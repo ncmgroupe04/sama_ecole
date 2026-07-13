@@ -1,0 +1,17 @@
+---
+description: Règles fondamentales du projet Jangalekat — toujours actives
+alwaysApply: true
+---
+
+Ce projet suit `AGENTS.md` à la racine du dépôt : lis-le avant toute tâche, il fait foi.
+
+Rappels critiques (détail complet dans AGENTS.md) :
+- Stack figée : ASP.NET Core 9, EF Core, **PostgreSQL uniquement**. Ne jamais proposer SQLite/MySQL.
+- Multi-tenant obligatoire : `SchoolId` + Row-Level Security PostgreSQL + Global Query Filter EF Core sur toute table métier.
+- Aucun mode hors-ligne / local / LAN. Le produit est 100 % en ligne dès la V1.
+- CQRS via MediatR : Commands pour l'écriture, Queries pour la lecture, jamais mélangés.
+- Aucune suppression physique de donnée métier — soft delete uniquement.
+- Format d'erreur API normalisé — voir `docs/Volume_4_API_Design.md` §0.4.
+- Paiement d'abonnement confirmé uniquement par webhook signé (HMAC) — jamais par une route client. Voir `AGENTS.md` règle #11.
+
+Pour toute question de règle métier, ouvrir le volume correspondant dans `/docs` (voir table dans `AGENTS.md`) avant d'improviser.

@@ -1,0 +1,47 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jangalekat-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-jangalekat}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-jangalekat_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - jangalekat_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-jangalekat}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: jangalekat-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Jangalekat.Web/Dockerfile
+    container_name: jangalekat-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=postgres;Database=${DB_NAME:-jangalekat_dev};Username=${DB_USER:-jangalekat};Password=${DB_PASSWORD:-changeme}"
+      Jwt__Issuer: "https://api.jangalekat.sn"
+      Jwt__Audience: "jangalekat-clients"
+      Jwt__SigningKey: "${JWT_SIGNING_KEY:-DEV_ONLY_INSECURE_KEY_CHANGE_ME_MINIMUM_32_CHARS}"
+      Redis__ConnectionString: "redis:6379"
+    ports:
+      - "5000:8080"
+
+volumes:
+  jangalekat_pg_data:

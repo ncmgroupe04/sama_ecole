@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Fichier source — ne jamais éditer wwwroot/css/site.css directement, c'est un fichier
+  généré par `npm run build:css` (voir package.json et AGENTS.md).
+
+  Composants transverses réutilisables (Volume 5 §7 Bibliothèque de composants) à
+  déclarer ici via @layer components, jamais en CSS custom hors Tailwind :
+
+  @layer components {
+    .btn-primary { @apply bg-primary text-white rounded-md px-4 py-2 font-medium hover:opacity-90; }
+    .status-badge-active { @apply bg-success/10 text-success rounded-full px-2 py-0.5 text-jgk-table font-medium; }
+    .status-badge-expired { @apply bg-danger/10 text-danger rounded-full px-2 py-0.5 text-jgk-table font-medium; }
+  }
+*/

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jangalekat_test
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: jangalekat_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U jangalekat_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run unit tests
+        run: dotnet test tests/Jangalekat.UnitTests --no-build --configuration Release --logger "trx;LogFileName=unit.trx"
+
+      - name: Run integration tests (incl. isolation multi-tenant)
+        env:
+          ConnectionStrings__Default: "Host=localhost;Port=5432;Database=jangalekat_test;Username=jangalekat_test;Password=test_password"
+        run: dotnet test tests/Jangalekat.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=integration.trx"
+
+      - name: Vérifier la couverture du test d'isolation multi-tenant
+        run: |
+          dotnet test tests/Jangalekat.IntegrationTests --filter Category=MultiTenant --no-build --configuration Release
+
+      - name: Publier les résultats de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/*.trx'
+
+  docker-build:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f src/Jangalekat.Web/Dockerfile -t jangalekat-api:${{ github.sha }} .
+
+      # Étape de push vers le registre + déploiement : voir docs/Volume_9_Deployment_Operations.md §CI/CD.
+      # Volontairement non automatisée ici pour garder une porte de validation manuelle avant la mise en production.

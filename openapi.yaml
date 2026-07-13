@@ -1,0 +1,836 @@
+openapi: 3.0.3
+info:
+  title: Jangalekat API
+  description: >
+    API REST de la plateforme SaaS de gestion scolaire Jangalekat.
+    Toutes les routes (sauf /auth/*) exigent un JWT Bearer valide.
+    Le tenant (SchoolId) est dérivé du claim `schoolId` du token, jamais d'un paramètre de requête.
+    Référence fonctionnelle complète : docs/Volume_4_API_Design.md
+  version: "1.0.0"
+servers:
+  - url: https://api.jangalekat.sn/v1
+    description: Production
+  - url: https://staging-api.jangalekat.sn/v1
+    description: Staging
+  - url: http://localhost:5000/v1
+    description: Développement local
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Schools
+  - name: SchoolYears
+  - name: Classrooms
+  - name: Subjects
+  - name: Students
+  - name: Teachers
+  - name: Enrollments
+  - name: Grades
+  - name: ReportCards
+  - name: Finance
+  - name: Subscriptions
+  - name: RegistrationRequests
+  - name: Payments
+  - name: Audit
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authentification par email/mot de passe
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokens' }
+        '401':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renouvellement du token d'accès
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Nouveau couple de tokens
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokens' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Révocation du refresh token courant
+      responses:
+        '204': { description: Déconnecté }
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Lister les utilisateurs de l'établissement courant
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - name: role
+          in: query
+          schema: { $ref: '#/components/schemas/Role' }
+      responses:
+        '200':
+          description: Liste paginée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedUsers' }
+    post:
+      tags: [Users]
+      summary: Créer un utilisateur (Directeur/Super Admin uniquement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserCreateRequest' }
+      responses:
+        '201': { description: Créé, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /users/{userId}/status:
+    patch:
+      tags: [Users]
+      summary: Suspendre / bloquer / réactiver un utilisateur
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, reason]
+              properties:
+                status: { type: string, enum: [Active, Suspended, Blocked] }
+                reason: { type: string }
+      responses:
+        '200': { description: Statut mis à jour }
+
+  /schools:
+    get:
+      tags: [Schools]
+      summary: Lister les établissements (Super Admin uniquement)
+      responses:
+        '200': { description: Liste des établissements }
+    post:
+      tags: [Schools]
+      summary: Créer un nouvel établissement (Super Admin uniquement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchoolCreateRequest' }
+      responses:
+        '201': { description: Établissement créé }
+
+  /schools/current/settings:
+    get:
+      tags: [Schools]
+      summary: Paramètres de l'établissement courant
+      responses:
+        '200':
+          description: Paramètres
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolSettings' }
+    put:
+      tags: [Schools]
+      summary: Mettre à jour les paramètres (Directeur uniquement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchoolSettings' }
+      responses:
+        '200': { description: Paramètres mis à jour }
+
+  /school-years:
+    get:
+      tags: [SchoolYears]
+      summary: Lister les années scolaires
+      responses:
+        '200': { description: Liste des années scolaires }
+    post:
+      tags: [SchoolYears]
+      summary: Créer une nouvelle année scolaire
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchoolYearCreateRequest' }
+      responses:
+        '201': { description: Année scolaire créée }
+
+  /classrooms:
+    get:
+      tags: [Classrooms]
+      summary: Lister les classes de l'année scolaire active
+      responses:
+        '200': { description: Liste des classes }
+    post:
+      tags: [Classrooms]
+      summary: Créer une classe (nomenclature libre, sans liste figée)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClassroomCreateRequest' }
+      responses:
+        '201': { description: Classe créée }
+
+  /subjects:
+    get:
+      tags: [Subjects]
+      summary: Lister les matières
+      responses:
+        '200': { description: Liste des matières }
+    post:
+      tags: [Subjects]
+      summary: Créer une matière avec coefficient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubjectCreateRequest' }
+      responses:
+        '201': { description: Matière créée }
+
+  /students:
+    get:
+      tags: [Students]
+      summary: Lister/rechercher les élèves
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - name: classroomId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Liste paginée d'élèves
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedStudents' }
+    post:
+      tags: [Students]
+      summary: Inscrire un élève (le matricule est généré à l'enregistrement, jamais avant)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StudentCreateRequest' }
+      responses:
+        '201': { description: Élève créé, matricule généré, content: { application/json: { schema: { $ref: '#/components/schemas/Student' } } } }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /students/{studentId}:
+    get:
+      tags: [Students]
+      summary: Fiche complète d'un élève
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Fiche élève
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudentProfile' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /teachers:
+    get:
+      tags: [Teachers]
+      summary: Lister les enseignants
+      responses:
+        '200': { description: Liste des enseignants }
+    post:
+      tags: [Teachers]
+      summary: Créer un enseignant (matricule généré à l'enregistrement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TeacherCreateRequest' }
+      responses:
+        '201': { description: Enseignant créé }
+
+  /enrollments:
+    post:
+      tags: [Enrollments]
+      summary: Créer une inscription/réinscription (déclenche automatiquement le calcul Finance)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EnrollmentCreateRequest' }
+      responses:
+        '201':
+          description: Inscription créée, frais calculés automatiquement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Enrollment' }
+
+  /grades:
+    post:
+      tags: [Grades]
+      summary: Saisir ou mettre à jour une note (verrouillage optimiste)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GradeUpsertRequest' }
+      responses:
+        '200': { description: Note enregistrée }
+        '409':
+          description: Conflit de concurrence — la note a été modifiée entre-temps
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /report-cards/generate:
+    post:
+      tags: [ReportCards]
+      summary: Générer le bulletin PDF d'un élève pour une période
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, termId]
+              properties:
+                studentId: { type: string, format: uuid }
+                termId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PDF généré
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  /finance/payments:
+    post:
+      tags: [Finance]
+      summary: Enregistrer un paiement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentCreateRequest' }
+      responses:
+        '201': { description: Paiement enregistré, reçu généré }
+
+  /finance/expenses:
+    get:
+      tags: [Finance]
+      summary: Lister les dépenses
+      responses:
+        '200': { description: Liste des dépenses }
+    post:
+      tags: [Finance]
+      summary: Enregistrer une dépense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExpenseCreateRequest' }
+      responses:
+        '201': { description: Dépense enregistrée }
+
+  /finance/dashboard:
+    get:
+      tags: [Finance]
+      summary: Indicateurs financiers (encaissé, solde dû, taux de recouvrement)
+      responses:
+        '200':
+          description: Tableau de bord financier
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FinanceDashboard' }
+
+  /registration-requests:
+    post:
+      tags: [RegistrationRequests]
+      summary: Soumettre une demande d'inscription self-service (formulaire public, Volume 1 §11.5)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegistrationRequestCreate' }
+      responses:
+        '201':
+          description: Demande créée, référence de suivi communiquée par email
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistrationRequestCreated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /registration-requests/{trackingReference}/status:
+    get:
+      tags: [RegistrationRequests]
+      summary: Consulter l'état d'une demande sans authentification
+      security: []
+      parameters:
+        - name: trackingReference
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Statut de la demande
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistrationRequestStatus' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/registration-requests:
+    get:
+      tags: [RegistrationRequests]
+      summary: Lister les demandes d'inscription (Super Admin)
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [Pending, Approved, Rejected] }
+      responses:
+        '200': { description: Liste des demandes }
+
+  /admin/registration-requests/{id}/approve:
+    post:
+      tags: [RegistrationRequests]
+      summary: Approuver — crée établissement + compte Directeur + abonnement AwaitingPayment (Super Admin)
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Établissement créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistrationApprovalResult' }
+
+  /admin/registration-requests/{id}/reject:
+    post:
+      tags: [RegistrationRequests]
+      summary: Rejeter une demande (Super Admin)
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200': { description: Demande rejetée }
+
+  /subscriptions/{schoolId}/payments:
+    get:
+      tags: [Payments]
+      summary: Historique des paiements d'abonnement de l'établissement (Directeur)
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200': { description: Historique des paiements }
+    post:
+      tags: [Payments]
+      summary: Initier un paiement d'abonnement (Mobile Money, virement, carte)
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscriptionPaymentInitiateRequest' }
+      responses:
+        '201':
+          description: Session de paiement créée — URL de redirection agrégateur
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionPaymentInitiateResult' }
+
+  /webhooks/payments/{provider}:
+    post:
+      tags: [Payments]
+      summary: Callback de l'agrégateur de paiement (PayDunya/CinetPay) — signature HMAC vérifiée obligatoirement, voir docs/Volume_7_Security.md
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, enum: [paydunya, cinetpay] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, description: "Payload brut spécifique à l'agrégateur, stocké tel quel dans WebhookPayloadRaw" }
+      responses:
+        '200': { description: Webhook traité }
+        '401': { description: Signature invalide — webhook rejeté et journalisé }
+
+  /subscriptions/{schoolId}:
+    get:
+      tags: [Subscriptions]
+      summary: Consulter l'abonnement d'un établissement (Super Admin)
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200': { description: Détail de l'abonnement }
+    patch:
+      tags: [Subscriptions]
+      summary: Modifier le plan ou la date d'expiration (Super Admin)
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscriptionUpdateRequest' }
+      responses:
+        '200': { description: Abonnement mis à jour }
+
+  /audit-logs:
+    get:
+      tags: [Audit]
+      summary: Consulter le journal d'audit de l'établissement
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200': { description: Liste paginée d'événements d'audit }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PageNumber:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    EntityId:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    NotFound:
+      description: Ressource introuvable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: Erreur de validation
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    Role:
+      type: string
+      enum: [SuperAdmin, Directeur, Secretariat, Finance, Enseignant]
+
+    ErrorResponse:
+      type: object
+      description: Format normalisé — voir docs/Volume_4_API_Design.md §0.4
+      properties:
+        code: { type: string, example: "VALIDATION_ERROR" }
+        message: { type: string }
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              reason: { type: string }
+        traceId: { type: string }
+
+    AuthTokens:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn: { type: integer, example: 900 }
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { type: string, enum: [Active, Suspended, Blocked] }
+        schoolId: { type: string, format: uuid }
+
+    UserCreateRequest:
+      type: object
+      required: [fullName, email, role, password]
+      properties:
+        fullName: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        password: { type: string, format: password }
+
+    PaginatedUsers:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/User' } }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    SchoolCreateRequest:
+      type: object
+      required: [name, address, directorEmail]
+      properties:
+        name: { type: string }
+        address: { type: string }
+        phone: { type: string }
+        directorEmail: { type: string, format: email }
+
+    SchoolSettings:
+      type: object
+      properties:
+        gradingScale: { type: string, enum: ["10", "20"] }
+        studentMatriculeFormat: { type: string, example: "ELEV-{YEAR}-{SEQ:4}" }
+        teacherMatriculeFormat: { type: string, example: "ENS-{YEAR}-{SEQ:3}" }
+        autoLogoutMinutes: { type: integer, default: 10 }
+        dateFormat: { type: string, enum: ["dd/MM/yyyy", "dd MMMM yyyy"] }
+
+    SchoolYearCreateRequest:
+      type: object
+      required: [label, startDate, endDate]
+      properties:
+        label: { type: string, example: "2026-2027" }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+
+    ClassroomCreateRequest:
+      type: object
+      required: [name, level]
+      properties:
+        name: { type: string, example: "CM2 B" }
+        level: { type: string, example: "Primaire" }
+        capacity: { type: integer }
+
+    SubjectCreateRequest:
+      type: object
+      required: [name, coefficient, level]
+      properties:
+        name: { type: string }
+        coefficient: { type: number }
+        level: { type: string }
+
+    Student:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        classroomId: { type: string, format: uuid }
+        birthDate: { type: string, format: date }
+        gender: { type: string, enum: [M, F] }
+
+    StudentProfile:
+      allOf:
+        - $ref: '#/components/schemas/Student'
+        - type: object
+          properties:
+            enrollmentHistory: { type: array, items: { type: object } }
+            grades: { type: array, items: { type: object } }
+            payments: { type: array, items: { type: object } }
+
+    StudentCreateRequest:
+      type: object
+      required: [fullName, birthDate, gender, classroomId]
+      properties:
+        fullName: { type: string }
+        birthDate: { type: string, format: date }
+        gender: { type: string, enum: [M, F] }
+        classroomId: { type: string, format: uuid }
+        guardianName: { type: string }
+        guardianPhone: { type: string }
+
+    PaginatedStudents:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Student' } }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    TeacherCreateRequest:
+      type: object
+      required: [fullName, email, subjectIds]
+      properties:
+        fullName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        subjectIds: { type: array, items: { type: string, format: uuid } }
+
+    EnrollmentCreateRequest:
+      type: object
+      required: [studentId, classroomId, schoolYearId, type]
+      properties:
+        studentId: { type: string, format: uuid }
+        classroomId: { type: string, format: uuid }
+        schoolYearId: { type: string, format: uuid }
+        type: { type: string, enum: [NewEnrollment, ReEnrollment] }
+
+    Enrollment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        totalDue: { type: number }
+        status: { type: string, enum: [Pending, Confirmed, Cancelled] }
+
+    GradeUpsertRequest:
+      type: object
+      required: [studentId, subjectId, termId, value, rowVersion]
+      properties:
+        studentId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        termId: { type: string, format: uuid }
+        value: { type: number, minimum: 0 }
+        rowVersion:
+          type: string
+          description: Jeton de concurrence optimiste renvoyé lors de la dernière lecture
+
+    PaymentCreateRequest:
+      type: object
+      required: [studentId, amount, method, category]
+      properties:
+        studentId: { type: string, format: uuid }
+        amount: { type: number }
+        method: { type: string, enum: [Cash, MobileMoney, BankTransfer] }
+        category: { type: string, enum: [Enrollment, Tuition, Exam, Other] }
+
+    ExpenseCreateRequest:
+      type: object
+      required: [label, amount, category, date]
+      properties:
+        label: { type: string }
+        amount: { type: number }
+        category: { type: string }
+        date: { type: string, format: date }
+
+    FinanceDashboard:
+      type: object
+      properties:
+        collectedToday: { type: number }
+        collectedThisMonth: { type: number }
+        totalOutstanding: { type: number }
+        recoveryRate: { type: number, description: "Pourcentage, 0-100" }
+
+    SubscriptionUpdateRequest:
+      type: object
+      properties:
+        plan: { type: string, enum: [Primaire, Standard, Premium] }
+        expiresAt: { type: string, format: date }
+        status: { type: string, enum: [AwaitingPayment, Active, Suspended, ReadOnly] }
+
+    RegistrationRequestCreate:
+      type: object
+      required: [directorFullName, directorEmail, directorPhone, password, schoolName, requestedPlan]
+      properties:
+        directorFullName: { type: string }
+        directorEmail: { type: string, format: email }
+        directorPhone: { type: string }
+        password: { type: string, format: password, description: "Haché immédiatement côté serveur, jamais journalisé" }
+        schoolName: { type: string }
+        schoolAddress: { type: string }
+        city: { type: string }
+        region: { type: string }
+        estimatedStudentCount: { type: integer }
+        requestedPlan: { type: string, enum: [Primaire, Standard, Premium] }
+
+    RegistrationRequestCreated:
+      type: object
+      properties:
+        trackingReference: { type: string, example: "JGK-REQ-2026-00042" }
+        status: { type: string, enum: [Pending] }
+
+    RegistrationRequestStatus:
+      type: object
+      properties:
+        trackingReference: { type: string }
+        status: { type: string, enum: [Pending, Approved, Rejected] }
+        rejectionReason: { type: string, nullable: true }
+
+    RegistrationApprovalResult:
+      type: object
+      properties:
+        schoolId: { type: string, format: uuid }
+        directorUserId: { type: string, format: uuid }
+        subscriptionId: { type: string, format: uuid }
+        subscriptionStatus: { type: string, enum: [AwaitingPayment] }
+
+    SubscriptionPaymentInitiateRequest:
+      type: object
+      required: [method, billingPeriod]
+      properties:
+        method: { type: string, enum: [MobileMoney, BankTransfer, Card] }
+        billingPeriod: { type: string, enum: [Monthly, Yearly] }
+
+    SubscriptionPaymentInitiateResult:
+      type: object
+      properties:
+        paymentId: { type: string, format: uuid }
+        redirectUrl: { type: string, format: uri, description: "URL de la page de paiement hébergée par l'agrégateur (PayDunya/CinetPay)" }
+        status: { type: string, enum: [Initiated] }

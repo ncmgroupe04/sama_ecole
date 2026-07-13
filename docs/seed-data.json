@@ -1,0 +1,74 @@
+{
+  "_comment": "Jeu de données de test pour environnement de développement/tests. Ne jamais utiliser en production. Rattaché aux entités du DDS (Volume_3_DDS.md) et de l'ERD (docs/ERD.md).",
+
+  "schools": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "École Primaire Les Baobabs",
+      "address": "Rue 12, Médina, Dakar",
+      "phone": "+221771234567",
+      "status": "Active"
+    },
+    {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "Lycée Moderne Teranga",
+      "address": "Avenue Bourguiba, Dakar",
+      "phone": "+221779876543",
+      "status": "Active"
+    }
+  ],
+
+  "subscriptions": [
+    { "id": "s1111111-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "plan": "Primaire", "expiresAt": "2027-08-31", "status": "Active" },
+    { "id": "s2222222-0000-0000-0000-000000000002", "schoolId": "22222222-2222-2222-2222-222222222222", "plan": "Standard", "expiresAt": "2027-08-31", "status": "Active" }
+  ],
+
+  "users": [
+    { "id": "u0000001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "fullName": "Fatou Ndiaye", "email": "directrice@baobabs.sn", "role": "Directeur", "status": "Active" },
+    { "id": "u0000002-0000-0000-0000-000000000002", "schoolId": "11111111-1111-1111-1111-111111111111", "fullName": "Moussa Diop", "email": "secretariat@baobabs.sn", "role": "Secretariat", "status": "Active" },
+    { "id": "u0000003-0000-0000-0000-000000000003", "schoolId": "11111111-1111-1111-1111-111111111111", "fullName": "Aissatou Ba", "email": "finance@baobabs.sn", "role": "Finance", "status": "Active" },
+    { "id": "u0000004-0000-0000-0000-000000000004", "schoolId": "11111111-1111-1111-1111-111111111111", "fullName": "Ibrahima Sarr", "email": "enseignant@baobabs.sn", "role": "Enseignant", "status": "Active" },
+    { "id": "u0000005-0000-0000-0000-000000000005", "schoolId": null, "fullName": "Super Admin Jangalekat", "email": "superadmin@jangalekat.sn", "role": "SuperAdmin", "status": "Active" }
+  ],
+
+  "schoolYears": [
+    { "id": "y0000001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "label": "2026-2027", "startDate": "2026-10-01", "endDate": "2027-07-15", "isActive": true }
+  ],
+
+  "classrooms": [
+    { "id": "c0000001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "name": "CM2 A", "level": "Primaire", "capacity": 40 },
+    { "id": "c0000002-0000-0000-0000-000000000002", "schoolId": "11111111-1111-1111-1111-111111111111", "name": "CI B", "level": "Primaire", "capacity": 35 }
+  ],
+
+  "subjects": [
+    { "id": "sub00001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "name": "Mathématiques", "coefficient": 4, "level": "Primaire" },
+    { "id": "sub00002-0000-0000-0000-000000000002", "schoolId": "11111111-1111-1111-1111-111111111111", "name": "Français", "coefficient": 4, "level": "Primaire" },
+    { "id": "sub00003-0000-0000-0000-000000000003", "schoolId": "11111111-1111-1111-1111-111111111111", "name": "Éveil scientifique", "coefficient": 2, "level": "Primaire" }
+  ],
+
+  "teachers": [
+    { "id": "t0000001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "matricule": "ENS-2026-001", "fullName": "Ibrahima Sarr", "email": "enseignant@baobabs.sn", "subjectIds": ["sub00001-0000-0000-0000-000000000001", "sub00003-0000-0000-0000-000000000003"] }
+  ],
+
+  "students": [
+    { "id": "st000001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "matricule": "ELEV-2026-0001", "fullName": "Awa Fall", "birthDate": "2015-03-12", "gender": "F", "classroomId": "c0000001-0000-0000-0000-000000000001" },
+    { "id": "st000002-0000-0000-0000-000000000002", "schoolId": "11111111-1111-1111-1111-111111111111", "matricule": "ELEV-2026-0002", "fullName": "Ousmane Kane", "birthDate": "2015-07-22", "gender": "M", "classroomId": "c0000001-0000-0000-0000-000000000001" },
+    { "id": "st000003-0000-0000-0000-000000000003", "schoolId": "11111111-1111-1111-1111-111111111111", "matricule": "ELEV-2026-0003", "fullName": "Mariama Sy", "birthDate": "2018-01-05", "gender": "F", "classroomId": "c0000002-0000-0000-0000-000000000002" }
+  ],
+
+  "enrollments": [
+    { "id": "en000001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "studentId": "st000001-0000-0000-0000-000000000001", "classroomId": "c0000001-0000-0000-0000-000000000001", "schoolYearId": "y0000001-0000-0000-0000-000000000001", "type": "ReEnrollment", "totalDue": 150000, "status": "Confirmed" },
+    { "id": "en000002-0000-0000-0000-000000000002", "schoolId": "11111111-1111-1111-1111-111111111111", "studentId": "st000002-0000-0000-0000-000000000002", "classroomId": "c0000001-0000-0000-0000-000000000001", "schoolYearId": "y0000001-0000-0000-0000-000000000001", "type": "NewEnrollment", "totalDue": 175000, "status": "Pending" }
+  ],
+
+  "payments": [
+    { "id": "pa000001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "studentId": "st000001-0000-0000-0000-000000000001", "enrollmentId": "en000001-0000-0000-0000-000000000001", "amount": 75000, "method": "MobileMoney", "category": "Tuition" }
+  ],
+
+  "grades": [
+    { "id": "gr000001-0000-0000-0000-000000000001", "schoolId": "11111111-1111-1111-1111-111111111111", "studentId": "st000001-0000-0000-0000-000000000001", "subjectId": "sub00001-0000-0000-0000-000000000001", "value": 15.5 },
+    { "id": "gr000002-0000-0000-0000-000000000002", "schoolId": "11111111-1111-1111-1111-111111111111", "studentId": "st000001-0000-0000-0000-000000000001", "subjectId": "sub00002-0000-0000-0000-000000000002", "value": 17 }
+  ],
+
+  "_usage": "Utiliser via un DbSeeder exécuté uniquement en environnement Development/Test (jamais Production). Chaque enregistrement respecte les contraintes school_id du DDS pour tester l'isolation multi-tenant entre l'école 1 (Les Baobabs) et l'école 2 (Teranga, volontairement quasi vide pour tester qu'aucune donnée de l'école 1 n'y apparaît)."
+}

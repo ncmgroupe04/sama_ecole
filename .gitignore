@@ -1,0 +1,30 @@
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+
+# --- Secrets & environnement ---
+.env
+*.env.local
+appsettings.*.Local.json
+
+# --- Frontend / outillage ---
+node_modules/
+wwwroot/dist/
+src/Jangalekat.Web/wwwroot/css/site.css
+
+# --- IDE ---
+.idea/
+*.swp
+
+# --- Logs & données locales ---
+*.log
+logs/
+jangalekat_pg_data/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
