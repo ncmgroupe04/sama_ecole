@@ -1,6 +1,7 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('studentsView', () => ({
         students: [],
+        classrooms: [],
         totalCount: 0,
         page: 1,
         pageSize: 10,
@@ -22,7 +23,17 @@ document.addEventListener('alpine:init', () => {
 
         // Initialisation
         init() {
+            this.loadClassrooms();
             this.loadStudents();
+        },
+
+        async loadClassrooms() {
+            try {
+                const data = await window.api.get('/classrooms');
+                this.classrooms = Array.isArray(data) ? data : (data.items || []);
+            } catch (err) {
+                console.error("Erreur chargement classes:", err);
+            }
         },
 
         async loadStudents() {

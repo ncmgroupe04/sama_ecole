@@ -101,6 +101,9 @@
                 </div>
                 <select class="pl-3 pr-8 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary appearance-none">
                     <option value="">Classe : Toutes</option>
+                    <template x-for="c in classrooms" :key="c.id">
+                        <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
+                    </template>
                 </select>
                 <select class="pl-3 pr-8 py-1.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary appearance-none">
                     <option value="">Genre : Tous</option>
@@ -256,11 +259,15 @@
                                     <p x-show="createErrors.gender" x-text="createErrors.gender" class="mt-1 text-xs text-danger"></p>
                                 </div>
 
-                                <!-- Classe (Note: Devrait être chargé dynamiquement depuis /classrooms) -->
+                                <!-- Classe (Dynamique) -->
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">Classe (UUID temporaire) <span class="text-danger">*</span></label>
-                                    <input type="text" x-model="newStudent.classroomId" required placeholder="ex: c0000001-..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
-                                    <p class="mt-1 text-xs text-gray-500">Pour le test, coller un UUID de classroom valide.</p>
+                                    <label class="block text-sm font-medium text-gray-700">Classe <span class="text-danger">*</span></label>
+                                    <select x-model="newStudent.classroomId" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2 bg-white">
+                                        <option value="" disabled>Sélectionner une classe</option>
+                                        <template x-for="c in classrooms" :key="c.id">
+                                            <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
+                                        </template>
+                                    </select>
                                     <p x-show="createErrors.classroomid" x-text="createErrors.classroomid" class="mt-1 text-xs text-danger"></p>
                                 </div>
 
