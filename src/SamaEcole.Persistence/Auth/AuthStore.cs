@@ -90,9 +90,9 @@ public class AuthStore(ApplicationDbContext dbContext, TimeProvider timeProvider
                 cancellationToken);
     }
 
-    public async Task RevokeAllRefreshTokensAsync(Guid userId, CancellationToken cancellationToken)
+    public async Task<int> RevokeAllRefreshTokensAsync(Guid userId, CancellationToken cancellationToken)
     {
-        await dbContext.RefreshTokens
+        return await dbContext.RefreshTokens
             .Where(t => t.UserId == userId && t.RevokedAt == null)
             .ExecuteUpdateAsync(
                 s => s.SetProperty(t => t.RevokedAt, timeProvider.GetUtcNow()),

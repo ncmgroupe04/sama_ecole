@@ -11,8 +11,12 @@ public interface IApplicationDbContext
 {
     DbSet<School> Schools { get; }
     DbSet<Student> Students { get; }
+    DbSet<Classroom> Classrooms { get; }
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
+
+    /// <summary>Journal append-only des changements de statut (ticket JGK-A05) : on y AJOUTE, jamais plus.</summary>
+    DbSet<UserStatusHistory> UserStatusHistory { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 

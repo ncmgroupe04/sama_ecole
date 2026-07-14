@@ -30,8 +30,11 @@ public interface IAuthStore
 
     Task RevokeRefreshTokenAsync(Guid tokenId, CancellationToken cancellationToken);
 
-    /// <summary>Révoque tous les refresh tokens actifs de l'utilisateur (logout, ou rejeu détecté).</summary>
-    Task RevokeAllRefreshTokensAsync(Guid userId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Révoque tous les refresh tokens actifs de l'utilisateur (logout, rejeu détecté, ou suspension
+    /// par le Directeur — ticket JGK-A05). Renvoie le nombre de sessions effectivement coupées.
+    /// </summary>
+    Task<int> RevokeAllRefreshTokensAsync(Guid userId, CancellationToken cancellationToken);
 }
 
 public record AuthUser(

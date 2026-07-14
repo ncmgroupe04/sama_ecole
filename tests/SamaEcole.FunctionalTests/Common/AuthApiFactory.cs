@@ -34,8 +34,12 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public const string DirecteurEmail = "directeur@sama-ecole.sn";
     public const string DirecteurPassword = "Motdepasse!Solide2026";
 
+    public const string SecretaireEmail = "secretaire@sama-ecole.sn";
+    public const string SecretairePassword = "AutreMotdepasse!2026";
+
     public static readonly Guid EcoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly Guid DirecteurId = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
+    public static readonly Guid SecretaireId = Guid.Parse("cccccccc-0000-0000-0000-000000000003");
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
@@ -67,19 +71,35 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await using var owner = NewOwnerContext();
         await owner.Database.MigrateAsync();
 
-        // Le compte de test est semé avec un VRAI hash Identity : le login doit le vérifier
+        // Les comptes de test sont semés avec un VRAI hash Identity : le login doit le vérifier
         // réellement, pas court-circuiter le hachage.
+        var hasher = new IdentityPasswordHasher();
+
         owner.Schools.Add(new School { Id = EcoleId, Name = "École de test" });
-        owner.Users.Add(new User
-        {
-            Id = DirecteurId,
-            SchoolId = EcoleId,
-            Email = DirecteurEmail,
-            PasswordHash = new IdentityPasswordHasher().Hash(DirecteurPassword),
-            FullName = "Directeur de test",
-            Role = Role.Directeur,
-            Status = EntityStatus.Active
-        });
+
+        owner.Users.AddRange(
+            new User
+            {
+                Id = DirecteurId,
+                SchoolId = EcoleId,
+                Email = DirecteurEmail,
+                PasswordHash = hasher.Hash(DirecteurPassword),
+                FullName = "Directeur de test",
+                Role = Role.Directeur,
+                Status = EntityStatus.Active
+            },
+            // Cible des suspensions (ticket JGK-A05) : un Directeur ne peut pas modifier son PROPRE
+            // statut, il faut donc un second compte dans la même école.
+            new User
+            {
+                Id = SecretaireId,
+                SchoolId = EcoleId,
+                Email = SecretaireEmail,
+                PasswordHash = hasher.Hash(SecretairePassword),
+                FullName = "Secrétaire de test",
+                Role = Role.Secretariat,
+                Status = EntityStatus.Active
+            });
 
         await owner.SaveChangesAsync(CancellationToken.None);
     }
@@ -135,6 +155,24 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         {
             Environment.SetEnvironmentVariable(key, null);
         }
+    }
+
+    /// <summary>
+    /// Remet les comptes de test à neuf entre deux tests (ticket JGK-A05). Les tests de statut
+    /// bloquent et débloquent les mêmes comptes : sans cela, le premier qui bloque la secrétaire
+    /// ferait échouer tous les suivants, et l'ordre d'exécution deviendrait significatif.
+    ///
+    /// Exécuté par le PROPRIÉTAIRE : le rôle applicatif n'a volontairement pas le droit de purger
+    /// user_status_history (journal append-only).
+    /// </summary>
+    public async Task ResetTestUsersAsync()
+    {
+        await using var owner = NewOwnerContext();
+
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM user_status_history;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM refresh_tokens;");
+        await owner.Database.ExecuteSqlRawAsync(
+            """UPDATE users SET "Status" = 'Active', "AccessFailedCount" = 0, "LockoutEndAt" = NULL;""");
     }
 
     /// <summary>Forge un token signé par la MÊME clé que l'API, mais déjà expiré.</summary>
