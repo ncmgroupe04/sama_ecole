@@ -235,6 +235,10 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // année, obtiendrait une année inactive. L'ordre d'exécution deviendrait significatif.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_years;");
 
+        // Matières (ticket JGK-C03) : un test qui crée « Maths / Primaire » ferait échouer en 409 le
+        // suivant qui croit créer la même matière à neuf.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM subjects;");
+
         await owner.Database.ExecuteSqlRawAsync(
             $"""DELETE FROM schools WHERE "Id" <> '{EcoleId}';""");
 

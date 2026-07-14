@@ -28,4 +28,7 @@ public class PagesController : Controller
 
     [HttpGet("/annees-scolaires")]
     public IActionResult SchoolYears() => View("~/Views/SchoolYears/Index.cshtml");
+
+    [HttpGet("/matieres")]
+    public IActionResult Subjects() => View("~/Views/Subjects/Index.cshtml");
 }

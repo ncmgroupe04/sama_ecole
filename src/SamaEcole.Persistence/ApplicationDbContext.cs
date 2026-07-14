@@ -20,6 +20,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Student> Students => Set<Student>();
     public DbSet<Classroom> Classrooms => Set<Classroom>();
     public DbSet<SchoolYear> SchoolYears => Set<SchoolYear>();
+    public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<UserStatusHistory> UserStatusHistory => Set<UserStatusHistory>();

@@ -1,0 +1,182 @@
+@{
+    ViewData["Title"] = "Pédagogie - Matières";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/subjects.js" asp-append-version="true"></script>
+}
+
+<div x-data="subjectsView()">
+    <!-- Titre et bouton Nouvelle matière -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-jgk-title font-bold text-gray-900">Matières et coefficients</h1>
+            <p class="text-jgk-subtitle text-gray-500 mt-1">
+                Le coefficient de chaque matière pèse dans le calcul des moyennes et des bulletins.
+            </p>
+        </div>
+
+        <button x-show="isDirecteur" x-cloak x-on:click="openCreate()"
+                class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors shadow-sm shadow-indigo-200 flex items-center justify-center gap-2">
+            <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            Nouvelle matière
+        </button>
+    </div>
+
+    <!-- Alerte d'erreur API globale -->
+    <div x-show="error" x-cloak class="mt-6 bg-red-50 border-l-4 border-danger p-4 rounded-md">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg aria-hidden="true" class="h-5 w-5 text-danger" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-red-700" x-text="error"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteneur -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mt-6 relative">
+
+        <!-- Voile de chargement -->
+        <div x-show="isLoading" class="absolute inset-0 z-10 bg-white/70 flex items-center justify-center rounded-xl backdrop-blur-sm">
+            <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        </div>
+
+        <div class="p-4 border-b border-gray-200 bg-gray-50/50 rounded-t-xl flex gap-6">
+            <div>
+                <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Matières</p>
+                <p class="text-lg font-bold text-gray-900" x-text="subjects.length"></p>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Niveaux couverts</p>
+                <p class="text-lg font-bold text-gray-900" x-text="groups.length"></p>
+            </div>
+        </div>
+
+        <!-- État vide -->
+        <div x-show="!isLoading && subjects.length === 0" x-cloak class="py-12 text-center">
+            <div class="flex flex-col items-center justify-center">
+                <div aria-hidden="true" class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                </div>
+                <p class="text-gray-500 font-medium">Aucune matière n'est configurée.</p>
+                <p class="text-xs text-gray-400 mt-1">Créez vos matières et leurs coefficients pour préparer les bulletins.</p>
+            </div>
+        </div>
+
+        @* Une section par niveau : c'est ainsi qu'un barème se lit et se contrôle — « au primaire,
+           voici mes matières et le total des coefficients ». *@
+        <div x-show="!isLoading && subjects.length > 0" x-cloak class="divide-y divide-gray-100">
+            <template x-for="group in groups" :key="group.level">
+                <div>
+                    <div class="flex items-center justify-between px-4 py-2.5 bg-gray-50/70">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-primary" x-text="group.level"></span>
+                        <span class="text-xs text-gray-500">
+                            Total des coefficients :
+                            <span class="font-semibold text-gray-700" x-text="formatCoefficient(group.totalCoefficient)"></span>
+                        </span>
+                    </div>
+
+                    <table class="w-full text-left border-collapse">
+                        <tbody class="text-sm text-gray-700">
+                            <template x-for="(subject, index) in group.subjects" :key="subject.id || index">
+                                <tr class="hover:bg-gray-50 transition-colors border-t border-gray-100">
+                                    <td class="py-3 px-4 font-medium text-gray-900">
+                                        <span class="inline-flex items-center gap-2">
+                                            <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                                            <span x-text="subject.name"></span>
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-right w-40">
+                                        <span class="text-gray-400 text-xs">coef.</span>
+                                        <span class="font-bold text-gray-900 ml-1" x-text="formatCoefficient(subject.coefficient)"></span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Panneau latéral : création d'une matière -->
+    <div x-show="isCreateOpen" class="fixed inset-0 overflow-hidden z-40" x-cloak>
+        <div class="absolute inset-0 overflow-hidden">
+            <div x-show="isCreateOpen" x-transition.opacity class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" x-on:click="isCreateOpen = false"></div>
+
+            <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                <div x-show="isCreateOpen"
+                     x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+                     x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
+                     class="pointer-events-auto w-screen max-w-md">
+                    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                        <div class="bg-primary px-4 py-6 sm:px-6">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-lg font-medium text-white">Nouvelle matière</h2>
+                                <div class="ml-3 flex h-7 items-center">
+                                    <button type="button" x-on:click="isCreateOpen = false" class="rounded-md bg-primary text-indigo-200 hover:text-white focus:outline-none">
+                                        <span class="sr-only">Fermer</span>
+                                        <svg aria-hidden="true" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-1">
+                                <p class="text-sm text-indigo-200">Rattachez la matière à un niveau et fixez son coefficient.</p>
+                            </div>
+                        </div>
+
+                        <div class="relative flex-1 px-4 py-6 sm:px-6">
+                            <div x-show="createErrors.global" x-cloak class="mb-4 bg-red-50 p-3 rounded-md border-l-4 border-danger">
+                                <p class="text-sm text-red-700" x-text="createErrors.global"></p>
+                            </div>
+
+                            <form x-on:submit.prevent="submitCreate()" class="space-y-4">
+                                <div>
+                                    <label for="subject-name" class="block text-sm font-medium text-gray-700">Nom de la matière <span class="text-danger">*</span></label>
+                                    <input id="subject-name" type="text" x-model="newSubject.name" required maxlength="80" placeholder="ex : Mathématiques"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
+                                    <p x-show="createErrors.name" x-cloak x-text="createErrors.name" class="mt-1 text-xs text-danger"></p>
+                                </div>
+
+                                <div>
+                                    <label for="subject-level" class="block text-sm font-medium text-gray-700">Niveau <span class="text-danger">*</span></label>
+                                    @* Champ libre + autocomplétion des niveaux déjà saisis : la nomenclature
+                                       reste celle de l'établissement (pas de liste figée), tout en évitant les
+                                       variantes d'orthographe qui créeraient des niveaux fantômes. *@
+                                    <input id="subject-level" type="text" x-model="newSubject.level" required maxlength="50" list="known-levels" placeholder="ex : Primaire"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
+                                    <datalist id="known-levels">
+                                        <template x-for="level in knownLevels" :key="level">
+                                            <option :value="level"></option>
+                                        </template>
+                                    </datalist>
+                                    <p x-show="createErrors.level" x-cloak x-text="createErrors.level" class="mt-1 text-xs text-danger"></p>
+                                </div>
+
+                                <div>
+                                    <label for="subject-coefficient" class="block text-sm font-medium text-gray-700">Coefficient <span class="text-danger">*</span></label>
+                                    <input id="subject-coefficient" type="number" x-model.number="newSubject.coefficient" required min="0.5" max="20" step="0.5"
+                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
+                                    <p x-show="createErrors.coefficient" x-cloak x-text="createErrors.coefficient" class="mt-1 text-xs text-danger"></p>
+                                </div>
+
+                                <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
+                                    <button type="button" x-on:click="isCreateOpen = false" class="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none">
+                                        Annuler
+                                    </button>
+                                    <button type="submit" :disabled="isSubmitting" class="inline-flex justify-center items-center gap-2 rounded-md border border-transparent bg-primary py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 focus:outline-none disabled:opacity-50">
+                                        <svg x-show="isSubmitting" x-cloak aria-hidden="true" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

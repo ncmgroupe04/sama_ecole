@@ -16,6 +16,9 @@ public interface IApplicationDbContext
     /// <summary>Années scolaires (ticket JGK-C01) : le pivot des inscriptions, des frais et des bulletins.</summary>
     DbSet<SchoolYear> SchoolYears { get; }
 
+    /// <summary>Matières et coefficients par niveau (ticket JGK-C03). Le coefficient pilote les bulletins.</summary>
+    DbSet<Subject> Subjects { get; }
+
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
 

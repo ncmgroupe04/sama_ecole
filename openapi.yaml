@@ -315,19 +315,44 @@ paths:
   /subjects:
     get:
       tags: [Subjects]
-      summary: Lister les matières
+      summary: Lister les matières de l'établissement courant
+      description: >-
+        L'établissement est déduit du JWT : il n'est jamais un paramètre. Lecture ouverte à tous les
+        rôles — l'enseignant a besoin des coefficients, le secrétariat pour composer les bulletins.
+        Triées par niveau puis par nom.
       responses:
-        '200': { description: Liste des matières }
+        '200':
+          description: Liste des matières
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Subject' }
     post:
       tags: [Subjects]
-      summary: Créer une matière avec coefficient
+      summary: Créer une matière avec coefficient (Directeur)
+      description: >-
+        Le coefficient relève de la notation : réservé au Directeur (Volume 7 §15). Une même matière
+        peut exister à plusieurs niveaux avec des coefficients différents — l'unicité porte sur
+        (niveau, nom), pas sur le nom seul.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/SubjectCreateRequest' }
       responses:
-        '201': { description: Matière créée }
+        '201':
+          description: Matière créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subject' }
+        '403': { description: Réservé au Directeur }
+        '409':
+          description: Une matière de ce nom existe déjà à ce niveau dans cet établissement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /students:
     get:
@@ -819,11 +844,28 @@ components:
 
     SubjectCreateRequest:
       type: object
+      description: >-
+        Pas de `schoolId` : il est déduit du JWT. Le `level` est un texte libre, aligné sur la
+        nomenclature des classes de l'établissement (pas de liste figée).
       required: [name, coefficient, level]
       properties:
-        name: { type: string }
-        coefficient: { type: number }
-        level: { type: string }
+        name: { type: string, maxLength: 80, example: "Mathématiques" }
+        coefficient:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 20
+          example: 4
+        level: { type: string, maxLength: 50, example: "Primaire" }
+
+    Subject:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: "Mathématiques" }
+        level: { type: string, example: "Primaire" }
+        coefficient: { type: number, format: double, example: 4 }
 
     Student:
       type: object
