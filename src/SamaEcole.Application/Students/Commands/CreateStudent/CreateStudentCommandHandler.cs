@@ -1,6 +1,9 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
+using FluentValidation.Results;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Students.Commands.CreateStudent;
 
@@ -14,6 +17,25 @@ public class CreateStudentCommandHandler(
     {
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
+
+        // La classe doit exister DANS CETTE ÉCOLE. Le Global Query Filter restreint déjà la requête
+        // au tenant courant : une classe d'une autre école est donc introuvable ici, et le contrôle
+        // vaut vérification d'appartenance autant que d'existence.
+        //
+        // Sans ce contrôle, la clé étrangère composite (SchoolId, ClassroomId) rejetterait bien la
+        // ligne — mais sous la forme d'une DbUpdateException remontée en 500, là où l'utilisateur
+        // mérite une erreur de saisie exploitable sur le bon champ.
+        var classroomExists = await dbContext.Classrooms
+            .AnyAsync(c => c.Id == request.ClassroomId, cancellationToken);
+
+        if (!classroomExists)
+        {
+            throw new ValidationException([
+                new ValidationFailure(
+                    nameof(request.ClassroomId),
+                    "La classe indiquée n'existe pas dans votre établissement.")
+            ]);
+        }
 
         // Génération du matricule ET insertion dans une seule transaction (AGENTS.md règle #3) :
         // si l'insertion échoue, le compteur de matricules est rembobiné avec elle — aucun trou.

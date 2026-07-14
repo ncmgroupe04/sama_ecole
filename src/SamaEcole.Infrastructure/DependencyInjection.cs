@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Infrastructure.Multitenancy;
+using SamaEcole.Infrastructure.Notifications;
 using SamaEcole.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,8 +22,14 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
-        // TODO (tickets JGK-E02, JGK-G03) : enregistrer ici la génération PDF (QuestPDF)
-        // et le service d'envoi d'email (MailKit) une fois les tickets correspondants démarrés.
+        // Mot de passe initial du Directeur (ticket JGK-B01).
+        services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
+
+        // ⚠️ N'ENVOIE RIEN : journalise l'e-mail. L'adaptateur SMTP réel (MailKit) est le ticket
+        // JGK-G03. À remplacer avant toute exploitation réelle — voir LoggingEmailSender.
+        services.AddSingleton<IEmailSender, LoggingEmailSender>();
+
+        // TODO (ticket JGK-E02) : enregistrer ici la génération PDF (QuestPDF).
 
         return services;
     }

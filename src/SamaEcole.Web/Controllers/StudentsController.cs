@@ -1,4 +1,5 @@
 using SamaEcole.Application.Students.Commands.CreateStudent;
+using SamaEcole.Application.Students.Queries.GetStudents;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,19 @@ namespace SamaEcole.Web.Controllers;
 [Authorize]
 public class StudentsController(ISender mediator) : ControllerBase
 {
+    /// <summary>
+    /// La requête est liée depuis la chaîne de requête. Elle ne porte PAS de SchoolId : l'école est
+    /// lue dans le JWT (AGENTS.md règle #10) — l'accepter du client permettrait de lire les élèves
+    /// d'un autre établissement en changeant un paramètre d'URL.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType<PaginatedStudents>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> List([FromQuery] GetStudentsQuery query, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(query, cancellationToken));
+
     [HttpPost]
+    [ProducesResponseType<CreateStudentResult>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Create([FromBody] CreateStudentCommand command, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(command, cancellationToken);

@@ -22,27 +22,38 @@ public class StudentIsolationTests : IAsyncLifetime
     private static readonly Guid EcoleA = Guid.Parse("11111111-1111-1111-1111-111111111111");
     private static readonly Guid EcoleB = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
+    private static readonly Guid ClasseA = Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000a");
+    private static readonly Guid ClasseB = Guid.Parse("bbbbbbbb-0000-0000-0000-00000000000b");
+
     public async Task InitializeAsync()
     {
         await _db.InitializeAsync();
 
-        // Jeu de données posé par le PROPRIÉTAIRE (exempté de RLS) : un élève dans chaque école.
+        // Jeu de données posé par le PROPRIÉTAIRE (exempté de RLS) : une classe et un élève dans
+        // chaque école. Les classes sont RÉELLES et non des Guid inventés : depuis JGK-C02, students
+        // porte une clé étrangère composite (SchoolId, ClassroomId) — un identifiant de classe au
+        // hasard ferait échouer l'insertion sur la contrainte, et non sur la RLS, ce qui ferait
+        // passer ce test au vert pour une raison qui n'a rien à voir avec l'isolation.
         await using var owner = _db.NewOwnerContext();
 
         owner.Schools.AddRange(
             new School { Id = EcoleA, Name = "École A" },
             new School { Id = EcoleB, Name = "École B" });
 
+        owner.Classrooms.AddRange(
+            new Classroom { Id = ClasseA, SchoolId = EcoleA, Name = "CM2 A", Level = "Primaire", Capacity = 40 },
+            new Classroom { Id = ClasseB, SchoolId = EcoleB, Name = "6e B", Level = "Collège", Capacity = 45 });
+
         owner.Students.AddRange(
             new Student
             {
                 SchoolId = EcoleA, Matricule = "ELEV-2026-0001", FullName = "Awa Fall",
-                BirthDate = new DateOnly(2015, 3, 12), Gender = "F", ClassroomId = Guid.NewGuid()
+                BirthDate = new DateOnly(2015, 3, 12), Gender = "F", ClassroomId = ClasseA
             },
             new Student
             {
                 SchoolId = EcoleB, Matricule = "ELEV-2026-0001", FullName = "Modou Diop",
-                BirthDate = new DateOnly(2014, 8, 2), Gender = "M", ClassroomId = Guid.NewGuid()
+                BirthDate = new DateOnly(2014, 8, 2), Gender = "M", ClassroomId = ClasseB
             });
 
         await owner.SaveChangesAsync(CancellationToken.None);
@@ -78,15 +89,21 @@ public class StudentIsolationTests : IAsyncLifetime
 
         // Session positionnée sur l'École A qui tente d'écrire pour l'École B : le WITH CHECK de la
         // policy doit refuser. Sans lui, un bug applicatif pourrait injecter chez un concurrent.
+        //
+        // La ligne insérée est par ailleurs parfaitement VALIDE — elle vise une vraie classe de
+        // l'École B. C'est essentiel : si elle référençait une classe inexistante, PostgreSQL la
+        // rejetterait sur la clé étrangère (23503) et le test serait vert sans que la RLS ait eu à
+        // se prononcer. Seule la policy peut ici refuser la ligne, d'où le 42501 attendu.
         await using var command = connection.CreateCommand();
         command.CommandText =
             """
             INSERT INTO students ("Id", "SchoolId", "Matricule", "FullName", "BirthDate", "Gender",
                                   "ClassroomId", "CreatedAt", "IsDeleted")
             VALUES (gen_random_uuid(), @schoolId, 'ELEV-2026-9999', 'Intrus', DATE '2015-01-01', 'M',
-                    gen_random_uuid(), NOW(), FALSE);
+                    @classroomId, NOW(), FALSE);
             """;
         command.Parameters.AddWithValue("schoolId", EcoleB);
+        command.Parameters.AddWithValue("classroomId", ClasseB);
 
         var act = async () => await command.ExecuteNonQueryAsync();
 

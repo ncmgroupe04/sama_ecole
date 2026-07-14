@@ -5,8 +5,11 @@ using SamaEcole.Infrastructure.Security;
 using SamaEcole.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -37,9 +40,17 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public const string SecretaireEmail = "secretaire@sama-ecole.sn";
     public const string SecretairePassword = "AutreMotdepasse!2026";
 
+    // Super Admin : SchoolId NULL, il n'appartient à aucun établissement (ticket JGK-B01).
+    public const string SuperAdminEmail = "superadmin@sama-ecole.sn";
+    public const string SuperAdminPassword = "SuperMotdepasse!2026";
+
     public static readonly Guid EcoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly Guid DirecteurId = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
     public static readonly Guid SecretaireId = Guid.Parse("cccccccc-0000-0000-0000-000000000003");
+    public static readonly Guid SuperAdminId = Guid.Parse("dddddddd-0000-0000-0000-000000000004");
+
+    /// <summary>Capture les e-mails sortants : c'est le seul canal par lequel passe le mot de passe initial.</summary>
+    public FakeEmailSender Emails { get; } = new();
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
@@ -99,6 +110,19 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 FullName = "Secrétaire de test",
                 Role = Role.Secretariat,
                 Status = EntityStatus.Active
+            },
+            // Aucun SchoolId : sa session n'a pas de tenant, la RLS lui ferme donc toutes les tables
+            // d'école. C'est précisément pourquoi la création d'un Directeur exige une fonction
+            // SECURITY DEFINER (ticket JGK-B01).
+            new User
+            {
+                Id = SuperAdminId,
+                SchoolId = null,
+                Email = SuperAdminEmail,
+                PasswordHash = hasher.Hash(SuperAdminPassword),
+                FullName = "Super Admin de test",
+                Role = Role.SuperAdmin,
+                Status = EntityStatus.Active
             });
 
         await owner.SaveChangesAsync(CancellationToken.None);
@@ -114,6 +138,14 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Development);
+
+        // ConfigureTestServices s'exécute APRÈS les enregistrements de Program.cs : le remplacement de
+        // service fonctionne, lui (contrairement à ConfigureAppConfiguration — voir plus bas).
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(Emails);
+        });
     }
 
     /// <summary>
@@ -135,6 +167,17 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     private void ApplyEnvironment()
     {
         Environment.SetEnvironmentVariable("ConnectionStrings__Default", AppConnectionString);
+
+        // NEUTRALISE la chaîne « Migrations ». L'API de test tourne en environnement Development et
+        // charge donc appsettings.Development.json, où cette chaîne pointe vers la base de
+        // développement RÉELLE du poste (localhost:5432). Or Program.cs s'en sert pour semer les
+        // comptes de démonstration au démarrage : sans cette ligne, chaque exécution des tests
+        // fonctionnels écrivait dans la vraie base du développeur au lieu de son conteneur — un
+        // effet de bord invisible tant que les deux schémas coïncidaient.
+        //
+        // Vidée, elle fait sauter le seeder (Program.cs ignore une chaîne vide) : ces tests posent
+        // eux-mêmes le jeu de données dont ils ont besoin, et rien d'autre.
+        Environment.SetEnvironmentVariable("ConnectionStrings__Migrations", string.Empty);
         Environment.SetEnvironmentVariable("Jwt__Issuer", Issuer);
         Environment.SetEnvironmentVariable("Jwt__Audience", Audience);
         Environment.SetEnvironmentVariable("Jwt__SigningKey", SigningKey);
@@ -148,7 +191,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         foreach (var key in new[]
                  {
-                     "ConnectionStrings__Default", "Jwt__Issuer", "Jwt__Audience", "Jwt__SigningKey",
+                     "ConnectionStrings__Default", "ConnectionStrings__Migrations",
+                     "Jwt__Issuer", "Jwt__Audience", "Jwt__SigningKey",
                      "Jwt__AccessTokenMinutes", "Auth__MaxFailedAttempts", "Auth__LockoutMinutes",
                      "Auth__RefreshTokenDays"
                  })
@@ -171,8 +215,23 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM user_status_history;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM refresh_tokens;");
+
+        // Écoles et comptes créés PAR les tests (ticket JGK-B01) : sans cette purge, une école créée
+        // dans un test resterait provisionnée et fausserait le suivant. Les utilisateurs d'abord :
+        // ils référencent les écoles.
+        await owner.Database.ExecuteSqlRawAsync(
+            $"""
+             DELETE FROM users
+             WHERE "Id" NOT IN ('{DirecteurId}', '{SecretaireId}', '{SuperAdminId}');
+             """);
+
+        await owner.Database.ExecuteSqlRawAsync(
+            $"""DELETE FROM schools WHERE "Id" <> '{EcoleId}';""");
+
         await owner.Database.ExecuteSqlRawAsync(
             """UPDATE users SET "Status" = 'Active', "AccessFailedCount" = 0, "LockoutEndAt" = NULL;""");
+
+        Emails.Clear();
     }
 
     /// <summary>Forge un token signé par la MÊME clé que l'API, mais déjà expiré.</summary>

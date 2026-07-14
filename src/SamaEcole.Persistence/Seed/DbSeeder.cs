@@ -103,6 +103,43 @@ public static class DbSeeder
             }
         }
 
+        // Classes des Baobabs (ticket JGK-C02). Sans elles, le formulaire de création d'élève
+        // s'ouvre sur un sélecteur de classes vide : rien ne serait créable au premier démarrage.
+        //
+        // Les ÉLÈVES, eux, ne sont volontairement pas semés : leurs matricules seraient posés en dur
+        // sans incrémenter matricule_sequences, et le premier élève créé depuis l'interface
+        // réclamerait un numéro déjà pris — violation d'unicité, pour un jeu de démonstration.
+        // La liste démarre donc vide, et le premier élève passe par le vrai parcours d'inscription.
+        var classrooms = new[]
+        {
+            new Classroom
+            {
+                Id = Guid.Parse("c0000001-0000-0000-0000-000000000001"),
+                SchoolId = BaobabsId, Name = "CM2 A", Level = "Primaire", Capacity = 40
+            },
+            new Classroom
+            {
+                Id = Guid.Parse("c0000002-0000-0000-0000-000000000002"),
+                SchoolId = BaobabsId, Name = "CI B", Level = "Primaire", Capacity = 35
+            }
+        };
+
+        foreach (var classroom in classrooms)
+        {
+            // IgnoreQueryFilters : Classroom est une ITenantEntity, son Global Query Filter compare
+            // SchoolId au tenant courant — or le seeder n'en a AUCUN. Sans cela, le test d'existence
+            // répondrait « absente » à chaque démarrage, et le second relancerait l'insertion pour se
+            // heurter à l'index unique. Le rôle propriétaire, lui, voit bien la ligne côté RLS.
+            var exists = await dbContext.Classrooms
+                .IgnoreQueryFilters()
+                .AnyAsync(c => c.Id == classroom.Id, cancellationToken);
+
+            if (!exists)
+            {
+                dbContext.Classrooms.Add(classroom);
+            }
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 

@@ -2,6 +2,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Persistence;
 using SamaEcole.Persistence.Auth;
 using SamaEcole.Persistence.Interceptors;
+using SamaEcole.Persistence.Schools;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -88,6 +89,9 @@ public sealed class RlsTestDatabase : IAsyncDisposable
     /// </summary>
     public AuthStore NewAuthStore(ApplicationDbContext dbContext, TimeProvider? timeProvider = null) =>
         new(dbContext, timeProvider ?? TimeProvider.System);
+
+    /// <summary>Provisionnement d'école (ticket JGK-B01), branché sur le rôle applicatif.</summary>
+    public SchoolProvisioningStore NewProvisioningStore(ApplicationDbContext dbContext) => new(dbContext);
 
     private async Task ExecuteAsOwnerAsync(string sql)
     {
