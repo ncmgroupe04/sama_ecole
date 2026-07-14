@@ -40,6 +40,14 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 concurrencyEx.Message,
                 null),
 
+            // Échec d'authentification (ticket JGK-A04). Message volontairement générique : il ne doit
+            // jamais permettre de distinguer un e-mail inconnu d'un mot de passe faux.
+            InvalidCredentialsException credentialsEx => (
+                HttpStatusCode.Unauthorized,
+                "INVALID_CREDENTIALS",
+                credentialsEx.Message,
+                null),
+
             UnauthorizedAccessException => (
                 HttpStatusCode.Forbidden,
                 "FORBIDDEN",

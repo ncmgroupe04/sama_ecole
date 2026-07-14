@@ -1,5 +1,6 @@
 using System.Text;
 using SamaEcole.Application;
+using SamaEcole.Application.Auth;
 using SamaEcole.Infrastructure;
 using SamaEcole.Persistence;
 using SamaEcole.Web.Middleware;
@@ -10,8 +11,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- Couches applicatives (Clean Architecture — docs/Volume_2_SDS.md) ---
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddPersistence(builder.Configuration);
+
+// Paramètres d'authentification (verrouillage, durée du refresh token) — ticket JGK-A04.
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Auth").Get<AuthSettings>() ?? new AuthSettings());
 
 // --- Authentification JWT (AGENTS.md — Décision D-07) ---
 var jwtSection = builder.Configuration.GetSection("Jwt");
@@ -19,6 +24,10 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Sans ceci, ASP.NET renomme `sub` en ClaimTypes.NameIdentifier : CurrentUserService, qui lit
+        // le claim brut `sub`, renverrait alors toujours null (ticket JGK-A04).
+        options.MapInboundClaims = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -27,8 +36,12 @@ builder.Services
             ValidAudience = jwtSection["Audience"],
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["SigningKey"]!)),
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30)
+            ValidateLifetime = true, // un token expiré -> 401 (critère du ticket JGK-A04)
+            ClockSkew = TimeSpan.FromSeconds(30),
+
+            // Les claims sont émis sous leurs noms bruts par JwtTokenGenerator.
+            NameClaimType = "sub",
+            RoleClaimType = "role"
         };
     });
 builder.Services.AddAuthorization();

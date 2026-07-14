@@ -49,7 +49,7 @@ public static class RlsGuard
                  SELECT tablename AS "Value"
                  FROM pg_tables
                  WHERE schemaname = 'public'
-                   AND tablename IN ('students', 'subscriptions', 'matricule_sequences')
+                   AND tablename IN ('students', 'subscriptions', 'matricule_sequences', 'users')
                    AND tableowner = current_user
                  """)
             .ToListAsync(cancellationToken);

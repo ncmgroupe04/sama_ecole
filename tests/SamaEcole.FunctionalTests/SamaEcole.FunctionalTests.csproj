@@ -14,6 +14,9 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageReference Include="FluentAssertions" Version="7.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.1" />
+    <!-- L'API démarre contre un vrai PostgreSQL : RlsGuard refuse de booter sans base, et les
+         policies RLS ne sont reproductibles par aucun double en mémoire (ticket JGK-A03/A04). -->
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.1.0" />
   </ItemGroup>
 
   <ItemGroup>

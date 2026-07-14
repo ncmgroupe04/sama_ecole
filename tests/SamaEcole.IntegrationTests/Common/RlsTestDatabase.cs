@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Persistence;
+using SamaEcole.Persistence.Auth;
 using SamaEcole.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -80,6 +81,13 @@ public sealed class RlsTestDatabase : IAsyncDisposable
 
     public MatriculeGenerator NewGenerator(ApplicationDbContext dbContext) =>
         new(dbContext, TimeProvider.System);
+
+    /// <summary>
+    /// AuthStore branché sur le rôle APPLICATIF et SANS tenant — exactement la situation du login :
+    /// la table users est sous RLS, seules les fonctions SECURITY DEFINER doivent lui donner accès.
+    /// </summary>
+    public AuthStore NewAuthStore(ApplicationDbContext dbContext, TimeProvider? timeProvider = null) =>
+        new(dbContext, timeProvider ?? TimeProvider.System);
 
     private async Task ExecuteAsOwnerAsync(string sql)
     {

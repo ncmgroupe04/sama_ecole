@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Persistence.Auth;
 using SamaEcole.Persistence.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -31,6 +32,10 @@ public static class DependencyInjection
         // AGENTS.md règle #3). TimeProvider est injecté pour rendre l'année du matricule testable.
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IMatriculeGenerator, MatriculeGenerator>();
+
+        // Chemin d'authentification (ticket JGK-A04) : passe par les fonctions SECURITY DEFINER,
+        // car la table users est sous RLS et le login s'exécute sans tenant.
+        services.AddScoped<IAuthStore, AuthStore>();
 
         return services;
     }

@@ -25,6 +25,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     // jamais manipulés à la main par un Handler. Volontairement absent d'IApplicationDbContext.
     public DbSet<MatriculeSequence> MatriculeSequences => Set<MatriculeSequence>();
 
+    // Refresh tokens : manipulés uniquement par AuthStore (ticket JGK-A04). Hors IApplicationDbContext,
+    // aucun Handler métier n'a de raison d'y toucher.
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
