@@ -68,6 +68,35 @@ window.api = {
         }
     },
 
+    /**
+     * Traduit une erreur d'API en messages affichables SOUS LES CHAMPS du formulaire.
+     *
+     * L'API renvoie `details` sous la forme d'un DICTIONNAIRE { "FullName": ["Le nom est
+     * obligatoire."] } — ExceptionHandlingMiddleware y place le dictionnaire Errors de
+     * FluentValidation. Les formulaires attendaient jusqu'ici un TABLEAU de { field, reason } : la
+     * condition Array.isArray() échouait donc toujours, et chaque erreur de saisie tombait dans le
+     * message générique « global ». Aucune erreur ne s'est jamais affichée sous son champ.
+     *
+     * Les clés sont mises en minuscules pour correspondre aux noms attendus par les vues
+     * (createErrors.fullname, createErrors.classroomid…).
+     */
+    toFieldErrors(error, fallbackMessage) {
+        const details = error && error.details;
+
+        if (details && typeof details === 'object' && !Array.isArray(details)) {
+            const errors = {};
+
+            Object.entries(details).forEach(([field, messages]) => {
+                errors[field.toLowerCase()] = Array.isArray(messages) ? messages[0] : String(messages);
+            });
+
+            if (Object.keys(errors).length > 0) return errors;
+        }
+
+        // Pas de détail par champ : conflit (409), règle métier, panne réseau… → message global.
+        return { global: (error && error.message) || fallbackMessage };
+    },
+
     /** Format d'erreur normalisé (docs/Volume_4_API_Design.md §0.4), ou corps vide pour un 401 du middleware JWT. */
     async toError(response) {
         const payload = await response.json().catch(() => null);

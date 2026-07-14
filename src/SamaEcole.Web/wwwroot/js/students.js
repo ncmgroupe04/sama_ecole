@@ -65,14 +65,8 @@ document.addEventListener('alpine:init', () => {
                 this.page = 1;
                 await this.loadStudents();
             } catch (err) {
-                // Formatage des erreurs normalisées (Volume 4)
-                if (err.details && Array.isArray(err.details)) {
-                    err.details.forEach(d => {
-                        this.createErrors[d.field.toLowerCase()] = d.reason;
-                    });
-                } else {
-                    this.createErrors['global'] = err.message || "Une erreur est survenue lors de la création.";
-                }
+                this.createErrors = window.api.toFieldErrors(
+                    err, "Une erreur est survenue lors de la création.");
             } finally {
                 this.isSubmitting = false;
             }

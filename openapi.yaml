@@ -211,9 +211,18 @@ paths:
   /classrooms:
     get:
       tags: [Classrooms]
-      summary: Lister les classes de l'année scolaire active
+      summary: Lister les classes de l'établissement courant
+      description: >-
+        L'établissement est déduit du JWT : il n'est jamais un paramètre. `studentCount` est
+        calculé côté base.
       responses:
-        '200': { description: Liste des classes }
+        '200':
+          description: Liste des classes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Classroom' }
     post:
       tags: [Classrooms]
       summary: Créer une classe (nomenclature libre, sans liste figée)
@@ -223,7 +232,17 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/ClassroomCreateRequest' }
       responses:
-        '201': { description: Classe créée }
+        '201':
+          description: Classe créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Classroom' }
+        '409':
+          description: Une classe de ce nom existe déjà dans cet établissement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /subjects:
     get:
@@ -678,13 +697,29 @@ components:
         startDate: { type: string, format: date }
         endDate: { type: string, format: date }
 
-    ClassroomCreateRequest:
+    Classroom:
       type: object
-      required: [name, level]
+      description: >-
+        `schoolId` ne figure volontairement pas : il est déduit du JWT, jamais transmis ni accepté
+        du client (AGENTS.md règle #10).
       properties:
+        id: { type: string, format: uuid }
         name: { type: string, example: "CM2 B" }
         level: { type: string, example: "Primaire" }
-        capacity: { type: integer }
+        capacity: { type: integer, example: 40 }
+        studentCount: { type: integer, example: 32, description: Effectif actuel, calculé côté base }
+
+    ClassroomCreateRequest:
+      type: object
+      required: [name, level, capacity]
+      description: >-
+        La nomenclature est LIBRE : ni `name` ni `level` ne suivent une liste figée. Une école
+        primaire, un collège et un lycée sénégalais ne nomment pas leurs classes de la même façon —
+        toute énumération exclurait des établissements.
+      properties:
+        name: { type: string, maxLength: 50, example: "CM2 B" }
+        level: { type: string, maxLength: 50, example: "Primaire" }
+        capacity: { type: integer, minimum: 1, maximum: 200, example: 40 }
 
     SubjectCreateRequest:
       type: object

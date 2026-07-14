@@ -43,13 +43,7 @@ document.addEventListener('alpine:init', () => {
                 this.newClassroom = { name: '', level: 'Primaire', capacity: 30 };
                 await this.loadClassrooms();
             } catch (err) {
-                if (err.details && Array.isArray(err.details)) {
-                    err.details.forEach(d => {
-                        this.createErrors[d.field.toLowerCase()] = d.reason;
-                    });
-                } else {
-                    this.createErrors['global'] = err.message || "Erreur lors de la création.";
-                }
+                this.createErrors = window.api.toFieldErrors(err, "Erreur lors de la création.");
             } finally {
                 this.isSubmitting = false;
             }
