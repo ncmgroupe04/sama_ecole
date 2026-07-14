@@ -1,17 +1,125 @@
+using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
+
 namespace SamaEcole.Persistence.Seed;
 
 /// <summary>
-/// Charge docs/seed-data.json — Development/Test UNIQUEMENT, jamais appelé en Production
-/// (vérifier IWebHostEnvironment.IsProduction() côté appelant, SamaEcole.Web/Program.cs).
-/// Implémentation à compléter avec le premier ticket qui en a besoin (ex. JGK-D01 pour tester
-/// l'isolation multi-tenant avec les deux écoles du jeu de données).
+/// Comptes et écoles de démonstration — Development/Test UNIQUEMENT, jamais en Production
+/// (l'appelant vérifie IWebHostEnvironment, voir SamaEcole.Web/Program.cs).
+///
+/// SE CONNECTE AVEC LE RÔLE PROPRIÉTAIRE (chaîne « Migrations »), et non avec le rôle applicatif.
+/// Ce n'est pas un raccourci : depuis la migration AddAuthentication, `users` est sous policy RLS, et
+/// le rôle applicatif n'y a accès QUE par les trois fonctions SECURITY DEFINER du chemin de login.
+/// Un INSERT direct depuis l'application échoue donc — « new row violates row-level security policy »
+/// — et c'est exactement le comportement voulu. Semer est une opération d'administration, au même
+/// titre qu'une migration : elle appartient au propriétaire.
+///
+/// Ne lit PAS docs/seed-data.json, contrairement à ce que prévoyait le squelette : ce fichier n'est
+/// pas exploitable en l'état. Ses identifiants ne sont pas des UUID valides (« u0000001-… »,
+/// « s1111111-… » : u et s ne sont pas des chiffres hexadécimaux), et la plupart de ses entités
+/// (classes, matières, enseignants, inscriptions) n'ont pas encore de table. On sème donc ici le
+/// strict sous-ensemble qui a une entité réelle — en gardant ses écoles, e-mails et rôles, pour que
+/// le jour où le fichier deviendra exploitable, rien ne change pour l'utilisateur.
+///
+/// Idempotent ligne à ligne : relancer l'application ne duplique ni n'écrase rien.
 /// </summary>
 public static class DbSeeder
 {
-    public static async Task SeedAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Mot de passe commun aux comptes de démonstration. Respecte la politique du Volume 7 §2
+    /// (12 caractères minimum, majuscule, minuscule, chiffre, caractère spécial) : le login vérifie
+    /// réellement le hash, un mot de passe trivial ne passerait pas la validation.
+    /// </summary>
+    public const string DemoPassword = "Motdepasse!Solide2026";
+
+    public static readonly Guid BaobabsId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    public static readonly Guid TerangaId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+    public static async Task SeedAsync(
+        string ownerConnectionString,
+        IPasswordHasher passwordHasher,
+        CancellationToken cancellationToken = default)
     {
-        // TODO : désérialiser docs/seed-data.json et insérer Schools/Users/Students/... si la
-        // base est vide. Respecter l'ordre des dépendances (Schools avant Users avant Students...).
-        await Task.CompletedTask;
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseNpgsql(ownerConnectionString) // Npgsql exclusivement — AGENTS.md règle #1.
+            .Options;
+
+        // Aucun tenant : ni School ni User n'est une ITenantEntity, aucun Global Query Filter ne
+        // s'applique donc à ce qui est semé ici.
+        await using var dbContext = new ApplicationDbContext(options, new NoTenantProvider());
+
+        // Deux écoles, et pas une : c'est ce qui permet de constater à la main que l'isolation
+        // multi-tenant fonctionne, sans avoir à monter un test.
+        var schools = new[]
+        {
+            new School
+            {
+                Id = BaobabsId,
+                Name = "École Primaire Les Baobabs",
+                Address = "Rue 12, Médina, Dakar",
+                Phone = "+221771234567",
+                Status = EntityStatus.Active
+            },
+            new School
+            {
+                Id = TerangaId,
+                Name = "Lycée Moderne Teranga",
+                Address = "Avenue Bourguiba, Dakar",
+                Phone = "+221779876543",
+                Status = EntityStatus.Active
+            }
+        };
+
+        foreach (var school in schools)
+        {
+            if (!await dbContext.Schools.AnyAsync(s => s.Id == school.Id, cancellationToken))
+            {
+                dbContext.Schools.Add(school);
+            }
+        }
+
+        // Hash calculé une seule fois : PBKDF2 est volontairement lent, le refaire par compte
+        // rallongerait le démarrage sans rien apporter.
+        var passwordHash = passwordHasher.Hash(DemoPassword);
+
+        var users = new[]
+        {
+            NewUser("directrice@baobabs.sn", "Fatou Ndiaye", Role.Directeur, BaobabsId, passwordHash),
+            NewUser("secretariat@baobabs.sn", "Moussa Diop", Role.Secretariat, BaobabsId, passwordHash),
+            NewUser("finance@baobabs.sn", "Aissatou Ba", Role.Finance, BaobabsId, passwordHash),
+            NewUser("enseignant@baobabs.sn", "Ibrahima Sarr", Role.Enseignant, BaobabsId, passwordHash),
+
+            // SchoolId null : le Super Admin n'appartient à aucun établissement (voir User.SchoolId).
+            NewUser("superadmin@sama-ecole.sn", "Super Admin Sama Ecole", Role.SuperAdmin, null, passwordHash)
+        };
+
+        foreach (var user in users)
+        {
+            if (!await dbContext.Users.AnyAsync(u => u.Email == user.Email, cancellationToken))
+            {
+                dbContext.Users.Add(user);
+            }
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static User NewUser(string email, string fullName, Role role, Guid? schoolId, string passwordHash) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            SchoolId = schoolId,
+            Email = email,
+            FullName = fullName,
+            Role = role,
+            PasswordHash = passwordHash,
+            Status = EntityStatus.Active
+        };
+
+    private sealed class NoTenantProvider : ITenantProvider
+    {
+        public Guid? CurrentSchoolId => null;
     }
 }

@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /*
+    Alpine ne retire l'attribut x-cloak qu'une fois initialisé. Sans cette règle, tout élément
+    x-show apparaît en clair pendant le chargement du script (bandeau d'erreur vide, indicateur de
+    chargement) puis disparaît : un clignotement visible sur une connexion lente.
+  */
+  [x-cloak] {
+    display: none !important;
+  }
+}
+
 /*
   Fichier source — ne jamais éditer wwwroot/css/site.css directement, c'est un fichier
   généré par `npm run build:css` (voir package.json et AGENTS.md).

@@ -1,8 +1,11 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using SamaEcole.Application;
 using SamaEcole.Application.Auth;
+using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Infrastructure;
 using SamaEcole.Persistence;
+using SamaEcole.Persistence.Seed;
 using SamaEcole.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -46,7 +49,16 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllersWithViews(); // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
+builder.Services
+    .AddControllersWithViews() // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
+    .AddJsonOptions(options =>
+    {
+        // Les énumérations circulent en CHAÎNES, pas en entiers : openapi.yaml les déclare ainsi
+        // (`status: { type: string, enum: [Active, Suspended, Blocked] }`, de même pour Role).
+        // Par défaut System.Text.Json sérialise un enum en nombre et REFUSE une chaîne en entrée —
+        // le contrat d'API n'était donc pas respecté, ni en lecture ni en écriture.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -64,6 +76,24 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    // Comptes de démonstration. Jamais en Production : le mot de passe est public (DbSeeder).
+    // Sans eux, une base fraîchement migrée n'a AUCUN utilisateur — et comme aucun endpoint de
+    // création de compte n'existe encore (JGK-B01), l'écran de connexion serait infranchissable.
+    //
+    // Semer exige le rôle PROPRIÉTAIRE : `users` est sous RLS, et le rôle applicatif n'y accède que
+    // par les fonctions du chemin de login (migration AddAuthentication). Sans chaîne « Migrations »
+    // configurée, on ne sème pas — c'est le cas des tests fonctionnels, qui sèment leur propre jeu.
+    var ownerConnectionString = builder.Configuration.GetConnectionString("Migrations");
+
+    if (!string.IsNullOrWhiteSpace(ownerConnectionString))
+    {
+        using var scope = app.Services.CreateScope();
+
+        await DbSeeder.SeedAsync(
+            ownerConnectionString,
+            scope.ServiceProvider.GetRequiredService<IPasswordHasher>());
+    }
 }
 
 // Traduit toute exception applicative en réponse HTTP normalisée

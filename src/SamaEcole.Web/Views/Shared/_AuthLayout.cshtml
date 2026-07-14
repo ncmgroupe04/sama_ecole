@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Sama Ecole</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    @* auth.js est un script CLASSIQUE, et Alpine est différé : tout script non différé s'exécute
+       avant tout script différé, quel que soit son emplacement. window.auth existe donc avant
+       qu'Alpine ne s'initialise, et l'écouteur alpine:init de auth.js est enregistré à temps. *@
+    <script src="~/js/auth.js" asp-append-version="true"></script>
+
+    @* Alpine est servi par NOUS, pas par un CDN. C'est cette page qui reçoit les mots de passe de
+       toutes les écoles : un script tiers, chargé depuis un domaine que nous ne contrôlons pas et
+       en version flottante (« 3.x.x » : n'importe quelle 3.x future, jamais relue), pourrait les
+       exfiltrer à la moindre compromission du CDN. Version figée, mise à jour par un commit. *@
+    <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen">
+    @RenderBody()
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

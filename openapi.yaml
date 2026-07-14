@@ -55,6 +55,12 @@ paths:
       responses:
         '200':
           description: Connexion réussie
+          headers:
+            Set-Cookie:
+              description: >-
+                Refresh token, `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`.
+                Seul canal par lequel ce jeton est délivré.
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthTokens' }
@@ -68,29 +74,37 @@ paths:
     post:
       tags: [Auth]
       summary: Renouvellement du token d'accès
+      description: >-
+        Sans corps de requête : le refresh token est lu dans le cookie `sama_ecole_refresh_token`,
+        que le navigateur joint automatiquement. Le jeton présenté est révoqué et remplacé
+        (rotation) ; un jeton déjà consommé qui serait rejoué révoque TOUTE la famille de jetons de
+        l'utilisateur. Le client doit donc sérialiser ses renouvellements concurrents.
       security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken: { type: string }
       responses:
         '200':
-          description: Nouveau couple de tokens
+          description: Nouveaux jetons — le cookie de refresh est remplacé
+          headers:
+            Set-Cookie:
+              description: Nouveau refresh token (l'ancien est révoqué).
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthTokens' }
+        '401':
+          description: Cookie absent, expiré, révoqué ou rejoué — le cookie est purgé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /auth/logout:
     post:
       tags: [Auth]
-      summary: Révocation du refresh token courant
+      summary: Révocation des refresh tokens de l'utilisateur courant
+      description: >-
+        Révoque TOUS les refresh tokens actifs de l'utilisateur (identifié par son JWT) et purge le
+        cookie. L'access token déjà émis reste valide jusqu'à son expiration : l'API est sans état.
       responses:
-        '204': { description: Déconnecté }
+        '204': { description: Déconnecté — le cookie de refresh est purgé }
 
   /users:
     get:
@@ -602,9 +616,13 @@ components:
 
     AuthTokens:
       type: object
+      description: >-
+        Le refresh token ne figure PAS ici : il n'est délivré que dans le cookie HttpOnly
+        `sama_ecole_refresh_token` (§1.1 du Volume 4). L'exposer aussi dans ce corps annulerait la
+        protection — un script injecté (XSS) appellerait /auth/refresh, dont le cookie part
+        automatiquement, et lirait le jeton dans la réponse.
       properties:
         accessToken: { type: string }
-        refreshToken: { type: string }
         expiresIn: { type: integer, example: 900 }
 
     User:
