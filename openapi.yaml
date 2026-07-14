@@ -194,19 +194,87 @@ paths:
   /school-years:
     get:
       tags: [SchoolYears]
-      summary: Lister les années scolaires
+      summary: Lister les années scolaires de l'établissement courant
+      description: >-
+        L'établissement est déduit du JWT : il n'est jamais un paramètre. Lecture ouverte à tous les
+        rôles — l'année active est le contexte de travail de tous les écrans. `isClosed` est calculé
+        à la lecture : une année terminée est en lecture seule.
       responses:
-        '200': { description: Liste des années scolaires }
+        '200':
+          description: Liste des années scolaires, la plus récente d'abord
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SchoolYear' }
     post:
       tags: [SchoolYears]
-      summary: Créer une nouvelle année scolaire
+      summary: Créer une nouvelle année scolaire (Directeur)
+      description: >-
+        Créer une année ne fait PAS basculer l'établissement dessus : elle est créée inactive, et le
+        basculement passe par `/school-years/{id}/activate`. Seule exception, la première année d'une
+        école devient active d'office — sans année active, rien n'est inscriptible. Une année déjà
+        terminée n'est jamais activée automatiquement.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/SchoolYearCreateRequest' }
       responses:
-        '201': { description: Année scolaire créée }
+        '201':
+          description: Année scolaire créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolYear' }
+        '403': { description: Réservé au Directeur }
+        '409':
+          description: Une année de ce libellé existe déjà dans cet établissement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /school-years/{id}/activate:
+    post:
+      tags: [SchoolYears]
+      summary: Faire de cette année l'année active (Directeur, double confirmation)
+      description: >-
+        Une seule année est active à la fois : l'année active précédente est désactivée dans la même
+        transaction, et l'unicité est garantie par un index PostgreSQL, pas seulement par
+        l'application. Une année TERMINÉE ne peut pas être activée (les années passées sont en
+        lecture seule) ; une année à venir, si. Le mot de passe du Directeur est redemandé
+        (Volume_7_Security §16 — « changement de l'année scolaire active »).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  format: password
+                  description: Mot de passe du Directeur connecté — confirmation de l'opération.
+      responses:
+        '200':
+          description: Année scolaire activée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolYear' }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Année scolaire introuvable dans cet établissement }
+        '422':
+          description: >-
+            Mot de passe de confirmation incorrect, ou année terminée (lecture seule).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /classrooms:
     get:
@@ -691,11 +759,39 @@ components:
 
     SchoolYearCreateRequest:
       type: object
+      description: >-
+        Pas de champ `isActive` : créer une année ne fait jamais basculer l'établissement dessus
+        (voir POST /school-years). Pas de `schoolId` non plus : il est déduit du JWT.
       required: [label, startDate, endDate]
       properties:
+        label:
+          type: string
+          maxLength: 20
+          example: "2026-2027"
+          description: Libellé d'affichage, format libre. Unique au sein de l'établissement.
+        startDate: { type: string, format: date }
+        endDate:
+          type: string
+          format: date
+          description: >-
+            Postérieure à `startDate`, et comprise entre 3 et 18 mois après elle — de quoi
+            intercepter la faute de frappe sur le millésime.
+
+    SchoolYear:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
         label: { type: string, example: "2026-2027" }
         startDate: { type: string, format: date }
         endDate: { type: string, format: date }
+        isActive:
+          type: boolean
+          description: Une seule année active par établissement, garantie par un index PostgreSQL.
+        isClosed:
+          type: boolean
+          description: >-
+            Calculé à la lecture (`endDate` dépassée), jamais stocké. Une année close est en lecture
+            seule : elle ne peut plus être activée.
 
     Classroom:
       type: object

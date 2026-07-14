@@ -1,0 +1,72 @@
+using SamaEcole.Application.SchoolYears;
+using SamaEcole.Application.SchoolYears.Commands.ActivateSchoolYear;
+using SamaEcole.Application.SchoolYears.Commands.CreateSchoolYear;
+using SamaEcole.Application.SchoolYears.Queries.GetSchoolYears;
+using SamaEcole.Domain.Enums;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace SamaEcole.Web.Controllers;
+
+/// <summary>
+/// Ticket JGK-C01 — /school-years (openapi.yaml). Contrôleur mince : aucune logique métier ici
+/// (AGENTS.md règle #8). L'école n'est jamais un paramètre de requête : elle vient du JWT (règle #10).
+/// </summary>
+[ApiController]
+[Route("api/v1/school-years")]
+[Authorize]
+public class SchoolYearsController(ISender mediator) : ControllerBase
+{
+    /// <summary>Corps du POST d'activation : la ressource est dans l'URL, le mot de passe confirme l'acte.</summary>
+    public record ActivateRequest(string Password);
+
+    /// <summary>
+    /// LECTURE ouverte à tout utilisateur de l'école : l'année active est le contexte de travail de
+    /// tous les écrans (inscriptions, frais, notes). La réserver au Directeur obligerait chaque autre
+    /// rôle à travailler sans savoir sur quel exercice il écrit.
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<SchoolYearDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> List(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetSchoolYearsQuery(), cancellationToken));
+
+    /// <summary>
+    /// ÉCRITURE réservée au Directeur : l'année scolaire est un paramètre d'établissement
+    /// (docs/Volume_7_Security.md §15 — « Informations, année scolaire, notation… : Directeur »).
+    /// </summary>
+    [HttpPost]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<SchoolYearDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Create(
+        [FromBody] CreateSchoolYearCommand command, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(command, cancellationToken);
+
+        return CreatedAtAction(nameof(List), new { id = result.Id }, result);
+    }
+
+    /// <summary>
+    /// Bascule de l'année active — Directeur, avec ressaisie du mot de passe
+    /// (docs/Volume_7_Security.md §16 : « changement de l'année scolaire active »).
+    ///
+    /// POST et non PUT : ce n'est pas le remplacement d'une représentation, c'est une action métier
+    /// qui en modifie DEUX ressources — l'année qui s'active, et celle qui se désactive.
+    /// </summary>
+    [HttpPost("{id:guid}/activate")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<SchoolYearDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Activate(
+        Guid id, [FromBody] ActivateRequest request, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new ActivateSchoolYearCommand(id, request.Password), cancellationToken);
+
+        return Ok(result);
+    }
+}

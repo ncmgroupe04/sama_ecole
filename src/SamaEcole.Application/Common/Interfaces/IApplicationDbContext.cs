@@ -12,6 +12,10 @@ public interface IApplicationDbContext
     DbSet<School> Schools { get; }
     DbSet<Student> Students { get; }
     DbSet<Classroom> Classrooms { get; }
+
+    /// <summary>Années scolaires (ticket JGK-C01) : le pivot des inscriptions, des frais et des bulletins.</summary>
+    DbSet<SchoolYear> SchoolYears { get; }
+
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
 

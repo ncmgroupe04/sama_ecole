@@ -229,6 +229,12 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // laissé une ligne de réglages sur l'école semée (ticket JGK-B02).
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_settings;");
 
+        // Idem pour les années scolaires (ticket JGK-C01) — et il ne s'agit pas seulement des écoles
+        // créées par les tests : une école n'a droit qu'à UNE année active. Sans cette purge, la
+        // première année créée par un test resterait active et le suivant, croyant créer sa première
+        // année, obtiendrait une année inactive. L'ordre d'exécution deviendrait significatif.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_years;");
+
         await owner.Database.ExecuteSqlRawAsync(
             $"""DELETE FROM schools WHERE "Id" <> '{EcoleId}';""");
 
