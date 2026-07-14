@@ -81,6 +81,13 @@ jobs:
       - name: Run integration tests (incl. isolation multi-tenant)
         run: dotnet test tests/SamaEcole.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=integration.trx"
 
+      # Les tests fonctionnels ne tournaient PAS en CI : les critères d'acceptation de JGK-A04
+      # (token expiré → 401, refresh token révoqué après logout, refresh token jamais exposé hors du
+      # cookie HttpOnly) n'étaient donc vérifiés que sur le poste du développeur qui y pensait.
+      # Comme les tests d'intégration, ils démarrent leur propre PostgreSQL via Testcontainers.
+      - name: Run functional tests (parcours HTTP réels, authentification)
+        run: dotnet test tests/SamaEcole.FunctionalTests --no-build --configuration Release --logger "trx;LogFileName=functional.trx"
+
       # Le test d'isolation est le garde-fou n°1 du multi-tenant : il doit RÉELLEMENT s'exécuter.
       # Un test ignoré (Skip) compte comme "réussi" pour dotnet test — on refuse donc explicitement
       # un run où aucun test MultiTenant n'a été exécuté.

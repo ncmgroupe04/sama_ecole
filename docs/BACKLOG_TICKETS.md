@@ -6,7 +6,11 @@ Chaque ticket est conçu pour être donné **seul, un par un**, à un agent de c
 
 > **État du squelette fourni** : `JGK-A01` (solution + projets) est fait. `JGK-D01` est fait : `IMatriculeGenerator` a désormais une implémentation PostgreSQL réelle (compteur par école, incrémenté dans la transaction d'enregistrement). `JGK-A03` est fait : RLS active sur `students`, `subscriptions`, `matricule_sequences`, avec un rôle applicatif dédié `sama_ecole_app` (`NOSUPERUSER`/`NOBYPASSRLS`) et le test d'isolation multi-tenant réellement exécuté en CI.
 >
-> **Reste ouvert sur l'isolation** : la table `users` n'a **pas** de policy RLS — le login cherche un utilisateur par e-mail avant de connaître son école, et `SchoolId` y est nullable (comptes plateforme). Elle demande une policy dédiée. Voir `docs/REPO_STRUCTURE.md` §État du squelette.
+> **Isolation — le trou est refermé** : la table `users` est **désormais sous policy RLS**, depuis la migration `AddAuthentication` (JGK-A04). Le problème qui la laissait ouverte — le login cherche un compte par e-mail *avant* de connaître son école, or une requête sans tenant ne voit aucune ligne sous RLS — n'est pas résolu en laissant la table ouverte, mais en réservant le contournement au seul chemin d'authentification : trois fonctions `SECURITY DEFINER` (chercher un compte par e-mail, par id, enregistrer une tentative de connexion) sur lesquelles le rôle applicatif reçoit `EXECUTE`, `EXECUTE` étant retiré à `PUBLIC`. Toute autre lecture de `users` reste soumise à la RLS.
+>
+> **Conséquence à connaître avant d'écrire du code** : le rôle applicatif ne peut PAS insérer dans `users` (« new row violates row-level security policy »). Toute création de compte hors du chemin de login — un seeder, un import — doit passer par le rôle propriétaire, celui des migrations. C'est voulu : ne pas le contourner.
+
+> **`docs/seed-data.json` n'est pas encore chargeable** : ses identifiants n'étaient pas des UUID valides et la majorité de ses entités (classes, matières, enseignants, inscriptions) n'ont pas encore de table. Les UUID sont corrigés, mais `DbSeeder` ne sème pour l'instant que les écoles et les utilisateurs — les seules entités qui existent.
 
 ---
 
