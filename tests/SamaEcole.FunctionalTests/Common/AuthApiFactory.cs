@@ -225,6 +225,10 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
              WHERE "Id" NOT IN ('{DirecteurId}', '{SecretaireId}', '{SuperAdminId}');
              """);
 
+        // Avant les écoles : school_settings les référence en Restrict, et un PUT de test aurait
+        // laissé une ligne de réglages sur l'école semée (ticket JGK-B02).
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_settings;");
+
         await owner.Database.ExecuteSqlRawAsync(
             $"""DELETE FROM schools WHERE "Id" <> '{EcoleId}';""");
 

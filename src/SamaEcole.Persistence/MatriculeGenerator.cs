@@ -1,14 +1,17 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Common;
+using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Persistence;
 
 /// <summary>
-/// Numérotation séquentielle par établissement (docs/Volume_1_Cahier_des_Charges.md §2.2) :
-///   - élèves      : ELEV-{année}-{séquence sur 4 chiffres}  — ex. ELEV-2026-0001
-///   - enseignants : ENS-{année}-{séquence sur 3 chiffres}   — ex. ENS-2026-001
+/// Numérotation séquentielle par établissement (docs/Volume_1_Cahier_des_Charges.md §2.2).
+///
+/// Le GABARIT vient des paramètres de l'école (ticket JGK-B02 : studentMatriculeFormat /
+/// teacherMatriculeFormat), il n'est plus codé en dur. Une école qui n'a pas encore touché à ses
+/// réglages retombe sur les valeurs par défaut — « ELEV-{YEAR}-{SEQ:4} », « ENS-{YEAR}-{SEQ:3} ».
 ///
 /// Concurrence : le compteur est incrémenté par un unique INSERT ... ON CONFLICT DO UPDATE
 /// ... RETURNING. PostgreSQL pose un verrou de ligne sur le compteur : deux inscriptions
@@ -22,26 +25,47 @@ namespace SamaEcole.Persistence;
 public class MatriculeGenerator(ApplicationDbContext dbContext, TimeProvider timeProvider) : IMatriculeGenerator
 {
     public Task<string> GenerateNextStudentMatriculeAsync(Guid schoolId, CancellationToken cancellationToken) =>
-        GenerateAsync(schoolId, MatriculeKind.Student, prefix: "ELEV", digits: 4, cancellationToken);
+        GenerateAsync(schoolId, MatriculeKind.Student, cancellationToken);
 
     public Task<string> GenerateNextTeacherMatriculeAsync(Guid schoolId, CancellationToken cancellationToken) =>
-        GenerateAsync(schoolId, MatriculeKind.Teacher, prefix: "ENS", digits: 3, cancellationToken);
+        GenerateAsync(schoolId, MatriculeKind.Teacher, cancellationToken);
 
     private async Task<string> GenerateAsync(
         Guid schoolId,
         MatriculeKind kind,
-        string prefix,
-        int digits,
         CancellationToken cancellationToken)
     {
+        var format = await ResolveFormatAsync(schoolId, kind, cancellationToken);
+
         // Année SCOLAIRE (bascule en octobre), pas année civile — voir AcademicYear.
-        // Le préfixe et le nombre de chiffres sont figés ici : leur personnalisation par
-        // établissement (docs/Volume_1_Cahier_des_Charges.md §2.2, paramètres de l'école)
-        // est un ticket distinct — ne pas la bricoler au cas par cas dans les Handlers.
         var year = AcademicYear.ForDate(timeProvider.GetUtcNow());
         var next = await NextValueAsync(schoolId, kind, year, cancellationToken);
 
-        return $"{prefix}-{year}-{next.ToString().PadLeft(digits, '0')}";
+        return MatriculeFormat.Render(format, year, next);
+    }
+
+    private async Task<string> ResolveFormatAsync(
+        Guid schoolId,
+        MatriculeKind kind,
+        CancellationToken cancellationToken)
+    {
+        // IgnoreQueryFilters + filtre explicite : le générateur est appelé dans la transaction
+        // d'inscription, où le tenant EST celui de l'école — mais aussi par le provisionnement, où
+        // le filtre global ne serait pas satisfait. On filtre donc soi-même, sans se reposer dessus.
+        var settings = await dbContext.SchoolSettings
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.SchoolId == schoolId && !s.IsDeleted, cancellationToken);
+
+        // Aucun réglage enregistré (école antérieure à JGK-B02) : on retombe sur les valeurs par
+        // défaut plutôt que d'échouer. Une inscription ne doit pas dépendre d'un écran de réglages
+        // que personne n'a encore ouvert.
+        return kind switch
+        {
+            MatriculeKind.Student => settings?.StudentMatriculeFormat ?? SchoolSettingsDefaults.StudentMatriculeFormat,
+            MatriculeKind.Teacher => settings?.TeacherMatriculeFormat ?? SchoolSettingsDefaults.TeacherMatriculeFormat,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Type de matricule inconnu.")
+        };
     }
 
     private async Task<int> NextValueAsync(

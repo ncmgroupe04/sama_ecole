@@ -18,6 +18,9 @@ public interface IApplicationDbContext
     /// <summary>Journal append-only des changements de statut (ticket JGK-A05) : on y AJOUTE, jamais plus.</summary>
     DbSet<UserStatusHistory> UserStatusHistory { get; }
 
+    /// <summary>Paramètres d'établissement (ticket JGK-B02).</summary>
+    DbSet<SchoolSettings> SchoolSettings { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>
