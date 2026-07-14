@@ -4,7 +4,7 @@ globs: src/**/*.cs
 alwaysApply: false
 ---
 
-- Respecter la Clean Architecture : `Jangalekat.Domain` ne dépend de rien ; `Jangalekat.Application` ne dépend que de `Domain` ; `Jangalekat.Infrastructure`/`Persistence` implémentent les interfaces d'`Application` ; `Jangalekat.Web` orchestre. Jamais de dépendance dans l'autre sens.
+- Respecter la Clean Architecture : `SamaEcole.Domain` ne dépend de rien ; `SamaEcole.Application` ne dépend que de `Domain` ; `SamaEcole.Infrastructure`/`Persistence` implémentent les interfaces d'`Application` ; `SamaEcole.Web` orchestre. Jamais de dépendance dans l'autre sens.
 - Aucune logique métier dans un `Controller` ni dans une entité EF Core — elle vit dans un Handler `Application` (`Commands`/`Queries` MediatR).
 - Toute entité métier hérite des champs d'audit (`CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`, `IsDeleted`) et porte un `Id` en UUID v7.
 - Toute entité rattachée à une école porte un `SchoolId` non nullable.

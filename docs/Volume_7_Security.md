@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 7 — Security Architecture Specification (SAS) & Matrice des Rôles et Permissions
 

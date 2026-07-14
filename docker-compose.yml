@@ -2,25 +2,32 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: jangalekat-postgres
+    container_name: sama-ecole-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER:-jangalekat}
+      # Rôle PROPRIÉTAIRE : migrations uniquement. Il est exempté de la RLS (propriétaire des tables),
+      # l'application ne doit JAMAIS s'en servir — ticket JGK-A03.
+      POSTGRES_USER: ${DB_USER:-sama_ecole}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
-      POSTGRES_DB: ${DB_NAME:-jangalekat_dev}
+      POSTGRES_DB: ${DB_NAME:-sama_ecole_dev}
+      # Rôle APPLICATIF, créé par le script d'init : NOSUPERUSER + NOBYPASSRLS, soumis aux policies.
+      DB_APP_USER: ${DB_APP_USER:-sama_ecole_app}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:-changeme_app}
     ports:
       - "5432:5432"
     volumes:
-      - jangalekat_pg_data:/var/lib/postgresql/data
+      - sama_ecole_pg_data:/var/lib/postgresql/data
+      # Joué par initdb sur un volume vierge seulement (`docker compose down -v` pour le rejouer).
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-jangalekat}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sama_ecole}"]
       interval: 5s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: jangalekat-redis
+    container_name: sama-ecole-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -28,20 +35,24 @@ services:
   api:
     build:
       context: .
-      dockerfile: src/Jangalekat.Web/Dockerfile
-    container_name: jangalekat-api
+      dockerfile: src/SamaEcole.Web/Dockerfile
+    container_name: sama-ecole-api
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Default: "Host=postgres;Database=${DB_NAME:-jangalekat_dev};Username=${DB_USER:-jangalekat};Password=${DB_PASSWORD:-changeme}"
-      Jwt__Issuer: "https://api.jangalekat.sn"
-      Jwt__Audience: "jangalekat-clients"
+      # Runtime = rôle applicatif (soumis à la RLS). Le démarrage échoue volontairement si ce rôle
+      # peut contourner la RLS — voir RlsGuard.
+      ConnectionStrings__Default: "Host=postgres;Database=${DB_NAME:-sama_ecole_dev};Username=${DB_APP_USER:-sama_ecole_app};Password=${DB_APP_PASSWORD:-changeme_app}"
+      # Migrations = rôle propriétaire, le seul qui puisse ALTER TABLE / CREATE POLICY.
+      ConnectionStrings__Migrations: "Host=postgres;Database=${DB_NAME:-sama_ecole_dev};Username=${DB_USER:-sama_ecole};Password=${DB_PASSWORD:-changeme}"
+      Jwt__Issuer: "https://api.sama-ecole.sn"
+      Jwt__Audience: "sama-ecole-clients"
       Jwt__SigningKey: "${JWT_SIGNING_KEY:-DEV_ONLY_INSECURE_KEY_CHANGE_ME_MINIMUM_32_CHARS}"
       Redis__ConnectionString: "redis:6379"
     ports:
       - "5000:8080"
 
 volumes:
-  jangalekat_pg_data:
+  sama_ecole_pg_data:

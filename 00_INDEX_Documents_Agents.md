@@ -1,6 +1,6 @@
-# JANGALEKAT — Dépôt complet pour IA codeuses
+# SAMA ECOLE — Dépôt complet pour IA codeuses
 
-Ce package contient **tout ce qu'il faut** pour démarrer le développement de Jangalekat avec Claude Code, Cursor ou Antigravity, en plus des 12 volumes de documentation fonctionnelle/technique déjà produits.
+Ce package contient **tout ce qu'il faut** pour démarrer le développement de Sama Ecole avec Claude Code, Cursor ou Antigravity, en plus des 12 volumes de documentation fonctionnelle/technique déjà produits.
 
 ## Ce qui a été ajouté et pourquoi
 
@@ -27,11 +27,11 @@ En complément du tableau ci-dessus, ont été ajoutés :
 
 | Fichier / dossier | Rôle | Comble quel manque |
 |---|---|---|
-| `Jangalekat.sln` + 9 `.csproj` réels | Solution .NET complète (5 projets `src`, 3 `tests`, 1 `tools`), références entre couches correctes | Un agent qui part d'une page blanche invente sa propre structure de projets ; celle-ci est déjà tranchée et cohérente avec `Volume_2_SDS.md` |
+| `SamaEcole.sln` + 9 `.csproj` réels | Solution .NET complète (5 projets `src`, 3 `tests`, 1 `tools`), références entre couches correctes | Un agent qui part d'une page blanche invente sa propre structure de projets ; celle-ci est déjà tranchée et cohérente avec `Volume_2_SDS.md` |
 | Module `Students/CreateStudent` complet (`Domain` + `Application` + `Persistence` + `Web` + test unitaire) | Pattern de référence de bout en bout | Sans exemple concret, chaque agent réinvente sa propre façon d'implémenter Command/Handler/Validator/Controller — source d'incohérence entre tickets |
 | `ApplicationDbContext` avec Global Query Filter générique | Applique automatiquement `SchoolId + IsDeleted` à toute entité `ITenantEntity` | Évite qu'un agent oublie le filtre sur une nouvelle table — un seul endroit à maintenir |
 | `ExceptionHandlingMiddleware` | Traduit toute exception en réponse HTTP normalisée (`Volume_4_API_Design.md` §0.4) | Sans lui, chaque contrôleur gérerait ses erreurs différemment |
-| `Dockerfile` (`Jangalekat.Web`) | Build réel de l'image, référencé par `docker-compose.yml` et `ci.yml` | Ces deux fichiers le référençaient déjà sans qu'il existe |
+| `Dockerfile` (`SamaEcole.Web`) | Build réel de l'image, référencé par `docker-compose.yml` et `ci.yml` | Ces deux fichiers le référençaient déjà sans qu'il existe |
 | `CONTRIBUTING.md` + `.github/PULL_REQUEST_TEMPLATE.md` | Process de contribution, checklist de Definition of Done par PR | Manquait pour cadrer le travail des agents PR par PR, au-delà des règles techniques d'`AGENTS.md` |
 
 **Limite assumée** : le SDK .NET et l'accès à NuGet ne sont pas disponibles dans l'environnement qui a généré ce package — les `.csproj`/`.sln` sont donc écrits à la main (format standard, non généré par `dotnet new`) et n'ont pas été compilés ici. Première étape recommandée chez toi : `dotnet restore && dotnet build` pour confirmer que tout compile, avant de lancer le premier ticket.

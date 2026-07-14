@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 2 — Software Design Specification (SDS)
 
@@ -24,7 +24,7 @@
 
 ### 1.1 Objectif
 
-Ce document définit l'architecture technique officielle de Jangalekat. Il constitue la référence pour développer, maintenir, faire évoluer et déployer l'application. Toute décision technique doit être conforme à ce document et au Volume 0.
+Ce document définit l'architecture technique officielle de Sama Ecole. Il constitue la référence pour développer, maintenir, faire évoluer et déployer l'application. Toute décision technique doit être conforme à ce document et au Volume 0.
 
 ### 1.2 Objectifs techniques
 
@@ -83,15 +83,15 @@ Toute bibliothèque additionnelle doit être validée par l'équipe technique av
 ### 3.2 Organisation des projets
 
 ```
-Jangalekat.sln
+SamaEcole.sln
 │
-├── Jangalekat.Domain          → Entités, interfaces, règles métier, Value Objects (aucune dépendance externe)
-├── Jangalekat.Application     → Cas d'utilisation, services applicatifs, DTO, validations, interfaces de repositories
-├── Jangalekat.Infrastructure  → EF Core (Npgsql), repositories, migrations, services techniques (PDF, email, fichiers, sauvegarde)
-├── Jangalekat.Web             → Contrôleurs MVC, vues Razor, contrôleurs API REST, authentification, fichiers statiques
-├── Jangalekat.Shared          → Constantes, énumérations, helpers, extensions
-├── Jangalekat.Tests           → Tests unitaires, intégration, fonctionnels (Volume 8)
-└── Jangalekat.Tools           → Scripts, outils d'import/export, outils de maintenance
+├── SamaEcole.Domain          → Entités, interfaces, règles métier, Value Objects (aucune dépendance externe)
+├── SamaEcole.Application     → Cas d'utilisation, services applicatifs, DTO, validations, interfaces de repositories
+├── SamaEcole.Infrastructure  → EF Core (Npgsql), repositories, migrations, services techniques (PDF, email, fichiers, sauvegarde)
+├── SamaEcole.Web             → Contrôleurs MVC, vues Razor, contrôleurs API REST, authentification, fichiers statiques
+├── Sama Ecole.Shared          → Constantes, énumérations, helpers, extensions
+├── Sama Ecole.Tests           → Tests unitaires, intégration, fonctionnels (Volume 8)
+└── SamaEcole.Tools           → Scripts, outils d'import/export, outils de maintenance
 ```
 
 ### 3.3 Règles fondamentales
@@ -99,7 +99,7 @@ Jangalekat.sln
 - Une couche ne peut jamais accéder à une couche supérieure ; les couches internes (Domain) ne dépendent jamais des couches externes.
 - Toutes les dépendances sont injectées via le conteneur d'Injection de Dépendances natif d'ASP.NET Core.
 - Aucun accès direct à la base de données depuis un contrôleur : tout passe par un service applicatif.
-- Toute logique métier réside dans `Jangalekat.Application`, jamais dans les contrôleurs ni dans les entités EF Core.
+- Toute logique métier réside dans `SamaEcole.Application`, jamais dans les contrôleurs ni dans les entités EF Core.
 
 ### 3.4 Diagramme global d'architecture
 
@@ -125,7 +125,7 @@ PostgreSQL (base unique, multi-tenant, hébergée cloud)
 ### 3.5 Diagramme des composants (modules)
 
 ```
-Jangalekat
+Sama Ecole
 ├── Authentification & Comptes
 ├── Tableau de bord
 ├── Paramètres Établissement

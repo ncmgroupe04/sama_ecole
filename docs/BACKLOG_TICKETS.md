@@ -1,10 +1,12 @@
-# Jangalekat — Backlog de tickets (prêt à l'emploi pour agents de code)
+# Sama Ecole — Backlog de tickets (prêt à l'emploi pour agents de code)
 
 Chaque ticket est conçu pour être donné **seul, un par un**, à un agent de code (Claude Code, Cursor, Antigravity). Format : ID (traçable à `Volume_1.5_PRD.md` et à la RTM de `Volume_8_Test_Strategy.md`), description courte, critères d'acceptation testables, dépendances. Priorité selon `Volume_1_Cahier_des_Charges.md` §6 : **C**ritique / **H**aute / **M**oyenne / **F**aible.
 
 > Règle d'usage : ne jamais donner plus de 2-3 tickets à la fois à un agent. Un ticket = une PR = une revue.
 
-> **État du squelette fourni** : `JGK-A01` (solution + projets) est déjà fait. `JGK-D01` (création élève) a un **pattern de référence** implémenté (`Students/Commands/CreateStudent`) mais incomplet — `IMatriculeGenerator` n'a pas d'implémentation réelle, à traiter en même temps que `JGK-A02`/`JGK-A03`. Voir `docs/REPO_STRUCTURE.md` §État du squelette.
+> **État du squelette fourni** : `JGK-A01` (solution + projets) est fait. `JGK-D01` est fait : `IMatriculeGenerator` a désormais une implémentation PostgreSQL réelle (compteur par école, incrémenté dans la transaction d'enregistrement). `JGK-A03` est fait : RLS active sur `students`, `subscriptions`, `matricule_sequences`, avec un rôle applicatif dédié `sama_ecole_app` (`NOSUPERUSER`/`NOBYPASSRLS`) et le test d'isolation multi-tenant réellement exécuté en CI.
+>
+> **Reste ouvert sur l'isolation** : la table `users` n'a **pas** de policy RLS — le login cherche un utilisateur par e-mail avant de connaître son école, et `SchoolId` y est nullable (comptes plateforme). Elle demande une policy dédiée. Voir `docs/REPO_STRUCTURE.md` §État du squelette.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Règles base de données, migrations EF Core, multi-tenant
-globs: src/Jangalekat.Persistence/**/*.cs,**/Migrations/**/*.cs
+globs: src/SamaEcole.Persistence/**/*.cs,**/Migrations/**/*.cs
 alwaysApply: false
 ---
 

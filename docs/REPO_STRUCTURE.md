@@ -1,9 +1,9 @@
-# Jangalekat — Structure du dépôt
+# Sama Ecole — Structure du dépôt
 
 Cette arborescence est déjà créée physiquement dans le dépôt (dossiers + README par projet). Un agent de code doit placer chaque fichier au bon endroit dès le départ — ne pas créer une structure parallèle.
 
 ```
-jangalekat/
+sama_ecole/
 ├── AGENTS.md                          # Fichier maître — à lire en premier
 ├── CLAUDE.md                          # Importe AGENTS.md (Claude Code)
 ├── GEMINI.md                          # Pointeur vers AGENTS.md (Antigravity)
@@ -43,26 +43,26 @@ jangalekat/
 │   ├── REPO_STRUCTURE.md              # Ce fichier
 │   └── design-references/             # Reçu, bulletin, dashboard — à reproduire à l'identique (README.md + images)
 │
-├── Jangalekat.sln                     # Solution — déjà initialisée, prête pour `dotnet restore`
+├── SamaEcole.sln                     # Solution — déjà initialisée, prête pour `dotnet restore`
 ├── CONTRIBUTING.md                    # Process de contribution (branches, commits, DoD)
 │
 ├── src/
-│   ├── Jangalekat.Domain/             # Entités, enums — zéro dépendance externe
+│   ├── SamaEcole.Domain/             # Entités, enums — zéro dépendance externe
 │   │   ├── Entities/                  # School.cs, Student.cs (pattern de référence)
 │   │   ├── Enums/                     # Role, EntityStatus, EnrollmentType, PaymentMethod...
 │   │   └── Common/                    # AuditableEntity, ITenantEntity
-│   ├── Jangalekat.Application/        # Commands/Queries MediatR, règles métier
+│   ├── SamaEcole.Application/        # Commands/Queries MediatR, règles métier
 │   │   ├── Common/Interfaces/         # IApplicationDbContext, ITenantProvider, IMatriculeGenerator...
 │   │   ├── Common/Behaviors/          # ValidationBehavior (pipeline MediatR)
 │   │   ├── Common/Exceptions/         # ValidationException (422), ConcurrencyConflictException (409)
 │   │   └── Students/Commands/CreateStudent/   # Pattern de référence complet — à dupliquer pour chaque ticket
-│   ├── Jangalekat.Infrastructure/      # Identity, email, PDF, résolution tenant
+│   ├── SamaEcole.Infrastructure/      # Identity, email, PDF, résolution tenant
 │   │   └── Multitenancy/              # TenantProvider, CurrentUserService (lecture des claims JWT)
-│   ├── Jangalekat.Persistence/         # EF Core + PostgreSQL uniquement
+│   ├── SamaEcole.Persistence/         # EF Core + PostgreSQL uniquement
 │   │   ├── Configurations/            # SchoolConfiguration, StudentConfiguration
 │   │   ├── Migrations/                # Vide intentionnellement — voir README.md du dossier
 │   │   └── Seed/                      # DbSeeder (à compléter avec docs/seed-data.json)
-│   └── Jangalekat.Web/                 # API + Razor — orchestration uniquement
+│   └── SamaEcole.Web/                 # API + Razor — orchestration uniquement
 │       ├── Controllers/               # StudentsController (pattern de référence)
 │       ├── Middleware/                # ExceptionHandlingMiddleware (format d'erreur normalisé)
 │       ├── Views/                     # Vues Razor (à créer au fil des tickets)
@@ -73,9 +73,9 @@ jangalekat/
 │       └── Dockerfile                 # Build CSS (Node) puis build .NET, en deux étapes
 │
 └── tests/
-    ├── Jangalekat.UnitTests/           # Ex. CreateStudentCommandValidatorTests
-    ├── Jangalekat.IntegrationTests/     # Catégorie obligatoire : MultiTenant (StudentIsolationTests, squelette à compléter)
-    └── Jangalekat.FunctionalTests/
+    ├── SamaEcole.UnitTests/           # Ex. CreateStudentCommandValidatorTests
+    ├── SamaEcole.IntegrationTests/     # Catégorie obligatoire : MultiTenant (StudentIsolationTests, squelette à compléter)
+    └── SamaEcole.FunctionalTests/
 ```
 
 ## État du squelette

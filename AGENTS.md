@@ -1,4 +1,4 @@
-# AGENTS.md — Jangalekat
+# AGENTS.md — Sama Ecole
 
 Plateforme SaaS de gestion scolaire (Sénégal). Backend ASP.NET Core 9 (C#), EF Core, PostgreSQL uniquement. Frontend ASP.NET Core MVC + Razor, API REST découplée, **Tailwind CSS** pour le style (Décision D-13). Multi-tenant par `SchoolId` + Row-Level Security PostgreSQL. 100 % en ligne — aucun mode local/LAN/offline.
 
@@ -11,24 +11,26 @@ dotnet restore
 dotnet build
 dotnet test                                    # tous les tests
 dotnet test --filter Category=MultiTenant      # test critique d'isolation (docs/Volume_8_Test_Strategy.md §5)
-dotnet ef migrations add <Nom> -p src/Jangalekat.Persistence -s src/Jangalekat.Web
-dotnet ef database update -p src/Jangalekat.Persistence -s src/Jangalekat.Web
+dotnet ef migrations add <Nom> -p src/SamaEcole.Persistence -s src/SamaEcole.Web
+dotnet ef database update -p src/SamaEcole.Persistence -s src/SamaEcole.Web
 docker compose up -d                           # Postgres + Redis en local
-npm install --prefix src/Jangalekat.Web        # dépendances Tailwind CSS
-npm run build:css --prefix src/Jangalekat.Web  # compile wwwroot/css/site.css depuis Tailwind
-npm run watch:css --prefix src/Jangalekat.Web  # recompile en continu pendant le développement
+npm install --prefix src/SamaEcole.Web        # dépendances Tailwind CSS
+npm run build:css --prefix src/SamaEcole.Web  # compile wwwroot/css/site.css depuis Tailwind
+npm run watch:css --prefix src/SamaEcole.Web  # recompile en continu pendant le développement
 ```
 
 ## Règles non négociables (ne jamais réinventer, ne jamais contourner)
 
 1. **Un seul moteur de BDD : PostgreSQL.** Jamais de SQLite, MySQL, ou code conditionnel multi-SGBD. → `docs/Volume_0_Vision_Architecture.md` §0.8.
 2. **Toute table métier porte un `SchoolId`** et est protégée par une policy RLS PostgreSQL **+** un Global Query Filter EF Core — les deux, jamais un seul. → `docs/Volume_3_DDS.md` §2.
+   - **Deux rôles PostgreSQL, jamais un seul** : l'application tourne avec `sama_ecole_app` (`NOSUPERUSER`, `NOBYPASSRLS`, propriétaire d'aucune table) ; le rôle propriétaire `sama_ecole` est réservé aux **migrations**. PostgreSQL exempte de RLS un superutilisateur, un rôle `BYPASSRLS` **et le propriétaire d'une table** : brancher l'application sur le propriétaire désactive l'isolation *sans aucun message d'erreur*. `RlsGuard` refuse le démarrage dans ce cas — ne le contournez pas.
+   - Toute nouvelle table tenant doit être ajoutée à `TenantTables` dans la migration RLS, sinon elle n'est protégée que par le filtre EF Core.
 3. **Le matricule (élève/enseignant) est généré uniquement dans la transaction d'enregistrement**, jamais à l'ouverture du formulaire. → `docs/Volume_1_Cahier_des_Charges.md` §2.1.
 4. **Le service Finance ne modifie jamais directement un montant issu d'une inscription.** Toute correction passe par Secrétariat/Admin et est historisée. → `docs/Volume_1_Cahier_des_Charges.md` §7.2.
 5. **Concurrence : verrouillage optimiste (`RowVersion`/`xmin`)** sur les tables sensibles (Notes, Paiements, Frais). Conflit → `409 Conflict`, jamais un écrasement silencieux.
 6. **Aucune suppression physique** de donnée métier. Toujours soft delete (`IsDeleted`, `DeletedAt`, `DeletedBy`).
 7. **CQRS via MediatR** : Commands pour l'écriture, Queries pour la lecture. Aucun service ne mélange les deux. → `docs/Volume_6_Dev_Guide.md` §5.
-8. **Aucune logique métier dans un contrôleur ni dans une entité EF Core.** Elle vit dans `Jangalekat.Application`.
+8. **Aucune logique métier dans un contrôleur ni dans une entité EF Core.** Elle vit dans `SamaEcole.Application`.
 9. **Toute erreur API suit le format normalisé** de `docs/Volume_4_API_Design.md` §0.4 — jamais une exception brute renvoyée au client.
 10. **JWT contient `sub`, `schoolId`, `role`.** Le `schoolId` ne se lit jamais depuis un paramètre de requête modifiable par le client.
 11. **Un paiement d'abonnement n'est confirmé que par un webhook signé (HMAC) de l'agrégateur** (PayDunya/CinetPay). Aucune route accessible au client ne positionne `SubscriptionPayments.Status = Confirmed`. Tant que `Subscriptions.Status = AwaitingPayment`, l'accès est restreint au strict paiement — voir `docs/Volume_7_Security.md` §12bis, ticket JGK-I04.
@@ -52,7 +54,7 @@ npm run watch:css --prefix src/Jangalekat.Web  # recompile en continu pendant le
 
 ## Squelette de code déjà en place
 
-La solution `.NET` (`Jangalekat.sln`, 5 projets `src/`, 3 projets `tests/`, 1 projet `tools/`) est déjà initialisée et compile une fois `dotnet restore` exécuté avec accès à NuGet. Le module `Students` (`CreateStudentCommand` + Handler + Validator + `StudentsController`) sert de **pattern de référence** à suivre pour tous les tickets de `docs/BACKLOG_TICKETS.md` : même structure Command/Handler/Validator, même gestion du tenant via `ITenantProvider`, même génération de matricule dans le Handler.
+La solution `.NET` (`SamaEcole.sln`, 5 projets `src/`, 3 projets `tests/`, 1 projet `tools/`) est déjà initialisée et compile une fois `dotnet restore` exécuté avec accès à NuGet. Le module `Students` (`CreateStudentCommand` + Handler + Validator + `StudentsController`) sert de **pattern de référence** à suivre pour tous les tickets de `docs/BACKLOG_TICKETS.md` : même structure Command/Handler/Validator, même gestion du tenant via `ITenantProvider`, même génération de matricule dans le Handler.
 
 ## Où trouver quoi (ne pas tout lire à chaque tâche — ouvrir le volume pertinent)
 

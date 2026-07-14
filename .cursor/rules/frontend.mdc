@@ -1,6 +1,6 @@
 ---
 description: Règles frontend Razor / Tailwind CSS / UI
-globs: src/Jangalekat.Web/Views/**/*.cshtml,src/Jangalekat.Web/wwwroot/**/*,src/Jangalekat.Web/tailwind.config.js
+globs: src/SamaEcole.Web/Views/**/*.cshtml,src/SamaEcole.Web/wwwroot/**/*,src/SamaEcole.Web/tailwind.config.js
 alwaysApply: false
 ---
 

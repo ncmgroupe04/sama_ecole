@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 4 — API Design Specification (ADS)
 

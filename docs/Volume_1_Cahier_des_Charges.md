@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 1 — Cahier des Charges Fonctionnel
 
@@ -353,6 +353,6 @@ Un seul paramètre global (`Paramètres → Format des dates`), appliqué à tou
 
 ### 12.2 Résultat attendu
 
-À l'issue de ce cahier des charges, Jangalekat couvre : administration, scolarité, inscriptions, bulletins, gestion pédagogique, gestion financière, gestion des abonnements multi-écoles, contrôle des accès, statistiques académiques et financières — adapté aux écoles maternelles, primaires, collèges, lycées et centres de formation du Sénégal, opérable entièrement en ligne.
+À l'issue de ce cahier des charges, Sama Ecole couvre : administration, scolarité, inscriptions, bulletins, gestion pédagogique, gestion financière, gestion des abonnements multi-écoles, contrôle des accès, statistiques académiques et financières — adapté aux écoles maternelles, primaires, collèges, lycées et centres de formation du Sénégal, opérable entièrement en ligne.
 
 **Fin du Volume 1.**

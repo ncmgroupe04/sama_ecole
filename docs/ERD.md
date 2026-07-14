@@ -1,4 +1,4 @@
-# Jangalekat — Diagramme Entité-Association (ERD)
+# Sama Ecole — Diagramme Entité-Association (ERD)
 
 Référence normative du schéma : `Volume_3_DDS.md`. Ce diagramme est une vue visuelle synthétique des entités cœur du MVP ; toute divergence avec le DDS doit être corrigée dans le DDS d'abord, puis répercutée ici.
 

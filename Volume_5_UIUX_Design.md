@@ -1,10 +1,10 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 5 — UI/UX Design Specification (UDS)
 
 **Version :** 2.0
 **Statut :** Document de référence — remplace la version 1.0
-**Changement principal :** le frontend cible est **exclusivement le web responsive** (ASP.NET Core MVC + Razor, Volume 0/2). Toute mention antérieure de WPF, .NET MAUI, Avalonia ou Blazor Hybrid — qui présupposait une application desktop installée — est retirée : Jangalekat est consulté depuis un navigateur, sur ordinateur, tablette ou smartphone.
+**Changement principal :** le frontend cible est **exclusivement le web responsive** (ASP.NET Core MVC + Razor, Volume 0/2). Toute mention antérieure de WPF, .NET MAUI, Avalonia ou Blazor Hybrid — qui présupposait une application desktop installée — est retirée : Sama Ecole est consulté depuis un navigateur, sur ordinateur, tablette ou smartphone.
 
 ---
 
@@ -40,7 +40,7 @@ Design system unique et partagé (couleurs, polices, espacements, icônes, bouto
 
 **Références visuelles exactes** : le reçu d'inscription, le bulletin de notes et le gabarit général de dashboard sont fournis en images dans `docs/design-references/` (+ description détaillée dans `docs/design-references/README.md`) et font foi — à reproduire à l'identique, sans réinterprétation. En cas de divergence entre ces références et les règles génériques ci-dessous, les références l'emportent.
 
-**Implémentation technique : Tailwind CSS** (décision D-13, Volume 0 §0.13). La palette, la typographie et les points de rupture ci-dessous doivent être déclarés une seule fois dans `tailwind.config.js` (thème étendu) et jamais recopiés en valeurs brutes dans les vues Razor — un agent qui a besoin de la couleur "Bleu institutionnel" utilise la classe utilitaire correspondante (ex. `bg-primary`), jamais un code hexadécimal en dur. Voir `docs/REPO_STRUCTURE.md` pour l'emplacement du fichier de configuration dans `Jangalekat.Web`.
+**Implémentation technique : Tailwind CSS** (décision D-13, Volume 0 §0.13). La palette, la typographie et les points de rupture ci-dessous doivent être déclarés une seule fois dans `tailwind.config.js` (thème étendu) et jamais recopiés en valeurs brutes dans les vues Razor — un agent qui a besoin de la couleur "Bleu institutionnel" utilise la classe utilitaire correspondante (ex. `bg-primary`), jamais un code hexadécimal en dur. Voir `docs/REPO_STRUCTURE.md` pour l'emplacement du fichier de configuration dans `SamaEcole.Web`.
 
 ### 2.1 Palette de couleurs
 
@@ -160,7 +160,7 @@ Chaque composant doit documenter ses états : par défaut, survol, focus, désac
 
 ## 9. Résilience réseau côté interface
 
-Puisque Jangalekat est en ligne par conception (Volume 0 §0.8), l'interface doit gérer explicitement la qualité de connexion :
+Puisque Sama Ecole est en ligne par conception (Volume 0 §0.8), l'interface doit gérer explicitement la qualité de connexion :
 
 - Indicateur discret dans la barre d'état : connecté / connexion instable / hors ligne.
 - En cas de coupure courte pendant une saisie : le formulaire reste rempli, une bannière indique « Connexion perdue — nouvel envoi automatique dès la reconnexion », et l'envoi est retenté automatiquement sans perte de saisie.

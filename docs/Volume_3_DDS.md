@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 3 — Database Design Specification (DDS)
 
@@ -28,7 +28,7 @@
 
 ### 1.1 Objectif
 
-Ce document décrit de façon exhaustive la structure physique de la base de données PostgreSQL de Jangalekat : tables, colonnes, types, clés, index, contraintes, relations. Il est directement exploitable pour générer les migrations Entity Framework Core.
+Ce document décrit de façon exhaustive la structure physique de la base de données PostgreSQL de Sama Ecole : tables, colonnes, types, clés, index, contraintes, relations. Il est directement exploitable pour générer les migrations Entity Framework Core.
 
 ### 1.2 Moteur unique
 
@@ -78,7 +78,7 @@ CREATE POLICY tenant_isolation ON "Students"
     USING ("SchoolId" = current_setting('app.current_school_id')::uuid);
 ```
 
-À chaque requête, le backend positionne `app.current_school_id` via `SET LOCAL` au début de la transaction, à partir de l'identité de l'utilisateur authentifié. Un rôle applicatif dédié (`jangalekat_app`) n'a **aucun privilège `BYPASSRLS`**.
+À chaque requête, le backend positionne `app.current_school_id` via `SET LOCAL` au début de la transaction, à partir de l'identité de l'utilisateur authentifié. Un rôle applicatif dédié (`sama_ecole_app`) n'a **aucun privilège `BYPASSRLS`**.
 
 **Barrière 2 — Global Query Filter Entity Framework Core (barrière applicative, ergonomique pour le développeur)**
 

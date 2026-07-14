@@ -1,0 +1,37 @@
+using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Persistence.Interceptors;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace SamaEcole.Persistence;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
+    {
+        // ConnectionStrings:Default = rôle APPLICATIF (sama_ecole_app), soumis à la RLS.
+        // Les migrations utilisent ConnectionStrings:Migrations (rôle propriétaire) — voir
+        // DesignTimeDbContextFactory. Ne jamais faire tourner l'application avec le rôle
+        // propriétaire : PostgreSQL exempte le propriétaire d'une table de ses policies RLS.
+        var connectionString = configuration.GetConnectionString("Default")
+            ?? throw new InvalidOperationException("ConnectionStrings:Default est manquant. Voir .env.example.");
+
+        services.AddScoped<TenantConnectionInterceptor>();
+
+        services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
+            options
+                .UseNpgsql(connectionString) // Npgsql exclusivement — AGENTS.md règle #1.
+                .AddInterceptors(serviceProvider.GetRequiredService<TenantConnectionInterceptor>()));
+
+        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+
+        // Numérotation par école, incrémentée dans la transaction d'enregistrement (ticket JGK-D01,
+        // AGENTS.md règle #3). TimeProvider est injecté pour rendre l'année du matricule testable.
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<IMatriculeGenerator, MatriculeGenerator>();
+
+        return services;
+    }
+}

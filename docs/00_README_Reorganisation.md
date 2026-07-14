@@ -1,4 +1,4 @@
-# JANGALEKAT — Documentation v2.0
+# SAMA ECOLE — Documentation v2.0
 ## Index et note de réorganisation
 
 **Date :** Juillet 2026
@@ -8,7 +8,7 @@
 
 ## 1. Ce qui a changé, en une phrase
 
-Jangalekat n'est plus une application Offline-First évoluant progressivement vers le SaaS. C'est désormais **une plateforme SaaS cloud, en ligne dès le premier jour, multi-tenant, sur un socle technique unique**. Le détail complet des arbitrages se trouve dans le **Journal des décisions au Volume 0, §0.13**.
+Sama Ecole n'est plus une application Offline-First évoluant progressivement vers le SaaS. C'est désormais **une plateforme SaaS cloud, en ligne dès le premier jour, multi-tenant, sur un socle technique unique**. Le détail complet des arbitrages se trouve dans le **Journal des décisions au Volume 0, §0.13**.
 
 ## 2. Les trois problèmes corrigés
 

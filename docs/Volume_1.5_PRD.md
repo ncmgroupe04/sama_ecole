@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 1.5 — Product Requirements Document (PRD)
 
@@ -27,7 +27,7 @@
 
 ### 1.1 Contexte
 
-De nombreux établissements scolaires utilisent encore des cahiers, des fichiers Excel ou plusieurs logiciels distincts pour gérer les inscriptions, les notes, les paiements et les bulletins, ce qui entraîne erreurs, pertes d'information et charge administrative importante. Jangalekat centralise ces activités dans une seule application accessible en ligne.
+De nombreux établissements scolaires utilisent encore des cahiers, des fichiers Excel ou plusieurs logiciels distincts pour gérer les inscriptions, les notes, les paiements et les bulletins, ce qui entraîne erreurs, pertes d'information et charge administrative importante. Sama Ecole centralise ces activités dans une seule application accessible en ligne.
 
 ### 1.2 Vision
 

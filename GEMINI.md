@@ -1,4 +1,4 @@
-# GEMINI.md — Jangalekat (Antigravity)
+# GEMINI.md — Sama Ecole (Antigravity)
 
 Antigravity : le fichier de référence de ce projet est **`AGENTS.md`** à la racine du dépôt. Lis-le intégralement avant toute tâche — il contient la stack, les commandes, les règles non négociables et l'index des volumes de documentation dans `/docs`.
 

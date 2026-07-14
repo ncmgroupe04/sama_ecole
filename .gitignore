@@ -14,7 +14,7 @@ appsettings.*.Local.json
 # --- Frontend / outillage ---
 node_modules/
 wwwroot/dist/
-src/Jangalekat.Web/wwwroot/css/site.css
+src/SamaEcole.Web/wwwroot/css/site.css
 
 # --- IDE ---
 .idea/
@@ -23,7 +23,7 @@ src/Jangalekat.Web/wwwroot/css/site.css
 # --- Logs & données locales ---
 *.log
 logs/
-jangalekat_pg_data/
+sama_ecole_pg_data/
 
 # --- OS ---
 .DS_Store

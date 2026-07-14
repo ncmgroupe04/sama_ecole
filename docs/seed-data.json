@@ -28,7 +28,7 @@
     { "id": "u0000002-0000-0000-0000-000000000002", "schoolId": "11111111-1111-1111-1111-111111111111", "fullName": "Moussa Diop", "email": "secretariat@baobabs.sn", "role": "Secretariat", "status": "Active" },
     { "id": "u0000003-0000-0000-0000-000000000003", "schoolId": "11111111-1111-1111-1111-111111111111", "fullName": "Aissatou Ba", "email": "finance@baobabs.sn", "role": "Finance", "status": "Active" },
     { "id": "u0000004-0000-0000-0000-000000000004", "schoolId": "11111111-1111-1111-1111-111111111111", "fullName": "Ibrahima Sarr", "email": "enseignant@baobabs.sn", "role": "Enseignant", "status": "Active" },
-    { "id": "u0000005-0000-0000-0000-000000000005", "schoolId": null, "fullName": "Super Admin Jangalekat", "email": "superadmin@jangalekat.sn", "role": "SuperAdmin", "status": "Active" }
+    { "id": "u0000005-0000-0000-0000-000000000005", "schoolId": null, "fullName": "Super Admin Sama Ecole", "email": "superadmin@sama-ecole.sn", "role": "SuperAdmin", "status": "Active" }
   ],
 
   "schoolYears": [

@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 ## Documentation Technique et Fonctionnelle — Système de Gestion Scolaire
 
 # VOLUME 0 — Vision Produit & Décisions d'Architecture
@@ -29,7 +29,7 @@
 
 ## 0.1 Présentation du projet
 
-**Jangalekat** est un logiciel professionnel de gestion scolaire conçu pour répondre aux besoins des établissements d'enseignement du Sénégal, avec une architecture évolutive permettant une adaptation à d'autres pays d'Afrique de l'Ouest.
+**Sama Ecole** est un logiciel professionnel de gestion scolaire conçu pour répondre aux besoins des établissements d'enseignement du Sénégal, avec une architecture évolutive permettant une adaptation à d'autres pays d'Afrique de l'Ouest.
 
 Le projet est développé comme une **plateforme SaaS multi-écoles accessible en ligne**, hébergée sur un serveur cloud, accessible par navigateur (et plus tard par application mobile) depuis n'importe quel poste connecté à Internet.
 
@@ -57,7 +57,7 @@ Construire une solution de gestion scolaire :
 - accessible partout, à tout moment, depuis n'importe quel appareil connecté ;
 - évolutive vers plusieurs pays et plusieurs milliers d'écoles.
 
-L'objectif est que Jangalekat puisse être utilisé aussi bien par une petite école primaire que par un groupe scolaire comprenant plusieurs établissements, sur une seule plateforme partagée.
+L'objectif est que Sama Ecole puisse être utilisé aussi bien par une petite école primaire que par un groupe scolaire comprenant plusieurs établissements, sur une seule plateforme partagée.
 
 ## 0.3 Mission
 
@@ -132,7 +132,7 @@ Pourquoi :
 
 **Entity Framework Core** — et uniquement Entity Framework Core.
 
-> Toute référence à SQLAlchemy (Python) dans une version antérieure du cahier des charges est une erreur de cohérence et est supprimée. Jangalekat est un projet .NET de bout en bout.
+> Toute référence à SQLAlchemy (Python) dans une version antérieure du cahier des charges est une erreur de cohérence et est supprimée. Sama Ecole est un projet .NET de bout en bout.
 
 ### Base de données
 
@@ -195,7 +195,7 @@ Détails complets : Volume 3, chapitre « Stratégie Multi-Tenant ».
 
 ### CSS / Design system
 
-**Tailwind CSS** (décision définitive, tranchée en juillet 2026 — voir Journal des décisions D-13). Choisi plutôt que Bootstrap car purement utilitaire : il permet d'implémenter fidèlement le design system du Volume 5 sans avoir à surcharger des styles de composants imposés par défaut. Compilation via Tailwind CLI/PostCSS, intégrée à `Jangalekat.Web` (voir `docs/REPO_STRUCTURE.md`).
+**Tailwind CSS** (décision définitive, tranchée en juillet 2026 — voir Journal des décisions D-13). Choisi plutôt que Bootstrap car purement utilitaire : il permet d'implémenter fidèlement le design system du Volume 5 sans avoir à surcharger des styles de composants imposés par défaut. Compilation via Tailwind CLI/PostCSS, intégrée à `SamaEcole.Web` (voir `docs/REPO_STRUCTURE.md`).
 
 ### Hébergement & Déploiement
 

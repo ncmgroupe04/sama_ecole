@@ -1,4 +1,4 @@
-# Jangalekat — Backlog de tickets (prêt à l'emploi pour agents de code)
+# Sama Ecole — Backlog de tickets (prêt à l'emploi pour agents de code)
 
 Chaque ticket est conçu pour être donné **seul, un par un**, à un agent de code (Claude Code, Cursor, Antigravity). Format : ID (traçable à `Volume_1.5_PRD.md` et à la RTM de `Volume_8_Test_Strategy.md`), description courte, critères d'acceptation testables, dépendances. Priorité selon `Volume_1_Cahier_des_Charges.md` §6 : **C**ritique / **H**aute / **M**oyenne / **F**aible.
 

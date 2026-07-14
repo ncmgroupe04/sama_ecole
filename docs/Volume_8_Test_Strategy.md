@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 8 — Test Strategy & Quality Assurance (TSQA)
 
@@ -28,7 +28,7 @@
 
 ## 1. Objectif
 
-Garantir que chaque version de Jangalekat est fiable, stable, sécurisée, performante et conforme au cahier des charges (Volume 1) et aux spécifications techniques (Volumes 2 à 7). Aucune fonctionnalité n'est mise en production sans avoir été testée.
+Garantir que chaque version de Sama Ecole est fiable, stable, sécurisée, performante et conforme au cahier des charges (Volume 1) et aux spécifications techniques (Volumes 2 à 7). Aucune fonctionnalité n'est mise en production sans avoir été testée.
 
 ## 2. Stratégie globale
 
@@ -56,7 +56,7 @@ Valident les interactions entre modules : Inscription → Finance, Élèves → 
 Pour **chaque** entité portant `SchoolId`, un test d'intégration automatisé vérifie :
 
 1. Un utilisateur authentifié de l'école A ne peut lire aucune ligne de l'école B, même par ID direct (`GET /students/{id}` d'un élève de B avec un token de A → `404`, jamais `403`, pour ne pas révéler l'existence de la ressource).
-2. Une requête SQL brute exécutée avec le rôle applicatif `jangalekat_app` (sans `BYPASSRLS`) ne retourne que les lignes de l'école courante, **même si le Global Query Filter EF Core est désactivé manuellement dans le test** — ce qui prouve que la Row-Level Security PostgreSQL (Volume 3 §2.2) constitue bien une barrière indépendante et non un doublon cosmétique.
+2. Une requête SQL brute exécutée avec le rôle applicatif `sama_ecole_app` (sans `BYPASSRLS`) ne retourne que les lignes de l'école courante, **même si le Global Query Filter EF Core est désactivé manuellement dans le test** — ce qui prouve que la Row-Level Security PostgreSQL (Volume 3 §2.2) constitue bien une barrière indépendante et non un doublon cosmétique.
 
 Ce test est exécuté à **chaque** pipeline CI/CD, pas seulement en recette manuelle, et bloque le merge en cas d'échec.
 

@@ -1,10 +1,10 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 6 — Development Guide & Coding Standards (DGCS)
 
 **Version :** 2.0
 **Statut :** Constitution technique du projet — remplace la version 1.0
-**Changements de cette version :** un seul moteur de base de données (PostgreSQL) — suppression du chapitre « migrations multi-moteurs » ; suppression du projet `Jangalekat.Desktop` de l'organisation des dossiers (aucune application desktop n'est prévue, voir Volume 0 v2.0) ; ajout d'un renvoi explicite vers le Volume 3 §2 pour tout code touchant à l'isolation multi-tenant.
+**Changements de cette version :** un seul moteur de base de données (PostgreSQL) — suppression du chapitre « migrations multi-moteurs » ; suppression du projet `Sama Ecole.Desktop` de l'organisation des dossiers (aucune application desktop n'est prévue, voir Volume 0 v2.0) ; ajout d'un renvoi explicite vers le Volume 3 §2 pour tout code touchant à l'isolation multi-tenant.
 
 ---
 
@@ -26,7 +26,7 @@
 
 ## 1. Vision du développement et stack officielle
 
-Le développement de Jangalekat respecte : architecture modulaire, code maintenable, forte séparation des responsabilités, sécurité par défaut, évolutivité, performances élevées. Jangalekat n'est jamais développé comme une simple application CRUD — chaque module encapsule de vraies règles métier (Volume 2).
+Le développement de Sama Ecole respecte : architecture modulaire, code maintenable, forte séparation des responsabilités, sécurité par défaut, évolutivité, performances élevées. Sama Ecole n'est jamais développé comme une simple application CRUD — chaque module encapsule de vraies règles métier (Volume 2).
 
 ### Stack technologique officielle (définitive)
 
@@ -55,20 +55,20 @@ Le développement de Jangalekat respecte : architecture modulaire, code maintena
 
 ```
 src/
-├── Jangalekat.Domain            → Entités, Value Objects, énumérations, interfaces, événements métier (aucune dépendance externe)
-├── Jangalekat.Application       → Use Cases (CQRS/MediatR), DTO, Validators, règles métier applicatives
-├── Jangalekat.Infrastructure    → Email, PDF, Excel, notifications, QR Code, chiffrement, intégrations externes
-├── Jangalekat.Persistence       → DbContext, configurations EF Core, migrations, seeders, repositories
-├── Jangalekat.Web               → Controllers API + Controllers MVC/Razor, middlewares, Swagger, authentification
+├── SamaEcole.Domain            → Entités, Value Objects, énumérations, interfaces, événements métier (aucune dépendance externe)
+├── SamaEcole.Application       → Use Cases (CQRS/MediatR), DTO, Validators, règles métier applicatives
+├── SamaEcole.Infrastructure    → Email, PDF, Excel, notifications, QR Code, chiffrement, intégrations externes
+├── SamaEcole.Persistence       → DbContext, configurations EF Core, migrations, seeders, repositories
+├── SamaEcole.Web               → Controllers API + Controllers MVC/Razor, middlewares, Swagger, authentification
 tests/
-├── Jangalekat.UnitTests
-├── Jangalekat.IntegrationTests
-└── Jangalekat.FunctionalTests
+├── SamaEcole.UnitTests
+├── SamaEcole.IntegrationTests
+└── SamaEcole.FunctionalTests
 tools/
-└── Jangalekat.Tools             → scripts d'import, outils de maintenance
+└── SamaEcole.Tools             → scripts d'import, outils de maintenance
 ```
 
-> Le projet `Jangalekat.Desktop` présent dans une version antérieure de ce document est supprimé : il présupposait une application installée localement, incompatible avec le pivot cloud (Volume 0 v2.0). `Jangalekat.Web` héberge à la fois l'API REST et les vues Razor du back-office — un seul déploiement, pas deux binaires à maintenir.
+> Le projet `Sama Ecole.Desktop` présent dans une version antérieure de ce document est supprimé : il présupposait une application installée localement, incompatible avec le pivot cloud (Volume 0 v2.0). `SamaEcole.Web` héberge à la fois l'API REST et les vues Razor du back-office — un seul déploiement, pas deux binaires à maintenir.
 
 ### Rôle de chaque projet
 

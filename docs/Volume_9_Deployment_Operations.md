@@ -1,4 +1,4 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 9 — Deployment & Operations Guide (DOG)
 
@@ -28,7 +28,7 @@
 
 ## 1. Objectif
 
-Définir les procédures d'installation, de déploiement, de maintenance, de mise à jour, de sauvegarde et d'exploitation de Jangalekat en tant que **plateforme cloud unique**, servant toutes les écoles clientes simultanément.
+Définir les procédures d'installation, de déploiement, de maintenance, de mise à jour, de sauvegarde et d'exploitation de Sama Ecole en tant que **plateforme cloud unique**, servant toutes les écoles clientes simultanément.
 
 > Ce document remplace la version 1.0, qui couvrait trois modes de déploiement (Local/LAN/SaaS) avec une base de code unique mais trois architectures cibles. Cette complexité disparaît entièrement (Volume 0 v2.0) : il n'y a plus qu'une seule architecture cible à opérer, ce qui réduit fortement la surface de risque opérationnel.
 

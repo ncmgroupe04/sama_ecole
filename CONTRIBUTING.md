@@ -1,4 +1,4 @@
-# Contribuer à Jangalekat
+# Contribuer à Sama Ecole
 
 Ce guide s'adresse aussi bien aux développeurs humains qu'aux agents de code (Claude Code, Cursor, Antigravity). Pour les règles techniques détaillées, voir `AGENTS.md` — ce document couvre le processus de contribution.
 

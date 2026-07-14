@@ -14,12 +14,12 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: jangalekat_test
+          POSTGRES_USER: sama_ecole_test
           POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: jangalekat_test
+          POSTGRES_DB: sama_ecole_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U jangalekat_test"
+          --health-cmd "pg_isready -U sama_ecole_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -39,17 +39,62 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run unit tests
-        run: dotnet test tests/Jangalekat.UnitTests --no-build --configuration Release --logger "trx;LogFileName=unit.trx"
-
-      - name: Run integration tests (incl. isolation multi-tenant)
+      # Rôle applicatif : NOSUPERUSER + NOBYPASSRLS, propriétaire d'aucune table. C'est lui qui doit
+      # subir les policies RLS (ticket JGK-A03). Le service postgres de GitHub n'exécute pas les
+      # scripts docker-entrypoint-initdb.d, on le crée donc explicitement.
+      - name: Créer le rôle applicatif (non-superuser, sans BYPASSRLS)
         env:
-          ConnectionStrings__Default: "Host=localhost;Port=5432;Database=jangalekat_test;Username=jangalekat_test;Password=test_password"
-        run: dotnet test tests/Jangalekat.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=integration.trx"
-
-      - name: Vérifier la couverture du test d'isolation multi-tenant
+          PGPASSWORD: test_password
         run: |
-          dotnet test tests/Jangalekat.IntegrationTests --filter Category=MultiTenant --no-build --configuration Release
+          psql -h localhost -U sama_ecole_test -d sama_ecole_test -v ON_ERROR_STOP=1 -c \
+            "CREATE ROLE sama_ecole_app LOGIN PASSWORD 'test_app_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;"
+          psql -h localhost -U sama_ecole_test -d sama_ecole_test -v ON_ERROR_STOP=1 -c \
+            "GRANT CONNECT ON DATABASE sama_ecole_test TO sama_ecole_app; GRANT USAGE ON SCHEMA public TO sama_ecole_app;"
+
+      # Applique les migrations avec le rôle PROPRIÉTAIRE : valide en CI que le SQL de la migration
+      # RLS (ALTER TABLE / CREATE POLICY / GRANT) passe réellement sur un PostgreSQL neuf.
+      - name: Appliquer les migrations (rôle propriétaire)
+        env:
+          ConnectionStrings__Migrations: "Host=localhost;Port=5432;Database=sama_ecole_test;Username=sama_ecole_test;Password=test_password"
+        run: |
+          dotnet tool install --global dotnet-ef
+          dotnet ef database update -p src/SamaEcole.Persistence -s src/SamaEcole.Web --configuration Release --no-build
+
+      # Prouve que le rôle applicatif ne peut PAS contourner la RLS. Si quelqu'un lui redonne
+      # SUPERUSER ou BYPASSRLS un jour, la CI casse ici plutôt qu'en production.
+      - name: Vérifier que le rôle applicatif ne contourne pas la RLS
+        env:
+          PGPASSWORD: test_password
+        run: |
+          UNSAFE=$(psql -h localhost -U sama_ecole_test -d sama_ecole_test -tAc \
+            "SELECT count(*) FROM pg_roles WHERE rolname = 'sama_ecole_app' AND (rolsuper OR rolbypassrls);")
+          if [ "$UNSAFE" != "0" ]; then
+            echo "::error::Le rôle sama_ecole_app est superutilisateur ou porte BYPASSRLS : l'isolation multi-tenant serait inopérante."
+            exit 1
+          fi
+
+      - name: Run unit tests
+        run: dotnet test tests/SamaEcole.UnitTests --no-build --configuration Release --logger "trx;LogFileName=unit.trx"
+
+      # Les tests d'intégration démarrent leur propre PostgreSQL via Testcontainers (Docker est
+      # disponible sur ubuntu-latest) : ils créent le rôle applicatif et posent la RLS eux-mêmes.
+      - name: Run integration tests (incl. isolation multi-tenant)
+        run: dotnet test tests/SamaEcole.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=integration.trx"
+
+      # Le test d'isolation est le garde-fou n°1 du multi-tenant : il doit RÉELLEMENT s'exécuter.
+      # Un test ignoré (Skip) compte comme "réussi" pour dotnet test — on refuse donc explicitement
+      # un run où aucun test MultiTenant n'a été exécuté.
+      - name: Vérifier que le test d'isolation multi-tenant s'exécute vraiment
+        run: |
+          OUTPUT=$(dotnet test tests/SamaEcole.IntegrationTests --filter Category=MultiTenant \
+            --no-build --configuration Release)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -qiE 'Passed!.*Failed:\s*0.*Passed:\s*[1-9]'; then
+            echo "Test d'isolation multi-tenant exécuté et réussi."
+          else
+            echo "::error::Aucun test Category=MultiTenant n'a été réellement exécuté (ignoré ou absent)."
+            exit 1
+          fi
 
       - name: Publier les résultats de tests
         if: always()
@@ -67,7 +112,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build image
-        run: docker build -f src/Jangalekat.Web/Dockerfile -t jangalekat-api:${{ github.sha }} .
+        run: docker build -f src/SamaEcole.Web/Dockerfile -t sama-ecole-api:${{ github.sha }} .
 
       # Étape de push vers le registre + déploiement : voir docs/Volume_9_Deployment_Operations.md §CI/CD.
       # Volontairement non automatisée ici pour garder une porte de validation manuelle avant la mise en production.
