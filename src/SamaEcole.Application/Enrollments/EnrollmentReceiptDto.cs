@@ -15,6 +15,7 @@ public record EnrollmentReceiptDto(
     string SchoolName,
     string? SchoolPhone,
     string? SchoolCity,
+    string? SchoolLogoUrl,
     string Matricule,
     string StudentFullName,
     string ClassroomName,

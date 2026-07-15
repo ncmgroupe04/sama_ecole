@@ -10,6 +10,10 @@ namespace SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceiptPdf;
 /// <see cref="GetEnrollmentReceiptQuery"/> (isolation tenant, lignes figées, 404 hors établissement),
 /// puis on ne fait plus que composer le document. Une seule source de vérité pour le contenu du reçu,
 /// que l'appelant veuille le JSON ou le PDF.
+///
+/// Le logo de l'établissement est récupéré ici, avant la composition : c'est une E/S réseau (garde
+/// SSRF, timeout, taille), elle n'a donc pas sa place dans le générateur, qui reste une fonction pure.
+/// Un logo absent ou injoignable rend simplement <c>null</c> — le reçu s'émet sans logo, jamais en erreur.
 /// </summary>
 public record GetEnrollmentReceiptPdfQuery(Guid EnrollmentId) : IRequest<ReceiptPdfResult>;
 
@@ -18,13 +22,16 @@ public record ReceiptPdfResult(byte[] Content, string ReceiptNumber);
 
 public class GetEnrollmentReceiptPdfQueryHandler(
     ISender mediator,
-    IReceiptPdfGenerator pdfGenerator)
+    IReceiptPdfGenerator pdfGenerator,
+    ISchoolLogoProvider logoProvider)
     : IRequestHandler<GetEnrollmentReceiptPdfQuery, ReceiptPdfResult>
 {
     public async Task<ReceiptPdfResult> Handle(GetEnrollmentReceiptPdfQuery request, CancellationToken cancellationToken)
     {
         var receipt = await mediator.Send(new GetEnrollmentReceiptQuery(request.EnrollmentId), cancellationToken);
 
-        return new ReceiptPdfResult(pdfGenerator.Generate(receipt), receipt.ReceiptNumber);
+        var logo = await logoProvider.TryFetchAsync(receipt.SchoolLogoUrl, cancellationToken);
+
+        return new ReceiptPdfResult(pdfGenerator.Generate(receipt, logo), receipt.ReceiptNumber);
     }
 }

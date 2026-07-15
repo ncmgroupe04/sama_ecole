@@ -115,6 +115,7 @@ public class CreateEnrollmentCommandHandler(
                 school?.Name ?? string.Empty,
                 school?.Phone,
                 ReceiptCity.FromAddress(school?.Address),
+                school?.LogoUrl,
                 matricule,
                 student.FullName,
                 classroom.Name,

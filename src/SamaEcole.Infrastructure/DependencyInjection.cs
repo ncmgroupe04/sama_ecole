@@ -1,5 +1,7 @@
+using System.Net.Http;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Infrastructure.Documents;
+using SamaEcole.Infrastructure.Media;
 using SamaEcole.Infrastructure.Multitenancy;
 using SamaEcole.Infrastructure.Notifications;
 using SamaEcole.Infrastructure.Security;
@@ -32,6 +34,22 @@ public static class DependencyInjection
 
         // Génération PDF du reçu d'inscription (ticket JGK-E02). Sans état : un singleton suffit.
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
+
+        // Récupération du logo de l'établissement pour le reçu (JGK-E02). Client HTTP dédié :
+        //  * garde anti-SSRF au moment de la connexion (l'URL vient du Directeur — cf. SsrfSafeConnect) ;
+        //  * aucune redirection auto : une 3xx pourrait rebondir d'une URL publique vers un service interne ;
+        //  * timeout court : le logo ne doit jamais retarder l'émission d'un reçu.
+        services.AddHttpClient(HttpSchoolLogoProvider.HttpClientName, client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(5);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("SamaEcole-Recu/1.0");
+            })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                AllowAutoRedirect = false,
+                ConnectCallback = SsrfSafeConnect.ConnectAsync
+            });
+        services.AddSingleton<ISchoolLogoProvider, HttpSchoolLogoProvider>();
 
         return services;
     }

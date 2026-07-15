@@ -20,7 +20,7 @@ namespace SamaEcole.Infrastructure.Documents;
 /// La mention obligatoire est une CONSTANTE ici (AGENTS.md règle #12) : aucun appelant ne peut
 /// l'altérer ni l'omettre.
 /// </summary>
-public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt) : IDocument
+public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? logo) : IDocument
 {
     private const string MandatoryMention =
         "Il est demandé aux parents de garder minutieusement leur reçu après le paiement.";
@@ -61,8 +61,19 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt) : IDocument
                 header.Item().Text(receipt.SchoolName.ToUpperInvariant()).Bold().FontSize(20);
                 header.Item().Text($"{receipt.SchoolName} | Téléphone : {receipt.SchoolPhone ?? "—————"}")
                     .FontSize(9).FontColor(Colors.Grey.Medium);
-                header.Item().PaddingTop(2).Text("[Emplacement Logo Officiel]")
-                    .FontSize(9).FontColor(Colors.Grey.Medium);
+
+                // Le logo officiel occupe l'emplacement réservé de la maquette (README design §1.1), aligné
+                // à gauche sous la ligne de coordonnées. Faute de logo lisible, on garde le libellé témoin
+                // de la maquette plutôt qu'un trou — le générateur ne nous passe que des octets déjà validés.
+                if (logo is not null)
+                {
+                    header.Item().PaddingTop(4).MaxHeight(48).MaxWidth(170).Image(logo).FitArea();
+                }
+                else
+                {
+                    header.Item().PaddingTop(2).Text("[Emplacement Logo Officiel]")
+                        .FontSize(9).FontColor(Colors.Grey.Medium);
+                }
             });
         });
     }

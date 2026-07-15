@@ -19,6 +19,19 @@ public class ReceiptPdfGenerator : IReceiptPdfGenerator
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public byte[] Generate(EnrollmentReceiptDto receipt) =>
-        new EnrollmentReceiptDocument(receipt).GeneratePdf();
+    public byte[] Generate(EnrollmentReceiptDto receipt, byte[]? logo)
+    {
+        try
+        {
+            return new EnrollmentReceiptDocument(receipt, logo).GeneratePdf();
+        }
+        catch (Exception) when (logo is not null)
+        {
+            // Dernier filet : le logo a passé les contrôles du fournisseur mais reste illisible pour le
+            // moteur de rendu. Un reçu OFFICIEL doit toujours s'émettre — on le régénère sans le logo
+            // plutôt que de propager l'échec. Le cas courant (logo injoignable) est déjà journalisé et
+            // écarté en amont par ISchoolLogoProvider ; on n'arrive ici que pour un contenu pathologique.
+            return new EnrollmentReceiptDocument(receipt, null).GeneratePdf();
+        }
+    }
 }

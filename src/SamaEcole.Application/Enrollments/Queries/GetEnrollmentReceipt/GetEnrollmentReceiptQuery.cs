@@ -66,6 +66,7 @@ public class GetEnrollmentReceiptQueryHandler(
             school?.Name ?? string.Empty,
             school?.Phone,
             ReceiptCity.FromAddress(school?.Address),
+            school?.LogoUrl,
             header.Matricule,
             header.FullName,
             header.ClassroomName,
