@@ -1,18 +1,15 @@
-@{
-    ViewData["Title"] = "Pédagogie - Années scolaires";
-}
-
-@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
-@section Scripts {
-    <script src="~/js/school-years.js" asp-append-version="true"></script>
-}
-
+@*
+    Panneau de gestion des années scolaires (ticket JGK-C01), extrait pour être RÉUTILISÉ comme onglet
+    de l'écran Paramètres. Le composant Alpine schoolYearsView() est défini dans wwwroot/js/school-years.js,
+    que la page hôte (Settings/Index.cshtml) charge dans sa section Scripts — une partial ne peut pas
+    déclarer @@section elle-même.
+*@
 <div x-data="schoolYearsView()">
     <!-- Titre et bouton Nouvelle année -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-jgk-title font-bold text-gray-900">Années scolaires</h1>
-            <p class="text-jgk-subtitle text-gray-500 mt-1">
+            <h2 class="text-lg font-semibold text-gray-900">Années scolaires</h2>
+            <p class="text-sm text-gray-500 mt-1">
                 L'année active est l'exercice sur lequel travaille l'établissement : inscriptions, frais et bulletins s'y rattachent.
             </p>
         </div>

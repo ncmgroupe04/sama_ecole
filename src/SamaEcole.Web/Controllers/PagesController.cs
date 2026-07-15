@@ -29,12 +29,17 @@ public class PagesController : Controller
     [HttpGet("/classes")]
     public IActionResult Classrooms() => View("~/Views/Classrooms/Index.cshtml");
 
-    [HttpGet("/annees-scolaires")]
-    public IActionResult SchoolYears() => View("~/Views/SchoolYears/Index.cshtml");
-
     [HttpGet("/matieres")]
     public IActionResult Subjects() => View("~/Views/Subjects/Index.cshtml");
 
     [HttpGet("/frais")]
     public IActionResult Fees() => View("~/Views/Fees/Index.cshtml");
+
+    [HttpGet("/parametres")]
+    public IActionResult Settings() => View("~/Views/Settings/Index.cshtml");
+
+    // Les années scolaires ne sont plus une entrée de menu à part : elles vivent désormais dans les
+    // Paramètres (onglet dédié). On redirige l'ancienne adresse pour ne casser aucun lien existant.
+    [HttpGet("/annees-scolaires")]
+    public IActionResult SchoolYears() => RedirectToAction(nameof(Settings), new { tab = "annees-scolaires" });
 }

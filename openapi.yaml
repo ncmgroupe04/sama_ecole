@@ -170,6 +170,37 @@ paths:
       responses:
         '201': { description: Établissement créé }
 
+  /schools/current:
+    get:
+      tags: [Schools]
+      summary: Identité de l'établissement courant (nom, coordonnées, logo)
+      description: >-
+        L'établissement est déduit du JWT (jamais un paramètre). Lecture ouverte à tous les rôles —
+        le nom et les coordonnées figurent sur le reçu et les écrans. À distinguer de POST /schools
+        (création par le Super Admin).
+      responses:
+        '200':
+          description: Fiche de l'établissement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolProfile' }
+    put:
+      tags: [Schools]
+      summary: Mettre à jour l'identité de l'établissement (Directeur uniquement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchoolProfile' }
+      responses:
+        '200':
+          description: Fiche mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolProfile' }
+        '403': { description: Rôle non autorisé (écriture réservée au Directeur) }
+        '422': { description: Données invalides (nom manquant, URL de logo invalide…) }
+
   /schools/current/settings:
     get:
       tags: [Schools]
@@ -946,6 +977,19 @@ components:
         phone: { type: string }
         directorEmail: { type: string, format: email }
 
+    SchoolProfile:
+      type: object
+      description: >-
+        Identité de l'établissement courant (nom, coordonnées, logo). Éditable par le Directeur, reprise
+        sur le reçu d'inscription. `name` est obligatoire ; `logoUrl`, s'il est fourni, doit être une URL
+        http(s).
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 200 }
+        address: { type: string, nullable: true, maxLength: 300 }
+        phone: { type: string, nullable: true, maxLength: 30 }
+        logoUrl: { type: string, nullable: true, format: uri, maxLength: 500 }
+
     SchoolSettings:
       type: object
       properties:
@@ -954,6 +998,7 @@ components:
         teacherMatriculeFormat: { type: string, example: "ENS-{YEAR}-{SEQ:3}" }
         autoLogoutMinutes: { type: integer, default: 10 }
         dateFormat: { type: string, enum: ["dd/MM/yyyy", "dd MMMM yyyy"] }
+        tuitionMonthsPerYear: { type: integer, default: 9, minimum: 1, maximum: 12, description: 'Mensualités facturées par an (JGK-E01).' }
 
     SchoolYearCreateRequest:
       type: object

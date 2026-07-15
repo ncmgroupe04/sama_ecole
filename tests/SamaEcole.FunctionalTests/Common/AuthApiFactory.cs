@@ -276,6 +276,15 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlRawAsync(
             $"""DELETE FROM schools WHERE "Id" <> '{EcoleId}';""");
 
+        // Remet la fiche de l'école semée à neuf : un PUT /schools/current de test la renomme, et sans
+        // cette remise à zéro le test suivant hériterait du nom/adresse modifiés (ordre significatif).
+        await owner.Database.ExecuteSqlRawAsync(
+            $"""
+             UPDATE schools
+             SET "Name" = 'École de test', "Address" = NULL, "Phone" = NULL, "LogoUrl" = NULL
+             WHERE "Id" = '{EcoleId}';
+             """);
+
         await owner.Database.ExecuteSqlRawAsync(
             """UPDATE users SET "Status" = 'Active', "AccessFailedCount" = 0, "LockoutEndAt" = NULL;""");
 

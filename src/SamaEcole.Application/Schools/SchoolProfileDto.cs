@@ -1,0 +1,13 @@
+namespace SamaEcole.Application.Schools;
+
+/// <summary>
+/// Identité de l'établissement (ticket configuration Directeur) : les champs de <c>School</c> que le
+/// Directeur entretient — nom, adresse, téléphone, logo. Ils alimentent l'en-tête et le bas du reçu
+/// d'inscription (JGK-E02) et les écrans. À distinguer de <c>SchoolSettingsDto</c> (barème, formats de
+/// matricule, format de date…), qui porte les RÉGLAGES et non l'identité.
+/// </summary>
+public record SchoolProfileDto(
+    string Name,
+    string? Address,
+    string? Phone,
+    string? LogoUrl);
