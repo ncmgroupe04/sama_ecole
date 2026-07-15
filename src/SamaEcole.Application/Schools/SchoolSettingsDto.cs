@@ -10,4 +10,5 @@ public record SchoolSettingsDto(
     string StudentMatriculeFormat,
     string TeacherMatriculeFormat,
     int AutoLogoutMinutes,
-    string DateFormat);
+    string DateFormat,
+    int TuitionMonthsPerYear);

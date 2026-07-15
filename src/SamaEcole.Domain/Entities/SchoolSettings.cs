@@ -26,6 +26,15 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     public int AutoLogoutMinutes { get; set; } = SchoolSettingsDefaults.AutoLogoutMinutes;
 
     public string DateFormat { get; set; } = SchoolSettingsDefaults.DateFormat;
+
+    /// <summary>
+    /// Nombre de mensualités facturées sur une année scolaire (ticket JGK-E01). Le calcul du montant
+    /// dû à l'inscription multiplie chaque mensualité par ce nombre ; un frais ponctuel n'est jamais
+    /// multiplié. Les écoles sénégalaises raisonnent en « tranches » (souvent 9), d'où un réglage
+    /// explicite plutôt qu'une déduction des dates de l'année — celles-ci peuvent couvrir des mois
+    /// non facturés.
+    /// </summary>
+    public int TuitionMonthsPerYear { get; set; } = SchoolSettingsDefaults.TuitionMonthsPerYear;
 }
 
 /// <summary>
@@ -41,6 +50,13 @@ public static class SchoolSettingsDefaults
     public const int AutoLogoutMinutes = 10;
     public const string DateFormat = "dd/MM/yyyy";
 
+    /// <summary>9 tranches — la convention la plus répandue au Sénégal (rentrée d'octobre, fin en juin).</summary>
+    public const int TuitionMonthsPerYear = 9;
+
     public static readonly int[] AllowedGradingScales = [10, 20];
     public static readonly string[] AllowedDateFormats = ["dd/MM/yyyy", "dd MMMM yyyy"];
+
+    /// <summary>Bornes du nombre de mensualités : au moins 1 mois, au plus l'année civile complète.</summary>
+    public const int MinTuitionMonths = 1;
+    public const int MaxTuitionMonths = 12;
 }

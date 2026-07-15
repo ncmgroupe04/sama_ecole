@@ -28,6 +28,12 @@ public interface IApplicationDbContext
     /// <summary>Journal append-only des changements de barème (ticket JGK-F01) : on y AJOUTE, jamais plus.</summary>
     DbSet<FeeChangeHistory> FeeChangeHistory { get; }
 
+    /// <summary>Inscriptions/réinscriptions (ticket JGK-E01). Portent le TotalDue calculé. Verrou optimiste xmin.</summary>
+    DbSet<Enrollment> Enrollments { get; }
+
+    /// <summary>Détail figé des frais d'une inscription (ticket JGK-E01) : l'instantané du barème pour le reçu.</summary>
+    DbSet<EnrollmentFeeLine> EnrollmentFeeLines { get; }
+
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
 

@@ -22,6 +22,7 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
         builder.Property(s => s.TeacherMatriculeFormat).IsRequired().HasMaxLength(50);
         builder.Property(s => s.AutoLogoutMinutes).IsRequired();
         builder.Property(s => s.DateFormat).IsRequired().HasMaxLength(30);
+        builder.Property(s => s.TuitionMonthsPerYear).IsRequired();
 
         builder.HasOne<School>()
             .WithMany()

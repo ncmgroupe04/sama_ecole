@@ -23,6 +23,9 @@ public class PagesController : Controller
     [HttpGet("/eleves")]
     public IActionResult Students() => View("~/Views/Students/Index.cshtml");
 
+    [HttpGet("/inscriptions")]
+    public IActionResult Enrollments() => View("~/Views/Enrollments/Index.cshtml");
+
     [HttpGet("/classes")]
     public IActionResult Classrooms() => View("~/Views/Classrooms/Index.cshtml");
 

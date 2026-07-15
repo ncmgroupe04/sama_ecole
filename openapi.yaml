@@ -427,10 +427,30 @@ paths:
             schema: { $ref: '#/components/schemas/EnrollmentCreateRequest' }
       responses:
         '201':
-          description: Inscription créée, frais calculés automatiquement
+          description: Inscription créée, frais calculés automatiquement (renvoie le reçu)
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Enrollment' }
+              schema: { $ref: '#/components/schemas/EnrollmentReceipt' }
+        '403': { description: Rôle non autorisé (le service Finance ne compose pas de montant dû) }
+        '409': { description: Élève déjà inscrit pour l'année active }
+        '422': { description: Aucune année active, ou données invalides }
+
+  /enrollments/{id}/receipt:
+    get:
+      tags: [Enrollments]
+      summary: Reçu d'inscription (ticket JGK-E01 — JSON ; le PDF pixel-fidèle est JGK-E02)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Reçu (détail des frais figé à l'inscription)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnrollmentReceipt' }
+        '404': { description: Inscription introuvable dans l'établissement courant }
 
   /grades:
     post:
@@ -1052,20 +1072,51 @@ components:
 
     EnrollmentCreateRequest:
       type: object
-      required: [studentId, classroomId, schoolYearId, type]
+      description: >-
+        Deux modes selon `type`. NewEnrollment : l'élève est CRÉÉ dans le flux (fullName, birthDate,
+        gender requis) et son matricule généré. ReEnrollment : `studentId` d'un élève existant.
+        Ni `schoolYearId` ni `totalDue` : l'année ACTIVE est résolue serveur, et le montant est
+        CALCULÉ à partir du barème de la classe — jamais fourni par le client (règles #4 et #10).
+      required: [type, classroomId]
       properties:
-        studentId: { type: string, format: uuid }
-        classroomId: { type: string, format: uuid }
-        schoolYearId: { type: string, format: uuid }
         type: { type: string, enum: [NewEnrollment, ReEnrollment] }
+        classroomId: { type: string, format: uuid }
+        studentId:
+          type: string
+          format: uuid
+          description: Requis pour ReEnrollment ; ignoré pour NewEnrollment.
+        fullName: { type: string, maxLength: 200, description: NewEnrollment uniquement }
+        birthDate: { type: string, format: date, description: NewEnrollment uniquement }
+        gender: { type: string, enum: [M, F], description: NewEnrollment uniquement }
+        guardianName: { type: string }
+        guardianPhone: { type: string }
 
-    Enrollment:
+    EnrollmentReceipt:
       type: object
+      description: Reçu d'inscription (JGK-E01). Le détail des frais est figé à l'inscription.
       properties:
-        id: { type: string, format: uuid }
-        studentId: { type: string, format: uuid }
-        totalDue: { type: number }
+        enrollmentId: { type: string, format: uuid }
+        schoolName: { type: string }
+        schoolPhone: { type: string, nullable: true }
+        matricule: { type: string }
+        studentFullName: { type: string }
+        classroomName: { type: string }
+        classroomLevel: { type: string }
+        schoolYearLabel: { type: string }
+        type: { type: string, enum: [NewEnrollment, ReEnrollment] }
         status: { type: string, enum: [Pending, Confirmed, Cancelled] }
+        enrolledAt: { type: string, format: date-time }
+        totalDue: { type: number }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              designation: { type: string }
+              isRecurring: { type: boolean }
+              unitAmount: { type: number }
+              months: { type: integer }
+              lineTotal: { type: number }
 
     GradeUpsertRequest:
       type: object

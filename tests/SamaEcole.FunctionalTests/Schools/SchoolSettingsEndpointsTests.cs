@@ -25,7 +25,8 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         string StudentMatriculeFormat,
         string TeacherMatriculeFormat,
         int AutoLogoutMinutes,
-        string DateFormat);
+        string DateFormat,
+        int TuitionMonthsPerYear);
 
     private async Task<Tokens> LoginAsync(string email, string password)
     {
@@ -57,13 +58,15 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
     private static object ValidBody(
         string gradingScale = "20",
         string studentFormat = "ELEV-{YEAR}-{SEQ:4}",
-        int autoLogout = 10) => new
+        int autoLogout = 10,
+        int tuitionMonths = 9) => new
         {
             gradingScale,
             studentMatriculeFormat = studentFormat,
             teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
             autoLogoutMinutes = autoLogout,
-            dateFormat = "dd/MM/yyyy"
+            dateFormat = "dd/MM/yyyy",
+            tuitionMonthsPerYear = tuitionMonths
         };
 
     [Fact]
@@ -80,6 +83,7 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         settings.StudentMatriculeFormat.Should().Be("ELEV-{YEAR}-{SEQ:4}");
         settings.AutoLogoutMinutes.Should().Be(10);
         settings.DateFormat.Should().Be("dd/MM/yyyy");
+        settings.TuitionMonthsPerYear.Should().Be(9, "9 tranches est le défaut sénégalais (JGK-E01)");
     }
 
     [Fact]
@@ -88,7 +92,8 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         var directeur = await LoginAsDirecteurAsync();
 
         var response = await PutSettingsAsync(
-            directeur.AccessToken, ValidBody(gradingScale: "10", studentFormat: "BAOBAB-{SEQ:5}", autoLogout: 30));
+            directeur.AccessToken,
+            ValidBody(gradingScale: "10", studentFormat: "BAOBAB-{SEQ:5}", autoLogout: 30, tuitionMonths: 10));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -98,6 +103,19 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         reread.GradingScale.Should().Be("10");
         reread.StudentMatriculeFormat.Should().Be("BAOBAB-{SEQ:5}");
         reread.AutoLogoutMinutes.Should().Be(30);
+        reread.TuitionMonthsPerYear.Should().Be(10);
+    }
+
+    [Theory]
+    [InlineData(0)]   // gratuité involontaire de toute scolarité
+    [InlineData(13)]  // au-delà de l'année civile
+    public async Task An_Out_Of_Range_Tuition_Months_Must_Be_Rejected(int tuitionMonths)
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        var response = await PutSettingsAsync(directeur.AccessToken, ValidBody(tuitionMonths: tuitionMonths));
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]

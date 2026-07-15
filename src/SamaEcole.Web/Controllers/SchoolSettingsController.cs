@@ -24,7 +24,8 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         string StudentMatriculeFormat,
         string TeacherMatriculeFormat,
         int AutoLogoutMinutes,
-        string DateFormat);
+        string DateFormat,
+        int TuitionMonthsPerYear);
 
     /// <summary>
     /// LECTURE ouverte à tout utilisateur de l'école : le format de date et le barème pilotent
@@ -52,7 +53,8 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.StudentMatriculeFormat,
                 request.TeacherMatriculeFormat,
                 request.AutoLogoutMinutes,
-                request.DateFormat),
+                request.DateFormat,
+                request.TuitionMonthsPerYear),
             cancellationToken);
 
         return Ok(result);

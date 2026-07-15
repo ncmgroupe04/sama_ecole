@@ -11,4 +11,5 @@ public record UpdateSchoolSettingsCommand(
     string StudentMatriculeFormat,
     string TeacherMatriculeFormat,
     int AutoLogoutMinutes,
-    string DateFormat) : IRequest<SchoolSettingsDto>;
+    string DateFormat,
+    int TuitionMonthsPerYear) : IRequest<SchoolSettingsDto>;
