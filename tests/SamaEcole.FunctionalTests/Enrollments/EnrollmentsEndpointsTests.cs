@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using FluentAssertions;
 using SamaEcole.FunctionalTests.Common;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -42,9 +43,10 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private record FeeCategoryDto(Guid Id, string Name, bool IsRecurring);
     private record ReceiptLine(string Designation, bool IsRecurring, decimal UnitAmount, int Months, decimal LineTotal);
     private record Receipt(
-        Guid EnrollmentId, string SchoolName, string? SchoolPhone, string Matricule, string StudentFullName,
-        string ClassroomName, string ClassroomLevel, string SchoolYearLabel, string Type, string Status,
-        DateTimeOffset EnrolledAt, List<ReceiptLine> Lines, decimal TotalDue);
+        Guid EnrollmentId, string ReceiptNumber, string SchoolName, string? SchoolPhone, string? SchoolCity,
+        string Matricule, string StudentFullName, string ClassroomName, string ClassroomLevel,
+        string SchoolYearLabel, string Type, string Status, DateTimeOffset EnrolledAt,
+        List<ReceiptLine> Lines, decimal TotalDue);
 
     private async Task<string> TokenAsync(string email, string password)
     {
@@ -139,6 +141,7 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
 
         receipt.Matricule.Should().NotBeNullOrWhiteSpace("le matricule est généré à l'enregistrement");
+        receipt.ReceiptNumber.Should().MatchRegex(@"^REC-\d{4}-\d{4}$", "le numéro de reçu officiel est généré à l'enregistrement (JGK-E02)");
         receipt.StudentFullName.Should().Be("Awa Ndiaye");
         receipt.Type.Should().Be("NewEnrollment");
         receipt.TotalDue.Should().Be(ExpectedTotal, "frais ponctuel + mensualité × 9 mois (réglage par défaut)");
@@ -154,6 +157,43 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         reread.TotalDue.Should().Be(ExpectedTotal);
         reread.Matricule.Should().Be(receipt.Matricule);
         reread.Lines.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task The_Official_Receipt_Can_Be_Downloaded_As_A_Pdf()
+    {
+        // Ticket JGK-E02 : le reçu officiel se télécharge en PDF. On vérifie qu'un vrai PDF sort du
+        // pipeline (en-tête magique), avec le bon type MIME et un nom de fichier portant le numéro
+        // officiel — la fidélité visuelle à la référence relève de la revue à l'œil.
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+
+        var secretaire = await SecretaireTokenAsync();
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Awa Ndiaye"));
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
+
+        var pdfResponse = await SendAsync(
+            HttpMethod.Get, $"/api/v1/enrollments/{receipt.EnrollmentId}/receipt/pdf", secretaire);
+
+        pdfResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        pdfResponse.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
+        pdfResponse.Content.Headers.ContentDisposition!.FileName.Should().Contain(receipt.ReceiptNumber);
+
+        var bytes = await pdfResponse.Content.ReadAsByteArrayAsync();
+        bytes.Should().NotBeEmpty();
+        Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-", "l'en-tête magique d'un fichier PDF");
+    }
+
+    [Fact]
+    public async Task Downloading_The_Pdf_Of_An_Unknown_Enrollment_Returns_404()
+    {
+        var secretaire = await SecretaireTokenAsync();
+        var response = await SendAsync(
+            HttpMethod.Get, $"/api/v1/enrollments/{Guid.NewGuid()}/receipt/pdf", secretaire);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

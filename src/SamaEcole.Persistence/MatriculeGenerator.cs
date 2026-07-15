@@ -24,11 +24,28 @@ namespace SamaEcole.Persistence;
 /// </summary>
 public class MatriculeGenerator(ApplicationDbContext dbContext, TimeProvider timeProvider) : IMatriculeGenerator
 {
+    /// <summary>
+    /// Gabarit FIXE des numéros de reçu (ticket JGK-E02), contrairement aux matricules dont le format
+    /// est paramétrable par l'école : un reçu est une pièce officielle, sa forme ne se règle pas. Rendu
+    /// par le même moteur que les matricules — « REC-2025-0002 ».
+    /// </summary>
+    private const string ReceiptNumberFormat = "REC-{YEAR}-{SEQ:4}";
+
     public Task<string> GenerateNextStudentMatriculeAsync(Guid schoolId, CancellationToken cancellationToken) =>
         GenerateAsync(schoolId, MatriculeKind.Student, cancellationToken);
 
     public Task<string> GenerateNextTeacherMatriculeAsync(Guid schoolId, CancellationToken cancellationToken) =>
         GenerateAsync(schoolId, MatriculeKind.Teacher, cancellationToken);
+
+    public async Task<string> GenerateNextReceiptNumberAsync(Guid schoolId, CancellationToken cancellationToken)
+    {
+        // Même année SCOLAIRE que le matricule généré au même instant dans la même transaction : le reçu
+        // et le matricule d'une inscription portent donc toujours le même millésime.
+        var year = AcademicYear.ForDate(timeProvider.GetUtcNow());
+        var next = await NextValueAsync(schoolId, MatriculeKind.Receipt, year, cancellationToken);
+
+        return MatriculeFormat.Render(ReceiptNumberFormat, year, next);
+    }
 
     private async Task<string> GenerateAsync(
         Guid schoolId,

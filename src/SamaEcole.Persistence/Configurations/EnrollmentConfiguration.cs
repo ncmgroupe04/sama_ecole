@@ -27,7 +27,14 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         builder.Property(e => e.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(e => e.TotalDue).IsRequired().HasPrecision(12, 2);
+        builder.Property(e => e.ReceiptNumber).HasMaxLength(50).IsRequired();
         builder.Property(e => e.EnrolledAt).IsRequired();
+
+        // Le numéro de reçu est officiel (JGK-E02) : unique par établissement, jamais réémis. L'index
+        // (non filtré) vaut même pour une inscription annulée — un numéro consommé reste consommé.
+        builder.HasIndex(e => new { e.SchoolId, e.ReceiptNumber })
+            .IsUnique()
+            .HasDatabaseName("UX_enrollments_receipt_number");
 
         // « Un élève n'a qu'une inscription active par année scolaire » (DDS §5.4), tenu par la BASE.
         // Index PARTIEL excluant les inscriptions annulées et supprimées : un élève dont l'inscription

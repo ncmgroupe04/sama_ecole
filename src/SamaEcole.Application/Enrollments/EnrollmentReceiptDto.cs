@@ -11,8 +11,10 @@ namespace SamaEcole.Application.Enrollments;
 /// </summary>
 public record EnrollmentReceiptDto(
     Guid EnrollmentId,
+    string ReceiptNumber,
     string SchoolName,
     string? SchoolPhone,
+    string? SchoolCity,
     string Matricule,
     string StudentFullName,
     string ClassroomName,
@@ -35,3 +37,23 @@ public record EnrollmentFeeLineDto(
     decimal UnitAmount,
     int Months,
     decimal LineTotal);
+
+/// <summary>
+/// Dérive la « ville » du bas de reçu (« Fait à … », référence de design §1.6) depuis l'adresse libre
+/// de l'établissement. Le modèle ne stocke qu'une adresse (School.Address) ; par convention sénégalaise
+/// elle se termine par la localité (« Rue 12, Médina, Dakar » → « Dakar »). Faute d'adresse, on renvoie
+/// null et le reçu laisse la ligne à compléter — jamais une valeur inventée.
+/// </summary>
+public static class ReceiptCity
+{
+    public static string? FromAddress(string? address)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return null;
+        }
+
+        var lastSegment = address.Split(',')[^1].Trim();
+        return lastSegment.Length == 0 ? null : lastSegment;
+    }
+}

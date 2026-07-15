@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Infrastructure.Documents;
 using SamaEcole.Infrastructure.Multitenancy;
 using SamaEcole.Infrastructure.Notifications;
 using SamaEcole.Infrastructure.Security;
@@ -29,7 +30,8 @@ public static class DependencyInjection
         // JGK-G03. À remplacer avant toute exploitation réelle — voir LoggingEmailSender.
         services.AddSingleton<IEmailSender, LoggingEmailSender>();
 
-        // TODO (ticket JGK-E02) : enregistrer ici la génération PDF (QuestPDF).
+        // Génération PDF du reçu d'inscription (ticket JGK-E02). Sans état : un singleton suffit.
+        services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
 
         return services;
     }

@@ -37,6 +37,7 @@ public class GetEnrollmentReceiptQueryHandler(
             select new
             {
                 e.Id,
+                e.ReceiptNumber,
                 s.Matricule,
                 s.FullName,
                 ClassroomName = c.Name,
@@ -61,8 +62,10 @@ public class GetEnrollmentReceiptQueryHandler(
 
         return new EnrollmentReceiptDto(
             header.Id,
+            header.ReceiptNumber,
             school?.Name ?? string.Empty,
             school?.Phone,
+            ReceiptCity.FromAddress(school?.Address),
             header.Matricule,
             header.FullName,
             header.ClassroomName,

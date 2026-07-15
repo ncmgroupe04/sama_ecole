@@ -40,5 +40,12 @@ public class Enrollment : AuditableEntity, ITenantEntity
     /// <summary>Montant total dû, en FCFA. Calculé à partir du barème de la classe, jamais négatif.</summary>
     public decimal TotalDue { get; set; }
 
+    /// <summary>
+    /// Numéro officiel du reçu d'inscription (ticket JGK-E02, ex. « REC-2025-0002 »). Attribué UNE FOIS,
+    /// dans la même transaction que l'inscription (AGENTS.md règle #3, comme le matricule) : gapless,
+    /// unique par école, jamais réémis. C'est ce numéro qui identifie le reçu PDF et sa réimpression.
+    /// </summary>
+    public string ReceiptNumber { get; set; } = string.Empty;
+
     public DateTimeOffset EnrolledAt { get; set; }
 }

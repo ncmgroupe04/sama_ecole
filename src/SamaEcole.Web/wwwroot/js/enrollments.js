@@ -46,6 +46,7 @@ document.addEventListener('alpine:init', () => {
 
         // Reçu émis
         receipt: null,
+        pdfError: null,
 
         async init() {
             await this.loadReferenceData();
@@ -206,6 +207,39 @@ document.addEventListener('alpine:init', () => {
             window.print();
         },
 
+        /**
+         * Télécharge le reçu officiel en PDF (ticket JGK-E02). L'API exige le jeton : un simple lien ne
+         * suffit pas, on récupère donc le PDF en blob avec l'en-tête Authorization, puis on déclenche le
+         * téléchargement côté navigateur. Renouvellement préventif du jeton, comme window.api.
+         */
+        async downloadPdf() {
+            if (!this.receipt) return;
+            this.pdfError = null;
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch(`/api/v1/enrollments/${this.receipt.enrollmentId}/receipt/pdf`, {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                    credentials: 'same-origin'
+                });
+                if (!response.ok) throw new Error('Téléchargement du reçu impossible.');
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Recu-${this.receipt.receiptNumber}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                this.pdfError = err.message || 'Téléchargement du reçu impossible.';
+            }
+        },
+
         // ---------------------------------------------------------------- Affichage
 
         classroomLabel(classroom) {
@@ -226,9 +260,16 @@ document.addEventListener('alpine:init', () => {
             return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + ' FCFA';
         },
 
-        /** Référence courte du reçu, dérivée de l'identifiant d'inscription (le reçu numéroté officiel est JGK-E02). */
+        /** Numéro officiel du reçu (ticket JGK-E02), ex. « REC-2025-0002 ». */
         receiptReference() {
-            return this.receipt ? this.receipt.enrollmentId.split('-')[0].toUpperCase() : '';
+            return this.receipt ? this.receipt.receiptNumber : '';
+        },
+
+        /** Bas de reçu « Fait à [ville], le [date] » (référence de design §1.6) ; sans ville, on abrège. */
+        faitMention() {
+            if (!this.receipt) return '';
+            const date = this.formatDate(this.receipt.enrolledAt);
+            return this.receipt.schoolCity ? `Fait à ${this.receipt.schoolCity}, le ${date}` : `Fait le ${date}`;
         },
 
         formatDate(iso) {

@@ -134,6 +134,21 @@ public class EnrollmentTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Successive_Enrollments_Get_Strictly_Sequential_Official_Receipt_Numbers()
+    {
+        // Ticket JGK-E02 : le numéro de reçu est officiel, unique et sans trou, comme le matricule —
+        // et attribué dans la même transaction. Le millésime est celui de l'année scolaire courante.
+        await using var db = _db.NewAppContext(EcoleA);
+        var handler = NewHandler(db, EcoleA);
+
+        var first = await handler.Handle(NewStudentCommand("Reçu Un"), CancellationToken.None);
+        var second = await handler.Handle(NewStudentCommand("Reçu Deux"), CancellationToken.None);
+
+        first.ReceiptNumber.Should().Be($"REC-{_year}-0001");
+        second.ReceiptNumber.Should().Be($"REC-{_year}-0002");
+    }
+
+    [Fact]
     public async Task Enrolling_The_Same_Student_Twice_In_The_Active_Year_Is_Refused()
     {
         // Première inscription : crée l'élève.

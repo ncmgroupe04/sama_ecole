@@ -1,6 +1,7 @@
 using SamaEcole.Application.Enrollments;
 using SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceipt;
+using SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceiptPdf;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -47,4 +48,18 @@ public class EnrollmentsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Receipt(Guid id, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetEnrollmentReceiptQuery(id), cancellationToken));
+
+    // Reçu officiel en PDF (ticket JGK-E02). Lecture ouverte à tous les rôles de l'école, comme le reçu
+    // JSON : la finance encaisse sur cette base. Le tenant vient du JWT — un reçu d'une autre école
+    // est introuvable (404), jamais servi.
+    [HttpGet("{id:guid}/receipt/pdf")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReceiptPdf(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetEnrollmentReceiptPdfQuery(id), cancellationToken);
+
+        return File(result.Content, "application/pdf", $"Recu-{result.ReceiptNumber}.pdf");
+    }
 }

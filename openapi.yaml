@@ -452,6 +452,23 @@ paths:
               schema: { $ref: '#/components/schemas/EnrollmentReceipt' }
         '404': { description: Inscription introuvable dans l'établissement courant }
 
+  /enrollments/{id}/receipt/pdf:
+    get:
+      tags: [Enrollments]
+      summary: Reçu d'inscription officiel en PDF (ticket JGK-E02 — reproduit docs/design-references/receipt-reference.png)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Le reçu au format PDF (téléchargement)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { description: Inscription introuvable dans l'établissement courant }
+
   /grades:
     post:
       tags: [Grades]
@@ -1096,8 +1113,10 @@ components:
       description: Reçu d'inscription (JGK-E01). Le détail des frais est figé à l'inscription.
       properties:
         enrollmentId: { type: string, format: uuid }
+        receiptNumber: { type: string, description: 'Numéro officiel unique du reçu (JGK-E02), ex. « REC-2025-0002 ».' }
         schoolName: { type: string }
         schoolPhone: { type: string, nullable: true }
+        schoolCity: { type: string, nullable: true, description: 'Ville du bas de reçu (« Fait à … »), dérivée de l''adresse de l''école.' }
         matricule: { type: string }
         studentFullName: { type: string }
         classroomName: { type: string }

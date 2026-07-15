@@ -52,5 +52,12 @@ public enum SubscriptionStatus
 public enum MatriculeKind
 {
     Student,
-    Teacher
+    Teacher,
+
+    /// <summary>
+    /// Numéro de reçu d'inscription (ticket JGK-E02, ex. « REC-2025-0002 »). Réutilise le compteur
+    /// séquentiel par (école, type, année) des matricules : même garantie de numérotation officielle
+    /// unique et sans trou, incrémentée dans la transaction d'inscription.
+    /// </summary>
+    Receipt
 }

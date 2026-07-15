@@ -78,6 +78,10 @@ public class CreateEnrollmentCommandHandler(
             var lines = await BuildFeeLinesAsync(schoolId, request.ClassroomId, tuitionMonths, ct);
             var totalDue = lines.Sum(l => l.LineTotal);
 
+            // Numéro officiel du reçu (JGK-E02), attribué DANS la transaction comme le matricule : s'il y
+            // a le moindre rollback ensuite, le compteur de reçus est rembobiné avec — aucun trou.
+            var receiptNumber = await matriculeGenerator.GenerateNextReceiptNumberAsync(schoolId, ct);
+
             var enrollment = new Enrollment
             {
                 SchoolId = schoolId,
@@ -87,6 +91,7 @@ public class CreateEnrollmentCommandHandler(
                 Type = request.Type,
                 Status = EnrollmentStatus.Confirmed,
                 TotalDue = totalDue,
+                ReceiptNumber = receiptNumber,
                 EnrolledAt = timeProvider.GetUtcNow()
             };
 
@@ -106,8 +111,10 @@ public class CreateEnrollmentCommandHandler(
 
             return new EnrollmentReceiptDto(
                 enrollment.Id,
+                receiptNumber,
                 school?.Name ?? string.Empty,
                 school?.Phone,
+                ReceiptCity.FromAddress(school?.Address),
                 matricule,
                 student.FullName,
                 classroom.Name,

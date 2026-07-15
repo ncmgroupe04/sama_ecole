@@ -10,4 +10,10 @@ public interface IMatriculeGenerator
 {
     Task<string> GenerateNextStudentMatriculeAsync(Guid schoolId, CancellationToken cancellationToken);
     Task<string> GenerateNextTeacherMatriculeAsync(Guid schoolId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Prochain numéro de reçu d'inscription (ticket JGK-E02, ex. « REC-2025-0002 »). Même contrat que
+    /// les matricules : appelé DANS la transaction d'inscription, gapless et unique par établissement.
+    /// </summary>
+    Task<string> GenerateNextReceiptNumberAsync(Guid schoolId, CancellationToken cancellationToken);
 }
