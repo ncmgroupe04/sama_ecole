@@ -19,6 +19,15 @@ public interface IApplicationDbContext
     /// <summary>Matières et coefficients par niveau (ticket JGK-C03). Le coefficient pilote les bulletins.</summary>
     DbSet<Subject> Subjects { get; }
 
+    /// <summary>Catégories de frais paramétrables (ticket JGK-F01) : inscription, mensualité, cantine…</summary>
+    DbSet<FeeCategory> FeeCategories { get; }
+
+    /// <summary>Barème : le montant d'une catégorie pour une classe (ticket JGK-F01). Verrou optimiste xmin.</summary>
+    DbSet<ClassFee> ClassFees { get; }
+
+    /// <summary>Journal append-only des changements de barème (ticket JGK-F01) : on y AJOUTE, jamais plus.</summary>
+    DbSet<FeeChangeHistory> FeeChangeHistory { get; }
+
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
 
@@ -29,6 +38,13 @@ public interface IApplicationDbContext
     DbSet<SchoolSettings> SchoolSettings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Positionne le jeton de concurrence (xmin) ATTENDU par le client sur une entité déjà suivie,
+    /// pour que le prochain SaveChangesAsync refuse en 409 si la ligne a changé entre-temps
+    /// (AGENTS.md règle #5). Encapsule l'API de suivi d'EF Core : Application n'a pas à connaître xmin.
+    /// </summary>
+    void SetOriginalConcurrencyToken<TEntity>(TEntity entity, uint expectedVersion) where TEntity : class;
 
     /// <summary>
     /// Exécute <paramref name="operation"/> dans UNE seule transaction (la crée si aucune n'est

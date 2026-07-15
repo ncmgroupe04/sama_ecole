@@ -31,4 +31,7 @@ public class PagesController : Controller
 
     [HttpGet("/matieres")]
     public IActionResult Subjects() => View("~/Views/Subjects/Index.cshtml");
+
+    [HttpGet("/frais")]
+    public IActionResult Fees() => View("~/Views/Fees/Index.cshtml");
 }

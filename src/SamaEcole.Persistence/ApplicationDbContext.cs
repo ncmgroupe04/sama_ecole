@@ -21,6 +21,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Classroom> Classrooms => Set<Classroom>();
     public DbSet<SchoolYear> SchoolYears => Set<SchoolYear>();
     public DbSet<Subject> Subjects => Set<Subject>();
+    public DbSet<FeeCategory> FeeCategories => Set<FeeCategory>();
+    public DbSet<ClassFee> ClassFees => Set<ClassFee>();
+    public DbSet<FeeChangeHistory> FeeChangeHistory => Set<FeeChangeHistory>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<UserStatusHistory> UserStatusHistory => Set<UserStatusHistory>();
@@ -37,6 +40,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        // Le verrou optimiste xmin du barème (ClassFee, AGENTS.md règle #5) est configuré dans
+        // ClassFeeConfiguration : une propriété fantôme uint marquée IsRowVersion, que la convention
+        // Npgsql mappe automatiquement sur la colonne système xmin sans générer de migration.
 
         // Applique automatiquement le filtre SchoolId à toute entité ITenantEntity,
         // pour ne pas dépendre de la discipline de chaque développeur/agent à chaque ajout de table.
@@ -81,6 +88,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             return await base.SaveChangesAsync(cancellationToken);
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // Verrou optimiste xmin (AGENTS.md règle #5) : la ligne visée a changé depuis sa lecture,
+            // l'UPDATE « WHERE xmin = <valeur lue> » n'a donc touché aucune ligne. Ce catch doit
+            // précéder celui de DbUpdateException — dont il hérite — sinon il ne serait jamais atteint.
+            var entry = ex.Entries.FirstOrDefault();
+            var table = entry?.Metadata.GetTableName() ?? "inconnue";
+            var key = entry?.Entity is AuditableEntity audited ? audited.Id.ToString() : "inconnue";
+
+            throw new ConcurrencyConflictException(table, key);
+        }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
         {
             // Traduit ici, et pas dans les Handlers : SamaEcole.Application ne doit pas connaître Npgsql.
@@ -89,6 +107,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             throw new ConcurrencyConflictException(pg.TableName ?? "inconnue", pg.ConstraintName ?? "contrainte d'unicité");
         }
     }
+
+    /// <summary>
+    /// Positionne le jeton de concurrence (xmin) ATTENDU par le client sur une entité déjà suivie.
+    /// Le prochain SaveChangesAsync comparera cette valeur à celle en base : si la ligne a changé
+    /// entre-temps, il refusera en 409 plutôt que d'écraser (AGENTS.md règle #5). Encapsulé ici pour
+    /// que SamaEcole.Application n'ait pas à manipuler l'API de suivi d'EF Core ni à connaître xmin.
+    /// </summary>
+    public void SetOriginalConcurrencyToken<TEntity>(TEntity entity, uint expectedVersion)
+        where TEntity : class
+        => Entry(entity).Property("xmin").OriginalValue = expectedVersion;
 
     public async Task<T> ExecuteInTransactionAsync<T>(
         Func<CancellationToken, Task<T>> operation,

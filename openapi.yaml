@@ -470,6 +470,142 @@ paths:
             application/pdf:
               schema: { type: string, format: binary }
 
+  /finance/fee-categories:
+    get:
+      tags: [Finance]
+      summary: Lister les catégories de frais de l'établissement courant
+      description: >-
+        Liste paramétrable (inscription, mensualité, cantine…). Lecture ouverte à tous les rôles.
+      responses:
+        '200':
+          description: Liste des catégories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/FeeCategory' }
+    post:
+      tags: [Finance]
+      summary: Créer une catégorie de frais (Directeur)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FeeCategoryCreateRequest' }
+      responses:
+        '201':
+          description: Catégorie créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeeCategory' }
+        '403': { description: Réservé au Directeur }
+        '409':
+          description: Une catégorie de ce nom existe déjà
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /finance/fees:
+    get:
+      tags: [Finance]
+      summary: Lister le barème de l'établissement courant (une ligne par catégorie × classe)
+      description: >-
+        Le montant de chaque (catégorie, classe) déjà défini. Les couples encore vierges
+        n'apparaissent pas : l'interface, connaissant catégories et classes, y affiche « non défini ».
+        `rowVersion` (xmin) est le jeton de concurrence optimiste à renvoyer lors d'une modification.
+      responses:
+        '200':
+          description: Barème
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ClassFee' }
+
+  /finance/fees/apply-standard:
+    post:
+      tags: [Finance]
+      summary: Option 1 — appliquer un montant standard à toutes les classes d'une catégorie (Directeur)
+      description: >-
+        Applique un montant à toutes les classes en un geste (Volume 1 §7.4). `overwriteExisting` à
+        false (défaut) ne remplit que les classes encore vierges et PRÉSERVE les exceptions déjà
+        ajustées ; à true, réaligne aussi les classes existantes sur le montant standard. Chaque
+        changement est historisé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplyStandardFeeRequest' }
+      responses:
+        '200':
+          description: Compte-rendu (créées, réalignées, laissées telles quelles)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplyStandardFeeResult' }
+        '403': { description: Réservé au Directeur }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /finance/fees/{id}:
+    put:
+      tags: [Finance]
+      summary: Option 2 — ajuster le montant d'une classe (exception), verrouillage optimiste (Directeur)
+      description: >-
+        Modifie une ligne de barème. `rowVersion` (xmin lu à l'affichage) protège contre l'écrasement
+        concurrent : si un autre utilisateur a modifié la ligne entre-temps, la réponse est 409
+        (AGENTS.md règle #5). Le changement est historisé.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, rowVersion]
+              properties:
+                amount: { type: number, minimum: 0 }
+                rowVersion:
+                  type: integer
+                  format: int64
+                  description: Jeton de concurrence (xmin) renvoyé par le dernier GET /finance/fees.
+      responses:
+        '200':
+          description: Montant mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UpdateFeeResult' }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Ligne de barème introuvable dans cet établissement }
+        '409':
+          description: La ligne a été modifiée par un autre utilisateur entre-temps
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /finance/fees/{id}/history:
+    get:
+      tags: [Finance]
+      summary: Historique des modifications d'une ligne de barème
+      description: Ancien montant, nouveau montant, auteur, date — du plus récent au plus ancien (Volume 1 §7.4).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Historique
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/FeeHistoryEntry' }
+
   /finance/payments:
     post:
       tags: [Finance]
@@ -942,6 +1078,80 @@ components:
         rowVersion:
           type: string
           description: Jeton de concurrence optimiste renvoyé lors de la dernière lecture
+
+    FeeCategoryCreateRequest:
+      type: object
+      description: Pas de `schoolId` : il est déduit du JWT. La liste est libre (Volume 1 §7.1).
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 60, example: "Mensualité" }
+        isRecurring:
+          type: boolean
+          description: Vrai pour une mensualité (due chaque mois), faux pour un frais ponctuel.
+
+    FeeCategory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: "Mensualité" }
+        isRecurring: { type: boolean }
+
+    ClassFee:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        feeCategoryId: { type: string, format: uuid }
+        feeCategoryName: { type: string, example: "Mensualité" }
+        classroomId: { type: string, format: uuid }
+        classroomName: { type: string, example: "CM2 A" }
+        level: { type: string, example: "Primaire" }
+        amount: { type: number, example: 15000 }
+        rowVersion:
+          type: integer
+          format: int64
+          description: Jeton de concurrence optimiste (xmin) à renvoyer lors d'une modification.
+
+    ApplyStandardFeeRequest:
+      type: object
+      required: [feeCategoryId, amount]
+      properties:
+        feeCategoryId: { type: string, format: uuid }
+        amount: { type: number, minimum: 0, example: 15000 }
+        overwriteExisting:
+          type: boolean
+          default: false
+          description: >-
+            false : ne remplit que les classes vierges et préserve les exceptions. true : réaligne
+            toutes les classes sur le montant standard.
+
+    ApplyStandardFeeResult:
+      type: object
+      properties:
+        created: { type: integer, description: Classes pour lesquelles une ligne a été créée. }
+        updated: { type: integer, description: Classes réalignées sur le standard (overwrite). }
+        skipped: { type: integer, description: Classes laissées telles quelles (exception préservée ou déjà au montant). }
+
+    UpdateFeeResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        amount: { type: number }
+        rowVersion:
+          type: integer
+          format: int64
+          description: Nouveau jeton après écriture, pour enchaîner une modification sans recharger.
+
+    FeeHistoryEntry:
+      type: object
+      properties:
+        oldAmount:
+          type: number
+          nullable: true
+          description: Montant avant le changement. Null pour la définition initiale.
+        newAmount: { type: number }
+        changedByUserId: { type: string, format: uuid }
+        changedByName: { type: string, example: "Fatou Ndiaye" }
+        changedAt: { type: string, format: date-time }
 
     PaymentCreateRequest:
       type: object

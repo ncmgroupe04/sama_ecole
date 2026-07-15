@@ -239,6 +239,19 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // suivant qui croit créer la même matière à neuf.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM subjects;");
 
+        // Frais (ticket JGK-F01), dans l'ordre des dépendances : l'historique référence le barème, le
+        // barème référence classes et catégories. Le journal est append-only pour le rôle applicatif,
+        // mais CE contexte est le propriétaire des tables — il peut le purger.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM fee_change_history;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM class_fees;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM fee_categories;");
+
+        // Élèves et classes : class_fees et students les référencent, donc APRÈS eux. Sans cette
+        // purge, une classe laissée par un test fausserait le décompte « appliquer à toutes les
+        // classes » (Option 1 de JGK-F01) du test suivant.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM students;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM classrooms;");
+
         await owner.Database.ExecuteSqlRawAsync(
             $"""DELETE FROM schools WHERE "Id" <> '{EcoleId}';""");
 
