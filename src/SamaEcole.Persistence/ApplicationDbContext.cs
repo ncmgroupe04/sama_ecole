@@ -26,6 +26,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<FeeChangeHistory> FeeChangeHistory => Set<FeeChangeHistory>();
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
     public DbSet<EnrollmentFeeLine> EnrollmentFeeLines => Set<EnrollmentFeeLine>();
+    public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<UserStatusHistory> UserStatusHistory => Set<UserStatusHistory>();

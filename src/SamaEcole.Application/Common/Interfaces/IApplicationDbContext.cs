@@ -34,6 +34,9 @@ public interface IApplicationDbContext
     /// <summary>Détail figé des frais d'une inscription (ticket JGK-E01) : l'instantané du barème pour le reçu.</summary>
     DbSet<EnrollmentFeeLine> EnrollmentFeeLines { get; }
 
+    /// <summary>Encaissements de caisse (ticket JGK-F02). Le solde vit sur l'inscription (verrou optimiste xmin).</summary>
+    DbSet<Payment> Payments { get; }
+
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
 

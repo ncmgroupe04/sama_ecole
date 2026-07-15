@@ -32,8 +32,9 @@ public static class DependencyInjection
         // JGK-G03. À remplacer avant toute exploitation réelle — voir LoggingEmailSender.
         services.AddSingleton<IEmailSender, LoggingEmailSender>();
 
-        // Génération PDF du reçu d'inscription (ticket JGK-E02). Sans état : un singleton suffit.
+        // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02). Sans état : des singletons suffisent.
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
+        services.AddSingleton<IPaymentReceiptPdfGenerator, PaymentReceiptPdfGenerator>();
 
         // Récupération du logo de l'établissement pour le reçu (JGK-E02). Client HTTP dédié :
         //  * garde anti-SSRF au moment de la connexion (l'URL vient du Directeur — cf. SsrfSafeConnect) ;

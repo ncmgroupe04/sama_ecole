@@ -27,6 +27,8 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         builder.Property(e => e.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(e => e.TotalDue).IsRequired().HasPrecision(12, 2);
+        // Cumul des encaissements (JGK-F02) : par défaut 0, incrémenté sous le verrou xmin de cette table.
+        builder.Property(e => e.AmountPaid).IsRequired().HasPrecision(12, 2).HasDefaultValue(0m);
         builder.Property(e => e.ReceiptNumber).HasMaxLength(50).IsRequired();
         builder.Property(e => e.EnrolledAt).IsRequired();
 

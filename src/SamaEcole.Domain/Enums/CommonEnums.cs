@@ -20,11 +20,29 @@ public enum EnrollmentStatus
     Cancelled
 }
 
+/// <summary>
+/// Moyens de paiement d'un élève acceptés en V1 (DDS §6, Volume 1 §7.3) : espèces, chèque, virement,
+/// Mobile Money (Wave / Orange Money — saisi MANUELLEMENT en V1, sans intégration agrégateur ; celle-ci
+/// ne concerne que les abonnements, règle #11). Distinct de <c>SubscriptionPaymentMethod</c>.
+/// </summary>
 public enum PaymentMethod
 {
     Cash,
-    MobileMoney,
-    BankTransfer
+    Cheque,
+    Transfer,
+    MobileMoney
+}
+
+/// <summary>
+/// Statut d'un paiement d'élève (DDS §6). <c>Paid</c> : ce versement solde l'inscription ; <c>Partial</c> :
+/// un solde reste dû après lui ; <c>Cancelled</c> : versement annulé/remboursé (réservé à une évolution —
+/// aucune route de F02 ne l'émet). Le statut GLOBAL d'une inscription se déduit de son solde, pas d'ici.
+/// </summary>
+public enum PaymentStatus
+{
+    Paid,
+    Partial,
+    Cancelled
 }
 
 public enum PaymentCategory

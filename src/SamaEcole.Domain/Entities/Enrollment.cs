@@ -41,6 +41,16 @@ public class Enrollment : AuditableEntity, ITenantEntity
     public decimal TotalDue { get; set; }
 
     /// <summary>
+    /// Cumul des versements encaissés sur cette inscription (ticket JGK-F02), en FCFA. Le SOLDE restant
+    /// est <c>TotalDue − AmountPaid</c>. Ce champ n'est PAS le montant dû (règle #4 : la Finance ne touche
+    /// jamais à <see cref="TotalDue"/>) — c'est un compteur d'encaissements, incrémenté dans la même
+    /// transaction que chaque <see cref="Payment"/>. C'est cette écriture sur l'inscription qui déclenche
+    /// le verrou optimiste xmin : deux encaissements concurrents sur le même solde entrent en collision,
+    /// le second reçoit un 409 (règle #5), jamais un sur-crédit silencieux.
+    /// </summary>
+    public decimal AmountPaid { get; set; }
+
+    /// <summary>
     /// Numéro officiel du reçu d'inscription (ticket JGK-E02, ex. « REC-2025-0002 »). Attribué UNE FOIS,
     /// dans la même transaction que l'inscription (AGENTS.md règle #3, comme le matricule) : gapless,
     /// unique par école, jamais réémis. C'est ce numéro qui identifie le reçu PDF et sa réimpression.

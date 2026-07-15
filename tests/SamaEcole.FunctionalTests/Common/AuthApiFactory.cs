@@ -241,6 +241,9 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
              WHERE "Id" NOT IN ('{DirecteurId}', '{SecretaireId}', '{SuperAdminId}', '{FinanceId}');
              """);
 
+        // Encaissements (ticket JGK-F02) : ils référencent l'inscription en Restrict, donc AVANT elle.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM payments;");
+
         // Inscriptions (ticket JGK-E01), AVANT les tables qu'elles référencent en Restrict (élèves,
         // classes, années, catégories de frais). Les lignes de frais d'abord : elles pointent l'inscription.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM enrollment_fee_lines;");

@@ -677,14 +677,54 @@ paths:
   /finance/payments:
     post:
       tags: [Finance]
-      summary: Enregistrer un paiement
+      summary: Encaisser un paiement (Directeur + Finance) — ticket JGK-F02
+      description: >-
+        Impute un versement sur le solde d'une inscription. Le montant dû (TotalDue) n'est jamais fourni
+        ni modifié par le client (règles #4/#10) ; l'école vient du JWT. Verrou optimiste : deux
+        encaissements concurrents sur le même solde ne peuvent pas s'écraser — le second reçoit 409.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/PaymentCreateRequest' }
       responses:
-        '201': { description: Paiement enregistré, reçu généré }
+        '201':
+          description: Paiement encaissé, numéro de reçu attribué
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentResult' }
+        '403': { description: Rôle non autorisé (écriture réservée à Directeur + Finance) }
+        '404': { description: Inscription introuvable dans cet établissement }
+        '409': { description: Encaissement concurrent — recharger le solde et réessayer }
+        '422': { description: Montant invalide, solde dépassé, ou inscription déjà soldée/annulée }
+
+  /finance/payments/{id}/receipt:
+    get:
+      tags: [Finance]
+      summary: Reçu de paiement (JSON) — lecture ouverte à tout rôle de l'école
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Données du reçu de paiement (montants figés à l'encaissement)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentReceipt' }
+        '404': { description: Paiement introuvable dans cet établissement }
+
+  /finance/payments/{id}/receipt/pdf:
+    get:
+      tags: [Finance]
+      summary: Reçu de paiement officiel en PDF (JGK-F02)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Reçu PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { description: Paiement introuvable dans cet établissement }
 
   /finance/expenses:
     get:
@@ -1270,12 +1310,46 @@ components:
 
     PaymentCreateRequest:
       type: object
-      required: [studentId, amount, method, category]
+      description: >-
+        Encaissement contre une INSCRIPTION (c'est là que vit le solde), pas contre un élève : un élève
+        peut avoir plusieurs inscriptions au fil des années, chacune avec son propre solde.
+      required: [enrollmentId, amount, method]
       properties:
-        studentId: { type: string, format: uuid }
+        enrollmentId: { type: string, format: uuid }
+        amount: { type: number, description: "FCFA, strictement positif, jamais supérieur au solde restant." }
+        method: { type: string, enum: [Cash, Cheque, Transfer, MobileMoney] }
+
+    PaymentResult:
+      type: object
+      description: Résultat d'un encaissement — de quoi confirmer à la caisse et imprimer le reçu.
+      properties:
+        paymentId: { type: string, format: uuid }
+        receiptNumber: { type: string, example: "REC-2025-0007" }
         amount: { type: number }
-        method: { type: string, enum: [Cash, MobileMoney, BankTransfer] }
-        category: { type: string, enum: [Enrollment, Tuition, Exam, Other] }
+        totalDue: { type: number }
+        amountPaid: { type: number, description: "Cumul encaissé après ce versement." }
+        remainingBalance: { type: number }
+        status: { type: string, enum: [Paid, Partial] }
+
+    PaymentReceipt:
+      type: object
+      description: Données du reçu de paiement, montants figés à l'instant de l'encaissement.
+      properties:
+        receiptNumber: { type: string }
+        schoolName: { type: string }
+        schoolPhone: { type: string, nullable: true }
+        schoolCity: { type: string, nullable: true }
+        schoolLogoUrl: { type: string, nullable: true }
+        matricule: { type: string }
+        studentFullName: { type: string }
+        classroomName: { type: string }
+        schoolYearLabel: { type: string }
+        method: { type: string, enum: [Cash, Cheque, Transfer, MobileMoney] }
+        amount: { type: number }
+        totalDue: { type: number }
+        alreadyPaid: { type: number }
+        remainingBalance: { type: number }
+        paidAt: { type: string, format: date-time }
 
     ExpenseCreateRequest:
       type: object
