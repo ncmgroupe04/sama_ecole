@@ -674,6 +674,23 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/FeeHistoryEntry' }
 
+  /finance/students/{studentId}/balance:
+    get:
+      tags: [Finance]
+      summary: Solde à encaisser pour un élève (année scolaire active) — point d'entrée de la caisse
+      description: >-
+        Retrouve l'inscription de l'élève sur l'année scolaire ACTIVE et son solde. Lecture ouverte à
+        tout rôle de l'école (composer/afficher un solde n'est pas un acte d'encaissement, règle #4).
+      parameters:
+        - { name: studentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Solde de l'inscription active
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudentBalance' }
+        '404': { description: Élève introuvable, ou aucune inscription sur l'année active }
+
   /finance/payments:
     post:
       tags: [Finance]
@@ -1307,6 +1324,21 @@ components:
         changedByUserId: { type: string, format: uuid }
         changedByName: { type: string, example: "Fatou Ndiaye" }
         changedAt: { type: string, format: date-time }
+
+    StudentBalance:
+      type: object
+      description: Solde à encaisser pour un élève, sur son inscription de l'année scolaire active.
+      properties:
+        enrollmentId: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        studentFullName: { type: string }
+        classroomName: { type: string }
+        schoolYearLabel: { type: string }
+        totalDue: { type: number }
+        amountPaid: { type: number }
+        remainingBalance: { type: number }
+        status: { type: string, enum: [Paid, Partial] }
 
     PaymentCreateRequest:
       type: object

@@ -42,10 +42,16 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     private record Tokens(string AccessToken, int ExpiresIn);
     private record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount);
     private record FeeCategoryDto(Guid Id, string Name, bool IsRecurring);
-    private record Receipt(Guid EnrollmentId, string ReceiptNumber, decimal TotalDue);
+    private record Receipt(Guid EnrollmentId, string ReceiptNumber, string Matricule, decimal TotalDue);
     private record PaymentResult(
         Guid PaymentId, string ReceiptNumber, decimal Amount, decimal TotalDue,
         decimal AmountPaid, decimal RemainingBalance, string Status);
+    private record StudentListItem(Guid Id, string Matricule, string FullName);
+    private record PaginatedStudents(List<StudentListItem> Items, int TotalCount);
+    private record StudentBalance(
+        Guid EnrollmentId, Guid StudentId, string Matricule, string StudentFullName,
+        string ClassroomName, string SchoolYearLabel,
+        decimal TotalDue, decimal AmountPaid, decimal RemainingBalance, string Status);
 
     private async Task<string> TokenAsync(string email, string password)
     {
@@ -116,6 +122,52 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
     private static object PaymentBody(Guid enrollmentId, decimal amount, string method = "Cash") =>
         new { enrollmentId, amount, method };
+
+    /// <summary>Résout un élève par matricule, comme le fera la recherche de l'écran caisse.</summary>
+    private async Task<Guid> ResolveStudentIdAsync(string token, string matricule)
+    {
+        var response = await SendAsync(HttpMethod.Get, $"/api/v1/students?search={matricule}", token);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var page = (await response.Content.ReadFromJsonAsync<PaginatedStudents>())!;
+        return page.Items.Single(s => s.Matricule == matricule).Id;
+    }
+
+    [Fact]
+    public async Task The_Student_Balance_Endpoint_Reflects_The_Active_Enrollment()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+        var studentId = await ResolveStudentIdAsync(finance, enrollment.Matricule);
+
+        var before = await SendAsync(HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance);
+        before.StatusCode.Should().Be(HttpStatusCode.OK);
+        var balanceBefore = (await before.Content.ReadFromJsonAsync<StudentBalance>())!;
+        balanceBefore.EnrollmentId.Should().Be(enrollment.EnrollmentId);
+        balanceBefore.TotalDue.Should().Be(ExpectedTotal);
+        balanceBefore.AmountPaid.Should().Be(0m);
+        balanceBefore.RemainingBalance.Should().Be(ExpectedTotal);
+        balanceBefore.Status.Should().Be("Partial");
+
+        var pay = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
+            PaymentBody(enrollment.EnrollmentId, 60_000m));
+        pay.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var after = await SendAsync(HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance);
+        var balanceAfter = (await after.Content.ReadFromJsonAsync<StudentBalance>())!;
+        balanceAfter.AmountPaid.Should().Be(60_000m);
+        balanceAfter.RemainingBalance.Should().Be(ExpectedTotal - 60_000m);
+    }
+
+    [Fact]
+    public async Task The_Balance_Of_An_Unknown_Student_Returns_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/{Guid.NewGuid()}/balance", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
 
     [Fact]
     public async Task Finance_Records_A_Partial_Payment_And_Gets_A_Receipt_Number_And_Balance()

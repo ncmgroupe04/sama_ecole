@@ -8,6 +8,7 @@ using SamaEcole.Application.Finance.Queries.GetFeeCategories;
 using SamaEcole.Application.Finance.Queries.GetFeeHistory;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceipt;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceiptPdf;
+using SamaEcole.Application.Finance.Queries.GetStudentBalance;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -93,6 +94,16 @@ public class FinanceController(ISender mediator) : ControllerBase
     // compose le montant dû à l'inscription). Miroir exact d'EnrollmentsController (Directeur+Secrétariat)
     // — la règle #4 sépare qui fixe le dû de qui l'encaisse.
     private const string PaymentWriters = "Directeur,Finance";
+
+    /// <summary>
+    /// Point d'entrée de l'écran caisse : à partir d'un élève trouvé par recherche, l'inscription et le
+    /// solde de l'année active. LECTURE ouverte à tout rôle de l'école, comme le reçu.
+    /// </summary>
+    [HttpGet("students/{studentId:guid}/balance")]
+    [ProducesResponseType<StudentBalanceDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> StudentBalance(Guid studentId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetStudentBalanceQuery(studentId), cancellationToken));
 
     /// <summary>Encaisse un versement sur une inscription, avec verrou optimiste et reçu officiel (règles #4, #5).</summary>
     [HttpPost("payments")]

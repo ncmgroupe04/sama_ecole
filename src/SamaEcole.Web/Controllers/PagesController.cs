@@ -35,6 +35,9 @@ public class PagesController : Controller
     [HttpGet("/frais")]
     public IActionResult Fees() => View("~/Views/Fees/Index.cshtml");
 
+    [HttpGet("/caisse")]
+    public IActionResult Caisse() => View("~/Views/Caisse/Index.cshtml");
+
     [HttpGet("/parametres")]
     public IActionResult Settings() => View("~/Views/Settings/Index.cshtml");
 
