@@ -38,6 +38,10 @@ public class PagesController : Controller
     [HttpGet("/matieres")]
     public IActionResult Subjects() => View("~/Views/Subjects/Index.cshtml");
 
+    // JGK-G01/G02 : écran de saisie des notes (Devoir/Composition) par classe, matière et trimestre.
+    [HttpGet("/notes")]
+    public IActionResult Grades() => View("~/Views/Grades/Index.cshtml");
+
     [HttpGet("/frais")]
     public IActionResult Fees() => View("~/Views/Fees/Index.cshtml");
 

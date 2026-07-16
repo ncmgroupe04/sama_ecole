@@ -1,6 +1,7 @@
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
 using SamaEcole.Application.Grades.Commands.CreateMention;
+using SamaEcole.Application.Grades.Queries.GetClassGrades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.Grades.Queries.GetMentions;
 using SamaEcole.Application.Grades.Commands.UpdateGrade;
@@ -28,6 +29,20 @@ public class GradesController(ISender mediator) : ControllerBase
     public record CreateMentionRequest(string Label, decimal MinAverage);
 
     private const string GradingRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
+
+    /// <summary>
+    /// Écran de saisie des notes : les élèves d'une classe avec leurs notes déjà saisies pour une
+    /// matière et un trimestre. LECTURE ouverte au Directeur et à l'Enseignant, comme la consultation
+    /// des notes (Volume_7_Security « Voir »).
+    /// </summary>
+    [HttpGet]
+    [Authorize(Roles = GradingRoles)]
+    [ProducesResponseType<IReadOnlyList<StudentGradeRowDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ListForClass(
+        [FromQuery] GetClassGradesQuery query, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(query, cancellationToken));
 
     [HttpPost]
     [Authorize(Roles = nameof(Role.Enseignant))]

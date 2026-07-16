@@ -1,0 +1,146 @@
+@{
+    ViewData["Title"] = "Notes et bulletins";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/grades.js" asp-append-version="true"></script>
+}
+
+<div x-data="gradesView()">
+    <!-- Titre -->
+    <div>
+        <h1 class="text-jgk-title font-bold text-gray-900">Notes et bulletins</h1>
+        <p class="text-jgk-subtitle text-gray-500 mt-1">
+            Sélectionnez une classe, une matière et un trimestre pour saisir ou corriger les notes.
+        </p>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- Sélecteurs -->
+    <div class="card mt-6 p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div>
+                <label for="grades-classroom" class="block text-sm font-medium text-gray-700">Classe</label>
+                <select id="grades-classroom" x-model="selectedClassroomId" x-on:change="reload()" class="input-field bg-white">
+                    <option value="">Sélectionnez une classe…</option>
+                    <template x-for="c in classrooms" :key="c.id">
+                        <option :value="c.id" x-text="c.name + ' — ' + c.level"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label for="grades-subject" class="block text-sm font-medium text-gray-700">Matière</label>
+                <select id="grades-subject" x-model="selectedSubjectId" x-on:change="reload()" class="input-field bg-white">
+                    <option value="">Sélectionnez une matière…</option>
+                    <template x-for="s in subjects" :key="s.id">
+                        <option :value="s.id" x-text="s.name"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label for="grades-term" class="block text-sm font-medium text-gray-700">Trimestre</label>
+                <select id="grades-term" x-model="selectedTermId" x-on:change="reload()" class="input-field bg-white" :disabled="terms.length === 0">
+                    <option value="">Sélectionnez un trimestre…</option>
+                    <template x-for="t in terms" :key="t.id">
+                        <option :value="t.id" x-text="t.label"></option>
+                    </template>
+                </select>
+            </div>
+        </div>
+
+        <!-- Aucune année active : rien à proposer comme trimestre -->
+        <div x-show="!isLoadingContext && terms.length === 0" x-cloak class="mt-4 rounded-md border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning">
+            Aucune année scolaire active n'a de trimestre disponible. Configurez une année active dans
+            <a href="/parametres" class="underline font-medium">Paramètres</a>.
+        </div>
+    </div>
+
+    <!-- Rôle Directeur : rappel que seule la correction (pas la saisie) lui est ouverte -->
+    <div x-show="!canEnterGrades && hasSelection" x-cloak class="mt-4 rounded-md border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
+        En tant que Directeur, vous pouvez corriger une note déjà saisie, mais seul l'enseignant saisit une nouvelle note.
+    </div>
+
+    <!-- Conflit de concurrence (AGENTS.md règle #5) -->
+    <div x-show="conflictError" x-cloak class="mt-4 rounded-md border-l-4 border-danger bg-danger-bg p-4">
+        <p class="text-sm font-medium text-danger">Une note a été modifiée entre-temps par une autre personne.</p>
+        <button type="button" x-on:click="reload()" class="mt-2 text-sm font-medium text-danger underline">Recharger le tableau</button>
+    </div>
+
+    <!-- Aucune sélection complète -->
+    <div x-show="!hasSelection" x-cloak class="card mt-6">
+        <empty-state icon="book" title="Choisissez une classe, une matière et un trimestre."
+                     hint="Le tableau de saisie apparaît une fois les trois sélections faites." />
+    </div>
+
+    <!-- Chargement -->
+    <div x-show="hasSelection && isLoadingRows" x-cloak class="card mt-6 p-12 flex items-center justify-center">
+        <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+    </div>
+
+    <!-- Aucun élève dans la classe -->
+    <div x-show="hasSelection && !isLoadingRows && rows.length === 0" x-cloak class="card mt-6">
+        <empty-state icon="users" title="Cette classe ne compte aucun élève." hint="Inscrivez des élèves dans cette classe pour saisir leurs notes." />
+    </div>
+
+    <!-- Tableau de saisie -->
+    <div x-show="hasSelection && !isLoadingRows && rows.length > 0" x-cloak class="card mt-6 relative">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3 px-4 w-12 text-center">N°</th>
+                        <th class="py-3 px-4">Matricule</th>
+                        <th class="py-3 px-4">Élève</th>
+                        <th class="py-3 px-4 w-40 text-center">Devoir</th>
+                        <th class="py-3 px-4 w-40 text-center">Composition</th>
+                    </tr>
+                </thead>
+                <tbody class="table-cell divide-y divide-gray-100">
+                    <template x-for="(row, index) in rows" :key="row.studentId">
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="py-2 px-4 text-center text-gray-400 font-medium" x-text="index + 1"></td>
+                            <td class="py-2 px-4 text-xs font-mono text-gray-500" x-text="row.matricule"></td>
+                            <td class="py-2 px-4 font-medium text-gray-900" x-text="row.fullName"></td>
+
+                            <td class="py-2 px-4">
+                                <div class="flex items-center gap-2 justify-center">
+                                    <input type="number" min="0" :max="gradingScale"
+                                           class="input-field mt-0 w-20 text-center"
+                                           :class="row.devoir.status === 'error' ? 'border-danger' : ''"
+                                           :data-row="index" data-field="devoir"
+                                           :disabled="row.devoir.status === 'saving' || (!row.devoir.id && !canEnterGrades)"
+                                           :title="(!row.devoir.id && !canEnterGrades) ? 'Réservé à l\'enseignant' : ''"
+                                           x-model="row.devoir.value"
+                                           x-on:blur="saveCell(index, 'devoir')"
+                                           x-on:keydown.enter.prevent="focusNextRow(index, 'devoir')" />
+                                    <svg x-show="row.devoir.status === 'saving'" x-cloak aria-hidden="true" class="animate-spin w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <icon x-show="row.devoir.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
+                                </div>
+                                <p x-show="row.devoir.error" x-cloak x-text="row.devoir.error" class="mt-1 text-xs text-danger text-center"></p>
+                            </td>
+
+                            <td class="py-2 px-4">
+                                <div class="flex items-center gap-2 justify-center">
+                                    <input type="number" min="0" :max="gradingScale"
+                                           class="input-field mt-0 w-20 text-center"
+                                           :class="row.composition.status === 'error' ? 'border-danger' : ''"
+                                           :data-row="index" data-field="composition"
+                                           :disabled="row.composition.status === 'saving' || (!row.composition.id && !canEnterGrades)"
+                                           :title="(!row.composition.id && !canEnterGrades) ? 'Réservé à l\'enseignant' : ''"
+                                           x-model="row.composition.value"
+                                           x-on:blur="saveCell(index, 'composition')"
+                                           x-on:keydown.enter.prevent="focusNextRow(index, 'composition')" />
+                                    <svg x-show="row.composition.status === 'saving'" x-cloak aria-hidden="true" class="animate-spin w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <icon x-show="row.composition.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
+                                </div>
+                                <p x-show="row.composition.error" x-cloak x-text="row.composition.error" class="mt-1 text-xs text-danger text-center"></p>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

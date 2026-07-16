@@ -101,10 +101,13 @@
                 <span class="text-sm font-medium">Enseignants</span>
             </span>
 
-            <span x-show="canView(['Directeur', 'Enseignant'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Notes et bulletins — module à venir">
+            @* Tickets JGK-G01/G02 livrés (saisie de notes, moyennes) : chaque module devient un vrai
+               lien le jour où son ticket est livré (patron documenté plus haut). Le bulletin PDF
+               (JGK-G03) reste à venir — l'écran ci-dessous ne couvre que la saisie. *@
+            <a href="/notes" x-show="canView(['Directeur', 'Enseignant'])" x-cloak class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
                 <icon name="book" class="w-5 h-5" />
                 <span class="text-sm font-medium">Notes et bulletins</span>
-            </span>
+            </a>
 
             <a href="/frais" x-show="canView(['Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/frais") ? LinkActive : LinkIdle)">
                 <icon name="wallet" class="w-5 h-5" />
