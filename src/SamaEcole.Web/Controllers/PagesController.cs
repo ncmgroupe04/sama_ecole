@@ -20,6 +20,12 @@ public class PagesController : Controller
     [HttpGet("/")]
     public IActionResult Index() => RedirectToAction(nameof(Students));
 
+    // JGK-F04. Route dédiée plutôt que remplacer l'atterrissage par défaut (/eleves) : c'est un
+    // tableau de bord FINANCIER, pas un accueil générique — seuls Directeur et Finance en ont l'usage
+    // (voir FinanceController.Dashboard), le Secrétariat continue d'atterrir sur les élèves.
+    [HttpGet("/tableau-de-bord")]
+    public IActionResult Dashboard() => View("~/Views/Dashboard/Index.cshtml");
+
     [HttpGet("/eleves")]
     public IActionResult Students() => View("~/Views/Students/Index.cshtml");
 

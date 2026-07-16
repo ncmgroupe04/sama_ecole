@@ -1,0 +1,108 @@
+/**
+ * Tableau de bord financier (ticket JGK-F04) — /finance/dashboard : encaissé jour/mois/année, solde
+ * dû, taux de recouvrement sur l'année scolaire active, et les derniers versements encaissés à la
+ * caisse. Lecture seule : aucune action de saisie n'a lieu ici (l'encaissement reste l'écran Caisse,
+ * JGK-F02) — seule la recherche dans les derniers paiements est interactive.
+ */
+document.addEventListener('alpine:init', () => {
+    Alpine.data('dashboardView', () => ({
+        // Seuls le Directeur et la Finance pilotent la trésorerie (règle #4, comme la Caisse). Confort
+        // d'affichage : l'API garde (FinanceController.Dashboard, [Authorize(Roles = "Directeur,Finance")]).
+        canView: window.auth.role === 'Directeur' || window.auth.role === 'Finance',
+
+        isLoading: false,
+        error: null,
+        data: null,
+        search: '',
+
+        async init() {
+            if (this.canView) await this.load();
+        },
+
+        async load() {
+            this.isLoading = true;
+            this.error = null;
+            try {
+                this.data = await window.api.get('/finance/dashboard');
+            } catch (err) {
+                this.error = err.message || 'Erreur lors du chargement du tableau de bord.';
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        filteredPayments() {
+            if (!this.data) return [];
+            const q = this.search.trim().toLowerCase();
+            if (!q) return this.data.recentPayments;
+            return this.data.recentPayments.filter((p) =>
+                p.matricule.toLowerCase().includes(q) ||
+                p.studentFullName.toLowerCase().includes(q) ||
+                p.receiptNumber.toLowerCase().includes(q));
+        },
+
+        resetSearch() {
+            this.search = '';
+        },
+
+        /** Initiales pour l'avatar de ligne (ex. « Awa Ndiaye » → « AN »), même idiome que le profil de la sidebar. */
+        initials(fullName) {
+            return (fullName || '')
+                .split(' ')
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0])
+                .join('')
+                .toUpperCase();
+        },
+
+        methodLabel(method) {
+            const labels = { Cash: 'Espèces', Cheque: 'Chèque', Transfer: 'Virement', MobileMoney: 'Mobile Money' };
+            return labels[method] || method;
+        },
+
+        /** FCFA : entiers, séparateur de milliers français. Pas de décimales — la monnaie n'en a pas. */
+        formatMoney(amount) {
+            if (amount === null || amount === undefined) return '—';
+            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + ' FCFA';
+        },
+
+        formatPercent(rate) {
+            return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 }).format(rate || 0);
+        },
+
+        formatDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            return `${day}/${month}/${d.getFullYear()}`;
+        },
+
+        /**
+         * Télécharge le reçu officiel en PDF (même patron que enrollments.js/caisse.js) : l'API exige
+         * le jeton, on récupère donc le PDF en blob avec l'en-tête Authorization plutôt qu'un simple lien.
+         */
+        async downloadReceipt(paymentId, receiptNumber) {
+            if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                await window.api.refreshOrRedirect();
+            }
+
+            const response = await fetch(`/api/v1/finance/payments/${paymentId}/receipt/pdf`, {
+                headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                credentials: 'same-origin'
+            });
+            if (!response.ok) return;
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Recu-${receiptNumber}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+    }));
+});

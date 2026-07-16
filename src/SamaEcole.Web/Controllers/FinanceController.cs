@@ -6,6 +6,7 @@ using SamaEcole.Application.Finance.Commands.UpdateClassFee;
 using SamaEcole.Application.Finance.Queries.GetClassFees;
 using SamaEcole.Application.Finance.Queries.GetFeeCategories;
 using SamaEcole.Application.Finance.Queries.GetFeeHistory;
+using SamaEcole.Application.Finance.Queries.GetFinanceDashboard;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceipt;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceiptPdf;
 using SamaEcole.Application.Finance.Queries.GetStudentBalance;
@@ -139,4 +140,18 @@ public class FinanceController(ISender mediator) : ControllerBase
 
         return File(result.Content, "application/pdf", $"Recu-{result.ReceiptNumber}.pdf");
     }
+
+    // ------------------------------------------------------------------ Tableau de bord (JGK-F04)
+
+    /// <summary>
+    /// Encaissé jour/mois/année, solde dû et taux de recouvrement sur l'année scolaire active. Réservé
+    /// à Directeur et Finance : le Secrétariat compose le montant dû à l'inscription mais n'a pas besoin
+    /// de voir la santé financière agrégée de l'établissement (règle #4).
+    /// </summary>
+    [HttpGet("dashboard")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<FinanceDashboardDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Dashboard(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetFinanceDashboardQuery(), cancellationToken));
 }
