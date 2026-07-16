@@ -393,6 +393,28 @@ paths:
         '403': { description: Réservé au Directeur }
         '404': { description: Année scolaire introuvable dans cet établissement }
 
+  /school-years/{id}/terms:
+    get:
+      tags: [SchoolYears]
+      summary: Lister les trimestres d'une année scolaire (générés automatiquement)
+      description: >-
+        Trois trimestres sont générés automatiquement à la création de l'année scolaire, leurs dates
+        divisant la période en trois tranches consécutives — aucun endpoint ne les crée directement.
+        Lecture ouverte à tous les rôles : l'écran de saisie de notes en a besoin.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Les trimestres de cette année, dans l'ordre
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Term' }
+
   /classrooms:
     get:
       tags: [Classrooms]
@@ -589,19 +611,31 @@ paths:
   /grades:
     post:
       tags: [Grades]
-      summary: Saisir ou mettre à jour une note (verrouillage optimiste)
+      summary: Saisir ou corriger une note (Enseignant, Directeur) — verrouillage optimiste
+      description: >-
+        Un seul endpoint sert la première saisie ET les corrections : `rowVersion` absent signifie
+        « nouvelle note » (une création concurrente sur la même clé élève/matière/trimestre/type
+        d'évaluation est refusée en 409, jamais un doublon) ; `rowVersion` présent signifie
+        « je corrige la note lue avec ce jeton » (409 si elle a changé entre-temps).
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/GradeUpsertRequest' }
       responses:
-        '200': { description: Note enregistrée }
+        '200':
+          description: Note enregistrée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GradeSaved' }
+        '403': { description: Réservé au Directeur et à l'Enseignant }
+        '404': { description: Aucune note existante à corriger pour cette clé (rowVersion fourni) }
         '409':
           description: Conflit de concurrence — la note a été modifiée entre-temps
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /report-cards/generate:
     post:
@@ -1351,15 +1385,43 @@ components:
 
     GradeUpsertRequest:
       type: object
-      required: [studentId, subjectId, termId, value, rowVersion]
+      required: [studentId, subjectId, termId, evaluationType, value]
       properties:
         studentId: { type: string, format: uuid }
         subjectId: { type: string, format: uuid }
         termId: { type: string, format: uuid }
-        value: { type: number, minimum: 0 }
+        evaluationType: { type: string, enum: [Devoir, Composition] }
+        value:
+          type: number
+          minimum: 0
+          description: Sur le barème de l'école (SchoolSettings.GradingScale, 10 ou 20).
         rowVersion:
-          type: string
-          description: Jeton de concurrence optimiste renvoyé lors de la dernière lecture
+          type: integer
+          format: int64
+          nullable: true
+          description: >-
+            Absent/null pour une PREMIÈRE saisie (une création concurrente sur la même clé est
+            refusée en 409). Présent — le jeton xmin renvoyé par la dernière lecture — pour corriger
+            une note existante : verrouillage optimiste, refusé en 409 si la note a changé entre-temps.
+
+    GradeSaved:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        value: { type: number }
+        rowVersion:
+          type: integer
+          format: int64
+          description: Nouveau jeton xmin — à renvoyer pour la prochaine correction.
+
+    Term:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string, example: "1er trimestre" }
+        order: { type: integer, example: 1 }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
 
     FeeCategoryCreateRequest:
       type: object

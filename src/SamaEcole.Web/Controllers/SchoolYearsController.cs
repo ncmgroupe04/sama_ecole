@@ -3,6 +3,7 @@ using SamaEcole.Application.SchoolYears.Commands.ActivateSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.CreateSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.ExportSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.GetSchoolYears;
+using SamaEcole.Application.SchoolYears.Queries.GetTerms;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -70,6 +71,16 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Trimestres générés automatiquement à la création de l'année (ticket JGK-G01) — LECTURE ouverte
+    /// à tout utilisateur de l'école, comme la liste des années : l'écran de saisie de notes en a
+    /// besoin, quel que soit le rôle.
+    /// </summary>
+    [HttpGet("{id:guid}/terms")]
+    [ProducesResponseType<IReadOnlyList<TermDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Terms(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetTermsQuery(id), cancellationToken));
 
     /// <summary>
     /// Export ZIP (élèves, paiements, classes) d'une année scolaire — pour archivage hors plateforme.

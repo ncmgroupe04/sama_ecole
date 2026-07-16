@@ -43,6 +43,9 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public const string FinanceEmail = "finance@sama-ecole.sn";
     public const string FinancePassword = "FinanceMotdepasse!2026";
 
+    public const string EnseignantEmail = "enseignant@sama-ecole.sn";
+    public const string EnseignantPassword = "EnseignantMotdepasse!2026";
+
     // Super Admin : SchoolId NULL, il n'appartient à aucun établissement (ticket JGK-B01).
     public const string SuperAdminEmail = "superadmin@sama-ecole.sn";
     public const string SuperAdminPassword = "SuperMotdepasse!2026";
@@ -52,6 +55,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public static readonly Guid SecretaireId = Guid.Parse("cccccccc-0000-0000-0000-000000000003");
     public static readonly Guid SuperAdminId = Guid.Parse("dddddddd-0000-0000-0000-000000000004");
     public static readonly Guid FinanceId = Guid.Parse("eeeeeeee-0000-0000-0000-000000000005");
+    public static readonly Guid EnseignantId = Guid.Parse("ffffffff-0000-0000-0000-000000000006");
 
     /// <summary>Capture les e-mails sortants : c'est le seul canal par lequel passe le mot de passe initial.</summary>
     public FakeEmailSender Emails { get; } = new();
@@ -125,6 +129,18 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 PasswordHash = hasher.Hash(FinancePassword),
                 FullName = "Comptable de test",
                 Role = Role.Finance,
+                Status = EntityStatus.Active
+            },
+            // Rôle Enseignant (ticket JGK-G01) : saisit les notes, mais ne fixe ni les frais ni les
+            // inscriptions.
+            new User
+            {
+                Id = EnseignantId,
+                SchoolId = EcoleId,
+                Email = EnseignantEmail,
+                PasswordHash = hasher.Hash(EnseignantPassword),
+                FullName = "Enseignant de test",
+                Role = Role.Enseignant,
                 Status = EntityStatus.Active
             },
             // Aucun SchoolId : sa session n'a pas de tenant, la RLS lui ferme donc toutes les tables
@@ -243,6 +259,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlInterpolatedAsync(
             $"""UPDATE users SET "PasswordHash" = {hasher.Hash(FinancePassword)} WHERE "Id" = {FinanceId};""");
         await owner.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(EnseignantPassword)} WHERE "Id" = {EnseignantId};""");
+        await owner.Database.ExecuteSqlInterpolatedAsync(
             $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SuperAdminPassword)} WHERE "Id" = {SuperAdminId};""");
 
         // Écoles et comptes créés PAR les tests (ticket JGK-B01) : sans cette purge, une école créée
@@ -251,7 +269,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlRawAsync(
             $"""
              DELETE FROM users
-             WHERE "Id" NOT IN ('{DirecteurId}', '{SecretaireId}', '{SuperAdminId}', '{FinanceId}');
+             WHERE "Id" NOT IN ('{DirecteurId}', '{SecretaireId}', '{SuperAdminId}', '{FinanceId}', '{EnseignantId}');
              """);
 
         // Encaissements (ticket JGK-F02) : ils référencent l'inscription en Restrict, donc AVANT elle.
@@ -265,6 +283,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Avant les écoles : school_settings les référence en Restrict, et un PUT de test aurait
         // laissé une ligne de réglages sur l'école semée (ticket JGK-B02).
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_settings;");
+
+        // Notes (ticket JGK-G01), AVANT les tables qu'elles référencent en Restrict (élèves, matières,
+        // trimestres) — et les trimestres eux-mêmes AVANT les années scolaires qu'ils référencent.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM grades;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM terms;");
 
         // Idem pour les années scolaires (ticket JGK-C01) — et il ne s'agit pas seulement des écoles
         // créées par les tests : une école n'a droit qu'à UNE année active. Sans cette purge, la

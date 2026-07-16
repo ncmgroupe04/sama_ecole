@@ -49,6 +49,12 @@ public interface IApplicationDbContext
     /// <summary>Journal d'audit append-only (ticket JGK-H01) : on y AJOUTE, jamais plus.</summary>
     DbSet<AuditLog> AuditLogs { get; }
 
+    /// <summary>Trimestres d'une année scolaire (ticket JGK-G01), générés automatiquement à sa création.</summary>
+    DbSet<Term> Terms { get; }
+
+    /// <summary>Notes (ticket JGK-G01) : une par (élève, matière, trimestre, type d'évaluation). Verrou optimiste xmin.</summary>
+    DbSet<Grade> Grades { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>

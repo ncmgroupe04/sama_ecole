@@ -60,6 +60,15 @@ public class CreateSchoolYearCommandHandler(
 
         dbContext.SchoolYears.Add(schoolYear);
 
+        // Trois trimestres générés automatiquement (ticket JGK-G01) : aucun ticket du backlog ne
+        // prévoit d'écran de configuration dédié, et le système sénégalais standard en compte trois.
+        // Les dates découpent la période de l'année en trois tranches consécutives, sans trou ni
+        // chevauchement — la dernière absorbe le reste de la division entière.
+        foreach (var term in BuildTerms(schoolYear.Id, schoolId, request.StartDate, request.EndDate))
+        {
+            dbContext.Terms.Add(term);
+        }
+
         // Un libellé en doublon viole l'index unique, et deux créations simultanées d'une première
         // année violeraient l'index unique partiel « une seule active » : SaveChangesAsync traduit
         // l'un comme l'autre en ConcurrencyConflictException → 409, jamais un écrasement silencieux
@@ -76,4 +85,32 @@ public class CreateSchoolYearCommandHandler(
     }
 
     private static bool IsClosed(CreateSchoolYearCommand request, DateOnly today) => request.EndDate < today;
+
+    private static IEnumerable<Term> BuildTerms(Guid schoolYearId, Guid schoolId, DateOnly start, DateOnly end)
+    {
+        var totalDays = end.DayNumber - start.DayNumber + 1;
+        var chunk = totalDays / 3;
+
+        var firstEnd = start.AddDays(chunk - 1);
+        var secondStart = firstEnd.AddDays(1);
+        var secondEnd = secondStart.AddDays(chunk - 1);
+        var thirdStart = secondEnd.AddDays(1);
+
+        (string Label, DateOnly Start, DateOnly End)[] terms =
+        [
+            ("1er trimestre", start, firstEnd),
+            ("2e trimestre", secondStart, secondEnd),
+            ("3e trimestre", thirdStart, end) // absorbe le reste de la division entière
+        ];
+
+        return terms.Select((t, index) => new Term
+        {
+            SchoolId = schoolId,
+            SchoolYearId = schoolYearId,
+            Label = t.Label,
+            Order = index + 1,
+            StartDate = t.Start,
+            EndDate = t.End
+        });
+    }
 }

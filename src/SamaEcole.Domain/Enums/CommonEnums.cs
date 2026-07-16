@@ -67,6 +67,16 @@ public enum SubscriptionStatus
     ReadOnly
 }
 
+/// <summary>
+/// Type d'évaluation d'une note (ticket JGK-G01, Volume 1 §8.1) : le bulletin distingue une colonne
+/// Devoir d'une colonne Composition par matière, avant la moyenne pondérée — jamais une note unique.
+/// </summary>
+public enum EvaluationType
+{
+    Devoir,
+    Composition
+}
+
 public enum MatriculeKind
 {
     Student,
