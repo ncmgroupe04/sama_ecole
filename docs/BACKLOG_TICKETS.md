@@ -1,16 +1,10 @@
-# Sama Ecole — Backlog de tickets (prêt à l'emploi pour agents de code)
+# Jangalekat — Backlog de tickets (prêt à l'emploi pour agents de code)
 
 Chaque ticket est conçu pour être donné **seul, un par un**, à un agent de code (Claude Code, Cursor, Antigravity). Format : ID (traçable à `Volume_1.5_PRD.md` et à la RTM de `Volume_8_Test_Strategy.md`), description courte, critères d'acceptation testables, dépendances. Priorité selon `Volume_1_Cahier_des_Charges.md` §6 : **C**ritique / **H**aute / **M**oyenne / **F**aible.
 
 > Règle d'usage : ne jamais donner plus de 2-3 tickets à la fois à un agent. Un ticket = une PR = une revue.
 
-> **État du squelette fourni** : `JGK-A01` (solution + projets) est fait. `JGK-D01` est fait : `IMatriculeGenerator` a désormais une implémentation PostgreSQL réelle (compteur par école, incrémenté dans la transaction d'enregistrement). `JGK-A03` est fait : RLS active sur `students`, `subscriptions`, `matricule_sequences`, avec un rôle applicatif dédié `sama_ecole_app` (`NOSUPERUSER`/`NOBYPASSRLS`) et le test d'isolation multi-tenant réellement exécuté en CI.
->
-> **Isolation — le trou est refermé** : la table `users` est **désormais sous policy RLS**, depuis la migration `AddAuthentication` (JGK-A04). Le problème qui la laissait ouverte — le login cherche un compte par e-mail *avant* de connaître son école, or une requête sans tenant ne voit aucune ligne sous RLS — n'est pas résolu en laissant la table ouverte, mais en réservant le contournement au seul chemin d'authentification : trois fonctions `SECURITY DEFINER` (chercher un compte par e-mail, par id, enregistrer une tentative de connexion) sur lesquelles le rôle applicatif reçoit `EXECUTE`, `EXECUTE` étant retiré à `PUBLIC`. Toute autre lecture de `users` reste soumise à la RLS.
->
-> **Conséquence à connaître avant d'écrire du code** : le rôle applicatif ne peut PAS insérer dans `users` (« new row violates row-level security policy »). Toute création de compte hors du chemin de login — un seeder, un import — doit passer par le rôle propriétaire, celui des migrations. C'est voulu : ne pas le contourner.
-
-> **`docs/seed-data.json` n'est pas encore chargeable** : ses identifiants n'étaient pas des UUID valides et la majorité de ses entités (classes, matières, enseignants, inscriptions) n'ont pas encore de table. Les UUID sont corrigés, mais `DbSeeder` ne sème pour l'instant que les écoles et les utilisateurs — les seules entités qui existent.
+> **État du squelette fourni** : `JGK-A01` (solution + projets) est déjà fait. `JGK-D01` (création élève) a un **pattern de référence** implémenté (`Students/Commands/CreateStudent`) mais incomplet — `IMatriculeGenerator` n'a pas d'implémentation réelle, à traiter en même temps que `JGK-A02`/`JGK-A03`. Voir `docs/REPO_STRUCTURE.md` §État du squelette.
 
 ---
 
@@ -91,8 +85,8 @@ Middleware/mécanisme côté frontend expirant la session après `autoLogoutMinu
 `GET /teachers/{id}` avec classes/matières attribuées, historique.
 
 **JGK-D05** [H] — Gabarit de dashboard réutilisable (Razor + Tailwind)
-Construire le gabarit générique de listing (barre latérale, barre supérieure, cartes KPI, filtres, tableau paginé, menu d'actions) **reproduisant exactement `docs/design-references/dashboard-reference.jpg`** (Volume 5 §2, description dans `docs/design-references/README.md` §3), en couleur primaire violet/indigo (`tailwind.config.js`). Appliqué en premier lieu à la vue "Liste des élèves" (JGK-D01/D02), puis réutilisé tel quel pour les autres modules (Enseignants, Classes, Paiements...).
-*Dépend de* : JGK-D02. *Critères* : comparaison visuelle avec la référence (structure, couleurs, disposition des cartes et du tableau) ; le gabarit est un composant/layout partagé, pas dupliqué copier-coller par vue.
+Construire le gabarit générique de listing (barre latérale, barre supérieure, cartes KPI, filtres, tableau paginé, menu d'actions) **reproduisant exactement `docs/design-references/dashboard-reference.jpg`** (Volume 5 §2, description dans `docs/design-references/README.md` §3), en couleur primaire violet/indigo (`tailwind.config.js`). **Le menu latéral n'affiche que les modules autorisés pour le rôle connecté** (Volume 5 §3.2), Super Admin inclus. Appliqué en premier lieu à la vue "Liste des élèves" (JGK-D01/D02), puis réutilisé tel quel pour les autres modules (Enseignants, Classes, Paiements...).
+*Dépend de* : JGK-D02. *Critères* : comparaison visuelle avec la référence (structure, couleurs, disposition des cartes et du tableau) ; le gabarit est un composant/layout partagé, pas dupliqué copier-coller par vue ; connecté avec 2 rôles différents (ex. Enseignant et Directeur), le menu affiché diffère et correspond exactement à la matrice du Volume 7 §15 ; taper directement l'URL d'un module non affiché renvoie une erreur d'autorisation côté API, pas seulement une absence de lien.
 
 ---
 

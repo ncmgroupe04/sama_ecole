@@ -1,4 +1,4 @@
-# SAMA ECOLE
+# JANGALEKAT
 
 # VOLUME 1 — Cahier des Charges Fonctionnel
 
@@ -165,6 +165,19 @@ Chaque inscription conserve : date, classe, année scolaire, utilisateur ayant e
 ### 7.1 Frais scolaires
 
 Catégories paramétrables par l'établissement : inscription, réinscription, mensualités, examens, uniformes, transport, cantine, autres.
+
+### 7.1bis Établissement public vs privé — clarification (sans impact code)
+
+> **Note ajoutée en cours de développement (plateforme à ~70%)** : cette précision ne modifie **aucune** règle technique déjà codée — elle documente un comportement déjà couvert par le paramétrage existant (§7.4), pour lever toute ambiguïté future.
+
+Jangalekat s'adresse aussi bien aux établissements **privés** qu'**publics** (école publique, collège, lycée) :
+
+- Un établissement **privé** utilise typiquement des frais de scolarité mensuels sur l'année scolaire (~9 mois), configurés via §7.4.
+- Un établissement **public** sénégalais ne facture en général pas de scolarité mensuelle (enseignement gratuit/subventionné) — il peut alors régler chaque catégorie de frais à **0** ou la laisser simplement inutilisée (ex. seule la coopérative scolaire ou la cantine sont configurées), sans qu'aucun mode ou champ "établissement public" distinct ne soit nécessaire dans le modèle de données.
+- Le module Finance reste donc **strictement le même** pour les deux cas — la différence est uniquement dans les valeurs saisies par l'établissement lors de son propre paramétrage, jamais dans une logique conditionnelle du code.
+- L'abonnement Jangalekat lui-même (Volume 1 §11.1) reste indépendant de cette distinction : un établissement public paie son abonnement plateforme comme tout autre établissement, que ses frais de scolarité internes soient à zéro ou non.
+
+**Vérification recommandée (pas une reprise de développement)** : demander simplement à l'agent de code de confirmer que le ticket JGK-F01 (paramétrage des frais) accepte bien un montant à 0 pour une catégorie sans erreur de validation — si c'est déjà le cas, aucune action supplémentaire n'est nécessaire.
 
 ### 7.2 Synchronisation Inscription ↔ Finance
 
@@ -353,6 +366,58 @@ Un seul paramètre global (`Paramètres → Format des dates`), appliqué à tou
 
 ### 12.2 Résultat attendu
 
-À l'issue de ce cahier des charges, Sama Ecole couvre : administration, scolarité, inscriptions, bulletins, gestion pédagogique, gestion financière, gestion des abonnements multi-écoles, contrôle des accès, statistiques académiques et financières — adapté aux écoles maternelles, primaires, collèges, lycées et centres de formation du Sénégal, opérable entièrement en ligne.
+À l'issue de ce cahier des charges, Jangalekat couvre : administration, scolarité, inscriptions, bulletins, gestion pédagogique, gestion financière, gestion des abonnements multi-écoles, contrôle des accès, statistiques académiques et financières — adapté aux écoles maternelles, primaires, collèges, lycées et centres de formation du Sénégal, opérable entièrement en ligne.
+
+---
+
+## 13. Portails Parents et Élèves & Messagerie
+
+**Nouvelle exigence** : Jangalekat ne se limite pas à un outil de gestion interne à l'établissement — la plateforme met en relation les **enseignants** avec les **parents d'élèves** (tous niveaux) et avec les **élèves eux-mêmes** (Collège et Lycée uniquement).
+
+### 13.1 Rattachement Parent ↔ Élève
+
+- Un Parent (Tuteur) peut être rattaché à **plusieurs enfants**, y compris dans des classes ou établissements différents s'il utilise Jangalekat pour plusieurs de ses enfants.
+- Un Élève peut avoir **plusieurs Parents/Tuteurs** rattachés (père, mère, tuteur légal), chacun avec son propre compte.
+- Le rattachement est saisi par le Secrétariat au moment de l'inscription (Volume 1 §6) et peut être complété/corrigé ultérieurement par le Directeur.
+- Chaque Parent ne voit **que** les enfants qui lui sont explicitement rattachés — jamais les autres élèves de la classe, même de la même fratrie si non rattachée.
+
+### 13.2 Compte Élève — restriction de cycle
+
+- **Aucun compte de connexion n'est créé pour un élève de Maternelle ou de Primaire** — à cet âge, seuls les Parents ont accès aux informations.
+- Un compte Élève n'est proposé qu'à partir du **Collège**, et jusqu'au **Lycée**.
+- La création du compte Élève est une action volontaire du Secrétariat ou du Directeur (pas de création automatique à l'inscription), avec un mot de passe initial à changer à la première connexion.
+
+### 13.3 Ce que le Parent peut consulter (lecture seule)
+
+- Les notes et bulletins de chacun de ses enfants rattachés.
+- Les absences et retards.
+- Les paiements dus, effectués, et l'historique des reçus (Volume 1 §7).
+- Les annonces de classe et messages des enseignants concernant son enfant (§13.5).
+- Un Parent ne peut **rien modifier** : aucune saisie de note, aucune action financière, aucune gestion de compte.
+
+### 13.4 Ce que l'Élève (Collège/Lycée) peut consulter (lecture seule)
+
+- Ses propres notes et bulletins.
+- Son emploi du temps et les annonces de ses classes.
+- Les messages des enseignants qui lui sont adressés.
+- Un Élève ne voit jamais les notes ou informations d'un autre élève, ni les informations financières de sa famille (réservées au Parent).
+
+### 13.5 Messagerie et annonces
+
+**Deux canaux, volontairement simples pour la V1** (pas de messagerie instantanée temps réel, réévaluable en V2 si le besoin se confirme — Volume 0, Décision D-14) :
+
+1. **Annonces de classe** : un Enseignant publie une annonce visible par tous les Parents et Élèves (Collège/Lycée) de la classe concernée (ex. « Contrôle de mathématiques déplacé au 15 »).
+2. **Messages individuels** : un Enseignant échange avec un Parent (ou un Élève de Collège/Lycée) au sujet d'un élève précis, sous forme de fil de discussion simple.
+
+**Règles** :
+- Toute communication passe **exclusivement** par l'Enseignant ou l'établissement — aucun canal Parent-Parent ni Élève-Élève.
+- Chaque nouveau message ou annonce déclenche une **notification par email** (réutilise l'infrastructure de notification existante, Volume 3 §4.6). Les canaux SMS/WhatsApp restent en roadmap V2 (Volume 0 §0.12).
+- Un Parent ne reçoit une notification que pour les messages/annonces concernant ses propres enfants rattachés.
+
+### 13.6 Isolation et sécurité (rappel)
+
+Le détail technique de l'isolation Parent→ses enfants et Élève→lui-même est spécifié au Volume 7 (Sécurité), §Portails Parents/Élèves — cette isolation est une extension du même principe déjà appliqué à l'isolation entre établissements (Row-Level Security), appliquée cette fois à l'intérieur d'un même établissement.
+
+---
 
 **Fin du Volume 1.**
