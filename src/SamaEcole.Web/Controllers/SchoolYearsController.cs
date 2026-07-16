@@ -1,6 +1,7 @@
 using SamaEcole.Application.SchoolYears;
 using SamaEcole.Application.SchoolYears.Commands.ActivateSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.CreateSchoolYear;
+using SamaEcole.Application.SchoolYears.Queries.ExportSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.GetSchoolYears;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -68,5 +69,23 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
         var result = await mediator.Send(new ActivateSchoolYearCommand(id, request.Password), cancellationToken);
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Export ZIP (élèves, paiements, classes) d'une année scolaire — pour archivage hors plateforme.
+    /// Réservé au Directeur : croise des données personnelles (élèves) et financières (paiements) de
+    /// toute l'école, un périmètre plus large que celui d'un seul rôle métier.
+    /// </summary>
+    [HttpGet("{id:guid}/export")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [Produces("application/zip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Export(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new ExportSchoolYearQuery(id), cancellationToken);
+
+        return File(result.Content, "application/zip", result.FileName);
     }
 }

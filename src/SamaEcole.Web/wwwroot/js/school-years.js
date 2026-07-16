@@ -33,6 +33,9 @@ document.addEventListener('alpine:init', () => {
         isActivating: false,
         activateErrors: {},
 
+        // --- Export (ZIP élèves/paiements/classes) ---
+        exportingYearId: null,
+
         init() {
             this.loadYears();
         },
@@ -72,10 +75,10 @@ document.addEventListener('alpine:init', () => {
 
         statusClass(year) {
             return {
-                active: 'bg-green-50 text-success ring-1 ring-inset ring-green-600/20',
-                closed: 'bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-500/20',
-                upcoming: 'bg-indigo-50 text-primary ring-1 ring-inset ring-indigo-600/20',
-                inactive: 'bg-orange-50 text-warning ring-1 ring-inset ring-orange-600/20'
+                active: 'status-badge-success',
+                closed: 'status-badge-neutral',
+                upcoming: 'status-badge-primary',
+                inactive: 'status-badge-warning'
             }[this.statusOf(year)];
         },
 
@@ -181,6 +184,43 @@ document.addEventListener('alpine:init', () => {
                 this.password = '';
             } finally {
                 this.isActivating = false;
+            }
+        },
+
+        // ------------------------------------------------------------------ Export
+
+        /**
+         * Télécharge le ZIP (élèves, paiements, classes) de l'année — même patron que
+         * dashboard.js/enrollments.js : l'API exige le jeton, on récupère donc le fichier en blob avec
+         * l'en-tête Authorization plutôt qu'un simple lien.
+         */
+        async exportYear(year) {
+            this.exportingYearId = year.id;
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch(`/api/v1/school-years/${year.id}/export`, {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                    credentials: 'same-origin'
+                });
+                if (!response.ok) {
+                    this.error = "Erreur lors de l'export de l'année scolaire.";
+                    return;
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Export-${year.label}.zip`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            } finally {
+                this.exportingYearId = null;
             }
         }
     }));

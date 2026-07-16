@@ -368,6 +368,31 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+  /school-years/{id}/export:
+    get:
+      tags: [SchoolYears]
+      summary: Exporter les données d'une année scolaire en archive ZIP (Directeur)
+      description: >-
+        Archive ZIP contenant trois CSV — `eleves.csv`, `paiements.csv`, `classes.csv` — construits à
+        partir des inscriptions NON annulées de cette année scolaire précise (une inscription annulée
+        n'a jamais existé pour l'archive). Réservé au Directeur : l'export croise des données
+        personnelles (élèves) et financières (paiements) sur l'ensemble de l'établissement, un
+        périmètre plus large que celui d'un seul rôle métier. Disponible pour toute année, pas
+        seulement les années terminées. Chaque export est journalisé dans les journaux d'audit.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Archive ZIP (Content-Type application/zip)
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Année scolaire introuvable dans cet établissement }
+
   /classrooms:
     get:
       tags: [Classrooms]
