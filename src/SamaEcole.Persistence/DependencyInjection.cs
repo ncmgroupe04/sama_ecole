@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Persistence.Auth;
+using SamaEcole.Persistence.AuditLogs;
 using SamaEcole.Persistence.Interceptors;
 using SamaEcole.Persistence.Schools;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,10 @@ public static class DependencyInjection
         // Création du premier compte d'une école (ticket JGK-B01) : passe elle aussi par une fonction
         // SECURITY DEFINER, `users` étant sous RLS et le Super Admin sans tenant.
         services.AddScoped<ISchoolProvisioningStore, SchoolProvisioningStore>();
+
+        // Journal d'audit (ticket JGK-H01) : même contournement RLS, pour les connexions (avant tenant)
+        // et les actions Super Admin (aucun SchoolId propre).
+        services.AddScoped<IAuditLogStore, AuditLogStore>();
 
         return services;
     }

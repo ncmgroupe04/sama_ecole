@@ -17,13 +17,23 @@ namespace SamaEcole.Application.Schools.Commands.CreateSchool;
 ///
 /// Le mot de passe est GÉNÉRÉ ici, jamais fourni par l'appelant, et ne sort que par l'e-mail du
 /// Directeur — pas par la réponse HTTP (voir CreateSchoolResult).
+///
+/// Journal d'audit (JGK-H01) : écrit ICI, à la main, plutôt que via AuditLoggingBehavior. L'ACTEUR
+/// (Super Admin) n'a lui-même aucune école — le mécanisme générique, qui lit
+/// tenantProvider.CurrentSchoolId, ne trouverait donc rien à qui imputer l'entrée. IAuditLogStore
+/// contourne la RLS avec l'école NOUVELLEMENT CRÉÉE, désormais connue après la transaction — même
+/// raisonnement que pour la connexion (LoginCommandHandler). Un échec (ex. e-mail déjà utilisé) ne
+/// crée aucune école : rien à journaliser dans cette table tenant pour cette branche.
 /// </summary>
 public class CreateSchoolCommandHandler(
     IApplicationDbContext dbContext,
     ISchoolProvisioningStore provisioningStore,
+    IAuditLogStore auditLogStore,
+    ICurrentUserService currentUser,
     IPasswordGenerator passwordGenerator,
     IPasswordHasher passwordHasher,
     IEmailSender emailSender,
+    TimeProvider timeProvider,
     ILogger<CreateSchoolCommandHandler> logger)
     : IRequestHandler<CreateSchoolCommand, CreateSchoolResult>
 {
