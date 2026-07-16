@@ -31,4 +31,19 @@ public class GetStudentsQueryValidatorTests
     {
         _validator.Validate(new GetStudentsQuery { Page = page }).IsValid.Should().BeFalse();
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("M")]
+    [InlineData("F")]
+    public void Valid_Gender_Should_Pass(string? gender)
+    {
+        _validator.Validate(new GetStudentsQuery { Gender = gender }).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Unknown_Gender_Should_Fail()
+    {
+        _validator.Validate(new GetStudentsQuery { Gender = "X" }).IsValid.Should().BeFalse();
+    }
 }

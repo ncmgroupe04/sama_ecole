@@ -20,6 +20,12 @@ document.addEventListener('alpine:init', () => {
         isLoading: false,
         error: null,
 
+        // Recherche + filtre niveau + tri sur la grille de la catégorie sélectionnée (Volume 5 §6)
+        search: '',
+        levelFilter: '',
+        sortKey: 'name',
+        sortDir: 'asc',
+
         isDirecteur: window.auth.role === 'Directeur',
 
         // Création de catégorie (panneau latéral)
@@ -83,11 +89,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Les lignes de la grille pour la catégorie sélectionnée : TOUTES les classes, chacune avec
-         * son montant s'il existe, ou null (« non défini ») sinon. C'est ce croisement qui montre d'un
-         * coup d'œil ce qu'il reste à paramétrer.
+         * TOUTES les classes croisées avec leur montant pour la catégorie sélectionnée (montant null
+         * si aucune ligne n'existe encore). Base non filtrée : sert de dénominateur à definedCount, la
+         * recherche/filtre/tri ne s'appliquent qu'à l'affichage (voir rows()).
          */
-        get rows() {
+        get allRows() {
             if (!this.selectedCategoryId) return [];
 
             return this.classrooms.map((classroom) => {
@@ -98,7 +104,38 @@ document.addEventListener('alpine:init', () => {
         },
 
         get definedCount() {
-            return this.rows.filter((r) => r.fee).length;
+            return this.allRows.filter((r) => r.fee).length;
+        },
+
+        get knownLevels() {
+            return [...new Set(this.classrooms.map((c) => c.level))].sort();
+        },
+
+        toggleSort(key) {
+            if (this.sortKey === key) {
+                this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortKey = key;
+                this.sortDir = 'asc';
+            }
+        },
+
+        /** Recherche (nom/niveau) + filtre niveau + tri, appliqués à l'affichage sans toucher allRows. */
+        get rows() {
+            const q = this.search.trim().toLowerCase();
+            let rows = this.allRows.filter((r) =>
+                (!q || r.classroom.name.toLowerCase().includes(q) || r.classroom.level.toLowerCase().includes(q)) &&
+                (!this.levelFilter || r.classroom.level === this.levelFilter));
+
+            const dir = this.sortDir === 'asc' ? 1 : -1;
+            return [...rows].sort((a, b) => {
+                if (this.sortKey === 'amount') {
+                    const va = a.fee ? a.fee.amount : -1;
+                    const vb = b.fee ? b.fee.amount : -1;
+                    return (va - vb) * dir;
+                }
+                return String(a.classroom[this.sortKey]).localeCompare(String(b.classroom[this.sortKey])) * dir;
+            });
         },
 
         formatMoney(amount) {

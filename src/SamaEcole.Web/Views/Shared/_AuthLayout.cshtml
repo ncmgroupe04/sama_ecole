@@ -18,6 +18,7 @@
     <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen">
+    @await Html.PartialAsync("_IconSprite")
     @RenderBody()
     @await RenderSectionAsync("Scripts", required: false)
 </body>

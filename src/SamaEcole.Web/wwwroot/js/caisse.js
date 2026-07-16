@@ -18,6 +18,8 @@ document.addEventListener('alpine:init', () => {
 
         students: [],
         studentsLoaded: false,
+        isSearchingStudents: false,
+        studentSearchError: null,
         studentSearch: '',
         selectedStudent: null,
 
@@ -34,27 +36,36 @@ document.addEventListener('alpine:init', () => {
         receipt: null,       // reçu complet, chargé après coup pour l'affichage/l'impression
         pdfError: null,
 
-        async init() {
-            if (this.canRecordPayment) await this.loadStudents();
-        },
-
         // ---------------------------------------------------------------- Recherche élève
 
-        async loadStudents() {
+        /**
+         * Recherche CÔTÉ SERVEUR (GET /students?search=…), et non un chargement d'une page fixe filtrée
+         * en local : une école secondaire sénégalaise compte couramment plus de mille élèves (même
+         * remarque que GetStudentsQuery), un plafond de page les rendrait invisibles à la recherche.
+         * Déclenchée avec un anti-rebond (x-on:input.debounce.300ms dans la vue).
+         */
+        async searchStudents() {
+            this.clearSelection();
+            const q = this.studentSearch.trim();
+
+            if (q.length < 2) {
+                this.students = [];
+                this.studentsLoaded = false;
+                this.studentSearchError = null;
+                return;
+            }
+
+            this.isSearchingStudents = true;
+            this.studentSearchError = null;
             try {
-                const page = await window.api.get('/students?page=1&pageSize=200');
+                const page = await window.api.get(`/students?search=${encodeURIComponent(q)}&page=1&pageSize=20`);
                 this.students = page.items;
                 this.studentsLoaded = true;
             } catch (err) {
-                this.formErrors = { global: err.message || 'Erreur lors du chargement des élèves.' };
+                this.studentSearchError = err.message || 'Erreur lors de la recherche.';
+            } finally {
+                this.isSearchingStudents = false;
             }
-        },
-
-        filteredStudents() {
-            const q = this.studentSearch.trim().toLowerCase();
-            if (!q) return this.students;
-            return this.students.filter((s) =>
-                s.fullName.toLowerCase().includes(q) || s.matricule.toLowerCase().includes(q));
         },
 
         clearSelection() {

@@ -23,6 +23,7 @@
     <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans h-screen flex overflow-hidden antialiased" x-data="{ sidebarOpen: false }">
+    @await Html.PartialAsync("_IconSprite")
 
     <!-- Overlay pour mobile -->
     <div x-show="sidebarOpen" class="fixed inset-0 z-20 bg-gray-900 bg-opacity-50 transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
@@ -33,7 +34,9 @@
         <!-- En-tête Sidebar / Logo -->
         <div class="flex items-center justify-center h-16 border-b border-gray-100 px-6">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center font-bold text-lg">S</div>
+                <div class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center" aria-hidden="true">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" /></svg>
+                </div>
                 <span class="font-bold text-lg text-gray-900 tracking-tight">Sama Ecole</span>
             </div>
         </div>
@@ -47,74 +50,89 @@
         @{
             var path = Context.Request.Path.Value ?? "/";
 
+            // text-primary (#6366F1 DEFAULT) sur bg-indigo-50 ne tient que 3.99:1 — sous le seuil
+            // WCAG AA 4.5:1 (Volume 5 §8). primary-700 (7.07:1 sur indigo-50, 7.90:1 sur blanc) le
+            // respecte largement sans changer la teinte de marque utilisée ailleurs (logo, avatars).
             const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors";
-            const string LinkIdle = $"{LinkBase} text-gray-600 hover:bg-gray-50 hover:text-primary";
-            const string LinkActive = $"{LinkBase} text-primary bg-indigo-50 font-medium";
+            const string LinkIdle = $"{LinkBase} text-gray-600 hover:bg-gray-50 hover:text-primary-700";
+            const string LinkActive = $"{LinkBase} text-primary-700 bg-indigo-50 font-medium";
             const string LinkSoon = $"{LinkBase} text-gray-400 cursor-not-allowed select-none";
         }
 
         <!-- Navigation -->
-        <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+        <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto" x-data="sidebarNav()">
 
-            <span class="@LinkSoon" aria-disabled="true" title="Tableau de bord — module à venir">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+            @* JGK-F04 : premier module à devenir un vrai lien plutôt qu'un <span> désactivé (le patron
+               documenté ci-dessus : « chaque module devient un vrai lien le jour où son ticket est
+               livré »). Ouvert à tous les rôles ici — le tableau de bord garde lui-même l'accès côté
+               API/JS pour le Secrétariat (confort d'affichage, l'API garde, règle #4). *@
+            <a href="/tableau-de-bord" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" x-cloak class="@(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
+                <icon name="dashboard" class="w-5 h-5" />
                 <span class="text-sm font-medium">Tableau de bord</span>
-            </span>
+            </a>
 
-            <a href="/eleves" class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            <a href="/eleves" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" x-cloak class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
+                <icon name="users" class="w-5 h-5" />
                 <span class="text-sm font-medium">Élèves</span>
             </a>
 
-            <a href="/inscriptions" class="@(path.StartsWith("/inscriptions") ? LinkActive : LinkIdle)">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <a href="/inscriptions" x-show="canView(['Directeur', 'Secretariat', 'Finance'])" x-cloak class="@(path.StartsWith("/inscriptions") ? LinkActive : LinkIdle)">
+                <icon name="document" class="w-5 h-5" />
                 <span class="text-sm font-medium">Inscriptions</span>
             </a>
 
-            <a href="/classes" class="@(path.StartsWith("/classes") ? LinkActive : LinkIdle)">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m3-4h1m-1 4h1m-5 8h8" /></svg>
+            <a href="/classes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/classes") ? LinkActive : LinkIdle)">
+                <icon name="building" class="w-5 h-5" />
                 <span class="text-sm font-medium">Classes</span>
             </a>
 
-            <a href="/matieres" class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+            <a href="/matieres" x-show="canView(['Directeur', 'Enseignant'])" x-cloak class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
+                <icon name="book" class="w-5 h-5" />
                 <span class="text-sm font-medium">Matières</span>
             </a>
 
-            <span class="@LinkSoon" aria-disabled="true" title="Présences — module à venir">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Présences — module à venir">
+                <icon name="checkmark-circle" class="w-5 h-5" />
                 <span class="text-sm font-medium">Présences</span>
             </span>
 
-            <span class="@LinkSoon" aria-disabled="true" title="Enseignants — module à venir">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            <span x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Enseignants — module à venir">
+                <icon name="users" class="w-5 h-5" />
                 <span class="text-sm font-medium">Enseignants</span>
             </span>
 
-            <span class="@LinkSoon" aria-disabled="true" title="Notes et bulletins — module à venir">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+            <span x-show="canView(['Directeur', 'Enseignant'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Notes et bulletins — module à venir">
+                <icon name="book" class="w-5 h-5" />
                 <span class="text-sm font-medium">Notes et bulletins</span>
             </span>
 
-            <a href="/frais" class="@(path.StartsWith("/frais") ? LinkActive : LinkIdle)">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <a href="/frais" x-show="canView(['Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/frais") ? LinkActive : LinkIdle)">
+                <icon name="wallet" class="w-5 h-5" />
                 <span class="text-sm font-medium">Finance</span>
             </a>
 
-            <a href="/caisse" class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+            <a href="/caisse" x-show="canView(['Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
+                <icon name="payment" class="w-5 h-5" />
                 <span class="text-sm font-medium">Caisse</span>
             </a>
 
-            <span class="@LinkSoon" aria-disabled="true" title="Rapports — module à venir">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <span x-show="canView(['Directeur', 'Finance'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Rapports — module à venir">
+                <icon name="chart-multiple" class="w-5 h-5" />
                 <span class="text-sm font-medium">Rapports</span>
             </span>
 
-            <a href="/parametres" class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            <a href="/parametres" x-show="canView(['Directeur'])" x-cloak class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
+                <icon name="settings" class="w-5 h-5" />
                 <span class="text-sm font-medium">Paramètres</span>
             </a>
+
+            @* Administration (Volume 5 §3.2, explicitement Super Admin uniquement) : aucune route
+               livrée à ce jour (Module B du backlog, JGK-B01 CRUD Établissements), donc un <span>
+               désactivé comme les autres modules à venir. *@
+            <span x-show="canView(['SuperAdmin'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Administration — module à venir">
+                <icon name="layers" class="w-5 h-5" />
+                <span class="text-sm font-medium">Administration</span>
+            </span>
         </nav>
 
         @* Profil réel de la session : l'e-mail est celui saisi à la connexion, le rôle est lu dans le
@@ -142,7 +160,7 @@
             <div class="flex items-center gap-4">
                 <!-- Bouton Menu Mobile -->
                 <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-gray-500 hover:text-gray-900 rounded-md">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    <icon name="menu" class="w-6 h-6" />
                 </button>
                 
                 @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
@@ -158,7 +176,7 @@
                    confiance dans le reste de l'écran. *@
                 <div class="hidden sm:block relative">
                     <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
-                        <svg class="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <icon name="search" class="w-5 h-5 text-gray-300" />
                     </span>
                     <input type="search"
                            disabled
@@ -170,7 +188,7 @@
 
                 <span aria-disabled="true" title="Notifications — module à venir"
                       class="p-2 text-gray-300 cursor-not-allowed">
-                    <svg aria-hidden="true" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                    <icon name="bell" class="w-6 h-6" />
                 </span>
 
                 @* Déconnexion (Volume 5 §3.1). Révoque les refresh tokens côté serveur et purge le
@@ -180,7 +198,7 @@
                         title="Se déconnecter"
                         aria-label="Se déconnecter"
                         class="p-2 text-gray-400 hover:text-danger rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                    <svg aria-hidden="true" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    <icon name="sign-out" class="w-6 h-6" />
                 </button>
             </div>
         </header>

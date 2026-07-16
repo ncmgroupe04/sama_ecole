@@ -131,7 +131,8 @@ document.addEventListener('alpine:init', () => {
 
         async loadStudents() {
             try {
-                const page = await window.api.get('/students?page=1&pageSize=200');
+                // 100 = GetStudentsQueryValidator.MaxPageSize, le plafond serveur anti-DoS.
+                const page = await window.api.get('/students?page=1&pageSize=100');
                 this.students = page.items;
                 this.studentsLoaded = true;
             } catch (err) {

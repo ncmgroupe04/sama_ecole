@@ -16,5 +16,7 @@ public class GetStudentsQueryValidator : AbstractValidator<GetStudentsQuery>
         RuleFor(x => x.Page).GreaterThan(0);
         RuleFor(x => x.PageSize).GreaterThan(0).LessThanOrEqualTo(MaxPageSize);
         RuleFor(x => x.Search).MaximumLength(100);
+        RuleFor(x => x.Gender).Must(g => g is null or "M" or "F")
+            .WithMessage("Le genre doit être 'M' ou 'F'.");
     }
 }

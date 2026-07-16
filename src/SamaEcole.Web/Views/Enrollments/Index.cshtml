@@ -33,7 +33,7 @@
     </div>
 
     <!-- Rôle non autorisé : le service Finance encaisse, il ne compose pas le montant dû (règle #4). -->
-    <div x-show="!canEnroll" x-cloak class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 py-12 text-center">
+    <div x-show="!canEnroll" x-cloak class="mt-6 card py-12 text-center">
         <p class="text-gray-500 font-medium">Seuls le Directeur et le Secrétariat peuvent inscrire un élève.</p>
         <p class="text-xs text-gray-400 mt-1">Vous pouvez consulter un reçu depuis la fiche d'un élève.</p>
     </div>
@@ -45,15 +45,12 @@
             <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
         </div>
 
-        <!-- Erreur de chargement -->
-        <div x-show="error" x-cloak class="mt-6 bg-red-50 border-l-4 border-danger p-4 rounded-md">
-            <p class="text-sm text-red-700" x-text="error"></p>
-        </div>
+        @await Html.PartialAsync("_ErrorBanner")
 
         <!-- Aucune année active : rien à rattacher, on bloque l'inscription. -->
-        <div x-show="!isLoading && !error && !activeYear" x-cloak class="mt-6 bg-orange-50 border-l-4 border-warning p-4 rounded-md">
-            <p class="text-sm text-orange-800 font-medium">Aucune année scolaire active.</p>
-            <p class="text-xs text-orange-700 mt-1">
+        <div x-show="!isLoading && !error && !activeYear" x-cloak class="mt-6 rounded-md border-l-4 border-warning bg-warning-bg p-4">
+            <p class="text-sm font-medium text-warning">Aucune année scolaire active.</p>
+            <p class="text-xs text-warning mt-1">
                 Activez une année scolaire (<a href="/parametres?tab=annees-scolaires" class="underline font-medium">Paramètres › Années scolaires</a>) avant d'inscrire un élève.
             </p>
         </div>
@@ -62,11 +59,11 @@
         <div x-show="!isLoading && !error && activeYear && !receipt" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Colonne formulaire -->
-            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+            <div class="lg:col-span-2 card p-6 space-y-6">
 
                 <!-- Bandeau année active -->
                 <div class="flex items-center gap-2 text-sm text-gray-500">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-success ring-1 ring-inset ring-green-600/20">Année active</span>
+                    <badge variant="success">Année active</badge>
                     <span class="font-medium text-gray-900" x-text="activeYear ? activeYear.label : ''"></span>
                 </div>
 
@@ -90,18 +87,13 @@
                 <form x-on:submit.prevent="submit()" class="space-y-5">
 
                     <!-- Erreur métier globale -->
-                    <div x-show="formErrors.global" x-cloak class="bg-red-50 p-3 rounded-md border-l-4 border-danger">
-                        <p class="text-sm text-red-700" x-text="formErrors.global"></p>
-                    </div>
-                    <div x-show="formErrors.schoolyear" x-cloak class="bg-orange-50 p-3 rounded-md border-l-4 border-warning">
-                        <p class="text-sm text-orange-800" x-text="formErrors.schoolyear"></p>
-                    </div>
+                    <div x-show="formErrors.global" x-cloak class="rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="formErrors.global"></div>
+                    <div x-show="formErrors.schoolyear" x-cloak class="rounded-md border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="formErrors.schoolyear"></div>
 
                     <!-- Classe -->
                     <div>
                         <label for="enr-classroom" class="block text-sm font-medium text-gray-700">Classe d'affectation <span class="text-danger">*</span></label>
-                        <select id="enr-classroom" x-model="form.classroomId" required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2 bg-white">
+                        <select id="enr-classroom" x-model="form.classroomId" required class="input-field bg-white">
                             <option value="">— Choisir une classe —</option>
                             <template x-for="c in classrooms" :key="c.id">
                                 <option :value="c.id" x-text="classroomLabel(c)"></option>
@@ -117,21 +109,18 @@
                     <div x-show="mode === 'NewEnrollment'" x-cloak class="space-y-5">
                         <div>
                             <label for="enr-fullname" class="block text-sm font-medium text-gray-700">Nom complet de l'élève <span class="text-danger">*</span></label>
-                            <input id="enr-fullname" type="text" x-model="form.fullName" maxlength="200" placeholder="ex : Awa Ndiaye"
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
+                            <input id="enr-fullname" type="text" x-model="form.fullName" maxlength="200" placeholder="ex : Awa Ndiaye" class="input-field">
                             <p x-show="formErrors.fullname" x-cloak x-text="formErrors.fullname" class="mt-1 text-xs text-danger"></p>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <div>
                                 <label for="enr-birthdate" class="block text-sm font-medium text-gray-700">Date de naissance <span class="text-danger">*</span></label>
-                                <input id="enr-birthdate" type="date" x-model="form.birthDate"
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
+                                <input id="enr-birthdate" type="date" x-model="form.birthDate" class="input-field">
                                 <p x-show="formErrors.birthdate" x-cloak x-text="formErrors.birthdate" class="mt-1 text-xs text-danger"></p>
                             </div>
                             <div>
                                 <label for="enr-gender" class="block text-sm font-medium text-gray-700">Genre <span class="text-danger">*</span></label>
-                                <select id="enr-gender" x-model="form.gender"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2 bg-white">
+                                <select id="enr-gender" x-model="form.gender" class="input-field bg-white">
                                     <option value="M">Masculin</option>
                                     <option value="F">Féminin</option>
                                 </select>
@@ -141,13 +130,11 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <div>
                                 <label for="enr-guardian" class="block text-sm font-medium text-gray-700">Nom du tuteur</label>
-                                <input id="enr-guardian" type="text" x-model="form.guardianName" maxlength="200" placeholder="Parent / tuteur"
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
+                                <input id="enr-guardian" type="text" x-model="form.guardianName" maxlength="200" placeholder="Parent / tuteur" class="input-field">
                             </div>
                             <div>
                                 <label for="enr-guardian-phone" class="block text-sm font-medium text-gray-700">Téléphone du tuteur</label>
-                                <input id="enr-guardian-phone" type="tel" x-model="form.guardianPhone" maxlength="30" placeholder="77 000 00 00"
-                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
+                                <input id="enr-guardian-phone" type="tel" x-model="form.guardianPhone" maxlength="30" placeholder="77 000 00 00" class="input-field">
                             </div>
                         </div>
                     </div>
@@ -157,7 +144,7 @@
                         <label for="enr-student-search" class="block text-sm font-medium text-gray-700">Élève à réinscrire <span class="text-danger">*</span></label>
                         <input id="enr-student-search" type="text" x-model="studentSearch" placeholder="Rechercher par nom ou matricule…"
                                x-on:input="form.studentId = ''"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
+                               class="input-field">
                         <p x-show="formErrors.studentid" x-cloak x-text="formErrors.studentid" class="mt-1 text-xs text-danger"></p>
 
                         <div class="mt-2 border border-gray-200 rounded-md divide-y divide-gray-100 max-h-56 overflow-y-auto">
@@ -178,9 +165,8 @@
 
                     <!-- Soumission -->
                     <div class="pt-2 flex justify-end border-t border-gray-100">
-                        <button type="submit" :disabled="!canSubmit()"
-                                class="mt-4 inline-flex justify-center items-center gap-2 rounded-md bg-primary py-2.5 px-6 text-sm font-medium text-white shadow-sm shadow-indigo-200 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                            <svg x-show="!isSubmitting" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <button type="submit" :disabled="!canSubmit()" class="btn-primary mt-4">
+                            <icon x-show="!isSubmitting" name="checkmark-circle" class="w-5 h-5" />
                             <span x-text="isSubmitting ? 'Enregistrement…' : 'Inscrire l\'élève'"></span>
                         </button>
                     </div>
@@ -189,7 +175,7 @@
 
             <!-- Colonne aperçu des frais -->
             <div class="lg:col-span-1">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5 lg:sticky lg:top-4">
+                <div class="card p-5 lg:sticky lg:top-4">
                     <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Frais dus</h2>
                     <p class="text-xs text-gray-400 mt-0.5">Calcul en direct — le serveur fait foi à l'enregistrement.</p>
 
@@ -233,31 +219,26 @@
             <!-- Barre d'actions (non imprimée) -->
             <div class="no-print flex items-center justify-between mb-4">
                 <div class="flex items-center gap-2 text-success">
-                    <svg aria-hidden="true" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <icon name="checkmark-circle" class="w-6 h-6" />
                     <span class="text-sm font-medium">Inscription enregistrée.</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button type="button" x-on:click="startNewEnrollment()"
-                            class="px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                    <button type="button" x-on:click="startNewEnrollment()" class="btn-secondary">
                         Nouvelle inscription
                     </button>
-                    <button type="button" x-on:click="downloadPdf()"
-                            class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-                        <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <button type="button" x-on:click="downloadPdf()" class="btn-secondary">
+                        <icon name="download" class="w-5 h-5" />
                         Télécharger le PDF
                     </button>
-                    <button type="button" x-on:click="printReceipt()"
-                            class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors shadow-sm flex items-center gap-2">
-                        <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    <button type="button" x-on:click="printReceipt()" class="btn-primary">
+                        <icon name="print" class="w-5 h-5" />
                         Imprimer
                     </button>
                 </div>
             </div>
 
             <!-- Échec de téléchargement du PDF (non imprimé). -->
-            <div x-show="pdfError" x-cloak class="no-print mb-4 bg-red-50 border-l-4 border-danger p-3 rounded-md">
-                <p class="text-sm text-red-700" x-text="pdfError"></p>
-            </div>
+            <div x-show="pdfError" x-cloak class="no-print mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="pdfError"></div>
 
             <!-- Document imprimable : noir et blanc, sobre (docs/design-references/README.md §1) -->
             <div id="receipt-printable" class="bg-white border border-gray-300 mx-auto max-w-2xl p-8 text-gray-900" style="font-family: 'Times New Roman', Georgia, serif;">

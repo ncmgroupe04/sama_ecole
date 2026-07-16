@@ -18,42 +18,27 @@
         </div>
 
         <div class="flex items-center gap-2" x-show="isDirecteur" x-cloak>
-            <button x-on:click="openCreateCategory()"
-                    class="px-3 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            <button x-on:click="openCreateCategory()" class="btn-secondary">
+                <icon name="plus" class="w-5 h-5" />
                 Catégorie
             </button>
-            <button x-on:click="openApplyStandard()" :disabled="!selectedCategoryId"
-                    class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors shadow-sm shadow-indigo-200 flex items-center gap-2 disabled:opacity-50">
-                <svg aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            <button x-on:click="openApplyStandard()" :disabled="!selectedCategoryId" class="btn-primary">
+                <icon name="wallet" class="w-5 h-5" />
                 Appliquer un montant standard
             </button>
         </div>
     </div>
 
-    <!-- Alerte d'erreur API globale -->
-    <div x-show="error" x-cloak class="mt-6 bg-red-50 border-l-4 border-danger p-4 rounded-md">
-        <p class="text-sm text-red-700" x-text="error"></p>
-    </div>
+    @await Html.PartialAsync("_ErrorBanner")
 
     <!-- État vide : aucune catégorie -->
-    <div x-show="!isLoading && categories.length === 0" x-cloak class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 py-12 text-center">
-        <div class="flex flex-col items-center justify-center">
-            <div aria-hidden="true" class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-            </div>
-            <p class="text-gray-500 font-medium">Aucune catégorie de frais n'est configurée.</p>
-            <p class="text-xs text-gray-400 mt-1">Créez une catégorie (inscription, mensualité, cantine…) pour commencer.</p>
-        </div>
+    <div x-show="!isLoading && categories.length === 0" x-cloak class="card mt-6">
+        <empty-state icon="wallet" title="Aucune catégorie de frais n'est configurée."
+                     hint="Créez une catégorie (inscription, mensualité, cantine…) pour commencer." />
     </div>
 
     <!-- Grille -->
-    <div x-show="categories.length > 0" x-cloak class="bg-white rounded-xl shadow-sm border border-gray-200 mt-6 relative">
-
-        <!-- Voile de chargement -->
-        <div x-show="isLoading" class="absolute inset-0 z-10 bg-white/70 flex items-center justify-center rounded-xl backdrop-blur-sm">
-            <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-        </div>
+    <div x-show="categories.length > 0" x-cloak class="card mt-6 relative">
 
         <!-- Onglets de catégories -->
         <div class="border-b border-gray-200 px-2 overflow-x-auto">
@@ -63,52 +48,72 @@
                             class="px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2"
                             :class="category.id === selectedCategoryId ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'">
                         <span x-text="category.name"></span>
-                        <span x-show="category.isRecurring" x-cloak
-                              class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-primary uppercase tracking-wide">
-                            Mensuel
-                        </span>
+                        <badge x-show="category.isRecurring" x-cloak variant="neutral" class="text-[10px] uppercase tracking-wide">Mensuel</badge>
                     </button>
                 </template>
             </nav>
         </div>
 
-        <!-- Synthèse de la catégorie sélectionnée -->
-        <div class="p-4 bg-gray-50/50 flex gap-6 border-b border-gray-100">
-            <div>
-                <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Classes</p>
-                <p class="text-lg font-bold text-gray-900" x-text="classrooms.length"></p>
+        <!-- Synthèse de la catégorie sélectionnée + recherche/filtre -->
+        <div class="p-4 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100">
+            <div class="flex gap-6">
+                <stat-card size="compact" label="Classes" icon="building" accent="primary">
+                    <span x-text="classrooms.length"></span>
+                </stat-card>
+                <stat-card size="compact" label="Montants définis" icon="wallet">
+                    <span :class="definedCount === classrooms.length ? 'text-success' : 'text-warning'"
+                          x-text="definedCount + ' / ' + classrooms.length"></span>
+                </stat-card>
             </div>
-            <div>
-                <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Montants définis</p>
-                <p class="text-lg font-bold" :class="definedCount === classrooms.length ? 'text-success' : 'text-warning'"
-                   x-text="definedCount + ' / ' + classrooms.length"></p>
+
+            <div class="flex gap-3">
+                <select x-model="levelFilter" aria-label="Filtrer par niveau" class="input-field mt-0 w-40 bg-white">
+                    <option value="">Tous les niveaux</option>
+                    <template x-for="level in knownLevels" :key="level">
+                        <option :value="level" x-text="level"></option>
+                    </template>
+                </select>
+
+                <div class="relative w-full sm:w-56">
+                    <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <icon name="search" class="w-4 h-4 text-gray-400" />
+                    </span>
+                    <input type="search" x-model="search" placeholder="Rechercher une classe…"
+                           aria-label="Rechercher une classe"
+                           class="input-field mt-0 w-full pl-9" />
+                </div>
             </div>
         </div>
 
         <!-- Aucune classe -->
-        <div x-show="classrooms.length === 0" x-cloak class="py-12 text-center">
-            <p class="text-gray-500 font-medium">Aucune classe n'est encore définie.</p>
-            <p class="text-xs text-gray-400 mt-1">Créez vos classes avant de paramétrer leurs frais.</p>
+        <div x-show="classrooms.length === 0" x-cloak>
+            <empty-state icon="building" title="Aucune classe n'est encore définie."
+                         hint="Créez vos classes avant de paramétrer leurs frais." />
         </div>
 
         <!-- Tableau des classes -->
         <div x-show="classrooms.length > 0" x-cloak class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        <th class="py-3 px-4">Classe</th>
-                        <th class="py-3 px-4">Niveau</th>
-                        <th class="py-3 px-4 text-right">Montant</th>
+                    <tr class="table-head">
+                        <sort-th column="name" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('name')" class="py-3 px-4">Classe</sort-th>
+                        <sort-th column="level" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('level')" class="py-3 px-4">Niveau</sort-th>
+                        <sort-th column="amount" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('amount')" class="py-3 px-4 text-right">Montant</sort-th>
                         <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="text-sm text-gray-700 divide-y divide-gray-100">
+                <tbody class="table-cell divide-y divide-gray-100">
+                    <tr x-show="rows.length === 0" x-cloak>
+                        <td colspan="4">
+                            <empty-state icon="search" title="Aucune classe ne correspond à la recherche."
+                                         hint="Essayez un autre nom, niveau ou filtre." />
+                        </td>
+                    </tr>
+
                     <template x-for="row in rows" :key="row.classroom.id">
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="py-3 px-4 font-medium text-gray-900" x-text="row.classroom.name"></td>
-                            <td class="py-3 px-4">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700" x-text="row.classroom.level"></span>
-                            </td>
+                            <td class="py-3 px-4"><badge variant="neutral" x-text="row.classroom.level"></badge></td>
                             <td class="py-3 px-4 text-right font-bold" :class="row.fee ? 'text-gray-900' : 'text-gray-300'">
                                 <span x-show="row.fee" x-text="formatMoney(row.fee ? row.fee.amount : null)"></span>
                                 <span x-show="!row.fee" x-cloak class="text-xs font-medium text-gray-400 italic">non défini</span>
@@ -134,185 +139,123 @@
         </div>
     </div>
 
-    <!-- Panneau latéral : création d'une catégorie -->
-    <div x-show="isCategoryOpen" class="fixed inset-0 overflow-hidden z-40" x-cloak>
-        <div class="absolute inset-0 overflow-hidden">
-            <div x-show="isCategoryOpen" x-transition.opacity class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" x-on:click="isCategoryOpen = false"></div>
-            <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-                <div x-show="isCategoryOpen"
-                     x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
-                     x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
-                     class="pointer-events-auto w-screen max-w-md">
-                    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
-                        <div class="bg-primary px-4 py-6 sm:px-6">
-                            <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-medium text-white">Nouvelle catégorie de frais</h2>
-                                <button type="button" x-on:click="isCategoryOpen = false" class="rounded-md bg-primary text-indigo-200 hover:text-white focus:outline-none">
-                                    <span class="sr-only">Fermer</span>
-                                    <svg aria-hidden="true" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                </button>
-                            </div>
-                            <p class="mt-1 text-sm text-indigo-200">Inscription, mensualité, cantine, transport… la liste est libre.</p>
-                        </div>
-                        <div class="relative flex-1 px-4 py-6 sm:px-6">
-                            <div x-show="categoryErrors.global" x-cloak class="mb-4 bg-red-50 p-3 rounded-md border-l-4 border-danger">
-                                <p class="text-sm text-red-700" x-text="categoryErrors.global"></p>
-                            </div>
-                            <form x-on:submit.prevent="submitCreateCategory()" class="space-y-4">
-                                <div>
-                                    <label for="cat-name" class="block text-sm font-medium text-gray-700">Nom de la catégorie <span class="text-danger">*</span></label>
-                                    <input id="cat-name" type="text" x-model="newCategory.name" required maxlength="60" placeholder="ex : Mensualité"
-                                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
-                                    <p x-show="categoryErrors.name" x-cloak x-text="categoryErrors.name" class="mt-1 text-xs text-danger"></p>
-                                </div>
-                                <div class="flex items-start gap-2">
-                                    <input id="cat-recurring" type="checkbox" x-model="newCategory.isRecurring" class="mt-1 rounded border-gray-300 text-primary focus:ring-primary">
-                                    <label for="cat-recurring" class="text-sm text-gray-700">
-                                        Frais mensuel (dû chaque mois)
-                                        <span class="block text-xs text-gray-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
-                                    </label>
-                                </div>
-                                <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
-                                    <button type="button" x-on:click="isCategoryOpen = false" class="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Annuler</button>
-                                    <button type="submit" :disabled="isSavingCategory" class="inline-flex justify-center items-center gap-2 rounded-md bg-primary py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50">
-                                        <span x-text="isSavingCategory ? 'Enregistrement...' : 'Créer'"></span>
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+    <!-- Création d'une catégorie de frais -->
+    <modal-shell open="isCategoryOpen" title="Nouvelle catégorie de frais">
+        <modal-subtitle>Inscription, mensualité, cantine, transport… la liste est libre.</modal-subtitle>
+
+        <div x-show="categoryErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="categoryErrors.global"></div>
+        <form x-on:submit.prevent="submitCreateCategory()" class="space-y-4">
+            <div>
+                <label for="cat-name" class="block text-sm font-medium text-gray-700">Nom de la catégorie <span class="text-danger">*</span></label>
+                <input id="cat-name" type="text" x-model="newCategory.name" required maxlength="60" placeholder="ex : Mensualité" class="input-field">
+                <p x-show="categoryErrors.name" x-cloak x-text="categoryErrors.name" class="mt-1 text-xs text-danger"></p>
             </div>
-        </div>
-    </div>
+            <div class="flex items-start gap-2">
+                <input id="cat-recurring" type="checkbox" x-model="newCategory.isRecurring" class="mt-1 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="cat-recurring" class="text-sm text-gray-700">
+                    Frais mensuel (dû chaque mois)
+                    <span class="block text-xs text-gray-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
+                </label>
+            </div>
+            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button type="button" x-on:click="isCategoryOpen = false" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isSavingCategory" class="btn-primary">
+                    <span x-text="isSavingCategory ? 'Enregistrement...' : 'Créer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
 
     <!-- Modale : appliquer un montant standard -->
-    <div x-show="isApplyOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-        <div class="flex min-h-full items-center justify-center p-4">
-            <div x-show="isApplyOpen" x-transition.opacity class="fixed inset-0 bg-gray-500 bg-opacity-75" x-on:click="isApplyOpen = false"></div>
-            <div x-show="isApplyOpen"
-                 x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                 class="relative w-full max-w-md transform overflow-hidden rounded-xl bg-white p-6 text-left shadow-xl transition-all">
-                <h3 class="text-base font-semibold text-gray-900">
-                    Montant standard — <span class="text-primary" x-text="selectedCategory ? selectedCategory.name : ''"></span>
-                </h3>
-                <p class="mt-1 text-sm text-gray-600">
-                    Ce montant s'appliquera à
-                    <span class="font-semibold" x-text="classrooms.length"></span>
-                    classe(s) en une fois.
-                </p>
+    <modal-shell open="isApplyOpen" size="md">
+        <modal-title>Montant standard — <span class="text-indigo-100" x-text="selectedCategory ? selectedCategory.name : ''"></span></modal-title>
+        <modal-subtitle>
+            Ce montant s'appliquera à
+            <span class="font-semibold" x-text="classrooms.length"></span>
+            classe(s) en une fois.
+        </modal-subtitle>
 
-                <!-- Compte-rendu après application -->
-                <div x-show="applyReport" x-cloak class="mt-4 bg-green-50 p-3 rounded-md border-l-4 border-success text-sm text-green-800">
-                    <span x-text="applyReport ? applyReport.created : 0"></span> créée(s),
-                    <span x-text="applyReport ? applyReport.updated : 0"></span> réalignée(s),
-                    <span x-text="applyReport ? applyReport.skipped : 0"></span> inchangée(s).
-                </div>
-
-                <div x-show="applyErrors.global" x-cloak class="mt-4 bg-red-50 p-3 rounded-md border-l-4 border-danger text-sm text-red-700" x-text="applyErrors.global"></div>
-
-                <form x-on:submit.prevent="submitApplyStandard()" class="mt-4 space-y-4">
-                    <div>
-                        <label for="apply-amount" class="block text-sm font-medium text-gray-700">Montant (FCFA) <span class="text-danger">*</span></label>
-                        <input id="apply-amount" type="number" x-model.number="applyForm.amount" required min="0" step="500" placeholder="ex : 15000"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
-                        <p x-show="applyErrors.amount" x-cloak x-text="applyErrors.amount" class="mt-1 text-xs text-danger"></p>
-                    </div>
-                    <div class="flex items-start gap-2">
-                        <input id="apply-overwrite" type="checkbox" x-model="applyForm.overwriteExisting" class="mt-1 rounded border-gray-300 text-primary focus:ring-primary">
-                        <label for="apply-overwrite" class="text-sm text-gray-700">
-                            Écraser les montants déjà définis
-                            <span class="block text-xs text-gray-400">Décoché, les exceptions ajustées classe par classe sont préservées.</span>
-                        </label>
-                    </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" x-on:click="isApplyOpen = false" class="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Fermer</button>
-                        <button type="submit" :disabled="isApplying" class="inline-flex justify-center items-center gap-2 rounded-md bg-primary py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50">
-                            <span x-text="isApplying ? 'Application...' : 'Appliquer'"></span>
-                        </button>
-                    </div>
-                </form>
-            </div>
+        <!-- Compte-rendu après application -->
+        <div x-show="applyReport" x-cloak class="mb-4 rounded-md border-l-4 border-success bg-success-bg p-3 text-sm text-success">
+            <span x-text="applyReport ? applyReport.created : 0"></span> créée(s),
+            <span x-text="applyReport ? applyReport.updated : 0"></span> réalignée(s),
+            <span x-text="applyReport ? applyReport.skipped : 0"></span> inchangée(s).
         </div>
-    </div>
+
+        <div x-show="applyErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="applyErrors.global"></div>
+
+        <form x-on:submit.prevent="submitApplyStandard()" class="space-y-4">
+            <div>
+                <label for="apply-amount" class="block text-sm font-medium text-gray-700">Montant (FCFA) <span class="text-danger">*</span></label>
+                <input id="apply-amount" type="number" x-model.number="applyForm.amount" required min="0" step="500" placeholder="ex : 15000" class="input-field">
+                <p x-show="applyErrors.amount" x-cloak x-text="applyErrors.amount" class="mt-1 text-xs text-danger"></p>
+            </div>
+            <div class="flex items-start gap-2">
+                <input id="apply-overwrite" type="checkbox" x-model="applyForm.overwriteExisting" class="mt-1 rounded border-gray-300 text-primary focus:ring-primary">
+                <label for="apply-overwrite" class="text-sm text-gray-700">
+                    Écraser les montants déjà définis
+                    <span class="block text-xs text-gray-400">Décoché, les exceptions ajustées classe par classe sont préservées.</span>
+                </label>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-on:click="isApplyOpen = false" class="btn-secondary">Fermer</button>
+                <button type="submit" :disabled="isApplying" class="btn-primary">
+                    <span x-text="isApplying ? 'Application...' : 'Appliquer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
 
     <!-- Modale : modifier une exception -->
-    <div x-show="editing" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-        <div class="flex min-h-full items-center justify-center p-4">
-            <div x-show="editing" x-transition.opacity class="fixed inset-0 bg-gray-500 bg-opacity-75" x-on:click="closeEdit()"></div>
-            <div x-show="editing"
-                 x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                 x-on:keydown.escape.window="closeEdit()"
-                 class="relative w-full max-w-md transform overflow-hidden rounded-xl bg-white p-6 text-left shadow-xl transition-all">
-                <h3 class="text-base font-semibold text-gray-900">
-                    Montant — <span class="text-primary" x-text="editing ? editing.classroomName : ''"></span>
-                </h3>
-                <p class="mt-1 text-sm text-gray-600" x-text="selectedCategory ? selectedCategory.name : ''"></p>
+    <modal-shell open="editing" on-close="closeEdit()" size="md">
+        <modal-title>Montant — <span class="text-indigo-100" x-text="editing ? editing.classroomName : ''"></span></modal-title>
+        <modal-subtitle><span x-text="selectedCategory ? selectedCategory.name : ''"></span></modal-subtitle>
 
-                <div x-show="editErrors.global" x-cloak class="mt-4 bg-orange-50 p-3 rounded-md border-l-4 border-warning text-sm text-orange-800" x-text="editErrors.global"></div>
+        <div x-show="editErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
 
-                <form x-on:submit.prevent="submitEdit()" class="mt-4 space-y-4">
-                    <div>
-                        <label for="edit-amount" class="block text-sm font-medium text-gray-700">Montant (FCFA) <span class="text-danger">*</span></label>
-                        <input id="edit-amount" type="number" x-model.number="editing.amount" required min="0" step="500"
-                               x-effect="if (editing) $nextTick(() => $el.focus())"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
-                        <p x-show="editErrors.amount" x-cloak x-text="editErrors.amount" class="mt-1 text-xs text-danger"></p>
-                    </div>
-                    <div class="mt-6 flex justify-end gap-3">
-                        <button type="button" x-on:click="closeEdit()" class="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Annuler</button>
-                        <button type="submit" :disabled="isSavingEdit" class="inline-flex justify-center items-center gap-2 rounded-md bg-primary py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50">
-                            <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
-                        </button>
-                    </div>
-                </form>
+        <form x-on:submit.prevent="submitEdit()" class="space-y-4">
+            <div>
+                <label for="edit-amount" class="block text-sm font-medium text-gray-700">Montant (FCFA) <span class="text-danger">*</span></label>
+                <input id="edit-amount" type="number" x-model.number="editing.amount" required min="0" step="500"
+                       x-effect="if (editing) $nextTick(() => $el.focus())" class="input-field">
+                <p x-show="editErrors.amount" x-cloak x-text="editErrors.amount" class="mt-1 text-xs text-danger"></p>
             </div>
-        </div>
-    </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-on:click="closeEdit()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isSavingEdit" class="btn-primary">
+                    <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
 
     <!-- Modale : historique -->
-    <div x-show="historyFor" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-        <div class="flex min-h-full items-center justify-center p-4">
-            <div x-show="historyFor" x-transition.opacity class="fixed inset-0 bg-gray-500 bg-opacity-75" x-on:click="closeHistory()"></div>
-            <div x-show="historyFor"
-                 x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-4 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                 x-on:keydown.escape.window="closeHistory()"
-                 class="relative w-full max-w-lg transform overflow-hidden rounded-xl bg-white p-6 text-left shadow-xl transition-all">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-base font-semibold text-gray-900">
-                        Historique — <span class="text-primary" x-text="historyFor ? historyFor.classroomName : ''"></span>
-                    </h3>
-                    <button type="button" x-on:click="closeHistory()" class="text-gray-400 hover:text-gray-600">
-                        <span class="sr-only">Fermer</span>
-                        <svg aria-hidden="true" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
+    <modal-shell open="historyFor" on-close="closeHistory()" size="lg">
+        <modal-title>Historique — <span class="text-indigo-100" x-text="historyFor ? historyFor.classroomName : ''"></span></modal-title>
 
-                <div x-show="isLoadingHistory" class="py-8 text-center text-sm text-gray-400">Chargement…</div>
+        <div x-show="isLoadingHistory" class="py-8 text-center text-sm text-gray-400">Chargement…</div>
 
-                <div x-show="!isLoadingHistory && historyEntries.length === 0" x-cloak class="py-8 text-center text-sm text-gray-400">
-                    Aucune modification enregistrée.
-                </div>
-
-                <ul x-show="!isLoadingHistory && historyEntries.length > 0" x-cloak class="mt-4 divide-y divide-gray-100 max-h-80 overflow-y-auto">
-                    <template x-for="(entry, index) in historyEntries" :key="index">
-                        <li class="py-3 flex items-start justify-between gap-4">
-                            <div>
-                                <p class="text-sm text-gray-900">
-                                    <span x-show="entry.oldAmount !== null" x-cloak>
-                                        <span class="text-gray-400 line-through" x-text="formatMoney(entry.oldAmount)"></span>
-                                        <span class="text-gray-400">→</span>
-                                    </span>
-                                    <span class="font-semibold" x-text="formatMoney(entry.newAmount)"></span>
-                                    <span x-show="entry.oldAmount === null" x-cloak class="text-xs text-gray-400 ml-1">(définition initiale)</span>
-                                </p>
-                                <p class="text-xs text-gray-500 mt-0.5" x-text="'par ' + entry.changedByName"></p>
-                            </div>
-                            <span class="text-xs text-gray-400 whitespace-nowrap" x-text="formatDate(entry.changedAt)"></span>
-                        </li>
-                    </template>
-                </ul>
-            </div>
+        <div x-show="!isLoadingHistory && historyEntries.length === 0" x-cloak class="py-8 text-center text-sm text-gray-400">
+            Aucune modification enregistrée.
         </div>
-    </div>
+
+        <ul x-show="!isLoadingHistory && historyEntries.length > 0" x-cloak class="max-h-80 divide-y divide-gray-100 overflow-y-auto">
+            <template x-for="(entry, index) in historyEntries" :key="index">
+                <li class="flex items-start justify-between gap-4 py-3">
+                    <div>
+                        <p class="text-sm text-gray-900">
+                            <span x-show="entry.oldAmount !== null" x-cloak>
+                                <span class="text-gray-400 line-through" x-text="formatMoney(entry.oldAmount)"></span>
+                                <span class="text-gray-400">→</span>
+                            </span>
+                            <span class="font-semibold" x-text="formatMoney(entry.newAmount)"></span>
+                            <span x-show="entry.oldAmount === null" x-cloak class="ml-1 text-xs text-gray-400">(définition initiale)</span>
+                        </p>
+                        <p class="mt-0.5 text-xs text-gray-500" x-text="'par ' + entry.changedByName"></p>
+                    </div>
+                    <span class="whitespace-nowrap text-xs text-gray-400" x-text="formatDate(entry.changedAt)"></span>
+                </li>
+            </template>
+        </ul>
+    </modal-shell>
 </div>

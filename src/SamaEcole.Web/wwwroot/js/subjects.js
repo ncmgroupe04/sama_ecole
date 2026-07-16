@@ -10,6 +10,7 @@ document.addEventListener('alpine:init', () => {
         subjects: [],
         isLoading: false,
         error: null,
+        search: '',
 
         isDirecteur: window.auth.role === 'Directeur',
 
@@ -39,9 +40,14 @@ document.addEventListener('alpine:init', () => {
          * nom (GetSubjectsQueryHandler) : il suffit de la découper, sans re-trier ici.
          */
         get groups() {
+            const q = this.search.trim().toLowerCase();
+            const visible = q
+                ? this.subjects.filter((s) => s.name.toLowerCase().includes(q) || s.level.toLowerCase().includes(q))
+                : this.subjects;
+
             const byLevel = new Map();
 
-            for (const subject of this.subjects) {
+            for (const subject of visible) {
                 if (!byLevel.has(subject.level)) byLevel.set(subject.level, []);
                 byLevel.get(subject.level).push(subject);
             }

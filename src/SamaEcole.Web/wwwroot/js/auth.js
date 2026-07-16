@@ -269,6 +269,22 @@ document.addEventListener('alpine:init', () => {
     }));
 
     /**
+     * Visibilité du menu latéral par rôle (JGK-D05, Volume 5 §3.2) : masquer un onglet est une
+     * commodité d'ergonomie, jamais une mesure de sécurité — chaque route reste protégée côté API
+     * indépendamment de l'affichage (voir le commentaire de PagesController). Les listes de rôles
+     * reprennent la colonne « Voir » de la matrice détaillée (Volume 7 §15), module par module.
+     *
+     * Matières, Présences et Rapports sont absents de la matrice détaillée : leurs listes de rôles
+     * viennent d'une confirmation produit directe plutôt que du Volume 7 §15. Administration est
+     * réservée au Super Admin sur mention explicite du Volume 5 §3.2, bien qu'aucune route ne soit
+     * encore livrée (Module B du backlog).
+     */
+    Alpine.data('sidebarNav', () => ({
+        role: window.auth.role,
+        canView(roles) { return roles.includes(this.role); }
+    }));
+
+    /**
      * Indicateur réseau de la barre d'état (Volume 5 §9). navigator.onLine ne prouve pas qu'Internet
      * répond — seulement que l'interface réseau est active — mais il détecte le cas qui compte ici :
      * la coupure franche, fréquente sur une connexion mobile sénégalaise.

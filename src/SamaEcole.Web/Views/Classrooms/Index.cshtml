@@ -14,68 +14,76 @@
             <h1 class="text-jgk-title font-bold text-gray-900">Classes</h1>
             <p class="text-jgk-subtitle text-gray-500 mt-1">Gérez l'arborescence et les capacités d'accueil.</p>
         </div>
-        <button @@click="isCreateOpen = true" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors shadow-sm shadow-indigo-200 flex items-center justify-center gap-2">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        <button @@click="isCreateOpen = true" class="btn-primary">
+            <icon name="plus" class="w-5 h-5" />
             Nouvelle classe
         </button>
     </div>
 
-    <!-- Alert d'erreur API globale -->
-    <div x-show="error" x-cloak class="mt-6 bg-red-50 border-l-4 border-danger p-4 rounded-md">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-danger" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
-            </div>
-            <div class="ml-3">
-                <p class="text-sm text-red-700" x-text="error"></p>
-            </div>
-        </div>
-    </div>
+    @await Html.PartialAsync("_ErrorBanner")
 
     <!-- Synthèse et Tableau -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mt-6 relative">
-        
-        <!-- Loading Overlay -->
-        <div x-show="isLoading" class="absolute inset-0 z-10 bg-white/70 flex items-center justify-center rounded-xl backdrop-blur-sm">
-            <svg class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-        </div>
-
-        <div class="p-4 border-b border-gray-200 bg-gray-50/50 rounded-t-xl flex gap-6">
-            <div>
-                <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Classes</p>
-                <p class="text-lg font-bold text-gray-900" x-text="classrooms.length"></p>
+    <div class="card mt-6 relative">
+        <div class="p-4 border-b border-gray-200 bg-gray-50/50 rounded-t-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex gap-6">
+                <stat-card size="compact" label="Total Classes" icon="building" accent="primary">
+                    <span x-text="classrooms.length"></span>
+                </stat-card>
+                <stat-card size="compact" label="Capacité Totale" icon="users" accent="primary">
+                    <span x-text="getTotalCapacity() + ' places'"></span>
+                </stat-card>
             </div>
-            <div>
-                <p class="text-xs text-gray-500 font-medium uppercase tracking-wider">Capacité Totale</p>
-                <p class="text-lg font-bold text-gray-900" x-text="getTotalCapacity() + ' places'"></p>
+
+            <div class="flex gap-3">
+                <select x-model="levelFilter" aria-label="Filtrer par niveau"
+                        class="input-field mt-0 w-40 bg-white">
+                    <option value="">Tous les niveaux</option>
+                    <option value="Crèche">Crèche</option>
+                    <option value="Maternelle">Maternelle</option>
+                    <option value="Primaire">Primaire</option>
+                    <option value="Collège">Collège</option>
+                    <option value="Lycée">Lycée</option>
+                </select>
+
+                <div class="relative w-full sm:w-56">
+                    <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <icon name="search" class="w-4 h-4 text-gray-400" />
+                    </span>
+                    <input type="search" x-model="search" placeholder="Rechercher une classe…"
+                           aria-label="Rechercher une classe"
+                           class="input-field mt-0 w-full pl-9" />
+                </div>
             </div>
         </div>
 
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <tr class="table-head">
                         <th class="py-3 px-4 w-12 text-center">N°</th>
-                        <th class="py-3 px-4">Nom de la classe</th>
-                        <th class="py-3 px-4">Niveau</th>
-                        <th class="py-3 px-4 text-center">Capacité (places)</th>
+                        <sort-th column="name" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('name')" class="py-3 px-4">Nom de la classe</sort-th>
+                        <sort-th column="level" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('level')" class="py-3 px-4">Niveau</sort-th>
+                        <sort-th column="capacity" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('capacity')" class="py-3 px-4 text-center">Capacité (places)</sort-th>
                         <th class="py-3 px-4">ID Référence (Pour tests)</th>
                     </tr>
                 </thead>
-                <tbody class="text-sm text-gray-700 divide-y divide-gray-100">
-                    <tr x-show="!isLoading && classrooms.length === 0" x-cloak>
-                        <td colspan="5" class="py-12 text-center">
-                            <div class="flex flex-col items-center justify-center">
-                                <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
-                                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                                </div>
-                                <p class="text-gray-500 font-medium">Aucune classe n'est configurée.</p>
-                                <p class="text-xs text-gray-400 mt-1">Créez votre première classe pour commencer les inscriptions.</p>
-                            </div>
+                <tbody class="table-cell divide-y divide-gray-100">
+                    <template x-if="isLoading">
+                        <template x-for="i in 3" :key="i">
+                            <tr>
+                                <td class="py-3 px-4" colspan="5"><div class="skeleton h-4 w-full"></div></td>
+                            </tr>
+                        </template>
+                    </template>
+
+                    <tr x-show="!isLoading && visibleClassrooms().length === 0" x-cloak>
+                        <td colspan="5">
+                            <empty-state icon="building" title="Aucune classe n'est configurée."
+                                         hint="Créez votre première classe pour commencer les inscriptions." />
                         </td>
                     </tr>
 
-                    <template x-for="(classroom, index) in classrooms" :key="classroom.id || index">
+                    <template x-for="(classroom, index) in visibleClassrooms()" :key="classroom.id || index">
                         <tr class="hover:bg-gray-50 transition-colors group">
                             <td class="py-3 px-4 text-center text-gray-400 font-medium" x-text="index + 1"></td>
                             <td class="py-3 px-4 font-bold text-gray-900">
@@ -84,9 +92,7 @@
                                     <span x-text="classroom.name"></span>
                                 </span>
                             </td>
-                            <td class="py-3 px-4">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800" x-text="classroom.level"></span>
-                            </td>
+                            <td class="py-3 px-4"><badge variant="neutral" x-text="classroom.level"></badge></td>
                             <td class="py-3 px-4 text-center font-medium" x-text="classroom.capacity"></td>
                             <td class="py-3 px-4 text-xs font-mono text-gray-400 group-hover:text-primary transition-colors">
                                 <!-- Pratique pour copier-coller l'ID dans le formulaire Élève pour les tests -->
@@ -99,78 +105,50 @@
         </div>
     </div>
 
-    <!-- Modale (Slide-over) Création de Classe -->
-    <div x-show="isCreateOpen" class="fixed inset-0 overflow-hidden z-40" x-cloak>
-        <div class="absolute inset-0 overflow-hidden">
-            <div x-show="isCreateOpen" x-transition.opacity class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @@click="isCreateOpen = false"></div>
-            
-            <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-                <div x-show="isCreateOpen" x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="pointer-events-auto w-screen max-w-md">
-                    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
-                        <div class="bg-primary px-4 py-6 sm:px-6">
-                            <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-medium text-white">Nouvelle classe</h2>
-                                <div class="ml-3 flex h-7 items-center">
-                                    <button type="button" @@click="isCreateOpen = false" class="rounded-md bg-primary text-indigo-200 hover:text-white focus:outline-none">
-                                        <span class="sr-only">Fermer</span>
-                                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="mt-1">
-                                <p class="text-sm text-indigo-200">Configurez une nouvelle classe et sa capacité.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="relative flex-1 px-4 py-6 sm:px-6">
-                            <!-- Erreur globale -->
-                            <div x-show="createErrors.global" class="mb-4 bg-red-50 p-3 rounded-md border-l-4 border-danger">
-                                <p class="text-sm text-red-700" x-text="createErrors.global"></p>
-                            </div>
+    <!-- Création de classe -->
+    <modal-shell open="isCreateOpen" title="Nouvelle classe">
+        <modal-subtitle>Configurez une nouvelle classe et sa capacité.</modal-subtitle>
 
-                            <form @@submit.prevent="submitCreate" class="space-y-4">
-                                <!-- Nom de la classe -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Nom de la classe <span class="text-danger">*</span></label>
-                                    <input type="text" x-model="newClassroom.name" required placeholder="ex: CM2 B" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
-                                    <p x-show="createErrors.name" x-text="createErrors.name" class="mt-1 text-xs text-danger"></p>
-                                </div>
+        <!-- Erreur globale -->
+        <div x-show="createErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
 
-                                <!-- Niveau -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Niveau <span class="text-danger">*</span></label>
-                                    <select x-model="newClassroom.level" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2 bg-white">
-                                        <option value="Crèche">Crèche</option>
-                                        <option value="Maternelle">Maternelle</option>
-                                        <option value="Primaire">Primaire</option>
-                                        <option value="Collège">Collège</option>
-                                        <option value="Lycée">Lycée</option>
-                                    </select>
-                                    <p x-show="createErrors.level" x-text="createErrors.level" class="mt-1 text-xs text-danger"></p>
-                                </div>
-
-                                <!-- Capacité -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Capacité d'accueil <span class="text-danger">*</span></label>
-                                    <input type="number" x-model.number="newClassroom.capacity" required min="1" max="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2">
-                                    <p x-show="createErrors.capacity" x-text="createErrors.capacity" class="mt-1 text-xs text-danger"></p>
-                                </div>
-
-                                <!-- Boutons d'action -->
-                                <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
-                                    <button type="button" @@click="isCreateOpen = false" class="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none">
-                                        Annuler
-                                    </button>
-                                    <button type="submit" :disabled="isSubmitting" class="inline-flex justify-center rounded-md border border-transparent bg-primary py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 focus:outline-none disabled:opacity-50 flex items-center gap-2">
-                                        <svg x-show="isSubmitting" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                        <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+        <form x-on:submit.prevent="submitCreate()" class="space-y-4">
+            <!-- Nom de la classe -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nom de la classe <span class="text-danger">*</span></label>
+                <input type="text" x-model="newClassroom.name" required placeholder="ex: CM2 B" class="input-field">
+                <p x-show="createErrors.name" x-text="createErrors.name" class="mt-1 text-xs text-danger"></p>
             </div>
-        </div>
-    </div>
+
+            <!-- Niveau -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Niveau <span class="text-danger">*</span></label>
+                <select x-model="newClassroom.level" required class="input-field bg-white">
+                    <option value="Crèche">Crèche</option>
+                    <option value="Maternelle">Maternelle</option>
+                    <option value="Primaire">Primaire</option>
+                    <option value="Collège">Collège</option>
+                    <option value="Lycée">Lycée</option>
+                </select>
+                <p x-show="createErrors.level" x-text="createErrors.level" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <!-- Capacité -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Capacité d'accueil <span class="text-danger">*</span></label>
+                <input type="number" x-model.number="newClassroom.capacity" required min="1" max="100" class="input-field">
+                <p x-show="createErrors.capacity" x-text="createErrors.capacity" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button type="button" @@click="isCreateOpen = false" class="btn-secondary">
+                    Annuler
+                </button>
+                <button type="submit" :disabled="isSubmitting" class="btn-primary">
+                    <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
 </div>

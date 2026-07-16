@@ -20,6 +20,11 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
             query = query.Where(s => s.ClassroomId == classroomId);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Gender))
+        {
+            query = query.Where(s => s.Gender == request.Gender);
+        }
+
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             // Recherche insensible à la casse : « diop » doit trouver « Diop ».

@@ -18,6 +18,9 @@ public record GetStudentsQuery : IRequest<PaginatedStudents>
 
     /// <summary>Filtre optionnel sur une classe.</summary>
     public Guid? ClassroomId { get; init; }
+
+    /// <summary>Filtre optionnel sur le genre ("M" ou "F").</summary>
+    public string? Gender { get; init; }
 }
 
 public record StudentListItem(
