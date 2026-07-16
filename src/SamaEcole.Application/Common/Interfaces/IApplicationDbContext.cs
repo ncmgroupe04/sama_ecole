@@ -55,6 +55,9 @@ public interface IApplicationDbContext
     /// <summary>Notes (ticket JGK-G01) : une par (élève, matière, trimestre, type d'évaluation). Verrou optimiste xmin.</summary>
     DbSet<Grade> Grades { get; }
 
+    /// <summary>Mentions personnalisables dérivées de la moyenne générale (ticket JGK-G02).</summary>
+    DbSet<Mention> Mentions { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>

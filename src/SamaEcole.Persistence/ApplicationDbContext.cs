@@ -34,6 +34,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Term> Terms => Set<Term>();
     public DbSet<Grade> Grades => Set<Grade>();
+    public DbSet<Mention> Mentions => Set<Mention>();
 
     // Compteurs de matricules : écrits uniquement par MatriculeGenerator (INSERT ... ON CONFLICT),
     // jamais manipulés à la main par un Handler. Volontairement absent d'IApplicationDbContext.

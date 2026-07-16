@@ -611,27 +611,126 @@ paths:
   /grades:
     post:
       tags: [Grades]
-      summary: Saisir ou corriger une note (Enseignant, Directeur) — verrouillage optimiste
+      summary: Saisir une nouvelle note (Enseignant uniquement)
       description: >-
-        Un seul endpoint sert la première saisie ET les corrections : `rowVersion` absent signifie
-        « nouvelle note » (une création concurrente sur la même clé élève/matière/trimestre/type
-        d'évaluation est refusée en 409, jamais un doublon) ; `rowVersion` présent signifie
-        « je corrige la note lue avec ce jeton » (409 si elle a changé entre-temps).
+        docs/Volume_7_Security.md « Notes » : Saisir est réservé à l'Enseignant (le Directeur ne peut
+        que corriger, PUT /grades/{id}). Aucune note ne doit déjà exister pour la clé
+        élève/matière/trimestre/type d'évaluation : une création concurrente sur la même clé est
+        refusée en 409, jamais un doublon silencieux.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GradeUpsertRequest' }
+            schema: { $ref: '#/components/schemas/GradeCreateRequest' }
+      responses:
+        '201':
+          description: Note créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GradeSaved' }
+        '403': { description: Réservé à l'Enseignant }
+        '409':
+          description: Une note existe déjà pour cette clé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /grades/{id}:
+    put:
+      tags: [Grades]
+      summary: Corriger une note déjà saisie (Directeur, Enseignant) — verrouillage optimiste
+      description: >-
+        docs/Volume_7_Security.md « Notes » : Modifier est ouvert au Directeur ET à l'Enseignant,
+        contrairement à la saisie. `rowVersion` est le jeton xmin lu à la dernière consultation — un
+        jeton périmé (la note a changé entre-temps) est refusé en 409, jamais un écrasement silencieux.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GradeUpdateRequest' }
       responses:
         '200':
-          description: Note enregistrée
+          description: Note corrigée
           content:
             application/json:
               schema: { $ref: '#/components/schemas/GradeSaved' }
         '403': { description: Réservé au Directeur et à l'Enseignant }
-        '404': { description: Aucune note existante à corriger pour cette clé (rowVersion fourni) }
+        '404': { description: Note introuvable dans l'établissement courant }
         '409':
           description: Conflit de concurrence — la note a été modifiée entre-temps
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /grades/calculate:
+    get:
+      tags: [Grades]
+      summary: Calculer les moyennes et la mention d'un élève pour un trimestre
+      description: >-
+        Ticket JGK-G02 — moyenne de chaque matière notée, moyenne générale pondérée par les
+        coefficients (Volume 1 §8.3) et mention qui en découle (§8.4). Recalculé à la demande, jamais
+        persisté : la version figée du bulletin relève de JGK-G03. Lecture ouverte au Directeur et à
+        l'Enseignant, comme la consultation des notes.
+      parameters:
+        - name: studentId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: termId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Synthèse des moyennes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GradeSummary' }
+        '403': { description: Réservé au Directeur et à l'Enseignant }
+        '404': { description: Élève ou trimestre introuvable dans l'établissement courant }
+
+  /grades/mentions:
+    get:
+      tags: [Grades]
+      summary: Lister les mentions (personnalisées, ou par défaut tant qu'aucune n'a été créée)
+      description: >-
+        Ticket JGK-G02 (Volume 1 §8.4). Les seuils par défaut sont des fractions du barème de l'école
+        (SchoolSettings.GradingScale) : ils s'adaptent qu'une école note sur 10 ou sur 20.
+      responses:
+        '200':
+          description: Mentions actives, la plus forte d'abord
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Mention' }
+    post:
+      tags: [Grades]
+      summary: Créer une mention personnalisée (Directeur)
+      description: >-
+        docs/Volume_7_Security.md « Paramètres de l'école » : notation, mentions — Directeur
+        uniquement. Dès la première mention créée, l'école cesse de recevoir les valeurs par défaut.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MentionCreateRequest' }
+      responses:
+        '201':
+          description: Mention créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Mention' }
+        '403': { description: Réservé au Directeur }
+        '409':
+          description: Une mention de ce libellé existe déjà
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1383,7 +1482,7 @@ components:
               months: { type: integer }
               lineTotal: { type: number }
 
-    GradeUpsertRequest:
+    GradeCreateRequest:
       type: object
       required: [studentId, subjectId, termId, evaluationType, value]
       properties:
@@ -1395,14 +1494,19 @@ components:
           type: number
           minimum: 0
           description: Sur le barème de l'école (SchoolSettings.GradingScale, 10 ou 20).
+
+    GradeUpdateRequest:
+      type: object
+      required: [value, rowVersion]
+      properties:
+        value:
+          type: number
+          minimum: 0
+          description: Sur le barème de l'école (SchoolSettings.GradingScale, 10 ou 20).
         rowVersion:
           type: integer
           format: int64
-          nullable: true
-          description: >-
-            Absent/null pour une PREMIÈRE saisie (une création concurrente sur la même clé est
-            refusée en 409). Présent — le jeton xmin renvoyé par la dernière lecture — pour corriger
-            une note existante : verrouillage optimiste, refusé en 409 si la note a changé entre-temps.
+          description: Jeton xmin renvoyé par la dernière lecture — verrouillage optimiste.
 
     GradeSaved:
       type: object
@@ -1422,6 +1526,56 @@ components:
         order: { type: integer, example: 1 }
         startDate: { type: string, format: date }
         endDate: { type: string, format: date }
+
+    SubjectGrade:
+      type: object
+      description: >-
+        `devoir`/`composition` sont null si ce type d'évaluation n'a pas encore été saisi — la
+        moyenne se calcule alors sur ce qui existe.
+      properties:
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        devoir: { type: number, nullable: true }
+        composition: { type: number, nullable: true }
+        average: { type: number }
+        coefficient: { type: number }
+        weightedPoints: { type: number, description: "average × coefficient" }
+
+    GradeSummary:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        termId: { type: string, format: uuid }
+        subjects:
+          type: array
+          items: { $ref: '#/components/schemas/SubjectGrade' }
+        totalCoefficients: { type: number }
+        totalPoints: { type: number }
+        generalAverage: { type: number }
+        mention:
+          type: string
+          nullable: true
+          description: Null tant qu'aucune matière n'est notée, ou sous le seuil de la mention la plus basse.
+
+    Mention:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null pour une mention par défaut, non encore stockée.
+        label: { type: string, example: "Excellent" }
+        minAverage:
+          type: number
+          description: Moyenne minimale (incluse) pour obtenir cette mention, sur le barème de l'école.
+
+    MentionCreateRequest:
+      type: object
+      required: [label, minAverage]
+      properties:
+        label: { type: string, maxLength: 40, example: "Excellent" }
+        minAverage: { type: number, minimum: 0 }
 
     FeeCategoryCreateRequest:
       type: object

@@ -289,6 +289,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM grades;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM terms;");
 
+        // Mentions (ticket JGK-G02) : une mention personnalisée créée par un test ferait recevoir au
+        // suivant SA liste au lieu des 5 valeurs par défaut (GetMentionsQueryHandler ne renvoie les
+        // défauts que si la table est VIDE) — l'ordre d'exécution deviendrait significatif.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM mentions;");
+
         // Idem pour les années scolaires (ticket JGK-C01) — et il ne s'agit pas seulement des écoles
         // créées par les tests : une école n'a droit qu'à UNE année active. Sans cette purge, la
         // première année créée par un test resterait active et le suivant, croyant créer sa première
