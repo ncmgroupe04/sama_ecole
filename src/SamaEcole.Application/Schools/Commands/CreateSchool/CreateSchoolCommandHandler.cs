@@ -84,6 +84,12 @@ public class CreateSchoolCommandHandler(
         // risquerait d'annoncer au Directeur des identifiants qui n'existent finalement pas.
         await SendCredentialsAsync(email, fullName, request.Name, password, cancellationToken);
 
+        // L'école n'existe qu'à partir d'ici : c'est la première occasion d'attribuer l'entrée
+        // d'audit à un SchoolId réel (voir la remarque de classe — l'acteur, Super Admin, n'en a pas).
+        await auditLogStore.AppendAsync(
+            schoolId, currentUser.UserId!.Value, "Schools", "CreateSchool",
+            success: true, failureReason: null, currentUser.IpAddress, timeProvider.GetUtcNow(), cancellationToken);
+
         logger.LogInformation(
             "Établissement {SchoolId} créé avec son Directeur {DirectorId}.", schoolId, directorId);
 

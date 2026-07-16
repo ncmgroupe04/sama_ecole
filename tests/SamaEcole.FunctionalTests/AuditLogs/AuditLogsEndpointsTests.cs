@@ -206,13 +206,15 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
     }
 
     [Fact]
-    public async Task Creating_A_School_Should_Not_Crash_Even_Though_Its_Audit_Entry_Is_Not_Yet_Captured()
+    public async Task Creating_A_School_Should_Produce_An_Audit_Entry_Attributed_To_The_New_School()
     {
-        // CreateSchoolCommand n'est délibérément PAS IAuditableRequest (voir la classe CreateSchoolCommand
-        // et AuditLoggingBehavior) : le Super Admin n'a aucun SchoolId propre, et la policy RLS de
-        // audit_logs rejetterait tout INSERT depuis sa session — capturer « actions Super Admin » dans
-        // ce journal exigerait sa propre fonction SECURITY DEFINER, comme provision_school_director.
-        // Ce test garde la trace du choix : la création d'école doit rester 201, jamais un 500.
+        // CreateSchoolCommand n'est délibérément PAS IAuditableRequest (voir AuditLoggingBehavior) :
+        // le Super Admin n'a aucun SchoolId propre, donc le mécanisme générique ne trouverait rien à
+        // qui imputer l'entrée. Le Handler écrit lui-même via IAuditLogStore une fois l'école connue
+        // (même contournement RLS que Login) — ce test vérifie que l'entrée existe vraiment, lue
+        // depuis le journal de l'école NOUVELLEMENT créée (le Super Admin, lui, ne peut pas lire
+        // /api/v1/audit-logs : il n'a pas de SchoolId).
+        _factory.Emails.Clear();
         var superAdmin = await SuperAdminTokenAsync();
 
         var createSchool = await SendAsync(HttpMethod.Post, "/api/v1/schools", superAdmin, new
@@ -225,6 +227,119 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
         });
 
         createSchool.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var email = _factory.Emails.LastTo("directrice@filaos.sn");
+        email.Should().NotBeNull();
+        var password = FakeEmailSender.ExtractPassword(email!);
+
+        var directrice = await TokenAsync("directrice@filaos.sn", password);
+        var logs = await GetAuditLogsAsync(directrice);
+
+        logs.Items.Should().ContainSingle(l => l.Module == "Schools" && l.Action == "CreateSchool" && l.Success);
+    }
+
+    private async Task LoginExpectingUnauthorizedAsync(string email, string password)
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // Chaque test ci-dessous récupère le token du Directeur AVANT l'action sous test, puis le
+    // réutilise pour lire le journal : se reconnecter APRÈS produirait sa propre entrée « Auth/Login »
+    // et fausserait les assertions d'unicité/vacuité (la lecture du journal exige un Directeur connecté,
+    // et cette connexion est elle-même désormais journalisée).
+
+    [Fact]
+    public async Task A_Successful_Login_Should_Produce_A_Corresponding_Audit_Entry()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        await TokenAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
+
+        var logs = await GetAuditLogsAsync(directeur);
+
+        logs.Items.Should().ContainSingle(l =>
+            l.Module == "Auth" && l.Action == "Login" && l.Success && l.ActorFullName == "Secrétaire de test");
+    }
+
+    [Fact]
+    public async Task A_Wrong_Password_Should_Produce_A_Failure_Entry_With_A_Reason()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        await LoginExpectingUnauthorizedAsync(AuthApiFactory.SecretaireEmail, "mauvais-mot-de-passe");
+
+        var logs = await GetAuditLogsAsync(directeur);
+
+        var failure = logs.Items.Should()
+            .ContainSingle(l => l.Module == "Auth" && l.Action == "Login" && !l.Success).Subject;
+        failure.FailureReason.Should().Be("Mot de passe invalide.");
+    }
+
+    [Fact]
+    public async Task Login_Attempts_Past_The_Lockout_Threshold_Should_Produce_A_Lockout_Entry()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        // AuthApiFactory fixe Auth__MaxFailedAttempts=5 : la 5e tentative déclenche le verrou, la 6e
+        // tombe donc dans la branche « déjà verrouillé » du Handler.
+        for (var i = 0; i < 5; i++)
+        {
+            await LoginExpectingUnauthorizedAsync(AuthApiFactory.SecretaireEmail, "mauvais-mot-de-passe");
+        }
+        await LoginExpectingUnauthorizedAsync(AuthApiFactory.SecretaireEmail, "mauvais-mot-de-passe");
+
+        var logs = await GetAuditLogsAsync(directeur);
+
+        var lockout = logs.Items.Should()
+            .ContainSingle(l => l.Module == "Auth" && l.Action == "Login" && !l.Success
+                && l.FailureReason != null && l.FailureReason.Contains("verrouillé")).Subject;
+        lockout.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Login_On_A_Suspended_Account_Should_Produce_A_Failure_Entry_With_The_Status()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var suspend = await SendAsync(HttpMethod.Patch, $"/api/v1/users/{AuthApiFactory.SecretaireId}/status", directeur,
+            new { status = "Suspended", reason = "Absences répétées non justifiées" });
+        suspend.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await LoginExpectingUnauthorizedAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
+
+        var logs = await GetAuditLogsAsync(directeur);
+
+        var failure = logs.Items.Should()
+            .ContainSingle(l => l.Module == "Auth" && l.Action == "Login" && !l.Success
+                && l.FailureReason != null && l.FailureReason.Contains("statut")).Subject;
+        failure.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Login_With_Unknown_Email_Should_Not_Produce_Any_Audit_Entry()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        // Aucun utilisateur ni école à qui imputer l'entrée (voir la remarque de classe de
+        // LoginCommandHandler) : volontairement pas journalisé dans cette table tenant.
+        await LoginExpectingUnauthorizedAsync("inconnu@sama-ecole.sn", "peu-importe");
+
+        var logs = await GetAuditLogsAsync(directeur);
+
+        logs.Items.Should().NotContain(l => l.Module == "Auth" && l.Action == "Login" && l.ActorFullName != "Directeur de test");
+    }
+
+    [Fact]
+    public async Task SuperAdmin_Login_Should_Not_Produce_Any_Tenant_Audit_Entry()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        // Le Super Admin n'a aucun SchoolId propre (relève de PlatformAuditLogs, hors périmètre MVP).
+        await TokenAsync(AuthApiFactory.SuperAdminEmail, AuthApiFactory.SuperAdminPassword);
+
+        var logs = await GetAuditLogsAsync(directeur);
+
+        logs.Items.Should().NotContain(l => l.Module == "Auth" && l.Action == "Login" && l.ActorFullName != "Directeur de test");
     }
 
     [Theory]
@@ -245,13 +360,15 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
     }
 
     [Fact]
-    public async Task The_Log_Should_Be_Empty_When_Nothing_Sensitive_Has_Happened_Yet()
+    public async Task The_Log_Should_Contain_Only_The_Directeurs_Own_Login_When_Nothing_Else_Has_Happened()
     {
+        // Se connecter pour LIRE le journal est lui-même désormais un événement journalisé (JGK-A04) :
+        // la seule entrée « rien de sensible ne s'est encore produit » est donc celle-là.
         var directeur = await DirecteurTokenAsync();
 
         var logs = await GetAuditLogsAsync(directeur);
 
-        logs.Items.Should().BeEmpty();
-        logs.TotalCount.Should().Be(0);
+        logs.Items.Should().ContainSingle(l => l.Module == "Auth" && l.Action == "Login" && l.Success);
+        logs.TotalCount.Should().Be(1);
     }
 }
