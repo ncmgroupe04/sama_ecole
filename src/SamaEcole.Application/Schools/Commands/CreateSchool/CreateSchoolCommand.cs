@@ -5,6 +5,12 @@ namespace SamaEcole.Application.Schools.Commands.CreateSchool;
 /// <summary>
 /// POST /schools — ticket JGK-B01 (openapi.yaml §SchoolCreateRequest).
 /// Le mot de passe du Directeur n'est PAS un paramètre : il est généré côté serveur.
+///
+/// PAS IAuditableRequest (JGK-H01) : l'acteur (Super Admin) n'a aucun SchoolId, et la policy RLS de
+/// `audit_logs` rejette donc TOUT INSERT tenté depuis sa session, quelle que soit la valeur de
+/// SchoolId visée — même contrainte que `users` (voir AddSchoolProvisioning). Une entrée d'audit pour
+/// « actions Super Admin » exigerait sa propre fonction SECURITY DEFINER (comme
+/// provision_school_director) ; scope volontairement différé, voir AuditLoggingBehavior.
 /// </summary>
 public record CreateSchoolCommand(
     string Name,

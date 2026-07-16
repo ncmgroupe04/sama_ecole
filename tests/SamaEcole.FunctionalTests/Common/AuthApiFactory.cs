@@ -218,9 +218,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 
     /// <summary>
-    /// Remet les comptes de test à neuf entre deux tests (ticket JGK-A05). Les tests de statut
-    /// bloquent et débloquent les mêmes comptes : sans cela, le premier qui bloque la secrétaire
-    /// ferait échouer tous les suivants, et l'ordre d'exécution deviendrait significatif.
+    /// Remet les comptes de test à neuf entre deux tests (ticket JGK-A05, puis la réinitialisation de
+    /// mot de passe). Les tests de statut bloquent et débloquent les mêmes comptes, et ceux de mot de
+    /// passe le RÉÉCRIVENT en dur : sans remise à zéro du hash ici aussi, le premier test qui change le
+    /// mot de passe de la secrétaire ferait échouer tous les suivants qui se connectent avec
+    /// SecretairePassword — l'ordre d'exécution deviendrait significatif.
     ///
     /// Exécuté par le PROPRIÉTAIRE : le rôle applicatif n'a volontairement pas le droit de purger
     /// user_status_history (journal append-only).
@@ -230,7 +232,18 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await using var owner = NewOwnerContext();
 
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM user_status_history;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM audit_logs;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM refresh_tokens;");
+
+        var hasher = new IdentityPasswordHasher();
+        await owner.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(DirecteurPassword)} WHERE "Id" = {DirecteurId};""");
+        await owner.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SecretairePassword)} WHERE "Id" = {SecretaireId};""");
+        await owner.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(FinancePassword)} WHERE "Id" = {FinanceId};""");
+        await owner.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SuperAdminPassword)} WHERE "Id" = {SuperAdminId};""");
 
         // Écoles et comptes créés PAR les tests (ticket JGK-B01) : sans cette purge, une école créée
         // dans un test resterait provisionnée et fausserait le suivant. Les utilisateurs d'abord :

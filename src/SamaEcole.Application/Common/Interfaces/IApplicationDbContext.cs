@@ -46,6 +46,9 @@ public interface IApplicationDbContext
     /// <summary>Paramètres d'établissement (ticket JGK-B02).</summary>
     DbSet<SchoolSettings> SchoolSettings { get; }
 
+    /// <summary>Journal d'audit append-only (ticket JGK-H01) : on y AJOUTE, jamais plus.</summary>
+    DbSet<AuditLog> AuditLogs { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>

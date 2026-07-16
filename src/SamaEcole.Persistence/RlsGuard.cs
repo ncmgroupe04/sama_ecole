@@ -50,7 +50,7 @@ public static class RlsGuard
                  FROM pg_tables
                  WHERE schemaname = 'public'
                    AND tablename IN ('students', 'subscriptions', 'matricule_sequences', 'users',
-                                    'user_status_history', 'school_settings')
+                                    'user_status_history', 'school_settings', 'audit_logs')
                    AND tableowner = current_user
                  """)
             .ToListAsync(cancellationToken);

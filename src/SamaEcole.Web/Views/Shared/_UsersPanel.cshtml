@@ -1,0 +1,229 @@
+@*
+    Onglet Utilisateurs (Paramètres) — gestion du personnel par le Directeur. Le composant Alpine
+    usersView() est défini dans wwwroot/js/users.js, chargé par la page hôte (Settings/Index.cshtml).
+*@
+<div x-data="usersView()">
+    <!-- Titre et bouton Nouvel utilisateur -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900">Utilisateurs</h2>
+            <p class="text-sm text-gray-500 mt-1">
+                Créez les comptes de votre personnel et contrôlez leur accès (blocage, suspension, mot de passe).
+            </p>
+        </div>
+
+        <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-primary">
+            <icon name="plus" class="w-5 h-5" />
+            Nouvel utilisateur
+        </button>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- Synthèse et tableau -->
+    <div class="card mt-6 relative">
+        <div class="p-4 border-b border-gray-200 bg-gray-50/50 rounded-t-xl flex gap-6">
+            <stat-card size="compact" label="Comptes" icon="users" accent="primary">
+                <span x-text="users.length"></span>
+            </stat-card>
+            <stat-card size="compact" label="Actifs" icon="checkmark-circle" accent="success">
+                <span x-text="users.filter(u => u.status === 'Active').length"></span>
+            </stat-card>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3 px-4">Nom complet</th>
+                        <th class="py-3 px-4">E-mail</th>
+                        <th class="py-3 px-4">Rôle</th>
+                        <th class="py-3 px-4">Statut</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="table-cell divide-y divide-gray-100">
+                    <template x-if="isLoading">
+                        <template x-for="i in 3" :key="i">
+                            <tr><td class="py-3 px-4" colspan="5"><div class="skeleton h-4 w-full"></div></td></tr>
+                        </template>
+                    </template>
+
+                    <tr x-show="!isLoading && users.length === 0" x-cloak>
+                        <td colspan="5">
+                            <empty-state icon="users" title="Aucun utilisateur n'est encore créé."
+                                         hint="Créez un premier compte pour votre personnel." />
+                        </td>
+                    </tr>
+
+                    <template x-for="user in users" :key="user.id">
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-4 font-medium text-gray-900">
+                                <span class="inline-flex items-center gap-2">
+                                    <span x-text="user.fullName"></span>
+                                    <badge x-show="user.isSelf" x-cloak variant="primary">Vous</badge>
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-gray-600" x-text="user.email"></td>
+                            <td class="py-3 px-4"><badge variant="neutral" x-text="roleLabel(user.role)"></badge></td>
+                            <td class="py-3 px-4">
+                                <span :class="statusBadgeVariant(user.status)" x-text="statusLabel(user.status)"></span>
+                            </td>
+                            <td class="py-3 px-4 text-right whitespace-nowrap">
+                                <template x-if="!user.isSelf">
+                                    <span class="inline-flex items-center gap-1">
+                                        <button x-show="user.status !== 'Blocked'" x-cloak type="button"
+                                                x-on:click="openStatusChange(user, 'Blocked')"
+                                                class="text-xs font-medium text-danger hover:underline px-1.5 py-1">
+                                            Bloquer
+                                        </button>
+                                        <button x-show="user.status === 'Active'" x-cloak type="button"
+                                                x-on:click="openStatusChange(user, 'Suspended')"
+                                                class="text-xs font-medium text-warning hover:underline px-1.5 py-1">
+                                            Suspendre
+                                        </button>
+                                        <button x-show="user.status !== 'Active'" x-cloak type="button"
+                                                x-on:click="openStatusChange(user, 'Active')"
+                                                class="text-xs font-medium text-success hover:underline px-1.5 py-1">
+                                            Réactiver
+                                        </button>
+                                        <button type="button" x-on:click="openResetPassword(user)"
+                                                class="text-xs font-medium text-primary-700 hover:underline px-1.5 py-1">
+                                            Mot de passe
+                                        </button>
+                                        <button type="button" x-on:click="openHistory(user)"
+                                                class="text-xs font-medium text-gray-500 hover:text-gray-700 px-1.5 py-1">
+                                            Historique
+                                        </button>
+                                    </span>
+                                </template>
+                                <span x-show="user.isSelf" x-cloak class="text-xs text-gray-400 italic">—</span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Création d'un utilisateur -->
+    <modal-shell open="isCreateOpen" title="Nouvel utilisateur">
+        <modal-subtitle>Le mot de passe ci-dessous est celui du compte : communiquez-le vous-même à la personne concernée.</modal-subtitle>
+
+        <div x-show="createErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+
+        <form x-on:submit.prevent="submitCreate()" class="space-y-4">
+            <div>
+                <label for="user-fullname" class="block text-sm font-medium text-gray-700">Nom complet <span class="text-danger">*</span></label>
+                <input id="user-fullname" type="text" x-model="newUser.fullName" required maxlength="200" placeholder="ex : Awa Ndiaye" class="input-field">
+                <p x-show="createErrors.fullname" x-cloak x-text="createErrors.fullname" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label for="user-email" class="block text-sm font-medium text-gray-700">E-mail <span class="text-danger">*</span></label>
+                <input id="user-email" type="email" x-model="newUser.email" required maxlength="256" placeholder="nom@ecole.sn" class="input-field">
+                <p x-show="createErrors.email" x-cloak x-text="createErrors.email" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label for="user-role" class="block text-sm font-medium text-gray-700">Rôle <span class="text-danger">*</span></label>
+                <select id="user-role" x-model="newUser.role" required class="input-field bg-white">
+                    <option value="Secretariat">Secrétariat</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Enseignant">Enseignant</option>
+                </select>
+                <p x-show="createErrors.role" x-cloak x-text="createErrors.role" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label for="user-password" class="block text-sm font-medium text-gray-700">Mot de passe <span class="text-danger">*</span></label>
+                <input id="user-password" type="text" x-model="newUser.password" required class="input-field font-mono">
+                <p class="mt-1 text-xs text-gray-400">Minimum 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial.</p>
+                <p x-show="createErrors.password" x-cloak x-text="createErrors.password" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isSubmitting" class="btn-primary">
+                    <span x-text="isSubmitting ? 'Enregistrement...' : 'Créer le compte'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Changement de statut (motif obligatoire, JGK-A05) -->
+    <modal-shell open="statusTarget" on-close="closeStatusChange()" size="md">
+        <modal-title><span x-text="statusTarget ? statusActionLabel(statusTarget.newStatus) : ''"></span> — <span x-text="statusTarget ? statusTarget.fullName : ''"></span></modal-title>
+        <modal-subtitle>Ce changement révoque immédiatement les sessions ouvertes du compte, sauf réactivation.</modal-subtitle>
+
+        <div x-show="statusErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="statusErrors.global"></div>
+
+        <form x-on:submit.prevent="submitStatusChange()" class="space-y-4">
+            <div>
+                <label for="status-reason" class="block text-sm font-medium text-gray-700">Motif <span class="text-danger">*</span></label>
+                <input id="status-reason" type="text" x-model="statusReason" required minlength="5" maxlength="500"
+                       placeholder="ex : Départ de l'établissement" class="input-field">
+                <p x-show="statusErrors.reason" x-cloak x-text="statusErrors.reason" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-on:click="closeStatusChange()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isChangingStatus" class="btn-primary">
+                    <span x-text="isChangingStatus ? 'Enregistrement...' : 'Confirmer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Réinitialisation de mot de passe -->
+    <modal-shell open="passwordTarget" on-close="closeResetPassword()" size="md">
+        <modal-title>Mot de passe — <span x-text="passwordTarget ? passwordTarget.fullName : ''"></span></modal-title>
+        <modal-subtitle>Communiquez ce mot de passe vous-même : toutes les sessions ouvertes du compte seront fermées.</modal-subtitle>
+
+        <div x-show="passwordErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="passwordErrors.global"></div>
+
+        <form x-on:submit.prevent="submitResetPassword()" class="space-y-4">
+            <div>
+                <label for="reset-password" class="block text-sm font-medium text-gray-700">Nouveau mot de passe <span class="text-danger">*</span></label>
+                <input id="reset-password" type="text" x-model="newPassword" required class="input-field font-mono">
+                <p class="mt-1 text-xs text-gray-400">Minimum 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial.</p>
+                <p x-show="passwordErrors.newpassword" x-cloak x-text="passwordErrors.newpassword" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-on:click="closeResetPassword()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isResettingPassword" class="btn-primary">
+                    <span x-text="isResettingPassword ? 'Enregistrement...' : 'Réinitialiser'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Historique des statuts -->
+    <modal-shell open="historyFor" on-close="closeHistory()" title="Historique" size="lg">
+        <modal-subtitle><span x-text="historyFor ? historyFor.fullName : ''"></span></modal-subtitle>
+
+        <div x-show="isLoadingHistory" class="py-8 text-center text-sm text-gray-400">Chargement…</div>
+
+        <div x-show="!isLoadingHistory && historyEntries.length === 0" x-cloak class="py-8 text-center text-sm text-gray-400">
+            Aucun changement de statut enregistré.
+        </div>
+
+        <ul x-show="!isLoadingHistory && historyEntries.length > 0" x-cloak class="max-h-80 divide-y divide-gray-100 overflow-y-auto">
+            <template x-for="(entry, index) in historyEntries" :key="index">
+                <li class="flex items-start justify-between gap-4 py-3">
+                    <div>
+                        <p class="text-sm text-gray-900">
+                            <span class="text-gray-400" x-text="statusLabel(entry.previousStatus)"></span>
+                            <span class="text-gray-400">→</span>
+                            <span class="font-semibold" x-text="statusLabel(entry.newStatus)"></span>
+                        </p>
+                        <p class="mt-0.5 text-xs text-gray-500" x-text="entry.reason"></p>
+                        <p class="mt-0.5 text-xs text-gray-400" x-text="'par ' + entry.changedByFullName"></p>
+                    </div>
+                    <span class="whitespace-nowrap text-xs text-gray-400" x-text="formatDate(entry.changedAt)"></span>
+                </li>
+            </template>
+        </ul>
+    </modal-shell>
+</div>

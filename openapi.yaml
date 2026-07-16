@@ -109,22 +109,24 @@ paths:
   /users:
     get:
       tags: [Users]
-      summary: Lister les utilisateurs de l'établissement courant
-      parameters:
-        - $ref: '#/components/parameters/PageNumber'
-        - $ref: '#/components/parameters/PageSize'
-        - name: role
-          in: query
-          schema: { $ref: '#/components/schemas/Role' }
+      summary: Lister les utilisateurs de l'établissement courant (Directeur uniquement)
+      description: >-
+        Liste PLATE, non paginée : le personnel d'un établissement se compte en dizaines, pas en
+        milliers (à la différence de /students). L'école vient du JWT, jamais d'un paramètre.
       responses:
         '200':
-          description: Liste paginée
+          description: Comptes de l'établissement courant
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/PaginatedUsers' }
+              schema: { type: array, items: { $ref: '#/components/schemas/UserSummary' } }
     post:
       tags: [Users]
-      summary: Créer un utilisateur (Directeur/Super Admin uniquement)
+      summary: Créer un compte Secrétariat/Finance/Enseignant (Directeur uniquement)
+      description: >-
+        SuperAdmin et Directeur sont volontairement exclus des rôles assignables ici : SuperAdmin est
+        un rôle plateforme hors du contrôle d'une école, Directeur ne se crée que via POST /schools
+        (JGK-B01). Le mot de passe est saisi DIRECTEMENT par le Directeur, jamais généré ni envoyé par
+        e-mail (l'adaptateur SMTP réel relève de JGK-G03, hors périmètre MVP).
       requestBody:
         required: true
         content:
@@ -132,6 +134,33 @@ paths:
             schema: { $ref: '#/components/schemas/UserCreateRequest' }
       responses:
         '201': { description: Créé, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '403': { description: Rôle appelant non autorisé, ou rôle demandé non assignable }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /users/{userId}/password:
+    patch:
+      tags: [Users]
+      summary: Réinitialiser le mot de passe d'un compte (Directeur uniquement)
+      description: >-
+        Toutes les sessions actives du compte sont révoquées (même raisonnement que le blocage,
+        JGK-A05) : un mot de passe qu'on vient de changer ne doit pas laisser une session ouverte
+        utilisable sous l'ancien. Un Directeur ne peut pas réinitialiser son propre mot de passe par
+        cette voie.
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newPassword]
+              properties:
+                newPassword: { type: string, format: password }
+      responses:
+        '200': { description: Mot de passe réinitialisé, sessions révoquées }
+        '403': { description: Rôle appelant non autorisé, ou cible = l'acteur lui-même }
+        '404': { description: Utilisateur introuvable dans l'établissement courant }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /users/{userId}/status:
@@ -152,6 +181,38 @@ paths:
                 reason: { type: string }
       responses:
         '200': { description: Statut mis à jour }
+
+  /audit-logs:
+    get:
+      tags: [AuditLogs]
+      summary: Journal d'audit de l'établissement courant (Directeur uniquement)
+      description: >-
+        Ticket JGK-H01. Lecture seule, paginée : les entrées sont écrites automatiquement par
+        AuditLoggingBehavior (paiements, changements de statut/mot de passe/création de compte
+        utilisateur, impressions de reçus), jamais par un appel client direct — append-only imposé
+        jusqu'au niveau des GRANT PostgreSQL (SELECT, INSERT uniquement).
+
+        Scope actuel : ne couvre pas encore la connexion (JGK-A04) ni les actions Super Admin (ex.
+        création d'établissement) — l'acteur n'a alors aucun SchoolId propre, ce qui exigerait sa
+        propre fonction SECURITY DEFINER (comme provision_school_director, JGK-B01).
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - name: module
+          in: query
+          description: Filtre sur le domaine fonctionnel (ex. "Finance", "Users").
+          schema: { type: string }
+        - name: success
+          in: query
+          description: true = succès uniquement, false = échecs uniquement, absent = tous.
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Liste paginée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedAuditLogs' }
+        '403': { description: Rôle appelant non autorisé (réservé au Directeur) }
 
   /schools:
     get:
@@ -1017,10 +1078,34 @@ components:
         role: { $ref: '#/components/schemas/Role' }
         password: { type: string, format: password }
 
-    PaginatedUsers:
+    UserSummary:
+      type: object
+      description: Ligne de GET /users — isSelf est calculé côté serveur (confort d'affichage, l'API garde).
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        status: { type: string, enum: [Active, Suspended, Blocked] }
+        isSelf: { type: boolean }
+
+    AuditLogEntry:
+      type: object
+      description: Ligne de GET /audit-logs (ticket JGK-H01).
+      properties:
+        id: { type: string, format: uuid }
+        actorFullName: { type: string }
+        module: { type: string, example: Finance }
+        action: { type: string, example: RecordPayment }
+        success: { type: boolean }
+        failureReason: { type: string, nullable: true }
+        ipAddress: { type: string, nullable: true }
+        occurredAt: { type: string, format: date-time }
+
+    PaginatedAuditLogs:
       type: object
       properties:
-        items: { type: array, items: { $ref: '#/components/schemas/User' } }
+        items: { type: array, items: { $ref: '#/components/schemas/AuditLogEntry' } }
         totalCount: { type: integer }
         page: { type: integer }
         pageSize: { type: integer }

@@ -23,4 +23,6 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor) : ICur
             return claim is not null && Enum.TryParse<Role>(claim.Value, out var role) ? role : null;
         }
     }
+
+    public string? IpAddress => httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
 }

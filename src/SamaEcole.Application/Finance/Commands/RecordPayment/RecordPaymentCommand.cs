@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using MediatR;
 
@@ -8,9 +9,12 @@ namespace SamaEcole.Application.Finance.Commands.RecordPayment;
 /// dû (<c>TotalDue</c>) n'est jamais fourni ni modifié par le client : la Finance ne fait qu'imputer un
 /// versement sur le solde figé à l'inscription (AGENTS.md règles #4 et #10). L'inscription est identifiée
 /// par son Id ; l'école vient du JWT.
+///
+/// IAuditableRequest (JGK-H01) : « paiements » fait partie des écritures sensibles explicitement
+/// listées par le journal d'audit centralisé.
 /// </summary>
 public record RecordPaymentCommand(Guid EnrollmentId, decimal Amount, PaymentMethod Method)
-    : IRequest<RecordPaymentResult>;
+    : IRequest<RecordPaymentResult>, IAuditableRequest;
 
 /// <summary>
 /// Résultat d'un encaissement : de quoi confirmer à la caisse et imprimer le reçu (le numéro officiel),
