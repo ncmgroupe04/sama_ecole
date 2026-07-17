@@ -739,7 +739,18 @@ paths:
   /report-cards/generate:
     post:
       tags: [ReportCards]
-      summary: Générer le bulletin PDF d'un élève pour une période
+      summary: Générer le bulletin PDF (A5) d'un élève pour un trimestre — Directeur, Enseignant
+      description: >-
+        Ticket JGK-G03. Reproduit docs/design-references/bulletin-reference.png (AGENTS.md règle #12) :
+        tableau des notes (Devoir/Composition/Moyenne/Coefficient/Moyenne×Coefficient/Rang), moyenne
+        générale pondérée et mention (réutilise JGK-G02), récapitulatif des moyennes de chaque trimestre
+        de l'année + moyenne annuelle + rang annuel. Recalculé à la demande à partir des notes
+        actuelles — rien n'est persisté, régénérer donne toujours le bulletin à jour.
+
+        Certaines cases de la référence visuelle restent volontairement VIDES, faute de suivi dans le
+        système à ce jour : T.H, Absences, Retards, mentions disciplinaires (Blâme, Avertissement,
+        Tableau d'honneur, Encouragements, Félicitations), Décision du Conseil, Appréciation par
+        matière, lieu de naissance, Classe redoublée.
       requestBody:
         required: true
         content:
@@ -752,10 +763,12 @@ paths:
                 termId: { type: string, format: uuid }
       responses:
         '200':
-          description: PDF généré
+          description: Bulletin PDF (format A5 portrait)
           content:
             application/pdf:
               schema: { type: string, format: binary }
+        '403': { description: Réservé au Directeur et à l'Enseignant }
+        '404': { description: Élève ou trimestre introuvable dans l'établissement courant }
 
   /finance/fee-categories:
     get:

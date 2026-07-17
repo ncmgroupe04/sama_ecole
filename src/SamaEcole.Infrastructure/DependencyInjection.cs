@@ -36,6 +36,9 @@ public static class DependencyInjection
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
         services.AddSingleton<IPaymentReceiptPdfGenerator, PaymentReceiptPdfGenerator>();
 
+        // Bulletin de notes PDF (ticket JGK-G03) — même moteur QuestPDF, même convention.
+        services.AddSingleton<IReportCardPdfGenerator, ReportCardPdfGenerator>();
+
         // Récupération du logo de l'établissement pour le reçu (JGK-E02). Client HTTP dédié :
         //  * garde anti-SSRF au moment de la connexion (l'URL vient du Directeur — cf. SsrfSafeConnect) ;
         //  * aucune redirection auto : une 3xx pourrait rebondir d'une URL publique vers un service interne ;
