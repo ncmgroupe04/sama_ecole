@@ -1,0 +1,140 @@
+@{
+    ViewData["Title"] = "Présences";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/attendance.js" asp-append-version="true"></script>
+}
+
+<div x-data="attendanceView()">
+    <div>
+        <h1 class="text-jgk-title font-bold text-gray-900">Présences</h1>
+        <p class="text-jgk-subtitle text-gray-500 mt-1">Faites l'appel d'une classe pour une matière, une date et un créneau.</p>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- Sélection de l'appel -->
+    <div class="card mt-6 p-4">
+        <div class="flex flex-col lg:flex-row lg:items-end gap-3">
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
+                <select x-model="filters.classroomId" class="input-field mt-0 bg-white">
+                    <option value="" disabled>Choisir une classe…</option>
+                    <template x-for="c in classrooms" :key="c.id">
+                        <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
+                    </template>
+                </select>
+            </div>
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-500 mb-1">Matière</label>
+                <select x-model="filters.subjectId" class="input-field mt-0 bg-white">
+                    <option value="" disabled>Choisir une matière…</option>
+                    <template x-for="s in subjects" :key="s.id">
+                        <option :value="s.id" x-text="s.name + ' (' + s.level + ')'"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Date</label>
+                <input type="date" x-model="filters.date" class="input-field mt-0" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Créneau</label>
+                <input type="text" x-model="filters.period" list="attendance-periods" placeholder="Matin" class="input-field mt-0 w-40" />
+                <datalist id="attendance-periods">
+                    <option value="Matin"></option>
+                    <option value="Après-midi"></option>
+                    <option value="1re heure"></option>
+                    <option value="2e heure"></option>
+                </datalist>
+            </div>
+            <button type="button" x-on:click="loadRoster()" :disabled="!canLoad || isLoading" class="btn-primary whitespace-nowrap">
+                <icon name="checkmark-circle" class="w-4 h-4" />
+                <span x-text="isLoading ? 'Chargement…' : 'Charger l\'appel'"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Grille d'appel -->
+    <div class="card mt-6 relative" x-show="rosterLoaded" x-cloak>
+        <div class="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center flex-wrap gap-2 text-sm">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-bg text-success">
+                    Présents : <span class="ml-1 font-bold" x-text="countBy('Present')"></span>
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-warning-bg text-warning">
+                    Retards : <span class="ml-1 font-bold" x-text="countBy('Late')"></span>
+                </span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-danger-bg text-danger">
+                    Absents non justifiés : <span class="ml-1 font-bold" x-text="countBy('UnjustifiedAbsence')"></span>
+                </span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span x-show="alreadySubmitted" x-cloak class="text-xs font-medium text-warning">Appel déjà enregistré pour ce créneau.</span>
+                <button type="button" x-on:click="submit()" :disabled="submitting || alreadySubmitted || entries.length === 0" class="btn-primary">
+                    <span x-text="submitting ? 'Enregistrement…' : 'Enregistrer l\'appel'"></span>
+                </button>
+            </div>
+        </div>
+
+        <div x-show="submitError" x-cloak class="mx-4 mt-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="submitError"></div>
+        <div x-show="submitSuccess" x-cloak class="mx-4 mt-4 rounded-md border-l-4 border-success bg-success-bg p-3 text-sm text-success">Appel enregistré avec succès.</div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3 px-4">Élève</th>
+                        <th class="py-3 px-4 w-56">Statut</th>
+                        <th class="py-3 px-4 w-40">Retard (min)</th>
+                    </tr>
+                </thead>
+                <tbody class="table-cell divide-y divide-gray-100">
+                    <tr x-show="entries.length === 0">
+                        <td colspan="3">
+                            <empty-state icon="users" title="Aucun élève dans cette classe."
+                                         hint="Vérifiez que des élèves sont inscrits dans la classe choisie." />
+                        </td>
+                    </tr>
+                    <template x-for="(entry, index) in entries" :key="entry.studentId">
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs" x-text="initials(entry.fullName)"></div>
+                                    <div>
+                                        <p class="font-medium text-gray-900" x-text="entry.fullName"></p>
+                                        <p class="font-mono text-xs text-gray-500" x-text="entry.matricule"></p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4">
+                                <select x-model="entry.status" x-on:change="onStatusChange(entry)"
+                                        :disabled="alreadySubmitted"
+                                        class="input-field mt-0 bg-white text-sm py-1.5">
+                                    <template x-for="opt in statusOptions" :key="opt.value">
+                                        <option :value="opt.value" x-text="opt.label"></option>
+                                    </template>
+                                </select>
+                            </td>
+                            <td class="py-3 px-4">
+                                <input type="number" min="1" max="240" x-model.number="entry.lateMinutes"
+                                       x-show="entry.status === 'Late'"
+                                       :disabled="alreadySubmitted"
+                                       class="input-field mt-0 w-28 text-sm py-1.5" placeholder="min" />
+                                <span x-show="entry.status !== 'Late'" class="text-gray-300">—</span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- État initial : aucun appel encore chargé -->
+    <div class="card mt-6" x-show="!rosterLoaded && !isLoading" x-cloak>
+        <empty-state icon="checkmark-circle" title="Sélectionnez une classe, une matière, une date et un créneau."
+                     hint="Puis cliquez sur « Charger l'appel » pour saisir les présences." />
+    </div>
+</div>

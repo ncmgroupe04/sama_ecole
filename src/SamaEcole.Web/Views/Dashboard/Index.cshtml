@@ -7,6 +7,52 @@
     <script src="~/js/dashboard.js" asp-append-version="true"></script>
 }
 
+@* JGK-R01 — Vue d'ensemble analytique de l'établissement (Directeur / Super Admin). Composant
+   distinct du tableau de bord financier ci-dessous : périmètre de rôles différent (le Directeur voit
+   les deux, la Finance seulement le financier, le Super Admin seulement l'analytique). *@
+<div x-data="dashboardAnalytics()" x-show="canView" x-cloak class="mb-10">
+    <div>
+        <h1 class="text-jgk-title font-bold text-gray-900">Tableau de bord</h1>
+        <p class="text-jgk-subtitle text-gray-500 mt-1">Effectifs, ressources humaines, assiduité et abonnement de l'établissement.</p>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        <template x-if="isLoading">
+            <template x-for="i in 4" :key="i">
+                <div class="card p-5 h-[92px] skeleton"></div>
+            </template>
+        </template>
+
+        <template x-if="!isLoading && data">
+            <stat-card label="Élèves inscrits (année active)" icon="users" accent="primary">
+                <span x-text="data.enrollments.total"></span>
+                <span class="ml-2 text-xs font-normal text-gray-500">
+                    <span x-text="data.enrollments.boys"></span> G · <span x-text="data.enrollments.girls"></span> F
+                </span>
+            </stat-card>
+        </template>
+        <template x-if="!isLoading && data">
+            <stat-card label="Enseignants actifs" icon="book" accent="primary">
+                <span x-text="data.activeTeachers"></span>
+            </stat-card>
+        </template>
+        <template x-if="!isLoading && data">
+            <stat-card label="Taux de présence (ce mois)" icon="checkmark-circle" accent="success">
+                <span x-text="formatPercent(data.attendanceRate)"></span>
+            </stat-card>
+        </template>
+        <template x-if="!isLoading && data">
+            <stat-card label="Abonnement" icon="wallet" accent="primary">
+                <span x-text="subscriptionValue()"></span>
+                <span x-show="data.subscription" class="ml-2 text-[11px] font-normal text-gray-500"
+                      x-text="subscriptionStatusLabel()"></span>
+            </stat-card>
+        </template>
+    </div>
+</div>
+
 <div x-data="dashboardView()">
     <div>
         <h1 class="text-jgk-title font-bold text-gray-900">Tableau de bord financier</h1>
@@ -75,9 +121,9 @@
                 <thead>
                     <tr class="table-head">
                         <th class="py-3 px-4">Élève</th>
-                        <th class="py-3 px-4">Matricule</th>
-                        <th class="py-3 px-4">Reçu N°</th>
-                        <th class="py-3 px-4 text-right">Montant</th>
+                        <th class="py-3 px-4 whitespace-nowrap">Matricule</th>
+                        <th class="py-3 px-4 whitespace-nowrap">Reçu N°</th>
+                        <th class="py-3 px-4 text-right whitespace-nowrap">Montant</th>
                         <th class="py-3 px-4">Mode</th>
                         <th class="py-3 px-4">Date</th>
                         <th class="py-3 px-4 w-12"><span class="sr-only">Reçu PDF</span></th>
@@ -100,11 +146,11 @@
                                     <span class="font-medium text-gray-900" x-text="payment.studentFullName"></span>
                                 </span>
                             </td>
-                            <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="payment.matricule"></td>
-                            <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="payment.receiptNumber"></td>
-                            <td class="py-3 px-4 text-right font-medium" x-text="formatMoney(payment.amount)"></td>
+                            <td class="py-3 px-4 font-mono text-xs text-gray-500 whitespace-nowrap" x-text="payment.matricule"></td>
+                            <td class="py-3 px-4 font-mono text-xs text-gray-500 whitespace-nowrap" x-text="payment.receiptNumber"></td>
+                            <td class="py-3 px-4 text-right font-medium whitespace-nowrap" x-text="formatMoney(payment.amount)"></td>
                             <td class="py-3 px-4"><badge variant="neutral" x-text="methodLabel(payment.method)"></badge></td>
-                            <td class="py-3 px-4 text-gray-500" x-text="formatDate(payment.paidAt)"></td>
+                            <td class="py-3 px-4 text-gray-500 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
                             <td class="py-3 px-4 text-center">
                                 <button type="button"
                                         x-on:click="downloadReceipt(payment.paymentId, payment.receiptNumber)"

@@ -5,6 +5,61 @@
  * JGK-F02) — seule la recherche dans les derniers paiements est interactive.
  */
 document.addEventListener('alpine:init', () => {
+    /**
+     * JGK-R01 — Vue d'ensemble analytique (effectifs de l'année active, enseignants actifs, taux de
+     * présence du mois, abonnement). Réservée au Directeur et au Super Admin : confort d'affichage, la
+     * garde réelle est ReportsController ([Authorize(Roles = "Directeur,SuperAdmin")]) + la RLS.
+     */
+    Alpine.data('dashboardAnalytics', () => ({
+        canView: window.auth.role === 'Directeur' || window.auth.role === 'SuperAdmin',
+
+        isLoading: false,
+        error: null,
+        data: null,
+
+        async init() {
+            if (this.canView) await this.load();
+        },
+
+        async load() {
+            this.isLoading = true;
+            this.error = null;
+            try {
+                this.data = await window.api.get('/reports/dashboard');
+            } catch (err) {
+                this.error = err.message || 'Erreur lors du chargement du tableau de bord.';
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        /** Taux de présence : « — » quand aucun appel n'a encore été saisi ce mois (attendanceRate null). */
+        formatPercent(rate) {
+            if (rate === null || rate === undefined) return '—';
+            return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 }).format(rate);
+        },
+
+        /** Valeur principale de la carte Abonnement : jours restants, ou un libellé si pas d'échéance. */
+        subscriptionValue() {
+            const sub = this.data && this.data.subscription;
+            if (!sub) return '—';
+            if (sub.daysRemaining === null || sub.daysRemaining === undefined) return 'En attente';
+            if (sub.daysRemaining < 0) return 'Expiré';
+            return `${sub.daysRemaining} j`;
+        },
+
+        /** Statut lisible à côté de la valeur (plan + statut brut de l'abonnement). */
+        subscriptionStatusLabel() {
+            const sub = this.data && this.data.subscription;
+            if (!sub) return '';
+            const statusLabels = {
+                AwaitingPayment: 'En attente de paiement', Active: 'Actif',
+                Suspended: 'Suspendu', ReadOnly: 'Lecture seule'
+            };
+            return `${sub.plan} · ${statusLabels[sub.status] || sub.status}`;
+        }
+    }));
+
     Alpine.data('dashboardView', () => ({
         // Seuls le Directeur et la Finance pilotent la trésorerie (règle #4, comme la Caisse). Confort
         // d'affichage : l'API garde (FinanceController.Dashboard, [Authorize(Roles = "Directeur,Finance")]).
