@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Validation;
 using SamaEcole.Application.Users.Common;
 using SamaEcole.Domain.Enums;
 using FluentValidation;
@@ -15,9 +16,9 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 
     public CreateUserCommandValidator()
     {
-        RuleFor(x => x.FullName).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.FullName).NotEmpty().MaximumLength(200).NoHtml();
 
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256).NoHtml();
 
         RuleFor(x => x.Role)
             .Must(role => AssignableRoles.Contains(role))

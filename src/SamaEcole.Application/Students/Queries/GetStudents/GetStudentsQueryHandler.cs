@@ -60,6 +60,7 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
                 // et rendrait la sous-requête vide : on l'affiche alors explicitement plutôt que de
                 // faire disparaître l'élève de la liste.
                 dbContext.Classrooms
+                    .AsNoTracking()
                     .Where(c => c.Id == s.ClassroomId)
                     .Select(c => c.Name)
                     .FirstOrDefault() ?? "Classe supprimée",

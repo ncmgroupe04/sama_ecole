@@ -16,7 +16,7 @@ public class GetFeeHistoryQueryHandler(IApplicationDbContext dbContext)
         return await (
             from h in dbContext.FeeChangeHistory.AsNoTracking()
             where h.ClassFeeId == request.ClassFeeId
-            join u in dbContext.Users on h.ChangedByUserId equals u.Id into authors
+            join u in dbContext.Users.AsNoTracking() on h.ChangedByUserId equals u.Id into authors
             from author in authors.DefaultIfEmpty()
             orderby h.ChangedAt descending
             select new FeeHistoryDto(

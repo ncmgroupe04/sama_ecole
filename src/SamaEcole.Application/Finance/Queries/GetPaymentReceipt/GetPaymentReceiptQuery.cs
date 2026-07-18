@@ -30,10 +30,10 @@ public class GetPaymentReceiptQueryHandler(
         // d'un élève ou d'une classe d'une autre école.
         var row = await (
             from p in dbContext.Payments.AsNoTracking()
-            join e in dbContext.Enrollments on p.EnrollmentId equals e.Id
-            join s in dbContext.Students on e.StudentId equals s.Id
-            join c in dbContext.Classrooms on e.ClassroomId equals c.Id
-            join y in dbContext.SchoolYears on e.SchoolYearId equals y.Id
+            join e in dbContext.Enrollments.AsNoTracking() on p.EnrollmentId equals e.Id
+            join s in dbContext.Students.AsNoTracking() on e.StudentId equals s.Id
+            join c in dbContext.Classrooms.AsNoTracking() on e.ClassroomId equals c.Id
+            join y in dbContext.SchoolYears.AsNoTracking() on e.SchoolYearId equals y.Id
             where p.Id == request.PaymentId
             select new
             {

@@ -40,4 +40,22 @@ public class CreateStudentCommandValidatorTests
 
         result.IsValid.Should().BeTrue();
     }
+
+    [Fact]
+    public void Should_Fail_When_FullName_Contains_Html()
+    {
+        // JGK-F01 — branchement de la règle NoHtml (payloads exhaustifs : SafeTextValidationTests).
+        var command = new CreateStudentCommand
+        {
+            FullName = "<img src=x onerror=alert(1)>",
+            BirthDate = new DateOnly(2015, 3, 12),
+            Gender = "F",
+            ClassroomId = Guid.NewGuid()
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.FullName));
+    }
 }

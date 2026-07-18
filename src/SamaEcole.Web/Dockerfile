@@ -26,8 +26,19 @@ COPY src/ src/
 COPY --from=css-build /src/web/wwwroot/css/site.css src/SamaEcole.Web/wwwroot/css/site.css
 RUN dotnet publish src/SamaEcole.Web/SamaEcole.Web.csproj -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+# Alpine plutôt que l'image Debian par défaut : empreinte disque très réduite et bien moins de
+# paquets système, donc une surface d'attaque plus étroite pour l'image qui tourne réellement en
+# production (les étapes précédentes ne survivent pas au build multi-stage).
+FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
 WORKDIR /app
+
+# QuestPDF (reçus, bulletins — AGENTS.md règle #12) s'appuie sur SkiaSharp, qui délègue le rendu du
+# texte à fontconfig/freetype et à une police système : contrairement à l'image Debian, l'Alpine de
+# base n'embarque ni l'un ni l'autre, et la génération de PDF échouerait silencieusement (texte vide
+# ou exception au premier document généré). icu-libs : composants Unicode complets, pour rester au
+# plus près du comportement de l'image Debian précédente plutôt que de basculer en mode Invariant.
+RUN apk add --no-cache fontconfig freetype ttf-dejavu icu-libs
+
 COPY --from=build /app .
 
 ENV ASPNETCORE_URLS=http://+:8080

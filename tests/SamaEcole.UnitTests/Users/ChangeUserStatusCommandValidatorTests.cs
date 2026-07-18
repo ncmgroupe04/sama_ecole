@@ -40,4 +40,14 @@ public class ChangeUserStatusCommandValidatorTests
 
         _validator.Validate(command).IsValid.Should().BeFalse();
     }
+
+    [Fact]
+    public void A_Reason_Containing_Html_Should_Be_Rejected()
+    {
+        // JGK-F01 — le motif est réaffiché dans l'historique de statut (payloads exhaustifs :
+        // SafeTextValidationTests).
+        var result = _validator.Validate(Command("<script>alert(1)</script> absences répétées"));
+
+        result.IsValid.Should().BeFalse();
+    }
 }

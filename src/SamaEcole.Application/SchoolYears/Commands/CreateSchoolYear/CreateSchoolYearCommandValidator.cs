@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Validation;
 using FluentValidation;
 
 namespace SamaEcole.Application.SchoolYears.Commands.CreateSchoolYear;
@@ -18,7 +19,7 @@ public class CreateSchoolYearCommandValidator : AbstractValidator<CreateSchoolYe
     {
         // Libellé LIBRE : « 2026-2027 » au Sénégal, mais aucun format n'est imposé — c'est un texte
         // d'affichage, jamais une clé de calcul (voir SchoolYear).
-        RuleFor(x => x.Label).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Label).NotEmpty().MaximumLength(20).NoHtml();
 
         RuleFor(x => x.StartDate)
             .NotEqual(default(DateOnly)).WithMessage("La date de début est obligatoire.");

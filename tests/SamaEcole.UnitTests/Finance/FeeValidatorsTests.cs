@@ -29,6 +29,25 @@ public class FeeValidatorsTests
     }
 
     [Fact]
+    public void Category_Name_With_Html_Should_Fail()
+    {
+        // JGK-F01 — branchement de la règle NoHtml (payloads exhaustifs : SafeTextValidationTests).
+        var command = new CreateFeeCategoryCommand { Name = "<i>Frais</i>", IsRecurring = false };
+
+        _categoryValidator.Validate(command).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Frais_D_Inscription_Should_Pass()
+    {
+        // Le nom de catégorie LE PLUS COURANT du produit contient la sous-chaîne « script » : si la
+        // règle anti-injection bloquait le mot au lieu des caractères « < » / « > », ce test tomberait.
+        var command = new CreateFeeCategoryCommand { Name = "Frais d'inscription", IsRecurring = false };
+
+        _categoryValidator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
     public void Apply_Standard_With_A_Zero_Amount_Should_Pass()
     {
         // Zéro est légitime : un frais peut être offert (inscription gratuite, par exemple).

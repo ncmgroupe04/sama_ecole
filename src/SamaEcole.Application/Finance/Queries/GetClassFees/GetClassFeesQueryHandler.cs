@@ -18,8 +18,8 @@ public class GetClassFeesQueryHandler(IApplicationDbContext dbContext)
         // sans propriété CLR sur l'entité).
         return await (
             from fee in dbContext.ClassFees.AsNoTracking()
-            join category in dbContext.FeeCategories on fee.FeeCategoryId equals category.Id
-            join classroom in dbContext.Classrooms on fee.ClassroomId equals classroom.Id
+            join category in dbContext.FeeCategories.AsNoTracking() on fee.FeeCategoryId equals category.Id
+            join classroom in dbContext.Classrooms.AsNoTracking() on fee.ClassroomId equals classroom.Id
             orderby category.Name, classroom.Level, classroom.Name
             select new ClassFeeDto(
                 fee.Id,

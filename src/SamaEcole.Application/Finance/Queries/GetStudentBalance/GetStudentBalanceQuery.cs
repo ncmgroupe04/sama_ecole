@@ -38,9 +38,9 @@ public class GetStudentBalanceQueryHandler(IApplicationDbContext dbContext)
         // d'une autre école est structurellement invisible ici, jamais un solde d'un autre tenant.
         var row = await (
             from e in dbContext.Enrollments.AsNoTracking()
-            join s in dbContext.Students on e.StudentId equals s.Id
-            join c in dbContext.Classrooms on e.ClassroomId equals c.Id
-            join y in dbContext.SchoolYears on e.SchoolYearId equals y.Id
+            join s in dbContext.Students.AsNoTracking() on e.StudentId equals s.Id
+            join c in dbContext.Classrooms.AsNoTracking() on e.ClassroomId equals c.Id
+            join y in dbContext.SchoolYears.AsNoTracking() on e.SchoolYearId equals y.Id
             where s.Id == request.StudentId && y.IsActive && e.Status != EnrollmentStatus.Cancelled
             select new StudentBalanceDto(
                 e.Id,

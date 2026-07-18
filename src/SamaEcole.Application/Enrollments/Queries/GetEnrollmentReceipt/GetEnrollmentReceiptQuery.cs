@@ -30,9 +30,9 @@ public class GetEnrollmentReceiptQueryHandler(
         // possible d'un élève, d'une classe ou d'une année d'une autre école.
         var header = await (
             from e in dbContext.Enrollments.AsNoTracking()
-            join s in dbContext.Students on e.StudentId equals s.Id
-            join c in dbContext.Classrooms on e.ClassroomId equals c.Id
-            join y in dbContext.SchoolYears on e.SchoolYearId equals y.Id
+            join s in dbContext.Students.AsNoTracking() on e.StudentId equals s.Id
+            join c in dbContext.Classrooms.AsNoTracking() on e.ClassroomId equals c.Id
+            join y in dbContext.SchoolYears.AsNoTracking() on e.SchoolYearId equals y.Id
             where e.Id == request.EnrollmentId
             select new
             {

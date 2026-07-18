@@ -98,6 +98,7 @@ public class ActivateSchoolYearCommandHandler(
     private async Task ConfirmPasswordAsync(Guid actorId, string password, CancellationToken cancellationToken)
     {
         var passwordHash = await dbContext.Users
+            .AsNoTracking()
             .Where(u => u.Id == actorId)
             .Select(u => u.PasswordHash)
             .FirstOrDefaultAsync(cancellationToken)

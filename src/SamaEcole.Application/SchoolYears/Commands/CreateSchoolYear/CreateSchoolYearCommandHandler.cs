@@ -26,6 +26,7 @@ public class CreateSchoolYearCommandHandler(
         // Deux périodes se chevauchent si chacune commence avant que l'autre ne finisse (bornes
         // incluses : partager ne serait-ce qu'un jour suffit à créer l'ambiguïté).
         var overlapping = await dbContext.SchoolYears
+            .AsNoTracking()
             .Where(y => y.StartDate <= request.EndDate && request.StartDate <= y.EndDate)
             .Select(y => y.Label)
             .FirstOrDefaultAsync(cancellationToken);

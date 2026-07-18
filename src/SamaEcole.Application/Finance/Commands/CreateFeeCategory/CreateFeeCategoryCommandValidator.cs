@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Validation;
 using FluentValidation;
 
 namespace SamaEcole.Application.Finance.Commands.CreateFeeCategory;
@@ -6,6 +7,7 @@ public class CreateFeeCategoryCommandValidator : AbstractValidator<CreateFeeCate
 {
     public CreateFeeCategoryCommandValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(60);
+        // NoHtml laisse passer « Frais d'inscription » (le MOT script n'est pas bloqué — voir SafeTextValidation).
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(60).NoHtml();
     }
 }

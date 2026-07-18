@@ -46,4 +46,14 @@ public class GetStudentsQueryValidatorTests
     {
         _validator.Validate(new GetStudentsQuery { Gender = "X" }).IsValid.Should().BeFalse();
     }
+
+    [Fact]
+    public void Search_With_Html_Should_Fail()
+    {
+        // JGK-F01 — le texte de recherche est renvoyé à l'écran (« résultats pour… ») : branché sur
+        // NoHtml comme les champs stockés (payloads exhaustifs : SafeTextValidationTests).
+        var query = new GetStudentsQuery { Search = "<script>alert(1)</script>" };
+
+        _validator.Validate(query).IsValid.Should().BeFalse();
+    }
 }

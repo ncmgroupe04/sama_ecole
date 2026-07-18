@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Validation;
 using FluentValidation;
 
 namespace SamaEcole.Application.Users.Commands.ChangeUserStatus;
@@ -16,6 +17,7 @@ public class ChangeUserStatusCommandValidator : AbstractValidator<ChangeUserStat
         RuleFor(c => c.Reason)
             .NotEmpty().WithMessage("Le motif est obligatoire.")
             .MinimumLength(5).WithMessage("Le motif doit être explicite (5 caractères minimum).")
-            .MaximumLength(500);
+            .MaximumLength(500)
+            .NoHtml();
     }
 }

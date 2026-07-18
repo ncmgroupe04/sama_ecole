@@ -38,6 +38,16 @@ public class CreateUserCommandValidatorTests
     }
 
     [Fact]
+    public void FullName_With_Html_Should_Fail()
+    {
+        // JGK-F01 — branchement de la règle NoHtml (payloads exhaustifs : SafeTextValidationTests).
+        var result = _validator.Validate(ValidCommand() with { FullName = "<script>alert(1)</script>" });
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateUserCommand.FullName));
+    }
+
+    [Fact]
     public void Missing_FullName_Should_Fail()
     {
         var command = ValidCommand() with { FullName = "" };

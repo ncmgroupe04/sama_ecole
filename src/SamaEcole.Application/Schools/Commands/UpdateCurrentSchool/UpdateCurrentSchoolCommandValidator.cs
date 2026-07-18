@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Validation;
 using FluentValidation;
 
 namespace SamaEcole.Application.Schools.Commands.UpdateCurrentSchool;
@@ -13,13 +14,16 @@ public class UpdateCurrentSchoolCommandValidator : AbstractValidator<UpdateCurre
     {
         RuleFor(c => c.Name)
             .NotEmpty().WithMessage("Le nom de l'établissement est obligatoire.")
-            .MaximumLength(200).WithMessage("Le nom ne peut pas dépasser 200 caractères.");
+            .MaximumLength(200).WithMessage("Le nom ne peut pas dépasser 200 caractères.")
+            .NoHtml();
 
         RuleFor(c => c.Address)
-            .MaximumLength(300).WithMessage("L'adresse ne peut pas dépasser 300 caractères.");
+            .MaximumLength(300).WithMessage("L'adresse ne peut pas dépasser 300 caractères.")
+            .NoHtml();
 
         RuleFor(c => c.Phone)
-            .MaximumLength(30).WithMessage("Le téléphone ne peut pas dépasser 30 caractères.");
+            .MaximumLength(30).WithMessage("Le téléphone ne peut pas dépasser 30 caractères.")
+            .NoHtml();
 
         RuleFor(c => c.LogoUrl)
             .MaximumLength(500).WithMessage("L'URL du logo ne peut pas dépasser 500 caractères.")
