@@ -27,6 +27,7 @@ tags:
   - name: Subjects
   - name: Students
   - name: Teachers
+  - name: Attendance
   - name: Enrollments
   - name: Grades
   - name: ReportCards
@@ -34,6 +35,7 @@ tags:
   - name: Subscriptions
   - name: RegistrationRequests
   - name: Payments
+  - name: Reports
   - name: Audit
 
 paths:
@@ -541,19 +543,164 @@ paths:
   /teachers:
     get:
       tags: [Teachers]
-      summary: Lister les enseignants
+      summary: Lister les enseignants (pagination, recherche)
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: search
+          in: query
+          schema: { type: string }
       responses:
-        '200': { description: Liste des enseignants }
+        '200':
+          description: Liste paginée des enseignants
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedTeachers' }
+        '403': { description: Rôle non autorisé (Volume_7_Security.md « Enseignants ») }
     post:
       tags: [Teachers]
-      summary: Créer un enseignant (matricule généré à l'enregistrement)
+      summary: Créer un enseignant (matricule généré à l'enregistrement, ticket JGK-D03)
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/TeacherCreateRequest' }
       responses:
-        '201': { description: Enseignant créé }
+        '201':
+          description: Enseignant créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeacherResult' }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /teachers/{id}:
+    get:
+      tags: [Teachers]
+      summary: Fiche enseignant complète (ticket JGK-D04)
+      description: >-
+        Matières qualifiées, attributions classe/matière groupées par année scolaire — cette
+        dernière liste EST l'historique, une attribution n'étant jamais réécrite d'une année sur l'autre.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Fiche enseignant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeacherProfile' }
+        '403': { description: Rôle non autorisé (Volume_7_Security.md « Enseignants ») }
+        '404': { description: Enseignant introuvable dans l'établissement courant }
+
+  /teachers/{id}/assignments:
+    post:
+      tags: [Teachers]
+      summary: Attribuer une classe/matière à l'enseignant sur l'année scolaire active (ticket JGK-D04)
+      description: >-
+        Aucune année scolaire dans le corps de la requête : l'année ACTIVE est résolue serveur, jamais
+        choisie par le client (même règle que POST /enrollments).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TeacherAssignmentCreateRequest' }
+      responses:
+        '201':
+          description: Attribution créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeacherAssignmentResult' }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { description: Enseignant introuvable dans l'établissement courant }
+        '409': { description: Cette attribution (enseignant, classe, matière, année) existe déjà }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /attendance/roster:
+    get:
+      tags: [Attendance]
+      summary: Grille d'appel d'une classe pour une date/matière/créneau (ticket JGK-D06)
+      description: >-
+        Génère la liste des élèves de la classe pour la saisie de l'appel. L'Enseignant n'y a accès que
+        pour ses classes/matières assignées (403 sinon) ; Directeur et Secrétariat sans restriction. Si
+        une fiche existe déjà pour cette clé, les statuts déjà saisis sont renvoyés (alreadySubmitted=true).
+      parameters:
+        - name: classroomId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: subjectId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: period
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Grille d'appel
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceRoster' }
+        '403': { description: Enseignant non assigné à cette classe/matière }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /attendance:
+    post:
+      tags: [Attendance]
+      summary: Enregistrer l'appel complet — fiche + statut de chaque élève (ticket JGK-D06)
+      description: >-
+        Ni schoolId ni schoolYearId dans le corps : l'année ACTIVE est résolue serveur (même règle que
+        POST /enrollments). Une seconde saisie de la même clé (classe, matière, date, créneau) est refusée en 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttendanceSubmitRequest' }
+      responses:
+        '201':
+          description: Appel enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceSubmitResult' }
+        '403': { description: Enseignant non assigné à cette classe/matière }
+        '409': { description: Un appel existe déjà pour cette classe, matière, date et créneau }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /attendance/{id}:
+    get:
+      tags: [Attendance]
+      summary: Relire une fiche d'appel enregistrée (ticket JGK-D06 — consultation)
+      description: 'Réservé au Directeur, au Secrétariat et au Super Admin. Le rôle Finance est exclu.'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Fiche d'appel avec le statut de chaque élève
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceSheet' }
+        '403': { description: Rôle non autorisé (Finance exclu de la consultation) }
+        '404': { description: Fiche d'appel introuvable dans l'établissement courant }
 
   /enrollments:
     post:
@@ -635,6 +782,50 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /grades/import:
+    post:
+      tags: [Grades]
+      summary: Importer une colonne de notes depuis un fichier CSV/Excel (Enseignant uniquement)
+      description: >-
+        Mode de saisie alternatif à POST /grades, même permission (Saisir = Enseignant seul). Le
+        fichier (CSV ou Excel) comporte deux colonnes — matricule, puis note — et remplit UNE colonne
+        (`evaluationType`) pour toute la classe. Le fichier est validé intégralement avant la moindre
+        écriture : une seule ligne invalide (matricule inconnu ou hors de la classe visée, doublon dans
+        le fichier, note hors barème) rejette l'import entier en 422 avec le détail ligne par ligne
+        (`details`, clé « Ligne N ») — jamais un import partiel. Une ligne déjà notée est corrigée
+        (upsert), pas dupliquée : un fichier corrigé après une première tentative en erreur peut être
+        renvoyé tel quel.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [classroomId, subjectId, termId, evaluationType, file]
+              properties:
+                classroomId: { type: string, format: uuid }
+                subjectId: { type: string, format: uuid }
+                termId: { type: string, format: uuid }
+                evaluationType: { type: string, enum: [Devoir, Composition] }
+                file:
+                  type: string
+                  format: binary
+                  description: Fichier .csv ou .xlsx, deux colonnes (matricule, note). En-tête facultatif.
+      responses:
+        '200':
+          description: Import appliqué — décompte des lignes créées/corrigées/inchangées
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GradeImportResult' }
+        '403': { description: Réservé à l'Enseignant }
+        '422':
+          description: >-
+            Fichier illisible/vide/mal formé, ou au moins une ligne invalide — `details` liste chaque
+            ligne fautive (« Ligne N »), rien n'est enregistré.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /grades/{id}:
     put:
@@ -1003,10 +1194,108 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/FinanceDashboard' }
 
+  /reports/dashboard:
+    get:
+      tags: [Reports]
+      summary: Tableau de bord analytique du Directeur (ticket JGK-R01)
+      description: >-
+        Agrège plusieurs modules : effectifs de l'année active (ventilés par genre), enseignants
+        actifs, taux de présence du mois en cours ((Présents + Retards) / total des appels), et résumé
+        de l'abonnement. Réservé au Directeur et au Super Admin. Les agrégats métier passent sous la
+        policy RLS PostgreSQL — jamais de mélange entre deux écoles.
+      responses:
+        '200':
+          description: Indicateurs du tableau de bord Directeur
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DirectorDashboard' }
+        '403': { description: Réservé au Directeur et au Super Admin }
+
+  /reports/attendance:
+    get:
+      tags: [Reports]
+      summary: Rapport d'assiduité détaillé par classe et par élève (ticket JGK-R02)
+      description: >-
+        Agrège les fiches d'appel sur une période : taux moyen (global ou pour une classe) et, par
+        élève, ses absences justifiées/non justifiées, ses retards, son cumul de minutes de retard et
+        son taux de présence individuel ((Présents + Retards) / total de ses appels). Réservé au
+        Directeur, au Secrétariat et au Super Admin. Le classId éventuel est validé comme appartenant à
+        l'école courante (422 sinon). Les agrégats passent sous la policy RLS.
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: classId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Rapport d'assiduité paginé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceReport' }
+        '403': { description: Réservé au Directeur, au Secrétariat et au Super Admin }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /reports/attendance/export:
+    get:
+      tags: [Reports]
+      summary: Exporter le rapport d'assiduité en PDF ou CSV (ticket JGK-R03)
+      description: >-
+        Mêmes filtres et validation que /reports/attendance, plus un paramètre `format` (pdf ou csv).
+        Renvoie un flux de fichier nommé dynamiquement, avec le type MIME adéquat. Réservé au Directeur,
+        au Secrétariat et au Super Admin. Le classId éventuel est validé (⊂ tenant) ; les données
+        transitent sous la policy RLS de l'école.
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: classId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: format
+          in: query
+          required: true
+          schema: { type: string, enum: [pdf, csv] }
+      responses:
+        '200':
+          description: Fichier exporté (téléchargement)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+            text/csv:
+              schema: { type: string, format: binary }
+        '403': { description: Réservé au Directeur, au Secrétariat et au Super Admin }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /registration-requests:
     post:
       tags: [RegistrationRequests]
       summary: Soumettre une demande d'inscription self-service (formulaire public, Volume 1 §11.5)
+      description: >-
+        Anonyme. Anti-spam obligatoire (Volume 7 §Paiements) : limitation de débit par IP (429 au-delà)
+        et honeypot (champ `website`, à laisser vide). Le mot de passe est haché immédiatement côté
+        serveur et n'est jamais journalisé ni renvoyé. Répond 200 (et non 201) : la réponse est
+        volontairement identique à celle d'une soumission piégée par le honeypot, pour ne donner aucun
+        signal exploitable ; le suivi se fait ensuite par la référence retournée.
       security: []
       requestBody:
         required: true
@@ -1014,17 +1303,24 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/RegistrationRequestCreate' }
       responses:
-        '201':
-          description: Demande créée, référence de suivi communiquée par email
+        '200':
+          description: Demande reçue, référence de suivi communiquée par email
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RegistrationRequestCreated' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
 
   /registration-requests/{trackingReference}/status:
     get:
       tags: [RegistrationRequests]
       summary: Consulter l'état d'une demande sans authentification
+      description: >-
+        Anonyme. La référence de suivi fait office de secret d'accès de fait (aucune autre
+        authentification n'existe encore pour cette demande) : la réponse ne renvoie donc que le strict
+        minimum — jamais l'e-mail, le téléphone, l'adresse, l'effectif ou le plan déclarés. Limitation de
+        débit par IP (429 au-delà), plus généreuse que la soumission : consulter son propre dossier peut
+        légitimement se faire plusieurs fois.
       security: []
       parameters:
         - name: trackingReference
@@ -1038,22 +1334,37 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RegistrationRequestStatus' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
 
   /admin/registration-requests:
     get:
       tags: [RegistrationRequests]
       summary: Lister les demandes d'inscription (Super Admin)
+      description: >-
+        Réservé au Super Admin. Renvoie tout ce qui est utile à la revue (établissement, coordonnées du
+        Directeur, plan souhaité) mais JAMAIS le hash du mot de passe.
       parameters:
         - name: status
           in: query
           schema: { type: string, enum: [Pending, Approved, Rejected] }
       responses:
-        '200': { description: Liste des demandes }
+        '200':
+          description: Liste des demandes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RegistrationRequestListItem' }
+        '403': { description: Réservé au Super Admin }
 
   /admin/registration-requests/{id}/approve:
     post:
       tags: [RegistrationRequests]
       summary: Approuver — crée établissement + compte Directeur + abonnement AwaitingPayment (Super Admin)
+      description: >-
+        Réservé au Super Admin. Crée établissement (Active) + compte Directeur (Active, mot de passe déjà
+        choisi à la soumission) + abonnement (AwaitingPayment) dans UNE transaction atomique : si l'un des
+        trois échoue, aucun n'est créé et la demande reste Pending.
       parameters:
         - $ref: '#/components/parameters/EntityId'
       responses:
@@ -1062,11 +1373,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RegistrationApprovalResult' }
+        '403': { description: Réservé au Super Admin }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /admin/registration-requests/{id}/reject:
     post:
       tags: [RegistrationRequests]
       summary: Rejeter une demande (Super Admin)
+      description: Réservé au Super Admin. Le motif est obligatoire — il est communiqué au Directeur via le suivi public.
       parameters:
         - $ref: '#/components/parameters/EntityId'
       requestBody:
@@ -1077,21 +1392,41 @@ paths:
               type: object
               required: [reason]
               properties:
-                reason: { type: string }
+                reason: { type: string, maxLength: 1000 }
       responses:
-        '200': { description: Demande rejetée }
+        '204': { description: Demande rejetée }
+        '403': { description: Réservé au Super Admin }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /subscriptions/{schoolId}/payments:
     get:
       tags: [Payments]
       summary: Historique des paiements d'abonnement de l'établissement (Directeur)
+      description: >-
+        Ticket JGK-I07. Le statut/plan/échéance de l'abonnement voyagent dans la même réponse que
+        l'historique paginé — l'écran "Facturation & Historique" n'a besoin que d'un seul appel.
       parameters:
         - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
       responses:
-        '200': { description: Historique des paiements }
+        '200':
+          description: Statut de l'abonnement et historique paginé des paiements
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedSubscriptionPayments' }
+        '403': { description: Réservé au Directeur, ou établissement de l'URL différent de celui de la session }
+        '404': { description: Aucun abonnement associé à cet établissement }
     post:
       tags: [Payments]
       summary: Initier un paiement d'abonnement (Mobile Money, virement, carte)
+      description: >-
+        Ticket JGK-I05, réservé au Directeur. Le montant est calculé serveur (plan × période choisie),
+        jamais fourni par le client. Réponse 200 (et non 201) : la ligne SubscriptionPayment créée est
+        consultable via GET /subscriptions/{schoolId}/payments (JGK-I07) — même choix que l'approbation
+        d'inscription (JGK-I03), qui crée pourtant un établissement entier et répond 200 aussi. Route
+        explicitement exemptée du mode restreint AwaitingPayment (JGK-I04) : c'est la seule voie de sortie.
       parameters:
         - $ref: '#/components/parameters/EntityId'
       requestBody:
@@ -1100,16 +1435,27 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/SubscriptionPaymentInitiateRequest' }
       responses:
-        '201':
+        '200':
           description: Session de paiement créée — URL de redirection agrégateur
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SubscriptionPaymentInitiateResult' }
+        '403': { description: Réservé au Directeur, ou établissement de l'URL différent de celui de la session }
+        '404': { description: Aucun abonnement associé à cet établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { description: L'agrégateur de paiement a refusé la demande ou est injoignable }
 
   /webhooks/payments/{provider}:
     post:
       tags: [Payments]
-      summary: Callback de l'agrégateur de paiement (PayDunya/CinetPay) — signature HMAC vérifiée obligatoirement, voir docs/Volume_7_Security.md
+      summary: Callback de l'agrégateur de paiement (PayDunya/CinetPay) — signature vérifiée obligatoirement, voir docs/Volume_7_Security.md §12bis
+      description: >-
+        Ticket JGK-I06. Double vérification avant toute écriture : (1) signature du corps du webhook,
+        rejetée en 401 si absente/invalide ; (2) appel IPN serveur à serveur vers l'agrégateur (avec nos
+        propres clés) pour connaître le statut RÉEL et le montant RÉELLEMENT payé — le corps du webhook
+        lui-même n'est jamais la source de vérité (AGENTS.md règle #11). Idempotent : un second appel
+        pour une référence déjà traitée répond 200 sans rien ré-écrire. Le corps peut être en
+        `application/x-www-form-urlencoded` (format par défaut des IPN PayDunya) ou JSON.
       security: []
       parameters:
         - name: provider
@@ -1119,11 +1465,15 @@ paths:
       requestBody:
         required: true
         content:
+          application/x-www-form-urlencoded:
+            schema: { type: object, description: "Payload brut spécifique à l'agrégateur, stocké tel quel (aplati en JSON) dans WebhookPayloadRaw" }
           application/json:
             schema: { type: object, description: "Payload brut spécifique à l'agrégateur, stocké tel quel dans WebhookPayloadRaw" }
       responses:
-        '200': { description: Webhook traité }
+        '200': { description: "Webhook traité (ou déjà traité — réponse identique, idempotence)" }
         '401': { description: Signature invalide — webhook rejeté et journalisé }
+        '404': { description: "Agrégateur non pris en charge, ou référence de paiement inconnue" }
+        '502': { description: "L'agrégateur n'a pas pu être contacté pour la vérification IPN" }
 
   /subscriptions/{schoolId}:
     get:
@@ -1195,6 +1545,11 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     ValidationError:
       description: Erreur de validation
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimited:
+      description: Trop de requêtes (limitation de débit par IP)
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1444,6 +1799,146 @@ components:
         email: { type: string, format: email }
         phone: { type: string }
         subjectIds: { type: array, items: { type: string, format: uuid } }
+        userId:
+          type: string
+          format: uuid
+          description: >-
+            Compte de connexion (rôle Enseignant, même école) à rattacher à la fiche (ticket JGK-D06).
+            Optionnel ; requis pour que cet enseignant puisse faire l'appel de ses classes.
+
+    TeacherResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        matricule: { type: string }
+
+    Teacher:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        status: { type: string, enum: [Active, Suspended, Blocked] }
+        subjects: { type: array, items: { type: string } }
+
+    PaginatedTeachers:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Teacher' } }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    TeacherAssignment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        classroomName: { type: string }
+        subjectName: { type: string }
+        schoolYearId: { type: string, format: uuid }
+        schoolYearLabel: { type: string }
+        isActiveSchoolYear: { type: boolean }
+
+    TeacherProfile:
+      allOf:
+        - $ref: '#/components/schemas/Teacher'
+        - type: object
+          properties:
+            assignments: { type: array, items: { $ref: '#/components/schemas/TeacherAssignment' } }
+
+    TeacherAssignmentCreateRequest:
+      type: object
+      required: [classroomId, subjectId]
+      properties:
+        classroomId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+
+    TeacherAssignmentResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        classroomId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        schoolYearId: { type: string, format: uuid }
+
+    AttendanceStatus:
+      type: string
+      enum: [Present, JustifiedAbsence, UnjustifiedAbsence, Late]
+
+    AttendanceRosterRow:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        status:
+          description: Statut déjà saisi si la fiche existe, sinon null.
+          nullable: true
+          allOf: [{ $ref: '#/components/schemas/AttendanceStatus' }]
+        lateMinutes: { type: integer }
+
+    AttendanceRoster:
+      type: object
+      properties:
+        classroomId: { type: string, format: uuid }
+        classroomName: { type: string }
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        date: { type: string, format: date }
+        period: { type: string }
+        alreadySubmitted: { type: boolean }
+        students: { type: array, items: { $ref: '#/components/schemas/AttendanceRosterRow' } }
+
+    AttendanceEntry:
+      type: object
+      required: [studentId, status]
+      properties:
+        studentId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/AttendanceStatus' }
+        lateMinutes:
+          type: integer
+          description: Strictement positif si status = Late, sinon 0.
+
+    AttendanceSubmitRequest:
+      type: object
+      required: [classroomId, subjectId, date, period, entries]
+      properties:
+        classroomId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        date: { type: string, format: date }
+        period: { type: string }
+        entries: { type: array, items: { $ref: '#/components/schemas/AttendanceEntry' } }
+
+    AttendanceSubmitResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        studentCount: { type: integer }
+
+    AttendanceLine:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        status: { $ref: '#/components/schemas/AttendanceStatus' }
+        lateMinutes: { type: integer }
+
+    AttendanceSheet:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        classroomId: { type: string, format: uuid }
+        classroomName: { type: string }
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        schoolYearId: { type: string, format: uuid }
+        schoolYearLabel: { type: string }
+        date: { type: string, format: date }
+        period: { type: string }
+        lines: { type: array, items: { $ref: '#/components/schemas/AttendanceLine' } }
 
     EnrollmentCreateRequest:
       type: object
@@ -1530,6 +2025,13 @@ components:
           type: integer
           format: int64
           description: Nouveau jeton xmin — à renvoyer pour la prochaine correction.
+
+    GradeImportResult:
+      type: object
+      properties:
+        created: { type: integer, description: Notes créées (élève sans note préalable pour cette clé). }
+        updated: { type: integer, description: Notes corrigées (valeur différente de l'existante). }
+        unchanged: { type: integer, description: Lignes dont la valeur importée égalait déjà la note existante. }
 
     Term:
       type: object
@@ -1739,6 +2241,65 @@ components:
         totalOutstanding: { type: number }
         recoveryRate: { type: number, description: "Pourcentage, 0-100" }
 
+    DirectorDashboard:
+      type: object
+      description: Tableau de bord analytique du Directeur (ticket JGK-R01).
+      properties:
+        enrollments:
+          type: object
+          properties:
+            total: { type: integer }
+            boys: { type: integer }
+            girls: { type: integer }
+        activeTeachers: { type: integer }
+        attendanceRate:
+          type: number
+          nullable: true
+          description: "Taux 0-1 = (Présents + Retards) / total des appels du mois. Null si aucun appel ce mois."
+        subscription:
+          type: object
+          nullable: true
+          description: "Résumé de l'abonnement de l'école. Null pour un Super Admin sans établissement."
+          properties:
+            plan: { type: string, enum: [Primaire, Standard, Premium] }
+            status: { type: string, enum: [AwaitingPayment, Active, Suspended, ReadOnly] }
+            expiresAt: { type: string, format: date, nullable: true }
+            daysRemaining:
+              type: integer
+              nullable: true
+              description: "Jours avant échéance. Négatif si expiré, null si aucune date d'échéance."
+
+    StudentAttendanceReportRow:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        classroomId: { type: string, format: uuid }
+        classroomName: { type: string }
+        totalCalls: { type: integer }
+        present: { type: integer }
+        late: { type: integer }
+        justifiedAbsences: { type: integer }
+        unjustifiedAbsences: { type: integer }
+        totalLateMinutes: { type: integer }
+        attendanceRate: { type: number, description: "Taux 0-1 = (Présents + Retards) / total de ses appels." }
+
+    AttendanceReport:
+      type: object
+      properties:
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        classId: { type: string, format: uuid, nullable: true }
+        averageAttendanceRate:
+          type: number
+          nullable: true
+          description: "Taux moyen 0-1 sur la période (global ou pour la classe). Null si aucun appel."
+        students: { type: array, items: { $ref: '#/components/schemas/StudentAttendanceReportRow' } }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
     SubscriptionUpdateRequest:
       type: object
       properties:
@@ -1748,31 +2309,59 @@ components:
 
     RegistrationRequestCreate:
       type: object
-      required: [directorFullName, directorEmail, directorPhone, password, schoolName, requestedPlan]
+      required: [directorFullName, directorEmail, directorPhone, directorPassword, schoolName, requestedPlan]
       properties:
-        directorFullName: { type: string }
-        directorEmail: { type: string, format: email }
-        directorPhone: { type: string }
-        password: { type: string, format: password, description: "Haché immédiatement côté serveur, jamais journalisé" }
-        schoolName: { type: string }
-        schoolAddress: { type: string }
-        city: { type: string }
-        region: { type: string }
-        estimatedStudentCount: { type: integer }
+        directorFullName: { type: string, maxLength: 200 }
+        directorEmail: { type: string, format: email, maxLength: 200 }
+        directorPhone: { type: string, maxLength: 30 }
+        directorPassword: { type: string, format: password, minLength: 12, maxLength: 128, description: "Choisi par le Directeur ; haché immédiatement côté serveur, jamais journalisé ni renvoyé" }
+        schoolName: { type: string, maxLength: 200 }
+        schoolAddress: { type: string, maxLength: 300 }
+        city: { type: string, maxLength: 100 }
+        region: { type: string, maxLength: 100 }
+        estimatedStudentCount: { type: integer, minimum: 1 }
         requestedPlan: { type: string, enum: [Primaire, Standard, Premium] }
+        website: { type: string, description: "Honeypot anti-spam : champ leurre, DOIT rester vide. Rempli, la soumission est ignorée sans être enregistrée." }
 
     RegistrationRequestCreated:
       type: object
       properties:
-        trackingReference: { type: string, example: "JGK-REQ-2026-00042" }
-        status: { type: string, enum: [Pending] }
+        trackingReference: { type: string, example: "REG-7QK3M9PZ" }
 
     RegistrationRequestStatus:
       type: object
+      description: >-
+        Strict minimum public (ticket JGK-I02) : ni e-mail, ni téléphone, ni adresse, ni effectif, ni
+        plan souhaité, ni identité du Super Admin ayant statué.
       properties:
-        trackingReference: { type: string }
+        trackingReference: { type: string, example: "REG-7QK3M9PZ" }
+        schoolName: { type: string }
         status: { type: string, enum: [Pending, Approved, Rejected] }
+        submittedAt: { type: string, format: date-time }
+        rejectionReason: { type: string, nullable: true, description: "Renseigné uniquement si status = Rejected (motif obligatoire côté Super Admin, ticket JGK-I03)" }
+
+    RegistrationRequestListItem:
+      type: object
+      description: >-
+        Vue de revue Super Admin (ticket JGK-I03). Inclut les coordonnées du Directeur (nécessaires à
+        l'arbitrage) mais JAMAIS le hash du mot de passe.
+      properties:
+        id: { type: string, format: uuid }
+        trackingReference: { type: string, example: "REG-7QK3M9PZ" }
+        schoolName: { type: string }
+        schoolAddress: { type: string, nullable: true }
+        city: { type: string, nullable: true }
+        region: { type: string, nullable: true }
+        estimatedStudentCount: { type: integer, nullable: true }
+        requestedPlan: { type: string, enum: [Primaire, Standard, Premium] }
+        directorFullName: { type: string }
+        directorEmail: { type: string, format: email }
+        directorPhone: { type: string }
+        status: { type: string, enum: [Pending, Approved, Rejected] }
+        submittedAt: { type: string, format: date-time }
+        reviewedAt: { type: string, format: date-time, nullable: true }
         rejectionReason: { type: string, nullable: true }
+        createdSchoolId: { type: string, format: uuid, nullable: true, description: "École née de l'approbation ; null tant que la demande n'est pas approuvée" }
 
     RegistrationApprovalResult:
       type: object
@@ -1795,3 +2384,28 @@ components:
         paymentId: { type: string, format: uuid }
         redirectUrl: { type: string, format: uri, description: "URL de la page de paiement hébergée par l'agrégateur (PayDunya/CinetPay)" }
         status: { type: string, enum: [Initiated] }
+
+    SubscriptionPaymentHistoryItem:
+      type: object
+      description: Ligne de GET /subscriptions/{schoolId}/payments (ticket JGK-I07).
+      properties:
+        id: { type: string, format: uuid }
+        initiatedAt: { type: string, format: date-time }
+        confirmedAt: { type: string, format: date-time, nullable: true }
+        amount: { type: number }
+        currency: { type: string, example: XOF }
+        billingPeriod: { type: string, enum: [Monthly, Yearly] }
+        method: { type: string, enum: [MobileMoney, BankTransfer, Card] }
+        status: { type: string, enum: [Initiated, Confirmed, Failed] }
+        providerTransactionRef: { type: string, nullable: true }
+
+    PaginatedSubscriptionPayments:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/SubscriptionPaymentHistoryItem' } }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+        subscriptionStatus: { type: string, enum: [AwaitingPayment, Active, Suspended, ReadOnly] }
+        subscriptionPlan: { type: string, enum: [Primaire, Standard, Premium] }
+        subscriptionExpiresAt: { type: string, format: date, nullable: true }
