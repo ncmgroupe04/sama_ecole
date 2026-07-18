@@ -14,8 +14,13 @@ public class Student : AuditableEntity, ITenantEntity
     public required string Matricule { get; set; }
     public required string FullName { get; set; }
     public DateOnly BirthDate { get; set; }
+    public string? BirthPlace { get; set; }
     public required string Gender { get; set; } // "M" | "F"
     public Guid ClassroomId { get; set; }
+
+    /// <summary>URL de la photo d'identité (docs/Volume_3_DDS.md : PhotoUrl). Même contrat qu'un LogoUrl
+    /// d'école : une adresse http(s) saisie par l'utilisateur, jamais un fichier téléversé.</summary>
+    public string? PhotoUrl { get; set; }
 
     public string? GuardianName { get; set; }
     public string? GuardianPhone { get; set; }

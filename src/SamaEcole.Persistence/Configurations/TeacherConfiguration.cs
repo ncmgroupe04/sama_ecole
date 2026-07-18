@@ -21,6 +21,8 @@ public class TeacherConfiguration : IEntityTypeConfiguration<Teacher>
         builder.Property(t => t.Matricule).IsRequired().HasMaxLength(30);
         builder.Property(t => t.FullName).IsRequired().HasMaxLength(200);
         builder.Property(t => t.Email).IsRequired().HasMaxLength(255);
+        builder.Property(t => t.BirthPlace).HasMaxLength(200);
+        builder.Property(t => t.PhotoUrl).HasMaxLength(500);
         builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
 
         // Un matricule est unique par école, pas globalement (même règle que Student).

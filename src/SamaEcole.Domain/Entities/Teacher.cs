@@ -20,6 +20,10 @@ public class Teacher : AuditableEntity, ITenantEntity
     public required string FullName { get; set; }
     public required string Email { get; set; }
     public string? Phone { get; set; }
+    public string? BirthPlace { get; set; }
+
+    /// <summary>URL de la photo d'identité — même contrat que <see cref="Student.PhotoUrl"/>.</summary>
+    public string? PhotoUrl { get; set; }
 
     public EntityStatus Status { get; set; } = EntityStatus.Active;
 

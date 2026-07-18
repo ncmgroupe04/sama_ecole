@@ -21,7 +21,9 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         builder.Property(s => s.SchoolId).IsRequired();
         builder.Property(s => s.Matricule).IsRequired().HasMaxLength(30);
         builder.Property(s => s.FullName).IsRequired().HasMaxLength(200);
+        builder.Property(s => s.BirthPlace).HasMaxLength(200);
         builder.Property(s => s.Gender).IsRequired().HasMaxLength(1);
+        builder.Property(s => s.PhotoUrl).HasMaxLength(500);
 
         // Un matricule est unique par école, pas globalement.
         builder.HasIndex(s => new { s.SchoolId, s.Matricule }).IsUnique();
