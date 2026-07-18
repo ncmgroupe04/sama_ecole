@@ -32,16 +32,23 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
         // Moyenne d'une matière : sur ce qui a été saisi (Devoir seul, Composition seule, ou les deux) —
         // la saisie progresse au fil du trimestre, exiger les deux figerait l'écran tant qu'il manque
         // une note (Volume 1 §8.3 : « total des coefficients, total des points, moyenne générale »).
+        // Formule PARTAGÉE avec GetStudentDetailQueryHandler (JGK-D02) via GradeCalculator — une seule
+        // source de vérité pour la moyenne d'une matière et la moyenne générale pondérée.
         var subjects = rows
             .GroupBy(r => new { r.SubjectId, r.Name, r.Coefficient })
             .Select(g =>
             {
-                var average = g.Average(r => r.Value);
+                var devoir = g.Where(r => r.EvaluationType == EvaluationType.Devoir).Select(r => (decimal?)r.Value).FirstOrDefault();
+                var composition = g.Where(r => r.EvaluationType == EvaluationType.Composition).Select(r => (decimal?)r.Value).FirstOrDefault();
+
+                // Toujours non-null : le groupe vient d'au moins une ligne de note (Devoir ou Composition).
+                var average = GradeCalculator.SubjectAverage(devoir, composition)!.Value;
+
                 return new SubjectGradeDto(
                     g.Key.SubjectId,
                     g.Key.Name,
-                    g.Where(r => r.EvaluationType == EvaluationType.Devoir).Select(r => (decimal?)r.Value).FirstOrDefault(),
-                    g.Where(r => r.EvaluationType == EvaluationType.Composition).Select(r => (decimal?)r.Value).FirstOrDefault(),
+                    devoir,
+                    composition,
                     average,
                     g.Key.Coefficient,
                     average * g.Key.Coefficient);
@@ -49,16 +56,16 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
             .OrderBy(s => s.SubjectName)
             .ToList();
 
-        var totalCoefficients = subjects.Sum(s => s.Coefficient);
-        var totalPoints = subjects.Sum(s => s.WeightedPoints);
-        var generalAverage = totalCoefficients > 0 ? totalPoints / totalCoefficients : 0m;
+        var (totalCoefficients, totalPoints, generalAverageOrNull) =
+            GradeCalculator.WeightedGeneralAverage(subjects.Select(s => ((decimal?)s.Average, s.Coefficient)));
+        var generalAverage = generalAverageOrNull ?? 0m;
 
         // Aucune matière notée : rien à qualifier, jamais une mention par défaut trompeuse.
         string? mention = null;
         if (totalCoefficients > 0)
         {
             var scale = await MentionScale.ResolveAsync(dbContext, cancellationToken);
-            mention = scale.FirstOrDefault(m => generalAverage >= m.MinAverage).Label;
+            mention = GradeCalculator.MentionFor(generalAverage, scale);
         }
 
         return new GradeSummaryDto(
