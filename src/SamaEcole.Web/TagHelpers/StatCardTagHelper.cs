@@ -89,8 +89,11 @@ public class StatCardTagHelper : TagHelper
     }
 
     /// <summary>
-    /// Traduit le nom d'accent en classes de pastille. Les jetons de marque/statut utilisent leurs
-    /// variantes `-bg` (Phase 0) ; pink/blue restent des cas particuliers de l'écran Élèves.
+    /// Traduit le nom d'accent en classes de pastille ET en classe de couleur de la valeur — les deux
+    /// restent volontairement liés (même teinte pour l'icône et le chiffre). Classes écrites EN CLAIR
+    /// (littéraux complets, jamais "text-" + accent) : le scanner Tailwind lit ce fichier comme du texte
+    /// brut (voir `content` dans tailwind.config.js) et n'indexe que les classes qui y apparaissent
+    /// telles quelles.
     /// </summary>
     private static (string bg, string text) AccentClasses(string accent) => accent.ToLowerInvariant() switch
     {
@@ -99,6 +102,7 @@ public class StatCardTagHelper : TagHelper
         "danger" => ("bg-danger-bg", "text-danger"),
         "pink" => ("bg-pink-50", "text-pink-600"),
         "blue" => ("bg-blue-50", "text-blue-600"),
+        "primary" => ("bg-primary-50", "text-primary"),
         _ => ("bg-primary-50", "text-primary")
     };
 }
