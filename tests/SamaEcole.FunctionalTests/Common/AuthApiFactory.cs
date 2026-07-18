@@ -60,6 +60,9 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Capture les e-mails sortants : c'est le seul canal par lequel passe le mot de passe initial.</summary>
     public FakeEmailSender Emails { get; } = new();
 
+    /// <summary>Remplace PayDunyaPaymentService (ticket JGK-I05) : aucune clé réelle dans les tests.</summary>
+    public FakePaymentService Payments { get; } = new();
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
         .Build();
@@ -177,6 +180,9 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         {
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Emails);
+
+            services.RemoveAll<IPaymentService>();
+            services.AddSingleton<IPaymentService>(Payments);
         });
     }
 
@@ -217,6 +223,14 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Auth__MaxFailedAttempts", "5");
         Environment.SetEnvironmentVariable("Auth__LockoutMinutes", "15");
         Environment.SetEnvironmentVariable("Auth__RefreshTokenDays", "14");
+
+        // La limite par défaut (5 requêtes / 5 min, appsettings.json) protège le formulaire public
+        // d'inscription (JGK-I01) en production, mais TestServer ne renseigne aucune IP source
+        // (Connection.RemoteIpAddress est null en transport in-memory) : toutes les requêtes de TOUS
+        // les tests de la classe partagent donc la même partition « unknown ». Sans ce relèvement,
+        // une poignée de tests suffirait à déclencher un 429 et à faire échouer les suivants.
+        Environment.SetEnvironmentVariable("RateLimiting__Registration__PermitLimit", "1000");
+        Environment.SetEnvironmentVariable("RateLimiting__Registration__WindowMinutes", "5");
     }
 
     private static void ClearEnvironment()
@@ -226,7 +240,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "ConnectionStrings__Default", "ConnectionStrings__Migrations",
                      "Jwt__Issuer", "Jwt__Audience", "Jwt__SigningKey",
                      "Jwt__AccessTokenMinutes", "Auth__MaxFailedAttempts", "Auth__LockoutMinutes",
-                     "Auth__RefreshTokenDays"
+                     "Auth__RefreshTokenDays", "RateLimiting__Registration__PermitLimit",
+                     "RateLimiting__Registration__WindowMinutes"
                  })
         {
             Environment.SetEnvironmentVariable(key, null);
@@ -250,6 +265,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM user_status_history;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM audit_logs;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM refresh_tokens;");
+
+        // Demandes d'inscription self-service (ticket JGK-I01) : table PLATEFORME, sans SchoolId à
+        // rattacher — sans cette purge, une demande laissée par un test fausserait le décompte du
+        // suivant (ex. « lister les demandes en attente » du futur JGK-I03).
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_registration_requests;");
 
         var hasher = new IdentityPasswordHasher();
         await owner.Database.ExecuteSqlInterpolatedAsync(
@@ -294,11 +314,27 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // défauts que si la table est VIDE) — l'ordre d'exécution deviendrait significatif.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM mentions;");
 
+        // Présences (ticket JGK-D06) : student_attendances référence attendance_sheets ET students ;
+        // attendance_sheets référence classrooms, subjects et school_years. Donc les lignes élève
+        // d'abord, la fiche ensuite, le tout AVANT les tables référencées plus bas.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM student_attendances;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM attendance_sheets;");
+
+        // Attributions enseignant (ticket JGK-D04) : référence teachers, classrooms, subjects ET
+        // school_years en Restrict, donc AVANT chacune d'entre elles.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM teacher_assignments;");
+
         // Idem pour les années scolaires (ticket JGK-C01) — et il ne s'agit pas seulement des écoles
         // créées par les tests : une école n'a droit qu'à UNE année active. Sans cette purge, la
         // première année créée par un test resterait active et le suivant, croyant créer sa première
         // année, obtiendrait une année inactive. L'ordre d'exécution deviendrait significatif.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_years;");
+
+        // Enseignants (ticket JGK-D03) : teacher_subjects référence teachers ET subjects en Restrict,
+        // donc avant l'un ou l'autre. Sans cette purge, un enseignant laissé par un test fausserait
+        // le décompte de la liste du test suivant.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM teacher_subjects;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM teachers;");
 
         // Matières (ticket JGK-C03) : un test qui crée « Maths / Primaire » ferait échouer en 409 le
         // suivant qui croit créer la même matière à neuf.
@@ -317,6 +353,13 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM students;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM classrooms;");
 
+        // Paiements d'abonnement (ticket JGK-I05) : référencent subscriptions (Restrict), donc AVANT eux.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM subscription_payments;");
+
+        // Abonnements créés PAR l'approbation d'une demande (ticket JGK-I03) : ils référencent schools
+        // (Restrict), donc AVANT la suppression des écoles. Aucun n'est semé, on peut tout purger.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM subscriptions;");
+
         await owner.Database.ExecuteSqlRawAsync(
             $"""DELETE FROM schools WHERE "Id" <> '{EcoleId}';""");
 
@@ -333,6 +376,77 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             """UPDATE users SET "Status" = 'Active', "AccessFailedCount" = 0, "LockoutEndAt" = NULL;""");
 
         Emails.Clear();
+        Payments.Clear();
+    }
+
+    /// <summary>
+    /// Crée un utilisateur supplémentaire DIRECTEMENT en base (ticket JGK-I04) : contourne l'API à
+    /// dessein — un établissement AwaitingPayment ne peut précisément PAS créer de compte via POST
+    /// /users (bloqué par SubscriptionAwaitingPaymentMiddleware), c'est ce que ce ticket vérifie. Sert
+    /// à prouver que le blocage s'applique à N'IMPORTE QUEL rôle de l'école, pas seulement au Directeur.
+    /// </summary>
+    public async Task<Guid> CreateAdditionalUserAsync(Guid schoolId, string email, string password, Role role)
+    {
+        await using var owner = NewOwnerContext();
+        var hasher = new IdentityPasswordHasher();
+
+        var user = new User
+        {
+            SchoolId = schoolId,
+            Email = email,
+            PasswordHash = hasher.Hash(password),
+            FullName = "Utilisateur de test JGK-I04",
+            Role = role,
+            Status = EntityStatus.Active
+        };
+
+        owner.Users.Add(user);
+        await owner.SaveChangesAsync(CancellationToken.None);
+
+        return user.Id;
+    }
+
+    /// <summary>
+    /// Modifie directement le statut d'un abonnement (ticket JGK-I04) : simule une confirmation de
+    /// paiement SANS passer par le webhook (utile pour tester I04 indépendamment de I06). Pour tester le
+    /// traitement du webhook lui-même, voir ProcessPaymentWebhookEndpointsTests (JGK-I06).
+    /// </summary>
+    public async Task SetSubscriptionStatusAsync(Guid schoolId, SubscriptionStatus status)
+    {
+        await using var owner = NewOwnerContext();
+
+        await owner.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE subscriptions SET "Status" = {status.ToString()} WHERE "SchoolId" = {schoolId};""");
+    }
+
+    /// <summary>
+    /// Lit une ligne SubscriptionPayment directement en base (ticket JGK-I05) : vérifie ce que l'API ne
+    /// peut pas encore exposer elle-même (aucun GET par identifiant, JGK-I07 pas encore livré) — que la
+    /// transaction de paiement est bien liée à l'abonnement, avec le bon montant et le bon statut.
+    /// </summary>
+    public async Task<SubscriptionPayment?> GetSubscriptionPaymentAsync(Guid paymentId)
+    {
+        await using var owner = NewOwnerContext();
+
+        // IgnoreQueryFilters : SubscriptionPayment implémente ITenantEntity, et NewOwnerContext() utilise
+        // NoTenantProvider (CurrentSchoolId => null) — sans ceci, le Global Query Filter deviendrait
+        // "SchoolId == null" et ne trouverait donc JAMAIS aucune ligne réelle.
+        return await owner.SubscriptionPayments.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(p => p.Id == paymentId);
+    }
+
+    /// <summary>
+    /// Lit l'abonnement d'une école directement en base (ticket JGK-I06) : vérifie l'activation
+    /// (Status, ExpiresAt) déclenchée par le traitement du webhook. Pas d'IgnoreQueryFilters ici :
+    /// Subscription n'implémente PAS ITenantEntity (voir son commentaire de classe), donc aucun Global
+    /// Query Filter ne s'applique — seule la policy RLS la protège, et le rôle PROPRIÉTAIRE (utilisé par
+    /// NewOwnerContext) en est exempté nativement par PostgreSQL.
+    /// </summary>
+    public async Task<Subscription?> GetSubscriptionAsync(Guid schoolId)
+    {
+        await using var owner = NewOwnerContext();
+
+        return await owner.Subscriptions.AsNoTracking().SingleOrDefaultAsync(s => s.SchoolId == schoolId);
     }
 
     /// <summary>Forge un token signé par la MÊME clé que l'API, mais déjà expiré.</summary>
@@ -349,6 +463,19 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             TimeProvider.System);
 
         return generator.Generate(DirecteurId, EcoleId, Role.Directeur).Value;
+    }
+
+    /// <summary>
+    /// Sème un jeu de données via le rôle PROPRIÉTAIRE (exempté de RLS), pour les scénarios où passer
+    /// par l'API serait disproportionné (ticket JGK-R01 : le tableau de bord agrège élèves, inscriptions,
+    /// enseignants, présences et abonnement — reconstituer tout cela par appels HTTP alourdirait le test
+    /// sans rien prouver de plus). La LECTURE testée, elle, passe bien par l'API sous RLS.
+    /// </summary>
+    public async Task SeedAsOwnerAsync(Func<ApplicationDbContext, Task> seed)
+    {
+        await using var owner = NewOwnerContext();
+        await seed(owner);
+        await owner.SaveChangesAsync(CancellationToken.None);
     }
 
     private ApplicationDbContext NewOwnerContext()

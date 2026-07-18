@@ -62,9 +62,67 @@ public enum SubscriptionPlan
 
 public enum SubscriptionStatus
 {
+    /// <summary>
+    /// État initial d'un abonnement créé à l'approbation d'une demande self-service (ticket JGK-I03,
+    /// docs/Volume_1_Cahier_des_Charges.md §11.5, docs/Volume_3_DDS.md §5.6) : aucune date d'expiration
+    /// tant que le premier paiement n'est pas confirmé (JGK-I06). L'accès reste restreint au strict
+    /// paiement tant que l'abonnement est dans cet état (mode restreint, ticket JGK-I04).
+    /// </summary>
+    AwaitingPayment,
     Active,
     Suspended,
     ReadOnly
+}
+
+/// <summary>
+/// Cycle de vie d'une demande d'inscription self-service (ticket JGK-I01, docs/Volume_3_DDS.md §5.7).
+/// Une demande ne devient JAMAIS une école par simple changement de statut : l'approbation (JGK-I03)
+/// CRÉE une nouvelle ligne School/User/Subscription dans une transaction dédiée, la demande restant
+/// un historique immuable de la candidature.
+/// </summary>
+public enum RegistrationRequestStatus
+{
+    Pending,
+    Approved,
+    Rejected
+}
+
+/// <summary>
+/// Moyen de paiement d'un ABONNEMENT (ticket JGK-I05, docs/Volume_1_Cahier_des_Charges.md §11.6) —
+/// distinct de <see cref="PaymentMethod"/> (encaissement de scolarité, JGK-F02) : deux domaines métier
+/// différents, même si le vocabulaire se recoupe.
+/// </summary>
+public enum SubscriptionPaymentMethod
+{
+    MobileMoney,
+    BankTransfer,
+    Card
+}
+
+/// <summary>
+/// Périodicité choisie pour un paiement d'abonnement (ticket JGK-I05, Volume 1 §11.6 : « mensuel ou
+/// annuel »). Détermine à la fois le montant facturé (docs/Volume_3_DDS.md n'a pas de table de tarifs —
+/// voir ISubscriptionPricingProvider) et, une fois le paiement confirmé, la nouvelle date d'expiration
+/// de l'abonnement (JGK-I06, pas encore livré) — d'où sa présence sur SubscriptionPayment bien qu'absente
+/// du schéma Volume_3_DDS §5.8 : sans elle, le futur traitement du webhook ne pourrait pas savoir de
+/// combien prolonger l'abonnement.
+/// </summary>
+public enum BillingPeriod
+{
+    Monthly,
+    Yearly
+}
+
+/// <summary>
+/// Statut d'un paiement d'abonnement (ticket JGK-I05/I06, docs/Volume_3_DDS.md §5.8). Ne passe à
+/// <see cref="Confirmed"/> QUE via le traitement d'un webhook signé (JGK-I06, AGENTS.md règle #11) —
+/// aucune route accessible au Directeur ne positionne ce statut.
+/// </summary>
+public enum SubscriptionPaymentStatus
+{
+    Initiated,
+    Confirmed,
+    Failed
 }
 
 /// <summary>
@@ -75,6 +133,19 @@ public enum EvaluationType
 {
     Devoir,
     Composition
+}
+
+/// <summary>
+/// Statut d'un élève à un appel (ticket JGK-D06). <c>Late</c> s'accompagne d'un nombre de minutes de
+/// retard strictement positif (StudentAttendance.LateMinutes) ; les autres statuts portent toujours
+/// zéro minute. Un retard n'est PAS une absence : c'est une présence tardive, comptée séparément.
+/// </summary>
+public enum AttendanceStatus
+{
+    Present,
+    JustifiedAbsence,
+    UnjustifiedAbsence,
+    Late
 }
 
 public enum MatriculeKind

@@ -1,5 +1,8 @@
+using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using SamaEcole.Application;
 using SamaEcole.Application.Auth;
 using SamaEcole.Application.Common.Interfaces;
@@ -7,7 +10,9 @@ using SamaEcole.Infrastructure;
 using SamaEcole.Persistence;
 using SamaEcole.Persistence.Seed;
 using SamaEcole.Web.Middleware;
+using SamaEcole.Web.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -65,12 +70,78 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new() { Title = "Sama Ecole API", Version = "v1" });
 });
 
+// Limitation de débit du formulaire PUBLIC d'inscription (ticket JGK-I01, docs/Volume_7_Security.md
+// §Paiements). Partitionné par IP : un flot d'inscriptions depuis une même adresse est freiné sans
+// pénaliser les autres. Fenêtre fixe simple — le but est de casser l'automatisation de masse, pas de
+// lisser finement le trafic. Limite configurable (l'environnement de test la relève pour ne pas
+// faire trébucher des tests qui soumettent plusieurs demandes légitimes d'affilée).
+var registrationPermitLimit = builder.Configuration.GetValue("RateLimiting:Registration:PermitLimit", 5);
+var registrationWindowMinutes = builder.Configuration.GetValue("RateLimiting:Registration:WindowMinutes", 5);
+
+// Ticket JGK-I02 — suivi public par référence. Plafond distinct, plus généreux : consulter l'état de
+// son propre dossier peut légitimement se faire plusieurs fois (rafraîchissement manuel).
+var registrationStatusPermitLimit = builder.Configuration.GetValue("RateLimiting:RegistrationStatus:PermitLimit", 20);
+var registrationStatusWindowMinutes = builder.Configuration.GetValue("RateLimiting:RegistrationStatus:WindowMinutes", 5);
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy(RegistrationRateLimiting.PolicyName, httpContext =>
+    {
+        // Clé de partition = IP source. Absente (proxy mal configuré, test) -> une partition commune
+        // « unknown » : mieux vaut regrouper prudemment que de laisser passer sans limite.
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = registrationPermitLimit,
+            Window = TimeSpan.FromMinutes(registrationWindowMinutes),
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy(RegistrationRateLimiting.StatusPolicyName, httpContext =>
+    {
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = registrationStatusPermitLimit,
+            Window = TimeSpan.FromMinutes(registrationStatusWindowMinutes),
+            QueueLimit = 0
+        });
+    });
+
+    // Réponse de dépassement au format d'erreur normalisé (docs/Volume_4_API_Design.md §0.4) — jamais
+    // la page 429 brute d'ASP.NET (AGENTS.md règle #9).
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+
+        var payload = new
+        {
+            code = "RATE_LIMITED",
+            message = "Trop de demandes envoyées depuis cette adresse. Réessayez dans quelques minutes.",
+            details = (object?)null,
+            traceId = context.HttpContext.TraceIdentifier
+        };
+
+        await context.HttpContext.Response.WriteAsync(JsonSerializer.Serialize(payload), cancellationToken);
+    };
+});
+
 var app = builder.Build();
 
 // Refuse de démarrer si l'application se connecte à PostgreSQL avec un rôle qui contourne la RLS
 // (superutilisateur, BYPASSRLS, ou propriétaire des tables) : l'isolation multi-tenant serait
 // silencieusement inopérante (ticket JGK-A03, AGENTS.md règle #2).
 await app.Services.EnsureRuntimeRoleCannotBypassRlsAsync();
+
+// Ticket JGK-F01 — en-têtes de sécurité (nosniff, X-Frame-Options, CSP…) sur TOUTES les réponses, y
+// compris Swagger UI ci-dessous. Posé EN TOUT PREMIER dans le pipeline : UseSwaggerUI et
+// UseStaticFiles COURT-CIRCUITENT la requête pour leurs propres routes (ils ne rappellent jamais
+// next()) — un middleware ajouté après eux n'aurait donc jamais vu passer ces réponses.
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -103,7 +174,16 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseStaticFiles(); // sert wwwroot/css/site.css compilé depuis Tailwind (Décision D-13)
 app.UseAuthentication();
+
+// Ticket JGK-I04 — après UseAuthentication (il lui faut context.User déjà résolu pour lire le claim
+// schoolId), avant UseAuthorization/MapControllers (le blocage doit précéder toute logique métier).
+app.UseMiddleware<SubscriptionAwaitingPaymentMiddleware>();
+
 app.UseAuthorization();
+
+// Après l'authentification : le endpoint (donc sa politique [EnableRateLimiting]) est déjà résolu, et
+// la limite du formulaire public s'applique avant que le contrôleur ne soit invoqué.
+app.UseRateLimiter();
 
 app.MapControllers();
 app.MapControllerRoute(

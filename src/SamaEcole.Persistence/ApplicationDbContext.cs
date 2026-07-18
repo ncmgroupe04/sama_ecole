@@ -29,12 +29,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<SchoolRegistrationRequest> SchoolRegistrationRequests => Set<SchoolRegistrationRequest>();
+    public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<UserStatusHistory> UserStatusHistory => Set<UserStatusHistory>();
     public DbSet<SchoolSettings> SchoolSettings => Set<SchoolSettings>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Term> Terms => Set<Term>();
     public DbSet<Grade> Grades => Set<Grade>();
     public DbSet<Mention> Mentions => Set<Mention>();
+    public DbSet<Teacher> Teachers => Set<Teacher>();
+    public DbSet<TeacherSubject> TeacherSubjects => Set<TeacherSubject>();
+    public DbSet<TeacherAssignment> TeacherAssignments => Set<TeacherAssignment>();
+    public DbSet<AttendanceSheet> AttendanceSheets => Set<AttendanceSheet>();
+    public DbSet<StudentAttendance> StudentAttendances => Set<StudentAttendance>();
 
     // Compteurs de matricules : écrits uniquement par MatriculeGenerator (INSERT ... ON CONFLICT),
     // jamais manipulés à la main par un Handler. Volontairement absent d'IApplicationDbContext.

@@ -3,6 +3,7 @@ using SamaEcole.Persistence.Auth;
 using SamaEcole.Persistence.AuditLogs;
 using SamaEcole.Persistence.Interceptors;
 using SamaEcole.Persistence.Schools;
+using SamaEcole.Persistence.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +47,10 @@ public static class DependencyInjection
         // Journal d'audit (ticket JGK-H01) : même contournement RLS, pour les connexions (avant tenant)
         // et les actions Super Admin (aucun SchoolId propre).
         services.AddScoped<IAuditLogStore, AuditLogStore>();
+
+        // Traitement du webhook de paiement (ticket JGK-I06) : acteur anonyme, même contournement RLS
+        // que ci-dessus pour lire/écrire subscription_payments et subscriptions.
+        services.AddScoped<ISubscriptionPaymentStore, SubscriptionPaymentStore>();
 
         return services;
     }

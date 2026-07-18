@@ -15,8 +15,9 @@
 
     @* Redirige vers /login AVANT le rendu du corps : sans session, l'utilisateur ne voit pas
        l'interface apparaître une fraction de seconde. Confort d'affichage, pas une protection —
-       les données ne viennent que de l'API, qui exige le JWT (voir PagesController). *@
-    <script>window.auth.requireSession();</script>
+       les données ne viennent que de l'API, qui exige le JWT (voir PagesController).
+       Fichier EXTERNE et non inline : la CSP n'autorise pas script-src 'unsafe-inline' (JGK-F01). *@
+    <script src="~/js/require-session.js" asp-append-version="true"></script>
 
     @* Alpine servi par nous, en version figée : ni CDN tiers, ni « 3.x.x » flottant.
        Voir _AuthLayout.cshtml pour le raisonnement complet. *@
@@ -91,15 +92,19 @@
                 <span class="text-sm font-medium">Matières</span>
             </a>
 
-            <span x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Présences — module à venir">
+            @* JGK-D06 : écran d'appel livré — le module devient un vrai lien. Saisie ouverte à
+               l'Enseignant (borné à ses classes assignées côté API), au Directeur et au Secrétariat. *@
+            <a href="/presences" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/presences") ? LinkActive : LinkIdle)">
                 <icon name="checkmark-circle" class="w-5 h-5" />
                 <span class="text-sm font-medium">Présences</span>
-            </span>
+            </a>
 
-            <span x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Enseignants — module à venir">
+            @* JGK-D03/D04 : fiches enseignants livrées — le module devient un vrai lien. Consultation
+               ouverte au Super Admin/Directeur/Secrétariat ; création/attribution : Directeur/Secrétariat. *@
+            <a href="/enseignants" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/enseignants") ? LinkActive : LinkIdle)">
                 <icon name="users" class="w-5 h-5" />
                 <span class="text-sm font-medium">Enseignants</span>
-            </span>
+            </a>
 
             @* Tickets JGK-G01/G02 livrés (saisie de notes, moyennes) : chaque module devient un vrai
                lien le jour où son ticket est livré (patron documenté plus haut). Le bulletin PDF
@@ -119,23 +124,26 @@
                 <span class="text-sm font-medium">Caisse</span>
             </a>
 
-            <span x-show="canView(['Directeur', 'Finance'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Rapports — module à venir">
+            @* JGK-R02 : le module Rapports devient un vrai lien (premier écran livré : assiduité).
+               Directeur / Secrétariat / Super Admin — Finance et Enseignant exclus de la consultation
+               transverse (Volume 7). L'API garde (ReportsController) reste la protection réelle. *@
+            <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/rapports") ? LinkActive : LinkIdle)">
                 <icon name="chart-multiple" class="w-5 h-5" />
                 <span class="text-sm font-medium">Rapports</span>
-            </span>
+            </a>
 
             <a href="/parametres" x-show="canView(['Directeur'])" x-cloak class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
                 <icon name="settings" class="w-5 h-5" />
                 <span class="text-sm font-medium">Paramètres</span>
             </a>
 
-            @* Administration (Volume 5 §3.2, explicitement Super Admin uniquement) : aucune route
-               livrée à ce jour (Module B du backlog, JGK-B01 CRUD Établissements), donc un <span>
-               désactivé comme les autres modules à venir. *@
-            <span x-show="canView(['SuperAdmin'])" x-cloak class="@LinkSoon" aria-disabled="true" title="Administration — module à venir">
+            @* Administration (Volume 5 §3.2, explicitement Super Admin uniquement) : devient un vrai
+               lien avec JGK-I03 (revue des demandes d'inscription self-service), premier écran livré de
+               cet espace — « chaque module devient un vrai lien le jour où son ticket est livré ». *@
+            <a href="/admin/inscriptions" x-show="canView(['SuperAdmin'])" x-cloak class="@(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
                 <icon name="layers" class="w-5 h-5" />
-                <span class="text-sm font-medium">Administration</span>
-            </span>
+                <span class="text-sm font-medium">Demandes d'inscription</span>
+            </a>
         </nav>
 
         @* Profil réel de la session : l'e-mail est celui saisi à la connexion, le rôle est lu dans le

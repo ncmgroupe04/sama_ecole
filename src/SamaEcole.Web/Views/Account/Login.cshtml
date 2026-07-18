@@ -4,8 +4,9 @@
 }
 
 @* Inutile de réafficher cet écran à quelqu'un qui a déjà une session ouverte. Exécuté avant le
-   rendu du corps : pas de clignotement du formulaire avant la redirection. *@
-<script>window.auth.redirectIfAuthenticated();</script>
+   rendu du corps : pas de clignotement du formulaire avant la redirection.
+   Fichier EXTERNE et non inline : la CSP n'autorise pas script-src 'unsafe-inline' (JGK-F01). *@
+<script src="~/js/redirect-if-authenticated.js" asp-append-version="true"></script>
 
 <div class="min-h-screen lg:grid lg:grid-cols-2">
 
@@ -139,6 +140,16 @@
                (aucun ticket livré à ce jour). Un lien mort serait pire qu'une consigne claire. *@
             <p class="mt-6 text-center text-jgk-table text-gray-500">
                 Mot de passe oublié ? Contactez l'administrateur de votre établissement.
+            </p>
+
+            <p class="mt-2 text-center text-jgk-table text-gray-500">
+                Votre établissement n'est pas encore inscrit ?
+                <a href="/inscription" class="text-primary font-medium hover:underline">Inscrire mon établissement</a>
+            </p>
+
+            <p class="mt-2 text-center text-jgk-table text-gray-500">
+                Demande déjà envoyée ?
+                <a href="/suivi-demande" class="text-primary font-medium hover:underline">Suivre son état</a>
             </p>
         </div>
     </div>

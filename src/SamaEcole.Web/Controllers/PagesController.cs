@@ -35,6 +35,18 @@ public class PagesController : Controller
     [HttpGet("/classes")]
     public IActionResult Classrooms() => View("~/Views/Classrooms/Index.cshtml");
 
+    // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
+    // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
+    // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.
+    [HttpGet("/enseignants")]
+    public IActionResult Teachers() => View("~/Views/Teachers/Index.cshtml");
+
+    // JGK-D06 : écran d'appel — roster d'une classe pour une date/matière/créneau, saisie des statuts.
+    // C'est AttendanceController qui garde l'accès (saisie : Enseignant borné à ses classes, Directeur,
+    // Secrétariat) et la RLS qui isole.
+    [HttpGet("/presences")]
+    public IActionResult Attendance() => View("~/Views/Attendance/Index.cshtml");
+
     [HttpGet("/matieres")]
     public IActionResult Subjects() => View("~/Views/Subjects/Index.cshtml");
 
@@ -50,6 +62,18 @@ public class PagesController : Controller
 
     [HttpGet("/parametres")]
     public IActionResult Settings() => View("~/Views/Settings/Index.cshtml");
+
+    // JGK-R02 : rapport d'assiduité détaillé par classe et par élève. Comme les autres pages, gabarit
+    // [AllowAnonymous] côté vue (le JWT ne voyage pas en navigation) — c'est ReportsController qui garde
+    // l'accès (Directeur/Secrétariat/Super Admin) et la RLS qui isole.
+    [HttpGet("/rapports/assiduite")]
+    public IActionResult AttendanceReport() => View("~/Views/Reports/Attendance.cshtml");
+
+    // JGK-I03 : espace Super Admin de revue des demandes d'inscription self-service. Comme les autres
+    // pages, [AllowAnonymous] côté vue (le JWT ne voyage pas en navigation) — c'est
+    // AdminRegistrationRequestsController qui garde l'accès (Roles = SuperAdmin) et la RLS qui isole.
+    [HttpGet("/admin/inscriptions")]
+    public IActionResult RegistrationRequests() => View("~/Views/Admin/RegistrationRequests.cshtml");
 
     // Les années scolaires ne sont plus une entrée de menu à part : elles vivent désormais dans les
     // Paramètres (onglet dédié). On redirige l'ancienne adresse pour ne casser aucun lien existant.

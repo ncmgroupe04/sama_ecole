@@ -40,6 +40,15 @@ public interface IApplicationDbContext
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
 
+    /// <summary>
+    /// Demandes d'inscription self-service (ticket JGK-I01) : table plateforme (hors RLS/tenant) qui
+    /// PRÉCÈDE l'existence de l'école. Écrite par le formulaire public anonyme.
+    /// </summary>
+    DbSet<SchoolRegistrationRequest> SchoolRegistrationRequests { get; }
+
+    /// <summary>Paiements d'abonnement (ticket JGK-I05) : table tenant normale, écrite par le Directeur lui-même.</summary>
+    DbSet<SubscriptionPayment> SubscriptionPayments { get; }
+
     /// <summary>Journal append-only des changements de statut (ticket JGK-A05) : on y AJOUTE, jamais plus.</summary>
     DbSet<UserStatusHistory> UserStatusHistory { get; }
 
@@ -57,6 +66,21 @@ public interface IApplicationDbContext
 
     /// <summary>Mentions personnalisables dérivées de la moyenne générale (ticket JGK-G02).</summary>
     DbSet<Mention> Mentions { get; }
+
+    /// <summary>Enseignants (ticket JGK-D03). Matricule généré par le Handler, même règle que Students.</summary>
+    DbSet<Teacher> Teachers { get; }
+
+    /// <summary>Matières qu'un enseignant est qualifié à enseigner (ticket JGK-D03).</summary>
+    DbSet<TeacherSubject> TeacherSubjects { get; }
+
+    /// <summary>Attributions classe/matière/année d'un enseignant (ticket JGK-D04) — sert d'historique.</summary>
+    DbSet<TeacherAssignment> TeacherAssignments { get; }
+
+    /// <summary>Fiches d'appel : un appel par (classe, matière, date, créneau) (ticket JGK-D06).</summary>
+    DbSet<AttendanceSheet> AttendanceSheets { get; }
+
+    /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
+    DbSet<StudentAttendance> StudentAttendances { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
