@@ -185,11 +185,11 @@
             </div>
 
             <div class="flex items-center gap-4">
-                @* Recherche globale et notifications : les contrôles existent dans la maquette du
-                   Volume 5, mais aucun backend ne les alimente. Désactivés plutôt que factices —
-                   un champ qui n'obéit pas et une pastille rouge qui n'annonce rien font perdre
-                   confiance dans le reste de l'écran. *@
-                <div class="hidden sm:block relative">
+                @* Recherche globale désactivée : la maquette Volume 5 la prévoyait, mais aucun backend
+                   ne l'alimente et elle fait doublon avec la recherche spécifique de chaque écran
+                   (Élèves, Classes, Enseignants...). Commentée plutôt que supprimée pour garder la
+                   trace si un vrai moteur de recherche transverse est construit un jour. *@
+                @* <div class="hidden sm:block relative">
                     <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
                         <icon name="search" class="w-5 h-5 text-gray-300" />
                     </span>
@@ -199,7 +199,7 @@
                            title="Recherche globale — à venir"
                            placeholder="Rechercher…"
                            class="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-400 placeholder:text-gray-300 cursor-not-allowed" />
-                </div>
+                </div> *@
 
                 <span aria-disabled="true" title="Notifications — module à venir"
                       class="p-2 text-gray-300 cursor-not-allowed">

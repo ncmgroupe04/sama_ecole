@@ -4,9 +4,8 @@
 }
 
 @* Inutile de réafficher cet écran à quelqu'un qui a déjà une session ouverte. Exécuté avant le
-   rendu du corps : pas de clignotement du formulaire avant la redirection.
-   Fichier EXTERNE et non inline : la CSP n'autorise pas script-src 'unsafe-inline' (JGK-F01). *@
-<script src="~/js/redirect-if-authenticated.js" asp-append-version="true"></script>
+   rendu du corps : pas de clignotement du formulaire avant la redirection. *@
+<script>window.auth.redirectIfAuthenticated();</script>
 
 <div class="min-h-screen lg:grid lg:grid-cols-2">
 
@@ -150,6 +149,19 @@
             <p class="mt-2 text-center text-jgk-table text-gray-500">
                 Demande déjà envoyée ?
                 <a href="/suivi-demande" class="text-primary font-medium hover:underline">Suivre son état</a>
+            </p>
+
+            @* Ligne d'assistance pour les directeurs dont l'inscription attend encore une validation
+               manuelle (aucune automatisation de ce côté à ce jour) — délibérément sobre, en bas de
+               page, pour ne pas rivaliser visuellement avec le formulaire de connexion lui-même. *@
+            <p class="mt-6 text-center text-xs text-gray-500">
+                Inscription en attente de validation ? Contactez-nous pour accélérer le processus.
+            </p>
+            <p class="mt-1 text-center text-xs text-gray-500">
+                <a href="tel:+221763545916" class="text-primary font-medium hover:underline">Appeler</a>
+                ou
+                <a href="https://wa.me/221763545916" class="text-primary font-medium hover:underline">WhatsApp</a>
+                : +221 76 354 59 16
             </p>
         </div>
     </div>
