@@ -1,11 +1,14 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
 using SamaEcole.Application.Grades.Commands.CreateMention;
+using SamaEcole.Application.Grades.Commands.ImportGrades;
 using SamaEcole.Application.Grades.Queries.GetClassGrades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.Grades.Queries.GetMentions;
 using SamaEcole.Application.Grades.Commands.UpdateGrade;
 using SamaEcole.Domain.Enums;
+using FluentValidation.Results;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,6 +30,9 @@ public class GradesController(ISender mediator) : ControllerBase
 {
     public record UpdateGradeRequest(decimal Value, uint RowVersion);
     public record CreateMentionRequest(string Label, decimal MinAverage);
+
+    public record ImportGradesRequest(
+        Guid ClassroomId, Guid SubjectId, Guid TermId, EvaluationType EvaluationType, IFormFile? File);
 
     private const string GradingRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
 
@@ -55,6 +61,37 @@ public class GradesController(ISender mediator) : ControllerBase
         var result = await mediator.Send(command, cancellationToken);
 
         return CreatedAtAction(nameof(Create), new { id = result.Id }, result);
+    }
+
+    /// <summary>
+    /// Import de masse d'une colonne de notes (Devoir OU Composition) depuis un fichier CSV/Excel à
+    /// deux colonnes (matricule, note) — mode de saisie alternatif à la grille cellule par cellule,
+    /// même permission que la saisie unitaire (docs/Volume_7_Security.md « Notes » : Saisir = Enseignant
+    /// seul). Tout le fichier est validé avant la moindre écriture (422 avec le détail ligne par ligne
+    /// si une seule ligne est invalide) — voir ImportGradesCommandHandler.
+    /// </summary>
+    [HttpPost("import")]
+    [Authorize(Roles = nameof(Role.Enseignant))]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    [ProducesResponseType<ImportGradesResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Import([FromForm] ImportGradesRequest request, CancellationToken cancellationToken)
+    {
+        if (request.File is null || request.File.Length == 0)
+        {
+            throw new ValidationException([new ValidationFailure("File", "Aucun fichier n'a été fourni.")]);
+        }
+
+        await using var stream = new MemoryStream();
+        await request.File.CopyToAsync(stream, cancellationToken);
+
+        var result = await mediator.Send(new ImportGradesCommand(
+            request.ClassroomId, request.SubjectId, request.TermId, request.EvaluationType,
+            stream.ToArray(), request.File.FileName), cancellationToken);
+
+        return Ok(result);
     }
 
     [HttpPut("{id:guid}")]

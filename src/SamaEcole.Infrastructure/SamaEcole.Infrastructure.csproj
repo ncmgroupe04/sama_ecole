@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.1" />
     <!-- Version alignée sur ce que résout déjà Authentication.JwtBearer 9.0.1 dans SamaEcole.Web :

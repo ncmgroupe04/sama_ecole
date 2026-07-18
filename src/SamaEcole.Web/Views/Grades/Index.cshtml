@@ -20,34 +20,43 @@
 
     <!-- Sélecteurs -->
     <div class="card mt-6 p-6">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <div>
-                <label for="grades-classroom" class="block text-sm font-medium text-gray-700">Classe</label>
-                <select id="grades-classroom" x-model="selectedClassroomId" x-on:change="reload()" class="input-field bg-white">
-                    <option value="">Sélectionnez une classe…</option>
-                    <template x-for="c in classrooms" :key="c.id">
-                        <option :value="c.id" x-text="c.name + ' — ' + c.level"></option>
-                    </template>
-                </select>
+        <div class="flex flex-col sm:flex-row sm:items-end gap-5">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 flex-1">
+                <div>
+                    <label for="grades-classroom" class="block text-sm font-medium text-gray-700">Classe</label>
+                    <select id="grades-classroom" x-model="selectedClassroomId" x-on:change="reload()" class="input-field bg-white">
+                        <option value="">Sélectionnez une classe…</option>
+                        <template x-for="c in classrooms" :key="c.id">
+                            <option :value="c.id" x-text="c.name + ' — ' + c.level"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label for="grades-subject" class="block text-sm font-medium text-gray-700">Matière</label>
+                    <select id="grades-subject" x-model="selectedSubjectId" x-on:change="reload()" class="input-field bg-white">
+                        <option value="">Sélectionnez une matière…</option>
+                        <template x-for="s in subjects" :key="s.id">
+                            <option :value="s.id" x-text="s.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label for="grades-term" class="block text-sm font-medium text-gray-700">Trimestre</label>
+                    <select id="grades-term" x-model="selectedTermId" x-on:change="reload()" class="input-field bg-white" :disabled="terms.length === 0">
+                        <option value="">Sélectionnez un trimestre…</option>
+                        <template x-for="t in terms" :key="t.id">
+                            <option :value="t.id" x-text="t.label"></option>
+                        </template>
+                    </select>
+                </div>
             </div>
-            <div>
-                <label for="grades-subject" class="block text-sm font-medium text-gray-700">Matière</label>
-                <select id="grades-subject" x-model="selectedSubjectId" x-on:change="reload()" class="input-field bg-white">
-                    <option value="">Sélectionnez une matière…</option>
-                    <template x-for="s in subjects" :key="s.id">
-                        <option :value="s.id" x-text="s.name"></option>
-                    </template>
-                </select>
-            </div>
-            <div>
-                <label for="grades-term" class="block text-sm font-medium text-gray-700">Trimestre</label>
-                <select id="grades-term" x-model="selectedTermId" x-on:change="reload()" class="input-field bg-white" :disabled="terms.length === 0">
-                    <option value="">Sélectionnez un trimestre…</option>
-                    <template x-for="t in terms" :key="t.id">
-                        <option :value="t.id" x-text="t.label"></option>
-                    </template>
-                </select>
-            </div>
+
+            <!-- Mode de saisie alternatif : réservé à l'Enseignant, comme la saisie cellule par cellule. -->
+            <button type="button" x-show="canEnterGrades && hasSelection" x-cloak x-on:click="openImport()"
+                    class="btn-secondary whitespace-nowrap">
+                <icon name="upload" class="w-4 h-4" />
+                Importer un fichier
+            </button>
         </div>
 
         <!-- Aucune année active : rien à proposer comme trimestre -->
@@ -143,4 +152,66 @@
             </table>
         </div>
     </div>
+
+    <!-- Import de notes par fichier CSV/Excel : mode de saisie alternatif, réservé à l'Enseignant. -->
+    <modal-shell open="isImportOpen" on-close="isImportOpen = false" title="Importer des notes (CSV/Excel)" size="lg">
+        <modal-subtitle>Un fichier à deux colonnes : matricule, puis note — pour Devoir OU Composition, jamais les deux à la fois.</modal-subtitle>
+
+        <div x-show="importGlobalError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="importGlobalError"></div>
+
+        <div x-show="importSuccess" x-cloak class="mb-4 rounded-md border-l-4 border-success bg-success-bg p-3 text-sm text-success" x-text="importSuccess"></div>
+
+        <!-- Rien n'a été enregistré tant qu'une seule ligne est en erreur (validation intégrale avant écriture). -->
+        <div x-show="importErrors.length > 0" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3">
+            <p class="text-sm font-medium text-danger mb-2">
+                Le fichier contient des erreurs — rien n'a été enregistré. Corrigez puis réessayez :
+            </p>
+            <ul class="text-sm text-danger space-y-1 max-h-52 overflow-y-auto">
+                <template x-for="e in importErrors" :key="e.line + e.message">
+                    <li><span class="font-semibold" x-text="e.line"></span> — <span x-text="e.message"></span></li>
+                </template>
+            </ul>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Colonne à remplir <span class="text-danger">*</span></label>
+                <div class="mt-1.5 flex items-center gap-6">
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                        <input type="radio" x-model="importEvaluationType" value="devoir" class="border-gray-300 text-primary focus:ring-primary">
+                        Devoir
+                    </label>
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                        <input type="radio" x-model="importEvaluationType" value="composition" class="border-gray-300 text-primary focus:ring-primary">
+                        Composition
+                    </label>
+                </div>
+            </div>
+
+            <div class="rounded-md bg-gray-50 border border-gray-200 p-3 flex items-center justify-between gap-3">
+                <p class="text-xs text-gray-600">
+                    Le modèle reprend les matricules exacts des élèves de cette classe : évite toute erreur de matricule à la saisie.
+                </p>
+                <button type="button" x-on:click="downloadTemplate()" :disabled="!importEvaluationType"
+                        class="btn-secondary whitespace-nowrap text-xs disabled:opacity-50 disabled:cursor-not-allowed">
+                    <icon name="download" class="w-4 h-4" />
+                    Modèle
+                </button>
+            </div>
+
+            <div>
+                <label for="grades-import-file" class="block text-sm font-medium text-gray-700">Fichier <span class="text-danger">*</span></label>
+                <input id="grades-import-file" type="file" accept=".csv,.xlsx,.xls" x-on:change="onImportFileChange($event)"
+                       class="input-field bg-white file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-primary file:cursor-pointer" />
+                <p class="mt-1 text-xs text-gray-500">CSV ou Excel, deux colonnes (matricule, note) — une ligne d'en-tête est acceptée mais pas obligatoire.</p>
+            </div>
+        </div>
+
+        <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
+            <button type="button" x-on:click="isImportOpen = false" class="btn-secondary">Fermer</button>
+            <button type="button" x-on:click="submitImport()" :disabled="importSubmitting" class="btn-primary">
+                <span x-text="importSubmitting ? 'Import en cours...' : 'Importer'"></span>
+            </button>
+        </div>
+    </modal-shell>
 </div>

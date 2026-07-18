@@ -10,6 +10,11 @@
  * SAISIR (POST) est réservé à l'Enseignant, CORRIGER (PUT) est ouvert au Directeur et à l'Enseignant
  * (docs/Volume_7_Security.md « Notes », comme GradesController) : un Directeur ne voit donc pas de
  * champ actif sur une cellule encore vide, seulement sur celles déjà notées.
+ *
+ * Import CSV/Excel : mode de saisie ALTERNATIF, réservé lui aussi à l'Enseignant — un fichier à deux
+ * colonnes (matricule, note) remplit en une fois UNE colonne (Devoir OU Composition) pour toute la
+ * classe (POST /grades/import). Tout le fichier est validé côté serveur avant la moindre écriture :
+ * soit il est intégralement accepté, soit rien n'est enregistré et chaque ligne en erreur est listée.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('gradesView', () => ({
@@ -19,6 +24,10 @@ document.addEventListener('alpine:init', () => {
         subjects: [],
         terms: [],
         gradingScale: 20,
+        // Consommé par le partiel _ErrorBanner partagé (x-show="error") : jamais renseigné en
+        // pratique aujourd'hui (chaque échec réseau a déjà son propre traitement ci-dessous), mais
+        // sans cette déclaration Alpine évalue "error" comme une référence indéfinie à chaque rendu.
+        error: null,
 
         selectedClassroomId: '',
         selectedSubjectId: '',
@@ -28,6 +37,15 @@ document.addEventListener('alpine:init', () => {
         isLoadingRows: false,
         rows: [],
         conflictError: false,
+
+        // Import par fichier CSV/Excel.
+        isImportOpen: false,
+        importEvaluationType: '', // 'devoir' | 'composition' — mêmes clés que data-field sur la grille
+        importFile: null,
+        importSubmitting: false,
+        importErrors: [],
+        importGlobalError: null,
+        importSuccess: null,
 
         get hasSelection() {
             return Boolean(this.selectedClassroomId && this.selectedSubjectId && this.selectedTermId);
@@ -153,6 +171,111 @@ document.addEventListener('alpine:init', () => {
         focusNextRow(rowIndex, field) {
             const next = document.querySelector(`input[data-row="${rowIndex + 1}"][data-field="${field}"]`);
             if (next) next.focus();
+        },
+
+        openImport() {
+            this.importEvaluationType = '';
+            this.importFile = null;
+            this.importErrors = [];
+            this.importGlobalError = null;
+            this.importSuccess = null;
+            this.isImportOpen = true;
+        },
+
+        onImportFileChange(event) {
+            this.importFile = event.target.files[0] || null;
+        },
+
+        /**
+         * Modèle pré-rempli avec les matricules EXACTS de la classe déjà chargée (this.rows) : la
+         * première source d'erreur de matricule est un matricule retapé à la main, ce modèle l'élimine
+         * d'office. Généré côté client, sans aller-retour serveur : les données sont déjà sous les yeux.
+         */
+        downloadTemplate() {
+            if (!this.importEvaluationType) return;
+
+            const lines = ['Matricule;Note'];
+            for (const row of this.rows) {
+                const cell = row[this.importEvaluationType];
+                lines.push(`${row.matricule};${cell && cell.value !== '' ? cell.value : ''}`);
+            }
+
+            // BOM UTF-8 : ouverture propre dans Excel FR (même convention que AttendanceReportCsv côté serveur).
+            const bom = String.fromCharCode(0xFEFF);
+            const blob = new Blob([bom + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `modele-notes-${this.importEvaluationType}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+        },
+
+        async submitImport() {
+            this.importGlobalError = null;
+            this.importErrors = [];
+            this.importSuccess = null;
+
+            if (!this.importEvaluationType) {
+                this.importGlobalError = "Choisissez d'abord la colonne à remplir : Devoir ou Composition.";
+                return;
+            }
+            if (!this.importFile) {
+                this.importGlobalError = 'Choisissez un fichier à importer.';
+                return;
+            }
+
+            this.importSubmitting = true;
+            try {
+                const formData = new FormData();
+                formData.append('classroomId', this.selectedClassroomId);
+                formData.append('subjectId', this.selectedSubjectId);
+                formData.append('termId', this.selectedTermId);
+                formData.append('evaluationType', this.evaluationTypeFor(this.importEvaluationType));
+                formData.append('file', this.importFile);
+
+                const result = await window.api.upload('/grades/import', formData);
+
+                const parts = [];
+                if (result.created) parts.push(`${result.created} créée${result.created > 1 ? 's' : ''}`);
+                if (result.updated) parts.push(`${result.updated} corrigée${result.updated > 1 ? 's' : ''}`);
+                if (result.unchanged) parts.push(`${result.unchanged} déjà à jour`);
+                this.importSuccess = parts.length > 0 ? `Import réussi : ${parts.join(', ')}.` : 'Import réussi.';
+                this.importFile = null;
+
+                await this.reload();
+            } catch (err) {
+                this.applyImportError(err);
+            } finally {
+                this.importSubmitting = false;
+            }
+        },
+
+        /**
+         * `details` du serveur est { "Ligne 3": ["message"], "File": ["message"] } (ValidationException,
+         * docs/Volume_4_API_Design.md §0.4) : "File" est une erreur de STRUCTURE (fichier vide, format
+         * non supporté...), affichée à part des erreurs ligne par ligne.
+         */
+        applyImportError(err) {
+            const details = err && err.details;
+            if (!details || typeof details !== 'object') {
+                this.importGlobalError = (err && err.message) || "Erreur lors de l'import.";
+                return;
+            }
+
+            const firstMessage = (messages) => (Array.isArray(messages) ? messages[0] : String(messages));
+            const entries = Object.entries(details);
+            const fileEntry = entries.find(([key]) => key === 'File');
+
+            if (fileEntry) this.importGlobalError = firstMessage(fileEntry[1]);
+
+            this.importErrors = entries
+                .filter(([key]) => key !== 'File')
+                .map(([line, messages]) => ({ line, message: firstMessage(messages) }));
+
+            if (!fileEntry && this.importErrors.length === 0) {
+                this.importGlobalError = (err && err.message) || "Erreur lors de l'import.";
+            }
         }
     }));
 });
