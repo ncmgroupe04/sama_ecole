@@ -29,6 +29,10 @@ document.addEventListener('alpine:init', () => {
         newTeacher: { fullName: '', email: '', phone: '', subjectIds: [], userId: '' },
         createErrors: {},
 
+        // Confirmation « Enseignant ajouté » affichée après un enregistrement réussi.
+        showAddedDialog: false,
+        addedTeacherName: '',
+
         // Slide-over détail
         detail: null,
         detailLoading: false,
@@ -119,8 +123,10 @@ document.addEventListener('alpine:init', () => {
                 await window.api.post('/teachers', payload);
 
                 this.isCreateOpen = false;
+                this.addedTeacherName = this.newTeacher.fullName;
                 this.page = 1;
                 await this.loadTeachers();
+                this.showAddedDialog = true; // confirmation « Enseignant ajouté »
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Une erreur est survenue lors de la création.');
             } finally {

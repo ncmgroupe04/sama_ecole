@@ -34,6 +34,10 @@ document.addEventListener('alpine:init', () => {
         newCategory: { name: '', isRecurring: true },
         categoryErrors: {},
 
+        // Confirmation « Catégorie ajoutée » affichée après un enregistrement réussi.
+        showCategoryAddedDialog: false,
+        addedCategoryName: '',
+
         // Application d'un montant standard (modale)
         isApplyOpen: false,
         isApplying: false,
@@ -157,8 +161,10 @@ document.addEventListener('alpine:init', () => {
             try {
                 const created = await window.api.post('/finance/fee-categories', this.newCategory);
                 this.isCategoryOpen = false;
+                this.addedCategoryName = this.newCategory.name;
                 await this.loadAll();
                 this.selectedCategoryId = created.id; // bascule sur la catégorie qu'on vient de créer
+                this.showCategoryAddedDialog = true; // confirmation « Catégorie ajoutée »
             } catch (err) {
                 this.categoryErrors = window.api.toFieldErrors(err, 'Erreur lors de la création de la catégorie.');
             } finally {

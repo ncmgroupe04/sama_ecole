@@ -100,7 +100,7 @@
                 <thead>
                     <tr class="table-head">
                         <th class="py-3 px-4 w-12 text-center">N°</th>
-                        <th class="py-3 px-4">Matricule</th>
+                        <th class="py-3 px-4 whitespace-nowrap">Matricule</th>
                         <th class="py-3 px-4">Élève</th>
                         <th class="py-3 px-4 w-40 text-center">Devoir</th>
                         <th class="py-3 px-4 w-40 text-center">Composition</th>
@@ -110,7 +110,7 @@
                     <template x-for="(row, index) in rows" :key="row.studentId">
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="py-2 px-4 text-center text-gray-400 font-medium" x-text="index + 1"></td>
-                            <td class="py-2 px-4 text-xs font-mono text-gray-500" x-text="row.matricule"></td>
+                            <td class="py-2 px-4 text-xs font-mono text-gray-500 whitespace-nowrap" x-text="row.matricule"></td>
                             <td class="py-2 px-4 font-medium text-gray-900" x-text="row.fullName"></td>
 
                             <td class="py-2 px-4">

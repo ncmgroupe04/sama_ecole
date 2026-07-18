@@ -56,7 +56,7 @@
         </div>
 
         <!-- ============================= FORMULAIRE + APERÇU ============================= -->
-        <div x-show="!isLoading && !error && activeYear && !receipt" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div x-show="!isLoading && !error && activeYear && !showReceipt" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Colonne formulaire -->
             <div class="lg:col-span-2 card p-6 space-y-6">
@@ -214,15 +214,18 @@
         </div>
 
         <!-- ============================= REÇU ============================= -->
-        <div x-show="receipt" x-cloak class="mt-6">
+        <div x-show="showReceipt" x-cloak class="mt-6">
 
             <!-- Barre d'actions (non imprimée) -->
-            <div class="no-print flex items-center justify-between mb-4">
+            <div class="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div class="flex items-center gap-2 text-success">
                     <icon name="checkmark-circle" class="w-6 h-6" />
                     <span class="text-sm font-medium">Inscription enregistrée.</span>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" x-on:click="closeReceipt()" class="btn-secondary">
+                        Retour (Fermer)
+                    </button>
                     <button type="button" x-on:click="startNewEnrollment()" class="btn-secondary">
                         Nouvelle inscription
                     </button>
@@ -337,5 +340,33 @@
             </div>
         </div>
 
+    </div>
+
+    @* Fenêtre de confirmation affichée juste après l'enregistrement (avant le reçu) : elle annonce que
+       l'inscription est validée, puis laisse le choix entre imprimer le reçu ou terminer. Non imprimée
+       (.no-print) — de toute façon elle est fermée au moment d'imprimer le reçu. *@
+    <div class="no-print">
+        <modal-shell open="showConfirmDialog" size="md" on-close="finishFromDialog()" title="Inscription validée">
+            <div class="text-center">
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
+                    <icon name="checkmark-circle" class="h-8 w-8 text-success" />
+                </div>
+                <p class="mt-4 text-base font-semibold text-gray-900">L'inscription a bien été validée.</p>
+                <p class="mt-1 text-sm text-gray-500" x-show="receipt" x-cloak>
+                    <span x-text="receipt ? receipt.studentFullName : ''"></span> —
+                    reçu n° <span class="font-medium" x-text="receiptReference()"></span>
+                </p>
+                <p class="mt-1 text-sm text-gray-500">Vous pouvez imprimer le reçu ou terminer.</p>
+            </div>
+            <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-4">
+                <button type="button" x-on:click="finishFromDialog()" class="btn-secondary">
+                    Terminer
+                </button>
+                <button type="button" x-on:click="showReceiptFromDialog()" class="btn-primary">
+                    <icon name="print" class="w-5 h-5" />
+                    Imprimer le reçu
+                </button>
+            </div>
+        </modal-shell>
     </div>
 </div>

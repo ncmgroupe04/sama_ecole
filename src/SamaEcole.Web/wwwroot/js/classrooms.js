@@ -21,6 +21,10 @@ document.addEventListener('alpine:init', () => {
         },
         createErrors: {},
 
+        // Confirmation « Classe ajoutée » affichée après un enregistrement réussi.
+        showAddedDialog: false,
+        addedClassroomName: '',
+
         init() {
             this.loadClassrooms();
         },
@@ -77,8 +81,10 @@ document.addEventListener('alpine:init', () => {
                 await window.api.post('/classrooms', this.newClassroom);
 
                 this.isCreateOpen = false;
+                this.addedClassroomName = this.newClassroom.name;
                 this.newClassroom = { name: '', level: 'Primaire', capacity: 30 };
                 await this.loadClassrooms();
+                this.showAddedDialog = true; // confirmation « Classe ajoutée »
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, "Erreur lors de la création.");
             } finally {

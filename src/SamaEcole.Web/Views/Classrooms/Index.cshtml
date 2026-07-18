@@ -155,4 +155,20 @@
             </div>
         </form>
     </modal-shell>
+
+    <!-- Confirmation : classe ajoutée -->
+    <modal-shell open="showAddedDialog" size="md" title="Classe ajoutée">
+        <div class="text-center">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
+                <icon name="checkmark-circle" class="h-8 w-8 text-success" />
+            </div>
+            <p class="mt-4 text-base font-semibold text-gray-900">La classe a bien été ajoutée.</p>
+            <p class="mt-1 text-sm text-gray-500" x-show="addedClassroomName" x-cloak>
+                <span class="font-medium" x-text="addedClassroomName"></span> figure désormais dans la liste.
+            </p>
+        </div>
+        <div class="mt-8 flex justify-end border-t border-gray-200 pt-4">
+            <button type="button" x-on:click="showAddedDialog = false" class="btn-primary">OK</button>
+        </div>
+    </modal-shell>
 </div>

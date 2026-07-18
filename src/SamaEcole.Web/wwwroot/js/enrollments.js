@@ -48,6 +48,12 @@ document.addEventListener('alpine:init', () => {
         receipt: null,
         pdfError: null,
 
+        // Parcours après enregistrement : une fois l'inscription validée, on affiche d'abord une
+        // fenêtre de confirmation (« Inscription validée »), et le reçu ne s'affiche que si
+        // l'utilisateur choisit de l'imprimer/consulter — il n'est plus jeté directement à l'écran.
+        showConfirmDialog: false,
+        showReceipt: false,
+
         async init() {
             await this.loadReferenceData();
         },
@@ -181,6 +187,10 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 this.receipt = await window.api.post('/enrollments', command);
+                // Étape 1 : on confirme l'enregistrement dans une fenêtre dédiée. Le reçu n'apparaît
+                // qu'ensuite, si l'utilisateur clique « Imprimer le reçu ».
+                this.showReceipt = false;
+                this.showConfirmDialog = true;
             } catch (err) {
                 this.formErrors = window.api.toFieldErrors(err, "Erreur lors de l'inscription.");
             } finally {
@@ -188,8 +198,39 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /** Fenêtre de confirmation → « Imprimer le reçu » : on ferme le dialogue et on révèle le reçu. */
+        showReceiptFromDialog() {
+            this.showConfirmDialog = false;
+            this.showReceipt = true;
+        },
+
+        /**
+         * Fenêtre de confirmation → « Terminer » (ou fermeture) : on n'affiche pas le reçu et on repart
+         * sur un formulaire vierge, prêt pour la prochaine inscription.
+         */
+        finishFromDialog() {
+            this.showConfirmDialog = false;
+            this.startNewEnrollment();
+        },
+
+        /**
+         * Écran du reçu → « Retour (Fermer) » : on masque le reçu et on revient au formulaire pour
+         * enchaîner une inscription du même type (mode conservé) que celle qui vient d'être validée.
+         */
+        closeReceipt() {
+            this.showReceipt = false;
+            this.receipt = null;
+            this.pdfError = null;
+            const mode = this.mode;
+            this.startNewEnrollment();
+            this.mode = mode;
+        },
+
         startNewEnrollment() {
             this.receipt = null;
+            this.showReceipt = false;
+            this.showConfirmDialog = false;
+            this.pdfError = null;
             this.form = {
                 classroomId: '',
                 fullName: '',
