@@ -78,7 +78,9 @@
                             <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="teacher.matricule"></td>
                             <td class="py-3 px-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs" x-text="initials(teacher.fullName)"></div>
+                                    <img x-show="teacher.photoUrl" :src="teacher.photoUrl" alt=""
+                                         class="w-8 h-8 rounded-full object-cover shrink-0" x-cloak>
+                                    <div x-show="!teacher.photoUrl" class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"></div>
                                     <div>
                                         <p class="font-medium text-gray-900" x-text="teacher.fullName"></p>
                                         <p class="text-xs text-gray-500" x-text="teacher.email"></p>
@@ -118,7 +120,9 @@
         <template x-if="detail">
             <div>
                 <div class="flex items-center gap-4 pb-5 border-b border-gray-100">
-                    <div class="w-14 h-14 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-base flex-shrink-0" x-text="initials(detail.fullName)"></div>
+                    <img x-show="detail.photoUrl" :src="detail.photoUrl" alt=""
+                         class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak>
+                    <div x-show="!detail.photoUrl" class="w-14 h-14 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-base flex-shrink-0" x-text="initials(detail.fullName)"></div>
                     <div>
                         <p class="text-xl font-bold text-gray-900" x-text="detail.fullName"></p>
                         <p class="text-sm text-gray-500 font-mono" x-text="detail.matricule"></p>
@@ -133,6 +137,10 @@
                     <div>
                         <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Téléphone</dt>
                         <dd class="mt-1 text-base font-medium text-gray-900" x-text="detail.phone || '—'"></dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Lieu de naissance</dt>
+                        <dd class="mt-1 text-base font-medium text-gray-900" x-text="detail.birthPlace || '—'"></dd>
                     </div>
                     <div>
                         <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Statut</dt>
@@ -237,6 +245,23 @@
                 <label class="block text-sm font-medium text-gray-700">Téléphone</label>
                 <input type="text" x-model="newTeacher.phone" class="input-field">
                 <p x-show="createErrors.phone" x-text="createErrors.phone" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Lieu de naissance</label>
+                <input type="text" x-model="newTeacher.birthPlace" class="input-field">
+                <p x-show="createErrors.birthplace" x-text="createErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Photo (URL)</label>
+                <div class="mt-1 flex items-center gap-3">
+                    <img x-show="newTeacher.photoUrl" :src="newTeacher.photoUrl" alt=""
+                         class="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200" x-cloak>
+                    <input type="text" x-model="newTeacher.photoUrl" placeholder="https://…"
+                           class="input-field flex-1">
+                </div>
+                <p x-show="createErrors.photourl" x-text="createErrors.photourl" class="mt-1 text-xs text-danger"></p>
             </div>
 
             <div>

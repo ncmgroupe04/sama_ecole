@@ -21,6 +21,7 @@ public record TeacherListItem(
     string FullName,
     string Email,
     string? Phone,
+    string? PhotoUrl,
     string Status,
     IReadOnlyList<string> Subjects);
 

@@ -82,6 +82,8 @@ public class CreateTeacherCommandHandler(
                 FullName = request.FullName,
                 Email = request.Email,
                 Phone = request.Phone,
+                BirthPlace = request.BirthPlace,
+                PhotoUrl = request.PhotoUrl,
                 UserId = request.UserId
             };
 

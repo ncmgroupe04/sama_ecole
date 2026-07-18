@@ -12,6 +12,8 @@ public record CreateTeacherCommand : IRequest<CreateTeacherResult>
     public required string FullName { get; init; }
     public required string Email { get; init; }
     public string? Phone { get; init; }
+    public string? BirthPlace { get; init; }
+    public string? PhotoUrl { get; init; }
 
     /// <summary>Matières que l'enseignant est qualifié à enseigner (openapi.yaml : requis, au moins une).</summary>
     public required IReadOnlyList<Guid> SubjectIds { get; init; }

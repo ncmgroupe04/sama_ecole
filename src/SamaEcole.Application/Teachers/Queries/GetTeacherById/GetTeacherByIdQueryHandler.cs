@@ -43,6 +43,8 @@ public class GetTeacherByIdQueryHandler(IApplicationDbContext dbContext)
             teacher.FullName,
             teacher.Email,
             teacher.Phone,
+            teacher.BirthPlace,
+            teacher.PhotoUrl,
             teacher.Status.ToString(),
             subjects,
             assignments);

@@ -22,6 +22,8 @@ public record TeacherProfileDto(
     string FullName,
     string Email,
     string? Phone,
+    string? BirthPlace,
+    string? PhotoUrl,
     string Status,
     IReadOnlyList<string> Subjects,
     IReadOnlyList<TeacherAssignmentDto> Assignments);

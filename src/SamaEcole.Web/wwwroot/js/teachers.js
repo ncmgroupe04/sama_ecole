@@ -26,7 +26,7 @@ document.addEventListener('alpine:init', () => {
         // Slide-over création
         isCreateOpen: false,
         isSubmitting: false,
-        newTeacher: { fullName: '', email: '', phone: '', subjectIds: [], userId: '' },
+        newTeacher: { fullName: '', email: '', phone: '', birthPlace: '', photoUrl: '', subjectIds: [], userId: '' },
         createErrors: {},
 
         // Confirmation « Enseignant ajouté » affichée après un enregistrement réussi.
@@ -105,7 +105,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         openCreate() {
-            this.newTeacher = { fullName: '', email: '', phone: '', subjectIds: [], userId: '' };
+            this.newTeacher = { fullName: '', email: '', phone: '', birthPlace: '', photoUrl: '', subjectIds: [], userId: '' };
             this.createErrors = {};
             this.isCreateOpen = true;
         },
@@ -118,6 +118,8 @@ document.addEventListener('alpine:init', () => {
                     fullName: this.newTeacher.fullName,
                     email: this.newTeacher.email,
                     phone: this.newTeacher.phone || null,
+                    birthPlace: this.newTeacher.birthPlace || null,
+                    photoUrl: this.newTeacher.photoUrl || null,
                     subjectIds: this.newTeacher.subjectIds,
                     userId: this.newTeacher.userId || null
                 };

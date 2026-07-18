@@ -13,6 +13,14 @@ public class CreateTeacherCommandValidator : AbstractValidator<CreateTeacherComm
         // « <script>@x.com » passerait (JGK-F01).
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(255).NoHtml();
         RuleFor(x => x.Phone).MaximumLength(30).NoHtml();
+        RuleFor(x => x.BirthPlace).MaximumLength(200).NoHtml();
+
+        // Même contrat que LogoUrl / Student.PhotoUrl : une adresse http(s), jamais un file:// ou
+        // javascript: — la photo n'est jamais téléversée, seulement référencée par URL.
+        RuleFor(x => x.PhotoUrl)
+            .MaximumLength(500).WithMessage("L'URL de la photo ne peut pas dépasser 500 caractères.")
+            .Must(BeAValidHttpUrl).When(x => !string.IsNullOrWhiteSpace(x.PhotoUrl))
+            .WithMessage("L'URL de la photo doit être une adresse http(s) valide.");
 
         RuleFor(x => x.SubjectIds).NotEmpty()
             .WithMessage("Au moins une matière est requise.");
@@ -22,4 +30,8 @@ public class CreateTeacherCommandValidator : AbstractValidator<CreateTeacherComm
             .When(x => x.SubjectIds.Count > 0)
             .WithMessage("Une même matière ne peut être indiquée deux fois.");
     }
+
+    private static bool BeAValidHttpUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }

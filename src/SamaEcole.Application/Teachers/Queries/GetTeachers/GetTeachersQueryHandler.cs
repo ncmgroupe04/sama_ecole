@@ -31,7 +31,7 @@ public class GetTeachersQueryHandler(IApplicationDbContext dbContext)
             .OrderBy(t => t.FullName)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(t => new { t.Id, t.Matricule, t.FullName, t.Email, t.Phone, t.Status })
+            .Select(t => new { t.Id, t.Matricule, t.FullName, t.Email, t.Phone, t.PhotoUrl, t.Status })
             .ToListAsync(cancellationToken);
 
         // Une seconde requête plutôt qu'une jointure imbriquée par ligne (comme le ferait un
@@ -56,6 +56,7 @@ public class GetTeachersQueryHandler(IApplicationDbContext dbContext)
                 t.FullName,
                 t.Email,
                 t.Phone,
+                t.PhotoUrl,
                 t.Status.ToString(),
                 subjectsByTeacher
                     .Where(s => s.TeacherId == t.Id)
