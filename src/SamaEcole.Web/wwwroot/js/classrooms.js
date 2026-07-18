@@ -1,14 +1,15 @@
 document.addEventListener('alpine:init', () => {
+    // Ordre pédagogique des cycles ; un niveau hors nomenclature passe en fin, par ordre alphabétique.
+    const LEVEL_ORDER = ['Crèche', 'Maternelle', 'Primaire', 'Collège', 'Lycée'];
+
     Alpine.data('classroomsView', () => ({
         classrooms: [],
         isLoading: false,
         error: null,
 
-        // Recherche + filtre niveau + tri (Volume 5 §6 : tri, recherche, filtres sur toutes les listes)
+        // Recherche + filtre niveau (Volume 5 §6 : recherche et filtres sur toutes les listes)
         search: '',
         levelFilter: '',
-        sortKey: 'name',
-        sortDir: 'asc',
 
         // Modal State
         isCreateOpen: false,
@@ -24,30 +25,34 @@ document.addEventListener('alpine:init', () => {
             this.loadClassrooms();
         },
 
-        toggleSort(key) {
-            if (this.sortKey === key) {
-                this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                this.sortKey = key;
-                this.sortDir = 'asc';
-            }
-        },
-
-        /** Recherche (nom/niveau) + filtre niveau + tri, appliqués à l'affichage sans toucher this.classrooms. */
-        visibleClassrooms() {
+        /**
+         * Une section par cycle (même lecture que l'écran Matières) : le niveau se voit au premier
+         * regard dans l'en-tête de section, plus besoin de le répéter devant chaque classe.
+         */
+        get groups() {
             const q = this.search.trim().toLowerCase();
-            let rows = this.classrooms.filter((c) =>
+            const visible = this.classrooms.filter((c) =>
                 (!q || c.name.toLowerCase().includes(q) || c.level.toLowerCase().includes(q)) &&
                 (!this.levelFilter || c.level === this.levelFilter));
 
-            const dir = this.sortDir === 'asc' ? 1 : -1;
-            rows = [...rows].sort((a, b) => {
-                const va = a[this.sortKey];
-                const vb = b[this.sortKey];
-                if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
-                return String(va).localeCompare(String(vb)) * dir;
+            const byLevel = new Map();
+            for (const classroom of visible) {
+                if (!byLevel.has(classroom.level)) byLevel.set(classroom.level, []);
+                byLevel.get(classroom.level).push(classroom);
+            }
+
+            return Array.from(byLevel, ([level, classrooms]) => ({
+                level,
+                // « numeric: true » pour que 6e < 10e — un tri texte brut mettrait 10e avant 6e.
+                classrooms: [...classrooms].sort((a, b) => a.name.localeCompare(b.name, 'fr', { numeric: true })),
+                totalCapacity: classrooms.reduce((sum, c) => sum + (c.capacity || 0), 0),
+                totalStudents: classrooms.reduce((sum, c) => sum + (c.studentCount || 0), 0)
+            })).sort((a, b) => {
+                const ia = LEVEL_ORDER.indexOf(a.level);
+                const ib = LEVEL_ORDER.indexOf(b.level);
+                if (ia !== ib) return (ia === -1 ? LEVEL_ORDER.length : ia) - (ib === -1 ? LEVEL_ORDER.length : ib);
+                return a.level.localeCompare(b.level, 'fr');
             });
-            return rows;
         },
 
         async loadClassrooms() {
@@ -70,7 +75,7 @@ document.addEventListener('alpine:init', () => {
             this.createErrors = {};
             try {
                 await window.api.post('/classrooms', this.newClassroom);
-                
+
                 this.isCreateOpen = false;
                 this.newClassroom = { name: '', level: 'Primaire', capacity: 30 };
                 await this.loadClassrooms();
@@ -84,6 +89,10 @@ document.addEventListener('alpine:init', () => {
         // Utilities
         getTotalCapacity() {
             return this.classrooms.reduce((sum, c) => sum + (c.capacity || 0), 0);
+        },
+
+        plural(count, singular, plural) {
+            return count + ' ' + (count > 1 ? plural : singular);
         }
     }));
 });

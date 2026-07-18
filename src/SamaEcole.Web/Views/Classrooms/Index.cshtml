@@ -56,52 +56,56 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="table-head">
-                        <th class="py-3 px-4 w-12 text-center">N°</th>
-                        <sort-th column="name" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('name')" class="py-3 px-4">Nom de la classe</sort-th>
-                        <sort-th column="level" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('level')" class="py-3 px-4">Niveau</sort-th>
-                        <sort-th column="capacity" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('capacity')" class="py-3 px-4 text-center">Capacité (places)</sort-th>
-                        <th class="py-3 px-4">ID Référence (Pour tests)</th>
-                    </tr>
-                </thead>
-                <tbody class="table-cell divide-y divide-gray-100">
-                    <template x-if="isLoading">
-                        <template x-for="i in 3" :key="i">
-                            <tr>
-                                <td class="py-3 px-4" colspan="5"><div class="skeleton h-4 w-full"></div></td>
-                            </tr>
-                        </template>
-                    </template>
+        <template x-if="isLoading">
+            <div class="p-4 space-y-3">
+                <template x-for="i in 3" :key="i"><div class="skeleton h-10 w-full"></div></template>
+            </div>
+        </template>
 
-                    <tr x-show="!isLoading && visibleClassrooms().length === 0" x-cloak>
-                        <td colspan="5">
-                            <empty-state icon="building" title="Aucune classe n'est configurée."
-                                         hint="Créez votre première classe pour commencer les inscriptions." />
-                        </td>
-                    </tr>
+        <!-- État vide -->
+        <div x-show="!isLoading && groups.length === 0" x-cloak>
+            <empty-state icon="building" title="Aucune classe n'est configurée."
+                         hint="Créez votre première classe pour commencer les inscriptions." />
+        </div>
 
-                    <template x-for="(classroom, index) in visibleClassrooms()" :key="classroom.id || index">
-                        <tr class="hover:bg-gray-50 transition-colors group">
-                            <td class="py-3 px-4 text-center text-gray-400 font-medium" x-text="index + 1"></td>
-                            <td class="py-3 px-4 font-bold text-gray-900">
-                                <span class="inline-flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
-                                    <span x-text="classroom.name"></span>
-                                </span>
-                            </td>
-                            <td class="py-3 px-4"><badge variant="neutral" x-text="classroom.level"></badge></td>
-                            <td class="py-3 px-4 text-center font-medium" x-text="classroom.capacity"></td>
-                            <td class="py-3 px-4 text-xs font-mono text-gray-400 group-hover:text-primary transition-colors">
-                                <!-- Pratique pour copier-coller l'ID dans le formulaire Élève pour les tests -->
-                                <span x-text="classroom.id"></span>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
+        @* Une section par cycle (Crèche → Lycée), comme sur l'écran Matières : le niveau se lit dans
+           l'en-tête de section, il n'est plus répété devant chaque classe. *@
+        <div x-show="!isLoading && groups.length > 0" x-cloak class="divide-y divide-gray-100">
+            <template x-for="group in groups" :key="group.level">
+                <div>
+                    <div class="flex items-center justify-between gap-3 px-4 py-3 bg-indigo-50/60 border-l-4 border-primary">
+                        <div class="flex items-baseline gap-2.5 min-w-0">
+                            <span class="text-sm font-bold text-primary-700 uppercase tracking-wide" x-text="group.level"></span>
+                            <span class="text-xs text-gray-500 whitespace-nowrap" x-text="plural(group.classrooms.length, 'classe', 'classes')"></span>
+                        </div>
+                        <span class="text-jgk-table text-gray-500 whitespace-nowrap">
+                            <span class="font-semibold text-gray-700" x-text="group.totalStudents"></span> inscrits ·
+                            <span class="font-semibold text-gray-700" x-text="group.totalCapacity"></span> places
+                        </span>
+                    </div>
+
+                    <table class="w-full text-left border-collapse">
+                        <tbody class="table-cell">
+                            <template x-for="classroom in group.classrooms" :key="classroom.id">
+                                <tr class="hover:bg-gray-50 transition-colors border-t border-gray-100">
+                                    <td class="py-3 px-4 font-bold text-gray-900">
+                                        <span class="inline-flex items-center gap-2">
+                                            <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                                            <span x-text="classroom.name"></span>
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-right w-56 whitespace-nowrap">
+                                        <span class="text-gray-400 text-xs">effectif</span>
+                                        <span class="font-bold text-gray-900 ml-1">
+                                            <span x-text="classroom.studentCount || 0"></span> / <span x-text="classroom.capacity"></span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
         </div>
     </div>
 

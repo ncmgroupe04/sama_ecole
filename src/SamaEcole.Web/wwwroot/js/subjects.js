@@ -6,6 +6,10 @@
  * Directeur)] en écriture).
  */
 document.addEventListener('alpine:init', () => {
+    // Ordre pédagogique des cycles (même convention que l'écran Classes) ; un niveau hors
+    // nomenclature — « Terminale S », par exemple — passe en fin, par ordre alphabétique.
+    const LEVEL_ORDER = ['Crèche', 'Maternelle', 'Primaire', 'Collège', 'Lycée'];
+
     Alpine.data('subjectsView', () => ({
         subjects: [],
         isLoading: false,
@@ -36,8 +40,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Regroupement par niveau, calculé à la volée. La liste arrive déjà triée par niveau puis par
-         * nom (GetSubjectsQueryHandler) : il suffit de la découper, sans re-trier ici.
+         * Regroupement par niveau, calculé à la volée. Les matières d'un niveau arrivent déjà triées
+         * par nom (GetSubjectsQueryHandler) ; seules les SECTIONS sont réordonnées, pour suivre
+         * l'ordre pédagogique des cycles plutôt que l'ordre alphabétique du serveur.
          */
         get groups() {
             const q = this.search.trim().toLowerCase();
@@ -56,7 +61,12 @@ document.addEventListener('alpine:init', () => {
                 level,
                 subjects,
                 totalCoefficient: subjects.reduce((sum, s) => sum + Number(s.coefficient), 0)
-            }));
+            })).sort((a, b) => {
+                const ia = LEVEL_ORDER.indexOf(a.level);
+                const ib = LEVEL_ORDER.indexOf(b.level);
+                if (ia !== ib) return (ia === -1 ? LEVEL_ORDER.length : ia) - (ib === -1 ? LEVEL_ORDER.length : ib);
+                return a.level.localeCompare(b.level, 'fr');
+            });
         },
 
         /**
