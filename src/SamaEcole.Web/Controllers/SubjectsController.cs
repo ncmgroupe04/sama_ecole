@@ -1,6 +1,6 @@
 using SamaEcole.Application.Subjects.Commands.CreateSubject;
 using SamaEcole.Application.Subjects.Queries.GetSubjects;
-using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -27,12 +27,12 @@ public class SubjectsController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(new GetSubjectsQuery(), cancellationToken));
 
     /// <summary>
-    /// ÉCRITURE ouverte au Directeur ET au Secrétariat (ticket JGK-G02 : délégation de la gestion des
-    /// matières/coefficients en cas d'absence du Directeur — docs/Volume_7_Security.md « Paramètres
-    /// de l'école »). Réservée aux deux seuls rôles, jamais à l'Enseignant ni à la Finance.
+    /// ÉCRITURE : Directeur toujours ; Secrétariat seulement si SON école a activé la délégation
+    /// (GradingPolicies.CanManageGradingScale, ticket JGK-G02, docs/Volume_7_Security.md « Paramètres
+    /// de l'école »). Jamais l'Enseignant ni la Finance.
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}")]
+    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
     [ProducesResponseType<SubjectResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]

@@ -8,10 +8,15 @@ using Xunit;
 namespace SamaEcole.FunctionalTests.Schools;
 
 /// <summary>
-/// Ticket JGK-G02 — PUT /schools/current/settings/grading-scale. Endpoint dédié, distinct de
-/// PUT /schools/current/settings : seul le barème est délégable au Secrétariat (docs/Volume_7_Security.md
-/// « Paramètres de l'école »), le reste des réglages (matricules, déconnexion auto, mensualités) reste
-/// Directeur seul — voir SchoolSettingsEndpointsTests pour ces autres champs.
+/// Ticket JGK-G02 — PUT /schools/current/settings/grading-scale, protégé par la politique
+/// CanManageGradingScale (SamaEcole.Web.Authorization), pas par un rôle codé en dur : le Directeur
+/// passe toujours, le Secrétariat seulement si SON école a activé
+/// SchoolSettings.AllowSecretaryToManageGrading (fermé par défaut — voir
+/// An_Enseignant_Must_Not_Update_The_Grading_Scale et A_Secretariat_Must_Not_Update_The_Grading_Scale_By_Default).
+///
+/// Endpoint dédié, distinct de PUT /schools/current/settings : seul le barème est délégable, le reste
+/// des réglages (matricules, déconnexion auto, mensualités) reste Directeur seul — voir
+/// SchoolSettingsEndpointsTests pour ces autres champs.
 /// </summary>
 public class UpdateGradingScaleEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApiFactory>, IAsyncLifetime
 {
@@ -57,6 +62,28 @@ public class UpdateGradingScaleEndpointsTests(AuthApiFactory factory) : IClassFi
         return (await response.Content.ReadFromJsonAsync<Settings>())!;
     }
 
+    /// <summary>Seul geste du Directeur capable d'activer la délégation : PUT /schools/current/settings.</summary>
+    private async Task EnableSecretaryDelegationAsync(string directeurToken)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/schools/current/settings")
+        {
+            Content = JsonContent.Create(new
+            {
+                gradingScale = "20",
+                studentMatriculeFormat = "ELEV-{YEAR}-{SEQ:4}",
+                teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
+                autoLogoutMinutes = 10,
+                dateFormat = "dd/MM/yyyy",
+                tuitionMonthsPerYear = 9,
+                allowSecretaryToManageGrading = true
+            })
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", directeurToken);
+
+        var response = await _client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     [Fact]
     public async Task A_Directeur_Can_Update_The_Grading_Scale()
     {
@@ -69,22 +96,77 @@ public class UpdateGradingScaleEndpointsTests(AuthApiFactory factory) : IClassFi
     }
 
     [Fact]
-    public async Task A_Secretariat_Can_Update_The_Grading_Scale()
+    public async Task A_Directeur_Can_Update_The_Grading_Scale_Even_Without_Delegation_Enabled()
     {
-        // Ticket JGK-G02 : délégation en cas d'absence du Directeur.
+        // Le Directeur n'a jamais besoin de la délégation : elle ne conditionne QUE le Secrétariat.
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await PutGradingScaleAsync(directeur, "10");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task A_Secretariat_Must_Not_Update_The_Grading_Scale_By_Default()
+    {
+        // Délégation FACULTATIVE : fermée tant que le Directeur ne l'a pas explicitement activée
+        // (SchoolSettingsDefaults.AllowSecretaryToManageGrading = false).
         var secretaire = await SecretaireTokenAsync();
 
         var response = await PutGradingScaleAsync(secretaire, "10");
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 
+    [Fact]
+    public async Task A_Secretariat_Can_Update_The_Grading_Scale_Once_The_Directeur_Enables_Delegation()
+    {
         var directeur = await DirecteurTokenAsync();
+        await EnableSecretaryDelegationAsync(directeur);
+
+        var secretaire = await SecretaireTokenAsync();
+        var response = await PutGradingScaleAsync(secretaire, "10");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await GetSettingsAsync(directeur)).GradingScale.Should().Be("10");
+    }
+
+    [Fact]
+    public async Task A_Secretariat_Loses_Access_Again_Once_The_Directeur_Disables_Delegation()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await EnableSecretaryDelegationAsync(directeur);
+
+        // Le Directeur revient sur sa décision.
+        var disableRequest = new HttpRequestMessage(HttpMethod.Put, "/api/v1/schools/current/settings")
+        {
+            Content = JsonContent.Create(new
+            {
+                gradingScale = "20",
+                studentMatriculeFormat = "ELEV-{YEAR}-{SEQ:4}",
+                teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
+                autoLogoutMinutes = 10,
+                dateFormat = "dd/MM/yyyy",
+                tuitionMonthsPerYear = 9,
+                allowSecretaryToManageGrading = false
+            })
+        };
+        disableRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", directeur);
+        (await _client.SendAsync(disableRequest)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var secretaire = await SecretaireTokenAsync();
+        var response = await PutGradingScaleAsync(secretaire, "10");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task An_Enseignant_Must_Not_Update_The_Grading_Scale()
     {
+        var directeur = await DirecteurTokenAsync();
+        await EnableSecretaryDelegationAsync(directeur);
+
+        // La délégation ne concerne QUE le Secrétariat : elle n'ouvre rien à l'Enseignant.
         var enseignant = await EnseignantTokenAsync();
 
         var response = await PutGradingScaleAsync(enseignant, "10");
@@ -95,9 +177,12 @@ public class UpdateGradingScaleEndpointsTests(AuthApiFactory factory) : IClassFi
     [Fact]
     public async Task A_Secretariat_Must_Not_Reach_The_Other_Settings_Through_This_Endpoint()
     {
-        // Le reste des réglages (matricules, déconnexion auto, mensualités) reste Directeur seul :
-        // ce n'est pas cet endpoint, réservé au barème, qui pourrait les exposer, mais on vérifie
-        // ici que le PUT bundlé leur reste bien fermé.
+        // Le reste des réglages (matricules, déconnexion auto, mensualités) reste Directeur seul,
+        // même délégation activée : ce n'est pas cet endpoint, réservé au barème, qui pourrait les
+        // exposer, mais on vérifie ici que le PUT bundlé leur reste bien fermé.
+        var directeur = await DirecteurTokenAsync();
+        await EnableSecretaryDelegationAsync(directeur);
+
         var secretaire = await SecretaireTokenAsync();
 
         var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/schools/current/settings")
@@ -109,7 +194,8 @@ public class UpdateGradingScaleEndpointsTests(AuthApiFactory factory) : IClassFi
                 teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
                 autoLogoutMinutes = 10,
                 dateFormat = "dd/MM/yyyy",
-                tuitionMonthsPerYear = 9
+                tuitionMonthsPerYear = 9,
+                allowSecretaryToManageGrading = true
             })
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secretaire);

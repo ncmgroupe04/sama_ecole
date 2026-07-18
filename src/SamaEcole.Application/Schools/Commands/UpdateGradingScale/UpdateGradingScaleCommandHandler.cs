@@ -45,6 +45,7 @@ public class UpdateGradingScaleCommandHandler(
             settings.TeacherMatriculeFormat,
             settings.AutoLogoutMinutes,
             settings.DateFormat,
-            settings.TuitionMonthsPerYear);
+            settings.TuitionMonthsPerYear,
+            settings.AllowSecretaryToManageGrading);
     }
 }

@@ -1,10 +1,12 @@
 /**
- * Écran Matières et coefficients — ticket JGK-C03. Création déléguée au Secrétariat en plus du
- * Directeur depuis JGK-G02 (docs/Volume_7_Security.md « Paramètres de l'école »).
+ * Écran Matières et coefficients — ticket JGK-C03. Création déléguée au Secrétariat depuis JGK-G02,
+ * MAIS seulement si le Directeur de SON école a activé la délégation (docs/Volume_7_Security.md
+ * « Paramètres de l'école », case à cocher de Settings/Index.cshtml) — pas un rôle codé en dur.
  *
- * Le serveur reste seul juge : le rôle est relu du JWT pour masquer le bouton de création, mais
- * l'API répond 403 à qui l'appellerait quand même (SubjectsController est [Authorize(Roles =
- * Directeur,Secretariat)] en écriture).
+ * Le serveur reste seul juge : le rôle ET le réglage sont relus pour masquer le bouton de création,
+ * mais l'API répond 403 à qui l'appellerait quand même (SubjectsController est
+ * [Authorize(Policy = "CanManageGradingScale")] en écriture, évaluée côté serveur contre la même
+ * colonne SchoolSettings.AllowSecretaryToManageGrading).
  */
 document.addEventListener('alpine:init', () => {
     // Ordre pédagogique des cycles (même convention que l'écran Classes) ; un niveau hors
@@ -17,7 +19,13 @@ document.addEventListener('alpine:init', () => {
         error: null,
         search: '',
 
-        canCreateSubject: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+        isDirecteur: window.auth.role === 'Directeur',
+        isSecretariat: window.auth.role === 'Secretariat',
+        allowSecretaryToManageGrading: false,
+
+        get canCreateSubject() {
+            return this.isDirecteur || (this.isSecretariat && this.allowSecretaryToManageGrading);
+        },
 
         isCreateOpen: false,
         isSubmitting: false,
@@ -30,6 +38,19 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             this.loadSubjects();
+            // Nécessaire uniquement pour le Secrétariat (canCreateSubject) ; lu sans condition, l'appel
+            // est déjà ouvert à tout utilisateur authentifié (SchoolSettingsController.Get).
+            this.loadGradingDelegation();
+        },
+
+        async loadGradingDelegation() {
+            try {
+                const settings = await window.api.get('/schools/current/settings');
+                this.allowSecretaryToManageGrading = settings.allowSecretaryToManageGrading;
+            } catch {
+                // Confort d'affichage seulement : un échec ici laisse le bouton masqué pour le
+                // Secrétariat plutôt que de casser le chargement de la liste des matières.
+            }
         },
 
         async loadSubjects() {

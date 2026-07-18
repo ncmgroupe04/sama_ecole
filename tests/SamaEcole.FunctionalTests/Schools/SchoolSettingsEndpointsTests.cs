@@ -26,7 +26,8 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         string TeacherMatriculeFormat,
         int AutoLogoutMinutes,
         string DateFormat,
-        int TuitionMonthsPerYear);
+        int TuitionMonthsPerYear,
+        bool AllowSecretaryToManageGrading);
 
     private async Task<Tokens> LoginAsync(string email, string password)
     {
@@ -59,14 +60,16 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         string gradingScale = "20",
         string studentFormat = "ELEV-{YEAR}-{SEQ:4}",
         int autoLogout = 10,
-        int tuitionMonths = 9) => new
+        int tuitionMonths = 9,
+        bool allowSecretaryToManageGrading = false) => new
         {
             gradingScale,
             studentMatriculeFormat = studentFormat,
             teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
             autoLogoutMinutes = autoLogout,
             dateFormat = "dd/MM/yyyy",
-            tuitionMonthsPerYear = tuitionMonths
+            tuitionMonthsPerYear = tuitionMonths,
+            allowSecretaryToManageGrading
         };
 
     [Fact]
@@ -84,6 +87,8 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         settings.AutoLogoutMinutes.Should().Be(10);
         settings.DateFormat.Should().Be("dd/MM/yyyy");
         settings.TuitionMonthsPerYear.Should().Be(9, "9 tranches est le défaut sénégalais (JGK-E01)");
+        settings.AllowSecretaryToManageGrading.Should().BeFalse(
+            "la délégation au Secrétariat (JGK-G02) est un choix explicite du Directeur, jamais un acquis silencieux");
     }
 
     [Fact]
@@ -104,6 +109,22 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         reread.StudentMatriculeFormat.Should().Be("BAOBAB-{SEQ:5}");
         reread.AutoLogoutMinutes.Should().Be(30);
         reread.TuitionMonthsPerYear.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task A_Directeur_Can_Toggle_The_Secretary_Grading_Delegation()
+    {
+        // Ticket JGK-G02 : c'est CE champ, sur CET endpoint bundlé Directeur seul, qui gouverne
+        // CanManageGradingScaleHandler pour PUT /grading-scale, POST /subjects et POST /grades/mentions.
+        var directeur = await LoginAsDirecteurAsync();
+
+        var response = await PutSettingsAsync(
+            directeur.AccessToken, ValidBody(allowSecretaryToManageGrading: true));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var reread = (await (await GetSettingsAsync(directeur.AccessToken)).Content.ReadFromJsonAsync<Settings>())!;
+        reread.AllowSecretaryToManageGrading.Should().BeTrue();
     }
 
     [Theory]

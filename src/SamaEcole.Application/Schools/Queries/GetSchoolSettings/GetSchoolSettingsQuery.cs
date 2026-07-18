@@ -39,7 +39,8 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         settings.TeacherMatriculeFormat,
         settings.AutoLogoutMinutes,
         settings.DateFormat,
-        settings.TuitionMonthsPerYear);
+        settings.TuitionMonthsPerYear,
+        settings.AllowSecretaryToManageGrading);
 
     private static SchoolSettingsDto Defaults() => new(
         SchoolSettingsDefaults.GradingScale.ToString(),
@@ -47,5 +48,6 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         SchoolSettingsDefaults.TeacherMatriculeFormat,
         SchoolSettingsDefaults.AutoLogoutMinutes,
         SchoolSettingsDefaults.DateFormat,
-        SchoolSettingsDefaults.TuitionMonthsPerYear);
+        SchoolSettingsDefaults.TuitionMonthsPerYear,
+        SchoolSettingsDefaults.AllowSecretaryToManageGrading);
 }

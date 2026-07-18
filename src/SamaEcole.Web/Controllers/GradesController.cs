@@ -8,6 +8,7 @@ using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.Grades.Queries.GetMentions;
 using SamaEcole.Application.Grades.Commands.UpdateGrade;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using FluentValidation.Results;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -38,13 +39,13 @@ public class GradesController(ISender mediator) : ControllerBase
 
     /// <summary>
     /// Lecture des mentions uniquement (docs/Volume_7_Security.md « Notes » : Voir = Directeur +
-    /// Enseignant). Le Secrétariat y est ajouté à part — via JGK-G02 il peut désormais CRÉER des
-    /// mentions et a donc besoin de les lire — sans toucher à GradingRoles, qui reste la permission de
-    /// saisie/correction des notes (Secrétariat en est et doit en rester exclu).
+    /// Enseignant). Le Secrétariat y est ajouté à part, SANS condition sur la délégation
+    /// (contrairement à l'écriture, voir GradingPolicies.CanManageGradingScale) : il en a besoin pour
+    /// composer les bulletins, que la gestion des mentions lui soit déléguée ou non — sans toucher à
+    /// GradingRoles, qui reste la permission de saisie/correction des notes (Secrétariat en est et
+    /// doit en rester exclu).
     /// </summary>
     private const string MentionReadRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Enseignant)}";
-
-    private const string MentionWriteRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}";
 
     /// <summary>
     /// Écran de saisie des notes : les élèves d'une classe avec leurs notes déjà saisies pour une
@@ -131,9 +132,9 @@ public class GradesController(ISender mediator) : ControllerBase
 
     /// <summary>
     /// Ticket JGK-G02 — mentions personnalisables (Volume 1 §8.4). LECTURE ouverte au Directeur, au
-    /// Secrétariat et à l'Enseignant (l'écran de moyennes en a besoin) ; ÉCRITURE ouverte au Directeur
-    /// et au Secrétariat (délégation en cas d'absence du Directeur — Volume_7_Security « Paramètres de
-    /// l'école »), jamais à l'Enseignant.
+    /// Secrétariat et à l'Enseignant (l'écran de moyennes en a besoin) ; ÉCRITURE : Directeur toujours,
+    /// Secrétariat seulement si SON école a activé la délégation (GradingPolicies.CanManageGradingScale),
+    /// jamais l'Enseignant.
     /// </summary>
     [HttpGet("mentions")]
     [Authorize(Roles = MentionReadRoles)]
@@ -142,7 +143,7 @@ public class GradesController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(new GetMentionsQuery(), cancellationToken));
 
     [HttpPost("mentions")]
-    [Authorize(Roles = MentionWriteRoles)]
+    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
     [ProducesResponseType<MentionDto>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]

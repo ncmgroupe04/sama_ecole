@@ -9,9 +9,11 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Infrastructure;
 using SamaEcole.Persistence;
 using SamaEcole.Persistence.Seed;
+using SamaEcole.Web.Authorization;
 using SamaEcole.Web.Middleware;
 using SamaEcole.Web.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 
@@ -52,7 +54,14 @@ builder.Services
             RoleClaimType = "role"
         };
     });
-builder.Services.AddAuthorization();
+// Ticket JGK-G02 — délégation de la notation au Secrétariat, au choix de CHAQUE Directeur
+// (SchoolSettings.AllowSecretaryToManageGrading), plutôt qu'un rôle codé en dur dans l'attribut.
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(GradingPolicies.CanManageGradingScale, policy =>
+        policy.Requirements.Add(new CanManageGradingScaleRequirement()));
+});
+builder.Services.AddScoped<IAuthorizationHandler, CanManageGradingScaleHandler>();
 
 builder.Services
     .AddControllersWithViews() // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md

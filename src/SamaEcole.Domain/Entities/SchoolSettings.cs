@@ -35,6 +35,15 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// non facturés.
     /// </summary>
     public int TuitionMonthsPerYear { get; set; } = SchoolSettingsDefaults.TuitionMonthsPerYear;
+
+    /// <summary>
+    /// Ticket JGK-G02 — au choix du Directeur de CHAQUE école (colonne, pas un rôle codé en dur) :
+    /// délègue au Secrétariat la gestion du barème, des matières/coefficients et des mentions du
+    /// bulletin. Lu par CanManageGradingScaleHandler (SamaEcole.Web.Authorization), jamais par une
+    /// simple comparaison de rôle. Faux par défaut : la délégation est un choix explicite du
+    /// Directeur, pas un acquis silencieux à l'activation du module.
+    /// </summary>
+    public bool AllowSecretaryToManageGrading { get; set; } = SchoolSettingsDefaults.AllowSecretaryToManageGrading;
 }
 
 /// <summary>
@@ -52,6 +61,9 @@ public static class SchoolSettingsDefaults
 
     /// <summary>9 tranches — la convention la plus répandue au Sénégal (rentrée d'octobre, fin en juin).</summary>
     public const int TuitionMonthsPerYear = 9;
+
+    /// <summary>Délégation au Secrétariat désactivée tant que le Directeur ne l'a pas explicitement activée.</summary>
+    public const bool AllowSecretaryToManageGrading = false;
 
     public static readonly int[] AllowedGradingScales = [10, 20];
     public static readonly string[] AllowedDateFormats = ["dd/MM/yyyy", "dd MMMM yyyy"];

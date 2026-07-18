@@ -85,6 +85,22 @@ public class GradeSummaryEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
         return (student.Id, subject.Id, terms[0].Id);
     }
 
+    /// <summary>Seul geste du Directeur capable d'activer la délégation (ticket JGK-G02) : PUT /schools/current/settings.</summary>
+    private async Task EnableSecretaryDelegationAsync(string directeurToken)
+    {
+        var response = await SendAsync(HttpMethod.Put, "/api/v1/schools/current/settings", directeurToken, new
+        {
+            gradingScale = "20",
+            studentMatriculeFormat = "ELEV-{YEAR}-{SEQ:4}",
+            teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
+            autoLogoutMinutes = 10,
+            dateFormat = "dd/MM/yyyy",
+            tuitionMonthsPerYear = 9,
+            allowSecretaryToManageGrading = true
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     [Fact]
     public async Task Calculate_Returns_The_Weighted_General_Average_And_Mention()
     {
@@ -148,10 +164,24 @@ public class GradeSummaryEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
     }
 
     [Fact]
-    public async Task A_Secretariat_Can_Create_A_Custom_Mention()
+    public async Task A_Secretariat_Must_Not_Create_A_Mention_By_Default()
     {
-        // Ticket JGK-G02 : délégation de la configuration des mentions au Secrétariat en cas
-        // d'absence du Directeur (docs/Volume_7_Security.md « Paramètres de l'école »).
+        // Ticket JGK-G02 : la délégation est FACULTATIVE, fermée tant que le Directeur ne l'a pas
+        // explicitement activée (SchoolSettingsDefaults.AllowSecretaryToManageGrading = false).
+        var secretaire = await SecretaireTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/grades/mentions", secretaire,
+            new { label = "Mention Secrétariat", minAverage = 5 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task A_Secretariat_Can_Create_A_Custom_Mention_Once_The_Directeur_Enables_Delegation()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await EnableSecretaryDelegationAsync(directeur);
+
         var secretaire = await SecretaireTokenAsync();
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/grades/mentions", secretaire,
@@ -161,9 +191,10 @@ public class GradeSummaryEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
     }
 
     [Fact]
-    public async Task A_Secretariat_Can_Read_The_Mentions()
+    public async Task A_Secretariat_Can_Read_The_Mentions_Even_Without_Delegation_Enabled()
     {
-        // Nécessaire pour composer une nouvelle mention en connaissance des seuils existants.
+        // Nécessaire pour composer les bulletins : la LECTURE des mentions n'est jamais conditionnée
+        // par la délégation, contrairement à l'écriture (GradesController.MentionReadRoles).
         var secretaire = await SecretaireTokenAsync();
 
         var response = await SendAsync(HttpMethod.Get, "/api/v1/grades/mentions", secretaire);
@@ -172,10 +203,14 @@ public class GradeSummaryEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
     }
 
     [Fact]
-    public async Task An_Enseignant_Must_Not_Create_A_Mention()
+    public async Task An_Enseignant_Must_Not_Create_A_Mention_Even_With_Delegation_Enabled()
     {
-        // Configurer les mentions relève des paramètres d'établissement, réservés au Directeur et au
-        // Secrétariat (docs/Volume_7_Security.md « Paramètres de l'école »).
+        // Configurer les mentions relève des paramètres d'établissement, réservés au Directeur et,
+        // si délégué, au Secrétariat (docs/Volume_7_Security.md « Paramètres de l'école ») — la
+        // délégation ne concerne QUE le Secrétariat, elle n'ouvre rien à l'Enseignant.
+        var directeur = await DirecteurTokenAsync();
+        await EnableSecretaryDelegationAsync(directeur);
+
         var enseignant = await EnseignantTokenAsync();
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/grades/mentions", enseignant,

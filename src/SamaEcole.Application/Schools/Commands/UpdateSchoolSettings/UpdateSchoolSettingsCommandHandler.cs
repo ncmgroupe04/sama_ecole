@@ -43,6 +43,7 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.AutoLogoutMinutes = request.AutoLogoutMinutes;
         settings.DateFormat = request.DateFormat;
         settings.TuitionMonthsPerYear = request.TuitionMonthsPerYear;
+        settings.AllowSecretaryToManageGrading = request.AllowSecretaryToManageGrading;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -54,6 +55,7 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.TeacherMatriculeFormat,
             settings.AutoLogoutMinutes,
             settings.DateFormat,
-            settings.TuitionMonthsPerYear);
+            settings.TuitionMonthsPerYear,
+            settings.AllowSecretaryToManageGrading);
     }
 }

@@ -3,6 +3,7 @@ using SamaEcole.Application.Schools.Commands.UpdateGradingScale;
 using SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
 using SamaEcole.Application.Schools.Queries.GetSchoolSettings;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,8 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         string TeacherMatriculeFormat,
         int AutoLogoutMinutes,
         string DateFormat,
-        int TuitionMonthsPerYear);
+        int TuitionMonthsPerYear,
+        bool AllowSecretaryToManageGrading);
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
@@ -57,20 +59,22 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.TeacherMatriculeFormat,
                 request.AutoLogoutMinutes,
                 request.DateFormat,
-                request.TuitionMonthsPerYear),
+                request.TuitionMonthsPerYear,
+                request.AllowSecretaryToManageGrading),
             cancellationToken);
 
         return Ok(result);
     }
 
     /// <summary>
-    /// Ticket JGK-G02 — le barème est délégable au Secrétariat (en cas d'absence du Directeur),
-    /// contrairement au reste des réglages (matricules, déconnexion automatique, mensualités) qui
-    /// restent réservés au Directeur sur PUT / ci-dessus. D'où un endpoint dédié plutôt qu'un
-    /// élargissement du PUT / entier, qui aurait ouvert ces autres réglages au Secrétariat aussi.
+    /// Ticket JGK-G02 — le barème est délégable au Secrétariat (à la guise du Directeur de CHAQUE
+    /// école, voir GradingPolicies.CanManageGradingScale), contrairement au reste des réglages
+    /// (matricules, déconnexion automatique, mensualités) qui restent réservés au Directeur sur
+    /// PUT / ci-dessus. D'où un endpoint dédié plutôt qu'un élargissement du PUT / entier, qui aurait
+    /// ouvert ces autres réglages au Secrétariat aussi.
     /// </summary>
     [HttpPut("grading-scale")]
-    [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}")]
+    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
     [ProducesResponseType<SchoolSettingsDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]

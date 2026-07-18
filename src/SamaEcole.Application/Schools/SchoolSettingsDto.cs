@@ -11,4 +11,5 @@ public record SchoolSettingsDto(
     string TeacherMatriculeFormat,
     int AutoLogoutMinutes,
     string DateFormat,
-    int TuitionMonthsPerYear);
+    int TuitionMonthsPerYear,
+    bool AllowSecretaryToManageGrading);

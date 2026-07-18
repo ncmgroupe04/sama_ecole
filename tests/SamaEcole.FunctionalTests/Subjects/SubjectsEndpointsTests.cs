@@ -59,6 +59,22 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         return (await response.Content.ReadFromJsonAsync<SubjectDto>())!;
     }
 
+    /// <summary>Seul geste du Directeur capable d'activer la délégation (ticket JGK-G02) : PUT /schools/current/settings.</summary>
+    private async Task EnableSecretaryDelegationAsync(string directeurToken)
+    {
+        var response = await SendAsync(HttpMethod.Put, "/api/v1/schools/current/settings", directeurToken, new
+        {
+            gradingScale = "20",
+            studentMatriculeFormat = "ELEV-{YEAR}-{SEQ:4}",
+            teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
+            autoLogoutMinutes = 10,
+            dateFormat = "dd/MM/yyyy",
+            tuitionMonthsPerYear = 9,
+            allowSecretaryToManageGrading = true
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     [Fact]
     public async Task Listing_Subjects_Without_A_Token_Should_Return_401()
     {
@@ -132,10 +148,24 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     }
 
     [Fact]
-    public async Task A_Secretary_Can_Create_A_Subject()
+    public async Task A_Secretary_Must_Not_Create_A_Subject_By_Default()
     {
-        // Ticket JGK-G02 : délégation de la gestion des matières/coefficients au Secrétariat en cas
-        // d'absence du Directeur (docs/Volume_7_Security.md « Paramètres de l'école »).
+        // Ticket JGK-G02 : la délégation est FACULTATIVE, fermée tant que le Directeur ne l'a pas
+        // explicitement activée (SchoolSettingsDefaults.AllowSecretaryToManageGrading = false).
+        var token = await SecretaireTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/subjects", token,
+            new { name = "Histoire", level = "Collège", coefficient = 3 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task A_Secretary_Can_Create_A_Subject_Once_The_Directeur_Enables_Delegation()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await EnableSecretaryDelegationAsync(directeur);
+
         var token = await SecretaireTokenAsync();
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/subjects", token,
@@ -145,10 +175,14 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     }
 
     [Fact]
-    public async Task An_Enseignant_Must_Not_Create_A_Subject()
+    public async Task An_Enseignant_Must_Not_Create_A_Subject_Even_With_Delegation_Enabled()
     {
         // Le coefficient relève de la notation : Directeur/Secrétariat uniquement, jamais l'Enseignant
-        // (docs/Volume_7_Security.md « Paramètres de l'école »).
+        // (docs/Volume_7_Security.md « Paramètres de l'école ») — la délégation ne concerne QUE le
+        // Secrétariat, elle n'ouvre rien à l'Enseignant.
+        var directeur = await DirecteurTokenAsync();
+        await EnableSecretaryDelegationAsync(directeur);
+
         var enseignant = await AccessTokenAsync(AuthApiFactory.EnseignantEmail, AuthApiFactory.EnseignantPassword);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/subjects", enseignant,

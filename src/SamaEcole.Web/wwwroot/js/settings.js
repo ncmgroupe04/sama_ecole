@@ -9,12 +9,16 @@
  * valeurs — le format de date et le barème pilotent tous les écrans — mais les champs sont en lecture
  * seule et les boutons d'enregistrement masqués. Confort d'affichage : l'API reste seule juge.
  *
- * Exception ticket JGK-G02 (délégation en cas d'absence du Directeur, docs/Volume_7_Security.md
- * « Paramètres de l'école ») : le barème et les mentions du bulletin sont ÉCRITS par le Directeur
- * ET le Secrétariat (canManageGradingConfig). Le barème a son propre formulaire/bouton
- * (saveGradingScale, PUT /schools/current/settings/grading-scale) séparé du reste de la Configuration
- * (saveConfig, PUT /schools/current/settings) : ce dernier reste Directeur seul, sinon le Secrétariat
- * gagnerait aussi la main sur les formats de matricule, la déconnexion auto et les mensualités.
+ * Exception ticket JGK-G02 (délégation FACULTATIVE, à la guise du Directeur de CHAQUE école — jamais
+ * un rôle codé en dur) : le barème et les mentions du bulletin sont ÉCRITS par le Directeur, et par le
+ * Secrétariat SEULEMENT si config.allowSecretaryToManageGrading est activé (canManageGradingConfig,
+ * un getter — jamais une valeur figée au chargement). Ce booléen vit dans SchoolSettings et n'est
+ * modifiable que par le Directeur, via la case à cocher du formulaire bundlé ci-dessous (saveConfig).
+ * Le barème a son propre formulaire/bouton (saveGradingScale, PUT /schools/current/settings/grading-scale)
+ * séparé du reste de la Configuration (saveConfig, PUT /schools/current/settings) : ce dernier reste
+ * Directeur seul, sinon le Secrétariat gagnerait aussi la main sur les formats de matricule, la
+ * déconnexion auto et les mensualités — cette même requête PUT est cependant la SEULE à pouvoir
+ * changer allowSecretaryToManageGrading, d'où la case à cocher dans CE formulaire précisément.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('settingsView', () => ({
@@ -39,14 +43,19 @@ document.addEventListener('alpine:init', () => {
             autoLogoutMinutes: 10,
             tuitionMonthsPerYear: 9,
             studentMatriculeFormat: '',
-            teacherMatriculeFormat: ''
+            teacherMatriculeFormat: '',
+            allowSecretaryToManageGrading: false
         },
         configErrors: {},
         configSaving: false,
         configSaved: false,
 
         // --- Barème (JGK-G02 : formulaire séparé, voir note en tête de fichier) ---
-        canManageGradingConfig: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+        // Getter, PAS une valeur figée au chargement : dépend de config.allowSecretaryToManageGrading,
+        // que seul le Directeur peut basculer (case à cocher du formulaire Réglages ci-dessous).
+        get canManageGradingConfig() {
+            return this.isDirecteur || (this.isSecretariat && this.config.allowSecretaryToManageGrading);
+        },
         gradingScaleErrors: {},
         gradingScaleSaving: false,
         gradingScaleSaved: false,
@@ -94,7 +103,8 @@ document.addEventListener('alpine:init', () => {
                     autoLogoutMinutes: config.autoLogoutMinutes,
                     tuitionMonthsPerYear: config.tuitionMonthsPerYear,
                     studentMatriculeFormat: config.studentMatriculeFormat,
-                    teacherMatriculeFormat: config.teacherMatriculeFormat
+                    teacherMatriculeFormat: config.teacherMatriculeFormat,
+                    allowSecretaryToManageGrading: config.allowSecretaryToManageGrading
                 };
             } catch (err) {
                 this.loadError = err.message || 'Erreur lors du chargement des paramètres.';
@@ -143,7 +153,8 @@ document.addEventListener('alpine:init', () => {
                     teacherMatriculeFormat: this.config.teacherMatriculeFormat,
                     autoLogoutMinutes: Number(this.config.autoLogoutMinutes),
                     dateFormat: this.config.dateFormat,
-                    tuitionMonthsPerYear: Number(this.config.tuitionMonthsPerYear)
+                    tuitionMonthsPerYear: Number(this.config.tuitionMonthsPerYear),
+                    allowSecretaryToManageGrading: this.config.allowSecretaryToManageGrading
                 });
                 this.config = {
                     gradingScale: saved.gradingScale,
@@ -151,7 +162,8 @@ document.addEventListener('alpine:init', () => {
                     autoLogoutMinutes: saved.autoLogoutMinutes,
                     tuitionMonthsPerYear: saved.tuitionMonthsPerYear,
                     studentMatriculeFormat: saved.studentMatriculeFormat,
-                    teacherMatriculeFormat: saved.teacherMatriculeFormat
+                    teacherMatriculeFormat: saved.teacherMatriculeFormat,
+                    allowSecretaryToManageGrading: saved.allowSecretaryToManageGrading
                 };
                 this.configSaved = true;
             } catch (err) {
