@@ -77,4 +77,34 @@ public class ReportCardDocumentTests
         // Signature standard d'un fichier PDF : les 5 premiers octets valent "%PDF-".
         System.Text.Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-");
     }
+
+    /// <summary>
+    /// Volume 1 §8.5 — suppression des décimales inutiles : une moyenne entière ou à une décimale ne
+    /// doit jamais afficher de zéro de remplissage, mais l'arrondi à 2 décimales reste appliqué avant
+    /// affichage (une moyenne pondérée peut porter bien plus de décimales brutes).
+    /// </summary>
+    [Theory]
+    [InlineData(17.00, "17")]      // Entière : aucune décimale affichée.
+    [InlineData(15.50, "15,5")]    // Une décimale utile conservée, virgule comme séparateur.
+    [InlineData(9.5625, "9,56")]   // Arrondi correct à 2 décimales (AwayFromZero) avant affichage.
+    [InlineData(0.00, "0")]        // Zéro : pas de "0,00".
+    public void FormatGrade_Strips_Unnecessary_Decimals(double value, string expected)
+    {
+        ReportCardDocument.FormatGrade((decimal)value).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(17.00, "17")]
+    [InlineData(9.5625, "9,56")]
+    public void FormatOptionalGrade_Delegates_To_FormatGrade_When_A_Value_Is_Present(double value, string expected)
+    {
+        ReportCardDocument.FormatOptionalGrade((decimal)value).Should().Be(expected);
+    }
+
+    /// <summary>Devoir ou Composition pas encore saisi : le placeholder "-", jamais un zéro trompeur.</summary>
+    [Fact]
+    public void FormatOptionalGrade_Returns_Placeholder_When_Null()
+    {
+        ReportCardDocument.FormatOptionalGrade(null).Should().Be("-");
+    }
 }

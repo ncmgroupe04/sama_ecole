@@ -297,14 +297,16 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
 
     private static string FormatDate(DateOnly date) => date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
-    private static string FormatOptionalGrade(decimal? value) => value is { } v ? FormatGrade(v) : "-";
+    /// <summary>« - » quand la note n'a pas encore été saisie (Devoir ou Composition manquant) — jamais un zéro trompeur.</summary>
+    internal static string FormatOptionalGrade(decimal? value) => value is { } v ? FormatGrade(v) : "-";
 
     /// <summary>
     /// Volume 1 §8.5 — suppression des décimales inutiles : 17,00 → 17 ; 15,50 → 15,5. Arrondi à 2
     /// décimales avant affichage (une moyenne pondérée peut porter bien plus de décimales brutes).
-    /// Séparateur décimal virgule, comme la référence visuelle ("11,13", "9,5625").
+    /// Séparateur décimal virgule, comme la référence visuelle ("11,13", "9,5625"). <c>internal</c> pour
+    /// être exercée directement par ReportCardDocumentTests (voir InternalsVisibleTo du csproj).
     /// </summary>
-    private static string FormatGrade(decimal value) =>
+    internal static string FormatGrade(decimal value) =>
         Math.Round(value, 2, MidpointRounding.AwayFromZero)
             .ToString("0.##", CultureInfo.InvariantCulture)
             .Replace('.', ',');

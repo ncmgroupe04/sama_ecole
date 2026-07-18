@@ -22,4 +22,10 @@
     <ProjectReference Include="..\SamaEcole.Application\SamaEcole.Application.csproj" />
   </ItemGroup>
 
+  <!-- ReportCardDocument expose son formatage décimal (FormatGrade/FormatOptionalGrade) en `internal`
+       pour être testé directement (Volume 1 §8.5), sans en faire une API publique. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SamaEcole.UnitTests" />
+  </ItemGroup>
+
 </Project>
