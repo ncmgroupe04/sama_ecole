@@ -80,8 +80,8 @@ public class StatCardTagHelper : TagHelper
         output.Content.SetHtmlContent($"""
             <div class="card flex items-center justify-between p-5 transition-shadow hover:shadow-md">
                 <div>
-                    <p class="mb-1 text-sm font-medium text-gray-500">{label}</p>
-                    <p class="text-2xl font-bold text-gray-900">{value}</p>
+                    <p class="mb-1 text-sm font-semibold text-gray-700">{label}</p>
+                    <p class="text-2xl font-bold {pastilleText}">{value}</p>
                 </div>
                 {largeIcon}
             </div>
