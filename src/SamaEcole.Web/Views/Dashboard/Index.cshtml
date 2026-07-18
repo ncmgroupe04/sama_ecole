@@ -51,6 +51,60 @@
             </stat-card>
         </template>
     </div>
+
+    <!-- Diagrammes : répartition par genre (donut) + taux de présence (jauge). Complètent les cartes
+         KPI ci-dessus par une lecture visuelle et le détail en pourcentage de chaque chiffre. -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <template x-if="!isLoading && data">
+            <div class="card p-5">
+                <p class="text-sm font-semibold text-gray-900">Répartition par genre</p>
+                <p class="text-xs text-gray-500 mt-0.5">Élèves inscrits, année active.</p>
+                <div class="mt-4 flex items-center gap-6">
+                    <svg viewBox="0 0 36 36" class="w-28 h-28 -rotate-90 shrink-0" role="img" aria-label="Répartition filles / garçons">
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="3.2"></circle>
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1D4ED8" stroke-width="3.2"
+                                stroke-linecap="round"
+                                :stroke-dasharray="boysFraction() + ' ' + (100 - boysFraction())"></circle>
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#BE185D" stroke-width="3.2"
+                                stroke-linecap="round"
+                                :stroke-dasharray="girlsFraction() + ' ' + (100 - girlsFraction())"
+                                :stroke-dashoffset="-boysFraction()"></circle>
+                    </svg>
+                    <dl class="space-y-2.5 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:#1D4ED8"></span>
+                            <dt class="text-gray-600">Garçons</dt>
+                            <dd class="font-bold text-gray-900" x-text="data.enrollments.boys"></dd>
+                            <dd class="text-gray-400" x-text="'(' + pct(data.enrollments.boys, data.enrollments.total) + ')'"></dd>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:#BE185D"></span>
+                            <dt class="text-gray-600">Filles</dt>
+                            <dd class="font-bold text-gray-900" x-text="data.enrollments.girls"></dd>
+                            <dd class="text-gray-400" x-text="'(' + pct(data.enrollments.girls, data.enrollments.total) + ')'"></dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </template>
+
+        <template x-if="!isLoading && data">
+            <div class="card p-5">
+                <p class="text-sm font-semibold text-gray-900">Taux de présence</p>
+                <p class="text-xs text-gray-500 mt-0.5">Part des présences (dont retards) sur les appels du mois en cours.</p>
+                <div class="mt-6">
+                    <div class="flex items-baseline justify-between mb-1.5">
+                        <span class="text-2xl font-bold text-gray-900" x-text="formatPercent(data.attendanceRate)"></span>
+                    </div>
+                    <div class="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                        <div class="h-full rounded-full bg-success transition-all"
+                             :style="'width: ' + Math.round((data.attendanceRate || 0) * 100) + '%'"></div>
+                    </div>
+                    <p x-show="data.attendanceRate === null" class="mt-2 text-xs text-gray-400">Aucun appel saisi ce mois-ci.</p>
+                </div>
+            </div>
+        </template>
+    </div>
 </div>
 
 <div x-data="dashboardView()">
@@ -96,6 +150,77 @@
                 <span x-text="formatMoney(data.outstandingBalance)"></span>
                 <badge variant="warning" class="ml-2 text-[11px]"><span x-text="formatPercent(data.recoveryRate)"></span> recouvré</badge>
             </stat-card>
+        </template>
+    </div>
+
+    <!-- Diagrammes : recouvrement (donut) + comparaison jour/mois/année (barres), avec le détail en
+         pourcentage de chaque chiffre affiché dans les cartes KPI ci-dessus. -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <template x-if="!isLoading && data">
+            <div class="card p-5">
+                <p class="text-sm font-semibold text-gray-900">Recouvrement</p>
+                <p class="text-xs text-gray-500 mt-0.5">Encaissé vs solde dû, année scolaire active.</p>
+                <div class="mt-4 flex items-center gap-6">
+                    <svg viewBox="0 0 36 36" class="w-28 h-28 -rotate-90 shrink-0" role="img" aria-label="Part recouvrée du solde dû">
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="3.2"></circle>
+                        <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1E8E3E" stroke-width="3.2"
+                                stroke-linecap="round"
+                                :stroke-dasharray="(data.recoveryRate * 100) + ' ' + (100 - data.recoveryRate * 100)"></circle>
+                    </svg>
+                    <dl class="space-y-2.5 text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0 bg-success"></span>
+                            <dt class="text-gray-600">Encaissé</dt>
+                            <dd class="font-bold text-gray-900" x-text="formatPercent(data.recoveryRate)"></dd>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:#E5E7EB"></span>
+                            <dt class="text-gray-600">Solde dû</dt>
+                            <dd class="font-bold text-gray-900" x-text="formatPercent(1 - data.recoveryRate)"></dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </template>
+
+        <template x-if="!isLoading && data">
+            <div class="card p-5">
+                <p class="text-sm font-semibold text-gray-900">Encaissements</p>
+                <p class="text-xs text-gray-500 mt-0.5">Comparaison jour / mois / année.</p>
+                <div class="mt-5 space-y-3.5">
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+                            <span>Aujourd'hui</span>
+                            <span class="font-semibold text-gray-900" x-text="formatMoney(data.collectedToday)"></span>
+                        </div>
+                        <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+                            <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedToday) + '%'"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+                            <span>Ce mois</span>
+                            <span class="font-semibold text-gray-900" x-text="formatMoney(data.collectedThisMonth)"></span>
+                        </div>
+                        <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+                            <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedThisMonth) + '%'"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
+                            <span>Cette année</span>
+                            <span class="font-semibold text-gray-900" x-text="formatMoney(data.collectedThisYear)"></span>
+                        </div>
+                        <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+                            <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedThisYear) + '%'"></div>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500">
+                    Aujourd'hui représente <span class="font-semibold text-gray-700" x-text="pct(data.collectedToday, data.collectedThisMonth)"></span> du mois en cours ·
+                    ce mois représente <span class="font-semibold text-gray-700" x-text="pct(data.collectedThisMonth, data.collectedThisYear)"></span> de l'année.
+                </p>
+            </div>
         </template>
     </div>
 

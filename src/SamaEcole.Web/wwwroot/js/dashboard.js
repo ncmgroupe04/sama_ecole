@@ -57,6 +57,26 @@ document.addEventListener('alpine:init', () => {
                 Suspended: 'Suspendu', ReadOnly: 'Lecture seule'
             };
             return `${sub.plan} · ${statusLabels[sub.status] || sub.status}`;
+        },
+
+        /** Pourcentage affiché (ex. « 42 % ») ; « 0 % » sur un total vide plutôt qu'une division par zéro. */
+        pct(part, total) {
+            if (!total) return '0 %';
+            return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 })
+                .format(part / total);
+        },
+
+        /** Part EXACTE (non arrondie) des garçons dans l'effectif, en points sur 100 — alimente le
+         * cercle du donut (circonférence de 100 avec r = 15.9155), où un arrondi laisserait un espace
+         * visible entre les deux segments. */
+        boysFraction() {
+            if (!this.data || !this.data.enrollments.total) return 0;
+            return (this.data.enrollments.boys / this.data.enrollments.total) * 100;
+        },
+
+        girlsFraction() {
+            if (!this.data || !this.data.enrollments.total) return 0;
+            return (this.data.enrollments.girls / this.data.enrollments.total) * 100;
         }
     }));
 
@@ -124,6 +144,21 @@ document.addEventListener('alpine:init', () => {
 
         formatPercent(rate) {
             return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 }).format(rate || 0);
+        },
+
+        /** Pourcentage affiché (ex. « 42 % ») ; « 0 % » sur un dénominateur vide plutôt qu'une division par zéro. */
+        pct(part, total) {
+            if (!total) return '0 %';
+            return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 })
+                .format(part / total);
+        },
+
+        /** Largeur de barre (0-100) relative au plus grand des trois montants comparés — jour/mois/année
+         * partagent donc une même échelle plutôt que chacune sa propre barre pleine. Un minimum de 2 %
+         * garde la barre visible (donc cliquable/lisible) même sur un montant nul. */
+        barWidth(amount) {
+            const max = Math.max(this.data.collectedToday, this.data.collectedThisMonth, this.data.collectedThisYear, 1);
+            return Math.max(2, Math.round((amount / max) * 100));
         },
 
         formatDate(iso) {
