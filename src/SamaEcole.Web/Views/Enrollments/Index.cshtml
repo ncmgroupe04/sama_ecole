@@ -347,26 +347,11 @@
        (.no-print) — de toute façon elle est fermée au moment d'imprimer le reçu. *@
     <div class="no-print">
         <modal-shell open="showConfirmDialog" size="md" on-close="finishFromDialog()" title="Inscription validée">
-            <div class="text-center">
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
-                    <icon name="checkmark-circle" class="h-8 w-8 text-success" />
-                </div>
-                <p class="mt-4 text-base font-semibold text-gray-900">L'inscription a bien été validée.</p>
-                <p class="mt-1 text-sm text-gray-500" x-show="receipt" x-cloak>
-                    <span x-text="receipt ? receipt.studentFullName : ''"></span> —
-                    reçu n° <span class="font-medium" x-text="receiptReference()"></span>
-                </p>
-                <p class="mt-1 text-sm text-gray-500">Vous pouvez imprimer le reçu ou terminer.</p>
-            </div>
-            <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 border-t border-gray-200 pt-4">
-                <button type="button" x-on:click="finishFromDialog()" class="btn-secondary">
-                    Terminer
-                </button>
-                <button type="button" x-on:click="showReceiptFromDialog()" class="btn-primary">
-                    <icon name="print" class="w-5 h-5" />
-                    Imprimer le reçu
-                </button>
-            </div>
+            <confirm-dialog-body close-action="finishFromDialog()" close-label="Terminer"
+                                 new-action="showReceiptFromDialog()" new-label="Imprimer le reçu">
+                L'inscription de <span class="font-medium text-gray-900" x-text="receipt ? receipt.studentFullName : ''"></span>
+                a bien été validée — reçu n° <span class="font-medium text-gray-900" x-text="receiptReference()"></span>.
+            </confirm-dialog-body>
         </modal-shell>
     </div>
 </div>

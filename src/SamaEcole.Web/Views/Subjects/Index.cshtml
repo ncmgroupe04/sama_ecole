@@ -146,4 +146,12 @@
             </div>
         </form>
     </modal-shell>
+
+    <!-- Confirmation : matière ajoutée -->
+    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Matière ajoutée">
+        <confirm-dialog-body close-action="showAddedDialog = false"
+                             new-action="showAddedDialog = false; openCreate()" new-label="Nouvelle matière">
+            La matière <span class="font-medium text-gray-900" x-text="addedSubjectName"></span> a bien été ajoutée.
+        </confirm-dialog-body>
+    </modal-shell>
 </div>

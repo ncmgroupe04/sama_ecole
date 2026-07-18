@@ -36,6 +36,11 @@ document.addEventListener('alpine:init', () => {
         receipt: null,       // reçu complet, chargé après coup pour l'affichage/l'impression
         pdfError: null,
 
+        // Parcours après encaissement : une fenêtre de confirmation (« Paiement validé ») s'affiche
+        // d'abord ; le reçu ne s'affiche que si l'utilisateur choisit de l'imprimer/consulter.
+        showConfirmDialog: false,
+        showReceipt: false,
+
         // ---------------------------------------------------------------- Recherche élève
 
         /**
@@ -140,6 +145,11 @@ document.addEventListener('alpine:init', () => {
                 // Le résultat du POST est volontairement minimal (règle CQRS) : on relit le reçu complet
                 // pour l'affichage/l'impression, comme /inscriptions le fait pour son propre reçu.
                 this.receipt = await window.api.get(`/finance/payments/${this.paymentResult.paymentId}/receipt`);
+
+                // Étape 1 : on confirme l'encaissement dans une fenêtre dédiée ; le reçu n'apparaît
+                // qu'ensuite, si l'utilisateur clique « Imprimer le reçu ».
+                this.showReceipt = false;
+                this.showConfirmDialog = true;
             } catch (err) {
                 if (err.status === 409) {
                     // Solde modifié entre-temps par un autre caissier : jamais un écrasement silencieux
@@ -153,6 +163,24 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /** Fenêtre de confirmation → « Imprimer le reçu » : on ferme le dialogue et on révèle le reçu. */
+        showReceiptFromDialog() {
+            this.showConfirmDialog = false;
+            this.showReceipt = true;
+        },
+
+        /** Fenêtre de confirmation → « Terminer » (ou fermeture) : repart sur une recherche vierge. */
+        finishFromDialog() {
+            this.showConfirmDialog = false;
+            this.startNewPayment();
+        },
+
+        /** Écran du reçu → « Retour (Fermer) » : masque le reçu et revient à la recherche d'élève. */
+        closeReceipt() {
+            this.showReceipt = false;
+            this.startNewPayment();
+        },
+
         startNewPayment() {
             this.selectedStudent = null;
             this.balance = null;
@@ -164,6 +192,8 @@ document.addEventListener('alpine:init', () => {
             this.paymentResult = null;
             this.receipt = null;
             this.pdfError = null;
+            this.showReceipt = false;
+            this.showConfirmDialog = false;
         },
 
         printReceipt() {

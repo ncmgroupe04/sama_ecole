@@ -167,19 +167,11 @@
     </modal-shell>
 
     <!-- Confirmation : catégorie de frais ajoutée -->
-    <modal-shell open="showCategoryAddedDialog" size="md" title="Catégorie ajoutée">
-        <div class="text-center">
-            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
-                <icon name="checkmark-circle" class="h-8 w-8 text-success" />
-            </div>
-            <p class="mt-4 text-base font-semibold text-gray-900">La catégorie de frais a bien été ajoutée.</p>
-            <p class="mt-1 text-sm text-gray-500" x-show="addedCategoryName" x-cloak>
-                <span class="font-medium" x-text="addedCategoryName"></span> est désormais disponible dans la grille.
-            </p>
-        </div>
-        <div class="mt-8 flex justify-end border-t border-gray-200 pt-4">
-            <button type="button" x-on:click="showCategoryAddedDialog = false" class="btn-primary">OK</button>
-        </div>
+    <modal-shell open="showCategoryAddedDialog" size="md" on-close="showCategoryAddedDialog = false" title="Catégorie ajoutée">
+        <confirm-dialog-body close-action="showCategoryAddedDialog = false"
+                             new-action="showCategoryAddedDialog = false; openCreateCategory()" new-label="Nouvelle catégorie">
+            La catégorie <span class="font-medium text-gray-900" x-text="addedCategoryName"></span> a bien été ajoutée et est désormais disponible dans la grille.
+        </confirm-dialog-body>
     </modal-shell>
 
     <!-- Modale : appliquer un montant standard -->

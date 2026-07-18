@@ -39,6 +39,7 @@ document.addEventListener('alpine:init', () => {
         assignForm: { classroomId: '', subjectId: '' },
         assignError: null,
         assignSubmitting: false,
+        assignSuccess: false,
         classrooms: [],
 
         init() {
@@ -138,6 +139,7 @@ document.addEventListener('alpine:init', () => {
             this.detail = null;
             this.assignForm = { classroomId: '', subjectId: '' };
             this.assignError = null;
+            this.assignSuccess = false;
             this.detailLoading = true;
             try {
                 this.detail = await window.api.get(`/teachers/${teacher.id}`);
@@ -168,6 +170,7 @@ document.addEventListener('alpine:init', () => {
         async submitAssign() {
             this.assignSubmitting = true;
             this.assignError = null;
+            this.assignSuccess = false;
             try {
                 await window.api.post(`/teachers/${this.detail.id}/assignments`, {
                     classroomId: this.assignForm.classroomId,
@@ -177,6 +180,7 @@ document.addEventListener('alpine:init', () => {
                 const id = this.detail.id;
                 this.assignForm = { classroomId: '', subjectId: '' };
                 this.detail = await window.api.get(`/teachers/${id}`);
+                this.assignSuccess = true; // formulaire déjà vide et prêt pour l'attribution suivante
             } catch (err) {
                 this.assignError = err.message || "Erreur lors de l'attribution.";
             } finally {

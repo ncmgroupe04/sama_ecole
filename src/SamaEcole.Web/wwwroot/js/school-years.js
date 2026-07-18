@@ -27,6 +27,10 @@ document.addEventListener('alpine:init', () => {
         newYear: { label: '', startDate: '', endDate: '' },
         createErrors: {},
 
+        // Confirmation « Année scolaire ajoutée » affichée après un enregistrement réussi.
+        showAddedDialog: false,
+        addedYearLabel: '',
+
         // --- Activation (double confirmation par mot de passe, Volume_7_Security §16) ---
         yearToActivate: null,
         password: '',
@@ -140,7 +144,9 @@ document.addEventListener('alpine:init', () => {
                 await window.api.post('/school-years', this.newYear);
 
                 this.isCreateOpen = false;
+                this.addedYearLabel = this.newYear.label;
                 await this.loadYears();
+                this.showAddedDialog = true; // confirmation « Année scolaire ajoutée »
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, "Erreur lors de la création de l'année scolaire.");
             } finally {

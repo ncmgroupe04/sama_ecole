@@ -27,6 +27,10 @@ document.addEventListener('alpine:init', () => {
         isRejecting: false,
         rejectErrors: {},
 
+        // --- Confirmations post-action (approbation / rejet) ---
+        approvedResult: null, // { schoolName, directorFullName }
+        rejectedResult: null, // { schoolName }
+
         // --- Détails ---
         detailTarget: null,
 
@@ -100,10 +104,12 @@ document.addEventListener('alpine:init', () => {
             this.isApproving = true;
             this.approveError = null;
             try {
+                const { schoolName, directorFullName } = this.approveTarget;
                 await window.api.post(`/admin/registration-requests/${this.approveTarget.id}/approve`);
                 this.closeApprove();
                 this.closeDetail();
                 await this.load();
+                this.approvedResult = { schoolName, directorFullName }; // confirmation « Demande approuvée »
             } catch (err) {
                 this.approveError = err.message || "Erreur lors de l'approbation.";
             } finally {
@@ -129,12 +135,14 @@ document.addEventListener('alpine:init', () => {
             this.isRejecting = true;
             this.rejectErrors = {};
             try {
+                const { schoolName } = this.rejectTarget;
                 await window.api.post(`/admin/registration-requests/${this.rejectTarget.id}/reject`, {
                     reason: this.rejectReason
                 });
                 this.closeReject();
                 this.closeDetail();
                 await this.load();
+                this.rejectedResult = { schoolName }; // confirmation « Demande rejetée »
             } catch (err) {
                 this.rejectErrors = window.api.toFieldErrors(err, 'Erreur lors du rejet.');
             } finally {

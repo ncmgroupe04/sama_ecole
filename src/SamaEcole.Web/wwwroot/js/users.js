@@ -21,6 +21,11 @@ document.addEventListener('alpine:init', () => {
         newUser: { fullName: '', email: '', role: 'Secretariat', password: '' },
         createErrors: {},
 
+        // Confirmation « Utilisateur ajouté » affichée après un enregistrement réussi. Rappelle le mot
+        // de passe saisi : une fois la modale de création fermée, il n'est visible nulle part ailleurs.
+        showAddedDialog: false,
+        addedUser: { fullName: '', email: '', password: '' },
+
         // --- Changement de statut (motif obligatoire, JGK-A05) ---
         statusTarget: null, // { id, fullName, newStatus }
         statusReason: '',
@@ -90,7 +95,13 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.api.post('/users', this.newUser);
                 this.isCreateOpen = false;
+                this.addedUser = {
+                    fullName: this.newUser.fullName,
+                    email: this.newUser.email,
+                    password: this.newUser.password
+                };
                 await this.load();
+                this.showAddedDialog = true; // confirmation « Utilisateur ajouté »
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Erreur lors de la création du compte.');
             } finally {

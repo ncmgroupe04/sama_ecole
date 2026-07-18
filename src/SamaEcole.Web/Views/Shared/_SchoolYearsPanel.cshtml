@@ -151,6 +151,14 @@
         </form>
     </modal-shell>
 
+    <!-- Confirmation : année scolaire ajoutée -->
+    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Année scolaire ajoutée">
+        <confirm-dialog-body close-action="showAddedDialog = false"
+                             new-action="showAddedDialog = false; openCreate()" new-label="Nouvelle année">
+            L'année <span class="font-medium text-gray-900" x-text="addedYearLabel"></span> a bien été ajoutée. Elle reste inactive jusqu'à son activation.
+        </confirm-dialog-body>
+    </modal-shell>
+
     @*
         Modale de DOUBLE CONFIRMATION (docs/Volume_7_Security.md §16 — « changement de l'année scolaire
         active »). Volontairement centrée et non glissée sur le côté comme le formulaire de création :

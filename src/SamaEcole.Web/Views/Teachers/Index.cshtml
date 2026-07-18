@@ -181,6 +181,7 @@
                 <div class="mt-6 bg-gray-50 rounded-lg p-4 sm:p-5" x-show="canManage" x-cloak>
                     <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Attribuer une classe / matière (année active)</p>
                     <div x-show="assignError" x-cloak class="mb-3 rounded-md border-l-4 border-danger bg-danger-bg p-2.5 text-sm text-danger" x-text="assignError"></div>
+                    <div x-show="assignSuccess" x-cloak class="mb-3 rounded-md border-l-4 border-success bg-success-bg p-2.5 text-sm text-success">Affectation enregistrée.</div>
                     <form x-on:submit.prevent="submitAssign()" class="flex flex-col sm:flex-row sm:items-end gap-3">
                         <div class="flex-1">
                             <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
@@ -277,18 +278,10 @@
     </modal-shell>
 
     <!-- Confirmation : enseignant ajouté -->
-    <modal-shell open="showAddedDialog" size="md" title="Enseignant ajouté">
-        <div class="text-center">
-            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
-                <icon name="checkmark-circle" class="h-8 w-8 text-success" />
-            </div>
-            <p class="mt-4 text-base font-semibold text-gray-900">La fiche enseignant a bien été ajoutée.</p>
-            <p class="mt-1 text-sm text-gray-500" x-show="addedTeacherName" x-cloak>
-                <span class="font-medium" x-text="addedTeacherName"></span> figure désormais dans la liste.
-            </p>
-        </div>
-        <div class="mt-8 flex justify-end border-t border-gray-200 pt-4">
-            <button type="button" x-on:click="showAddedDialog = false" class="btn-primary">OK</button>
-        </div>
+    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Enseignant ajouté">
+        <confirm-dialog-body close-action="showAddedDialog = false"
+                             new-action="showAddedDialog = false; openCreate()" new-label="Nouvel enseignant">
+            La fiche de <span class="font-medium text-gray-900" x-text="addedTeacherName"></span> a bien été ajoutée et figure désormais dans la liste.
+        </confirm-dialog-body>
     </modal-shell>
 </div>

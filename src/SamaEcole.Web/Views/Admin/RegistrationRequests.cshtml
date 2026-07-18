@@ -211,4 +211,19 @@
             </div>
         </form>
     </modal-shell>
+
+    <!-- Confirmation : demande approuvée -->
+    <modal-shell open="approvedResult" size="md" on-close="approvedResult = null" title="Demande approuvée">
+        <confirm-dialog-body close-action="approvedResult = null">
+            L'établissement <span class="font-medium text-gray-900" x-text="approvedResult ? approvedResult.schoolName : ''"></span>
+            a été créé. <span x-text="approvedResult ? approvedResult.directorFullName : ''"></span> peut désormais se connecter.
+        </confirm-dialog-body>
+    </modal-shell>
+
+    <!-- Confirmation : demande rejetée -->
+    <modal-shell open="rejectedResult" size="md" on-close="rejectedResult = null" title="Demande rejetée">
+        <confirm-dialog-body close-action="rejectedResult = null">
+            La demande de <span class="font-medium text-gray-900" x-text="rejectedResult ? rejectedResult.schoolName : ''"></span> a bien été rejetée.
+        </confirm-dialog-body>
+    </modal-shell>
 </div>

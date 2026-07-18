@@ -151,6 +151,20 @@
         </form>
     </modal-shell>
 
+    <!-- Confirmation : utilisateur ajouté. Rappelle le mot de passe : une fois cette fenêtre fermée,
+         il n'est plus visible nulle part (règle #6 — pas de stockage en clair côté serveur). -->
+    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Utilisateur ajouté">
+        <confirm-dialog-body close-action="showAddedDialog = false"
+                             new-action="showAddedDialog = false; openCreate()" new-label="Nouvel utilisateur">
+            Le compte de <span class="font-medium text-gray-900" x-text="addedUser.fullName"></span> a bien été créé.
+            <span class="mt-4 block bg-gray-50 rounded-lg p-4 text-left text-sm space-y-1.5">
+                <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">À communiquer à l'intéressé(e)</span>
+                <span class="block"><span class="text-gray-500">E-mail :</span> <span class="font-mono text-gray-900" x-text="addedUser.email"></span></span>
+                <span class="block"><span class="text-gray-500">Mot de passe :</span> <span class="font-mono text-gray-900" x-text="addedUser.password"></span></span>
+            </span>
+        </confirm-dialog-body>
+    </modal-shell>
+
     <!-- Changement de statut (motif obligatoire, JGK-A05) -->
     <modal-shell open="statusTarget" on-close="closeStatusChange()" size="md">
         <modal-title><span x-text="statusTarget ? statusActionLabel(statusTarget.newStatus) : ''"></span> — <span x-text="statusTarget ? statusTarget.fullName : ''"></span></modal-title>

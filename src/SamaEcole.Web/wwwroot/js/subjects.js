@@ -23,6 +23,10 @@ document.addEventListener('alpine:init', () => {
         newSubject: { name: '', level: '', coefficient: 1 },
         createErrors: {},
 
+        // Confirmation « Matière ajoutée » affichée après un enregistrement réussi.
+        showAddedDialog: false,
+        addedSubjectName: '',
+
         init() {
             this.loadSubjects();
         },
@@ -99,7 +103,9 @@ document.addEventListener('alpine:init', () => {
                 await window.api.post('/subjects', this.newSubject);
 
                 this.isCreateOpen = false;
+                this.addedSubjectName = this.newSubject.name;
                 await this.loadSubjects();
+                this.showAddedDialog = true; // confirmation « Matière ajoutée »
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(err, 'Erreur lors de la création de la matière.');
             } finally {

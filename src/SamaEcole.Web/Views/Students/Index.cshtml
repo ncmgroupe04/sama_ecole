@@ -262,4 +262,12 @@
             </div>
         </form>
     </modal-shell>
+
+    <!-- Confirmation : élève ajouté -->
+    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Élève ajouté">
+        <confirm-dialog-body close-action="showAddedDialog = false"
+                             new-action="showAddedDialog = false; isCreateOpen = true" new-label="Nouvel élève">
+            <span class="font-medium text-gray-900" x-text="addedStudentName"></span> a bien été ajouté(e) et figure désormais dans la liste.
+        </confirm-dialog-body>
+    </modal-shell>
 </div>

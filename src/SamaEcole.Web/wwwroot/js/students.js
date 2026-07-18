@@ -31,6 +31,10 @@ document.addEventListener('alpine:init', () => {
         },
         createErrors: {},
 
+        // Confirmation « Élève ajouté » affichée après un enregistrement réussi.
+        showAddedDialog: false,
+        addedStudentName: '',
+
         // Initialisation
         init() {
             this.loadClassrooms();
@@ -97,14 +101,16 @@ document.addEventListener('alpine:init', () => {
             this.createErrors = {};
             try {
                 const created = await window.api.post('/students', this.newStudent);
-                
+
                 // Fermer la modale et réinitialiser
                 this.isCreateOpen = false;
+                this.addedStudentName = this.newStudent.fullName;
                 this.newStudent = { fullName: '', birthDate: '', gender: 'M', classroomId: '', guardianName: '', guardianPhone: '' };
-                
+
                 // Rafraîchir la liste
                 this.page = 1;
                 await this.loadStudents();
+                this.showAddedDialog = true; // confirmation « Élève ajouté »
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(
                     err, "Une erreur est survenue lors de la création.");

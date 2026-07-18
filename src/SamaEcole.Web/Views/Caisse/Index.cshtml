@@ -37,7 +37,7 @@
     <div x-show="canRecordPayment" x-cloak>
 
         <!-- ============================= RECHERCHE + SOLDE + FORMULAIRE ============================= -->
-        <div x-show="!receipt" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div x-show="!showReceipt" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Colonne recherche élève -->
             <div class="lg:col-span-1 card p-6">
@@ -169,15 +169,18 @@
         </div>
 
         <!-- ============================= REÇU ============================= -->
-        <div x-show="receipt" x-cloak class="mt-6">
+        <div x-show="showReceipt" x-cloak class="mt-6">
 
             <!-- Barre d'actions (non imprimée) -->
-            <div class="no-print flex items-center justify-between mb-4">
+            <div class="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div class="flex items-center gap-2 text-success">
                     <icon name="checkmark-circle" class="w-6 h-6" />
                     <span class="text-sm font-medium">Paiement encaissé.</span>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" x-on:click="closeReceipt()" class="btn-secondary">
+                        Retour (Fermer)
+                    </button>
                     <button type="button" x-on:click="startNewPayment()" class="btn-secondary">
                         Nouvel encaissement
                     </button>
@@ -292,5 +295,18 @@
             </div>
         </div>
 
+    </div>
+
+    @* Fenêtre de confirmation affichée juste après l'encaissement (avant le reçu) — même parcours que
+       /inscriptions : annoncer que le paiement est validé, puis laisser le choix entre imprimer le reçu
+       ou terminer. *@
+    <div class="no-print">
+        <modal-shell open="showConfirmDialog" size="md" on-close="finishFromDialog()" title="Paiement validé">
+            <confirm-dialog-body close-action="finishFromDialog()" close-label="Terminer"
+                                 new-action="showReceiptFromDialog()" new-label="Imprimer le reçu">
+                Le versement de <span class="font-medium text-gray-900" x-text="receipt ? formatMoney(receipt.amount) : ''"></span>
+                a bien été encaissé — reçu n° <span class="font-medium text-gray-900" x-text="receipt ? receipt.receiptNumber : ''"></span>.
+            </confirm-dialog-body>
+        </modal-shell>
     </div>
 </div>
