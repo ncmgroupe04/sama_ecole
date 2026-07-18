@@ -60,6 +60,21 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 exception.Message,
                 null),
 
+            // Ticket JGK-I05 : l'agrégateur de paiement (PayDunya…) a refusé ou est injoignable. 502 —
+            // le serveur, agissant comme passerelle, a reçu une réponse invalide de l'amont.
+            PaymentProviderException paymentEx => (
+                HttpStatusCode.BadGateway,
+                "PAYMENT_PROVIDER_ERROR",
+                paymentEx.Message,
+                null),
+
+            // Ticket JGK-I06, docs/Volume_7_Security.md §12bis : signature de webhook absente/invalide.
+            InvalidWebhookSignatureException webhookEx => (
+                HttpStatusCode.Unauthorized,
+                "INVALID_WEBHOOK_SIGNATURE",
+                webhookEx.Message,
+                null),
+
             _ => (
                 HttpStatusCode.InternalServerError,
                 "INTERNAL_ERROR",

@@ -29,6 +29,18 @@ public interface ISchoolProvisioningStore
         Role role,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Crée l'abonnement initial d'un établissement (ticket JGK-I03). Même problème que le Directeur :
+    /// `subscriptions` est sous policy RLS, et un Super Admin sans schoolId ne satisferait le WITH CHECK
+    /// d'aucune ligne — d'où une seconde fonction SECURITY DEFINER, avec la même garde anti-escalade
+    /// (elle refuse d'agir sur un établissement qui possède DÉJÀ un abonnement). Renvoie null dans ce cas.
+    /// </summary>
+    Task<Guid?> CreateInitialSubscriptionAsync(
+        Guid schoolId,
+        SubscriptionPlan plan,
+        SubscriptionStatus status,
+        CancellationToken cancellationToken);
+
     /// <summary>Un e-mail identifie un compte sur TOUTE la plateforme (docs/Volume_3_DDS.md §5.2).</summary>
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken);
 }

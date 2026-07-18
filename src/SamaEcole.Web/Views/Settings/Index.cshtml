@@ -9,6 +9,7 @@
     <script src="~/js/school-years.js" asp-append-version="true"></script>
     <script src="~/js/users.js" asp-append-version="true"></script>
     <script src="~/js/audit-log.js" asp-append-version="true"></script>
+    <script src="~/js/subscription-payments-history.js" asp-append-version="true"></script>
 }
 
 <div x-data="settingsView()">
@@ -62,6 +63,14 @@
                     class="whitespace-nowrap border-b-2 py-3 px-1 text-sm font-medium transition-colors"
                     :class="tabClass('journal-audit')">
                 Journal d'audit
+            </button>
+            @* Réservé au Directeur : GET /subscriptions/{schoolId}/payments est [Authorize(Roles =
+               Directeur)] (voir SubscriptionsController, ticket JGK-I07) — la facturation de
+               l'établissement ne concerne que lui. *@
+            <button type="button" x-show="isDirecteur" x-cloak x-on:click="tab = 'facturation'"
+                    class="whitespace-nowrap border-b-2 py-3 px-1 text-sm font-medium transition-colors"
+                    :class="tabClass('facturation')">
+                Facturation &amp; Historique
             </button>
         </nav>
     </div>
@@ -223,6 +232,11 @@
     <!-- ============================= ONGLET JOURNAL D'AUDIT ============================= -->
     <div x-show="isDirecteur && tab === 'journal-audit'" x-cloak class="mt-6">
         @await Html.PartialAsync("_AuditLogPanel")
+    </div>
+
+    <!-- ============================= ONGLET FACTURATION & HISTORIQUE ============================= -->
+    <div x-show="isDirecteur && tab === 'facturation'" x-cloak class="mt-6">
+        @await Html.PartialAsync("_SubscriptionPaymentsPanel")
     </div>
 
 </div>

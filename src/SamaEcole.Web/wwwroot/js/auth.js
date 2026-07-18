@@ -19,6 +19,11 @@
     const LOGIN_PATH = '/login';
     const DEFAULT_LANDING = '/eleves';
 
+    // Le Super Admin n'a AUCUN établissement : /eleves (comme tout écran tenant) est vide pour lui,
+    // la RLS lui fermant toutes les tables d'école. Son point d'entrée utile est la revue des demandes
+    // d'inscription (JGK-I03). Les autres rôles gardent l'atterrissage tenant par défaut.
+    const SUPER_ADMIN_LANDING = '/admin/inscriptions';
+
     const STORAGE_KEYS = {
         accessToken: 'sama_ecole.access_token',
         expiresAt: 'sama_ecole.access_token_expires_at',
@@ -99,6 +104,12 @@
         get role() {
             const claims = readClaims(this.accessToken);
             return claims ? claims.role || '' : '';
+        },
+
+        /** Ticket JGK-I05 : l'écran de paiement d'abonnement en a besoin pour construire l'URL /subscriptions/{schoolId}/payments. */
+        get schoolId() {
+            const claims = readClaims(this.accessToken);
+            return claims ? claims.schoolId || '' : '';
         },
 
         /** Un jeton présent mais périmé n'est pas une session : il reste renouvelable tant que le cookie vit. */
@@ -211,10 +222,15 @@
             }
         },
 
+        /** Atterrissage par défaut selon le rôle : le Super Admin n'a pas de tenant, on l'oriente vers son espace. */
+        defaultLandingForRole() {
+            return this.role === 'SuperAdmin' ? SUPER_ADMIN_LANDING : DEFAULT_LANDING;
+        },
+
         /** Inverse : inutile de réafficher l'écran de connexion à quelqu'un qui a déjà une session. */
         redirectIfAuthenticated() {
             if (auth.isAuthenticated()) {
-                window.location.replace(DEFAULT_LANDING);
+                window.location.replace(auth.defaultLandingForRole());
             }
         },
 
@@ -227,7 +243,7 @@
             const target = new URLSearchParams(window.location.search).get('returnUrl');
             const isInternalPath = target && target.startsWith('/') && !target.startsWith('//');
 
-            return isInternalPath ? target : DEFAULT_LANDING;
+            return isInternalPath ? target : auth.defaultLandingForRole();
         }
     };
 

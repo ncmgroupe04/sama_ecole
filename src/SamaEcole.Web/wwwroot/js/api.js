@@ -5,6 +5,13 @@
  * token ne vit que 15 minutes ; ce client le renouvelle de façon transparente (ticket JGK-A04), et
  * l'appelant n'a rien à savoir de tout cela — il fait api.get(...) et reçoit ses données.
  */
+
+// Ticket JGK-I04 : point d'atterrissage unique quand SubscriptionAwaitingPaymentMiddleware bloque un
+// appel. Le JWT ne voyage jamais sur une navigation classique (localStorage, pas de cookie) — c'est
+// donc ICI, au premier appel d'API d'une page bloquée, que la redirection peut réellement se décider,
+// jamais côté serveur au moment du rendu de la page (voir le commentaire de classe du middleware).
+const SUBSCRIPTION_RESTRICTED_PATH = '/abonnement/paiement';
+
 window.api = {
     baseUrl: '/api/v1',
 
@@ -31,7 +38,16 @@ window.api = {
         }
 
         if (!response.ok) {
-            throw await this.toError(response);
+            const error = await this.toError(response);
+
+            // Ticket JGK-I04 : un 403 "ordinaire" (rôle insuffisant) ne doit PAS rediriger — seul ce
+            // code précis, posé par SubscriptionAwaitingPaymentMiddleware, déclenche la redirection.
+            if (error.code === 'SUBSCRIPTION_AWAITING_PAYMENT'
+                && window.location.pathname !== SUBSCRIPTION_RESTRICTED_PATH) {
+                window.location.assign(SUBSCRIPTION_RESTRICTED_PATH);
+            }
+
+            throw error;
         }
 
         if (response.status === 204) return null;
@@ -39,18 +55,25 @@ window.api = {
     },
 
     async send(endpoint, method, body) {
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = {};
         const token = window.auth.accessToken;
 
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
+        // FormData (upload de fichier) : le navigateur doit fixer lui-même le Content-Type avec sa
+        // frontière multipart — l'imposer ici casserait le décodage côté serveur.
+        const isFormData = body instanceof FormData;
+        if (!isFormData) {
+            headers['Content-Type'] = 'application/json';
+        }
+
         return await fetch(`${this.baseUrl}${endpoint}`, {
             method,
             headers,
             credentials: 'same-origin',
-            body: body ? JSON.stringify(body) : undefined
+            body: isFormData ? body : (body ? JSON.stringify(body) : undefined)
         });
     },
 
@@ -118,5 +141,7 @@ window.api = {
     post(endpoint, body) { return this.request(endpoint, 'POST', body); },
     put(endpoint, body) { return this.request(endpoint, 'PUT', body); },
     patch(endpoint, body) { return this.request(endpoint, 'PATCH', body); },
-    delete(endpoint) { return this.request(endpoint, 'DELETE'); }
+    delete(endpoint) { return this.request(endpoint, 'DELETE'); },
+    /** Upload multipart (FormData) — même robustesse (renouvellement de jeton, 401, erreurs) que post(). */
+    upload(endpoint, formData) { return this.request(endpoint, 'POST', formData); }
 };

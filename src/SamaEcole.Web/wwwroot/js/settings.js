@@ -39,7 +39,7 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             const requested = new URLSearchParams(window.location.search).get('tab');
-            if (['etablissement', 'configuration', 'annees-scolaires', 'utilisateurs', 'journal-audit'].includes(requested)) {
+            if (['etablissement', 'configuration', 'annees-scolaires', 'utilisateurs', 'journal-audit', 'facturation'].includes(requested)) {
                 this.tab = requested;
             }
             this.load();
