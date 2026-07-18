@@ -2,12 +2,19 @@
  * Écran Paramètres — regroupe TOUT ce que le Directeur configure pour son établissement :
  *   1. Établissement : identité (nom, adresse, téléphone, logo) — API /schools/current.
  *   2. Configuration : barème, format de date, déconnexion auto, mensualités/an, formats de matricule
- *      — API /schools/current/settings.
+ *      — API /schools/current/settings — et les mentions du bulletin — API /grades/mentions.
  *   3. Années scolaires : géré par schoolYearsView() (js/school-years.js), monté dans l'onglet.
  *
  * L'écriture est réservée au Directeur (l'API répond 403 aux autres). Les autres rôles VOIENT les
  * valeurs — le format de date et le barème pilotent tous les écrans — mais les champs sont en lecture
  * seule et les boutons d'enregistrement masqués. Confort d'affichage : l'API reste seule juge.
+ *
+ * Exception ticket JGK-G02 (délégation en cas d'absence du Directeur, docs/Volume_7_Security.md
+ * « Paramètres de l'école ») : le barème et les mentions du bulletin sont ÉCRITS par le Directeur
+ * ET le Secrétariat (canManageGradingConfig). Le barème a son propre formulaire/bouton
+ * (saveGradingScale, PUT /schools/current/settings/grading-scale) séparé du reste de la Configuration
+ * (saveConfig, PUT /schools/current/settings) : ce dernier reste Directeur seul, sinon le Secrétariat
+ * gagnerait aussi la main sur les formats de matricule, la déconnexion auto et les mensualités.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('settingsView', () => ({
@@ -15,6 +22,7 @@ document.addEventListener('alpine:init', () => {
         tab: 'etablissement',
 
         isDirecteur: window.auth.role === 'Directeur',
+        isSecretariat: window.auth.role === 'Secretariat',
         isLoading: true,
         loadError: null,
 
@@ -37,6 +45,22 @@ document.addEventListener('alpine:init', () => {
         configSaving: false,
         configSaved: false,
 
+        // --- Barème (JGK-G02 : formulaire séparé, voir note en tête de fichier) ---
+        canManageGradingConfig: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+        gradingScaleErrors: {},
+        gradingScaleSaving: false,
+        gradingScaleSaved: false,
+
+        // --- Mentions du bulletin (dans l'onglet Configuration) ---
+        canViewMentions: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat' || window.auth.role === 'Enseignant',
+        mentions: [],
+        isMentionCreateOpen: false,
+        mentionSubmitting: false,
+        newMention: { label: '', minAverage: null },
+        mentionCreateErrors: {},
+        showMentionAddedDialog: false,
+        addedMentionLabel: '',
+
         init() {
             const requested = new URLSearchParams(window.location.search).get('tab');
             if (['etablissement', 'configuration', 'annees-scolaires', 'utilisateurs', 'journal-audit', 'facturation'].includes(requested)) {
@@ -49,10 +73,14 @@ document.addEventListener('alpine:init', () => {
             this.isLoading = true;
             this.loadError = null;
             try {
-                const [profile, config] = await Promise.all([
+                const requests = [
                     window.api.get('/schools/current'),
                     window.api.get('/schools/current/settings')
-                ]);
+                ];
+                if (this.canViewMentions) requests.push(window.api.get('/grades/mentions'));
+
+                const [profile, config, mentions] = await Promise.all(requests);
+                if (this.canViewMentions) this.mentions = mentions;
 
                 this.profile = {
                     name: profile.name || '',
@@ -131,6 +159,61 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.configSaving = false;
             }
+        },
+
+        // ---------------------------------------------------------------- Barème (JGK-G02)
+
+        async saveGradingScale() {
+            this.gradingScaleErrors = {};
+            this.gradingScaleSaved = false;
+            this.gradingScaleSaving = true;
+            try {
+                const saved = await window.api.put('/schools/current/settings/grading-scale', {
+                    gradingScale: this.config.gradingScale
+                });
+                this.config.gradingScale = saved.gradingScale;
+                this.gradingScaleSaved = true;
+            } catch (err) {
+                this.gradingScaleErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
+            } finally {
+                this.gradingScaleSaving = false;
+            }
+        },
+
+        // ---------------------------------------------------------------- Mentions du bulletin
+
+        /** Vrai tant que l'école n'a créé aucune mention : GetMentionsQueryHandler renvoie alors le
+         *  barème par défaut, avec des id null (voir CreateMentionCommand). Dès le premier ajout, ce
+         *  barème par défaut disparaît entièrement — le Directeur doit recréer tout ce qu'il veut garder. */
+        get isDefaultMentions() {
+            return this.mentions.length > 0 && this.mentions.every((m) => !m.id);
+        },
+
+        openCreateMention() {
+            this.newMention = { label: '', minAverage: null };
+            this.mentionCreateErrors = {};
+            this.isMentionCreateOpen = true;
+        },
+
+        async submitCreateMention() {
+            this.mentionSubmitting = true;
+            this.mentionCreateErrors = {};
+            try {
+                await window.api.post('/grades/mentions', this.newMention);
+                this.isMentionCreateOpen = false;
+                this.addedMentionLabel = this.newMention.label;
+                this.mentions = await window.api.get('/grades/mentions');
+                this.showMentionAddedDialog = true;
+            } catch (err) {
+                this.mentionCreateErrors = window.api.toFieldErrors(err, 'Erreur lors de la création de la mention.');
+            } finally {
+                this.mentionSubmitting = false;
+            }
+        },
+
+        // Même contournement du sérialiseur decimal que Subjects.formatCoefficient (16.00 → 16).
+        formatAverage(value) {
+            return Number(value).toLocaleString('fr-FR');
         },
 
         // ---------------------------------------------------------------- Affichage

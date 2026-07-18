@@ -1,9 +1,10 @@
 /**
- * Écran Matières et coefficients — ticket JGK-C03.
+ * Écran Matières et coefficients — ticket JGK-C03. Création déléguée au Secrétariat en plus du
+ * Directeur depuis JGK-G02 (docs/Volume_7_Security.md « Paramètres de l'école »).
  *
  * Le serveur reste seul juge : le rôle est relu du JWT pour masquer le bouton de création, mais
  * l'API répond 403 à qui l'appellerait quand même (SubjectsController est [Authorize(Roles =
- * Directeur)] en écriture).
+ * Directeur,Secretariat)] en écriture).
  */
 document.addEventListener('alpine:init', () => {
     // Ordre pédagogique des cycles (même convention que l'écran Classes) ; un niveau hors
@@ -16,7 +17,7 @@ document.addEventListener('alpine:init', () => {
         error: null,
         search: '',
 
-        isDirecteur: window.auth.role === 'Directeur',
+        canCreateSubject: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
         isCreateOpen: false,
         isSubmitting: false,

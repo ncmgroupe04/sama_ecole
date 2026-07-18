@@ -91,7 +91,10 @@
                 <span class="text-sm font-medium">Classes</span>
             </a>
 
-            <a href="/matieres" x-show="canView(['Directeur', 'Enseignant'])" x-cloak class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
+            @* JGK-G02 : gestion des matières/coefficients déléguée au Secrétariat en plus du Directeur
+               (docs/Volume_7_Security.md « Paramètres de l'école »). L'Enseignant reste en lecture
+               seule (SubjectsController : GET ouvert à tous, POST = Directeur/Secrétariat). *@
+            <a href="/matieres" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
                 <icon name="book" class="w-5 h-5" />
                 <span class="text-sm font-medium">Matières</span>
             </a>
@@ -136,7 +139,10 @@
                 <span class="text-sm font-medium">Rapports</span>
             </a>
 
-            <a href="/parametres" x-show="canView(['Directeur'])" x-cloak class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
+            @* JGK-G02 : le Secrétariat gagne accès à l'onglet Configuration (barème + mentions,
+               settings.js) en plus du Directeur — le reste de l'écran (Établissement, Utilisateurs,
+               Journal d'audit, Facturation) reste en lecture seule ou masqué pour lui, voir Settings/Index.cshtml. *@
+            <a href="/parametres" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
                 <icon name="settings" class="w-5 h-5" />
                 <span class="text-sm font-medium">Paramètres</span>
             </a>

@@ -132,12 +132,26 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     }
 
     [Fact]
-    public async Task A_Secretary_Must_Not_Create_A_Subject()
+    public async Task A_Secretary_Can_Create_A_Subject()
     {
-        // Le coefficient relève de la notation : Directeur uniquement (docs/Volume_7_Security.md §15).
+        // Ticket JGK-G02 : délégation de la gestion des matières/coefficients au Secrétariat en cas
+        // d'absence du Directeur (docs/Volume_7_Security.md « Paramètres de l'école »).
         var token = await SecretaireTokenAsync();
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/subjects", token,
+            new { name = "Histoire", level = "Collège", coefficient = 3 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task An_Enseignant_Must_Not_Create_A_Subject()
+    {
+        // Le coefficient relève de la notation : Directeur/Secrétariat uniquement, jamais l'Enseignant
+        // (docs/Volume_7_Security.md « Paramètres de l'école »).
+        var enseignant = await AccessTokenAsync(AuthApiFactory.EnseignantEmail, AuthApiFactory.EnseignantPassword);
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/subjects", enseignant,
             new { name = "Histoire", level = "Collège", coefficient = 3 });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);

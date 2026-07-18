@@ -148,10 +148,34 @@ public class GradeSummaryEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
     }
 
     [Fact]
+    public async Task A_Secretariat_Can_Create_A_Custom_Mention()
+    {
+        // Ticket JGK-G02 : délégation de la configuration des mentions au Secrétariat en cas
+        // d'absence du Directeur (docs/Volume_7_Security.md « Paramètres de l'école »).
+        var secretaire = await SecretaireTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/grades/mentions", secretaire,
+            new { label = "Mention Secrétariat", minAverage = 5 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task A_Secretariat_Can_Read_The_Mentions()
+    {
+        // Nécessaire pour composer une nouvelle mention en connaissance des seuils existants.
+        var secretaire = await SecretaireTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Get, "/api/v1/grades/mentions", secretaire);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task An_Enseignant_Must_Not_Create_A_Mention()
     {
-        // Configurer les mentions relève des paramètres d'établissement, réservés au Directeur
-        // (docs/Volume_7_Security.md « Paramètres de l'école »).
+        // Configurer les mentions relève des paramètres d'établissement, réservés au Directeur et au
+        // Secrétariat (docs/Volume_7_Security.md « Paramètres de l'école »).
         var enseignant = await EnseignantTokenAsync();
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/grades/mentions", enseignant,

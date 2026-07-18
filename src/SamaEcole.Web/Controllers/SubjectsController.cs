@@ -27,11 +27,12 @@ public class SubjectsController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(new GetSubjectsQuery(), cancellationToken));
 
     /// <summary>
-    /// ÉCRITURE réservée au Directeur : le coefficient relève de la NOTATION, rangée parmi les
-    /// paramètres de l'établissement que seul le Directeur fixe (docs/Volume_7_Security.md §15).
+    /// ÉCRITURE ouverte au Directeur ET au Secrétariat (ticket JGK-G02 : délégation de la gestion des
+    /// matières/coefficients en cas d'absence du Directeur — docs/Volume_7_Security.md « Paramètres
+    /// de l'école »). Réservée aux deux seuls rôles, jamais à l'Enseignant ni à la Finance.
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = nameof(Role.Directeur))]
+    [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}")]
     [ProducesResponseType<SubjectResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]

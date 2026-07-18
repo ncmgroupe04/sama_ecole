@@ -17,7 +17,7 @@
             </p>
         </div>
 
-        <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-primary">
+        <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()" class="btn-primary">
             <icon name="plus" class="w-5 h-5" />
             Nouvelle matière
         </button>

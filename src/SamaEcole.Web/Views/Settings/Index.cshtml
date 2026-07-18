@@ -22,10 +22,16 @@
         </p>
     </div>
 
-    <!-- Écriture réservée au Directeur (Volume 7 §15). Les autres rôles consultent en lecture seule. -->
-    <div x-show="!isDirecteur" x-cloak class="mt-4 rounded-md border-l-4 border-primary bg-primary-50 p-3">
+    <!-- Écriture réservée au Directeur (Volume 7 §15), sauf le barème et les mentions (JGK-G02,
+         canManageGradingConfig) délégables au Secrétariat. Les autres rôles consultent en lecture seule. -->
+    <div x-show="!isDirecteur && !isSecretariat" x-cloak class="mt-4 rounded-md border-l-4 border-primary bg-primary-50 p-3">
         <p class="text-sm text-primary-700">
             Seul le Directeur peut modifier les paramètres de l'établissement. Vous les consultez en lecture seule.
+        </p>
+    </div>
+    <div x-show="isSecretariat" x-cloak class="mt-4 rounded-md border-l-4 border-primary bg-primary-50 p-3">
+        <p class="text-sm text-primary-700">
+            En tant que Secrétariat, vous pouvez modifier le barème de notation et les mentions du bulletin. Les autres réglages sont réservés au Directeur.
         </p>
     </div>
 
@@ -137,23 +143,46 @@
 
     <!-- ============================= ONGLET CONFIGURATION ============================= -->
     <div x-show="!isLoading && !loadError && tab === 'configuration'" x-cloak class="mt-6">
+
+        @* JGK-G02 : carte séparée du reste des réglages — le barème est délégable au Secrétariat, pas
+           les autres champs de cet onglet (voir note en tête de settings.js). Même API que les
+           mentions ci-dessous (ressource propre, formulaire indépendant), même logique d'affichage. *@
         <div class="card p-6 max-w-2xl">
+            <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Barème de notation</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Pilote la saisie des notes, les moyennes et les bulletins.</p>
+
+            <form x-on:submit.prevent="saveGradingScale()" x-on:input="gradingScaleSaved = false" class="mt-5 space-y-5">
+                <div class="max-w-xs">
+                    <label for="cfg-grading" class="block text-sm font-medium text-gray-700">Barème</label>
+                    <select id="cfg-grading" x-model="config.gradingScale" :disabled="!canManageGradingConfig"
+                            class="input-field bg-white disabled:bg-gray-50 disabled:text-gray-500">
+                        <option value="20">Sur 20</option>
+                        <option value="10">Sur 10</option>
+                    </select>
+                    <p x-show="gradingScaleErrors.gradingscale" x-cloak x-text="gradingScaleErrors.gradingscale" class="mt-1 text-xs text-danger"></p>
+                </div>
+
+                <div x-show="gradingScaleErrors.global" x-cloak class="rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="gradingScaleErrors.global"></div>
+
+                <div x-show="canManageGradingConfig" x-cloak class="pt-2 flex items-center justify-end gap-3 border-t border-gray-100">
+                    <span x-show="gradingScaleSaved" x-cloak class="text-sm text-success flex items-center gap-1">
+                        <icon name="checkmark-circle" class="w-5 h-5" />
+                        Enregistré
+                    </span>
+                    <button type="submit" :disabled="gradingScaleSaving" class="btn-primary mt-4">
+                        <span x-text="gradingScaleSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card p-6 max-w-2xl mt-6">
             <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Réglages de l'établissement</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Barème, affichage des dates, sécurité et facturation.</p>
+            <p class="text-xs text-gray-400 mt-0.5">Affichage des dates, sécurité et facturation.</p>
 
             <form x-on:submit.prevent="saveConfig()" x-on:input="configSaved = false" class="mt-5 space-y-5">
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                        <label for="cfg-grading" class="block text-sm font-medium text-gray-700">Barème de notation</label>
-                        <select id="cfg-grading" x-model="config.gradingScale" :disabled="!isDirecteur"
-                                class="input-field bg-white disabled:bg-gray-50 disabled:text-gray-500">
-                            <option value="20">Sur 20</option>
-                            <option value="10">Sur 10</option>
-                        </select>
-                        <p x-show="configErrors.gradingscale" x-cloak x-text="configErrors.gradingscale" class="mt-1 text-xs text-danger"></p>
-                    </div>
-
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                     <div>
                         <label for="cfg-date" class="block text-sm font-medium text-gray-700">Format des dates</label>
                         <select id="cfg-date" x-model="config.dateFormat" :disabled="!isDirecteur"
@@ -163,9 +192,6 @@
                         </select>
                         <p x-show="configErrors.dateformat" x-cloak x-text="configErrors.dateformat" class="mt-1 text-xs text-danger"></p>
                     </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <label for="cfg-tuition" class="block text-sm font-medium text-gray-700">Mensualités par an</label>
                         <input id="cfg-tuition" type="number" min="1" max="12" x-model.number="config.tuitionMonthsPerYear" :disabled="!isDirecteur"
@@ -217,6 +243,41 @@
                 </div>
             </form>
         </div>
+
+        @* Ressource séparée (GradesController /grades/mentions) : pas un champ de SchoolSettings, donc
+           formulaire indépendant hors du <form> ci-dessus. Masquée (pas juste lecture seule) à
+           Secrétariat/Finance : voir canViewMentions dans settings.js. *@
+        <div x-show="canViewMentions" x-cloak class="card p-6 max-w-2xl mt-6">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Mentions du bulletin</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Attribuées automatiquement selon la moyenne générale de l'élève.</p>
+                </div>
+                <button type="button" x-show="canManageGradingConfig" x-cloak x-on:click="openCreateMention()"
+                        class="btn-secondary whitespace-nowrap text-xs">
+                    <icon name="plus" class="w-4 h-4" />
+                    Ajouter
+                </button>
+            </div>
+
+            <!-- Tant qu'aucune mention n'a été créée, l'école reçoit un barème par défaut (id null) ;
+                 dès le premier ajout personnalisé, ce barème par défaut disparaît entièrement. -->
+            <div x-show="isDefaultMentions" x-cloak class="mt-4 rounded-md border-l-4 border-primary bg-primary-50 p-3 text-sm text-primary-700">
+                Valeurs par défaut, non personnalisées. Dès votre première mention ajoutée, cette liste
+                par défaut n'est plus utilisée — pensez à recréer toutes les mentions souhaitées, pas seulement la vôtre.
+            </div>
+
+            <ul class="mt-4 divide-y divide-gray-100 border-t border-gray-100">
+                <template x-for="(m, index) in mentions" :key="m.id || index">
+                    <li class="flex items-center justify-between py-2.5">
+                        <span class="text-sm font-medium text-gray-900" x-text="m.label"></span>
+                        <span class="text-sm text-gray-500">
+                            À partir de <span class="font-semibold text-gray-900" x-text="formatAverage(m.minAverage)"></span>/<span x-text="config.gradingScale"></span>
+                        </span>
+                    </li>
+                </template>
+            </ul>
+        </div>
     </div>
 
     <!-- ============================= ONGLET ANNÉES SCOLAIRES ============================= -->
@@ -238,5 +299,42 @@
     <div x-show="isDirecteur && tab === 'facturation'" x-cloak class="mt-6">
         @await Html.PartialAsync("_SubscriptionPaymentsPanel")
     </div>
+
+    <!-- Création d'une mention -->
+    <modal-shell open="isMentionCreateOpen" title="Nouvelle mention">
+        <modal-subtitle>Le seuil est la moyenne minimale, sur <span x-text="config.gradingScale"></span>, pour l'obtenir.</modal-subtitle>
+
+        <div x-show="mentionCreateErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="mentionCreateErrors.global"></div>
+
+        <form x-on:submit.prevent="submitCreateMention()" class="space-y-4">
+            <div>
+                <label for="mention-label" class="block text-sm font-medium text-gray-700">Libellé <span class="text-danger">*</span></label>
+                <input id="mention-label" type="text" x-model="newMention.label" required maxlength="40" placeholder="ex : Excellent" class="input-field">
+                <p x-show="mentionCreateErrors.label" x-cloak x-text="mentionCreateErrors.label" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label for="mention-min-average" class="block text-sm font-medium text-gray-700">Seuil minimum <span class="text-danger">*</span></label>
+                <input id="mention-min-average" type="number" x-model.number="newMention.minAverage" required min="0" :max="config.gradingScale" step="0.1"
+                       class="input-field">
+                <p x-show="mentionCreateErrors.minaverage" x-cloak x-text="mentionCreateErrors.minaverage" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button type="button" x-on:click="isMentionCreateOpen = false" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="mentionSubmitting" class="btn-primary">
+                    <span x-text="mentionSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Confirmation : mention ajoutée -->
+    <modal-shell open="showMentionAddedDialog" size="md" on-close="showMentionAddedDialog = false" title="Mention ajoutée">
+        <confirm-dialog-body close-action="showMentionAddedDialog = false"
+                             new-action="showMentionAddedDialog = false; openCreateMention()" new-label="Nouvelle mention">
+            La mention <span class="font-medium text-gray-900" x-text="addedMentionLabel"></span> a bien été ajoutée.
+        </confirm-dialog-body>
+    </modal-shell>
 
 </div>

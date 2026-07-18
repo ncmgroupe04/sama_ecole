@@ -1,4 +1,5 @@
 using SamaEcole.Application.Schools;
+using SamaEcole.Application.Schools.Commands.UpdateGradingScale;
 using SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
 using SamaEcole.Application.Schools.Queries.GetSchoolSettings;
 using SamaEcole.Domain.Enums;
@@ -26,6 +27,8 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         int AutoLogoutMinutes,
         string DateFormat,
         int TuitionMonthsPerYear);
+
+    public record UpdateGradingScaleRequest(string GradingScale);
 
     /// <summary>
     /// LECTURE ouverte à tout utilisateur de l'école : le format de date et le barème pilotent
@@ -56,6 +59,26 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.DateFormat,
                 request.TuitionMonthsPerYear),
             cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Ticket JGK-G02 — le barème est délégable au Secrétariat (en cas d'absence du Directeur),
+    /// contrairement au reste des réglages (matricules, déconnexion automatique, mensualités) qui
+    /// restent réservés au Directeur sur PUT / ci-dessus. D'où un endpoint dédié plutôt qu'un
+    /// élargissement du PUT / entier, qui aurait ouvert ces autres réglages au Secrétariat aussi.
+    /// </summary>
+    [HttpPut("grading-scale")]
+    [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}")]
+    [ProducesResponseType<SchoolSettingsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateGradingScale(
+        [FromBody] UpdateGradingScaleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new UpdateGradingScaleCommand(request.GradingScale), cancellationToken);
 
         return Ok(result);
     }
