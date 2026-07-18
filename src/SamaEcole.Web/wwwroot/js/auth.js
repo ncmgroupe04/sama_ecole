@@ -21,8 +21,14 @@
 
     // Le Super Admin n'a AUCUN établissement : /eleves (comme tout écran tenant) est vide pour lui,
     // la RLS lui fermant toutes les tables d'école. Son point d'entrée utile est la revue des demandes
-    // d'inscription (JGK-I03). Les autres rôles gardent l'atterrissage tenant par défaut.
+    // d'inscription (JGK-I03).
     const SUPER_ADMIN_LANDING = '/admin/inscriptions';
+
+    // JGK-F04 : Directeur et Finance ont un tableau de bord dédié (voir PagesController.Dashboard) et
+    // y atterrissent directement. Secrétariat et Enseignant, qui n'y ont pas accès (_Layout.cshtml,
+    // sidebarNav), gardent l'atterrissage tenant par défaut sur /eleves.
+    const DASHBOARD_LANDING = '/tableau-de-bord';
+    const DASHBOARD_ROLES = ['Directeur', 'Finance'];
 
     const STORAGE_KEYS = {
         accessToken: 'sama_ecole.access_token',
@@ -224,7 +230,9 @@
 
         /** Atterrissage par défaut selon le rôle : le Super Admin n'a pas de tenant, on l'oriente vers son espace. */
         defaultLandingForRole() {
-            return this.role === 'SuperAdmin' ? SUPER_ADMIN_LANDING : DEFAULT_LANDING;
+            if (this.role === 'SuperAdmin') return SUPER_ADMIN_LANDING;
+            if (DASHBOARD_ROLES.includes(this.role)) return DASHBOARD_LANDING;
+            return DEFAULT_LANDING;
         },
 
         /** Inverse : inutile de réafficher l'écran de connexion à quelqu'un qui a déjà une session. */
