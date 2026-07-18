@@ -11,8 +11,10 @@ public record CreateStudentCommand : IRequest<CreateStudentResult>
 {
     public required string FullName { get; init; }
     public required DateOnly BirthDate { get; init; }
+    public string? BirthPlace { get; init; }
     public required string Gender { get; init; }
     public required Guid ClassroomId { get; init; }
+    public string? PhotoUrl { get; init; }
     public string? GuardianName { get; init; }
     public string? GuardianPhone { get; init; }
 }

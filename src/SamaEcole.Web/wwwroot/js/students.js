@@ -15,8 +15,14 @@ document.addEventListener('alpine:init', () => {
         classroomFilter: '',
         genderFilter: '',
         
-        // Slide-over — fiche élève (lecture seule)
+        // Fiche élève (JGK-D02) — detailStudent porte la ligne de liste (affichage immédiat de
+        // l'identité), studentDetail la fiche complète chargée depuis GET /students/{id}
+        // (historique scolaire, notes, paiements).
         detailStudent: null,
+        studentDetail: null,
+        isLoadingDetails: false,
+        detailError: null,
+        detailTab: 'history',
 
         // Slide-over state
         isCreateOpen: false,
@@ -24,8 +30,10 @@ document.addEventListener('alpine:init', () => {
         newStudent: {
             fullName: '',
             birthDate: '',
+            birthPlace: '',
             gender: 'M',
             classroomId: '', // Must be UUID
+            photoUrl: '',
             guardianName: '',
             guardianPhone: ''
         },
@@ -83,17 +91,29 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Ouvre la fiche élève (bouton « Actions » de la liste). Aucun appel API : la ligne du tableau
-         * porte déjà tous les champs stockés sur l'élève (StudentListItem), il n'y a rien de plus à
-         * charger tant que le ticket JGK-D02 (fiche complète — historique scolaire, notes, paiements)
-         * n'est pas construit.
+         * Ouvre la fiche élève (JGK-D02). La ligne de liste (StudentListItem) affiche l'identité
+         * immédiatement ; la fiche complète — historique scolaire, notes par trimestre, paiements —
+         * est chargée depuis GET /students/{id}. L'onglet repart toujours sur « Historique ».
          */
-        openDetail(student) {
+        async openDetail(student) {
             this.detailStudent = student;
+            this.studentDetail = null;
+            this.detailError = null;
+            this.detailTab = 'history';
+            this.isLoadingDetails = true;
+            try {
+                this.studentDetail = await window.api.get(`/students/${student.id}`);
+            } catch (err) {
+                this.detailError = err.message || "Impossible de charger la fiche complète de l'élève.";
+            } finally {
+                this.isLoadingDetails = false;
+            }
         },
 
         closeDetail() {
             this.detailStudent = null;
+            this.studentDetail = null;
+            this.detailError = null;
         },
 
         async submitCreate() {
@@ -105,7 +125,7 @@ document.addEventListener('alpine:init', () => {
                 // Fermer la modale et réinitialiser
                 this.isCreateOpen = false;
                 this.addedStudentName = this.newStudent.fullName;
-                this.newStudent = { fullName: '', birthDate: '', gender: 'M', classroomId: '', guardianName: '', guardianPhone: '' };
+                this.newStudent = { fullName: '', birthDate: '', birthPlace: '', gender: 'M', classroomId: '', photoUrl: '', guardianName: '', guardianPhone: '' };
 
                 // Rafraîchir la liste
                 this.page = 1;
@@ -129,6 +149,65 @@ document.addEventListener('alpine:init', () => {
         getInitials(name) {
             if (!name) return '??';
             return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        },
+
+        // ----- Fiche élève (JGK-D02) : utilitaires de présentation -----
+
+        /** Montant en FCFA, séparateurs de milliers français, sans décimale (la caisse travaille en entiers). */
+        formatAmount(amount) {
+            if (amount === null || amount === undefined) return '—';
+            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + ' FCFA';
+        },
+
+        /**
+         * Note lisible : au plus une décimale, sans zéro inutile (17.0 → « 17 », 14.5 → « 14,5 »),
+         * même convention que le bulletin (DDS §8). Renvoie « — » si la note est absente.
+         */
+        formatGrade(value) {
+            if (value === null || value === undefined) return '—';
+            return (Math.round(value * 10) / 10).toLocaleString('fr-FR');
+        },
+
+        /** Moyenne suffixée du barème de l'école (14,5/20 ou 7,2/10) — jamais « /20 » supposé. */
+        formatAverage(value) {
+            if (value === null || value === undefined) return '—';
+            const scale = this.studentDetail?.gradingScale ?? 20;
+            return `${this.formatGrade(value)}/${scale}`;
+        },
+
+        enrollmentTypeLabel(type) {
+            return { NewEnrollment: 'Nouvelle inscription', ReEnrollment: 'Réinscription' }[type] || type;
+        },
+
+        enrollmentStatusLabel(status) {
+            return { Confirmed: 'Confirmée', Pending: 'En attente', Cancelled: 'Annulée' }[status] || status;
+        },
+
+        /** Classe de pastille partagée (input.css) selon le statut d'inscription. */
+        enrollmentStatusBadge(status) {
+            return {
+                Confirmed: 'status-badge-success',
+                Pending: 'status-badge-warning',
+                Cancelled: 'status-badge-danger'
+            }[status] || 'status-badge-neutral';
+        },
+
+        paymentMethodLabel(method) {
+            return {
+                Cash: 'Espèces', Cheque: 'Chèque', Transfer: 'Virement', MobileMoney: 'Mobile Money'
+            }[method] || method;
+        },
+
+        paymentStatusLabel(status) {
+            return { Paid: 'Soldé', Partial: 'Partiel', Cancelled: 'Annulé' }[status] || status;
+        },
+
+        paymentStatusBadge(status) {
+            return {
+                Paid: 'status-badge-success',
+                Partial: 'status-badge-warning',
+                Cancelled: 'status-badge-danger'
+            }[status] || 'status-badge-neutral';
         }
     }));
 });

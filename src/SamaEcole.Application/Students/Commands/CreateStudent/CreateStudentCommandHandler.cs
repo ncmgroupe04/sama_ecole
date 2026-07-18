@@ -51,8 +51,10 @@ public class CreateStudentCommandHandler(
                 Matricule = matricule,
                 FullName = request.FullName,
                 BirthDate = request.BirthDate,
+                BirthPlace = request.BirthPlace,
                 Gender = request.Gender,
                 ClassroomId = request.ClassroomId,
+                PhotoUrl = request.PhotoUrl,
                 GuardianName = request.GuardianName,
                 GuardianPhone = request.GuardianPhone
             };

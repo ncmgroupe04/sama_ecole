@@ -53,6 +53,7 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
                 s.Matricule,
                 s.FullName,
                 s.BirthDate,
+                s.BirthPlace,
                 s.Gender,
                 s.ClassroomId,
 
@@ -65,6 +66,7 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
                     .Select(c => c.Name)
                     .FirstOrDefault() ?? "Classe supprimée",
 
+                s.PhotoUrl,
                 s.GuardianName,
                 s.GuardianPhone))
             .ToListAsync(cancellationToken);

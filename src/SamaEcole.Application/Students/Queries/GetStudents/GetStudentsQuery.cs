@@ -28,9 +28,11 @@ public record StudentListItem(
     string Matricule,
     string FullName,
     DateOnly BirthDate,
+    string? BirthPlace,
     string Gender,
     Guid ClassroomId,
     string ClassroomName,
+    string? PhotoUrl,
     string? GuardianName,
     string? GuardianPhone);
 

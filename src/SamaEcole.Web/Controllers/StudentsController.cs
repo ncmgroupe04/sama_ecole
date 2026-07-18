@@ -1,4 +1,5 @@
 using SamaEcole.Application.Students.Commands.CreateStudent;
+using SamaEcole.Application.Students.Queries.GetStudentDetail;
 using SamaEcole.Application.Students.Queries.GetStudents;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,18 @@ public class StudentsController(ISender mediator) : ControllerBase
     [ProducesResponseType<PaginatedStudents>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] GetStudentsQuery query, CancellationToken cancellationToken)
         => Ok(await mediator.Send(query, cancellationToken));
+
+    /// <summary>
+    /// Fiche élève complète (ticket JGK-D02) : identité, historique scolaire, notes par trimestre et
+    /// historique des paiements. Comme pour la liste, l'école vient du JWT (règle #10) : un id d'une
+    /// autre école est introuvable (404), jamais servi. Les sections vides reviennent en listes vides
+    /// pour laisser l'UI afficher un empty-state.
+    /// </summary>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<StudentDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDetail(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetStudentDetailQuery(id), cancellationToken));
 
     [HttpPost]
     [ProducesResponseType<CreateStudentResult>(StatusCodes.Status201Created)]
