@@ -15,7 +15,14 @@ namespace SamaEcole.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    /// <param name="isDevelopment">
+    /// Vient de <c>IHostEnvironment.IsDevelopment()</c> (résolu dans Program.cs, seul endroit qui
+    /// connaît l'environnement d'hébergement) : jamais dérivé d'une variable de configuration
+    /// modifiable, pour qu'aucun déploiement Staging/Production mal configuré ne puisse activer
+    /// DevPaymentService (voir sa condition d'enregistrement plus bas).
+    /// </param>
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, IConfiguration configuration, bool isDevelopment)
     {
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantProvider, TenantProvider>();
@@ -71,15 +78,37 @@ public static class DependencyInjection
         // (agnostique, docs/Volume_1_Cahier_des_Charges.md §11.6 : « le choix définitif reste à
         // valider »). Client HTTP dédié, sans garde SSRF ici : l'URL est une constante de configuration
         // (PayDunyaOptions.ApiBaseUrl), jamais une adresse fournie par un utilisateur.
-        services.Configure<PayDunyaOptions>(configuration.GetSection(PayDunyaOptions.SectionName));
+        var payDunyaSection = configuration.GetSection(PayDunyaOptions.SectionName);
+        services.Configure<PayDunyaOptions>(payDunyaSection);
         services.Configure<SubscriptionPricingOptions>(configuration.GetSection(SubscriptionPricingOptions.SectionName));
-        services.AddHttpClient(PayDunyaPaymentService.HttpClientName, (provider, client) =>
+
+        // Toujours enregistré (même hors Development) : DevPaymentSimulationController en dépend pour
+        // afficher son faux guichet, et sa propre garde IWebHostEnvironment.IsDevelopment() suffit à en
+        // interdire l'usage ailleurs — un DevPaymentService inutilisé ne coûte rien.
+        services.AddSingleton<DevPaymentService>();
+
+        // Bascule Dev-only : Environment=Development ET clés absentes/au sentinel "REMPLACER" (les DEUX
+        // conditions, jamais l'une sans l'autre — un compte marchand configuré en Development doit
+        // continuer à passer par le vrai PayDunya, et aucune configuration Staging/Production ne doit
+        // jamais pouvoir déclencher l'auto-confirmation, même par erreur). Sans elle, l'écran
+        // /abonnement/paiement reste bloqué pour quiconque n'a pas de compte PayDunya (sandbox ou prod)
+        // sous la main en local.
+        var payDunyaOptions = payDunyaSection.Get<PayDunyaOptions>() ?? new PayDunyaOptions();
+        if (isDevelopment && !payDunyaOptions.IsConfigured)
         {
-            var payDunyaOptions = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<PayDunyaOptions>>().Value;
-            client.BaseAddress = new Uri(payDunyaOptions.ApiBaseUrl.TrimEnd('/') + "/");
-            client.Timeout = TimeSpan.FromSeconds(15);
-        });
-        services.AddScoped<IPaymentService, PayDunyaPaymentService>();
+            services.AddSingleton<IPaymentService>(provider => provider.GetRequiredService<DevPaymentService>());
+        }
+        else
+        {
+            services.AddHttpClient(PayDunyaPaymentService.HttpClientName, (provider, client) =>
+            {
+                var options = provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<PayDunyaOptions>>().Value;
+                client.BaseAddress = new Uri(options.ApiBaseUrl.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(15);
+            });
+            services.AddScoped<IPaymentService, PayDunyaPaymentService>();
+        }
+
         services.AddSingleton<ISubscriptionPricingProvider, ConfiguredSubscriptionPricingProvider>();
 
         return services;

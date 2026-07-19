@@ -21,7 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- Couches applicatives (Clean Architecture — docs/Volume_2_SDS.md) ---
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AddPersistence(builder.Configuration);
 
 // Paramètres d'authentification (verrouillage, durée du refresh token) — ticket JGK-A04.
@@ -87,6 +87,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new() { Title = "Sama Ecole API", Version = "v1" });
+
+    // Aligner Swagger sur le port 5000 (même que l'application)
+    options.AddServer(new Microsoft.OpenApi.Models.OpenApiServer
+    {
+        Url = "http://localhost:5000",
+        Description = "Development (port 5000)"
+    });
 
     // Deux Queries distinctes peuvent légitimement porter le même nom de DTO (ex. SubjectGradeDto) —
     // Swashbuckle génère par défaut un schemaId à partir du seul nom de classe, sans son namespace, et

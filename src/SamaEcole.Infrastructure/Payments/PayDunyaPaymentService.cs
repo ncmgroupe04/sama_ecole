@@ -37,10 +37,11 @@ public class PayDunyaPaymentService(
     {
         var config = options.Value;
 
-        // Échec explicite et immédiat plutôt qu'une requête vouée au 401 : des clés vides signifient
-        // qu'aucun compte marchand n'a encore été configuré (voir PayDunyaOptions).
-        if (string.IsNullOrWhiteSpace(config.MasterKey) || string.IsNullOrWhiteSpace(config.PrivateKey)
-            || string.IsNullOrWhiteSpace(config.PublicKey) || string.IsNullOrWhiteSpace(config.Token))
+        // Échec explicite et immédiat plutôt qu'une requête vouée au 401 : des clés vides ou au sentinel
+        // "REMPLACER" signifient qu'aucun compte marchand n'a encore été configuré (voir
+        // PayDunyaOptions.IsConfigured — en Development, DependencyInjection bascule alors sur
+        // DevPaymentService plutôt que d'atteindre cette garde).
+        if (!config.IsConfigured)
         {
             throw new PaymentProviderException(
                 "PayDunya n'est pas configuré (clés manquantes) — voir .env.example, section PayDunya.");
@@ -269,8 +270,7 @@ public class PayDunyaPaymentService(
     {
         var config = options.Value;
 
-        if (string.IsNullOrWhiteSpace(config.MasterKey) || string.IsNullOrWhiteSpace(config.PrivateKey)
-            || string.IsNullOrWhiteSpace(config.PublicKey) || string.IsNullOrWhiteSpace(config.Token))
+        if (!config.IsConfigured)
         {
             throw new PaymentProviderException(
                 "PayDunya n'est pas configuré (clés manquantes) — voir .env.example, section PayDunya.");

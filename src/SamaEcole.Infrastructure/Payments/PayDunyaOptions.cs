@@ -27,4 +27,17 @@ public class PayDunyaOptions
     /// transmises à PayDunya (l'API et les pages Razor partagent le même hôte dans ce projet).
     /// </summary>
     public string PublicBaseUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Fausse ("REMPLACER", le sentinel de .env.example) ou absente : dans les deux cas, aucun compte
+    /// marchand n'a été renseigné. Centralisé ici pour que PayDunyaPaymentService (garde d'appel) ET
+    /// DependencyInjection (choix entre PayDunyaPaymentService et DevPaymentService, Development
+    /// uniquement) partagent EXACTEMENT la même définition de "non configuré".
+    /// </summary>
+    public bool IsConfigured =>
+        IsKeyConfigured(MasterKey) && IsKeyConfigured(PrivateKey)
+        && IsKeyConfigured(PublicKey) && IsKeyConfigured(Token);
+
+    private static bool IsKeyConfigured(string key) =>
+        !string.IsNullOrWhiteSpace(key) && key != "REMPLACER";
 }
