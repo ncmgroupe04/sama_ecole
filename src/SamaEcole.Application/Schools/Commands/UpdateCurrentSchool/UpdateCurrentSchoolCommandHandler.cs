@@ -32,11 +32,16 @@ public class UpdateCurrentSchoolCommandHandler(
         school.Address = Normalize(request.Address);
         school.Phone = Normalize(request.Phone);
         school.LogoUrl = Normalize(request.LogoUrl);
+        school.InspectionAcademie = Normalize(request.InspectionAcademie);
+        school.InspectionEducationFormation = Normalize(request.InspectionEducationFormation);
+        school.NomLycee = Normalize(request.NomLycee);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Identité de l'établissement {SchoolId} mise à jour.", schoolId);
 
-        return new SchoolProfileDto(school.Name, school.Address, school.Phone, school.LogoUrl);
+        return new SchoolProfileDto(
+            school.Name, school.Address, school.Phone, school.LogoUrl,
+            school.InspectionAcademie, school.InspectionEducationFormation, school.NomLycee);
     }
 
     /// <summary>Chaîne vide ⇒ null : un champ optionnel effacé par le Directeur redevient NULL, pas "".</summary>

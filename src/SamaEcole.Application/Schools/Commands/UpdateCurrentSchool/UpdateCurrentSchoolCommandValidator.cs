@@ -29,6 +29,20 @@ public class UpdateCurrentSchoolCommandValidator : AbstractValidator<UpdateCurre
             .MaximumLength(500).WithMessage("L'URL du logo ne peut pas dépasser 500 caractères.")
             .Must(BeAValidHttpUrl).When(c => !string.IsNullOrWhiteSpace(c.LogoUrl))
             .WithMessage("L'URL du logo doit être une adresse http(s) valide.");
+
+        // En-tête administratif du bulletin. Facultatifs : les rendre obligatoires bloquerait toute
+        // école qui corrige juste son adresse — la ligne du bulletin s'imprime simplement vide.
+        RuleFor(c => c.InspectionAcademie)
+            .MaximumLength(150).WithMessage("L'Inspection d'Académie ne peut pas dépasser 150 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.InspectionEducationFormation)
+            .MaximumLength(150).WithMessage("L'IEF ne peut pas dépasser 150 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.NomLycee)
+            .MaximumLength(150).WithMessage("Le nom d'établissement du bulletin ne peut pas dépasser 150 caractères.")
+            .NoHtml();
     }
 
     private static bool BeAValidHttpUrl(string? url) =>

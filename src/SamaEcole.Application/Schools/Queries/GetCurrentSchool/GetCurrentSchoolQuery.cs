@@ -27,6 +27,8 @@ public class GetCurrentSchoolQueryHandler(IApplicationDbContext dbContext, ITena
             .FirstOrDefaultAsync(s => s.Id == schoolId, cancellationToken)
             ?? throw new KeyNotFoundException("Établissement introuvable.");
 
-        return new SchoolProfileDto(school.Name, school.Address, school.Phone, school.LogoUrl);
+        return new SchoolProfileDto(
+            school.Name, school.Address, school.Phone, school.LogoUrl,
+            school.InspectionAcademie, school.InspectionEducationFormation, school.NomLycee);
     }
 }

@@ -16,6 +16,12 @@ public class SchoolConfiguration : IEntityTypeConfiguration<School>
         builder.Property(s => s.Phone).HasMaxLength(30);
         builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(20);
 
+        // En-tête administratif du bulletin (IA / IEF / LYCEE DE) — mêmes ordres de grandeur que
+        // l'adresse : des libellés courts, jamais des paragraphes.
+        builder.Property(s => s.InspectionAcademie).HasMaxLength(150);
+        builder.Property(s => s.InspectionEducationFormation).HasMaxLength(150);
+        builder.Property(s => s.NomLycee).HasMaxLength(150);
+
         builder.HasQueryFilter(s => !s.IsDeleted);
     }
 }

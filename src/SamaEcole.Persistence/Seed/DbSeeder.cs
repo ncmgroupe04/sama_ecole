@@ -60,7 +60,10 @@ public static class DbSeeder
                 Name = "École Primaire Les Baobabs",
                 Address = "Rue 12, Médina, Dakar",
                 Phone = "+221771234567",
-                Status = EntityStatus.Active
+                Status = EntityStatus.Active,
+                InspectionAcademie = "Dakar",
+                InspectionEducationFormation = "Dakar-Médina",
+                NomLycee = "Les Baobabs"
             },
             new School
             {
@@ -68,15 +71,31 @@ public static class DbSeeder
                 Name = "Lycée Moderne Teranga",
                 Address = "Avenue Bourguiba, Dakar",
                 Phone = "+221779876543",
-                Status = EntityStatus.Active
+                Status = EntityStatus.Active,
+                InspectionAcademie = "Dakar",
+                InspectionEducationFormation = "Dakar-Plateau",
+                NomLycee = "Teranga"
             }
         };
 
         foreach (var school in schools)
         {
-            if (!await dbContext.Schools.AnyAsync(s => s.Id == school.Id, cancellationToken))
+            var existing = await dbContext.Schools.FirstOrDefaultAsync(s => s.Id == school.Id, cancellationToken);
+
+            if (existing is null)
             {
                 dbContext.Schools.Add(school);
+            }
+            else if (existing.InspectionAcademie is null
+                     && existing.InspectionEducationFormation is null
+                     && existing.NomLycee is null)
+            {
+                // Rattrapage : école semée AVANT la migration AddSchoolAcademicInfo. On ne comble que
+                // si les TROIS champs sont vides — une valeur posée à la main par un Directeur ne se
+                // fait jamais écraser par un redémarrage.
+                existing.InspectionAcademie = school.InspectionAcademie;
+                existing.InspectionEducationFormation = school.InspectionEducationFormation;
+                existing.NomLycee = school.NomLycee;
             }
         }
 

@@ -36,7 +36,10 @@ document.addEventListener('alpine:init', () => {
         loadError: null,
 
         // --- Établissement (identité) ---
-        profile: { name: '', address: '', phone: '', logoUrl: '' },
+        profile: {
+            name: '', address: '', phone: '', logoUrl: '',
+            inspectionAcademie: '', inspectionEducationFormation: '', nomLycee: ''
+        },
         profileErrors: {},
         profileSaving: false,
         profileSaved: false,
@@ -102,7 +105,10 @@ document.addEventListener('alpine:init', () => {
                     name: profile.name || '',
                     address: profile.address || '',
                     phone: profile.phone || '',
-                    logoUrl: profile.logoUrl || ''
+                    logoUrl: profile.logoUrl || '',
+                    inspectionAcademie: profile.inspectionAcademie || '',
+                    inspectionEducationFormation: profile.inspectionEducationFormation || '',
+                    nomLycee: profile.nomLycee || ''
                 };
                 this.config = {
                     gradingScale: config.gradingScale,
@@ -133,13 +139,19 @@ document.addEventListener('alpine:init', () => {
                     name: this.profile.name,
                     address: this.profile.address || null,
                     phone: this.profile.phone || null,
-                    logoUrl: this.profile.logoUrl || null
+                    logoUrl: this.profile.logoUrl || null,
+                    inspectionAcademie: this.profile.inspectionAcademie || null,
+                    inspectionEducationFormation: this.profile.inspectionEducationFormation || null,
+                    nomLycee: this.profile.nomLycee || null
                 });
                 this.profile = {
                     name: saved.name || '',
                     address: saved.address || '',
                     phone: saved.phone || '',
-                    logoUrl: saved.logoUrl || ''
+                    logoUrl: saved.logoUrl || '',
+                    inspectionAcademie: saved.inspectionAcademie || '',
+                    inspectionEducationFormation: saved.inspectionEducationFormation || '',
+                    nomLycee: saved.nomLycee || ''
                 };
                 this.profileSaved = true;
             } catch (err) {

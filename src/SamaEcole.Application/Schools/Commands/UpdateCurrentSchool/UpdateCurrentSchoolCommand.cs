@@ -10,4 +10,10 @@ public record UpdateCurrentSchoolCommand(
     string Name,
     string? Address,
     string? Phone,
-    string? LogoUrl) : IRequest<SchoolProfileDto>;
+    string? LogoUrl,
+
+    // Bloc « Informations Académiques & Administration » du formulaire Établissement : alimente
+    // l'en-tête du bulletin (IA / IEF / LYCEE DE). Facultatifs — une ligne vide s'imprime vide.
+    string? InspectionAcademie,
+    string? InspectionEducationFormation,
+    string? NomLycee) : IRequest<SchoolProfileDto>;

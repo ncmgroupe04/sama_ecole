@@ -21,7 +21,14 @@ namespace SamaEcole.Web.Controllers;
 [Authorize]
 public class CurrentSchoolController(ISender mediator) : ControllerBase
 {
-    public record UpdateSchoolProfileRequest(string Name, string? Address, string? Phone, string? LogoUrl);
+    public record UpdateSchoolProfileRequest(
+        string Name,
+        string? Address,
+        string? Phone,
+        string? LogoUrl,
+        string? InspectionAcademie,
+        string? InspectionEducationFormation,
+        string? NomLycee);
 
     /// <summary>
     /// LECTURE ouverte à tout utilisateur de l'école : le nom et les coordonnées s'affichent sur le
@@ -41,6 +48,8 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
     public async Task<IActionResult> Update(
         [FromBody] UpdateSchoolProfileRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(
-            new UpdateCurrentSchoolCommand(request.Name, request.Address, request.Phone, request.LogoUrl),
+            new UpdateCurrentSchoolCommand(
+                request.Name, request.Address, request.Phone, request.LogoUrl,
+                request.InspectionAcademie, request.InspectionEducationFormation, request.NomLycee),
             cancellationToken));
 }

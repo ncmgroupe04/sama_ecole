@@ -13,7 +13,8 @@ public class UpdateCurrentSchoolCommandValidatorTests
     private readonly UpdateCurrentSchoolCommandValidator _validator = new();
 
     private static UpdateCurrentSchoolCommand Valid() =>
-        new("École Les Baobabs", "Rue 12, Médina, Dakar", "+221 77 123 45 67", "https://ecole.sn/logo.png");
+        new("École Les Baobabs", "Rue 12, Médina, Dakar", "+221 77 123 45 67", "https://ecole.sn/logo.png",
+            "Dakar", "Dakar-Médina", "Les Baobabs");
 
     [Fact]
     public void A_Complete_Profile_Should_Pass()
@@ -24,9 +25,32 @@ public class UpdateCurrentSchoolCommandValidatorTests
     [Fact]
     public void A_Name_Only_Profile_Should_Pass()
     {
-        var command = new UpdateCurrentSchoolCommand("École Les Baobabs", null, null, null);
+        var command = new UpdateCurrentSchoolCommand("École Les Baobabs", null, null, null, null, null, null);
 
         _validator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    /// <summary>L'en-tête administratif du bulletin (IA/IEF/LYCEE DE) reste borné et sans HTML.</summary>
+    [Fact]
+    public void A_Too_Long_Inspection_Academie_Should_Fail()
+    {
+        var command = Valid() with { InspectionAcademie = new string('A', 151) };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.InspectionAcademie));
+    }
+
+    [Fact]
+    public void An_Html_Bearing_Nom_Lycee_Should_Fail()
+    {
+        var command = Valid() with { NomLycee = "<script>alert(1)</script>" };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.NomLycee));
     }
 
     [Theory]

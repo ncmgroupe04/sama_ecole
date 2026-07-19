@@ -10,4 +10,9 @@ public record SchoolProfileDto(
     string Name,
     string? Address,
     string? Phone,
-    string? LogoUrl);
+    string? LogoUrl,
+
+    // En-tête administratif du bulletin (IA / IEF / LYCEE DE) — voir School pour la sémantique.
+    string? InspectionAcademie,
+    string? InspectionEducationFormation,
+    string? NomLycee);
