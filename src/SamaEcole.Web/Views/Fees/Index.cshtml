@@ -44,12 +44,20 @@
         <div class="border-b border-gray-200 px-2 overflow-x-auto">
             <nav class="flex gap-1 -mb-px" aria-label="Catégories de frais">
                 <template x-for="category in categories" :key="category.id">
-                    <button x-on:click="selectedCategoryId = category.id"
-                            class="px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2"
-                            :class="category.id === selectedCategoryId ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'">
-                        <span x-text="category.name"></span>
-                        <badge x-show="category.isRecurring" x-cloak variant="neutral" class="text-[10px] uppercase tracking-wide">Mensuel</badge>
-                    </button>
+                    <div class="group flex items-center border-b-2 transition-colors whitespace-nowrap"
+                         :class="category.id === selectedCategoryId ? 'border-primary' : 'border-transparent hover:border-gray-300'">
+                        <button type="button" x-on:click="selectedCategoryId = category.id"
+                                class="px-4 py-3 text-sm font-medium flex items-center gap-2"
+                                :class="category.id === selectedCategoryId ? 'text-primary' : 'text-gray-500 group-hover:text-gray-700'">
+                            <span x-text="category.name"></span>
+                            <badge x-show="category.isRecurring" x-cloak variant="neutral" class="text-[10px] uppercase tracking-wide">Mensuel</badge>
+                        </button>
+                        <button x-show="canDeleteFees" x-cloak type="button" x-on:click="openDeleteCategory(category)"
+                                class="mr-2 p-1 text-gray-300 hover:text-danger rounded transition-colors"
+                                title="Supprimer la catégorie">
+                            <icon name="trash-2" class="w-4 h-4" />
+                        </button>
+                    </div>
                 </template>
             </nav>
         </div>
@@ -119,15 +127,11 @@
                                 <span x-show="!row.fee" x-cloak class="text-xs font-medium text-gray-400 italic">non défini</span>
                             </td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
-                                <button x-show="row.fee" x-cloak x-on:click="openHistory(row)"
-                                        class="text-xs font-medium text-gray-500 hover:text-primary px-2 py-1 rounded transition-colors"
-                                        title="Historique des modifications">
-                                    Historique
-                                </button>
-                                <button x-show="isDirecteur && row.fee" x-cloak x-on:click="openEdit(row)"
-                                        class="text-xs font-medium text-primary bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-md transition-colors ml-1">
-                                    Modifier
-                                </button>
+                                <row-actions show="row.fee">
+                                    <row-action icon="clock" label="Historique" on-click="openHistory(row)" />
+                                    <row-action icon="pencil" label="Modifier" on-click="openEdit(row)" show="canModifyFees" />
+                                    <row-action icon="trash-2" label="Supprimer" on-click="openDeleteFee(row)" variant="danger" show="canDeleteFees" />
+                                </row-actions>
                                 <span x-show="isDirecteur && !row.fee" x-cloak class="text-xs text-gray-400 italic">
                                     Appliquez un standard
                                 </span>
@@ -265,5 +269,66 @@
                 </li>
             </template>
         </ul>
+    </modal-shell>
+
+    <!-- Confirmation : suppression d'une catégorie (cascade sur tout son barème) -->
+    <modal-shell open="deletingCategory" on-close="closeDeleteCategory()" size="md">
+        <modal-title>Supprimer la catégorie</modal-title>
+        <modal-subtitle>
+            <span class="font-semibold text-gray-900" x-text="deletingCategory ? deletingCategory.name : ''"></span>
+            et tous les montants déjà définis pour cette catégorie disparaîtront de cet écran.
+        </modal-subtitle>
+
+        <div x-show="deleteCategoryError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteCategoryError"></div>
+
+        <p class="text-sm text-gray-500">
+            L'historique comptable des paiements déjà encaissés reste intact : cette action n'efface aucune donnée financière, elle masque seulement la catégorie pour les nouvelles inscriptions.
+        </p>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" x-on:click="closeDeleteCategory()" class="btn-secondary">Annuler</button>
+            <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-danger">
+                <span x-text="isDeletingCategory ? 'Suppression...' : 'Supprimer la catégorie'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    <!-- Confirmation : suppression d'une ligne de barème -->
+    <modal-shell open="deletingFee" on-close="closeDeleteFee()" size="md">
+        <modal-title>Supprimer ce montant</modal-title>
+        <modal-subtitle>
+            <span class="font-semibold text-gray-900" x-text="deletingFee ? deletingFee.classroomName : ''"></span>
+            n'aura plus de montant défini pour cette catégorie tant qu'un nouveau ne sera pas fixé.
+        </modal-subtitle>
+
+        <div x-show="deleteFeeError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteFeeError"></div>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" x-on:click="closeDeleteFee()" class="btn-secondary">Annuler</button>
+            <button type="button" x-on:click="confirmDeleteFee()" :disabled="isDeletingFee" class="btn-danger">
+                <span x-text="isDeletingFee ? 'Suppression...' : 'Supprimer'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    <!-- Confirmation : catégorie supprimée -->
+    <modal-shell open="showCategoryDeletedDialog" size="md" on-close="showCategoryDeletedDialog = false" title="Catégorie supprimée">
+        <confirm-dialog-body close-action="showCategoryDeletedDialog = false">
+            La catégorie <span class="font-medium text-gray-900" x-text="deletedCategoryName"></span> a bien été supprimée.
+        </confirm-dialog-body>
+    </modal-shell>
+
+    <!-- Confirmation : montant modifié -->
+    <modal-shell open="showFeeEditedDialog" size="md" on-close="showFeeEditedDialog = false" title="Montant modifié">
+        <confirm-dialog-body close-action="showFeeEditedDialog = false">
+            Le montant de <span class="font-medium text-gray-900" x-text="editedFeeClassroomName"></span> est désormais de <span class="font-medium text-gray-900" x-text="formatMoney(editedFeeAmount)"></span>.
+        </confirm-dialog-body>
+    </modal-shell>
+
+    <!-- Confirmation : montant supprimé -->
+    <modal-shell open="showFeeDeletedDialog" size="md" on-close="showFeeDeletedDialog = false" title="Montant supprimé">
+        <confirm-dialog-body close-action="showFeeDeletedDialog = false">
+            Le montant de <span class="font-medium text-gray-900" x-text="deletedFeeClassroomName"></span> a bien été supprimé.
+        </confirm-dialog-body>
     </modal-shell>
 </div>

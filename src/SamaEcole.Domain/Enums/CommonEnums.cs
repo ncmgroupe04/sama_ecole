@@ -13,11 +13,23 @@ public enum EnrollmentType
     ReEnrollment
 }
 
+/// <summary>
+/// Cycle de vie d'une inscription (ticket cycle de vie des inscriptions). <c>Cancelled</c> : erreur de
+/// saisie annulée avant tout encaissement — libère le créneau (voir l'index partiel
+/// EnrollmentConfiguration.UX_enrollments_single_active_per_year, qui exclut ce seul statut).
+/// <c>DroppedOut</c>/<c>Transferred</c> : abandon ou transfert en cours d'année — l'élève quitte la
+/// classe pour l'avenir (exclu des appels de présence actifs), mais l'inscription reste l'historique
+/// figé des notes et paiements déjà effectués, elle n'est PAS soft-deletée et continue d'occuper le
+/// créneau (SchoolYearId, StudentId) : on ne réinscrit pas un élève transféré ou en abandon la même
+/// année, contrairement à une inscription annulée par erreur.
+/// </summary>
 public enum EnrollmentStatus
 {
     Pending,
     Confirmed,
-    Cancelled
+    Cancelled,
+    DroppedOut,
+    Transferred
 }
 
 /// <summary>

@@ -15,7 +15,7 @@ public class GetSubjectsQueryHandler(IApplicationDbContext dbContext)
         return await dbContext.Subjects
             .AsNoTracking()
             .OrderBy(s => s.Level).ThenBy(s => s.Name)
-            .Select(s => new SubjectDto(s.Id, s.Name, s.Level, s.Coefficient))
+            .Select(s => new SubjectDto(s.Id, s.Name, s.Level, s.Coefficient, EF.Property<uint>(s, "xmin")))
             .ToListAsync(cancellationToken);
     }
 }

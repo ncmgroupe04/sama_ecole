@@ -1,5 +1,7 @@
 using SamaEcole.Application.Teachers.Commands.AssignTeacher;
 using SamaEcole.Application.Teachers.Commands.CreateTeacher;
+using SamaEcole.Application.Teachers.Commands.DeleteTeacher;
+using SamaEcole.Application.Teachers.Commands.UpdateTeacher;
 using SamaEcole.Application.Teachers.Queries.GetTeacherById;
 using SamaEcole.Application.Teachers.Queries.GetTeachers;
 using SamaEcole.Domain.Enums;
@@ -23,6 +25,15 @@ namespace SamaEcole.Web.Controllers;
 public class TeachersController(ISender mediator) : ControllerBase
 {
     public record AssignTeacherRequest(Guid ClassroomId, Guid SubjectId);
+
+    public record UpdateTeacherRequest(
+        string FullName,
+        string Email,
+        string? Phone,
+        string? BirthPlace,
+        string? PhotoUrl,
+        IReadOnlyList<Guid> SubjectIds,
+        uint RowVersion);
 
     private const string ViewRoles =
         $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Secretariat)}";
@@ -78,5 +89,43 @@ public class TeachersController(ISender mediator) : ControllerBase
             cancellationToken);
 
         return CreatedAtAction(nameof(GetById), new { id }, result);
+    }
+
+    /// <summary>
+    /// Corrige les informations non financières et non sécurisées d'une fiche enseignant déjà créée
+    /// (état civil, contact, matières qualifiées). Le matricule et le rattachement d'un compte de
+    /// connexion (UserId) ne sont jamais modifiables ici (voir UpdateTeacherCommand).
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<UpdateTeacherResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Update(
+        Guid id, [FromBody] UpdateTeacherRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new UpdateTeacherCommand(
+                id, request.FullName, request.Email, request.Phone, request.BirthPlace,
+                request.PhotoUrl, request.SubjectIds, request.RowVersion),
+            cancellationToken));
+
+    /// <summary>
+    /// Archive (soft delete) une fiche enseignant créée par pure erreur de saisie. Refusée en 409 dès
+    /// qu'une attribution classe/matière/année existe déjà (DeleteTeacherCommandHandler). `rowVersion`
+    /// en query string, comme DELETE /grades/{id}.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Delete(
+        Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteTeacherCommand(id, rowVersion), cancellationToken);
+        return NoContent();
     }
 }

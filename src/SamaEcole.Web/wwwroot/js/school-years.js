@@ -36,6 +36,8 @@ document.addEventListener('alpine:init', () => {
         password: '',
         isActivating: false,
         activateErrors: {},
+        showActivatedDialog: false,
+        activatedYearLabel: '',
 
         // --- Export (ZIP élèves/paiements/classes) ---
         exportingYearId: null,
@@ -179,12 +181,14 @@ document.addEventListener('alpine:init', () => {
                     `/school-years/${this.yearToActivate.id}/activate`,
                     { password: this.password });
 
+                this.activatedYearLabel = this.yearToActivate.label;
                 this.closeActivate();
 
                 // Rechargement complet, et non mise à jour locale des deux lignes concernées :
                 // l'ancienne année active est retombée côté serveur, et c'est son état RÉEL qu'il faut
                 // afficher — pas ce que le navigateur croit qu'il s'est passé.
                 await this.loadYears();
+                this.showActivatedDialog = true;
             } catch (err) {
                 this.activateErrors = window.api.toFieldErrors(err, "Erreur lors de l'activation.");
                 this.password = '';

@@ -16,6 +16,10 @@ public record TeacherAssignmentDto(
     string SchoolYearLabel,
     bool IsActiveSchoolYear);
 
+/// <summary>
+/// <see cref="RowVersion"/> est le jeton xmin nécessaire à UpdateTeacherCommand et
+/// DeleteTeacherCommand (AGENTS.md règle #5).
+/// </summary>
 public record TeacherProfileDto(
     Guid Id,
     string Matricule,
@@ -26,4 +30,5 @@ public record TeacherProfileDto(
     string? PhotoUrl,
     string Status,
     IReadOnlyList<string> Subjects,
-    IReadOnlyList<TeacherAssignmentDto> Assignments);
+    IReadOnlyList<TeacherAssignmentDto> Assignments,
+    uint RowVersion);

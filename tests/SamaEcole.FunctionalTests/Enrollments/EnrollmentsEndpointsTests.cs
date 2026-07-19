@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using FluentAssertions;
+using SamaEcole.Domain.Enums;
 using SamaEcole.FunctionalTests.Common;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
@@ -47,6 +48,14 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         string Matricule, string StudentFullName, string ClassroomName, string ClassroomLevel,
         string SchoolYearLabel, string Type, string Status, DateTimeOffset EnrolledAt,
         List<ReceiptLine> Lines, decimal TotalDue);
+
+    // Miroir PARTIEL de GetStudentDetailQuery : seuls les champs utiles pour retrouver l'inscription et
+    // son jeton xmin (AcademicHistoryEntryDto.RowVersion) — les champs JSON non repris (Identity,
+    // Grades, Payments, GradingScale...) sont simplement ignorés par la désérialisation.
+    private record AcademicHistoryEntry(Guid EnrollmentId, string Status, uint RowVersion);
+    private record StudentDetail(List<AcademicHistoryEntry> AcademicHistory);
+    private record StudentSearchItem(Guid Id, string Matricule);
+    private record StudentSearchPage(List<StudentSearchItem> Items);
 
     private async Task<string> TokenAsync(string email, string password)
     {
@@ -113,6 +122,51 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         birthDate = "2015-05-20",
         gender = "F"
     };
+
+    /// <summary>
+    /// Le reçu (Receipt) porte le matricule mais pas l'identifiant brut de l'élève : on le retrouve par
+    /// recherche (GetStudentsQuery accepte nom OU matricule), comme le fait
+    /// ClassroomsEndpointsTests pour retrouver un élève fraîchement créé.
+    /// </summary>
+    private async Task<Guid> FindStudentIdByMatriculeAsync(string token, string matricule)
+    {
+        var response = await SendAsync(
+            HttpMethod.Get, $"/api/v1/students?page=1&pageSize=10&search={matricule}", token);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var page = (await response.Content.ReadFromJsonAsync<StudentSearchPage>())!;
+        return page.Items.Single().Id;
+    }
+
+    /// <summary>
+    /// Jeton xmin d'une inscription (AGENTS.md règle #5) : nécessaire à CancelEnrollmentCommand et
+    /// ChangeEnrollmentStatusCommand, lu depuis l'historique scolaire de l'élève (GET /students/{id}),
+    /// comme documenté sur AcademicHistoryEntryDto.RowVersion — il n'existe nulle part ailleurs
+    /// (le reçu d'inscription ne le porte pas).
+    /// </summary>
+    private async Task<AcademicHistoryEntry> FetchAcademicHistoryEntryAsync(
+        string token, Guid studentId, Guid enrollmentId)
+    {
+        var response = await SendAsync(HttpMethod.Get, $"/api/v1/students/{studentId}", token);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var detail = (await response.Content.ReadFromJsonAsync<StudentDetail>())!;
+        return detail.AcademicHistory.Single(e => e.EnrollmentId == enrollmentId);
+    }
+
+    /// <summary>
+    /// Encaisse un versement partiel — utilisé UNIQUEMENT pour faire tourner le xmin d'une inscription
+    /// avant un test de conflit sur ChangeEnrollmentStatusCommand (RecordPayment ne bloque aucune
+    /// transition de statut, contrairement à CancelEnrollmentCommand qui rejette explicitement toute
+    /// inscription déjà encaissée — voir TouchEnrollmentRowVersionAsync dans AuthApiFactory pour le cas
+    /// symétrique côté annulation).
+    /// </summary>
+    private async Task RecordPaymentAsync(string financeToken, Guid enrollmentId, decimal amount)
+    {
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", financeToken,
+            new { enrollmentId, amount, method = "Cash" });
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
 
     [Fact]
     public async Task Finance_Must_Not_Be_Allowed_To_Create_An_Enrollment()
@@ -219,5 +273,180 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
             NewEnrollmentBody(Guid.NewGuid(), "Anonyme"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // ---------------------------------------------------------------- DELETE /enrollments/{id} (Cancel)
+
+    [Fact]
+    public async Task A_Secretariat_Can_Cancel_An_Enrollment_Without_Soft_Deleting_It()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+        var secretaire = await SecretaireTokenAsync();
+
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Aminata Diallo"));
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
+
+        var studentId = await FindStudentIdByMatriculeAsync(secretaire, receipt.Matricule);
+        var history = await FetchAcademicHistoryEntryAsync(secretaire, studentId, receipt.EnrollmentId);
+
+        var response = await SendAsync(HttpMethod.Delete,
+            $"/api/v1/enrollments/{receipt.EnrollmentId}?rowVersion={history.RowVersion}", secretaire);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // CancelEnrollmentCommand documente explicitement l'absence de soft delete : l'historique
+        // scolaire doit rester visible (Status = Cancelled), jamais masqué par le Global Query Filter
+        // comme le serait un IsDeleted = true (AGENTS.md règle #6 s'applique différemment ici : on
+        // n'efface rien, on requalifie le statut — voir le commentaire de classe de la commande).
+        var enrollment = await _factory.GetEnrollmentAsync(receipt.EnrollmentId);
+        enrollment.Should().NotBeNull();
+        enrollment!.Status.Should().Be(EnrollmentStatus.Cancelled);
+        enrollment.IsDeleted.Should().BeFalse(
+            "l'annulation est un changement de statut, pas un soft delete : l'historique doit rester lisible");
+    }
+
+    [Fact]
+    public async Task Finance_Must_Not_Be_Allowed_To_Cancel_An_Enrollment()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+        var secretaire = await SecretaireTokenAsync();
+
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Omar Sylla"));
+        var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
+        var studentId = await FindStudentIdByMatriculeAsync(secretaire, receipt.Matricule);
+        var history = await FetchAcademicHistoryEntryAsync(secretaire, studentId, receipt.EnrollmentId);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Delete,
+            $"/api/v1/enrollments/{receipt.EnrollmentId}?rowVersion={history.RowVersion}", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _factory.GetEnrollmentAsync(receipt.EnrollmentId))!.Status.Should().Be(EnrollmentStatus.Confirmed);
+    }
+
+    [Fact]
+    public async Task Cancelling_An_Unknown_Enrollment_Should_Return_404()
+    {
+        var secretaire = await SecretaireTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/enrollments/{Guid.NewGuid()}?rowVersion=1", secretaire);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Cancelling_An_Enrollment_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+        var secretaire = await SecretaireTokenAsync();
+
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Rokhaya Thiam"));
+        var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
+        var studentId = await FindStudentIdByMatriculeAsync(secretaire, receipt.Matricule);
+        var staleVersion = (await FetchAcademicHistoryEntryAsync(secretaire, studentId, receipt.EnrollmentId)).RowVersion;
+
+        // Fait tourner xmin SANS créer de paiement ni changer le statut (voir le commentaire de
+        // TouchEnrollmentRowVersionAsync) : un Payment ferait échouer ce Cancel pour la MAUVAISE raison
+        // (règle métier « paiement déjà encaissé »), pas pour un jeton simplement périmé.
+        await _factory.TouchEnrollmentRowVersionAsync(receipt.EnrollmentId);
+
+        var response = await SendAsync(HttpMethod.Delete,
+            $"/api/v1/enrollments/{receipt.EnrollmentId}?rowVersion={staleVersion}", secretaire);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await _factory.GetEnrollmentAsync(receipt.EnrollmentId))!.Status.Should().Be(
+            EnrollmentStatus.Confirmed, "le conflit ne doit jamais entraîner une annulation silencieuse");
+    }
+
+    // ---------------------------------------------------------------- POST /enrollments/{id}/status
+
+    [Fact]
+    public async Task A_Secretariat_Can_Declare_A_Dropout()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+        var secretaire = await SecretaireTokenAsync();
+
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Lamine Faye"));
+        var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
+        var studentId = await FindStudentIdByMatriculeAsync(secretaire, receipt.Matricule);
+        var history = await FetchAcademicHistoryEntryAsync(secretaire, studentId, receipt.EnrollmentId);
+
+        var response = await SendAsync(HttpMethod.Post, $"/api/v1/enrollments/{receipt.EnrollmentId}/status",
+            secretaire, new { newStatus = "DroppedOut", rowVersion = history.RowVersion });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var enrollment = await _factory.GetEnrollmentAsync(receipt.EnrollmentId);
+        enrollment!.Status.Should().Be(EnrollmentStatus.DroppedOut);
+        enrollment.IsDeleted.Should().BeFalse("un abandon n'est jamais un soft delete : notes et paiements restent intacts");
+    }
+
+    [Fact]
+    public async Task Finance_Must_Not_Be_Allowed_To_Change_An_Enrollment_Status()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+        var secretaire = await SecretaireTokenAsync();
+
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Coumba Gning"));
+        var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
+        var studentId = await FindStudentIdByMatriculeAsync(secretaire, receipt.Matricule);
+        var history = await FetchAcademicHistoryEntryAsync(secretaire, studentId, receipt.EnrollmentId);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Post, $"/api/v1/enrollments/{receipt.EnrollmentId}/status",
+            finance, new { newStatus = "DroppedOut", rowVersion = history.RowVersion });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _factory.GetEnrollmentAsync(receipt.EnrollmentId))!.Status.Should().Be(EnrollmentStatus.Confirmed);
+    }
+
+    [Fact]
+    public async Task Changing_The_Status_Of_An_Unknown_Enrollment_Should_Return_404()
+    {
+        var secretaire = await SecretaireTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, $"/api/v1/enrollments/{Guid.NewGuid()}/status",
+            secretaire, new { newStatus = "DroppedOut", rowVersion = 1u });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Changing_The_Status_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+        var secretaire = await SecretaireTokenAsync();
+
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Babacar Niang"));
+        var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
+        var studentId = await FindStudentIdByMatriculeAsync(secretaire, receipt.Matricule);
+        var staleVersion = (await FetchAcademicHistoryEntryAsync(secretaire, studentId, receipt.EnrollmentId)).RowVersion;
+
+        // Un encaissement partiel concurrent fait tourner xmin sans bloquer la transition de statut
+        // (contrairement à CancelEnrollmentCommand, ChangeEnrollmentStatusCommandHandler ne vérifie
+        // aucun paiement) — voir RecordPaymentAsync.
+        var finance = await FinanceTokenAsync();
+        await RecordPaymentAsync(finance, receipt.EnrollmentId, 20_000m);
+
+        var response = await SendAsync(HttpMethod.Post, $"/api/v1/enrollments/{receipt.EnrollmentId}/status",
+            secretaire, new { newStatus = "DroppedOut", rowVersion = staleVersion });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await _factory.GetEnrollmentAsync(receipt.EnrollmentId))!.Status.Should().Be(
+            EnrollmentStatus.Confirmed, "le conflit ne doit jamais entraîner un changement de statut silencieux");
     }
 }

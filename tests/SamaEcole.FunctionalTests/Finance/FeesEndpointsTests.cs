@@ -51,6 +51,31 @@ public class FeesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
     private Task<string> SecretaireTokenAsync() =>
         AccessTokenAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
 
+    private Task<string> FinanceTokenAsync() =>
+        AccessTokenAsync(AuthApiFactory.FinanceEmail, AuthApiFactory.FinancePassword);
+
+    /// <summary>
+    /// Seul geste du Directeur capable d'activer la délégation Finance (matrice d'autorisation
+    /// "Photoshop") : PUT /schools/current/settings, comme EnableSecretaryDelegationAsync dans
+    /// UpdateGradingScaleEndpointsTests pour le barème.
+    /// </summary>
+    private async Task EnableFinanceDelegationAsync(string directeurToken, bool allowModify, bool allowDelete)
+    {
+        var response = await SendAsync(HttpMethod.Put, "/api/v1/schools/current/settings", directeurToken, new
+        {
+            gradingScale = "20",
+            studentMatriculeFormat = "ELEV-{YEAR}-{SEQ:4}",
+            teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
+            autoLogoutMinutes = 10,
+            dateFormat = "dd/MM/yyyy",
+            tuitionMonthsPerYear = 9,
+            allowSecretaryToManageGrading = false,
+            allowFinanceToModifyFees = allowModify,
+            allowFinanceToDeleteFees = allowDelete
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string token, object? body = null)
     {
         var request = new HttpRequestMessage(method, url);
@@ -293,5 +318,203 @@ public class FeesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
         var fees = await ListFeesAsync(secretaire);
 
         fees.Should().ContainSingle().Which.Amount.Should().Be(15000);
+    }
+
+    // ---------------------------------------------------------- Délégation Finance (matrice "Photoshop")
+
+    [Fact]
+    public async Task A_Finance_Must_Not_Modify_A_Fee_By_Default()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await CreateClassroomAsync(directeur, "CI");
+        var category = await CreateCategoryAsync(directeur, "Mensualité");
+        await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+        var fee = (await ListFeesAsync(directeur)).Single();
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/finance/fees/{fee.Id}", finance,
+            new { amount = 18000m, rowVersion = fee.RowVersion });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task A_Finance_Can_Modify_A_Fee_Once_The_Directeur_Enables_Delegation()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await CreateClassroomAsync(directeur, "CI");
+        var category = await CreateCategoryAsync(directeur, "Mensualité");
+        await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+        var fee = (await ListFeesAsync(directeur)).Single();
+
+        await EnableFinanceDelegationAsync(directeur, allowModify: true, allowDelete: false);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/finance/fees/{fee.Id}", finance,
+            new { amount = 18000m, rowVersion = fee.RowVersion });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ListFeesAsync(directeur)).Single().Amount.Should().Be(18000);
+    }
+
+    [Fact]
+    public async Task A_Finance_Loses_Modify_Access_Again_Once_The_Directeur_Disables_Delegation()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await CreateClassroomAsync(directeur, "CI");
+        var category = await CreateCategoryAsync(directeur, "Mensualité");
+        await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+        var fee = (await ListFeesAsync(directeur)).Single();
+
+        await EnableFinanceDelegationAsync(directeur, allowModify: true, allowDelete: false);
+        await EnableFinanceDelegationAsync(directeur, allowModify: false, allowDelete: false);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/finance/fees/{fee.Id}", finance,
+            new { amount = 18000m, rowVersion = fee.RowVersion });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task A_Directeur_Can_Delete_A_Fee()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await CreateClassroomAsync(directeur, "CI");
+        var category = await CreateCategoryAsync(directeur, "Mensualité");
+        await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+        var fee = (await ListFeesAsync(directeur)).Single();
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/finance/fees/{fee.Id}?rowVersion={fee.RowVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ListFeesAsync(directeur)).Should().BeEmpty("la ligne supprimée ne doit plus apparaître dans le barème");
+    }
+
+    [Fact]
+    public async Task A_Finance_Must_Not_Delete_A_Fee_By_Default()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await CreateClassroomAsync(directeur, "CI");
+        var category = await CreateCategoryAsync(directeur, "Mensualité");
+        await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+        var fee = (await ListFeesAsync(directeur)).Single();
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/finance/fees/{fee.Id}?rowVersion={fee.RowVersion}", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await ListFeesAsync(directeur)).Should().ContainSingle("la Finance non déléguée ne doit rien supprimer");
+    }
+
+    [Fact]
+    public async Task A_Finance_Can_Delete_A_Fee_Once_The_Directeur_Enables_Delegation()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await CreateClassroomAsync(directeur, "CI");
+        var category = await CreateCategoryAsync(directeur, "Mensualité");
+        await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+        var fee = (await ListFeesAsync(directeur)).Single();
+
+        await EnableFinanceDelegationAsync(directeur, allowModify: false, allowDelete: true);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/finance/fees/{fee.Id}?rowVersion={fee.RowVersion}", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ListFeesAsync(directeur)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Deleting_A_Fee_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await CreateClassroomAsync(directeur, "CI");
+        var category = await CreateCategoryAsync(directeur, "Mensualité");
+        await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+        var fee = (await ListFeesAsync(directeur)).Single();
+        var staleVersion = fee.RowVersion;
+
+        // Une modification entre-temps fait tourner le jeton xmin.
+        var put = await SendAsync(HttpMethod.Put, $"/api/v1/finance/fees/{fee.Id}", directeur,
+            new { amount = 16000m, rowVersion = staleVersion });
+        put.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/finance/fees/{fee.Id}?rowVersion={staleVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ListFeesAsync(directeur)).Should().ContainSingle("le conflit ne doit jamais entraîner une suppression silencieuse");
+    }
+
+    [Fact]
+    public async Task Deleting_An_Unknown_Fee_Should_Return_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/finance/fees/{Guid.NewGuid()}?rowVersion=1", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task A_Directeur_Can_Delete_A_Fee_Category_Cascading_Its_Fees()
+    {
+        var directeur = await DirecteurTokenAsync();
+        await CreateClassroomAsync(directeur, "CI");
+        await CreateClassroomAsync(directeur, "CP");
+        var category = await CreateCategoryAsync(directeur, "Mensualité");
+        await ApplyStandardAsync(directeur, category.Id, 15000, overwrite: false);
+
+        var response = await SendAsync(HttpMethod.Delete, $"/api/v1/finance/fee-categories/{category.Id}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var categories = await SendAsync(HttpMethod.Get, "/api/v1/finance/fee-categories", directeur);
+        (await categories.Content.ReadFromJsonAsync<List<FeeCategoryDto>>())!
+            .Should().BeEmpty("la catégorie supprimée ne doit plus apparaître");
+
+        (await ListFeesAsync(directeur)).Should()
+            .BeEmpty("ses lignes de barème doivent disparaître avec elle (cascade en transaction)");
+    }
+
+    [Fact]
+    public async Task A_Finance_Must_Not_Delete_A_Fee_Category_By_Default()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var category = await CreateCategoryAsync(directeur, "Cantine");
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Delete, $"/api/v1/finance/fee-categories/{category.Id}", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task A_Finance_Can_Delete_A_Fee_Category_Once_The_Directeur_Enables_Delegation()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var category = await CreateCategoryAsync(directeur, "Cantine");
+        await EnableFinanceDelegationAsync(directeur, allowModify: false, allowDelete: true);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Delete, $"/api/v1/finance/fee-categories/{category.Id}", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Deleting_An_Unknown_Fee_Category_Should_Return_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/finance/fee-categories/{Guid.NewGuid()}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

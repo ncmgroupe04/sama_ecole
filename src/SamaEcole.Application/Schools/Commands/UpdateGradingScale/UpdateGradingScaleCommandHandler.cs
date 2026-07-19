@@ -46,6 +46,8 @@ public class UpdateGradingScaleCommandHandler(
             settings.AutoLogoutMinutes,
             settings.DateFormat,
             settings.TuitionMonthsPerYear,
-            settings.AllowSecretaryToManageGrading);
+            settings.AllowSecretaryToManageGrading,
+            settings.AllowFinanceToModifyFees,
+            settings.AllowFinanceToDeleteFees);
     }
 }

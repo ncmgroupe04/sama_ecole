@@ -13,4 +13,8 @@ namespace SamaEcole.Application.Subjects.Queries.GetSubjects;
 /// </summary>
 public record GetSubjectsQuery : IRequest<IReadOnlyList<SubjectDto>>;
 
-public record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient);
+/// <summary>
+/// <see cref="RowVersion"/> est le jeton xmin nécessaire à UpdateSubjectCommand et
+/// DeleteSubjectCommand (AGENTS.md règle #5) — même contrat que GradeCellDto.RowVersion.
+/// </summary>
+public record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion);

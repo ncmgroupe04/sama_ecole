@@ -18,6 +18,12 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
 
         builder.HasKey(s => s.Id);
         builder.Property(s => s.SchoolId).IsRequired();
+
+        // Verrou optimiste xmin (AGENTS.md règle #5) : UpdateSubjectCommand/DeleteSubjectCommand en
+        // dépendent pour refuser en 409 une écriture sur une matière modifiée entre-temps, comme
+        // Grade et Enrollment. Propriété fantôme, aucune migration requise (convention Npgsql).
+        builder.Property<uint>("xmin").IsRowVersion();
+
         builder.Property(s => s.Name).IsRequired().HasMaxLength(80);
         builder.Property(s => s.Level).IsRequired().HasMaxLength(50);
 

@@ -79,7 +79,7 @@ public class ModalShellTagHelper : TagHelper
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
                      class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl sm:my-8 sm:h-auto sm:max-h-[90vh] sm:w-full {maxWidth} sm:rounded-xl">
-                    <div class="flex-shrink-0 bg-primary px-4 py-6 sm:px-6">
+                    <div class="flex-shrink-0 bg-primary px-4 py-4 sm:px-6">
                         <div class="flex items-center justify-between">
                             <h2 class="text-lg font-medium text-white">{titleHtml}</h2>
                             <button type="button" x-on:click="{close}" class="rounded-md bg-primary text-indigo-200 hover:text-white focus:outline-none">

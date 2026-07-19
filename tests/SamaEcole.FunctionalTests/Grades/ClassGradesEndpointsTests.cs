@@ -124,15 +124,18 @@ public class ClassGradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     }
 
     [Fact]
-    public async Task A_Secretary_Must_Not_List_Class_Grades()
+    public async Task A_Secretary_Can_List_Class_Grades()
     {
+        // Matrice d'autorisation "Photoshop" : le Secrétariat peut désormais corriger/annuler une
+        // note déjà saisie (GradesController.UpdateGradeRoles), il doit donc pouvoir VOIR la grille —
+        // contrairement à l'ancienne règle, où seuls Directeur et Enseignant y avaient accès.
         var directeur = await DirecteurTokenAsync();
         var (classroomId, _, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var secretaire = await SecretaireTokenAsync();
 
         var response = await SendAsync(HttpMethod.Get, ListUrl(classroomId, subjectId, termId), secretaire);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

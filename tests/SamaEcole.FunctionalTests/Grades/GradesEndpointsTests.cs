@@ -11,8 +11,10 @@ namespace SamaEcole.FunctionalTests.Grades;
 /// <summary>
 /// Ticket JGK-G01 — /grades contre un vrai PostgreSQL, à travers la vraie pile HTTP.
 ///
-/// Deux endpoints, deux permissions (docs/Volume_7_Security.md « Notes ») : POST (Saisir) est réservé
-/// à l'Enseignant, PUT (Modifier) est ouvert au Directeur ET à l'Enseignant.
+/// POST (Saisir) est réservé à l'Enseignant. PUT (Corriger) et DELETE (Annuler) sont réservés au
+/// Directeur et au Secrétariat — contrôle strict et non révocable de la matrice d'autorisation
+/// "Photoshop" : une fois une note enregistrée, l'Enseignant ne peut plus jamais la modifier, même la
+/// sienne (voir GradesController.UpdateGradeRoles).
 /// </summary>
 public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
 {
@@ -188,8 +190,11 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
     }
 
     [Fact]
-    public async Task An_Enseignant_Correcting_Their_Own_Grade_With_The_Fresh_Row_Version_Should_Succeed()
+    public async Task An_Enseignant_Must_Not_Correct_A_Grade_Even_Their_Own()
     {
+        // Contrôle strict de la matrice d'autorisation "Photoshop" : une fois enregistrée, MÊME
+        // l'auteur de la saisie ne peut plus la modifier. Une erreur de saisie exige le Directeur ou
+        // le Secrétariat (voir GradesController.UpdateGradeRoles).
         var directeur = await DirecteurTokenAsync();
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
@@ -200,16 +205,12 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var corrected = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", enseignant,
             new { value = 14, rowVersion = grade.RowVersion });
 
-        corrected.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = (await corrected.Content.ReadFromJsonAsync<GradeDto>())!;
-        result.Value.Should().Be(14);
+        corrected.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task A_Directeur_Can_Correct_A_Grade_Entered_By_The_Enseignant()
     {
-        // « Modifier » est ouvert aux DEUX rôles (docs/Volume_7_Security.md « Notes ») : contrairement
-        // à la saisie, la correction n'est pas réservée à l'Enseignant.
         var directeur = await DirecteurTokenAsync();
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
@@ -225,8 +226,10 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
     }
 
     [Fact]
-    public async Task A_Secretary_Must_Not_Correct_A_Grade()
+    public async Task A_Secretary_Can_Correct_A_Grade()
     {
+        // Contrôle strict de la matrice d'autorisation "Photoshop" : le Secrétariat corrige/annule
+        // une note déjà saisie, à la place de l'Enseignant qui en perd le droit une fois enregistrée.
         var directeur = await DirecteurTokenAsync();
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
@@ -238,7 +241,26 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var response = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", secretaire,
             new { value = 16, rowVersion = grade.RowVersion });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<GradeDto>())!.Value.Should().Be(16);
+    }
+
+    [Fact]
+    public async Task A_Secretary_Can_View_The_Grades_List()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+        await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+
+        var secretaire = await SecretaireTokenAsync();
+        var classroomsResponse = await SendAsync(HttpMethod.Get, "/api/v1/classrooms", secretaire);
+        var classroomId = (await classroomsResponse.Content.ReadFromJsonAsync<List<ClassroomDto>>())!.Single().Id;
+
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/grades?classroomId={classroomId}&subjectId={subjectId}&termId={termId}", secretaire);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -255,8 +277,9 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", directeur,
             new { value = 16, rowVersion = grade.RowVersion });
 
-        // L'Enseignant, resté sur l'ancienne lecture, tente de corriger avec le jeton PÉRIMÉ.
-        var conflict = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", enseignant,
+        // Le Secrétariat, resté sur l'ancienne lecture, tente de corriger avec le jeton PÉRIMÉ.
+        var secretaire = await SecretaireTokenAsync();
+        var conflict = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", secretaire,
             new { value = 20, rowVersion = grade.RowVersion });
 
         conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -269,6 +292,89 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
 
         var response = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{Guid.NewGuid()}", directeur,
             new { value = 12, rowVersion = 0u });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // ---------------------------------------------------------- Annulation (DELETE) — matrice "Photoshop"
+
+    [Fact]
+    public async Task A_Directeur_Can_Delete_A_Grade()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/grades/{grade.Id}?rowVersion={grade.RowVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task A_Secretary_Can_Delete_A_Grade()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
+
+        var secretaire = await SecretaireTokenAsync();
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/grades/{grade.Id}?rowVersion={grade.RowVersion}", secretaire);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task An_Enseignant_Must_Not_Delete_A_Grade_Even_Their_Own()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/grades/{grade.Id}?rowVersion={grade.RowVersion}", enseignant);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Deleting_A_Grade_With_A_Stale_Row_Version_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
+        var staleVersion = grade.RowVersion;
+
+        // Une correction entre-temps fait tourner le jeton xmin.
+        await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", directeur,
+            new { value = 16, rowVersion = staleVersion });
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/grades/{grade.Id}?rowVersion={staleVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Deleting_An_Unknown_Grade_Should_Return_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/grades/{Guid.NewGuid()}?rowVersion=1", directeur);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }

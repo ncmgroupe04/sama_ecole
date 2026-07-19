@@ -124,7 +124,7 @@
 
             <div>
                 <label for="year-start" class="block text-sm font-medium text-gray-700">Date de début <span class="text-danger">*</span></label>
-                <input id="year-start" type="date" x-model="newYear.startDate" required class="input-field">
+                <date-field id="year-start" model="newYear.startDate" required="true" />
                 @* Le chevauchement est rapporté sur ce champ : c'est la période qui est en cause,
                    et c'est là que l'API place l'erreur (StartDate). *@
                 <p x-show="createErrors.startdate" x-cloak x-text="createErrors.startdate" class="mt-1 text-xs text-danger"></p>
@@ -132,7 +132,7 @@
 
             <div>
                 <label for="year-end" class="block text-sm font-medium text-gray-700">Date de fin <span class="text-danger">*</span></label>
-                <input id="year-end" type="date" x-model="newYear.endDate" required class="input-field">
+                <date-field id="year-end" model="newYear.endDate" required="true" />
                 <p x-show="createErrors.enddate" x-cloak x-text="createErrors.enddate" class="mt-1 text-xs text-danger"></p>
             </div>
 
@@ -206,5 +206,12 @@
                 </button>
             </div>
         </form>
+    </modal-shell>
+
+    <!-- Confirmation : année scolaire activée -->
+    <modal-shell open="showActivatedDialog" size="md" on-close="showActivatedDialog = false" title="Année scolaire activée">
+        <confirm-dialog-body close-action="showActivatedDialog = false">
+            L'établissement travaille désormais sur <span class="font-medium text-gray-900" x-text="activatedYearLabel"></span>.
+        </confirm-dialog-body>
     </modal-shell>
 </div>

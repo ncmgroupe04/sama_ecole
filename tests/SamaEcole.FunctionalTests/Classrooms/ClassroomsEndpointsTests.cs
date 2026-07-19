@@ -12,7 +12,7 @@ namespace SamaEcole.FunctionalTests.Classrooms;
 /// Ticket JGK-C02 — /classrooms et la lecture de /students, contre un vrai PostgreSQL.
 /// Ces deux routes n'existaient pas : les vues Élèves et Classes appelaient un backend absent.
 /// </summary>
-public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>
+public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
 {
     private readonly AuthApiFactory _factory;
     private readonly HttpClient _client;
@@ -23,23 +23,32 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
     }
 
+    public Task InitializeAsync() => _factory.ResetTestUsersAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
+
     private record Tokens(string AccessToken, int ExpiresIn);
-    private record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount);
+    private record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount, uint RowVersion);
+    private record ClassroomUpdateResult(Guid Id, string Name, string Level, int Capacity, uint RowVersion);
     private record StudentCreated(Guid Id, string Matricule);
     private record StudentItem(Guid Id, string Matricule, string FullName, string Gender, string ClassroomName);
     private record PagedStudents(List<StudentItem> Items, int TotalCount, int Page, int PageSize);
 
-    private async Task<string> AccessTokenAsync()
+    private async Task<string> TokenAsync(string email, string password)
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new
-        {
-            email = AuthApiFactory.DirecteurEmail,
-            password = AuthApiFactory.DirecteurPassword
-        });
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         return (await response.Content.ReadFromJsonAsync<Tokens>())!.AccessToken;
     }
+
+    private Task<string> AccessTokenAsync() =>
+        TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);
+
+    private Task<string> SecretaireTokenAsync() =>
+        TokenAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
+
+    private Task<string> FinanceTokenAsync() =>
+        TokenAsync(AuthApiFactory.FinanceEmail, AuthApiFactory.FinancePassword);
 
     private async Task<HttpResponseMessage> SendAsync(
         HttpMethod method, string url, string token, object? body = null)
@@ -66,6 +75,19 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<ClassroomDto>())!;
+    }
+
+    /// <summary>
+    /// CreateClassroomResult (POST) ne porte pas RowVersion : le jeton xmin n'existe qu'après la
+    /// première lecture via GET /classrooms (ClassroomDto), comme ClassFeeDto dans FeesEndpointsTests.
+    /// </summary>
+    private async Task<ClassroomDto> FetchClassroomAsync(string token, Guid id)
+    {
+        var response = await SendAsync(HttpMethod.Get, "/api/v1/classrooms", token);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var classrooms = (await response.Content.ReadFromJsonAsync<List<ClassroomDto>>())!;
+        return classrooms.Single(c => c.Id == id);
     }
 
     [Fact]
@@ -191,5 +213,173 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>
         var response = await SendAsync(HttpMethod.Get, "/api/v1/students?page=1&pageSize=100000", token);
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    // ---------------------------------------------------------------- PUT /classrooms/{id}
+
+    [Fact]
+    public async Task A_Directeur_Can_Update_A_Classroom()
+    {
+        var directeur = await AccessTokenAsync();
+        var created = await CreateClassroomAsync(directeur, "CM2 Avant Correction");
+        var classroom = await FetchClassroomAsync(directeur, created.Id);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/classrooms/{classroom.Id}", directeur, new
+        {
+            name = "CM2 Après Correction",
+            level = "Élémentaire",
+            capacity = 45,
+            rowVersion = classroom.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = (await response.Content.ReadFromJsonAsync<ClassroomUpdateResult>())!;
+        updated.Name.Should().Be("CM2 Après Correction");
+        updated.Level.Should().Be("Élémentaire");
+        updated.Capacity.Should().Be(45);
+    }
+
+    [Fact]
+    public async Task A_Finance_Must_Not_Update_A_Classroom()
+    {
+        // ClassroomsController.ManageRoles = "Directeur,Secretariat" : la Finance n'y figure pas.
+        var directeur = await AccessTokenAsync();
+        var created = await CreateClassroomAsync(directeur, "CM1 Protégée");
+        var classroom = await FetchClassroomAsync(directeur, created.Id);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/classrooms/{classroom.Id}", finance, new
+        {
+            name = "Tentative Interdite",
+            level = "Primaire",
+            capacity = 40,
+            rowVersion = classroom.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Updating_An_Unknown_Classroom_Should_Return_404()
+    {
+        var directeur = await AccessTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/classrooms/{Guid.NewGuid()}", directeur, new
+        {
+            name = "Fantôme",
+            level = "Primaire",
+            capacity = 40,
+            rowVersion = 1u
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Updating_A_Classroom_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await AccessTokenAsync();
+        var created = await CreateClassroomAsync(directeur, "CM2 Concurrente");
+        var staleVersion = (await FetchClassroomAsync(directeur, created.Id)).RowVersion;
+
+        // Une première correction fait tourner le jeton xmin.
+        var firstEdit = await SendAsync(HttpMethod.Put, $"/api/v1/classrooms/{created.Id}", directeur, new
+        {
+            name = "CM2 Déjà Modifiée",
+            level = "Primaire",
+            capacity = 42,
+            rowVersion = staleVersion
+        });
+        firstEdit.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // La seconde tentative, avec le jeton PÉRIMÉ, ne doit jamais écraser silencieusement la première.
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/classrooms/{created.Id}", directeur, new
+        {
+            name = "CM2 Écrasement Refusé",
+            level = "Primaire",
+            capacity = 50,
+            rowVersion = staleVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await FetchClassroomAsync(directeur, created.Id)).Name.Should().Be("CM2 Déjà Modifiée");
+    }
+
+    // ---------------------------------------------------------------- DELETE /classrooms/{id}
+
+    [Fact]
+    public async Task A_Directeur_Can_Delete_A_Classroom_As_A_Soft_Delete()
+    {
+        var directeur = await AccessTokenAsync();
+        var created = await CreateClassroomAsync(directeur, "CM2 À Archiver");
+        var classroom = await FetchClassroomAsync(directeur, created.Id);
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/classrooms/{classroom.Id}?rowVersion={classroom.RowVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var list = await SendAsync(HttpMethod.Get, "/api/v1/classrooms", directeur);
+        (await list.Content.ReadFromJsonAsync<List<ClassroomDto>>())!
+            .Should().NotContain(c => c.Id == classroom.Id, "le Global Query Filter doit masquer la classe archivée");
+
+        // AGENTS.md règle #6 : jamais une suppression physique — vérifié directement en base, en
+        // contournant le filtre applicatif (IgnoreQueryFilters), pas seulement via l'absence côté API.
+        var archived = await _factory.GetClassroomAsync(classroom.Id);
+        archived.Should().NotBeNull("la ligne doit toujours exister en base, seulement marquée supprimée");
+        archived!.IsDeleted.Should().BeTrue();
+        archived.DeletedAt.Should().NotBeNull();
+        archived.DeletedBy.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task A_Finance_Must_Not_Delete_A_Classroom()
+    {
+        var directeur = await AccessTokenAsync();
+        var created = await CreateClassroomAsync(directeur, "CM1 Protégée Suppression");
+        var classroom = await FetchClassroomAsync(directeur, created.Id);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/classrooms/{classroom.Id}?rowVersion={classroom.RowVersion}", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _factory.GetClassroomAsync(classroom.Id))!.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Deleting_An_Unknown_Classroom_Should_Return_404()
+    {
+        var directeur = await AccessTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/classrooms/{Guid.NewGuid()}?rowVersion=1", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Deleting_A_Classroom_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await AccessTokenAsync();
+        var created = await CreateClassroomAsync(directeur, "CM2 Suppression Concurrente");
+        var staleVersion = (await FetchClassroomAsync(directeur, created.Id)).RowVersion;
+
+        // Une correction concurrente fait tourner le jeton xmin avant la tentative de suppression.
+        var edit = await SendAsync(HttpMethod.Put, $"/api/v1/classrooms/{created.Id}", directeur, new
+        {
+            name = "CM2 Modifiée Avant Suppression",
+            level = "Primaire",
+            capacity = 41,
+            rowVersion = staleVersion
+        });
+        edit.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/classrooms/{created.Id}?rowVersion={staleVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await _factory.GetClassroomAsync(created.Id))!.IsDeleted
+            .Should().BeFalse("le conflit ne doit jamais entraîner une suppression silencieuse");
     }
 }

@@ -31,6 +31,13 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     private record TeacherDto(Guid Id, string Matricule, string FullName, string Email, string? Phone, string Status, List<string> Subjects);
     private record PaginatedTeachers(List<TeacherDto> Items, int TotalCount, int Page, int PageSize);
 
+    /// <summary>Miroir de GetTeacherByIdQuery.TeacherProfileDto — seuls les champs utiles aux tests d'Update/Delete.</summary>
+    private record TeacherProfileDto(
+        Guid Id, string FullName, string Email, string? Phone, string? BirthPlace, string? PhotoUrl,
+        string Status, List<string> Subjects, uint RowVersion);
+
+    private record TeacherUpdateResult(Guid Id, uint RowVersion);
+
     private async Task<string> AccessTokenAsync(string email, string password)
     {
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
@@ -79,6 +86,18 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<TeacherResult>())!;
+    }
+
+    /// <summary>
+    /// CreateTeacherResult (POST) ne porte pas RowVersion : le jeton xmin n'existe qu'après la première
+    /// lecture via GET /teachers/{id} (TeacherProfileDto), comme ClassFeeDto dans FeesEndpointsTests.
+    /// </summary>
+    private async Task<TeacherProfileDto> FetchTeacherAsync(string token, Guid id)
+    {
+        var response = await SendAsync(HttpMethod.Get, $"/api/v1/teachers/{id}", token);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        return (await response.Content.ReadFromJsonAsync<TeacherProfileDto>())!;
     }
 
     [Fact]
@@ -270,5 +289,192 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         });
 
         second.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    // ---------------------------------------------------------------- PUT /teachers/{id}
+
+    [Fact]
+    public async Task A_Directeur_Can_Update_A_Teacher()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var mathId = await CreateSubjectAsync(directeur, "Mathématiques");
+        var created = await CreateTeacherAsync(directeur, "Ousmane Sarr", "ousmane.sarr@sama-ecole.sn", [mathId]);
+        var teacher = await FetchTeacherAsync(directeur, created.Id);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/teachers/{teacher.Id}", directeur, new
+        {
+            fullName = "Ousmane Sarr Diallo",
+            email = "ousmane.diallo@sama-ecole.sn",
+            phone = "+221770000000",
+            birthPlace = "Thiès",
+            photoUrl = (string?)null,
+            subjectIds = new[] { mathId },
+            rowVersion = teacher.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await FetchTeacherAsync(directeur, teacher.Id);
+        updated.FullName.Should().Be("Ousmane Sarr Diallo");
+        updated.Email.Should().Be("ousmane.diallo@sama-ecole.sn");
+        updated.BirthPlace.Should().Be("Thiès");
+    }
+
+    [Fact]
+    public async Task Finance_Must_Not_Update_A_Teacher()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var subjectId = await CreateSubjectAsync(directeur, "Français");
+        var created = await CreateTeacherAsync(directeur, "Bineta Sy", "bineta.sy@sama-ecole.sn", [subjectId]);
+        var teacher = await FetchTeacherAsync(directeur, created.Id);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/teachers/{teacher.Id}", finance, new
+        {
+            fullName = "Tentative Interdite",
+            email = "intrus@sama-ecole.sn",
+            phone = (string?)null,
+            birthPlace = (string?)null,
+            photoUrl = (string?)null,
+            subjectIds = new[] { subjectId },
+            rowVersion = teacher.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Updating_An_Unknown_Teacher_Should_Return_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var subjectId = await CreateSubjectAsync(directeur, "Espagnol");
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/teachers/{Guid.NewGuid()}", directeur, new
+        {
+            fullName = "Fantôme",
+            email = "fantome@sama-ecole.sn",
+            phone = (string?)null,
+            birthPlace = (string?)null,
+            photoUrl = (string?)null,
+            subjectIds = new[] { subjectId },
+            rowVersion = 1u
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Updating_A_Teacher_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var subjectId = await CreateSubjectAsync(directeur, "Philosophie");
+        var created = await CreateTeacherAsync(directeur, "Assane Ba", "assane.ba@sama-ecole.sn", [subjectId]);
+        var staleVersion = (await FetchTeacherAsync(directeur, created.Id)).RowVersion;
+
+        var firstEdit = await SendAsync(HttpMethod.Put, $"/api/v1/teachers/{created.Id}", directeur, new
+        {
+            fullName = "Assane Ba Déjà Modifié",
+            email = "assane.ba@sama-ecole.sn",
+            phone = (string?)null,
+            birthPlace = (string?)null,
+            photoUrl = (string?)null,
+            subjectIds = new[] { subjectId },
+            rowVersion = staleVersion
+        });
+        firstEdit.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/teachers/{created.Id}", directeur, new
+        {
+            fullName = "Assane Ba Écrasement Refusé",
+            email = "assane.ba@sama-ecole.sn",
+            phone = (string?)null,
+            birthPlace = (string?)null,
+            photoUrl = (string?)null,
+            subjectIds = new[] { subjectId },
+            rowVersion = staleVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await FetchTeacherAsync(directeur, created.Id)).FullName.Should().Be("Assane Ba Déjà Modifié");
+    }
+
+    // ---------------------------------------------------------------- DELETE /teachers/{id}
+
+    [Fact]
+    public async Task A_Directeur_Can_Delete_A_Teacher_As_A_Soft_Delete()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var subjectId = await CreateSubjectAsync(directeur, "Économie");
+        var created = await CreateTeacherAsync(directeur, "Khady Diouf", "khady.diouf@sama-ecole.sn", [subjectId]);
+        var teacher = await FetchTeacherAsync(directeur, created.Id);
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/teachers/{teacher.Id}?rowVersion={teacher.RowVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var list = await SendAsync(HttpMethod.Get, "/api/v1/teachers", directeur);
+        (await list.Content.ReadFromJsonAsync<PaginatedTeachers>())!.Items
+            .Should().NotContain(t => t.Id == teacher.Id, "le Global Query Filter doit masquer la fiche archivée");
+
+        var archived = await _factory.GetTeacherAsync(teacher.Id);
+        archived.Should().NotBeNull("la ligne doit toujours exister en base, seulement marquée supprimée");
+        archived!.IsDeleted.Should().BeTrue();
+        archived.DeletedAt.Should().NotBeNull();
+        archived.DeletedBy.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Finance_Must_Not_Delete_A_Teacher()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var subjectId = await CreateSubjectAsync(directeur, "Gymnastique");
+        var created = await CreateTeacherAsync(directeur, "Modou Kane", "modou.kane@sama-ecole.sn", [subjectId]);
+        var teacher = await FetchTeacherAsync(directeur, created.Id);
+
+        var finance = await FinanceTokenAsync();
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/teachers/{teacher.Id}?rowVersion={teacher.RowVersion}", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _factory.GetTeacherAsync(teacher.Id))!.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Deleting_An_Unknown_Teacher_Should_Return_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/teachers/{Guid.NewGuid()}?rowVersion=1", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Deleting_A_Teacher_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var subjectId = await CreateSubjectAsync(directeur, "Informatique");
+        var created = await CreateTeacherAsync(directeur, "Aida Diagne", "aida.diagne@sama-ecole.sn", [subjectId]);
+        var staleVersion = (await FetchTeacherAsync(directeur, created.Id)).RowVersion;
+
+        var edit = await SendAsync(HttpMethod.Put, $"/api/v1/teachers/{created.Id}", directeur, new
+        {
+            fullName = "Aida Diagne Modifiée Avant Suppression",
+            email = "aida.diagne@sama-ecole.sn",
+            phone = (string?)null,
+            birthPlace = (string?)null,
+            photoUrl = (string?)null,
+            subjectIds = new[] { subjectId },
+            rowVersion = staleVersion
+        });
+        edit.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/teachers/{created.Id}?rowVersion={staleVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await _factory.GetTeacherAsync(created.Id))!.IsDeleted
+            .Should().BeFalse("le conflit ne doit jamais entraîner une suppression silencieuse");
     }
 }

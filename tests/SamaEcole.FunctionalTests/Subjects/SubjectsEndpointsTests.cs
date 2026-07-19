@@ -26,7 +26,8 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     public Task DisposeAsync() => Task.CompletedTask;
 
     private record Tokens(string AccessToken, int ExpiresIn);
-    private record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient);
+    private record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion);
+    private record SubjectUpdateResult(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion);
 
     private async Task<string> AccessTokenAsync(string email, string password)
     {
@@ -57,6 +58,19 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<SubjectDto>())!;
+    }
+
+    /// <summary>
+    /// SubjectResult (POST) ne porte pas RowVersion : le jeton xmin n'existe qu'après la première
+    /// lecture via GET /subjects, comme ClassFeeDto dans FeesEndpointsTests.
+    /// </summary>
+    private async Task<SubjectDto> FetchSubjectAsync(string token, Guid id)
+    {
+        var response = await SendAsync(HttpMethod.Get, "/api/v1/subjects", token);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var subjects = (await response.Content.ReadFromJsonAsync<List<SubjectDto>>())!;
+        return subjects.Single(s => s.Id == id);
     }
 
     /// <summary>Seul geste du Directeur capable d'activer la délégation (ticket JGK-G02) : PUT /schools/current/settings.</summary>
@@ -203,5 +217,168 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var subjects = (await response.Content.ReadFromJsonAsync<List<SubjectDto>>())!;
         subjects.Should().ContainSingle().Which.Name.Should().Be("Sciences");
+    }
+
+    // ---------------------------------------------------------------- PUT /subjects/{id}
+
+    [Fact]
+    public async Task A_Directeur_Can_Update_A_Subject()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "Physique-Chimie", "Collège", 3);
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{subject.Id}", directeur, new
+        {
+            name = "Sciences Physiques",
+            level = "Collège",
+            coefficient = 4,
+            rowVersion = subject.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = (await response.Content.ReadFromJsonAsync<SubjectUpdateResult>())!;
+        updated.Name.Should().Be("Sciences Physiques");
+        updated.Coefficient.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task A_Secretary_Must_Not_Update_A_Subject_By_Default()
+    {
+        // Même délégation FACULTATIVE que la création (ticket JGK-G02) : fermée tant que le Directeur
+        // ne l'a pas explicitement activée.
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "Histoire-Géo", "Collège", 3);
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        var secretaire = await SecretaireTokenAsync();
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{subject.Id}", secretaire, new
+        {
+            name = "Tentative Interdite",
+            level = "Collège",
+            coefficient = 3,
+            rowVersion = subject.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Updating_An_Unknown_Subject_Should_Return_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{Guid.NewGuid()}", directeur, new
+        {
+            name = "Fantôme",
+            level = "Collège",
+            coefficient = 3,
+            rowVersion = 1u
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Updating_A_Subject_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "SVT", "Collège", 3);
+        var staleVersion = (await FetchSubjectAsync(directeur, created.Id)).RowVersion;
+
+        var firstEdit = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{created.Id}", directeur, new
+        {
+            name = "SVT Déjà Modifiée",
+            level = "Collège",
+            coefficient = 3,
+            rowVersion = staleVersion
+        });
+        firstEdit.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{created.Id}", directeur, new
+        {
+            name = "SVT Écrasement Refusé",
+            level = "Collège",
+            coefficient = 5,
+            rowVersion = staleVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await FetchSubjectAsync(directeur, created.Id)).Name.Should().Be("SVT Déjà Modifiée");
+    }
+
+    // ---------------------------------------------------------------- DELETE /subjects/{id}
+
+    [Fact]
+    public async Task A_Directeur_Can_Delete_A_Subject_As_A_Soft_Delete()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "Musique", "Primaire", 1);
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/subjects/{subject.Id}?rowVersion={subject.RowVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var list = await SendAsync(HttpMethod.Get, "/api/v1/subjects", directeur);
+        (await list.Content.ReadFromJsonAsync<List<SubjectDto>>())!
+            .Should().NotContain(s => s.Id == subject.Id, "le Global Query Filter doit masquer la matière archivée");
+
+        var archived = await _factory.GetSubjectAsync(subject.Id);
+        archived.Should().NotBeNull("la ligne doit toujours exister en base, seulement marquée supprimée");
+        archived!.IsDeleted.Should().BeTrue();
+        archived.DeletedAt.Should().NotBeNull();
+        archived.DeletedBy.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task A_Secretary_Must_Not_Delete_A_Subject_By_Default()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "Arts Plastiques", "Primaire", 1);
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        var secretaire = await SecretaireTokenAsync();
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/subjects/{subject.Id}?rowVersion={subject.RowVersion}", secretaire);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await _factory.GetSubjectAsync(subject.Id))!.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Deleting_An_Unknown_Subject_Should_Return_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/subjects/{Guid.NewGuid()}?rowVersion=1", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Deleting_A_Subject_With_A_Stale_RowVersion_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "Anglais", "Collège", 2);
+        var staleVersion = (await FetchSubjectAsync(directeur, created.Id)).RowVersion;
+
+        var edit = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{created.Id}", directeur, new
+        {
+            name = "Anglais Modifiée Avant Suppression",
+            level = "Collège",
+            coefficient = 2,
+            rowVersion = staleVersion
+        });
+        edit.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/subjects/{created.Id}?rowVersion={staleVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await _factory.GetSubjectAsync(created.Id))!.IsDeleted
+            .Should().BeFalse("le conflit ne doit jamais entraîner une suppression silencieuse");
     }
 }

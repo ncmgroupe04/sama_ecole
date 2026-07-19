@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -43,8 +44,19 @@ public class InitializeAttendanceSheetQueryHandler(
         // (403 sinon). Directeur/Secrétariat non bornés.
         await scopeAuthorizer.EnsureCanTakeAttendanceAsync(request.ClassroomId, request.SubjectId, activeYear.Id, cancellationToken);
 
+        // Un élève en abandon ou transféré sur l'année ACTIVE sort des futures listes de présence :
+        // sa scolarité dans cette classe s'est arrêtée, même si sa fiche pointe encore la classe
+        // (ChangeEnrollmentStatusCommand ne déplace jamais Student.ClassroomId). Les notes et
+        // paiements déjà enregistrés restent, eux, intacts — cette exclusion ne concerne que l'appel.
+        var excludedStudentIds = await dbContext.Enrollments.AsNoTracking()
+            .Where(e => e.SchoolYearId == activeYear.Id
+                        && e.ClassroomId == request.ClassroomId
+                        && (e.Status == EnrollmentStatus.DroppedOut || e.Status == EnrollmentStatus.Transferred))
+            .Select(e => e.StudentId)
+            .ToListAsync(cancellationToken);
+
         var students = await dbContext.Students.AsNoTracking()
-            .Where(s => s.ClassroomId == request.ClassroomId)
+            .Where(s => s.ClassroomId == request.ClassroomId && !excludedStudentIds.Contains(s.Id))
             .OrderBy(s => s.FullName)
             .Select(s => new { s.Id, s.Matricule, s.FullName })
             .ToListAsync(cancellationToken);

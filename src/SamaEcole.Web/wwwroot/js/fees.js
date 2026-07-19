@@ -9,6 +9,13 @@
  * l'API répond 403 à qui les appellerait quand même. Le jeton de concurrence (rowVersion/xmin) est
  * renvoyé tel quel à chaque modification — deux éditions concurrentes ne peuvent pas s'écraser
  * (AGENTS.md règle #5).
+ *
+ * Matrice d'autorisation "Photoshop" : le Directeur peut TOUJOURS modifier/supprimer ; la Finance ne
+ * le peut QUE si SchoolSettings.allowFinanceToModifyFees / allowFinanceToDeleteFees est activé pour
+ * l'école (canModifyFees / canDeleteFees, deux getters — jamais une valeur figée au chargement, même
+ * principe que canManageGradingConfig dans settings.js). Ces deux booléens sont lus une seule fois à
+ * l'ouverture de l'écran (comme gradingScale dans grades.js) : un changement de délégation fait par
+ * le Directeur pendant que cet écran est déjà ouvert n'est visible qu'au rechargement.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('feesView', () => ({
@@ -27,6 +34,29 @@ document.addEventListener('alpine:init', () => {
         sortDir: 'asc',
 
         isDirecteur: window.auth.role === 'Directeur',
+        allowFinanceToModifyFees: false,
+        allowFinanceToDeleteFees: false,
+
+        get canModifyFees() {
+            return this.isDirecteur || (window.auth.role === 'Finance' && this.allowFinanceToModifyFees);
+        },
+        get canDeleteFees() {
+            return this.isDirecteur || (window.auth.role === 'Finance' && this.allowFinanceToDeleteFees);
+        },
+
+        // Suppression d'une catégorie (modale de confirmation)
+        deletingCategory: null, // { id, name }
+        isDeletingCategory: false,
+        deleteCategoryError: null,
+        showCategoryDeletedDialog: false,
+        deletedCategoryName: '',
+
+        // Suppression d'une ligne de barème / exception (modale de confirmation)
+        deletingFee: null, // { classFeeId, classroomName, rowVersion }
+        isDeletingFee: false,
+        deleteFeeError: null,
+        showFeeDeletedDialog: false,
+        deletedFeeClassroomName: '',
 
         // Création de catégorie (panneau latéral)
         isCategoryOpen: false,
@@ -49,6 +79,9 @@ document.addEventListener('alpine:init', () => {
         editing: null, // { classFeeId, classroomName, amount, rowVersion }
         isSavingEdit: false,
         editErrors: {},
+        showFeeEditedDialog: false,
+        editedFeeClassroomName: '',
+        editedFeeAmount: null,
 
         // Historique (modale)
         historyFor: null, // { classroomName }
@@ -63,14 +96,17 @@ document.addEventListener('alpine:init', () => {
             this.isLoading = true;
             this.error = null;
             try {
-                const [categories, classrooms, fees] = await Promise.all([
+                const [categories, classrooms, fees, settings] = await Promise.all([
                     window.api.get('/finance/fee-categories'),
                     window.api.get('/classrooms'),
-                    window.api.get('/finance/fees')
+                    window.api.get('/finance/fees'),
+                    window.api.get('/schools/current/settings')
                 ]);
                 this.categories = categories;
                 this.classrooms = classrooms;
                 this.fees = fees;
+                this.allowFinanceToModifyFees = settings.allowFinanceToModifyFees;
+                this.allowFinanceToDeleteFees = settings.allowFinanceToDeleteFees;
 
                 // Garde la catégorie sélectionnée si elle existe encore, sinon prend la première.
                 if (!this.categories.some((c) => c.id === this.selectedCategoryId)) {
@@ -172,6 +208,35 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        openDeleteCategory(category) {
+            this.deletingCategory = category;
+            this.deleteCategoryError = null;
+        },
+
+        closeDeleteCategory() {
+            this.deletingCategory = null;
+            this.deleteCategoryError = null;
+        },
+
+        /** Supprime la catégorie ET tout son barème en cascade (soft delete côté serveur, AGENTS.md règle #6). */
+        async confirmDeleteCategory() {
+            if (!this.deletingCategory) return;
+
+            this.isDeletingCategory = true;
+            this.deleteCategoryError = null;
+            try {
+                await window.api.delete(`/finance/fee-categories/${this.deletingCategory.id}`);
+                this.deletedCategoryName = this.deletingCategory.name;
+                this.deletingCategory = null;
+                await this.loadAll();
+                this.showCategoryDeletedDialog = true;
+            } catch (err) {
+                this.deleteCategoryError = (err && err.message) || 'Erreur lors de la suppression de la catégorie.';
+            } finally {
+                this.isDeletingCategory = false;
+            }
+        },
+
         // ------------------------------------------------- Montant standard (Option 1)
 
         openApplyStandard() {
@@ -230,8 +295,11 @@ document.addEventListener('alpine:init', () => {
                     amount: this.editing.amount,
                     rowVersion: this.editing.rowVersion
                 });
+                this.editedFeeClassroomName = this.editing.classroomName;
+                this.editedFeeAmount = this.editing.amount;
                 this.closeEdit();
                 await this.reloadFees();
+                this.showFeeEditedDialog = true;
             } catch (err) {
                 // Conflit optimiste : quelqu'un a modifié cette ligne entre-temps. On recharge pour
                 // montrer la valeur réelle et on invite à recommencer, plutôt que d'écraser (règle #5).
@@ -243,6 +311,48 @@ document.addEventListener('alpine:init', () => {
                 }
             } finally {
                 this.isSavingEdit = false;
+            }
+        },
+
+        openDeleteFee(row) {
+            // Miroir du garde-fou d'openEdit : une ligne « non définie » n'a pas d'identifiant.
+            if (!row.fee) return;
+
+            this.deletingFee = {
+                classFeeId: row.fee.id,
+                classroomName: row.classroom.name,
+                rowVersion: row.fee.rowVersion
+            };
+            this.deleteFeeError = null;
+        },
+
+        closeDeleteFee() {
+            this.deletingFee = null;
+            this.deleteFeeError = null;
+        },
+
+        async confirmDeleteFee() {
+            if (!this.deletingFee) return;
+
+            this.isDeletingFee = true;
+            this.deleteFeeError = null;
+            try {
+                await window.api.delete(`/finance/fees/${this.deletingFee.classFeeId}?rowVersion=${this.deletingFee.rowVersion}`);
+                this.deletedFeeClassroomName = this.deletingFee.classroomName;
+                this.deletingFee = null;
+                await this.reloadFees();
+                this.showFeeDeletedDialog = true;
+            } catch (err) {
+                if (err.status === 409) {
+                    // Conflit optimiste : quelqu'un a modifié cette ligne entre-temps (règle #5). On
+                    // recharge pour montrer la valeur réelle plutôt que de forcer une suppression aveugle.
+                    this.deleteFeeError = 'Ce montant vient d\'être modifié par un autre utilisateur. La grille a été rafraîchie — vérifiez la valeur puis réessayez.';
+                    await this.reloadFees();
+                } else {
+                    this.deleteFeeError = (err && err.message) || 'Erreur lors de la suppression.';
+                }
+            } finally {
+                this.isDeletingFee = false;
             }
         },
 

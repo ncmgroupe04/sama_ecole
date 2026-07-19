@@ -12,4 +12,6 @@ public record SchoolSettingsDto(
     int AutoLogoutMinutes,
     string DateFormat,
     int TuitionMonthsPerYear,
-    bool AllowSecretaryToManageGrading);
+    bool AllowSecretaryToManageGrading,
+    bool AllowFinanceToModifyFees,
+    bool AllowFinanceToDeleteFees);

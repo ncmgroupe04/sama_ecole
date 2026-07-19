@@ -42,6 +42,19 @@ document.addEventListener('alpine:init', () => {
         assignSuccess: false,
         classrooms: [],
 
+        // Édition de la fiche (modale). `detail` est déjà la fiche fraîchement chargée (GET
+        // /teachers/{id}), RowVersion inclus — pas besoin d'une source séparée comme pour l'élève.
+        editingTeacher: null, // { fullName, email, phone, birthPlace, photoUrl, subjectIds, rowVersion }
+        isSavingTeacherEdit: false,
+        teacherEditErrors: {},
+        showTeacherEditedDialog: false,
+
+        // Suppression de la fiche (modale de confirmation)
+        deletingTeacherRecord: null, // { id, fullName, rowVersion }
+        isDeletingTeacherRecord: false,
+        deleteTeacherRecordError: null,
+        showTeacherDeletedDialog: false,
+
         init() {
             this.loadSubjects();
             this.loadTeachers();
@@ -154,6 +167,99 @@ document.addEventListener('alpine:init', () => {
 
         closeDetail() {
             this.detail = null;
+        },
+
+        /** Recharge la fiche depuis GET /teachers/{id} sans fermer la modale de détail. */
+        async refreshTeacherDetail() {
+            if (!this.detail) return;
+            this.detail = await window.api.get(`/teachers/${this.detail.id}`);
+        },
+
+        // ------------------------------------------------------------ Modifier la fiche
+
+        openEditTeacher() {
+            if (!this.detail) return;
+            this.editingTeacher = {
+                fullName: this.detail.fullName,
+                email: this.detail.email,
+                phone: this.detail.phone || '',
+                birthPlace: this.detail.birthPlace || '',
+                photoUrl: this.detail.photoUrl || '',
+                // La fiche ne renvoie que les NOMS des matières qualifiées (voir TeacherProfileDto) :
+                // on retrouve leurs identifiants dans le référentiel `subjects` déjà chargé.
+                subjectIds: this.subjects.filter((s) => this.detail.subjects.includes(s.name)).map((s) => s.id),
+                rowVersion: this.detail.rowVersion
+            };
+            this.teacherEditErrors = {};
+        },
+
+        closeEditTeacher() {
+            this.editingTeacher = null;
+            this.teacherEditErrors = {};
+        },
+
+        async submitEditTeacher() {
+            if (!this.editingTeacher || !this.detail) return;
+
+            this.isSavingTeacherEdit = true;
+            this.teacherEditErrors = {};
+            try {
+                await window.api.put(`/teachers/${this.detail.id}`, this.editingTeacher);
+                this.closeEditTeacher();
+                await this.refreshTeacherDetail();
+                await this.loadTeachers();
+                this.showTeacherEditedDialog = true;
+            } catch (err) {
+                if (err.code === 'CONCURRENCY_CONFLICT') {
+                    this.teacherEditErrors = { global: 'Cette fiche vient d\'être modifiée par un autre utilisateur. Elle a été rafraîchie — vérifiez les valeurs puis réessayez.' };
+                    await this.refreshTeacherDetail();
+                } else {
+                    this.teacherEditErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification.');
+                }
+            } finally {
+                this.isSavingTeacherEdit = false;
+            }
+        },
+
+        // ------------------------------------------------------------ Supprimer la fiche
+
+        openDeleteTeacher() {
+            if (!this.detail) return;
+            this.deletingTeacherRecord = { id: this.detail.id, fullName: this.detail.fullName, rowVersion: this.detail.rowVersion };
+            this.deleteTeacherRecordError = null;
+        },
+
+        closeDeleteTeacher() {
+            this.deletingTeacherRecord = null;
+            this.deleteTeacherRecordError = null;
+        },
+
+        async confirmDeleteTeacher() {
+            if (!this.deletingTeacherRecord) return;
+
+            this.isDeletingTeacherRecord = true;
+            this.deleteTeacherRecordError = null;
+            try {
+                await window.api.delete(`/teachers/${this.deletingTeacherRecord.id}?rowVersion=${this.deletingTeacherRecord.rowVersion}`);
+                this.deletingTeacherRecord = null;
+                this.closeDetail();
+                this.page = 1;
+                await this.loadTeachers();
+                this.showTeacherDeletedDialog = true;
+            } catch (err) {
+                if (err.code === 'BUSINESS_RULE_VIOLATION') {
+                    // Une attribution classe/matière/année existe déjà (DeleteTeacherCommandHandler) :
+                    // le message serveur est déjà explicite, on l'affiche tel quel.
+                    this.deleteTeacherRecordError = err.message;
+                } else if (err.code === 'CONCURRENCY_CONFLICT') {
+                    this.deleteTeacherRecordError = 'Cette fiche vient d\'être modifiée par un autre utilisateur. Rafraîchissez la page puis réessayez.';
+                    await this.refreshTeacherDetail();
+                } else {
+                    this.deleteTeacherRecordError = (err && err.message) || 'Erreur lors de la suppression.';
+                }
+            } finally {
+                this.isDeletingTeacherRecord = false;
+            }
         },
 
         /** Affectations regroupées par année scolaire (l'historique), année active en tête. */

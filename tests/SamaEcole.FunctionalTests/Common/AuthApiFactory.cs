@@ -231,6 +231,14 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // une poignée de tests suffirait à déclencher un 429 et à faire échouer les suivants.
         Environment.SetEnvironmentVariable("RateLimiting__Registration__PermitLimit", "1000");
         Environment.SetEnvironmentVariable("RateLimiting__Registration__WindowMinutes", "5");
+
+        // Même raisonnement que la limite d'inscription ci-dessus : TestServer ne renseigne aucune IP
+        // source, donc TOUTES les connexions de TOUS les tests d'une classe partagent la même
+        // partition « unknown ». La limite de production (10 / 5 min, appsettings.json) protège contre
+        // le credential stuffing — elle n'a rien à prouver ici, où chaque test se reconnecte
+        // volontairement à chaque fois par clarté et isolation plutôt que de partager un jeton.
+        Environment.SetEnvironmentVariable("RateLimiting__Login__PermitLimit", "1000");
+        Environment.SetEnvironmentVariable("RateLimiting__Login__WindowMinutes", "5");
     }
 
     private static void ClearEnvironment()
@@ -241,7 +249,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "Jwt__Issuer", "Jwt__Audience", "Jwt__SigningKey",
                      "Jwt__AccessTokenMinutes", "Auth__MaxFailedAttempts", "Auth__LockoutMinutes",
                      "Auth__RefreshTokenDays", "RateLimiting__Registration__PermitLimit",
-                     "RateLimiting__Registration__WindowMinutes"
+                     "RateLimiting__Registration__WindowMinutes", "RateLimiting__Login__PermitLimit",
+                     "RateLimiting__Login__WindowMinutes"
                  })
         {
             Environment.SetEnvironmentVariable(key, null);
@@ -447,6 +456,83 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await using var owner = NewOwnerContext();
 
         return await owner.Subscriptions.AsNoTracking().SingleOrDefaultAsync(s => s.SchoolId == schoolId);
+    }
+
+    /// <summary>
+    /// Lit une classe directement en base, IgnoreQueryFilters compris (même raisonnement que
+    /// GetSubscriptionPaymentAsync) — seul moyen de vérifier IsDeleted/DeletedAt/DeletedBy après un
+    /// DELETE /classrooms/{id} : le Global Query Filter masquerait sinon la ligne archivée, et la RLS
+    /// isolerait la requête sur un tenant que NoTenantProvider ne fournit pas.
+    /// </summary>
+    public async Task<Classroom?> GetClassroomAsync(Guid id)
+    {
+        await using var owner = NewOwnerContext();
+
+        return await owner.Classrooms.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(c => c.Id == id);
+    }
+
+    /// <summary>Même raisonnement que GetClassroomAsync, pour vérifier le soft delete de DELETE /students/{id}.</summary>
+    public async Task<Student?> GetStudentAsync(Guid id)
+    {
+        await using var owner = NewOwnerContext();
+
+        return await owner.Students.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Id == id);
+    }
+
+    /// <summary>Même raisonnement que GetClassroomAsync, pour vérifier le soft delete de DELETE /subjects/{id}.</summary>
+    public async Task<Subject?> GetSubjectAsync(Guid id)
+    {
+        await using var owner = NewOwnerContext();
+
+        return await owner.Subjects.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Id == id);
+    }
+
+    /// <summary>Même raisonnement que GetClassroomAsync, pour vérifier le soft delete de DELETE /teachers/{id}.</summary>
+    public async Task<Teacher?> GetTeacherAsync(Guid id)
+    {
+        await using var owner = NewOwnerContext();
+
+        return await owner.Teachers.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(t => t.Id == id);
+    }
+
+    /// <summary>
+    /// Même raisonnement que GetClassroomAsync, pour vérifier après DELETE /enrollments/{id} (annulation)
+    /// que Status passe bien à Cancelled SANS que IsDeleted ne devienne true — CancelEnrollmentCommand
+    /// documente explicitement ce choix (l'historique scolaire doit rester visible, jamais masqué par
+    /// le Global Query Filter).
+    /// </summary>
+    public async Task<Enrollment?> GetEnrollmentAsync(Guid id)
+    {
+        await using var owner = NewOwnerContext();
+
+        return await owner.Enrollments.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(e => e.Id == id);
+    }
+
+    /// <summary>
+    /// Force un UPDATE PostgreSQL sur une inscription SANS toucher un champ métier visible (aucun
+    /// changement de Status, aucun Payment créé) — PostgreSQL attribue malgré tout un nouveau xmin à
+    /// toute ligne réécrite (MVCC), même quand aucune valeur ne change réellement.
+    ///
+    /// Nécessaire UNIQUEMENT pour tester le conflit RowVersion (règle #5) de CancelEnrollmentCommand :
+    /// contrairement à Classroom/Subject/Teacher/Student (qui ont chacun leur propre UpdateCommand
+    /// anodin pour faire tourner xmin avant un test de conflit), la seule autre écriture connue sur
+    /// Enrollment est RecordPayment — qui ferait échouer le Cancel testé pour la MAUVAISE raison (« un
+    /// paiement existe déjà », business rule 409) plutôt que pour un jeton simplement périmé.
+    /// </summary>
+    public async Task TouchEnrollmentRowVersionAsync(Guid enrollmentId)
+    {
+        await using var owner = NewOwnerContext();
+
+        var enrollment = await owner.Enrollments.IgnoreQueryFilters()
+            .SingleAsync(e => e.Id == enrollmentId);
+
+        owner.Entry(enrollment).State = EntityState.Modified;
+        await owner.SaveChangesAsync(CancellationToken.None);
     }
 
     /// <summary>Forge un token signé par la MÊME clé que l'API, mais déjà expiré.</summary>

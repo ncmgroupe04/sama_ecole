@@ -215,11 +215,121 @@
                     </form>
                 </div>
 
-                <div class="mt-8 flex justify-end border-t border-gray-200 pt-4">
-                    <button type="button" x-on:click="closeDetail()" class="btn-secondary">Fermer</button>
+                <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-gray-200 pt-4">
+                    <template x-if="canManage">
+                        <div class="flex gap-2">
+                            <button type="button" x-on:click="openEditTeacher()" class="btn-secondary">
+                                Modifier la fiche
+                            </button>
+                            <button type="button" x-on:click="openDeleteTeacher()" class="text-sm font-medium text-danger bg-danger-bg hover:bg-red-100 px-4 py-2 rounded-md transition-colors">
+                                Supprimer
+                            </button>
+                        </div>
+                    </template>
+                    <button type="button" x-on:click="closeDetail()" class="btn-secondary sm:ml-auto">Fermer</button>
                 </div>
             </div>
         </template>
+    </modal-shell>
+
+    <!-- Modification de la fiche enseignant : matricule et compte de connexion non modifiables ici. -->
+    <modal-shell open="editingTeacher" on-close="closeEditTeacher()" title="Modifier la fiche">
+        <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
+
+        <div x-show="teacherEditErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="teacherEditErrors.global"></div>
+
+        <form x-on:submit.prevent="submitEditTeacher()" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nom complet <span class="text-danger">*</span></label>
+                <input type="text" x-model="editingTeacher.fullName" required class="input-field">
+                <p x-show="teacherEditErrors.fullname" x-text="teacherEditErrors.fullname" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">E-mail <span class="text-danger">*</span></label>
+                <input type="email" x-model="editingTeacher.email" required class="input-field">
+                <p x-show="teacherEditErrors.email" x-text="teacherEditErrors.email" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Téléphone</label>
+                <input type="text" x-model="editingTeacher.phone" class="input-field">
+                <p x-show="teacherEditErrors.phone" x-text="teacherEditErrors.phone" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Lieu de naissance</label>
+                <input type="text" x-model="editingTeacher.birthPlace" class="input-field">
+                <p x-show="teacherEditErrors.birthplace" x-text="teacherEditErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Photo (URL)</label>
+                <div class="mt-1 flex items-center gap-3">
+                    <img x-show="editingTeacher.photoUrl" :src="editingTeacher.photoUrl" alt=""
+                         class="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200" x-cloak>
+                    <input type="text" x-model="editingTeacher.photoUrl" placeholder="https://…" class="input-field flex-1">
+                </div>
+                <p x-show="teacherEditErrors.photourl" x-text="teacherEditErrors.photourl" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Matières enseignées <span class="text-danger">*</span></label>
+                <p class="text-xs text-gray-500 mb-2">Sélectionnez au moins une matière qualifiée.</p>
+                <div class="max-h-40 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
+                    <template x-for="s in subjects" :key="s.id">
+                        <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                            <input type="checkbox" :value="s.id" x-model="editingTeacher.subjectIds" class="rounded border-gray-300 text-primary focus:ring-primary">
+                            <span class="text-sm text-gray-700" x-text="s.name + ' (' + s.level + ')'"></span>
+                        </label>
+                    </template>
+                </div>
+                <p x-show="teacherEditErrors.subjectids" x-text="teacherEditErrors.subjectids" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button type="button" x-on:click="closeEditTeacher()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isSavingTeacherEdit" class="btn-primary">
+                    <span x-text="isSavingTeacherEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Confirmation : fiche modifiée -->
+    <modal-shell open="showTeacherEditedDialog" size="md" on-close="showTeacherEditedDialog = false" title="Fiche modifiée">
+        <confirm-dialog-body close-action="showTeacherEditedDialog = false">
+            La fiche a bien été mise à jour.
+        </confirm-dialog-body>
+    </modal-shell>
+
+    <!-- Confirmation : suppression de la fiche enseignant -->
+    <modal-shell open="deletingTeacherRecord" on-close="closeDeleteTeacher()" size="md">
+        <modal-title>Supprimer la fiche</modal-title>
+        <modal-subtitle>
+            <span class="font-semibold text-gray-900" x-text="deletingTeacherRecord ? deletingTeacherRecord.fullName : ''"></span>
+            sera archivée et n'apparaîtra plus dans la liste des enseignants.
+        </modal-subtitle>
+
+        <div x-show="deleteTeacherRecordError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteTeacherRecordError"></div>
+
+        <p class="text-sm text-gray-500">
+            Réservé à une fiche créée par pure erreur de saisie : impossible si une attribution classe/matière existe déjà pour cet enseignant.
+        </p>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" x-on:click="closeDeleteTeacher()" class="btn-secondary">Annuler</button>
+            <button type="button" x-on:click="confirmDeleteTeacher()" :disabled="isDeletingTeacherRecord" class="btn-danger">
+                <span x-text="isDeletingTeacherRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    <!-- Confirmation : suppression d'une fiche enseignant -->
+    <modal-shell open="showTeacherDeletedDialog" size="md" on-close="showTeacherDeletedDialog = false" title="Fiche supprimée">
+        <confirm-dialog-body close-action="showTeacherDeletedDialog = false">
+            La fiche a bien été supprimée.
+        </confirm-dialog-body>
     </modal-shell>
 
     <!-- Création d'une fiche enseignant (JGK-D03) -->

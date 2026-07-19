@@ -1,6 +1,8 @@
 using FluentAssertions;
 using SamaEcole.Application.Finance.Commands.ApplyStandardFee;
 using SamaEcole.Application.Finance.Commands.CreateFeeCategory;
+using SamaEcole.Application.Finance.Commands.DeleteClassFee;
+using SamaEcole.Application.Finance.Commands.DeleteFeeCategory;
 using SamaEcole.Application.Finance.Commands.UpdateClassFee;
 using Xunit;
 
@@ -11,6 +13,8 @@ public class FeeValidatorsTests
     private readonly CreateFeeCategoryCommandValidator _categoryValidator = new();
     private readonly ApplyStandardFeeCommandValidator _applyValidator = new();
     private readonly UpdateClassFeeCommandValidator _updateValidator = new();
+    private readonly DeleteClassFeeCommandValidator _deleteFeeValidator = new();
+    private readonly DeleteFeeCategoryCommandValidator _deleteCategoryValidator = new();
 
     [Fact]
     public void Valid_Category_Should_Pass()
@@ -95,5 +99,37 @@ public class FeeValidatorsTests
         var command = new UpdateClassFeeCommand(Guid.NewGuid(), -5000, RowVersion: 42);
 
         _updateValidator.Validate(command).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Delete_Fee_With_A_Valid_Id_Should_Pass()
+    {
+        var command = new DeleteClassFeeCommand(Guid.NewGuid(), RowVersion: 42);
+
+        _deleteFeeValidator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Delete_Fee_Without_An_Id_Should_Fail()
+    {
+        var command = new DeleteClassFeeCommand(Guid.Empty, RowVersion: 42);
+
+        _deleteFeeValidator.Validate(command).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Delete_Category_With_A_Valid_Id_Should_Pass()
+    {
+        var command = new DeleteFeeCategoryCommand(Guid.NewGuid());
+
+        _deleteCategoryValidator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Delete_Category_Without_An_Id_Should_Fail()
+    {
+        var command = new DeleteFeeCategoryCommand(Guid.Empty);
+
+        _deleteCategoryValidator.Validate(command).IsValid.Should().BeFalse();
     }
 }

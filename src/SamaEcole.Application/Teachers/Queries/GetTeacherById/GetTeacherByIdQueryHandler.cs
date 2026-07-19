@@ -12,7 +12,9 @@ public class GetTeacherByIdQueryHandler(IApplicationDbContext dbContext)
         // Le Global Query Filter + la RLS bornent déjà la recherche à l'école courante : un
         // TeacherId d'une autre école est simplement introuvable ici, jamais exposé.
         var teacher = await dbContext.Teachers.AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == request.TeacherId, cancellationToken)
+            .Where(t => t.Id == request.TeacherId)
+            .Select(t => new { Entity = t, RowVersion = EF.Property<uint>(t, "xmin") })
+            .FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Enseignant {request.TeacherId} introuvable.");
 
         var subjects = await dbContext.TeacherSubjects.AsNoTracking()
@@ -38,15 +40,16 @@ public class GetTeacherByIdQueryHandler(IApplicationDbContext dbContext)
             .ToListAsync(cancellationToken);
 
         return new TeacherProfileDto(
-            teacher.Id,
-            teacher.Matricule,
-            teacher.FullName,
-            teacher.Email,
-            teacher.Phone,
-            teacher.BirthPlace,
-            teacher.PhotoUrl,
-            teacher.Status.ToString(),
+            teacher.Entity.Id,
+            teacher.Entity.Matricule,
+            teacher.Entity.FullName,
+            teacher.Entity.Email,
+            teacher.Entity.Phone,
+            teacher.Entity.BirthPlace,
+            teacher.Entity.PhotoUrl,
+            teacher.Entity.Status.ToString(),
             subjects,
-            assignments);
+            assignments,
+            teacher.RowVersion);
     }
 }

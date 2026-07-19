@@ -10,6 +10,10 @@ namespace SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
 /// Secrétariat du barème, des matières/coefficients et des mentions — lu par
 /// CanManageGradingScaleHandler, jamais par PUT /grading-scale ni /subjects ni /grades/mentions
 /// eux-mêmes, qui restent Directeur+Secrétariat sans condition sur CETTE commande-ci.
+///
+/// Inclut aussi AllowFinanceToModifyFees et AllowFinanceToDeleteFees (matrice d'autorisation
+/// "Photoshop") : même mécanique, lues par CanModifyFeesHandler/CanDeleteFeesHandler, jamais par
+/// PUT/DELETE /finance/fees eux-mêmes.
 /// </summary>
 public record UpdateSchoolSettingsCommand(
     string GradingScale,
@@ -18,4 +22,6 @@ public record UpdateSchoolSettingsCommand(
     int AutoLogoutMinutes,
     string DateFormat,
     int TuitionMonthsPerYear,
-    bool AllowSecretaryToManageGrading) : IRequest<SchoolSettingsDto>;
+    bool AllowSecretaryToManageGrading,
+    bool AllowFinanceToModifyFees,
+    bool AllowFinanceToDeleteFees) : IRequest<SchoolSettingsDto>;

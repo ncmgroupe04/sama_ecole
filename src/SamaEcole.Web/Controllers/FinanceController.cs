@@ -1,6 +1,8 @@
 using SamaEcole.Application.Finance;
 using SamaEcole.Application.Finance.Commands.ApplyStandardFee;
 using SamaEcole.Application.Finance.Commands.CreateFeeCategory;
+using SamaEcole.Application.Finance.Commands.DeleteClassFee;
+using SamaEcole.Application.Finance.Commands.DeleteFeeCategory;
 using SamaEcole.Application.Finance.Commands.RecordPayment;
 using SamaEcole.Application.Finance.Commands.UpdateClassFee;
 using SamaEcole.Application.Finance.Queries.GetClassFees;
@@ -11,6 +13,7 @@ using SamaEcole.Application.Finance.Queries.GetPaymentReceipt;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceiptPdf;
 using SamaEcole.Application.Finance.Queries.GetStudentBalance;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,9 +26,14 @@ namespace SamaEcole.Web.Controllers;
 /// paramètre (règle #10).
 ///
 /// LECTURE ouverte à tout utilisateur de l'école : le secrétariat compose les montants dus à
-/// l'inscription, la finance encaisse — tous ont besoin de VOIR le barème. ÉCRITURE réservée au
-/// Directeur : le barème est un paramètre d'établissement (docs/Volume_7_Security.md §15), et la
-/// règle #4 tient le service Finance à l'écart de la fixation des montants.
+/// l'inscription, la finance encaisse — tous ont besoin de VOIR le barème. CRÉATION de catégorie
+/// réservée au Directeur (le barème est un paramètre d'établissement, docs/Volume_7_Security.md
+/// §15). MODIFICATION/SUPPRESSION d'une ligne de barème ou d'une catégorie : Directeur toujours ;
+/// Finance UNIQUEMENT si le Directeur de SON école a explicitement activé la délégation
+/// correspondante (SchoolSettings.AllowFinanceToModifyFees / AllowFinanceToDeleteFees, matrice
+/// d'autorisation "Photoshop") — voir CanModifyFeesHandler/CanDeleteFeesHandler
+/// (SamaEcole.Web.Authorization). Fermé par défaut : la règle #4 tient la Finance à l'écart de la
+/// fixation des montants tant que ce choix n'a pas été fait explicitement.
 /// </summary>
 [ApiController]
 [Route("api/v1/finance")]
@@ -55,6 +63,22 @@ public class FinanceController(ISender mediator) : ControllerBase
         return CreatedAtAction(nameof(ListCategories), new { id = result.Id }, result);
     }
 
+    /// <summary>
+    /// Supprime (soft delete) une catégorie ET, en cascade, tout son barème — matrice d'autorisation
+    /// "Photoshop" : Directeur toujours, Finance seulement si SchoolSettings.AllowFinanceToDeleteFees
+    /// est activé pour cette école (CanDeleteFeesHandler).
+    /// </summary>
+    [HttpDelete("fee-categories/{id:guid}")]
+    [Authorize(Policy = FinancePolicies.CanDeleteFees)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCategory(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteFeeCategoryCommand(id), cancellationToken);
+        return NoContent();
+    }
+
     // ------------------------------------------------------------------ Barème
 
     [HttpGet("fees")]
@@ -72,9 +96,14 @@ public class FinanceController(ISender mediator) : ControllerBase
         [FromBody] ApplyStandardFeeCommand command, CancellationToken cancellationToken)
         => Ok(await mediator.Send(command, cancellationToken));
 
-    /// <summary>Option 2 — ajuste le montant d'une classe (exception), avec verrouillage optimiste.</summary>
+    /// <summary>
+    /// Option 2 — ajuste le montant d'une classe (exception), avec verrouillage optimiste. Matrice
+    /// d'autorisation "Photoshop" : Directeur toujours, Finance seulement si
+    /// SchoolSettings.AllowFinanceToModifyFees est activé pour cette école (CanModifyFeesHandler) —
+    /// remplace l'ancien [Authorize(Roles = Directeur)] codé en dur.
+    /// </summary>
     [HttpPut("fees/{id:guid}")]
-    [Authorize(Roles = nameof(Role.Directeur))]
+    [Authorize(Policy = FinancePolicies.CanModifyFees)]
     [ProducesResponseType<UpdateClassFeeResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -83,6 +112,26 @@ public class FinanceController(ISender mediator) : ControllerBase
     public async Task<IActionResult> UpdateFee(
         Guid id, [FromBody] UpdateFeeRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new UpdateClassFeeCommand(id, request.Amount, request.RowVersion), cancellationToken));
+
+    /// <summary>
+    /// Supprime (soft delete) une ligne de barème, avec le même verrouillage optimiste que la
+    /// modification. Matrice d'autorisation "Photoshop" : Directeur toujours, Finance seulement si
+    /// SchoolSettings.AllowFinanceToDeleteFees est activé pour cette école (CanDeleteFeesHandler).
+    /// `rowVersion` en query string : une suppression, contrairement à une modification, n'a pas de
+    /// corps de requête à transporter avec elle.
+    /// </summary>
+    [HttpDelete("fees/{id:guid}")]
+    [Authorize(Policy = FinancePolicies.CanDeleteFees)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteFee(
+        Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteClassFeeCommand(id, rowVersion), cancellationToken);
+        return NoContent();
+    }
 
     [HttpGet("fees/{id:guid}/history")]
     [ProducesResponseType<IReadOnlyList<FeeHistoryDto>>(StatusCodes.Status200OK)]

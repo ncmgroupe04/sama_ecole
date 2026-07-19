@@ -7,9 +7,12 @@
  * pour la corriger — sans bouton « Enregistrer » global : sur une classe de quarante élèves, un
  * enregistrement groupé forcerait à tout ressaisir après une seule erreur de saisie.
  *
- * SAISIR (POST) est réservé à l'Enseignant, CORRIGER (PUT) est ouvert au Directeur et à l'Enseignant
- * (docs/Volume_7_Security.md « Notes », comme GradesController) : un Directeur ne voit donc pas de
- * champ actif sur une cellule encore vide, seulement sur celles déjà notées.
+ * Matrice d'autorisation "Photoshop" — contrôle strict et NON révocable (GradesController) : SAISIR
+ * (POST) une note qui n'existe pas encore reste réservé à l'Enseignant (canEnterGrades) ; CORRIGER
+ * (PUT) ou ANNULER (DELETE) une note déjà enregistrée est réservé au Directeur et au Secrétariat
+ * (canCorrectGrades) — l'Enseignant en perd le droit dès l'enregistrement initial, même sur sa propre
+ * saisie. D'où deux conditions distinctes par cellule : vide → gouvernée par canEnterGrades ;
+ * déjà notée → gouvernée par canCorrectGrades.
  *
  * Import CSV/Excel : mode de saisie ALTERNATIF, réservé lui aussi à l'Enseignant — un fichier à deux
  * colonnes (matricule, note) remplit en une fois UNE colonne (Devoir OU Composition) pour toute la
@@ -19,6 +22,7 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('gradesView', () => ({
         canEnterGrades: window.auth.role === 'Enseignant',
+        canCorrectGrades: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
         classrooms: [],
         subjects: [],
@@ -151,7 +155,7 @@ document.addEventListener('alpine:init', () => {
                 cell.value = result.value;
                 cell.original = result.value;
                 cell.status = 'saved';
-                setTimeout(() => { if (cell.status === 'saved') cell.status = 'idle'; }, 1500);
+                setTimeout(() => { if (cell.status === 'saved') cell.status = 'idle'; }, 2000);
             } catch (err) {
                 if (err.status === 409) {
                     // Verrou optimiste (AGENTS.md règle #5) : jamais un écrasement silencieux, on force

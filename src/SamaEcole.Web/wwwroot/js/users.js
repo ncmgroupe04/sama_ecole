@@ -31,12 +31,16 @@ document.addEventListener('alpine:init', () => {
         statusReason: '',
         isChangingStatus: false,
         statusErrors: {},
+        showStatusChangedDialog: false,
+        statusChangedSummary: { fullName: '', newStatus: '' },
 
         // --- Réinitialisation de mot de passe (saisie directe par le Directeur) ---
         passwordTarget: null, // { id, fullName }
         newPassword: '',
         isResettingPassword: false,
         passwordErrors: {},
+        showPasswordResetDialog: false,
+        resetPasswordSummary: { fullName: '', password: '' },
 
         // --- Historique des statuts ---
         historyFor: null, // { fullName }
@@ -132,8 +136,10 @@ document.addEventListener('alpine:init', () => {
                     status: this.statusTarget.newStatus,
                     reason: this.statusReason
                 });
+                this.statusChangedSummary = { fullName: this.statusTarget.fullName, newStatus: this.statusTarget.newStatus };
                 this.closeStatusChange();
                 await this.load();
+                this.showStatusChangedDialog = true;
             } catch (err) {
                 this.statusErrors = window.api.toFieldErrors(err, 'Erreur lors du changement de statut.');
             } finally {
@@ -151,6 +157,7 @@ document.addEventListener('alpine:init', () => {
 
         closeResetPassword() {
             this.passwordTarget = null;
+            this.newPassword = ''; // ne jamais laisser traîner une saisie de mot de passe en mémoire
         },
 
         async submitResetPassword() {
@@ -162,7 +169,11 @@ document.addEventListener('alpine:init', () => {
                 await window.api.patch(`/users/${this.passwordTarget.id}/password`, {
                     newPassword: this.newPassword
                 });
+                // Rappelée dans la confirmation ci-dessous : une fois passwordTarget refermé, ce mot de
+                // passe n'est plus stocké nulle part côté serveur (règle #6) — c'est ici ou jamais.
+                this.resetPasswordSummary = { fullName: this.passwordTarget.fullName, password: this.newPassword };
                 this.closeResetPassword();
+                this.showPasswordResetDialog = true;
             } catch (err) {
                 this.passwordErrors = window.api.toFieldErrors(err, 'Erreur lors de la réinitialisation.');
             } finally {

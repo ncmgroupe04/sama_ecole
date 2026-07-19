@@ -28,7 +28,9 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         int AutoLogoutMinutes,
         string DateFormat,
         int TuitionMonthsPerYear,
-        bool AllowSecretaryToManageGrading);
+        bool AllowSecretaryToManageGrading,
+        bool AllowFinanceToModifyFees,
+        bool AllowFinanceToDeleteFees);
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
@@ -60,7 +62,9 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.AutoLogoutMinutes,
                 request.DateFormat,
                 request.TuitionMonthsPerYear,
-                request.AllowSecretaryToManageGrading),
+                request.AllowSecretaryToManageGrading,
+                request.AllowFinanceToModifyFees,
+                request.AllowFinanceToDeleteFees),
             cancellationToken);
 
         return Ok(result);

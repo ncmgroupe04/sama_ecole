@@ -19,6 +19,11 @@
  * Directeur seul, sinon le Secrétariat gagnerait aussi la main sur les formats de matricule, la
  * déconnexion auto et les mensualités — cette même requête PUT est cependant la SEULE à pouvoir
  * changer allowSecretaryToManageGrading, d'où la case à cocher dans CE formulaire précisément.
+ *
+ * Matrice d'autorisation "Photoshop" : même mécanique pour allowFinanceToModifyFees et
+ * allowFinanceToDeleteFees (JGK-F01), lus par fees.js pour afficher/masquer les boutons Modifier et
+ * Supprimer de l'écran Finance — deux commutateurs indépendants, écrits par la même requête PUT que
+ * la délégation du barème.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('settingsView', () => ({
@@ -44,7 +49,9 @@ document.addEventListener('alpine:init', () => {
             tuitionMonthsPerYear: 9,
             studentMatriculeFormat: '',
             teacherMatriculeFormat: '',
-            allowSecretaryToManageGrading: false
+            allowSecretaryToManageGrading: false,
+            allowFinanceToModifyFees: false,
+            allowFinanceToDeleteFees: false
         },
         configErrors: {},
         configSaving: false,
@@ -104,7 +111,9 @@ document.addEventListener('alpine:init', () => {
                     tuitionMonthsPerYear: config.tuitionMonthsPerYear,
                     studentMatriculeFormat: config.studentMatriculeFormat,
                     teacherMatriculeFormat: config.teacherMatriculeFormat,
-                    allowSecretaryToManageGrading: config.allowSecretaryToManageGrading
+                    allowSecretaryToManageGrading: config.allowSecretaryToManageGrading,
+                    allowFinanceToModifyFees: config.allowFinanceToModifyFees,
+                    allowFinanceToDeleteFees: config.allowFinanceToDeleteFees
                 };
             } catch (err) {
                 this.loadError = err.message || 'Erreur lors du chargement des paramètres.';
@@ -142,7 +151,10 @@ document.addEventListener('alpine:init', () => {
 
         // ---------------------------------------------------------------- Configuration
 
-        async saveConfig() {
+        // showConfirmation=false pour les 3 commutateurs de délégation (Configuration) : une bascule
+        // en un clic n'a pas besoin d'une boîte de dialogue à fermer soi-même, contrairement au
+        // formulaire « Réglages de l'établissement », validé par un vrai bouton Enregistrer.
+        async saveConfig(showConfirmation = true) {
             this.configErrors = {};
             this.configSaved = false;
             this.configSaving = true;
@@ -154,7 +166,9 @@ document.addEventListener('alpine:init', () => {
                     autoLogoutMinutes: Number(this.config.autoLogoutMinutes),
                     dateFormat: this.config.dateFormat,
                     tuitionMonthsPerYear: Number(this.config.tuitionMonthsPerYear),
-                    allowSecretaryToManageGrading: this.config.allowSecretaryToManageGrading
+                    allowSecretaryToManageGrading: this.config.allowSecretaryToManageGrading,
+                    allowFinanceToModifyFees: this.config.allowFinanceToModifyFees,
+                    allowFinanceToDeleteFees: this.config.allowFinanceToDeleteFees
                 });
                 this.config = {
                     gradingScale: saved.gradingScale,
@@ -163,9 +177,11 @@ document.addEventListener('alpine:init', () => {
                     tuitionMonthsPerYear: saved.tuitionMonthsPerYear,
                     studentMatriculeFormat: saved.studentMatriculeFormat,
                     teacherMatriculeFormat: saved.teacherMatriculeFormat,
-                    allowSecretaryToManageGrading: saved.allowSecretaryToManageGrading
+                    allowSecretaryToManageGrading: saved.allowSecretaryToManageGrading,
+                    allowFinanceToModifyFees: saved.allowFinanceToModifyFees,
+                    allowFinanceToDeleteFees: saved.allowFinanceToDeleteFees
                 };
-                this.configSaved = true;
+                this.configSaved = showConfirmation;
             } catch (err) {
                 this.configErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
             } finally {

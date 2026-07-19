@@ -43,6 +43,35 @@ document.addEventListener('alpine:init', () => {
         showAddedDialog: false,
         addedStudentName: '',
 
+        // Corriger/archiver une fiche, et gérer le cycle de vie d'une inscription (annuler, déclarer
+        // un abandon/transfert) sont réservés au Directeur et au Secrétariat côté serveur
+        // (StudentsController.ManageRoles, EnrollmentsController.EnrollmentWriters) — confort d'affichage.
+        canManageStudent: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+
+        // Édition de la fiche (modale). Sourcée depuis studentDetail.identity (fraîchement chargée,
+        // RowVersion inclus) plutôt que la ligne de liste `detailStudent`, qui peut être périmée et ne
+        // porte pas le jeton de concurrence — le bouton n'est donc proposé qu'une fois studentDetail chargé.
+        editingStudent: null, // { fullName, birthDate, birthPlace, gender, classroomId, photoUrl, guardianName, guardianPhone, rowVersion }
+        isSavingStudentEdit: false,
+        studentEditErrors: {},
+        showStudentEditedDialog: false,
+
+        // Suppression de la fiche (modale de confirmation)
+        deletingStudentRecord: null, // { id, fullName, rowVersion }
+        isDeletingStudentRecord: false,
+        deleteStudentRecordError: null,
+        showStudentDeletedDialog: false,
+
+        // Cycle de vie d'une inscription : annulation (erreur de saisie)
+        cancelingEnrollment: null, // { enrollmentId, schoolYearLabel, rowVersion }
+        isCancelingEnrollment: false,
+        cancelEnrollmentError: null,
+
+        // Cycle de vie d'une inscription : abandon / transfert en cours d'année
+        changingEnrollmentStatus: null, // { enrollmentId, schoolYearLabel, rowVersion, newStatus }
+        isChangingEnrollmentStatus: false,
+        changeEnrollmentStatusError: null,
+
         // Initialisation
         init() {
             this.loadClassrooms();
@@ -116,6 +145,193 @@ document.addEventListener('alpine:init', () => {
             this.detailError = null;
         },
 
+        /** Recharge la fiche (identité, historique, notes, paiements) sans fermer la modale de détail. */
+        async refreshStudentDetail() {
+            if (!this.detailStudent) return;
+            this.studentDetail = await window.api.get(`/students/${this.detailStudent.id}`);
+            // La ligne de liste sert encore à l'en-tête de la modale (voir la vue) : on la resynchronise
+            // avec l'identité fraîchement rechargée pour qu'un champ modifié s'y reflète immédiatement.
+            Object.assign(this.detailStudent, this.studentDetail.identity);
+        },
+
+        // ------------------------------------------------------------ Modifier la fiche
+
+        openEditStudent() {
+            if (!this.studentDetail) return;
+            const identity = this.studentDetail.identity;
+            this.editingStudent = {
+                fullName: identity.fullName,
+                birthDate: identity.birthDate,
+                birthPlace: identity.birthPlace || '',
+                gender: identity.gender,
+                classroomId: identity.classroomId,
+                photoUrl: identity.photoUrl || '',
+                guardianName: identity.guardianName || '',
+                guardianPhone: identity.guardianPhone || '',
+                rowVersion: identity.rowVersion
+            };
+            this.studentEditErrors = {};
+        },
+
+        closeEditStudent() {
+            this.editingStudent = null;
+            this.studentEditErrors = {};
+        },
+
+        async submitEditStudent() {
+            if (!this.editingStudent || !this.detailStudent) return;
+
+            this.isSavingStudentEdit = true;
+            this.studentEditErrors = {};
+            try {
+                await window.api.put(`/students/${this.detailStudent.id}`, this.editingStudent);
+                this.closeEditStudent();
+                await this.refreshStudentDetail();
+                await this.loadStudents();
+                this.showStudentEditedDialog = true;
+            } catch (err) {
+                if (err.code === 'CONCURRENCY_CONFLICT') {
+                    // Verrou optimiste (AGENTS.md règle #5) : on recharge la fiche pour montrer l'état
+                    // réel avant de laisser l'utilisateur réessayer, jamais un écrasement silencieux.
+                    this.studentEditErrors = { global: 'Cette fiche vient d\'être modifiée par un autre utilisateur. Elle a été rafraîchie — vérifiez les valeurs puis réessayez.' };
+                    await this.refreshStudentDetail();
+                } else {
+                    this.studentEditErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification.');
+                }
+            } finally {
+                this.isSavingStudentEdit = false;
+            }
+        },
+
+        // ------------------------------------------------------------ Supprimer la fiche
+
+        openDeleteStudent() {
+            if (!this.studentDetail || !this.detailStudent) return;
+            this.deletingStudentRecord = {
+                id: this.detailStudent.id,
+                fullName: this.studentDetail.identity.fullName,
+                rowVersion: this.studentDetail.identity.rowVersion
+            };
+            this.deleteStudentRecordError = null;
+        },
+
+        closeDeleteStudent() {
+            this.deletingStudentRecord = null;
+            this.deleteStudentRecordError = null;
+        },
+
+        async confirmDeleteStudent() {
+            if (!this.deletingStudentRecord) return;
+
+            this.isDeletingStudentRecord = true;
+            this.deleteStudentRecordError = null;
+            try {
+                await window.api.delete(`/students/${this.deletingStudentRecord.id}?rowVersion=${this.deletingStudentRecord.rowVersion}`);
+                this.addedStudentName = ''; // évite d'afficher un nom périmé dans une autre confirmation
+                this.deletingStudentRecord = null;
+                this.closeDetail();
+                this.page = 1;
+                await this.loadStudents();
+                this.showStudentDeletedDialog = true;
+            } catch (err) {
+                if (err.code === 'BUSINESS_RULE_VIOLATION') {
+                    // Une inscription ou une note existe déjà (DeleteStudentCommandHandler) : le
+                    // message serveur est déjà explicite, on l'affiche tel quel.
+                    this.deleteStudentRecordError = err.message;
+                } else if (err.code === 'CONCURRENCY_CONFLICT') {
+                    this.deleteStudentRecordError = 'Cette fiche vient d\'être modifiée par un autre utilisateur. Rafraîchissez la page puis réessayez.';
+                    await this.refreshStudentDetail();
+                } else {
+                    this.deleteStudentRecordError = (err && err.message) || 'Erreur lors de la suppression.';
+                }
+            } finally {
+                this.isDeletingStudentRecord = false;
+            }
+        },
+
+        // ------------------------------------------------------------ Inscriptions : annulation (erreur de saisie)
+
+        openCancelEnrollment(entry) {
+            this.cancelingEnrollment = {
+                enrollmentId: entry.enrollmentId,
+                schoolYearLabel: entry.schoolYearLabel,
+                rowVersion: entry.rowVersion
+            };
+            this.cancelEnrollmentError = null;
+        },
+
+        closeCancelEnrollment() {
+            this.cancelingEnrollment = null;
+            this.cancelEnrollmentError = null;
+        },
+
+        async confirmCancelEnrollment() {
+            if (!this.cancelingEnrollment) return;
+
+            this.isCancelingEnrollment = true;
+            this.cancelEnrollmentError = null;
+            try {
+                await window.api.delete(`/enrollments/${this.cancelingEnrollment.enrollmentId}?rowVersion=${this.cancelingEnrollment.rowVersion}`);
+                this.cancelingEnrollment = null;
+                await this.refreshStudentDetail();
+            } catch (err) {
+                if (err.code === 'BUSINESS_RULE_VIOLATION') {
+                    // Un reçu de paiement existe déjà pour cette inscription (CancelEnrollmentCommandHandler) :
+                    // le message serveur invite déjà à utiliser le changement de statut à la place.
+                    this.cancelEnrollmentError = err.message;
+                } else if (err.code === 'CONCURRENCY_CONFLICT') {
+                    this.cancelEnrollmentError = 'Cette inscription vient d\'être modifiée par un autre utilisateur. La fiche a été rafraîchie.';
+                    await this.refreshStudentDetail();
+                } else {
+                    this.cancelEnrollmentError = (err && err.message) || "Erreur lors de l'annulation.";
+                }
+            } finally {
+                this.isCancelingEnrollment = false;
+            }
+        },
+
+        // ------------------------------------------------------------ Inscriptions : abandon / transfert
+
+        openChangeEnrollmentStatus(entry) {
+            this.changingEnrollmentStatus = {
+                enrollmentId: entry.enrollmentId,
+                schoolYearLabel: entry.schoolYearLabel,
+                rowVersion: entry.rowVersion,
+                newStatus: 'DroppedOut'
+            };
+            this.changeEnrollmentStatusError = null;
+        },
+
+        closeChangeEnrollmentStatus() {
+            this.changingEnrollmentStatus = null;
+            this.changeEnrollmentStatusError = null;
+        },
+
+        async submitChangeEnrollmentStatus() {
+            if (!this.changingEnrollmentStatus) return;
+
+            this.isChangingEnrollmentStatus = true;
+            this.changeEnrollmentStatusError = null;
+            try {
+                await window.api.post(`/enrollments/${this.changingEnrollmentStatus.enrollmentId}/status`, {
+                    newStatus: this.changingEnrollmentStatus.newStatus,
+                    rowVersion: this.changingEnrollmentStatus.rowVersion
+                });
+                this.closeChangeEnrollmentStatus();
+                await this.refreshStudentDetail();
+            } catch (err) {
+                if (err.code === 'CONCURRENCY_CONFLICT') {
+                    this.changeEnrollmentStatusError = 'Cette inscription vient d\'être modifiée par un autre utilisateur. La fiche a été rafraîchie.';
+                    await this.refreshStudentDetail();
+                } else {
+                    this.changeEnrollmentStatusError = window.api.toFieldErrors(err, 'Erreur lors du changement de statut.').global
+                        || (err && err.message) || 'Erreur lors du changement de statut.';
+                }
+            } finally {
+                this.isChangingEnrollmentStatus = false;
+            }
+        },
+
         async submitCreate() {
             this.isSubmitting = true;
             this.createErrors = {};
@@ -180,7 +396,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         enrollmentStatusLabel(status) {
-            return { Confirmed: 'Confirmée', Pending: 'En attente', Cancelled: 'Annulée' }[status] || status;
+            return {
+                Confirmed: 'Confirmée', Pending: 'En attente', Cancelled: 'Annulée',
+                DroppedOut: 'Abandon', Transferred: 'Transféré(e)'
+            }[status] || status;
         },
 
         /** Classe de pastille partagée (input.css) selon le statut d'inscription. */
@@ -188,8 +407,19 @@ document.addEventListener('alpine:init', () => {
             return {
                 Confirmed: 'status-badge-success',
                 Pending: 'status-badge-warning',
-                Cancelled: 'status-badge-danger'
+                Cancelled: 'status-badge-danger',
+                DroppedOut: 'status-badge-danger',
+                Transferred: 'status-badge-neutral'
             }[status] || 'status-badge-neutral';
+        },
+
+        /** Une inscription encore « vivante » (ni annulée, ni déjà en abandon/transfert) peut transiter. */
+        canTransitionEnrollment(status) {
+            return status === 'Confirmed' || status === 'Pending';
+        },
+
+        enrollmentNewStatusLabel(status) {
+            return { DroppedOut: 'Abandon', Transferred: 'Transfert' }[status] || status;
         },
 
         paymentMethodLabel(method) {

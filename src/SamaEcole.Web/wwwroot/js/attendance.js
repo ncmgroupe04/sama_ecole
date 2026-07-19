@@ -46,6 +46,23 @@ document.addEventListener('alpine:init', () => {
             return `${d.getFullYear()}-${month}-${day}`;
         },
 
+        /** Même patron que school-years.js : jj/mm/aaaa, la date de l'appel est déjà au format ISO local. */
+        formatDate(isoDate) {
+            if (!isoDate) return '';
+            const [year, month, day] = isoDate.split('-');
+            return `${day}/${month}/${year}`;
+        },
+
+        get selectedClassroomLabel() {
+            const c = this.classrooms.find((x) => x.id === this.filters.classroomId);
+            return c ? `${c.name} (${c.level})` : '';
+        },
+
+        get selectedSubjectLabel() {
+            const s = this.subjects.find((x) => x.id === this.filters.subjectId);
+            return s ? s.name : '';
+        },
+
         async loadClassrooms() {
             try {
                 const data = await window.api.get('/classrooms');

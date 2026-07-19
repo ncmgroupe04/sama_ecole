@@ -19,6 +19,12 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
 
         builder.HasKey(s => s.Id);
         builder.Property(s => s.SchoolId).IsRequired();
+
+        // Verrou optimiste xmin (AGENTS.md règle #5) : UpdateStudentCommand/DeleteStudentCommand en
+        // dépendent pour refuser en 409 une écriture sur une fiche élève modifiée entre-temps, comme
+        // Grade et Enrollment. Propriété fantôme, aucune migration requise (convention Npgsql).
+        builder.Property<uint>("xmin").IsRowVersion();
+
         builder.Property(s => s.Matricule).IsRequired().HasMaxLength(30);
         builder.Property(s => s.FullName).IsRequired().HasMaxLength(200);
         builder.Property(s => s.BirthPlace).HasMaxLength(200);

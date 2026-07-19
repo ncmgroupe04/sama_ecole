@@ -40,6 +40,15 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 concurrencyEx.Message,
                 null),
 
+            // Règle métier qui bloque une opération à cause de l'état actuel de la ressource (ex.
+            // suppression d'une classe encore liée à des élèves, annulation d'une inscription déjà
+            // encaissée) — pas une écriture concurrente, mais un conflit avec l'état existant.
+            BusinessRuleException businessRuleEx => (
+                HttpStatusCode.Conflict,
+                "BUSINESS_RULE_VIOLATION",
+                businessRuleEx.Message,
+                null),
+
             // Échec d'authentification (ticket JGK-A04). Message volontairement générique : il ne doit
             // jamais permettre de distinguer un e-mail inconnu d'un mot de passe faux.
             InvalidCredentialsException credentialsEx => (

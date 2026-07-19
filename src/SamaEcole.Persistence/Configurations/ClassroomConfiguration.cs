@@ -18,6 +18,12 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
 
         builder.HasKey(c => c.Id);
         builder.Property(c => c.SchoolId).IsRequired();
+
+        // Verrou optimiste xmin (AGENTS.md règle #5) : UpdateClassroomCommand/DeleteClassroomCommand
+        // en dépendent pour refuser en 409 une écriture sur une classe modifiée entre-temps, comme
+        // Grade et Enrollment. Propriété fantôme, aucune migration requise (convention Npgsql).
+        builder.Property<uint>("xmin").IsRowVersion();
+
         builder.Property(c => c.Name).IsRequired().HasMaxLength(50);
         builder.Property(c => c.Level).IsRequired().HasMaxLength(50);
 

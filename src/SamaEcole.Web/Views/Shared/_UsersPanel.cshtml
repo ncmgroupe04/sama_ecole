@@ -71,31 +71,13 @@
                             </td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
                                 <template x-if="!user.isSelf">
-                                    <span class="inline-flex items-center gap-1">
-                                        <button x-show="user.status !== 'Blocked'" x-cloak type="button"
-                                                x-on:click="openStatusChange(user, 'Blocked')"
-                                                class="text-xs font-medium text-danger hover:underline px-1.5 py-1">
-                                            Bloquer
-                                        </button>
-                                        <button x-show="user.status === 'Active'" x-cloak type="button"
-                                                x-on:click="openStatusChange(user, 'Suspended')"
-                                                class="text-xs font-medium text-warning hover:underline px-1.5 py-1">
-                                            Suspendre
-                                        </button>
-                                        <button x-show="user.status !== 'Active'" x-cloak type="button"
-                                                x-on:click="openStatusChange(user, 'Active')"
-                                                class="text-xs font-medium text-success hover:underline px-1.5 py-1">
-                                            Réactiver
-                                        </button>
-                                        <button type="button" x-on:click="openResetPassword(user)"
-                                                class="text-xs font-medium text-primary-700 hover:underline px-1.5 py-1">
-                                            Mot de passe
-                                        </button>
-                                        <button type="button" x-on:click="openHistory(user)"
-                                                class="text-xs font-medium text-gray-500 hover:text-gray-700 px-1.5 py-1">
-                                            Historique
-                                        </button>
-                                    </span>
+                                    <row-actions>
+                                        <row-action icon="block" label="Bloquer" on-click="openStatusChange(user, 'Blocked')" show="user.status !== 'Blocked'" variant="danger" />
+                                        <row-action icon="pause" label="Suspendre" on-click="openStatusChange(user, 'Suspended')" show="user.status === 'Active'" />
+                                        <row-action icon="checkmark-circle" label="Réactiver" on-click="openStatusChange(user, 'Active')" show="user.status !== 'Active'" />
+                                        <row-action icon="key" label="Mot de passe" on-click="openResetPassword(user)" />
+                                        <row-action icon="clock" label="Historique" on-click="openHistory(user)" />
+                                    </row-actions>
                                 </template>
                                 <span x-show="user.isSelf" x-cloak class="text-xs text-gray-400 italic">—</span>
                             </td>
@@ -189,6 +171,14 @@
         </form>
     </modal-shell>
 
+    <!-- Confirmation : statut modifié -->
+    <modal-shell open="showStatusChangedDialog" size="md" on-close="showStatusChangedDialog = false" title="Statut modifié">
+        <confirm-dialog-body close-action="showStatusChangedDialog = false">
+            Le compte de <span class="font-medium text-gray-900" x-text="statusChangedSummary.fullName"></span>
+            est désormais <span class="font-medium text-gray-900" x-text="statusLabel(statusChangedSummary.newStatus).toLowerCase()"></span>.
+        </confirm-dialog-body>
+    </modal-shell>
+
     <!-- Réinitialisation de mot de passe -->
     <modal-shell open="passwordTarget" on-close="closeResetPassword()" size="md">
         <modal-title>Mot de passe — <span x-text="passwordTarget ? passwordTarget.fullName : ''"></span></modal-title>
@@ -211,6 +201,18 @@
                 </button>
             </div>
         </form>
+    </modal-shell>
+
+    <!-- Confirmation : mot de passe réinitialisé. Rappelle le mot de passe : une fois cette fenêtre
+         fermée, il n'est plus visible nulle part (règle #6 — pas de stockage en clair côté serveur). -->
+    <modal-shell open="showPasswordResetDialog" size="md" on-close="showPasswordResetDialog = false" title="Mot de passe réinitialisé">
+        <confirm-dialog-body close-action="showPasswordResetDialog = false">
+            Le mot de passe de <span class="font-medium text-gray-900" x-text="resetPasswordSummary.fullName"></span> a bien été modifié.
+            <span class="mt-4 block bg-gray-50 rounded-lg p-4 text-left text-sm space-y-1.5">
+                <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">À communiquer à l'intéressé(e)</span>
+                <span class="block"><span class="text-gray-500">Nouveau mot de passe :</span> <span class="font-mono text-gray-900" x-text="resetPasswordSummary.password"></span></span>
+            </span>
+        </confirm-dialog-body>
     </modal-shell>
 
     <!-- Historique des statuts -->

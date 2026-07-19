@@ -1,7 +1,10 @@
 using SamaEcole.Application.Enrollments;
+using SamaEcole.Application.Enrollments.Commands.CancelEnrollment;
+using SamaEcole.Application.Enrollments.Commands.ChangeEnrollmentStatus;
 using SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceipt;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceiptPdf;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +28,8 @@ namespace SamaEcole.Web.Controllers;
 [Authorize]
 public class EnrollmentsController(ISender mediator) : ControllerBase
 {
+    public record ChangeEnrollmentStatusRequest(EnrollmentStatus NewStatus, uint RowVersion);
+
     // Directeur + Secrétariat, jamais Finance (règle #4). Chaîne littérale : un [Authorize(Roles)]
     // n'accepte que des constantes, et les deux rôles se lisent tels quels dans le claim du JWT.
     private const string EnrollmentWriters = "Directeur,Secretariat";
@@ -61,5 +66,44 @@ public class EnrollmentsController(ISender mediator) : ControllerBase
         var result = await mediator.Send(new GetEnrollmentReceiptPdfQuery(id), cancellationToken);
 
         return File(result.Content, "application/pdf", $"Recu-{result.ReceiptNumber}.pdf");
+    }
+
+    /// <summary>
+    /// Annule une inscription saisie par ERREUR (mauvais élève, mauvaise classe…). Refusée en 409 si
+    /// un paiement a déjà été encaissé (CancelEnrollmentCommandHandler) — dans ce cas, utiliser
+    /// POST .../status pour déclarer un abandon ou un transfert à la place. `rowVersion` en query
+    /// string, comme DELETE /grades/{id} : pas de corps de requête pour une annulation.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = EnrollmentWriters)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Cancel(
+        Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new CancelEnrollmentCommand(id, rowVersion), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Déclare un abandon ('DroppedOut') ou un transfert ('Transferred') en cours d'année — l'élève
+    /// quitte la scolarité pour l'avenir, mais l'inscription et son historique (notes, paiements)
+    /// restent intacts. Voir ChangeEnrollmentStatusCommand pour les effets exacts.
+    /// </summary>
+    [HttpPost("{id:guid}/status")]
+    [Authorize(Roles = EnrollmentWriters)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ChangeStatus(
+        Guid id, [FromBody] ChangeEnrollmentStatusRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new ChangeEnrollmentStatusCommand(id, request.NewStatus, request.RowVersion), cancellationToken);
+        return NoContent();
     }
 }

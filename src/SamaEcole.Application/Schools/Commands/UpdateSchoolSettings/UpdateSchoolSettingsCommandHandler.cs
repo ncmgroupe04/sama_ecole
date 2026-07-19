@@ -44,6 +44,8 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.DateFormat = request.DateFormat;
         settings.TuitionMonthsPerYear = request.TuitionMonthsPerYear;
         settings.AllowSecretaryToManageGrading = request.AllowSecretaryToManageGrading;
+        settings.AllowFinanceToModifyFees = request.AllowFinanceToModifyFees;
+        settings.AllowFinanceToDeleteFees = request.AllowFinanceToDeleteFees;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -56,6 +58,8 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.AutoLogoutMinutes,
             settings.DateFormat,
             settings.TuitionMonthsPerYear,
-            settings.AllowSecretaryToManageGrading);
+            settings.AllowSecretaryToManageGrading,
+            settings.AllowFinanceToModifyFees,
+            settings.AllowFinanceToDeleteFees);
     }
 }

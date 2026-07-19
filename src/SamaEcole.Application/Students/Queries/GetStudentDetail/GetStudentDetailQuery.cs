@@ -40,7 +40,11 @@ public record StudentDetailDto(
     // verrait sinon des moyennes fausses.
     int GradingScale);
 
-/// <summary>Données personnelles + classe courante. Toujours renseignées (sinon 404 en amont).</summary>
+/// <summary>
+/// Données personnelles + classe courante. Toujours renseignées (sinon 404 en amont).
+/// <see cref="RowVersion"/> est le jeton xmin nécessaire à UpdateStudentCommand et
+/// DeleteStudentCommand (AGENTS.md règle #5).
+/// </summary>
 public record StudentIdentityDto(
     Guid Id,
     string Matricule,
@@ -52,11 +56,15 @@ public record StudentIdentityDto(
     string ClassroomName,
     string? PhotoUrl,
     string? GuardianName,
-    string? GuardianPhone);
+    string? GuardianPhone,
+    uint RowVersion);
 
 /// <summary>
 /// Une ligne d'historique par inscription (année + classe + type + statut). Les inscriptions annulées
 /// figurent dans l'historique (avec leur statut) mais ne comptent pas dans le récapitulatif financier.
+/// <see cref="RowVersion"/> est le jeton xmin nécessaire à CancelEnrollmentCommand et
+/// ChangeEnrollmentStatusCommand (AGENTS.md règle #5) — c'est depuis cette ligne d'historique que
+/// l'UI propose « Annuler l'inscription » / « Déclarer un abandon ou un transfert ».
 /// </summary>
 public record AcademicHistoryEntryDto(
     Guid EnrollmentId,
@@ -67,7 +75,8 @@ public record AcademicHistoryEntryDto(
     string Status,
     bool IsActiveYear,
     decimal? GeneralAverage,
-    DateTimeOffset EnrolledAt);
+    DateTimeOffset EnrolledAt,
+    uint RowVersion);
 
 /// <summary>Bloc de notes d'un trimestre : le bulletin lisible matière par matière, plus la synthèse.</summary>
 public record TermReportDto(
@@ -129,6 +138,7 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
                 s.PhotoUrl,
                 s.GuardianName,
                 s.GuardianPhone,
+                RowVersion = EF.Property<uint>(s, "xmin"),
 
                 // Sous-requête pour le nom de classe : une classe supprimée (soft delete) sort du Global
                 // Query Filter — on l'affiche alors explicitement plutôt que de perdre la ligne (même
@@ -152,7 +162,8 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
             student.ClassroomName,
             student.PhotoUrl,
             student.GuardianName,
-            student.GuardianPhone);
+            student.GuardianPhone,
+            student.RowVersion);
 
         // Barème de l'école (10 ou 20), lu une seule fois : il sert au calcul des mentions par défaut ET
         // à l'affichage des moyennes côté UI. Absent en base → valeur par défaut (JGK-B02).
@@ -181,6 +192,7 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
                 e.TotalDue,
                 e.AmountPaid,
                 e.EnrolledAt,
+                RowVersion = EF.Property<uint>(e, "xmin"),
                 ClassroomName = dbContext.Classrooms.AsNoTracking()
                     .Where(c => c.Id == e.ClassroomId)
                     .Select(c => c.Name)
@@ -205,7 +217,8 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
                 e.Status.ToString(),
                 e.IsActive,
                 averageByYear.GetValueOrDefault(e.SchoolYearId),
-                e.EnrolledAt))
+                e.EnrolledAt,
+                e.RowVersion))
             .ToList();
 
         // 4) Paiements — reliés à l'élève PAR l'inscription (le Payment ne porte pas de StudentId).

@@ -66,9 +66,9 @@
         </div>
     </div>
 
-    <!-- Rôle Directeur : rappel que seule la correction (pas la saisie) lui est ouverte -->
+    <!-- Rôle Directeur/Secrétariat : rappel que seule la correction (pas la saisie) leur est ouverte -->
     <div x-show="!canEnterGrades && hasSelection" x-cloak class="mt-4 rounded-md border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
-        En tant que Directeur, vous pouvez corriger une note déjà saisie, mais seul l'enseignant saisit une nouvelle note.
+        Vous pouvez corriger une note déjà saisie, mais seul l'enseignant saisit une nouvelle note.
     </div>
 
     <!-- Conflit de concurrence (AGENTS.md règle #5) -->
@@ -119,8 +119,8 @@
                                            class="input-field mt-0 w-20 text-center"
                                            :class="row.devoir.status === 'error' ? 'border-danger' : ''"
                                            :data-row="index" data-field="devoir"
-                                           :disabled="row.devoir.status === 'saving' || (!row.devoir.id && !canEnterGrades)"
-                                           :title="(!row.devoir.id && !canEnterGrades) ? 'Réservé à l\'enseignant' : ''"
+                                           :disabled="row.devoir.status === 'saving' || (row.devoir.id ? !canCorrectGrades : !canEnterGrades)"
+                                           :title="row.devoir.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
                                            x-model="row.devoir.value"
                                            x-on:blur="saveCell(index, 'devoir')"
                                            x-on:keydown.enter.prevent="focusNextRow(index, 'devoir')" />
@@ -128,6 +128,7 @@
                                     <icon x-show="row.devoir.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
                                 </div>
                                 <p x-show="row.devoir.error" x-cloak x-text="row.devoir.error" class="mt-1 text-xs text-danger text-center"></p>
+                                <p x-show="row.devoir.status === 'saved'" x-cloak class="mt-1 text-xs text-success text-center">Enregistré</p>
                             </td>
 
                             <td class="py-2 px-4">
@@ -136,8 +137,8 @@
                                            class="input-field mt-0 w-20 text-center"
                                            :class="row.composition.status === 'error' ? 'border-danger' : ''"
                                            :data-row="index" data-field="composition"
-                                           :disabled="row.composition.status === 'saving' || (!row.composition.id && !canEnterGrades)"
-                                           :title="(!row.composition.id && !canEnterGrades) ? 'Réservé à l\'enseignant' : ''"
+                                           :disabled="row.composition.status === 'saving' || (row.composition.id ? !canCorrectGrades : !canEnterGrades)"
+                                           :title="row.composition.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
                                            x-model="row.composition.value"
                                            x-on:blur="saveCell(index, 'composition')"
                                            x-on:keydown.enter.prevent="focusNextRow(index, 'composition')" />
@@ -145,6 +146,7 @@
                                     <icon x-show="row.composition.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
                                 </div>
                                 <p x-show="row.composition.error" x-cloak x-text="row.composition.error" class="mt-1 text-xs text-danger text-center"></p>
+                                <p x-show="row.composition.status === 'saved'" x-cloak class="mt-1 text-xs text-success text-center">Enregistré</p>
                             </td>
                         </tr>
                     </template>

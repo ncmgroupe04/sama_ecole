@@ -55,11 +55,11 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Du</label>
-                    <input type="date" x-model="startDate" aria-label="Date de début" class="input-field mt-0" />
+                    <date-field model="startDate" aria-label="Date de début" class="mt-0" />
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Au</label>
-                    <input type="date" x-model="endDate" aria-label="Date de fin" class="input-field mt-0" />
+                    <date-field model="endDate" aria-label="Date de fin" class="mt-0" />
                 </div>
                 <button type="button" x-on:click="applyFilters()" class="btn-primary">
                     <icon name="chart-multiple" class="w-4 h-4" />

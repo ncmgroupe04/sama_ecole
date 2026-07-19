@@ -13,5 +13,9 @@ namespace SamaEcole.Application.Classrooms.Queries.GetClassrooms;
 /// </summary>
 public record GetClassroomsQuery : IRequest<IReadOnlyList<ClassroomDto>>;
 
-/// <summary>Le décompte d'élèves est calculé côté base : la liste sert à remplir un sélecteur autant qu'un tableau.</summary>
-public record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount);
+/// <summary>
+/// Le décompte d'élèves est calculé côté base : la liste sert à remplir un sélecteur autant qu'un
+/// tableau. <see cref="RowVersion"/> est le jeton xmin nécessaire à UpdateClassroomCommand et
+/// DeleteClassroomCommand (AGENTS.md règle #5) — même contrat que GradeCellDto.RowVersion.
+/// </summary>
+public record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount, uint RowVersion);

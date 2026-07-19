@@ -18,6 +18,12 @@ public class TeacherConfiguration : IEntityTypeConfiguration<Teacher>
 
         builder.HasKey(t => t.Id);
         builder.Property(t => t.SchoolId).IsRequired();
+
+        // Verrou optimiste xmin (AGENTS.md règle #5) : UpdateTeacherCommand/DeleteTeacherCommand en
+        // dépendent pour refuser en 409 une écriture sur une fiche enseignant modifiée entre-temps,
+        // comme Grade et Enrollment. Propriété fantôme, aucune migration requise (convention Npgsql).
+        builder.Property<uint>("xmin").IsRowVersion();
+
         builder.Property(t => t.Matricule).IsRequired().HasMaxLength(30);
         builder.Property(t => t.FullName).IsRequired().HasMaxLength(200);
         builder.Property(t => t.Email).IsRequired().HasMaxLength(255);

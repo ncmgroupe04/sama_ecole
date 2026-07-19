@@ -266,6 +266,23 @@
                                         </template>
                                     </div>
                                 </div>
+
+                                <!-- Cycle de vie de l'inscription : erreur de saisie (annulation) ou
+                                     arrêt de scolarité en cours d'année (abandon/transfert). Proposé
+                                     uniquement tant que l'inscription est encore active. -->
+                                <template x-if="canManageStudent && canTransitionEnrollment(entry.status)">
+                                    <div class="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+                                        <button type="button" x-on:click="openChangeEnrollmentStatus(entry)"
+                                                class="text-xs font-medium text-warning bg-warning-bg hover:bg-amber-100 px-3 py-1 rounded-md transition-colors">
+                                            Déclarer un abandon/transfert
+                                        </button>
+                                        <button type="button" x-on:click="openCancelEnrollment(entry)"
+                                                class="text-xs font-medium text-danger bg-danger-bg hover:bg-red-100 px-3 py-1 rounded-md transition-colors"
+                                                title="Réservé aux inscriptions sans paiement encaissé">
+                                            Annuler l'inscription
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
                         </template>
                     </div>
@@ -390,11 +407,183 @@
             </div>
         </div>
 
-        <div class="mt-8 flex justify-end border-t border-gray-200 pt-4">
-            <button type="button" @@click="closeDetail()" class="btn-secondary">
+        <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-gray-200 pt-4">
+            <template x-if="canManageStudent && studentDetail">
+                <div class="flex gap-2">
+                    <button type="button" @@click="openEditStudent()" class="btn-secondary">
+                        Modifier la fiche
+                    </button>
+                    <button type="button" @@click="openDeleteStudent()" class="text-sm font-medium text-danger bg-danger-bg hover:bg-red-100 px-4 py-2 rounded-md transition-colors">
+                        Supprimer
+                    </button>
+                </div>
+            </template>
+            <button type="button" @@click="closeDetail()" class="btn-secondary sm:ml-auto">
                 Fermer
             </button>
         </div>
+    </modal-shell>
+
+    <!-- Modification de la fiche élève : le matricule n'est jamais modifiable (AGENTS.md règle #3). -->
+    <modal-shell open="editingStudent" on-close="closeEditStudent()" title="Modifier la fiche">
+        <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
+
+        <div x-show="studentEditErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="studentEditErrors.global"></div>
+
+        <form x-on:submit.prevent="submitEditStudent()" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nom complet <span class="text-danger">*</span></label>
+                <input type="text" x-model="editingStudent.fullName" required class="input-field">
+                <p x-show="studentEditErrors.fullname" x-text="studentEditErrors.fullname" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Date de naissance <span class="text-danger">*</span></label>
+                <date-field model="editingStudent.birthDate" required="true" aria-label="Date de naissance" />
+                <p x-show="studentEditErrors.birthdate" x-text="studentEditErrors.birthdate" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Lieu de naissance</label>
+                <input type="text" x-model="editingStudent.birthPlace" class="input-field">
+                <p x-show="studentEditErrors.birthplace" x-text="studentEditErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Genre <span class="text-danger">*</span></label>
+                <select x-model="editingStudent.gender" class="input-field bg-white">
+                    <option value="M">Garçon</option>
+                    <option value="F">Fille</option>
+                </select>
+                <p x-show="studentEditErrors.gender" x-text="studentEditErrors.gender" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Classe <span class="text-danger">*</span></label>
+                <select x-model="editingStudent.classroomId" required class="input-field bg-white">
+                    <template x-for="c in classrooms" :key="c.id">
+                        <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
+                    </template>
+                </select>
+                <p x-show="studentEditErrors.classroomid" x-text="studentEditErrors.classroomid" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Photo (URL)</label>
+                <div class="mt-1 flex items-center gap-3">
+                    <img x-show="editingStudent.photoUrl" :src="editingStudent.photoUrl" alt=""
+                         class="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200" x-cloak>
+                    <input type="text" x-model="editingStudent.photoUrl" placeholder="https://…" class="input-field flex-1">
+                </div>
+                <p x-show="studentEditErrors.photourl" x-text="studentEditErrors.photourl" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nom du tuteur</label>
+                <input type="text" x-model="editingStudent.guardianName" class="input-field">
+                <p x-show="studentEditErrors.guardianname" x-text="studentEditErrors.guardianname" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Téléphone du tuteur</label>
+                <input type="text" x-model="editingStudent.guardianPhone" class="input-field">
+                <p x-show="studentEditErrors.guardianphone" x-text="studentEditErrors.guardianphone" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
+                <button type="button" @@click="closeEditStudent()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isSavingStudentEdit" class="btn-primary">
+                    <span x-text="isSavingStudentEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Confirmation : fiche modifiée -->
+    <modal-shell open="showStudentEditedDialog" size="md" on-close="showStudentEditedDialog = false" title="Fiche modifiée">
+        <confirm-dialog-body close-action="showStudentEditedDialog = false">
+            La fiche a bien été mise à jour.
+        </confirm-dialog-body>
+    </modal-shell>
+
+    <!-- Confirmation : suppression de la fiche élève -->
+    <modal-shell open="deletingStudentRecord" on-close="closeDeleteStudent()" size="md">
+        <modal-title>Supprimer la fiche</modal-title>
+        <modal-subtitle>
+            <span class="font-semibold text-gray-900" x-text="deletingStudentRecord ? deletingStudentRecord.fullName : ''"></span>
+            sera archivée et n'apparaîtra plus dans la liste des élèves.
+        </modal-subtitle>
+
+        <div x-show="deleteStudentRecordError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteStudentRecordError"></div>
+
+        <p class="text-sm text-gray-500">
+            Réservé à une fiche créée par pure erreur de saisie : impossible si une inscription ou une note existe déjà pour cet élève.
+        </p>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" @@click="closeDeleteStudent()" class="btn-secondary">Annuler</button>
+            <button type="button" @@click="confirmDeleteStudent()" :disabled="isDeletingStudentRecord" class="btn-danger">
+                <span x-text="isDeletingStudentRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    <!-- Confirmation : suppression d'une fiche élève -->
+    <modal-shell open="showStudentDeletedDialog" size="md" on-close="showStudentDeletedDialog = false" title="Fiche supprimée">
+        <confirm-dialog-body close-action="showStudentDeletedDialog = false">
+            La fiche a bien été supprimée.
+        </confirm-dialog-body>
+    </modal-shell>
+
+    <!-- Annulation d'une inscription (erreur de saisie, sans paiement encaissé) -->
+    <modal-shell open="cancelingEnrollment" on-close="closeCancelEnrollment()" size="md">
+        <modal-title>Annuler l'inscription</modal-title>
+        <modal-subtitle>
+            Année <span class="font-semibold text-gray-900" x-text="cancelingEnrollment ? cancelingEnrollment.schoolYearLabel : ''"></span>
+        </modal-subtitle>
+
+        <div x-show="cancelEnrollmentError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="cancelEnrollmentError"></div>
+
+        <p class="text-sm text-gray-500">
+            À réserver à une erreur de saisie : refusée si un reçu de paiement existe déjà pour cette inscription — utilisez plutôt « Déclarer un abandon/transfert » dans ce cas.
+        </p>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" @@click="closeCancelEnrollment()" class="btn-secondary">Retour</button>
+            <button type="button" @@click="confirmCancelEnrollment()" :disabled="isCancelingEnrollment" class="btn-danger">
+                <span x-text="isCancelingEnrollment ? 'Annulation...' : 'Annuler l\'inscription'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    <!-- Déclarer un abandon ou un transfert en cours d'année -->
+    <modal-shell open="changingEnrollmentStatus" on-close="closeChangeEnrollmentStatus()" size="md">
+        <modal-title>Abandon ou transfert</modal-title>
+        <modal-subtitle>
+            Année <span class="font-semibold text-gray-900" x-text="changingEnrollmentStatus ? changingEnrollmentStatus.schoolYearLabel : ''"></span>
+        </modal-subtitle>
+
+        <div x-show="changeEnrollmentStatusError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="changeEnrollmentStatusError"></div>
+
+        <form x-on:submit.prevent="submitChangeEnrollmentStatus()" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nouveau statut <span class="text-danger">*</span></label>
+                <select x-model="changingEnrollmentStatus.newStatus" required class="input-field bg-white">
+                    <option value="DroppedOut">Abandon</option>
+                    <option value="Transferred">Transfert vers un autre établissement</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-400">
+                    L'élève sort des futures listes de présence ; ses notes et paiements déjà enregistrés restent intacts.
+                </p>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" @@click="closeChangeEnrollmentStatus()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isChangingEnrollmentStatus" class="btn-primary">
+                    <span x-text="isChangingEnrollmentStatus ? 'Enregistrement...' : 'Confirmer'"></span>
+                </button>
+            </div>
+        </form>
     </modal-shell>
 
     <!-- Création d'élève (JGK-D01) -->
@@ -415,7 +604,7 @@
             <!-- Date de naissance -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Date de naissance <span class="text-danger">*</span></label>
-                <input type="date" x-model="newStudent.birthDate" required class="input-field">
+                <date-field model="newStudent.birthDate" required="true" aria-label="Date de naissance" />
                 <p x-show="createErrors.birthdate" x-text="createErrors.birthdate" class="mt-1 text-xs text-danger"></p>
             </div>
 

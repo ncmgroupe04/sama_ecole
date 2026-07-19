@@ -23,7 +23,8 @@ public class GetClassroomsQueryHandler(IApplicationDbContext dbContext)
                 c.Name,
                 c.Level,
                 c.Capacity,
-                dbContext.Students.Count(s => s.ClassroomId == c.Id)))
+                dbContext.Students.Count(s => s.ClassroomId == c.Id),
+                EF.Property<uint>(c, "xmin")))
             .ToListAsync(cancellationToken);
     }
 }

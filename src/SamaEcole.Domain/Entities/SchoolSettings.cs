@@ -44,6 +44,23 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// Directeur, pas un acquis silencieux à l'activation du module.
     /// </summary>
     public bool AllowSecretaryToManageGrading { get; set; } = SchoolSettingsDefaults.AllowSecretaryToManageGrading;
+
+    /// <summary>
+    /// Au choix du Directeur de CHAQUE école : délègue à la Finance le droit d'ajuster un montant de
+    /// barème déjà défini (PUT /finance/fees/{id}), normalement réservé au Directeur (AGENTS.md règle
+    /// #4). Lu par CanModifyFeesHandler (SamaEcole.Web.Authorization). Faux par défaut : la Finance
+    /// encaisse, elle ne fixe pas les montants tant que le Directeur n'a pas explicitement délégué.
+    /// </summary>
+    public bool AllowFinanceToModifyFees { get; set; } = SchoolSettingsDefaults.AllowFinanceToModifyFees;
+
+    /// <summary>
+    /// Au choix du Directeur de CHAQUE école : délègue à la Finance le droit de supprimer (soft
+    /// delete) une catégorie de frais ou une ligne de barème. Séparé de <see cref="AllowFinanceToModifyFees"/>
+    /// : supprimer une catégorie entière est un geste plus lourd de conséquences (elle disparaît de
+    /// toute l'interface) qu'ajuster un montant, donc un commutateur distinct. Lu par
+    /// CanDeleteFeesHandler (SamaEcole.Web.Authorization). Faux par défaut.
+    /// </summary>
+    public bool AllowFinanceToDeleteFees { get; set; } = SchoolSettingsDefaults.AllowFinanceToDeleteFees;
 }
 
 /// <summary>
@@ -64,6 +81,12 @@ public static class SchoolSettingsDefaults
 
     /// <summary>Délégation au Secrétariat désactivée tant que le Directeur ne l'a pas explicitement activée.</summary>
     public const bool AllowSecretaryToManageGrading = false;
+
+    /// <summary>Délégation à la Finance désactivée tant que le Directeur ne l'a pas explicitement activée.</summary>
+    public const bool AllowFinanceToModifyFees = false;
+
+    /// <summary>Délégation à la Finance désactivée tant que le Directeur ne l'a pas explicitement activée.</summary>
+    public const bool AllowFinanceToDeleteFees = false;
 
     public static readonly int[] AllowedGradingScales = [10, 20];
     public static readonly string[] AllowedDateFormats = ["dd/MM/yyyy", "dd MMMM yyyy"];

@@ -2,6 +2,7 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
 using SamaEcole.Application.Grades.Commands.CreateMention;
+using SamaEcole.Application.Grades.Commands.DeleteGrade;
 using SamaEcole.Application.Grades.Commands.ImportGrades;
 using SamaEcole.Application.Grades.Queries.GetClassGrades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
@@ -19,10 +20,12 @@ namespace SamaEcole.Web.Controllers;
 /// <summary>
 /// Tickets JGK-G01/G02 — /grades. Contrôleur mince : aucune logique métier ici (AGENTS.md règle #8).
 ///
-/// Deux endpoints distincts pour la saisie, deux permissions distinctes (docs/Volume_7_Security.md
-/// « Notes ») : SAISIR une nouvelle note est réservé à l'Enseignant ; CORRIGER une note déjà saisie
-/// est ouvert au Directeur ET à l'Enseignant. Un seul endpoint « upsert » aurait mélangé les deux
-/// permissions.
+/// SAISIR une nouvelle note est réservé à l'Enseignant. CORRIGER ou ANNULER une note déjà saisie en
+/// base est réservé au Directeur et au Secrétariat — matrice d'autorisation "Photoshop", contrôle
+/// strict et NON révocable (contrairement à la délégation du barème/matières/mentions, qui repose sur
+/// SchoolSettings.AllowSecretaryToManageGrading) : l'Enseignant ne peut plus jamais modifier une note
+/// une fois enregistrée, une erreur de saisie se corrige exclusivement via ces deux rôles. Un seul
+/// endpoint « upsert » aurait mélangé ces permissions désormais distinctes.
 /// </summary>
 [ApiController]
 [Route("api/v1/grades")]
@@ -35,25 +38,38 @@ public class GradesController(ISender mediator) : ControllerBase
     public record ImportGradesRequest(
         Guid ClassroomId, Guid SubjectId, Guid TermId, EvaluationType EvaluationType, IFormFile? File);
 
+    /// <summary>SAISIR une note (POST) et le calcul des moyennes (GET calculate) : inchangés par la matrice "Photoshop".</summary>
     private const string GradingRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
+
+    /// <summary>
+    /// Écran de saisie/correction : LECTURE ouverte au Directeur, au Secrétariat (qui peut désormais
+    /// corriger/annuler) et à l'Enseignant (qui saisit). Distincte de GradingRoles, qui reste la
+    /// permission d'ÉCRITURE de la saisie initiale (Enseignant seul).
+    /// </summary>
+    private const string ViewGradesRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Enseignant)}";
+
+    /// <summary>
+    /// CORRIGER ou ANNULER une note déjà enregistrée (PUT, DELETE) : Directeur et Secrétariat
+    /// uniquement, JAMAIS l'Enseignant — même l'auteur de la saisie initiale. Contrôle strict et non
+    /// révocable (matrice d'autorisation "Photoshop"), pas une délégation optionnelle.
+    /// </summary>
+    private const string UpdateGradeRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}";
 
     /// <summary>
     /// Lecture des mentions uniquement (docs/Volume_7_Security.md « Notes » : Voir = Directeur +
     /// Enseignant). Le Secrétariat y est ajouté à part, SANS condition sur la délégation
     /// (contrairement à l'écriture, voir GradingPolicies.CanManageGradingScale) : il en a besoin pour
-    /// composer les bulletins, que la gestion des mentions lui soit déléguée ou non — sans toucher à
-    /// GradingRoles, qui reste la permission de saisie/correction des notes (Secrétariat en est et
-    /// doit en rester exclu).
+    /// composer les bulletins, que la gestion des mentions lui soit déléguée ou non.
     /// </summary>
     private const string MentionReadRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Enseignant)}";
 
     /// <summary>
     /// Écran de saisie des notes : les élèves d'une classe avec leurs notes déjà saisies pour une
-    /// matière et un trimestre. LECTURE ouverte au Directeur et à l'Enseignant, comme la consultation
-    /// des notes (Volume_7_Security « Voir »).
+    /// matière et un trimestre. LECTURE ouverte au Directeur, au Secrétariat et à l'Enseignant — le
+    /// Secrétariat en a besoin pour corriger/annuler une note déjà saisie (voir UpdateGradeRoles).
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = GradingRoles)]
+    [Authorize(Roles = ViewGradesRoles)]
     [ProducesResponseType<IReadOnlyList<StudentGradeRowDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -105,8 +121,13 @@ public class GradesController(ISender mediator) : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Corrige une note déjà saisie. Réservé au Directeur et au Secrétariat — l'Enseignant, même
+    /// auteur de la saisie initiale, ne peut plus la modifier une fois enregistrée (contrôle strict,
+    /// matrice d'autorisation "Photoshop").
+    /// </summary>
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = GradingRoles)]
+    [Authorize(Roles = UpdateGradeRoles)]
     [ProducesResponseType<GradeResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -115,6 +136,24 @@ public class GradesController(ISender mediator) : ControllerBase
     public async Task<IActionResult> Update(
         Guid id, [FromBody] UpdateGradeRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new UpdateGradeCommand(id, request.Value, request.RowVersion), cancellationToken));
+
+    /// <summary>
+    /// Annule (soft delete) une note déjà saisie. Même permission que la correction : Directeur et
+    /// Secrétariat uniquement, jamais l'Enseignant. `rowVersion` en query string, comme
+    /// DELETE /finance/fees/{id} : une suppression n'a pas de corps de requête à transporter.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = UpdateGradeRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Delete(
+        Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteGradeCommand(id, rowVersion), cancellationToken);
+        return NoContent();
+    }
 
     /// <summary>
     /// Ticket JGK-G02 — moyennes par matière, moyenne générale pondérée et mention. Recalculé à la
