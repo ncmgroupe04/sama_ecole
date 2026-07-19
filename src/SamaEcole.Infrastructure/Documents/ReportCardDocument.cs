@@ -1,5 +1,6 @@
 using System.Globalization;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
+using SamaEcole.Domain.Enums;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -8,134 +9,201 @@ namespace SamaEcole.Infrastructure.Documents;
 
 /// <summary>
 /// Bulletin de notes en PDF, format A5 portrait (ticket JGK-G03). Reproduit
-/// docs/design-references/bulletin-reference.png (AGENTS.md règle #12) : mêmes colonnes du tableau de
-/// notes, mêmes blocs de synthèse (moyenne générale, décision du conseil, récapitulatif annuel).
+/// docs/design-references/bulletin-reference.png (AGENTS.md règle #12) : en-tête administratif
+/// IA/IEF/LYCEE DE, titre entre doubles filets, bloc d'identité encadré, tableau des disciplines avec
+/// appréciations, lignes TOTAL/Moyenne avec assiduité, rangée des distinctions, puis Décision du
+/// Conseil + Observations (gauche) et récapitulatif des moyennes + signature du Chef d'établissement
+/// avec emplacement de cachet (droite).
 ///
 /// Certaines cases de la référence restent volontairement VIDES — visuellement présentes, jamais
-/// remplies d'une donnée inventée — car rien dans le système ne les alimente encore : T.H, Absences,
-/// Retards, mentions disciplinaires (Blâme/Avertissement/Tableau d'honneur/Encouragements/
-/// Félicitations), Décision du Conseil, Appréciation par matière, lieu de naissance, Classe redoublée,
-/// et la hiérarchie Inspection d'Académie/départementale de l'en-tête (voir ReportCardDto).
+/// remplies d'une donnée inventée — car rien dans le système ne les alimente : T.H, la Décision du
+/// Conseil, et Classe redoublée. L'assiduité (Absences/Retards) s'imprime « - » tant qu'aucun appel
+/// n'a été fait sur la période (voir ReportCardDto), jamais un zéro trompeur. La distinction du conseil
+/// (Blâme… Félicitations) et les Observations, elles, SONT modélisées (ReportCardRemark) — cochée/
+/// remplie si saisies via l'écran dédié, vides sinon.
+///
+/// Le logo n'apparaît PAS : l'en-tête de la référence est purement administratif (IA/IEF/LYCEE DE),
+/// sans aucun logo. Le paramètre est conservé pour ne pas casser le contrat
+/// IReportCardPdfGenerator — il est simplement ignoré à la mise en page.
 /// </summary>
 public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocument
 {
+    /// <summary>Filet noir standard de la référence (tableaux, encadrés).</summary>
+    private const float RuleThickness = 0.75f;
+
     public DocumentMetadata GetMetadata() => new()
     {
         Title = $"Bulletin de notes — {reportCard.StudentFullName}",
         Author = reportCard.SchoolName
     };
 
-    public void Compose(IDocumentContainer container)
+    public void Compose(IDocumentContainer container) => ComposePage(container);
+
+    /// <summary>
+    /// Compose UNE page A5 dans <paramref name="container"/> — extrait de <see cref="Compose"/> pour être
+    /// appelé plusieurs fois sur le MÊME conteneur (une page par élève) par <see cref="ClassBulletinsDocument"/>,
+    /// qui fusionne les bulletins de toute une classe en un seul PDF. Même mise en page que le bulletin
+    /// individuel, aucune logique dupliquée.
+    /// </summary>
+    internal void ComposePage(IDocumentContainer container)
     {
+        // Le logo est volontairement ignoré (voir remarque de classe) : la référence n'en montre pas.
+        _ = logo;
+
         container.Page(page =>
         {
             page.Size(PageSizes.A5);
-            page.Margin(1, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(7.5f).FontColor(Colors.Black));
+
+            // Marges serrées (5-8 mm) : tout le gabarit tient sur UNE page A5, sans seconde page blanche.
+            page.Margin(7, Unit.Millimetre);
+
+            // Times New Roman : absente des dépôts Linux (police propriétaire) — le Dockerfile de
+            // production mappe ce nom vers Liberation Serif, un clone à métriques identiques, via un
+            // alias fontconfig. Rien à faire ici pour que les deux environnements donnent le même rendu.
+            page.DefaultTextStyle(text => text.FontFamily("Times New Roman").FontSize(7.5f).FontColor(Colors.Black));
 
             page.Content().Column(column =>
             {
-                column.Spacing(4);
+                column.Spacing(3);
                 column.Item().Element(ComposeHeader);
                 column.Item().Element(ComposeTitle);
                 column.Item().Element(ComposeIdentity);
                 column.Item().PaddingTop(2).Element(ComposeGradesTable);
-                column.Item().Element(ComposeSynthesisRow);
                 column.Item().Element(ComposeDisciplinaryMentionsRow);
-                column.Item().PaddingTop(2).Element(ComposeDecisionAndRecap);
-                column.Item().PaddingTop(6).Element(ComposeFooter);
+                column.Item().PaddingTop(5).Element(ComposeDecisionAndRecap);
+                column.Item().PaddingTop(4).Element(ComposeFooter);
             });
         });
     }
 
+    /// <summary>
+    /// En-tête administratif de la référence : IA / IEF / LYCEE DE à gauche (en majuscules), année
+    /// scolaire et période à droite, alignées sur les deux premières lignes. Une valeur non renseignée
+    /// laisse sa ligne vide après le libellé — jamais une valeur inventée.
+    /// </summary>
     private void ComposeHeader(IContainer container)
     {
-        container.BorderBottom(1).BorderColor(Colors.Black).PaddingBottom(3).Row(row =>
+        container.Row(row =>
         {
-            row.RelativeItem().Column(left =>
+            row.RelativeItem(3).Column(left =>
             {
-                left.Item().Text(reportCard.SchoolName.ToUpperInvariant()).Bold().FontSize(10);
+                left.Item().Text($"IA : {Upper(reportCard.InspectionAcademie)}").FontSize(8.5f);
+                left.Item().Text($"IEF : {Upper(reportCard.InspectionEducationFormation)}").FontSize(8.5f);
 
-                if (logo is not null)
-                {
-                    left.Item().PaddingTop(2).MaxHeight(28).MaxWidth(90).Image(logo).FitArea();
-                }
+                // AUCUN repli sur le nom légal de l'école (Identité de l'établissement, utilisé sur le
+                // reçu) : ce champ n'a pas sa place sur le bulletin, même quand NomLycee est vide — la
+                // ligne s'imprime alors vide, exactement comme IA et IEF ci-dessus.
+                left.Item().Text($"LYCEE DE : {Upper(reportCard.NomLycee)}").FontSize(8.5f);
             });
 
-            row.RelativeItem().AlignRight().Column(right =>
+            row.RelativeItem(2).Column(right =>
             {
-                right.Item().AlignRight().Text($"Année scolaire : {reportCard.SchoolYearLabel}");
-                right.Item().AlignRight().Text(reportCard.TermLabel).Bold();
+                right.Item().AlignRight().Text($"Année Scolaire : {reportCard.SchoolYearLabel}").FontSize(8.5f);
+                right.Item().AlignRight().Text(reportCard.TermLabel).Bold().FontSize(8.5f);
             });
         });
     }
 
+    /// <summary>Titre centré entre DEUX doubles filets horizontaux, comme sur la référence.</summary>
     private static void ComposeTitle(IContainer container)
     {
-        container.BorderTop(1.5f).BorderBottom(1.5f).BorderColor(Colors.Black)
-            .PaddingVertical(3).AlignCenter().Text("BULLETIN DE NOTES").Bold().FontSize(11);
+        container.Column(column =>
+        {
+            column.Item().Element(DoubleRule);
+            column.Item().PaddingVertical(2).AlignCenter().Text("BULLETIN DE NOTES").Bold().FontSize(12);
+            column.Item().Element(DoubleRule);
+        });
+
+        static void DoubleRule(IContainer c) => c.Column(rule =>
+        {
+            rule.Item().LineHorizontal(RuleThickness).LineColor(Colors.Black);
+            rule.Item().Height(1.2f);
+            rule.Item().LineHorizontal(RuleThickness).LineColor(Colors.Black);
+        });
     }
 
+    /// <summary>
+    /// Bloc d'identité encadré, trois lignes fixes : Prénoms/Nom (gras, corps plus grand), naissance et
+    /// classe, matricule et effectif. « Classe Redoublée » reste une case vide (non modélisé).
+    /// </summary>
     private void ComposeIdentity(IContainer container)
     {
-        container.PaddingTop(3).Column(column =>
+        var (prenoms, nom) = SplitFullName(reportCard.StudentFullName);
+
+        container.Border(RuleThickness).BorderColor(Colors.Black).Padding(4).Table(table =>
         {
-            column.Item().Row(row =>
+            // LES TROIS LIGNES PARTAGENT CES MÊMES COLONNES : c'est ce partage — pas un ajustement de
+            // largeurs au jugé — qui aligne "Nom" avec "Classe" et "Classe Redoublée" sur la même
+            // verticale. "Prénoms" fusionne les deux premières colonnes (ColumnSpan) pour lui laisser
+            // sa place habituelle, plus large.
+            table.ColumnsDefinition(columns =>
             {
-                row.RelativeItem(2).Text(t =>
-                {
-                    t.Span("Nom et prénoms : ");
-                    t.Span(reportCard.StudentFullName).Bold();
-                });
-                row.RelativeItem(1).Text(t =>
-                {
-                    t.Span("Classe : ");
-                    t.Span(reportCard.ClassroomName).Bold();
-                });
+                columns.RelativeColumn(2f);
+                columns.RelativeColumn(1.6f);
+                columns.RelativeColumn(1.4f);
             });
 
-            column.Item().PaddingTop(1).Row(row =>
+            table.Cell().ColumnSpan(2).Element(Cell).Text(t =>
             {
-                row.RelativeItem(2).Text($"Né(e) le : {FormatDate(reportCard.BirthDate)}");
-                row.RelativeItem(1).Text($"Matricule : {reportCard.Matricule}");
+                t.Span("Prénoms : ").FontSize(8.5f);
+                t.Span(prenoms).Bold().FontSize(9.5f);
+            });
+            table.Cell().Element(Cell).Text(t =>
+            {
+                t.Span("Nom : ").FontSize(8.5f);
+                t.Span(nom).Bold().FontSize(9.5f);
             });
 
-            column.Item().PaddingTop(1).Row(row =>
+            table.Cell().Element(Cell).Text($"Né(e) le : {FormatDate(reportCard.BirthDate)}");
+            table.Cell().Element(Cell).Text($"à : {reportCard.BirthPlace}");
+            table.Cell().Element(Cell).Text(t =>
             {
-                row.RelativeItem(2).Text($"Nombre d'élèves de la classe : {reportCard.ClassSize}");
-                row.RelativeItem(1).Text("Classe redoublée : ☐");
+                t.Span("Classe : ");
+                t.Span(reportCard.ClassroomName).Bold();
             });
+
+            table.Cell().Element(Cell).Text($"Matricule : {reportCard.Matricule}");
+            table.Cell().Element(Cell).Text($"Nbre d'élèves : {reportCard.ClassSize}");
+            table.Cell().Element(Cell).Text("Classe Redoublée :");
         });
+
+        static IContainer Cell(IContainer c) => c.PaddingVertical(1.5f);
     }
 
     private void ComposeGradesTable(IContainer container)
     {
+        // Barème d'espacement des lignes : moins il y a de matières, plus chaque ligne s'étire, pour
+        // qu'une classe à 2-3 matières ne laisse pas un grand vide sous un tableau minuscule. Repère :
+        // 12 matières (le cas testé par JGK-G03, "tient sur une page") retombe exactement sur les 2 pt
+        // fixes d'avant ce changement — le plafond bas est donc déjà éprouvé pour ne jamais déborder.
+        var rowPadding = Math.Clamp(24f / Math.Max(reportCard.Subjects.Count, 1), 2f, 8f);
+
         container.Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(2.9f); // Disciplines
-                columns.RelativeColumn(0.9f); // Devoir
-                columns.RelativeColumn(0.9f); // Composition
+                columns.RelativeColumn(2.9f);  // Disciplines
+                columns.RelativeColumn(0.9f);  // Devoir
+                columns.RelativeColumn(0.9f);  // Composition
                 columns.RelativeColumn(1.05f); // Moyenne
-                columns.RelativeColumn(0.7f); // Coefficient
+                columns.RelativeColumn(0.7f);  // Coefficient
                 columns.RelativeColumn(1.05f); // Moyenne x Coef
-                columns.RelativeColumn(0.6f); // T.H
-                columns.RelativeColumn(0.9f); // Rang
-                columns.RelativeColumn(1.85f); // Appréciation
+                columns.RelativeColumn(0.6f);  // T.H
+                columns.RelativeColumn(0.9f);  // Rang
+                columns.RelativeColumn(1.85f); // Appréciations
             });
 
             table.Header(header =>
             {
-                header.Cell().Element(HeaderCell).Text("Disciplines").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).Text("DISCIPLINES").Bold().FontSize(7);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Devoir").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Comp.").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text($"Moy./{reportCard.GradingScale}").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Comp").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text($"Moy/{reportCard.GradingScale}").Bold().FontSize(7);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Coef").Bold().FontSize(7);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Moy x").Bold().FontSize(7);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("T.H").Bold().FontSize(7);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Rang").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Appréciations").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).Text("Appréciations").Bold().FontSize(7);
             });
 
             foreach (var subject in reportCard.Subjects)
@@ -146,71 +214,80 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Coefficient));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.WeightedPoints));
-                table.Cell().Element(BodyCell).AlignCenter().Text("—");
+                table.Cell().Element(BodyCell).Text(""); // T.H : signification non établie, case vide.
                 table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
-                table.Cell().Element(BodyCell).Text("");
+                table.Cell().Element(BodyCell).Text(reportCard.SubjectAppreciations.GetValueOrDefault(subject.SubjectId) ?? "");
             }
 
+            // Ligne TOTAL de la référence : totaux Coef et Moy x, puis la case « Absences » à droite.
             table.Cell().Element(TotalCell).Text("TOTAL").Bold();
-            table.Cell().Element(TotalCell).Text("");
-            table.Cell().Element(TotalCell).Text("");
-            table.Cell().Element(TotalCell).Text("");
+            table.Cell().ColumnSpan(3).Element(TotalCell).Text("");
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatGrade(reportCard.TotalCoefficients)).Bold();
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatGrade(reportCard.TotalPoints)).Bold();
-            table.Cell().Element(TotalCell).Text("");
-            table.Cell().Element(TotalCell).Text("");
-            table.Cell().ColumnSpan(1).Element(TotalCell).Text("");
+            table.Cell().ColumnSpan(2).Element(TotalCell).Text("Absences");
+            table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Absences));
+
+            // Ligne Moyenne de la référence : moyenne générale, rang, retards, absences totales — dans
+            // la MÊME table pour que les filets verticaux restent alignés avec le tableau des notes.
+            table.Cell().Element(TotalCell).Text($"Moyenne : {FormatGrade(reportCard.GeneralAverage)} /{reportCard.GradingScale}").Bold();
+            table.Cell().ColumnSpan(2).Element(TotalCell).AlignCenter().Text("Rang");
+            table.Cell().Element(TotalCell).AlignCenter().Text(reportCard.GeneralRank.ToString()).Bold();
+            table.Cell().ColumnSpan(2).Element(TotalCell).AlignCenter().Text("Retards");
+            table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Retards));
+
+            // Corps réduit : « Abs. Tot » doit tenir sur UNE ligne dans sa colonne étroite, sans faire
+            // gonfler la hauteur de la rangée Moyenne.
+            table.Cell().Element(TotalCell).AlignCenter().Text("Abs. Tot").FontSize(6.5f);
+            table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.TotalAbsences));
         });
 
         static IContainer HeaderCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(3);
-        static IContainer BodyCell(IContainer c) =>
-            c.Border(0.5f).BorderColor(Colors.Grey.Darken1).PaddingVertical(2).PaddingHorizontal(3);
+            c.Border(RuleThickness).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(3);
+        IContainer BodyCell(IContainer c) =>
+            c.Border(0.5f).BorderColor(Colors.Black).PaddingVertical(rowPadding).PaddingHorizontal(3);
         static IContainer TotalCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten4).PaddingVertical(2).PaddingHorizontal(3);
+            c.Border(RuleThickness).BorderColor(Colors.Black).PaddingVertical(2.5f).PaddingHorizontal(3);
     }
 
-    private void ComposeSynthesisRow(IContainer container)
+    /// <summary>
+    /// Ligne des distinctions du conseil (Blâme… Félicitations) — chaque case porte une coche « [ ] »/
+    /// « [X] » : COCHÉE, grisée et en gras pour <see cref="ReportCardDto.DisciplinaryMention"/>, vide
+    /// sinon. Saisie via l'écran « Observations du conseil » (PUT /report-cards/remark), jamais
+    /// attribuée automatiquement.
+    /// </summary>
+    private void ComposeDisciplinaryMentionsRow(IContainer container)
     {
+        (DisciplinaryMention Value, string Label)[] mentions =
+        [
+            (DisciplinaryMention.Blame, "Blâme"),
+            (DisciplinaryMention.Avertissement, "Avertissement"),
+            (DisciplinaryMention.TableauHonneur, "Tableau d'honneur"),
+            (DisciplinaryMention.Encouragements, "Encouragements"),
+            (DisciplinaryMention.Felicitations, "Félicitations")
+        ];
+
         container.Table(table =>
-        {
-            table.ColumnsDefinition(columns =>
-            {
-                columns.RelativeColumn(2);
-                columns.RelativeColumn(1);
-                columns.RelativeColumn(1);
-                columns.RelativeColumn(1.2f);
-            });
-
-            SynthesisCell(table, $"Moyenne générale : {FormatGrade(reportCard.GeneralAverage)} /{reportCard.GradingScale}", bold: true);
-            SynthesisCell(table, $"Rang : {reportCard.GeneralRank}");
-            SynthesisCell(table, "Retards : —");
-            SynthesisCell(table, "Absences totales : —");
-        });
-
-        static void SynthesisCell(TableDescriptor table, string text, bool bold = false)
-        {
-            var cell = table.Cell().Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(4).Text(text);
-            if (bold) cell.Bold();
-        }
-    }
-
-    private static void ComposeDisciplinaryMentionsRow(IContainer container)
-    {
-        // Cases visuellement présentes, jamais cochées : aucune décision disciplinaire n'est modélisée
-        // (relève du conseil de classe, voir la remarque de classe).
-        string[] mentions = ["Blâme", "Avertissement", "Tableau d'honneur", "Encouragements", "Félicitations"];
-
-        container.PaddingTop(2).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
                 foreach (var _ in mentions) columns.RelativeColumn();
             });
 
-            foreach (var mention in mentions)
+            foreach (var (value, label) in mentions)
             {
-                table.Cell().Border(0.5f).BorderColor(Colors.Grey.Darken1).PaddingVertical(2).AlignCenter().Text(mention).FontSize(6.5f);
+                var isChecked = value == reportCard.DisciplinaryMention;
+
+                var cell = table.Cell().Border(0.5f).BorderColor(Colors.Black);
+                if (isChecked)
+                {
+                    cell = cell.Background(Colors.Grey.Lighten3);
+                }
+
+                var text = cell.PaddingVertical(2).AlignCenter().Text($"[{(isChecked ? "X" : " ")}] {label}").FontSize(6.5f);
+                if (isChecked)
+                {
+                    text.Bold();
+                }
             }
         });
     }
@@ -219,9 +296,9 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
     {
         container.Row(row =>
         {
-            row.RelativeItem().Element(ComposeDecisionDuConseil);
-            row.ConstantItem(6);
-            row.RelativeItem().Element(ComposeAnnualRecap);
+            row.RelativeItem(1.1f).Element(ComposeDecisionDuConseil);
+            row.ConstantItem(10);
+            row.RelativeItem(1).Element(ComposeAnnualRecap);
         });
     }
 
@@ -229,16 +306,16 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
     {
         string[] decisions = ["Admis(e) en classe supérieure", "Autorisé(e) à redoubler", "Exclusion"];
 
-        container.Border(0.75f).BorderColor(Colors.Grey.Darken1).Column(column =>
+        container.Border(RuleThickness).BorderColor(Colors.Black).Column(column =>
         {
             column.Item().Background(Colors.Grey.Lighten3).PaddingVertical(2).AlignCenter().Text("Décision du Conseil").Bold();
 
             foreach (var decision in decisions)
             {
-                column.Item().BorderTop(0.5f).BorderColor(Colors.Grey.Darken1).Row(row =>
+                column.Item().BorderTop(0.5f).BorderColor(Colors.Black).Row(row =>
                 {
-                    row.RelativeItem().PaddingVertical(2).PaddingHorizontal(3).Text(decision);
-                    row.ConstantItem(16).PaddingVertical(2).AlignCenter().Text("☐");
+                    row.RelativeItem().PaddingVertical(2.5f).PaddingHorizontal(3).Text(decision);
+                    row.ConstantItem(18).BorderLeft(0.5f).BorderColor(Colors.Black).PaddingVertical(2.5f).AlignCenter().Text("");
                 });
             }
         });
@@ -246,56 +323,95 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
 
     private void ComposeAnnualRecap(IContainer container)
     {
-        container.Border(0.75f).BorderColor(Colors.Grey.Darken1).Column(column =>
+        container.Border(RuleThickness).BorderColor(Colors.Black).Column(column =>
         {
             foreach (var recap in reportCard.TermRecaps)
             {
-                column.Item().BorderBottom(0.5f).BorderColor(Colors.Grey.Darken1).Row(row =>
+                column.Item().BorderBottom(0.5f).BorderColor(Colors.Black).Row(row =>
                 {
-                    row.RelativeItem().PaddingVertical(2).PaddingHorizontal(3).Text($"Moy. {recap.TermLabel}");
-                    row.ConstantItem(36).PaddingVertical(2).AlignRight().PaddingRight(3)
+                    row.RelativeItem().PaddingVertical(2.5f).PaddingHorizontal(3).Text($"Moy. {recap.TermLabel}");
+                    row.ConstantItem(36).PaddingVertical(2.5f).AlignRight().PaddingRight(3)
                         .Text(recap.Average is { } avg ? FormatGrade(avg) : "—");
                 });
             }
 
-            column.Item().BorderBottom(0.5f).BorderColor(Colors.Grey.Darken1).Row(row =>
+            column.Item().BorderBottom(0.5f).BorderColor(Colors.Black).Row(row =>
             {
-                row.RelativeItem().PaddingVertical(2).PaddingHorizontal(3).Text("Moyenne annuelle").Bold();
-                row.ConstantItem(36).PaddingVertical(2).AlignRight().PaddingRight(3)
+                row.RelativeItem().PaddingVertical(2.5f).PaddingHorizontal(3).Text("Moyenne annuelle").Bold();
+                row.ConstantItem(36).PaddingVertical(2.5f).AlignRight().PaddingRight(3)
                     .Text(reportCard.AnnualAverage is { } annual ? FormatGrade(annual) : "—").Bold();
             });
 
             column.Item().Row(row =>
             {
-                row.RelativeItem().PaddingVertical(2).PaddingHorizontal(3).Text("Rang annuel");
-                row.ConstantItem(36).PaddingVertical(2).AlignRight().PaddingRight(3)
+                row.RelativeItem().PaddingVertical(2.5f).PaddingHorizontal(3).Text("Rang");
+                row.ConstantItem(36).PaddingVertical(2.5f).AlignRight().PaddingRight(3)
                     .Text(reportCard.AnnualRank is { } rank ? rank.ToString() : "—");
             });
         });
     }
 
-    private static void ComposeFooter(IContainer container)
+    /// <summary>
+    /// Pied de la référence : Observations du conseil à gauche — le cadre affiche le texte saisi via
+    /// PUT /report-cards/remark, ou reste vide (mais visible, MinHeight) tant que rien n'est écrit —
+    /// signature du Chef d'établissement avec l'emplacement du cachet rond à droite.
+    /// </summary>
+    private void ComposeFooter(IContainer container)
     {
+        // Cercle en pointillés matérialisant l'emplacement du cachet officiel rond de la référence.
+        const string stampCircleSvg =
+            """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="5 4"/></svg>""";
+
         container.Row(row =>
         {
-            row.RelativeItem(3).Column(left =>
+            row.RelativeItem(1.1f).Column(left =>
             {
                 left.Item().Text("Observations du conseil des professeurs").Bold();
-                left.Item().PaddingTop(2).Border(0.5f).BorderColor(Colors.Grey.Darken1).MinHeight(40);
+
+                // AlignMiddle sur le CONTENEUR (centrage vertical dans le cadre) + AlignCenter sur le
+                // TEXTE lui-même (chaque ligne centrée horizontalement, y compris si le texte passe
+                // sur plusieurs lignes) — centrer le conteneur au lieu du texte donnerait une largeur
+                // "naturelle" non contrainte au bloc de texte et l'empêcherait de retourner à la ligne.
+                left.Item().PaddingTop(2).Border(0.5f).BorderColor(Colors.Black).MinHeight(48)
+                    .Padding(3).AlignMiddle()
+                    .Text(reportCard.CouncilObservations ?? "").Bold().FontSize(9.5f).AlignCenter();
             });
 
-            row.ConstantItem(6);
+            row.ConstantItem(10);
 
-            row.RelativeItem(2).Column(right =>
+            row.RelativeItem(1).Column(right =>
             {
-                right.Item().AlignCenter().Text("Le Chef d'établissement").Bold();
-                right.Item().PaddingTop(14).AlignCenter().Text("[Emplacement Cachet Officiel]")
-                    .FontSize(6.5f).FontColor(Colors.Grey.Medium);
+                right.Item().AlignCenter().Text("Le Chef d'Établissement").Bold();
+                right.Item().PaddingTop(3).AlignCenter().Height(46).Width(46).Svg(stampCircleSvg);
             });
         });
     }
 
     private static string FormatDate(DateOnly date) => date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+
+    /// <summary>Majuscules pour l'en-tête administratif ; chaîne vide si non renseigné (ligne imprimée vide).</summary>
+    private static string Upper(string? value) => value?.ToUpperInvariant() ?? "";
+
+    /// <summary>« - » tant qu'aucun appel n'a été fait sur la période — jamais un zéro trompeur.</summary>
+    internal static string FormatOptionalCount(int? value) => value?.ToString() ?? "-";
+
+    /// <summary>
+    /// La référence sépare Prénoms et Nom, le modèle ne porte qu'un FullName : le DERNIER mot est
+    /// affiché comme nom de famille, le reste comme prénoms — l'usage sénégalais (« Mame Diarra Bousso
+    /// FAYE »). Un nom en un seul mot s'affiche côté Prénoms, la case Nom reste vide. Simple heuristique
+    /// d'AFFICHAGE : rien n'est modifié en base. <c>internal</c> pour ReportCardDocumentTests.
+    /// </summary>
+    internal static (string Prenoms, string Nom) SplitFullName(string fullName)
+    {
+        var tokens = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return tokens.Length switch
+        {
+            0 => ("", ""),
+            1 => (tokens[0], ""),
+            _ => (string.Join(' ', tokens[..^1]), tokens[^1])
+        };
+    }
 
     /// <summary>« - » quand la note n'a pas encore été saisie (Devoir ou Composition manquant) — jamais un zéro trompeur.</summary>
     internal static string FormatOptionalGrade(decimal? value) => value is { } v ? FormatGrade(v) : "-";

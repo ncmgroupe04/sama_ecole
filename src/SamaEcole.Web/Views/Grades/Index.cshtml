@@ -51,6 +51,21 @@
                 </div>
             </div>
 
+            <!-- Bulletins de toute la classe (JGK-G03) : classe + trimestre suffisent, indépendant de la
+                 matière sélectionnée pour la saisie — réservé au Directeur/Enseignant. -->
+            <div x-show="canViewReportCard && hasClassAndTerm" x-cloak class="flex gap-2">
+                <button type="button" x-on:click="downloadClassBulletinsMergedPdf()" :disabled="downloadingClassBulletins"
+                        class="btn-secondary whitespace-nowrap text-sm" title="Un seul PDF, une page par élève — pour l'impression en lot">
+                    <icon name="download" class="w-4 h-4" />
+                    <span x-text="downloadingClassBulletins ? 'Génération…' : 'Bulletins (PDF)'"></span>
+                </button>
+                <button type="button" x-on:click="downloadClassBulletinsZip()" :disabled="downloadingClassBulletins"
+                        class="btn-secondary whitespace-nowrap text-sm" title="Une archive ZIP, un fichier par élève — pour l'envoi ou la sauvegarde">
+                    <icon name="download" class="w-4 h-4" />
+                    <span x-text="downloadingClassBulletins ? 'Génération…' : 'Bulletins (ZIP)'"></span>
+                </button>
+            </div>
+
             <!-- Mode de saisie alternatif : réservé à l'Enseignant, comme la saisie cellule par cellule. -->
             <button type="button" x-show="canEnterGrades && hasSelection" x-cloak x-on:click="openImport()"
                     class="btn-secondary whitespace-nowrap">
@@ -58,6 +73,9 @@
                 Importer un fichier
             </button>
         </div>
+
+        <!-- Erreur de génération/téléchargement des bulletins de classe (JGK-G03). -->
+        <div x-show="classBulletinsError" x-cloak class="mt-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="classBulletinsError"></div>
 
         <!-- Aucune année active : rien à proposer comme trimestre -->
         <div x-show="!isLoadingContext && terms.length === 0" x-cloak class="mt-4 rounded-md border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning">

@@ -58,7 +58,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         return await _client.SendAsync(request);
     }
 
-    private async Task<(Guid StudentId, Guid TermId)> SeedGradedStudentAsync(string directeurToken, string enseignantToken)
+    private async Task<(Guid StudentId, Guid ClassroomId, Guid TermId)> SeedGradedStudentAsync(string directeurToken, string enseignantToken)
     {
         var classroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeurToken,
             new { name = "CM2", level = "Primaire", capacity = 40 });
@@ -85,7 +85,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         await SendAsync(HttpMethod.Post, "/api/v1/grades", enseignantToken,
             new { studentId = student.Id, subjectId = subject.Id, termId, evaluationType = "Composition", value = 17 });
 
-        return (student.Id, termId);
+        return (student.Id, classroom.Id, termId);
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     {
         var directeur = await DirecteurTokenAsync();
         var enseignant = await EnseignantTokenAsync();
-        var (studentId, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+        var (studentId, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/report-cards/generate", directeur,
             new { studentId, termId });
@@ -111,7 +111,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     {
         var directeur = await DirecteurTokenAsync();
         var enseignant = await EnseignantTokenAsync();
-        var (studentId, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+        var (studentId, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/report-cards/generate", enseignant,
             new { studentId, termId });
@@ -124,7 +124,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     {
         var directeur = await DirecteurTokenAsync();
         var enseignant = await EnseignantTokenAsync();
-        var (studentId, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+        var (studentId, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
         var secretaire = await SecretaireTokenAsync();
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/report-cards/generate", secretaire,
@@ -138,7 +138,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     {
         var directeur = await DirecteurTokenAsync();
         var enseignant = await EnseignantTokenAsync();
-        var (_, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+        var (_, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/report-cards/generate", directeur,
             new { studentId = Guid.NewGuid(), termId });
@@ -155,5 +155,90 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Downloading_The_Class_Zip_Should_Return_A_Valid_Archive()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var enseignant = await EnseignantTokenAsync();
+        var (_, classroomId, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/report-cards/class-bulletins/zip?classroomId={classroomId}&termId={termId}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/zip");
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        bytes.Should().NotBeEmpty();
+        // Signature de fichier ZIP standard ("PK\x03\x04").
+        bytes[0].Should().Be(0x50);
+        bytes[1].Should().Be(0x4B);
+    }
+
+    [Fact]
+    public async Task Downloading_The_Class_Merged_Pdf_Should_Return_A_Valid_Pdf()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var enseignant = await EnseignantTokenAsync();
+        var (_, classroomId, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/report-cards/class-bulletins/merged-pdf?classroomId={classroomId}&termId={termId}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        bytes.Should().NotBeEmpty();
+        Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-");
+    }
+
+    [Fact]
+    public async Task A_Secretary_Must_Not_Download_Class_Bulletins()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var enseignant = await EnseignantTokenAsync();
+        var (_, classroomId, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+        var secretaire = await SecretaireTokenAsync();
+
+        var zipResponse = await SendAsync(HttpMethod.Get,
+            $"/api/v1/report-cards/class-bulletins/zip?classroomId={classroomId}&termId={termId}", secretaire);
+        var pdfResponse = await SendAsync(HttpMethod.Get,
+            $"/api/v1/report-cards/class-bulletins/merged-pdf?classroomId={classroomId}&termId={termId}", secretaire);
+
+        zipResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        pdfResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Downloading_Class_Bulletins_For_An_Unknown_Classroom_Should_Return_404()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var enseignant = await EnseignantTokenAsync();
+        var (_, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/report-cards/class-bulletins/zip?classroomId={Guid.NewGuid()}&termId={termId}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Downloading_Class_Bulletins_For_An_Empty_Classroom_Should_Return_409()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var enseignant = await EnseignantTokenAsync();
+        var (_, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+
+        var emptyClassroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeur,
+            new { name = "CM1", level = "Primaire", capacity = 40 });
+        var emptyClassroom = (await emptyClassroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
+
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/report-cards/class-bulletins/zip?classroomId={emptyClassroom.Id}&termId={termId}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 }

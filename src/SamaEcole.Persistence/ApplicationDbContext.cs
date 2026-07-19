@@ -42,6 +42,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<TeacherAssignment> TeacherAssignments => Set<TeacherAssignment>();
     public DbSet<AttendanceSheet> AttendanceSheets => Set<AttendanceSheet>();
     public DbSet<StudentAttendance> StudentAttendances => Set<StudentAttendance>();
+    public DbSet<ReportCardRemark> ReportCardRemarks => Set<ReportCardRemark>();
 
     // Console Super Admin — entités SANS CLÉ, jamais gérées par les migrations (voir OnModelCreating) :
     // la première est adossée à une vue réelle, la seconde n'existe qu'à travers FromSqlRaw.

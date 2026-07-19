@@ -295,10 +295,15 @@
                                      hint="Les notes saisies pour cet élève apparaîtront ici, regroupées par trimestre." />
                     </template>
 
+                    <!-- Erreur de génération/téléchargement du bulletin (JGK-G03), partagée par tous les trimestres. -->
+                    <div x-show="reportCardError" x-cloak
+                         class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger"
+                         x-text="reportCardError"></div>
+
                     <div class="space-y-6">
                         <template x-for="term in (studentDetail ? studentDetail.grades : [])" :key="term.termId">
                             <div>
-                                <!-- En-tête du trimestre : année + trimestre à gauche, synthèse à droite. -->
+                                <!-- En-tête du trimestre : année + trimestre à gauche, synthèse + bulletin à droite. -->
                                 <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                                     <p class="font-bold text-gray-900">
                                         <span x-text="term.schoolYearLabel"></span>
@@ -313,6 +318,20 @@
                                             Moyenne :
                                             <span class="font-bold text-gray-900" x-text="formatAverage(term.generalAverage)"></span>
                                         </p>
+                                        <!-- Réservées au Directeur/Enseignant côté serveur (ReportCardsController). -->
+                                        <button type="button" x-show="canViewReportCard" x-cloak
+                                                x-on:click="openReportCardRemark(term)"
+                                                class="btn-secondary text-xs whitespace-nowrap">
+                                            <icon name="pencil" class="w-4 h-4" />
+                                            <span>Observations</span>
+                                        </button>
+                                        <button type="button" x-show="canViewReportCard" x-cloak
+                                                x-on:click="downloadReportCard(term)"
+                                                :disabled="downloadingTermId === term.termId"
+                                                class="btn-secondary text-xs whitespace-nowrap">
+                                            <icon name="download" class="w-4 h-4" />
+                                            <span x-text="downloadingTermId === term.termId ? 'Génération…' : 'Bulletin'"></span>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -422,6 +441,43 @@
                 Fermer
             </button>
         </div>
+    </modal-shell>
+
+    <!-- Distinction du conseil (Blâme… Félicitations) et observations, imprimées sur le bulletin
+         (ReportCardDocument). Réservée au Directeur/Enseignant côté serveur, comme le bouton Bulletin. -->
+    <modal-shell open="editingReportCardRemark" on-close="closeReportCardRemark()" title="Observations du conseil">
+        <modal-subtitle>Distinction et observations du conseil des professeurs pour ce trimestre — imprimées sur le bulletin.</modal-subtitle>
+
+        <div x-show="reportCardRemarkErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="reportCardRemarkErrors.global"></div>
+
+        <form x-on:submit.prevent="submitReportCardRemark()" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Distinction</label>
+                <select x-model="editingReportCardRemark.disciplinaryMention" class="input-field bg-white">
+                    <option value="">Aucune</option>
+                    <option value="Blame">Blâme</option>
+                    <option value="Avertissement">Avertissement</option>
+                    <option value="TableauHonneur">Tableau d'honneur</option>
+                    <option value="Encouragements">Encouragements</option>
+                    <option value="Felicitations">Félicitations</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Observations du conseil des professeurs</label>
+                <textarea x-model="editingReportCardRemark.observations" maxlength="300" rows="4"
+                          placeholder="ex : Bon trimestre, poursuivez vos efforts."
+                          class="input-field"></textarea>
+                <p x-show="reportCardRemarkErrors.observations" x-cloak x-text="reportCardRemarkErrors.observations" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                <button type="button" x-on:click="closeReportCardRemark()" class="btn-secondary mt-4">Annuler</button>
+                <button type="submit" :disabled="isSavingReportCardRemark" class="btn-primary mt-4">
+                    <span x-text="isSavingReportCardRemark ? 'Enregistrement…' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
     </modal-shell>
 
     <!-- Modification de la fiche élève : le matricule n'est jamais modifiable (AGENTS.md règle #3). -->

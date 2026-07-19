@@ -160,6 +160,20 @@ public enum AttendanceStatus
     Late
 }
 
+/// <summary>
+/// Distinction du conseil de classe (docs/design-references/bulletin-reference.png : ligne Blâme /
+/// Avertissement / Tableau d'honneur / Encouragements / Félicitations). Au plus UNE par
+/// (élève, trimestre) — un conseil ne prononce pas deux distinctions contradictoires à la fois.
+/// </summary>
+public enum DisciplinaryMention
+{
+    Blame,
+    Avertissement,
+    TableauHonneur,
+    Encouragements,
+    Felicitations
+}
+
 public enum MatriculeKind
 {
     Student,

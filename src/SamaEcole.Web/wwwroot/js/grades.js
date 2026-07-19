@@ -24,6 +24,11 @@ document.addEventListener('alpine:init', () => {
         canEnterGrades: window.auth.role === 'Enseignant',
         canCorrectGrades: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
+        // Télécharger les bulletins de la classe (ZIP ou PDF fusionné) est réservé au Directeur/Enseignant
+        // côté serveur (ReportCardsController, ticket JGK-G03) — le Secrétariat n'y a pas accès, comme
+        // pour le bulletin individuel (voir students.js, canViewReportCard).
+        canViewReportCard: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant',
+
         classrooms: [],
         subjects: [],
         terms: [],
@@ -32,6 +37,9 @@ document.addEventListener('alpine:init', () => {
         // pratique aujourd'hui (chaque échec réseau a déjà son propre traitement ci-dessous), mais
         // sans cette déclaration Alpine évalue "error" comme une référence indéfinie à chaque rendu.
         error: null,
+
+        downloadingClassBulletins: false,
+        classBulletinsError: null,
 
         selectedClassroomId: '',
         selectedSubjectId: '',
@@ -53,6 +61,12 @@ document.addEventListener('alpine:init', () => {
 
         get hasSelection() {
             return Boolean(this.selectedClassroomId && this.selectedSubjectId && this.selectedTermId);
+        },
+
+        // Les bulletins couvrent TOUTES les matières de l'élève : classe + trimestre suffisent, la
+        // matière du sélecteur de saisie n'entre pas en jeu ici.
+        get hasClassAndTerm() {
+            return Boolean(this.selectedClassroomId && this.selectedTermId);
         },
 
         async init() {
@@ -175,6 +189,70 @@ document.addEventListener('alpine:init', () => {
         focusNextRow(rowIndex, field) {
             const next = document.querySelector(`input[data-row="${rowIndex + 1}"][data-field="${field}"]`);
             if (next) next.focus();
+        },
+
+        // ------------------------------------------------------------ Bulletins de classe (JGK-G03)
+
+        /** Fetch bas niveau partagé par le ZIP et le PDF fusionné : même mécanique que downloadReportCard (students.js). */
+        async fetchClassBulletins(endpoint) {
+            if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                await window.api.refreshOrRedirect();
+            }
+
+            const response = await fetch(
+                `/api/v1/report-cards/class-bulletins/${endpoint}?classroomId=${this.selectedClassroomId}&termId=${this.selectedTermId}`,
+                {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                    credentials: 'same-origin'
+                });
+
+            if (!response.ok) throw await window.api.toError(response);
+
+            return response.blob();
+        },
+
+        triggerDownload(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        },
+
+        classNameFor(classroomId) {
+            const classroom = this.classrooms.find(c => c.id === classroomId);
+            return classroom ? classroom.name : 'classe';
+        },
+
+        async downloadClassBulletinsZip() {
+            if (!this.hasClassAndTerm) return;
+            this.classBulletinsError = null;
+            this.downloadingClassBulletins = true;
+            try {
+                const blob = await this.fetchClassBulletins('zip');
+                this.triggerDownload(blob, `Bulletins_${this.classNameFor(this.selectedClassroomId)}.zip`);
+            } catch (err) {
+                this.classBulletinsError = (err && err.message) || 'Téléchargement des bulletins impossible.';
+            } finally {
+                this.downloadingClassBulletins = false;
+            }
+        },
+
+        async downloadClassBulletinsMergedPdf() {
+            if (!this.hasClassAndTerm) return;
+            this.classBulletinsError = null;
+            this.downloadingClassBulletins = true;
+            try {
+                const blob = await this.fetchClassBulletins('merged-pdf');
+                this.triggerDownload(blob, `Bulletins_${this.classNameFor(this.selectedClassroomId)}.pdf`);
+            } catch (err) {
+                this.classBulletinsError = (err && err.message) || 'Téléchargement des bulletins impossible.';
+            } finally {
+                this.downloadingClassBulletins = false;
+            }
         },
 
         openImport() {

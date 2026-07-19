@@ -82,6 +82,9 @@ public interface IApplicationDbContext
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 
+    /// <summary>Distinction cochée + observations du conseil des professeurs, par (élève, trimestre) — bulletin JGK-G03.</summary>
+    DbSet<ReportCardRemark> ReportCardRemarks { get; }
+
     /// <summary>
     /// Agrégats plateforme (console Super Admin) : entité SANS CLÉ adossée à la vue PostgreSQL
     /// `v_platform_dashboard_stats`, qui contourne la RLS via `security_invoker = false` +

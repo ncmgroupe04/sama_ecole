@@ -24,6 +24,18 @@ document.addEventListener('alpine:init', () => {
         detailError: null,
         detailTab: 'history',
 
+        // Bulletin PDF (JGK-G03) : téléchargé depuis l'onglet Notes & bulletins, un trimestre à la
+        // fois. Réservé au Directeur/Enseignant côté serveur (ReportCardsController) — même règle
+        // qu'ici pour ne pas afficher un bouton qui répondrait 403.
+        downloadingTermId: null,
+        reportCardError: null,
+
+        // Observations du conseil (distinction + texte), imprimées sur le bulletin — mêmes rôles que
+        // le téléchargement du PDF (ReportCardsController.ReportCardWriterRoles).
+        editingReportCardRemark: null, // { termId, disciplinaryMention, observations }
+        isSavingReportCardRemark: false,
+        reportCardRemarkErrors: {},
+
         // Slide-over state
         isCreateOpen: false,
         isSubmitting: false,
@@ -47,6 +59,10 @@ document.addEventListener('alpine:init', () => {
         // un abandon/transfert) sont réservés au Directeur et au Secrétariat côté serveur
         // (StudentsController.ManageRoles, EnrollmentsController.EnrollmentWriters) — confort d'affichage.
         canManageStudent: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+
+        // Générer le bulletin PDF (JGK-G03) est réservé au Directeur/Enseignant côté serveur
+        // (ReportCardsController) — le Secrétariat n'y a pas accès, contrairement à la saisie de notes.
+        canViewReportCard: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant',
 
         // Édition de la fiche (modale). Sourcée depuis studentDetail.identity (fraîchement chargée,
         // RowVersion inclus) plutôt que la ligne de liste `detailStudent`, qui peut être périmée et ne
@@ -152,6 +168,89 @@ document.addEventListener('alpine:init', () => {
             // La ligne de liste sert encore à l'en-tête de la modale (voir la vue) : on la resynchronise
             // avec l'identité fraîchement rechargée pour qu'un champ modifié s'y reflète immédiatement.
             Object.assign(this.detailStudent, this.studentDetail.identity);
+        },
+
+        // ------------------------------------------------------------ Bulletin PDF (JGK-G03)
+
+        /** Télécharge le bulletin PDF d'un trimestre, même mécanique que le reçu de paiement (caisse.js). */
+        async downloadReportCard(term) {
+            if (!this.detailStudent) return;
+            this.reportCardError = null;
+            this.downloadingTermId = term.termId;
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch('/api/v1/report-cards/generate', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${window.auth.accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ studentId: this.detailStudent.id, termId: term.termId })
+                });
+
+                if (!response.ok) throw new Error('Téléchargement du bulletin impossible.');
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                const matricule = this.studentDetail?.identity?.matricule || this.detailStudent.matricule;
+                link.download = `Bulletin-${matricule}-${term.termLabel.replace(/\s+/g, '-')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                this.reportCardError = err.message || 'Téléchargement du bulletin impossible.';
+            } finally {
+                this.downloadingTermId = null;
+            }
+        },
+
+        /** Ouvre l'écran, préreempli depuis GET /report-cards/remark (vide si rien n'a encore été saisi). */
+        async openReportCardRemark(term) {
+            if (!this.detailStudent) return;
+            this.reportCardRemarkErrors = {};
+            this.editingReportCardRemark = { termId: term.termId, disciplinaryMention: '', observations: '' };
+            try {
+                const remark = await window.api.get(`/report-cards/remark?studentId=${this.detailStudent.id}&termId=${term.termId}`);
+                this.editingReportCardRemark = {
+                    termId: term.termId,
+                    disciplinaryMention: remark.disciplinaryMention || '',
+                    observations: remark.observations || ''
+                };
+            } catch (err) {
+                this.reportCardRemarkErrors = { global: err.message || 'Impossible de charger les observations du conseil.' };
+            }
+        },
+
+        closeReportCardRemark() {
+            this.editingReportCardRemark = null;
+            this.reportCardRemarkErrors = {};
+        },
+
+        async submitReportCardRemark() {
+            if (!this.editingReportCardRemark || !this.detailStudent) return;
+
+            this.isSavingReportCardRemark = true;
+            this.reportCardRemarkErrors = {};
+            try {
+                await window.api.put('/report-cards/remark', {
+                    studentId: this.detailStudent.id,
+                    termId: this.editingReportCardRemark.termId,
+                    disciplinaryMention: this.editingReportCardRemark.disciplinaryMention || null,
+                    observations: this.editingReportCardRemark.observations || null
+                });
+                this.closeReportCardRemark();
+            } catch (err) {
+                this.reportCardRemarkErrors = window.api.toFieldErrors(err, 'Erreur lors de l\'enregistrement des observations.');
+            } finally {
+                this.isSavingReportCardRemark = false;
+            }
         },
 
         // ------------------------------------------------------------ Modifier la fiche

@@ -29,12 +29,17 @@ public class ReportCardDocumentTests
             .ToList();
 
         var ranks = subjects.ToDictionary(s => s.SubjectId, s => 1);
+        var appreciations = subjects.ToDictionary(s => s.SubjectId, s => (string?)"Bien");
 
         return new ReportCardDto(
             SchoolName: "École de test",
             SchoolLogoUrl: null,
+            InspectionAcademie: "Thies",
+            InspectionEducationFormation: "Mbour 1",
+            NomLycee: "Popenguine",
             StudentFullName: "Élève de Test avec un Nom Assez Long",
             BirthDate: new DateOnly(2012, 3, 14),
+            BirthPlace: "Saint-Louis",
             ClassroomName: "3e A",
             Matricule: "ELEV-2026-0001",
             ClassSize: 42,
@@ -47,7 +52,11 @@ public class ReportCardDocumentTests
             GeneralAverage: 13.27m,
             GeneralRank: 3,
             SubjectRanks: ranks,
+            SubjectAppreciations: appreciations,
             Mention: "Bien",
+            Absences: 1,
+            Retards: 0,
+            TotalAbsences: 2,
             TermRecaps:
             [
                 new ReportCardTermRecap("1er trimestre", 1, 13.27m),
@@ -55,7 +64,9 @@ public class ReportCardDocumentTests
                 new ReportCardTermRecap("3e trimestre", 3, null)
             ],
             AnnualAverage: 13.27m,
-            AnnualRank: 3);
+            AnnualRank: 3,
+            DisciplinaryMention: null,
+            CouncilObservations: null);
     }
 
     [Fact]
@@ -106,5 +117,78 @@ public class ReportCardDocumentTests
     public void FormatOptionalGrade_Returns_Placeholder_When_Null()
     {
         ReportCardDocument.FormatOptionalGrade(null).Should().Be("-");
+    }
+
+    /// <summary>
+    /// Aucun appel fait sur la période : les cases Absences/Retards impriment "-" (null), jamais un
+    /// zéro qui affirmerait à tort une assiduité parfaite. Un vrai zéro compté s'affiche, lui, "0".
+    /// </summary>
+    [Theory]
+    [InlineData(null, "-")]
+    [InlineData(0, "0")]
+    [InlineData(3, "3")]
+    public void FormatOptionalCount_Prints_Dash_Only_When_Attendance_Was_Never_Taken(int? value, string expected)
+    {
+        ReportCardDocument.FormatOptionalCount(value).Should().Be(expected);
+    }
+
+    /// <summary>
+    /// La référence sépare Prénoms et Nom mais le modèle ne porte qu'un FullName : le dernier mot est
+    /// affiché comme nom de famille, le reste comme prénoms (usage sénégalais). Heuristique
+    /// d'affichage uniquement — rien n'est modifié en base.
+    /// </summary>
+    [Theory]
+    [InlineData("Mame Diarra Bousso Faye", "Mame Diarra Bousso", "Faye")]
+    [InlineData("Awa Diallo", "Awa", "Diallo")]
+    [InlineData("Awa", "Awa", "")]
+    [InlineData("  Awa   Diallo  ", "Awa", "Diallo")]
+    public void SplitFullName_Displays_The_Last_Word_As_Family_Name(string fullName, string prenoms, string nom)
+    {
+        ReportCardDocument.SplitFullName(fullName).Should().Be((prenoms, nom));
+    }
+
+    /// <summary>
+    /// Une école qui n'a pas encore renseigné son en-tête administratif (IA/IEF/LYCEE DE null) doit
+    /// quand même obtenir son bulletin — lignes vides, jamais une exception ni une valeur inventée.
+    /// </summary>
+    [Fact]
+    public void A_Report_Card_Without_Academic_Header_Renders_On_One_Page()
+    {
+        var reportCard = BuildReportCard(8) with
+        {
+            InspectionAcademie = null,
+            InspectionEducationFormation = null,
+            NomLycee = null,
+            BirthPlace = null,
+            Absences = null,
+            Retards = null,
+            TotalAbsences = null
+        };
+
+        var pages = new ReportCardDocument(reportCard, logo: null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Une distinction cochée (Blâme… Félicitations) et des observations du conseil au texte maximal
+    /// (300 caractères, la borne du validator — voir ReportCardRemarkConfiguration) ne doivent jamais
+    /// faire déborder le bulletin sur une seconde page A5, même combinées au cas le plus chargé (12
+    /// matières, déjà éprouvé par ailleurs).
+    /// </summary>
+    [Fact]
+    public void A_Report_Card_With_A_Checked_Mention_And_Long_Observations_Fits_On_One_Page()
+    {
+        var reportCard = BuildReportCard(12) with
+        {
+            DisciplinaryMention = SamaEcole.Domain.Enums.DisciplinaryMention.Felicitations,
+            CouncilObservations = string.Concat(Enumerable.Repeat("Très bon trimestre, continuez ainsi. ", 9))[..300]
+        };
+
+        var pages = new ReportCardDocument(reportCard, logo: null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1);
     }
 }

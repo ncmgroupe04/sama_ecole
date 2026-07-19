@@ -51,6 +51,9 @@ public static class DependencyInjection
         // Bulletin de notes PDF (ticket JGK-G03) — même moteur QuestPDF, même convention.
         services.AddSingleton<IReportCardPdfGenerator, ReportCardPdfGenerator>();
 
+        // Bulletins de classe fusionnés en un seul PDF, pour l'impression en lot — même moteur QuestPDF.
+        services.AddSingleton<IClassBulletinsPdfGenerator, ClassBulletinsPdfGenerator>();
+
         // Rapport d'assiduité PDF (ticket JGK-R03) — même moteur QuestPDF, sans état.
         services.AddSingleton<IAttendanceReportPdfGenerator, AttendanceReportPdfGenerator>();
 

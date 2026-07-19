@@ -1,6 +1,8 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
+using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,19 +31,24 @@ public record ReportCardTermRecap(string TermLabel, int Order, decimal? Average)
 /// son équivalent Infrastructure) n'a plus qu'à mettre en page, aucun calcul ne s'y trouve.
 ///
 /// Champs volontairement ABSENTS malgré la présence de leur case sur la référence visuelle — le
-/// document IMPRIMÉ reproduit la case, restée vide, plutôt que d'inventer une donnée : T.H (aucune
-/// affectation enseignant/matière n'est modélisée), Absences/Retards (aucun suivi de présence, table
-/// Attendances jamais implémentée), Décision du Conseil et mentions disciplinaires — Blâme,
-/// Avertissement, Tableau d'honneur, Encouragements, Félicitations — (décisions humaines du conseil de
-/// classe, aucun ticket ne les capture), Classe redoublée (aucun indicateur de redoublement sur
-/// Enrollment/Student), lieu de naissance (absent de Student), hiérarchie administrative Inspection
-/// d'Académie/départementale (absente de School — toutes les écoles clientes n'y sont pas rattachées).
+/// document IMPRIMÉ reproduit la case, restée vide, plutôt que d'inventer une donnée : T.H (la
+/// signification de cette colonne sur la référence n'est pas établie), Décision du Conseil (décision
+/// humaine du conseil de classe, aucun ticket ne la capture), et Classe redoublée (aucun indicateur de
+/// redoublement sur Enrollment/Student).
 /// </summary>
 public record ReportCardDto(
     string SchoolName,
     string? SchoolLogoUrl,
+
+    // En-tête administratif (lignes « IA : … », « IEF : … », « LYCEE DE : … » de la référence).
+    // Renseigné dans Paramètres → Établissement ; null s'imprime en ligne vide, jamais inventé.
+    string? InspectionAcademie,
+    string? InspectionEducationFormation,
+    string? NomLycee,
+
     string StudentFullName,
     DateOnly BirthDate,
+    string? BirthPlace,
     string ClassroomName,
     string Matricule,
     int ClassSize,
@@ -54,29 +61,66 @@ public record ReportCardDto(
     decimal GeneralAverage,
     int GeneralRank,
     IReadOnlyDictionary<Guid, int> SubjectRanks,
+
+    // Appréciation par matière : la mention du barème de l'école atteinte par la moyenne de la matière
+    // (même échelle que la mention générale — aucun vocabulaire parallèle inventé). Null si la moyenne
+    // n'atteint aucun seuil : la case s'imprime vide.
+    IReadOnlyDictionary<Guid, string?> SubjectAppreciations,
+
     string? Mention,
+
+    // Assiduité du trimestre (JGK-D06). Null si AUCUN appel n'a été fait pour la classe sur la période :
+    // les cases s'impriment avec « - » — un zéro affirmerait à tort une assiduité parfaite.
+    // Absences = injustifiées seules ; TotalAbsences = justifiées + injustifiées ; Retards = pointages Late.
+    int? Absences,
+    int? Retards,
+    int? TotalAbsences,
+
     IReadOnlyList<ReportCardTermRecap> TermRecaps,
     decimal? AnnualAverage,
-    int? AnnualRank);
+    int? AnnualRank,
+
+    // Distinction cochée par le conseil (Blâme… Félicitations) et son observation — saisies via
+    // UpsertReportCardRemarkCommand. Null tant que rien n'a été saisi pour ce trimestre : la ligne/le
+    // cadre s'imprime vide, jamais une valeur inventée.
+    DisciplinaryMention? DisciplinaryMention,
+    string? CouncilObservations);
 
 public class GetReportCardPdfQueryHandler(
-    ISender mediator,
-    IApplicationDbContext dbContext,
+    ReportCardDataService dataService,
     IReportCardPdfGenerator pdfGenerator,
     ISchoolLogoProvider logoProvider)
     : IRequestHandler<GetReportCardPdfQuery, ReportCardPdfResult>
 {
     public async Task<ReportCardPdfResult> Handle(GetReportCardPdfQuery request, CancellationToken cancellationToken)
     {
+        var dto = await dataService.BuildAsync(request.StudentId, request.TermId, cancellationToken);
+        var logo = await logoProvider.TryFetchAsync(dto.SchoolLogoUrl, cancellationToken);
+
+        var fileName = $"Bulletin-{dto.Matricule}-{dto.TermLabel.Replace(' ', '-')}.pdf";
+        return new ReportCardPdfResult(pdfGenerator.Generate(dto, logo), fileName);
+    }
+}
+
+/// <summary>
+/// Construit le <see cref="ReportCardDto"/> d'UN élève — tous les calculs (moyennes, rangs, récapitulatif
+/// annuel, assiduité) de <see cref="GetReportCardPdfQueryHandler"/> avant sa passe finale (logo + rendu
+/// PDF). Extrait pour être réutilisé TEL QUEL par les bulletins de classe (ZIP, PDF fusionné) — une
+/// seule source de vérité pour « comment se calcule un bulletin », jamais une seconde copie du calcul.
+/// </summary>
+public class ReportCardDataService(ISender mediator, IApplicationDbContext dbContext)
+{
+    public async Task<ReportCardDto> BuildAsync(Guid studentId, Guid termId, CancellationToken cancellationToken)
+    {
         // Le Global Query Filter + la policy RLS bornent déjà à l'école courante : un élève ou un
         // trimestre d'une autre école y est structurellement introuvable (404, jamais un bulletin fuité).
         var student = await dbContext.Students.AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == request.StudentId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Élève {request.StudentId} introuvable dans votre établissement.");
+            .FirstOrDefaultAsync(s => s.Id == studentId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Élève {studentId} introuvable dans votre établissement.");
 
         var term = await dbContext.Terms.AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == request.TermId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Trimestre {request.TermId} introuvable dans votre établissement.");
+            .FirstOrDefaultAsync(t => t.Id == termId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Trimestre {termId} introuvable dans votre établissement.");
 
         var classroom = await dbContext.Classrooms.AsNoTracking().FirstAsync(c => c.Id == student.ClassroomId, cancellationToken);
         var school = await dbContext.Schools.AsNoTracking().FirstAsync(s => s.Id == student.SchoolId, cancellationToken);
@@ -158,11 +202,29 @@ public class GetReportCardPdfQueryHandler(
 
         var gradingScale = await GradingScaleGuard.ResolveScaleAsync(dbContext, cancellationToken);
 
+        // Appréciation par matière : la même échelle de mentions que la moyenne générale, appliquée à
+        // la moyenne de CHAQUE matière — une seule source de vérité pour « comment se qualifie une
+        // moyenne », aucun vocabulaire parallèle.
+        var mentionScale = await MentionScale.ResolveAsync(dbContext, cancellationToken);
+        var subjectAppreciations = summary.Subjects.ToDictionary(
+            s => s.SubjectId,
+            s => GradeCalculator.MentionFor(s.Average, mentionScale));
+
+        var (absences, retards, totalAbsences) = await CountAttendanceAsync(
+            student.Id, student.ClassroomId, term, cancellationToken);
+
+        var remark = await dbContext.ReportCardRemarks.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.StudentId == student.Id && r.TermId == term.Id, cancellationToken);
+
         var dto = new ReportCardDto(
             school.Name,
             school.LogoUrl,
+            school.InspectionAcademie,
+            school.InspectionEducationFormation,
+            school.NomLycee,
             student.FullName,
             student.BirthDate,
+            student.BirthPlace,
             classroom.Name,
             student.Matricule,
             classmateIds.Count,
@@ -175,15 +237,51 @@ public class GetReportCardPdfQueryHandler(
             summary.GeneralAverage,
             generalRank,
             subjectRanks,
+            subjectAppreciations,
             summary.Mention,
+            absences,
+            retards,
+            totalAbsences,
             termRecaps,
             annualAverage,
-            annualRank);
+            annualRank,
+            remark?.DisciplinaryMention,
+            remark?.Observations);
 
-        var logo = await logoProvider.TryFetchAsync(school.LogoUrl, cancellationToken);
+        return dto;
+    }
 
-        var fileName = $"Bulletin-{student.Matricule}-{term.Label.Replace(' ', '-')}.pdf";
-        return new ReportCardPdfResult(pdfGenerator.Generate(dto, logo), fileName);
+    /// <summary>
+    /// Assiduité du trimestre (JGK-D06) : compte les statuts de l'élève sur les fiches d'appel de SA
+    /// classe datées dans la période du trimestre. Si aucune fiche n'existe sur cette période, tout
+    /// revient null — le bulletin imprime alors « - », jamais un zéro qui affirmerait à tort une
+    /// assiduité parfaite alors que l'appel n'a simplement jamais été fait.
+    /// </summary>
+    private async Task<(int? Absences, int? Retards, int? TotalAbsences)> CountAttendanceAsync(
+        Guid studentId, Guid classroomId, Term term, CancellationToken cancellationToken)
+    {
+        var sheetsExist = await dbContext.AttendanceSheets.AsNoTracking()
+            .AnyAsync(s => s.ClassroomId == classroomId
+                           && s.Date >= term.StartDate && s.Date <= term.EndDate, cancellationToken);
+
+        if (!sheetsExist)
+        {
+            return (null, null, null);
+        }
+
+        var statuses = await (
+            from a in dbContext.StudentAttendances.AsNoTracking()
+            join sheet in dbContext.AttendanceSheets.AsNoTracking() on a.AttendanceSheetId equals sheet.Id
+            where a.StudentId == studentId
+                  && sheet.Date >= term.StartDate && sheet.Date <= term.EndDate
+            select a.Status)
+            .ToListAsync(cancellationToken);
+
+        var unjustified = statuses.Count(s => s == AttendanceStatus.UnjustifiedAbsence);
+        var justified = statuses.Count(s => s == AttendanceStatus.JustifiedAbsence);
+        var late = statuses.Count(s => s == AttendanceStatus.Late);
+
+        return (unjustified, late, unjustified + justified);
     }
 
     private async Task<Dictionary<Guid, GradeSummaryDto>> LoadSummariesAsync(
