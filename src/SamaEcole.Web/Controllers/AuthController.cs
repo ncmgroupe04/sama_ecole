@@ -5,9 +5,11 @@ using SamaEcole.Application.Auth.Commands.Refresh;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Web.Auth;
 using SamaEcole.Web.Contracts;
+using SamaEcole.Web.RateLimiting;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace SamaEcole.Web.Controllers;
 
@@ -29,6 +31,7 @@ public class AuthController(
     /// <summary>login et refresh sont anonymes : c'est justement leur rôle de délivrer un token.</summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(SensitiveEndpointRateLimiting.LoginPolicyName)]
     [ProducesResponseType<AuthTokensResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginCommand command, CancellationToken cancellationToken)

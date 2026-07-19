@@ -1,8 +1,10 @@
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.RateLimiting;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace SamaEcole.Web.Controllers;
 
@@ -22,6 +24,7 @@ public class ReportCardsController(ISender mediator) : ControllerBase
 
     [HttpPost("generate")]
     [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}")]
+    [EnableRateLimiting(SensitiveEndpointRateLimiting.ReportCardGenerationPolicyName)]
     [Produces("application/pdf")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

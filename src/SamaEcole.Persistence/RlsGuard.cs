@@ -43,22 +43,26 @@ public static class RlsGuard
         }
 
         // Le propriétaire d'une table est lui aussi exempté de RLS (sauf FORCE ROW LEVEL SECURITY).
-        var ownedTenantTables = await dbContext.Database
+        // Vérifié sur TOUTES les tables du schéma, pas une liste blanche codée en dur : sama_ecole_app
+        // ne doit posséder AUCUNE table (AGENTS.md règle #2), donc une seule table possédée — tenant
+        // ou non — signale déjà une connexion faite avec le mauvais rôle. Une liste explicite aurait
+        // silencieusement raté toute nouvelle table tenant ajoutée sans être répercutée ici (c'est
+        // précisément ce qui s'est produit : la liste d'origine ne couvrait que 7 des ~24 tables
+        // tenant existantes).
+        var ownedTables = await dbContext.Database
             .SqlQuery<string>(
                 $"""
                  SELECT tablename AS "Value"
                  FROM pg_tables
                  WHERE schemaname = 'public'
-                   AND tablename IN ('students', 'subscriptions', 'matricule_sequences', 'users',
-                                    'user_status_history', 'school_settings', 'audit_logs')
                    AND tableowner = current_user
                  """)
             .ToListAsync(cancellationToken);
 
-        if (ownedTenantTables.Count > 0)
+        if (ownedTables.Count > 0)
         {
             throw new InvalidOperationException(
-                $"Le rôle de l'application possède les tables tenant ({string.Join(", ", ownedTenantTables)}) : " +
+                $"Le rôle de l'application possède des tables ({string.Join(", ", ownedTables)}) : " +
                 "PostgreSQL exempte le propriétaire des policies RLS, l'isolation multi-tenant serait " +
                 "inopérante (AGENTS.md règle #2). Connectez l'application avec sama_ecole_app, qui n'est " +
                 "propriétaire d'aucune table.");

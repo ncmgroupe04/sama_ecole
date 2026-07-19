@@ -162,7 +162,13 @@ public class PayDunyaPaymentService(
         }
 
         var expected = Convert.ToHexStringLower(SHA512.HashData(Encoding.UTF8.GetBytes(privateKey)));
-        return string.Equals(hashFromPayload.Trim(), expected, StringComparison.OrdinalIgnoreCase);
+
+        // Comparaison à temps constant : une comparaison naïve (string.Equals) sort en avance dès le
+        // premier caractère différent, ce qui fuit — via le temps de réponse — combien de caractères
+        // du hash attendu un appelant a déjà devinés.
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(hashFromPayload.Trim().ToLowerInvariant()),
+            Encoding.UTF8.GetBytes(expected));
     }
 
     private static Dictionary<string, string> TryDecodeJson(string rawBody)
