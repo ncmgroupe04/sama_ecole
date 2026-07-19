@@ -12,6 +12,7 @@
        s'initialise, et les écouteurs alpine:init sont enregistrés à temps. *@
     <script src="~/js/auth.js" asp-append-version="true"></script>
     <script src="~/js/api.js" asp-append-version="true"></script>
+    <script src="~/js/ui-components.js" asp-append-version="true"></script>
 
     @* Redirige vers /login AVANT le rendu du corps : sans session, l'utilisateur ne voit pas
        l'interface apparaître une fraction de seconde. Confort d'affichage, pas une protection —
@@ -23,8 +24,24 @@
        Voir _AuthLayout.cshtml pour le raisonnement complet. *@
     <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans h-screen flex overflow-hidden antialiased" x-data="{ sidebarOpen: false }">
+<body class="bg-gray-50 text-gray-900 font-sans h-screen flex flex-col overflow-hidden antialiased" x-data="{ sidebarOpen: false }">
     @await Html.PartialAsync("_IconSprite")
+
+    @* Console Super Admin, bouton « Infiltrer » (PlatformController.ImpersonateSchool) : le Super Admin
+       navigue ici avec un jeton portant l'identité du Directeur de l'école ciblée — ce bandeau est
+       l'unique indice visuel qu'il ne s'agit pas d'une connexion normale, et le seul moyen de revenir
+       à sa propre session avant l'expiration du jeton (~15 min, non renouvelable). *@
+    <div x-data="impersonationBanner()" x-show="isImpersonating" x-cloak
+         class="shrink-0 bg-amber-400 text-amber-950 text-xs sm:text-sm font-medium px-4 py-2 flex items-center justify-center gap-3 text-center">
+        <icon name="alert-circle" class="w-4 h-4 shrink-0" />
+        <span>Session d'infiltration Super Admin — vous naviguez dans l'espace de cet établissement.</span>
+        <button type="button" x-on:click="exit()" :disabled="isExiting"
+                class="underline hover:no-underline font-semibold disabled:opacity-60">
+            <span x-text="isExiting ? 'Retour…' : 'Quitter'"></span>
+        </button>
+    </div>
+
+    <div class="flex-1 flex overflow-hidden min-h-0">
 
     <!-- Overlay pour mobile -->
     <div x-show="sidebarOpen" class="fixed inset-0 z-20 bg-gray-900 bg-opacity-50 transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
@@ -115,8 +132,10 @@
 
             @* Tickets JGK-G01/G02 livrés (saisie de notes, moyennes) : chaque module devient un vrai
                lien le jour où son ticket est livré (patron documenté plus haut). Le bulletin PDF
-               (JGK-G03) reste à venir — l'écran ci-dessous ne couvre que la saisie. *@
-            <a href="/notes" x-show="canView(['Directeur', 'Enseignant'])" x-cloak class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
+               (JGK-G03) reste à venir — l'écran ci-dessous ne couvre que la saisie. Secrétariat inclus
+               depuis la matrice d'autorisation "Photoshop" : il peut désormais corriger/annuler une
+               note déjà saisie (GradesController.UpdateGradeRoles), donc voir cet écran. *@
+            <a href="/notes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
                 <icon name="book" class="w-5 h-5" />
                 <span class="text-sm font-medium">Notes et bulletins</span>
             </a>
@@ -250,6 +269,7 @@
             </div>
             <span>Sama Ecole</span>
         </footer>
+    </div>
     </div>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

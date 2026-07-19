@@ -216,6 +216,110 @@ paths:
               schema: { $ref: '#/components/schemas/PaginatedAuditLogs' }
         '403': { description: Rôle appelant non autorisé (réservé au Directeur) }
 
+  /admin/platform/dashboard:
+    get:
+      tags: [Platform]
+      summary: Agrégats plateforme, toutes écoles confondues (Super Admin uniquement)
+      description: >-
+        Le Super Admin n'a aucun SchoolId propre : une requête EF Core normale sur les tables tenant
+        (schools/users/subscriptions/subscription_payments) ne renverrait donc rien (RLS, AGENTS.md
+        règle #2). Lit la vue PostgreSQL `v_platform_dashboard_stats` (migration
+        AddPlatformAdminViews), qui contourne l'isolation via `security_invoker = false` +
+        OWNER sama_ecole — jamais en affaiblissant les policies existantes.
+      responses:
+        '200':
+          description: Agrégats plateforme
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlatformDashboardStats' }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+
+  /admin/platform/activity:
+    get:
+      tags: [Platform]
+      summary: Journal d'audit de toutes les écoles, paginé (Super Admin uniquement)
+      description: >-
+        Même principe que /admin/platform/dashboard, mais pour `audit_logs` : appelle la fonction
+        PostgreSQL SECURITY DEFINER `get_global_audit_logs(limit, offset)` (migration
+        AddPlatformAdminViews), qui contourne la RLS pour ce seul rôle de façon auditée et volontaire.
+        `audit_logs` reste par ailleurs une table tenant normale (RLS + Global Query Filter) pour
+        tous les autres appelants.
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Liste paginée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedGlobalAuditLogs' }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+
+  /admin/platform/subscriptions:
+    get:
+      tags: [Platform]
+      summary: Abonnements de toutes les écoles, avec dernier paiement confirmé (Super Admin uniquement)
+      description: >-
+        Même principe que /admin/platform/dashboard : lit la vue PostgreSQL `v_platform_subscriptions`
+        (migration AddPlatformSubscriptionsAndImpersonation), qui contourne la RLS de
+        `subscriptions`/`subscription_payments` via `security_invoker = false` + OWNER sama_ecole.
+        Liste complète, non paginée (nombre d'écoles modeste), filtrage/recherche côté client comme
+        GET /schools.
+      responses:
+        '200':
+          description: Liste des abonnements
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/PlatformSubscription' } }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+
+  /admin/platform/subscriptions/{schoolId}/remind:
+    post:
+      tags: [Platform]
+      summary: Envoyer un rappel de paiement au Directeur de l'établissement (Super Admin uniquement)
+      description: >-
+        Bouton « Relancer » de l'écran Abonnements & Facturation. N'écrit AUCUN paiement ni statut
+        d'abonnement (AGENTS.md règle #11) : envoie un e-mail de rappel au Directeur actif de
+        l'établissement, retrouvé via la fonction SECURITY DEFINER
+        `auth_find_active_director_by_school`. Écrit une entrée d'audit sur l'école ciblée.
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Rappel envoyé }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Établissement introuvable }
+        '409': { description: Aucun compte Directeur actif pour cet établissement }
+
+  /admin/platform/schools/{schoolId}/impersonate:
+    post:
+      tags: [Platform]
+      summary: Ouvrir une session Directeur pour l'établissement ciblé (Super Admin uniquement)
+      description: >-
+        Bouton « Infiltrer » de l'écran Établissements. Émet un jeton de MÊME format qu'un jeton
+        normal (sub/schoolId/role, AGENTS.md règle #10), portant l'identité du Directeur actif de
+        l'établissement ciblé, avec un claim `impersonatedBy` supplémentaire traçant l'acteur réel.
+        AUCUN refresh token n'accompagne ce jeton : la session expire pour de bon avec l'access token
+        (~15 min) et ne se renouvelle jamais — sortir plus tôt échange le cookie de refresh du Super
+        Admin (resté intact) contre ses propres jetons. Écrit une entrée d'audit OBLIGATOIRE sur
+        l'école ciblée avant de renvoyer le jeton.
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Jeton d'impersonation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImpersonateSchoolResult' }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Établissement introuvable }
+        '409': { description: Aucun compte Directeur actif pour cet établissement }
+
   /schools:
     get:
       tags: [Schools]
@@ -453,6 +557,52 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /classrooms/{id}:
+    put:
+      tags: [Classrooms]
+      summary: Corriger le libellé/niveau/capacité d'une classe déjà créée
+      description: 'Réservé au Directeur et au Secrétariat. Verrou optimiste (rowVersion) — voir /grades/{id} pour le même contrat.'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClassroomUpdateRequest' }
+      responses:
+        '200':
+          description: Classe mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Classroom' }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Jeton de concurrence périmé, ou libellé déjà pris }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Classrooms]
+      summary: Archiver (soft delete) une classe créée par erreur
+      description: >-
+        Réservé au Directeur et au Secrétariat. Refusée en 409 si des élèves sont encore rattachés à
+        cette classe (AGENTS.md règle #6 : jamais de suppression physique).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Classe archivée }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Jeton de concurrence périmé, ou des élèves sont rattachés à cette classe' }
+
   /subjects:
     get:
       tags: [Subjects]
@@ -494,6 +644,50 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /subjects/{id}:
+    put:
+      tags: [Subjects]
+      summary: Corriger le libellé/niveau/coefficient d'une matière déjà créée
+      description: 'Même permission que la création (délégation Secrétariat via SchoolSettings, ticket JGK-G02).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubjectUpdateRequest' }
+      responses:
+        '200':
+          description: Matière mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subject' }
+        '403': { description: Réservé au Directeur (ou au Secrétariat si la délégation est activée) }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Jeton de concurrence périmé, ou (niveau, nom) déjà pris }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Subjects]
+      summary: Archiver (soft delete) une matière créée par erreur
+      description: 'Refusée en 409 si des notes existent déjà pour cette matière.'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Matière archivée }
+        '403': { description: Réservé au Directeur (ou au Secrétariat si la délégation est activée) }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Jeton de concurrence périmé, ou des notes existent déjà pour cette matière' }
 
   /students:
     get:
@@ -539,6 +733,38 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/StudentProfile' }
         '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Students]
+      summary: Corriger la fiche d'un élève (état civil, classe, tuteur) — matricule non modifiable
+      description: 'Réservé au Directeur et au Secrétariat.'
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StudentUpdateRequest' }
+      responses:
+        '200': { description: Fiche mise à jour, content: { application/json: { schema: { $ref: '#/components/schemas/Student' } } } }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Jeton de concurrence périmé }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Students]
+      summary: Archiver (soft delete) une fiche élève créée par pure erreur de saisie
+      description: 'Refusée en 409 dès qu''une inscription ou une note existe déjà pour cet élève.'
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Fiche archivée }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Jeton de concurrence périmé, ou une inscription/note existe déjà' }
 
   /teachers:
     get:
@@ -598,6 +824,46 @@ paths:
               schema: { $ref: '#/components/schemas/TeacherProfile' }
         '403': { description: Rôle non autorisé (Volume_7_Security.md « Enseignants ») }
         '404': { description: Enseignant introuvable dans l'établissement courant }
+    put:
+      tags: [Teachers]
+      summary: Corriger la fiche d'un enseignant (état civil, contact, matières qualifiées)
+      description: >-
+        Réservé au Directeur et au Secrétariat. Matricule et rattachement d'un compte de connexion
+        (userId) non modifiables ici (voir TeacherUpdateRequest).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TeacherUpdateRequest' }
+      responses:
+        '200': { description: Fiche mise à jour, content: { application/json: { schema: { $ref: '#/components/schemas/Teacher' } } } }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { description: Enseignant introuvable dans l'établissement courant }
+        '409': { description: Jeton de concurrence périmé }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Teachers]
+      summary: Archiver (soft delete) une fiche enseignant créée par pure erreur de saisie
+      description: 'Refusée en 409 dès qu''une attribution classe/matière/année existe déjà.'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Fiche archivée }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { description: Enseignant introuvable dans l'établissement courant }
+        '409': { description: 'Jeton de concurrence périmé, ou une attribution existe déjà' }
 
   /teachers/{id}/assignments:
     post:
@@ -720,6 +986,53 @@ paths:
         '403': { description: Rôle non autorisé (le service Finance ne compose pas de montant dû) }
         '409': { description: Élève déjà inscrit pour l'année active }
         '422': { description: Aucune année active, ou données invalides }
+
+  /enrollments/{id}:
+    delete:
+      tags: [Enrollments]
+      summary: Annuler une inscription saisie par erreur (jamais de suppression physique)
+      description: >-
+        Réservé au Directeur et au Secrétariat. Refusée en 409 si un paiement a déjà été encaissé —
+        utiliser POST /enrollments/{id}/status pour un abandon ou un transfert à la place.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Inscription annulée (statut Cancelled) }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { description: Inscription introuvable dans l'établissement courant }
+        '409': { description: 'Jeton de concurrence périmé, déjà annulée, ou un paiement existe déjà' }
+
+  /enrollments/{id}/status:
+    post:
+      tags: [Enrollments]
+      summary: Déclarer un abandon ou un transfert en cours d'année
+      description: >-
+        Réservé au Directeur et au Secrétariat. L'inscription n'est PAS annulée : elle change de
+        statut. L'élève sort des futures listes de présence actives ; ses notes et paiements déjà
+        enregistrés restent intacts.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangeEnrollmentStatusRequest' }
+      responses:
+        '204': { description: Statut mis à jour }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { description: Inscription introuvable dans l'établissement courant }
+        '409': { description: 'Jeton de concurrence périmé, ou l''inscription est déjà dans un statut terminal' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /enrollments/{id}/receipt:
     get:
@@ -997,6 +1310,26 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /finance/fee-categories/{id}:
+    delete:
+      tags: [Finance]
+      summary: Supprimer une catégorie de frais et tout son barème (Directeur, ou Finance déléguée)
+      description: >-
+        Soft delete en cascade (AGENTS.md règle #6) : la catégorie ET toutes ses lignes de barème
+        (ClassFee) associées disparaissent de l'interface dans la même transaction, sans jamais
+        d'écriture SQL DELETE réelle. Directeur toujours autorisé ; Finance uniquement si
+        SchoolSettings.allowFinanceToDeleteFees est activé pour cet établissement (matrice
+        d'autorisation "Photoshop").
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Catégorie et barème associé supprimés }
+        '403': { description: Réservé au Directeur, ou à la Finance si la délégation est activée }
+        '404': { description: Catégorie introuvable dans cet établissement }
+
   /finance/fees:
     get:
       tags: [Finance]
@@ -1040,11 +1373,13 @@ paths:
   /finance/fees/{id}:
     put:
       tags: [Finance]
-      summary: Option 2 — ajuster le montant d'une classe (exception), verrouillage optimiste (Directeur)
+      summary: Option 2 — ajuster le montant d'une classe (exception), verrouillage optimiste (Directeur, ou Finance déléguée)
       description: >-
         Modifie une ligne de barème. `rowVersion` (xmin lu à l'affichage) protège contre l'écrasement
         concurrent : si un autre utilisateur a modifié la ligne entre-temps, la réponse est 409
-        (AGENTS.md règle #5). Le changement est historisé.
+        (AGENTS.md règle #5). Le changement est historisé. Directeur toujours autorisé ; Finance
+        uniquement si SchoolSettings.allowFinanceToModifyFees est activé pour cet établissement
+        (matrice d'autorisation "Photoshop").
       parameters:
         - name: id
           in: path
@@ -1069,7 +1404,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/UpdateFeeResult' }
-        '403': { description: Réservé au Directeur }
+        '403': { description: Réservé au Directeur, ou à la Finance si la délégation est activée }
         '404': { description: Ligne de barème introuvable dans cet établissement }
         '409':
           description: La ligne a été modifiée par un autre utilisateur entre-temps
@@ -1077,6 +1412,34 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Finance]
+      summary: Supprimer une ligne de barème (Directeur, ou Finance déléguée)
+      description: >-
+        Soft delete (AGENTS.md règle #6), jamais un DELETE SQL réel — la ligne disparaît de
+        l'interface (Global Query Filter), l'historique comptable reste intact (EnrollmentFeeLine
+        fige un instantané du montant à l'inscription, indépendant de cette ligne de barème). Même
+        verrouillage optimiste que la modification. Directeur toujours autorisé ; Finance uniquement
+        si SchoolSettings.allowFinanceToDeleteFees est activé pour cet établissement.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+          description: Jeton de concurrence (xmin) renvoyé par le dernier GET /finance/fees.
+      responses:
+        '204': { description: Ligne de barème supprimée }
+        '403': { description: Réservé au Directeur, ou à la Finance si la délégation est activée }
+        '404': { description: Ligne de barème introuvable dans cet établissement }
+        '409':
+          description: La ligne a été modifiée par un autre utilisateur entre-temps
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /finance/fees/{id}/history:
     get:
@@ -1636,6 +1999,62 @@ components:
         page: { type: integer }
         pageSize: { type: integer }
 
+    PlatformDashboardStats:
+      type: object
+      description: Ligne unique de la vue `v_platform_dashboard_stats` (GET /admin/platform/dashboard).
+      properties:
+        totalSchools: { type: integer }
+        totalUsers: { type: integer }
+        totalRevenue: { type: number, format: decimal, description: Somme des paiements d'abonnement CONFIRMÉS uniquement (AGENTS.md règle #11). }
+        activeSubscriptions: { type: integer }
+
+    GlobalAuditLogItem:
+      type: object
+      description: Ligne de GET /admin/platform/activity — même nature que AuditLogEntry, avec l'établissement en plus.
+      properties:
+        id: { type: string, format: uuid }
+        schoolId: { type: string, format: uuid }
+        schoolName: { type: string }
+        userId: { type: string, format: uuid }
+        actorFullName: { type: string }
+        module: { type: string, example: Finance }
+        action: { type: string, example: RecordPayment }
+        success: { type: boolean }
+        failureReason: { type: string, nullable: true }
+        ipAddress: { type: string, nullable: true }
+        occurredAt: { type: string, format: date-time }
+
+    PaginatedGlobalAuditLogs:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/GlobalAuditLogItem' } }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    PlatformSubscription:
+      type: object
+      description: Ligne de GET /admin/platform/subscriptions — une école ayant un abonnement, avec son dernier paiement CONFIRMÉ le cas échéant.
+      properties:
+        schoolId: { type: string, format: uuid }
+        schoolName: { type: string }
+        plan: { type: string, enum: [Primaire, Standard, Premium] }
+        status: { type: string, enum: [AwaitingPayment, Active, Suspended, ReadOnly] }
+        expiresAt: { type: string, format: date, nullable: true }
+        lastPaymentAmountXof: { type: number, format: decimal, nullable: true }
+        lastPaymentAt: { type: string, format: date-time, nullable: true }
+
+    ImpersonateSchoolResult:
+      type: object
+      description: >-
+        Même forme qu'AuthTokens à un champ près (expiresIn, pas de refresh token — voir la
+        description de l'opération) : le client réutilise la même logique de session côté navigateur.
+      properties:
+        accessToken: { type: string }
+        expiresIn: { type: integer, description: Durée de vie en secondes (~900, JwtOptions.AccessTokenMinutes). }
+        schoolId: { type: string, format: uuid }
+        schoolName: { type: string }
+
     SchoolCreateRequest:
       type: object
       required: [name, address, directorEmail]
@@ -1667,6 +2086,26 @@ components:
         autoLogoutMinutes: { type: integer, default: 10 }
         dateFormat: { type: string, enum: ["dd/MM/yyyy", "dd MMMM yyyy"] }
         tuitionMonthsPerYear: { type: integer, default: 9, minimum: 1, maximum: 12, description: 'Mensualités facturées par an (JGK-E01).' }
+        allowSecretaryToManageGrading:
+          type: boolean
+          default: false
+          description: >-
+            Délègue au Secrétariat la gestion du barème, des matières/coefficients et des mentions
+            du bulletin (voir CanManageGradingScaleHandler). Fermé par défaut.
+        allowFinanceToModifyFees:
+          type: boolean
+          default: false
+          description: >-
+            Délègue à la Finance le droit d'ajuster un montant de barème déjà défini
+            (PUT /finance/fees/{id}), normalement réservé au Directeur (voir CanModifyFeesHandler).
+            Fermé par défaut.
+        allowFinanceToDeleteFees:
+          type: boolean
+          default: false
+          description: >-
+            Délègue à la Finance le droit de supprimer une catégorie de frais ou une ligne de
+            barème (voir CanDeleteFeesHandler). Commutateur distinct du précédent : supprimer est un
+            geste plus lourd de conséquences qu'ajuster un montant. Fermé par défaut.
 
     SchoolYearCreateRequest:
       type: object
@@ -1715,6 +2154,15 @@ components:
         level: { type: string, example: "Primaire" }
         capacity: { type: integer, example: 40 }
         studentCount: { type: integer, example: 32, description: Effectif actuel, calculé côté base }
+        rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
+
+    ClassroomUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClassroomCreateRequest'
+        - type: object
+          required: [rowVersion]
+          properties:
+            rowVersion: { type: integer, format: int64 }
 
     ClassroomCreateRequest:
       type: object
@@ -1752,6 +2200,15 @@ components:
         name: { type: string, example: "Mathématiques" }
         level: { type: string, example: "Primaire" }
         coefficient: { type: number, format: double, example: 4 }
+        rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
+
+    SubjectUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/SubjectCreateRequest'
+        - type: object
+          required: [rowVersion]
+          properties:
+            rowVersion: { type: integer, format: int64 }
 
     Student:
       type: object
@@ -1762,6 +2219,23 @@ components:
         classroomId: { type: string, format: uuid }
         birthDate: { type: string, format: date }
         gender: { type: string, enum: [M, F] }
+        rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
+
+    StudentUpdateRequest:
+      type: object
+      required: [fullName, birthDate, gender, classroomId, rowVersion]
+      description: >-
+        Le matricule n'est jamais modifiable (AGENTS.md règle #3) — absent de ce contrat.
+      properties:
+        fullName: { type: string, maxLength: 200 }
+        birthDate: { type: string, format: date }
+        birthPlace: { type: string, maxLength: 200 }
+        gender: { type: string, enum: [M, F] }
+        classroomId: { type: string, format: uuid }
+        photoUrl: { type: string, format: uri }
+        guardianName: { type: string, maxLength: 200 }
+        guardianPhone: { type: string, maxLength: 30 }
+        rowVersion: { type: integer, format: int64 }
 
     StudentProfile:
       allOf:
@@ -1822,6 +2296,22 @@ components:
         phone: { type: string }
         status: { type: string, enum: [Active, Suspended, Blocked] }
         subjects: { type: array, items: { type: string } }
+        rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
+
+    TeacherUpdateRequest:
+      type: object
+      required: [fullName, email, subjectIds, rowVersion]
+      description: >-
+        Le matricule et le rattachement d'un compte de connexion (userId) ne sont jamais modifiables
+        ici — absents de ce contrat (voir TeacherCreateRequest pour la création initiale).
+      properties:
+        fullName: { type: string, maxLength: 200 }
+        email: { type: string, format: email, maxLength: 255 }
+        phone: { type: string, maxLength: 30 }
+        birthPlace: { type: string, maxLength: 200 }
+        photoUrl: { type: string, format: uri }
+        subjectIds: { type: array, items: { type: string, format: uuid } }
+        rowVersion: { type: integer, format: int64 }
 
     PaginatedTeachers:
       type: object
@@ -1976,7 +2466,7 @@ components:
         classroomLevel: { type: string }
         schoolYearLabel: { type: string }
         type: { type: string, enum: [NewEnrollment, ReEnrollment] }
-        status: { type: string, enum: [Pending, Confirmed, Cancelled] }
+        status: { type: string, enum: [Pending, Confirmed, Cancelled, DroppedOut, Transferred] }
         enrolledAt: { type: string, format: date-time }
         totalDue: { type: number }
         lines:
@@ -1989,6 +2479,17 @@ components:
               unitAmount: { type: number }
               months: { type: integer }
               lineTotal: { type: number }
+
+    ChangeEnrollmentStatusRequest:
+      type: object
+      required: [newStatus, rowVersion]
+      description: >-
+        Déclare un abandon ou un transfert en cours d'année (voir POST /enrollments/{id}/status).
+        Seuls DroppedOut et Transferred sont acceptés ici — Cancelled passe par
+        DELETE /enrollments/{id}, réservé aux inscriptions jamais encaissées.
+      properties:
+        newStatus: { type: string, enum: [DroppedOut, Transferred] }
+        rowVersion: { type: integer, format: int64 }
 
     GradeCreateRequest:
       type: object

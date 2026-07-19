@@ -3,10 +3,9 @@
     Layout = "_SuperAdminLayout";
 }
 
-@* TODO BACKEND — voir wwwroot/js/superadmin-billing.js : GET /admin/platform/subscriptions n'existe
-   pas encore. SubscriptionPayment est une table TENANT protégée par RLS (AGENTS.md règle #2) ; une
-   vue plateforme croisant toutes les écoles demande une conception dédiée (même remarque que le
-   tableau de bord). Données de démonstration affichées avec bandeau explicite tant que l'appel 404. *@
+@* Consomme le VRAI GET /admin/platform/subscriptions (PlatformController, migration
+   AddPlatformSubscriptionsAndImpersonation : vue `v_platform_subscriptions`). Le bouton « Relancer »
+   appelle POST /admin/platform/subscriptions/{schoolId}/remind (SendSubscriptionReminderCommand). *@
 <div x-data="superAdminBilling()" x-init="load()">
 
     <div>
@@ -14,16 +13,8 @@
         <p class="text-sm text-zinc-500 mt-1">Suivi des licences école, échéances et paiements d'abonnement.</p>
     </div>
 
-    <div x-show="isDemoData" x-cloak
-         class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
-        <icon name="alert-circle" class="w-[18px] h-[18px] shrink-0 mt-0.5" />
-        <span>
-            Backend d'agrégation plateforme pas encore livré (<code class="text-amber-200">GET /admin/platform/subscriptions</code> introuvable) —
-            la liste ci-dessous est une donnée de démonstration.
-        </span>
-    </div>
-
     <div x-show="error" x-cloak class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
+    <div x-show="remindError" x-cloak class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="remindError"></div>
 
     <!-- KPI -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -96,10 +87,15 @@
                             <td class="py-3 px-4 whitespace-nowrap" :class="isDueSoon(sub.expiresAt) ? 'text-amber-400 font-medium' : 'text-zinc-400'" x-text="formatDate(sub.expiresAt)"></td>
                             <td class="py-3 px-4 text-zinc-400 whitespace-nowrap" x-text="formatXof(sub.lastPaymentAmountXof)"></td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
-                                <button type="button" disabled title="Fonctionnalité à venir"
-                                        class="text-xs font-medium text-zinc-600 cursor-not-allowed px-1.5 py-1">
-                                    Relancer
+                                <button type="button" x-show="!remindedSchoolIds[sub.schoolId]" x-cloak
+                                        x-on:click="remind(sub)" :disabled="remindingSchoolId === sub.schoolId"
+                                        class="text-xs font-medium text-sky-400 hover:text-sky-300 disabled:opacity-50 disabled:cursor-wait px-1.5 py-1">
+                                    <span x-text="remindingSchoolId === sub.schoolId ? 'Envoi…' : 'Relancer'"></span>
                                 </button>
+                                <span x-show="remindedSchoolIds[sub.schoolId]" x-cloak
+                                      class="text-xs font-medium text-emerald-400 px-1.5 py-1">
+                                    Rappel envoyé
+                                </span>
                             </td>
                         </tr>
                     </template>

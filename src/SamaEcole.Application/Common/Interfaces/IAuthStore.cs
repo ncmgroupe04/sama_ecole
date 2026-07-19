@@ -16,6 +16,15 @@ public interface IAuthStore
 
     Task<AuthUser?> FindUserByIdAsync(Guid userId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Console Super Admin (bouton « Infiltrer », « Relancer ») : le compte Directeur actif d'une école
+    /// cible, pour émettre un jeton d'impersonation ou envoyer un rappel de paiement. Contourne la RLS
+    /// de `users` par la même fonction SECURITY DEFINER que le login (auth_find_active_director_by_school,
+    /// migration AddPlatformSubscriptionsAndImpersonation) — jamais une lecture directe de la table.
+    /// Renvoie null si l'école n'a aucun Directeur actif (compte suspendu/bloqué/supprimé).
+    /// </summary>
+    Task<AuthUser?> FindActiveDirectorForSchoolAsync(Guid schoolId, CancellationToken cancellationToken);
+
     /// <summary>Remet à zéro le compteur d'échecs (succès) ou l'incrémente et verrouille au besoin.</summary>
     Task RecordLoginAttemptAsync(
         Guid userId,

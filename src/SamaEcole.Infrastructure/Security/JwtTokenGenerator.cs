@@ -23,6 +23,13 @@ namespace SamaEcole.Infrastructure.Security;
 public class JwtTokenGenerator(IOptions<JwtOptions> options, TimeProvider timeProvider) : IJwtTokenGenerator
 {
     public AccessToken Generate(Guid userId, Guid? schoolId, Role role)
+        => Generate(userId, schoolId, role, impersonatedByUserId: null);
+
+    /// <summary>Console Super Admin (bouton « Infiltrer ») — voir IJwtTokenGenerator.GenerateImpersonation.</summary>
+    public AccessToken GenerateImpersonation(Guid targetUserId, Guid targetSchoolId, Role targetRole, Guid impersonatedByUserId)
+        => Generate(targetUserId, targetSchoolId, targetRole, impersonatedByUserId);
+
+    private AccessToken Generate(Guid userId, Guid? schoolId, Role role, Guid? impersonatedByUserId)
     {
         var settings = options.Value;
 
@@ -46,6 +53,11 @@ public class JwtTokenGenerator(IOptions<JwtOptions> options, TimeProvider timePr
         if (schoolId is { } school)
         {
             claims.Add(new Claim("schoolId", school.ToString()));
+        }
+
+        if (impersonatedByUserId is { } superAdminId)
+        {
+            claims.Add(new Claim("impersonatedBy", superAdminId.ToString()));
         }
 
         var credentials = new SigningCredentials(

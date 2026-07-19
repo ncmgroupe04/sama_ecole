@@ -3,6 +3,12 @@
  * (SchoolsController, ticket JGK-B01, [Authorize(Roles = SuperAdmin)]) : liste complète, filtrage et
  * recherche instantanée côté client (la liste des écoles reste de taille modeste — pas besoin de
  * pagination serveur pour l'instant, contrairement au journal d'audit).
+ *
+ * Bouton « Infiltrer » : POST /admin/platform/schools/{schoolId}/impersonate
+ * (ImpersonateSchoolCommand) renvoie un jeton d'impersonation à courte durée de vie portant
+ * l'identité du Directeur de l'école ciblée. auth.enterImpersonation() bascule la session dessus et
+ * on redirige vers le tableau de bord tenant — _Layout.cshtml affiche alors le bandeau permettant d'en
+ * sortir (wwwroot/js/auth.js, impersonationBanner).
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('superAdminSchools', () => ({
@@ -11,6 +17,10 @@ document.addEventListener('alpine:init', () => {
         error: null,
         searchQuery: '',
         statusFilter: 'All',
+
+        impersonateTarget: null, // { id, name }
+        isImpersonating: false,
+        impersonateError: null,
 
         async load() {
             this.isLoading = true;
@@ -56,6 +66,32 @@ document.addEventListener('alpine:init', () => {
         formatDate(iso) {
             if (!iso) return '—';
             return new Date(iso).toLocaleDateString('fr-FR');
+        },
+
+        // ------------------------------------------------------------ Infiltrer
+
+        openImpersonateConfirm(school) {
+            this.impersonateTarget = { id: school.id, name: school.name };
+            this.impersonateError = null;
+        },
+
+        closeImpersonateConfirm() {
+            this.impersonateTarget = null;
+        },
+
+        async confirmImpersonate() {
+            if (!this.impersonateTarget) return;
+
+            this.isImpersonating = true;
+            this.impersonateError = null;
+            try {
+                const tokens = await window.api.post(`/admin/platform/schools/${this.impersonateTarget.id}/impersonate`);
+                window.auth.enterImpersonation(tokens);
+                window.location.assign('/tableau-de-bord');
+            } catch (err) {
+                this.impersonateError = err.message || "Erreur lors de l'infiltration.";
+                this.isImpersonating = false;
+            }
         }
     }));
 });

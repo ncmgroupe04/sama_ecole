@@ -38,6 +38,15 @@ public class AuthStore(ApplicationDbContext dbContext, TimeProvider timeProvider
         return await ReadUserAsync(command, cancellationToken);
     }
 
+    public async Task<AuthUser?> FindActiveDirectorForSchoolAsync(Guid schoolId, CancellationToken cancellationToken)
+    {
+        await using var command = await CreateCommandAsync(
+            "SELECT * FROM auth_find_active_director_by_school(@p)", cancellationToken);
+        command.Parameters.AddWithValue("p", schoolId);
+
+        return await ReadUserAsync(command, cancellationToken);
+    }
+
     public async Task RecordLoginAttemptAsync(
         Guid userId,
         bool success,

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SamaEcole.Persistence;
@@ -11,9 +12,11 @@ using SamaEcole.Persistence;
 namespace SamaEcole.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260719050944_AddPlatformAdminViews")]
+    partial class AddPlatformAdminViews
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -252,12 +255,6 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -832,37 +829,6 @@ namespace SamaEcole.Persistence.Migrations
                     b.ToView("v_platform_dashboard_stats", (string)null);
                 });
 
-            modelBuilder.Entity("SamaEcole.Domain.Entities.PlatformSubscriptionRow", b =>
-                {
-                    b.Property<DateOnly?>("ExpiresAt")
-                        .HasColumnType("date");
-
-                    b.Property<decimal?>("LastPaymentAmountXof")
-                        .HasColumnType("numeric");
-
-                    b.Property<DateTimeOffset?>("LastPaymentAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Plan")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("SchoolId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SchoolName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.ToTable((string)null);
-
-                    b.ToView("v_platform_subscriptions", (string)null);
-                });
-
             modelBuilder.Entity("SamaEcole.Domain.Entities.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1262,12 +1228,6 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
 
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
                     b.HasKey("Id");
 
                     b.HasIndex("SchoolId");
@@ -1381,12 +1341,6 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 
@@ -1605,12 +1559,6 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
 
                     b.HasKey("Id");
 

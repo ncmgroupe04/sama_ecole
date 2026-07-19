@@ -1,35 +1,30 @@
 /**
- * Console Super Admin — Abonnements & Facturation (refonte UI/UX).
- *
- * TODO BACKEND : `GET /api/v1/admin/platform/subscriptions` n'existe pas. Contrat attendu : un
- * tableau de { schoolId, schoolName, plan (SubscriptionPlan), status (SubscriptionStatus),
- * expiresAt (ISO date|null), lastPaymentAmountXof, lastPaymentAt }. Comme pour le tableau de bord
- * (voir superadmin-dashboard.js), Subscription/SubscriptionPayment restent soumis à la RLS par
- * tenant : une vraie implémentation demande sa propre conception d'accès plateforme, pas un simple
- * ajout de endpoint.
+ * Console Super Admin — Abonnements & Facturation. Consomme le vrai `GET /admin/platform/subscriptions`
+ * (PlatformController, migration AddPlatformSubscriptionsAndImpersonation : vue PostgreSQL
+ * `v_platform_subscriptions`, security_invoker = false comme le tableau de bord). Le bouton « Relancer »
+ * appelle `POST /admin/platform/subscriptions/{schoolId}/remind` : envoie un rappel par e-mail au
+ * Directeur de l'établissement (SendSubscriptionReminderCommand) — n'écrit AUCUN paiement ni statut
+ * d'abonnement (AGENTS.md règle #11), un simple aller-retour sans confirmation n'est donc pas destructif.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('superAdminBilling', () => ({
         subscriptions: [],
         isLoading: false,
-        isDemoData: false,
         error: null,
         searchQuery: '',
         statusFilter: 'All',
+
+        remindingSchoolId: null,
+        remindedSchoolIds: {},
+        remindError: null,
 
         async load() {
             this.isLoading = true;
             this.error = null;
             try {
                 this.subscriptions = await window.api.get('/admin/platform/subscriptions');
-                this.isDemoData = false;
             } catch (err) {
-                if (err.status === 404) {
-                    this.subscriptions = demoSubscriptions();
-                    this.isDemoData = true;
-                } else {
-                    this.error = err.message || 'Erreur lors du chargement des abonnements.';
-                }
+                this.error = err.message || 'Erreur lors du chargement des abonnements.';
             } finally {
                 this.isLoading = false;
             }
@@ -91,25 +86,19 @@ document.addEventListener('alpine:init', () => {
         formatXof(amount) {
             if (!amount) return '—';
             return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(amount);
+        },
+
+        async remind(sub) {
+            this.remindingSchoolId = sub.schoolId;
+            this.remindError = null;
+            try {
+                await window.api.post(`/admin/platform/subscriptions/${sub.schoolId}/remind`);
+                this.remindedSchoolIds[sub.schoolId] = true;
+            } catch (err) {
+                this.remindError = err.message || "Erreur lors de l'envoi du rappel.";
+            } finally {
+                this.remindingSchoolId = null;
+            }
         }
     }));
 });
-
-function demoSubscriptions() {
-    const names = ['Groupe Scolaire Diamniadio', 'Institut Sainte-Marie', 'École Les Baobabs', 'Complexe Scolaire Teranga', 'Lycée Moderne Thiès', 'École Al Azhar'];
-    const plans = ['Primaire', 'Standard', 'Premium'];
-    const statuses = ['Active', 'Active', 'AwaitingPayment', 'Suspended', 'Active', 'ReadOnly'];
-
-    return names.map((schoolName, i) => {
-        const daysOffset = [45, 4, -2, 12, 60, 25][i];
-        const expiresAt = new Date(Date.now() + daysOffset * 86400000).toISOString();
-        return {
-            schoolId: `demo-${i}`,
-            schoolName,
-            plan: plans[i % plans.length],
-            status: statuses[i],
-            expiresAt: statuses[i] === 'AwaitingPayment' ? null : expiresAt,
-            lastPaymentAmountXof: statuses[i] === 'AwaitingPayment' ? null : 25000 + i * 15000
-        };
-    });
-}

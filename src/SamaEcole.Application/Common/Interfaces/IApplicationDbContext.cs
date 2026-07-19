@@ -82,6 +82,29 @@ public interface IApplicationDbContext
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 
+    /// <summary>
+    /// Agrégats plateforme (console Super Admin) : entité SANS CLÉ adossée à la vue PostgreSQL
+    /// `v_platform_dashboard_stats`, qui contourne la RLS via `security_invoker = false` +
+    /// OWNER sama_ecole (AGENTS.md règle #2, docs/Volume_7_Security.md §8).
+    /// </summary>
+    DbSet<PlatformDashboardStats> PlatformDashboardStats { get; }
+
+    /// <summary>
+    /// Abonnements de toutes les écoles (console Super Admin) : entité SANS CLÉ adossée à la vue
+    /// PostgreSQL `v_platform_subscriptions`, même mécanisme que PlatformDashboardStats.
+    /// </summary>
+    DbSet<PlatformSubscriptionRow> PlatformSubscriptions { get; }
+
+    /// <summary>
+    /// Journal d'audit toutes écoles confondues (console Super Admin), une page à la fois — appelle la
+    /// fonction SECURITY DEFINER `get_global_audit_logs` (migration AddPlatformAdminViews) via
+    /// FromSqlRaw. Encapsulé ici (comme SetOriginalConcurrencyToken/ExecuteInTransactionAsync) : FromSqlRaw
+    /// exige le package EF Core Relational, volontairement absent de SamaEcole.Application (règle #1 —
+    /// seul SamaEcole.Persistence référence un provider/l'infrastructure relationnelle).
+    /// </summary>
+    Task<IReadOnlyList<GlobalAuditLogEntry>> GetGlobalAuditLogsAsync(
+        int limit, int offset, CancellationToken cancellationToken);
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>

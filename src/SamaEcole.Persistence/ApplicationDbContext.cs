@@ -43,6 +43,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<AttendanceSheet> AttendanceSheets => Set<AttendanceSheet>();
     public DbSet<StudentAttendance> StudentAttendances => Set<StudentAttendance>();
 
+    // Console Super Admin — entités SANS CLÉ, jamais gérées par les migrations (voir OnModelCreating) :
+    // la première est adossée à une vue réelle, la seconde n'existe qu'à travers FromSqlRaw.
+    public DbSet<PlatformDashboardStats> PlatformDashboardStats => Set<PlatformDashboardStats>();
+    public DbSet<GlobalAuditLogEntry> GlobalAuditLogEntries => Set<GlobalAuditLogEntry>();
+    public DbSet<PlatformSubscriptionRow> PlatformSubscriptions => Set<PlatformSubscriptionRow>();
+
     // Compteurs de matricules : écrits uniquement par MatriculeGenerator (INSERT ... ON CONFLICT),
     // jamais manipulés à la main par un Handler. Volontairement absent d'IApplicationDbContext.
     public DbSet<MatriculeSequence> MatriculeSequences => Set<MatriculeSequence>();
@@ -54,6 +60,32 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        // Console Super Admin (contournement RLS auditée, AGENTS.md règle #2) : deux entités SANS CLÉ.
+        // La première lit la vue `v_platform_dashboard_stats` (créée par migration, OWNER sama_ecole,
+        // security_invoker = false) ; la seconde n'a AUCUNE table/vue propre — elle n'existe que comme
+        // forme de résultat pour FromSqlRaw(get_global_audit_logs(...)), ToView(null) l'exclut donc des
+        // migrations tout en la gardant interrogeable.
+        modelBuilder.Entity<PlatformDashboardStats>(e =>
+        {
+            e.HasNoKey();
+            e.ToView("v_platform_dashboard_stats");
+        });
+
+        modelBuilder.Entity<GlobalAuditLogEntry>(e =>
+        {
+            e.HasNoKey();
+            e.ToView(null);
+        });
+
+        // Troisième entité SANS CLÉ de la console Super Admin : lit `v_platform_subscriptions`
+        // (créée par migration, OWNER sama_ecole, security_invoker = false), même mécanisme que
+        // PlatformDashboardStats.
+        modelBuilder.Entity<PlatformSubscriptionRow>(e =>
+        {
+            e.HasNoKey();
+            e.ToView("v_platform_subscriptions");
+        });
 
         // Le verrou optimiste xmin du barème (ClassFee, AGENTS.md règle #5) est configuré dans
         // ClassFeeConfiguration : une propriété fantôme uint marquée IsRowVersion, que la convention
@@ -131,6 +163,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public void SetOriginalConcurrencyToken<TEntity>(TEntity entity, uint expectedVersion)
         where TEntity : class
         => Entry(entity).Property("xmin").OriginalValue = expectedVersion;
+
+    /// <summary>
+    /// Console Super Admin — une page du journal d'audit toutes écoles confondues, via la fonction
+    /// SECURITY DEFINER `get_global_audit_logs` (migration AddPlatformAdminViews). IgnoreQueryFilters()
+    /// est un no-op ici (GlobalAuditLogEntry, ToView(null), n'a aucun HasQueryFilter), gardé explicite
+    /// pour documenter que cette lecture est volontairement hors du cloisonnement tenant.
+    /// </summary>
+    public async Task<IReadOnlyList<GlobalAuditLogEntry>> GetGlobalAuditLogsAsync(
+        int limit, int offset, CancellationToken cancellationToken)
+        => await GlobalAuditLogEntries
+            .FromSqlRaw("SELECT * FROM public.get_global_audit_logs({0}, {1})", limit, offset)
+            .IgnoreQueryFilters()
+            .ToListAsync(cancellationToken);
 
     public async Task<T> ExecuteInTransactionAsync<T>(
         Func<CancellationToken, Task<T>> operation,

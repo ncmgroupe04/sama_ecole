@@ -119,6 +119,19 @@
             return claims ? claims.schoolId || '' : '';
         },
 
+        /**
+         * Console Super Admin (bouton « Infiltrer ») : présent uniquement sur un jeton d'impersonation
+         * (JwtTokenGenerator.GenerateImpersonation) — l'id du Super Admin réel derrière la session.
+         */
+        get impersonatedBy() {
+            const claims = readClaims(this.accessToken);
+            return claims ? claims.impersonatedBy || '' : '';
+        },
+
+        isImpersonating() {
+            return Boolean(this.impersonatedBy);
+        },
+
         /** Un jeton présent mais périmé n'est pas une session : il reste renouvelable tant que le cookie vit. */
         isAuthenticated() {
             return Boolean(this.accessToken);
@@ -158,6 +171,27 @@
             }
 
             auth.saveSession(await response.json(), email);
+        },
+
+        /**
+         * Console Super Admin (bouton « Infiltrer ») : bascule la session sur le jeton d'impersonation
+         * renvoyé par POST /admin/platform/schools/{schoolId}/impersonate. Ce n'est PAS une nouvelle
+         * connexion — le cookie de refresh du Super Admin reste intact et inutilisé tant que dure
+         * l'impersonation, c'est lui qui permet de revenir (voir exitImpersonation).
+         */
+        enterImpersonation(tokens) {
+            auth.saveSession(tokens);
+        },
+
+        /**
+         * Sort d'une session d'impersonation AVANT son expiration naturelle (~15 min) : échange le
+         * cookie de refresh — celui du Super Admin, jamais touché par enterImpersonation — contre ses
+         * propres jetons. Contrairement à refresh(), on ignore délibérément isAccessTokenStale() : le
+         * jeton d'impersonation en cours n'est pas expiré, c'est une sortie volontaire.
+         */
+        async exitImpersonation() {
+            await fetchNewTokens();
+            window.location.assign(SUPER_ADMIN_LANDING);
         },
 
         /**
@@ -291,6 +325,27 @@ document.addEventListener('alpine:init', () => {
         email: window.auth.email,
         role: window.auth.role,
         logout: () => window.auth.logout()
+    }));
+
+    /**
+     * Bandeau d'impersonation (_Layout.cshtml) : visible uniquement quand la session courante vient du
+     * bouton « Infiltrer » de la console Super Admin (claim impersonatedBy, voir auth.js isImpersonating).
+     * Évalué une fois au chargement de la page — une impersonation ne démarre/finit jamais SANS
+     * navigation complète (enterImpersonation/exitImpersonation redirigent toujours), inutile de la
+     * suivre en réactif.
+     */
+    Alpine.data('impersonationBanner', () => ({
+        isImpersonating: window.auth.isImpersonating(),
+        isExiting: false,
+
+        async exit() {
+            this.isExiting = true;
+            try {
+                await window.auth.exitImpersonation();
+            } catch {
+                window.auth.redirectToLogin();
+            }
+        }
     }));
 
     /**

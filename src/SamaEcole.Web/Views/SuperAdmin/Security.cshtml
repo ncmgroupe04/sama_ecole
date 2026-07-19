@@ -3,98 +3,99 @@
     Layout = "_SuperAdminLayout";
 }
 
-@* TODO BACKEND — voir wwwroot/js/superadmin-security.js. AuditLog (Views/Shared/_AuditLogPanel.cshtml)
-   est une table TENANT : chaque école a son propre journal, isolé par RLS, et le Super Admin (sans
-   schoolId) n'en voit aucun par une requête EF Core normale. Le Volume 7 §15 prévoit bien un accès
-   "complet" du Super Admin au journal d'audit, mais Volume 3 note un PlatformAuditLogs distinct
-   comme "hors MVP" — cette table n'existe pas encore. Cet écran affiche donc une démonstration tant
-   que GET /admin/platform/activity n'est pas livré. *@
+@* Cet écran consomme le VRAI GET /api/v1/admin/platform/activity (PlatformController, migration
+   AddPlatformAdminViews : fonction SECURITY DEFINER get_global_audit_logs). Même nature de données que
+   l'onglet Journal d'audit des Paramètres (Views/Shared/_AuditLogPanel.cshtml), mais toutes écoles
+   confondues — d'où la colonne Établissement en plus. *@
 <div x-data="superAdminSecurity()" x-init="load()">
 
     <div>
         <h1 class="text-xl font-semibold text-white">Sécurité &amp; Logs</h1>
-        <p class="text-sm text-zinc-500 mt-1">Événements critiques de la plateforme, toutes écoles confondues.</p>
+        <p class="text-sm text-zinc-500 mt-1">Journal d'audit de la plateforme, toutes écoles confondues.</p>
     </div>
 
     <div x-show="isDemoData" x-cloak
          class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
         <icon name="alert-circle" class="w-[18px] h-[18px] shrink-0 mt-0.5" />
         <span>
-            Le journal d'audit plateforme (<code class="text-amber-200">GET /admin/platform/activity</code>) n'est pas encore livré
-            — un <code class="text-amber-200">PlatformAuditLogs</code> distinct du journal par école reste à concevoir (hors MVP). Flux de démonstration ci-dessous.
+            Backend du journal d'audit plateforme introuvable (<code class="text-amber-200">GET /admin/platform/activity</code>) —
+            les entrées ci-dessous sont des données de démonstration, pas des données réelles.
         </span>
     </div>
 
     <div x-show="error" x-cloak class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
 
-    <!-- Synthèse -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <p class="text-xs font-medium uppercase tracking-wider text-zinc-500">Écoles créées (30j)</p>
-            <p class="mt-1 text-2xl font-semibold text-sky-400" x-text="countByType('SchoolCreated')"></p>
-        </div>
-        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <p class="text-xs font-medium uppercase tracking-wider text-zinc-500">Tentatives bloquées (24h)</p>
-            <p class="mt-1 text-2xl font-semibold text-amber-400" x-text="countByType('RateLimited')"></p>
-        </div>
-        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
-            <p class="text-xs font-medium uppercase tracking-wider text-zinc-500">Erreurs applicatives (24h)</p>
-            <p class="mt-1 text-2xl font-semibold text-rose-400" x-text="countByType('ApplicationError')"></p>
-        </div>
-    </div>
+    <!-- Journal -->
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-800 bg-zinc-950/40">
+                        <th class="py-3 px-4 font-medium">Date/heure</th>
+                        <th class="py-3 px-4 font-medium">Établissement</th>
+                        <th class="py-3 px-4 font-medium">Utilisateur</th>
+                        <th class="py-3 px-4 font-medium">Domaine</th>
+                        <th class="py-3 px-4 font-medium">Action</th>
+                        <th class="py-3 px-4 font-medium">Résultat</th>
+                        <th class="py-3 px-4 font-medium">IP</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/80">
+                    <template x-if="isLoading">
+                        <template x-for="i in 6" :key="i">
+                            <tr><td class="py-3 px-4" colspan="7"><div class="h-4 w-full rounded bg-zinc-800 animate-pulse"></div></td></tr>
+                        </template>
+                    </template>
 
-    <!-- Filtres -->
-    <div class="flex flex-wrap items-center gap-2">
-        <template x-for="option in [
-            { value: 'All', label: 'Tous les événements' },
-            { value: 'warning', label: 'Avertissements' },
-            { value: 'critical', label: 'Critiques' }
-        ]" :key="option.value">
-            <button type="button" x-on:click="severityFilter = option.value"
-                    :class="severityFilter === option.value ? 'bg-sky-500/15 text-sky-400 ring-1 ring-inset ring-sky-500/30' : 'text-zinc-400 border border-zinc-800 hover:bg-zinc-900'"
-                    class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
-                <span x-text="option.label"></span>
-            </button>
-        </template>
-    </div>
+                    <tr x-show="!isLoading && entries.length === 0" x-cloak>
+                        <td colspan="7" class="py-12 text-center text-sm text-zinc-500">
+                            Aucune entrée dans le journal.
+                        </td>
+                    </tr>
 
-    <!-- Flux d'activité -->
-    <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur">
-        <template x-if="isLoading">
-            <div class="p-4 space-y-3">
-                <template x-for="i in 5" :key="i">
-                    <div class="h-10 w-full rounded bg-zinc-800 animate-pulse"></div>
+                    <template x-for="entry in entries" :key="entry.id">
+                        <tr class="hover:bg-zinc-900 transition-colors">
+                            <td class="py-3 px-4 text-zinc-400 whitespace-nowrap" x-text="formatDateTime(entry.occurredAt)"></td>
+                            <td class="py-3 px-4 text-zinc-100" x-text="entry.schoolName"></td>
+                            <td class="py-3 px-4 text-zinc-300" x-text="entry.actorFullName"></td>
+                            <td class="py-3 px-4">
+                                <span class="inline-flex items-center rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-zinc-300" x-text="entry.module"></span>
+                            </td>
+                            <td class="py-3 px-4 text-zinc-300" x-text="entry.action"></td>
+                            <td class="py-3 px-4">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                      :class="entry.success ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-inset ring-emerald-500/20' : 'bg-rose-500/15 text-rose-400 ring-1 ring-inset ring-rose-500/20'"
+                                      x-text="entry.success ? 'Succès' : 'Échec'"></span>
+                            </td>
+                            <td class="py-3 px-4 font-mono text-xs text-zinc-500" x-text="entry.ipAddress || '—'"></td>
+                        </tr>
+                        <tr x-show="!entry.success && entry.failureReason" x-cloak>
+                            <td></td>
+                            <td colspan="6" class="pb-3 px-4 -mt-3 text-xs text-rose-400" x-text="entry.failureReason"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between gap-4 border-t border-zinc-800 px-4 py-3">
+            <p class="text-xs text-zinc-500">
+                Page <span class="font-medium text-zinc-300" x-text="page"></span>
+                <template x-if="totalCount > 0">
+                    <span> sur <span class="font-medium text-zinc-300" x-text="Math.ceil(totalCount / pageSize)"></span> · <span x-text="totalCount"></span> résultats</span>
                 </template>
+            </p>
+            <div class="flex items-center gap-2">
+                <button type="button" x-on:click="if (page > 1) { page--; load(); }" :disabled="page === 1 || isLoading"
+                        class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-zinc-900">
+                    Précédent
+                </button>
+                <button type="button" x-on:click="if (page * pageSize < totalCount) { page++; load(); }" :disabled="page * pageSize >= totalCount || isLoading"
+                        class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-zinc-900">
+                    Suivant
+                </button>
             </div>
-        </template>
-
-        <p x-show="!isLoading && filteredEvents.length === 0" x-cloak class="py-12 text-center text-sm text-zinc-500">
-            Aucun événement pour ce filtre.
-        </p>
-
-        <ul x-show="!isLoading" class="divide-y divide-zinc-800/80">
-            <template x-for="event in filteredEvents" :key="event.id">
-                <li class="flex items-start gap-3 px-4 py-3.5">
-                    <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" :class="severityIconBg(event.severity)">
-                        @* Icône dynamique : <icon> (TagHelpers/IconTagHelper.cs) exige un nom résolu côté
-                           serveur, voir le commentaire équivalent dans Dashboard.cshtml. *@
-                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4" :class="severityIconText(event.severity)">
-                            <use :href="`#icon-${eventIcon(event.type)}`"></use>
-                        </svg>
-                    </span>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm text-zinc-100" x-text="event.message"></p>
-                        <p class="text-xs text-zinc-500 mt-0.5">
-                            <span x-text="formatDateTime(event.occurredAt)"></span>
-                            <template x-if="event.schoolName">
-                                <span> · <span x-text="event.schoolName"></span></span>
-                            </template>
-                        </p>
-                    </div>
-                    <span class="shrink-0 mt-1 h-1.5 w-1.5 rounded-full" :class="severityDot(event.severity)"></span>
-                </li>
-            </template>
-        </ul>
+        </div>
     </div>
 </div>
 

@@ -60,8 +60,18 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(GradingPolicies.CanManageGradingScale, policy =>
         policy.Requirements.Add(new CanManageGradingScaleRequirement()));
+
+    // Matrice d'autorisation "Photoshop" — délégation Finance, au choix de CHAQUE Directeur
+    // (SchoolSettings.AllowFinanceToModifyFees / AllowFinanceToDeleteFees), même mécanique que
+    // CanManageGradingScale ci-dessus.
+    options.AddPolicy(FinancePolicies.CanModifyFees, policy =>
+        policy.Requirements.Add(new CanModifyFeesRequirement()));
+    options.AddPolicy(FinancePolicies.CanDeleteFees, policy =>
+        policy.Requirements.Add(new CanDeleteFeesRequirement()));
 });
 builder.Services.AddScoped<IAuthorizationHandler, CanManageGradingScaleHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, CanModifyFeesHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, CanDeleteFeesHandler>();
 
 builder.Services
     .AddControllersWithViews() // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
@@ -77,6 +87,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new() { Title = "Sama Ecole API", Version = "v1" });
+
+    // Deux Queries distinctes peuvent légitimement porter le même nom de DTO (ex. SubjectGradeDto) —
+    // Swashbuckle génère par défaut un schemaId à partir du seul nom de classe, sans son namespace, et
+    // plante au démarrage dès que deux types différents partagent ce nom. Le nom complet lève
+    // l'ambiguïté définitivement, quel que soit le nombre de doublons futurs.
+    options.CustomSchemaIds(type => type.FullName);
 });
 
 // Limitation de débit du formulaire PUBLIC d'inscription (ticket JGK-I01, docs/Volume_7_Security.md
@@ -91,6 +107,15 @@ var registrationWindowMinutes = builder.Configuration.GetValue("RateLimiting:Reg
 // son propre dossier peut légitimement se faire plusieurs fois (rafraîchissement manuel).
 var registrationStatusPermitLimit = builder.Configuration.GetValue("RateLimiting:RegistrationStatus:PermitLimit", 20);
 var registrationStatusWindowMinutes = builder.Configuration.GetValue("RateLimiting:RegistrationStatus:WindowMinutes", 5);
+
+// Durcissement production — login (credential stuffing distribué) et génération de bulletin PDF
+// (coût CPU par appel, aucun cache). Partitionnées séparément de l'inscription publique ci-dessus :
+// des seuils différents, une volumétrie légitime différente.
+var loginPermitLimit = builder.Configuration.GetValue("RateLimiting:Login:PermitLimit", 10);
+var loginWindowMinutes = builder.Configuration.GetValue("RateLimiting:Login:WindowMinutes", 5);
+
+var reportCardPermitLimit = builder.Configuration.GetValue("RateLimiting:ReportCardGeneration:PermitLimit", 20);
+var reportCardWindowMinutes = builder.Configuration.GetValue("RateLimiting:ReportCardGeneration:WindowMinutes", 1);
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -120,6 +145,31 @@ builder.Services.AddRateLimiter(options =>
         });
     });
 
+    options.AddPolicy(SensitiveEndpointRateLimiting.LoginPolicyName, httpContext =>
+    {
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = loginPermitLimit,
+            Window = TimeSpan.FromMinutes(loginWindowMinutes),
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy(SensitiveEndpointRateLimiting.ReportCardGenerationPolicyName, httpContext =>
+    {
+        // Partitionné par utilisateur (claim sub), pas par IP : l'endpoint exige déjà [Authorize].
+        var partitionKey = httpContext.User.FindFirst("sub")?.Value ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = reportCardPermitLimit,
+            Window = TimeSpan.FromMinutes(reportCardWindowMinutes),
+            QueueLimit = 0
+        });
+    });
+
     // Réponse de dépassement au format d'erreur normalisé (docs/Volume_4_API_Design.md §0.4) — jamais
     // la page 429 brute d'ASP.NET (AGENTS.md règle #9).
     options.OnRejected = async (context, cancellationToken) =>
@@ -137,6 +187,16 @@ builder.Services.AddRateLimiter(options =>
 
         await context.HttpContext.Response.WriteAsync(JsonSerializer.Serialize(payload), cancellationToken);
     };
+});
+
+// HSTS — durée longue + sous-domaines + éligible au préchargement navigateur (l'app est 100 % en
+// ligne, AGENTS.md, aucun sous-domaine n'est censé être servi en clair). Effectif seulement en
+// production via app.UseHsts() plus bas.
+builder.Services.AddHsts(options =>
+{
+    options.Preload = true;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(365);
 });
 
 var app = builder.Build();
@@ -179,6 +239,15 @@ if (app.Environment.IsDevelopment())
 // Traduit toute exception applicative en réponse HTTP normalisée
 // (docs/Volume_4_API_Design.md §0.4) — jamais une exception brute renvoyée au client.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+if (!app.Environment.IsDevelopment())
+{
+    // HSTS : force HTTPS côté navigateur pour les requêtes SUIVANTES (contrairement à
+    // UseHttpsRedirection, qui ne redirige que la requête courante). Désactivé en Development —
+    // le profil local n'a pas de certificat de confiance publique et HSTS "collerait" au navigateur
+    // au-delà de la durée de vie du process de dev.
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
 app.UseStaticFiles(); // sert wwwroot/css/site.css compilé depuis Tailwind (Décision D-13)

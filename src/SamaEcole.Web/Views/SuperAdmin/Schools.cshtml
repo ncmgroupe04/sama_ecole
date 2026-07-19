@@ -6,7 +6,10 @@
 @* Cet écran consomme le VRAI endpoint GET /api/v1/schools (SchoolsController, ticket JGK-B01) — pas
    de démonstration ici, contrairement au tableau de bord. Le plan d'abonnement et le statut de
    paiement de chaque école n'y figurent pas encore (GetSchoolsQuery ne renvoie que les métadonnées
-   d'établissement) : à étendre côté Application si ces colonnes deviennent nécessaires. *@
+   d'établissement) : à étendre côté Application si ces colonnes deviennent nécessaires.
+
+   Bouton « Infiltrer » : POST /admin/platform/schools/{schoolId}/impersonate
+   (ImpersonateSchoolCommand) — voir wwwroot/js/superadmin-schools.js pour le flux complet. *@
 <div x-data="superAdminSchools()" x-init="load()">
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -103,8 +106,9 @@
                             </td>
                             <td class="py-3 px-4 text-zinc-400 whitespace-nowrap" x-text="formatDate(school.createdAt)"></td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
-                                <button type="button" disabled title="Fonctionnalité à venir — nécessite sa propre conception sécurité (audit, jeton d'accès limité dans le temps)"
-                                        class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-zinc-600 cursor-not-allowed">
+                                <button type="button" x-on:click="openImpersonateConfirm(school)"
+                                        title="Ouvrir une session Directeur pour cet établissement (audité)"
+                                        class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 transition-colors">
                                     <icon name="eye" class="w-3.5 h-3.5" />
                                     Infiltrer
                                 </button>
@@ -143,6 +147,35 @@
                 </div>
             </div>
         </template>
+    </div>
+
+    @* Confirmation « Infiltrer » — action à fort impact (bascule toute la session sur l'identité du
+       Directeur ciblé), d'où une confirmation explicite plutôt qu'un simple clic comme pour Relancer. *@
+    <div x-show="impersonateTarget" x-cloak
+         class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+         x-on:keydown.escape.window="closeImpersonateConfirm()">
+        <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
+            <h2 class="text-base font-semibold text-white">Infiltrer un établissement</h2>
+            <p class="mt-2 text-sm text-zinc-400">
+                Vous allez ouvrir une session Directeur pour
+                <span class="font-medium text-zinc-100" x-text="impersonateTarget ? impersonateTarget.name : ''"></span>.
+                Cette action est journalisée dans le journal d'audit de cet établissement. La session
+                expire automatiquement au bout de 15 minutes.
+            </p>
+
+            <div x-show="impersonateError" x-cloak class="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300" x-text="impersonateError"></div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-on:click="closeImpersonateConfirm()" :disabled="isImpersonating"
+                        class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50">
+                    Annuler
+                </button>
+                <button type="button" x-on:click="confirmImpersonate()" :disabled="isImpersonating"
+                        class="rounded-lg bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 transition-colors disabled:opacity-50">
+                    <span x-text="isImpersonating ? 'Ouverture…' : 'Confirmer'"></span>
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
