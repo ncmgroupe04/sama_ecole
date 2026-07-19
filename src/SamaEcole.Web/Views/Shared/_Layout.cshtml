@@ -147,12 +147,14 @@
                 <span class="text-sm font-medium">Paramètres</span>
             </a>
 
-            @* Administration (Volume 5 §3.2, explicitement Super Admin uniquement) : devient un vrai
-               lien avec JGK-I03 (revue des demandes d'inscription self-service), premier écran livré de
-               cet espace — « chaque module devient un vrai lien le jour où son ticket est livré ». *@
-            <a href="/admin/inscriptions" x-show="canView(['SuperAdmin'])" x-cloak class="@(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
+            @* Administration (Volume 5 §3.2, explicitement Super Admin uniquement) : pointe désormais vers
+               la console plateforme dédiée (layout _SuperAdminLayout, sombre) — le Super Admin n'y
+               revient normalement jamais en pratique puisque son atterrissage par défaut (auth.js,
+               defaultLandingForRole) l'y envoie directement dès la connexion. Ce lien ne reste utile
+               que s'il navigue d'abord ailleurs puis revient ici par erreur. *@
+            <a href="/admin" x-show="canView(['SuperAdmin'])" x-cloak class="@(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
                 <icon name="layers" class="w-5 h-5" />
-                <span class="text-sm font-medium">Demandes d'inscription</span>
+                <span class="text-sm font-medium">Console Super Admin</span>
             </a>
         </nav>
 

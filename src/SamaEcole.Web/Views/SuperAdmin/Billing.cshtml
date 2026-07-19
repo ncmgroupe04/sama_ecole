@@ -1,0 +1,130 @@
+@{
+    ViewData["Title"] = "Abonnements & Facturation";
+    Layout = "_SuperAdminLayout";
+}
+
+@* TODO BACKEND — voir wwwroot/js/superadmin-billing.js : GET /admin/platform/subscriptions n'existe
+   pas encore. SubscriptionPayment est une table TENANT protégée par RLS (AGENTS.md règle #2) ; une
+   vue plateforme croisant toutes les écoles demande une conception dédiée (même remarque que le
+   tableau de bord). Données de démonstration affichées avec bandeau explicite tant que l'appel 404. *@
+<div x-data="superAdminBilling()" x-init="load()">
+
+    <div>
+        <h1 class="text-xl font-semibold text-white">Abonnements &amp; Facturation</h1>
+        <p class="text-sm text-zinc-500 mt-1">Suivi des licences école, échéances et paiements d'abonnement.</p>
+    </div>
+
+    <div x-show="isDemoData" x-cloak
+         class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
+        <icon name="alert-circle" class="w-[18px] h-[18px] shrink-0 mt-0.5" />
+        <span>
+            Backend d'agrégation plateforme pas encore livré (<code class="text-amber-200">GET /admin/platform/subscriptions</code> introuvable) —
+            la liste ci-dessous est une donnée de démonstration.
+        </span>
+    </div>
+
+    <div x-show="error" x-cloak class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
+
+    <!-- KPI -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <template x-for="tile in kpiTiles" :key="tile.label">
+            <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+                <p class="text-xs font-medium uppercase tracking-wider text-zinc-500" x-text="tile.label"></p>
+                <p class="mt-2 text-2xl font-semibold" :class="tile.valueClass" x-text="tile.value"></p>
+            </div>
+        </template>
+    </div>
+
+    <!-- Filtres -->
+    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="relative flex-1 sm:max-w-xs">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-zinc-600">
+                <icon name="search" class="w-4 h-4" />
+            </span>
+            <input type="search" x-model="searchQuery" placeholder="Rechercher une école…" aria-label="Rechercher une école"
+                   class="w-full rounded-lg border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <template x-for="option in [
+                { value: 'All', label: 'Tous' },
+                { value: 'AwaitingPayment', label: 'En attente' },
+                { value: 'Active', label: 'Actifs' },
+                { value: 'Suspended', label: 'Suspendus' },
+                { value: 'ReadOnly', label: 'Lecture seule' }
+            ]" :key="option.value">
+                <button type="button" x-on:click="statusFilter = option.value"
+                        :class="statusFilter === option.value ? 'bg-sky-500/15 text-sky-400 ring-1 ring-inset ring-sky-500/30' : 'text-zinc-400 border border-zinc-800 hover:bg-zinc-900'"
+                        class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
+                    <span x-text="option.label"></span>
+                </button>
+            </template>
+        </div>
+    </div>
+
+    <!-- Table (≥ sm) -->
+    <div class="hidden sm:block rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-800 bg-zinc-950/40">
+                        <th class="py-3 px-4 font-medium">École</th>
+                        <th class="py-3 px-4 font-medium">Formule</th>
+                        <th class="py-3 px-4 font-medium">Statut</th>
+                        <th class="py-3 px-4 font-medium">Échéance</th>
+                        <th class="py-3 px-4 font-medium">Dernier paiement</th>
+                        <th class="py-3 px-4 font-medium text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/80">
+                    <template x-if="isLoading">
+                        <template x-for="i in 4" :key="i">
+                            <tr><td class="py-3 px-4" colspan="6"><div class="h-4 w-full rounded bg-zinc-800 animate-pulse"></div></td></tr>
+                        </template>
+                    </template>
+
+                    <tr x-show="!isLoading && filteredSubscriptions.length === 0" x-cloak>
+                        <td colspan="6" class="py-12 text-center text-sm text-zinc-500">Aucun abonnement ne correspond à ces filtres.</td>
+                    </tr>
+
+                    <template x-for="sub in filteredSubscriptions" :key="sub.schoolId">
+                        <tr class="hover:bg-zinc-900 transition-colors">
+                            <td class="py-3 px-4 font-medium text-zinc-100" x-text="sub.schoolName"></td>
+                            <td class="py-3 px-4 text-zinc-400" x-text="planLabel(sub.plan)"></td>
+                            <td class="py-3 px-4">
+                                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusClasses(sub.status)" x-text="statusLabel(sub.status)"></span>
+                            </td>
+                            <td class="py-3 px-4 whitespace-nowrap" :class="isDueSoon(sub.expiresAt) ? 'text-amber-400 font-medium' : 'text-zinc-400'" x-text="formatDate(sub.expiresAt)"></td>
+                            <td class="py-3 px-4 text-zinc-400 whitespace-nowrap" x-text="formatXof(sub.lastPaymentAmountXof)"></td>
+                            <td class="py-3 px-4 text-right whitespace-nowrap">
+                                <button type="button" disabled title="Fonctionnalité à venir"
+                                        class="text-xs font-medium text-zinc-600 cursor-not-allowed px-1.5 py-1">
+                                    Relancer
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Cartes (< sm) -->
+    <div class="sm:hidden space-y-3">
+        <template x-for="sub in filteredSubscriptions" :key="sub.schoolId">
+            <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <p class="font-medium text-zinc-100 truncate" x-text="sub.schoolName"></p>
+                    <span class="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium" :class="statusClasses(sub.status)" x-text="statusLabel(sub.status)"></span>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-xs text-zinc-500">
+                    <span x-text="planLabel(sub.plan)"></span>
+                    <span :class="isDueSoon(sub.expiresAt) ? 'text-amber-400 font-medium' : ''" x-text="formatDate(sub.expiresAt)"></span>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/superadmin-billing.js" asp-append-version="true"></script>
+}

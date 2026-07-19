@@ -75,6 +75,23 @@ public class PagesController : Controller
     [HttpGet("/admin/inscriptions")]
     public IActionResult RegistrationRequests() => View("~/Views/Admin/RegistrationRequests.cshtml");
 
+    // Console Super Admin (refonte plateforme) — gabarits [AllowAnonymous] au même titre que le reste
+    // de ce contrôleur : c'est SchoolsController (Roles = SuperAdmin) et les futures routes
+    // plateforme équivalentes qui gardent l'accès aux données, jamais la page elle-même. Le lien
+    // d'entrée dans _Layout.cshtml et l'atterrissage par défaut (wwwroot/js/auth.js,
+    // defaultLandingForRole) pointent vers /admin.
+    [HttpGet("/admin")]
+    public IActionResult SuperAdminDashboard() => View("~/Views/SuperAdmin/Dashboard.cshtml");
+
+    [HttpGet("/admin/etablissements")]
+    public IActionResult SuperAdminSchools() => View("~/Views/SuperAdmin/Schools.cshtml");
+
+    [HttpGet("/admin/facturation")]
+    public IActionResult SuperAdminBilling() => View("~/Views/SuperAdmin/Billing.cshtml");
+
+    [HttpGet("/admin/securite")]
+    public IActionResult SuperAdminSecurity() => View("~/Views/SuperAdmin/Security.cshtml");
+
     // Les années scolaires ne sont plus une entrée de menu à part : elles vivent désormais dans les
     // Paramètres (onglet dédié). On redirige l'ancienne adresse pour ne casser aucun lien existant.
     [HttpGet("/annees-scolaires")]

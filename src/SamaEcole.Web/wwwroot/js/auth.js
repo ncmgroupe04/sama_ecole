@@ -20,9 +20,10 @@
     const DEFAULT_LANDING = '/eleves';
 
     // Le Super Admin n'a AUCUN établissement : /eleves (comme tout écran tenant) est vide pour lui,
-    // la RLS lui fermant toutes les tables d'école. Son point d'entrée utile est la revue des demandes
-    // d'inscription (JGK-I03).
-    const SUPER_ADMIN_LANDING = '/admin/inscriptions';
+    // la RLS lui fermant toutes les tables d'école. Son point d'entrée est la console plateforme
+    // (tableau de bord global) — la revue des demandes d'inscription (JGK-I03) reste accessible
+    // depuis son propre menu, sous /admin/inscriptions.
+    const SUPER_ADMIN_LANDING = '/admin';
 
     // JGK-F04 : Directeur et Finance ont un tableau de bord dédié (voir PagesController.Dashboard) et
     // y atterrissent directement. Secrétariat et Enseignant, qui n'y ont pas accès (_Layout.cshtml,

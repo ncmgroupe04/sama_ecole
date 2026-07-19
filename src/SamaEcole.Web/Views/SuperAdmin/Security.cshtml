@@ -1,0 +1,103 @@
+@{
+    ViewData["Title"] = "Sécurité & Logs";
+    Layout = "_SuperAdminLayout";
+}
+
+@* TODO BACKEND — voir wwwroot/js/superadmin-security.js. AuditLog (Views/Shared/_AuditLogPanel.cshtml)
+   est une table TENANT : chaque école a son propre journal, isolé par RLS, et le Super Admin (sans
+   schoolId) n'en voit aucun par une requête EF Core normale. Le Volume 7 §15 prévoit bien un accès
+   "complet" du Super Admin au journal d'audit, mais Volume 3 note un PlatformAuditLogs distinct
+   comme "hors MVP" — cette table n'existe pas encore. Cet écran affiche donc une démonstration tant
+   que GET /admin/platform/activity n'est pas livré. *@
+<div x-data="superAdminSecurity()" x-init="load()">
+
+    <div>
+        <h1 class="text-xl font-semibold text-white">Sécurité &amp; Logs</h1>
+        <p class="text-sm text-zinc-500 mt-1">Événements critiques de la plateforme, toutes écoles confondues.</p>
+    </div>
+
+    <div x-show="isDemoData" x-cloak
+         class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
+        <icon name="alert-circle" class="w-[18px] h-[18px] shrink-0 mt-0.5" />
+        <span>
+            Le journal d'audit plateforme (<code class="text-amber-200">GET /admin/platform/activity</code>) n'est pas encore livré
+            — un <code class="text-amber-200">PlatformAuditLogs</code> distinct du journal par école reste à concevoir (hors MVP). Flux de démonstration ci-dessous.
+        </span>
+    </div>
+
+    <div x-show="error" x-cloak class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
+
+    <!-- Synthèse -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <p class="text-xs font-medium uppercase tracking-wider text-zinc-500">Écoles créées (30j)</p>
+            <p class="mt-1 text-2xl font-semibold text-sky-400" x-text="countByType('SchoolCreated')"></p>
+        </div>
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <p class="text-xs font-medium uppercase tracking-wider text-zinc-500">Tentatives bloquées (24h)</p>
+            <p class="mt-1 text-2xl font-semibold text-amber-400" x-text="countByType('RateLimited')"></p>
+        </div>
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <p class="text-xs font-medium uppercase tracking-wider text-zinc-500">Erreurs applicatives (24h)</p>
+            <p class="mt-1 text-2xl font-semibold text-rose-400" x-text="countByType('ApplicationError')"></p>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="flex flex-wrap items-center gap-2">
+        <template x-for="option in [
+            { value: 'All', label: 'Tous les événements' },
+            { value: 'warning', label: 'Avertissements' },
+            { value: 'critical', label: 'Critiques' }
+        ]" :key="option.value">
+            <button type="button" x-on:click="severityFilter = option.value"
+                    :class="severityFilter === option.value ? 'bg-sky-500/15 text-sky-400 ring-1 ring-inset ring-sky-500/30' : 'text-zinc-400 border border-zinc-800 hover:bg-zinc-900'"
+                    class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors">
+                <span x-text="option.label"></span>
+            </button>
+        </template>
+    </div>
+
+    <!-- Flux d'activité -->
+    <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur">
+        <template x-if="isLoading">
+            <div class="p-4 space-y-3">
+                <template x-for="i in 5" :key="i">
+                    <div class="h-10 w-full rounded bg-zinc-800 animate-pulse"></div>
+                </template>
+            </div>
+        </template>
+
+        <p x-show="!isLoading && filteredEvents.length === 0" x-cloak class="py-12 text-center text-sm text-zinc-500">
+            Aucun événement pour ce filtre.
+        </p>
+
+        <ul x-show="!isLoading" class="divide-y divide-zinc-800/80">
+            <template x-for="event in filteredEvents" :key="event.id">
+                <li class="flex items-start gap-3 px-4 py-3.5">
+                    <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" :class="severityIconBg(event.severity)">
+                        @* Icône dynamique : <icon> (TagHelpers/IconTagHelper.cs) exige un nom résolu côté
+                           serveur, voir le commentaire équivalent dans Dashboard.cshtml. *@
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4" :class="severityIconText(event.severity)">
+                            <use :href="`#icon-${eventIcon(event.type)}`"></use>
+                        </svg>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm text-zinc-100" x-text="event.message"></p>
+                        <p class="text-xs text-zinc-500 mt-0.5">
+                            <span x-text="formatDateTime(event.occurredAt)"></span>
+                            <template x-if="event.schoolName">
+                                <span> · <span x-text="event.schoolName"></span></span>
+                            </template>
+                        </p>
+                    </div>
+                    <span class="shrink-0 mt-1 h-1.5 w-1.5 rounded-full" :class="severityDot(event.severity)"></span>
+                </li>
+            </template>
+        </ul>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/superadmin-security.js" asp-append-version="true"></script>
+}
