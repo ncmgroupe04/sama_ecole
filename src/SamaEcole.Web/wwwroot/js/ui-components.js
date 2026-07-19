@@ -86,4 +86,38 @@ document.addEventListener('alpine:init', () => {
             });
         }
     }));
+
+    /**
+     * Liste déroulante avec recherche interne (TagHelpers/SelectFieldTagHelper.cs). Même convention
+     * que dateField() : ce composant ne porte que l'état d'ouverture/recherche, la valeur
+     * sélectionnée (I/O) reste portée par l'expression Alpine du parent (x-model sur le champ caché,
+     * relue directement dans les directives émises par le Tag Helper).
+     */
+    Alpine.data('selectField', (options) => ({
+        open: false,
+        search: '',
+        options,
+
+        get filteredOptions() {
+            const query = this.search.trim().toLowerCase();
+            if (!query) return this.options;
+            return this.options.filter((option) => option.label.toLowerCase().includes(query));
+        },
+
+        toggle() {
+            this.open = !this.open;
+            if (this.open) {
+                this.search = '';
+                this.$nextTick(() => this.$refs.search?.focus());
+            }
+        },
+
+        close() {
+            this.open = false;
+        },
+
+        labelFor(value) {
+            return this.options.find((option) => option.value === value)?.label ?? '';
+        }
+    }));
 });

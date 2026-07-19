@@ -98,6 +98,30 @@
       animation: none;
     }
   }
+
+  /* Défilement de la liste d'options de <select-field> (SelectFieldTagHelper) : piste presque
+     transparente, glissière bleu primary aux extrémités arrondies — pas exprimable en utilitaires
+     Tailwind (::-webkit-scrollbar n'est pas un plugin activé, voir tailwind.config.js). */
+  .select-field-list {
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.primary.DEFAULT") theme("colors.gray.100");
+  }
+
+  .select-field-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .select-field-list::-webkit-scrollbar-track {
+    @apply rounded-full bg-gray-100/60;
+  }
+
+  .select-field-list::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-primary;
+  }
+
+  .select-field-list::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary-600;
+  }
 }
 
 @keyframes skeleton-shimmer {

@@ -6,10 +6,13 @@
     <title>@ViewData["Title"] - Sama Ecole</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
-    @* auth.js est un script CLASSIQUE, et Alpine est différé : tout script non différé s'exécute
-       avant tout script différé, quel que soit son emplacement. window.auth existe donc avant
-       qu'Alpine ne s'initialise, et l'écouteur alpine:init de auth.js est enregistré à temps. *@
+    @* auth.js et api.js sont des scripts CLASSIQUES, et Alpine est différé : tout script non différé
+       s'exécute avant tout script différé, quel que soit son emplacement. window.auth et window.api
+       existent donc avant qu'Alpine ne s'initialise, et les écouteurs alpine:init sont enregistrés à
+       temps (même ordre que _Layout.cshtml) — SubscriptionPending.cshtml (subscription-payment.js)
+       dépend de window.api.post, injoignable sans ce script. *@
     <script src="~/js/auth.js" asp-append-version="true"></script>
+    <script src="~/js/api.js" asp-append-version="true"></script>
 
     @* Alpine est servi par NOUS, pas par un CDN. C'est cette page qui reçoit les mots de passe de
        toutes les écoles : un script tiers, chargé depuis un domaine que nous ne contrôlons pas et
