@@ -39,16 +39,19 @@ public class RowActionsTagHelper : TagHelper
 
         output.TagName = null;
         output.Content.SetHtmlContent($$"""
-            <div {{showAttr}}class="relative inline-block text-left" x-data="{ open: false }">
-                <button type="button" x-on:click="open = !open" :aria-expanded="open" aria-haspopup="true"
+            <div {{showAttr}}class="relative inline-block text-left" x-data="{ open: false, openUpward: false }">
+                <button type="button"
+                        x-on:click="openUpward = $el.getBoundingClientRect().bottom + 200 > window.innerHeight; open = !open"
+                        :aria-expanded="open" aria-haspopup="true"
                         title="{{label}}" aria-label="{{label}}"
                         class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
                     {{Svg("more-vertical", "w-5 h-5")}}
                 </button>
                 <div x-show="open" x-cloak x-on:click.outside="open = false" x-on:keydown.escape.window="open = false"
                      x-on:click="open = false"
+                     :class="openUpward ? 'bottom-full mb-1 origin-bottom-right' : 'top-full mt-1 origin-top-right'"
                      x-transition:enter="ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                     class="absolute right-0 z-20 mt-1 w-52 origin-top-right rounded-xl bg-white py-1.5 shadow-lg ring-1 ring-gray-100 focus:outline-none">
+                     class="absolute right-0 z-20 w-52 rounded-xl bg-white py-1.5 shadow-lg ring-1 ring-gray-100 focus:outline-none">
                     {{body}}
                 </div>
             </div>
