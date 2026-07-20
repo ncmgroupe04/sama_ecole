@@ -31,11 +31,22 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
         // Persisté en string comme tous les enums métier (cf. EnrollmentConfiguration, PaymentConfiguration).
         // HasDefaultValue applique le convertisseur : la migration écrit defaultValue: "College", ce qui
         // renseigne automatiquement la colonne NOT NULL pour les classrooms déjà en base (aucun downtime).
+        //
+        // HasSentinel(College) est INDISPENSABLE ici : avec HasDefaultValue, EF n'envoie la valeur à
+        // l'INSERT que si elle DIFFÈRE de la « sentinelle » (sinon il laisse le DEFAULT SGBD s'appliquer).
+        // Or `CycleType.Primaire = 0 = default(CycleType)`, et la détection automatique de sentinelle
+        // depuis l'initialiseur `= College` échoue parce que Classroom porte des membres `required`
+        // (Name, Level) — EF retombe alors sur default(T) = Primaire. Résultat sans ce réglage : une
+        // classe `Cycle = Primaire` est prise pour « non renseignée », le DEFAULT "College" s'applique,
+        // et le cycle Primaire (barème /10, moyenne simple) devient IMPOSSIBLE à enregistrer. En fixant
+        // la sentinelle sur College (le vrai défaut voulu), seule une valeur College est omise ; Primaire
+        // et Lycée sont toujours envoyés et correctement persistés.
         builder.Property(c => c.Cycle)
             .HasConversion<string>()
             .HasMaxLength(20)
             .IsRequired()
-            .HasDefaultValue(CycleType.College);
+            .HasDefaultValue(CycleType.College)
+            .HasSentinel(CycleType.College);
 
         // Deux classes ne peuvent pas porter le même nom dans la même école — mais « CM2 A » peut
         // évidemment exister dans deux écoles différentes. Le soft delete fait partie de la clé :
