@@ -105,6 +105,18 @@
                         </p>
                     </div>
 
+                    <!-- Classe redoublée (feature F) : coche portée par l'inscription, cochée [X] sur le
+                         bulletin (Enrollment.IsRepeating). Vaut pour une nouvelle inscription comme pour une
+                         réinscription — un élève peut redoubler qu'il soit nouveau dans l'école ou non. -->
+                    <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                        <input type="checkbox" x-model="form.isRepeating"
+                               class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                        <span class="text-sm text-gray-700">
+                            Classe redoublée
+                            <span class="block text-xs text-gray-400">L'élève redouble cette classe — la case sera cochée sur son bulletin.</span>
+                        </span>
+                    </label>
+
                     <!-- Nouvelle inscription : état civil de l'élève -->
                     <div x-show="mode === 'NewEnrollment'" x-cloak class="space-y-5">
                         <div>

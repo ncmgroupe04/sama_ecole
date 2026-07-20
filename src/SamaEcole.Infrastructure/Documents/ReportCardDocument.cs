@@ -15,8 +15,9 @@ namespace SamaEcole.Infrastructure.Documents;
 /// Conseil + Observations (gauche) et récapitulatif des moyennes + signature du Chef d'établissement
 /// avec emplacement de cachet (droite).
 ///
-/// Certaines cases de la référence restent volontairement VIDES — visuellement présentes, jamais
-/// remplies d'une donnée inventée — car rien dans le système ne les alimente : T.H, et Classe redoublée.
+/// Une case de la référence reste volontairement VIDE — visuellement présente, jamais remplie d'une
+/// donnée inventée — car rien dans le système ne l'alimente : T.H. La case « Classe redoublée » est,
+/// elle, cochée [X]/[ ] d'après <see cref="ReportCardDto.IsRepeating"/> (feature F, Enrollment.IsRepeating).
 /// L'assiduité (Absences/Retards) s'imprime « - » tant qu'aucun appel n'a été fait sur la période (voir
 /// ReportCardDto), jamais un zéro trompeur. La distinction du conseil (Blâme… Félicitations), la
 /// Décision du Conseil (Admis/Redouble/Exclusion) et les Observations, elles, SONT modélisées
@@ -138,7 +139,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
 
     /// <summary>
     /// Bloc d'identité encadré, trois lignes fixes : Prénoms/Nom (gras, corps plus grand), naissance et
-    /// classe, matricule et effectif. « Classe Redoublée » reste une case vide (non modélisé).
+    /// classe, matricule et effectif. « Classe Redoublée » est cochée [X]/[ ] selon IsRepeating (feature F).
     /// </summary>
     private void ComposeIdentity(IContainer container)
     {
@@ -178,7 +179,9 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
 
             table.Cell().Element(Cell).Text($"Matricule : {reportCard.Matricule}");
             table.Cell().Element(Cell).Text($"Nbre d'élèves : {reportCard.ClassSize}");
-            table.Cell().Element(Cell).Text("Classe Redoublée :");
+            // Classe redoublée (feature F) : cochée [X] si l'inscription porte IsRepeating, [ ] sinon —
+            // même convention de coche que la rangée des distinctions du conseil.
+            table.Cell().Element(Cell).Text($"Classe Redoublée : [{(reportCard.IsRepeating ? "X" : " ")}]");
         });
 
         static IContainer Cell(IContainer c) => c.PaddingVertical(1.5f);

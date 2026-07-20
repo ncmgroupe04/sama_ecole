@@ -24,6 +24,9 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
 
     public required Guid ClassroomId { get; init; }
 
+    /// <summary>L'élève redouble cette classe (feature F) — coché sur le bulletin. Faux par défaut.</summary>
+    public bool IsRepeating { get; init; }
+
     // --- Réinscription : élève existant ---
     public Guid? StudentId { get; init; }
 

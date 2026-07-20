@@ -89,6 +89,7 @@ public class CreateEnrollmentCommandHandler(
                 SchoolYearId = activeYear.Id,
                 ClassroomId = request.ClassroomId,
                 Type = request.Type,
+                IsRepeating = request.IsRepeating,
                 Status = EnrollmentStatus.Confirmed,
                 TotalDue = totalDue,
                 ReceiptNumber = receiptNumber,

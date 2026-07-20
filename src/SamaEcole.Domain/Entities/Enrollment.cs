@@ -35,6 +35,14 @@ public class Enrollment : AuditableEntity, ITenantEntity
     /// <summary>Première inscription ou réinscription (élève déjà connu, sans nouveau matricule).</summary>
     public EnrollmentType Type { get; set; }
 
+    /// <summary>
+    /// L'élève REDOUBLE cette classe (feature F). Distinct de <see cref="Type"/> : un redoublement peut
+    /// être une nouvelle inscription (élève venu d'une autre école qui reprend le niveau) comme une
+    /// réinscription. Alimente la case « Classe Redoublée » du bulletin (ReportCardDocument) : cochée
+    /// [X] si vrai, vide sinon. Faux par défaut.
+    /// </summary>
+    public bool IsRepeating { get; set; }
+
     public EnrollmentStatus Status { get; set; } = EnrollmentStatus.Confirmed;
 
     /// <summary>Montant total dû, en FCFA. Calculé à partir du barème de la classe, jamais négatif.</summary>

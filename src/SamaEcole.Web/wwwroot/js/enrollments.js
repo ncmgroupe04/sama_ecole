@@ -34,6 +34,7 @@ document.addEventListener('alpine:init', () => {
         mode: 'NewEnrollment',
         form: {
             classroomId: '',
+            isRepeating: false, // Classe redoublée (feature F) — porté par l'inscription, coché sur le bulletin.
             fullName: '',
             birthDate: '',
             birthPlace: '', // Obligatoire pour une nouvelle inscription (feature E).
@@ -174,11 +175,13 @@ document.addEventListener('alpine:init', () => {
                 ? {
                     type: 'ReEnrollment',
                     classroomId: this.form.classroomId,
+                    isRepeating: this.form.isRepeating,
                     studentId: this.form.studentId
                 }
                 : {
                     type: 'NewEnrollment',
                     classroomId: this.form.classroomId,
+                    isRepeating: this.form.isRepeating,
                     fullName: this.form.fullName,
                     birthDate: this.form.birthDate || null,
                     birthPlace: this.form.birthPlace || null,
@@ -235,6 +238,7 @@ document.addEventListener('alpine:init', () => {
             this.pdfError = null;
             this.form = {
                 classroomId: '',
+                isRepeating: false,
                 fullName: '',
                 birthDate: '',
                 birthPlace: '',

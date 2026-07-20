@@ -43,6 +43,7 @@ public class ReportCardDocumentTests
             ClassroomName: "3e A",
             Matricule: "ELEV-2026-0001",
             ClassSize: 42,
+            IsRepeating: false,
             SchoolYearLabel: "2026-2027",
             TermLabel: "1er trimestre",
             GradingScale: 20,

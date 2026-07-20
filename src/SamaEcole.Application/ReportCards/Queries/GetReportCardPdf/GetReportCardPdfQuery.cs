@@ -30,10 +30,10 @@ public record ReportCardTermRecap(string TermLabel, int Order, decimal? Average)
 /// Toutes les données du bulletin, déjà résolues et classées — <see cref="ReportCardPdfGenerator"/> (ou
 /// son équivalent Infrastructure) n'a plus qu'à mettre en page, aucun calcul ne s'y trouve.
 ///
-/// Champs volontairement ABSENTS malgré la présence de leur case sur la référence visuelle — le
-/// document IMPRIMÉ reproduit la case, restée vide, plutôt que d'inventer une donnée : T.H (la
-/// signification de cette colonne sur la référence n'est pas établie), et Classe redoublée (aucun
-/// indicateur de redoublement sur Enrollment/Student).
+/// Champ volontairement ABSENT malgré la présence de sa case sur la référence visuelle — le document
+/// IMPRIMÉ reproduit la case, restée vide, plutôt que d'inventer une donnée : T.H (la signification de
+/// cette colonne sur la référence n'est pas établie). La case « Classe redoublée », elle, EST désormais
+/// alimentée (feature F) depuis <see cref="IsRepeating"/> (Enrollment.IsRepeating).
 /// </summary>
 public record ReportCardDto(
     string SchoolName,
@@ -51,6 +51,11 @@ public record ReportCardDto(
     string ClassroomName,
     string Matricule,
     int ClassSize,
+
+    // Classe redoublée (feature F) : coché [X] sur le bulletin si l'inscription de l'élève pour cet
+    // exercice porte Enrollment.IsRepeating. False (case vide) si l'élève ne redouble pas, ou s'il n'a
+    // aucune inscription active sur l'année du trimestre.
+    bool IsRepeating,
     string SchoolYearLabel,
     string TermLabel,
     int GradingScale,
@@ -218,6 +223,16 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         var remark = await dbContext.ReportCardRemarks.AsNoTracking()
             .FirstOrDefaultAsync(r => r.StudentId == student.Id && r.TermId == term.Id, cancellationToken);
 
+        // Redoublement (feature F) : lu sur l'inscription NON annulée de l'élève pour l'exercice du
+        // trimestre. Un élève sans inscription active sur cette année (cas limite d'un bulletin d'archive)
+        // retombe sur false — case vide, jamais une valeur inventée.
+        var isRepeating = await dbContext.Enrollments.AsNoTracking()
+            .Where(e => e.StudentId == student.Id
+                        && e.SchoolYearId == term.SchoolYearId
+                        && e.Status != EnrollmentStatus.Cancelled)
+            .Select(e => e.IsRepeating)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var dto = new ReportCardDto(
             school.Name,
             school.LogoUrl,
@@ -230,6 +245,7 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             classroom.Name,
             student.Matricule,
             classmateIds.Count,
+            isRepeating,
             schoolYear.Label,
             term.Label,
             gradingScale,
