@@ -24,7 +24,7 @@ public class StudentsController(ISender mediator) : ControllerBase
     public record UpdateStudentRequest(
         string FullName,
         DateOnly BirthDate,
-        string? BirthPlace,
+        string BirthPlace,
         string Gender,
         Guid ClassroomId,
         string? PhotoUrl,

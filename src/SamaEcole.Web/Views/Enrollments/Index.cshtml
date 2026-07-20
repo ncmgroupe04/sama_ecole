@@ -127,6 +127,11 @@
                                 <p x-show="formErrors.gender" x-cloak x-text="formErrors.gender" class="mt-1 text-xs text-danger"></p>
                             </div>
                         </div>
+                        <div>
+                            <label for="enr-birthplace" class="block text-sm font-medium text-gray-700">Lieu de naissance <span class="text-danger">*</span></label>
+                            <input id="enr-birthplace" type="text" x-model="form.birthPlace" maxlength="200" placeholder="ex : Dakar" class="input-field">
+                            <p x-show="formErrors.birthplace" x-cloak x-text="formErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+                        </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             <div>
                                 <label for="enr-guardian" class="block text-sm font-medium text-gray-700">Nom du tuteur</label>

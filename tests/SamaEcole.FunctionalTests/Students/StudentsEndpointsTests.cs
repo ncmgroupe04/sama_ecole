@@ -83,6 +83,7 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         {
             fullName,
             birthDate = "2015-03-12",
+            birthPlace = "Thiès", // Obligatoire depuis la feature E.
             gender = "F",
             classroomId,
             guardianName = "Tuteur Test",
@@ -180,7 +181,7 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         {
             fullName = "Fantôme",
             birthDate = "2015-03-12",
-            birthPlace = (string?)null,
+            birthPlace = "Thiès", // Valide : le 404 doit venir de l'élève introuvable, pas de la validation.
             gender = "M",
             classroomId = classroom.Id,
             photoUrl = (string?)null,
@@ -204,7 +205,7 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         {
             fullName = "Fatou Cissé Déjà Modifiée",
             birthDate = "2015-03-12",
-            birthPlace = (string?)null,
+            birthPlace = "Thiès",
             gender = "F",
             classroomId = classroom.Id,
             photoUrl = (string?)null,
@@ -218,7 +219,7 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         {
             fullName = "Fatou Cissé Écrasement Refusé",
             birthDate = "2015-03-12",
-            birthPlace = (string?)null,
+            birthPlace = "Thiès",
             gender = "F",
             classroomId = classroom.Id,
             photoUrl = (string?)null,
@@ -298,7 +299,7 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         {
             fullName = "Ibrahima Gueye Modifié Avant Suppression",
             birthDate = "2015-03-12",
-            birthPlace = (string?)null,
+            birthPlace = "Thiès",
             gender = "M",
             classroomId = classroom.Id,
             photoUrl = (string?)null,

@@ -8,7 +8,10 @@ public class CreateStudentCommandValidator : AbstractValidator<CreateStudentComm
     public CreateStudentCommandValidator()
     {
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(200).NoHtml();
-        RuleFor(x => x.BirthPlace).MaximumLength(200).NoHtml();
+        // Lieu de naissance OBLIGATOIRE (feature E) : exigence juridique/académique au Sénégal.
+        RuleFor(x => x.BirthPlace)
+            .NotEmpty().WithMessage("Le lieu de naissance est obligatoire.")
+            .MaximumLength(200).NoHtml();
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").WithMessage("Le genre doit être 'M' ou 'F'.");
         RuleFor(x => x.ClassroomId).NotEmpty();
         RuleFor(x => x.BirthDate).LessThan(DateOnly.FromDateTime(DateTime.UtcNow));

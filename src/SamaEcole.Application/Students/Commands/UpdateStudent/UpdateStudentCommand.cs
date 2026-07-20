@@ -19,7 +19,7 @@ public record UpdateStudentCommand(
     Guid Id,
     string FullName,
     DateOnly BirthDate,
-    string? BirthPlace,
+    string BirthPlace,
     string Gender,
     Guid ClassroomId,
     string? PhotoUrl,

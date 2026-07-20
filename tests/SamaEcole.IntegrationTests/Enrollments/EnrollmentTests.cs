@@ -81,6 +81,7 @@ public class EnrollmentTests : IAsyncLifetime
         ClassroomId = ClasseA,
         FullName = fullName,
         BirthDate = new DateOnly(2015, 5, 20),
+        BirthPlace = "Dakar", // Obligatoire (feature E) : sinon la contrainte NOT NULL rejette l'élève créé.
         Gender = "F"
     };
 
@@ -184,6 +185,7 @@ public class EnrollmentTests : IAsyncLifetime
                 Matricule = existingMatricule,
                 FullName = "Ancien Élève",
                 BirthDate = new DateOnly(2012, 3, 3),
+                BirthPlace = "Dakar",
                 Gender = "M",
                 ClassroomId = ClasseA
             });

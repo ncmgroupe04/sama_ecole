@@ -77,7 +77,7 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
     private async Task<Guid> CreateStudentAsync(string token, string fullName, Guid classroomId)
     {
         var response = await SendAsync(HttpMethod.Post, "/api/v1/students", token,
-            new { fullName, birthDate = "2015-03-12", gender = "F", classroomId });
+            new { fullName, birthDate = "2015-03-12", birthPlace = "Dakar", gender = "F", classroomId });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<StudentResult>())!.Id;
     }

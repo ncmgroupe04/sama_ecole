@@ -48,12 +48,12 @@ public class StudentIsolationTests : IAsyncLifetime
             new Student
             {
                 SchoolId = EcoleA, Matricule = "ELEV-2026-0001", FullName = "Awa Fall",
-                BirthDate = new DateOnly(2015, 3, 12), Gender = "F", ClassroomId = ClasseA
+                BirthDate = new DateOnly(2015, 3, 12), BirthPlace = "Dakar", Gender = "F", ClassroomId = ClasseA
             },
             new Student
             {
                 SchoolId = EcoleB, Matricule = "ELEV-2026-0001", FullName = "Modou Diop",
-                BirthDate = new DateOnly(2014, 8, 2), Gender = "M", ClassroomId = ClasseB
+                BirthDate = new DateOnly(2014, 8, 2), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseB
             });
 
         await owner.SaveChangesAsync(CancellationToken.None);

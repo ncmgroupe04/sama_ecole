@@ -41,6 +41,7 @@ public class GradeConcurrencyTests : IAsyncLifetime
             Matricule = "ELEV-2026-0001",
             FullName = "Élève de test",
             BirthDate = new DateOnly(2015, 1, 1),
+            BirthPlace = "Dakar",
             Gender = "M",
             ClassroomId = Classe
         });

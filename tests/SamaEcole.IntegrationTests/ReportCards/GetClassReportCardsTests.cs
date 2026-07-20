@@ -49,8 +49,8 @@ public class GetClassReportCardsTests : IAsyncLifetime
         // Noms délibérément inversés par rapport à l'ordre de création : EleveA (Zorro) doit sortir en
         // SECOND, EleveB (Awa) en PREMIER — l'ordre alphabétique du tri, pas l'ordre d'insertion.
         owner.Students.AddRange(
-            new Student { Id = EleveA, SchoolId = Ecole, Matricule = "ELEV-2026-0001", FullName = "Zorro Diallo", BirthDate = new DateOnly(2015, 1, 1), Gender = "M", ClassroomId = Classe },
-            new Student { Id = EleveB, SchoolId = Ecole, Matricule = "ELEV-2026-0002", FullName = "Awa Sow", BirthDate = new DateOnly(2015, 2, 2), Gender = "F", ClassroomId = Classe });
+            new Student { Id = EleveA, SchoolId = Ecole, Matricule = "ELEV-2026-0001", FullName = "Zorro Diallo", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "M", ClassroomId = Classe },
+            new Student { Id = EleveB, SchoolId = Ecole, Matricule = "ELEV-2026-0002", FullName = "Awa Sow", BirthDate = new DateOnly(2015, 2, 2), BirthPlace = "Dakar", Gender = "F", ClassroomId = Classe });
 
         owner.SchoolYears.Add(new SchoolYear
         {

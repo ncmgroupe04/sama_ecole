@@ -77,9 +77,9 @@ public class AttendanceReportEndpointsTests : IClassFixture<AuthApiFactory>, IAs
                 new Classroom { Id = ClasseB, SchoolId = EcoleId, Name = "CM1 B", Level = "Primaire", Capacity = 40 });
             db.Subjects.Add(new Subject { Id = subjectId, SchoolId = EcoleId, Name = "Maths", Level = "Primaire", Coefficient = 4 });
             db.Students.AddRange(
-                new Student { Id = AwaId, SchoolId = EcoleId, Matricule = "ELEV-2026-0001", FullName = "Awa Fall", BirthDate = new DateOnly(2015, 1, 1), Gender = "F", ClassroomId = ClasseA },
-                new Student { Id = ModouId, SchoolId = EcoleId, Matricule = "ELEV-2026-0002", FullName = "Modou Diop", BirthDate = new DateOnly(2015, 1, 1), Gender = "M", ClassroomId = ClasseA },
-                new Student { Id = FatouId, SchoolId = EcoleId, Matricule = "ELEV-2026-0003", FullName = "Fatou Sarr", BirthDate = new DateOnly(2015, 1, 1), Gender = "F", ClassroomId = ClasseB });
+                new Student { Id = AwaId, SchoolId = EcoleId, Matricule = "ELEV-2026-0001", FullName = "Awa Fall", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "F", ClassroomId = ClasseA },
+                new Student { Id = ModouId, SchoolId = EcoleId, Matricule = "ELEV-2026-0002", FullName = "Modou Diop", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseA },
+                new Student { Id = FatouId, SchoolId = EcoleId, Matricule = "ELEV-2026-0003", FullName = "Fatou Sarr", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "F", ClassroomId = ClasseB });
 
             // Classe A — 3 appels dans la période (10, 11, 12 juillet).
             AddSheet(db, EcoleId, ClasseA, subjectId, yearId, new DateOnly(2026, 7, 10),

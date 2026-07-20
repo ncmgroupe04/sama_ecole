@@ -79,7 +79,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var subject = (await subjectResponse.Content.ReadFromJsonAsync<SubjectDto>())!;
 
         var studentResponse = await SendAsync(HttpMethod.Post, "/api/v1/students", directeurToken,
-            new { fullName = "Élève de test", birthDate = "2015-01-01", gender = "M", classroomId = classroom.Id });
+            new { fullName = "Élève de test", birthDate = "2015-01-01", birthPlace = "Dakar", gender = "M", classroomId = classroom.Id });
         var student = (await studentResponse.Content.ReadFromJsonAsync<StudentDto>())!;
 
         var yearResponse = await SendAsync(HttpMethod.Post, "/api/v1/school-years", directeurToken,

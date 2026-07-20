@@ -15,6 +15,7 @@ public class CreateStudentCommandValidatorTests
         {
             FullName = "Awa Fall",
             BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
             Gender = "X",
             ClassroomId = Guid.NewGuid()
         };
@@ -32,6 +33,7 @@ public class CreateStudentCommandValidatorTests
         {
             FullName = "Awa Fall",
             BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
             Gender = "F",
             ClassroomId = Guid.NewGuid()
         };
@@ -42,6 +44,25 @@ public class CreateStudentCommandValidatorTests
     }
 
     [Fact]
+    public void Should_Fail_When_BirthPlace_Is_Empty()
+    {
+        // Feature E — lieu de naissance obligatoire (exigence juridique/académique au Sénégal).
+        var command = new CreateStudentCommand
+        {
+            FullName = "Awa Fall",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "",
+            Gender = "F",
+            ClassroomId = Guid.NewGuid()
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.BirthPlace));
+    }
+
+    [Fact]
     public void Should_Fail_When_FullName_Contains_Html()
     {
         // JGK-F01 — branchement de la règle NoHtml (payloads exhaustifs : SafeTextValidationTests).
@@ -49,6 +70,7 @@ public class CreateStudentCommandValidatorTests
         {
             FullName = "<img src=x onerror=alert(1)>",
             BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
             Gender = "F",
             ClassroomId = Guid.NewGuid()
         };

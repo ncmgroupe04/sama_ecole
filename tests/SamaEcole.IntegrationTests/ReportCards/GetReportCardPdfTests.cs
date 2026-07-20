@@ -40,9 +40,9 @@ public class GetReportCardPdfTests : IAsyncLifetime
         owner.Classrooms.Add(new Classroom { Id = Classe, SchoolId = Ecole, Name = "CM2", Level = "Primaire", Capacity = 40 });
 
         owner.Students.AddRange(
-            new Student { Id = EleveA, SchoolId = Ecole, Matricule = "ELEV-2026-0001", FullName = "Awa (meilleure)", BirthDate = new DateOnly(2015, 1, 1), Gender = "F", ClassroomId = Classe },
-            new Student { Id = EleveB, SchoolId = Ecole, Matricule = "ELEV-2026-0002", FullName = "Modou (moyen)", BirthDate = new DateOnly(2015, 2, 2), Gender = "M", ClassroomId = Classe },
-            new Student { Id = EleveC, SchoolId = Ecole, Matricule = "ELEV-2026-0003", FullName = "Fatou (moins bonne)", BirthDate = new DateOnly(2015, 3, 3), Gender = "F", ClassroomId = Classe });
+            new Student { Id = EleveA, SchoolId = Ecole, Matricule = "ELEV-2026-0001", FullName = "Awa (meilleure)", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "F", ClassroomId = Classe },
+            new Student { Id = EleveB, SchoolId = Ecole, Matricule = "ELEV-2026-0002", FullName = "Modou (moyen)", BirthDate = new DateOnly(2015, 2, 2), BirthPlace = "Dakar", Gender = "M", ClassroomId = Classe },
+            new Student { Id = EleveC, SchoolId = Ecole, Matricule = "ELEV-2026-0003", FullName = "Fatou (moins bonne)", BirthDate = new DateOnly(2015, 3, 3), BirthPlace = "Dakar", Gender = "F", ClassroomId = Classe });
 
         owner.SchoolYears.Add(new SchoolYear
         {

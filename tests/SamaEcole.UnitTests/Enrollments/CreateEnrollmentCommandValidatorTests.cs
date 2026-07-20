@@ -22,10 +22,31 @@ public class CreateEnrollmentCommandValidatorTests
             ClassroomId = Guid.NewGuid(),
             FullName = "Awa Ndiaye",
             BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
             Gender = "F"
         };
 
         _validator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void A_New_Enrollment_Without_A_BirthPlace_Should_Fail()
+    {
+        // Feature E — lieu de naissance obligatoire pour une nouvelle inscription (l'élève créé ici
+        // suit la même règle que CreateStudentCommand).
+        var command = new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.NewEnrollment,
+            ClassroomId = Guid.NewGuid(),
+            FullName = "Awa Ndiaye",
+            BirthDate = new DateOnly(2015, 3, 12),
+            Gender = "F"
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.BirthPlace));
     }
 
     [Fact]

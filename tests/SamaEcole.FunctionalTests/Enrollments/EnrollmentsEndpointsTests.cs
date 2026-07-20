@@ -120,6 +120,7 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         classroomId,
         fullName,
         birthDate = "2015-05-20",
+        birthPlace = "Dakar",
         gender = "F"
     };
 

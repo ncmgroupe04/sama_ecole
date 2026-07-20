@@ -36,6 +36,7 @@ document.addEventListener('alpine:init', () => {
             classroomId: '',
             fullName: '',
             birthDate: '',
+            birthPlace: '', // Obligatoire pour une nouvelle inscription (feature E).
             gender: 'M',
             guardianName: '',
             guardianPhone: '',
@@ -180,6 +181,7 @@ document.addEventListener('alpine:init', () => {
                     classroomId: this.form.classroomId,
                     fullName: this.form.fullName,
                     birthDate: this.form.birthDate || null,
+                    birthPlace: this.form.birthPlace || null,
                     gender: this.form.gender,
                     guardianName: this.form.guardianName || null,
                     guardianPhone: this.form.guardianPhone || null
@@ -235,6 +237,7 @@ document.addEventListener('alpine:init', () => {
                 classroomId: '',
                 fullName: '',
                 birthDate: '',
+                birthPlace: '',
                 gender: 'M',
                 guardianName: '',
                 guardianPhone: '',

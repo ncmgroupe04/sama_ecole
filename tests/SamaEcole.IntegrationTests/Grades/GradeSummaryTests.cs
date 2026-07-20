@@ -38,7 +38,7 @@ public class GradeSummaryTests : IAsyncLifetime
         owner.Students.Add(new Student
         {
             Id = Eleve, SchoolId = Ecole, Matricule = "ELEV-2026-0001", FullName = "Élève de test",
-            BirthDate = new DateOnly(2015, 1, 1), Gender = "M", ClassroomId = Classe
+            BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "M", ClassroomId = Classe
         });
         owner.SchoolYears.Add(new SchoolYear
         {
@@ -122,7 +122,7 @@ public class GradeSummaryTests : IAsyncLifetime
             owner.Students.Add(new Student
             {
                 Id = primaireEleve, SchoolId = Ecole, Matricule = "ELEV-2026-0002", FullName = "Élève primaire",
-                BirthDate = new DateOnly(2018, 1, 1), Gender = "F", ClassroomId = primaireClasse
+                BirthDate = new DateOnly(2018, 1, 1), BirthPlace = "Dakar", Gender = "F", ClassroomId = primaireClasse
             });
             await owner.SaveChangesAsync(CancellationToken.None);
         }

@@ -27,7 +27,10 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
 
         builder.Property(s => s.Matricule).IsRequired().HasMaxLength(30);
         builder.Property(s => s.FullName).IsRequired().HasMaxLength(200);
-        builder.Property(s => s.BirthPlace).HasMaxLength(200);
+        // Lieu de naissance OBLIGATOIRE (feature E) : NOT NULL en base. Largeur 200 conservée (et non
+        // ramenée à 150) pour ne jamais tronquer une valeur déjà saisie — la contrainte qui compte est
+        // le NOT NULL, posé par la migration MakeStudentBirthPlaceRequired après backfill des anciennes lignes.
+        builder.Property(s => s.BirthPlace).IsRequired().HasMaxLength(200);
         builder.Property(s => s.Gender).IsRequired().HasMaxLength(1);
         builder.Property(s => s.PhotoUrl).HasMaxLength(500);
 

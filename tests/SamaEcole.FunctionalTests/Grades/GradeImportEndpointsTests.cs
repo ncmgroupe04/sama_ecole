@@ -95,11 +95,11 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var subject = (await subjectResponse.Content.ReadFromJsonAsync<SubjectDto>())!;
 
         var student1Response = await SendAsync(HttpMethod.Post, "/api/v1/students", directeurToken,
-            new { fullName = "Premier Élève", birthDate = "2015-01-01", gender = "M", classroomId = classroom.Id });
+            new { fullName = "Premier Élève", birthDate = "2015-01-01", birthPlace = "Dakar", gender = "M", classroomId = classroom.Id });
         var student1 = (await student1Response.Content.ReadFromJsonAsync<StudentDto>())!;
 
         var student2Response = await SendAsync(HttpMethod.Post, "/api/v1/students", directeurToken,
-            new { fullName = "Second Élève", birthDate = "2015-02-01", gender = "F", classroomId = classroom.Id });
+            new { fullName = "Second Élève", birthDate = "2015-02-01", birthPlace = "Dakar", gender = "F", classroomId = classroom.Id });
         var student2 = (await student2Response.Content.ReadFromJsonAsync<StudentDto>())!;
 
         var yearResponse = await SendAsync(HttpMethod.Post, "/api/v1/school-years", directeurToken,
@@ -193,7 +193,7 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
             new { name = "CM1", level = "Primaire", capacity = 40 });
         var otherClassroom = (await otherClassroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
         var otherStudentResponse = await SendAsync(HttpMethod.Post, "/api/v1/students", directeur,
-            new { fullName = "Élève d'une autre classe", birthDate = "2015-03-01", gender = "M", classroomId = otherClassroom.Id });
+            new { fullName = "Élève d'une autre classe", birthDate = "2015-03-01", birthPlace = "Dakar", gender = "M", classroomId = otherClassroom.Id });
         var otherStudent = (await otherStudentResponse.Content.ReadFromJsonAsync<StudentDto>())!;
 
         var enseignant = await EnseignantTokenAsync();

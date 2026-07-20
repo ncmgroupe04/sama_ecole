@@ -112,6 +112,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             classroomId = classroom.Id,
             fullName = "Awa Ndiaye",
             birthDate = "2015-05-20",
+            birthPlace = "Dakar",
             gender = "F"
         });
         enrollResponse.StatusCode.Should().Be(HttpStatusCode.Created);

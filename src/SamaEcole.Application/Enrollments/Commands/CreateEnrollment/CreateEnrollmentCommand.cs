@@ -30,6 +30,10 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     // --- Nouvelle inscription : état civil de l'élève à créer ---
     public string? FullName { get; init; }
     public DateOnly? BirthDate { get; init; }
+
+    /// <summary>Lieu de naissance de l'élève à créer — obligatoire pour une NOUVELLE inscription (feature E).</summary>
+    public string? BirthPlace { get; init; }
+
     public string? Gender { get; init; }
     public string? GuardianName { get; init; }
     public string? GuardianPhone { get; init; }

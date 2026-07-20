@@ -75,17 +75,17 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
             new Student
             {
                 Id = EleveComplet, SchoolId = EcoleA, Matricule = "ELEV-2026-0001", FullName = "Awa Fall",
-                BirthDate = new DateOnly(2015, 3, 12), Gender = "F", ClassroomId = ClasseA
+                BirthDate = new DateOnly(2015, 3, 12), BirthPlace = "Dakar", Gender = "F", ClassroomId = ClasseA
             },
             new Student
             {
                 Id = EleveSansHistorique, SchoolId = EcoleA, Matricule = "ELEV-2026-0002", FullName = "Cheikh Sy",
-                BirthDate = new DateOnly(2015, 7, 2), Gender = "M", ClassroomId = ClasseA
+                BirthDate = new DateOnly(2015, 7, 2), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseA
             },
             new Student
             {
                 Id = EleveEcoleB, SchoolId = EcoleB, Matricule = "ELEV-2026-0001", FullName = "Modou Diop",
-                BirthDate = new DateOnly(2014, 8, 2), Gender = "M", ClassroomId = ClasseB
+                BirthDate = new DateOnly(2014, 8, 2), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseB
             });
 
         owner.Enrollments.Add(new Enrollment

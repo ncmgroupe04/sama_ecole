@@ -510,8 +510,8 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700">Lieu de naissance</label>
-                <input type="text" x-model="editingStudent.birthPlace" class="input-field">
+                <label class="block text-sm font-medium text-gray-700">Lieu de naissance <span class="text-danger">*</span></label>
+                <input type="text" x-model="editingStudent.birthPlace" required maxlength="200" class="input-field">
                 <p x-show="studentEditErrors.birthplace" x-text="studentEditErrors.birthplace" class="mt-1 text-xs text-danger"></p>
             </div>
 
@@ -674,10 +674,10 @@
                 <p x-show="createErrors.birthdate" x-text="createErrors.birthdate" class="mt-1 text-xs text-danger"></p>
             </div>
 
-            <!-- Lieu de naissance -->
+            <!-- Lieu de naissance (obligatoire, feature E) -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Lieu de naissance</label>
-                <input type="text" x-model="newStudent.birthPlace" class="input-field">
+                <label class="block text-sm font-medium text-gray-700">Lieu de naissance <span class="text-danger">*</span></label>
+                <input type="text" x-model="newStudent.birthPlace" required maxlength="200" placeholder="ex : Dakar" class="input-field">
                 <p x-show="createErrors.birthplace" x-text="createErrors.birthplace" class="mt-1 text-xs text-danger"></p>
             </div>
 

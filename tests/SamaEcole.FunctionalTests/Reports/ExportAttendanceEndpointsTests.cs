@@ -69,8 +69,8 @@ public class ExportAttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAs
             db.Classrooms.Add(new Classroom { Id = ClasseA, SchoolId = EcoleId, Name = "CM2 A", Level = "Primaire", Capacity = 40 });
             db.Subjects.Add(new Subject { Id = subjectId, SchoolId = EcoleId, Name = "Maths", Level = "Primaire", Coefficient = 4 });
             db.Students.AddRange(
-                new Student { Id = AwaId, SchoolId = EcoleId, Matricule = "ELEV-2026-0001", FullName = "Awa Fall", BirthDate = new DateOnly(2015, 1, 1), Gender = "F", ClassroomId = ClasseA },
-                new Student { Id = ModouId, SchoolId = EcoleId, Matricule = "ELEV-2026-0002", FullName = "Modou Diop", BirthDate = new DateOnly(2015, 1, 1), Gender = "M", ClassroomId = ClasseA });
+                new Student { Id = AwaId, SchoolId = EcoleId, Matricule = "ELEV-2026-0001", FullName = "Awa Fall", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "F", ClassroomId = ClasseA },
+                new Student { Id = ModouId, SchoolId = EcoleId, Matricule = "ELEV-2026-0002", FullName = "Modou Diop", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseA });
 
             AddSheet(db, subjectId, yearId, new DateOnly(2026, 7, 10),
                 (AwaId, AttendanceStatus.Present, 0), (ModouId, AttendanceStatus.Present, 0));

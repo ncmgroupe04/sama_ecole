@@ -142,6 +142,8 @@ public class CreateEnrollmentCommandHandler(
             Matricule = matricule,
             FullName = request.FullName!,
             BirthDate = request.BirthDate!.Value,
+            // Obligatoire (feature E) : garanti non vide par CreateEnrollmentCommandValidator sur la branche NewEnrollment.
+            BirthPlace = request.BirthPlace!,
             Gender = request.Gender!,
             ClassroomId = request.ClassroomId,
             GuardianName = request.GuardianName,

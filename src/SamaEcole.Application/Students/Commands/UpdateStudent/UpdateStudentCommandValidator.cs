@@ -9,7 +9,10 @@ public class UpdateStudentCommandValidator : AbstractValidator<UpdateStudentComm
     {
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.FullName).NotEmpty().MaximumLength(200).NoHtml();
-        RuleFor(x => x.BirthPlace).MaximumLength(200).NoHtml();
+        // Lieu de naissance OBLIGATOIRE (feature E) — même règle qu'à la création.
+        RuleFor(x => x.BirthPlace)
+            .NotEmpty().WithMessage("Le lieu de naissance est obligatoire.")
+            .MaximumLength(200).NoHtml();
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").WithMessage("Le genre doit être 'M' ou 'F'.");
         RuleFor(x => x.ClassroomId).NotEmpty();
         RuleFor(x => x.BirthDate).LessThan(DateOnly.FromDateTime(DateTime.UtcNow));

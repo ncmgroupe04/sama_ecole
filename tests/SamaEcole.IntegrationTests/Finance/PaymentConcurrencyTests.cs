@@ -47,7 +47,7 @@ public class PaymentConcurrencyTests : IAsyncLifetime
         owner.Students.Add(new Student
         {
             Id = Eleve, SchoolId = Ecole, Matricule = "ELEV-2025-0001",
-            FullName = "Awa Fall", BirthDate = new DateOnly(2015, 5, 20), Gender = "F", ClassroomId = Classe
+            FullName = "Awa Fall", BirthDate = new DateOnly(2015, 5, 20), BirthPlace = "Dakar", Gender = "F", ClassroomId = Classe
         });
         owner.Enrollments.Add(new Enrollment
         {

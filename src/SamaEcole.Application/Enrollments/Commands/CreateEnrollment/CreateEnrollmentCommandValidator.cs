@@ -26,6 +26,11 @@ public class CreateEnrollmentCommandValidator : AbstractValidator<CreateEnrollme
         When(x => x.Type == EnrollmentType.NewEnrollment, () =>
         {
             RuleFor(x => x.FullName).NotEmpty().MaximumLength(200).NoHtml();
+            // Lieu de naissance OBLIGATOIRE pour une nouvelle inscription (feature E) : l'élève créé ici
+            // suit la même règle que CreateStudentCommand, sans quoi la colonne NOT NULL rejetterait l'insert.
+            RuleFor(x => x.BirthPlace)
+                .NotEmpty().WithMessage("Le lieu de naissance est obligatoire.")
+                .MaximumLength(200).NoHtml();
             RuleFor(x => x.Gender).Must(g => g is "M" or "F").WithMessage("Le genre doit être 'M' ou 'F'.");
             RuleFor(x => x.BirthDate)
                 .NotNull().WithMessage("La date de naissance est obligatoire.")

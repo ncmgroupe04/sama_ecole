@@ -77,8 +77,8 @@ public class ReportsDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
             db.Subjects.Add(new Subject { Id = subjectId, SchoolId = EcoleId, Name = "Mathématiques", Level = "Primaire", Coefficient = 4 });
 
             db.Students.AddRange(
-                new Student { Id = boyId, SchoolId = EcoleId, Matricule = "ELEV-2026-0001", FullName = "Modou Diop", BirthDate = new DateOnly(2015, 1, 1), Gender = "M", ClassroomId = classroomId },
-                new Student { Id = girlId, SchoolId = EcoleId, Matricule = "ELEV-2026-0002", FullName = "Awa Fall", BirthDate = new DateOnly(2015, 2, 2), Gender = "F", ClassroomId = classroomId });
+                new Student { Id = boyId, SchoolId = EcoleId, Matricule = "ELEV-2026-0001", FullName = "Modou Diop", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "M", ClassroomId = classroomId },
+                new Student { Id = girlId, SchoolId = EcoleId, Matricule = "ELEV-2026-0002", FullName = "Awa Fall", BirthDate = new DateOnly(2015, 2, 2), BirthPlace = "Dakar", Gender = "F", ClassroomId = classroomId });
 
             db.Enrollments.AddRange(
                 new Enrollment { SchoolId = EcoleId, StudentId = boyId, SchoolYearId = yearId, ClassroomId = classroomId, Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, TotalDue = 100000, ReceiptNumber = "REC-2026-0001", EnrolledAt = DateTimeOffset.UtcNow },
@@ -171,9 +171,9 @@ public class ReportsDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
             db.Classrooms.Add(new Classroom { Id = classroomId, SchoolId = EcoleId, Name = "CM2 A", Level = "Primaire", Capacity = 40 });
             db.Subjects.Add(new Subject { Id = subjectId, SchoolId = EcoleId, Name = "Maths", Level = "Primaire", Coefficient = 4 });
             db.Students.AddRange(
-                new Student { Id = s1, SchoolId = EcoleId, Matricule = "ELEV-2026-0001", FullName = "A", BirthDate = new DateOnly(2015, 1, 1), Gender = "M", ClassroomId = classroomId },
-                new Student { Id = s2, SchoolId = EcoleId, Matricule = "ELEV-2026-0002", FullName = "B", BirthDate = new DateOnly(2015, 1, 1), Gender = "F", ClassroomId = classroomId },
-                new Student { Id = s3, SchoolId = EcoleId, Matricule = "ELEV-2026-0003", FullName = "C", BirthDate = new DateOnly(2015, 1, 1), Gender = "M", ClassroomId = classroomId });
+                new Student { Id = s1, SchoolId = EcoleId, Matricule = "ELEV-2026-0001", FullName = "A", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "M", ClassroomId = classroomId },
+                new Student { Id = s2, SchoolId = EcoleId, Matricule = "ELEV-2026-0002", FullName = "B", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "F", ClassroomId = classroomId },
+                new Student { Id = s3, SchoolId = EcoleId, Matricule = "ELEV-2026-0003", FullName = "C", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "M", ClassroomId = classroomId });
             db.AttendanceSheets.Add(new AttendanceSheet { Id = sheetId, SchoolId = EcoleId, ClassroomId = classroomId, SubjectId = subjectId, SchoolYearId = yearId, Date = today, Period = "Matin", TakenByUserId = AuthApiFactory.DirecteurId });
             // 1 présent + 1 retard + 1 absence non justifiée = 2/3 de présence.
             db.StudentAttendances.AddRange(

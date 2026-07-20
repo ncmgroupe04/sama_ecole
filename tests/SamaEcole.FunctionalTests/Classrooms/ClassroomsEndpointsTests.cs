@@ -157,6 +157,7 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         {
             fullName = "Awa Fall Test",
             birthDate = "2015-03-12",
+            birthPlace = "Dakar",
             gender = "F",
             classroomId = classroom.Id,
             guardianName = "Fatou Fall",
@@ -192,6 +193,7 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         {
             fullName = "Élève sans classe",
             birthDate = "2015-03-12",
+            birthPlace = "Dakar",
             gender = "M",
             classroomId = Guid.NewGuid(),
             guardianName = (string?)null,
