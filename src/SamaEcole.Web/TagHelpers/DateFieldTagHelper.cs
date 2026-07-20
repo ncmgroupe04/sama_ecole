@@ -9,14 +9,23 @@ namespace SamaEcole.Web.TagHelpers;
 /// « Terminé ») — un <c>&lt;input type="date"&gt;</c> natif ne peut pas être restylé pour
 /// correspondre : son calendrier est dessiné par le navigateur/l'OS, hors de portée du CSS.
 ///
+/// Hybride : le déclencheur visible est un VRAI champ texte (saisie clavier au format JJ/MM/AAAA,
+/// « / » insérés automatiquement à mesure que l'utilisateur tape des chiffres), complété d'un
+/// bouton calendrier qui ouvre le même popover mois/année + grille de jours qu'avant. Les deux
+/// écrivent dans <see cref="Model"/> : cliquer un jour, ou terminer une saisie clavier valide,
+/// aboutissent au même état. Un texte invalide ou incomplet au moment du blur est silencieusement
+/// réaligné sur la dernière valeur valide de <see cref="Model"/> (pas de message d'erreur : la
+/// demande porte sur la saisie hybride, pas sur une validation de format dédiée).
+///
 /// Remplace TOUS les <c>&lt;input type="date"&gt;</c> de l'application (Volume 5 : « composants
 /// réutilisables développés une seule fois », pas redupliqués par écran).
 ///
 /// <see cref="Model"/> est une EXPRESSION Alpine brute (ex. « form.birthDate », «
 /// editingStudent.birthDate »), jamais une donnée utilisateur : émise telle quelle, exactement
-/// comme <see cref="ModalShellTagHelper.Open"/>. La logique de navigation mois/année vit dans le
-/// composant Alpine partagé <c>dateField()</c> (wwwroot/js/ui-components.js), chargé une fois par
-/// _Layout.cshtml — seule la valeur sélectionnée (I/O) passe par <see cref="Model"/>.
+/// comme <see cref="ModalShellTagHelper.Open"/>. La logique de navigation mois/année et de
+/// parsing/formatage clavier vit dans le composant Alpine partagé <c>dateField()</c>
+/// (wwwroot/js/ui-components.js), chargé une fois par _Layout.cshtml — seule la valeur
+/// sélectionnée (I/O) passe par <see cref="Model"/>.
 ///
 /// Un &lt;input type="date"&gt; natif reste présent, visuellement masqué (opacity-0, jamais
 /// display:none — un champ non rendu est exclu de la validation de contrainte HTML, voir
@@ -35,10 +44,7 @@ public class DateFieldTagHelper : TagHelper
     /// <summary>Si vrai, le champ caché porte <c>required</c> (validation native du formulaire).</summary>
     public bool Required { get; set; }
 
-    /// <summary>Texte affiché quand aucune date n'est encore choisie.</summary>
-    public string Placeholder { get; set; } = "Sélectionner une date";
-
-    /// <summary>Libellé accessible du déclencheur ; par défaut, reprend <see cref="Placeholder"/>.</summary>
+    /// <summary>Libellé accessible du champ texte ; par défaut, « Sélectionner une date ».</summary>
     public string? AriaLabel { get; set; }
 
     /// <summary>Classes Tailwind additionnelles pour le déclencheur (ex. « mt-0 » dans une barre de filtres).</summary>
@@ -56,8 +62,7 @@ public class DateFieldTagHelper : TagHelper
 
         var idAttr = string.IsNullOrWhiteSpace(Id) ? "" : $""" id="{WebUtility.HtmlEncode(Id)}" """.Trim() + " ";
         var requiredAttr = Required ? "required " : "";
-        var placeholder = WebUtility.HtmlEncode(Placeholder);
-        var ariaLabel = WebUtility.HtmlEncode(AriaLabel ?? Placeholder);
+        var ariaLabel = WebUtility.HtmlEncode(AriaLabel ?? "Sélectionner une date");
         var extraClass = string.IsNullOrWhiteSpace(Class) ? "" : " " + Class;
 
         // Options de mois/année rendues en HTML STATIQUE (pas via x-for) : un <select x-model> dont
@@ -76,15 +81,21 @@ public class DateFieldTagHelper : TagHelper
                 .Select(year => $"""<option value="{year}">{year}</option>"""));
 
         output.Content.SetHtmlContent($$"""
-            <div class="relative" x-data="dateField()">
+            <div class="relative" x-data="dateField()" x-effect="text = {{Model}} ? formatInput({{Model}}) : text">
                 <input type="date" {{requiredAttr}}x-model="{{Model}}" tabindex="-1" aria-hidden="true"
                        class="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none -z-10" />
-                <button type="button" {{idAttr}}x-on:click="toggle({{Model}})" :aria-expanded="open" aria-haspopup="dialog"
-                        aria-label="{{ariaLabel}}"
-                        class="input-field{{extraClass}} w-full flex items-center justify-between gap-2 bg-white text-left cursor-pointer">
-                    <span :class="{{Model}} ? 'text-gray-900' : 'text-gray-400'" x-text="{{Model}} ? formatDisplay({{Model}}) : '{{placeholder}}'"></span>
-                    {{Svg("calendar", "w-4 h-4 text-gray-400 flex-shrink-0")}}
-                </button>
+                <div class="input-field{{extraClass}} w-full flex items-center gap-1 bg-white p-0 pr-2">
+                    <input type="text" {{idAttr}}x-model="text" placeholder="JJ/MM/AAAA" inputmode="numeric" maxlength="10"
+                           aria-label="{{ariaLabel}}"
+                           x-on:input="onTextInput(); pendingIso && ({{Model}} = pendingIso)"
+                           x-on:blur="text = {{Model}} ? formatInput({{Model}}) : ''"
+                           class="flex-1 min-w-0 bg-transparent border-0 rounded-md py-2 pl-2 pr-1 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-0 sm:text-sm" />
+                    <button type="button" x-on:click="toggle({{Model}})" :aria-expanded="open" aria-haspopup="dialog"
+                            aria-label="Ouvrir le calendrier" tabindex="-1"
+                            class="p-1 text-gray-400 hover:text-gray-700 transition-colors shrink-0 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        {{Svg("calendar", "w-4 h-4")}}
+                    </button>
+                </div>
 
                 <div x-show="open" x-cloak x-on:click.outside="open = false" x-on:keydown.escape="open = false"
                      x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"

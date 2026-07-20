@@ -22,6 +22,14 @@ document.addEventListener('alpine:init', () => {
         viewMonth: null,
         weekdayLabels: ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'],
 
+        // Saisie clavier (hybride avec le calendrier) : `text` est le tampon affiché/tapé
+        // (JJ/MM/AAAA), distinct de Model — Model ne reçoit une écriture que lorsque `text` forme
+        // une date complète et valide (voir onTextInput). `pendingIso` porte le résultat du dernier
+        // parsing pour que le x-on:input émis par le Tag Helper (qui ne connaît pas cette fonction,
+        // seulement Model) sache s'il doit écrire dans Model ou laisser sa valeur inchangée.
+        text: '',
+        pendingIso: null,
+
         init() {
             this.setView(initialIso);
         },
@@ -78,6 +86,38 @@ document.addEventListener('alpine:init', () => {
             return new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', {
                 day: '2-digit', month: 'long', year: 'numeric'
             });
+        },
+
+        /** ISO (yyyy-MM-dd) → JJ/MM/AAAA, pour le champ texte. */
+        formatInput(iso) {
+            const [y, m, d] = iso.split('-');
+            return `${d}/${m}/${y}`;
+        },
+
+        /** JJ/MM/AAAA → ISO, ou null si incomplet/invalide (rejette aussi les débordements de
+         *  calendrier silencieusement corrigés par Date, ex. « 31/02/2024 » → mars). */
+        parseInput(text) {
+            const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());
+            if (!match) return null;
+            const day = Number(match[1]), month = Number(match[2]), year = Number(match[3]);
+            const d = new Date(year, month - 1, day);
+            if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+            return this.toIso(d);
+        },
+
+        /** Appelé à chaque frappe : insère les « / » au fil de la saisie (l'utilisateur ne tape que
+         *  des chiffres) et tente le parsing. Écrit dans `pendingIso`, pas directement dans Model —
+         *  ce composant ne connaît pas l'expression Model, seule la balise émise par le Tag Helper
+         *  la connaît (même convention que day.iso pour la grille du calendrier). */
+        onTextInput() {
+            const digits = this.text.replace(/\D/g, '').slice(0, 8);
+            let formatted = digits.slice(0, 2);
+            if (digits.length > 2) formatted += '/' + digits.slice(2, 4);
+            if (digits.length > 4) formatted += '/' + digits.slice(4, 8);
+            this.text = formatted;
+
+            this.pendingIso = this.parseInput(formatted);
+            if (this.pendingIso) this.setView(this.pendingIso);
         }
     }));
 
@@ -86,11 +126,17 @@ document.addEventListener('alpine:init', () => {
      * que dateField() : ce composant ne porte que l'état d'ouverture/recherche, la valeur
      * sélectionnée (I/O) reste portée par l'expression Alpine du parent (x-model sur le champ caché,
      * relue directement dans les directives émises par le Tag Helper).
+     *
+     * `options` démarre vide et n'est JAMAIS reçu en argument de factory : le Tag Helper l'alimente
+     * via x-effect="options = ..." sur l'élément racine, qui réévalue l'expression (littéral JSON
+     * statique ou expression Alpine dynamique, ex. « classrooms.map(...) ») à chaque changement d'une
+     * dépendance réactive qu'elle lit — un argument de factory, lui, n'aurait été capturé qu'une
+     * fois, figeant la liste sur son état (souvent vide) au tout premier rendu.
      */
-    Alpine.data('selectField', (options) => ({
+    Alpine.data('selectField', () => ({
         open: false,
         search: '',
-        options,
+        options: [],
 
         get filteredOptions() {
             const query = this.search.trim().toLowerCase();

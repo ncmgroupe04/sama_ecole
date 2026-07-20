@@ -1,5 +1,9 @@
 @{
     ViewData["Title"] = "Paramètres";
+    var gradingScaleOptions = new List<SelectFieldOption> { new("20", "Sur 20"), new("10", "Sur 10") };
+    var dateFormatOptions = new List<SelectFieldOption> {
+        new("dd/MM/yyyy", "31/12/2026 (jj/MM/aaaa)"), new("dd MMMM yyyy", "31 décembre 2026 (jj mois aaaa)")
+    };
 }
 
 @* auth.js et api.js sont chargés par _Layout. school-years.js alimente l'onglet « Années scolaires »
@@ -197,11 +201,8 @@
                     <form x-show="canManageGradingConfig" x-cloak
                           x-on:submit.prevent="saveGradingScale()"
                           class="flex items-center gap-2 pl-4 border-l border-gray-200">
-                        <select id="cfg-grading" x-model="config.gradingScale" aria-label="Modifier le barème"
-                                class="input-field bg-white text-sm py-1.5 w-24">
-                            <option value="20">Sur 20</option>
-                            <option value="10">Sur 10</option>
-                        </select>
+                        <select-field id="cfg-grading" model="config.gradingScale" aria-label="Modifier le barème"
+                                      class="text-sm w-24" options="gradingScaleOptions" />
                         <button type="submit" :disabled="gradingScaleSaving" class="btn-secondary text-xs whitespace-nowrap">
                             <span x-text="gradingScaleSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
                         </button>
@@ -276,11 +277,8 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                             <div>
                                 <label for="cfg-date" class="block text-sm font-medium text-gray-700">Format des dates</label>
-                                <select id="cfg-date" x-model="config.dateFormat" :disabled="!isDirecteur"
-                                        class="input-field bg-white disabled:bg-gray-50 disabled:text-gray-500">
-                                    <option value="dd/MM/yyyy">31/12/2026 (jj/MM/aaaa)</option>
-                                    <option value="dd MMMM yyyy">31 décembre 2026 (jj mois aaaa)</option>
-                                </select>
+                                <select-field id="cfg-date" model="config.dateFormat" disabled="!isDirecteur"
+                                              options="dateFormatOptions" />
                                 <p x-show="configErrors.dateformat" x-cloak x-text="configErrors.dateformat" class="mt-1 text-xs text-danger"></p>
                             </div>
                             <div>

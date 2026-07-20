@@ -46,12 +46,8 @@
             <div class="flex flex-wrap items-end gap-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
-                    <select x-model="classId" aria-label="Filtrer par classe" class="input-field mt-0 bg-white">
-                        <option value="">Toutes les classes</option>
-                        <template x-for="c in classrooms" :key="c.id">
-                            <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
-                        </template>
-                    </select>
+                    <select-field model="classId" aria-label="Filtrer par classe" class="mt-0" bold-options="true" placeholder="Toutes les classes"
+                                  options-expr="[{value:'', label:'Toutes les classes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Du</label>

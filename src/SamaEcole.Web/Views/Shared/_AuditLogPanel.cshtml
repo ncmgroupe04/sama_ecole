@@ -3,6 +3,10 @@
     Paramètres. Le composant Alpine auditLogView() est défini dans wwwroot/js/audit-log.js, que la
     page hôte (Settings/Index.cshtml) charge dans sa section Scripts.
 *@
+@{
+    var moduleFilterOptions = new List<SelectFieldOption> { new("", "Tous les domaines"), new("Finance", "Finance"), new("Users", "Utilisateurs") };
+    var successFilterOptions = new List<SelectFieldOption> { new("", "Tous résultats"), new("true", "Succès"), new("false", "Échecs") };
+}
 <div x-data="auditLogView()">
     <div>
         <h2 class="text-lg font-semibold text-gray-900">Journal d'audit</h2>
@@ -21,19 +25,11 @@
             </stat-card>
 
             <div class="flex gap-3">
-                <select x-model="moduleFilter" x-on:change="applyFilters()" aria-label="Filtrer par domaine"
-                        class="input-field mt-0 w-40 bg-white">
-                    <option value="">Tous les domaines</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Users">Utilisateurs</option>
-                </select>
+                <select-field model="moduleFilter" on-change="applyFilters()" aria-label="Filtrer par domaine"
+                              class="mt-0 w-40" placeholder="Tous les domaines" options="moduleFilterOptions" />
 
-                <select x-model="successFilter" x-on:change="applyFilters()" aria-label="Filtrer par résultat"
-                        class="input-field mt-0 w-36 bg-white">
-                    <option value="">Tous résultats</option>
-                    <option value="true">Succès</option>
-                    <option value="false">Échecs</option>
-                </select>
+                <select-field model="successFilter" on-change="applyFilters()" aria-label="Filtrer par résultat"
+                              class="mt-0 w-36" placeholder="Tous résultats" options="successFilterOptions" />
 
                 <button type="button" x-on:click="resetFilters()" class="text-sm font-medium text-gray-500 hover:text-gray-900">
                     Réinitialiser

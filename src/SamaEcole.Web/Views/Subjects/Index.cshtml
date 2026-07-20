@@ -116,33 +116,35 @@
                 <span class="text-sm font-bold text-gray-500 uppercase tracking-wide">Autres matières</span>
                 <span class="text-xs text-gray-400"> — nom sans catégorie reconnue</span>
             </div>
-            <table class="w-full text-left border-collapse">
-                <tbody>
-                    <template x-for="(subject, index) in otherSubjects" :key="subject.id || index">
-                        <tr class="hover:bg-gray-50 transition-colors border-t border-gray-100">
-                            <td class="py-3 px-4 font-medium text-gray-900">
-                                <span class="inline-flex items-center gap-2">
-                                    <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400"></span>
-                                    <span x-text="displayName(subject.name)" :title="subject.name"></span>
-                                    <badge variant="neutral" x-text="subject.level"></badge>
-                                </span>
-                            </td>
-                            <td class="py-3 px-4 text-right w-40">
-                                <span class="text-gray-400 text-xs">coef.</span>
-                                <span class="font-bold text-gray-900 ml-1" x-text="formatCoefficient(subject.coefficient)"></span>
-                            </td>
-                            <td class="py-3 px-4 text-right w-44 whitespace-nowrap">
-                                <template x-if="canManageSubject">
-                                    <row-actions>
-                                        <row-action icon="pencil" label="Modifier" on-click="openEdit(subject)" />
-                                        <row-action icon="trash-2" label="Supprimer" on-click="openDelete(subject)" variant="danger" />
-                                    </row-actions>
-                                </template>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <tbody>
+                        <template x-for="(subject, index) in otherSubjects" :key="subject.id || index">
+                            <tr class="hover:bg-gray-50 transition-colors border-t border-gray-100">
+                                <td class="py-3 px-4 font-medium text-gray-900">
+                                    <span class="inline-flex items-center gap-2">
+                                        <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                                        <span x-text="displayName(subject.name)" :title="subject.name"></span>
+                                        <badge variant="neutral" x-text="subject.level"></badge>
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-right w-40">
+                                    <span class="text-gray-400 text-xs">coef.</span>
+                                    <span class="font-bold text-gray-900 ml-1" x-text="formatCoefficient(subject.coefficient)"></span>
+                                </td>
+                                <td class="py-3 px-4 text-right w-44 whitespace-nowrap">
+                                    <template x-if="canManageSubject">
+                                        <row-actions>
+                                            <row-action icon="pencil" label="Modifier" on-click="openEdit(subject)" />
+                                            <row-action icon="trash-2" label="Supprimer" on-click="openDelete(subject)" variant="danger" />
+                                        </row-actions>
+                                    </template>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 

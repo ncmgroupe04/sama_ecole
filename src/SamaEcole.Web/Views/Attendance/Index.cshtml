@@ -20,21 +20,13 @@
         <div class="flex flex-col lg:flex-row lg:items-end gap-3">
             <div class="flex-1">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
-                <select x-model="filters.classroomId" class="input-field mt-0 bg-white">
-                    <option value="" disabled>Choisir une classe…</option>
-                    <template x-for="c in classrooms" :key="c.id">
-                        <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
-                    </template>
-                </select>
+                <select-field model="filters.classroomId" class="mt-0" bold-options="true" placeholder="Choisir une classe…"
+                              options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
             </div>
             <div class="flex-1">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Matière</label>
-                <select x-model="filters.subjectId" class="input-field mt-0 bg-white">
-                    <option value="" disabled>Choisir une matière…</option>
-                    <template x-for="s in subjects" :key="s.id">
-                        <option :value="s.id" x-text="s.name + ' (' + s.level + ')'"></option>
-                    </template>
-                </select>
+                <select-field model="filters.subjectId" class="mt-0" placeholder="Choisir une matière…"
+                              options-expr="subjects.map(s => ({value: s.id, label: s.name + ' (' + s.level + ')'}))" />
             </div>
             <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Date</label>
@@ -109,13 +101,8 @@
                                 </div>
                             </td>
                             <td class="py-3 px-4">
-                                <select x-model="entry.status" x-on:change="onStatusChange(entry)"
-                                        :disabled="alreadySubmitted"
-                                        class="input-field mt-0 bg-white text-sm py-1.5">
-                                    <template x-for="opt in statusOptions" :key="opt.value">
-                                        <option :value="opt.value" x-text="opt.label"></option>
-                                    </template>
-                                </select>
+                                <select-field model="entry.status" on-change="onStatusChange(entry)" disabled="alreadySubmitted"
+                                              class="mt-0 text-sm" options-expr="statusOptions" />
                             </td>
                             <td class="py-3 px-4">
                                 <input type="number" min="1" max="240" x-model.number="entry.lateMinutes"

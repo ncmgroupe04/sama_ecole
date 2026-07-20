@@ -2,6 +2,11 @@
     Onglet Utilisateurs (Paramètres) — gestion du personnel par le Directeur. Le composant Alpine
     usersView() est défini dans wwwroot/js/users.js, chargé par la page hôte (Settings/Index.cshtml).
 *@
+@{
+    var userRoleOptions = new List<SelectFieldOption> {
+        new("Secretariat", "Secrétariat"), new("Finance", "Finance"), new("Enseignant", "Enseignant")
+    };
+}
 <div x-data="usersView()">
     <!-- Titre et bouton Nouvel utilisateur -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -109,11 +114,7 @@
 
             <div>
                 <label for="user-role" class="block text-sm font-medium text-gray-700">Rôle <span class="text-danger">*</span></label>
-                <select id="user-role" x-model="newUser.role" required class="input-field bg-white">
-                    <option value="Secretariat">Secrétariat</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Enseignant">Enseignant</option>
-                </select>
+                <select-field id="user-role" model="newUser.role" required="true" options="userRoleOptions" />
                 <p x-show="createErrors.role" x-cloak x-text="createErrors.role" class="mt-1 text-xs text-danger"></p>
             </div>
 

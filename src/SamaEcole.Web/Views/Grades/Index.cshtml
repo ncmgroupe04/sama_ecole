@@ -24,30 +24,21 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 flex-1">
                 <div>
                     <label for="grades-classroom" class="block text-sm font-medium text-gray-700">Classe</label>
-                    <select id="grades-classroom" x-model="selectedClassroomId" x-on:change="reload()" class="input-field bg-white">
-                        <option value="">Sélectionnez une classe…</option>
-                        <template x-for="c in classrooms" :key="c.id">
-                            <option :value="c.id" x-text="c.name + ' — ' + c.level"></option>
-                        </template>
-                    </select>
+                    <select-field id="grades-classroom" model="selectedClassroomId" on-change="reload()" bold-options="true"
+                                  placeholder="Sélectionnez une classe…"
+                                  options-expr="[{value:'', label:'Sélectionnez une classe…'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' — ' + c.level})))" />
                 </div>
                 <div>
                     <label for="grades-subject" class="block text-sm font-medium text-gray-700">Matière</label>
-                    <select id="grades-subject" x-model="selectedSubjectId" x-on:change="reload()" class="input-field bg-white">
-                        <option value="">Sélectionnez une matière…</option>
-                        <template x-for="s in subjects" :key="s.id">
-                            <option :value="s.id" x-text="s.name"></option>
-                        </template>
-                    </select>
+                    <select-field id="grades-subject" model="selectedSubjectId" on-change="reload()"
+                                  placeholder="Sélectionnez une matière…"
+                                  options-expr="[{value:'', label:'Sélectionnez une matière…'}].concat(subjects.map(s => ({value: s.id, label: s.name})))" />
                 </div>
                 <div>
                     <label for="grades-term" class="block text-sm font-medium text-gray-700">Trimestre</label>
-                    <select id="grades-term" x-model="selectedTermId" x-on:change="reload()" class="input-field bg-white" :disabled="terms.length === 0">
-                        <option value="">Sélectionnez un trimestre…</option>
-                        <template x-for="t in terms" :key="t.id">
-                            <option :value="t.id" x-text="t.label"></option>
-                        </template>
-                    </select>
+                    <select-field id="grades-term" model="selectedTermId" on-change="reload()" disabled="terms.length === 0"
+                                  placeholder="Sélectionnez un trimestre…"
+                                  options-expr="[{value:'', label:'Sélectionnez un trimestre…'}].concat(terms.map(t => ({value: t.id, label: t.label})))" />
                 </div>
             </div>
 

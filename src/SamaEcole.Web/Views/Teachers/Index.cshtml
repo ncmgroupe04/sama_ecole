@@ -198,21 +198,13 @@
                     <form x-on:submit.prevent="submitAssign()" class="flex flex-col sm:flex-row sm:items-end gap-3">
                         <div class="flex-1">
                             <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
-                            <select x-model="assignForm.classroomId" required class="input-field mt-0 bg-white">
-                                <option value="" disabled>Choisir…</option>
-                                <template x-for="c in classrooms" :key="c.id">
-                                    <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
-                                </template>
-                            </select>
+                            <select-field model="assignForm.classroomId" required="true" bold-options="true" class="mt-0" placeholder="Choisir…"
+                                          options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
                         </div>
                         <div class="flex-1">
                             <label class="block text-xs font-medium text-gray-500 mb-1">Matière</label>
-                            <select x-model="assignForm.subjectId" required class="input-field mt-0 bg-white">
-                                <option value="" disabled>Choisir…</option>
-                                <template x-for="s in subjects" :key="s.id">
-                                    <option :value="s.id" x-text="s.name + ' (' + s.level + ')'"></option>
-                                </template>
-                            </select>
+                            <select-field model="assignForm.subjectId" required="true" class="mt-0" placeholder="Choisir…"
+                                          options-expr="subjects.map(s => ({value: s.id, label: s.name + ' (' + s.level + ')'}))" />
                         </div>
                         <button type="submit" :disabled="assignSubmitting" class="btn-primary whitespace-nowrap">
                             <span x-text="assignSubmitting ? '…' : 'Attribuer'"></span>
@@ -414,12 +406,8 @@
             <div x-show="canLinkAccount" x-cloak>
                 <label class="block text-sm font-medium text-gray-700">Compte de connexion (optionnel)</label>
                 <p class="text-xs text-gray-500 mb-1">Rattacher un compte « Enseignant » pour qu'il puisse faire l'appel de ses classes.</p>
-                <select x-model="newTeacher.userId" class="input-field bg-white">
-                    <option value="">Aucun</option>
-                    <template x-for="u in eligibleAccounts" :key="u.id">
-                        <option :value="u.id" x-text="u.fullName + ' (' + u.email + ')'"></option>
-                    </template>
-                </select>
+                <select-field model="newTeacher.userId" placeholder="Aucun"
+                              options-expr="[{value:'', label:'Aucun'}].concat(eligibleAccounts.map(u => ({value: u.id, label: u.fullName + ' (' + u.email + ')'})))" />
                 <p x-show="createErrors.userid" x-text="createErrors.userid" class="mt-1 text-xs text-danger"></p>
             </div>
 

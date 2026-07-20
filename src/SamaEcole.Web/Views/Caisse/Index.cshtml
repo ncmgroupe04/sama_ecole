@@ -1,5 +1,9 @@
 @{
     ViewData["Title"] = "Caisse";
+    var paymentMethodOptions = new List<SelectFieldOption> {
+        new("Cash", "Espèces"), new("Cheque", "Chèque"), new("Transfer", "Virement"),
+        new("MobileMoney", "Mobile Money (Wave / Orange Money)")
+    };
 }
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
@@ -148,12 +152,7 @@
                             </div>
                             <div>
                                 <label for="caisse-method" class="block text-sm font-medium text-gray-700">Moyen de paiement <span class="text-danger">*</span></label>
-                                <select id="caisse-method" x-model="form.method" class="input-field bg-white">
-                                    <option value="Cash">Espèces</option>
-                                    <option value="Cheque">Chèque</option>
-                                    <option value="Transfer">Virement</option>
-                                    <option value="MobileMoney">Mobile Money (Wave / Orange Money)</option>
-                                </select>
+                                <select-field id="caisse-method" model="form.method" options="paymentMethodOptions" />
                             </div>
                         </div>
 
@@ -219,62 +218,66 @@
                 </h3>
 
                 <!-- Bloc d'informations -->
-                <table class="w-full text-sm mb-6">
-                    <tbody>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600 w-1/3">Matricule</td>
-                            <td class="py-1 font-semibold" x-text="receipt.matricule"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Nom complet</td>
-                            <td class="py-1 font-semibold" x-text="receipt.studentFullName"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Classe d'affectation</td>
-                            <td class="py-1 font-semibold" x-text="receipt.classroomName"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Année scolaire</td>
-                            <td class="py-1 font-semibold" x-text="receipt.schoolYearLabel"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Date du paiement</td>
-                            <td class="py-1 font-semibold" x-text="formatDate(receipt.paidAt)"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Moyen de paiement</td>
-                            <td class="py-1 font-semibold" x-text="methodLabel(receipt.method)"></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm mb-6">
+                        <tbody>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600 w-1/3">Matricule</td>
+                                <td class="py-1 font-semibold" x-text="receipt.matricule"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Nom complet</td>
+                                <td class="py-1 font-semibold" x-text="receipt.studentFullName"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Classe d'affectation</td>
+                                <td class="py-1 font-semibold" x-text="receipt.classroomName"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Année scolaire</td>
+                                <td class="py-1 font-semibold" x-text="receipt.schoolYearLabel"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Date du paiement</td>
+                                <td class="py-1 font-semibold" x-text="formatDate(receipt.paidAt)"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Moyen de paiement</td>
+                                <td class="py-1 font-semibold" x-text="methodLabel(receipt.method)"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- Tableau des montants -->
-                <table class="w-full text-sm border border-gray-400 border-collapse">
-                    <thead>
-                        <tr class="border-b border-gray-400">
-                            <th class="text-left py-2 px-3 border-r border-gray-400 font-bold">Désignation</th>
-                            <th class="text-right py-2 px-3 font-bold">Montant (FCFA)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="border-b border-gray-300 font-bold">
-                            <td class="py-2 px-3 border-r border-gray-400">Versement reçu</td>
-                            <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.amount)"></td>
-                        </tr>
-                        <tr class="border-b border-gray-300">
-                            <td class="py-2 px-3 border-r border-gray-400">Montant total dû</td>
-                            <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.totalDue)"></td>
-                        </tr>
-                        <tr class="border-b border-gray-300">
-                            <td class="py-2 px-3 border-r border-gray-400">Déjà réglé à ce jour</td>
-                            <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.alreadyPaid)"></td>
-                        </tr>
-                        <tr class="border-t-2 border-gray-500 font-bold">
-                            <td class="py-2 px-3 border-r border-gray-400 uppercase">Reste à payer</td>
-                            <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.remainingBalance)"></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm border border-gray-400 border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-400">
+                                <th class="text-left py-2 px-3 border-r border-gray-400 font-bold">Désignation</th>
+                                <th class="text-right py-2 px-3 font-bold">Montant (FCFA)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-300 font-bold">
+                                <td class="py-2 px-3 border-r border-gray-400">Versement reçu</td>
+                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.amount)"></td>
+                            </tr>
+                            <tr class="border-b border-gray-300">
+                                <td class="py-2 px-3 border-r border-gray-400">Montant total dû</td>
+                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.totalDue)"></td>
+                            </tr>
+                            <tr class="border-b border-gray-300">
+                                <td class="py-2 px-3 border-r border-gray-400">Déjà réglé à ce jour</td>
+                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.alreadyPaid)"></td>
+                            </tr>
+                            <tr class="border-t-2 border-gray-500 font-bold">
+                                <td class="py-2 px-3 border-r border-gray-400 uppercase">Reste à payer</td>
+                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.remainingBalance)"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- Mention obligatoire (AGENTS.md règle #12) -->
                 <p class="text-center text-sm italic mt-5">

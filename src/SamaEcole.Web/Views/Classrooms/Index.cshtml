@@ -1,5 +1,10 @@
 @{
     ViewData["Title"] = "Pédagogie - Classes";
+    var classroomLevelOptions = new List<SelectFieldOption> {
+        new("Crèche", "Crèche"), new("Maternelle", "Maternelle"), new("Primaire", "Primaire"),
+        new("Collège", "Collège"), new("Lycée", "Lycée")
+    };
+    var levelFilterOptions = new List<SelectFieldOption> { new("", "Tous les niveaux") }.Concat(classroomLevelOptions).ToList();
 }
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
@@ -35,15 +40,8 @@
             </div>
 
             <div class="flex gap-3">
-                <select x-model="levelFilter" aria-label="Filtrer par niveau"
-                        class="input-field mt-0 w-40 bg-white">
-                    <option value="">Tous les niveaux</option>
-                    <option value="Crèche">Crèche</option>
-                    <option value="Maternelle">Maternelle</option>
-                    <option value="Primaire">Primaire</option>
-                    <option value="Collège">Collège</option>
-                    <option value="Lycée">Lycée</option>
-                </select>
+                <select-field model="levelFilter" aria-label="Filtrer par niveau"
+                              placeholder="Tous les niveaux" class="w-40" options="levelFilterOptions" />
 
                 <div class="relative w-full sm:w-56">
                     <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -133,34 +131,36 @@
                         </span>
                     </div>
 
-                    <table class="w-full text-left border-collapse">
-                        <tbody>
-                            <template x-for="classroom in group.classrooms" :key="classroom.id">
-                                <tr class="hover:bg-gray-50 transition-colors border-t border-gray-100">
-                                    <td class="py-3 px-4 font-bold text-gray-900">
-                                        <span class="inline-flex items-center gap-2">
-                                            <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400"></span>
-                                            <span x-text="displayName(classroom.name)" :title="classroom.name"></span>
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4 text-right w-56 whitespace-nowrap">
-                                        <span class="text-gray-400 text-xs">effectif</span>
-                                        <span class="font-bold text-gray-900 ml-1">
-                                            <span x-text="classroom.studentCount || 0"></span> / <span x-text="classroom.capacity"></span>
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4 text-right w-44 whitespace-nowrap">
-                                        <template x-if="canManage">
-                                            <row-actions>
-                                                <row-action icon="pencil" label="Modifier" on-click="openEdit(classroom)" />
-                                                <row-action icon="trash-2" label="Supprimer" on-click="openDelete(classroom)" variant="danger" />
-                                            </row-actions>
-                                        </template>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <tbody>
+                                <template x-for="classroom in group.classrooms" :key="classroom.id">
+                                    <tr class="hover:bg-gray-50 transition-colors border-t border-gray-100">
+                                        <td class="py-3 px-4 font-bold text-gray-900">
+                                            <span class="inline-flex items-center gap-2">
+                                                <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                                                <span x-text="displayName(classroom.name)" :title="classroom.name"></span>
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 text-right w-56 whitespace-nowrap">
+                                            <span class="text-gray-400 text-xs">effectif</span>
+                                            <span class="font-bold text-gray-900 ml-1">
+                                                <span x-text="classroom.studentCount || 0"></span> / <span x-text="classroom.capacity"></span>
+                                            </span>
+                                        </td>
+                                        <td class="py-3 px-4 text-right w-44 whitespace-nowrap">
+                                            <template x-if="canManage">
+                                                <row-actions>
+                                                    <row-action icon="pencil" label="Modifier" on-click="openEdit(classroom)" />
+                                                    <row-action icon="trash-2" label="Supprimer" on-click="openDelete(classroom)" variant="danger" />
+                                                </row-actions>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </template>
         </div>
@@ -184,13 +184,7 @@
             <!-- Niveau -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Niveau <span class="text-danger">*</span></label>
-                <select x-model="newClassroom.level" required class="input-field bg-white">
-                    <option value="Crèche">Crèche</option>
-                    <option value="Maternelle">Maternelle</option>
-                    <option value="Primaire">Primaire</option>
-                    <option value="Collège">Collège</option>
-                    <option value="Lycée">Lycée</option>
-                </select>
+                <select-field model="newClassroom.level" required="true" aria-label="Niveau" options="classroomLevelOptions" />
                 <p x-show="createErrors.level" x-text="createErrors.level" class="mt-1 text-xs text-danger"></p>
             </div>
 
@@ -236,13 +230,7 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700">Niveau <span class="text-danger">*</span></label>
-                <select x-model="editing.level" required class="input-field bg-white">
-                    <option value="Crèche">Crèche</option>
-                    <option value="Maternelle">Maternelle</option>
-                    <option value="Primaire">Primaire</option>
-                    <option value="Collège">Collège</option>
-                    <option value="Lycée">Lycée</option>
-                </select>
+                <select-field model="editing.level" required="true" aria-label="Niveau" options="classroomLevelOptions" />
                 <p x-show="editErrors.level" x-cloak x-text="editErrors.level" class="mt-1 text-xs text-danger"></p>
             </div>
 

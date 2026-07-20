@@ -17,6 +17,19 @@ namespace SamaEcole.Web.TagHelpers;
 /// (wwwroot/js/ui-components.js) ; seules la valeur sélectionnée (I/O) et la liste d'options
 /// passent par les attributs de ce Tag Helper.
 ///
+/// Deux façons de fournir les options, jamais combinées :
+/// <list type="bullet">
+/// <item><see cref="Options"/> — liste FIGÉE au rendu serveur (Razor), pour un choix statique
+/// (genre, statut...). Sérialisée une fois en JSON.</item>
+/// <item><see cref="OptionsExpr"/> — EXPRESSION Alpine brute qui s'évalue en tableau
+/// <c>{value, label}</c> (ex. « classrooms.map(c => ({value: c.id, label: c.name})) »), pour une
+/// liste chargée après coup par l'API (classes, matières...). Émise via <c>x-effect="options = ..."</c>
+/// plutôt qu'en argument du composant : un argument de factory Alpine n'est capturé qu'UNE fois, à
+/// l'initialisation — quand la vue hôte peuple <c>classrooms</c> après un fetch async, le composant
+/// se serait retrouvé figé sur un tableau vide. <c>x-effect</c> réévalue l'expression à chaque
+/// changement d'une dépendance réactive qu'elle lit (donc dès que <c>classrooms</c> change).</item>
+/// </list>
+///
 /// Un &lt;input type="text"&gt; natif reste présent, visuellement masqué (opacity-0, jamais
 /// display:none — un champ non rendu est exclu de la validation de contrainte HTML), il porte
 /// l'attribut <c>required</c> et reste le déclencheur de la validation native du formulaire.
@@ -27,14 +40,28 @@ public class SelectFieldTagHelper : TagHelper
     /// <summary>Expression Alpine liée (ex. « newSchool.country »). Lue et écrite telle quelle.</summary>
     public string Model { get; set; } = string.Empty;
 
-    /// <summary>Options proposées (valeur soumise + libellé affiché/recherché).</summary>
+    /// <summary>Options figées, rendues côté serveur (valeur soumise + libellé affiché/recherché).
+    /// Ignoré si <see cref="OptionsExpr"/> est fourni.</summary>
     public IEnumerable<SelectFieldOption> Options { get; set; } = [];
+
+    /// <summary>Expression Alpine brute s'évaluant en tableau <c>{value, label}</c>, pour une liste
+    /// dynamique (ex. « classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})) »).
+    /// Prioritaire sur <see cref="Options"/> si les deux sont fournis.</summary>
+    public string? OptionsExpr { get; set; }
 
     /// <summary>Id HTML optionnel, pour un &lt;label for="..."&gt; externe.</summary>
     public string? Id { get; set; }
 
     /// <summary>Si vrai, le champ caché porte <c>required</c> (validation native du formulaire).</summary>
     public bool Required { get; set; }
+
+    /// <summary>Expression Alpine brute optionnelle, exécutée après affectation de <see cref="Model"/>
+    /// (équivalent du <c>x-on:change</c> d'un &lt;select&gt; natif, ex. « reload() »).</summary>
+    public string? OnChange { get; set; }
+
+    /// <summary>Expression Alpine brute optionnelle évaluée en booléen (ex. « terms.length === 0 »).
+    /// Désactive le déclencheur — le menu ne s'ouvre pas — et applique un style visuel désactivé.</summary>
+    public string? Disabled { get; set; }
 
     /// <summary>Texte affiché quand aucune option n'est encore choisie.</summary>
     public string Placeholder { get; set; } = "Sélectionner une option";
@@ -48,6 +75,11 @@ public class SelectFieldTagHelper : TagHelper
     /// <summary>Classes Tailwind additionnelles pour le déclencheur.</summary>
     public string? Class { get; set; }
 
+    /// <summary>Si vrai, chaque libellé de la liste déroulante s'affiche en gras (ex. les noms de
+    /// classe, plus lisibles ainsi au milieu du reste de l'interface). Ne s'applique qu'à la liste
+    /// ouverte, pas au déclencheur fermé.</summary>
+    public bool BoldOptions { get; set; }
+
     private static readonly JsonSerializerOptions OptionsJsonSettings = new(JsonSerializerDefaults.Web);
 
     public override void Process(TagHelperContext context, TagHelperOutput output)
@@ -60,19 +92,27 @@ public class SelectFieldTagHelper : TagHelper
         var searchPlaceholder = WebUtility.HtmlEncode(SearchPlaceholder);
         var ariaLabel = WebUtility.HtmlEncode(AriaLabel ?? Placeholder);
         var extraClass = string.IsNullOrWhiteSpace(Class) ? "" : " " + Class;
+        var onChange = string.IsNullOrWhiteSpace(OnChange) ? "" : $"; {OnChange}";
+        var disabled = string.IsNullOrWhiteSpace(Disabled) ? "false" : $"({Disabled})";
+        var optionLabelWeight = BoldOptions ? " font-semibold" : "";
 
         // Sérialisé en JSON (littéral JS valide) puis HTML-encodé pour s'insérer sans risque dans un
-        // attribut x-data délimité par des guillemets doubles — même règle que Model/Open ailleurs :
+        // attribut x-effect délimité par des guillemets doubles — même règle que Model/Open ailleurs :
         // ce n'est jamais de la donnée utilisateur non filtrée, mais des options fournies par la vue.
-        var optionsJson = WebUtility.HtmlEncode(JsonSerializer.Serialize(Options, OptionsJsonSettings));
+        // Un littéral JSON est aussi une expression JS valide : OptionsExpr et Options partagent donc
+        // le même point d'injection (x-effect="options = ...").
+        var optionsSource = string.IsNullOrWhiteSpace(OptionsExpr)
+            ? WebUtility.HtmlEncode(JsonSerializer.Serialize(Options, OptionsJsonSettings))
+            : OptionsExpr;
 
         output.Content.SetHtmlContent($$"""
-            <div class="relative" x-data="selectField({{optionsJson}})">
+            <div class="relative" x-data="selectField()" x-effect="options = {{optionsSource}}">
                 <input type="text" {{requiredAttr}}x-model="{{Model}}" tabindex="-1" aria-hidden="true"
                        class="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none -z-10" />
-                <button type="button" {{idAttr}}x-on:click="toggle()" :aria-expanded="open" aria-haspopup="listbox"
+                <button type="button" {{idAttr}}x-on:click="!({{disabled}}) && toggle()" :aria-expanded="open" aria-haspopup="listbox"
+                        :disabled="{{disabled}}"
                         aria-label="{{ariaLabel}}"
-                        :class="open ? 'border-primary' : 'border-gray-300'"
+                        :class="({{disabled}}) ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' : (open ? 'border-primary' : 'border-gray-300')"
                         class="mt-1{{extraClass}} flex w-full items-center justify-between gap-2 rounded-md border bg-white p-2 text-left shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:text-sm">
                     <span :class="{{Model}} ? 'text-gray-900' : 'text-gray-400'" x-text="{{Model}} ? labelFor({{Model}}) : '{{placeholder}}'"></span>
                     {{Svg("chevron-down", "w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-150")}}
@@ -92,9 +132,9 @@ public class SelectFieldTagHelper : TagHelper
                     <ul role="listbox" class="select-field-list max-h-56 space-y-0.5 overflow-y-auto pr-1">
                         <template x-for="option in filteredOptions" :key="option.value">
                             <li role="option" :aria-selected="({{Model}} === option.value).toString()">
-                                <button type="button" x-on:click="{{Model}} = option.value; close()"
+                                <button type="button" x-on:click="{{Model}} = option.value; close(){{onChange}}"
                                         :class="{{Model}} === option.value ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50'"
-                                        class="w-full rounded-md px-3 py-2 text-left text-sm transition-colors" x-text="option.label"></button>
+                                        class="w-full rounded-md px-3 py-2 text-left text-sm{{optionLabelWeight}} transition-colors" x-text="option.label"></button>
                             </li>
                         </template>
                         <li x-show="filteredOptions.length === 0" x-cloak class="px-3 py-2 text-sm text-gray-400">Aucun résultat</li>

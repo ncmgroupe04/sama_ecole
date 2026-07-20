@@ -1,5 +1,6 @@
 @{
     ViewData["Title"] = "Inscriptions";
+    var genderOptions = new List<SelectFieldOption> { new("M", "Masculin"), new("F", "Féminin") };
 }
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
@@ -93,12 +94,9 @@
                     <!-- Classe -->
                     <div>
                         <label for="enr-classroom" class="block text-sm font-medium text-gray-700">Classe d'affectation <span class="text-danger">*</span></label>
-                        <select id="enr-classroom" x-model="form.classroomId" required class="input-field bg-white">
-                            <option value="">— Choisir une classe —</option>
-                            <template x-for="c in classrooms" :key="c.id">
-                                <option :value="c.id" x-text="classroomLabel(c)"></option>
-                            </template>
-                        </select>
+                        <select-field id="enr-classroom" model="form.classroomId" required="true" bold-options="true"
+                                      placeholder="— Choisir une classe —"
+                                      options-expr="[{value:'', label:'— Choisir une classe —'}].concat(classrooms.map(c => ({value: c.id, label: classroomLabel(c)})))" />
                         <p x-show="formErrors.classroomid" x-cloak x-text="formErrors.classroomid" class="mt-1 text-xs text-danger"></p>
                         <p x-show="classrooms.length === 0" x-cloak class="mt-1 text-xs text-gray-400">
                             Aucune classe définie. Créez vos classes avant d'inscrire (<a href="/classes" class="underline">Classes</a>).
@@ -132,10 +130,7 @@
                             </div>
                             <div>
                                 <label for="enr-gender" class="block text-sm font-medium text-gray-700">Genre <span class="text-danger">*</span></label>
-                                <select id="enr-gender" x-model="form.gender" class="input-field bg-white">
-                                    <option value="M">Masculin</option>
-                                    <option value="F">Féminin</option>
-                                </select>
+                                <select-field id="enr-gender" model="form.gender" options="genderOptions" />
                                 <p x-show="formErrors.gender" x-cloak x-text="formErrors.gender" class="mt-1 text-xs text-danger"></p>
                             </div>
                         </div>
@@ -281,62 +276,66 @@
                 </h3>
 
                 <!-- Bloc d'informations -->
-                <table class="w-full text-sm mb-6">
-                    <tbody>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600 w-1/3">Matricule</td>
-                            <td class="py-1 font-semibold" x-text="receipt.matricule"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Nom complet</td>
-                            <td class="py-1 font-semibold" x-text="receipt.studentFullName"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Classe d'affectation</td>
-                            <td class="py-1 font-semibold" x-text="receipt.classroomName + ' — ' + receipt.classroomLevel"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Année scolaire</td>
-                            <td class="py-1 font-semibold" x-text="receipt.schoolYearLabel"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Type de mouvement</td>
-                            <td class="py-1 font-semibold" x-text="typeLabel(receipt.type)"></td>
-                        </tr>
-                        <tr>
-                            <td class="py-1 pr-4 text-gray-600">Date de l'opération</td>
-                            <td class="py-1 font-semibold" x-text="formatDate(receipt.enrolledAt)"></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm mb-6">
+                        <tbody>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600 w-1/3">Matricule</td>
+                                <td class="py-1 font-semibold" x-text="receipt.matricule"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Nom complet</td>
+                                <td class="py-1 font-semibold" x-text="receipt.studentFullName"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Classe d'affectation</td>
+                                <td class="py-1 font-semibold" x-text="receipt.classroomName + ' — ' + receipt.classroomLevel"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Année scolaire</td>
+                                <td class="py-1 font-semibold" x-text="receipt.schoolYearLabel"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Type de mouvement</td>
+                                <td class="py-1 font-semibold" x-text="typeLabel(receipt.type)"></td>
+                            </tr>
+                            <tr>
+                                <td class="py-1 pr-4 text-gray-600">Date de l'opération</td>
+                                <td class="py-1 font-semibold" x-text="formatDate(receipt.enrolledAt)"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- Tableau des frais -->
-                <table class="w-full text-sm border border-gray-400 border-collapse">
-                    <thead>
-                        <tr class="border-b border-gray-400">
-                            <th class="text-left py-2 px-3 border-r border-gray-400 font-bold">Désignation des frais</th>
-                            <th class="text-right py-2 px-3 font-bold">Montant (FCFA)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="line in receipt.lines" :key="line.designation">
-                            <tr class="border-b border-gray-300">
-                                <td class="py-2 px-3 border-r border-gray-400">
-                                    <span x-text="line.designation"></span><span class="text-gray-500" x-text="recurringSuffix(line)"></span>
-                                </td>
-                                <td class="py-2 px-3 text-right" x-text="formatMoney(line.lineTotal)"></td>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm border border-gray-400 border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-400">
+                                <th class="text-left py-2 px-3 border-r border-gray-400 font-bold">Désignation des frais</th>
+                                <th class="text-right py-2 px-3 font-bold">Montant (FCFA)</th>
                             </tr>
-                        </template>
-                        <tr x-show="receipt.lines.length === 0" x-cloak>
-                            <td class="py-2 px-3 border-r border-gray-400 text-gray-500 italic" colspan="1">Aucun frais paramétré pour cette classe</td>
-                            <td class="py-2 px-3 text-right">0 FCFA</td>
-                        </tr>
-                        <tr class="border-t-2 border-gray-500 font-bold">
-                            <td class="py-2 px-3 border-r border-gray-400 uppercase">Total encaissé</td>
-                            <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.totalDue)"></td>
-                        </tr>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <template x-for="line in receipt.lines" :key="line.designation">
+                                <tr class="border-b border-gray-300">
+                                    <td class="py-2 px-3 border-r border-gray-400">
+                                        <span x-text="line.designation"></span><span class="text-gray-500" x-text="recurringSuffix(line)"></span>
+                                    </td>
+                                    <td class="py-2 px-3 text-right" x-text="formatMoney(line.lineTotal)"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="receipt.lines.length === 0" x-cloak>
+                                <td class="py-2 px-3 border-r border-gray-400 text-gray-500 italic" colspan="1">Aucun frais paramétré pour cette classe</td>
+                                <td class="py-2 px-3 text-right">0 FCFA</td>
+                            </tr>
+                            <tr class="border-t-2 border-gray-500 font-bold">
+                                <td class="py-2 px-3 border-r border-gray-400 uppercase">Total encaissé</td>
+                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.totalDue)"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- Mention obligatoire (AGENTS.md règle #12) -->
                 <p class="text-center text-sm italic mt-5">

@@ -1,5 +1,18 @@
 @{
     ViewData["Title"] = "Élèves - Aperçu";
+    var genderFilterOptions = new List<SelectFieldOption> { new("", "Genre : Tous"), new("F", "Fille"), new("M", "Garçon") };
+    var studentGenderOptions = new List<SelectFieldOption> { new("M", "Garçon"), new("F", "Fille") };
+    var disciplinaryMentionOptions = new List<SelectFieldOption> {
+        new("", "Aucune"), new("Blame", "Blâme"), new("Avertissement", "Avertissement"),
+        new("TableauHonneur", "Tableau d'honneur"), new("Encouragements", "Encouragements"), new("Felicitations", "Félicitations")
+    };
+    var councilDecisionOptions = new List<SelectFieldOption> {
+        new("", "Aucune / Non renseignée"), new("Admitted", "Admis(e) en classe supérieure"),
+        new("AllowedToRepeat", "Autorisé(e) à redoubler"), new("Excluded", "Exclusion")
+    };
+    var enrollmentStatusOptions = new List<SelectFieldOption> {
+        new("DroppedOut", "Abandon"), new("Transferred", "Transfert vers un autre établissement")
+    };
 }
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
@@ -62,19 +75,11 @@
                            placeholder="Rechercher un élève..." aria-label="Rechercher un élève"
                            class="input-field mt-0 pl-9 pr-3 w-full" />
                 </div>
-                <select x-model="classroomFilter" x-on:change="applyFilters()" aria-label="Filtrer par classe"
-                        class="input-field mt-0 bg-white w-full sm:w-auto sm:shrink-0">
-                    <option value="">Classe : Toutes</option>
-                    <template x-for="c in classrooms" :key="c.id">
-                        <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
-                    </template>
-                </select>
-                <select x-model="genderFilter" x-on:change="applyFilters()" aria-label="Filtrer par genre"
-                        class="input-field mt-0 bg-white w-full sm:w-auto sm:shrink-0">
-                    <option value="">Genre : Tous</option>
-                    <option value="F">Fille</option>
-                    <option value="M">Garçon</option>
-                </select>
+                <select-field model="classroomFilter" on-change="applyFilters()" aria-label="Filtrer par classe" bold-options="true"
+                               class="mt-0 w-full sm:w-auto" placeholder="Classe : Toutes"
+                               options-expr="[{value:'', label:'Classe : Toutes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
+                <select-field model="genderFilter" on-change="applyFilters()" aria-label="Filtrer par genre"
+                               class="mt-0 w-full sm:w-auto" placeholder="Genre : Tous" options="genderFilterOptions" />
             </div>
             <button type="button" x-on:click="resetFilters()"
                     class="mt-2 text-xs font-medium text-gray-400 hover:text-gray-700">
@@ -470,24 +475,14 @@
         <form x-on:submit.prevent="submitReportCardRemark()" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Distinction</label>
-                <select x-model="editingReportCardRemark.disciplinaryMention" class="input-field bg-white">
-                    <option value="">Aucune</option>
-                    <option value="Blame">Blâme</option>
-                    <option value="Avertissement">Avertissement</option>
-                    <option value="TableauHonneur">Tableau d'honneur</option>
-                    <option value="Encouragements">Encouragements</option>
-                    <option value="Felicitations">Félicitations</option>
-                </select>
+                <select-field model="editingReportCardRemark.disciplinaryMention" aria-label="Distinction"
+                              placeholder="Aucune" options="disciplinaryMentionOptions" />
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700">Décision du Conseil</label>
-                <select x-model="editingReportCardRemark.councilDecision" class="input-field bg-white">
-                    <option value="">Aucune / Non renseignée</option>
-                    <option value="Admitted">Admis(e) en classe supérieure</option>
-                    <option value="AllowedToRepeat">Autorisé(e) à redoubler</option>
-                    <option value="Excluded">Exclusion</option>
-                </select>
+                <select-field model="editingReportCardRemark.councilDecision" aria-label="Décision du Conseil"
+                              placeholder="Aucune / Non renseignée" options="councilDecisionOptions" />
             </div>
 
             <div>
@@ -534,20 +529,15 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700">Genre <span class="text-danger">*</span></label>
-                <select x-model="editingStudent.gender" class="input-field bg-white">
-                    <option value="M">Garçon</option>
-                    <option value="F">Fille</option>
-                </select>
+                <select-field model="editingStudent.gender" aria-label="Genre" options="studentGenderOptions" />
                 <p x-show="studentEditErrors.gender" x-text="studentEditErrors.gender" class="mt-1 text-xs text-danger"></p>
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700">Classe <span class="text-danger">*</span></label>
-                <select x-model="editingStudent.classroomId" required class="input-field bg-white">
-                    <template x-for="c in classrooms" :key="c.id">
-                        <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
-                    </template>
-                </select>
+                <select-field model="editingStudent.classroomId" required="true" aria-label="Classe" bold-options="true"
+                              placeholder="Sélectionner une classe"
+                              options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
                 <p x-show="studentEditErrors.classroomid" x-text="studentEditErrors.classroomid" class="mt-1 text-xs text-danger"></p>
             </div>
 
@@ -653,10 +643,8 @@
         <form x-on:submit.prevent="submitChangeEnrollmentStatus()" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Nouveau statut <span class="text-danger">*</span></label>
-                <select x-model="changingEnrollmentStatus.newStatus" required class="input-field bg-white">
-                    <option value="DroppedOut">Abandon</option>
-                    <option value="Transferred">Transfert vers un autre établissement</option>
-                </select>
+                <select-field model="changingEnrollmentStatus.newStatus" required="true" aria-label="Nouveau statut"
+                              options="enrollmentStatusOptions" />
                 <p class="mt-1 text-xs text-gray-400">
                     L'élève sort des futures listes de présence ; ses notes et paiements déjà enregistrés restent intacts.
                 </p>
@@ -703,22 +691,16 @@
             <!-- Genre -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Genre <span class="text-danger">*</span></label>
-                <select x-model="newStudent.gender" class="input-field bg-white">
-                    <option value="M">Garçon</option>
-                    <option value="F">Fille</option>
-                </select>
+                <select-field model="newStudent.gender" aria-label="Genre" options="studentGenderOptions" />
                 <p x-show="createErrors.gender" x-text="createErrors.gender" class="mt-1 text-xs text-danger"></p>
             </div>
 
             <!-- Classe (Dynamique) -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Classe <span class="text-danger">*</span></label>
-                <select x-model="newStudent.classroomId" required class="input-field bg-white">
-                    <option value="" disabled>Sélectionner une classe</option>
-                    <template x-for="c in classrooms" :key="c.id">
-                        <option :value="c.id" x-text="c.name + ' (' + c.level + ')'"></option>
-                    </template>
-                </select>
+                <select-field model="newStudent.classroomId" required="true" aria-label="Classe" bold-options="true"
+                              placeholder="Sélectionner une classe"
+                              options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
                 <p x-show="createErrors.classroomid" x-text="createErrors.classroomid" class="mt-1 text-xs text-danger"></p>
             </div>
 

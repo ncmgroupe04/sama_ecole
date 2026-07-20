@@ -77,12 +77,8 @@
             </div>
 
             <div class="flex gap-3">
-                <select x-model="levelFilter" aria-label="Filtrer par niveau" class="input-field mt-0 w-40 bg-white">
-                    <option value="">Tous les niveaux</option>
-                    <template x-for="level in knownLevels" :key="level">
-                        <option :value="level" x-text="level"></option>
-                    </template>
-                </select>
+                <select-field model="levelFilter" aria-label="Filtrer par niveau" class="mt-0 w-40" placeholder="Tous les niveaux"
+                              options-expr="[{value:'', label:'Tous les niveaux'}].concat(knownLevels.map(level => ({value: level, label: level})))" />
 
                 <div class="relative w-full sm:w-56">
                     <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
