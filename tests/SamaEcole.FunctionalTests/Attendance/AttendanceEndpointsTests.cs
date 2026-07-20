@@ -107,6 +107,7 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         {
             fullName = "Enseignant de test",
             email = "prof.lie@sama-ecole.sn",
+            birthDate = "1985-04-12",
             subjectIds = new[] { subjectId },
             userId = AuthApiFactory.EnseignantId
         });

@@ -84,7 +84,7 @@ public class ReportsDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
                 new Enrollment { SchoolId = EcoleId, StudentId = boyId, SchoolYearId = yearId, ClassroomId = classroomId, Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, TotalDue = 100000, ReceiptNumber = "REC-2026-0001", EnrolledAt = DateTimeOffset.UtcNow },
                 new Enrollment { SchoolId = EcoleId, StudentId = girlId, SchoolYearId = yearId, ClassroomId = classroomId, Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, TotalDue = 100000, ReceiptNumber = "REC-2026-0002", EnrolledAt = DateTimeOffset.UtcNow });
 
-            db.Teachers.Add(new Teacher { SchoolId = EcoleId, Matricule = "ENS-2026-001", FullName = "Fatou Sarr", Email = "fatou@sama-ecole.sn", Status = EntityStatus.Active });
+            db.Teachers.Add(new Teacher { SchoolId = EcoleId, Matricule = "ENS-2026-001", FullName = "Fatou Sarr", Email = "fatou@sama-ecole.sn", BirthDate = new DateOnly(1985, 4, 12), Status = EntityStatus.Active });
 
             db.AttendanceSheets.Add(new AttendanceSheet
             {

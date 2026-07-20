@@ -12,6 +12,7 @@ public class CreateTeacherCommandValidatorTests
     {
         FullName = "Moussa Ndiaye",
         Email = "moussa.ndiaye@sama-ecole.sn",
+        BirthDate = new DateOnly(1985, 4, 12),
         SubjectIds = [Guid.NewGuid()]
     };
 
@@ -19,6 +20,15 @@ public class CreateTeacherCommandValidatorTests
     public void Valid_Teacher_Should_Pass()
     {
         _validator.Validate(Valid()).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void A_Future_BirthDate_Should_Fail()
+    {
+        var result = _validator.Validate(Valid() with { BirthDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)) });
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(CreateTeacherCommand.BirthDate));
     }
 
     [Fact]

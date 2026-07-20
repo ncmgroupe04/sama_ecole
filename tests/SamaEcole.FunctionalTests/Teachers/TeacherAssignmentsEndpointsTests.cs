@@ -83,7 +83,7 @@ public class TeacherAssignmentsEndpointsTests : IClassFixture<AuthApiFactory>, I
     private async Task<Guid> CreateTeacherAsync(string token, string fullName, string email, Guid subjectId)
     {
         var response = await SendAsync(HttpMethod.Post, "/api/v1/teachers", token,
-            new { fullName, email, subjectIds = new[] { subjectId } });
+            new { fullName, email, birthDate = "1985-04-12", subjectIds = new[] { subjectId } });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<TeacherResult>())!.Id;
     }

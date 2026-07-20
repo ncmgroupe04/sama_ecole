@@ -12,6 +12,10 @@ public record CreateTeacherCommand : IRequest<CreateTeacherResult>
     public required string FullName { get; init; }
     public required string Email { get; init; }
     public string? Phone { get; init; }
+
+    /// <summary>Obligatoire à la création — voir <see cref="Domain.Entities.Teacher.BirthDate"/>.</summary>
+    public required DateOnly BirthDate { get; init; }
+
     public string? BirthPlace { get; init; }
     public string? PhotoUrl { get; init; }
 

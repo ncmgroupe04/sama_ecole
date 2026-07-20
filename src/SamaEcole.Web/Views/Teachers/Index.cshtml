@@ -140,6 +140,10 @@
                         <dd class="mt-1 text-base font-medium text-gray-900" x-text="detail.phone || '—'"></dd>
                     </div>
                     <div>
+                        <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Date de naissance</dt>
+                        <dd class="mt-1 text-base font-medium text-gray-900" x-text="formatDate(detail.birthDate)"></dd>
+                    </div>
+                    <div>
                         <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Lieu de naissance</dt>
                         <dd class="mt-1 text-base font-medium text-gray-900" x-text="detail.birthPlace || '—'"></dd>
                     </div>
@@ -259,6 +263,12 @@
             </div>
 
             <div>
+                <label class="block text-sm font-medium text-gray-700">Date de naissance <span class="text-danger">*</span></label>
+                <date-field model="editingTeacher.birthDate" required="true" aria-label="Date de naissance" />
+                <p x-show="teacherEditErrors.birthdate" x-text="teacherEditErrors.birthdate" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
                 <label class="block text-sm font-medium text-gray-700">Lieu de naissance</label>
                 <input type="text" x-model="editingTeacher.birthPlace" class="input-field">
                 <p x-show="teacherEditErrors.birthplace" x-text="teacherEditErrors.birthplace" class="mt-1 text-xs text-danger"></p>
@@ -358,6 +368,12 @@
                 <label class="block text-sm font-medium text-gray-700">Téléphone</label>
                 <input type="text" x-model="newTeacher.phone" class="input-field">
                 <p x-show="createErrors.phone" x-text="createErrors.phone" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Date de naissance <span class="text-danger">*</span></label>
+                <date-field model="newTeacher.birthDate" required="true" aria-label="Date de naissance" />
+                <p x-show="createErrors.birthdate" x-text="createErrors.birthdate" class="mt-1 text-xs text-danger"></p>
             </div>
 
             <div>

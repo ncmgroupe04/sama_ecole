@@ -55,8 +55,8 @@ public class TeacherAssignmentIsolationTests : IAsyncLifetime
             new SchoolYear { Id = AnneeB, SchoolId = EcoleB, Label = "2026-2027", StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2027, 6, 30), IsActive = true });
 
         owner.Teachers.AddRange(
-            new Teacher { Id = TeacherA, SchoolId = EcoleA, Matricule = "ENS-2026-001", FullName = "Moussa Ndiaye", Email = "moussa@ecole-a.sn" },
-            new Teacher { Id = TeacherB, SchoolId = EcoleB, Matricule = "ENS-2026-001", FullName = "Fatou Sarr", Email = "fatou@ecole-b.sn" });
+            new Teacher { Id = TeacherA, SchoolId = EcoleA, Matricule = "ENS-2026-001", FullName = "Moussa Ndiaye", Email = "moussa@ecole-a.sn", BirthDate = new DateOnly(1985, 4, 12) },
+            new Teacher { Id = TeacherB, SchoolId = EcoleB, Matricule = "ENS-2026-001", FullName = "Fatou Sarr", Email = "fatou@ecole-b.sn", BirthDate = new DateOnly(1990, 9, 3) });
 
         await owner.SaveChangesAsync(CancellationToken.None);
     }

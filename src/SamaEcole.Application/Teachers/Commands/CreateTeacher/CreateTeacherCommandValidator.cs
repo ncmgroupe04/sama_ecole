@@ -13,6 +13,7 @@ public class CreateTeacherCommandValidator : AbstractValidator<CreateTeacherComm
         // « <script>@x.com » passerait (JGK-F01).
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(255).NoHtml();
         RuleFor(x => x.Phone).MaximumLength(30).NoHtml();
+        RuleFor(x => x.BirthDate).LessThan(DateOnly.FromDateTime(DateTime.UtcNow));
         RuleFor(x => x.BirthPlace).MaximumLength(200).NoHtml();
 
         // Même contrat que LogoUrl / Student.PhotoUrl : une adresse http(s), jamais un file:// ou

@@ -26,7 +26,7 @@ document.addEventListener('alpine:init', () => {
         // Slide-over création
         isCreateOpen: false,
         isSubmitting: false,
-        newTeacher: { fullName: '', email: '', phone: '', birthPlace: '', photoUrl: '', photoData: '', subjectIds: [], userId: '' },
+        newTeacher: { fullName: '', email: '', phone: '', birthDate: '', birthPlace: '', photoUrl: '', photoData: '', subjectIds: [], userId: '' },
         createErrors: {},
 
         // Confirmation « Enseignant ajouté » affichée après un enregistrement réussi.
@@ -134,6 +134,7 @@ document.addEventListener('alpine:init', () => {
                     fullName: this.newTeacher.fullName,
                     email: this.newTeacher.email,
                     phone: this.newTeacher.phone || null,
+                    birthDate: this.newTeacher.birthDate,
                     birthPlace: this.newTeacher.birthPlace || null,
                     photoUrl: this.newTeacher.photoUrl || null,
                     photoData: this.newTeacher.photoData || null,
@@ -187,6 +188,7 @@ document.addEventListener('alpine:init', () => {
                 fullName: this.detail.fullName,
                 email: this.detail.email,
                 phone: this.detail.phone || '',
+                birthDate: this.detail.birthDate,
                 birthPlace: this.detail.birthPlace || '',
                 photoUrl: this.detail.photoUrl || '', // URL brute, jamais la photo téléversée (round-trip fidèle).
                 photoDisplayUrl: this.detail.photoDisplayUrl || '', // Aperçu <photo-dropzone> uniquement.
@@ -343,6 +345,11 @@ document.addEventListener('alpine:init', () => {
 
         initials(name) {
             return (name || '').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr + 'T00:00:00').toLocaleDateString('fr-FR');
         }
     }));
 });

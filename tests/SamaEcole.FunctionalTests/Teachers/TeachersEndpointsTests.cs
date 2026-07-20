@@ -33,7 +33,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
     /// <summary>Miroir de GetTeacherByIdQuery.TeacherProfileDto — seuls les champs utiles aux tests d'Update/Delete.</summary>
     private record TeacherProfileDto(
-        Guid Id, string FullName, string Email, string? Phone, string? BirthPlace, string? PhotoUrl,
+        Guid Id, string FullName, string Email, string? Phone, DateOnly BirthDate, string? BirthPlace, string? PhotoUrl,
         string Status, List<string> Subjects, uint RowVersion);
 
     private record TeacherUpdateResult(Guid Id, uint RowVersion);
@@ -82,7 +82,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         string token, string fullName, string email, IEnumerable<Guid> subjectIds)
     {
         var response = await SendAsync(HttpMethod.Post, "/api/v1/teachers", token,
-            new { fullName, email, subjectIds });
+            new { fullName, email, birthDate = "1985-04-12", subjectIds });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<TeacherResult>())!;
@@ -148,7 +148,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         var secretaire = await SecretaireTokenAsync();
         var response = await SendAsync(HttpMethod.Post, "/api/v1/teachers", secretaire,
-            new { fullName = "Fatou Sarr", email = "fatou.sarr@sama-ecole.sn", subjectIds = new[] { subjectId } });
+            new { fullName = "Fatou Sarr", email = "fatou.sarr@sama-ecole.sn", birthDate = "1985-04-12", subjectIds = new[] { subjectId } });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
     }
@@ -161,7 +161,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         var finance = await FinanceTokenAsync();
         var response = await SendAsync(HttpMethod.Post, "/api/v1/teachers", finance,
-            new { fullName = "Intrus", email = "intrus@sama-ecole.sn", subjectIds = new[] { subjectId } });
+            new { fullName = "Intrus", email = "intrus@sama-ecole.sn", birthDate = "1985-04-12", subjectIds = new[] { subjectId } });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -195,7 +195,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/teachers", superAdmin,
-            new { fullName = "Intrus", email = "intrus@sama-ecole.sn", subjectIds = Array.Empty<Guid>() });
+            new { fullName = "Intrus", email = "intrus@sama-ecole.sn", birthDate = "1985-04-12", subjectIds = Array.Empty<Guid>() });
         createResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
@@ -205,7 +205,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         var directeur = await DirecteurTokenAsync();
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur,
-            new { fullName = "Sans matière", email = "sans.matiere@sama-ecole.sn", subjectIds = Array.Empty<Guid>() });
+            new { fullName = "Sans matière", email = "sans.matiere@sama-ecole.sn", birthDate = "1985-04-12", subjectIds = Array.Empty<Guid>() });
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
@@ -216,7 +216,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         var directeur = await DirecteurTokenAsync();
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur,
-            new { fullName = "Matière fantôme", email = "fantome@sama-ecole.sn", subjectIds = new[] { Guid.NewGuid() } });
+            new { fullName = "Matière fantôme", email = "fantome@sama-ecole.sn", birthDate = "1985-04-12", subjectIds = new[] { Guid.NewGuid() } });
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
@@ -246,7 +246,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
         {
-            fullName = "Enseignant de test", email = "prof.lie@sama-ecole.sn",
+            fullName = "Enseignant de test", email = "prof.lie@sama-ecole.sn", birthDate = "1985-04-12",
             subjectIds = new[] { subjectId }, userId = AuthApiFactory.EnseignantId
         });
 
@@ -262,7 +262,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
         {
-            fullName = "Fiche invalide", email = "invalide@sama-ecole.sn",
+            fullName = "Fiche invalide", email = "invalide@sama-ecole.sn", birthDate = "1985-04-12",
             subjectIds = new[] { subjectId }, userId = AuthApiFactory.DirecteurId
         });
 
@@ -277,14 +277,14 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         var first = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
         {
-            fullName = "Premier", email = "premier@sama-ecole.sn",
+            fullName = "Premier", email = "premier@sama-ecole.sn", birthDate = "1985-04-12",
             subjectIds = new[] { subjectId }, userId = AuthApiFactory.EnseignantId
         });
         first.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var second = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
         {
-            fullName = "Second", email = "second@sama-ecole.sn",
+            fullName = "Second", email = "second@sama-ecole.sn", birthDate = "1985-04-12",
             subjectIds = new[] { subjectId }, userId = AuthApiFactory.EnseignantId
         });
 
@@ -306,6 +306,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             fullName = "Ousmane Sarr Diallo",
             email = "ousmane.diallo@sama-ecole.sn",
             phone = "+221770000000",
+            birthDate = "1985-04-12",
             birthPlace = "Thiès",
             photoUrl = (string?)null,
             subjectIds = new[] { mathId },
@@ -333,6 +334,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             fullName = "Tentative Interdite",
             email = "intrus@sama-ecole.sn",
             phone = (string?)null,
+            birthDate = "1985-04-12",
             birthPlace = (string?)null,
             photoUrl = (string?)null,
             subjectIds = new[] { subjectId },
@@ -353,6 +355,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             fullName = "Fantôme",
             email = "fantome@sama-ecole.sn",
             phone = (string?)null,
+            birthDate = "1985-04-12",
             birthPlace = (string?)null,
             photoUrl = (string?)null,
             subjectIds = new[] { subjectId },
@@ -375,6 +378,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             fullName = "Assane Ba Déjà Modifié",
             email = "assane.ba@sama-ecole.sn",
             phone = (string?)null,
+            birthDate = "1985-04-12",
             birthPlace = (string?)null,
             photoUrl = (string?)null,
             subjectIds = new[] { subjectId },
@@ -387,6 +391,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             fullName = "Assane Ba Écrasement Refusé",
             email = "assane.ba@sama-ecole.sn",
             phone = (string?)null,
+            birthDate = "1985-04-12",
             birthPlace = (string?)null,
             photoUrl = (string?)null,
             subjectIds = new[] { subjectId },
@@ -463,6 +468,7 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             fullName = "Aida Diagne Modifiée Avant Suppression",
             email = "aida.diagne@sama-ecole.sn",
             phone = (string?)null,
+            birthDate = "1985-04-12",
             birthPlace = (string?)null,
             photoUrl = (string?)null,
             subjectIds = new[] { subjectId },

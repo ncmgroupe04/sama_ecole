@@ -93,8 +93,8 @@ public class TeacherIsolationTests : IAsyncLifetime
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO teachers ("Id", "SchoolId", "Matricule", "FullName", "Email", "Status", "CreatedAt", "IsDeleted")
-            VALUES (gen_random_uuid(), @schoolId, @matricule, @fullName, @email, 'Active', NOW(), FALSE);
+            INSERT INTO teachers ("Id", "SchoolId", "Matricule", "FullName", "Email", "BirthDate", "Status", "CreatedAt", "IsDeleted")
+            VALUES (gen_random_uuid(), @schoolId, @matricule, @fullName, @email, DATE '1985-04-12', 'Active', NOW(), FALSE);
             """;
         command.Parameters.AddWithValue("schoolId", schoolId);
         command.Parameters.AddWithValue("matricule", matricule);

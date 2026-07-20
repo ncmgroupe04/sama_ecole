@@ -20,6 +20,7 @@ public record UpdateTeacherCommand(
     string FullName,
     string Email,
     string? Phone,
+    DateOnly BirthDate,
     string? BirthPlace,
     string? PhotoUrl,
     IReadOnlyList<Guid> SubjectIds,

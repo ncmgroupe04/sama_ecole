@@ -39,6 +39,7 @@ public class UpdateTeacherCommandHandler(IApplicationDbContext dbContext)
         teacher.FullName = request.FullName;
         teacher.Email = request.Email;
         teacher.Phone = request.Phone;
+        teacher.BirthDate = request.BirthDate;
         teacher.BirthPlace = request.BirthPlace;
         teacher.PhotoUrl = request.PhotoUrl;
 

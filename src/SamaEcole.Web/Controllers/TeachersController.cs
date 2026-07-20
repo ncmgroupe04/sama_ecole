@@ -33,6 +33,7 @@ public class TeachersController(ISender mediator) : ControllerBase
         string FullName,
         string Email,
         string? Phone,
+        DateOnly BirthDate,
         string? BirthPlace,
         string? PhotoUrl,
         IReadOnlyList<Guid> SubjectIds,
@@ -110,7 +111,7 @@ public class TeachersController(ISender mediator) : ControllerBase
         Guid id, [FromBody] UpdateTeacherRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(
             new UpdateTeacherCommand(
-                id, request.FullName, request.Email, request.Phone, request.BirthPlace,
+                id, request.FullName, request.Email, request.Phone, request.BirthDate, request.BirthPlace,
                 request.PhotoUrl, request.SubjectIds, request.RowVersion),
             cancellationToken));
 
