@@ -125,6 +125,18 @@
   .select-field-list::-webkit-scrollbar-thumb:hover {
     @apply bg-primary-600;
   }
+
+  /* Défilement horizontal sans barre visible (ex. onglets Paramètres sur mobile) : même contrainte
+     que select-field-list ci-dessus, ::-webkit-scrollbar n'est pas exprimable en utilitaire
+     Tailwind. Le contenu reste défilable au doigt/à la molette, seule la piste est masquée. */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes skeleton-shimmer {
