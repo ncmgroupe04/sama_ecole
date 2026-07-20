@@ -27,9 +27,24 @@ public class Student : AuditableEntity, ITenantEntity
     public required string Gender { get; set; } // "M" | "F"
     public Guid ClassroomId { get; set; }
 
-    /// <summary>URL de la photo d'identité (docs/Volume_3_DDS.md : PhotoUrl). Même contrat qu'un LogoUrl
-    /// d'école : une adresse http(s) saisie par l'utilisateur, jamais un fichier téléversé.</summary>
+    /// <summary>
+    /// URL de la photo d'identité (docs/Volume_3_DDS.md : PhotoUrl) — une adresse http(s) EXTERNE saisie
+    /// par l'utilisateur. Reste une alternative valide à <see cref="PhotoData"/> (feature B) : une école
+    /// qui héberge déjà ses photos ailleurs n'est pas obligée de téléverser. Priorité d'affichage à la
+    /// lecture (voir PhotoDisplay.ToDisplayUrl) : PhotoData l'emporte si présent, PhotoUrl sinon.
+    /// </summary>
     public string? PhotoUrl { get; set; }
+
+    /// <summary>
+    /// Photo d'identité TÉLÉVERSÉE (feature B), déjà compressée CÔTÉ CLIENT (Canvas 300×300, JPEG
+    /// qualité 80 % — ~30 Ko) avant l'envoi : le serveur ne redimensionne ni ne recompresse, il valide
+    /// seulement une borne de taille (PhotoValidation.MaxPhotoBytes). Toujours du JPEG — pas de colonne
+    /// de content-type séparée, le format est fixé par le pipeline de compression client, pas par
+    /// l'utilisateur. Distincte de <see cref="PhotoUrl"/> : gérée par une commande dédiée
+    /// (SetStudentPhotoCommand), jamais par UpdateStudentCommand — mélanger les deux ferait perdre la
+    /// photo silencieusement à la moindre modification de fiche qui omettrait de la retransmettre.
+    /// </summary>
+    public byte[]? PhotoData { get; set; }
 
     public string? GuardianName { get; set; }
     public string? GuardianPhone { get; set; }

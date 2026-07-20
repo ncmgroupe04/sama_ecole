@@ -4,6 +4,7 @@
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
+    <script src="~/js/photo-compress.js" asp-append-version="true"></script>
     <script src="~/js/teachers.js" asp-append-version="true"></script>
 }
 
@@ -78,9 +79,9 @@
                             <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="teacher.matricule"></td>
                             <td class="py-3 px-4">
                                 <div class="flex items-center gap-3">
-                                    <img x-show="teacher.photoUrl" :src="teacher.photoUrl" alt=""
+                                    <img x-show="teacher.photoDisplayUrl" :src="teacher.photoDisplayUrl" alt=""
                                          class="w-8 h-8 rounded-full object-cover shrink-0" x-cloak>
-                                    <div x-show="!teacher.photoUrl" class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"></div>
+                                    <div x-show="!teacher.photoDisplayUrl" class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"></div>
                                     <div>
                                         <p class="font-medium text-gray-900" x-text="teacher.fullName"></p>
                                         <p class="text-xs text-gray-500" x-text="teacher.email"></p>
@@ -120,9 +121,9 @@
         <template x-if="detail">
             <div>
                 <div class="flex items-center gap-4 pb-5 border-b border-gray-100">
-                    <img x-show="detail.photoUrl" :src="detail.photoUrl" alt=""
+                    <img x-show="detail.photoDisplayUrl" :src="detail.photoDisplayUrl" alt=""
                          class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak>
-                    <div x-show="!detail.photoUrl" class="w-14 h-14 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-base flex-shrink-0" x-text="initials(detail.fullName)"></div>
+                    <div x-show="!detail.photoDisplayUrl" class="w-14 h-14 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-base flex-shrink-0" x-text="initials(detail.fullName)"></div>
                     <div>
                         <p class="text-xl font-bold text-gray-900" x-text="detail.fullName"></p>
                         <p class="text-sm text-gray-500 font-mono" x-text="detail.matricule"></p>
@@ -264,11 +265,13 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700">Photo (URL)</label>
-                <div class="mt-1 flex items-center gap-3">
-                    <img x-show="editingTeacher.photoUrl" :src="editingTeacher.photoUrl" alt=""
-                         class="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200" x-cloak>
-                    <input type="text" x-model="editingTeacher.photoUrl" placeholder="https://…" class="input-field flex-1">
+                <label class="block text-sm font-medium text-gray-700">Photo</label>
+                <photo-dropzone preview="editingTeacher.photoDisplayUrl"
+                                on-change="uploadTeacherPhoto(photoBase64)" />
+                <p x-show="photoUploadError" x-cloak x-text="photoUploadError" class="mt-1 text-xs text-danger"></p>
+                <div class="mt-3">
+                    <label class="block text-xs font-medium text-gray-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
+                    <input type="text" x-model="editingTeacher.photoUrl" placeholder="https://…" class="input-field mt-1">
                 </div>
                 <p x-show="teacherEditErrors.photourl" x-text="teacherEditErrors.photourl" class="mt-1 text-xs text-danger"></p>
             </div>
@@ -364,14 +367,15 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700">Photo (URL)</label>
-                <div class="mt-1 flex items-center gap-3">
-                    <img x-show="newTeacher.photoUrl" :src="newTeacher.photoUrl" alt=""
-                         class="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200" x-cloak>
-                    <input type="text" x-model="newTeacher.photoUrl" placeholder="https://…"
-                           class="input-field flex-1">
+                <label class="block text-sm font-medium text-gray-700">Photo</label>
+                <photo-dropzone preview="newTeacher.photoData ? ('data:image/jpeg;base64,' + newTeacher.photoData) : newTeacher.photoUrl"
+                                on-change="newTeacher.photoData = photoBase64" />
+                <div class="mt-3">
+                    <label class="block text-xs font-medium text-gray-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
+                    <input type="text" x-model="newTeacher.photoUrl" placeholder="https://…" class="input-field mt-1">
                 </div>
                 <p x-show="createErrors.photourl" x-text="createErrors.photourl" class="mt-1 text-xs text-danger"></p>
+                <p x-show="createErrors.photodata" x-text="createErrors.photodata" class="mt-1 text-xs text-danger"></p>
             </div>
 
             <div>

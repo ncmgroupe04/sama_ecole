@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -44,11 +45,15 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
         // renvoyées — sans quoi la pagination afficherait toujours une seule page.
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
+        // PhotoData (bytea) est ramené brut puis converti en data: URI CÔTÉ CLR (PhotoDisplay), jamais
+        // dans la projection SQL : Convert.ToBase64String ne se traduit pas en SQL, et ce n'est de
+        // toute façon qu'après matérialisation qu'on choisit entre photo téléversée et URL externe.
+        var rows = await query
             .OrderBy(s => s.FullName)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(s => new StudentListItem(
+            .Select(s => new
+            {
                 s.Id,
                 s.Matricule,
                 s.FullName,
@@ -60,16 +65,34 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
                 // Jointure côté base. Une classe supprimée (soft delete) sort du Global Query Filter
                 // et rendrait la sous-requête vide : on l'affiche alors explicitement plutôt que de
                 // faire disparaître l'élève de la liste.
-                dbContext.Classrooms
+                ClassroomName = dbContext.Classrooms
                     .AsNoTracking()
                     .Where(c => c.Id == s.ClassroomId)
                     .Select(c => c.Name)
                     .FirstOrDefault() ?? "Classe supprimée",
 
                 s.PhotoUrl,
+                s.PhotoData,
                 s.GuardianName,
-                s.GuardianPhone))
+                s.GuardianPhone
+            })
             .ToListAsync(cancellationToken);
+
+        var items = rows
+            .Select(r => new StudentListItem(
+                r.Id,
+                r.Matricule,
+                r.FullName,
+                r.BirthDate,
+                r.BirthPlace,
+                r.Gender,
+                r.ClassroomId,
+                r.ClassroomName,
+                r.PhotoUrl,
+                PhotoDisplay.ToDisplayUrl(r.PhotoData, r.PhotoUrl),
+                r.GuardianName,
+                r.GuardianPhone))
+            .ToList();
 
         return new PaginatedStudents(items, totalCount, request.Page, request.PageSize);
     }

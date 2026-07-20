@@ -1,6 +1,7 @@
 using SamaEcole.Application.Teachers.Commands.AssignTeacher;
 using SamaEcole.Application.Teachers.Commands.CreateTeacher;
 using SamaEcole.Application.Teachers.Commands.DeleteTeacher;
+using SamaEcole.Application.Teachers.Commands.SetTeacherPhoto;
 using SamaEcole.Application.Teachers.Commands.UpdateTeacher;
 using SamaEcole.Application.Teachers.Queries.GetTeacherById;
 using SamaEcole.Application.Teachers.Queries.GetTeachers;
@@ -25,6 +26,8 @@ namespace SamaEcole.Web.Controllers;
 public class TeachersController(ISender mediator) : ControllerBase
 {
     public record AssignTeacherRequest(Guid ClassroomId, Guid SubjectId);
+
+    public record SetTeacherPhotoRequest(string? PhotoData, uint RowVersion);
 
     public record UpdateTeacherRequest(
         string FullName,
@@ -110,6 +113,22 @@ public class TeachersController(ISender mediator) : ControllerBase
                 id, request.FullName, request.Email, request.Phone, request.BirthPlace,
                 request.PhotoUrl, request.SubjectIds, request.RowVersion),
             cancellationToken));
+
+    /// <summary>
+    /// Feature B — dépose, remplace ou retire (PhotoData null) la photo téléversée d'une fiche déjà
+    /// créée. Commande DÉDIÉE, distincte de Update : même raisonnement que StudentsController.SetPhoto.
+    /// </summary>
+    [HttpPut("{id:guid}/photo")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<SetTeacherPhotoResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SetPhoto(
+        Guid id, [FromBody] SetTeacherPhotoRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new SetTeacherPhotoCommand(id, request.PhotoData, request.RowVersion), cancellationToken));
 
     /// <summary>
     /// Archive (soft delete) une fiche enseignant créée par pure erreur de saisie. Refusée en 409 dès

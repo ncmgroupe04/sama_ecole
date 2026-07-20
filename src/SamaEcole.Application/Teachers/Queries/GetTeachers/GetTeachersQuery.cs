@@ -21,7 +21,13 @@ public record TeacherListItem(
     string FullName,
     string Email,
     string? Phone,
+
+    /// <summary>URL externe BRUTE — round-trip fidèle pour l'édition (voir StudentListItem.PhotoUrl).</summary>
     string? PhotoUrl,
+
+    /// <summary>Feature B — valeur À AFFICHER (voir StudentListItem.PhotoDisplayUrl).</summary>
+    string? PhotoDisplayUrl,
+
     string Status,
     IReadOnlyList<string> Subjects);
 

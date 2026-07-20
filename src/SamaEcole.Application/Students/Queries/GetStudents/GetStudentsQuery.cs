@@ -32,7 +32,15 @@ public record StudentListItem(
     string Gender,
     Guid ClassroomId,
     string ClassroomName,
+
+    /// <summary>URL externe BRUTE, telle que stockée — jamais la photo téléversée (voir PhotoDisplayUrl).
+    /// Round-trip fidèle pour le formulaire d'édition : ne jamais y substituer une valeur calculée.</summary>
     string? PhotoUrl,
+
+    /// <summary>Feature B — valeur À AFFICHER (photo téléversée en data: URI si présente, sinon PhotoUrl,
+    /// sinon null). Réservée au rendu (avatar), jamais au formulaire d'édition.</summary>
+    string? PhotoDisplayUrl,
+
     string? GuardianName,
     string? GuardianPhone);
 

@@ -26,7 +26,7 @@ document.addEventListener('alpine:init', () => {
         // Slide-over création
         isCreateOpen: false,
         isSubmitting: false,
-        newTeacher: { fullName: '', email: '', phone: '', birthPlace: '', photoUrl: '', subjectIds: [], userId: '' },
+        newTeacher: { fullName: '', email: '', phone: '', birthPlace: '', photoUrl: '', photoData: '', subjectIds: [], userId: '' },
         createErrors: {},
 
         // Confirmation « Enseignant ajouté » affichée après un enregistrement réussi.
@@ -44,10 +44,13 @@ document.addEventListener('alpine:init', () => {
 
         // Édition de la fiche (modale). `detail` est déjà la fiche fraîchement chargée (GET
         // /teachers/{id}), RowVersion inclus — pas besoin d'une source séparée comme pour l'élève.
-        editingTeacher: null, // { fullName, email, phone, birthPlace, photoUrl, subjectIds, rowVersion }
+        editingTeacher: null, // { fullName, email, phone, birthPlace, photoUrl, photoDisplayUrl, subjectIds, rowVersion }
         isSavingTeacherEdit: false,
         teacherEditErrors: {},
         showTeacherEditedDialog: false,
+
+        // Feature B — upload/retrait de la photo (fiche déjà créée), même mécanique que students.js.
+        photoUploadError: null,
 
         // Suppression de la fiche (modale de confirmation)
         deletingTeacherRecord: null, // { id, fullName, rowVersion }
@@ -118,7 +121,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         openCreate() {
-            this.newTeacher = { fullName: '', email: '', phone: '', birthPlace: '', photoUrl: '', subjectIds: [], userId: '' };
+            this.newTeacher = { fullName: '', email: '', phone: '', birthPlace: '', photoUrl: '', photoData: '', subjectIds: [], userId: '' };
             this.createErrors = {};
             this.isCreateOpen = true;
         },
@@ -133,6 +136,7 @@ document.addEventListener('alpine:init', () => {
                     phone: this.newTeacher.phone || null,
                     birthPlace: this.newTeacher.birthPlace || null,
                     photoUrl: this.newTeacher.photoUrl || null,
+                    photoData: this.newTeacher.photoData || null,
                     subjectIds: this.newTeacher.subjectIds,
                     userId: this.newTeacher.userId || null
                 };
@@ -184,18 +188,48 @@ document.addEventListener('alpine:init', () => {
                 email: this.detail.email,
                 phone: this.detail.phone || '',
                 birthPlace: this.detail.birthPlace || '',
-                photoUrl: this.detail.photoUrl || '',
+                photoUrl: this.detail.photoUrl || '', // URL brute, jamais la photo téléversée (round-trip fidèle).
+                photoDisplayUrl: this.detail.photoDisplayUrl || '', // Aperçu <photo-dropzone> uniquement.
                 // La fiche ne renvoie que les NOMS des matières qualifiées (voir TeacherProfileDto) :
                 // on retrouve leurs identifiants dans le référentiel `subjects` déjà chargé.
                 subjectIds: this.subjects.filter((s) => this.detail.subjects.includes(s.name)).map((s) => s.id),
                 rowVersion: this.detail.rowVersion
             };
             this.teacherEditErrors = {};
+            this.photoUploadError = null;
         },
 
         closeEditTeacher() {
             this.editingTeacher = null;
             this.teacherEditErrors = {};
+            this.photoUploadError = null;
+        },
+
+        /**
+         * Feature B — dépôt/retrait de la photo depuis la fiche déjà créée : appelle IMMÉDIATEMENT
+         * PUT /teachers/{id}/photo (commande dédiée), même raisonnement que students.js.uploadStudentPhoto.
+         */
+        async uploadTeacherPhoto(photoBase64) {
+            if (!this.editingTeacher || !this.detail) return;
+
+            this.photoUploadError = null;
+            try {
+                const result = await window.api.put(`/teachers/${this.detail.id}/photo`, {
+                    photoData: photoBase64,
+                    rowVersion: this.editingTeacher.rowVersion
+                });
+                this.editingTeacher.photoDisplayUrl = result.photoDisplayUrl || '';
+                this.editingTeacher.rowVersion = result.rowVersion;
+                await this.refreshTeacherDetail();
+            } catch (err) {
+                if (err.code === 'CONCURRENCY_CONFLICT') {
+                    this.photoUploadError = 'Cette fiche vient d\'être modifiée par un autre utilisateur. Elle a été rafraîchie — réessayez.';
+                    await this.refreshTeacherDetail();
+                    this.editingTeacher.rowVersion = this.detail.rowVersion;
+                } else {
+                    this.photoUploadError = (err && err.message) || 'Erreur lors de l\'envoi de la photo.';
+                }
+            }
         },
 
         async submitEditTeacher() {

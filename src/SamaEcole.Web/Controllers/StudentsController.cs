@@ -1,5 +1,6 @@
 using SamaEcole.Application.Students.Commands.CreateStudent;
 using SamaEcole.Application.Students.Commands.DeleteStudent;
+using SamaEcole.Application.Students.Commands.SetStudentPhoto;
 using SamaEcole.Application.Students.Commands.UpdateStudent;
 using SamaEcole.Application.Students.Queries.GetStudentDetail;
 using SamaEcole.Application.Students.Queries.GetStudents;
@@ -21,6 +22,8 @@ namespace SamaEcole.Web.Controllers;
 [Authorize]
 public class StudentsController(ISender mediator) : ControllerBase
 {
+    public record SetStudentPhotoRequest(string? PhotoData, uint RowVersion);
+
     public record UpdateStudentRequest(
         string FullName,
         DateOnly BirthDate,
@@ -84,6 +87,22 @@ public class StudentsController(ISender mediator) : ControllerBase
                 request.ClassroomId, request.PhotoUrl, request.GuardianName, request.GuardianPhone,
                 request.RowVersion),
             cancellationToken));
+
+    /// <summary>
+    /// Feature B — dépose, remplace ou retire (PhotoData null) la photo téléversée d'une fiche déjà
+    /// créée. Commande DÉDIÉE, distincte de Update : voir SetStudentPhotoCommand pour le pourquoi.
+    /// </summary>
+    [HttpPut("{id:guid}/photo")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<SetStudentPhotoResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SetPhoto(
+        Guid id, [FromBody] SetStudentPhotoRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new SetStudentPhotoCommand(id, request.PhotoData, request.RowVersion), cancellationToken));
 
     /// <summary>
     /// Archive (soft delete) une fiche élève créée par pure erreur de saisie. Refusée en 409 dès

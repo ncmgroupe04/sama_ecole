@@ -4,6 +4,7 @@
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
+    <script src="~/js/photo-compress.js" asp-append-version="true"></script>
     <script src="~/js/students.js" asp-append-version="true"></script>
 }
 
@@ -107,9 +108,9 @@
                             <td class="py-2 px-4 w-[16%] font-medium text-gray-900 truncate" x-text="student.matricule"></td>
                             <td class="py-2 px-4 w-[28%]">
                                 <div class="flex items-center gap-3 min-w-0">
-                                    <img x-show="student.photoUrl" :src="student.photoUrl" alt=""
+                                    <img x-show="student.photoDisplayUrl" :src="student.photoDisplayUrl" alt=""
                                          class="w-8 h-8 rounded-full object-cover shrink-0" x-cloak>
-                                    <div x-show="!student.photoUrl" :class="initialsClasses(student.fullName)" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0" x-text="getInitials(student.fullName)"></div>
+                                    <div x-show="!student.photoDisplayUrl" :class="initialsClasses(student.fullName)" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0" x-text="getInitials(student.fullName)"></div>
                                     <div class="min-w-0">
                                         <p class="font-medium text-gray-900 truncate" x-text="student.fullName"></p>
                                     </div>
@@ -141,9 +142,9 @@
          GET /students/{id} (studentDetail) et présentés en onglets ci-dessous. -->
     <modal-shell open="detailStudent" on-close="closeDetail()" title="Fiche élève">
         <div class="flex items-center gap-4 pb-5 border-b border-gray-100">
-            <img x-show="detailStudent && detailStudent.photoUrl" :src="detailStudent ? detailStudent.photoUrl : ''" alt=""
+            <img x-show="detailStudent && detailStudent.photoDisplayUrl" :src="detailStudent ? detailStudent.photoDisplayUrl : ''" alt=""
                  class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak>
-            <div x-show="!detailStudent || !detailStudent.photoUrl" :class="detailStudent ? initialsClasses(detailStudent.fullName) : ''" class="w-14 h-14 rounded-full flex items-center justify-center font-bold text-base flex-shrink-0" x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
+            <div x-show="!detailStudent || !detailStudent.photoDisplayUrl" :class="detailStudent ? initialsClasses(detailStudent.fullName) : ''" class="w-14 h-14 rounded-full flex items-center justify-center font-bold text-base flex-shrink-0" x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
             <p class="text-xl font-bold text-gray-900" x-text="detailStudent ? detailStudent.fullName : ''"></p>
         </div>
 
@@ -535,11 +536,13 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700">Photo (URL)</label>
-                <div class="mt-1 flex items-center gap-3">
-                    <img x-show="editingStudent.photoUrl" :src="editingStudent.photoUrl" alt=""
-                         class="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200" x-cloak>
-                    <input type="text" x-model="editingStudent.photoUrl" placeholder="https://…" class="input-field flex-1">
+                <label class="block text-sm font-medium text-gray-700">Photo</label>
+                <photo-dropzone preview="editingStudent.photoDisplayUrl"
+                                on-change="uploadStudentPhoto(photoBase64)" />
+                <p x-show="photoUploadError" x-cloak x-text="photoUploadError" class="mt-1 text-xs text-danger"></p>
+                <div class="mt-3">
+                    <label class="block text-xs font-medium text-gray-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
+                    <input type="text" x-model="editingStudent.photoUrl" placeholder="https://…" class="input-field mt-1">
                 </div>
                 <p x-show="studentEditErrors.photourl" x-text="studentEditErrors.photourl" class="mt-1 text-xs text-danger"></p>
             </div>
@@ -703,16 +706,17 @@
                 <p x-show="createErrors.classroomid" x-text="createErrors.classroomid" class="mt-1 text-xs text-danger"></p>
             </div>
 
-            <!-- Photo (URL) -->
+            <!-- Photo (feature B : upload local compressé, URL externe en alternative) -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Photo (URL)</label>
-                <div class="mt-1 flex items-center gap-3">
-                    <img x-show="newStudent.photoUrl" :src="newStudent.photoUrl" alt=""
-                         class="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-200" x-cloak>
-                    <input type="text" x-model="newStudent.photoUrl" placeholder="https://…"
-                           class="input-field flex-1">
+                <label class="block text-sm font-medium text-gray-700">Photo</label>
+                <photo-dropzone preview="newStudent.photoData ? ('data:image/jpeg;base64,' + newStudent.photoData) : newStudent.photoUrl"
+                                on-change="newStudent.photoData = photoBase64" />
+                <div class="mt-3">
+                    <label class="block text-xs font-medium text-gray-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
+                    <input type="text" x-model="newStudent.photoUrl" placeholder="https://…" class="input-field mt-1">
                 </div>
                 <p x-show="createErrors.photourl" x-text="createErrors.photourl" class="mt-1 text-xs text-danger"></p>
+                <p x-show="createErrors.photodata" x-text="createErrors.photodata" class="mt-1 text-xs text-danger"></p>
             </div>
 
             <!-- Tuteur -->

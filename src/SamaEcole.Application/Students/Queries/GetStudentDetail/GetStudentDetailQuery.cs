@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades;
 using SamaEcole.Domain.Entities;
@@ -54,7 +55,13 @@ public record StudentIdentityDto(
     string Gender,
     Guid ClassroomId,
     string ClassroomName,
+
+    /// <summary>URL externe BRUTE (voir StudentListItem.PhotoUrl) — round-trip fidèle pour l'édition.</summary>
     string? PhotoUrl,
+
+    /// <summary>Feature B — valeur À AFFICHER (voir StudentListItem.PhotoDisplayUrl).</summary>
+    string? PhotoDisplayUrl,
+
     string? GuardianName,
     string? GuardianPhone,
     uint RowVersion);
@@ -136,6 +143,7 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
                 s.Gender,
                 s.ClassroomId,
                 s.PhotoUrl,
+                s.PhotoData,
                 s.GuardianName,
                 s.GuardianPhone,
                 RowVersion = EF.Property<uint>(s, "xmin"),
@@ -161,6 +169,7 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
             student.ClassroomId,
             student.ClassroomName,
             student.PhotoUrl,
+            PhotoDisplay.ToDisplayUrl(student.PhotoData, student.PhotoUrl),
             student.GuardianName,
             student.GuardianPhone,
             student.RowVersion);

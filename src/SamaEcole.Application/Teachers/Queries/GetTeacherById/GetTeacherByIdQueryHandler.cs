@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ public class GetTeacherByIdQueryHandler(IApplicationDbContext dbContext)
             teacher.Entity.Phone,
             teacher.Entity.BirthPlace,
             teacher.Entity.PhotoUrl,
+            PhotoDisplay.ToDisplayUrl(teacher.Entity.PhotoData, teacher.Entity.PhotoUrl),
             teacher.Entity.Status.ToString(),
             subjects,
             assignments,

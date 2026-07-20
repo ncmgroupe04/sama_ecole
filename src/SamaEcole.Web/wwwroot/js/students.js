@@ -46,6 +46,7 @@ document.addEventListener('alpine:init', () => {
             gender: 'M',
             classroomId: '', // Must be UUID
             photoUrl: '',
+            photoData: '', // Feature B — base64 déjà compressé (photo-compress.js), rempli par <photo-dropzone>.
             guardianName: '',
             guardianPhone: ''
         },
@@ -67,10 +68,14 @@ document.addEventListener('alpine:init', () => {
         // Édition de la fiche (modale). Sourcée depuis studentDetail.identity (fraîchement chargée,
         // RowVersion inclus) plutôt que la ligne de liste `detailStudent`, qui peut être périmée et ne
         // porte pas le jeton de concurrence — le bouton n'est donc proposé qu'une fois studentDetail chargé.
-        editingStudent: null, // { fullName, birthDate, birthPlace, gender, classroomId, photoUrl, guardianName, guardianPhone, rowVersion }
+        editingStudent: null, // { fullName, birthDate, birthPlace, gender, classroomId, photoUrl, photoDisplayUrl, guardianName, guardianPhone, rowVersion }
         isSavingStudentEdit: false,
         studentEditErrors: {},
         showStudentEditedDialog: false,
+
+        // Feature B — upload/retrait de la photo (fiche déjà créée) : commande dédiée, auto-enregistrée
+        // dès le dépôt du fichier, séparée du bouton « Enregistrer » général (voir uploadStudentPhoto).
+        photoUploadError: null,
 
         // Suppression de la fiche (modale de confirmation)
         deletingStudentRecord: null, // { id, fullName, rowVersion }
@@ -266,17 +271,49 @@ document.addEventListener('alpine:init', () => {
                 birthPlace: identity.birthPlace || '',
                 gender: identity.gender,
                 classroomId: identity.classroomId,
-                photoUrl: identity.photoUrl || '',
+                photoUrl: identity.photoUrl || '', // URL brute, jamais la photo téléversée (round-trip fidèle).
+                photoDisplayUrl: identity.photoDisplayUrl || '', // Aperçu <photo-dropzone> uniquement.
                 guardianName: identity.guardianName || '',
                 guardianPhone: identity.guardianPhone || '',
                 rowVersion: identity.rowVersion
             };
             this.studentEditErrors = {};
+            this.photoUploadError = null;
         },
 
         closeEditStudent() {
             this.editingStudent = null;
             this.studentEditErrors = {};
+            this.photoUploadError = null;
+        },
+
+        /**
+         * Feature B — dépôt/retrait de la photo depuis la fiche déjà créée : appelle IMMÉDIATEMENT
+         * PUT /students/{id}/photo (commande dédiée, SetStudentPhotoCommand), sans attendre le bouton
+         * « Enregistrer » général — mélanger la photo dans la sauvegarde générale la ferait perdre
+         * silencieusement à la moindre modification de nom/classe qui omettrait de la retransmettre.
+         */
+        async uploadStudentPhoto(photoBase64) {
+            if (!this.editingStudent || !this.detailStudent) return;
+
+            this.photoUploadError = null;
+            try {
+                const result = await window.api.put(`/students/${this.detailStudent.id}/photo`, {
+                    photoData: photoBase64,
+                    rowVersion: this.editingStudent.rowVersion
+                });
+                this.editingStudent.photoDisplayUrl = result.photoDisplayUrl || '';
+                this.editingStudent.rowVersion = result.rowVersion;
+                await this.refreshStudentDetail(); // synchronise la vignette de l'avatar en tête de fiche
+            } catch (err) {
+                if (err.code === 'CONCURRENCY_CONFLICT') {
+                    this.photoUploadError = 'Cette fiche vient d\'être modifiée par un autre utilisateur. Elle a été rafraîchie — réessayez.';
+                    await this.refreshStudentDetail();
+                    this.editingStudent.rowVersion = this.studentDetail.identity.rowVersion;
+                } else {
+                    this.photoUploadError = (err && err.message) || 'Erreur lors de l\'envoi de la photo.';
+                }
+            }
         },
 
         async submitEditStudent() {
@@ -442,7 +479,7 @@ document.addEventListener('alpine:init', () => {
                 // Fermer la modale et réinitialiser
                 this.isCreateOpen = false;
                 this.addedStudentName = this.newStudent.fullName;
-                this.newStudent = { fullName: '', birthDate: '', birthPlace: '', gender: 'M', classroomId: '', photoUrl: '', guardianName: '', guardianPhone: '' };
+                this.newStudent = { fullName: '', birthDate: '', birthPlace: '', gender: 'M', classroomId: '', photoUrl: '', photoData: '', guardianName: '', guardianPhone: '' };
 
                 // Rafraîchir la liste
                 this.page = 1;

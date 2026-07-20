@@ -15,6 +15,9 @@ public record CreateTeacherCommand : IRequest<CreateTeacherResult>
     public string? BirthPlace { get; init; }
     public string? PhotoUrl { get; init; }
 
+    /// <summary>Photo téléversée (feature B), déjà compressée côté client, en base64 — voir Teacher.PhotoData.</summary>
+    public string? PhotoData { get; init; }
+
     /// <summary>Matières que l'enseignant est qualifié à enseigner (openapi.yaml : requis, au moins une).</summary>
     public required IReadOnlyList<Guid> SubjectIds { get; init; }
 

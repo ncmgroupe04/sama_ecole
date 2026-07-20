@@ -18,6 +18,10 @@ public record CreateStudentCommand : IRequest<CreateStudentResult>
     public required string Gender { get; init; }
     public required Guid ClassroomId { get; init; }
     public string? PhotoUrl { get; init; }
+
+    /// <summary>Photo téléversée (feature B), déjà compressée côté client, en base64 — voir Student.PhotoData.</summary>
+    public string? PhotoData { get; init; }
+
     public string? GuardianName { get; init; }
     public string? GuardianPhone { get; init; }
 }

@@ -22,6 +22,8 @@ public class CreateTeacherCommandValidator : AbstractValidator<CreateTeacherComm
             .Must(BeAValidHttpUrl).When(x => !string.IsNullOrWhiteSpace(x.PhotoUrl))
             .WithMessage("L'URL de la photo doit être une adresse http(s) valide.");
 
+        RuleFor(x => x.PhotoData).MustBeValidPhotoData();
+
         RuleFor(x => x.SubjectIds).NotEmpty()
             .WithMessage("Au moins une matière est requise.");
 

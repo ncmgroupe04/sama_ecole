@@ -27,7 +27,13 @@ public record TeacherProfileDto(
     string Email,
     string? Phone,
     string? BirthPlace,
+
+    /// <summary>URL externe BRUTE — round-trip fidèle pour l'édition (voir StudentListItem.PhotoUrl).</summary>
     string? PhotoUrl,
+
+    /// <summary>Feature B — valeur À AFFICHER (voir StudentListItem.PhotoDisplayUrl).</summary>
+    string? PhotoDisplayUrl,
+
     string Status,
     IReadOnlyList<string> Subjects,
     IReadOnlyList<TeacherAssignmentDto> Assignments,

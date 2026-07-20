@@ -25,6 +25,9 @@ public class Teacher : AuditableEntity, ITenantEntity
     /// <summary>URL de la photo d'identité — même contrat que <see cref="Student.PhotoUrl"/>.</summary>
     public string? PhotoUrl { get; set; }
 
+    /// <summary>Photo téléversée (feature B) — même contrat que <see cref="Student.PhotoData"/>.</summary>
+    public byte[]? PhotoData { get; set; }
+
     public EntityStatus Status { get; set; } = EntityStatus.Active;
 
     /// <summary>

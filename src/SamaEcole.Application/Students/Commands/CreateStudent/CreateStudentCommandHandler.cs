@@ -55,6 +55,7 @@ public class CreateStudentCommandHandler(
                 Gender = request.Gender,
                 ClassroomId = request.ClassroomId,
                 PhotoUrl = request.PhotoUrl,
+                PhotoData = request.PhotoData is null ? null : Convert.FromBase64String(request.PhotoData),
                 GuardianName = request.GuardianName,
                 GuardianPhone = request.GuardianPhone
             };

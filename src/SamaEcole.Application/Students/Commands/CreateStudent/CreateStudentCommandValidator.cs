@@ -22,6 +22,8 @@ public class CreateStudentCommandValidator : AbstractValidator<CreateStudentComm
             .MaximumLength(500).WithMessage("L'URL de la photo ne peut pas dépasser 500 caractères.")
             .Must(BeAValidHttpUrl).When(x => !string.IsNullOrWhiteSpace(x.PhotoUrl))
             .WithMessage("L'URL de la photo doit être une adresse http(s) valide.");
+
+        RuleFor(x => x.PhotoData).MustBeValidPhotoData();
     }
 
     private static bool BeAValidHttpUrl(string? url) =>
