@@ -75,7 +75,7 @@
                            placeholder="Rechercher un élève..." aria-label="Rechercher un élève"
                            class="input-field mt-0 pl-9 pr-3 w-full" />
                 </div>
-                <select-field model="classroomFilter" on-change="applyFilters()" aria-label="Filtrer par classe" bold-options="true"
+                <select-field model="classroomFilter" on-change="applyFilters()" aria-label="Filtrer par classe"
                                class="mt-0 w-full sm:w-auto" placeholder="Classe : Toutes"
                                options-expr="[{value:'', label:'Classe : Toutes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
                 <select-field model="genderFilter" on-change="applyFilters()" aria-label="Filtrer par genre"
@@ -535,7 +535,7 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700">Classe <span class="text-danger">*</span></label>
-                <select-field model="editingStudent.classroomId" required="true" aria-label="Classe" bold-options="true"
+                <select-field model="editingStudent.classroomId" required="true" aria-label="Classe"
                               placeholder="Sélectionner une classe"
                               options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
                 <p x-show="studentEditErrors.classroomid" x-text="studentEditErrors.classroomid" class="mt-1 text-xs text-danger"></p>
@@ -698,7 +698,7 @@
             <!-- Classe (Dynamique) -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Classe <span class="text-danger">*</span></label>
-                <select-field model="newStudent.classroomId" required="true" aria-label="Classe" bold-options="true"
+                <select-field model="newStudent.classroomId" required="true" aria-label="Classe"
                               placeholder="Sélectionner une classe"
                               options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
                 <p x-show="createErrors.classroomid" x-text="createErrors.classroomid" class="mt-1 text-xs text-danger"></p>

@@ -198,7 +198,7 @@
                     <form x-on:submit.prevent="submitAssign()" class="flex flex-col sm:flex-row sm:items-end gap-3">
                         <div class="flex-1">
                             <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
-                            <select-field model="assignForm.classroomId" required="true" bold-options="true" class="mt-0" placeholder="Choisir…"
+                            <select-field model="assignForm.classroomId" required="true" class="mt-0" placeholder="Choisir…"
                                           options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
                         </div>
                         <div class="flex-1">

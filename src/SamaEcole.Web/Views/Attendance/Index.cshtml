@@ -20,7 +20,7 @@
         <div class="flex flex-col lg:flex-row lg:items-end gap-3">
             <div class="flex-1">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
-                <select-field model="filters.classroomId" class="mt-0" bold-options="true" placeholder="Choisir une classe…"
+                <select-field model="filters.classroomId" class="mt-0" placeholder="Choisir une classe…"
                               options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
             </div>
             <div class="flex-1">

@@ -46,7 +46,7 @@
             <div class="flex flex-wrap items-end gap-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
-                    <select-field model="classId" aria-label="Filtrer par classe" class="mt-0" bold-options="true" placeholder="Toutes les classes"
+                    <select-field model="classId" aria-label="Filtrer par classe" class="mt-0" placeholder="Toutes les classes"
                                   options-expr="[{value:'', label:'Toutes les classes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
                 </div>
                 <div>

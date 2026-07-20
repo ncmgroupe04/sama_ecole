@@ -75,11 +75,6 @@ public class SelectFieldTagHelper : TagHelper
     /// <summary>Classes Tailwind additionnelles pour le déclencheur.</summary>
     public string? Class { get; set; }
 
-    /// <summary>Si vrai, chaque libellé de la liste déroulante s'affiche en gras (ex. les noms de
-    /// classe, plus lisibles ainsi au milieu du reste de l'interface). Ne s'applique qu'à la liste
-    /// ouverte, pas au déclencheur fermé.</summary>
-    public bool BoldOptions { get; set; }
-
     private static readonly JsonSerializerOptions OptionsJsonSettings = new(JsonSerializerDefaults.Web);
 
     public override void Process(TagHelperContext context, TagHelperOutput output)
@@ -94,7 +89,6 @@ public class SelectFieldTagHelper : TagHelper
         var extraClass = string.IsNullOrWhiteSpace(Class) ? "" : " " + Class;
         var onChange = string.IsNullOrWhiteSpace(OnChange) ? "" : $"; {OnChange}";
         var disabled = string.IsNullOrWhiteSpace(Disabled) ? "false" : $"({Disabled})";
-        var optionLabelWeight = BoldOptions ? " font-semibold" : "";
 
         // Sérialisé en JSON (littéral JS valide) puis HTML-encodé pour s'insérer sans risque dans un
         // attribut x-effect délimité par des guillemets doubles — même règle que Model/Open ailleurs :
@@ -134,7 +128,7 @@ public class SelectFieldTagHelper : TagHelper
                             <li role="option" :aria-selected="({{Model}} === option.value).toString()">
                                 <button type="button" x-on:click="{{Model}} = option.value; close(){{onChange}}"
                                         :class="{{Model}} === option.value ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50'"
-                                        class="w-full rounded-md px-3 py-2 text-left text-sm{{optionLabelWeight}} transition-colors" x-text="option.label"></button>
+                                        class="w-full rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors" x-text="option.label"></button>
                             </li>
                         </template>
                         <li x-show="filteredOptions.length === 0" x-cloak class="px-3 py-2 text-sm text-gray-400">Aucun résultat</li>

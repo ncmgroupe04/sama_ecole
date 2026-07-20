@@ -94,7 +94,7 @@
                     <!-- Classe -->
                     <div>
                         <label for="enr-classroom" class="block text-sm font-medium text-gray-700">Classe d'affectation <span class="text-danger">*</span></label>
-                        <select-field id="enr-classroom" model="form.classroomId" required="true" bold-options="true"
+                        <select-field id="enr-classroom" model="form.classroomId" required="true"
                                       placeholder="— Choisir une classe —"
                                       options-expr="[{value:'', label:'— Choisir une classe —'}].concat(classrooms.map(c => ({value: c.id, label: classroomLabel(c)})))" />
                         <p x-show="formErrors.classroomid" x-cloak x-text="formErrors.classroomid" class="mt-1 text-xs text-danger"></p>

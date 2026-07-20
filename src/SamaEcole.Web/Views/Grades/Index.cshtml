@@ -24,7 +24,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 flex-1">
                 <div>
                     <label for="grades-classroom" class="block text-sm font-medium text-gray-700">Classe</label>
-                    <select-field id="grades-classroom" model="selectedClassroomId" on-change="reload()" bold-options="true"
+                    <select-field id="grades-classroom" model="selectedClassroomId" on-change="reload()"
                                   placeholder="Sélectionnez une classe…"
                                   options-expr="[{value:'', label:'Sélectionnez une classe…'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' — ' + c.level})))" />
                 </div>
