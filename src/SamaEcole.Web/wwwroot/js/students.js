@@ -64,6 +64,11 @@ document.addEventListener('alpine:init', () => {
         // Saisir les observations du conseil (Blâme… Félicitations) reste réservé au Directeur/Enseignant
         // côté serveur (ReportCardsController, ReportCardWriterRoles) — c'est une SAISIE, pas un simple
         // téléchargement, jamais ouverte au Secrétariat.
+        // Jamais l'Enseignant (Volume 7 « Finance ») : studentDetail.payments vaut alors null côté API
+        // (GetStudentDetailQueryHandler) — masquer l'onglet ici n'est qu'un confort d'affichage, la
+        // protection réelle est l'absence de la donnée dans la réponse, pas ce booléen.
+        canViewPayments: window.auth.role !== 'Enseignant',
+
         canEditReportCardRemark: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant',
 
         // Télécharger le bulletin PDF (JGK-G03) est ouvert au Directeur, à l'Enseignant ET au

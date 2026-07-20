@@ -55,6 +55,9 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     private Task<string> FinanceTokenAsync() =>
         TokenAsync(AuthApiFactory.FinanceEmail, AuthApiFactory.FinancePassword);
 
+    private Task<string> EnseignantTokenAsync() =>
+        TokenAsync(AuthApiFactory.EnseignantEmail, AuthApiFactory.EnseignantPassword);
+
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string token, object? body = null)
     {
         var request = new HttpRequestMessage(method, url);
@@ -112,6 +115,27 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         var response = await SendAsync(HttpMethod.Get, $"/api/v1/students/{Guid.NewGuid()}", directeur);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task An_Enseignant_Never_Receives_The_Payments_Section()
+    {
+        // docs/Volume_7_Security.md « Finance » : l'Enseignant n'a aucun accès aux données
+        // financières d'un élève. `payments` doit être `null` dans la réponse JSON elle-même — un
+        // masquage côté UI seul n'empêcherait pas un appel direct à cette route de tout exposer.
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CI Confidentialité");
+        var created = await CreateStudentAsync(directeur, classroom.Id, "Oumar Sarr");
+
+        var enseignant = await EnseignantTokenAsync();
+        var response = await SendAsync(HttpMethod.Get, $"/api/v1/students/{created.Id}", enseignant);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonDocument>();
+        body!.RootElement.GetProperty("payments").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+
+        // Contre-épreuve : le reste de la fiche reste servi normalement pour l'Enseignant.
+        body.RootElement.GetProperty("identity").GetProperty("fullName").GetString().Should().Be("Oumar Sarr");
     }
 
     // ---------------------------------------------------------------- PUT /students/{id}

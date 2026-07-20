@@ -217,7 +217,10 @@
                     <icon name="book" class="w-4 h-4" />
                     <span>Notes &amp; bulletins</span>
                 </button>
-                <button type="button" role="tab" @@click="detailTab = 'payments'"
+                <!-- Jamais pour l'Enseignant (Volume 7 « Finance ») : masquée ici pour l'ergonomie, mais
+                     c'est studentDetail.payments (absent de la réponse API pour ce rôle) qui protège
+                     réellement la donnée — voir GetStudentDetailQueryHandler. -->
+                <button type="button" role="tab" x-show="canViewPayments" x-cloak @@click="detailTab = 'payments'"
                         :aria-selected="detailTab === 'payments'"
                         :class="detailTab === 'payments' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'"
                         class="inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-t-md">
@@ -372,63 +375,69 @@
                     </div>
                 </div>
 
-                <!-- ONGLET 3 — Paiements : synthèse (dû / versé / solde) puis liste des reçus. -->
+                <!-- ONGLET 3 — Paiements : synthèse (dû / versé / solde) puis liste des reçus. Jamais pour
+                     l'Enseignant — studentDetail.payments vaut alors null (voir GetStudentDetailQueryHandler),
+                     d'où le template x-if : rien ici ne doit s'évaluer contre un payments absent. -->
                 <div x-show="detailTab === 'payments'" role="tabpanel" class="py-5">
-                    <!-- Synthèse financière : reflète les inscriptions, pertinente même sans versement. -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div class="rounded-lg border border-gray-200 p-4">
-                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total dû</p>
-                            <p class="mt-1 text-lg font-bold text-gray-900" x-text="studentDetail ? formatAmount(studentDetail.payments.totalDue) : '—'"></p>
-                        </div>
-                        <div class="rounded-lg border border-success/30 bg-success-bg p-4">
-                            <p class="text-[11px] font-bold text-success uppercase tracking-wider">Total versé</p>
-                            <p class="mt-1 text-lg font-bold text-success" x-text="studentDetail ? formatAmount(studentDetail.payments.totalPaid) : '—'"></p>
-                        </div>
-                        <!-- Solde : vert s'il est nul (soldé), orange s'il reste dû. -->
-                        <div class="rounded-lg border p-4"
-                             :class="studentDetail && studentDetail.payments.remainingBalance > 0 ? 'border-warning/30 bg-warning-bg' : 'border-success/30 bg-success-bg'">
-                            <p class="text-[11px] font-bold uppercase tracking-wider"
-                               :class="studentDetail && studentDetail.payments.remainingBalance > 0 ? 'text-warning' : 'text-success'">Solde restant</p>
-                            <p class="mt-1 text-lg font-bold"
-                               :class="studentDetail && studentDetail.payments.remainingBalance > 0 ? 'text-warning' : 'text-success'"
-                               x-text="studentDetail ? formatAmount(studentDetail.payments.remainingBalance) : '—'"></p>
-                        </div>
-                    </div>
+                    <template x-if="studentDetail && studentDetail.payments">
+                        <div>
+                            <!-- Synthèse financière : reflète les inscriptions, pertinente même sans versement. -->
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="rounded-lg border border-gray-200 p-4">
+                                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total dû</p>
+                                    <p class="mt-1 text-lg font-bold text-gray-900" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
+                                </div>
+                                <div class="rounded-lg border border-success/30 bg-success-bg p-4">
+                                    <p class="text-[11px] font-bold text-success uppercase tracking-wider">Total versé</p>
+                                    <p class="mt-1 text-lg font-bold text-success" x-text="formatAmount(studentDetail.payments.totalPaid)"></p>
+                                </div>
+                                <!-- Solde : vert s'il est nul (soldé), orange s'il reste dû. -->
+                                <div class="rounded-lg border p-4"
+                                     :class="studentDetail.payments.remainingBalance > 0 ? 'border-warning/30 bg-warning-bg' : 'border-success/30 bg-success-bg'">
+                                    <p class="text-[11px] font-bold uppercase tracking-wider"
+                                       :class="studentDetail.payments.remainingBalance > 0 ? 'text-warning' : 'text-success'">Solde restant</p>
+                                    <p class="mt-1 text-lg font-bold"
+                                       :class="studentDetail.payments.remainingBalance > 0 ? 'text-warning' : 'text-success'"
+                                       x-text="formatAmount(studentDetail.payments.remainingBalance)"></p>
+                                </div>
+                            </div>
 
-                    <!-- Liste des versements. -->
-                    <div class="mt-5">
-                        <template x-if="studentDetail && studentDetail.payments.entries.length === 0">
-                            <empty-state icon="wallet" title="Aucun paiement enregistré."
-                                         hint="Les versements encaissés pour cet élève apparaîtront ici." />
-                        </template>
+                            <!-- Liste des versements. -->
+                            <div class="mt-5">
+                                <template x-if="studentDetail.payments.entries.length === 0">
+                                    <empty-state icon="wallet" title="Aucun paiement enregistré."
+                                                 hint="Les versements encaissés pour cet élève apparaîtront ici." />
+                                </template>
 
-                        <div x-show="studentDetail && studentDetail.payments.entries.length > 0" class="overflow-x-auto rounded-lg border border-gray-200">
-                            <table class="w-full min-w-[560px] text-left border-collapse text-sm">
-                                <thead>
-                                    <tr class="table-head">
-                                        <th class="py-2.5 px-3">Date</th>
-                                        <th class="py-2.5 px-3">N° reçu</th>
-                                        <th class="py-2.5 px-3 text-right">Montant</th>
-                                        <th class="py-2.5 px-3">Méthode</th>
-                                        <th class="py-2.5 px-3 text-center">Statut</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100">
-                                    <template x-for="payment in (studentDetail ? studentDetail.payments.entries : [])" :key="payment.paymentId">
-                                        <tr>
-                                            <td class="py-2 px-3 text-gray-700 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
-                                            <td class="py-2 px-3 font-mono text-xs text-gray-600 whitespace-nowrap" x-text="payment.receiptNumber || '—'"></td>
-                                            <td class="py-2 px-3 text-right font-bold text-gray-900 whitespace-nowrap" x-text="formatAmount(payment.amount)"></td>
-                                            <td class="py-2 px-3 text-gray-700 whitespace-nowrap" x-text="paymentMethodLabel(payment.method)"></td>
-                                            <td class="py-2 px-3 text-center">
-                                                <span :class="paymentStatusBadge(payment.status)" x-text="paymentStatusLabel(payment.status)"></span>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
+                                <div x-show="studentDetail.payments.entries.length > 0" class="overflow-x-auto rounded-lg border border-gray-200">
+                                    <table class="w-full min-w-[560px] text-left border-collapse text-sm">
+                                        <thead>
+                                            <tr class="table-head">
+                                                <th class="py-2.5 px-3">Date</th>
+                                                <th class="py-2.5 px-3">N° reçu</th>
+                                                <th class="py-2.5 px-3 text-right">Montant</th>
+                                                <th class="py-2.5 px-3">Méthode</th>
+                                                <th class="py-2.5 px-3 text-center">Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-100">
+                                            <template x-for="payment in studentDetail.payments.entries" :key="payment.paymentId">
+                                                <tr>
+                                                    <td class="py-2 px-3 text-gray-700 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
+                                                    <td class="py-2 px-3 font-mono text-xs text-gray-600 whitespace-nowrap" x-text="payment.receiptNumber || '—'"></td>
+                                                    <td class="py-2 px-3 text-right font-bold text-gray-900 whitespace-nowrap" x-text="formatAmount(payment.amount)"></td>
+                                                    <td class="py-2 px-3 text-gray-700 whitespace-nowrap" x-text="paymentMethodLabel(payment.method)"></td>
+                                                    <td class="py-2 px-3 text-center">
+                                                        <span :class="paymentStatusBadge(payment.status)" x-text="paymentStatusLabel(payment.status)"></span>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </template>
                 </div>
 
             </div>

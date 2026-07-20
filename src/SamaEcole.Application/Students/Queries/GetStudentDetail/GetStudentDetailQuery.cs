@@ -34,7 +34,11 @@ public record StudentDetailDto(
     StudentIdentityDto Identity,
     IReadOnlyList<AcademicHistoryEntryDto> AcademicHistory,
     IReadOnlyList<TermReportDto> Grades,
-    PaymentHistoryDto Payments,
+
+    // Null pour l'Enseignant (docs/Volume_7_Security.md, Finance) : masquer l'onglet côté UI n'est
+    // qu'une commodité d'ergonomie, jamais une mesure de sécurité (Volume 5 §UX) — c'est CE champ,
+    // absent de la réponse, qui empêche réellement la fuite, pas le seul masquage du bouton.
+    PaymentHistoryDto? Payments,
 
     // Barème de l'école (10 ou 20) : les moyennes ci-dessus sont exprimées SUR CE barème (JGK-B02).
     // L'UI en a besoin pour afficher « 14,5/20 » ou « 7,2/10 » sans supposer /20 — une école en /10
@@ -124,7 +128,7 @@ public record PaymentEntryDto(
     string Status,
     DateTimeOffset PaidAt);
 
-public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
+public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser)
     : IRequestHandler<GetStudentDetailQuery, StudentDetailDto>
 {
     public async Task<StudentDetailDto> Handle(GetStudentDetailQuery request, CancellationToken cancellationToken)
@@ -230,12 +234,32 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
                 e.RowVersion))
             .ToList();
 
-        // 4) Paiements — reliés à l'élève PAR l'inscription (le Payment ne porte pas de StudentId).
-        var paymentEntries = await (
+        // 4) Paiements — jamais pour l'Enseignant (Volume 7 « Finance », Volume 1 §« Sans accès »).
+        // Absent de la requête plutôt que masqué côté UI : un accès direct à l'URL ne doit rien exposer.
+        PaymentHistoryDto? payments = null;
+        if (currentUser.Role != Role.Enseignant)
+        {
+            // Récapitulatif financier : le dû et le versé s'entendent hors inscriptions annulées (même
+            // périmètre que le tableau de bord Finance, JGK-F04). Le solde reste TotalDue − AmountPaid.
+            var financial = enrollments.Where(e => e.Status != EnrollmentStatus.Cancelled).ToList();
+            var totalDue = financial.Sum(e => e.TotalDue);
+            var totalPaid = financial.Sum(e => e.AmountPaid);
+
+            var paymentEntries = await BuildPaymentEntriesAsync(request.StudentId, cancellationToken);
+            payments = new PaymentHistoryDto(totalDue, totalPaid, totalDue - totalPaid, paymentEntries);
+        }
+
+        return new StudentDetailDto(identity, academicHistory, grades, payments, gradingScale);
+    }
+
+    /// <summary>Versements encaissés, reliés à l'élève PAR l'inscription (le Payment ne porte pas de StudentId).</summary>
+    private async Task<IReadOnlyList<PaymentEntryDto>> BuildPaymentEntriesAsync(
+        Guid studentId, CancellationToken cancellationToken) =>
+        await (
             from p in dbContext.Payments.AsNoTracking()
             join e in dbContext.Enrollments.AsNoTracking() on p.EnrollmentId equals e.Id
             join y in dbContext.SchoolYears.AsNoTracking() on e.SchoolYearId equals y.Id
-            where e.StudentId == request.StudentId
+            where e.StudentId == studentId
             orderby p.PaidAt descending
             select new PaymentEntryDto(
                 p.Id,
@@ -247,21 +271,6 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
                 p.Status.ToString(),
                 p.PaidAt))
             .ToListAsync(cancellationToken);
-
-        // Récapitulatif financier : le dû et le versé s'entendent hors inscriptions annulées (même
-        // périmètre que le tableau de bord Finance, JGK-F04). Le solde reste TotalDue − AmountPaid.
-        var financial = enrollments.Where(e => e.Status != EnrollmentStatus.Cancelled).ToList();
-        var totalDue = financial.Sum(e => e.TotalDue);
-        var totalPaid = financial.Sum(e => e.AmountPaid);
-
-        var payments = new PaymentHistoryDto(
-            totalDue,
-            totalPaid,
-            totalDue - totalPaid,
-            paymentEntries);
-
-        return new StudentDetailDto(identity, academicHistory, grades, payments, gradingScale);
-    }
 
     /// <summary>
     /// Assemble le bulletin lisible : une entrée par trimestre ayant au moins une note, chaque matière

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Students.Queries.GetStudentDetail;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -6,6 +7,14 @@ using SamaEcole.IntegrationTests.Common;
 using Xunit;
 
 namespace SamaEcole.IntegrationTests.Students;
+
+/// <summary>Rôle du seul champ que GetStudentDetailQueryHandler lit sur ICurrentUserService.</summary>
+file sealed class FakeCurrentUserService(Role? role) : ICurrentUserService
+{
+    public Guid? UserId => null;
+    public Role? Role => role;
+    public string? IpAddress => null;
+}
 
 /// <summary>
 /// Ticket JGK-D02 — la fiche élève complète (<c>GetStudentDetailQueryHandler</c>) exerce le vrai
@@ -124,7 +133,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         // Un utilisateur de l'École A (contexte applicatif borné à EcoleA — Global Query Filter +
         // RLS, exactement comme au runtime) tente d'ouvrir la fiche d'un élève de l'École B.
         await using var db = _db.NewAppContext(EcoleA);
-        var handler = new GetStudentDetailQueryHandler(db);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
 
         var act = async () => await handler.Handle(new GetStudentDetailQuery(EleveEcoleB), CancellationToken.None);
 
@@ -139,7 +148,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         // Contre-épreuve : sans elle, le test ci-dessus pourrait être vert pour une mauvaise raison
         // (un Handler cassé qui échoue pour TOUT le monde, pas seulement pour le mauvais tenant).
         await using var db = _db.NewAppContext(EcoleB);
-        var handler = new GetStudentDetailQueryHandler(db);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveEcoleB), CancellationToken.None);
 
@@ -155,7 +164,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
     public async Task Handle_Returns_Empty_Sections_And_Zeroed_Totals_For_A_Student_With_No_History()
     {
         await using var db = _db.NewAppContext(EcoleA);
-        var handler = new GetStudentDetailQueryHandler(db);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveSansHistorique), CancellationToken.None);
 
@@ -167,7 +176,8 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         detail.AcademicHistory.Should().BeEmpty("aucune inscription n'a été saisie pour cet élève");
         detail.Grades.Should().BeEmpty("aucune note n'a été saisie pour cet élève");
 
-        detail.Payments.Entries.Should().BeEmpty("aucun versement n'a été encaissé pour cet élève");
+        detail.Payments.Should().NotBeNull("le Directeur voit toujours le récapitulatif financier");
+        detail.Payments!.Entries.Should().BeEmpty("aucun versement n'a été encaissé pour cet élève");
         detail.Payments.TotalDue.Should().Be(0m);
         detail.Payments.TotalPaid.Should().Be(0m);
         detail.Payments.RemainingBalance.Should().Be(0m);
@@ -183,7 +193,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         // Contre-épreuve du cas vide : sans elle, des sections « toujours vides » (un bug qui
         // ignorerait les jointures) rendraient le test précédent vert pour une mauvaise raison.
         await using var db = _db.NewAppContext(EcoleA);
-        var handler = new GetStudentDetailQueryHandler(db);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveComplet), CancellationToken.None);
 
@@ -194,9 +204,33 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         detail.Grades.Should().ContainSingle();
         detail.Grades[0].Subjects.Should().ContainSingle(s => s.SubjectName == "Mathématiques" && s.Devoir == 14);
 
-        detail.Payments.Entries.Should().ContainSingle();
+        detail.Payments.Should().NotBeNull();
+        detail.Payments!.Entries.Should().ContainSingle();
         detail.Payments.TotalDue.Should().Be(100_000m);
         detail.Payments.TotalPaid.Should().Be(30_000m);
         detail.Payments.RemainingBalance.Should().Be(70_000m);
+    }
+
+    // ------------------------------------------------------------------
+    // 3) Confidentialité : jamais de paiements pour l'Enseignant
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Handle_Never_Returns_Payments_For_An_Enseignant()
+    {
+        // docs/Volume_7_Security.md « Finance » et Volume_1_Cahier_des_Charges.md (Enseignant : « Sans
+        // accès » à la Finance) : Payments doit être ABSENT de la réponse, pas seulement masqué côté
+        // UI — un accès direct à l'URL ne doit rien exposer.
+        await using var db = _db.NewAppContext(EcoleA);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Enseignant));
+
+        var detail = await handler.Handle(new GetStudentDetailQuery(EleveComplet), CancellationToken.None);
+
+        detail.Payments.Should().BeNull("un Enseignant n'a jamais accès aux données financières d'un élève");
+
+        // Contre-épreuve : le reste de la fiche reste servi normalement, seuls les paiements sont coupés.
+        detail.Identity.FullName.Should().Be("Awa Fall");
+        detail.AcademicHistory.Should().ContainSingle();
+        detail.Grades.Should().ContainSingle();
     }
 }
