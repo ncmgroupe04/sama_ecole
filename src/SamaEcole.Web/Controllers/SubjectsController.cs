@@ -2,7 +2,6 @@ using SamaEcole.Application.Subjects.Commands.CreateSubject;
 using SamaEcole.Application.Subjects.Commands.DeleteSubject;
 using SamaEcole.Application.Subjects.Commands.UpdateSubject;
 using SamaEcole.Application.Subjects.Queries.GetSubjects;
-using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,22 +20,22 @@ public class SubjectsController(ISender mediator) : ControllerBase
     public record UpdateSubjectRequest(string Name, string Level, decimal Coefficient, uint RowVersion);
 
     /// <summary>
-    /// LECTURE ouverte à tout utilisateur de l'école : l'enseignant a besoin des coefficients pour
-    /// comprendre ses moyennes, le secrétariat pour composer les bulletins. La réserver au Directeur
-    /// n'apporterait rien.
+    /// ÉCRITURE : Directeur, Secrétariat et Enseignant — accès inconditionnel, sans le garde-fou par
+    /// école de GradingPolicies.CanManageGradingScale (qui reste réservé au barème et aux mentions,
+    /// GradesController/SchoolSettingsController). Volontairement un rôle dédié plutôt que cette policy
+    /// partagée : l'élargir aurait aussi ouvert le barème et les mentions à l'Enseignant, jamais demandé.
+    /// Jamais la Finance.
     /// </summary>
+    private const string ManageRoles = "Directeur,Secretariat,Enseignant";
+
+    /// <summary>LECTURE ouverte à tout utilisateur de l'école.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<SubjectDto>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetSubjectsQuery(), cancellationToken));
 
-    /// <summary>
-    /// ÉCRITURE : Directeur toujours ; Secrétariat seulement si SON école a activé la délégation
-    /// (GradingPolicies.CanManageGradingScale, ticket JGK-G02, docs/Volume_7_Security.md « Paramètres
-    /// de l'école »). Jamais l'Enseignant ni la Finance.
-    /// </summary>
     [HttpPost]
-    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<SubjectResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -51,7 +50,7 @@ public class SubjectsController(ISender mediator) : ControllerBase
 
     /// <summary>Corrige le libellé/niveau/coefficient d'une matière déjà créée. Même permission que Create.</summary>
     [HttpPut("{id:guid}")]
-    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<UpdateSubjectResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -68,7 +67,7 @@ public class SubjectsController(ISender mediator) : ControllerBase
     /// pour elle (DeleteSubjectCommandHandler). `rowVersion` en query string, comme DELETE /grades/{id}.
     /// </summary>
     [HttpDelete("{id:guid}")]
-    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

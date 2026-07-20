@@ -219,13 +219,16 @@ Fermé par défaut sur chaque établissement : le Directeur doit l'activer expli
 
 **Paramètres de l'école**
 
-| Action | Directeur | Secrétariat |
-|---|---|---|
-| Informations, année scolaire, matricules, déconnexion automatique, mensualités, utilisateurs | ✔ | ✖ |
-| **Barème de notation (/10 ou /20), matières/coefficients, mentions du bulletin** (ticket JGK-G02 : délégation en cas d'absence du Directeur) | ✔ | ✔ |
-| Export de données (remplace « Sauvegardes/Restaurations » de la v1.0, désormais automatisées côté infrastructure — Volume 9) | ✔ | ✖ |
+| Action | Directeur | Secrétariat | Enseignant |
+|---|---|---|---|
+| Informations, année scolaire, matricules, déconnexion automatique, mensualités, utilisateurs | ✔ | ✖ | ✖ |
+| **Barème de notation (/10 ou /20), mentions du bulletin** (ticket JGK-G02 : délégation en cas d'absence du Directeur) | ✔ | ✔ (si délégation activée) | ✖ |
+| **Matières / coefficients** — accès inconditionnel, sans réglage de délégation | ✔ | ✔ | ✔ |
+| Export de données (remplace « Sauvegardes/Restaurations » de la v1.0, désormais automatisées côté infrastructure — Volume 9) | ✔ | ✖ | ✖ |
 
 Le barème est exposé par un endpoint dédié (`PUT /schools/current/settings/grading-scale`), distinct du reste des réglages d'établissement (`PUT /schools/current/settings`) : ouvrir ce dernier au Secrétariat lui aurait aussi donné la main sur les formats de matricule, la déconnexion automatique et les mensualités, hors du périmètre de la délégation voulue.
+
+Les matières (`/api/v1/subjects`, `SubjectsController`) ne suivent PAS ce même garde-fou par école : Directeur, Secrétariat et Enseignant peuvent tous créer/modifier/archiver une matière sans qu'aucun réglage ne soit à activer — un rôle dédié (`Authorize(Roles = "Directeur,Secretariat,Enseignant")`), distinct de la policy `CanManageGradingScale` qui reste, elle, réservée au barème et aux mentions.
 
 **Abonnements**
 
