@@ -44,6 +44,12 @@ public class DateFieldTagHelper : TagHelper
     /// <summary>Classes Tailwind additionnelles pour le déclencheur (ex. « mt-0 » dans une barre de filtres).</summary>
     public string? Class { get; set; }
 
+    private static readonly string[] MonthNames =
+    [
+        "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+        "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ];
+
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
         output.TagName = null;
@@ -53,6 +59,21 @@ public class DateFieldTagHelper : TagHelper
         var placeholder = WebUtility.HtmlEncode(Placeholder);
         var ariaLabel = WebUtility.HtmlEncode(AriaLabel ?? Placeholder);
         var extraClass = string.IsNullOrWhiteSpace(Class) ? "" : " " + Class;
+
+        // Options de mois/année rendues en HTML STATIQUE (pas via x-for) : un <select x-model> dont
+        // les <option> arrivent après coup, le temps qu'Alpine peuple un <template x-for>, se retrouve
+        // sans option correspondante au tout premier rendu — le navigateur retombe alors sur la
+        // première option de la liste (janvier ; l'année la plus haute, la liste étant décroissante),
+        // qu'Alpine ne corrige jamais ensuite puisque viewMonth/viewYear, eux, n'ont pas changé. Des
+        // options déjà présentes dans le HTML initial évitent la course : x-model trouve tout de suite
+        // la bonne <option>. Plage d'années : 100 ans en arrière (date de naissance) et 5 en avant.
+        var monthOptions = string.Concat(MonthNames.Select((name, index) =>
+            $"""<option value="{index}">{WebUtility.HtmlEncode(name)}</option>"""));
+
+        var currentYear = DateTime.Now.Year;
+        var yearOptions = string.Concat(
+            Enumerable.Range(currentYear - 100, 106).Reverse()
+                .Select(year => $"""<option value="{year}">{year}</option>"""));
 
         output.Content.SetHtmlContent($$"""
             <div class="relative" x-data="dateField()">
@@ -68,14 +89,25 @@ public class DateFieldTagHelper : TagHelper
                 <div x-show="open" x-cloak x-on:click.outside="open = false" x-on:keydown.escape="open = false"
                      x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                      class="absolute z-30 mt-2 w-[300px] rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100">
-                    <div class="flex items-center justify-between pb-3 mb-2 border-b border-gray-100">
+                    <div class="flex items-center justify-between gap-1 pb-3 mb-2 border-b border-gray-100">
                         <button type="button" x-on:click="prevMonth()" aria-label="Mois précédent"
-                                class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors">
+                                class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors shrink-0">
                             {{Svg("chevron-left", "w-5 h-5")}}
                         </button>
-                        <span class="text-base font-semibold text-gray-900" x-text="monthLabel"></span>
+                        <!-- Navigation rapide : sélection directe du mois/année plutôt que de défiler
+                             chevron par chevron jusqu'à une date lointaine (ex. une date de naissance). -->
+                        <div class="flex items-center gap-1 min-w-0">
+                            <select x-model.number="viewMonth" aria-label="Mois"
+                                    class="text-sm font-semibold text-gray-900 bg-transparent border-0 rounded-md py-1 pl-1.5 pr-6 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary">
+                                {{monthOptions}}
+                            </select>
+                            <select x-model.number="viewYear" aria-label="Année"
+                                    class="text-sm font-semibold text-gray-900 bg-transparent border-0 rounded-md py-1 pl-1.5 pr-6 cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary">
+                                {{yearOptions}}
+                            </select>
+                        </div>
                         <button type="button" x-on:click="nextMonth()" aria-label="Mois suivant"
-                                class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors">
+                                class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors shrink-0">
                             {{Svg("chevron-right", "w-5 h-5")}}
                         </button>
                     </div>

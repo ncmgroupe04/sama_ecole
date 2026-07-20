@@ -41,12 +41,6 @@ document.addEventListener('alpine:init', () => {
             this.open = !this.open;
         },
 
-        get monthLabel() {
-            const label = new Date(this.viewYear, this.viewMonth, 1)
-                .toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-            return label.charAt(0).toUpperCase() + label.slice(1);
-        },
-
         get days() {
             const firstOfMonth = new Date(this.viewYear, this.viewMonth, 1);
             const leading = (firstOfMonth.getDay() + 6) % 7; // Lundi en première colonne
