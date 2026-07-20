@@ -325,14 +325,15 @@
                                             Moyenne :
                                             <span class="font-bold text-gray-900" x-text="formatAverage(term.generalAverage)"></span>
                                         </p>
-                                        <!-- Réservées au Directeur/Enseignant côté serveur (ReportCardsController). -->
-                                        <button type="button" x-show="canViewReportCard" x-cloak
+                                        <!-- Réservée au Directeur/Enseignant côté serveur (ReportCardsController). -->
+                                        <button type="button" x-show="canEditReportCardRemark" x-cloak
                                                 x-on:click="openReportCardRemark(term)"
                                                 class="btn-secondary text-xs whitespace-nowrap">
                                             <icon name="pencil" class="w-4 h-4" />
                                             <span>Observations</span>
                                         </button>
-                                        <button type="button" x-show="canViewReportCard" x-cloak
+                                        <!-- Directeur, Enseignant et Secrétariat (téléchargement seulement). -->
+                                        <button type="button" x-show="canDownloadReportCard" x-cloak
                                                 x-on:click="downloadReportCard(term)"
                                                 :disabled="downloadingTermId === term.termId"
                                                 class="btn-secondary text-xs whitespace-nowrap">

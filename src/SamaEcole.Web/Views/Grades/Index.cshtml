@@ -52,8 +52,8 @@
             </div>
 
             <!-- Bulletins de toute la classe (JGK-G03) : classe + trimestre suffisent, indépendant de la
-                 matière sélectionnée pour la saisie — réservé au Directeur/Enseignant. -->
-            <div x-show="canViewReportCard && hasClassAndTerm" x-cloak class="flex gap-2">
+                 matière sélectionnée pour la saisie — ouvert au Directeur, à l'Enseignant et au Secrétariat. -->
+            <div x-show="canDownloadReportCard && hasClassAndTerm" x-cloak class="flex gap-2">
                 <button type="button" x-on:click="downloadClassBulletinsMergedPdf()" :disabled="downloadingClassBulletins"
                         class="btn-secondary whitespace-nowrap text-sm" title="Un seul PDF, une page par élève — pour l'impression en lot">
                     <icon name="download" class="w-4 h-4" />

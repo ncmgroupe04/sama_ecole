@@ -16,12 +16,14 @@ namespace SamaEcole.Web.Controllers;
 /// <summary>
 /// Ticket JGK-G03 — /report-cards. Contrôleur mince : aucune logique métier ici (AGENTS.md règle #8).
 ///
-/// Générer/imprimer est ouvert au Directeur ET à l'Enseignant (docs/Volume_7_Security.md
-/// « Bulletins »). Publier (verrouiller la saisie) n'est pas implémenté dans cette passe — aucune
-/// entité ReportCard n'est persistée, chaque appel régénère le bulletin à partir des notes actuelles.
+/// Générer/imprimer/télécharger (individuel ou groupé) est ouvert au Directeur, à l'Enseignant ET au
+/// Secrétariat (qui compose les bulletins mais n'y écrit rien). Publier (verrouiller la saisie) n'est
+/// pas implémenté dans cette passe — aucune entité ReportCard n'est persistée, chaque appel régénère
+/// le bulletin à partir des notes actuelles.
 ///
-/// La distinction du conseil (Blâme… Félicitations) et les observations partagent les MÊMES rôles que
-/// la génération : c'est la même préparation du même document, jamais ouverte au Secrétariat.
+/// La distinction du conseil (Blâme… Félicitations) et les observations, en revanche, restent réservées
+/// à Directeur/Enseignant : c'est une SAISIE, pas un simple téléchargement, jamais ouverte au
+/// Secrétariat.
 /// </summary>
 [ApiController]
 [Route("api/v1/report-cards")]
@@ -29,13 +31,14 @@ namespace SamaEcole.Web.Controllers;
 public class ReportCardsController(ISender mediator) : ControllerBase
 {
     private const string ReportCardWriterRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
+    private const string ReportCardDownloadRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)},{nameof(Role.Secretariat)}";
 
     public record GenerateReportCardRequest(Guid StudentId, Guid TermId);
     public record UpsertReportCardRemarkRequest(
         Guid StudentId, Guid TermId, DisciplinaryMention? DisciplinaryMention, CouncilDecision? CouncilDecision, string? Observations);
 
     [HttpPost("generate")]
-    [Authorize(Roles = ReportCardWriterRoles)]
+    [Authorize(Roles = ReportCardDownloadRoles)]
     [EnableRateLimiting(SensitiveEndpointRateLimiting.ReportCardGenerationPolicyName)]
     [Produces("application/pdf")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -55,7 +58,7 @@ public class ReportCardsController(ISender mediator) : ControllerBase
     /// individuelle : chaque appel régénère TOUS les bulletins de la classe à la volée.
     /// </summary>
     [HttpGet("class-bulletins/zip")]
-    [Authorize(Roles = ReportCardWriterRoles)]
+    [Authorize(Roles = ReportCardDownloadRoles)]
     [EnableRateLimiting(SensitiveEndpointRateLimiting.ReportCardGenerationPolicyName)]
     [Produces("application/zip")]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -76,7 +79,7 @@ public class ReportCardsController(ISender mediator) : ControllerBase
     /// individuelle.
     /// </summary>
     [HttpGet("class-bulletins/merged-pdf")]
-    [Authorize(Roles = ReportCardWriterRoles)]
+    [Authorize(Roles = ReportCardDownloadRoles)]
     [EnableRateLimiting(SensitiveEndpointRateLimiting.ReportCardGenerationPolicyName)]
     [Produces("application/pdf")]
     [ProducesResponseType(StatusCodes.Status200OK)]

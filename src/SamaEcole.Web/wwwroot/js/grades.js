@@ -24,10 +24,10 @@ document.addEventListener('alpine:init', () => {
         canEnterGrades: window.auth.role === 'Enseignant',
         canCorrectGrades: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
-        // Télécharger les bulletins de la classe (ZIP ou PDF fusionné) est réservé au Directeur/Enseignant
-        // côté serveur (ReportCardsController, ticket JGK-G03) — le Secrétariat n'y a pas accès, comme
-        // pour le bulletin individuel (voir students.js, canViewReportCard).
-        canViewReportCard: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant',
+        // Télécharger les bulletins de la classe (ZIP ou PDF fusionné) est ouvert au Directeur, à
+        // l'Enseignant ET au Secrétariat côté serveur (ReportCardsController.ReportCardDownloadRoles,
+        // ticket JGK-G03) — même portée que le bulletin individuel (voir students.js, canDownloadReportCard).
+        canDownloadReportCard: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant' || window.auth.role === 'Secretariat',
 
         classrooms: [],
         subjects: [],

@@ -61,9 +61,15 @@ document.addEventListener('alpine:init', () => {
         // (StudentsController.ManageRoles, EnrollmentsController.EnrollmentWriters) — confort d'affichage.
         canManageStudent: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
-        // Générer le bulletin PDF (JGK-G03) est réservé au Directeur/Enseignant côté serveur
-        // (ReportCardsController) — le Secrétariat n'y a pas accès, contrairement à la saisie de notes.
-        canViewReportCard: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant',
+        // Saisir les observations du conseil (Blâme… Félicitations) reste réservé au Directeur/Enseignant
+        // côté serveur (ReportCardsController, ReportCardWriterRoles) — c'est une SAISIE, pas un simple
+        // téléchargement, jamais ouverte au Secrétariat.
+        canEditReportCardRemark: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant',
+
+        // Télécharger le bulletin PDF (JGK-G03) est ouvert au Directeur, à l'Enseignant ET au
+        // Secrétariat côté serveur (ReportCardsController.ReportCardDownloadRoles) — il compose les
+        // bulletins mais n'y écrit rien.
+        canDownloadReportCard: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant' || window.auth.role === 'Secretariat',
 
         // Édition de la fiche (modale). Sourcée depuis studentDetail.identity (fraîchement chargée,
         // RowVersion inclus) plutôt que la ligne de liste `detailStudent`, qui peut être périmée et ne

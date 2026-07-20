@@ -120,8 +120,10 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     }
 
     [Fact]
-    public async Task A_Secretary_Must_Not_Generate_A_Report_Card()
+    public async Task A_Secretary_Can_Generate_A_Report_Card()
     {
+        // Le Secrétariat compose et télécharge les bulletins (ReportCardDownloadRoles) mais n'écrit
+        // jamais les observations du conseil, restées réservées à Directeur/Enseignant.
         var directeur = await DirecteurTokenAsync();
         var enseignant = await EnseignantTokenAsync();
         var (studentId, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
@@ -130,7 +132,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var response = await SendAsync(HttpMethod.Post, "/api/v1/report-cards/generate", secretaire,
             new { studentId, termId });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -196,7 +198,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     }
 
     [Fact]
-    public async Task A_Secretary_Must_Not_Download_Class_Bulletins()
+    public async Task A_Secretary_Can_Download_Class_Bulletins()
     {
         var directeur = await DirecteurTokenAsync();
         var enseignant = await EnseignantTokenAsync();
@@ -208,8 +210,25 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var pdfResponse = await SendAsync(HttpMethod.Get,
             $"/api/v1/report-cards/class-bulletins/merged-pdf?classroomId={classroomId}&termId={termId}", secretaire);
 
-        zipResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        pdfResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        zipResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        pdfResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task A_Secretary_Must_Not_Edit_The_Report_Card_Remark()
+    {
+        // Contrairement au téléchargement, la saisie des observations du conseil reste réservée à
+        // Directeur/Enseignant (ReportCardWriterRoles) — le Secrétariat compose le bulletin, il ne
+        // l'écrit pas.
+        var directeur = await DirecteurTokenAsync();
+        var enseignant = await EnseignantTokenAsync();
+        var (studentId, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+        var secretaire = await SecretaireTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Put, "/api/v1/report-cards/remark", secretaire,
+            new { studentId, termId, disciplinaryMention = (string?)null, councilDecision = (string?)null, observations = (string?)null });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
