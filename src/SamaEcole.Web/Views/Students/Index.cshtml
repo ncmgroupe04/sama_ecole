@@ -109,7 +109,7 @@
                                 <div class="flex items-center gap-3 min-w-0">
                                     <img x-show="student.photoUrl" :src="student.photoUrl" alt=""
                                          class="w-8 h-8 rounded-full object-cover shrink-0" x-cloak>
-                                    <div x-show="!student.photoUrl" class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="getInitials(student.fullName)"></div>
+                                    <div x-show="!student.photoUrl" :class="initialsClasses(student.fullName)" class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0" x-text="getInitials(student.fullName)"></div>
                                     <div class="min-w-0">
                                         <p class="font-medium text-gray-900 truncate" x-text="student.fullName"></p>
                                     </div>
@@ -143,7 +143,7 @@
         <div class="flex items-center gap-4 pb-5 border-b border-gray-100">
             <img x-show="detailStudent && detailStudent.photoUrl" :src="detailStudent ? detailStudent.photoUrl : ''" alt=""
                  class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak>
-            <div x-show="!detailStudent || !detailStudent.photoUrl" class="w-14 h-14 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-base flex-shrink-0" x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
+            <div x-show="!detailStudent || !detailStudent.photoUrl" :class="detailStudent ? initialsClasses(detailStudent.fullName) : ''" class="w-14 h-14 rounded-full flex items-center justify-center font-bold text-base flex-shrink-0" x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
             <p class="text-xl font-bold text-gray-900" x-text="detailStudent ? detailStudent.fullName : ''"></p>
         </div>
 

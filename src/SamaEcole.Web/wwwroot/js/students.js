@@ -468,6 +468,29 @@ document.addEventListener('alpine:init', () => {
             return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
         },
 
+        /**
+         * Couleur douce du badge d'initiales, DÉTERMINISTE par nom (charte D-MAJ §2 : « humaniser
+         * l'affichage »). Un même élève garde toujours la même teinte, d'un écran à l'autre et d'un
+         * rechargement à l'autre. Les chaînes de classes sont écrites en TOUTES LETTRES (jamais
+         * concaténées) pour que le scanner Tailwind les compile — sinon elles seraient purgées.
+         */
+        initialsClasses(name) {
+            const palette = [
+                'bg-blue-100 text-blue-700',
+                'bg-purple-100 text-purple-700',
+                'bg-pink-100 text-pink-700',
+                'bg-emerald-100 text-emerald-700',
+                'bg-amber-100 text-amber-700',
+                'bg-indigo-100 text-indigo-700',
+                'bg-teal-100 text-teal-700',
+                'bg-rose-100 text-rose-700'
+            ];
+            if (!name) return palette[0];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+            return palette[Math.abs(hash) % palette.length];
+        },
+
         // ----- Fiche élève (JGK-D02) : utilitaires de présentation -----
 
         /** Montant en FCFA, séparateurs de milliers français, sans décimale (la caisse travaille en entiers). */
