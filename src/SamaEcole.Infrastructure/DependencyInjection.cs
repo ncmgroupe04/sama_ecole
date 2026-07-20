@@ -61,6 +61,10 @@ public static class DependencyInjection
         // Sans état : un singleton suffit, comme les générateurs de documents ci-dessus.
         services.AddSingleton<IGradeImportFileParser, GradeImportFileParser>();
 
+        // Import d'élèves par fichier CSV/Excel (même bibliothèque ClosedXML, aucune nouvelle dépendance).
+        services.AddSingleton<IStudentImportFileParser, StudentImportFileParser>();
+        services.AddSingleton<IStudentImportTemplateGenerator, StudentImportTemplateGenerator>();
+
         // Récupération du logo de l'établissement pour le reçu (JGK-E02). Client HTTP dédié :
         //  * garde anti-SSRF au moment de la connexion (l'URL vient du Directeur — cf. SsrfSafeConnect) ;
         //  * aucune redirection auto : une 3xx pourrait rebondir d'une URL publique vers un service interne ;

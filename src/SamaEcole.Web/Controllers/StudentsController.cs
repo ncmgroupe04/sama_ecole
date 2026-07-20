@@ -1,9 +1,13 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Students.Commands.CreateStudent;
 using SamaEcole.Application.Students.Commands.DeleteStudent;
+using SamaEcole.Application.Students.Commands.ImportStudents;
 using SamaEcole.Application.Students.Commands.SetStudentPhoto;
 using SamaEcole.Application.Students.Commands.UpdateStudent;
 using SamaEcole.Application.Students.Queries.GetStudentDetail;
+using SamaEcole.Application.Students.Queries.GetStudentImportTemplate;
 using SamaEcole.Application.Students.Queries.GetStudents;
+using FluentValidation.Results;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +27,8 @@ namespace SamaEcole.Web.Controllers;
 public class StudentsController(ISender mediator) : ControllerBase
 {
     public record SetStudentPhotoRequest(string? PhotoData, uint RowVersion);
+
+    public record ImportStudentsRequest(IFormFile? File, bool DryRun);
 
     public record UpdateStudentRequest(
         string FullName,
@@ -66,6 +72,52 @@ public class StudentsController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(Create), new { id = result.Id }, result);
+    }
+
+    /// <summary>
+    /// Import de masse pour la rentrée scolaire (fichier CSV/Excel, une classe par ligne) — bouton
+    /// « Télécharger le modèle Excel d'exemple » de l'écran d'import. Voir GetStudentImportTemplateQuery.
+    /// </summary>
+    [HttpGet("import/template")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> DownloadImportTemplate(CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetStudentImportTemplateQuery(), cancellationToken);
+        return File(
+            result.Content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            result.FileName);
+    }
+
+    /// <summary>
+    /// Import de masse (ticket import Excel/CSV, D-MAJ §1.C) — <c>dryRun=true</c> pour l'aperçu (rien
+    /// n'est écrit, réponse 200 avec le détail ligne par ligne), <c>dryRun=false</c> pour la confirmation
+    /// (422 si la moindre ligne est invalide, RIEN écrit ; sinon les élèves sont créés en une seule
+    /// transaction). Voir ImportStudentsCommand pour le pourquoi de ce contrat en deux appels.
+    /// </summary>
+    [HttpPost("import")]
+    [Authorize(Roles = ManageRoles)]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    [ProducesResponseType<ImportStudentsResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Import([FromForm] ImportStudentsRequest request, CancellationToken cancellationToken)
+    {
+        if (request.File is null || request.File.Length == 0)
+        {
+            throw new ValidationException([new ValidationFailure("File", "Aucun fichier n'a été fourni.")]);
+        }
+
+        await using var stream = new MemoryStream();
+        await request.File.CopyToAsync(stream, cancellationToken);
+
+        var result = await mediator.Send(
+            new ImportStudentsCommand(stream.ToArray(), request.File.FileName, request.DryRun), cancellationToken);
+
+        return Ok(result);
     }
 
     /// <summary>

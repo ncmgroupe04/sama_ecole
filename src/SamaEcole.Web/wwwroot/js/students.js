@@ -93,6 +93,18 @@ document.addEventListener('alpine:init', () => {
         isChangingEnrollmentStatus: false,
         changeEnrollmentStatusError: null,
 
+        // Import de masse (rentrée scolaire, fichier CSV/Excel) : aperçu (dryRun=true) AVANT toute
+        // écriture, puis confirmation (dryRun=false) sur LE MÊME fichier — voir ImportStudentsCommand.
+        isImportOpen: false,
+        importDragging: false,
+        importFile: null, // File brut choisi/déposé, renvoyé tel quel au serveur (aucune transformation cliente).
+        importFileName: '',
+        isPreviewing: false,
+        isImporting: false,
+        importPreview: null, // Dernière réponse dryRun=true (ImportStudentsResult) : { totalRows, validRows, invalidRows, rows }
+        importResult: null, // Réponse de la confirmation (dryRun=false) une fois committed=true.
+        importError: null, // Rejet global (extension non supportée, fichier vide/corrompu, >1000 lignes).
+
         // Initialisation
         init() {
             this.loadClassrooms();
@@ -492,7 +504,125 @@ document.addEventListener('alpine:init', () => {
                 this.isSubmitting = false;
             }
         },
-        
+
+        // ------------------------------------------------------------ Import de masse (rentrée scolaire)
+
+        openImport() {
+            this.isImportOpen = true;
+            this.resetImportState();
+        },
+
+        closeImport() {
+            this.isImportOpen = false;
+            this.resetImportState();
+            // La liste peut avoir grossi (import confirmé pendant que la modale était ouverte) : on la
+            // recharge systématiquement à la fermeture plutôt que de suivre chaque cas un par un.
+            this.page = 1;
+            this.loadStudents();
+        },
+
+        resetImportState() {
+            this.importDragging = false;
+            this.importFile = null;
+            this.importFileName = '';
+            this.isPreviewing = false;
+            this.isImporting = false;
+            this.importPreview = null;
+            this.importResult = null;
+            this.importError = null;
+        },
+
+        /** Un fichier choisi (clic) ou déposé (drag&drop) lance IMMÉDIATEMENT l'aperçu — pas de bouton intermédiaire. */
+        onImportFileSelected(file) {
+            if (!file) return;
+            this.importFile = file;
+            this.importFileName = file.name;
+            this.importPreview = null;
+            this.importResult = null;
+            this.importError = null;
+            this.previewImport();
+        },
+
+        /** dryRun=true : valide l'intégralité du fichier SANS RIEN écrire (voir ImportStudentsCommand). */
+        async previewImport() {
+            if (!this.importFile) return;
+
+            this.isPreviewing = true;
+            this.importError = null;
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                formData.append('dryRun', 'true');
+                this.importPreview = await window.api.upload('/students/import', formData);
+            } catch (err) {
+                this.importError = (err && err.message) || "Erreur lors de l'analyse du fichier.";
+            } finally {
+                this.isPreviewing = false;
+            }
+        },
+
+        /**
+         * dryRun=false, sur LE MÊME fichier déjà prévisualisé : le serveur re-valide intégralement (l'état
+         * a pu changer depuis l'aperçu — classe supprimée entre-temps, par ex.) et n'écrit QUE si le
+         * fichier est encore entièrement valide, en une seule transaction (aucun import partiel, même en
+         * cas de coupure réseau après l'envoi : soit la réponse n'arrive jamais et rien n'a été écrit,
+         * soit elle arrive et tout est déjà en base).
+         */
+        async confirmImport() {
+            if (!this.importFile || !this.importPreview || this.importPreview.invalidRows > 0) return;
+
+            this.isImporting = true;
+            this.importError = null;
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                formData.append('dryRun', 'false');
+                this.importResult = await window.api.upload('/students/import', formData);
+            } catch (err) {
+                // Un rejet ici (422) signifie que l'état a changé depuis l'aperçu (ex. classe supprimée
+                // entre-temps) : on relance un aperçu pour montrer la situation à jour plutôt que de
+                // laisser l'utilisateur face à une erreur générique sans détail ligne par ligne.
+                this.importError = (err && err.message) || "Erreur lors de l'import.";
+                await this.previewImport();
+            } finally {
+                this.isImporting = false;
+            }
+        },
+
+        /** Bouton « Télécharger le modèle » : même mécanique fetch+blob que downloadReportCard/downloadPdf. */
+        async downloadImportTemplate() {
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch('/api/v1/students/import/template', {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                    credentials: 'same-origin'
+                });
+                if (!response.ok) throw new Error('Téléchargement du modèle impossible.');
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'Modele-Import-Eleves.xlsx';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                this.importError = (err && err.message) || 'Téléchargement du modèle impossible.';
+            }
+        },
+
+        /** Classes Tailwind d'une cellule de l'aperçu : rouge si CE champ précis est en erreur. */
+        importCellClass(row, field) {
+            return row.fieldErrors && row.fieldErrors[field]
+                ? 'bg-danger-bg text-danger font-medium'
+                : 'text-gray-700';
+        },
+
         // Utilitaires de présentation
         formatDate(dateStr) {
             if (!dateStr) return '';
