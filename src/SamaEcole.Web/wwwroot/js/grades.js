@@ -32,7 +32,6 @@ document.addEventListener('alpine:init', () => {
         classrooms: [],
         subjects: [],
         terms: [],
-        gradingScale: 20,
         // Consommé par le partiel _ErrorBanner partagé (x-show="error") : jamais renseigné en
         // pratique aujourd'hui (chaque échec réseau a déjà son propre traitement ci-dessous), mais
         // sans cette déclaration Alpine évalue "error" comme une référence indéfinie à chaque rendu.
@@ -69,18 +68,25 @@ document.addEventListener('alpine:init', () => {
             return Boolean(this.selectedClassroomId && this.selectedTermId);
         },
 
+        // Barème de saisie = celui du CYCLE de la classe sélectionnée, PAS un réglage global d'école :
+        // Primaire /10, Collège & Lycée /20 (système hybride). Même règle que côté serveur
+        // (CreateGradeCommandValidator.ResolveScaleForStudentAsync) — le serveur reste l'autorité, ceci
+        // n'est qu'un garde-fou de saisie (attribut max) et un repère visuel (« /10 » ou « /20 »).
+        get gradingScale() {
+            const classroom = this.classrooms.find(c => c.id === this.selectedClassroomId);
+            return classroom && classroom.cycle === 'Primaire' ? 10 : 20;
+        },
+
         async init() {
             this.isLoadingContext = true;
             try {
-                const [classrooms, subjects, years, settings] = await Promise.all([
+                const [classrooms, subjects, years] = await Promise.all([
                     window.api.get('/classrooms'),
                     window.api.get('/subjects'),
-                    window.api.get('/school-years'),
-                    window.api.get('/schools/current/settings')
+                    window.api.get('/school-years')
                 ]);
                 this.classrooms = classrooms;
                 this.subjects = subjects;
-                this.gradingScale = Number(settings.gradingScale) || 20;
 
                 // Seule l'année ACTIVE propose des trimestres à noter : les années passées sont en
                 // lecture seule (docs/Volume_1_Cahier_des_Charges.md, ticket JGK-C01).

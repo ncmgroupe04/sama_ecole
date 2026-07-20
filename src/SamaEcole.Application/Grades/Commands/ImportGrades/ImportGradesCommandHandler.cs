@@ -51,7 +51,10 @@ public class ImportGradesCommandHandler(
             ]);
         }
 
-        var gradingScale = await GradingScaleGuard.ResolveScaleAsync(dbContext, cancellationToken);
+        // Barème du CYCLE de la classe visée (Primaire /10, Collège & Lycée /20), comme la saisie unitaire
+        // (CreateGradeCommandHandler) — une note d'import qui dépasse le plafond du cycle est rejetée
+        // exactement de la même façon, jamais laissée passer parce qu'elle vient d'un fichier.
+        var gradingScale = await GradingScaleGuard.ResolveScaleForClassroomAsync(dbContext, request.ClassroomId, cancellationToken);
 
         // Lecture BRUTE du fichier : IGradeImportFileParser lève déjà une ValidationException si le
         // format est illisible, l'extension non supportée, ou le fichier vide.
@@ -127,7 +130,7 @@ public class ImportGradesCommandHandler(
             if (value > gradingScale)
             {
                 errors.Add(new ValidationFailure(
-                    field, $"La note ({value}) dépasse le barème de l'école ({gradingScale}) pour le matricule « {matricule} »."));
+                    field, $"La note ({value}) dépasse le barème du cycle de la classe ({gradingScale}) pour le matricule « {matricule} »."));
                 continue;
             }
 

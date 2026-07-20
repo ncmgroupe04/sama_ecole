@@ -1,4 +1,5 @@
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -26,6 +27,15 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
 
         builder.Property(c => c.Name).IsRequired().HasMaxLength(50);
         builder.Property(c => c.Level).IsRequired().HasMaxLength(50);
+
+        // Persisté en string comme tous les enums métier (cf. EnrollmentConfiguration, PaymentConfiguration).
+        // HasDefaultValue applique le convertisseur : la migration écrit defaultValue: "College", ce qui
+        // renseigne automatiquement la colonne NOT NULL pour les classrooms déjà en base (aucun downtime).
+        builder.Property(c => c.Cycle)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(CycleType.College);
 
         // Deux classes ne peuvent pas porter le même nom dans la même école — mais « CM2 A » peut
         // évidemment exister dans deux écoles différentes. Le soft delete fait partie de la clé :

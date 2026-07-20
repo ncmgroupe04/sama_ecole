@@ -2152,6 +2152,14 @@ components:
         id: { type: string, format: uuid }
         name: { type: string, example: "CM2 B" }
         level: { type: string, example: "Primaire" }
+        cycle:
+          type: string
+          enum: [Primaire, College, Lycee]
+          example: College
+          description: >-
+            Cycle d'enseignement STRUCTURÉ (distinct du `level` en texte libre). Pilote le barème de
+            notation : `Primaire` est noté sur /10, `College` et `Lycee` sur /20. Lecture seule — non
+            accepté à la création/mise à jour (défaut `College`).
         capacity: { type: integer, example: 40 }
         studentCount: { type: integer, example: 32, description: Effectif actuel, calculé côté base }
         rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }

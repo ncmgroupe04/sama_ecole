@@ -22,6 +22,10 @@ public class ReportCardRemark : AuditableEntity, ITenantEntity
     /// <summary>Null tant qu'aucune distinction n'a été cochée — la ligne s'imprime alors sans coche.</summary>
     public DisciplinaryMention? DisciplinaryMention { get; set; }
 
+    /// <summary>Null tant qu'aucune décision n'a été prise — les trois cases du bloc « Décision du
+    /// Conseil » s'impriment alors toutes vides, jamais une décision par défaut inventée.</summary>
+    public CouncilDecision? CouncilDecision { get; set; }
+
     /// <summary>Texte libre du conseil des professeurs. Null/vide : le cadre s'imprime vide.</summary>
     public string? Observations { get; set; }
 }

@@ -31,7 +31,8 @@ public class ReportCardsController(ISender mediator) : ControllerBase
     private const string ReportCardWriterRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
 
     public record GenerateReportCardRequest(Guid StudentId, Guid TermId);
-    public record UpsertReportCardRemarkRequest(Guid StudentId, Guid TermId, DisciplinaryMention? DisciplinaryMention, string? Observations);
+    public record UpsertReportCardRemarkRequest(
+        Guid StudentId, Guid TermId, DisciplinaryMention? DisciplinaryMention, CouncilDecision? CouncilDecision, string? Observations);
 
     [HttpPost("generate")]
     [Authorize(Roles = ReportCardWriterRoles)]
@@ -106,6 +107,7 @@ public class ReportCardsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> UpsertRemark(
         [FromBody] UpsertReportCardRemarkRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(
-            new UpsertReportCardRemarkCommand(request.StudentId, request.TermId, request.DisciplinaryMention, request.Observations),
+            new UpsertReportCardRemarkCommand(
+                request.StudentId, request.TermId, request.DisciplinaryMention, request.CouncilDecision, request.Observations),
             cancellationToken));
 }

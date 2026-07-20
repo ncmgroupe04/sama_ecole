@@ -1,4 +1,5 @@
 using SamaEcole.Domain.Common;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Domain.Entities;
 
@@ -18,6 +19,12 @@ public class Classroom : AuditableEntity, ITenantEntity
 
     /// <summary>Cycle ou niveau, en texte libre : « Primaire », « Collège », « Lycée »…</summary>
     public required string Level { get; set; }
+
+    /// <summary>
+    /// Cycle d'enseignement structuré, indépendant du <see cref="Level"/> textuel. Pilote le barème de
+    /// notation (Primaire /10, Collège &amp; Lycée /20). Valeur par défaut <see cref="CycleType.College"/>.
+    /// </summary>
+    public CycleType Cycle { get; set; } = CycleType.College;
 
     /// <summary>Effectif maximal. Sert d'alerte à l'inscription, jamais de blocage dur.</summary>
     public int Capacity { get; set; }

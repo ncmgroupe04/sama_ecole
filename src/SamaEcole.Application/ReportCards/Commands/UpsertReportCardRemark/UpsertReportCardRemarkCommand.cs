@@ -22,4 +22,5 @@ public record UpsertReportCardRemarkCommand(
     Guid StudentId,
     Guid TermId,
     DisciplinaryMention? DisciplinaryMention,
+    CouncilDecision? CouncilDecision,
     string? Observations) : IRequest<ReportCardRemarkDto>, IAuditableRequest;

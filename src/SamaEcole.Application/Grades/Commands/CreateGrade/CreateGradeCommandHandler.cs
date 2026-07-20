@@ -41,7 +41,9 @@ public class CreateGradeCommandHandler(IApplicationDbContext dbContext, ITenantP
             ]);
         }
 
-        var gradingScale = await GradingScaleGuard.ResolveScaleAsync(dbContext, cancellationToken);
+        // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20) — backstop du
+        // contrôle déjà tenu par CreateGradeCommandValidator, sur la même base pour ne pas le contredire.
+        var gradingScale = await GradingScaleGuard.ResolveScaleForStudentAsync(dbContext, request.StudentId, cancellationToken);
         GradingScaleGuard.EnsureWithinScale(request.Value, gradingScale, nameof(request.Value));
 
         // Aucune note ne doit déjà exister pour cette clé : l'index unique UX_grades_single_entry

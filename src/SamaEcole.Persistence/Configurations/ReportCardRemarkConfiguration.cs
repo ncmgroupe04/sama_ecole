@@ -20,6 +20,7 @@ public class ReportCardRemarkConfiguration : IEntityTypeConfiguration<ReportCard
         builder.Property(r => r.SchoolId).IsRequired();
 
         builder.Property(r => r.DisciplinaryMention).HasConversion<string>().HasMaxLength(30);
+        builder.Property(r => r.CouncilDecision).HasConversion<string>().HasMaxLength(30);
         // 300 caractères : le cadre "Observations du conseil" mesure ~48pt de haut sur le bulletin
         // A5 (ReportCardDocument.ComposeFooter) — au-delà, le texte pousse le document sur une
         // seconde page. Vérifié par ReportCardDocumentTests avec un texte à la borne exacte.

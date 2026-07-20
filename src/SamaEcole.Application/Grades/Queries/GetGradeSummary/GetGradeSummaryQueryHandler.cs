@@ -22,6 +22,16 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
             throw new KeyNotFoundException($"Trimestre {request.TermId} introuvable dans votre établissement.");
         }
 
+        // Cycle de la classe de l'élève : Primaire calcule une moyenne SIMPLE sur /10, sans coefficients
+        // ni mention (ceux-ci n'appartiennent qu'au secondaire) ; Collège & Lycée conservent la moyenne
+        // pondérée sur /20. Projection nullable : un élève sans classe → null → traité comme secondaire.
+        var cycle = await dbContext.Students.AsNoTracking()
+            .Where(s => s.Id == request.StudentId)
+            .Join(dbContext.Classrooms.AsNoTracking(),
+                s => s.ClassroomId, c => c.Id, (s, c) => (CycleType?)c.Cycle)
+            .FirstOrDefaultAsync(cancellationToken);
+        var isPrimaire = cycle == CycleType.Primaire;
+
         var rows = await (
             from g in dbContext.Grades.AsNoTracking()
             join s in dbContext.Subjects.AsNoTracking() on g.SubjectId equals s.Id
@@ -44,14 +54,19 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
                 // Toujours non-null : le groupe vient d'au moins une ligne de note (Devoir ou Composition).
                 var average = GradeCalculator.SubjectAverage(devoir, composition)!.Value;
 
+                // Primaire : coefficient neutralisé à 1 → la moyenne générale devient une moyenne simple
+                // des matières. Le coefficient réel de la matière est volontairement ignoré (le primaire
+                // n'a pas de système de coefficients). Secondaire : le coefficient stocké s'applique.
+                var coefficient = isPrimaire ? 1m : g.Key.Coefficient;
+
                 return new SubjectGradeDto(
                     g.Key.SubjectId,
                     g.Key.Name,
                     devoir,
                     composition,
                     average,
-                    g.Key.Coefficient,
-                    average * g.Key.Coefficient);
+                    coefficient,
+                    average * coefficient);
             })
             .OrderBy(s => s.SubjectName)
             .ToList();
@@ -60,9 +75,10 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
             GradeCalculator.WeightedGeneralAverage(subjects.Select(s => ((decimal?)s.Average, s.Coefficient)));
         var generalAverage = generalAverageOrNull ?? 0m;
 
-        // Aucune matière notée : rien à qualifier, jamais une mention par défaut trompeuse.
+        // Aucune matière notée : rien à qualifier, jamais une mention par défaut trompeuse. Le Primaire
+        // n'a pas de système de mentions (réservé au secondaire) : la mention y reste toujours nulle.
         string? mention = null;
-        if (totalCoefficients > 0)
+        if (!isPrimaire && totalCoefficients > 0)
         {
             var scale = await MentionScale.ResolveAsync(dbContext, cancellationToken);
             mention = GradeCalculator.MentionFor(generalAverage, scale);

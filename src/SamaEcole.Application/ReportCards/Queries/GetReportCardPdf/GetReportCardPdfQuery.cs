@@ -32,9 +32,8 @@ public record ReportCardTermRecap(string TermLabel, int Order, decimal? Average)
 ///
 /// Champs volontairement ABSENTS malgré la présence de leur case sur la référence visuelle — le
 /// document IMPRIMÉ reproduit la case, restée vide, plutôt que d'inventer une donnée : T.H (la
-/// signification de cette colonne sur la référence n'est pas établie), Décision du Conseil (décision
-/// humaine du conseil de classe, aucun ticket ne la capture), et Classe redoublée (aucun indicateur de
-/// redoublement sur Enrollment/Student).
+/// signification de cette colonne sur la référence n'est pas établie), et Classe redoublée (aucun
+/// indicateur de redoublement sur Enrollment/Student).
 /// </summary>
 public record ReportCardDto(
     string SchoolName,
@@ -80,10 +79,11 @@ public record ReportCardDto(
     decimal? AnnualAverage,
     int? AnnualRank,
 
-    // Distinction cochée par le conseil (Blâme… Félicitations) et son observation — saisies via
-    // UpsertReportCardRemarkCommand. Null tant que rien n'a été saisi pour ce trimestre : la ligne/le
-    // cadre s'imprime vide, jamais une valeur inventée.
+    // Distinction cochée par le conseil (Blâme… Félicitations), sa décision (Admis/Redouble/Exclusion)
+    // et son observation — saisies via UpsertReportCardRemarkCommand. Null tant que rien n'a été saisi
+    // pour ce trimestre : la ligne/case/cadre s'imprime vide, jamais une valeur inventée.
     DisciplinaryMention? DisciplinaryMention,
+    CouncilDecision? CouncilDecision,
     string? CouncilObservations);
 
 public class GetReportCardPdfQueryHandler(
@@ -200,7 +200,9 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             : RankOf(annualAverage.Value, annualAveragesByStudent
                 .Select(kv => kv.Value.Count > 0 ? (decimal?)kv.Value.Average() : null));
 
-        var gradingScale = await GradingScaleGuard.ResolveScaleAsync(dbContext, cancellationToken);
+        // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20), et non un réglage
+        // global d'école : le bulletin d'un CM2 affiche /10, celui d'une 3e /20, dans le même établissement.
+        var gradingScale = await GradingScaleGuard.ResolveScaleForClassroomAsync(dbContext, student.ClassroomId, cancellationToken);
 
         // Appréciation par matière : la même échelle de mentions que la moyenne générale, appliquée à
         // la moyenne de CHAQUE matière — une seule source de vérité pour « comment se qualifie une
@@ -246,6 +248,7 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             annualAverage,
             annualRank,
             remark?.DisciplinaryMention,
+            remark?.CouncilDecision,
             remark?.Observations);
 
         return dto;

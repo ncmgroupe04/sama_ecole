@@ -66,6 +66,7 @@ public class ReportCardDocumentTests
             AnnualAverage: 13.27m,
             AnnualRank: 3,
             DisciplinaryMention: null,
+            CouncilDecision: null,
             CouncilObservations: null);
     }
 
@@ -77,6 +78,22 @@ public class ReportCardDocumentTests
         var pages = document.GenerateImages(ImageGenerationSettings.Default).Count();
 
         pages.Should().Be(1, "le ticket JGK-G03 exige qu'un bulletin à 12 matières ne déborde jamais sur une seconde page A5");
+    }
+
+    /// <summary>
+    /// Étape 3 (système hybride) : un bulletin PRIMAIRE (barème /10) emprunte le tableau épuré — sans
+    /// colonnes de coefficients ni d'appréciations, sans rangée de distinctions — et ne doit pas plus
+    /// déborder que la version secondaire, même au cas le plus chargé (12 matières).
+    /// </summary>
+    [Fact]
+    public void A_Primaire_Report_Card_On_A_Ten_Point_Scale_Fits_On_A_Single_A5_Page()
+    {
+        var reportCard = BuildReportCard(12) with { GradingScale = 10 };
+
+        var pages = new ReportCardDocument(reportCard, logo: null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1, "le bulletin primaire /10 au tableau épuré ne doit jamais déborder sur une seconde page A5");
     }
 
     [Fact]
@@ -184,6 +201,26 @@ public class ReportCardDocumentTests
         {
             DisciplinaryMention = SamaEcole.Domain.Enums.DisciplinaryMention.Felicitations,
             CouncilObservations = string.Concat(Enumerable.Repeat("Très bon trimestre, continuez ainsi. ", 9))[..300]
+        };
+
+        var pages = new ReportCardDocument(reportCard, logo: null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Bloc « Décision du Conseil » : une décision cochée (ex. Admitted) ne doit pas faire déborder le
+    /// bulletin, même combinée au cas le plus chargé (12 matières). Le contenu exact des trois cases
+    /// (une seule cochée) n'est pas vérifiable ici sans extraction de texte PDF — ComposeDecisionDuConseil
+    /// est un simple aiguillage sur reportCard.CouncilDecision, couvert visuellement à la revue.
+    /// </summary>
+    [Fact]
+    public void A_Report_Card_With_A_Council_Decision_Fits_On_One_Page()
+    {
+        var reportCard = BuildReportCard(12) with
+        {
+            CouncilDecision = SamaEcole.Domain.Enums.CouncilDecision.Admitted
         };
 
         var pages = new ReportCardDocument(reportCard, logo: null)

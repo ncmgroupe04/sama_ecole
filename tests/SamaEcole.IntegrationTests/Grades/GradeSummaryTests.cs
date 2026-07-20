@@ -100,6 +100,49 @@ public class GradeSummaryTests : IAsyncLifetime
         summary.GeneralAverage.Should().Be(80m / 6m); // pondérée, PAS (12+16)/2 = 14
     }
 
+    /// <summary>
+    /// Étape 3 (système hybride) — une classe de cycle Primaire calcule une moyenne SIMPLE sur /10 :
+    /// les coefficients des matières sont neutralisés à 1 et aucune mention n'est attribuée (réservée au
+    /// secondaire). La classe par défaut des autres tests est en cycle College (pondérée /20) — les deux
+    /// comportements coexistent dans la même école.
+    /// </summary>
+    [Fact]
+    public async Task In_A_Primaire_Class_The_General_Average_Is_A_Simple_Mean_Without_Coefficients_Or_Mention()
+    {
+        var primaireClasse = Guid.Parse("a1a1a1a1-0000-0000-0000-0000000000a1");
+        var primaireEleve = Guid.Parse("b1b1b1b1-0000-0000-0000-0000000000b1");
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Classrooms.Add(new Classroom
+            {
+                Id = primaireClasse, SchoolId = Ecole, Name = "CI", Level = "Primaire",
+                Capacity = 40, Cycle = CycleType.Primaire
+            });
+            owner.Students.Add(new Student
+            {
+                Id = primaireEleve, SchoolId = Ecole, Matricule = "ELEV-2026-0002", FullName = "Élève primaire",
+                BirthDate = new DateOnly(2018, 1, 1), Gender = "F", ClassroomId = primaireClasse
+            });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(Ecole);
+        var createGrade = NewCreateGradeHandler(db);
+
+        // Maths (coeff 4) : 8. Français (coeff 2) : 6. En pondéré ce serait (8*4 + 6*2)/6 = 7,33…
+        // En primaire (moyenne simple, coefficients ignorés) : (8 + 6) / 2 = 7.
+        await createGrade.Handle(new CreateGradeCommand(primaireEleve, Maths, Trimestre, EvaluationType.Devoir, 8), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(primaireEleve, Francais, Trimestre, EvaluationType.Devoir, 6), CancellationToken.None);
+
+        var summary = await new GetGradeSummaryQueryHandler(db).Handle(
+            new GetGradeSummaryQuery(primaireEleve, Trimestre), CancellationToken.None);
+
+        summary.Subjects.Should().OnlyContain(s => s.Coefficient == 1m, "le primaire neutralise les coefficients à 1");
+        summary.GeneralAverage.Should().Be(7m, "moyenne simple (8+6)/2, jamais pondérée en primaire");
+        summary.Mention.Should().BeNull("le cycle primaire n'attribue pas de mention");
+    }
+
     [Fact]
     public async Task With_No_Grades_Entered_Yet_The_Summary_Is_Empty_And_Carries_No_Mention()
     {

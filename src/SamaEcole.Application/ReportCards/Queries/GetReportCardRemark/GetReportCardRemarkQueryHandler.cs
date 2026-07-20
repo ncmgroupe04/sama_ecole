@@ -14,6 +14,7 @@ public class GetReportCardRemarkQueryHandler(IApplicationDbContext dbContext)
         var remark = await dbContext.ReportCardRemarks.AsNoTracking()
             .FirstOrDefaultAsync(r => r.StudentId == request.StudentId && r.TermId == request.TermId, cancellationToken);
 
-        return new ReportCardRemarkDto(request.StudentId, request.TermId, remark?.DisciplinaryMention, remark?.Observations);
+        return new ReportCardRemarkDto(
+            request.StudentId, request.TermId, remark?.DisciplinaryMention, remark?.CouncilDecision, remark?.Observations);
     }
 }

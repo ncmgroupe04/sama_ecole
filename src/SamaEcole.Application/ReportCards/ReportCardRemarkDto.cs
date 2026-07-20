@@ -13,4 +13,5 @@ public record ReportCardRemarkDto(
     Guid StudentId,
     Guid TermId,
     DisciplinaryMention? DisciplinaryMention,
+    CouncilDecision? CouncilDecision,
     string? Observations);

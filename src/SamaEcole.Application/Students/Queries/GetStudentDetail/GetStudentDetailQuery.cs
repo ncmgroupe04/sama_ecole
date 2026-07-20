@@ -165,12 +165,12 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
             student.GuardianPhone,
             student.RowVersion);
 
-        // Barème de l'école (10 ou 20), lu une seule fois : il sert au calcul des mentions par défaut ET
-        // à l'affichage des moyennes côté UI. Absent en base → valeur par défaut (JGK-B02).
-        var gradingScale = await dbContext.SchoolSettings.AsNoTracking()
-            .Select(s => (int?)s.GradingScale)
-            .FirstOrDefaultAsync(cancellationToken)
-            ?? SchoolSettingsDefaults.GradingScale;
+        // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20), et NON un réglage
+        // global d'école : il pilote l'affichage des moyennes sur la fiche (« /10 » ou « /20 ») et, pour
+        // le secondaire, l'échelle des mentions par défaut. Un CM2 affiche /10, une 3e /20, même école.
+        // Cohérent avec le bulletin (ReportCardDataService) et le recalcul JGK-G02 : une seule vérité.
+        var gradingScale = await GradingScaleGuard.ResolveScaleForClassroomAsync(
+            dbContext, student.ClassroomId, cancellationToken);
 
         // 2) Notes — d'abord, car l'historique scolaire réutilise la moyenne annuelle qui s'en déduit.
         var grades = await BuildTermReportsAsync(request.StudentId, gradingScale, cancellationToken);
@@ -289,6 +289,12 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
             return [];
         }
 
+        // Le Primaire (barème /10) calcule une moyenne SIMPLE (coefficients neutralisés à 1) et n'attribue
+        // PAS de mention ; le secondaire garde la pondération /20 et ses mentions — même règle que
+        // GetGradeSummaryQueryHandler (JGK-G02), pour que la fiche ne contredise jamais le bulletin.
+        // gradingScale est déjà résolu par cycle en amont : 10 ⟺ Primaire, un seul signal pour la fiche.
+        var isPrimaire = gradingScale == 10;
+
         // Mentions personnalisées de l'école (JGK-G02), ou barème par défaut tant que rien n'est stocké —
         // même principe de « valeurs par défaut si rien en base » que GetSchoolSettingsQueryHandler.
         var mentions = await ResolveMentionsAsync(gradingScale, cancellationToken);
@@ -313,14 +319,19 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
                             .FirstOrDefault();
                         var average = GradeCalculator.SubjectAverage(devoir, composition);
 
+                        // Primaire : coefficient neutralisé à 1 → la moyenne générale (ligne ci-dessous,
+                        // via WeightedGeneralAverage) devient une moyenne simple. Le coefficient réel de
+                        // la matière est ignoré (le primaire n'a pas de système de coefficients).
+                        var coefficient = isPrimaire ? 1m : subject.Key.Coefficient;
+
                         return new SubjectGradeDto(
                             subject.Key.SubjectId,
                             subject.Key.SubjectName,
-                            subject.Key.Coefficient,
+                            coefficient,
                             devoir,
                             composition,
                             average,
-                            average is { } a ? a * subject.Key.Coefficient : null);
+                            average is { } a ? a * coefficient : null);
                     })
                     .OrderBy(s => s.SubjectName)
                     .ToList();
@@ -337,7 +348,8 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext)
                     term.Key.SchoolYearLabel,
                     subjects,
                     generalAverage,
-                    generalAverage is { } avg ? GradeCalculator.MentionFor(avg, mentions) : null);
+                    // Primaire : aucune mention (réservée au secondaire), comme sur le bulletin.
+                    !isPrimaire && generalAverage is { } avg ? GradeCalculator.MentionFor(avg, mentions) : null);
             })
             // Année la plus récente d'abord, puis ordre du trimestre (1, 2, 3) — cohérent avec Term.Order.
             .OrderByDescending(t => t.SchoolYearLabel)

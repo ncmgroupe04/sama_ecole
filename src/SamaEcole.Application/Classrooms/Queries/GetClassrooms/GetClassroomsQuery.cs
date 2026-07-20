@@ -1,3 +1,4 @@
+using SamaEcole.Domain.Enums;
 using MediatR;
 
 namespace SamaEcole.Application.Classrooms.Queries.GetClassrooms;
@@ -18,4 +19,9 @@ public record GetClassroomsQuery : IRequest<IReadOnlyList<ClassroomDto>>;
 /// tableau. <see cref="RowVersion"/> est le jeton xmin nécessaire à UpdateClassroomCommand et
 /// DeleteClassroomCommand (AGENTS.md règle #5) — même contrat que GradeCellDto.RowVersion.
 /// </summary>
-public record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount, uint RowVersion);
+/// <summary>
+/// <see cref="Cycle"/> pilote le barème de saisie des notes côté client (Primaire /10, sinon /20) :
+/// l'écran de notes adapte l'attribut HTML <c>max</c> et le libellé de colonne selon la classe choisie.
+/// Sérialisé en chaîne ("Primaire" / "College" / "Lycee") via le JsonStringEnumConverter global.
+/// </summary>
+public record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount, CycleType Cycle, uint RowVersion);

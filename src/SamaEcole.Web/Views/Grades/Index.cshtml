@@ -120,8 +120,8 @@
                         <th class="py-3 px-4 w-12 text-center">N°</th>
                         <th class="py-3 px-4 whitespace-nowrap">Matricule</th>
                         <th class="py-3 px-4">Élève</th>
-                        <th class="py-3 px-4 w-40 text-center">Devoir</th>
-                        <th class="py-3 px-4 w-40 text-center">Composition</th>
+                        <th class="py-3 px-4 w-40 text-center">Devoir <span class="text-gray-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+                        <th class="py-3 px-4 w-40 text-center">Composition <span class="text-gray-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -133,7 +133,7 @@
 
                             <td class="py-2 px-4">
                                 <div class="flex items-center gap-2 justify-center">
-                                    <input type="number" min="0" :max="gradingScale"
+                                    <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
                                            class="input-field mt-0 w-20 text-center"
                                            :class="row.devoir.status === 'error' ? 'border-danger' : ''"
                                            :data-row="index" data-field="devoir"
@@ -151,7 +151,7 @@
 
                             <td class="py-2 px-4">
                                 <div class="flex items-center gap-2 justify-center">
-                                    <input type="number" min="0" :max="gradingScale"
+                                    <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
                                            class="input-field mt-0 w-20 text-center"
                                            :class="row.composition.status === 'error' ? 'border-danger' : ''"
                                            :data-row="index" data-field="composition"

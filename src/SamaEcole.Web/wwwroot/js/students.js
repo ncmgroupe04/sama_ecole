@@ -32,7 +32,7 @@ document.addEventListener('alpine:init', () => {
 
         // Observations du conseil (distinction + texte), imprimées sur le bulletin — mêmes rôles que
         // le téléchargement du PDF (ReportCardsController.ReportCardWriterRoles).
-        editingReportCardRemark: null, // { termId, disciplinaryMention, observations }
+        editingReportCardRemark: null, // { termId, disciplinaryMention, councilDecision, observations }
         isSavingReportCardRemark: false,
         reportCardRemarkErrors: {},
 
@@ -215,12 +215,13 @@ document.addEventListener('alpine:init', () => {
         async openReportCardRemark(term) {
             if (!this.detailStudent) return;
             this.reportCardRemarkErrors = {};
-            this.editingReportCardRemark = { termId: term.termId, disciplinaryMention: '', observations: '' };
+            this.editingReportCardRemark = { termId: term.termId, disciplinaryMention: '', councilDecision: '', observations: '' };
             try {
                 const remark = await window.api.get(`/report-cards/remark?studentId=${this.detailStudent.id}&termId=${term.termId}`);
                 this.editingReportCardRemark = {
                     termId: term.termId,
                     disciplinaryMention: remark.disciplinaryMention || '',
+                    councilDecision: remark.councilDecision || '',
                     observations: remark.observations || ''
                 };
             } catch (err) {
@@ -243,6 +244,7 @@ document.addEventListener('alpine:init', () => {
                     studentId: this.detailStudent.id,
                     termId: this.editingReportCardRemark.termId,
                     disciplinaryMention: this.editingReportCardRemark.disciplinaryMention || null,
+                    councilDecision: this.editingReportCardRemark.councilDecision || null,
                     observations: this.editingReportCardRemark.observations || null
                 });
                 this.closeReportCardRemark();
@@ -483,11 +485,30 @@ document.addEventListener('alpine:init', () => {
             return (Math.round(value * 10) / 10).toLocaleString('fr-FR');
         },
 
-        /** Moyenne suffixée du barème de l'école (14,5/20 ou 7,2/10) — jamais « /20 » supposé. */
+        /** Moyenne suffixée du barème du CYCLE (14,5/20 au secondaire, 7,2/10 en primaire) — jamais « /20 » supposé. */
         formatAverage(value) {
             if (value === null || value === undefined) return '—';
             const scale = this.studentDetail?.gradingScale ?? 20;
             return `${this.formatGrade(value)}/${scale}`;
+        },
+
+        /**
+         * Cycle Primaire (barème /10) : gradingScale, résolu par cycle côté serveur
+         * (GetStudentDetailQueryHandler), vaut 10 pour le seul Primaire, 20 pour le secondaire. L'élève
+         * n'étant que dans UNE classe, toute la fiche porte un seul cycle — signal fiable pour verrouiller
+         * l'affichage des coefficients et adapter les libellés (formatAverage s'en sert déjà).
+         */
+        get isPrimaire() {
+            return this.studentDetail?.gradingScale === 10;
+        },
+
+        /**
+         * Coefficient AFFICHÉ, verrouillé à 1 en Primaire : ce cycle n'a pas de système de coefficients
+         * (le serveur les renvoie déjà à 1, ce garde-fou empêche tout coefficient pondéré résiduel de
+         * s'afficher) — cohérent avec la moyenne simple /10 et le bulletin primaire.
+         */
+        coefficientDisplay(subject) {
+            return this.isPrimaire ? 1 : subject.coefficient;
         },
 
         enrollmentTypeLabel(type) {

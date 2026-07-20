@@ -15,7 +15,9 @@ public class UpdateGradeCommandHandler(IApplicationDbContext dbContext)
             .FirstOrDefaultAsync(g => g.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Note {request.Id} introuvable.");
 
-        var gradingScale = await GradingScaleGuard.ResolveScaleAsync(dbContext, cancellationToken);
+        // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20) — backstop du
+        // contrôle déjà tenu par UpdateGradeCommandValidator, sur la même base pour ne pas le contredire.
+        var gradingScale = await GradingScaleGuard.ResolveScaleForStudentAsync(dbContext, grade.StudentId, cancellationToken);
         GradingScaleGuard.EnsureWithinScale(request.Value, gradingScale, nameof(request.Value));
 
         // Valeur inchangée : ne rien écrire, rien à arbitrer par le verrou optimiste.

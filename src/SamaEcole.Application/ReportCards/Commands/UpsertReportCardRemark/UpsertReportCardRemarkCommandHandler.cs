@@ -42,10 +42,12 @@ public class UpsertReportCardRemarkCommandHandler(IApplicationDbContext dbContex
         }
 
         remark.DisciplinaryMention = request.DisciplinaryMention;
+        remark.CouncilDecision = request.CouncilDecision;
         remark.Observations = string.IsNullOrWhiteSpace(request.Observations) ? null : request.Observations.Trim();
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new ReportCardRemarkDto(remark.StudentId, remark.TermId, remark.DisciplinaryMention, remark.Observations);
+        return new ReportCardRemarkDto(
+            remark.StudentId, remark.TermId, remark.DisciplinaryMention, remark.CouncilDecision, remark.Observations);
     }
 }

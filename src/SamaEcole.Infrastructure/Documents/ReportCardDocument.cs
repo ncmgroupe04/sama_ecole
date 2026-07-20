@@ -16,11 +16,11 @@ namespace SamaEcole.Infrastructure.Documents;
 /// avec emplacement de cachet (droite).
 ///
 /// Certaines cases de la référence restent volontairement VIDES — visuellement présentes, jamais
-/// remplies d'une donnée inventée — car rien dans le système ne les alimente : T.H, la Décision du
-/// Conseil, et Classe redoublée. L'assiduité (Absences/Retards) s'imprime « - » tant qu'aucun appel
-/// n'a été fait sur la période (voir ReportCardDto), jamais un zéro trompeur. La distinction du conseil
-/// (Blâme… Félicitations) et les Observations, elles, SONT modélisées (ReportCardRemark) — cochée/
-/// remplie si saisies via l'écran dédié, vides sinon.
+/// remplies d'une donnée inventée — car rien dans le système ne les alimente : T.H, et Classe redoublée.
+/// L'assiduité (Absences/Retards) s'imprime « - » tant qu'aucun appel n'a été fait sur la période (voir
+/// ReportCardDto), jamais un zéro trompeur. La distinction du conseil (Blâme… Félicitations), la
+/// Décision du Conseil (Admis/Redouble/Exclusion) et les Observations, elles, SONT modélisées
+/// (ReportCardRemark) — cochées/remplies si saisies via l'écran dédié, vides sinon.
 ///
 /// Le logo n'apparaît PAS : l'en-tête de la référence est purement administratif (IA/IEF/LYCEE DE),
 /// sans aucun logo. Le paramètre est conservé pour ne pas casser le contrat
@@ -30,6 +30,15 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
 {
     /// <summary>Filet noir standard de la référence (tableaux, encadrés).</summary>
     private const float RuleThickness = 0.75f;
+
+    /// <summary>
+    /// Cycle primaire (barème /10) : le <see cref="ReportCardDto.GradingScale"/> vaut 10 pour le seul
+    /// cycle Primaire (résolu par cycle dans ReportCardDataService), 20 pour Collège &amp; Lycée — c'est
+    /// donc un signal fiable. Le primaire n'a ni coefficients, ni mentions/distinctions, ni appréciations
+    /// (système réservé au secondaire, étape 3) : le tableau et la mise en page s'adaptent en conséquence,
+    /// tandis que le rendu /20 reste strictement inchangé.
+    /// </summary>
+    private bool IsPrimaire => reportCard.GradingScale == 10;
 
     public DocumentMetadata GetMetadata() => new()
     {
@@ -68,8 +77,13 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
                 column.Item().Element(ComposeHeader);
                 column.Item().Element(ComposeTitle);
                 column.Item().Element(ComposeIdentity);
-                column.Item().PaddingTop(2).Element(ComposeGradesTable);
-                column.Item().Element(ComposeDisciplinaryMentionsRow);
+                // Primaire (/10) : tableau épuré sans coefficients/appréciations et SANS rangée de
+                // distinctions du conseil. Secondaire (/20) : rendu d'origine, strictement inchangé.
+                column.Item().PaddingTop(2).Element(IsPrimaire ? ComposeGradesTablePrimaire : ComposeGradesTable);
+                if (!IsPrimaire)
+                {
+                    column.Item().Element(ComposeDisciplinaryMentionsRow);
+                }
                 column.Item().PaddingTop(5).Element(ComposeDecisionAndRecap);
                 column.Item().PaddingTop(4).Element(ComposeFooter);
             });
@@ -250,6 +264,73 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
     }
 
     /// <summary>
+    /// Variante PRIMAIRE du tableau des notes (/10, étape 3). Le cycle primaire n'a NI système de
+    /// coefficients, NI mentions/distinctions, NI appréciations (réservés au secondaire) : on retire donc
+    /// les colonnes Coefficient, « Moy x » et Appréciations, ainsi que les totaux de coefficients de la
+    /// rangée TOTAL. Restent les disciplines, Devoir/Composition, la moyenne /10, T.H (case vide, comme
+    /// au secondaire), le rang et l'assiduité. Le rendu Collège/Lycée passe, lui, par
+    /// <see cref="ComposeGradesTable"/>, laissé strictement inchangé pour éviter toute régression visuelle.
+    /// </summary>
+    private void ComposeGradesTablePrimaire(IContainer container)
+    {
+        // Même barème d'espacement des lignes que le secondaire (voir ComposeGradesTable).
+        var rowPadding = Math.Clamp(24f / Math.Max(reportCard.Subjects.Count, 1), 2f, 8f);
+
+        container.Table(table =>
+        {
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(3.4f);  // Disciplines
+                columns.RelativeColumn(1.0f);  // Devoir
+                columns.RelativeColumn(1.0f);  // Composition
+                columns.RelativeColumn(1.15f); // Moyenne /10
+                columns.RelativeColumn(0.7f);  // T.H
+                columns.RelativeColumn(1.0f);  // Rang
+            });
+
+            table.Header(header =>
+            {
+                header.Cell().Element(HeaderCell).Text("DISCIPLINES").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Devoir").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Comp").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text($"Moy/{reportCard.GradingScale}").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("T.H").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Rang").Bold().FontSize(7);
+            });
+
+            foreach (var subject in reportCard.Subjects)
+            {
+                table.Cell().Element(BodyCell).Text(subject.SubjectName);
+                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Devoir));
+                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
+                table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
+                table.Cell().Element(BodyCell).Text(""); // T.H : signification non établie, case vide.
+                table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
+            }
+
+            // Rangée moyenne générale + rang : pas de totaux de coefficients (le primaire n'en a pas).
+            table.Cell().ColumnSpan(4).Element(TotalCell).Text($"Moyenne : {FormatGrade(reportCard.GeneralAverage)} /{reportCard.GradingScale}").Bold();
+            table.Cell().Element(TotalCell).AlignCenter().Text("Rang").Bold();
+            table.Cell().Element(TotalCell).AlignCenter().Text(reportCard.GeneralRank.ToString()).Bold();
+
+            // Assiduité du trimestre — sans lien avec coefficients/mentions, conservée comme au secondaire.
+            table.Cell().Element(TotalCell).AlignCenter().Text("Absences");
+            table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Absences));
+            table.Cell().Element(TotalCell).AlignCenter().Text("Retards");
+            table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Retards));
+            table.Cell().Element(TotalCell).AlignCenter().Text("Abs. Tot").FontSize(6.5f);
+            table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.TotalAbsences));
+        });
+
+        static IContainer HeaderCell(IContainer c) =>
+            c.Border(RuleThickness).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(3);
+        IContainer BodyCell(IContainer c) =>
+            c.Border(0.5f).BorderColor(Colors.Black).PaddingVertical(rowPadding).PaddingHorizontal(3);
+        static IContainer TotalCell(IContainer c) =>
+            c.Border(RuleThickness).BorderColor(Colors.Black).PaddingVertical(2.5f).PaddingHorizontal(3);
+    }
+
+    /// <summary>
     /// Ligne des distinctions du conseil (Blâme… Félicitations) — chaque case porte une coche « [ ] »/
     /// « [X] » : COCHÉE, grisée et en gras pour <see cref="ReportCardDto.DisciplinaryMention"/>, vide
     /// sinon. Saisie via l'écran « Observations du conseil » (PUT /report-cards/remark), jamais
@@ -302,20 +383,45 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
         });
     }
 
-    private static void ComposeDecisionDuConseil(IContainer container)
+    /// <summary>
+    /// Bloc « Décision du Conseil » : trois lignes fixes, chacune avec une case à droite. La case de la
+    /// ligne correspondant à <see cref="ReportCardDto.CouncilDecision"/> porte un « X » gras ; les deux
+    /// autres restent vides — jamais plus d'une coche, jamais une décision par défaut inventée si rien
+    /// n'a été saisi (voir ReportCardRemark.CouncilDecision, nullable).
+    /// </summary>
+    private void ComposeDecisionDuConseil(IContainer container)
     {
-        string[] decisions = ["Admis(e) en classe supérieure", "Autorisé(e) à redoubler", "Exclusion"];
+        (CouncilDecision Value, string Label)[] decisions =
+        [
+            (CouncilDecision.Admitted, "Admis(e) en classe supérieure"),
+            (CouncilDecision.AllowedToRepeat, "Autorisé(e) à redoubler"),
+            (CouncilDecision.Excluded, "Exclusion")
+        ];
 
         container.Border(RuleThickness).BorderColor(Colors.Black).Column(column =>
         {
             column.Item().Background(Colors.Grey.Lighten3).PaddingVertical(2).AlignCenter().Text("Décision du Conseil").Bold();
 
-            foreach (var decision in decisions)
+            foreach (var (value, label) in decisions)
             {
+                var isChecked = value == reportCard.CouncilDecision;
+
                 column.Item().BorderTop(0.5f).BorderColor(Colors.Black).Row(row =>
                 {
-                    row.RelativeItem().PaddingVertical(2.5f).PaddingHorizontal(3).Text(decision);
-                    row.ConstantItem(18).BorderLeft(0.5f).BorderColor(Colors.Black).PaddingVertical(2.5f).AlignCenter().Text("");
+                    row.RelativeItem().PaddingVertical(2.5f).PaddingHorizontal(3).Text(label);
+
+                    // Petit carré à droite — grisé et coché [X] en gras pour la ligne retenue, vide sinon.
+                    var box = row.ConstantItem(18).BorderLeft(0.5f).BorderColor(Colors.Black).PaddingVertical(2.5f);
+                    if (isChecked)
+                    {
+                        box = box.Background(Colors.Grey.Lighten3);
+                    }
+
+                    var mark = box.AlignCenter().Text(isChecked ? "X" : "");
+                    if (isChecked)
+                    {
+                        mark.Bold();
+                    }
                 });
             }
         });

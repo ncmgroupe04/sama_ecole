@@ -7,6 +7,19 @@ public enum EntityStatus
     Blocked
 }
 
+/// <summary>
+/// Cycle d'enseignement d'une classe. Détermine notamment le barème de notation appliqué au bulletin :
+/// <c>Primaire</c> est noté sur /10, <c>College</c> et <c>Lycee</c> sur /20 (système sénégalais).
+/// Distinct du champ texte libre <see cref="SamaEcole.Domain.Entities.Classroom.Level"/>, qui reste la
+/// nomenclature d'affichage propre à chaque école (« CM2 A », « 3e B », « Terminale S2 »).
+/// </summary>
+public enum CycleType
+{
+    Primaire,
+    College,
+    Lycee
+}
+
 public enum EnrollmentType
 {
     NewEnrollment,
@@ -172,6 +185,20 @@ public enum DisciplinaryMention
     TableauHonneur,
     Encouragements,
     Felicitations
+}
+
+/// <summary>
+/// Décision du conseil de classe à l'issue d'un trimestre (docs/design-references/bulletin-reference.png :
+/// bloc « Décision du Conseil »). PAS de membre <c>None</c> : « aucune décision encore prise » est
+/// l'absence de valeur sur <see cref="Entities.ReportCardRemark.CouncilDecision"/> (nullable), jamais une
+/// valeur d'énumération supplémentaire — même parti pris que <see cref="DisciplinaryMention"/>, qui
+/// évite qu'un état "rien coché" soit représentable de deux façons différentes (null ET None).
+/// </summary>
+public enum CouncilDecision
+{
+    Admitted,
+    AllowedToRepeat,
+    Excluded
 }
 
 public enum MatriculeKind
