@@ -16,6 +16,10 @@
  * principe que canManageGradingConfig dans settings.js). Ces deux booléens sont lus une seule fois à
  * l'ouverture de l'écran (comme gradingScale dans grades.js) : un changement de délégation fait par
  * le Directeur pendant que cet écran est déjà ouvert n'est visible qu'au rechargement.
+ *
+ * Feature D — canModifyFees couvre aussi la CRÉATION d'une catégorie et l'application d'un montant
+ * standard (Option 1), pas seulement l'ajustement d'une ligne déjà existante (Option 2) : les trois
+ * façonnent le même barème, donc la même délégation (voir FinanceController).
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('feesView', () => ({

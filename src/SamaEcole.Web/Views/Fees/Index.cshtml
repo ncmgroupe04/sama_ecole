@@ -17,7 +17,9 @@
             </p>
         </div>
 
-        <div class="flex items-center gap-2" x-show="isDirecteur" x-cloak>
+        <!-- Feature D : Directeur toujours, Finance seulement si AllowFinanceToModifyFees est délégué
+             (même garde que Modifier/Supprimer sur les lignes du barème ci-dessous). -->
+        <div class="flex items-center gap-2" x-show="canModifyFees" x-cloak>
             <button x-on:click="openCreateCategory()" class="btn-secondary">
                 <icon name="plus" class="w-5 h-5" />
                 Catégorie
@@ -132,7 +134,7 @@
                                     <row-action icon="pencil" label="Modifier" on-click="openEdit(row)" show="canModifyFees" />
                                     <row-action icon="trash-2" label="Supprimer" on-click="openDeleteFee(row)" variant="danger" show="canDeleteFees" />
                                 </row-actions>
-                                <span x-show="isDirecteur && !row.fee" x-cloak class="text-xs text-gray-400 italic">
+                                <span x-show="canModifyFees && !row.fee" x-cloak class="text-xs text-gray-400 italic">
                                     Appliquez un standard
                                 </span>
                             </td>

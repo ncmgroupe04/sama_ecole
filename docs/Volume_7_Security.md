@@ -190,7 +190,14 @@ Format : `Module.Action` — ex. `Students.Read`, `Students.Create`, `Finance.Ex
 |---|---|---|
 | Encaisser / Dépenses | ✔ | ✔ |
 | Voir statistiques / Export | ✔ | ✔ |
+| **Configurer le barème** (créer une catégorie, appliquer un montant standard, ajuster une ligne) | ✔ | ✔ (si `AllowFinanceToModifyFees` délégué) |
+| **Supprimer une catégorie ou une ligne de barème** | ✔ | ✔ (si `AllowFinanceToDeleteFees` délégué) |
 | **Modifier un montant dû issu d'une inscription** | ✔ | **✖** (Volume 1 §7.2) |
+
+Feature D (autonomie Finance) : créer une catégorie et appliquer un montant standard partagent la
+délégation « configurer le barème » avec l'ajustement classe par classe déjà existant — les trois
+façonnent le même objet, jamais une inscription déjà passée (`FinanceController`, `CanModifyFeesHandler`).
+Fermé par défaut sur chaque établissement : le Directeur doit l'activer explicitement dans Paramètres.
 
 **Notes**
 

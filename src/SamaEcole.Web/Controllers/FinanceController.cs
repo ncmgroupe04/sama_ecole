@@ -12,7 +12,6 @@ using SamaEcole.Application.Finance.Queries.GetFinanceDashboard;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceipt;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceiptPdf;
 using SamaEcole.Application.Finance.Queries.GetStudentBalance;
-using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -26,14 +25,20 @@ namespace SamaEcole.Web.Controllers;
 /// paramètre (règle #10).
 ///
 /// LECTURE ouverte à tout utilisateur de l'école : le secrétariat compose les montants dus à
-/// l'inscription, la finance encaisse — tous ont besoin de VOIR le barème. CRÉATION de catégorie
-/// réservée au Directeur (le barème est un paramètre d'établissement, docs/Volume_7_Security.md
-/// §15). MODIFICATION/SUPPRESSION d'une ligne de barème ou d'une catégorie : Directeur toujours ;
-/// Finance UNIQUEMENT si le Directeur de SON école a explicitement activé la délégation
-/// correspondante (SchoolSettings.AllowFinanceToModifyFees / AllowFinanceToDeleteFees, matrice
-/// d'autorisation "Photoshop") — voir CanModifyFeesHandler/CanDeleteFeesHandler
-/// (SamaEcole.Web.Authorization). Fermé par défaut : la règle #4 tient la Finance à l'écart de la
-/// fixation des montants tant que ce choix n'a pas été fait explicitement.
+/// l'inscription, la finance encaisse — tous ont besoin de VOIR le barème. CRÉATION d'une catégorie,
+/// application d'un montant standard (Option 1), MODIFICATION/SUPPRESSION d'une ligne de barème ou
+/// d'une catégorie : Directeur toujours ; Finance UNIQUEMENT si le Directeur de SON école a
+/// explicitement activé la délégation correspondante (SchoolSettings.AllowFinanceToModifyFees /
+/// AllowFinanceToDeleteFees, matrice d'autorisation "Photoshop") — voir
+/// CanModifyFeesHandler/CanDeleteFeesHandler (SamaEcole.Web.Authorization). Fermé par défaut : la
+/// règle #4 tient la Finance à l'écart de la fixation des montants tant que ce choix n'a pas été fait
+/// explicitement.
+///
+/// Créer une catégorie / appliquer un standard PARTAGENT la délégation "modifier" (pas une bascule
+/// distincte) : les deux façonnent le même objet — le barème d'établissement — au même titre qu'un
+/// ajustement classe par classe (Option 2). Un Directeur qui délègue "modifier les frais" délègue donc
+/// aussi la mise en place initiale du barème, jamais la SUPPRESSION (délégation séparée, plus lourde
+/// de conséquences).
 /// </summary>
 [ApiController]
 [Route("api/v1/finance")]
@@ -49,8 +54,13 @@ public class FinanceController(ISender mediator) : ControllerBase
     public async Task<IActionResult> ListCategories(CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetFeeCategoriesQuery(), cancellationToken));
 
+    /// <summary>
+    /// Feature D — autonomie Finance. Matrice d'autorisation "Photoshop", même délégation que
+    /// UpdateFee ci-dessous (AllowFinanceToModifyFees) : Directeur toujours, Finance seulement si
+    /// délégué. Remplace l'ancien [Authorize(Roles = Directeur)] codé en dur.
+    /// </summary>
     [HttpPost("fee-categories")]
-    [Authorize(Roles = nameof(Role.Directeur))]
+    [Authorize(Policy = FinancePolicies.CanModifyFees)]
     [ProducesResponseType<CreateFeeCategoryResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -86,9 +96,12 @@ public class FinanceController(ISender mediator) : ControllerBase
     public async Task<IActionResult> ListFees(CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetClassFeesQuery(), cancellationToken));
 
-    /// <summary>Option 1 — applique un montant standard à toutes les classes d'une catégorie, en un geste.</summary>
+    /// <summary>
+    /// Option 1 — applique un montant standard à toutes les classes d'une catégorie, en un geste.
+    /// Feature D : même délégation que CreateCategory/UpdateFee (AllowFinanceToModifyFees).
+    /// </summary>
     [HttpPost("fees/apply-standard")]
-    [Authorize(Roles = nameof(Role.Directeur))]
+    [Authorize(Policy = FinancePolicies.CanModifyFees)]
     [ProducesResponseType<ApplyStandardFeeResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
