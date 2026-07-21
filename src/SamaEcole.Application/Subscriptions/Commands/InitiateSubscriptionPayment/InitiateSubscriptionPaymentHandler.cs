@@ -28,16 +28,13 @@ public class InitiateSubscriptionPaymentHandler(
     public async Task<InitiateSubscriptionPaymentResult> Handle(
         InitiateSubscriptionPaymentCommand request, CancellationToken cancellationToken)
     {
+        // Le SchoolId de l'URL n'est JAMAIS la source de vérité (règle #10). Le rapprochement avec le
+        // tenant réel de la session (request.SchoolId vs claim JWT) est désormais fait EN AMONT, par
+        // SubscriptionsController via la policy resource-based CanAccessSchoolResource (audit BOLA/IDOR,
+        // voir SchoolResourceAuthorizationHandler) — ce Handler ne peut donc être atteint qu'avec un
+        // SchoolId déjà vérifié.
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
-
-        // Le SchoolId de l'URL n'est JAMAIS la source de vérité (règle #10) : s'il diverge du tenant
-        // réel de la session, mieux vaut un refus explicite qu'une réussite silencieuse sur la mauvaise
-        // ressource — même si RLS empêcherait de toute façon toute fuite de données d'une autre école.
-        if (request.SchoolId != schoolId)
-        {
-            throw new UnauthorizedAccessException("L'établissement de l'URL ne correspond pas à votre session.");
-        }
 
         var subscription = await dbContext.Subscriptions
             .SingleOrDefaultAsync(s => s.SchoolId == schoolId, cancellationToken)

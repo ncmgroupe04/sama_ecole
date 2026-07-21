@@ -97,6 +97,12 @@ Les entités suivantes sont globales à la plateforme et gérées par le Super A
 
 Le Volume 8 (Test Strategy) impose un test d'intégration systématique : *« un utilisateur de l'école A ne peut, par aucune requête, lire ou modifier une ligne appartenant à l'école B »* — exécuté à chaque pipeline CI/CD, pas seulement en recette manuelle.
 
+### 2.5 Cache applicatif (Redis) — une troisième surface, hors RLS
+
+Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas encore consommé en code à ce jour. Les deux barrières de §2.2 (RLS PostgreSQL, Global Query Filter EF Core) protègent **exclusivement PostgreSQL** : un cache applicatif est une troisième surface entièrement hors de leur portée. Une clé de cache qui n'embarque pas le `SchoolId` (ex. une clé littérale `"grading-scale"`, la même pour toutes les écoles) ferait fuiter la donnée d'une école vers toutes les autres dès la première écriture concurrente — silencieusement, sans qu'aucune requête SQL ne soit en cause.
+
+**Règle non négociable dès qu'un cache Redis (ou tout autre cache applicatif partagé) est introduit** : toute clé est composée via `ITenantCacheKeyFactory.BuildKey` (`src/SamaEcole.Application/Common/Interfaces/ITenantCacheKeyFactory.cs`, implémenté par `TenantCacheKeyFactory` dans `SamaEcole.Infrastructure/Multitenancy`), jamais par interpolation de chaîne manuelle. La factory préfixe systématiquement par le `SchoolId` du tenant courant (`ITenantProvider.CurrentSchoolId`, dérivé du JWT — jamais un paramètre modifiable par le client, règle #10) et refuse de construire une clé si aucun tenant n'est résolu (fail closed). Les rares données réellement globales à la plateforme (ex. barème de tarification des abonnements) doivent le documenter explicitement en commentaire à l'endroit de l'appel — l'absence de `SchoolId` doit toujours être un choix visible, jamais un oubli.
+
 ---
 
 ## 3. Structure commune des tables métier

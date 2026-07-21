@@ -28,6 +28,11 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
+        // Aucun cache applicatif (Redis) n'est encore consommé en code à ce jour — enregistré par
+        // anticipation (Volume_6_Dev_Guide.md : Redis prévu dès la V1) pour qu'un futur ajout de cache
+        // n'ait JAMAIS à composer une clé "à la main" : voir ITenantCacheKeyFactory.
+        services.AddScoped<ITenantCacheKeyFactory, TenantCacheKeyFactory>();
+
         // Authentification (ticket JGK-A04).
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.TryAddSingleton(TimeProvider.System);

@@ -10,13 +10,11 @@ public class GetSubscriptionPaymentsQueryHandler(IApplicationDbContext dbContext
     public async Task<PaginatedSubscriptionPayments> Handle(
         GetSubscriptionPaymentsQuery request, CancellationToken cancellationToken)
     {
+        // Le rapprochement request.SchoolId vs claim JWT est fait EN AMONT par SubscriptionsController
+        // via la policy resource-based CanAccessSchoolResource (audit BOLA/IDOR, voir
+        // SchoolResourceAuthorizationHandler, même mécanique que InitiateSubscriptionPaymentHandler).
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
-
-        if (request.SchoolId != schoolId)
-        {
-            throw new UnauthorizedAccessException("L'établissement de l'URL ne correspond pas à votre session.");
-        }
 
         // Subscription n'implémente pas ITenantEntity (voir son commentaire de classe) : filtre manuel,
         // même idiome que InitiateSubscriptionPaymentHandler.

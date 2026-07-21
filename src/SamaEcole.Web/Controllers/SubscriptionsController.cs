@@ -1,6 +1,7 @@
 using SamaEcole.Application.Subscriptions.Commands.InitiateSubscriptionPayment;
 using SamaEcole.Application.Subscriptions.Queries.GetSubscriptionPayments;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/subscriptions")]
 [Authorize(Roles = nameof(Role.Directeur))]
-public class SubscriptionsController(ISender mediator) : ControllerBase
+public class SubscriptionsController(ISender mediator, IAuthorizationService authorizationService) : ControllerBase
 {
     public record InitiatePaymentRequest(SubscriptionPaymentMethod Method, BillingPeriod BillingPeriod);
 
@@ -32,6 +33,8 @@ public class SubscriptionsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> InitiatePayment(
         Guid schoolId, [FromBody] InitiatePaymentRequest request, CancellationToken cancellationToken)
     {
+        await EnsureSchoolResourceAccessAsync(schoolId);
+
         var result = await mediator.Send(
             new InitiateSubscriptionPaymentCommand
             {
@@ -53,10 +56,30 @@ public class SubscriptionsController(ISender mediator) : ControllerBase
         Guid schoolId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
+        await EnsureSchoolResourceAccessAsync(schoolId);
+
         var result = await mediator.Send(
             new GetSubscriptionPaymentsQuery { SchoolId = schoolId, Page = page, PageSize = pageSize },
             cancellationToken);
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Policy resource-based réutilisable (audit BOLA/IDOR, voir SchoolResourceAuthorizationHandler) :
+    /// remplace la comparaison manuelle « request.SchoolId != tenantProvider.CurrentSchoolId » qui vivait
+    /// auparavant dans chaque Handler MediatR de ce module. Lève la même exception qu'avant
+    /// (ExceptionHandlingMiddleware la traduit en 403 au format normalisé, AGENTS.md règle #9) : le
+    /// comportement observable par le client est inchangé.
+    /// </summary>
+    private async Task EnsureSchoolResourceAccessAsync(Guid schoolId)
+    {
+        var authorization = await authorizationService.AuthorizeAsync(
+            User, schoolId, SchoolResourcePolicies.CanAccessSchoolResource);
+
+        if (!authorization.Succeeded)
+        {
+            throw new UnauthorizedAccessException("L'établissement de l'URL ne correspond pas à votre session.");
+        }
     }
 }
