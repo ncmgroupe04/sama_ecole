@@ -153,7 +153,7 @@
 
  <!-- Réinscription : sélection d'un élève existant -->
  <div x-show="mode === 'ReEnrollment'" x-cloak>
- <label for="enr-student-search" class="block text-sm font-medium text-slate-700">Élève à réinscrire <span class="text-danger">*</span></label>
+ <label for="enr-student-search" class="block text-sm font-semibold text-slate-700">Élève à réinscrire <span class="text-danger">*</span></label>
  <input id="enr-student-search" type="text" x-model="studentSearch" placeholder="Rechercher par nom ou matricule…"
  x-on:input="form.studentId = ''"
  class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
