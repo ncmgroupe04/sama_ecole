@@ -135,32 +135,40 @@
  </button>
  </form>
 
- @* Aucun lien « mot de passe oublié » : le backend n'expose pas encore de réinitialisation
- (aucun ticket livré à ce jour). Un lien mort serait pire qu'une consigne claire. *@
- <p class="mt-6 text-center text-jgk-table text-slate-500">
- Mot de passe oublié ? Contactez l'administrateur de votre établissement.
+ @* ÉTAPE 1 (voir décision produit) — pas encore de réinitialisation self-service côté backend, mais
+ l'aide doit être ACTIONNABLE : le libellé « mot de passe oublié » est désormais un lien mailto vers
+ le support (sujet pré-rempli), doublé du numéro d'assistance déjà présent en bas de page.
+ ÉTAPE 2 (terrain préparé) — le parcours self-service est déjà spécifié : POST
+ /api/v1/auth/forgot-password + POST /api/v1/auth/reset-password (docs/Volume_4_API_Design.md §1).
+ Quand il sera livré, il suffira de remplacer le href mailto ci-dessous par un lien vers la future
+ page /mot-de-passe-oublie — le reste de ce bloc (style, structure) reste inchangé. *@
+ <p class="mt-6 text-center text-jgk-body font-semibold text-slate-700">
+ Mot de passe oublié ?
+ <a href="mailto:support@sama-ecole.sn?subject=R%C3%A9initialisation%20de%20mot%20de%20passe&amp;body=Bonjour%2C%0A%0AJe%20souhaite%20r%C3%A9initialiser%20le%20mot%20de%20passe%20de%20mon%20compte.%0A%0AAdresse%20e-mail%20du%20compte%20%3A%20"
+ class="text-primary font-semibold hover:underline">Contactez le support</a>
+ ou l'administrateur de votre établissement.
  </p>
 
- <p class="mt-2 text-center text-jgk-table text-slate-500">
+ <p class="mt-3 text-center text-jgk-body font-semibold text-slate-700">
  Votre établissement n'est pas encore inscrit ?
- <a href="/inscription" class="text-primary font-medium hover:underline">Inscrire mon établissement</a>
+ <a href="/inscription" class="block mt-1 text-primary font-semibold hover:underline">Inscrire mon établissement</a>
  </p>
 
- <p class="mt-2 text-center text-jgk-table text-slate-500">
+ <p class="mt-2 text-center text-jgk-body font-semibold text-slate-700">
  Demande déjà envoyée ?
- <a href="/suivi-demande" class="text-primary font-medium hover:underline">Suivre son état</a>
+ <a href="/suivi-demande" class="block mt-1 text-primary font-semibold hover:underline">Suivre son état</a>
  </p>
 
  @* Ligne d'assistance pour les directeurs dont l'inscription attend encore une validation
- manuelle (aucune automatisation de ce côté à ce jour) — délibérément sobre, en bas de
- page, pour ne pas rivaliser visuellement avec le formulaire de connexion lui-même. *@
- <p class="mt-6 text-center text-xs text-slate-500">
+ manuelle (aucune automatisation de ce côté à ce jour) — plus sobre que les liens ci-dessus, mais
+ remontée en lisibilité (jgk-table + slate-600) avec le reste du pied de formulaire. *@
+ <p class="mt-6 text-center text-jgk-table font-medium text-slate-600">
  Inscription en attente de validation ? Contactez-nous pour accélérer le processus.
  </p>
- <p class="mt-1 text-center text-xs text-slate-500">
- <a href="tel:+221763545916" class="text-primary font-medium hover:underline">Appeler</a>
+ <p class="mt-1 text-center text-jgk-table font-medium text-slate-600">
+ <a href="tel:+221763545916" class="text-primary font-semibold hover:underline">Appeler</a>
  ou
- <a href="https://wa.me/221763545916" class="text-primary font-medium hover:underline">WhatsApp</a>
+ <a href="https://wa.me/221763545916" class="text-primary font-semibold hover:underline">WhatsApp</a>
  : +221 76 354 59 16
  </p>
  </div>
