@@ -56,6 +56,35 @@ builder.Services.AddSingleton(
 
 // --- Authentification JWT (AGENTS.md — Décision D-07) ---
 var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtSigningKey = jwtSection["SigningKey"];
+
+// Garde de démarrage — même logique que RlsGuard (rôle PostgreSQL) et EmailSenderGuard (SMTP) : sans
+// elle, une clé absente, faible, ou restée au sentinel de développement ne fait PAS échouer le
+// démarrage (contrairement à RlsGuard/EmailSenderGuard) — l'application démarre "avec succès" mais émet
+// des tokens signés avec une clé triviale ou publique (visible dans appsettings.Development.json /
+// .env.example), sans qu'aucun avertissement ne le signale avant la première connexion.
+if (string.IsNullOrWhiteSpace(jwtSigningKey))
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey est manquant (voir .env.example — Jwt__SigningKey). L'application refuse de " +
+        "démarrer plutôt que d'échouer plus tard, au premier login.");
+}
+
+if (!builder.Environment.IsDevelopment()
+    && (jwtSigningKey is "DEV_ONLY_INSECURE_KEY_CHANGE_ME_MINIMUM_32_CHARS" or "REMPLACER_PAR_UNE_CLE_ALEATOIRE_256_BITS"))
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey utilise encore une clé de développement/placeholder hors Development. Générez " +
+        "une clé aléatoire dédiée (256 bits minimum, jamais réutilisée entre environnements) avant de " +
+        "déployer — voir .env.example.");
+}
+
+if (Encoding.UTF8.GetByteCount(jwtSigningKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:SigningKey fait moins de 256 bits (32 octets) : trop faible pour HMAC-SHA256 (Volume_7_Security.md §6). " +
+        "Voir .env.example.");
+}
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -72,7 +101,7 @@ builder.Services
             ValidateAudience = true,
             ValidAudience = jwtSection["Audience"],
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["SigningKey"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey)),
             ValidateLifetime = true, // un token expiré -> 401 (critère du ticket JGK-A04)
             ClockSkew = TimeSpan.FromSeconds(30),
 
