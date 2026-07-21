@@ -1,275 +1,275 @@
 @{
-    ViewData["Title"] = "Pédagogie - Matières";
+ ViewData["Title"] = "Pédagogie - Matières";
 }
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
-    <script src="~/js/subjects.js" asp-append-version="true"></script>
+ <script src="~/js/subjects.js" asp-append-version="true"></script>
 }
 
 <div x-data="subjectsView()">
-    <!-- Titre et bouton Nouvelle matière -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-jgk-title font-bold text-gray-900">Matières et coefficients</h1>
-            <p class="text-jgk-subtitle text-gray-500 mt-1">
-                Le coefficient de chaque matière pèse dans le calcul des moyennes et des bulletins.
-            </p>
-        </div>
+ <!-- Titre et bouton Nouvelle matière -->
+ <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div>
+ <h1 class="text-jgk-title font-bold text-slate-900">Matières et coefficients</h1>
+ <p class="text-jgk-subtitle text-slate-500 mt-1">
+ Le coefficient de chaque matière pèse dans le calcul des moyennes et des bulletins.
+ </p>
+ </div>
 
-        <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()" class="btn-primary">
-            <icon name="plus" class="w-5 h-5" />
-            Nouvelle matière
-        </button>
-    </div>
+ <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()" class="btn-primary">
+ <icon name="plus" class="w-5 h-5" />
+ Nouvelle matière
+ </button>
+ </div>
 
-    @await Html.PartialAsync("_ErrorBanner")
+ @await Html.PartialAsync("_ErrorBanner")
 
-    <!-- Conteneur -->
-    <div class="card mt-6 relative">
+ <!-- Conteneur -->
+ <div class="card mt-6 relative">
 
-        <div class="p-4 border-b border-gray-200 bg-gray-50/50 rounded-t-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="flex gap-6">
-                <stat-card size="compact" label="Matières" icon="book" accent="primary">
-                    <span x-text="subjects.length"></span>
-                </stat-card>
-                <stat-card size="compact" label="Niveaux couverts" icon="layers" accent="primary">
-                    <span x-text="visibleLevelCount"></span>
-                </stat-card>
-            </div>
+ <div class="p-6 border-b border-slate-200 bg-slate-50/50 rounded-t-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div class="flex gap-6">
+ <stat-card size="compact" label="Matières" icon="book" accent="primary">
+ <span x-text="subjects.length"></span>
+ </stat-card>
+ <stat-card size="compact" label="Niveaux couverts" icon="layers" accent="primary">
+ <span x-text="visibleLevelCount"></span>
+ </stat-card>
+ </div>
 
-            <div class="relative w-full sm:w-64">
-                <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
-                    <icon name="search" class="w-4 h-4 text-gray-400" />
-                </span>
-                <input type="search" x-model="search" placeholder="Rechercher une matière ou un niveau…"
-                       aria-label="Rechercher une matière"
-                       class="input-field mt-0 w-full pl-9" />
-            </div>
-        </div>
+ <div class="relative w-full sm:w-64">
+ <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
+ <icon name="search" class="w-4 h-4 text-slate-400" />
+ </span>
+ <input type="search" x-model="search" placeholder="Rechercher une matière ou un niveau…"
+ aria-label="Rechercher une matière"
+ class="input-field mt-0 w-full pl-9 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+ </div>
+ </div>
 
-        <template x-if="isLoading">
-            <div class="p-4 space-y-3">
-                <template x-for="i in 3" :key="i"><div class="skeleton h-10 w-full"></div></template>
-            </div>
-        </template>
+ <template x-if="isLoading">
+ <div class="p-6 space-y-3">
+ <template x-for="i in 3" :key="i"><div class="skeleton h-10 w-full"></div></template>
+ </div>
+ </template>
 
-        <!-- État vide -->
-        <div x-show="!isLoading && visibleSubjects.length === 0" x-cloak>
-            <empty-state icon="book" title="Aucune matière n'est configurée."
-                         hint="Créez vos matières et leurs coefficients pour préparer les bulletins." />
-        </div>
+ <!-- État vide -->
+ <div x-show="!isLoading && visibleSubjects.length === 0" x-cloak>
+ <empty-state icon="book" title="Aucune matière n'est configurée."
+ hint="Créez vos matières et leurs coefficients pour préparer les bulletins." />
+ </div>
 
-        @* Grille principale : 4 colonnes fixes, une par catégorie de disciplines (Lettres & Langues /
-           Sciences & Technologies / Arts, Sport & Culture / Éveil & Petite Enfance — voir categoryFor
-           dans subjects.js), pour exploiter la largeur de l'écran plutôt qu'empiler les niveaux
-           verticalement. « Éveil & Petite Enfance » se décide par NIVEAU (Crèche/Maternelle), les 3
-           autres par mot-clé dans le nom de la matière — un champ libre par école, donc une
-           heuristique : chaque ligne garde son niveau en pastille, et une matière qui ne correspond à
-           aucun mot-clé connu part dans otherSubjects plutôt que d'être mal classée en silence.
-           items-stretch : les 4 cartes gardent la même hauteur, sm:/lg: (600px/1024px) et non
-           md:/xl: — tailwind.config.js remplace entièrement les points de rupture par défaut de
-           Tailwind (Volume 5 §2.4), md:/xl: n'existent pas dans ce projet. *@
-        <div x-show="!isLoading && visibleSubjects.length > 0" x-cloak class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
-            <template x-for="group in categoryGroups" :key="group.category">
-                <div class="bg-white rounded-xl border border-gray-100 p-4 h-full flex flex-col">
-                    <div class="flex items-center justify-between gap-2 pb-3 border-b border-gray-100">
-                        <span class="text-sm font-bold text-primary-700 uppercase tracking-wide" x-text="group.category"></span>
-                        <span class="text-jgk-table text-gray-500 whitespace-nowrap" x-show="group.subjects.length > 0" x-cloak
-                              x-text="formatCoefficient(group.totalCoefficient)"></span>
-                    </div>
-                    <span class="text-xs text-gray-500 whitespace-nowrap pt-2"
-                          x-text="group.subjects.length + (group.subjects.length > 1 ? ' matières' : ' matière')"></span>
+ @* Grille principale : 4 colonnes fixes, une par catégorie de disciplines (Lettres & Langues /
+ Sciences & Technologies / Arts, Sport & Culture / Éveil & Petite Enfance — voir categoryFor
+ dans subjects.js), pour exploiter la largeur de l'écran plutôt qu'empiler les niveaux
+ verticalement. « Éveil & Petite Enfance » se décide par NIVEAU (Crèche/Maternelle), les 3
+ autres par mot-clé dans le nom de la matière — un champ libre par école, donc une
+ heuristique : chaque ligne garde son niveau en pastille, et une matière qui ne correspond à
+ aucun mot-clé connu part dans otherSubjects plutôt que d'être mal classée en silence.
+ items-stretch : les 4 cartes gardent la même hauteur, sm:/lg: (600px/1024px) et non
+ md:/xl: — tailwind.config.js remplace entièrement les points de rupture par défaut de
+ Tailwind (Volume 5 §2.4), md:/xl: n'existent pas dans ce projet. *@
+ <div x-show="!isLoading && visibleSubjects.length > 0" x-cloak class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+ <template x-for="group in categoryGroups" :key="group.category">
+ <div class="bg-white rounded-xl border border-slate-100 p-6 h-full flex flex-col">
+ <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+ <span class="text-sm font-bold text-primary-700 uppercase tracking-wide" x-text="group.category"></span>
+ <span class="text-jgk-table text-slate-500 whitespace-nowrap" x-show="group.subjects.length > 0" x-cloak
+ x-text="formatCoefficient(group.totalCoefficient)"></span>
+ </div>
+ <span class="text-xs text-slate-500 whitespace-nowrap pt-2"
+ x-text="group.subjects.length + (group.subjects.length > 1 ? ' matières' : ' matière')"></span>
 
-                    <div class="divide-y divide-gray-100 flex-1 mt-1">
-                        <template x-for="(subject, index) in group.subjects" :key="subject.id || index">
-                            <div class="grid grid-cols-[2fr_1fr_auto] items-center gap-2 py-2.5 hover:bg-gray-50 transition-colors">
-                                <span class="min-w-0 flex items-center gap-2 font-medium text-gray-900">
-                                    <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></span>
-                                    <span class="truncate" x-text="displayName(subject.name)" :title="subject.name"></span>
-                                    <badge variant="neutral" class="shrink-0 text-[10px]" x-text="subject.level"></badge>
-                                </span>
-                                <span class="text-right text-jgk-table font-semibold text-gray-700 whitespace-nowrap">
-                                    <span x-text="formatCoefficient(subject.coefficient)"></span>
-                                </span>
-                                <template x-if="canManageSubject">
-                                    <row-actions>
-                                        <row-action icon="pencil" label="Modifier" on-click="openEdit(subject)" />
-                                        <row-action icon="trash-2" label="Supprimer" on-click="openDelete(subject)" variant="danger" />
-                                    </row-actions>
-                                </template>
-                            </div>
-                        </template>
+ <div class="divide-y divide-slate-100 flex-1 mt-1">
+ <template x-for="(subject, index) in group.subjects" :key="subject.id || index">
+ <div class="grid grid-cols-[2fr_1fr_auto] items-center gap-2 py-2.5 hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <span class="min-w-0 flex items-center gap-2 font-medium text-slate-900">
+ <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></span>
+ <span class="truncate" x-text="displayName(subject.name)" :title="subject.name"></span>
+ <badge variant="neutral" class="shrink-0 text-[10px]" x-text="subject.level"></badge>
+ </span>
+ <span class="text-right text-jgk-table font-semibold text-slate-700 whitespace-nowrap">
+ <span x-text="formatCoefficient(subject.coefficient)"></span>
+ </span>
+ <template x-if="canManageSubject">
+ <row-actions>
+ <row-action icon="pencil" label="Modifier" on-click="openEdit(subject)" />
+ <row-action icon="trash-2" label="Supprimer" on-click="openDelete(subject)" variant="danger" />
+ </row-actions>
+ </template>
+ </div>
+ </template>
 
-                        <p x-show="group.subjects.length === 0" x-cloak class="py-6 text-center text-xs text-gray-400">
-                            Aucune matière dans cette catégorie.
-                        </p>
-                    </div>
-                </div>
-            </template>
-        </div>
+ <p x-show="group.subjects.length === 0" x-cloak class="py-6 text-center text-xs text-slate-400">
+ Aucune matière dans cette catégorie.
+ </p>
+ </div>
+ </div>
+ </template>
+ </div>
 
-        @* Filet de sécurité : une matière dont le nom ne correspond à aucun mot-clé connu (otherSubjects
-           dans subjects.js) — affichée à part plutôt que forcée dans une des 4 colonnes ci-dessus. *@
-        <div x-show="!isLoading && otherSubjects.length > 0" x-cloak class="border-t border-gray-100">
-            <div class="px-4 py-3 bg-gray-50/60 border-l-4 border-gray-300">
-                <span class="text-sm font-bold text-gray-500 uppercase tracking-wide">Autres matières</span>
-                <span class="text-xs text-gray-400"> — nom sans catégorie reconnue</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <tbody>
-                        <template x-for="(subject, index) in otherSubjects" :key="subject.id || index">
-                            <tr class="hover:bg-gray-50 transition-colors border-t border-gray-100">
-                                <td class="py-3 px-4 font-medium text-gray-900">
-                                    <span class="inline-flex items-center gap-2">
-                                        <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400"></span>
-                                        <span x-text="displayName(subject.name)" :title="subject.name"></span>
-                                        <badge variant="neutral" x-text="subject.level"></badge>
-                                    </span>
-                                </td>
-                                <td class="py-3 px-4 text-right w-40">
-                                    <span class="text-gray-400 text-xs">coef.</span>
-                                    <span class="font-bold text-gray-900 ml-1" x-text="formatCoefficient(subject.coefficient)"></span>
-                                </td>
-                                <td class="py-3 px-4 text-right w-44 whitespace-nowrap">
-                                    <template x-if="canManageSubject">
-                                        <row-actions>
-                                            <row-action icon="pencil" label="Modifier" on-click="openEdit(subject)" />
-                                            <row-action icon="trash-2" label="Supprimer" on-click="openDelete(subject)" variant="danger" />
-                                        </row-actions>
-                                    </template>
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+ @* Filet de sécurité : une matière dont le nom ne correspond à aucun mot-clé connu (otherSubjects
+ dans subjects.js) — affichée à part plutôt que forcée dans une des 4 colonnes ci-dessus. *@
+ <div x-show="!isLoading && otherSubjects.length > 0" x-cloak class="border-t border-slate-100">
+ <div class="px-4 py-3 bg-slate-50/60 border-l-4 border-slate-300">
+ <span class="text-sm font-bold text-slate-500 uppercase tracking-wide">Autres matières</span>
+ <span class="text-xs text-slate-400"> — nom sans catégorie reconnue</span>
+ </div>
+ <div class="overflow-x-auto">
+ <table class="w-full text-left border-collapse">
+ <tbody>
+ <template x-for="(subject, index) in otherSubjects" :key="subject.id || index">
+ <tr class="hover:bg-slate-50 transition-colors border-t border-slate-100 transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <td class="py-3 px-4 font-medium text-slate-900">
+ <span class="inline-flex items-center gap-2">
+ <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400"></span>
+ <span x-text="displayName(subject.name)" :title="subject.name"></span>
+ <badge variant="neutral" x-text="subject.level"></badge>
+ </span>
+ </td>
+ <td class="py-3 px-4 text-right w-40">
+ <span class="text-slate-400 text-xs">coef.</span>
+ <span class="font-bold text-slate-900 ml-1" x-text="formatCoefficient(subject.coefficient)"></span>
+ </td>
+ <td class="py-3 px-4 text-right w-44 whitespace-nowrap">
+ <template x-if="canManageSubject">
+ <row-actions>
+ <row-action icon="pencil" label="Modifier" on-click="openEdit(subject)" />
+ <row-action icon="trash-2" label="Supprimer" on-click="openDelete(subject)" variant="danger" />
+ </row-actions>
+ </template>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
 
-    <!-- Création d'une matière -->
-    <modal-shell open="isCreateOpen" title="Nouvelle matière">
-        <modal-subtitle>Rattachez la matière à un niveau et fixez son coefficient.</modal-subtitle>
+ <!-- Création d'une matière -->
+ <modal-shell open="isCreateOpen" title="Nouvelle matière">
+ <modal-subtitle>Rattachez la matière à un niveau et fixez son coefficient.</modal-subtitle>
 
-        <div x-show="createErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+ <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
 
-        <form x-on:submit.prevent="submitCreate()" class="space-y-4">
-            <div>
-                <label for="subject-name" class="block text-sm font-medium text-gray-700">Nom de la matière <span class="text-danger">*</span></label>
-                <input id="subject-name" type="text" x-model="newSubject.name" required maxlength="80" placeholder="ex : Mathématiques"
-                       class="input-field">
-                <p x-show="createErrors.name" x-cloak x-text="createErrors.name" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <form x-on:submit.prevent="submitCreate()" class="space-y-4">
+ <div>
+ <label for="subject-name" class="block text-sm font-medium text-slate-700">Nom de la matière <span class="text-danger">*</span></label>
+ <input id="subject-name" type="text" x-model="newSubject.name" required maxlength="80" placeholder="ex : Mathématiques"
+ class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="createErrors.name" x-cloak x-text="createErrors.name" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label for="subject-level" class="block text-sm font-medium text-gray-700">Niveau <span class="text-danger">*</span></label>
-                @* Champ libre + autocomplétion des niveaux déjà saisis : la nomenclature
-                   reste celle de l'établissement (pas de liste figée), tout en évitant les
-                   variantes d'orthographe qui créeraient des niveaux fantômes. *@
-                <input id="subject-level" type="text" x-model="newSubject.level" required maxlength="50" list="known-levels" placeholder="ex : Primaire"
-                       class="input-field">
-                <datalist id="known-levels">
-                    <template x-for="level in knownLevels" :key="level">
-                        <option :value="level"></option>
-                    </template>
-                </datalist>
-                <p x-show="createErrors.level" x-cloak x-text="createErrors.level" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label for="subject-level" class="block text-sm font-medium text-slate-700">Niveau <span class="text-danger">*</span></label>
+ @* Champ libre + autocomplétion des niveaux déjà saisis : la nomenclature
+ reste celle de l'établissement (pas de liste figée), tout en évitant les
+ variantes d'orthographe qui créeraient des niveaux fantômes. *@
+ <input id="subject-level" type="text" x-model="newSubject.level" required maxlength="50" list="known-levels" placeholder="ex : Primaire"
+ class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <datalist id="known-levels">
+ <template x-for="level in knownLevels" :key="level">
+ <option :value="level"></option>
+ </template>
+ </datalist>
+ <p x-show="createErrors.level" x-cloak x-text="createErrors.level" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label for="subject-coefficient" class="block text-sm font-medium text-gray-700">Coefficient <span class="text-danger">*</span></label>
-                <input id="subject-coefficient" type="number" x-model.number="newSubject.coefficient" required min="0.5" max="20" step="0.5"
-                       class="input-field">
-                <p x-show="createErrors.coefficient" x-cloak x-text="createErrors.coefficient" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label for="subject-coefficient" class="block text-sm font-medium text-slate-700">Coefficient <span class="text-danger">*</span></label>
+ <input id="subject-coefficient" type="number" x-model.number="newSubject.coefficient" required min="0.5" max="20" step="0.5"
+ class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="createErrors.coefficient" x-cloak x-text="createErrors.coefficient" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
-                <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">
-                    Annuler
-                </button>
-                <button type="submit" :disabled="isSubmitting" class="btn-primary">
-                    <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
-                </button>
-            </div>
-        </form>
-    </modal-shell>
+ <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+ <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">
+ Annuler
+ </button>
+ <button type="submit" :disabled="isSubmitting" class="btn-primary">
+ <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
 
-    <!-- Confirmation : matière ajoutée -->
-    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Matière ajoutée">
-        <confirm-dialog-body close-action="showAddedDialog = false"
-                             new-action="showAddedDialog = false; openCreate()" new-label="Nouvelle matière">
-            La matière <span class="font-medium text-gray-900" x-text="addedSubjectName"></span> a bien été ajoutée.
-        </confirm-dialog-body>
-    </modal-shell>
+ <!-- Confirmation : matière ajoutée -->
+ <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Matière ajoutée">
+ <confirm-dialog-body close-action="showAddedDialog = false"
+ new-action="showAddedDialog = false; openCreate()" new-label="Nouvelle matière">
+ La matière <span class="font-medium text-slate-900" x-text="addedSubjectName"></span> a bien été ajoutée.
+ </confirm-dialog-body>
+ </modal-shell>
 
-    <!-- Modification d'une matière -->
-    <modal-shell open="editing" on-close="closeEdit()" title="Modifier la matière">
-        <modal-subtitle><span x-text="editing ? editing.name : ''"></span></modal-subtitle>
+ <!-- Modification d'une matière -->
+ <modal-shell open="editing" on-close="closeEdit()" title="Modifier la matière">
+ <modal-subtitle><span x-text="editing ? editing.name : ''"></span></modal-subtitle>
 
-        <div x-show="editErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
+ <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
 
-        <form x-on:submit.prevent="submitEdit()" class="space-y-4">
-            <div>
-                <label for="edit-subject-name" class="block text-sm font-medium text-gray-700">Nom de la matière <span class="text-danger">*</span></label>
-                <input id="edit-subject-name" type="text" x-model="editing.name" required maxlength="80" class="input-field">
-                <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <form x-on:submit.prevent="submitEdit()" class="space-y-4">
+ <div>
+ <label for="edit-subject-name" class="block text-sm font-medium text-slate-700">Nom de la matière <span class="text-danger">*</span></label>
+ <input id="edit-subject-name" type="text" x-model="editing.name" required maxlength="80" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label for="edit-subject-level" class="block text-sm font-medium text-gray-700">Niveau <span class="text-danger">*</span></label>
-                <input id="edit-subject-level" type="text" x-model="editing.level" required maxlength="50" list="known-levels" class="input-field">
-                <p x-show="editErrors.level" x-cloak x-text="editErrors.level" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label for="edit-subject-level" class="block text-sm font-medium text-slate-700">Niveau <span class="text-danger">*</span></label>
+ <input id="edit-subject-level" type="text" x-model="editing.level" required maxlength="50" list="known-levels" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="editErrors.level" x-cloak x-text="editErrors.level" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label for="edit-subject-coefficient" class="block text-sm font-medium text-gray-700">Coefficient <span class="text-danger">*</span></label>
-                <input id="edit-subject-coefficient" type="number" x-model.number="editing.coefficient" required min="0.5" max="20" step="0.5" class="input-field">
-                <p x-show="editErrors.coefficient" x-cloak x-text="editErrors.coefficient" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label for="edit-subject-coefficient" class="block text-sm font-medium text-slate-700">Coefficient <span class="text-danger">*</span></label>
+ <input id="edit-subject-coefficient" type="number" x-model.number="editing.coefficient" required min="0.5" max="20" step="0.5" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="editErrors.coefficient" x-cloak x-text="editErrors.coefficient" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div class="mt-6 flex justify-end gap-3">
-                <button type="button" x-on:click="closeEdit()" class="btn-secondary">Annuler</button>
-                <button type="submit" :disabled="isSavingEdit" class="btn-primary">
-                    <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
-                </button>
-            </div>
-        </form>
-    </modal-shell>
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeEdit()" class="btn-secondary">Annuler</button>
+ <button type="submit" :disabled="isSavingEdit" class="btn-primary">
+ <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
 
-    <!-- Confirmation : matière modifiée -->
-    <modal-shell open="showEditedDialog" size="md" on-close="showEditedDialog = false" title="Matière modifiée">
-        <confirm-dialog-body close-action="showEditedDialog = false">
-            La matière <span class="font-medium text-gray-900" x-text="editedSubjectName"></span> a bien été mise à jour.
-        </confirm-dialog-body>
-    </modal-shell>
+ <!-- Confirmation : matière modifiée -->
+ <modal-shell open="showEditedDialog" size="md" on-close="showEditedDialog = false" title="Matière modifiée">
+ <confirm-dialog-body close-action="showEditedDialog = false">
+ La matière <span class="font-medium text-slate-900" x-text="editedSubjectName"></span> a bien été mise à jour.
+ </confirm-dialog-body>
+ </modal-shell>
 
-    <!-- Confirmation : suppression d'une matière -->
-    <modal-shell open="deletingSubject" on-close="closeDelete()" size="md">
-        <modal-title>Supprimer la matière</modal-title>
-        <modal-subtitle>
-            <span class="font-semibold text-gray-900" x-text="deletingSubject ? deletingSubject.name : ''"></span>
-            sera archivée et n'apparaîtra plus dans les sélecteurs de matière.
-        </modal-subtitle>
+ <!-- Confirmation : suppression d'une matière -->
+ <modal-shell open="deletingSubject" on-close="closeDelete()" size="md">
+ <modal-title>Supprimer la matière</modal-title>
+ <modal-subtitle>
+ <span class="font-semibold text-slate-900" x-text="deletingSubject ? deletingSubject.name : ''"></span>
+ sera archivée et n'apparaîtra plus dans les sélecteurs de matière.
+ </modal-subtitle>
 
-        <div x-show="deleteSubjectError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteSubjectError"></div>
+ <div x-show="deleteSubjectError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteSubjectError"></div>
 
-        <p class="text-sm text-gray-500">
-            Impossible si des notes existent déjà pour cette matière : son coefficient pilote encore le calcul des moyennes et des bulletins déjà émis.
-        </p>
+ <p class="text-sm text-slate-500">
+ Impossible si des notes existent déjà pour cette matière : son coefficient pilote encore le calcul des moyennes et des bulletins déjà émis.
+ </p>
 
-        <div class="mt-6 flex justify-end gap-3">
-            <button type="button" x-on:click="closeDelete()" class="btn-secondary">Annuler</button>
-            <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingSubject" class="btn-danger">
-                <span x-text="isDeletingSubject ? 'Suppression...' : 'Supprimer la matière'"></span>
-            </button>
-        </div>
-    </modal-shell>
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeDelete()" class="btn-secondary">Annuler</button>
+ <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingSubject" class="btn-danger">
+ <span x-text="isDeletingSubject ? 'Suppression...' : 'Supprimer la matière'"></span>
+ </button>
+ </div>
+ </modal-shell>
 
-    <!-- Confirmation : matière supprimée -->
-    <modal-shell open="showDeletedDialog" size="md" on-close="showDeletedDialog = false" title="Matière supprimée">
-        <confirm-dialog-body close-action="showDeletedDialog = false">
-            La matière <span class="font-medium text-gray-900" x-text="deletedSubjectName"></span> a bien été supprimée.
-        </confirm-dialog-body>
-    </modal-shell>
+ <!-- Confirmation : matière supprimée -->
+ <modal-shell open="showDeletedDialog" size="md" on-close="showDeletedDialog = false" title="Matière supprimée">
+ <confirm-dialog-body close-action="showDeletedDialog = false">
+ La matière <span class="font-medium text-slate-900" x-text="deletedSubjectName"></span> a bien été supprimée.
+ </confirm-dialog-body>
+ </modal-shell>
 </div>

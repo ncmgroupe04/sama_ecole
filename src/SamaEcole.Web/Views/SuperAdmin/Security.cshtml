@@ -1,104 +1,104 @@
 @{
-    ViewData["Title"] = "Sécurité & Logs";
-    Layout = "_SuperAdminLayout";
+ ViewData["Title"] = "Sécurité & Logs";
+ Layout = "_SuperAdminLayout";
 }
 
 @* Cet écran consomme le VRAI GET /api/v1/admin/platform/activity (PlatformController, migration
-   AddPlatformAdminViews : fonction SECURITY DEFINER get_global_audit_logs). Même nature de données que
-   l'onglet Journal d'audit des Paramètres (Views/Shared/_AuditLogPanel.cshtml), mais toutes écoles
-   confondues — d'où la colonne Établissement en plus. *@
+ AddPlatformAdminViews : fonction SECURITY DEFINER get_global_audit_logs). Même nature de données que
+ l'onglet Journal d'audit des Paramètres (Views/Shared/_AuditLogPanel.cshtml), mais toutes écoles
+ confondues — d'où la colonne Établissement en plus. *@
 <div x-data="superAdminSecurity()" x-init="load()">
 
-    <div>
-        <h1 class="text-xl font-semibold text-white">Sécurité &amp; Logs</h1>
-        <p class="text-sm text-zinc-500 mt-1">Journal d'audit de la plateforme, toutes écoles confondues.</p>
-    </div>
+ <div>
+ <h1 class="text-xl font-semibold text-white">Sécurité &amp; Logs</h1>
+ <p class="text-sm text-zinc-500 mt-1">Journal d'audit de la plateforme, toutes écoles confondues.</p>
+ </div>
 
-    <div x-show="isDemoData" x-cloak
-         class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
-        <icon name="alert-circle" class="w-[18px] h-[18px] shrink-0 mt-0.5" />
-        <span>
-            Backend du journal d'audit plateforme introuvable (<code class="text-amber-200">GET /admin/platform/activity</code>) —
-            les entrées ci-dessous sont des données de démonstration, pas des données réelles.
-        </span>
-    </div>
+ <div x-show="isDemoData" x-cloak
+ class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
+ <icon name="alert-circle" class="w-[18px] h-[18px] shrink-0 mt-0.5" />
+ <span>
+ Backend du journal d'audit plateforme introuvable (<code class="text-amber-200">GET /admin/platform/activity</code>) —
+ les entrées ci-dessous sont des données de démonstration, pas des données réelles.
+ </span>
+ </div>
 
-    <div x-show="error" x-cloak class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
+ <div x-show="error" x-cloak class="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
 
-    <!-- Journal -->
-    <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-800 bg-zinc-950/40">
-                        <th class="py-3 px-4 font-medium">Date/heure</th>
-                        <th class="py-3 px-4 font-medium">Établissement</th>
-                        <th class="py-3 px-4 font-medium">Utilisateur</th>
-                        <th class="py-3 px-4 font-medium">Domaine</th>
-                        <th class="py-3 px-4 font-medium">Action</th>
-                        <th class="py-3 px-4 font-medium">Résultat</th>
-                        <th class="py-3 px-4 font-medium">IP</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-zinc-800/80">
-                    <template x-if="isLoading">
-                        <template x-for="i in 6" :key="i">
-                            <tr><td class="py-3 px-4" colspan="7"><div class="h-4 w-full rounded bg-zinc-800 animate-pulse"></div></td></tr>
-                        </template>
-                    </template>
+ <!-- Journal -->
+ <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur overflow-hidden">
+ <div class="overflow-x-auto">
+ <table class="w-full text-left border-collapse">
+ <thead>
+ <tr class="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-800 bg-zinc-950/40 hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <th class="py-3 px-4 font-medium uppercase tracking-wider text-slate-500 font-semibold">Date/heure</th>
+ <th class="py-3 px-4 font-medium uppercase tracking-wider text-slate-500 font-semibold">Établissement</th>
+ <th class="py-3 px-4 font-medium uppercase tracking-wider text-slate-500 font-semibold">Utilisateur</th>
+ <th class="py-3 px-4 font-medium uppercase tracking-wider text-slate-500 font-semibold">Domaine</th>
+ <th class="py-3 px-4 font-medium uppercase tracking-wider text-slate-500 font-semibold">Action</th>
+ <th class="py-3 px-4 font-medium uppercase tracking-wider text-slate-500 font-semibold">Résultat</th>
+ <th class="py-3 px-4 font-medium uppercase tracking-wider text-slate-500 font-semibold">IP</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-zinc-800/80">
+ <template x-if="isLoading">
+ <template x-for="i in 6" :key="i">
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out"><td class="py-3 px-4" colspan="7"><div class="h-4 w-full rounded-xl bg-zinc-800 animate-pulse"></div></td></tr>
+ </template>
+ </template>
 
-                    <tr x-show="!isLoading && entries.length === 0" x-cloak>
-                        <td colspan="7" class="py-12 text-center text-sm text-zinc-500">
-                            Aucune entrée dans le journal.
-                        </td>
-                    </tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="!isLoading && entries.length === 0" x-cloak>
+ <td colspan="7" class="py-12 text-center text-sm text-zinc-500">
+ Aucune entrée dans le journal.
+ </td>
+ </tr>
 
-                    <template x-for="entry in entries" :key="entry.id">
-                        <tr class="hover:bg-zinc-900 transition-colors">
-                            <td class="py-3 px-4 text-zinc-400 whitespace-nowrap" x-text="formatDateTime(entry.occurredAt)"></td>
-                            <td class="py-3 px-4 text-zinc-100" x-text="entry.schoolName"></td>
-                            <td class="py-3 px-4 text-zinc-300" x-text="entry.actorFullName"></td>
-                            <td class="py-3 px-4">
-                                <span class="inline-flex items-center rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-zinc-300" x-text="entry.module"></span>
-                            </td>
-                            <td class="py-3 px-4 text-zinc-300" x-text="entry.action"></td>
-                            <td class="py-3 px-4">
-                                <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                                      :class="entry.success ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-inset ring-emerald-500/20' : 'bg-rose-500/15 text-rose-400 ring-1 ring-inset ring-rose-500/20'"
-                                      x-text="entry.success ? 'Succès' : 'Échec'"></span>
-                            </td>
-                            <td class="py-3 px-4 font-mono text-xs text-zinc-500" x-text="entry.ipAddress || '—'"></td>
-                        </tr>
-                        <tr x-show="!entry.success && entry.failureReason" x-cloak>
-                            <td></td>
-                            <td colspan="6" class="pb-3 px-4 -mt-3 text-xs text-rose-400" x-text="entry.failureReason"></td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
+ <template x-for="entry in entries" :key="entry.id">
+ <tr class="hover:bg-zinc-900 transition-colors hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-3 px-4 text-zinc-400 whitespace-nowrap" x-text="formatDateTime(entry.occurredAt)"></td>
+ <td class="py-3 px-4 text-zinc-100" x-text="entry.schoolName"></td>
+ <td class="py-3 px-4 text-zinc-300" x-text="entry.actorFullName"></td>
+ <td class="py-3 px-4">
+ <span class="inline-flex items-center rounded-full bg-zinc-800 px-2.5 py-0.5 text-xs font-medium text-zinc-300" x-text="entry.module"></span>
+ </td>
+ <td class="py-3 px-4 text-zinc-300" x-text="entry.action"></td>
+ <td class="py-3 px-4">
+ <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+ :class="entry.success ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-inset ring-emerald-500/20' : 'bg-rose-500/15 text-rose-400 ring-1 ring-inset ring-rose-500/20'"
+ x-text="entry.success ? 'Succès' : 'Échec'"></span>
+ </td>
+ <td class="py-3 px-4 font-mono text-xs text-zinc-500" x-text="entry.ipAddress || '—'"></td>
+ </tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="!entry.success && entry.failureReason" x-cloak>
+ <td></td>
+ <td colspan="6" class="pb-3 px-4 -mt-3 text-xs text-rose-400" x-text="entry.failureReason"></td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
 
-        <div class="flex items-center justify-between gap-4 border-t border-zinc-800 px-4 py-3">
-            <p class="text-xs text-zinc-500">
-                Page <span class="font-medium text-zinc-300" x-text="page"></span>
-                <template x-if="totalCount > 0">
-                    <span> sur <span class="font-medium text-zinc-300" x-text="Math.ceil(totalCount / pageSize)"></span> · <span x-text="totalCount"></span> résultats</span>
-                </template>
-            </p>
-            <div class="flex items-center gap-2">
-                <button type="button" x-on:click="if (page > 1) { page--; load(); }" :disabled="page === 1 || isLoading"
-                        class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-zinc-900">
-                    Précédent
-                </button>
-                <button type="button" x-on:click="if (page * pageSize < totalCount) { page++; load(); }" :disabled="page * pageSize >= totalCount || isLoading"
-                        class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-zinc-900">
-                    Suivant
-                </button>
-            </div>
-        </div>
-    </div>
+ <div class="flex items-center justify-between gap-4 border-t border-zinc-800 px-4 py-3">
+ <p class="text-xs text-zinc-500">
+ Page <span class="font-medium text-zinc-300" x-text="page"></span>
+ <template x-if="totalCount > 0">
+ <span> sur <span class="font-medium text-zinc-300" x-text="Math.ceil(totalCount / pageSize)"></span> · <span x-text="totalCount"></span> résultats</span>
+ </template>
+ </p>
+ <div class="flex items-center gap-2">
+ <button type="button" x-on:click="if (page > 1) { page--; load(); }" :disabled="page === 1 || isLoading"
+ class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-zinc-900">
+ Précédent
+ </button>
+ <button type="button" x-on:click="if (page * pageSize < totalCount) { page++; load(); }" :disabled="page * pageSize >= totalCount || isLoading"
+ class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50 disabled:hover:bg-zinc-900">
+ Suivant
+ </button>
+ </div>
+ </div>
+ </div>
 </div>
 
 @section Scripts {
-    <script src="~/js/superadmin-security.js" asp-append-version="true"></script>
+ <script src="~/js/superadmin-security.js" asp-append-version="true"></script>
 }

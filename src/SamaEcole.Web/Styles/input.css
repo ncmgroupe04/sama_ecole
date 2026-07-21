@@ -39,7 +39,7 @@
   }
 
   .card {
-    @apply rounded-xl border border-gray-200 bg-white shadow-sm;
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
   }
 
   .input-field {
@@ -51,7 +51,7 @@
      de la référence. Le CORPS des tableaux garde 13px (jeton jgk-table, .table-cell) : seul l'en-tête
      rétrécit, ce qui accentue la hiérarchie en-tête/données. */
   .table-head {
-    @apply border-b border-gray-200 bg-gray-50 text-[11px] font-extrabold uppercase tracking-wider text-slate-500;
+    @apply border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold uppercase tracking-wider text-slate-500;
   }
 
   .table-cell {

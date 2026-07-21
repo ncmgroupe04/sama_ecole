@@ -1,233 +1,233 @@
 @{
-    ViewData["Title"] = "Inscription de votre établissement";
-    Layout = "_AuthLayout";
-    var requestedPlanOptions = new List<SelectFieldOption> {
-        new("Primaire", "Primaire"), new("Standard", "Standard"), new("Premium", "Premium")
-    };
+ ViewData["Title"] = "Inscription de votre établissement";
+ Layout = "_AuthLayout";
+ var requestedPlanOptions = new List<SelectFieldOption> {
+ new("Primaire", "Primaire"), new("Standard", "Standard"), new("Premium", "Premium")
+ };
 }
 
 <div class="min-h-screen lg:grid lg:grid-cols-2">
 
-    <!-- Panneau de marque — masqué sur mobile -->
-    <div class="hidden lg:flex flex-col justify-between bg-primary text-white p-12 relative overflow-hidden">
-        <div aria-hidden="true" class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10"></div>
-        <div aria-hidden="true" class="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-white/5"></div>
+ <!-- Panneau de marque — masqué sur mobile -->
+ <div class="hidden lg:flex flex-col justify-between bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white p-12 relative overflow-hidden">
+ <div aria-hidden="true" class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10"></div>
+ <div aria-hidden="true" class="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-white/5"></div>
 
-        <div class="relative flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-white text-primary flex items-center justify-center font-bold text-xl">S</div>
-            <span class="font-bold text-xl tracking-tight">Sama Ecole</span>
-        </div>
+ <div class="relative flex items-center gap-3">
+ <div class="w-10 h-10 rounded-2xl bg-white text-primary flex items-center justify-center font-bold text-xl">S</div>
+ <span class="font-bold text-xl tracking-tight">Sama Ecole</span>
+ </div>
 
-        <div class="relative max-w-md">
-            <h2 class="text-3xl font-bold leading-tight">Inscrivez votre établissement en quelques minutes.</h2>
-            <p class="mt-4 text-white/80 text-jgk-body leading-relaxed">
-                Renseignez votre demande. Après validation par notre équipe, vous recevrez vos accès et
-                pourrez activer votre abonnement.
-            </p>
+ <div class="relative max-w-md">
+ <h2 class="text-3xl font-bold leading-tight">Inscrivez votre établissement en quelques minutes.</h2>
+ <p class="mt-4 text-white/80 text-jgk-body leading-relaxed">
+ Renseignez votre demande. Après validation par notre équipe, vous recevrez vos accès et
+ pourrez activer votre abonnement.
+ </p>
 
-            <ul class="mt-8 space-y-3 text-white/90 text-jgk-body">
-                <li class="flex items-center gap-3">
-                    <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>Aucun paiement demandé avant validation</span>
-                </li>
-                <li class="flex items-center gap-3">
-                    <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>Suivi de votre demande par référence, sans compte</span>
-                </li>
-                <li class="flex items-center gap-3">
-                    <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>Vos données isolées et protégées dès l'ouverture</span>
-                </li>
-            </ul>
-        </div>
+ <ul class="mt-8 space-y-3 text-white/90 text-jgk-body">
+ <li class="flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <span>Aucun paiement demandé avant validation</span>
+ </li>
+ <li class="flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <span>Suivi de votre demande par référence, sans compte</span>
+ </li>
+ <li class="flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <span>Vos données isolées et protégées dès l'ouverture</span>
+ </li>
+ </ul>
+ </div>
 
-        <p class="relative text-white/60 text-jgk-table">© 2026 Sama Ecole — Sénégal</p>
-    </div>
+ <p class="relative text-white/60 text-jgk-table">© 2026 Sama Ecole — Sénégal</p>
+ </div>
 
-    <!-- Formulaire -->
-    <div class="flex items-center justify-center p-6 sm:p-12 min-h-screen lg:min-h-0">
-        <div class="w-full max-w-lg" x-data="registrationForm()">
+ <!-- Formulaire -->
+ <div class="flex items-center justify-center p-6 sm:p-12 min-h-screen lg:min-h-0">
+ <div class="w-full max-w-lg" x-data="registrationForm()">
 
-            <!-- Logo sur mobile -->
-            <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
-                <div class="w-9 h-9 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-lg">S</div>
-                <span class="font-bold text-lg text-gray-900 tracking-tight">Sama Ecole</span>
-            </div>
+ <!-- Logo sur mobile -->
+ <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
+ <div class="w-9 h-9 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center font-bold text-lg">S</div>
+ <span class="font-bold text-lg text-slate-900 tracking-tight">Sama Ecole</span>
+ </div>
 
-            <!-- ÉCRAN DE SUCCÈS : la référence de suivi remplace le formulaire une fois la demande reçue. -->
-            <div x-cloak x-show="trackingReference" class="text-center">
-                <div class="mx-auto w-14 h-14 rounded-full bg-success/10 flex items-center justify-center mb-5">
-                    <svg aria-hidden="true" class="w-7 h-7 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                </div>
-                <h1 class="text-jgk-title font-bold text-gray-900">Demande envoyée !</h1>
-                <p class="text-jgk-body text-gray-500 mt-2">
-                    Conservez votre référence de suivi. Elle vous permet de suivre l'état de votre demande à
-                    tout moment, sans vous connecter.
-                </p>
+ <!-- ÉCRAN DE SUCCÈS : la référence de suivi remplace le formulaire une fois la demande reçue. -->
+ <div x-cloak x-show="trackingReference" class="text-center">
+ <div class="mx-auto w-14 h-14 rounded-full bg-success/10 flex items-center justify-center mb-5">
+ <svg aria-hidden="true" class="w-7 h-7 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+ </div>
+ <h1 class="text-jgk-title font-bold text-slate-900">Demande envoyée !</h1>
+ <p class="text-jgk-body text-slate-500 mt-2">
+ Conservez votre référence de suivi. Elle vous permet de suivre l'état de votre demande à
+ tout moment, sans vous connecter.
+ </p>
 
-                <div class="mt-6 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 px-6 py-5">
-                    <p class="text-jgk-table text-gray-500 uppercase tracking-wide">Référence de suivi</p>
-                    <p class="mt-1 text-2xl font-bold text-primary tracking-widest" x-text="trackingReference"></p>
-                </div>
+ <div class="mt-6 rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 px-6 py-5">
+ <p class="text-jgk-table text-slate-500 uppercase tracking-wide">Référence de suivi</p>
+ <p class="mt-1 text-2xl font-bold text-primary tracking-widest" x-text="trackingReference"></p>
+ </div>
 
-                <p class="mt-6 text-jgk-table text-gray-500">
-                    Un e-mail de confirmation vous a été adressé. Après validation par notre équipe, vous
-                    recevrez vos accès pour vous connecter.
-                </p>
+ <p class="mt-6 text-jgk-table text-slate-500">
+ Un e-mail de confirmation vous a été adressé. Après validation par notre équipe, vous
+ recevrez vos accès pour vous connecter.
+ </p>
 
-                @* ?ref= pré-remplit et lance directement la recherche sur l'écran de suivi (JGK-I02,
-                   tracking.js#init) : le Directeur n'a pas à recopier la référence qu'il vient de recevoir. *@
-                <a x-bind:href="'/suivi-demande?ref=' + encodeURIComponent(trackingReference)"
-                   class="mt-6 inline-block text-jgk-body font-medium text-primary hover:underline">
-                    Suivre l'état de ma demande
-                </a>
-                <br />
-                <a href="/login" class="mt-2 inline-block text-jgk-table text-gray-500 hover:underline">
-                    Retour à la connexion
-                </a>
-            </div>
+ @* ?ref= pré-remplit et lance directement la recherche sur l'écran de suivi (JGK-I02,
+ tracking.js#init) : le Directeur n'a pas à recopier la référence qu'il vient de recevoir. *@
+ <a x-bind:href="'/suivi-demande?ref=' + encodeURIComponent(trackingReference)"
+ class="mt-6 inline-block text-jgk-body font-medium text-primary hover:underline">
+ Suivre l'état de ma demande
+ </a>
+ <br />
+ <a href="/login" class="mt-2 inline-block text-jgk-table text-slate-500 hover:underline">
+ Retour à la connexion
+ </a>
+ </div>
 
-            <!-- FORMULAIRE : masqué dès qu'une référence a été obtenue. -->
-            <div x-show="!trackingReference">
-                <div class="text-center lg:text-left mb-8">
-                    <h1 class="text-jgk-title font-bold text-gray-900">Inscription de votre établissement</h1>
-                    <p class="text-jgk-body text-gray-500 mt-2">
-                        Déjà inscrit ? <a href="/login" class="text-primary font-medium hover:underline">Se connecter</a>
-                    </p>
-                </div>
+ <!-- FORMULAIRE : masqué dès qu'une référence a été obtenue. -->
+ <div x-show="!trackingReference">
+ <div class="text-center lg:text-left mb-8">
+ <h1 class="text-jgk-title font-bold text-slate-900">Inscription de votre établissement</h1>
+ <p class="text-jgk-body text-slate-500 mt-2">
+ Déjà inscrit ? <a href="/login" class="text-primary font-medium hover:underline">Se connecter</a>
+ </p>
+ </div>
 
-                <!-- Message d'erreur global. aria-live : lu sans déplacer le focus. -->
-                <div x-cloak
-                     x-show="error"
-                     x-transition.opacity
-                     role="alert"
-                     aria-live="polite"
-                     class="mb-6 flex items-start gap-3 rounded-lg bg-danger/10 border border-danger/20 px-4 py-3">
-                    <svg aria-hidden="true" class="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-6.93-12a2 2 0 00-3.5 0l-6.93 12A2 2 0 005.07 19z" /></svg>
-                    <p class="text-jgk-body text-danger" x-text="error"></p>
-                </div>
+ <!-- Message d'erreur global. aria-live : lu sans déplacer le focus. -->
+ <div x-cloak
+ x-show="error"
+ x-transition.opacity
+ role="alert"
+ aria-live="polite"
+ class="mb-6 flex items-start gap-3 rounded-2xl bg-danger/10 border border-danger/20 px-4 py-3">
+ <svg aria-hidden="true" class="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-6.93-12a2 2 0 00-3.5 0l-6.93 12A2 2 0 005.07 19z" /></svg>
+ <p class="text-jgk-body text-danger" x-text="error"></p>
+ </div>
 
-                <form x-on:submit.prevent="submit()" novalidate class="space-y-5">
+ <form x-on:submit.prevent="submit()" novalidate class="space-y-5">
 
-                    <!-- HONEYPOT : leurre anti-spam. Invisible et hors tabulation pour un humain ; un bot le
-                         remplit et se trahit. aria-hidden + tabindex=-1 + autocomplete=off pour qu'aucun
-                         lecteur d'écran ni gestionnaire de mots de passe ne le remplisse par mégarde. -->
-                    <div aria-hidden="true" class="absolute -left-[9999px] w-px h-px overflow-hidden" style="opacity:0">
-                        <label for="website">Ne pas remplir ce champ</label>
-                        <input id="website" type="text" x-model="website" tabindex="-1" autocomplete="off" />
-                    </div>
+ <!-- HONEYPOT : leurre anti-spam. Invisible et hors tabulation pour un humain ; un bot le
+ remplit et se trahit. aria-hidden + tabindex=-1 + autocomplete=off pour qu'aucun
+ lecteur d'écran ni gestionnaire de mots de passe ne le remplisse par mégarde. -->
+ <div aria-hidden="true" class="absolute -left-[9999px] w-px h-px overflow-hidden" style="opacity:0">
+ <label for="website">Ne pas remplir ce champ</label>
+ <input id="website" type="text" x-model="website" tabindex="-1" autocomplete="off" />
+ </div>
 
-                    <fieldset class="space-y-4">
-                        <legend class="text-jgk-body font-semibold text-gray-900 mb-1">Votre établissement</legend>
+ <fieldset class="space-y-4">
+ <legend class="text-jgk-body font-semibold text-slate-900 mb-1">Votre établissement</legend>
 
-                        <div>
-                            <label for="schoolName" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Nom de l'établissement</label>
-                            <input id="schoolName" type="text" x-model="schoolName" required maxlength="200"
-                                   placeholder="Complexe scolaire Les Baobabs"
-                                   class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                        </div>
+ <div>
+ <label for="schoolName" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Nom de l'établissement</label>
+ <input id="schoolName" type="text" x-model="schoolName" required maxlength="200"
+ placeholder="Complexe scolaire Les Baobabs"
+ class="w-full px-5 py-2.5.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label for="city" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Ville <span class="text-gray-400 font-normal">(facultatif)</span></label>
-                                <input id="city" type="text" x-model="city" maxlength="100" placeholder="Dakar"
-                                       class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                            </div>
-                            <div>
-                                <label for="region" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Région <span class="text-gray-400 font-normal">(facultatif)</span></label>
-                                <input id="region" type="text" x-model="region" maxlength="100" placeholder="Dakar"
-                                       class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                            </div>
-                        </div>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label for="city" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Ville <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <input id="city" type="text" x-model="city" maxlength="100" placeholder="Dakar"
+ class="w-full px-5 py-2.5.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
+ <div>
+ <label for="region" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Région <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <input id="region" type="text" x-model="region" maxlength="100" placeholder="Dakar"
+ class="w-full px-5 py-2.5.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
+ </div>
 
-                        <div>
-                            <label for="schoolAddress" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Adresse <span class="text-gray-400 font-normal">(facultatif)</span></label>
-                            <input id="schoolAddress" type="text" x-model="schoolAddress" maxlength="300" placeholder="Rue 12 x Avenue Bourguiba"
-                                   class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                        </div>
+ <div>
+ <label for="schoolAddress" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Adresse <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <input id="schoolAddress" type="text" x-model="schoolAddress" maxlength="300" placeholder="Rue 12 x Avenue Bourguiba"
+ class="w-full px-5 py-2.5.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label for="estimatedStudentCount" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Effectif estimé <span class="text-gray-400 font-normal">(facultatif)</span></label>
-                                <input id="estimatedStudentCount" type="number" min="1" x-model="estimatedStudentCount" placeholder="250"
-                                       class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                            </div>
-                            <div>
-                                <label for="requestedPlan" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Formule souhaitée</label>
-                                <select-field id="requestedPlan" model="requestedPlan" options="requestedPlanOptions" />
-                            </div>
-                        </div>
-                    </fieldset>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label for="estimatedStudentCount" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Effectif estimé <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <input id="estimatedStudentCount" type="number" min="1" x-model="estimatedStudentCount" placeholder="250"
+ class="w-full px-5 py-2.5.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
+ <div>
+ <label for="requestedPlan" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Formule souhaitée</label>
+ <select-field id="requestedPlan" model="requestedPlan" options="requestedPlanOptions" />
+ </div>
+ </div>
+ </fieldset>
 
-                    <fieldset class="space-y-4 pt-2">
-                        <legend class="text-jgk-body font-semibold text-gray-900 mb-1">Vous, le responsable</legend>
+ <fieldset class="space-y-4 pt-2">
+ <legend class="text-jgk-body font-semibold text-slate-900 mb-1">Vous, le responsable</legend>
 
-                        <div>
-                            <label for="directorFullName" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Nom complet</label>
-                            <input id="directorFullName" type="text" x-model="directorFullName" required maxlength="200"
-                                   placeholder="Awa Ndiaye"
-                                   class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                        </div>
+ <div>
+ <label for="directorFullName" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Nom complet</label>
+ <input id="directorFullName" type="text" x-model="directorFullName" required maxlength="200"
+ placeholder="Awa Ndiaye"
+ class="w-full px-5 py-2.5.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label for="directorEmail" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Adresse e-mail</label>
-                                <input id="directorEmail" type="email" x-model="directorEmail" required maxlength="200"
-                                       autocomplete="email" placeholder="awa@monecole.sn"
-                                       class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                            </div>
-                            <div>
-                                <label for="directorPhone" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Téléphone</label>
-                                <input id="directorPhone" type="tel" x-model="directorPhone" required maxlength="30"
-                                       placeholder="+221 77 000 00 00"
-                                       class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                            </div>
-                        </div>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label for="directorEmail" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Adresse e-mail</label>
+ <input id="directorEmail" type="email" x-model="directorEmail" required maxlength="200"
+ autocomplete="email" placeholder="awa@monecole.sn"
+ class="w-full px-5 py-2.5.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
+ <div>
+ <label for="directorPhone" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Téléphone</label>
+ <input id="directorPhone" type="tel" x-model="directorPhone" required maxlength="30"
+ placeholder="+221 77 000 00 00"
+ class="w-full px-5 py-2.5.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
+ </div>
 
-                        <div>
-                            <label for="directorPassword" class="block text-jgk-body font-medium text-gray-700 mb-1.5">Mot de passe</label>
-                            <div class="relative">
-                                <input id="directorPassword"
-                                       x-bind:type="showPassword ? 'text' : 'password'"
-                                       x-model="directorPassword" required minlength="12"
-                                       autocomplete="new-password" placeholder="12 caractères minimum"
-                                       class="w-full pl-4 pr-11 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                                <button type="button"
-                                        x-on:click="showPassword = !showPassword"
-                                        x-bind:aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-                                        x-bind:aria-pressed="showPassword.toString()"
-                                        class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-primary transition-colors">
-                                    <svg x-show="!showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                    <svg x-cloak x-show="showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                                </button>
-                            </div>
-                            <p class="mt-1.5 text-jgk-table text-gray-500">Au moins 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial — sans suite évidente ni votre nom. C'est ce mot de passe qui vous connectera une fois la demande validée.</p>
-                        </div>
-                    </fieldset>
+ <div>
+ <label for="directorPassword" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Mot de passe</label>
+ <div class="relative">
+ <input id="directorPassword"
+ x-bind:type="showPassword ? 'text' : 'password'"
+ x-model="directorPassword" required minlength="12"
+ autocomplete="new-password" placeholder="12 caractères minimum"
+ class="w-full pl-4 pr-11 py-2.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ <button type="button"
+ x-on:click="showPassword = !showPassword"
+ x-bind:aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+ x-bind:aria-pressed="showPassword.toString()"
+ class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-primary transition-colors">
+ <svg x-show="!showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+ <svg x-cloak x-show="showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+ </button>
+ </div>
+ <p class="mt-1.5 text-jgk-table text-slate-500">Au moins 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial — sans suite évidente ni votre nom. C'est ce mot de passe qui vous connectera une fois la demande validée.</p>
+ </div>
+ </fieldset>
 
-                    <button type="submit"
-                            x-bind:disabled="isSubmitting"
-                            x-bind:aria-busy="isSubmitting.toString()"
-                            class="w-full flex items-center justify-center gap-2 bg-primary text-white rounded-lg px-4 py-2.5 text-jgk-body font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all">
-                        <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                        </svg>
-                        <span x-text="isSubmitting ? 'Envoi…' : 'Envoyer ma demande'">Envoyer ma demande</span>
-                    </button>
+ <button type="submit"
+ x-bind:disabled="isSubmitting"
+ x-bind:aria-busy="isSubmitting.toString()"
+ class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white rounded-2xl px-5 py-2.5.5 text-jgk-body font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all">
+ <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+ <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+ <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+ </svg>
+ <span x-text="isSubmitting ? 'Envoi…' : 'Envoyer ma demande'">Envoyer ma demande</span>
+ </button>
 
-                    <p class="text-center text-jgk-table text-gray-400">
-                        Aucun paiement ne vous est demandé à cette étape.
-                    </p>
-                </form>
-            </div>
-        </div>
-    </div>
+ <p class="text-center text-jgk-table text-slate-400">
+ Aucun paiement ne vous est demandé à cette étape.
+ </p>
+ </form>
+ </div>
+ </div>
+ </div>
 </div>
 
 @section Scripts {
-    @* Script CLASSIQUE placé en fin de corps : il s'exécute pendant l'analyse, donc AVANT le script
-       Alpine différé du layout. Son écouteur alpine:init est ainsi enregistré à temps (même mécanisme
-       que auth.js). *@
-    <script src="~/js/registration.js" asp-append-version="true"></script>
+ @* Script CLASSIQUE placé en fin de corps : il s'exécute pendant l'analyse, donc AVANT le script
+ Alpine différé du layout. Son écouteur alpine:init est ainsi enregistré à temps (même mécanisme
+ que auth.js). *@
+ <script src="~/js/registration.js" asp-append-version="true"></script>
 }

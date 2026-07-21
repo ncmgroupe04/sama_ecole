@@ -258,10 +258,12 @@ document.addEventListener('alpine:init', () => {
 
         // ---------------------------------------------------------------- Affichage
 
+        // Segmented control (Views/Settings/Index.cshtml) : pastille blanche + texte primaire pour
+        // l'onglet actif, fond transparent + texte discret (éclairci au survol) pour les autres.
         tabClass(name) {
             return this.tab === name
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
+                ? 'bg-white text-primary font-semibold shadow-sm'
+                : 'text-slate-600 hover:bg-white/60 hover:text-slate-900';
         }
     }));
 });

@@ -1,276 +1,284 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Sama Ecole</title>
-    <!-- CSS généré dans wwwroot/css/site.css par `npm run build:css` (Tailwind, Décision D-13) -->
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>@ViewData["Title"] - Sama Ecole</title>
+ <!-- CSS généré dans wwwroot/css/site.css par `npm run build:css` (Tailwind, Décision D-13) -->
+ <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
-    @* Scripts CLASSIQUES, donc exécutés avant le script différé d'Alpine, quel que soit leur
-       emplacement dans le document : window.auth et window.api existent avant qu'Alpine ne
-       s'initialise, et les écouteurs alpine:init sont enregistrés à temps. *@
-    <script src="~/js/auth.js" asp-append-version="true"></script>
-    <script src="~/js/api.js" asp-append-version="true"></script>
-    <script src="~/js/ui-components.js" asp-append-version="true"></script>
+ @* Scripts CLASSIQUES, donc exécutés avant le script différé d'Alpine, quel que soit leur
+ emplacement dans le document : window.auth et window.api existent avant qu'Alpine ne
+ s'initialise, et les écouteurs alpine:init sont enregistrés à temps. *@
+ <script src="~/js/auth.js" asp-append-version="true"></script>
+ <script src="~/js/api.js" asp-append-version="true"></script>
+ <script src="~/js/ui-components.js" asp-append-version="true"></script>
 
-    @* Redirige vers /login AVANT le rendu du corps : sans session, l'utilisateur ne voit pas
-       l'interface apparaître une fraction de seconde. Confort d'affichage, pas une protection —
-       les données ne viennent que de l'API, qui exige le JWT (voir PagesController).
-       Fichier EXTERNE et non inline : la CSP n'autorise pas script-src 'unsafe-inline' (JGK-F01). *@
-    <script src="~/js/require-session.js" asp-append-version="true"></script>
+ @* Redirige vers /login AVANT le rendu du corps : sans session, l'utilisateur ne voit pas
+ l'interface apparaître une fraction de seconde. Confort d'affichage, pas une protection —
+ les données ne viennent que de l'API, qui exige le JWT (voir PagesController).
+ Fichier EXTERNE et non inline : la CSP n'autorise pas script-src 'unsafe-inline' (JGK-F01). *@
+ <script src="~/js/require-session.js" asp-append-version="true"></script>
 
-    @* Alpine servi par nous, en version figée : ni CDN tiers, ni « 3.x.x » flottant.
-       Voir _AuthLayout.cshtml pour le raisonnement complet. *@
-    <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
+ @* Alpine servi par nous, en version figée : ni CDN tiers, ni « 3.x.x » flottant.
+ Voir _AuthLayout.cshtml pour le raisonnement complet. *@
+ <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans h-screen flex flex-col overflow-hidden antialiased" x-data="{ sidebarOpen: false }">
-    @await Html.PartialAsync("_IconSprite")
+<body class="bg-slate-50 text-slate-900 font-sans h-screen flex flex-col overflow-hidden antialiased" x-data="{ sidebarOpen: false }">
+ @await Html.PartialAsync("_IconSprite")
 
-    @* Console Super Admin, bouton « Infiltrer » (PlatformController.ImpersonateSchool) : le Super Admin
-       navigue ici avec un jeton portant l'identité du Directeur de l'école ciblée — ce bandeau est
-       l'unique indice visuel qu'il ne s'agit pas d'une connexion normale, et le seul moyen de revenir
-       à sa propre session avant l'expiration du jeton (~15 min, non renouvelable). *@
-    <div x-data="impersonationBanner()" x-show="isImpersonating" x-cloak
-         class="shrink-0 bg-amber-400 text-amber-950 text-xs sm:text-sm font-medium px-4 py-2 flex items-center justify-center gap-3 text-center">
-        <icon name="alert-circle" class="w-4 h-4 shrink-0" />
-        <span>Session d'infiltration Super Admin — vous naviguez dans l'espace de cet établissement.</span>
-        <button type="button" x-on:click="exit()" :disabled="isExiting"
-                class="underline hover:no-underline font-semibold disabled:opacity-60">
-            <span x-text="isExiting ? 'Retour…' : 'Quitter'"></span>
-        </button>
-    </div>
+ @* Console Super Admin, bouton « Infiltrer » (PlatformController.ImpersonateSchool) : le Super Admin
+ navigue ici avec un jeton portant l'identité du Directeur de l'école ciblée — ce bandeau est
+ l'unique indice visuel qu'il ne s'agit pas d'une connexion normale, et le seul moyen de revenir
+ à sa propre session avant l'expiration du jeton (~15 min, non renouvelable). *@
+ <div x-data="impersonationBanner()" x-show="isImpersonating" x-cloak
+ class="shrink-0 bg-amber-400 text-amber-950 text-xs sm:text-sm font-medium px-5 py-2.5 flex items-center justify-center gap-3 text-center">
+ <icon name="alert-circle" class="w-4 h-4 shrink-0" />
+ <span>Session d'infiltration Super Admin — vous naviguez dans l'espace de cet établissement.</span>
+ <button type="button" x-on:click="exit()" :disabled="isExiting"
+ class="underline hover:no-underline font-semibold disabled:opacity-60">
+ <span x-text="isExiting ? 'Retour…' : 'Quitter'"></span>
+ </button>
+ </div>
 
-    <div class="flex-1 flex overflow-hidden min-h-0">
+ <div class="flex-1 flex overflow-hidden min-h-0">
 
-    <!-- Overlay pour mobile -->
-    <div x-show="sidebarOpen" class="fixed inset-0 z-20 bg-gray-900 bg-opacity-50 transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
+ <!-- Overlay pour mobile -->
+ <div x-show="sidebarOpen" class="fixed inset-0 z-20 bg-slate-900 bg-opacity-50 transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
 
-    <!-- Barre latérale -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
-        
-        <!-- En-tête Sidebar / Logo -->
-        <div class="flex items-center justify-center h-16 border-b border-gray-100 px-6">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded bg-primary text-white flex items-center justify-center" aria-hidden="true">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" /></svg>
-                </div>
-                <span class="font-bold text-lg text-gray-900 tracking-tight">Sama Ecole</span>
-            </div>
-        </div>
+ <!-- Barre latérale -->
+ <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
+ 
+ <!-- En-tête Sidebar / Logo -->
+ <div class="flex items-center justify-center h-16 border-b border-slate-100 px-6">
+ <div class="flex items-center gap-2">
+ <div class="w-8 h-8 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center" aria-hidden="true">
+ <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" /></svg>
+ </div>
+ <span class="font-bold text-lg text-slate-900 tracking-tight">Sama Ecole</span>
+ </div>
+ </div>
 
-        @*
-            Deux états seulement, et jamais de href="#" : un lien qui ne mène nulle part est un bug,
-            pas un raccourci de maquette. Les modules non livrés sont des <span> désactivés, visibles
-            mais non cliquables — l'utilisateur voit ce qui arrive sans buter dans une page morte.
-            Chaque module devient un vrai lien le jour où son ticket est livré.
-        *@
-        @{
-            var path = Context.Request.Path.Value ?? "/";
+ @*
+ Deux états seulement, et jamais de href="#" : un lien qui ne mène nulle part est un bug,
+ pas un raccourci de maquette. Les modules non livrés sont des <span> désactivés, visibles
+ mais non cliquables — l'utilisateur voit ce qui arrive sans buter dans une page morte.
+ Chaque module devient un vrai lien le jour où son ticket est livré.
+ *@
+ @{
+ var path = Context.Request.Path.Value ?? "/";
 
-            // text-primary (#6366F1 DEFAULT) sur bg-indigo-50 ne tient que 3.99:1 — sous le seuil
-            // WCAG AA 4.5:1 (Volume 5 §8). primary-700 (7.07:1 sur indigo-50, 7.90:1 sur blanc) le
-            // respecte largement sans changer la teinte de marque utilisée ailleurs (logo, avatars).
-            const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors";
-            const string LinkIdle = $"{LinkBase} text-gray-600 hover:bg-gray-50 hover:text-primary-700";
-            const string LinkActive = $"{LinkBase} text-primary-700 bg-indigo-50 font-medium";
-            const string LinkSoon = $"{LinkBase} text-gray-400 cursor-not-allowed select-none";
-        }
+ // text-primary (#6366F1 DEFAULT) sur bg-indigo-50 ne tient que 3.99:1 — sous le seuil
+ // WCAG AA 4.5:1 (Volume 5 §8). primary-700 (7.07:1 sur indigo-50, 7.90:1 sur blanc) le
+ // respecte largement sans changer la teinte de marque utilisée ailleurs (logo, avatars).
+ const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-2xl transition-colors";
+ const string LinkIdle = $"{LinkBase} text-slate-600 hover:bg-slate-50 hover:text-primary-700";
+ const string LinkActive = $"{LinkBase} text-primary-700 bg-indigo-50 font-medium";
+ const string LinkSoon = $"{LinkBase} text-slate-400 cursor-not-allowed select-none";
+ }
 
-        <!-- Navigation -->
-        <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto" x-data="sidebarNav()">
+ <!-- Navigation -->
+ <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto" x-data="sidebarNav()">
 
-            @* JGK-F04 : premier module à devenir un vrai lien plutôt qu'un <span> désactivé (le patron
-               documenté ci-dessus : « chaque module devient un vrai lien le jour où son ticket est
-               livré »). Le tableau de bord n'a de contenu que pour le Directeur/SuperAdmin (analytique)
-               et le Directeur/Finance (trésorerie) : le Secrétariat et l'Enseignant n'y voyaient qu'un
-               message « accès réservé », le lien leur est donc retiré. L'API reste la garde (règle #4). *@
-            <a href="/tableau-de-bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
-                <icon name="dashboard" class="w-5 h-5" />
-                <span class="text-sm font-medium">Tableau de bord</span>
-            </a>
+ @* JGK-F04 : premier module à devenir un vrai lien plutôt qu'un <span> désactivé (le patron
+ documenté ci-dessus : « chaque module devient un vrai lien le jour où son ticket est
+ livré »). Le tableau de bord n'a de contenu que pour le Directeur/SuperAdmin (analytique)
+ et le Directeur/Finance (trésorerie) : le Secrétariat et l'Enseignant n'y voyaient qu'un
+ message « accès réservé », le lien leur est donc retiré. L'API reste la garde (règle #4). *@
+ <a href="/tableau-de-bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
+ <icon name="dashboard" class="w-6 h-6" />
+ <span class="text-base font-medium">Tableau de bord</span>
+ </a>
 
-            <a href="/eleves" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" x-cloak class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
-                <icon name="users" class="w-5 h-5" />
-                <span class="text-sm font-medium">Élèves</span>
-            </a>
+ <a href="/eleves" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" x-cloak class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
+ <icon name="users" class="w-6 h-6" />
+ <span class="text-base font-medium">Élèves</span>
+ </a>
 
-            @* Inscription/Réinscription : Directeur et Secrétariat seulement. Le service Finance ne
-               compose jamais un montant dû (règle #4) — il encaisse depuis la Caisse — le lien lui est
-               donc retiré. L'API répondait déjà 403 à une écriture de sa part. *@
-            <a href="/inscriptions" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/inscriptions") ? LinkActive : LinkIdle)">
-                <icon name="document" class="w-5 h-5" />
-                <span class="text-sm font-medium">Inscriptions</span>
-            </a>
+ @* Inscription/Réinscription : Directeur et Secrétariat seulement. Le service Finance ne
+ compose jamais un montant dû (règle #4) — il encaisse depuis la Caisse — le lien lui est
+ donc retiré. L'API répondait déjà 403 à une écriture de sa part. *@
+ <a href="/inscriptions" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/inscriptions") ? LinkActive : LinkIdle)">
+ <icon name="document" class="w-6 h-6" />
+ <span class="text-base font-medium">Inscriptions</span>
+ </a>
 
-            <a href="/classes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/classes") ? LinkActive : LinkIdle)">
-                <icon name="building" class="w-5 h-5" />
-                <span class="text-sm font-medium">Classes</span>
-            </a>
+ <a href="/classes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/classes") ? LinkActive : LinkIdle)">
+ <icon name="building" class="w-6 h-6" />
+ <span class="text-base font-medium">Classes</span>
+ </a>
 
-            @* JGK-G02 : gestion des matières/coefficients déléguée au Secrétariat en plus du Directeur
-               (docs/Volume_7_Security.md « Paramètres de l'école »). L'Enseignant reste en lecture
-               seule (SubjectsController : GET ouvert à tous, POST = Directeur/Secrétariat). *@
-            <a href="/matieres" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
-                <icon name="book" class="w-5 h-5" />
-                <span class="text-sm font-medium">Matières</span>
-            </a>
+ @* JGK-G02 : gestion des matières/coefficients déléguée au Secrétariat en plus du Directeur
+ (docs/Volume_7_Security.md « Paramètres de l'école »). L'Enseignant reste en lecture
+ seule (SubjectsController : GET ouvert à tous, POST = Directeur/Secrétariat). *@
+ <a href="/matieres" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
+ <icon name="book" class="w-6 h-6" />
+ <span class="text-base font-medium">Matières</span>
+ </a>
 
-            @* JGK-D06 : écran d'appel livré — le module devient un vrai lien. Saisie ouverte à
-               l'Enseignant (borné à ses classes assignées côté API), au Directeur et au Secrétariat. *@
-            <a href="/presences" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/presences") ? LinkActive : LinkIdle)">
-                <icon name="checkmark-circle" class="w-5 h-5" />
-                <span class="text-sm font-medium">Présences</span>
-            </a>
+ @* JGK-D06 : écran d'appel livré — le module devient un vrai lien. Saisie ouverte à
+ l'Enseignant (borné à ses classes assignées côté API), au Directeur et au Secrétariat. *@
+ <a href="/presences" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/presences") ? LinkActive : LinkIdle)">
+ <icon name="checkmark-circle" class="w-6 h-6" />
+ <span class="text-base font-medium">Présences</span>
+ </a>
 
-            @* JGK-D03/D04 : fiches enseignants livrées — le module devient un vrai lien. Consultation
-               ouverte au Super Admin/Directeur/Secrétariat ; création/attribution : Directeur/Secrétariat. *@
-            <a href="/enseignants" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/enseignants") ? LinkActive : LinkIdle)">
-                <icon name="users" class="w-5 h-5" />
-                <span class="text-sm font-medium">Enseignants</span>
-            </a>
+ @* JGK-D03/D04 : fiches enseignants livrées — le module devient un vrai lien. Consultation
+ ouverte au Super Admin/Directeur/Secrétariat ; création/attribution : Directeur/Secrétariat. *@
+ <a href="/enseignants" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/enseignants") ? LinkActive : LinkIdle)">
+ <icon name="users" class="w-6 h-6" />
+ <span class="text-base font-medium">Enseignants</span>
+ </a>
 
-            @* Tickets JGK-G01/G02 livrés (saisie de notes, moyennes) : chaque module devient un vrai
-               lien le jour où son ticket est livré (patron documenté plus haut). Le bulletin PDF
-               (JGK-G03) reste à venir — l'écran ci-dessous ne couvre que la saisie. Secrétariat inclus
-               depuis la matrice d'autorisation "Photoshop" : il peut désormais corriger/annuler une
-               note déjà saisie (GradesController.UpdateGradeRoles), donc voir cet écran. *@
-            <a href="/notes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
-                <icon name="book" class="w-5 h-5" />
-                <span class="text-sm font-medium">Notes et bulletins</span>
-            </a>
+ @* Tickets JGK-G01/G02 livrés (saisie de notes, moyennes) : chaque module devient un vrai
+ lien le jour où son ticket est livré (patron documenté plus haut). Le bulletin PDF
+ (JGK-G03) reste à venir — l'écran ci-dessous ne couvre que la saisie. Secrétariat inclus
+ depuis la matrice d'autorisation "Photoshop" : il peut désormais corriger/annuler une
+ note déjà saisie (GradesController.UpdateGradeRoles), donc voir cet écran. *@
+ <a href="/notes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
+ <icon name="book" class="w-6 h-6" />
+ <span class="text-base font-medium">Notes et bulletins</span>
+ </a>
 
-            <a href="/frais" x-show="canView(['Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/frais") ? LinkActive : LinkIdle)">
-                <icon name="wallet" class="w-5 h-5" />
-                <span class="text-sm font-medium">Finance</span>
-            </a>
+ <a href="/frais" x-show="canView(['Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/frais") ? LinkActive : LinkIdle)">
+ <icon name="wallet" class="w-6 h-6" />
+ <span class="text-base font-medium">Finance</span>
+ </a>
 
-            <a href="/caisse" x-show="canView(['Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
-                <icon name="payment" class="w-5 h-5" />
-                <span class="text-sm font-medium">Caisse</span>
-            </a>
+ <a href="/caisse" x-show="canView(['Directeur', 'Finance'])" x-cloak class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
+ <icon name="payment" class="w-6 h-6" />
+ <span class="text-base font-medium">Caisse</span>
+ </a>
 
-            @* JGK-R02 : le module Rapports devient un vrai lien (premier écran livré : assiduité).
-               Directeur / Secrétariat / Super Admin — Finance et Enseignant exclus de la consultation
-               transverse (Volume 7). L'API garde (ReportsController) reste la protection réelle. *@
-            <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/rapports") ? LinkActive : LinkIdle)">
-                <icon name="chart-multiple" class="w-5 h-5" />
-                <span class="text-sm font-medium">Rapports</span>
-            </a>
+ @* JGK-R02 : le module Rapports devient un vrai lien (premier écran livré : assiduité).
+ Directeur / Secrétariat / Super Admin — Finance et Enseignant exclus de la consultation
+ transverse (Volume 7). L'API garde (ReportsController) reste la protection réelle. *@
+ <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/rapports") ? LinkActive : LinkIdle)">
+ <icon name="chart-multiple" class="w-6 h-6" />
+ <span class="text-base font-medium">Rapports</span>
+ </a>
 
-            @* JGK-G02 : le Secrétariat gagne accès à l'onglet Configuration (barème + mentions,
-               settings.js) en plus du Directeur — le reste de l'écran (Établissement, Utilisateurs,
-               Journal d'audit, Facturation) reste en lecture seule ou masqué pour lui, voir Settings/Index.cshtml. *@
-            <a href="/parametres" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
-                <icon name="settings" class="w-5 h-5" />
-                <span class="text-sm font-medium">Paramètres</span>
-            </a>
+ @* JGK-G02 : le Secrétariat gagne accès à l'onglet Configuration (barème + mentions,
+ settings.js) en plus du Directeur — le reste de l'écran (Établissement, Utilisateurs,
+ Journal d'audit, Facturation) reste en lecture seule ou masqué pour lui, voir Settings/Index.cshtml. *@
+ <a href="/parametres" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
+ <icon name="settings" class="w-6 h-6" />
+ <span class="text-base font-medium">Paramètres</span>
+ </a>
 
-            @* Administration (Volume 5 §3.2, explicitement Super Admin uniquement) : pointe désormais vers
-               la console plateforme dédiée (layout _SuperAdminLayout, sombre) — le Super Admin n'y
-               revient normalement jamais en pratique puisque son atterrissage par défaut (auth.js,
-               defaultLandingForRole) l'y envoie directement dès la connexion. Ce lien ne reste utile
-               que s'il navigue d'abord ailleurs puis revient ici par erreur. *@
-            <a href="/admin" x-show="canView(['SuperAdmin'])" x-cloak class="@(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
-                <icon name="layers" class="w-5 h-5" />
-                <span class="text-sm font-medium">Console Super Admin</span>
-            </a>
-        </nav>
+ @* Administration (Volume 5 §3.2, explicitement Super Admin uniquement) : pointe désormais vers
+ la console plateforme dédiée (layout _SuperAdminLayout, sombre) — le Super Admin n'y
+ revient normalement jamais en pratique puisque son atterrissage par défaut (auth.js,
+ defaultLandingForRole) l'y envoie directement dès la connexion. Ce lien ne reste utile
+ que s'il navigue d'abord ailleurs puis revient ici par erreur. *@
+ <a href="/admin" x-show="canView(['SuperAdmin'])" x-cloak class="@(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
+ <icon name="layers" class="w-6 h-6" />
+ <span class="text-base font-medium">Console Super Admin</span>
+ </a>
+ </nav>
 
-        @* Profil réel de la session : l'e-mail est celui saisi à la connexion, le rôle est lu dans le
-           JWT. Le nom complet manque tant qu'aucun endpoint ne l'expose (pas de GET /users/me). *@
-        <div class="p-4 border-t border-gray-100" x-data="sessionMenu()">
-            <div class="flex items-center gap-3">
-                @* Initiale calculée localement : envoyer l'e-mail à un service d'avatars tiers
-                   (ui-avatars.com, comme précédemment) revient à lui divulguer une donnée personnelle. *@
-                <div aria-hidden="true" class="w-10 h-10 shrink-0 rounded-full bg-primary text-white flex items-center justify-center font-medium uppercase"
-                     x-text="email ? email[0] : '?'"></div>
+ @* Profil réel de la session : l'e-mail est celui saisi à la connexion, le rôle est lu dans le
+ JWT. Le nom complet manque tant qu'aucun endpoint ne l'expose (pas de GET /users/me). *@
+ <div class="p-6 border-t border-slate-100" x-data="sessionMenu()">
+ <div class="flex items-center gap-3">
+ @* Initiale calculée localement : envoyer l'e-mail à un service d'avatars tiers
+ (ui-avatars.com, comme précédemment) revient à lui divulguer une donnée personnelle. *@
+ <div aria-hidden="true" class="w-10 h-10 shrink-0 rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-sm flex items-center justify-center font-medium uppercase"
+ x-text="email ? email[0] : '?'"></div>
 
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 truncate" x-text="email" x-bind:title="email"></p>
-                    <p class="text-xs text-gray-500 truncate" x-text="role"></p>
-                </div>
-            </div>
-        </div>
-    </aside>
+ <div class="flex-1 min-w-0">
+ <p class="text-sm font-medium text-slate-900 truncate" x-text="email" x-bind:title="email"></p>
+ <p class="text-xs text-slate-500 truncate" x-text="role"></p>
+ </div>
+ </div>
+ </div>
+ </aside>
 
-    <!-- Contenu Principal -->
-    <div class="flex-1 flex flex-col h-full min-w-0">
-        
-        <!-- Barre supérieure -->
-        <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
-            <div class="flex items-center gap-4">
-                <!-- Bouton Menu Mobile -->
-                <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-gray-500 hover:text-gray-900 rounded-md">
-                    <icon name="menu" class="w-6 h-6" />
-                </button>
-                
-                @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
-                   y compris sur la page Classes : une indication de position fausse vaut moins que pas
-                   d'indication du tout. Un vrai fil d'ariane viendra avec l'arborescence des modules. *@
-                <h2 class="hidden sm:block text-sm font-medium text-gray-900">@ViewData["Title"]</h2>
-            </div>
+ <!-- Contenu Principal -->
+ <div class="flex-1 flex flex-col h-full min-w-0">
+ 
+ <!-- Barre supérieure -->
+ <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
+ <div class="flex items-center gap-4">
+ <!-- Bouton Menu Mobile -->
+ <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 rounded-xl">
+ <icon name="menu" class="w-6 h-6" />
+ </button>
+ 
+ @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
+ y compris sur la page Classes : une indication de position fausse vaut moins que pas
+ d'indication du tout. Un vrai fil d'ariane viendra avec l'arborescence des modules. *@
+ <h2 class="hidden sm:block text-sm font-medium text-slate-900">@ViewData["Title"]</h2>
+ </div>
 
-            <div class="flex items-center gap-4">
-                @* Recherche globale désactivée : la maquette Volume 5 la prévoyait, mais aucun backend
-                   ne l'alimente et elle fait doublon avec la recherche spécifique de chaque écran
-                   (Élèves, Classes, Enseignants...). Commentée plutôt que supprimée pour garder la
-                   trace si un vrai moteur de recherche transverse est construit un jour. *@
-                @* <div class="hidden sm:block relative">
-                    <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
-                        <icon name="search" class="w-5 h-5 text-gray-300" />
-                    </span>
-                    <input type="search"
-                           disabled
-                           aria-label="Recherche globale — à venir"
-                           title="Recherche globale — à venir"
-                           placeholder="Rechercher…"
-                           class="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-400 placeholder:text-gray-300 cursor-not-allowed" />
-                </div> *@
+ <div class="flex items-center gap-4">
+ @* Recherche globale désactivée : la maquette Volume 5 la prévoyait, mais aucun backend
+ ne l'alimente et elle fait doublon avec la recherche spécifique de chaque écran
+ (Élèves, Classes, Enseignants...). Commentée plutôt que supprimée pour garder la
+ trace si un vrai moteur de recherche transverse est construit un jour. *@
+ @* <div class="hidden sm:block relative">
+ <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
+ <icon name="search" class="w-5 h-5 text-slate-300" />
+ </span>
+ <input type="search"
+ disabled
+ aria-label="Recherche globale — à venir"
+ title="Recherche globale — à venir"
+ placeholder="Rechercher…"
+ class="w-64 pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-400 placeholder:text-slate-300 cursor-not-allowed transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+ </div> *@
 
-                <span aria-disabled="true" title="Notifications — module à venir"
-                      class="p-2 text-gray-300 cursor-not-allowed">
-                    <icon name="bell" class="w-6 h-6" />
-                </span>
+ @* Utilisateur connecté : remplace l'ancienne cloche de notifications (module jamais livré).
+ Aucun contexte d'authentification Razor côté serveur n'existe ici — l'access token JWT vit
+ uniquement dans le navigateur (localStorage, voir auth.js) — donc l'e-mail de session, seule
+ identité déjà exposée côté client (sessionMenu(), même source que le profil de la barre
+ latérale), sert d'affichage : le nom complet manque tant qu'aucun endpoint ne l'expose
+ (pas de GET /users/me). *@
+ <div x-data="sessionMenu()" class="flex items-center gap-2 px-1" :title="email">
+ <div aria-hidden="true" class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center text-xs font-medium uppercase"
+ x-text="email ? email[0] : '?'"></div>
+ <span class="hidden sm:block text-sm font-medium text-slate-700 truncate max-w-[10rem]" x-text="email"></span>
+ </div>
 
-                @* Déconnexion (Volume 5 §3.1). Révoque les refresh tokens côté serveur et purge le
-                   cookie : fermer l'onglet ne suffisait pas, la session serait restée ouverte 14 jours. *@
-                <button x-data="sessionMenu()"
-                        x-on:click="logout()"
-                        title="Se déconnecter"
-                        aria-label="Se déconnecter"
-                        class="p-2 text-gray-400 hover:text-danger rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                    <icon name="sign-out" class="w-6 h-6" />
-                </button>
-            </div>
-        </header>
+ @* Déconnexion (Volume 5 §3.1). Révoque les refresh tokens côté serveur et purge le
+ cookie : fermer l'onglet ne suffisait pas, la session serait restée ouverte 14 jours. *@
+ <button x-data="sessionMenu()"
+ x-on:click="logout()"
+ title="Se déconnecter"
+ aria-label="Se déconnecter"
+ class="flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-danger rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+ <icon name="sign-out" class="w-6 h-6" />
+ <span class="hidden sm:inline text-sm font-medium">Déconnexion</span>
+ </button>
+ </div>
+ </header>
 
-        <!-- Zone de contenu -->
-        <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8">
-            <div class="max-w-7xl mx-auto space-y-6">
-                @RenderBody()
-            </div>
-        </main>
+ <!-- Zone de contenu -->
+ <main class="flex-1 overflow-y-auto overflow-x-hidden p-8 lg:p-10">
+ <div class="max-w-7xl mx-auto space-y-6">
+ @RenderBody()
+ </div>
+ </main>
 
-        @*
-            Barre d'état (Volume 5 §3.3 et §9). Elle affichait « Connecté » et « Abonnement : Actif »
-            en pastilles vertes CODÉES EN DUR, ainsi qu'un nom d'école fixe : trois affirmations que
-            rien ne vérifiait. Un voyant vert qui ne mesure rien est pire qu'un voyant absent — il
-            resterait vert le jour où l'abonnement expire.
+ @*
+ Barre d'état (Volume 5 §3.3 et §9). Elle affichait « Connecté » et « Abonnement : Actif »
+ en pastilles vertes CODÉES EN DUR, ainsi qu'un nom d'école fixe : trois affirmations que
+ rien ne vérifiait. Un voyant vert qui ne mesure rien est pire qu'un voyant absent — il
+ resterait vert le jour où l'abonnement expire.
 
-            Ne reste ici que ce qui est réellement observable côté navigateur : l'état du réseau, que
-            le Volume 5 §9 demande explicitement. Le statut d'abonnement et le nom de l'école
-            reviendront quand une route les exposera (JGK-B02 / JGK-I04).
-        *@
-        <footer class="bg-white border-t border-gray-200 py-2 px-4 flex justify-between items-center text-xs text-gray-500">
-            <div x-data="networkStatus()" class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full" :class="online ? 'bg-success' : 'bg-danger'"></span>
-                <span x-text="online ? 'Connecté' : 'Hors ligne — vérifiez votre réseau'"></span>
-            </div>
-            <span>Sama Ecole</span>
-        </footer>
-    </div>
-    </div>
-    @await RenderSectionAsync("Scripts", required: false)
+ Ne reste ici que ce qui est réellement observable côté navigateur : l'état du réseau, que
+ le Volume 5 §9 demande explicitement. Le statut d'abonnement et le nom de l'école
+ reviendront quand une route les exposera (JGK-B02 / JGK-I04).
+ *@
+ <footer class="bg-white border-t border-slate-200 py-2 px-4 flex justify-between items-center text-xs text-slate-500">
+ <div x-data="networkStatus()" class="flex items-center gap-1.5">
+ <span class="w-2 h-2 rounded-full" :class="online ? 'bg-success' : 'bg-danger'"></span>
+ <span x-text="online ? 'Connecté' : 'Hors ligne — vérifiez votre réseau'"></span>
+ </div>
+ <span>Sama Ecole</span>
+ </footer>
+ </div>
+ </div>
+ @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -1,315 +1,315 @@
 @{
-    ViewData["Title"] = "Caisse";
-    var paymentMethodOptions = new List<SelectFieldOption> {
-        new("Cash", "Espèces"), new("Cheque", "Chèque"), new("Transfer", "Virement"),
-        new("MobileMoney", "Mobile Money (Wave / Orange Money)")
-    };
+ ViewData["Title"] = "Caisse";
+ var paymentMethodOptions = new List<SelectFieldOption> {
+ new("Cash", "Espèces"), new("Cheque", "Chèque"), new("Transfer", "Virement"),
+ new("MobileMoney", "Mobile Money (Wave / Orange Money)")
+ };
 }
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
-    <script src="~/js/caisse.js" asp-append-version="true"></script>
+ <script src="~/js/caisse.js" asp-append-version="true"></script>
 }
 
 @* Impression du seul reçu : même convention que /inscriptions (docs/design-references/README.md §1). *@
 <style>
-    @@media print {
-        body * { visibility: hidden !important; }
-        #receipt-printable, #receipt-printable * { visibility: visible !important; }
-        #receipt-printable {
-            position: absolute; left: 0; top: 0; width: 100%;
-            margin: 0; padding: 0; box-shadow: none !important; border: 0 !important;
-        }
-        .no-print { display: none !important; }
-    }
+ @@media print {
+ body * { visibility: hidden !important; }
+ #receipt-printable, #receipt-printable * { visibility: visible !important; }
+ #receipt-printable {
+ position: absolute; left: 0; top: 0; width: 100%;
+ margin: 0; padding: 0; box-shadow: none !important; border: 0 !important;
+ }
+ .no-print { display: none !important; }
+ }
 </style>
 
 <div x-data="caisseView()">
-    <!-- Titre -->
-    <div>
-        <h1 class="text-jgk-title font-bold text-gray-900">Caisse</h1>
-        <p class="text-jgk-subtitle text-gray-500 mt-1">
-            Recherchez un élève pour consulter son solde et encaisser un versement sur son inscription.
-        </p>
-    </div>
+ <!-- Titre -->
+ <div>
+ <h1 class="text-jgk-title font-bold text-slate-900">Caisse</h1>
+ <p class="text-jgk-subtitle text-slate-500 mt-1">
+ Recherchez un élève pour consulter son solde et encaisser un versement sur son inscription.
+ </p>
+ </div>
 
-    <!-- Rôle non autorisé : le service Secrétariat compose le montant dû, il n'encaisse pas (règle #4). -->
-    <div x-show="!canRecordPayment" x-cloak class="mt-6 card py-12 text-center">
-        <p class="text-gray-500 font-medium">Seuls le Directeur et le service Finance peuvent encaisser un paiement.</p>
-    </div>
+ <!-- Rôle non autorisé : le service Secrétariat compose le montant dû, il n'encaisse pas (règle #4). -->
+ <div x-show="!canRecordPayment" x-cloak class="mt-6 card py-12 text-center">
+ <p class="text-slate-500 font-medium">Seuls le Directeur et le service Finance peuvent encaisser un paiement.</p>
+ </div>
 
-    <div x-show="canRecordPayment" x-cloak>
+ <div x-show="canRecordPayment" x-cloak>
 
-        <!-- ============================= RECHERCHE + SOLDE + FORMULAIRE ============================= -->
-        <div x-show="!showReceipt" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+ <!-- ============================= RECHERCHE + SOLDE + FORMULAIRE ============================= -->
+ <div x-show="!showReceipt" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            <!-- Colonne recherche élève -->
-            <div class="lg:col-span-1 card p-6">
-                <label for="caisse-student-search" class="block text-sm font-medium text-gray-700">Rechercher un élève</label>
-                <input id="caisse-student-search" type="text" x-model="studentSearch" placeholder="Nom ou matricule… (2 caractères min.)"
-                       x-on:input.debounce.300ms="searchStudents()" class="input-field">
+ <!-- Colonne recherche élève -->
+ <div class="lg:col-span-1 card p-6">
+ <label for="caisse-student-search" class="block text-sm font-medium text-slate-700">Rechercher un élève</label>
+ <input id="caisse-student-search" type="text" x-model="studentSearch" placeholder="Nom ou matricule… (2 caractères min.)"
+ x-on:input.debounce.300ms="searchStudents()" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
 
-                <div x-show="studentSearchError" x-cloak class="mt-2 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="studentSearchError"></div>
+ <div x-show="studentSearchError" x-cloak class="mt-2 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="studentSearchError"></div>
 
-                <div class="mt-2 border border-gray-200 rounded-md divide-y divide-gray-100 max-h-96 overflow-y-auto">
-                    <template x-for="s in students" :key="s.id">
-                        <button type="button" x-on:click="selectStudent(s)"
-                                class="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between transition-colors"
-                                :class="selectedStudent && selectedStudent.id === s.id ? 'bg-indigo-50' : ''">
-                            <span class="text-sm text-gray-900" x-text="s.fullName"></span>
-                            <span class="text-xs font-mono text-gray-500" x-text="s.matricule"></span>
-                        </button>
-                    </template>
-                    <div x-show="isSearchingStudents" x-cloak class="px-3 py-4 text-sm text-gray-400 text-center">Recherche…</div>
-                    <div x-show="!isSearchingStudents && studentsLoaded && students.length === 0" x-cloak class="px-3 py-4 text-sm text-gray-400 text-center">
-                        Aucun élève ne correspond.
-                    </div>
-                    <div x-show="!isSearchingStudents && !studentsLoaded && !studentSearchError && studentSearch.trim().length === 0" x-cloak class="px-3 py-4 text-sm text-gray-400 text-center">
-                        Tapez un nom ou un matricule pour rechercher.
-                    </div>
-                    <div x-show="!isSearchingStudents && !studentsLoaded && studentSearch.trim().length > 0 && studentSearch.trim().length < 2" x-cloak class="px-3 py-4 text-sm text-gray-400 text-center">
-                        Tapez au moins 2 caractères.
-                    </div>
-                </div>
-            </div>
+ <div class="mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-96 overflow-y-auto">
+ <template x-for="s in students" :key="s.id">
+ <button type="button" x-on:click="selectStudent(s)"
+ class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out"
+ :class="selectedStudent && selectedStudent.id === s.id ? 'bg-indigo-50' : ''">
+ <span class="text-sm text-slate-900" x-text="s.fullName"></span>
+ <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
+ </button>
+ </template>
+ <div x-show="isSearchingStudents" x-cloak class="px-3 py-4 text-sm text-slate-400 text-center">Recherche…</div>
+ <div x-show="!isSearchingStudents && studentsLoaded && students.length === 0" x-cloak class="px-3 py-4 text-sm text-slate-400 text-center">
+ Aucun élève ne correspond.
+ </div>
+ <div x-show="!isSearchingStudents && !studentsLoaded && !studentSearchError && studentSearch.trim().length === 0" x-cloak class="px-3 py-4 text-sm text-slate-400 text-center">
+ Tapez un nom ou un matricule pour rechercher.
+ </div>
+ <div x-show="!isSearchingStudents && !studentsLoaded && studentSearch.trim().length > 0 && studentSearch.trim().length < 2" x-cloak class="px-3 py-4 text-sm text-slate-400 text-center">
+ Tapez au moins 2 caractères.
+ </div>
+ </div>
+ </div>
 
-            <!-- Colonne solde + encaissement -->
-            <div class="lg:col-span-2">
+ <!-- Colonne solde + encaissement -->
+ <div class="lg:col-span-2">
 
-                <!-- Aucun élève sélectionné -->
-                <div x-show="!selectedStudent" x-cloak class="card p-12 text-center">
-                    <p class="text-sm text-gray-400">Sélectionnez un élève pour afficher son solde.</p>
-                </div>
+ <!-- Aucun élève sélectionné -->
+ <div x-show="!selectedStudent" x-cloak class="card p-12 text-center">
+ <p class="text-sm text-slate-400">Sélectionnez un élève pour afficher son solde.</p>
+ </div>
 
-                <!-- Chargement du solde -->
-                <div x-show="selectedStudent && isLoadingBalance" x-cloak class="card p-12 flex items-center justify-center">
-                    <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                </div>
+ <!-- Chargement du solde -->
+ <div x-show="selectedStudent && isLoadingBalance" x-cloak class="card p-12 flex items-center justify-center">
+ <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+ </div>
 
-                <!-- Élève sans inscription active : rien à encaisser -->
-                <div x-show="selectedStudent && !isLoadingBalance && balanceError" x-cloak class="rounded-md border-l-4 border-warning bg-warning-bg p-4">
-                    <p class="text-sm font-medium text-warning">Aucune inscription active pour cet élève.</p>
-                    <p class="text-xs text-warning mt-1">Vérifiez qu'il est inscrit pour l'année scolaire en cours (<a href="/inscriptions" class="underline font-medium">Inscriptions</a>).</p>
-                </div>
+ <!-- Élève sans inscription active : rien à encaisser -->
+ <div x-show="selectedStudent && !isLoadingBalance && balanceError" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-6">
+ <p class="text-sm font-medium text-warning">Aucune inscription active pour cet élève.</p>
+ <p class="text-xs text-warning mt-1">Vérifiez qu'il est inscrit pour l'année scolaire en cours (<a href="/inscriptions" class="underline font-medium">Inscriptions</a>).</p>
+ </div>
 
-                <!-- Solde + formulaire -->
-                <div x-show="selectedStudent && !isLoadingBalance && balance" x-cloak class="card p-6 space-y-6">
+ <!-- Solde + formulaire -->
+ <div x-show="selectedStudent && !isLoadingBalance && balance" x-cloak class="card p-6 space-y-6">
 
-                    <!-- Récapitulatif -->
-                    <div>
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wider">Solde de l'inscription</h2>
-                            <badge x-show="balance && balance.status === 'Paid'" x-cloak variant="success">Soldé</badge>
-                            <badge x-show="balance && balance.status === 'Partial'" x-cloak variant="warning">Solde partiel</badge>
-                        </div>
-                        <p class="text-sm text-gray-500 mt-1">
-                            <span x-text="balance ? balance.studentFullName : ''"></span> ·
-                            <span x-text="balance ? balance.matricule : ''"></span> ·
-                            <span x-text="balance ? balance.classroomName : ''"></span> ·
-                            <span x-text="balance ? balance.schoolYearLabel : ''"></span>
-                        </p>
+ <!-- Récapitulatif -->
+ <div>
+ <div class="flex items-center justify-between">
+ <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Solde de l'inscription</h2>
+ <badge x-show="balance && balance.status === 'Paid'" x-cloak variant="success">Soldé</badge>
+ <badge x-show="balance && balance.status === 'Partial'" x-cloak variant="warning">Solde partiel</badge>
+ </div>
+ <p class="text-sm text-slate-500 mt-1">
+ <span x-text="balance ? balance.studentFullName : ''"></span> ·
+ <span x-text="balance ? balance.matricule : ''"></span> ·
+ <span x-text="balance ? balance.classroomName : ''"></span> ·
+ <span x-text="balance ? balance.schoolYearLabel : ''"></span>
+ </p>
 
-                        <dl class="mt-4 grid grid-cols-3 gap-4 text-center border-t border-gray-100 pt-4">
-                            <div>
-                                <dt class="text-xs text-gray-500">Total dû</dt>
-                                <dd class="text-base font-semibold text-gray-900" x-text="formatMoney(balance ? balance.totalDue : 0)"></dd>
-                            </div>
-                            <div>
-                                <dt class="text-xs text-gray-500">Déjà réglé</dt>
-                                <dd class="text-base font-semibold text-gray-900" x-text="formatMoney(balance ? balance.amountPaid : 0)"></dd>
-                            </div>
-                            <div>
-                                <dt class="text-xs text-gray-500">Reste à payer</dt>
-                                <dd class="text-base font-bold text-primary" x-text="formatMoney(balance ? balance.remainingBalance : 0)"></dd>
-                            </div>
-                        </dl>
-                    </div>
+ <dl class="mt-4 grid grid-cols-3 gap-4 text-center border-t border-slate-100 pt-4">
+ <div>
+ <dt class="text-xs text-slate-500">Total dû</dt>
+ <dd class="text-base font-semibold text-slate-900" x-text="formatMoney(balance ? balance.totalDue : 0)"></dd>
+ </div>
+ <div>
+ <dt class="text-xs text-slate-500">Déjà réglé</dt>
+ <dd class="text-base font-semibold text-slate-900" x-text="formatMoney(balance ? balance.amountPaid : 0)"></dd>
+ </div>
+ <div>
+ <dt class="text-xs text-slate-500">Reste à payer</dt>
+ <dd class="text-base font-bold text-primary" x-text="formatMoney(balance ? balance.remainingBalance : 0)"></dd>
+ </div>
+ </dl>
+ </div>
 
-                    <!-- Inscription déjà soldée : pas de formulaire -->
-                    <div x-show="balance && balance.remainingBalance <= 0" x-cloak class="rounded-md border-l-4 border-success bg-success-bg p-4">
-                        <p class="text-sm font-medium text-success">Cette inscription est intégralement réglée.</p>
-                    </div>
+ <!-- Inscription déjà soldée : pas de formulaire -->
+ <div x-show="balance && balance.remainingBalance <= 0" x-cloak class="rounded-xl border-l-4 border-success bg-success-bg p-6">
+ <p class="text-sm font-medium text-success">Cette inscription est intégralement réglée.</p>
+ </div>
 
-                    <!-- Conflit de concurrence : un autre caissier a encaissé entre-temps -->
-                    <div x-show="conflictError" x-cloak class="rounded-md border-l-4 border-danger bg-danger-bg p-4">
-                        <p class="text-sm font-medium text-danger">Le solde a changé entre-temps (un autre encaissement a eu lieu).</p>
-                        <button type="button" x-on:click="reloadBalance()" class="mt-2 text-sm font-medium text-danger underline">Recharger le solde</button>
-                    </div>
+ <!-- Conflit de concurrence : un autre caissier a encaissé entre-temps -->
+ <div x-show="conflictError" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-6">
+ <p class="text-sm font-medium text-danger">Le solde a changé entre-temps (un autre encaissement a eu lieu).</p>
+ <button type="button" x-on:click="reloadBalance()" class="mt-2 text-sm font-medium text-danger underline">Recharger le solde</button>
+ </div>
 
-                    <!-- Formulaire d'encaissement -->
-                    <form x-show="balance && balance.remainingBalance > 0" x-cloak x-on:submit.prevent="submit()" class="space-y-5 border-t border-gray-100 pt-5">
+ <!-- Formulaire d'encaissement -->
+ <form x-show="balance && balance.remainingBalance > 0" x-cloak x-on:submit.prevent="submit()" class="space-y-5 border-t border-slate-100 pt-5">
 
-                        <div x-show="formErrors.global" x-cloak class="rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="formErrors.global"></div>
+ <div x-show="formErrors.global" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="formErrors.global"></div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <div>
-                                <label for="caisse-amount" class="block text-sm font-medium text-gray-700">Montant versé (FCFA) <span class="text-danger">*</span></label>
-                                <input id="caisse-amount" type="number" min="1" x-model.number="form.amount" placeholder="ex : 25000" class="input-field">
-                                <p x-show="formErrors.amount" x-cloak x-text="formErrors.amount" class="mt-1 text-xs text-danger"></p>
-                                <button type="button" x-on:click="fillFullBalance()" class="mt-1 text-xs text-primary hover:underline">
-                                    Régler le solde intégral (<span x-text="formatMoney(balance ? balance.remainingBalance : 0)"></span>)
-                                </button>
-                            </div>
-                            <div>
-                                <label for="caisse-method" class="block text-sm font-medium text-gray-700">Moyen de paiement <span class="text-danger">*</span></label>
-                                <select-field id="caisse-method" model="form.method" options="paymentMethodOptions" />
-                            </div>
-                        </div>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+ <div>
+ <label for="caisse-amount" class="block text-sm font-medium text-slate-700">Montant versé (FCFA) <span class="text-danger">*</span></label>
+ <input id="caisse-amount" type="number" min="1" x-model.number="form.amount" placeholder="ex : 25000" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="formErrors.amount" x-cloak x-text="formErrors.amount" class="mt-1 text-xs text-danger"></p>
+ <button type="button" x-on:click="fillFullBalance()" class="mt-1 text-xs text-primary hover:underline">
+ Régler le solde intégral (<span x-text="formatMoney(balance ? balance.remainingBalance : 0)"></span>)
+ </button>
+ </div>
+ <div>
+ <label for="caisse-method" class="block text-sm font-medium text-slate-700">Moyen de paiement <span class="text-danger">*</span></label>
+ <select-field id="caisse-method" model="form.method" options="paymentMethodOptions" />
+ </div>
+ </div>
 
-                        <div class="pt-2 flex justify-end border-t border-gray-100">
-                            <button type="submit" :disabled="!canSubmit()" class="btn-primary mt-4">
-                                <icon x-show="!isSubmitting" name="checkmark-circle" class="w-5 h-5" />
-                                <span x-text="isSubmitting ? 'Encaissement…' : 'Encaisser le versement'"></span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+ <div class="pt-2 flex justify-end border-t border-slate-100">
+ <button type="submit" :disabled="!canSubmit()" class="btn-primary mt-4">
+ <icon x-show="!isSubmitting" name="checkmark-circle" class="w-5 h-5" />
+ <span x-text="isSubmitting ? 'Encaissement…' : 'Encaisser le versement'"></span>
+ </button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
 
-        <!-- ============================= REÇU ============================= -->
-        <div x-show="showReceipt" x-cloak class="mt-6">
+ <!-- ============================= REÇU ============================= -->
+ <div x-show="showReceipt" x-cloak class="mt-6">
 
-            <!-- Barre d'actions (non imprimée) -->
-            <div class="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <div class="flex items-center gap-2 text-success">
-                    <icon name="checkmark-circle" class="w-6 h-6" />
-                    <span class="text-sm font-medium">Paiement encaissé.</span>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" x-on:click="closeReceipt()" class="btn-secondary">
-                        Retour (Fermer)
-                    </button>
-                    <button type="button" x-on:click="startNewPayment()" class="btn-secondary">
-                        Nouvel encaissement
-                    </button>
-                    <button type="button" x-on:click="downloadPdf()" class="btn-secondary">
-                        <icon name="download" class="w-5 h-5" />
-                        Télécharger le PDF
-                    </button>
-                    <button type="button" x-on:click="printReceipt()" class="btn-primary">
-                        <icon name="print" class="w-5 h-5" />
-                        Imprimer
-                    </button>
-                </div>
-            </div>
+ <!-- Barre d'actions (non imprimée) -->
+ <div class="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+ <div class="flex items-center gap-2 text-success">
+ <icon name="checkmark-circle" class="w-6 h-6" />
+ <span class="text-sm font-medium">Paiement encaissé.</span>
+ </div>
+ <div class="flex flex-wrap items-center gap-2">
+ <button type="button" x-on:click="closeReceipt()" class="btn-secondary">
+ Retour (Fermer)
+ </button>
+ <button type="button" x-on:click="startNewPayment()" class="btn-secondary">
+ Nouvel encaissement
+ </button>
+ <button type="button" x-on:click="downloadPdf()" class="btn-secondary">
+ <icon name="download" class="w-5 h-5" />
+ Télécharger le PDF
+ </button>
+ <button type="button" x-on:click="printReceipt()" class="btn-primary">
+ <icon name="print" class="w-5 h-5" />
+ Imprimer
+ </button>
+ </div>
+ </div>
 
-            <!-- Échec de téléchargement du PDF (non imprimé). -->
-            <div x-show="pdfError" x-cloak class="no-print mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="pdfError"></div>
+ <!-- Échec de téléchargement du PDF (non imprimé). -->
+ <div x-show="pdfError" x-cloak class="no-print mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="pdfError"></div>
 
-            <!-- Document imprimable : noir et blanc, sobre (docs/design-references/README.md §1) -->
-            <div id="receipt-printable" class="bg-white border border-gray-300 mx-auto max-w-2xl p-8 text-gray-900" style="font-family: 'Times New Roman', Georgia, serif;">
+ <!-- Document imprimable : noir et blanc, sobre (docs/design-references/README.md §1) -->
+ <div id="receipt-printable" class="bg-white border border-slate-300 mx-auto max-w-2xl p-8 text-slate-900" style="font-family: 'Times New Roman', Georgia, serif;">
 
-                <!-- En-tête établissement -->
-                <div class="flex items-start justify-between border-b border-gray-400 pb-4">
-                    <div>
-                        <h2 class="text-2xl font-bold uppercase" x-text="receipt.schoolName"></h2>
-                        <p class="text-sm text-gray-600 mt-0.5">
-                            <span x-text="receipt.schoolName"></span>
-                            <span x-show="receipt.schoolPhone" x-cloak> · Téléphone : <span x-text="receipt.schoolPhone"></span></span>
-                        </p>
-                    </div>
-                    <div class="w-20 h-20 border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400 text-center">Logo officiel</div>
-                </div>
+ <!-- En-tête établissement -->
+ <div class="flex items-start justify-between border-b border-slate-400 pb-4">
+ <div>
+ <h2 class="text-2xl font-bold uppercase" x-text="receipt.schoolName"></h2>
+ <p class="text-sm text-slate-600 mt-0.5">
+ <span x-text="receipt.schoolName"></span>
+ <span x-show="receipt.schoolPhone" x-cloak> · Téléphone : <span x-text="receipt.schoolPhone"></span></span>
+ </p>
+ </div>
+ <div class="w-20 h-20 border border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-400 text-center">Logo officiel</div>
+ </div>
 
-                <!-- Titre -->
-                <h3 class="text-center font-bold italic text-lg my-5">
-                    REÇU DE PAIEMENT n° <span x-text="receipt.receiptNumber"></span>
-                </h3>
+ <!-- Titre -->
+ <h3 class="text-center font-bold italic text-lg my-5">
+ REÇU DE PAIEMENT n° <span x-text="receipt.receiptNumber"></span>
+ </h3>
 
-                <!-- Bloc d'informations -->
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm mb-6">
-                        <tbody>
-                            <tr>
-                                <td class="py-1 pr-4 text-gray-600 w-1/3">Matricule</td>
-                                <td class="py-1 font-semibold" x-text="receipt.matricule"></td>
-                            </tr>
-                            <tr>
-                                <td class="py-1 pr-4 text-gray-600">Nom complet</td>
-                                <td class="py-1 font-semibold" x-text="receipt.studentFullName"></td>
-                            </tr>
-                            <tr>
-                                <td class="py-1 pr-4 text-gray-600">Classe d'affectation</td>
-                                <td class="py-1 font-semibold" x-text="receipt.classroomName"></td>
-                            </tr>
-                            <tr>
-                                <td class="py-1 pr-4 text-gray-600">Année scolaire</td>
-                                <td class="py-1 font-semibold" x-text="receipt.schoolYearLabel"></td>
-                            </tr>
-                            <tr>
-                                <td class="py-1 pr-4 text-gray-600">Date du paiement</td>
-                                <td class="py-1 font-semibold" x-text="formatDate(receipt.paidAt)"></td>
-                            </tr>
-                            <tr>
-                                <td class="py-1 pr-4 text-gray-600">Moyen de paiement</td>
-                                <td class="py-1 font-semibold" x-text="methodLabel(receipt.method)"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+ <!-- Bloc d'informations -->
+ <div class="overflow-x-auto">
+ <table class="w-full text-sm mb-6">
+ <tbody>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-1 pr-4 text-slate-600 w-1/3">Matricule</td>
+ <td class="py-1 font-semibold" x-text="receipt.matricule"></td>
+ </tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-1 pr-4 text-slate-600">Nom complet</td>
+ <td class="py-1 font-semibold" x-text="receipt.studentFullName"></td>
+ </tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-1 pr-4 text-slate-600">Classe d'affectation</td>
+ <td class="py-1 font-semibold" x-text="receipt.classroomName"></td>
+ </tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-1 pr-4 text-slate-600">Année scolaire</td>
+ <td class="py-1 font-semibold" x-text="receipt.schoolYearLabel"></td>
+ </tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-1 pr-4 text-slate-600">Date du paiement</td>
+ <td class="py-1 font-semibold" x-text="formatDate(receipt.paidAt)"></td>
+ </tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-1 pr-4 text-slate-600">Moyen de paiement</td>
+ <td class="py-1 font-semibold" x-text="methodLabel(receipt.method)"></td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
 
-                <!-- Tableau des montants -->
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm border border-gray-400 border-collapse">
-                        <thead>
-                            <tr class="border-b border-gray-400">
-                                <th class="text-left py-2 px-3 border-r border-gray-400 font-bold">Désignation</th>
-                                <th class="text-right py-2 px-3 font-bold">Montant (FCFA)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="border-b border-gray-300 font-bold">
-                                <td class="py-2 px-3 border-r border-gray-400">Versement reçu</td>
-                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.amount)"></td>
-                            </tr>
-                            <tr class="border-b border-gray-300">
-                                <td class="py-2 px-3 border-r border-gray-400">Montant total dû</td>
-                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.totalDue)"></td>
-                            </tr>
-                            <tr class="border-b border-gray-300">
-                                <td class="py-2 px-3 border-r border-gray-400">Déjà réglé à ce jour</td>
-                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.alreadyPaid)"></td>
-                            </tr>
-                            <tr class="border-t-2 border-gray-500 font-bold">
-                                <td class="py-2 px-3 border-r border-gray-400 uppercase">Reste à payer</td>
-                                <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.remainingBalance)"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+ <!-- Tableau des montants -->
+ <div class="overflow-x-auto">
+ <table class="w-full text-sm border border-slate-400 border-collapse">
+ <thead>
+ <tr class="border-b border-slate-400 hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <th class="text-left py-2 px-3 border-r border-slate-400 font-bold uppercase tracking-wider text-slate-500 font-semibold">Désignation</th>
+ <th class="text-right py-2 px-3 font-bold uppercase tracking-wider text-slate-500 font-semibold">Montant (FCFA)</th>
+ </tr>
+ </thead>
+ <tbody>
+ <tr class="border-b border-slate-300 font-bold hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-2 px-3 border-r border-slate-400">Versement reçu</td>
+ <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.amount)"></td>
+ </tr>
+ <tr class="border-b border-slate-300 hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-2 px-3 border-r border-slate-400">Montant total dû</td>
+ <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.totalDue)"></td>
+ </tr>
+ <tr class="border-b border-slate-300 hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-2 px-3 border-r border-slate-400">Déjà réglé à ce jour</td>
+ <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.alreadyPaid)"></td>
+ </tr>
+ <tr class="border-t-2 border-slate-500 font-bold hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-2 px-3 border-r border-slate-400 uppercase">Reste à payer</td>
+ <td class="py-2 px-3 text-right" x-text="formatMoney(receipt.remainingBalance)"></td>
+ </tr>
+ </tbody>
+ </table>
+ </div>
 
-                <!-- Mention obligatoire (AGENTS.md règle #12) -->
-                <p class="text-center text-sm italic mt-5">
-                    Il est demandé aux parents de garder minutieusement leur reçu après le paiement.
-                </p>
+ <!-- Mention obligatoire (AGENTS.md règle #12) -->
+ <p class="text-center text-sm italic mt-5">
+ Il est demandé aux parents de garder minutieusement leur reçu après le paiement.
+ </p>
 
-                <!-- Bas de page -->
-                <div class="flex justify-between items-end mt-8 text-sm">
-                    <div>
-                        <p class="italic" x-text="faitMention()"></p>
-                        <div class="mt-2 w-32 h-16 border border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-400">Cachet officiel</div>
-                    </div>
-                    <div class="text-right">
-                        <p class="italic">Signature du Directeur / Service Financier</p>
-                        <div class="mt-10 w-40 border-t border-gray-400"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+ <!-- Bas de page -->
+ <div class="flex justify-between items-end mt-8 text-sm">
+ <div>
+ <p class="italic" x-text="faitMention()"></p>
+ <div class="mt-2 w-32 h-16 border border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-400">Cachet officiel</div>
+ </div>
+ <div class="text-right">
+ <p class="italic">Signature du Directeur / Service Financier</p>
+ <div class="mt-10 w-40 border-t border-slate-400"></div>
+ </div>
+ </div>
+ </div>
+ </div>
 
-    </div>
+ </div>
 
-    @* Fenêtre de confirmation affichée juste après l'encaissement (avant le reçu) — même parcours que
-       /inscriptions : annoncer que le paiement est validé, puis laisser le choix entre imprimer le reçu
-       ou terminer. *@
-    <div class="no-print">
-        <modal-shell open="showConfirmDialog" size="md" on-close="finishFromDialog()" title="Paiement validé">
-            <confirm-dialog-body close-action="finishFromDialog()" close-label="Terminer"
-                                 new-action="showReceiptFromDialog()" new-label="Imprimer le reçu">
-                Le versement de <span class="font-medium text-gray-900" x-text="receipt ? formatMoney(receipt.amount) : ''"></span>
-                a bien été encaissé — reçu n° <span class="font-medium text-gray-900" x-text="receipt ? receipt.receiptNumber : ''"></span>.
-            </confirm-dialog-body>
-        </modal-shell>
-    </div>
+ @* Fenêtre de confirmation affichée juste après l'encaissement (avant le reçu) — même parcours que
+ /inscriptions : annoncer que le paiement est validé, puis laisser le choix entre imprimer le reçu
+ ou terminer. *@
+ <div class="no-print">
+ <modal-shell open="showConfirmDialog" size="md" on-close="finishFromDialog()" title="Paiement validé">
+ <confirm-dialog-body close-action="finishFromDialog()" close-label="Terminer"
+ new-action="showReceiptFromDialog()" new-label="Imprimer le reçu">
+ Le versement de <span class="font-medium text-slate-900" x-text="receipt ? formatMoney(receipt.amount) : ''"></span>
+ a bien été encaissé — reçu n° <span class="font-medium text-slate-900" x-text="receipt ? receipt.receiptNumber : ''"></span>.
+ </confirm-dialog-body>
+ </modal-shell>
+ </div>
 </div>

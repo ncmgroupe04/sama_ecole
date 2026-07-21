@@ -1,168 +1,168 @@
 @{
-    ViewData["Title"] = "Connexion";
-    Layout = "_AuthLayout";
+ ViewData["Title"] = "Connexion";
+ Layout = "_AuthLayout";
 }
 
 @* Inutile de réafficher cet écran à quelqu'un qui a déjà une session ouverte. Exécuté avant le
-   rendu du corps : pas de clignotement du formulaire avant la redirection. *@
+ rendu du corps : pas de clignotement du formulaire avant la redirection. *@
 <script>window.auth.redirectIfAuthenticated();</script>
 
 <div class="min-h-screen lg:grid lg:grid-cols-2">
 
-    <!-- Panneau de marque — masqué sur mobile, où l'écran doit aller droit au formulaire -->
-    <div class="hidden lg:flex flex-col justify-between bg-primary text-white p-12 relative overflow-hidden">
-        <!-- Halos décoratifs : purement visuels, aria-hidden pour ne pas polluer la lecture d'écran -->
-        <div aria-hidden="true" class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10"></div>
-        <div aria-hidden="true" class="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-white/5"></div>
+ <!-- Panneau de marque — masqué sur mobile, où l'écran doit aller droit au formulaire -->
+ <div class="hidden lg:flex flex-col justify-between bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white p-12 relative overflow-hidden">
+ <!-- Halos décoratifs : purement visuels, aria-hidden pour ne pas polluer la lecture d'écran -->
+ <div aria-hidden="true" class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10"></div>
+ <div aria-hidden="true" class="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-white/5"></div>
 
-        <div class="relative flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-white text-primary flex items-center justify-center font-bold text-xl">S</div>
-            <span class="font-bold text-xl tracking-tight">Sama Ecole</span>
-        </div>
+ <div class="relative flex items-center gap-3">
+ <div class="w-10 h-10 rounded-2xl bg-white text-primary flex items-center justify-center font-bold text-xl">S</div>
+ <span class="font-bold text-xl tracking-tight">Sama Ecole</span>
+ </div>
 
-        <div class="relative max-w-md">
-            <h2 class="text-3xl font-bold leading-tight">La gestion de votre école, réunie en un seul endroit.</h2>
-            <p class="mt-4 text-white/80 text-jgk-body leading-relaxed">
-                Inscriptions, notes, bulletins et finances — accessibles partout, à jour en permanence.
-            </p>
+ <div class="relative max-w-md">
+ <h2 class="text-3xl font-bold leading-tight">La gestion de votre école, réunie en un seul endroit.</h2>
+ <p class="mt-4 text-white/80 text-jgk-body leading-relaxed">
+ Inscriptions, notes, bulletins et finances — accessibles partout, à jour en permanence.
+ </p>
 
-            <ul class="mt-8 space-y-3 text-white/90 text-jgk-body">
-                <li class="flex items-center gap-3">
-                    <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>Dossiers élèves et matricules automatiques</span>
-                </li>
-                <li class="flex items-center gap-3">
-                    <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>Reçus et bulletins prêts à imprimer</span>
-                </li>
-                <li class="flex items-center gap-3">
-                    <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span>Données de votre établissement, isolées et protégées</span>
-                </li>
-            </ul>
-        </div>
+ <ul class="mt-8 space-y-3 text-white/90 text-jgk-body">
+ <li class="flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <span>Dossiers élèves et matricules automatiques</span>
+ </li>
+ <li class="flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <span>Reçus et bulletins prêts à imprimer</span>
+ </li>
+ <li class="flex items-center gap-3">
+ <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ <span>Données de votre établissement, isolées et protégées</span>
+ </li>
+ </ul>
+ </div>
 
-        <p class="relative text-white/60 text-jgk-table">© 2026 Sama Ecole — Sénégal</p>
-    </div>
+ <p class="relative text-white/60 text-jgk-table">© 2026 Sama Ecole — Sénégal</p>
+ </div>
 
-    <!-- Formulaire -->
-    <div class="flex items-center justify-center p-6 sm:p-12 min-h-screen lg:min-h-0">
-        <div class="w-full max-w-md" x-data="loginForm()">
+ <!-- Formulaire -->
+ <div class="flex items-center justify-center p-6 sm:p-12 min-h-screen lg:min-h-0">
+ <div class="w-full max-w-md" x-data="loginForm()">
 
-            <!-- Logo sur mobile, où le panneau de marque n'est pas affiché -->
-            <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
-                <div class="w-9 h-9 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-lg">S</div>
-                <span class="font-bold text-lg text-gray-900 tracking-tight">Sama Ecole</span>
-            </div>
+ <!-- Logo sur mobile, où le panneau de marque n'est pas affiché -->
+ <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
+ <div class="w-9 h-9 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center font-bold text-lg">S</div>
+ <span class="font-bold text-lg text-slate-900 tracking-tight">Sama Ecole</span>
+ </div>
 
-            <div class="text-center lg:text-left mb-8">
-                <h1 class="text-jgk-title font-bold text-gray-900">Connexion</h1>
-                <p class="text-jgk-body text-gray-500 mt-2">Accédez à l'espace de votre établissement.</p>
-            </div>
+ <div class="text-center lg:text-left mb-8">
+ <h1 class="text-jgk-title font-bold text-slate-900">Connexion</h1>
+ <p class="text-jgk-body text-slate-500 mt-2">Accédez à l'espace de votre établissement.</p>
+ </div>
 
-            <!-- Message d'erreur. aria-live : lu par un lecteur d'écran sans déplacer le focus. -->
-            <div x-cloak
-                 x-show="error"
-                 x-transition.opacity
-                 role="alert"
-                 aria-live="polite"
-                 class="mb-6 flex items-start gap-3 rounded-lg bg-danger/10 border border-danger/20 px-4 py-3">
-                <svg aria-hidden="true" class="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-6.93-12a2 2 0 00-3.5 0l-6.93 12A2 2 0 005.07 19z" /></svg>
-                <p class="text-jgk-body text-danger" x-text="error"></p>
-            </div>
+ <!-- Message d'erreur. aria-live : lu par un lecteur d'écran sans déplacer le focus. -->
+ <div x-cloak
+ x-show="error"
+ x-transition.opacity
+ role="alert"
+ aria-live="polite"
+ class="mb-6 flex items-start gap-3 rounded-2xl bg-danger/10 border border-danger/20 px-4 py-3">
+ <svg aria-hidden="true" class="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-6.93-12a2 2 0 00-3.5 0l-6.93 12A2 2 0 005.07 19z" /></svg>
+ <p class="text-jgk-body text-danger" x-text="error"></p>
+ </div>
 
-            <form x-on:submit.prevent="submit()" novalidate class="space-y-5">
+ <form x-on:submit.prevent="submit()" novalidate class="space-y-5">
 
-                <div>
-                    <label for="email" class="block text-jgk-body font-medium text-gray-700 mb-1.5">
-                        Adresse e-mail
-                    </label>
-                    <div class="relative">
-                        <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                        </span>
-                        <input id="email"
-                               type="email"
-                               x-model="email"
-                               required
-                               autocomplete="email"
-                               autofocus
-                               placeholder="directeur@monecole.sn"
-                               x-bind:aria-invalid="error ? 'true' : 'false'"
-                               class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
-                    </div>
-                </div>
+ <div>
+ <label for="email" class="block text-jgk-body font-medium text-slate-700 mb-1.5">
+ Adresse e-mail
+ </label>
+ <div class="relative">
+ <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+ <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+ </span>
+ <input id="email"
+ type="email"
+ x-model="email"
+ required
+ autocomplete="email"
+ autofocus
+ placeholder="directeur@monecole.sn"
+ x-bind:aria-invalid="error ? 'true' : 'false'"
+ class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ </div>
+ </div>
 
-                <div>
-                    <label for="password" class="block text-jgk-body font-medium text-gray-700 mb-1.5">
-                        Mot de passe
-                    </label>
-                    <div class="relative">
-                        <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                        </span>
+ <div>
+ <label for="password" class="block text-jgk-body font-medium text-slate-700 mb-1.5">
+ Mot de passe
+ </label>
+ <div class="relative">
+ <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+ <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+ </span>
 
-                        @* Le type bascule entre password et text : le navigateur conserve la valeur, x-model reste la source de vérité. *@
-                        <input id="password"
-                               x-bind:type="showPassword ? 'text' : 'password'"
-                               x-model="password"
-                               required
-                               autocomplete="current-password"
-                               placeholder="••••••••••••"
-                               x-bind:aria-invalid="error ? 'true' : 'false'"
-                               class="w-full pl-10 pr-11 py-2.5 bg-white border border-gray-200 rounded-lg text-jgk-body placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+ @* Le type bascule entre password et text : le navigateur conserve la valeur, x-model reste la source de vérité. *@
+ <input id="password"
+ x-bind:type="showPassword ? 'text' : 'password'"
+ x-model="password"
+ required
+ autocomplete="current-password"
+ placeholder="••••••••••••"
+ x-bind:aria-invalid="error ? 'true' : 'false'"
+ class="w-full pl-10 pr-11 py-2.5 bg-white border border-slate-200 rounded-2xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
 
-                        <button type="button"
-                                x-on:click="showPassword = !showPassword"
-                                x-bind:aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-                                x-bind:aria-pressed="showPassword.toString()"
-                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-primary transition-colors">
-                            <svg x-show="!showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            <svg x-cloak x-show="showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                        </button>
-                    </div>
-                </div>
+ <button type="button"
+ x-on:click="showPassword = !showPassword"
+ x-bind:aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+ x-bind:aria-pressed="showPassword.toString()"
+ class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-primary transition-colors">
+ <svg x-show="!showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+ <svg x-cloak x-show="showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+ </button>
+ </div>
+ </div>
 
-                <button type="submit"
-                        x-bind:disabled="isSubmitting"
-                        x-bind:aria-busy="isSubmitting.toString()"
-                        class="w-full flex items-center justify-center gap-2 bg-primary text-white rounded-lg px-4 py-2.5 text-jgk-body font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all">
-                    <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    <span x-text="isSubmitting ? 'Connexion…' : 'Se connecter'">Se connecter</span>
-                </button>
-            </form>
+ <button type="submit"
+ x-bind:disabled="isSubmitting"
+ x-bind:aria-busy="isSubmitting.toString()"
+ class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white rounded-2xl px-5 py-[9px] text-base font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all">
+ <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+ <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+ <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+ </svg>
+ <span x-text="isSubmitting ? 'Connexion…' : 'Se connecter'">Se connecter</span>
+ </button>
+ </form>
 
-            @* Aucun lien « mot de passe oublié » : le backend n'expose pas encore de réinitialisation
-               (aucun ticket livré à ce jour). Un lien mort serait pire qu'une consigne claire. *@
-            <p class="mt-6 text-center text-jgk-table text-gray-500">
-                Mot de passe oublié ? Contactez l'administrateur de votre établissement.
-            </p>
+ @* Aucun lien « mot de passe oublié » : le backend n'expose pas encore de réinitialisation
+ (aucun ticket livré à ce jour). Un lien mort serait pire qu'une consigne claire. *@
+ <p class="mt-6 text-center text-jgk-table text-slate-500">
+ Mot de passe oublié ? Contactez l'administrateur de votre établissement.
+ </p>
 
-            <p class="mt-2 text-center text-jgk-table text-gray-500">
-                Votre établissement n'est pas encore inscrit ?
-                <a href="/inscription" class="text-primary font-medium hover:underline">Inscrire mon établissement</a>
-            </p>
+ <p class="mt-2 text-center text-jgk-table text-slate-500">
+ Votre établissement n'est pas encore inscrit ?
+ <a href="/inscription" class="text-primary font-medium hover:underline">Inscrire mon établissement</a>
+ </p>
 
-            <p class="mt-2 text-center text-jgk-table text-gray-500">
-                Demande déjà envoyée ?
-                <a href="/suivi-demande" class="text-primary font-medium hover:underline">Suivre son état</a>
-            </p>
+ <p class="mt-2 text-center text-jgk-table text-slate-500">
+ Demande déjà envoyée ?
+ <a href="/suivi-demande" class="text-primary font-medium hover:underline">Suivre son état</a>
+ </p>
 
-            @* Ligne d'assistance pour les directeurs dont l'inscription attend encore une validation
-               manuelle (aucune automatisation de ce côté à ce jour) — délibérément sobre, en bas de
-               page, pour ne pas rivaliser visuellement avec le formulaire de connexion lui-même. *@
-            <p class="mt-6 text-center text-xs text-gray-500">
-                Inscription en attente de validation ? Contactez-nous pour accélérer le processus.
-            </p>
-            <p class="mt-1 text-center text-xs text-gray-500">
-                <a href="tel:+221763545916" class="text-primary font-medium hover:underline">Appeler</a>
-                ou
-                <a href="https://wa.me/221763545916" class="text-primary font-medium hover:underline">WhatsApp</a>
-                : +221 76 354 59 16
-            </p>
-        </div>
-    </div>
+ @* Ligne d'assistance pour les directeurs dont l'inscription attend encore une validation
+ manuelle (aucune automatisation de ce côté à ce jour) — délibérément sobre, en bas de
+ page, pour ne pas rivaliser visuellement avec le formulaire de connexion lui-même. *@
+ <p class="mt-6 text-center text-xs text-slate-500">
+ Inscription en attente de validation ? Contactez-nous pour accélérer le processus.
+ </p>
+ <p class="mt-1 text-center text-xs text-slate-500">
+ <a href="tel:+221763545916" class="text-primary font-medium hover:underline">Appeler</a>
+ ou
+ <a href="https://wa.me/221763545916" class="text-primary font-medium hover:underline">WhatsApp</a>
+ : +221 76 354 59 16
+ </p>
+ </div>
+ </div>
 </div>

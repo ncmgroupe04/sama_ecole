@@ -1,430 +1,430 @@
 @{
-    ViewData["Title"] = "Enseignants";
+ ViewData["Title"] = "Enseignants";
 }
 
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
-    <script src="~/js/photo-compress.js" asp-append-version="true"></script>
-    <script src="~/js/teachers.js" asp-append-version="true"></script>
+ <script src="~/js/photo-compress.js" asp-append-version="true"></script>
+ <script src="~/js/teachers.js" asp-append-version="true"></script>
 }
 
 <div x-data="teachersView()">
-    <div class="flex items-start justify-between gap-4">
-        <div>
-            <h1 class="text-jgk-title font-bold text-gray-900">Enseignants</h1>
-            <p class="text-jgk-subtitle text-gray-500 mt-1">Fiches du personnel enseignant, matières qualifiées et affectations.</p>
-        </div>
-    </div>
+ <div class="flex items-start justify-between gap-4">
+ <div>
+ <h1 class="text-jgk-title font-bold text-slate-900">Enseignants</h1>
+ <p class="text-jgk-subtitle text-slate-500 mt-1">Fiches du personnel enseignant, matières qualifiées et affectations.</p>
+ </div>
+ </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-        <stat-card label="Total enseignants" icon="users" accent="primary">
-            <span x-text="totalCount">0</span>
-        </stat-card>
-    </div>
+ <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+ <stat-card label="Total enseignants" icon="users" accent="primary">
+ <span x-text="totalCount">0</span>
+ </stat-card>
+ </div>
 
-    @await Html.PartialAsync("_ErrorBanner")
+ @await Html.PartialAsync("_ErrorBanner")
 
-    <div class="card mt-6 relative">
-        <div class="p-4 border-b border-gray-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div class="flex flex-wrap items-center gap-3">
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-                        <icon name="search" class="w-4 h-4 text-gray-400" />
-                    </span>
-                    <input type="text" x-model="search" x-on:input.debounce.400ms="applyFilters()"
-                           placeholder="Nom, matricule ou e-mail..." aria-label="Rechercher un enseignant"
-                           class="input-field mt-0 pl-9 pr-3 w-full sm:w-72" />
-                </div>
-                <button type="button" x-on:click="resetFilters()" class="text-sm font-medium text-gray-500 hover:text-gray-900">
-                    Réinitialiser
-                </button>
-            </div>
+ <div class="card mt-6 relative">
+ <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+ <div class="flex flex-wrap items-center gap-3">
+ <div class="relative">
+ <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+ <icon name="search" class="w-4 h-4 text-slate-400" />
+ </span>
+ <input type="text" x-model="search" x-on:input.debounce.400ms="applyFilters()"
+ placeholder="Nom, matricule ou e-mail..." aria-label="Rechercher un enseignant"
+ class="input-field mt-0 pl-9 pr-3 w-full sm:w-72 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+ </div>
+ <button type="button" x-on:click="resetFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+ Réinitialiser
+ </button>
+ </div>
 
-            <div class="flex items-center gap-3" x-show="canManage" x-cloak>
-                <button type="button" x-on:click="openCreate()" class="btn-primary">
-                    <icon name="plus" class="w-4 h-4" />
-                    Ajouter un enseignant
-                </button>
-            </div>
-        </div>
+ <div class="flex items-center gap-3" x-show="canManage" x-cloak>
+ <button type="button" x-on:click="openCreate()" class="btn-primary">
+ <icon name="plus" class="w-4 h-4" />
+ Ajouter un enseignant
+ </button>
+ </div>
+ </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="table-head">
-                        <th class="py-3 px-4">Matricule</th>
-                        <th class="py-3 px-4">Enseignant</th>
-                        <th class="py-3 px-4">Téléphone</th>
-                        <th class="py-3 px-4">Matières</th>
-                        <th class="py-3 px-4">Statut</th>
-                        <th class="py-3 px-4 w-16 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <template x-if="isLoading">
-                        <template x-for="i in 5" :key="i">
-                            <tr><td class="py-3 px-4" colspan="6"><div class="skeleton h-4 w-full"></div></td></tr>
-                        </template>
-                    </template>
+ <div class="overflow-x-auto">
+ <table class="w-full text-left border-collapse">
+ <thead>
+ <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Matricule</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Enseignant</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Téléphone</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Matières</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
+ <th class="py-3 px-4 w-16 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-if="isLoading">
+ <template x-for="i in 5" :key="i">
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out"><td class="py-3 px-4" colspan="6"><div class="skeleton h-4 w-full"></div></td></tr>
+ </template>
+ </template>
 
-                    <tr x-show="!isLoading && teachers.length === 0" x-cloak>
-                        <td colspan="6">
-                            <empty-state icon="users" title="Aucun enseignant trouvé."
-                                         hint="Ajustez la recherche, ou ajoutez une fiche enseignant." />
-                        </td>
-                    </tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="!isLoading && teachers.length === 0" x-cloak>
+ <td colspan="6">
+ <empty-state icon="users" title="Aucun enseignant trouvé."
+ hint="Ajustez la recherche, ou ajoutez une fiche enseignant." />
+ </td>
+ </tr>
 
-                    <template x-for="teacher in teachers" :key="teacher.id">
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="teacher.matricule"></td>
-                            <td class="py-3 px-4">
-                                <div class="flex items-center gap-3">
-                                    <img x-show="teacher.photoDisplayUrl" :src="teacher.photoDisplayUrl" alt=""
-                                         class="w-8 h-8 rounded-full object-cover shrink-0" x-cloak>
-                                    <div x-show="!teacher.photoDisplayUrl" class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"></div>
-                                    <div>
-                                        <p class="font-medium text-gray-900" x-text="teacher.fullName"></p>
-                                        <p class="text-xs text-gray-500" x-text="teacher.email"></p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-3 px-4 text-gray-500" x-text="teacher.phone || '—'"></td>
-                            <td class="py-3 px-4">
-                                <div class="flex flex-wrap gap-1">
-                                    <template x-for="s in teacher.subjects" :key="s">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-50 text-primary" x-text="s"></span>
-                                    </template>
-                                    <span x-show="!teacher.subjects || teacher.subjects.length === 0" class="text-gray-400 text-xs">—</span>
-                                </div>
-                            </td>
-                            <td class="py-3 px-4">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                                      :class="statusClass(teacher.status)" x-text="statusLabel(teacher.status)"></span>
-                            </td>
-                            <td class="py-3 px-4 text-right">
-                                <button type="button" x-on:click="openDetail(teacher)" title="Voir la fiche" aria-label="Voir la fiche"
-                                        class="p-1.5 text-gray-400 hover:text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
-                                    <icon name="eye" class="w-5 h-5" />
-                                </button>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
+ <template x-for="teacher in teachers" :key="teacher.id">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <td class="py-3 px-4 font-mono text-xs text-slate-500" x-text="teacher.matricule"></td>
+ <td class="py-3 px-4">
+ <div class="flex items-center gap-3">
+ <img x-show="teacher.photoDisplayUrl" :src="teacher.photoDisplayUrl" alt=""
+ class="w-8 h-8 rounded-full object-cover shrink-0" x-cloak>
+ <div x-show="!teacher.photoDisplayUrl" class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"></div>
+ <div>
+ <p class="font-medium text-slate-900" x-text="teacher.fullName"></p>
+ <p class="text-xs text-slate-500" x-text="teacher.email"></p>
+ </div>
+ </div>
+ </td>
+ <td class="py-3 px-4 text-slate-500" x-text="teacher.phone || '—'"></td>
+ <td class="py-3 px-4">
+ <div class="flex flex-wrap gap-1">
+ <template x-for="s in teacher.subjects" :key="s">
+ <span class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-primary-50 text-primary" x-text="s"></span>
+ </template>
+ <span x-show="!teacher.subjects || teacher.subjects.length === 0" class="text-slate-400 text-xs">—</span>
+ </div>
+ </td>
+ <td class="py-3 px-4">
+ <span class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium"
+ :class="statusClass(teacher.status)" x-text="statusLabel(teacher.status)"></span>
+ </td>
+ <td class="py-3 px-4 text-right">
+ <button type="button" x-on:click="openDetail(teacher)" title="Voir la fiche" aria-label="Voir la fiche"
+ class="p-1.5 text-slate-400 hover:text-primary rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+ <icon name="eye" class="w-5 h-5" />
+ </button>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
 
-        <pagination page="page" page-size="pageSize" total="totalCount" on-change="loadTeachers()" />
-    </div>
+ <pagination page="page" page-size="pageSize" total="totalCount" on-change="loadTeachers()" />
+ </div>
 
-    <!-- Fiche enseignant : infos + matières + affectations (historique) + attribution (Directeur/Secrétariat) -->
-    <modal-shell open="detail" on-close="closeDetail()" title="Fiche enseignant">
-        <template x-if="detail">
-            <div>
-                <div class="flex items-center gap-4 pb-5 border-b border-gray-100">
-                    <img x-show="detail.photoDisplayUrl" :src="detail.photoDisplayUrl" alt=""
-                         class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak>
-                    <div x-show="!detail.photoDisplayUrl" class="w-14 h-14 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-base flex-shrink-0" x-text="initials(detail.fullName)"></div>
-                    <div>
-                        <p class="text-xl font-bold text-gray-900" x-text="detail.fullName"></p>
-                        <p class="text-sm text-gray-500 font-mono" x-text="detail.matricule"></p>
-                    </div>
-                </div>
+ <!-- Fiche enseignant : infos + matières + affectations (historique) + attribution (Directeur/Secrétariat) -->
+ <modal-shell open="detail" on-close="closeDetail()" title="Fiche enseignant">
+ <template x-if="detail">
+ <div>
+ <div class="flex items-center gap-4 pb-5 border-b border-slate-100">
+ <img x-show="detail.photoDisplayUrl" :src="detail.photoDisplayUrl" alt=""
+ class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak>
+ <div x-show="!detail.photoDisplayUrl" class="w-14 h-14 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-base flex-shrink-0" x-text="initials(detail.fullName)"></div>
+ <div>
+ <p class="text-xl font-bold text-slate-900" x-text="detail.fullName"></p>
+ <p class="text-sm text-slate-500 font-mono" x-text="detail.matricule"></p>
+ </div>
+ </div>
 
-                <dl class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-5">
-                    <div>
-                        <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">E-mail</dt>
-                        <dd class="mt-1 text-base font-medium text-gray-900" x-text="detail.email"></dd>
-                    </div>
-                    <div>
-                        <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Téléphone</dt>
-                        <dd class="mt-1 text-base font-medium text-gray-900" x-text="detail.phone || '—'"></dd>
-                    </div>
-                    <div>
-                        <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Date de naissance</dt>
-                        <dd class="mt-1 text-base font-medium text-gray-900" x-text="formatDate(detail.birthDate)"></dd>
-                    </div>
-                    <div>
-                        <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Lieu de naissance</dt>
-                        <dd class="mt-1 text-base font-medium text-gray-900" x-text="detail.birthPlace || '—'"></dd>
-                    </div>
-                    <div>
-                        <dt class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Statut</dt>
-                        <dd class="mt-1.5">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold"
-                                  :class="statusClass(detail.status)" x-text="statusLabel(detail.status)"></span>
-                        </dd>
-                    </div>
-                </dl>
+ <dl class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-5">
+ <div>
+ <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">E-mail</dt>
+ <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.email"></dd>
+ </div>
+ <div>
+ <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Téléphone</dt>
+ <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.phone || '—'"></dd>
+ </div>
+ <div>
+ <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date de naissance</dt>
+ <dd class="mt-1 text-base font-medium text-slate-900" x-text="formatDate(detail.birthDate)"></dd>
+ </div>
+ <div>
+ <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lieu de naissance</dt>
+ <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.birthPlace || '—'"></dd>
+ </div>
+ <div>
+ <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Statut</dt>
+ <dd class="mt-1.5">
+ <span class="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-bold"
+ :class="statusClass(detail.status)" x-text="statusLabel(detail.status)"></span>
+ </dd>
+ </div>
+ </dl>
 
-                <div class="mt-6">
-                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Matières qualifiées</p>
-                    <div class="flex flex-wrap gap-1.5">
-                        <template x-for="s in detail.subjects" :key="s">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-primary-50 text-primary" x-text="s"></span>
-                        </template>
-                        <span x-show="!detail.subjects || detail.subjects.length === 0" class="text-gray-400 text-sm">Aucune matière.</span>
-                    </div>
-                </div>
+ <div class="mt-6">
+ <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Matières qualifiées</p>
+ <div class="flex flex-wrap gap-1.5">
+ <template x-for="s in detail.subjects" :key="s">
+ <span class="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-medium bg-primary-50 text-primary" x-text="s"></span>
+ </template>
+ <span x-show="!detail.subjects || detail.subjects.length === 0" class="text-slate-400 text-sm">Aucune matière.</span>
+ </div>
+ </div>
 
-                <!-- Affectations classe/matière, groupées par année scolaire (historique) -->
-                <div class="mt-6">
-                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Affectations</p>
-                    <div x-show="assignmentsByYear().length === 0" class="text-gray-400 text-sm">Aucune affectation.</div>
-                    <template x-for="group in assignmentsByYear()" :key="group.label">
-                        <div class="mb-4">
-                            <div class="flex items-center gap-2 mb-1.5">
-                                <span class="text-sm font-semibold text-gray-700" x-text="group.label"></span>
-                                <span x-show="group.isActive" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-success-bg text-success">Active</span>
-                            </div>
-                            <ul class="space-y-1">
-                                <template x-for="a in group.items" :key="a.id">
-                                    <li class="text-sm text-gray-600 flex items-center gap-2">
-                                        <icon name="building" class="w-3.5 h-3.5 text-gray-400" />
-                                        <span x-text="a.classroomName"></span>
-                                        <span class="text-gray-300">·</span>
-                                        <span x-text="a.subjectName"></span>
-                                    </li>
-                                </template>
-                            </ul>
-                        </div>
-                    </template>
-                </div>
+ <!-- Affectations classe/matière, groupées par année scolaire (historique) -->
+ <div class="mt-6">
+ <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Affectations</p>
+ <div x-show="assignmentsByYear().length === 0" class="text-slate-400 text-sm">Aucune affectation.</div>
+ <template x-for="group in assignmentsByYear()" :key="group.label">
+ <div class="mb-4">
+ <div class="flex items-center gap-2 mb-1.5">
+ <span class="text-sm font-semibold text-slate-700" x-text="group.label"></span>
+ <span x-show="group.isActive" class="inline-flex items-center px-2 py-0.5 rounded-xl text-[10px] font-bold bg-success-bg text-success">Active</span>
+ </div>
+ <ul class="space-y-1">
+ <template x-for="a in group.items" :key="a.id">
+ <li class="text-sm text-slate-600 flex items-center gap-2">
+ <icon name="building" class="w-3.5 h-3.5 text-slate-400" />
+ <span x-text="a.classroomName"></span>
+ <span class="text-slate-300">·</span>
+ <span x-text="a.subjectName"></span>
+ </li>
+ </template>
+ </ul>
+ </div>
+ </template>
+ </div>
 
-                <!-- Attribution d'une classe/matière (année active) — Directeur/Secrétariat -->
-                <div class="mt-6 bg-gray-50 rounded-lg p-4 sm:p-5" x-show="canManage" x-cloak>
-                    <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Attribuer une classe / matière (année active)</p>
-                    <div x-show="assignError" x-cloak class="mb-3 rounded-md border-l-4 border-danger bg-danger-bg p-2.5 text-sm text-danger" x-text="assignError"></div>
-                    <div x-show="assignSuccess" x-cloak class="mb-3 rounded-md border-l-4 border-success bg-success-bg p-2.5 text-sm text-success">Affectation enregistrée.</div>
-                    <form x-on:submit.prevent="submitAssign()" class="flex flex-col sm:flex-row sm:items-end gap-3">
-                        <div class="flex-1">
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Classe</label>
-                            <select-field model="assignForm.classroomId" required="true" class="mt-0" placeholder="Choisir…"
-                                          options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
-                        </div>
-                        <div class="flex-1">
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Matière</label>
-                            <select-field model="assignForm.subjectId" required="true" class="mt-0" placeholder="Choisir…"
-                                          options-expr="subjects.map(s => ({value: s.id, label: s.name + ' (' + s.level + ')'}))" />
-                        </div>
-                        <button type="submit" :disabled="assignSubmitting" class="btn-primary whitespace-nowrap">
-                            <span x-text="assignSubmitting ? '…' : 'Attribuer'"></span>
-                        </button>
-                    </form>
-                </div>
+ <!-- Attribution d'une classe/matière (année active) — Directeur/Secrétariat -->
+ <div class="mt-6 bg-slate-50 rounded-2xl p-6 sm:p-5" x-show="canManage" x-cloak>
+ <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Attribuer une classe / matière (année active)</p>
+ <div x-show="assignError" x-cloak class="mb-3 rounded-xl border-l-4 border-danger bg-danger-bg p-2.5 text-sm text-danger" x-text="assignError"></div>
+ <div x-show="assignSuccess" x-cloak class="mb-3 rounded-xl border-l-4 border-success bg-success-bg p-2.5 text-sm text-success">Affectation enregistrée.</div>
+ <form x-on:submit.prevent="submitAssign()" class="flex flex-col sm:flex-row sm:items-end gap-3">
+ <div class="flex-1">
+ <label class="block text-xs font-medium text-slate-500 mb-1">Classe</label>
+ <select-field model="assignForm.classroomId" required="true" class="mt-0 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Choisir…"
+ options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
+ </div>
+ <div class="flex-1">
+ <label class="block text-xs font-medium text-slate-500 mb-1">Matière</label>
+ <select-field model="assignForm.subjectId" required="true" class="mt-0 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Choisir…"
+ options-expr="subjects.map(s => ({value: s.id, label: s.name + ' (' + s.level + ')'}))" />
+ </div>
+ <button type="submit" :disabled="assignSubmitting" class="btn-primary whitespace-nowrap">
+ <span x-text="assignSubmitting ? '…' : 'Attribuer'"></span>
+ </button>
+ </form>
+ </div>
 
-                <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-gray-200 pt-4">
-                    <template x-if="canManage">
-                        <div class="flex gap-2">
-                            <button type="button" x-on:click="openEditTeacher()" class="btn-secondary">
-                                Modifier la fiche
-                            </button>
-                            <button type="button" x-on:click="openDeleteTeacher()" class="text-sm font-medium text-danger bg-danger-bg hover:bg-red-100 px-4 py-2 rounded-md transition-colors">
-                                Supprimer
-                            </button>
-                        </div>
-                    </template>
-                    <button type="button" x-on:click="closeDetail()" class="btn-secondary sm:ml-auto">Fermer</button>
-                </div>
-            </div>
-        </template>
-    </modal-shell>
+ <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-slate-200 pt-4">
+ <template x-if="canManage">
+ <div class="flex gap-2">
+ <button type="button" x-on:click="openEditTeacher()" class="btn-secondary">
+ Modifier la fiche
+ </button>
+ <button type="button" x-on:click="openDeleteTeacher()" class="text-sm font-medium text-danger bg-danger-bg hover:bg-red-100 px-5 py-2.5 rounded-xl transition-colors">
+ Supprimer
+ </button>
+ </div>
+ </template>
+ <button type="button" x-on:click="closeDetail()" class="btn-secondary sm:ml-auto">Fermer</button>
+ </div>
+ </div>
+ </template>
+ </modal-shell>
 
-    <!-- Modification de la fiche enseignant : matricule et compte de connexion non modifiables ici. -->
-    <modal-shell open="editingTeacher" on-close="closeEditTeacher()" title="Modifier la fiche">
-        <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
+ <!-- Modification de la fiche enseignant : matricule et compte de connexion non modifiables ici. -->
+ <modal-shell open="editingTeacher" on-close="closeEditTeacher()" title="Modifier la fiche">
+ <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
 
-        <div x-show="teacherEditErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="teacherEditErrors.global"></div>
+ <div x-show="teacherEditErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="teacherEditErrors.global"></div>
 
-        <form x-on:submit.prevent="submitEditTeacher()" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Nom complet <span class="text-danger">*</span></label>
-                <input type="text" x-model="editingTeacher.fullName" required class="input-field">
-                <p x-show="teacherEditErrors.fullname" x-text="teacherEditErrors.fullname" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <form x-on:submit.prevent="submitEditTeacher()" class="space-y-4">
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Nom complet <span class="text-danger">*</span></label>
+ <input type="text" x-model="editingTeacher.fullName" required class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="teacherEditErrors.fullname" x-text="teacherEditErrors.fullname" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">E-mail <span class="text-danger">*</span></label>
-                <input type="email" x-model="editingTeacher.email" required class="input-field">
-                <p x-show="teacherEditErrors.email" x-text="teacherEditErrors.email" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">E-mail <span class="text-danger">*</span></label>
+ <input type="email" x-model="editingTeacher.email" required class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="teacherEditErrors.email" x-text="teacherEditErrors.email" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Téléphone</label>
-                <input type="text" x-model="editingTeacher.phone" class="input-field">
-                <p x-show="teacherEditErrors.phone" x-text="teacherEditErrors.phone" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Téléphone</label>
+ <input type="text" x-model="editingTeacher.phone" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="teacherEditErrors.phone" x-text="teacherEditErrors.phone" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Date de naissance <span class="text-danger">*</span></label>
-                <date-field model="editingTeacher.birthDate" required="true" aria-label="Date de naissance" />
-                <p x-show="teacherEditErrors.birthdate" x-text="teacherEditErrors.birthdate" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Date de naissance <span class="text-danger">*</span></label>
+ <date-field model="editingTeacher.birthDate" required="true" aria-label="Date de naissance" />
+ <p x-show="teacherEditErrors.birthdate" x-text="teacherEditErrors.birthdate" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Lieu de naissance</label>
-                <input type="text" x-model="editingTeacher.birthPlace" class="input-field">
-                <p x-show="teacherEditErrors.birthplace" x-text="teacherEditErrors.birthplace" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Lieu de naissance</label>
+ <input type="text" x-model="editingTeacher.birthPlace" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="teacherEditErrors.birthplace" x-text="teacherEditErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Photo</label>
-                <photo-dropzone preview="editingTeacher.photoDisplayUrl"
-                                on-change="uploadTeacherPhoto(photoBase64)" />
-                <p x-show="photoUploadError" x-cloak x-text="photoUploadError" class="mt-1 text-xs text-danger"></p>
-                <div class="mt-3">
-                    <label class="block text-xs font-medium text-gray-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
-                    <input type="text" x-model="editingTeacher.photoUrl" placeholder="https://…" class="input-field mt-1">
-                </div>
-                <p x-show="teacherEditErrors.photourl" x-text="teacherEditErrors.photourl" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Photo</label>
+ <photo-dropzone preview="editingTeacher.photoDisplayUrl"
+ on-change="uploadTeacherPhoto(photoBase64)" />
+ <p x-show="photoUploadError" x-cloak x-text="photoUploadError" class="mt-1 text-xs text-danger"></p>
+ <div class="mt-3">
+ <label class="block text-xs font-medium text-slate-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
+ <input type="text" x-model="editingTeacher.photoUrl" placeholder="https://…" class="input-field mt-1 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ </div>
+ <p x-show="teacherEditErrors.photourl" x-text="teacherEditErrors.photourl" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Matières enseignées <span class="text-danger">*</span></label>
-                <p class="text-xs text-gray-500 mb-2">Sélectionnez au moins une matière qualifiée.</p>
-                <div class="max-h-40 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
-                    <template x-for="s in subjects" :key="s.id">
-                        <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" :value="s.id" x-model="editingTeacher.subjectIds" class="rounded border-gray-300 text-primary focus:ring-primary">
-                            <span class="text-sm text-gray-700" x-text="s.name + ' (' + s.level + ')'"></span>
-                        </label>
-                    </template>
-                </div>
-                <p x-show="teacherEditErrors.subjectids" x-text="teacherEditErrors.subjectids" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Matières enseignées <span class="text-danger">*</span></label>
+ <p class="text-xs text-slate-500 mb-2">Sélectionnez au moins une matière qualifiée.</p>
+ <div class="max-h-40 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
+ <template x-for="s in subjects" :key="s.id">
+ <label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <input type="checkbox" :value="s.id" x-model="editingTeacher.subjectIds" class="rounded-xl border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <span class="text-sm text-slate-700" x-text="s.name + ' (' + s.level + ')'"></span>
+ </label>
+ </template>
+ </div>
+ <p x-show="teacherEditErrors.subjectids" x-text="teacherEditErrors.subjectids" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
-                <button type="button" x-on:click="closeEditTeacher()" class="btn-secondary">Annuler</button>
-                <button type="submit" :disabled="isSavingTeacherEdit" class="btn-primary">
-                    <span x-text="isSavingTeacherEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
-                </button>
-            </div>
-        </form>
-    </modal-shell>
+ <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+ <button type="button" x-on:click="closeEditTeacher()" class="btn-secondary">Annuler</button>
+ <button type="submit" :disabled="isSavingTeacherEdit" class="btn-primary">
+ <span x-text="isSavingTeacherEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
 
-    <!-- Confirmation : fiche modifiée -->
-    <modal-shell open="showTeacherEditedDialog" size="md" on-close="showTeacherEditedDialog = false" title="Fiche modifiée">
-        <confirm-dialog-body close-action="showTeacherEditedDialog = false">
-            La fiche a bien été mise à jour.
-        </confirm-dialog-body>
-    </modal-shell>
+ <!-- Confirmation : fiche modifiée -->
+ <modal-shell open="showTeacherEditedDialog" size="md" on-close="showTeacherEditedDialog = false" title="Fiche modifiée">
+ <confirm-dialog-body close-action="showTeacherEditedDialog = false">
+ La fiche a bien été mise à jour.
+ </confirm-dialog-body>
+ </modal-shell>
 
-    <!-- Confirmation : suppression de la fiche enseignant -->
-    <modal-shell open="deletingTeacherRecord" on-close="closeDeleteTeacher()" size="md">
-        <modal-title>Supprimer la fiche</modal-title>
-        <modal-subtitle>
-            <span class="font-semibold text-gray-900" x-text="deletingTeacherRecord ? deletingTeacherRecord.fullName : ''"></span>
-            sera archivée et n'apparaîtra plus dans la liste des enseignants.
-        </modal-subtitle>
+ <!-- Confirmation : suppression de la fiche enseignant -->
+ <modal-shell open="deletingTeacherRecord" on-close="closeDeleteTeacher()" size="md">
+ <modal-title>Supprimer la fiche</modal-title>
+ <modal-subtitle>
+ <span class="font-semibold text-slate-900" x-text="deletingTeacherRecord ? deletingTeacherRecord.fullName : ''"></span>
+ sera archivée et n'apparaîtra plus dans la liste des enseignants.
+ </modal-subtitle>
 
-        <div x-show="deleteTeacherRecordError" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteTeacherRecordError"></div>
+ <div x-show="deleteTeacherRecordError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteTeacherRecordError"></div>
 
-        <p class="text-sm text-gray-500">
-            Réservé à une fiche créée par pure erreur de saisie : impossible si une attribution classe/matière existe déjà pour cet enseignant.
-        </p>
+ <p class="text-sm text-slate-500">
+ Réservé à une fiche créée par pure erreur de saisie : impossible si une attribution classe/matière existe déjà pour cet enseignant.
+ </p>
 
-        <div class="mt-6 flex justify-end gap-3">
-            <button type="button" x-on:click="closeDeleteTeacher()" class="btn-secondary">Annuler</button>
-            <button type="button" x-on:click="confirmDeleteTeacher()" :disabled="isDeletingTeacherRecord" class="btn-danger">
-                <span x-text="isDeletingTeacherRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
-            </button>
-        </div>
-    </modal-shell>
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeDeleteTeacher()" class="btn-secondary">Annuler</button>
+ <button type="button" x-on:click="confirmDeleteTeacher()" :disabled="isDeletingTeacherRecord" class="btn-danger">
+ <span x-text="isDeletingTeacherRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
+ </button>
+ </div>
+ </modal-shell>
 
-    <!-- Confirmation : suppression d'une fiche enseignant -->
-    <modal-shell open="showTeacherDeletedDialog" size="md" on-close="showTeacherDeletedDialog = false" title="Fiche supprimée">
-        <confirm-dialog-body close-action="showTeacherDeletedDialog = false">
-            La fiche a bien été supprimée.
-        </confirm-dialog-body>
-    </modal-shell>
+ <!-- Confirmation : suppression d'une fiche enseignant -->
+ <modal-shell open="showTeacherDeletedDialog" size="md" on-close="showTeacherDeletedDialog = false" title="Fiche supprimée">
+ <confirm-dialog-body close-action="showTeacherDeletedDialog = false">
+ La fiche a bien été supprimée.
+ </confirm-dialog-body>
+ </modal-shell>
 
-    <!-- Création d'une fiche enseignant (JGK-D03) -->
-    <modal-shell open="isCreateOpen" title="Ajouter un enseignant">
-        <modal-subtitle>Le matricule sera généré automatiquement à l'enregistrement.</modal-subtitle>
+ <!-- Création d'une fiche enseignant (JGK-D03) -->
+ <modal-shell open="isCreateOpen" title="Ajouter un enseignant">
+ <modal-subtitle>Le matricule sera généré automatiquement à l'enregistrement.</modal-subtitle>
 
-        <div x-show="createErrors.global" x-cloak class="mb-4 rounded-md border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+ <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
 
-        <form x-on:submit.prevent="submitCreate()" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Nom complet <span class="text-danger">*</span></label>
-                <input type="text" x-model="newTeacher.fullName" required class="input-field">
-                <p x-show="createErrors.fullname" x-text="createErrors.fullname" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <form x-on:submit.prevent="submitCreate()" class="space-y-4">
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Nom complet <span class="text-danger">*</span></label>
+ <input type="text" x-model="newTeacher.fullName" required class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="createErrors.fullname" x-text="createErrors.fullname" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">E-mail <span class="text-danger">*</span></label>
-                <input type="email" x-model="newTeacher.email" required class="input-field">
-                <p x-show="createErrors.email" x-text="createErrors.email" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">E-mail <span class="text-danger">*</span></label>
+ <input type="email" x-model="newTeacher.email" required class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="createErrors.email" x-text="createErrors.email" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Téléphone</label>
-                <input type="text" x-model="newTeacher.phone" class="input-field">
-                <p x-show="createErrors.phone" x-text="createErrors.phone" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Téléphone</label>
+ <input type="text" x-model="newTeacher.phone" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="createErrors.phone" x-text="createErrors.phone" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Date de naissance <span class="text-danger">*</span></label>
-                <date-field model="newTeacher.birthDate" required="true" aria-label="Date de naissance" />
-                <p x-show="createErrors.birthdate" x-text="createErrors.birthdate" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Date de naissance <span class="text-danger">*</span></label>
+ <date-field model="newTeacher.birthDate" required="true" aria-label="Date de naissance" />
+ <p x-show="createErrors.birthdate" x-text="createErrors.birthdate" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Lieu de naissance</label>
-                <input type="text" x-model="newTeacher.birthPlace" class="input-field">
-                <p x-show="createErrors.birthplace" x-text="createErrors.birthplace" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Lieu de naissance</label>
+ <input type="text" x-model="newTeacher.birthPlace" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="createErrors.birthplace" x-text="createErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Photo</label>
-                <photo-dropzone preview="newTeacher.photoData ? ('data:image/jpeg;base64,' + newTeacher.photoData) : newTeacher.photoUrl"
-                                on-change="newTeacher.photoData = photoBase64" />
-                <div class="mt-3">
-                    <label class="block text-xs font-medium text-gray-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
-                    <input type="text" x-model="newTeacher.photoUrl" placeholder="https://…" class="input-field mt-1">
-                </div>
-                <p x-show="createErrors.photourl" x-text="createErrors.photourl" class="mt-1 text-xs text-danger"></p>
-                <p x-show="createErrors.photodata" x-text="createErrors.photodata" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Photo</label>
+ <photo-dropzone preview="newTeacher.photoData ? ('data:image/jpeg;base64,' + newTeacher.photoData) : newTeacher.photoUrl"
+ on-change="newTeacher.photoData = photoBase64" />
+ <div class="mt-3">
+ <label class="block text-xs font-medium text-slate-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
+ <input type="text" x-model="newTeacher.photoUrl" placeholder="https://…" class="input-field mt-1 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ </div>
+ <p x-show="createErrors.photourl" x-text="createErrors.photourl" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.photodata" x-text="createErrors.photodata" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Matières enseignées <span class="text-danger">*</span></label>
-                <p class="text-xs text-gray-500 mb-2">Sélectionnez au moins une matière qualifiée.</p>
-                <div class="max-h-40 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
-                    <template x-for="s in subjects" :key="s.id">
-                        <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                            <input type="checkbox" :value="s.id" x-model="newTeacher.subjectIds" class="rounded border-gray-300 text-primary focus:ring-primary">
-                            <span class="text-sm text-gray-700" x-text="s.name + ' (' + s.level + ')'"></span>
-                        </label>
-                    </template>
-                    <p x-show="subjects.length === 0" class="px-3 py-2 text-sm text-gray-400">Aucune matière : créez-en d'abord dans « Matières ».</p>
-                </div>
-                <p x-show="createErrors.subjectids" x-text="createErrors.subjectids" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Matières enseignées <span class="text-danger">*</span></label>
+ <p class="text-xs text-slate-500 mb-2">Sélectionnez au moins une matière qualifiée.</p>
+ <div class="max-h-40 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
+ <template x-for="s in subjects" :key="s.id">
+ <label class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 cursor-pointer transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <input type="checkbox" :value="s.id" x-model="newTeacher.subjectIds" class="rounded-xl border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <span class="text-sm text-slate-700" x-text="s.name + ' (' + s.level + ')'"></span>
+ </label>
+ </template>
+ <p x-show="subjects.length === 0" class="px-3 py-2 text-sm text-slate-400">Aucune matière : créez-en d'abord dans « Matières ».</p>
+ </div>
+ <p x-show="createErrors.subjectids" x-text="createErrors.subjectids" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <!-- Rattachement d'un compte de connexion (Directeur uniquement) : permet à l'enseignant de
-                 faire l'appel de ses classes (JGK-D06). Optionnel. -->
-            <div x-show="canLinkAccount" x-cloak>
-                <label class="block text-sm font-medium text-gray-700">Compte de connexion (optionnel)</label>
-                <p class="text-xs text-gray-500 mb-1">Rattacher un compte « Enseignant » pour qu'il puisse faire l'appel de ses classes.</p>
-                <select-field model="newTeacher.userId" placeholder="Aucun"
-                              options-expr="[{value:'', label:'Aucun'}].concat(eligibleAccounts.map(u => ({value: u.id, label: u.fullName + ' (' + u.email + ')'})))" />
-                <p x-show="createErrors.userid" x-text="createErrors.userid" class="mt-1 text-xs text-danger"></p>
-            </div>
+ <!-- Rattachement d'un compte de connexion (Directeur uniquement) : permet à l'enseignant de
+ faire l'appel de ses classes (JGK-D06). Optionnel. -->
+ <div x-show="canLinkAccount" x-cloak>
+ <label class="block text-sm font-medium text-slate-700">Compte de connexion (optionnel)</label>
+ <p class="text-xs text-slate-500 mb-1">Rattacher un compte « Enseignant » pour qu'il puisse faire l'appel de ses classes.</p>
+ <select-field model="newTeacher.userId" placeholder="Aucun"
+ options-expr="[{value:'', label:'Aucun'}].concat(eligibleAccounts.map(u => ({value: u.id, label: u.fullName + ' (' + u.email + ')'})))" />
+ <p x-show="createErrors.userid" x-text="createErrors.userid" class="mt-1 text-xs text-danger"></p>
+ </div>
 
-            <div class="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-4">
-                <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">Annuler</button>
-                <button type="submit" :disabled="isSubmitting" class="btn-primary">
-                    <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
-                </button>
-            </div>
-        </form>
-    </modal-shell>
+ <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+ <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">Annuler</button>
+ <button type="submit" :disabled="isSubmitting" class="btn-primary">
+ <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
 
-    <!-- Confirmation : enseignant ajouté -->
-    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Enseignant ajouté">
-        <confirm-dialog-body close-action="showAddedDialog = false"
-                             new-action="showAddedDialog = false; openCreate()" new-label="Nouvel enseignant">
-            La fiche de <span class="font-medium text-gray-900" x-text="addedTeacherName"></span> a bien été ajoutée et figure désormais dans la liste.
-        </confirm-dialog-body>
-    </modal-shell>
+ <!-- Confirmation : enseignant ajouté -->
+ <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Enseignant ajouté">
+ <confirm-dialog-body close-action="showAddedDialog = false"
+ new-action="showAddedDialog = false; openCreate()" new-label="Nouvel enseignant">
+ La fiche de <span class="font-medium text-slate-900" x-text="addedTeacherName"></span> a bien été ajoutée et figure désormais dans la liste.
+ </confirm-dialog-body>
+ </modal-shell>
 </div>

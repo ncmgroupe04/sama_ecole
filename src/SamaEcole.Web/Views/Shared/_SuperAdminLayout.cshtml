@@ -1,126 +1,126 @@
 <!DOCTYPE html>
 <html lang="fr" class="dark">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Console Super Admin - Sama Ecole</title>
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>@ViewData["Title"] - Console Super Admin - Sama Ecole</title>
+ <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
-    @* Même chaîne de chargement que _Layout.cshtml (voir son commentaire de tête) : auth.js/api.js
-       s'exécutent avant Alpine, require-session.js protège l'affichage, Alpine est auto-hébergé. *@
-    <script src="~/js/auth.js" asp-append-version="true"></script>
-    <script src="~/js/api.js" asp-append-version="true"></script>
-    <script src="~/js/require-session.js" asp-append-version="true"></script>
-    <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
+ @* Même chaîne de chargement que _Layout.cshtml (voir son commentaire de tête) : auth.js/api.js
+ s'exécutent avant Alpine, require-session.js protège l'affichage, Alpine est auto-hébergé. *@
+ <script src="~/js/auth.js" asp-append-version="true"></script>
+ <script src="~/js/api.js" asp-append-version="true"></script>
+ <script src="~/js/require-session.js" asp-append-version="true"></script>
+ <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
 </head>
 @* Cette console est TOUJOURS sombre — ce n'est pas un thème bascule par l'utilisateur (pas de
-   `dark:` variant Tailwind ici), donc aucune dépendance à darkMode dans tailwind.config.js et aucun
-   risque de régression sur le reste de l'application, qui n'utilise aucune classe `dark:`. *@
+ `dark:` variant Tailwind ici), donc aucune dépendance à darkMode dans tailwind.config.js et aucun
+ risque de régression sur le reste de l'application, qui n'utilise aucune classe `dark:`. *@
 <body class="h-screen flex overflow-hidden antialiased bg-zinc-950 text-zinc-100 font-sans" x-data="{ sidebarOpen: false }">
-    @await Html.PartialAsync("_IconSprite")
+ @await Html.PartialAsync("_IconSprite")
 
-    <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-20 bg-black/70 backdrop-blur-sm lg:hidden" x-on:click="sidebarOpen = false"></div>
+ <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-20 bg-black/70 backdrop-blur-sm lg:hidden" x-on:click="sidebarOpen = false"></div>
 
-    <!-- Barre latérale -->
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-           class="fixed inset-y-0 left-0 z-30 w-64 border-r border-zinc-800 bg-zinc-950/95 backdrop-blur transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full">
+ <!-- Barre latérale -->
+ <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+ class="fixed inset-y-0 left-0 z-30 w-64 border-r border-zinc-800 bg-zinc-950/95 backdrop-blur transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full">
 
-        <div class="flex items-center h-16 border-b border-zinc-800 px-5 gap-2.5 shrink-0">
-            <div class="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center ring-1 ring-sky-500/30" aria-hidden="true">
-                <icon name="globe" class="w-[18px] h-[18px]" />
-            </div>
-            <div class="min-w-0">
-                <p class="font-semibold text-sm text-white leading-tight truncate">Sama Ecole</p>
-                <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-500 leading-tight">Console Plateforme</p>
-            </div>
-        </div>
+ <div class="flex items-center h-16 border-b border-zinc-800 px-5 gap-2.5 shrink-0">
+ <div class="w-8 h-8 rounded-2xl bg-sky-500/15 text-sky-400 flex items-center justify-center ring-1 ring-sky-500/30" aria-hidden="true">
+ <icon name="globe" class="w-[18px] h-[18px]" />
+ </div>
+ <div class="min-w-0">
+ <p class="font-semibold text-sm text-white leading-tight truncate">Sama Ecole</p>
+ <p class="text-[11px] font-medium uppercase tracking-wider text-zinc-500 leading-tight">Console Plateforme</p>
+ </div>
+ </div>
 
-        @{
-            var path = Context.Request.Path.Value ?? "/";
-            const string SaLinkBase = "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors";
-            const string SaLinkIdle = $"{SaLinkBase} text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100";
-            const string SaLinkActive = $"{SaLinkBase} bg-sky-500/10 text-sky-400 ring-1 ring-inset ring-sky-500/20";
-        }
+ @{
+ var path = Context.Request.Path.Value ?? "/";
+ const string SaLinkBase = "flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-colors";
+ const string SaLinkIdle = $"{SaLinkBase} text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100";
+ const string SaLinkActive = $"{SaLinkBase} bg-sky-500/10 text-sky-400 ring-1 ring-inset ring-sky-500/20";
+ }
 
-        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            <a href="/admin" class="@(path == "/admin" ? SaLinkActive : SaLinkIdle)">
-                <icon name="dashboard" class="w-5 h-5 shrink-0" />
-                <span>Tableau de bord</span>
-            </a>
-            <a href="/admin/etablissements" class="@(path.StartsWith("/admin/etablissements") ? SaLinkActive : SaLinkIdle)">
-                <icon name="building" class="w-5 h-5 shrink-0" />
-                <span>Établissements</span>
-            </a>
-            <a href="/admin/facturation" class="@(path.StartsWith("/admin/facturation") ? SaLinkActive : SaLinkIdle)">
-                <icon name="wallet" class="w-5 h-5 shrink-0" />
-                <span>Abonnements &amp; Facturation</span>
-            </a>
-            <a href="/admin/securite" class="@(path.StartsWith("/admin/securite") ? SaLinkActive : SaLinkIdle)">
-                <icon name="shield" class="w-5 h-5 shrink-0" />
-                <span>Sécurité &amp; Logs</span>
-            </a>
+ <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+ <a href="/admin" class="@(path == "/admin" ? SaLinkActive : SaLinkIdle)">
+ <icon name="dashboard" class="w-5 h-5 shrink-0" />
+ <span>Tableau de bord</span>
+ </a>
+ <a href="/admin/etablissements" class="@(path.StartsWith("/admin/etablissements") ? SaLinkActive : SaLinkIdle)">
+ <icon name="building" class="w-5 h-5 shrink-0" />
+ <span>Établissements</span>
+ </a>
+ <a href="/admin/facturation" class="@(path.StartsWith("/admin/facturation") ? SaLinkActive : SaLinkIdle)">
+ <icon name="wallet" class="w-5 h-5 shrink-0" />
+ <span>Abonnements &amp; Facturation</span>
+ </a>
+ <a href="/admin/securite" class="@(path.StartsWith("/admin/securite") ? SaLinkActive : SaLinkIdle)">
+ <icon name="shield" class="w-5 h-5 shrink-0" />
+ <span>Sécurité &amp; Logs</span>
+ </a>
 
-            <div class="pt-3 mt-3 border-t border-zinc-800">
-                <a href="/admin/inscriptions" class="@(path.StartsWith("/admin/inscriptions") ? SaLinkActive : SaLinkIdle)">
-                    <icon name="document" class="w-5 h-5 shrink-0" />
-                    <span>Demandes d'inscription</span>
-                </a>
-            </div>
-        </nav>
+ <div class="pt-3 mt-3 border-t border-zinc-800">
+ <a href="/admin/inscriptions" class="@(path.StartsWith("/admin/inscriptions") ? SaLinkActive : SaLinkIdle)">
+ <icon name="document" class="w-5 h-5 shrink-0" />
+ <span>Demandes d'inscription</span>
+ </a>
+ </div>
+ </nav>
 
-        @* sessionMenu() est déjà enregistré globalement dans wwwroot/js/auth.js (utilisé par _Layout) :
-           on le réutilise tel quel, pas de duplication de logique de session. *@
-        <div class="p-3 border-t border-zinc-800 shrink-0" x-data="sessionMenu()">
-            <div class="flex items-center gap-3 rounded-lg px-2 py-2">
-                <div aria-hidden="true" class="w-9 h-9 shrink-0 rounded-full bg-sky-500/15 text-sky-400 ring-1 ring-sky-500/30 flex items-center justify-center text-sm font-semibold uppercase"
-                     x-text="email ? email[0] : '?'"></div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-zinc-100 truncate" x-text="email" x-bind:title="email"></p>
-                    <p class="text-xs text-zinc-500 truncate">Super Admin</p>
-                </div>
-                <button type="button" x-on:click="logout()" title="Se déconnecter" aria-label="Se déconnecter"
-                        class="p-1.5 text-zinc-500 hover:text-rose-400 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500">
-                    <icon name="sign-out" class="w-5 h-5" />
-                </button>
-            </div>
-        </div>
-    </aside>
+ @* sessionMenu() est déjà enregistré globalement dans wwwroot/js/auth.js (utilisé par _Layout) :
+ on le réutilise tel quel, pas de duplication de logique de session. *@
+ <div class="p-3 border-t border-zinc-800 shrink-0" x-data="sessionMenu()">
+ <div class="flex items-center gap-3 rounded-2xl px-2 py-2">
+ <div aria-hidden="true" class="w-9 h-9 shrink-0 rounded-full bg-sky-500/15 text-sky-400 ring-1 ring-sky-500/30 flex items-center justify-center text-sm font-semibold uppercase"
+ x-text="email ? email[0] : '?'"></div>
+ <div class="flex-1 min-w-0">
+ <p class="text-sm font-medium text-zinc-100 truncate" x-text="email" x-bind:title="email"></p>
+ <p class="text-xs text-zinc-500 truncate">Super Admin</p>
+ </div>
+ <button type="button" x-on:click="logout()" title="Se déconnecter" aria-label="Se déconnecter"
+ class="p-1.5 text-zinc-500 hover:text-rose-400 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500">
+ <icon name="sign-out" class="w-5 h-5" />
+ </button>
+ </div>
+ </div>
+ </aside>
 
-    <!-- Contenu principal -->
-    <div class="flex-1 flex flex-col h-full min-w-0">
-        <header class="h-16 shrink-0 flex items-center justify-between gap-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur px-4 lg:px-8">
-            <div class="flex items-center gap-3 min-w-0">
-                <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-zinc-400 hover:text-white rounded-md">
-                    <icon name="menu" class="w-6 h-6" />
-                </button>
-                <h1 class="text-sm font-semibold text-zinc-100 truncate">@ViewData["Title"]</h1>
-            </div>
+ <!-- Contenu principal -->
+ <div class="flex-1 flex flex-col h-full min-w-0">
+ <header class="h-16 shrink-0 flex items-center justify-between gap-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur px-4 lg:px-8">
+ <div class="flex items-center gap-3 min-w-0">
+ <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-zinc-400 hover:text-white rounded-xl">
+ <icon name="menu" class="w-6 h-6" />
+ </button>
+ <h1 class="text-sm font-semibold text-zinc-100 truncate">@ViewData["Title"]</h1>
+ </div>
 
-            <div class="flex items-center gap-4">
-                @* Réseau — même composant Alpine que _Layout (wwwroot/js/auth.js), restylé sombre. *@
-                <div x-data="networkStatus()" class="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500">
-                    <span class="w-1.5 h-1.5 rounded-full" :class="online ? 'bg-emerald-400' : 'bg-rose-400'"></span>
-                    <span x-text="online ? 'Connecté' : 'Hors ligne'"></span>
-                </div>
-                <span aria-disabled="true" title="Notifications — module à venir" class="p-1.5 text-zinc-600 cursor-not-allowed">
-                    <icon name="bell" class="w-5 h-5" />
-                </span>
-            </div>
-        </header>
+ <div class="flex items-center gap-4">
+ @* Réseau — même composant Alpine que _Layout (wwwroot/js/auth.js), restylé sombre. *@
+ <div x-data="networkStatus()" class="hidden sm:flex items-center gap-1.5 text-xs text-zinc-500">
+ <span class="w-1.5 h-1.5 rounded-full" :class="online ? 'bg-emerald-400' : 'bg-rose-400'"></span>
+ <span x-text="online ? 'Connecté' : 'Hors ligne'"></span>
+ </div>
+ <span aria-disabled="true" title="Notifications — module à venir" class="p-1.5 text-zinc-600 cursor-not-allowed">
+ <icon name="bell" class="w-5 h-5" />
+ </span>
+ </div>
+ </header>
 
-        @* Garde de CONFORT D'AFFICHAGE uniquement — même principe que registrationRequestsView()
-           (wwwroot/js/admin-registration-requests.js) : la vraie protection reste chaque contrôleur
-           API [Authorize(Roles = SuperAdmin)] (SchoolsController, etc.), pas ce x-show. Centralisée
-           ici plutôt que dupliquée dans chaque vue de la console. *@
-        <main class="flex-1 overflow-y-auto p-4 lg:p-8" x-data="{ isSuperAdmin: window.auth.role === 'SuperAdmin' }">
-            <div x-show="!isSuperAdmin" x-cloak class="max-w-lg mx-auto mt-16 text-center text-zinc-500">
-                Cet espace est réservé au Super Administrateur.
-            </div>
-            <div x-show="isSuperAdmin" x-cloak class="max-w-7xl mx-auto space-y-6">
-                @RenderBody()
-            </div>
-        </main>
-    </div>
-    @await RenderSectionAsync("Scripts", required: false)
+ @* Garde de CONFORT D'AFFICHAGE uniquement — même principe que registrationRequestsView()
+ (wwwroot/js/admin-registration-requests.js) : la vraie protection reste chaque contrôleur
+ API [Authorize(Roles = SuperAdmin)] (SchoolsController, etc.), pas ce x-show. Centralisée
+ ici plutôt que dupliquée dans chaque vue de la console. *@
+ <main class="flex-1 overflow-y-auto p-8 lg:p-10" x-data="{ isSuperAdmin: window.auth.role === 'SuperAdmin' }">
+ <div x-show="!isSuperAdmin" x-cloak class="max-w-lg mx-auto mt-16 text-center text-zinc-500">
+ Cet espace est réservé au Super Administrateur.
+ </div>
+ <div x-show="isSuperAdmin" x-cloak class="max-w-7xl mx-auto space-y-6">
+ @RenderBody()
+ </div>
+ </main>
+ </div>
+ @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
