@@ -10,7 +10,7 @@ namespace SamaEcole.Infrastructure.Documents;
 /// <summary>
 /// Bulletin de notes en PDF, format A5 portrait (ticket JGK-G03). Reproduit
 /// docs/design-references/bulletin-reference.png (AGENTS.md règle #12) : en-tête administratif
-/// IA/IEF/LYCEE DE, titre entre doubles filets, bloc d'identité encadré, tableau des disciplines avec
+/// IA/IEF/&lt;cycle&gt;, titre entre doubles filets, bloc d'identité encadré, tableau des disciplines avec
 /// appréciations, lignes TOTAL/Moyenne avec assiduité, rangée des distinctions, puis Décision du
 /// Conseil + Observations (gauche) et récapitulatif des moyennes + signature du Chef d'établissement
 /// avec emplacement de cachet (droite).
@@ -23,7 +23,7 @@ namespace SamaEcole.Infrastructure.Documents;
 /// Décision du Conseil (Admis/Redouble/Exclusion) et les Observations, elles, SONT modélisées
 /// (ReportCardRemark) — cochées/remplies si saisies via l'écran dédié, vides sinon.
 ///
-/// Le logo n'apparaît PAS : l'en-tête de la référence est purement administratif (IA/IEF/LYCEE DE),
+/// Le logo n'apparaît PAS : l'en-tête de la référence est purement administratif (IA/IEF/établissement),
 /// sans aucun logo. Le paramètre est conservé pour ne pas casser le contrat
 /// IReportCardPdfGenerator — il est simplement ignoré à la mise en page.
 /// </summary>
@@ -33,13 +33,12 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
     private const float RuleThickness = 0.75f;
 
     /// <summary>
-    /// Cycle primaire (barème /10) : le <see cref="ReportCardDto.GradingScale"/> vaut 10 pour le seul
-    /// cycle Primaire (résolu par cycle dans ReportCardDataService), 20 pour Collège &amp; Lycée — c'est
-    /// donc un signal fiable. Le primaire n'a ni coefficients, ni mentions/distinctions, ni appréciations
+    /// Cycle primaire, lu sur <see cref="ReportCardDto.Cycle"/> — la classe de l'élève, résolue dans
+    /// ReportCardDataService. Le primaire n'a ni coefficients, ni mentions/distinctions, ni appréciations
     /// (système réservé au secondaire, étape 3) : le tableau et la mise en page s'adaptent en conséquence,
     /// tandis que le rendu /20 reste strictement inchangé.
     /// </summary>
-    private bool IsPrimaire => reportCard.GradingScale == 10;
+    private bool IsPrimaire => reportCard.Cycle == CycleType.Primaire;
 
     public DocumentMetadata GetMetadata() => new()
     {
@@ -92,7 +91,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
     }
 
     /// <summary>
-    /// En-tête administratif de la référence : IA / IEF / LYCEE DE à gauche (en majuscules), année
+    /// En-tête administratif de la référence : IA / IEF / établissement à gauche (en majuscules), année
     /// scolaire et période à droite, alignées sur les deux premières lignes. Une valeur non renseignée
     /// laisse sa ligne vide après le libellé — jamais une valeur inventée.
     /// </summary>
@@ -105,10 +104,13 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
                 left.Item().Text($"IA : {Upper(reportCard.InspectionAcademie)}").FontSize(8.5f);
                 left.Item().Text($"IEF : {Upper(reportCard.InspectionEducationFormation)}").FontSize(8.5f);
 
-                // AUCUN repli sur le nom légal de l'école (Identité de l'établissement, utilisé sur le
-                // reçu) : ce champ n'a pas sa place sur le bulletin, même quand NomLycee est vide — la
-                // ligne s'imprime alors vide, exactement comme IA et IEF ci-dessus.
-                left.Item().Text($"LYCEE DE : {Upper(reportCard.NomLycee)}").FontSize(8.5f);
+                // Préfixe résolu par cycle en amont (SchoolHeading) : « ÉCOLE ÉLÉMENTAIRE DE » pour un
+                // CM2, « COLLÈGE DE » pour une 5e, « LYCÉE DE » pour une Terminale — le même
+                // établissement édite les trois. AUCUN repli sur le nom légal de l'école (Identité de
+                // l'établissement, utilisé sur le reçu) : ce champ n'a pas sa place sur le bulletin,
+                // même quand HeadingName est vide — la ligne s'imprime alors réduite à son préfixe,
+                // exactement comme IA et IEF ci-dessus s'impriment réduites au leur.
+                left.Item().Text($"{reportCard.HeadingPrefix} : {Upper(reportCard.HeadingName)}").FontSize(8.5f);
             });
 
             row.RelativeItem(2).Column(right =>

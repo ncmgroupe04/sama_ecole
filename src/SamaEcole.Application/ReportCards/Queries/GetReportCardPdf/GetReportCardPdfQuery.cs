@@ -39,16 +39,28 @@ public record ReportCardDto(
     string SchoolName,
     string? SchoolLogoUrl,
 
-    // En-tête administratif (lignes « IA : … », « IEF : … », « LYCEE DE : … » de la référence).
+    // En-tête administratif (lignes « IA : … », « IEF : … », « <cycle> DE : … » de la référence).
     // Renseigné dans Paramètres → Établissement ; null s'imprime en ligne vide, jamais inventé.
     string? InspectionAcademie,
     string? InspectionEducationFormation,
-    string? NomLycee,
+
+    // Troisième ligne, résolue par SchoolHeading : le préfixe suit le CYCLE de la classe de l'élève
+    // (« ÉCOLE ÉLÉMENTAIRE DE » / « COLLÈGE DE » / « LYCÉE DE »), et non un réglage global — un même
+    // établissement édite des bulletins de CM2 et de Terminale. HeadingName est le nom saisi par
+    // l'école, débarrassé du préfixe de cycle qu'elle avait pu y écrire elle-même.
+    string HeadingPrefix,
+    string? HeadingName,
 
     string StudentFullName,
     DateOnly BirthDate,
     string? BirthPlace,
     string ClassroomName,
+
+    // Cycle de la classe. Gouverne le libellé de l'en-tête (via HeadingPrefix) ET la variante de
+    // tableau retenue par ReportCardDocument — qui déduisait jusqu'ici le primaire de GradingScale == 10,
+    // un proxy incapable de distinguer Collège de Lycée (tous deux /20).
+    CycleType Cycle,
+
     string Matricule,
     int ClassSize,
 
@@ -243,11 +255,13 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             school.LogoUrl,
             school.InspectionAcademie,
             school.InspectionEducationFormation,
-            school.NomLycee,
+            SchoolHeading.PrefixFor(classroom.Cycle),
+            SchoolHeading.StripCyclePrefix(school.NomLycee),
             student.FullName,
             student.BirthDate,
             student.BirthPlace,
             classroom.Name,
+            classroom.Cycle,
             student.Matricule,
             classmateIds.Count,
             isRepeating,

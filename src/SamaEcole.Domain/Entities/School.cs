@@ -28,10 +28,16 @@ public class School : AuditableEntity
     public string? InspectionEducationFormation { get; set; }
 
     /// <summary>
-    /// Nom porté par la ligne « LYCEE DE : … » du bulletin (ex. « Popenguine »). Distinct de
-    /// <see cref="Name"/> : la raison sociale complète (« Complexe Privé… », affichée sur le reçu)
-    /// n'a pas sa place sur le bulletin. Tant que ce champ est vide, la ligne s'imprime vide — AUCUN
-    /// repli sur Name, même partiel (voir ReportCardDocument.ComposeHeader).
+    /// Nom porté par la troisième ligne de l'en-tête du bulletin (ex. « Popenguine »). SANS son préfixe
+    /// de cycle : celui-ci (« ÉCOLE ÉLÉMENTAIRE DE » / « COLLÈGE DE » / « LYCÉE DE ») est ajouté à
+    /// l'impression selon le cycle de la CLASSE de l'élève — un même établissement édite des bulletins
+    /// de CM2 comme de Terminale. Un préfixe malgré tout saisi ici est retiré par
+    /// <c>SchoolHeading.StripCyclePrefix</c>, sans quoi un bulletin de 6e afficherait
+    /// « COLLÈGE DE : LYCÉE DE POPENGUINE ».
+    ///
+    /// Distinct de <see cref="Name"/> : la raison sociale complète (« Complexe Privé… », affichée sur le
+    /// reçu) n'a pas sa place sur le bulletin. Tant que ce champ est vide, la ligne s'imprime réduite à
+    /// son préfixe — AUCUN repli sur Name, même partiel (voir ReportCardDocument.ComposeHeader).
     /// </summary>
     public string? NomLycee { get; set; }
 }

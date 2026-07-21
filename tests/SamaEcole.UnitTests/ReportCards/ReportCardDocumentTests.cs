@@ -1,6 +1,7 @@
 using FluentAssertions;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
+using SamaEcole.Domain.Enums;
 using SamaEcole.Infrastructure.Documents;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -36,11 +37,13 @@ public class ReportCardDocumentTests
             SchoolLogoUrl: null,
             InspectionAcademie: "Thies",
             InspectionEducationFormation: "Mbour 1",
-            NomLycee: "Popenguine",
+            HeadingPrefix: "LYCÉE DE",
+            HeadingName: "Popenguine",
             StudentFullName: "Élève de Test avec un Nom Assez Long",
             BirthDate: new DateOnly(2012, 3, 14),
             BirthPlace: "Saint-Louis",
             ClassroomName: "3e A",
+            Cycle: CycleType.Lycee,
             Matricule: "ELEV-2026-0001",
             ClassSize: 42,
             IsRepeating: false,
@@ -89,7 +92,7 @@ public class ReportCardDocumentTests
     [Fact]
     public void A_Primaire_Report_Card_On_A_Ten_Point_Scale_Fits_On_A_Single_A5_Page()
     {
-        var reportCard = BuildReportCard(12) with { GradingScale = 10 };
+        var reportCard = BuildReportCard(12) with { GradingScale = 10, Cycle = CycleType.Primaire };
 
         var pages = new ReportCardDocument(reportCard, logo: null)
             .GenerateImages(ImageGenerationSettings.Default).Count();
@@ -176,7 +179,7 @@ public class ReportCardDocumentTests
         {
             InspectionAcademie = null,
             InspectionEducationFormation = null,
-            NomLycee = null,
+            HeadingName = null,
             BirthPlace = null,
             Absences = null,
             Retards = null,

@@ -8,6 +8,7 @@ using SamaEcole.Domain.Enums;
 using SamaEcole.IntegrationTests.Common;
 using SamaEcole.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace SamaEcole.IntegrationTests.ReportCards;
@@ -30,6 +31,10 @@ public class GetReportCardPdfTests : IAsyncLifetime
     private static readonly Guid Trimestre1 = Guid.Parse("dddddddd-0000-0000-0000-00000000000d");
     private static readonly Guid Trimestre2 = Guid.Parse("dddddddd-0000-0000-0000-00000000000e");
     private static readonly Guid Matiere = Guid.Parse("eeeeeeee-0000-0000-0000-00000000000e");
+
+    // Seconde classe du MÊME établissement, sur un autre cycle : c'est tout l'objet du test d'en-tête.
+    private static readonly Guid ClassePrimaire = Guid.Parse("aaaaaaaa-0000-0000-0000-00000000000b");
+    private static readonly Guid ElevePrimaire = Guid.Parse("bbbbbbbb-0000-0000-0000-00000000000e");
 
     public async Task InitializeAsync()
     {
@@ -127,6 +132,55 @@ public class GetReportCardPdfTests : IAsyncLifetime
         reportCard.TermRecaps.Should().Contain(r => r.TermLabel == "1er trimestre" && r.Average == 14);
         reportCard.TermRecaps.Should().Contain(r => r.TermLabel == "2e trimestre" && r.Average == null);
         reportCard.AnnualAverage.Should().Be(14, "le seul trimestre noté détermine seul la moyenne annuelle à ce stade");
+    }
+
+    /// <summary>
+    /// L'en-tête du bulletin suit le CYCLE DE LA CLASSE de l'élève, pas un réglage global : dans le même
+    /// établissement, le bulletin d'un CM1 s'intitule « ÉCOLE ÉLÉMENTAIRE DE » là où celui d'une 3e
+    /// s'intitule « COLLÈGE DE » — un « LYCÉE DE » codé en dur s'imprimait auparavant sur les trois.
+    ///
+    /// Le nom est ici saisi AVEC son préfixe (« LYCÉE DE POPENGUINE »), cas parfaitement réel puisque le
+    /// champ est libre : il doit être nettoyé, sans quoi l'en-tête cumulerait deux cycles contradictoires.
+    /// </summary>
+    [Fact]
+    public async Task The_Heading_Follows_The_Cycle_Of_The_Student_Classroom()
+    {
+        await using (var owner = _db.NewOwnerContext())
+        {
+            var school = await owner.Schools.FirstAsync(s => s.Id == Ecole);
+            school.NomLycee = "LYCÉE DE POPENGUINE";
+
+            owner.Classrooms.Add(new Classroom
+            {
+                Id = ClassePrimaire, SchoolId = Ecole, Name = "CM1", Level = "Primaire",
+                Cycle = CycleType.Primaire, Capacity = 40
+            });
+            owner.Students.Add(new Student
+            {
+                Id = ElevePrimaire, SchoolId = Ecole, Matricule = "ELEV-2026-0004",
+                FullName = "Ndeye Primaire", BirthDate = new DateOnly(2016, 4, 4),
+                BirthPlace = "Dakar", Gender = "F", ClassroomId = ClassePrimaire
+            });
+
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(Ecole);
+        var handler = new GetReportCardPdfQueryHandler(new ReportCardDataService(new FakeMediator(db), db), new StubPdfGenerator(), Logo);
+
+        // EleveA appartient à la classe d'origine, restée sur le cycle par défaut (College).
+        await handler.Handle(new GetReportCardPdfQuery(EleveA, Trimestre1), CancellationToken.None);
+        var college = StubPdfGenerator.LastReportCard!;
+
+        await handler.Handle(new GetReportCardPdfQuery(ElevePrimaire, Trimestre1), CancellationToken.None);
+        var primaire = StubPdfGenerator.LastReportCard!;
+
+        college.HeadingPrefix.Should().Be("COLLÈGE DE");
+        primaire.HeadingPrefix.Should().Be("ÉCOLE ÉLÉMENTAIRE DE",
+            "le bulletin d'un CM1 ne doit jamais s'intituler LYCÉE, même dans un établissement qui en abrite un");
+
+        primaire.HeadingName.Should().Be("POPENGUINE",
+            "le préfixe saisi par l'école est retiré, sans quoi l'en-tête afficherait « ÉCOLE ÉLÉMENTAIRE DE : LYCÉE DE POPENGUINE »");
     }
 
     private sealed class StubTenantProvider(Guid? schoolId) : ITenantProvider
