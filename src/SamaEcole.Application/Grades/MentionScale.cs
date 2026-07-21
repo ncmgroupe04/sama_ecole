@@ -9,6 +9,10 @@ namespace SamaEcole.Application.Grades;
 /// si au moins une existe, sinon les valeurs par défaut du barème (même principe de secours que
 /// SchoolSettingsDefaults — une école neuve a toujours des mentions, même si personne n'y a touché).
 /// Partagé par GetGradeSummaryQueryHandler (choix de la mention) et GetMentionsQueryHandler (affichage).
+///
+/// Les seuils sortent TOUJOURS sur <see cref="MentionScales.Reference"/> (/20), jamais sur
+/// SchoolSettings.GradingScale : voir <see cref="MentionScales"/>. Un bulletin dont le barème diffère
+/// (Primaire /10) les transpose via <see cref="MentionScales.RescaleTo"/>.
 /// </summary>
 internal static class MentionScale
 {
@@ -26,7 +30,6 @@ internal static class MentionScale
             return stored.Select(m => (m.Label, m.MinAverage)).ToArray();
         }
 
-        var gradingScale = await GradingScaleGuard.ResolveScaleAsync(dbContext, cancellationToken);
-        return MentionDefaults.ForScale(gradingScale);
+        return MentionDefaults.ForScale(MentionScales.Reference);
     }
 }

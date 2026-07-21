@@ -8,27 +8,24 @@ using Microsoft.EntityFrameworkCore;
 namespace SamaEcole.Application.Grades;
 
 /// <summary>
-/// Plafond de notation applicable à une note.
+/// Plafond de notation applicable à une note : celui du CYCLE de la classe de l'élève (système
+/// hybride — Primaire /10, Collège &amp; Lycée /20), résolu par
+/// <see cref="ResolveScaleForStudentAsync"/>, <see cref="ResolveScaleForGradeAsync"/> ou
+/// <see cref="ResolveScaleForClassroomAsync"/> selon ce dont l'appelant dispose.
 ///
-/// Deux résolutions coexistent volontairement :
-/// <list type="bullet">
-///   <item><see cref="ResolveScaleAsync"/> — barème de l'ÉCOLE (SchoolSettings.GradingScale, Volume 1
-///   §8.2). Conservé tel quel : mentions, bulletin PDF (QuestPDF) et import de notes s'y appuient
-///   encore.</item>
-///   <item><see cref="ResolveScaleForStudentAsync"/> / <see cref="ResolveScaleForGradeAsync"/> — barème
-///   du CYCLE de la classe de l'élève (système hybride : Primaire /10, Collège &amp; Lycée /20). Utilisé
-///   par la SAISIE UNITAIRE d'une note (Create/Update), qui doit respecter le cycle de la classe
-///   concernée et non un réglage global d'école.</item>
-/// </list>
+/// TOUTES les entrées (saisie unitaire, import) et toutes les restitutions (fiche élève, bulletin
+/// PDF) passent par cette résolution. Le réglage d'école SchoolSettings.GradingScale ne gouverne
+/// plus aucune note — c'est pourquoi il n'est plus lu ici.
+///
+/// Les seuils de MENTION ne passent pas par cette classe : ils vivent sur
+/// <see cref="MentionScales.Reference"/> (/20) et sont transposés au barème d'un bulletin par
+/// <see cref="MentionScales.RescaleTo"/>.
+///
 /// Dans tous les cas, une note hors plage est une erreur de saisie sur le bon champ (422), pas une
 /// exception brute (AGENTS.md règle #9).
 /// </summary>
 internal static class GradingScaleGuard
 {
-    public static async Task<int> ResolveScaleAsync(IApplicationDbContext dbContext, CancellationToken cancellationToken)
-        => (await dbContext.SchoolSettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken))
-            ?.GradingScale ?? SchoolSettingsDefaults.GradingScale;
-
     /// <summary>Barème du cycle de la classe de l'élève. Élève ou classe introuvable → /20 (branche « Sinon »).</summary>
     public static async Task<int> ResolveScaleForStudentAsync(
         IApplicationDbContext dbContext, Guid studentId, CancellationToken cancellationToken)
@@ -78,9 +75,9 @@ internal static class GradingScaleGuard
 
     /// <summary>
     /// Contrôle partagé (Create/Update/Mention) qui rend l'erreur de saisie sur le bon champ (422). Message
-    /// NEUTRE volontairement, car le barème passé peut être celui de l'école (mention, via
-    /// <see cref="ResolveScaleAsync"/>) comme celui du cycle de la classe (saisie de note, via
-    /// <see cref="ResolveScaleForStudentAsync"/> / <see cref="ResolveScaleForGradeAsync"/>).
+    /// NEUTRE volontairement, car le barème passé peut être celui du cycle de la classe (saisie de note,
+    /// via <see cref="ResolveScaleForStudentAsync"/> / <see cref="ResolveScaleForGradeAsync"/>) comme le
+    /// barème de référence des mentions (<see cref="MentionScales.Reference"/>).
     /// </summary>
     public static void EnsureWithinScale(decimal value, int gradingScale, string propertyName)
     {

@@ -13,8 +13,10 @@ public class CreateMentionCommandHandler(IApplicationDbContext dbContext, ITenan
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
 
-        var gradingScale = await GradingScaleGuard.ResolveScaleAsync(dbContext, cancellationToken);
-        GradingScaleGuard.EnsureWithinScale(request.MinAverage, gradingScale, nameof(request.MinAverage));
+        // Un seuil de mention s'exprime sur le barème de RÉFÉRENCE (/20), pas sur celui de l'école :
+        // la mention n'existe qu'au secondaire, et une école restée à « 10 » plafonnait ici à 10 des
+        // seuils qui doivent pouvoir aller jusqu'à 20 (voir MentionScales).
+        GradingScaleGuard.EnsureWithinScale(request.MinAverage, MentionScales.Reference, nameof(request.MinAverage));
 
         // Un libellé en doublon viole l'index unique : SaveChangesAsync le traduit en
         // ConcurrencyConflictException (409), jamais en écrasement silencieux (AGENTS.md règle #5).

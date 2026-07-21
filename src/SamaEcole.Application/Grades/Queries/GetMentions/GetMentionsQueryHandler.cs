@@ -20,8 +20,9 @@ public class GetMentionsQueryHandler(IApplicationDbContext dbContext)
             return stored.Select(m => new MentionDto(m.Id, m.Label, m.MinAverage)).ToList();
         }
 
-        var gradingScale = await GradingScaleGuard.ResolveScaleAsync(dbContext, cancellationToken);
-        return MentionDefaults.ForScale(gradingScale)
+        // Seuils par défaut sur le barème de référence des mentions (/20), jamais sur
+        // SchoolSettings.GradingScale — voir MentionScales.
+        return MentionDefaults.ForScale(MentionScales.Reference)
             .Select(m => new MentionDto(null, m.Label, m.MinAverage))
             .ToList();
     }

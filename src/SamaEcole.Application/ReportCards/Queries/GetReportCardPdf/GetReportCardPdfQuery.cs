@@ -212,10 +212,15 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         // Appréciation par matière : la même échelle de mentions que la moyenne générale, appliquée à
         // la moyenne de CHAQUE matière — une seule source de vérité pour « comment se qualifie une
         // moyenne », aucun vocabulaire parallèle.
+        //
+        // Les seuils sortent sur /20 (MentionScales.Reference) : il faut donc les TRANSPOSER au barème
+        // du bulletin, sans quoi un CM2 noté /10 était jugé sur des seuils /20 — « Passable » (8/20)
+        // pour un 9/10, et aucune appréciation pour un 7,5/10 pourtant équivalent à 15/20.
         var mentionScale = await MentionScale.ResolveAsync(dbContext, cancellationToken);
+        var appreciationScale = MentionScales.RescaleTo(mentionScale, gradingScale);
         var subjectAppreciations = summary.Subjects.ToDictionary(
             s => s.SubjectId,
-            s => GradeCalculator.MentionFor(s.Average, mentionScale));
+            s => GradeCalculator.MentionFor(s.Average, appreciationScale));
 
         var (absences, retards, totalAbsences) = await CountAttendanceAsync(
             student.Id, student.ClassroomId, term, cancellationToken);
