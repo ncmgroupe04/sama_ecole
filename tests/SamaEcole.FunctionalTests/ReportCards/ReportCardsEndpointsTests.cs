@@ -61,7 +61,10 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private async Task<(Guid StudentId, Guid ClassroomId, Guid TermId)> SeedGradedStudentAsync(string directeurToken, string enseignantToken)
     {
         var classroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeurToken,
-            new { name = "CM2", level = "Primaire", capacity = 40 });
+            // Classe du SECONDAIRE : notes sur /20, tableau de bulletin complet (coefficients,
+            // appréciations, rangée des distinctions). Le rendu Primaire /10 est couvert par
+            // ReportCardDocumentTests et GetReportCardPdfTests.
+            new { name = "3e A", level = "Collège", capacity = 40 });
         var classroom = (await classroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
 
         var subjectResponse = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeurToken,
@@ -252,7 +255,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var (_, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
 
         var emptyClassroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeur,
-            new { name = "CM1", level = "Primaire", capacity = 40 });
+            new { name = "3e B", level = "Collège", capacity = 40 });
         var emptyClassroom = (await emptyClassroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
 
         var response = await SendAsync(HttpMethod.Get,

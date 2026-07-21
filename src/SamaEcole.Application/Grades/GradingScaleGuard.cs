@@ -69,9 +69,9 @@ internal static class GradingScaleGuard
         return ScaleForCycle(cycle);
     }
 
-    /// <summary>Plafond d'un cycle : Primaire /10, Collège &amp; Lycée (et cycle inconnu) /20.</summary>
+    /// <summary>Plafond d'un cycle : Maternelle &amp; Primaire /10, Collège &amp; Lycée (et cycle inconnu) /20.</summary>
     public static int ScaleForCycle(CycleType? cycle)
-        => cycle == CycleType.Primaire ? 10 : 20;
+        => cycle is { } c && c.UsesSimplifiedGrading() ? 10 : 20;
 
     /// <summary>
     /// Contrôle partagé (Create/Update/Mention) qui rend l'erreur de saisie sur le bon champ (422). Message

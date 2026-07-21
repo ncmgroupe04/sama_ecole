@@ -87,7 +87,8 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         SeedGradingContextAsync(string directeurToken)
     {
         var classroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeurToken,
-            new { name = "CM2", level = "Primaire", capacity = 40 });
+            // Classe du SECONDAIRE : le CSV importé porte des notes sur /20 (voir GradesEndpointsTests).
+            new { name = "3e A", level = "Collège", capacity = 40 });
         var classroom = (await classroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
 
         var subjectResponse = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeurToken,
@@ -190,7 +191,7 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
 
         // Une SECONDE classe, avec son propre élève — hors du périmètre de l'import ci-dessous.
         var otherClassroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeur,
-            new { name = "CM1", level = "Primaire", capacity = 40 });
+            new { name = "3e B", level = "Collège", capacity = 40 });
         var otherClassroom = (await otherClassroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
         var otherStudentResponse = await SendAsync(HttpMethod.Post, "/api/v1/students", directeur,
             new { fullName = "Élève d'une autre classe", birthDate = "2015-03-01", birthPlace = "Dakar", gender = "M", classroomId = otherClassroom.Id });

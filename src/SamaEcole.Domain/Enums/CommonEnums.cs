@@ -9,15 +9,36 @@ public enum EntityStatus
 
 /// <summary>
 /// Cycle d'enseignement d'une classe. Détermine notamment le barème de notation appliqué au bulletin :
-/// <c>Primaire</c> est noté sur /10, <c>College</c> et <c>Lycee</c> sur /20 (système sénégalais).
-/// Distinct du champ texte libre <see cref="SamaEcole.Domain.Entities.Classroom.Level"/>, qui reste la
-/// nomenclature d'affichage propre à chaque école (« CM2 A », « 3e B », « Terminale S2 »).
+/// <c>Maternelle</c> et <c>Primaire</c> sont notés sur /10, <c>College</c> et <c>Lycee</c> sur /20
+/// (système sénégalais). DÉRIVÉ du champ <see cref="SamaEcole.Domain.Entities.Classroom.Level"/> par
+/// <c>ClassroomCycle.CycleFor</c> — jamais saisi séparément, sous peine de voir les deux se contredire
+/// (c'est exactement ce qui a laissé toutes les classes sur College jusqu'au 2026-07-21).
 /// </summary>
 public enum CycleType
 {
     Primaire,
     College,
-    Lycee
+    Lycee,
+
+    /// <summary>
+    /// Préscolaire (Crèche, Maternelle). AJOUTÉ EN FIN d'énumération à dessein : les membres existants
+    /// gardent ainsi leur valeur entière, et <c>default(CycleType)</c> reste <see cref="Primaire"/> —
+    /// dont dépend le réglage de sentinelle de ClassroomConfiguration. La colonne étant persistée en
+    /// string, l'ordre n'a aucune incidence en base.
+    /// </summary>
+    Maternelle
+}
+
+public static class CycleTypeExtensions
+{
+    /// <summary>
+    /// Cycles à notation SIMPLIFIÉE : barème /10, moyenne simple sans coefficients, ni mentions ni
+    /// appréciations, et tableau de bulletin épuré. Une seule source de vérité pour cette distinction,
+    /// partagée par Application (GradingScaleGuard, GetGradeSummary) et Infrastructure
+    /// (ReportCardDocument) — sans quoi chacun réinventerait le test et finirait par diverger.
+    /// </summary>
+    public static bool UsesSimplifiedGrading(this CycleType cycle)
+        => cycle is CycleType.Primaire or CycleType.Maternelle;
 }
 
 public enum EnrollmentType

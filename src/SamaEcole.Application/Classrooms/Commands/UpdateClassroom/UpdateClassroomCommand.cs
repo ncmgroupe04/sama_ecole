@@ -1,3 +1,4 @@
+using SamaEcole.Domain.Enums;
 using MediatR;
 
 namespace SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
@@ -13,4 +14,5 @@ namespace SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
 public record UpdateClassroomCommand(Guid Id, string Name, string Level, int Capacity, uint RowVersion)
     : IRequest<ClassroomResult>;
 
-public record ClassroomResult(Guid Id, string Name, string Level, int Capacity, uint RowVersion);
+/// <summary><see cref="Cycle"/> est recalculé depuis le niveau à chaque correction — voir CreateClassroomResult.</summary>
+public record ClassroomResult(Guid Id, string Name, string Level, int Capacity, CycleType Cycle, uint RowVersion);

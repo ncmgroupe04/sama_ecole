@@ -22,15 +22,16 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
             throw new KeyNotFoundException($"Trimestre {request.TermId} introuvable dans votre établissement.");
         }
 
-        // Cycle de la classe de l'élève : Primaire calcule une moyenne SIMPLE sur /10, sans coefficients
-        // ni mention (ceux-ci n'appartiennent qu'au secondaire) ; Collège & Lycée conservent la moyenne
-        // pondérée sur /20. Projection nullable : un élève sans classe → null → traité comme secondaire.
+        // Cycle de la classe de l'élève : Maternelle & Primaire calculent une moyenne SIMPLE sur /10,
+        // sans coefficients ni mention (ceux-ci n'appartiennent qu'au secondaire) ; Collège & Lycée
+        // conservent la moyenne pondérée sur /20. Projection nullable : un élève sans classe → null →
+        // traité comme secondaire.
         var cycle = await dbContext.Students.AsNoTracking()
             .Where(s => s.Id == request.StudentId)
             .Join(dbContext.Classrooms.AsNoTracking(),
                 s => s.ClassroomId, c => c.Id, (s, c) => (CycleType?)c.Cycle)
             .FirstOrDefaultAsync(cancellationToken);
-        var isPrimaire = cycle == CycleType.Primaire;
+        var isPrimaire = cycle is { } c && c.UsesSimplifiedGrading();
 
         var rows = await (
             from g in dbContext.Grades.AsNoTracking()

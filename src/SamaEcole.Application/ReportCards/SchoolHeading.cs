@@ -1,5 +1,4 @@
-using System.Globalization;
-using System.Text;
+using SamaEcole.Application.Common;
 using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.ReportCards;
@@ -31,6 +30,7 @@ public static class SchoolHeading
     /// </summary>
     public static string PrefixFor(CycleType cycle) => cycle switch
     {
+        CycleType.Maternelle => "ÉCOLE MATERNELLE DE",
         CycleType.Primaire => "ÉCOLE ÉLÉMENTAIRE DE",
         CycleType.College => "COLLÈGE DE",
         _ => "LYCÉE DE"
@@ -41,8 +41,11 @@ public static class SchoolHeading
     [
         ["ECOLE", "ELEMENTAIRE"],
         ["ECOLE", "PRIMAIRE"],
+        ["ECOLE", "MATERNELLE"],
         ["COLLEGE"],
         ["LYCEE"],
+        ["MATERNELLE"],
+        ["CRECHE"],
         ["CEM"],
         ["ECOLE"]
     ];
@@ -73,7 +76,7 @@ public static class SchoolHeading
 
         var consumed = CycleWords
             .FirstOrDefault(words => words.Length <= tokens.Length
-                                     && Enumerable.Range(0, words.Length).All(i => Fold(tokens[i]) == words[i]))
+                                     && Enumerable.Range(0, words.Length).All(i => TextFolding.Fold(tokens[i]) == words[i]))
             ?.Length ?? 0;
 
         if (consumed == 0)
@@ -84,11 +87,11 @@ public static class SchoolHeading
         // Liaison « DE »/« DU »/« DES » en mot séparé, ou « D' » collée au nom (« LYCÉE D'ABC » → « ABC »).
         if (consumed < tokens.Length)
         {
-            if (Connectors.Contains(Fold(tokens[consumed])))
+            if (Connectors.Contains(TextFolding.Fold(tokens[consumed])))
             {
                 consumed++;
             }
-            else if (Fold(tokens[consumed]) is ['D', '\'' or '’', _, ..])
+            else if (TextFolding.Fold(tokens[consumed]) is ['D', '\'' or '’', _, ..])
             {
                 tokens[consumed] = tokens[consumed][2..];
             }
@@ -97,25 +100,5 @@ public static class SchoolHeading
         var remaining = string.Join(' ', tokens[consumed..]);
 
         return string.IsNullOrWhiteSpace(remaining) ? original : remaining;
-    }
-
-    /// <summary>
-    /// Forme de COMPARAISON d'un mot : majuscules, accents retirés. Sert uniquement à reconnaître un mot
-    /// de cycle — la valeur imprimée reste toujours la saisie d'origine de l'école.
-    /// </summary>
-    private static string Fold(string token)
-    {
-        var decomposed = token.ToUpperInvariant().Normalize(NormalizationForm.FormD);
-
-        var builder = new StringBuilder(decomposed.Length);
-        foreach (var c in decomposed)
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-            {
-                builder.Append(c);
-            }
-        }
-
-        return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 }

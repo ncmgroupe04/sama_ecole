@@ -13,12 +13,22 @@ namespace SamaEcole.UnitTests.ReportCards;
 public class SchoolHeadingTests
 {
     [Theory]
+    [InlineData(CycleType.Maternelle, "ÉCOLE MATERNELLE DE")]
     [InlineData(CycleType.Primaire, "ÉCOLE ÉLÉMENTAIRE DE")]
     [InlineData(CycleType.College, "COLLÈGE DE")]
     [InlineData(CycleType.Lycee, "LYCÉE DE")]
     public void PrefixFor_Follows_The_Classroom_Cycle(CycleType cycle, string expected)
     {
         SchoolHeading.PrefixFor(cycle).Should().Be(expected);
+    }
+
+    /// <summary>Tout cycle doit porter un libellé propre — un membre ajouté sans libellé retomberait sur « LYCÉE DE ».</summary>
+    [Fact]
+    public void PrefixFor_Covers_Every_Cycle_Without_Falling_Back_Silently()
+    {
+        var prefixes = Enum.GetValues<CycleType>().Select(SchoolHeading.PrefixFor).ToList();
+
+        prefixes.Should().OnlyHaveUniqueItems("chaque cycle a son propre en-tête ; un doublon trahit un membre non traité");
     }
 
     /// <summary>
@@ -36,6 +46,8 @@ public class SchoolHeadingTests
     [InlineData("LYCÉE D'EXCELLENCE", "EXCELLENCE")]         // Liaison « D' » collée au nom.
     [InlineData("Lycée Popenguine", "Popenguine")]           // Sans liaison du tout.
     [InlineData("  Lycée   de   Popenguine  ", "Popenguine")]
+    [InlineData("École Maternelle de Saly", "Saly")]         // Cycle Maternelle (préfixe en deux mots).
+    [InlineData("Crèche de Ngaparou", "Ngaparou")]
     public void StripCyclePrefix_Removes_A_Cycle_Prefix_Typed_By_The_School(string saisi, string expected)
     {
         SchoolHeading.StripCyclePrefix(saisi).Should().Be(expected);

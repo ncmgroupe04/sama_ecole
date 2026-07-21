@@ -27,8 +27,8 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
     public Task DisposeAsync() => Task.CompletedTask;
 
     private record Tokens(string AccessToken, int ExpiresIn);
-    private record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount, uint RowVersion);
-    private record ClassroomUpdateResult(Guid Id, string Name, string Level, int Capacity, uint RowVersion);
+    private record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount, string? Cycle, uint RowVersion);
+    private record ClassroomUpdateResult(Guid Id, string Name, string Level, int Capacity, string? Cycle, uint RowVersion);
     private record StudentCreated(Guid Id, string Matricule);
     private record StudentItem(Guid Id, string Matricule, string FullName, string Gender, string ClassroomName);
     private record PagedStudents(List<StudentItem> Items, int TotalCount, int Page, int PageSize);
@@ -115,6 +115,70 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         var classrooms = (await response.Content.ReadFromJsonAsync<List<ClassroomDto>>())!;
 
         classrooms.Should().Contain(c => c.Id == created.Id && c.Name == "CM2 Apparition");
+    }
+
+    /// <summary>
+    /// Le cycle d'une classe se DÉDUIT de son niveau, côté serveur, et doit survivre à l'aller-retour
+    /// HTTP complet. Régression d'origine : Classroom.Cycle n'était branché sur aucune commande, donc
+    /// jamais écrit — toute classe, y compris de Primaire, restait sur le défaut College. Le bulletin
+    /// d'un CM2 s'intitulait alors « COLLÈGE DE », ses notes se saisissaient sur /20 au lieu de /10 et
+    /// sa moyenne se pondérait par des coefficients que le primaire n'utilise pas. Aucun test ne
+    /// couvrait le cycle jusqu'ici, ce qui a laissé passer le bug jusqu'à l'impression d'un bulletin.
+    /// </summary>
+    [Theory]
+    [InlineData("Primaire", "Primaire")]
+    [InlineData("Collège", "College")]
+    [InlineData("Lycée", "Lycee")]
+    [InlineData("Maternelle", "Maternelle")]
+    [InlineData("Crèche", "Maternelle")]
+    public async Task Created_Classroom_Should_Derive_Its_Cycle_From_Its_Level(string level, string expectedCycle)
+    {
+        var token = await AccessTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", token, new
+        {
+            name = $"Cycle {level} {Guid.NewGuid():N}"[..24],
+            level,
+            capacity = 40
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = (await response.Content.ReadFromJsonAsync<ClassroomDto>())!;
+        created.Cycle.Should().Be(expectedCycle, "la réponse de création annonce le cycle déduit");
+
+        // Et surtout : le cycle a bien été PERSISTÉ, pas seulement calculé pour la réponse.
+        var list = await SendAsync(HttpMethod.Get, "/api/v1/classrooms", token);
+        var classrooms = (await list.Content.ReadFromJsonAsync<List<ClassroomDto>>())!;
+
+        classrooms.Should().ContainSingle(c => c.Id == created.Id)
+            .Which.Cycle.Should().Be(expectedCycle);
+    }
+
+    /// <summary>
+    /// Corriger le niveau d'une classe saisie par erreur doit RE-dériver son cycle : sans cela la
+    /// correction resterait cosmétique et le bulletin garderait l'en-tête et le barème d'origine.
+    /// </summary>
+    [Fact]
+    public async Task Updating_The_Level_Should_Re_Derive_The_Cycle()
+    {
+        var directeur = await AccessTokenAsync();
+        var created = await CreateClassroomAsync(directeur, "6e Saisie Erronee");
+        var classroom = await FetchClassroomAsync(directeur, created.Id);
+
+        classroom.Cycle.Should().Be("Primaire", "le helper crée la classe avec le niveau « Primaire »");
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/classrooms/{classroom.Id}", directeur, new
+        {
+            name = "6e Saisie Corrigee",
+            level = "Collège",
+            capacity = 40,
+            rowVersion = classroom.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = (await response.Content.ReadFromJsonAsync<ClassroomUpdateResult>())!;
+
+        updated.Cycle.Should().Be("College", "le cycle suit le niveau corrigé, il ne reste pas figé sur Primaire");
     }
 
     [Fact]

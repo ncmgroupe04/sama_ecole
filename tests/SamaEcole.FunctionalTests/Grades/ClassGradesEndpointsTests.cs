@@ -64,7 +64,8 @@ public class ClassGradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private async Task<(Guid ClassroomId, Guid StudentId, Guid SubjectId, Guid TermId)> SeedGradingContextAsync(string directeurToken)
     {
         var classroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeurToken,
-            new { name = "CM2", level = "Primaire", capacity = 40 });
+            // Classe du SECONDAIRE : notes saisies sur /20 (voir GradesEndpointsTests).
+            new { name = "3e A", level = "Collège", capacity = 40 });
         var classroom = (await classroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
 
         var subjectResponse = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeurToken,

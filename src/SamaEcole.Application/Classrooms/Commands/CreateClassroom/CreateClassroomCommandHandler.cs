@@ -14,11 +14,17 @@ public class CreateClassroomCommandHandler(
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
 
+        var level = request.Level.Trim();
+
         var classroom = new Classroom
         {
             SchoolId = schoolId,
             Name = request.Name.Trim(),
-            Level = request.Level.Trim(),
+            Level = level,
+            // Cycle DÉRIVÉ du niveau, jamais saisi séparément (voir ClassroomCycle) : c'est son absence
+            // ici qui laissait toute classe de Primaire sur le défaut College — bulletin intitulé
+            // « COLLÈGE DE », notes sur /20 et moyenne pondérée, pour un CM2.
+            Cycle = ClassroomCycle.CycleFor(level),
             Capacity = request.Capacity
         };
 
@@ -29,6 +35,6 @@ public class CreateClassroomCommandHandler(
         // silencieux ni un 500 (AGENTS.md règle #5).
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new CreateClassroomResult(classroom.Id, classroom.Name, classroom.Level, classroom.Capacity);
+        return new CreateClassroomResult(classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle);
     }
 }

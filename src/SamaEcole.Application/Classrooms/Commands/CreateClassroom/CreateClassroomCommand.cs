@@ -1,3 +1,4 @@
+using SamaEcole.Domain.Enums;
 using MediatR;
 
 namespace SamaEcole.Application.Classrooms.Commands.CreateClassroom;
@@ -14,4 +15,9 @@ public record CreateClassroomCommand : IRequest<CreateClassroomResult>
     public int Capacity { get; init; }
 }
 
-public record CreateClassroomResult(Guid Id, string Name, string Level, int Capacity);
+/// <summary>
+/// <see cref="Cycle"/> est DÉRIVÉ du niveau par le handler (ClassroomCycle), jamais envoyé par le
+/// client : il est renvoyé ici pour que l'appelant sache immédiatement quel barème et quel en-tête de
+/// bulletin sa classe vient de recevoir — il n'a aucun moyen de le déduire lui-même.
+/// </summary>
+public record CreateClassroomResult(Guid Id, string Name, string Level, int Capacity, CycleType Cycle);

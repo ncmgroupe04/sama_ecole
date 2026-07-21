@@ -33,12 +33,13 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
     private const float RuleThickness = 0.75f;
 
     /// <summary>
-    /// Cycle primaire, lu sur <see cref="ReportCardDto.Cycle"/> — la classe de l'élève, résolue dans
-    /// ReportCardDataService. Le primaire n'a ni coefficients, ni mentions/distinctions, ni appréciations
-    /// (système réservé au secondaire, étape 3) : le tableau et la mise en page s'adaptent en conséquence,
-    /// tandis que le rendu /20 reste strictement inchangé.
+    /// Cycle à notation simplifiée (Maternelle, Primaire), lu sur <see cref="ReportCardDto.Cycle"/> — la
+    /// classe de l'élève, résolue dans ReportCardDataService. Ces cycles n'ont ni coefficients, ni
+    /// mentions/distinctions, ni appréciations (système réservé au secondaire, étape 3) : le tableau et
+    /// la mise en page s'adaptent en conséquence, tandis que le rendu /20 reste strictement inchangé.
+    /// Le prédicat vit sur CycleTypeExtensions, partagé avec GradingScaleGuard et GetGradeSummary.
     /// </summary>
-    private bool IsPrimaire => reportCard.Cycle == CycleType.Primaire;
+    private bool IsPrimaire => reportCard.Cycle.UsesSimplifiedGrading();
 
     public DocumentMetadata GetMetadata() => new()
     {
@@ -94,6 +95,10 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
     /// En-tête administratif de la référence : IA / IEF / établissement à gauche (en majuscules), année
     /// scolaire et période à droite, alignées sur les deux premières lignes. Une valeur non renseignée
     /// laisse sa ligne vide après le libellé — jamais une valeur inventée.
+    ///
+    /// Le LIBELLÉ de chaque ligne est en gras (IA, IEF, ÉCOLE ÉLÉMENTAIRE DE / COLLÈGE DE / LYCÉE DE),
+    /// la valeur renseignée par l'école reste en normal : c'est le contraste entre les deux qui fait
+    /// ressortir la structure administrative, là où tout mettre en gras la ferait disparaître.
     /// </summary>
     private void ComposeHeader(IContainer container)
     {
@@ -101,8 +106,8 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
         {
             row.RelativeItem(3).Column(left =>
             {
-                left.Item().Text($"IA : {Upper(reportCard.InspectionAcademie)}").FontSize(8.5f);
-                left.Item().Text($"IEF : {Upper(reportCard.InspectionEducationFormation)}").FontSize(8.5f);
+                left.Item().Element(c => HeaderLine(c, "IA", Upper(reportCard.InspectionAcademie)));
+                left.Item().Element(c => HeaderLine(c, "IEF", Upper(reportCard.InspectionEducationFormation)));
 
                 // Préfixe résolu par cycle en amont (SchoolHeading) : « ÉCOLE ÉLÉMENTAIRE DE » pour un
                 // CM2, « COLLÈGE DE » pour une 5e, « LYCÉE DE » pour une Terminale — le même
@@ -110,15 +115,28 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
                 // l'établissement, utilisé sur le reçu) : ce champ n'a pas sa place sur le bulletin,
                 // même quand HeadingName est vide — la ligne s'imprime alors réduite à son préfixe,
                 // exactement comme IA et IEF ci-dessus s'impriment réduites au leur.
-                left.Item().Text($"{reportCard.HeadingPrefix} : {Upper(reportCard.HeadingName)}").FontSize(8.5f);
+                left.Item().Element(c => HeaderLine(c, reportCard.HeadingPrefix, Upper(reportCard.HeadingName)));
             });
 
             row.RelativeItem(2).Column(right =>
             {
-                right.Item().AlignRight().Text($"Année Scolaire : {reportCard.SchoolYearLabel}").FontSize(8.5f);
+                right.Item().AlignRight().Text(t =>
+                {
+                    t.Span("Année Scolaire : ").Bold().FontSize(8.5f);
+                    t.Span(reportCard.SchoolYearLabel).FontSize(8.5f);
+                });
                 right.Item().AlignRight().Text(reportCard.TermLabel).Bold().FontSize(8.5f);
             });
         });
+
+        // Libellé en gras, valeur en normal — une seule définition pour les trois lignes de gauche,
+        // sans quoi la mise en forme dériverait de l'une à l'autre.
+        static void HeaderLine(IContainer container, string label, string value) =>
+            container.Text(text =>
+            {
+                text.Span($"{label} : ").Bold().FontSize(8.5f);
+                text.Span(value).FontSize(8.5f);
+            });
     }
 
     /// <summary>Titre centré entre DEUX doubles filets horizontaux, comme sur la référence.</summary>

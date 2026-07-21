@@ -25,6 +25,11 @@ public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext)
         classroom.Level = request.Level.Trim();
         classroom.Capacity = request.Capacity;
 
+        // Le cycle SUIT le niveau (ClassroomCycle) : corriger une classe passée par erreur en « Collège »
+        // vers « Primaire » doit rebasculer son bulletin, son barème et sa moyenne — sans quoi la
+        // correction resterait cosmétique et le cycle figé sur sa valeur d'origine.
+        classroom.Cycle = ClassroomCycle.CycleFor(classroom.Level);
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var newRowVersion = await dbContext.Classrooms.AsNoTracking()
@@ -32,6 +37,6 @@ public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext)
             .Select(c => EF.Property<uint>(c, "xmin"))
             .FirstAsync(cancellationToken);
 
-        return new ClassroomResult(classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, newRowVersion);
+        return new ClassroomResult(classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle, newRowVersion);
     }
 }

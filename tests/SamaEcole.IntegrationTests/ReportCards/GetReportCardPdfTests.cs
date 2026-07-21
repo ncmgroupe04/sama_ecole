@@ -42,7 +42,14 @@ public class GetReportCardPdfTests : IAsyncLifetime
 
         await using var owner = _db.NewOwnerContext();
         owner.Schools.Add(new School { Id = Ecole, Name = "École A" });
-        owner.Classrooms.Add(new Classroom { Id = Classe, SchoolId = Ecole, Name = "CM2", Level = "Primaire", Capacity = 40 });
+        // Classe du SECONDAIRE, cycle explicite : les tests de rang et de moyenne annuelle ci-dessous
+        // reposent sur la moyenne pondérée /20. Un « CM2 / Primaire » laissé sur le défaut College —
+        // ce qu'elle était — mêlait la nomenclature du primaire au comportement du collège.
+        owner.Classrooms.Add(new Classroom
+        {
+            Id = Classe, SchoolId = Ecole, Name = "3e A", Level = "Collège",
+            Cycle = CycleType.College, Capacity = 40
+        });
 
         owner.Students.AddRange(
             new Student { Id = EleveA, SchoolId = Ecole, Matricule = "ELEV-2026-0001", FullName = "Awa (meilleure)", BirthDate = new DateOnly(2015, 1, 1), BirthPlace = "Dakar", Gender = "F", ClassroomId = Classe },
@@ -168,7 +175,7 @@ public class GetReportCardPdfTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var handler = new GetReportCardPdfQueryHandler(new ReportCardDataService(new FakeMediator(db), db), new StubPdfGenerator(), Logo);
 
-        // EleveA appartient à la classe d'origine, restée sur le cycle par défaut (College).
+        // EleveA appartient à la classe d'origine, une 3e du cycle Collège.
         await handler.Handle(new GetReportCardPdfQuery(EleveA, Trimestre1), CancellationToken.None);
         var college = StubPdfGenerator.LastReportCard!;
 

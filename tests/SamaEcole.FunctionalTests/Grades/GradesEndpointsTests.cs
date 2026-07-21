@@ -71,7 +71,10 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
     private async Task<(Guid StudentId, Guid SubjectId, Guid TermId)> SeedGradingContextAsync(string directeurToken)
     {
         var classroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeurToken,
-            new { name = "CM2", level = "Primaire", capacity = 40 });
+            // Classe du SECONDAIRE : ces tests saisissent des notes sur /20. Le niveau détermine
+            // désormais le cycle (ClassroomCycle), et donc le barème — une classe « Primaire » plafonne
+            // à /10 et refuserait ces notes en 422.
+            new { name = "3e A", level = "Collège", capacity = 40 });
         var classroom = (await classroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
 
         var subjectResponse = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeurToken,
