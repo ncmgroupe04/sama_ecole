@@ -60,17 +60,17 @@
  hint="Créez vos matières et leurs coefficients pour préparer les bulletins." />
  </div>
 
- @* Grille principale : 4 colonnes fixes, une par catégorie de disciplines (Lettres & Langues /
+ @* Grille principale : 2 colonnes (2×2 pour les 4 catégories de disciplines — Lettres & Langues /
  Sciences & Technologies / Arts, Sport & Culture / Éveil & Petite Enfance — voir categoryFor
- dans subjects.js), pour exploiter la largeur de l'écran plutôt qu'empiler les niveaux
- verticalement. « Éveil & Petite Enfance » se décide par NIVEAU (Crèche/Maternelle), les 3
- autres par mot-clé dans le nom de la matière — un champ libre par école, donc une
- heuristique : chaque ligne garde son niveau en pastille, et une matière qui ne correspond à
- aucun mot-clé connu part dans otherSubjects plutôt que d'être mal classée en silence.
- items-stretch : les 4 cartes gardent la même hauteur, sm:/lg: (600px/1024px) et non
- md:/xl: — tailwind.config.js remplace entièrement les points de rupture par défaut de
- Tailwind (Volume 5 §2.4), md:/xl: n'existent pas dans ce projet. *@
- <div x-show="!isLoading && visibleSubjects.length > 0" x-cloak class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+ dans subjects.js), pour que chaque carte reste assez large (noms de matière longs, coefficient,
+ actions) plutôt que tassée sur 4 colonnes. « Éveil & Petite Enfance » se décide par NIVEAU
+ (Crèche/Maternelle), les 3 autres par mot-clé dans le nom de la matière — un champ libre par
+ école, donc une heuristique : chaque ligne garde son niveau en pastille, et une matière qui ne
+ correspond à aucun mot-clé connu part dans otherSubjects plutôt que d'être mal classée en silence.
+ items-stretch : les cartes d'une même rangée gardent la même hauteur, sm: (600px) et non
+ md: — tailwind.config.js remplace entièrement les points de rupture par défaut de
+ Tailwind (Volume 5 §2.4), md:/lg:/xl: n'apportent rien de plus ici. *@
+ <div x-show="!isLoading && visibleSubjects.length > 0" x-cloak class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch">
  <template x-for="group in categoryGroups" :key="group.category">
  <div class="bg-white rounded-xl border border-slate-100 p-6 h-full flex flex-col">
  <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
@@ -84,9 +84,9 @@
  <div class="divide-y divide-slate-100 flex-1 mt-1">
  <template x-for="(subject, index) in group.subjects" :key="subject.id || index">
  <div class="grid grid-cols-[2fr_1fr_auto] items-center gap-2 py-2.5 hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
- <span class="min-w-0 flex items-center gap-2 font-medium text-slate-900">
+ <span class="min-w-0 flex items-center gap-2 flex-wrap font-medium text-slate-900">
  <span aria-hidden="true" class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></span>
- <span class="truncate" x-text="displayName(subject.name)" :title="subject.name"></span>
+ <span class="break-words" x-text="displayName(subject.name)" :title="subject.name"></span>
  <badge variant="neutral" class="shrink-0 text-[10px]" x-text="subject.level"></badge>
  </span>
  <span class="text-right text-jgk-table font-semibold text-slate-700 whitespace-nowrap">

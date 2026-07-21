@@ -1,11 +1,13 @@
 document.addEventListener('alpine:init', () => {
-    // Ordre pédagogique des cycles ; un niveau hors nomenclature passe en fin, par ordre alphabétique.
-    const LEVEL_ORDER = ['Crèche', 'Maternelle', 'Primaire', 'Collège', 'Lycée'];
+    // Ordre d'affichage des cycles (voulu par l'école : Primaire/Collège/Lycée en avant, Crèche/
+    // Maternelle en dernier) ; un niveau hors nomenclature passe en fin, par ordre alphabétique.
+    const LEVEL_ORDER = ['Primaire', 'Collège', 'Lycée', 'Crèche', 'Maternelle'];
 
-    // Les 5 cycles affichés en colonnes fixes de la grille de l'écran Classes, gauche → droite.
-    // Coïncide avec LEVEL_ORDER : tout niveau hors de cette liste (donnée héritée, future
-    // nomenclature) reste géré par otherGroups plutôt que silencieusement perdu.
-    const MAIN_CYCLES = ['Crèche', 'Maternelle', 'Primaire', 'Collège', 'Lycée'];
+    // Les 5 cycles affichés dans la grille de l'écran Classes, dans l'ordre. Avec la grille sur
+    // 3 colonnes, les 3 premiers (Primaire/Collège/Lycée) forment la 1ère rangée et les 2 derniers
+    // (Crèche/Maternelle) la 2e. Coïncide avec LEVEL_ORDER : tout niveau hors de cette liste
+    // (donnée héritée, future nomenclature) reste géré par otherGroups plutôt que silencieusement perdu.
+    const MAIN_CYCLES = ['Primaire', 'Collège', 'Lycée', 'Crèche', 'Maternelle'];
 
     // Succession pédagogique RÉELLE (CE1 < CI alphabétiquement serait faux) : chaque classe est
     // rattachée au premier jeton qu'elle commence par (ex. « CE1 B » → CE1, « Terminale S1 » →
@@ -134,10 +136,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Grille principale de l'écran : toujours 5 colonnes, une par cycle (Crèche/Maternelle/
-         * Primaire/Collège/Lycée), même quand un cycle n'a encore aucune classe — la colonne reste
-         * visible avec son en-tête, plutôt que de faire sauter la mise en page selon les données
-         * du moment.
+         * Grille principale de l'écran : toujours les 5 cycles dans l'ordre MAIN_CYCLES (Primaire/
+         * Collège/Lycée puis Crèche/Maternelle), même quand un cycle n'a encore aucune classe — la
+         * carte reste visible avec son en-tête, plutôt que de faire sauter la mise en page selon
+         * les données du moment.
          */
         get mainGroups() {
             return MAIN_CYCLES.map((level) =>

@@ -66,17 +66,19 @@
  hint="Créez votre première classe pour commencer les inscriptions." />
  </div>
 
- @* Grille principale : 5 colonnes fixes, une par cycle (Crèche → Lycée), pour exploiter la
- largeur de l'écran plutôt qu'empiler les cycles verticalement (source d'un long défilement
- dès qu'une école dépasse une poignée de classes). Chaque classe est triée par succession
+ @* Grille des cycles : 3 colonnes max pour garder chaque carte assez large (nom de classe,
+ effectif, actions sans compression) plutôt que 5 colonnes tassées sur une seule rangée.
+ Ordre voulu par l'école (MAIN_CYCLES dans classrooms.js) : Primaire, Collège, Lycée en
+ 1ère rangée, Crèche et Maternelle en 2e rangée. Chaque classe est triée par succession
  pédagogique réelle (TPS, PS… puis CI, CP, CE1… puis 6e, 5e… puis Seconde, Première,
  Terminale — voir byGradeThenName dans classrooms.js), pas alphabétiquement.
- items-stretch : les 5 cartes gardent exactement la même hauteur (celle de la plus longue),
- pour que Crèche/Collège avec peu de classes ne cassent pas l'alignement visuel de la rangée.
+ items-stretch : les cartes d'une même rangée gardent exactement la même hauteur (celle de
+ la plus longue), pour que Crèche/Maternelle avec peu de classes ne cassent pas l'alignement
+ visuel de la rangée.
  sm:/lg: (600px/1024px) et non md:/xl: — tailwind.config.js REMPLACE entièrement les points
  de rupture par défaut de Tailwind (Volume 5 §2.4) ; md:/xl: n'existent pas dans ce projet et
  ne généreraient silencieusement aucun CSS. *@
- <div x-show="!isLoading && groups.length > 0" x-cloak class="p-6 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 items-stretch">
+ <div x-show="!isLoading && groups.length > 0" x-cloak class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
  <template x-for="cycle in mainGroups" :key="cycle.level">
  <div class="bg-white rounded-xl border border-slate-100 p-6 h-full flex flex-col">
  <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
