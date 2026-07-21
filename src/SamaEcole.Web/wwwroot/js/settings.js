@@ -1,24 +1,30 @@
 /**
  * Écran Paramètres — regroupe TOUT ce que le Directeur configure pour son établissement :
  *   1. Établissement : identité (nom, adresse, téléphone, logo) — API /schools/current.
- *   2. Configuration : barème, format de date, déconnexion auto, mensualités/an, formats de matricule
+ *   2. Configuration : format de date, déconnexion auto, mensualités/an, formats de matricule
  *      — API /schools/current/settings — et les mentions du bulletin — API /grades/mentions.
  *   3. Années scolaires : géré par schoolYearsView() (js/school-years.js), monté dans l'onglet.
  *
  * L'écriture est réservée au Directeur (l'API répond 403 aux autres). Les autres rôles VOIENT les
- * valeurs — le format de date et le barème pilotent tous les écrans — mais les champs sont en lecture
- * seule et les boutons d'enregistrement masqués. Confort d'affichage : l'API reste seule juge.
+ * valeurs — le format de date pilote tous les écrans — mais les champs sont en lecture seule et les
+ * boutons d'enregistrement masqués. Confort d'affichage : l'API reste seule juge.
  *
- * Exception ticket JGK-G02 (délégation FACULTATIVE, à la guise du Directeur de CHAQUE école — jamais
- * un rôle codé en dur) : le barème et les mentions du bulletin sont ÉCRITS par le Directeur, et par le
- * Secrétariat SEULEMENT si config.allowSecretaryToManageGrading est activé (canManageGradingConfig,
- * un getter — jamais une valeur figée au chargement). Ce booléen vit dans SchoolSettings et n'est
- * modifiable que par le Directeur, via la case à cocher du formulaire bundlé ci-dessous (saveConfig).
- * Le barème a son propre formulaire/bouton (saveGradingScale, PUT /schools/current/settings/grading-scale)
- * séparé du reste de la Configuration (saveConfig, PUT /schools/current/settings) : ce dernier reste
- * Directeur seul, sinon le Secrétariat gagnerait aussi la main sur les formats de matricule, la
- * déconnexion auto et les mensualités — cette même requête PUT est cependant la SEULE à pouvoir
- * changer allowSecretaryToManageGrading, d'où la case à cocher dans CE formulaire précisément.
+ * BARÈME DE NOTATION : ce n'est plus un réglage. Il découle du CYCLE de la classe
+ * (GradingScaleGuard.ScaleForCycle : Primaire /10, Collège & Lycée /20) et s'applique à la saisie des
+ * notes, à l'import, à la fiche élève et au bulletin PDF. Le sélecteur qui vivait dans cet écran a été
+ * retiré au profit d'une note explicative : il laissait croire qu'un réglage global pilotait les notes.
+ * config.gradingScale est TOUJOURS chargé et renvoyé tel quel par saveConfig — il sert encore de plafond
+ * aux seuils de mentions côté serveur (CreateMentionCommandHandler + MentionScale), d'où son usage
+ * résiduel dans le panneau Mentions. Ne pas le supprimer de l'état sans corriger cette validation.
+ *
+ * Ticket JGK-G02 (délégation FACULTATIVE, à la guise du Directeur de CHAQUE école — jamais un rôle
+ * codé en dur) : les mentions du bulletin sont ÉCRITES par le Directeur, et par le Secrétariat
+ * SEULEMENT si config.allowSecretaryToManageGrading est activé (canManageGradingConfig, un getter —
+ * jamais une valeur figée au chargement). Ce booléen vit dans SchoolSettings et n'est modifiable que
+ * par le Directeur, via la case à cocher du formulaire bundlé ci-dessous (saveConfig) : cette requête
+ * PUT reste Directeur seul, sinon le Secrétariat gagnerait aussi la main sur les formats de matricule,
+ * la déconnexion auto et les mensualités — et c'est pourtant la SEULE à pouvoir changer
+ * allowSecretaryToManageGrading, d'où la case à cocher dans CE formulaire précisément.
  *
  * Matrice d'autorisation "Photoshop" : même mécanique pour allowFinanceToModifyFees et
  * allowFinanceToDeleteFees (JGK-F01), lus par fees.js pour afficher/masquer les boutons Modifier et
@@ -60,15 +66,13 @@ document.addEventListener('alpine:init', () => {
         configSaving: false,
         configSaved: false,
 
-        // --- Barème (JGK-G02 : formulaire séparé, voir note en tête de fichier) ---
+        // --- Délégation de la configuration des notes (JGK-G02) ---
         // Getter, PAS une valeur figée au chargement : dépend de config.allowSecretaryToManageGrading,
         // que seul le Directeur peut basculer (case à cocher du formulaire Réglages ci-dessous).
+        // Ne gouverne plus que les mentions du bulletin (le barème n'est plus un réglage, voir en tête).
         get canManageGradingConfig() {
             return this.isDirecteur || (this.isSecretariat && this.config.allowSecretaryToManageGrading);
         },
-        gradingScaleErrors: {},
-        gradingScaleSaving: false,
-        gradingScaleSaved: false,
 
         // --- Mentions du bulletin (dans l'onglet Configuration) ---
         canViewMentions: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat' || window.auth.role === 'Enseignant',
@@ -198,25 +202,6 @@ document.addEventListener('alpine:init', () => {
                 this.configErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
             } finally {
                 this.configSaving = false;
-            }
-        },
-
-        // ---------------------------------------------------------------- Barème (JGK-G02)
-
-        async saveGradingScale() {
-            this.gradingScaleErrors = {};
-            this.gradingScaleSaved = false;
-            this.gradingScaleSaving = true;
-            try {
-                const saved = await window.api.put('/schools/current/settings/grading-scale', {
-                    gradingScale: this.config.gradingScale
-                });
-                this.config.gradingScale = saved.gradingScale;
-                this.gradingScaleSaved = true;
-            } catch (err) {
-                this.gradingScaleErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
-            } finally {
-                this.gradingScaleSaving = false;
             }
         },
 

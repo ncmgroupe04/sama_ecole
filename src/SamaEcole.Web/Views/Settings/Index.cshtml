@@ -1,6 +1,5 @@
 @{
  ViewData["Title"] = "Paramètres";
- var gradingScaleOptions = new List<SelectFieldOption> { new("20", "Sur 20"), new("10", "Sur 10") };
  var dateFormatOptions = new List<SelectFieldOption> {
  new("dd/MM/yyyy", "31/12/2026 (jj/MM/aaaa)"), new("dd MMMM yyyy", "31 décembre 2026 (jj mois aaaa)")
  };
@@ -186,28 +185,25 @@
  étroites empilées au centre. *@
  <div class="card">
 
- @* JGK-G02 : barème affiché en stat, éditable inline pour qui a canManageGradingConfig
- (Directeur + Secrétariat délégué — PUT /grading-scale, ressource propre séparée du reste
- des réglages, voir note en tête de settings.js). La bascule de délégation elle-même (à
- droite) n'est décidée que par le Directeur : PUT /schools/current/settings (saveConfig)
- est la SEULE requête à pouvoir l'écrire, jamais /grading-scale ni /subjects ni
- /grades/mentions — d'où l'appel direct à saveConfig() sur le switch, sans nouveau point
- d'entrée. *@
- <div class="p-6 border-b border-slate-200 bg-slate-50/50 rounded-t-xl flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
- <div class="flex flex-wrap items-center gap-4">
- <stat-card size="compact" label="Barème de notation actif" icon="book" accent="primary">
- <span x-text="`Sur ${config.gradingScale}`"></span>
- </stat-card>
-
- <form x-show="canManageGradingConfig" x-cloak
- x-on:submit.prevent="saveGradingScale()"
- class="flex items-center gap-2 pl-4 border-l border-slate-200">
- <select-field id="cfg-grading" model="config.gradingScale" aria-label="Modifier le barème"
- class="text-sm w-24 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" options="gradingScaleOptions" />
- <button type="submit" :disabled="gradingScaleSaving" class="btn-secondary text-xs whitespace-nowrap">
- <span x-text="gradingScaleSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
- </button>
- </form>
+ @* Le barème n'est PLUS un réglage d'établissement : il découle du cycle de la classe
+ (GradingScaleGuard.ScaleForCycle — Primaire /10, Collège & Lycée /20), appliqué par la
+ saisie de notes, l'import, la fiche élève et le bulletin PDF. Le sélecteur qui vivait ici
+ laissait croire l'inverse : on le remplace par une note explicative. La bascule de
+ délégation (à droite) n'est décidée que par le Directeur : PUT /schools/current/settings
+ (saveConfig) est la SEULE requête à pouvoir l'écrire, jamais /subjects ni /grades/mentions
+ — d'où l'appel direct à saveConfig() sur le switch, sans nouveau point d'entrée. *@
+ <div class="p-6 border-b border-slate-200 bg-slate-50/50 rounded-t-xl flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+ <div class="flex items-start gap-3 rounded-xl border-l-4 border-primary bg-primary-50 p-3 max-w-2xl">
+ <icon name="book" class="w-5 h-5 text-primary shrink-0 mt-0.5" />
+ <div class="text-sm text-primary-700">
+ <p class="font-medium">Barème de notation automatique</p>
+ <p class="text-xs mt-1">
+ Le barème s'adapte au cycle de chaque classe : <span class="font-semibold">sur 10</span>
+ au Primaire, <span class="font-semibold">sur 20</span> au Collège et au Lycée.
+ Aucun réglage n'est nécessaire — la saisie des notes, les moyennes et les bulletins
+ suivent automatiquement le cycle de la classe concernée.
+ </p>
+ </div>
  </div>
 
  @* Réservé au Directeur (docs/Volume_7_Security.md, JGK-G02, matrice d'autorisation
@@ -261,9 +257,6 @@
  </div>
  </div>
  </div>
- <p x-show="gradingScaleErrors.gradingscale || gradingScaleErrors.global" x-cloak
- class="px-4 pt-2 text-xs text-danger"
- x-text="gradingScaleErrors.gradingscale || gradingScaleErrors.global"></p>
 
  <!-- Corps : réglages généraux (gauche) et mentions du bulletin (droite) -->
  <div class="p-6 grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -451,13 +444,6 @@
  <modal-shell open="configSaved" size="md" on-close="configSaved = false" title="Modification enregistrée">
  <confirm-dialog-body close-action="configSaved = false">
  Les réglages de l'établissement ont bien été mis à jour.
- </confirm-dialog-body>
- </modal-shell>
-
- <!-- Confirmation : barème mis à jour -->
- <modal-shell open="gradingScaleSaved" size="md" on-close="gradingScaleSaved = false" title="Barème mis à jour">
- <confirm-dialog-body close-action="gradingScaleSaved = false">
- Le barème de notation est désormais sur <span class="font-medium text-slate-900" x-text="config.gradingScale"></span>.
  </confirm-dialog-body>
  </modal-shell>
 
