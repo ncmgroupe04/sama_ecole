@@ -84,8 +84,9 @@ document.addEventListener('alpine:init', () => {
         showAddedDialog: false,
         addedClassroomName: '',
 
-        // Corriger/archiver une classe déjà créée : réservé au Directeur et au Secrétariat côté
-        // serveur (ClassroomsController.ManageRoles) — ce booléen n'est qu'un confort d'affichage.
+        // Créer, corriger ou archiver une classe : réservé au Directeur et au Secrétariat côté
+        // serveur (ClassroomsController.ManageRoles) — l'Enseignant consulte l'arborescence des
+        // classes mais ne la modifie pas ; ce booléen n'est qu'un confort d'affichage.
         canManage: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
         // Édition (modale)

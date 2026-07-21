@@ -56,20 +56,22 @@ document.addEventListener('alpine:init', () => {
         showAddedDialog: false,
         addedStudentName: '',
 
-        // Corriger/archiver une fiche, et gérer le cycle de vie d'une inscription (annuler, déclarer
-        // un abandon/transfert) sont réservés au Directeur et au Secrétariat côté serveur
-        // (StudentsController.ManageRoles, EnrollmentsController.EnrollmentWriters) — confort d'affichage.
+        // Créer un élève, corriger/archiver une fiche, et gérer le cycle de vie d'une inscription
+        // (annuler, déclarer un abandon/transfert) sont réservés au Directeur et au Secrétariat côté
+        // serveur (StudentsController.ManageRoles, EnrollmentsController.EnrollmentWriters) —
+        // l'Enseignant ne fait que consulter ses classes ; confort d'affichage, la protection réelle
+        // est côté API.
         canManageStudent: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
-        // Saisir les observations du conseil (Blâme… Félicitations) reste réservé au Directeur/Enseignant
-        // côté serveur (ReportCardsController, ReportCardWriterRoles) — c'est une SAISIE, pas un simple
-        // téléchargement, jamais ouverte au Secrétariat.
+        // Saisir les observations du conseil (Blâme… Félicitations) est ouvert au Directeur, à
+        // l'Enseignant ET au Secrétariat côté serveur (ReportCardsController.ReportCardWriterRoles) —
+        // le Secrétariat assure ainsi le suivi administratif au même titre que la direction.
         // Jamais l'Enseignant (Volume 7 « Finance ») : studentDetail.payments vaut alors null côté API
         // (GetStudentDetailQueryHandler) — masquer l'onglet ici n'est qu'un confort d'affichage, la
         // protection réelle est l'absence de la donnée dans la réponse, pas ce booléen.
         canViewPayments: window.auth.role !== 'Enseignant',
 
-        canEditReportCardRemark: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant',
+        canEditReportCardRemark: window.auth.role === 'Directeur' || window.auth.role === 'Enseignant' || window.auth.role === 'Secretariat',
 
         // Télécharger le bulletin PDF (JGK-G03) est ouvert au Directeur, à l'Enseignant ET au
         // Secrétariat côté serveur (ReportCardsController.ReportCardDownloadRoles) — il compose les

@@ -19,7 +19,7 @@
  <h1 class="text-jgk-title font-bold text-slate-900">Classes</h1>
  <p class="text-jgk-subtitle text-slate-500 mt-1">Gérez l'arborescence et les capacités d'accueil.</p>
  </div>
- <button @@click="isCreateOpen = true" class="btn-primary">
+ <button x-show="canManage" x-cloak @@click="isCreateOpen = true" class="btn-primary">
  <icon name="plus" class="w-5 h-5" />
  Nouvelle classe
  </button>

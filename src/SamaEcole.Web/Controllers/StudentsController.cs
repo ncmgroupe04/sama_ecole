@@ -18,8 +18,9 @@ namespace SamaEcole.Web.Controllers;
 /// Contrôleur de référence : mince, aucune logique métier, traduit HTTP ↔ MediatR
 /// (AGENTS.md règle #8). Voir openapi.yaml pour le contrat complet, ticket JGK-D01.
 ///
-/// LECTURE et CRÉATION ouvertes à tout utilisateur authentifié (comportement historique inchangé).
-/// CORRIGER ou ARCHIVER une fiche déjà créée est réservé au Directeur et au Secrétariat.
+/// LECTURE ouverte à tout utilisateur authentifié (l'Enseignant consulte ses classes).
+/// CRÉER, CORRIGER ou ARCHIVER une fiche élève est réservé au Directeur et au Secrétariat —
+/// voir docs/Volume_7_Security.md §15 (matrice Élèves).
 /// </summary>
 [ApiController]
 [Route("api/v1/students")]
@@ -66,7 +67,9 @@ public class StudentsController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(new GetStudentDetailQuery(id), cancellationToken));
 
     [HttpPost]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<CreateStudentResult>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Create([FromBody] CreateStudentCommand command, CancellationToken cancellationToken)
     {

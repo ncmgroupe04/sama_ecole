@@ -215,20 +215,20 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     }
 
     [Fact]
-    public async Task A_Secretary_Must_Not_Edit_The_Report_Card_Remark()
+    public async Task A_Secretary_Can_Edit_The_Report_Card_Remark()
     {
-        // Contrairement au téléchargement, la saisie des observations du conseil reste réservée à
-        // Directeur/Enseignant (ReportCardWriterRoles) — le Secrétariat compose le bulletin, il ne
-        // l'écrit pas.
+        // Comme le téléchargement, la saisie des observations du conseil est ouverte au Secrétariat
+        // (ReportCardWriterRoles) — il assure le suivi administratif de la vie scolaire au même titre
+        // que la direction.
         var directeur = await DirecteurTokenAsync();
         var enseignant = await EnseignantTokenAsync();
         var (studentId, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
         var secretaire = await SecretaireTokenAsync();
 
         var response = await SendAsync(HttpMethod.Put, "/api/v1/report-cards/remark", secretaire,
-            new { studentId, termId, disciplinaryMention = (string?)null, councilDecision = (string?)null, observations = (string?)null });
+            new { studentId, termId, disciplinaryMention = (string?)null, councilDecision = (string?)null, observations = "RAS" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

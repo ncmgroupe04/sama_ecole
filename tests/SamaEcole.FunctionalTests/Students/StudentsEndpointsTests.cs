@@ -9,11 +9,12 @@ using Xunit;
 namespace SamaEcole.FunctionalTests.Students;
 
 /// <summary>
-/// Ticket JGK-D02 — PUT/DELETE /students/{id} contre un vrai PostgreSQL. La lecture (GET) et la
-/// création (POST) sont déjà couvertes indirectement par ClassroomsEndpointsTests et
-/// AuditLogsEndpointsTests ; ce fichier couvre spécifiquement la correction et l'archivage d'une
-/// fiche élève déjà créée (StudentsController.ManageRoles = Directeur/Secrétariat), avec le
-/// verrouillage optimiste xmin (AGENTS.md règle #5) et le soft delete (règle #6).
+/// Ticket JGK-D02 — PUT/DELETE /students/{id} contre un vrai PostgreSQL. La lecture (GET) et le
+/// chemin de création autorisé (POST) sont déjà couverts indirectement par
+/// ClassroomsEndpointsTests et AuditLogsEndpointsTests ; ce fichier couvre spécifiquement la
+/// restriction de la création aux rôles autorisés, la correction et l'archivage d'une fiche élève
+/// déjà créée (StudentsController.ManageRoles = Directeur/Secrétariat), avec le verrouillage
+/// optimiste xmin (AGENTS.md règle #5) et le soft delete (règle #6).
 /// </summary>
 public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
 {
@@ -105,6 +106,29 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         var detail = (await response.Content.ReadFromJsonAsync<StudentDetailDto>())!;
         return detail.Identity;
+    }
+
+    [Fact]
+    public async Task An_Enseignant_Must_Not_Create_A_Student()
+    {
+        // StudentsController.ManageRoles = "Directeur,Secretariat" : l'Enseignant consulte les
+        // élèves de ses classes mais ne peut pas en inscrire (docs/Volume_7_Security.md §15).
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CI Restriction Enseignant");
+
+        var enseignant = await EnseignantTokenAsync();
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/students", enseignant, new
+        {
+            fullName = "Élève Interdit",
+            birthDate = "2015-03-12",
+            birthPlace = "Thiès",
+            gender = "M",
+            classroomId = classroom.Id,
+            guardianName = "Tuteur Test",
+            guardianPhone = "+221771234567"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

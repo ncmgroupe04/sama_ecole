@@ -33,7 +33,7 @@
  <icon name="upload" class="w-4 h-4" />
  Importer des élèves
  </button>
- <button @@click="isCreateOpen = true" class="btn-primary">
+ <button x-show="canManageStudent" x-cloak @@click="isCreateOpen = true" class="btn-primary">
  <icon name="plus" class="w-4 h-4" />
  Ajouter un élève
  </button>

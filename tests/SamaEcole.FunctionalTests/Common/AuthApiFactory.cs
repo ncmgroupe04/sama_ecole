@@ -313,6 +313,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // laissé une ligne de réglages sur l'école semée (ticket JGK-B02).
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_settings;");
 
+        // Observations du conseil (bulletins, JGK-G03) : référencent élèves ET trimestres en Restrict,
+        // donc AVANT l'un ou l'autre — sinon un bulletin annoté par un test laisse une ligne qui bloque
+        // la purge des trimestres du test suivant (FK_report_card_remarks_terms_SchoolId_TermId).
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM report_card_remarks;");
+
         // Notes (ticket JGK-G01), AVANT les tables qu'elles référencent en Restrict (élèves, matières,
         // trimestres) — et les trimestres eux-mêmes AVANT les années scolaires qu'ils référencent.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM grades;");

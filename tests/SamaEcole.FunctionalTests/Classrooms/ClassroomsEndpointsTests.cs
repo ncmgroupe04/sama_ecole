@@ -50,6 +50,9 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
     private Task<string> FinanceTokenAsync() =>
         TokenAsync(AuthApiFactory.FinanceEmail, AuthApiFactory.FinancePassword);
 
+    private Task<string> EnseignantTokenAsync() =>
+        TokenAsync(AuthApiFactory.EnseignantEmail, AuthApiFactory.EnseignantPassword);
+
     private async Task<HttpResponseMessage> SendAsync(
         HttpMethod method, string url, string token, object? body = null)
     {
@@ -130,6 +133,23 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         });
 
         second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task An_Enseignant_Must_Not_Create_A_Classroom()
+    {
+        // ClassroomsController.ManageRoles = "Directeur,Secretariat" : l'Enseignant consulte
+        // l'arborescence des classes mais ne la modifie pas (docs/Volume_7_Security.md §15).
+        var enseignant = await EnseignantTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", enseignant, new
+        {
+            name = "Classe Interdite",
+            level = "Primaire",
+            capacity = 30
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

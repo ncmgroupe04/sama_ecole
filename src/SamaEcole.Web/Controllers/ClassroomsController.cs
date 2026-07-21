@@ -12,9 +12,9 @@ namespace SamaEcole.Web.Controllers;
 /// Ticket JGK-C02 — /classrooms (openapi.yaml). Contrôleur mince : aucune logique métier ici
 /// (AGENTS.md règle #8). L'école n'est jamais un paramètre de requête : elle vient du JWT (règle #10).
 ///
-/// LECTURE et CRÉATION ouvertes à tout utilisateur authentifié (comportement historique inchangé).
-/// CORRIGER ou ARCHIVER une classe déjà créée est réservé au Directeur et au Secrétariat — ce sont ces
-/// deux rôles qui gèrent l'organisation des classes au quotidien.
+/// LECTURE ouverte à tout utilisateur authentifié (l'Enseignant consulte l'arborescence des classes).
+/// CRÉER, CORRIGER ou ARCHIVER une classe est réservé au Directeur et au Secrétariat — ce sont ces
+/// deux rôles qui gèrent l'organisation des classes au quotidien (docs/Volume_7_Security.md §15).
 /// </summary>
 [ApiController]
 [Route("api/v1/classrooms")]
@@ -31,7 +31,9 @@ public class ClassroomsController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(new GetClassroomsQuery(), cancellationToken));
 
     [HttpPost]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<CreateClassroomResult>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(
         [FromBody] CreateClassroomCommand command, CancellationToken cancellationToken)

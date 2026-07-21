@@ -215,10 +215,10 @@ Fermé par défaut sur chaque établissement : le Directeur doit l'activer expli
 | Action | Directeur | Enseignant | Secrétariat |
 |---|---|---|---|
 | Générer / Imprimer / Télécharger (individuel ou groupé) | ✔ | ✔ | ✔ |
-| Observations du conseil (distinction, texte) | ✔ | ✔ | ✖ |
+| Observations du conseil (distinction, texte) | ✔ | ✔ | ✔ |
 | Publier | ✔ | ✖ | ✖ |
 
-Le Secrétariat compose et télécharge les bulletins (`ReportCardsController.ReportCardDownloadRoles`) mais n'écrit jamais les observations du conseil, restées sur `ReportCardWriterRoles` (Directeur/Enseignant) — c'est une saisie, pas un téléchargement.
+Le Secrétariat compose, télécharge et saisit les observations du conseil (`ReportCardsController.ReportCardWriterRoles` = `ReportCardDownloadRoles` = Directeur/Enseignant/Secrétariat) — il assure ainsi le suivi administratif de la vie scolaire au même titre que la direction.
 
 **Paramètres de l'école**
 

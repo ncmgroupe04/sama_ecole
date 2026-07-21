@@ -17,20 +17,19 @@ namespace SamaEcole.Web.Controllers;
 /// Ticket JGK-G03 — /report-cards. Contrôleur mince : aucune logique métier ici (AGENTS.md règle #8).
 ///
 /// Générer/imprimer/télécharger (individuel ou groupé) est ouvert au Directeur, à l'Enseignant ET au
-/// Secrétariat (qui compose les bulletins mais n'y écrit rien). Publier (verrouiller la saisie) n'est
-/// pas implémenté dans cette passe — aucune entité ReportCard n'est persistée, chaque appel régénère
-/// le bulletin à partir des notes actuelles.
+/// Secrétariat. Publier (verrouiller la saisie) n'est pas implémenté dans cette passe — aucune entité
+/// ReportCard n'est persistée, chaque appel régénère le bulletin à partir des notes actuelles.
 ///
-/// La distinction du conseil (Blâme… Félicitations) et les observations, en revanche, restent réservées
-/// à Directeur/Enseignant : c'est une SAISIE, pas un simple téléchargement, jamais ouverte au
-/// Secrétariat.
+/// La distinction du conseil (Blâme… Félicitations) et les observations sont ouvertes au Directeur,
+/// à l'Enseignant ET au Secrétariat, qui assure ainsi le suivi administratif de la vie scolaire au
+/// même titre que la direction (docs/Volume_7_Security.md §15).
 /// </summary>
 [ApiController]
 [Route("api/v1/report-cards")]
 [Authorize]
 public class ReportCardsController(ISender mediator) : ControllerBase
 {
-    private const string ReportCardWriterRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
+    private const string ReportCardWriterRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)},{nameof(Role.Secretariat)}";
     private const string ReportCardDownloadRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)},{nameof(Role.Secretariat)}";
 
     public record GenerateReportCardRequest(Guid StudentId, Guid TermId);
