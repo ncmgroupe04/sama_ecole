@@ -1,0 +1,27 @@
+# Normalisation des fins de ligne.
+#
+# Sans ce fichier, une machine Windows restitue les scripts en CRLF (core.autocrlf). Pour un script
+# monté DANS un conteneur Linux, le « \r » se colle au shebang : `/bin/bash^M: bad interpreter`, et le
+# script ne s'exécute jamais. C'est exactement ce qui est arrivé à docker/postgres/init/01-create-app-role.sh
+# — le rôle applicatif sama_ecole_app n'était plus créé, et tous les GRANT des migrations retombaient
+# silencieusement dans leur branche « rôle absent ». Panne invisible tant que le volume Postgres n'est
+# pas recréé, donc découverte très loin de sa cause.
+
+* text=auto
+
+# Fichiers CONSOMMÉS PAR LINUX : toujours en LF, quelle que soit la machine qui fait le checkout.
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+*.Dockerfile    text eol=lf
+.dockerignore   text eol=lf
+docker-compose*.yml text eol=lf
+
+# Binaires : aucune conversion (une normalisation les corromprait).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
