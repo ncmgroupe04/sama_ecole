@@ -10,6 +10,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SamaEcole.Application\SamaEcole.Application.csproj" />
+    <!-- Commande `migrate` : a besoin d'ApplicationDbContext et de ses migrations. Toujours AUCUNE
+         référence vers SamaEcole.Web (voir README) — cet outil tourne sans host ASP.NET. -->
+    <ProjectReference Include="..\..\src\SamaEcole.Persistence\SamaEcole.Persistence.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SamaEcole.UnitTests" />
   </ItemGroup>
 
 </Project>

@@ -32,6 +32,25 @@ services:
     ports:
       - "6379:6379"
 
+  # Applique les migrations EF Core, puis s'arrête. Conteneur ÉPHÉMÈRE, seul à recevoir le rôle
+  # propriétaire : c'est ce qui permet au conteneur web de tourner sans jamais disposer de droits
+  # exemptés de RLS (AGENTS.md règle #2). Voir tools/SamaEcole.Tools/README.md.
+  #
+  # `docker compose up` l'exécute avant l'api (service_completed_successfully ci-dessous) et
+  # interrompt le démarrage si elle échoue : le web ne tourne jamais sur un schéma partiellement migré.
+  migrate:
+    build:
+      context: .
+      dockerfile: tools/SamaEcole.Tools/Dockerfile
+    container_name: sama-ecole-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Migrations: "Host=postgres;Database=${DB_NAME:-sama_ecole_dev};Username=${DB_USER:-sama_ecole};Password=${DB_PASSWORD:-changeme}"
+    # Tâche ponctuelle, pas un service : sans cela Compose la relancerait en boucle après sa sortie.
+    restart: "no"
+
   api:
     build:
       context: .
@@ -40,12 +59,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # L'api ne démarre que si les migrations ont réussi (code retour 0). Un échec de `migrate`
+      # laisse l'api à l'arrêt plutôt que de la lancer sur un schéma incohérent.
+      migrate:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       # Runtime = rôle applicatif (soumis à la RLS). Le démarrage échoue volontairement si ce rôle
       # peut contourner la RLS — voir RlsGuard.
       ConnectionStrings__Default: "Host=postgres;Database=${DB_NAME:-sama_ecole_dev};Username=${DB_APP_USER:-sama_ecole_app};Password=${DB_APP_PASSWORD:-changeme_app}"
-      # Migrations = rôle propriétaire, le seul qui puisse ALTER TABLE / CREATE POLICY.
+      # Rôle propriétaire — présent ICI UNIQUEMENT pour le DbSeeder de Development (comptes de démo,
+      # voir Program.cs) : `users` est sous RLS et le rôle applicatif n'y accède que par les fonctions
+      # du chemin de login. L'api ne s'en sert JAMAIS pour migrer — c'est le service `migrate`.
+      #
+      # EN PRODUCTION, NE PAS REPORTER CETTE LIGNE sur le conteneur web : le seeder n'y tourne pas, et
+      # y laisser les identifiants propriétaire redonnerait au processus exposé un accès exempté de RLS
+      # — précisément ce que la séparation en deux services sert à éviter (AGENTS.md règle #2).
       ConnectionStrings__Migrations: "Host=postgres;Database=${DB_NAME:-sama_ecole_dev};Username=${DB_USER:-sama_ecole};Password=${DB_PASSWORD:-changeme}"
       Jwt__Issuer: "https://api.sama-ecole.sn"
       Jwt__Audience: "sama-ecole-clients"

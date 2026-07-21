@@ -1,0 +1,34 @@
+# Sans ce fichier, `COPY src/ src/` embarque les bin/ et obj/ de la machine qui construit l'image.
+# Le obj/project.assets.json de l'hôte référence son propre cache NuGet (chemins Windows en
+# développement) et ÉCRASE celui que `dotnet restore` vient de produire dans le conteneur : le
+# `dotnet publish` échoue alors sur un NETSDK1064 « package not found » très trompeur, alors que le
+# restore s'est bien déroulé. Concerne les deux images (web et outils).
+
+# Artefacts de compilation
+**/bin/
+**/obj/
+**/node_modules/
+
+# Secrets et configuration locale — ne doivent jamais entrer dans le contexte de build,
+# a fortiori dans une couche d'image (AGENTS.md : ne jamais committer .env ni de clés).
+.env
+.env.*
+!.env.example
+
+# Historique et outillage de développement
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+**/*.user
+
+# Sorties de tests et couverture
+TestResults/
+**/TestResults/
+coverage/
+
+# Documentation et ressources non nécessaires au build
+docs/
+*.md
+!tools/SamaEcole.Tools/README.md

@@ -21,6 +21,8 @@
     <ProjectReference Include="..\..\src\SamaEcole.Application\SamaEcole.Application.csproj" />
     <!-- Émission du JWT et hachage Identity (ticket JGK-A04) : testables sans base de données. -->
     <ProjectReference Include="..\..\src\SamaEcole.Infrastructure\SamaEcole.Infrastructure.csproj" />
+    <!-- Commande `migrate` : la résolution de la chaîne de connexion se teste sans base. -->
+    <ProjectReference Include="..\..\tools\SamaEcole.Tools\SamaEcole.Tools.csproj" />
   </ItemGroup>
 
 </Project>
