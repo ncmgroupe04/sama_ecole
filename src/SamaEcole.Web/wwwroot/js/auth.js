@@ -377,4 +377,44 @@ document.addEventListener('alpine:init', () => {
             window.addEventListener('offline', () => { this.online = false; });
         }
     }));
+
+    /**
+     * Indicateur d'ANNÉE SCOLAIRE ACTIVE de la barre supérieure (JGK-C01). Il rend visible sur CHAQUE
+     * écran l'exercice sur lequel travaille l'établissement — inscriptions, frais, notes, bulletins et
+     * finances s'y rattachent, résolus serveur via SchoolYear.IsActive. Sans cet indice, changer
+     * d'année ne produit aucun signal visible et la fonctionnalité paraît inerte.
+     *
+     * Il n'ACTIVE jamais rien : la bascule reste un acte confirmé par mot de passe, réservé au
+     * Directeur (docs/Volume_7_Security.md §16). Le badge n'y donne accès que par un lien vers
+     * l'onglet Paramètres › Années ; pour les autres rôles il est purement informatif.
+     *
+     * GET /school-years est ouvert à tous les rôles de l'école : chacun voit donc le contexte, seul le
+     * Directeur peut le changer.
+     */
+    Alpine.data('activeSchoolYearBadge', () => ({
+        label: null,
+        loaded: false,
+        isDirecteur: window.auth.role === 'Directeur',
+
+        async init() {
+            // Une session sans école (Super Admin plateforme) n'a pas d'année active : GET /school-years
+            // lui renverrait une liste vide. On n'affiche donc rien plutôt qu'un badge « Aucune ».
+            if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') {
+                this.loaded = true;
+                return;
+            }
+
+            try {
+                const years = await window.api.get('/school-years');
+                const active = Array.isArray(years) ? years.find((y) => y.isActive) : null;
+                this.label = active ? active.label : null;
+            } catch {
+                // Confort d'affichage : un indicateur ne doit jamais bloquer l'écran. En cas d'échec,
+                // il reste simplement absent — les données, elles, viennent toujours de l'API gardée.
+                this.label = null;
+            } finally {
+                this.loaded = true;
+            }
+        }
+    }));
 });

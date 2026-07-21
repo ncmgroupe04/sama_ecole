@@ -1,6 +1,9 @@
 @{
  ViewData["Title"] = "Élèves - Aperçu";
  var genderFilterOptions = new List<SelectFieldOption> { new("", "Genre : Tous"), new("F", "Fille"), new("M", "Garçon") };
+ // Portée par année scolaire (voir studentsView.yearScope) : par défaut « Inscrits cette année »,
+ // avec un retour possible sur l'annuaire complet pour gérer un élève pas encore (ré)inscrit.
+ var yearScopeOptions = new List<SelectFieldOption> { new("active", "Inscrits cette année"), new("", "Tous les élèves") };
  var studentGenderOptions = new List<SelectFieldOption> { new("M", "Garçon"), new("F", "Fille") };
  var disciplinaryMentionOptions = new List<SelectFieldOption> {
  new("", "Aucune"), new("Blame", "Blâme"), new("Avertissement", "Avertissement"),
@@ -80,6 +83,11 @@
  options-expr="[{value:'', label:'Classe : Toutes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
  <select-field model="genderFilter" on-change="applyFilters()" aria-label="Filtrer par genre"
  class="mt-0 w-full sm:w-auto transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Genre : Tous" options="genderFilterOptions" />
+ @* Portée par année scolaire : « Inscrits cette année » (défaut) borne la liste à l'effectif
+ rattaché à l'année active ; « Tous les élèves » rebascule sur l'annuaire complet pour retrouver
+ un élève importé/créé pas encore (ré)inscrit. Voir studentsView.yearScope / GetStudentsQuery. *@
+ <select-field model="yearScope" on-change="applyFilters()" aria-label="Portée par année scolaire"
+ class="mt-0 w-full sm:w-auto transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" options="yearScopeOptions" />
  </div>
  <button type="button" x-on:click="resetFilters()"
  class="mt-2 text-xs font-medium text-slate-400 hover:text-slate-700">
@@ -109,7 +117,7 @@
  <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="!isLoading && students.length === 0" x-cloak>
  <td colspan="5">
  <empty-state icon="users" title="Aucun élève trouvé."
- hint="Ajustez la recherche ou les filtres, ou ajoutez un élève." />
+ hint="Aucun élève inscrit pour l'année active ? Basculez sur « Tous les élèves », ajustez la recherche, ou ajoutez un élève." />
  </td>
  </tr>
 

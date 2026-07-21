@@ -21,6 +21,18 @@ public record GetStudentsQuery : IRequest<PaginatedStudents>
 
     /// <summary>Filtre optionnel sur le genre ("M" ou "F").</summary>
     public string? Gender { get; init; }
+
+    /// <summary>
+    /// Ne conserver que les élèves AYANT une inscription (non annulée) pour l'année scolaire ACTIVE.
+    ///
+    /// Optionnel et FAUX par défaut, à dessein : l'API reste par défaut l'annuaire COMPLET des personnes
+    /// de l'école. Un élève est une personne qui traverse les années (Student ne porte pas de SchoolYearId) ;
+    /// il peut être créé ou importé AVANT d'être (ré)inscrit, et doit rester visible/administrable dans cet
+    /// intervalle. C'est l'écran Élèves qui active ce filtre (wwwroot/js/students.js) pour coller à
+    /// l'exercice courant — le laisser vrai par défaut casserait le parcours « importer un effectif puis
+    /// inscrire », où les élèves ne sont pas encore rattachés à une année. Voir GetStudentsQueryHandler.
+    /// </summary>
+    public bool ActiveYearOnly { get; init; }
 }
 
 public record StudentListItem(

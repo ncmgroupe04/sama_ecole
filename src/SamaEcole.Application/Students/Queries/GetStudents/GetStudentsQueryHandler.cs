@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,29 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
         // un jour (AGENTS.md règle #2). Le réécrire à la main donnerait l'illusion que c'est LUI qui
         // protège, et le rendrait facile à oublier sur la prochaine requête.
         var query = dbContext.Students.AsNoTracking();
+
+        // Filtre optionnel « inscrits pour l'année active » (activé par l'écran Élèves) : on borne aux
+        // élèves ayant une inscription NON annulée sur l'exercice courant. L'élève étant une personne qui
+        // traverse les années (aucun SchoolYearId sur Student), c'est l'inscription (Enrollment) qui porte
+        // l'année — d'où la sous-requête, jamais un champ d'année sur l'élève. Le Global Query Filter + la
+        // RLS bornent aussi cette sous-requête au tenant courant (AGENTS.md règle #2).
+        if (request.ActiveYearOnly)
+        {
+            var activeYearId = await dbContext.SchoolYears.AsNoTracking()
+                .Where(y => y.IsActive)
+                .Select(y => (Guid?)y.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            // Sans année active, « inscrits » ne veut rien dire : liste vide, sans même interroger les
+            // élèves — jamais un repli silencieux sur tout l'effectif, qui ignorerait le contexte demandé.
+            if (activeYearId is not { } yearId)
+            {
+                return new PaginatedStudents([], 0, request.Page, request.PageSize);
+            }
+
+            query = query.Where(s => dbContext.Enrollments.Any(e =>
+                e.StudentId == s.Id && e.SchoolYearId == yearId && e.Status != EnrollmentStatus.Cancelled));
+        }
 
         if (request.ClassroomId is { } classroomId)
         {

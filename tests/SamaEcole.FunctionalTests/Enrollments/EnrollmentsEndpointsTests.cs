@@ -54,7 +54,7 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     // Grades, Payments, GradingScale...) sont simplement ignorés par la désérialisation.
     private record AcademicHistoryEntry(Guid EnrollmentId, string Status, uint RowVersion);
     private record StudentDetail(List<AcademicHistoryEntry> AcademicHistory);
-    private record StudentSearchItem(Guid Id, string Matricule);
+    private record StudentSearchItem(Guid Id, string Matricule, string FullName);
     private record StudentSearchPage(List<StudentSearchItem> Items);
 
     private async Task<string> TokenAsync(string email, string password)
@@ -167,6 +167,57 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", financeToken,
             new { enrollmentId, amount, method = "Cash" });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    /// <summary>Noms des élèves renvoyés par GET /students pour une recherche donnée, filtre d'année optionnel.</summary>
+    private async Task<List<string>> GetStudentNamesAsync(string token, string search, bool activeYearOnly)
+    {
+        var url = $"/api/v1/students?page=1&pageSize=50&search={search}";
+        if (activeYearOnly) url += "&activeYearOnly=true";
+
+        var response = await SendAsync(HttpMethod.Get, url, token);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var page = (await response.Content.ReadFromJsonAsync<StudentSearchPage>())!;
+        return page.Items.Select(i => i.FullName).ToList();
+    }
+
+    [Fact]
+    public async Task The_Students_List_Filters_On_The_Active_Year_Only_When_Asked()
+    {
+        // GetStudentsQuery.ActiveYearOnly (écran Élèves) : la liste doit pouvoir se borner à l'effectif
+        // INSCRIT pour l'année active — inscriptions, notes et finances travaillent sur cet exercice —
+        // sans jamais retirer de l'annuaire complet un élève créé hors inscription (parcours « importer
+        // un effectif puis inscrire »). On prouve les deux comportements sur la MÊME donnée.
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+
+        // A — inscrit sur l'année active : POST /enrollments crée l'élève ET son inscription.
+        var secretaire = await SecretaireTokenAsync();
+        var enrollResponse = await SendAsync(
+            HttpMethod.Post, "/api/v1/enrollments", secretaire, NewEnrollmentBody(classroomId, "Awa Filtre Active"));
+        enrollResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // B — élève créé DIRECTEMENT, sans aucune inscription : l'annuaire le connaît, l'année active non.
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/students", directeur, new
+        {
+            fullName = "Modou Filtre Direct",
+            birthDate = "2015-05-20",
+            birthPlace = "Dakar",
+            gender = "M",
+            classroomId
+        });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Filtré (activeYearOnly=true) : seul l'inscrit de l'année active remonte.
+        var activeOnly = await GetStudentNamesAsync(directeur, "Filtre", activeYearOnly: true);
+        activeOnly.Should().Contain("Awa Filtre Active");
+        activeOnly.Should().NotContain("Modou Filtre Direct", "un élève sans inscription sur l'année active en est absent");
+
+        // Défaut de l'API (annuaire complet) : les deux remontent — la rétrocompatibilité est préservée.
+        var all = await GetStudentNamesAsync(directeur, "Filtre", activeYearOnly: false);
+        all.Should().Contain("Awa Filtre Active");
+        all.Should().Contain("Modou Filtre Direct");
     }
 
     [Fact]

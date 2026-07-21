@@ -14,7 +14,15 @@ document.addEventListener('alpine:init', () => {
         search: '',
         classroomFilter: '',
         genderFilter: '',
-        
+
+        // Portée par année scolaire. Par défaut 'active' : l'écran Élèves montre l'effectif INSCRIT pour
+        // l'année active (le contexte de travail courant, cohérent avec les inscriptions, les notes et les
+        // finances). 'all' rebascule sur l'annuaire complet — indispensable juste après un import ou une
+        // création, tant que l'élève n'est pas encore (ré)inscrit. Traduit en `activeYearOnly` côté API
+        // (GetStudentsQuery), qui reste par défaut l'annuaire complet.
+        yearScope: 'active',
+
+
         // Fiche élève (JGK-D02) — detailStudent porte la ligne de liste (affichage immédiat de
         // l'identité), studentDetail la fiche complète chargée depuis GET /students/{id}
         // (historique scolaire, notes, paiements).
@@ -141,6 +149,7 @@ document.addEventListener('alpine:init', () => {
                 if (this.search.trim()) params.set('search', this.search.trim());
                 if (this.classroomFilter) params.set('classroomId', this.classroomFilter);
                 if (this.genderFilter) params.set('gender', this.genderFilter);
+                if (this.yearScope === 'active') params.set('activeYearOnly', 'true');
 
                 const data = await window.api.get(`/students?${params.toString()}`);
                 this.students = data.items || [];
@@ -162,6 +171,7 @@ document.addEventListener('alpine:init', () => {
             this.search = '';
             this.classroomFilter = '';
             this.genderFilter = '';
+            this.yearScope = 'active'; // on revient à la vue par défaut (inscrits de l'année active), pas à « tous »
             this.applyFilters();
         },
 

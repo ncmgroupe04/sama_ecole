@@ -212,6 +212,26 @@
  </div>
 
  <div class="flex items-center gap-4">
+ @* Indicateur d'ANNÉE SCOLAIRE ACTIVE (JGK-C01) : rend visible sur chaque écran l'exercice de
+ travail courant, dont dépendent inscriptions, frais, notes et finances (résolu serveur via
+ SchoolYear.IsActive, voir activeSchoolYearBadge()). Cliquable pour le seul Directeur — vers
+ l'onglet Paramètres › Années où la bascule se confirme par mot de passe (Volume_7_Security §16) ;
+ informatif pour les autres rôles. Masqué sous `sm` pour ne pas encombrer la barre sur mobile. *@
+ <div x-data="activeSchoolYearBadge()" x-show="loaded && label" x-cloak class="hidden sm:block">
+ <a x-show="isDirecteur" x-cloak href="/annees-scolaires"
+ title="Année scolaire active — gérer dans Paramètres › Années"
+ class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-primary-700 text-sm font-medium hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+ <icon name="calendar" class="w-4 h-4" />
+ <span x-text="label"></span>
+ </a>
+ <span x-show="!isDirecteur" x-cloak
+ title="Année scolaire active de l'établissement"
+ class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium">
+ <icon name="calendar" class="w-4 h-4" />
+ <span x-text="label"></span>
+ </span>
+ </div>
+
  @* Recherche globale désactivée : la maquette Volume 5 la prévoyait, mais aucun backend
  ne l'alimente et elle fait doublon avec la recherche spécifique de chaque écran
  (Élèves, Classes, Enseignants...). Commentée plutôt que supprimée pour garder la
