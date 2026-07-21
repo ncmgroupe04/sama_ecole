@@ -45,9 +45,23 @@ public static class DependencyInjection
         // Référence de suivi d'une demande d'inscription self-service (ticket JGK-I01).
         services.AddSingleton<IRegistrationReferenceGenerator, RegistrationReferenceGenerator>();
 
-        // ⚠️ N'ENVOIE RIEN : journalise l'e-mail. L'adaptateur SMTP réel (MailKit) est le ticket
-        // JGK-G03. À remplacer avant toute exploitation réelle — voir LoggingEmailSender.
-        services.AddSingleton<IEmailSender, LoggingEmailSender>();
+        // Envoi d'e-mails transactionnels (ticket JGK-G03, incl. le mot de passe provisoire du
+        // Directeur — JGK-B01). Development : LoggingEmailSender, qui journalise en clair (pratique en
+        // local, voir sa doc). Hors Development : SmtpEmailSender réel, et l'absence de configuration
+        // SMTP fait ÉCHOUER LE DÉMARRAGE plutôt que de retomber silencieusement sur l'adaptateur qui
+        // journalise les mots de passe — même logique que RlsGuard / PayDunyaOptions.IsConfigured.
+        var smtpOptions = configuration.GetSection(SmtpOptions.SectionName).Get<SmtpOptions>() ?? new SmtpOptions();
+        services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+
+        if (isDevelopment)
+        {
+            services.AddSingleton<IEmailSender, LoggingEmailSender>();
+        }
+        else
+        {
+            EmailSenderGuard.EnsureEmailSenderIsConfigured(smtpOptions, isDevelopment);
+            services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        }
 
         // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02). Sans état : des singletons suffisent.
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();

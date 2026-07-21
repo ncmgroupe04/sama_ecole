@@ -4,16 +4,14 @@ using Microsoft.Extensions.Logging;
 namespace SamaEcole.Infrastructure.Notifications;
 
 /// <summary>
-/// Adaptateur d'attente : journalise l'e-mail au lieu de l'envoyer.
+/// Adaptateur d'attente : journalise l'e-mail au lieu de l'envoyer. Le mot de passe provisoire du
+/// Directeur (ticket JGK-B01) y apparaît donc en clair — c'est le seul endroit où il apparaît.
 ///
-/// ⚠️ NE DÉLIVRE RIEN. L'adaptateur SMTP réel (MailKit, section Smtp de la configuration) relève du
-/// ticket JGK-G03, hors du périmètre MVP. Tant qu'il n'existe pas, le Directeur créé par JGK-B01 ne
-/// reçoit PAS son e-mail : son mot de passe provisoire est à récupérer dans les journaux du serveur.
-///
-/// C'est acceptable en développement et pour le premier client piloté à la main ; ce ne l'est pas
-/// en exploitation ouverte. Le mot de passe est volontairement journalisé — c'est le seul endroit
-/// où il apparaît — ce qui est aussi la raison pour laquelle cet adaptateur ne doit pas survivre à
-/// la mise en production réelle.
+/// Réservé à Development, où c'est le moyen pratique de retrouver ce mot de passe faute d'un vrai
+/// serveur SMTP local (DependencyInjection.AddInfrastructure n'enregistre CET adaptateur QUE si
+/// isDevelopment ; sinon SmtpEmailSender, ou échec de démarrage si le SMTP n'est pas configuré — voir
+/// EmailSenderGuard). Ce cloisonnement est structurel, pas une simple convention : ne pas réenregistrer
+/// cet adaptateur inconditionnellement.
 /// </summary>
 public class LoggingEmailSender(ILogger<LoggingEmailSender> logger) : IEmailSender
 {

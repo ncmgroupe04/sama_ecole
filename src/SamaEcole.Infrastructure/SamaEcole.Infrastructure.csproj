@@ -15,7 +15,6 @@
          épingler une autre version rejouerait un downgrade NU1605 et casserait la restauration. -->
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.0.1" />
     <PackageReference Include="QuestPDF" Version="2024.10.3" />
-    <PackageReference Include="MailKit" Version="4.9.0" />
   </ItemGroup>
 
   <ItemGroup>
