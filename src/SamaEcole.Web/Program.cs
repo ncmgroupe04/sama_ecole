@@ -16,8 +16,34 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Logging structuré (docs/Volume_9_Deployment_Operations.md §10 : "centralisé, ex. via Serilog"). JSON
+// compact hors Development pour un puits centralisé (ELK/Loki/Datadog… derrière le driver de logs du
+// conteneur, Volume_9 §2.1) ; console lisible en Development. Niveaux pilotés par appsettings*.json
+// (section "Serilog", ReadFrom.Configuration) — mêmes clés que l'ancienne section "Logging" qu'elle
+// remplace. Aucun enrichisseur de PII : les seules données identifiantes déjà journalisées par
+// l'application (UserId, SchoolId, adresse IP sur les échecs d'authentification) le sont explicitement
+// par le code appelant, jamais ajoutées automatiquement ici.
+builder.Host.UseSerilog((context, services, loggerConfig) =>
+{
+    loggerConfig
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext();
+
+    if (context.HostingEnvironment.IsDevelopment())
+    {
+        loggerConfig.WriteTo.Console();
+    }
+    else
+    {
+        loggerConfig.WriteTo.Console(new CompactJsonFormatter());
+    }
+});
 
 // --- Couches applicatives (Clean Architecture — docs/Volume_2_SDS.md) ---
 builder.Services.AddApplication();
@@ -30,6 +56,7 @@ builder.Services.AddSingleton(
 
 // --- Authentification JWT (AGENTS.md — Décision D-07) ---
 var jwtSection = builder.Configuration.GetSection("Jwt");
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -252,6 +279,11 @@ if (app.Environment.IsDevelopment())
 // (docs/Volume_4_API_Design.md §0.4) — jamais une exception brute renvoyée au client.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+// Une ligne structurée par requête (méthode, chemin, code, durée) — jamais le corps ni les en-têtes,
+// donc aucun risque de journaliser un jeton ou un mot de passe. Placé après ExceptionHandlingMiddleware
+// pour capturer le code HTTP réellement renvoyé, y compris sur les requêtes en erreur.
+app.UseSerilogRequestLogging();
+
 if (!app.Environment.IsDevelopment())
 {
     // HSTS : force HTTPS côté navigateur pour les requêtes SUIVANTES (contrairement à
@@ -280,7 +312,16 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}"); // Vues Razor — voir docs/BACKLOG_TICKETS.md
 
-app.Run();
+try
+{
+    app.Run();
+}
+finally
+{
+    // Vide les sinks (ex. fichier/réseau) avant l'arrêt du process — sans cela, les dernières lignes
+    // journalisées pendant l'arrêt peuvent être perdues.
+    Log.CloseAndFlush();
+}
 
 // Rendu accessible aux tests fonctionnels (WebApplicationFactory<Program>).
 public partial class Program;

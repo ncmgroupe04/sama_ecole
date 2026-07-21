@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.1" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
     <!-- Requis par l'outillage `dotnet ef` (projet de démarrage des migrations — voir AGENTS.md §Commandes). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.1">
