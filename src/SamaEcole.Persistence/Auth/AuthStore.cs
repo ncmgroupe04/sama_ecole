@@ -108,6 +108,77 @@ public class AuthStore(ApplicationDbContext dbContext, TimeProvider timeProvider
                 cancellationToken);
     }
 
+    public async Task StorePasswordResetTokenAsync(
+        Guid userId,
+        string tokenHash,
+        DateTimeOffset expiresAt,
+        CancellationToken cancellationToken)
+    {
+        // Périme les demandes encore en cours AVANT d'enregistrer la nouvelle : un compte n'a jamais
+        // qu'un seul lien de réinitialisation valide à la fois.
+        await RevokeOutstandingResetTokensAsync(userId, cancellationToken);
+
+        dbContext.PasswordResetTokens.Add(new PasswordResetToken
+        {
+            UserId = userId,
+            TokenHash = tokenHash,
+            ExpiresAt = expiresAt
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<StoredPasswordResetToken?> FindPasswordResetTokenAsync(
+        string tokenHash, CancellationToken cancellationToken)
+    {
+        return await dbContext.PasswordResetTokens
+            .AsNoTracking()
+            .Where(t => t.TokenHash == tokenHash)
+            .Select(t => new StoredPasswordResetToken(t.Id, t.UserId, t.ExpiresAt, t.UsedAt, t.RevokedAt))
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<int> CompletePasswordResetAsync(
+        Guid tokenId, Guid userId, string newPasswordHash, CancellationToken cancellationToken)
+    {
+        return await dbContext.ExecuteInTransactionAsync(async ct =>
+        {
+            // users est sous RLS et ce chemin n'a AUCUN tenant (l'appelant n'est pas authentifié) :
+            // l'écriture passe par la fonction SECURITY DEFINER dédiée, une requête EF ne verrait
+            // aucune ligne et l'UPDATE serait un silencieux « 0 ligne modifiée ».
+            await using (var command = await CreateCommandAsync(
+                "SELECT auth_set_password_hash(@userId, @hash)", ct))
+            {
+                command.Parameters.AddWithValue("userId", userId);
+                command.Parameters.AddWithValue("hash", newPasswordHash);
+
+                await command.ExecuteNonQueryAsync(ct);
+            }
+
+            var now = timeProvider.GetUtcNow();
+
+            // Usage unique.
+            await dbContext.PasswordResetTokens
+                .Where(t => t.Id == tokenId && t.UsedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.UsedAt, now), ct);
+
+            // Le mot de passe vient de changer : les autres demandes en cours n'ont plus lieu d'être,
+            // les laisser valides rouvrirait le compte à qui détient un lien plus ancien.
+            await RevokeOutstandingResetTokensAsync(userId, ct);
+
+            return await RevokeAllRefreshTokensAsync(userId, ct);
+        }, cancellationToken);
+    }
+
+    private async Task RevokeOutstandingResetTokensAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var now = timeProvider.GetUtcNow();
+
+        await dbContext.PasswordResetTokens
+            .Where(t => t.UserId == userId && t.UsedAt == null && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), cancellationToken);
+    }
+
     private async Task<NpgsqlCommand> CreateCommandAsync(string sql, CancellationToken cancellationToken)
     {
         var connection = (NpgsqlConnection)dbContext.Database.GetDbConnection();

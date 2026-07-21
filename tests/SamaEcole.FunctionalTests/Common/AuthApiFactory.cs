@@ -239,6 +239,13 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // volontairement à chaque fois par clarté et isolation plutôt que de partager un jeton.
         Environment.SetEnvironmentVariable("RateLimiting__Login__PermitLimit", "1000");
         Environment.SetEnvironmentVariable("RateLimiting__Login__WindowMinutes", "5");
+
+        // Même raison encore : la limite de production est ici volontairement BASSE (5 / 15 min — une
+        // réinitialisation est un geste rare), donc la partition « unknown » partagée la ferait sauter
+        // dès le sixième appel de la suite. Le comportement de refus lui-même n'a pas à être prouvé
+        // ici : c'est de la configuration ASP.NET, pas du code applicatif.
+        Environment.SetEnvironmentVariable("RateLimiting__PasswordReset__PermitLimit", "1000");
+        Environment.SetEnvironmentVariable("RateLimiting__PasswordReset__WindowMinutes", "5");
     }
 
     private static void ClearEnvironment()
@@ -250,7 +257,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "Jwt__AccessTokenMinutes", "Auth__MaxFailedAttempts", "Auth__LockoutMinutes",
                      "Auth__RefreshTokenDays", "RateLimiting__Registration__PermitLimit",
                      "RateLimiting__Registration__WindowMinutes", "RateLimiting__Login__PermitLimit",
-                     "RateLimiting__Login__WindowMinutes"
+                     "RateLimiting__Login__WindowMinutes", "RateLimiting__PasswordReset__PermitLimit",
+                     "RateLimiting__PasswordReset__WindowMinutes"
                  })
         {
             Environment.SetEnvironmentVariable(key, null);

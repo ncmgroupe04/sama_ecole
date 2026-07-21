@@ -23,4 +23,16 @@ public static class SensitiveEndpointRateLimiting
     /// enseignants derrière un même établissement/proxy ne doivent pas se pénaliser entre eux.
     /// </summary>
     public const string ReportCardGenerationPolicyName = "report-card-generation";
+
+    /// <summary>
+    /// POST /auth/forgot-password et /auth/reset-password. Routes ANONYMES, donc sans verrouillage de
+    /// compte pour les protéger : la limite par IP est ici la seule barrière. Elle borne deux abus
+    /// distincts — le balayage d'adresses pour énumérer les comptes (que la réponse uniforme rend déjà
+    /// muet, mais qui coûterait des requêtes et des e-mails), et le bombardement d'une boîte mail par
+    /// demandes répétées.
+    ///
+    /// Volontairement plus stricte que le login (5 / 15 min contre 10 / 5 min) : réinitialiser son mot
+    /// de passe est un geste rare, une limite basse ne gêne aucun usage légitime.
+    /// </summary>
+    public const string PasswordResetPolicyName = "auth-password-reset";
 }

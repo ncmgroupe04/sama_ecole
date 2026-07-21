@@ -182,6 +182,8 @@ var registrationStatusWindowMinutes = builder.Configuration.GetValue("RateLimiti
 var loginPermitLimit = builder.Configuration.GetValue("RateLimiting:Login:PermitLimit", 10);
 var loginWindowMinutes = builder.Configuration.GetValue("RateLimiting:Login:WindowMinutes", 5);
 
+var passwordResetPermitLimit = builder.Configuration.GetValue("RateLimiting:PasswordReset:PermitLimit", 5);
+var passwordResetWindowMinutes = builder.Configuration.GetValue("RateLimiting:PasswordReset:WindowMinutes", 15);
 var reportCardPermitLimit = builder.Configuration.GetValue("RateLimiting:ReportCardGeneration:PermitLimit", 20);
 var reportCardWindowMinutes = builder.Configuration.GetValue("RateLimiting:ReportCardGeneration:WindowMinutes", 1);
 
@@ -221,6 +223,19 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = loginPermitLimit,
             Window = TimeSpan.FromMinutes(loginWindowMinutes),
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy(SensitiveEndpointRateLimiting.PasswordResetPolicyName, httpContext =>
+    {
+        // Par IP : ces routes sont anonymes, il n'y a aucun utilisateur sur qui partitionner.
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = passwordResetPermitLimit,
+            Window = TimeSpan.FromMinutes(passwordResetWindowMinutes),
             QueueLimit = 0
         });
     });

@@ -28,6 +28,24 @@ public class FakeEmailSender : IEmailSender
     public EmailMessage? LastTo(string email) =>
         _sent.LastOrDefault(m => m.To.Equals(email, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// Extrait le jeton du lien de réinitialisation. Comme le mot de passe initial, le jeton en clair
+    /// ne sort QUE par cet e-mail : la base n'en stocke que le SHA-256, et la réponse HTTP ne le
+    /// contient pas. Sans cette extraction, le parcours self-service ne serait testable qu'à moitié.
+    /// </summary>
+    public static string ExtractResetToken(EmailMessage message)
+    {
+        var match = Regex.Match(message.Body, @"reinitialiser-mot-de-passe\?token=(?<token>\S+)");
+
+        if (!match.Success)
+        {
+            throw new InvalidOperationException(
+                $"Aucun lien de réinitialisation trouvé dans l'e-mail :\n{message.Body}");
+        }
+
+        return match.Groups["token"].Value;
+    }
+
     /// <summary>Extrait le mot de passe provisoire du corps de l'e-mail.</summary>
     public static string ExtractPassword(EmailMessage message)
     {

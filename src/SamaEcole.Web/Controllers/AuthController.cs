@@ -1,7 +1,9 @@
 using SamaEcole.Application.Auth;
+using SamaEcole.Application.Auth.Commands.ForgotPassword;
 using SamaEcole.Application.Auth.Commands.Login;
 using SamaEcole.Application.Auth.Commands.Logout;
 using SamaEcole.Application.Auth.Commands.Refresh;
+using SamaEcole.Application.Auth.Commands.ResetPassword;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Web.Auth;
 using SamaEcole.Web.Contracts;
@@ -75,6 +77,55 @@ public class AuthController(
         }
 
         return Ok(IssueRefreshCookie(tokens));
+    }
+
+    /// <summary>
+    /// Demande un lien de réinitialisation (docs/Volume_4_API_Design.md §1). Anonyme par nature : celui
+    /// qui a oublié son mot de passe ne peut pas s'authentifier.
+    ///
+    /// Renvoie TOUJOURS 202, que l'adresse existe ou non — le Handler ne lève jamais d'exception sur ce
+    /// point. Répondre 404 sur une adresse inconnue ferait de cette route un oracle d'énumération de
+    /// comptes, exploitable pour dresser la liste des utilisateurs de la plateforme.
+    ///
+    /// 202 (Accepted) plutôt que 200 : la remise de l'e-mail est asynchrone et hors du contrôle de
+    /// l'API — nous accusons réception de la demande, nous ne garantissons pas une livraison.
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(SensitiveEndpointRateLimiting.PasswordResetPolicyName)]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordCommand command, CancellationToken cancellationToken)
+    {
+        await mediator.Send(command, cancellationToken);
+
+        return Accepted();
+    }
+
+    /// <summary>
+    /// Applique le nouveau mot de passe à partir du jeton reçu par e-mail. Anonyme : le jeton fait
+    /// office d'authentification, c'est tout l'objet du parcours.
+    ///
+    /// Un jeton inconnu, expiré, déjà consommé ou révoqué donne le MÊME 422, avec le même message :
+    /// distinguer ces cas indiquerait à un attaquant qu'il a deviné un condensat valide.
+    /// </summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(SensitiveEndpointRateLimiting.PasswordResetPolicyName)]
+    [ProducesResponseType<ResetPasswordResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordCommand command, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(command, cancellationToken);
+
+        // Toutes les sessions viennent d'être coupées, y compris celle du navigateur courant s'il en
+        // avait une : le cookie doit partir avec elles, sinon il serait présenté à chaque refresh
+        // jusqu'à sa date d'expiration, pour un jeton désormais révoqué.
+        RefreshTokenCookie.Delete(Response);
+
+        return Ok(result);
     }
 
     /// <summary>Authentifié : l'utilisateur à déconnecter est lu dans le JWT, jamais dans la requête.</summary>

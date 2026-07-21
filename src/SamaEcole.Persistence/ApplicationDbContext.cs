@@ -58,6 +58,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     // aucun Handler métier n'a de raison d'y toucher.
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    /// <summary>
+    /// Jetons de réinitialisation self-service. Comme <see cref="RefreshTokens"/>, hors du contrat
+    /// IApplicationDbContext : ce chemin s'exécute sans tenant et n'est atteint que par AuthStore.
+    /// </summary>
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

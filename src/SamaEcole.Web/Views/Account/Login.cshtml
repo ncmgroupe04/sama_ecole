@@ -135,18 +135,15 @@
  </button>
  </form>
 
- @* ÉTAPE 1 (voir décision produit) — pas encore de réinitialisation self-service côté backend, mais
- l'aide doit être ACTIONNABLE : le libellé « mot de passe oublié » est désormais un lien mailto vers
- le support (sujet pré-rempli), doublé du numéro d'assistance déjà présent en bas de page.
- ÉTAPE 2 (terrain préparé) — le parcours self-service est déjà spécifié : POST
- /api/v1/auth/forgot-password + POST /api/v1/auth/reset-password (docs/Volume_4_API_Design.md §1).
- Quand il sera livré, il suffira de remplacer le href mailto ci-dessous par un lien vers la future
- page /mot-de-passe-oublie — le reste de ce bloc (style, structure) reste inchangé. *@
+ @* ÉTAPE 2 livrée : le parcours self-service existe désormais (POST /api/v1/auth/forgot-password +
+ POST /api/v1/auth/reset-password). Le lien mailto vers le support, qui tenait lieu de solution
+ d'attente, est remplacé par la page dédiée — comme l'annonçait la note précédente. Le recours à
+ l'administrateur de l'établissement reste mentionné : il garde la voie administrative
+ (POST /api/v1/users/{id}/reset-password) pour un compte dont l'adresse n'est plus accessible. *@
  <p class="mt-6 text-center text-jgk-body font-semibold text-slate-700">
  Mot de passe oublié ?
- <a href="mailto:support@sama-ecole.sn?subject=R%C3%A9initialisation%20de%20mot%20de%20passe&amp;body=Bonjour%2C%0A%0AJe%20souhaite%20r%C3%A9initialiser%20le%20mot%20de%20passe%20de%20mon%20compte.%0A%0AAdresse%20e-mail%20du%20compte%20%3A%20"
- class="text-primary font-semibold hover:underline">Contactez le support</a>
- ou l'administrateur de votre établissement.
+ <a href="/mot-de-passe-oublie" class="text-primary font-semibold hover:underline">Réinitialisez-le</a>
+ ou contactez l'administrateur de votre établissement.
  </p>
 
  <p class="mt-3 text-center text-jgk-body font-semibold text-slate-700">

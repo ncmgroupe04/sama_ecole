@@ -23,6 +23,18 @@ public class AccountController : Controller
     [HttpGet("/suivi-demande")]
     public IActionResult Track() => View();
 
+    /// <summary>Saisie de l'adresse — POST /api/v1/auth/forgot-password (wwwroot/js/password-reset.js).</summary>
+    [HttpGet("/mot-de-passe-oublie")]
+    public IActionResult ForgotPassword() => View();
+
+    /// <summary>
+    /// Choix du nouveau mot de passe. Le jeton arrive en query string, tel que posé dans le lien de
+    /// l'e-mail — il n'est JAMAIS lu côté serveur ici : cette page ne fait que l'acheminer vers POST
+    /// /api/v1/auth/reset-password, seul endroit qui le vérifie.
+    /// </summary>
+    [HttpGet("/reinitialiser-mot-de-passe")]
+    public IActionResult ResetPassword() => View();
+
     // Ticket JGK-I04 — page d'atterrissage quand SubscriptionAwaitingPaymentMiddleware bloque un appel
     // d'API (wwwroot/js/api.js y redirige sur le code SUBSCRIPTION_AWAITING_PAYMENT). [AllowAnonymous]
     // comme le reste de ce contrôleur : un visiteur non connecté y est renvoyé vers /login par son
