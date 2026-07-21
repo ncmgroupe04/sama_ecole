@@ -87,24 +87,12 @@ public class CreateSchoolYearCommandHandler(
 
     private static bool IsClosed(CreateSchoolYearCommand request, DateOnly today) => request.EndDate < today;
 
-    private static IEnumerable<Term> BuildTerms(Guid schoolYearId, Guid schoolId, DateOnly start, DateOnly end)
-    {
-        var totalDays = end.DayNumber - start.DayNumber + 1;
-        var chunk = totalDays / 3;
-
-        var firstEnd = start.AddDays(chunk - 1);
-        var secondStart = firstEnd.AddDays(1);
-        var secondEnd = secondStart.AddDays(chunk - 1);
-        var thirdStart = secondEnd.AddDays(1);
-
-        (string Label, DateOnly Start, DateOnly End)[] terms =
-        [
-            ("1er trimestre", start, firstEnd),
-            ("2e trimestre", secondStart, secondEnd),
-            ("3e trimestre", thirdStart, end) // absorbe le reste de la division entière
-        ];
-
-        return terms.Select((t, index) => new Term
+    /// <summary>
+    /// Le découpage lui-même vit dans TermSchedule, partagé avec la modification des dates : une année
+    /// modifiée doit retomber exactement sur le même découpage qu'une année créée avec ces dates-là.
+    /// </summary>
+    private static IEnumerable<Term> BuildTerms(Guid schoolYearId, Guid schoolId, DateOnly start, DateOnly end) =>
+        TermSchedule.Split(start, end).Select((t, index) => new Term
         {
             SchoolId = schoolId,
             SchoolYearId = schoolYearId,
@@ -113,5 +101,4 @@ public class CreateSchoolYearCommandHandler(
             StartDate = t.Start,
             EndDate = t.End
         });
-    }
 }

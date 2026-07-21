@@ -13,8 +13,11 @@ namespace SamaEcole.Domain.Entities;
 ///     UX_school_years_single_active (migration AddSchoolYears). Deux requêtes concurrentes ne
 ///     peuvent donc pas activer deux années : PostgreSQL en refuse une, et le conflit remonte en 409.
 ///
-///   * Les années PASSÉES sont en lecture seule : aucune route ne modifie une année existante, et la
-///     seule mutation possible — l'activation — est refusée sur une année déjà terminée.
+///   * Les années PASSÉES sont en lecture seule : les deux mutations possibles — l'activation
+///     (POST .../activate) et la correction du libellé/de la période (PUT /school-years/{id}) — sont
+///     l'une comme l'autre refusées sur une année déjà terminée. Une année EN COURS ou À VENIR reste
+///     modifiable : prolonger l'exercice quand le calendrier se décale est un usage normal, qui recale
+///     alors les trimestres (UpdateSchoolYearCommandHandler) sans jamais toucher aux notes saisies.
 ///
 /// À ne pas confondre avec <see cref="AcademicYear"/> : celle-ci est DÉDUITE de la date (bascule
 /// d'octobre) et sert à numéroter les matricules ; une SchoolYear est DÉCLARÉE par l'établissement,

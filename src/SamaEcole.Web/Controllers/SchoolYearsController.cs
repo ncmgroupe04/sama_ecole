@@ -1,6 +1,7 @@
 using SamaEcole.Application.SchoolYears;
 using SamaEcole.Application.SchoolYears.Commands.ActivateSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.CreateSchoolYear;
+using SamaEcole.Application.SchoolYears.Commands.UpdateSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.ExportSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.GetSchoolYears;
 using SamaEcole.Application.SchoolYears.Queries.GetTerms;
@@ -50,6 +51,28 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
 
         return CreatedAtAction(nameof(List), new { id = result.Id }, result);
     }
+
+    /// <summary>
+    /// Corrige le libellé et/ou la période d'une année (ticket JGK-C01) — typiquement prolonger une
+    /// année de quelques semaines quand le calendrier scolaire se décale. Directeur, comme la création :
+    /// l'année scolaire est un paramètre d'établissement (docs/Volume_7_Security.md §15).
+    ///
+    /// PAS de ressaisie du mot de passe, contrairement à l'activation : celle-ci change l'exercice sur
+    /// lequel s'imputent les écritures du jour (§16), là où corriger des dates ne déplace aucune donnée
+    /// d'un exercice à l'autre. Les trimestres, eux, sont recalés — voir UpdateSchoolYearCommandHandler.
+    ///
+    /// L'id vient de la ROUTE et écrase celui du corps : les deux ne doivent pas pouvoir diverger.
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<SchoolYearDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Update(
+        Guid id, [FromBody] UpdateSchoolYearCommand command, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(command with { Id = id }, cancellationToken));
 
     /// <summary>
     /// Bascule de l'année active — Directeur, avec ressaisie du mot de passe

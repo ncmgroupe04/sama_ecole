@@ -39,6 +39,8 @@ public class SchoolYearsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private record SchoolYearDto(
         Guid Id, string Label, DateOnly StartDate, DateOnly EndDate, bool IsActive, bool IsClosed);
 
+    private record TermDto(Guid Id, string Label, int Order, DateOnly StartDate, DateOnly EndDate);
+
     private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
 
     // Trois périodes qui ne se chevauchent pas, définies RELATIVEMENT à aujourd'hui : des dates en dur
@@ -97,6 +99,14 @@ public class SchoolYearsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         return (await response.Content.ReadFromJsonAsync<List<SchoolYearDto>>())!;
+    }
+
+    private async Task<List<TermDto>> ListTermsAsync(string token, Guid yearId)
+    {
+        var response = await SendAsync(HttpMethod.Get, $"/api/v1/school-years/{yearId}/terms", token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<List<TermDto>>())!;
     }
 
     [Fact]
@@ -267,6 +277,113 @@ public class SchoolYearsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
 
         var body = await overlapping.Content.ReadAsStringAsync();
         body.Should().Contain("StartDate");
+    }
+
+    // ------------------------------------------------- PUT /school-years/{id} (libellé + période)
+
+    [Fact]
+    public async Task A_Directeur_Can_Extend_The_Current_Year_And_The_Terms_Follow()
+    {
+        // Le cas d'usage du ticket : le calendrier se décale, l'année en cours doit être prolongée.
+        // Les trimestres en sont DÉDUITS — les laisser en place daterait les bulletins hors de leur
+        // propre année, d'où le recalage vérifié ici.
+        var token = await DirecteurTokenAsync();
+        var year = await CreateYearAsync(token, CurrentYear("2026-2027"));
+
+        var extendedEnd = Today.AddDays(+120); // un mois de plus que le +90 initial
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/school-years/{year.Id}", token, new
+        {
+            label = "2026-2027",
+            startDate = Today.AddDays(-150).ToString("yyyy-MM-dd"),
+            endDate = extendedEnd.ToString("yyyy-MM-dd")
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updated = (await response.Content.ReadFromJsonAsync<SchoolYearDto>())!;
+        updated.EndDate.Should().Be(extendedEnd);
+        updated.IsActive.Should().BeTrue("prolonger une année ne change jamais l'exercice actif");
+
+        // Les trimestres couvrent la NOUVELLE période, sans trou : le dernier finit avec l'année.
+        var terms = await ListTermsAsync(token, year.Id);
+
+        terms.Should().HaveCount(3);
+        terms.OrderBy(t => t.Order).Last().EndDate.Should().Be(extendedEnd);
+        terms.OrderBy(t => t.Order).First().StartDate.Should().Be(Today.AddDays(-150));
+    }
+
+    [Fact]
+    public async Task Modifying_A_Finished_Year_Should_Be_Refused()
+    {
+        // « Années passées en lecture seule » (ticket JGK-C01) : même garde que l'activation, et pour
+        // la même raison — les frais et les bulletins d'un exercice clos sont déjà arrêtés.
+        var token = await DirecteurTokenAsync();
+        await CreateYearAsync(token, CurrentYear("2026-2027"));
+        var past = await CreateYearAsync(token, PastYear("2024-2025"));
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/school-years/{past.Id}", token,
+            YearBody("2024-2025", -500, -130));
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task Modifying_A_Year_Into_An_Overlap_Should_Return_422()
+    {
+        var token = await DirecteurTokenAsync();
+        await CreateYearAsync(token, CurrentYear("2026-2027"));
+        var next = await CreateYearAsync(token, FutureYear("2027-2028"));
+
+        // On tire la date de début de l'année suivante EN ARRIÈRE, jusque dans l'année en cours.
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/school-years/{next.Id}", token,
+            YearBody("2027-2028", +50, +340));
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("StartDate");
+    }
+
+    [Fact]
+    public async Task Modifying_A_Year_Must_Not_Collide_With_Its_Own_Period()
+    {
+        // Le piège de l'implémentation : si le contrôle de chevauchement ne s'excluait pas lui-même,
+        // toute modification serait refusée par sa PROPRE période. Ici, seul le libellé change.
+        var token = await DirecteurTokenAsync();
+        var year = await CreateYearAsync(token, CurrentYear("2026-2027"));
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/school-years/{year.Id}", token,
+            CurrentYear("2026-2027 (corrigée)"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await response.Content.ReadFromJsonAsync<SchoolYearDto>())!.Label.Should().Be("2026-2027 (corrigée)");
+    }
+
+    [Fact]
+    public async Task Modifying_An_Unknown_Year_Should_Return_404()
+    {
+        var token = await DirecteurTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/school-years/{Guid.NewGuid()}", token,
+            CurrentYear("2026-2027"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task A_Secretary_Must_Not_Modify_A_School_Year()
+    {
+        // Comme la création et l'activation : l'année scolaire est un paramètre d'établissement,
+        // réservé au Directeur (docs/Volume_7_Security.md §15).
+        var directeur = await DirecteurTokenAsync();
+        var year = await CreateYearAsync(directeur, CurrentYear("2026-2027"));
+
+        var secretaire = await SecretaireTokenAsync();
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/school-years/{year.Id}", secretaire,
+            YearBody("2026-2027", -150, +120));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

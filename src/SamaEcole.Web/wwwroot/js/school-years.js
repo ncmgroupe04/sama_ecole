@@ -31,6 +31,17 @@ document.addEventListener('alpine:init', () => {
         showAddedDialog: false,
         addedYearLabel: '',
 
+        // --- Modification du libellé / de la période (PUT /school-years/{id}) ---
+        //
+        // Un drapeau d'ouverture SÉPARÉ de la copie de travail, comme pour la création : modal-shell
+        // garde son contenu dans le DOM, et un x-model sur un objet nul planterait à l'évaluation.
+        isEditOpen: false,
+        editingYear: { id: null, label: '', startDate: '', endDate: '' },
+        isSavingEdit: false,
+        editErrors: {},
+        showEditedDialog: false,
+        editedYearLabel: '',
+
         // --- Activation (double confirmation par mot de passe, Volume_7_Security §16) ---
         yearToActivate: null,
         password: '',
@@ -93,6 +104,16 @@ document.addEventListener('alpine:init', () => {
             return this.isDirecteur && !year.isActive && !year.isClosed;
         },
 
+        /**
+         * Modifier reste possible sur l'année ACTIVE (prolonger l'exercice en cours est le cas d'usage
+         * principal) comme sur une année à venir, mais jamais sur une année terminée : les frais et les
+         * bulletins d'un exercice clos sont arrêtés. Même règle côté serveur, qui refuse en 422 —
+         * masquer le bouton n'est qu'un confort d'affichage.
+         */
+        canEdit(year) {
+            return this.isDirecteur && !year.isClosed;
+        },
+
         activeYear() {
             return this.years.find((year) => year.isActive) || null;
         },
@@ -123,11 +144,13 @@ document.addEventListener('alpine:init', () => {
          * est déjà chargée, autant répondre tout de suite plutôt que faire attendre un aller-retour à
          * une connexion mobile.
          */
-        overlapsExistingYear() {
-            const { startDate, endDate } = this.newYear;
+        overlapsExistingYear(candidate = this.newYear, excludeId = null) {
+            const { startDate, endDate } = candidate;
             if (!startDate || !endDate) return null;
 
-            return this.years.find((year) => year.startDate <= endDate && startDate <= year.endDate) || null;
+            // excludeId : une année en cours de MODIFICATION ne chevauche pas sa propre période.
+            return this.years.find((year) =>
+                year.id !== excludeId && year.startDate <= endDate && startDate <= year.endDate) || null;
         },
 
         async submitCreate() {
@@ -153,6 +176,63 @@ document.addEventListener('alpine:init', () => {
                 this.createErrors = window.api.toFieldErrors(err, "Erreur lors de la création de l'année scolaire.");
             } finally {
                 this.isSubmitting = false;
+            }
+        },
+
+        // --------------------------------------------- Modification (libellé / période)
+
+        openEdit(year) {
+            // Copie de TRAVAIL, jamais la ligne du tableau : l'éditer en direct ferait bouger
+            // l'affichage pendant la saisie, et laisserait des valeurs fausses à l'écran si l'API refuse.
+            this.editingYear = {
+                id: year.id,
+                label: year.label,
+                startDate: year.startDate,
+                endDate: year.endDate
+            };
+            this.editErrors = {};
+            this.isEditOpen = true;
+        },
+
+        closeEdit() {
+            this.isEditOpen = false;
+            this.editErrors = {};
+        },
+
+        async submitEdit() {
+            if (!this.editingYear.id) return;
+
+            this.editErrors = {};
+
+            // Même pré-contrôle que la création, en s'excluant soi-même. La règle reste celle du serveur
+            // (UpdateSchoolYearCommandHandler, 422) : on évite seulement un aller-retour inutile.
+            const overlap = this.overlapsExistingYear(this.editingYear, this.editingYear.id);
+            if (overlap) {
+                this.editErrors = {
+                    startdate: `Cette période chevauche l'année scolaire « ${overlap.label} » déjà enregistrée.`
+                };
+                return;
+            }
+
+            this.isSavingEdit = true;
+            try {
+                await window.api.put(`/school-years/${this.editingYear.id}`, {
+                    label: this.editingYear.label,
+                    startDate: this.editingYear.startDate,
+                    endDate: this.editingYear.endDate
+                });
+
+                this.editedYearLabel = this.editingYear.label;
+                this.closeEdit();
+
+                // Rechargement complet : le serveur a pu recaler les trimestres, et c'est l'état RÉEL
+                // de l'année qu'il faut afficher — pas ce que le navigateur croit avoir envoyé.
+                await this.loadYears();
+                this.showEditedDialog = true;
+            } catch (err) {
+                this.editErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification.');
+            } finally {
+                this.isSavingEdit = false;
             }
         },
 

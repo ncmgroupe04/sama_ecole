@@ -82,6 +82,16 @@
  Activer
  </button>
 
+ @* Corriger le libellé ou la période — typiquement prolonger l'année en cours de
+ quelques semaines. Proposé sur l'année ACTIVE comme sur une année à venir, mais
+ jamais sur une année terminée (canEdit) : l'API refuse de toute façon en 422. *@
+ <button x-show="canEdit(year)" x-cloak
+ x-on:click="openEdit(year)"
+ title="Modifier le libellé et les dates de cette année"
+ class="ml-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+ Modifier
+ </button>
+
  @* Une année terminée est en lecture seule (ticket JGK-C01) : on le DIT,
  au lieu d'afficher un bouton grisé dont personne ne devine la raison. *@
  <span x-show="year.isClosed" x-cloak
@@ -156,6 +166,55 @@
  <confirm-dialog-body close-action="showAddedDialog = false"
  new-action="showAddedDialog = false; openCreate()" new-label="Nouvelle année">
  L'année <span class="font-medium text-slate-900" x-text="addedYearLabel"></span> a bien été ajoutée. Elle reste inactive jusqu'à son activation.
+ </confirm-dialog-body>
+ </modal-shell>
+
+ @*
+ Modification du libellé et de la période. Glissée sur le côté comme le formulaire de création
+ (même nature : une saisie), et non centrée comme l'activation — corriger des dates ne déplace
+ aucune donnée d'un exercice à l'autre, c'est l'activation qui engage l'établissement.
+ *@
+ <modal-shell open="isEditOpen" on-close="closeEdit()" title="Modifier l'année scolaire">
+ <modal-subtitle>Les trimestres sont recalés sur la nouvelle période. Les notes déjà saisies restent attachées à leur trimestre.</modal-subtitle>
+
+ <!-- Erreur non rattachable à un champ : année terminée, libellé en doublon, réseau… -->
+ <div x-show="editErrors.global || editErrors.id" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger"
+ x-text="editErrors.global || editErrors.id"></div>
+
+ <form x-on:submit.prevent="submitEdit()" class="space-y-4">
+ <div>
+ <label for="edit-year-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
+ <input id="edit-year-label" type="text" x-model="editingYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="editErrors.label" x-cloak x-text="editErrors.label" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div>
+ <label for="edit-year-start" class="block text-sm font-medium text-slate-700">Date de début <span class="text-danger">*</span></label>
+ <date-field id="edit-year-start" model="editingYear.startDate" required="true" />
+ <p x-show="editErrors.startdate" x-cloak x-text="editErrors.startdate" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div>
+ <label for="edit-year-end" class="block text-sm font-medium text-slate-700">Date de fin <span class="text-danger">*</span></label>
+ <date-field id="edit-year-end" model="editingYear.endDate" required="true" />
+ <p x-show="editErrors.enddate" x-cloak x-text="editErrors.enddate" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+ <button type="button" x-on:click="closeEdit()" class="btn-secondary">
+ Annuler
+ </button>
+ <button type="submit" :disabled="isSavingEdit" class="btn-primary">
+ <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Confirmation : année scolaire modifiée -->
+ <modal-shell open="showEditedDialog" size="md" on-close="showEditedDialog = false" title="Année scolaire modifiée">
+ <confirm-dialog-body close-action="showEditedDialog = false">
+ L'année <span class="font-medium text-slate-900" x-text="editedYearLabel"></span> a bien été mise à jour.
  </confirm-dialog-body>
  </modal-shell>
 
