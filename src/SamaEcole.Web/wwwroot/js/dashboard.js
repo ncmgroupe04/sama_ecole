@@ -89,6 +89,7 @@ document.addEventListener('alpine:init', () => {
         error: null,
         data: null,
         search: '',
+        activeTab: 'dual', // 'dual' (côte à côte), 'annual' (bilan annuel), 'monthly' (bilan mensuel)
 
         async init() {
             if (this.canView) await this.load();

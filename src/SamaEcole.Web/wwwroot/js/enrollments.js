@@ -300,6 +300,13 @@ document.addEventListener('alpine:init', () => {
             this.receipt = null;
             this.showReceipt = false;
             this.showConfirmDialog = false;
+            this.showPdfModal = false;
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = null;
+            }
+            this.pdfPreviewTitle = '';
+            this.pdfDownloadName = '';
             this.pdfError = null;
             this.form = {
                 classroomId: '',
@@ -323,37 +330,84 @@ document.addEventListener('alpine:init', () => {
             window.print();
         },
 
-        /**
-         * Télécharge le reçu officiel en PDF (ticket JGK-E02). L'API exige le jeton : un simple lien ne
-         * suffit pas, on récupère donc le PDF en blob avec l'en-tête Authorization, puis on déclenche le
-         * téléchargement côté navigateur. Renouvellement préventif du jeton, comme window.api.
-         */
-        async downloadPdf() {
-            if (!this.receipt) return;
+        showPdfModal: false,
+        pdfPreviewUrl: null,
+        pdfPreviewTitle: '',
+        pdfDownloadName: '',
+
+        async openPdfPreview(url, title, downloadName) {
             this.pdfError = null;
             try {
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                     await window.api.refreshOrRedirect();
                 }
 
-                const response = await fetch(`/api/v1/enrollments/${this.receipt.enrollmentId}/receipt/pdf`, {
+                const response = await fetch(url, {
                     headers: { Authorization: `Bearer ${window.auth.accessToken}` },
                     credentials: 'same-origin'
                 });
-                if (!response.ok) throw new Error('Téléchargement du reçu impossible.');
+                if (!response.ok) throw new Error('Téléchargement du document impossible.');
 
                 const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `Recu-${this.receipt.receiptNumber}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                URL.revokeObjectURL(url);
+                if (this.pdfPreviewUrl) {
+                    URL.revokeObjectURL(this.pdfPreviewUrl);
+                }
+                this.pdfPreviewUrl = URL.createObjectURL(blob);
+                this.pdfPreviewTitle = title || 'Document officiel';
+                this.pdfDownloadName = downloadName || 'document.pdf';
+                this.showPdfModal = true;
             } catch (err) {
-                this.pdfError = err.message || 'Téléchargement du reçu impossible.';
+                this.pdfError = err.message || 'Erreur lors du chargement du document.';
             }
+        },
+
+        closePdfPreview() {
+            this.showPdfModal = false;
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = null;
+            }
+        },
+
+        printPreviewPdf() {
+            const iframe = document.getElementById('enr-pdf-preview-frame');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.print();
+            }
+        },
+
+        downloadPreviewPdf() {
+            if (!this.pdfPreviewUrl) return;
+            const link = document.createElement('a');
+            link.href = this.pdfPreviewUrl;
+            link.download = this.pdfDownloadName || 'document.pdf';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        },
+
+        /**
+         * Télécharge/Prévisualise le reçu officiel en PDF via la modale (Ticket JGK-E02 / Axe 4).
+         */
+        async downloadPdf() {
+            if (!this.receipt) return;
+            await this.openPdfPreview(
+                `/api/v1/enrollments/${this.receipt.enrollmentId}/receipt/pdf`,
+                `Reçu d'inscription n° ${this.receiptReference()}`,
+                `Recu-${this.receipt.receiptNumber}.pdf`
+            );
+        },
+
+        /**
+         * Télécharge/Prévisualise le certificat d'inscription en PDF via la modale (Ticket JGK-E03 / Axe 2).
+         */
+        async downloadCertificatePdf() {
+            if (!this.receipt) return;
+            await this.openPdfPreview(
+                `/api/v1/enrollments/${this.receipt.enrollmentId}/certificate/pdf`,
+                `Certificat / Attestation d'inscription`,
+                `Certificat-Inscription-${this.receipt.matricule}.pdf`
+            );
         },
 
         // ---------------------------------------------------------------- Affichage

@@ -48,6 +48,9 @@ public class UpdateGradingScaleCommandHandler(
             settings.TuitionMonthsPerYear,
             settings.AllowSecretaryToManageGrading,
             settings.AllowFinanceToModifyFees,
-            settings.AllowFinanceToDeleteFees);
+            settings.AllowFinanceToDeleteFees,
+            settings.DirectorSignatureUrl,
+            settings.CashierSignatureUrl,
+            settings.OfficialStampUrl);
     }
 }

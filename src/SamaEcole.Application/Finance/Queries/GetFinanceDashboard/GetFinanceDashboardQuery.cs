@@ -21,7 +21,11 @@ public record FinanceDashboardDto(
     decimal CollectedThisYear,
     decimal OutstandingBalance,
     decimal RecoveryRate,
-    IReadOnlyList<RecentPaymentDto> RecentPayments);
+    IReadOnlyList<RecentPaymentDto> RecentPayments,
+    decimal ExpectedThisMonth = 0m,
+    decimal MonthlyRecoveryRate = 0m,
+    decimal ExpectedThisYear = 0m,
+    decimal YearlyRecoveryRate = 0m);
 
 public record RecentPaymentDto(
     Guid PaymentId,
@@ -66,10 +70,12 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext dbContext, Ti
 
         // Solde dû et taux de recouvrement portent sur les inscriptions NON ANNULÉES de l'année scolaire
         // ACTIVE — le même périmètre que la caisse (GetStudentBalanceQuery), pas l'historique complet.
+        var activeYear = await dbContext.SchoolYears.AsNoTracking()
+            .Where(y => y.IsActive)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var activeEnrollments = dbContext.Enrollments.AsNoTracking()
-            .Where(e => e.Status != EnrollmentStatus.Cancelled)
-            .Join(dbContext.SchoolYears.AsNoTracking().Where(y => y.IsActive),
-                e => e.SchoolYearId, y => y.Id, (e, _) => e);
+            .Where(e => e.Status != EnrollmentStatus.Cancelled && activeYear != null && e.SchoolYearId == activeYear.Id);
 
         var totals = await activeEnrollments
             .Select(e => new { e.TotalDue, e.AmountPaid })
@@ -79,6 +85,32 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext dbContext, Ti
         var totalPaid = totals.Sum(t => t.AmountPaid);
         var outstandingBalance = totalDue - totalPaid;
         var recoveryRate = totalDue > 0 ? totalPaid / totalDue : 0m;
+
+        decimal expectedThisMonth = 0m;
+        if (activeYear != null)
+        {
+            int monthIndex = (now.Year - activeYear.StartDate.Year) * 12 + now.Month - activeYear.StartDate.Month + 1;
+            if (monthIndex >= 1)
+            {
+                var feeLines = await dbContext.EnrollmentFeeLines.AsNoTracking()
+                    .Where(l => dbContext.Enrollments.Any(e => e.Id == l.EnrollmentId && e.Status != EnrollmentStatus.Cancelled && e.SchoolYearId == activeYear.Id))
+                    .ToListAsync(cancellationToken);
+
+                foreach (var line in feeLines)
+                {
+                    if (monthIndex == 1 && (!line.IsRecurring || line.Months <= 1))
+                    {
+                        expectedThisMonth += line.LineTotal;
+                    }
+                    if (line.IsRecurring && line.Months >= monthIndex)
+                    {
+                        expectedThisMonth += line.UnitAmount;
+                    }
+                }
+            }
+        }
+
+        var monthlyRecoveryRate = expectedThisMonth > 0 ? Math.Min(1.0m, collectedThisMonth / expectedThisMonth) : (collectedThisMonth > 0 ? 1.0m : 0m);
 
         var recentPayments = await (
             from p in dbContext.Payments.AsNoTracking()
@@ -93,6 +125,7 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext dbContext, Ti
 
         return new FinanceDashboardDto(
             collectedToday, collectedThisMonth, collectedThisYear,
-            outstandingBalance, recoveryRate, recentPayments);
+            outstandingBalance, recoveryRate, recentPayments,
+            expectedThisMonth, monthlyRecoveryRate, totalDue, recoveryRate);
     }
 }

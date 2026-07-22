@@ -63,9 +63,10 @@ public static class DependencyInjection
             services.AddSingleton<IEmailSender, SmtpEmailSender>();
         }
 
-        // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02). Sans état : des singletons suffisent.
+        // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02) et certificat d'inscription (Axe 2). Sans état : des singletons suffisent.
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
         services.AddSingleton<IPaymentReceiptPdfGenerator, PaymentReceiptPdfGenerator>();
+        services.AddSingleton<IEnrollmentCertificatePdfGenerator, EnrollmentCertificatePdfGenerator>();
 
         // Bulletin de notes PDF (ticket JGK-G03) — même moteur QuestPDF, même convention.
         services.AddSingleton<IReportCardPdfGenerator, ReportCardPdfGenerator>();

@@ -2,6 +2,8 @@ using SamaEcole.Application.Enrollments;
 using SamaEcole.Application.Enrollments.Commands.CancelEnrollment;
 using SamaEcole.Application.Enrollments.Commands.ChangeEnrollmentStatus;
 using SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
+using SamaEcole.Application.Enrollments.Queries.GetEnrollmentCertificate;
+using SamaEcole.Application.Enrollments.Queries.GetEnrollmentCertificatePdf;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceipt;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceiptPdf;
 using SamaEcole.Domain.Enums;
@@ -66,6 +68,23 @@ public class EnrollmentsController(ISender mediator) : ControllerBase
         var result = await mediator.Send(new GetEnrollmentReceiptPdfQuery(id), cancellationToken);
 
         return File(result.Content, "application/pdf", $"Recu-{result.ReceiptNumber}.pdf");
+    }
+
+    [HttpGet("{id:guid}/certificate")]
+    [ProducesResponseType<EnrollmentCertificateDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Certificate(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetEnrollmentCertificateQuery(id), cancellationToken));
+
+    [HttpGet("{id:guid}/certificate/pdf")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CertificatePdf(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetEnrollmentCertificatePdfQuery(id), cancellationToken);
+
+        return File(result.Content, "application/pdf", $"Certificat-{result.CertificateNumber}.pdf");
     }
 
     /// <summary>

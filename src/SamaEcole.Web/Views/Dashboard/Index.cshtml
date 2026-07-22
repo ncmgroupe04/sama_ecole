@@ -159,6 +159,116 @@
  </template>
  </div>
 
+            <!-- Navigation Onglets et Bilan Dual (Ticket JGK-F04 / Axe 3) -->
+            <div x-show="!isLoading && data" x-cloak class="mt-8">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Bilan Financier Dual</h2>
+                        <p class="text-xs text-slate-500">Comparaison en temps réel entre l'exercice annuel et le mois en cours.</p>
+                    </div>
+                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-start sm:self-auto">
+                        <button type="button" x-on:click="activeTab = 'dual'"
+                                :class="activeTab === 'dual' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
+                                class="px-3 py-1.5 rounded-lg text-xs transition-all">
+                            Côte à côte (Dual)
+                        </button>
+                        <button type="button" x-on:click="activeTab = 'annual'"
+                                :class="activeTab === 'annual' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
+                                class="px-3 py-1.5 rounded-lg text-xs transition-all">
+                            Bilan Annuel
+                        </button>
+                        <button type="button" x-on:click="activeTab = 'monthly'"
+                                :class="activeTab === 'monthly' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
+                                class="px-3 py-1.5 rounded-lg text-xs transition-all">
+                            Bilan Mensuel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Contenu Bilan Dual -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                    <!-- BILAN ANNUEL -->
+                    <div x-show="activeTab === 'dual' || activeTab === 'annual'"
+                         :class="activeTab === 'annual' ? 'lg:col-span-2' : ''"
+                         class="card p-6 border-l-4 border-indigo-600 bg-gradient-to-br from-white to-indigo-50/20 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">Exercice actif</span>
+                                <h3 class="text-lg font-bold text-slate-900 mt-1">Bilan Annuel Global</h3>
+                            </div>
+                            <span class="text-2xl font-black text-indigo-600" x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></span>
+                        </div>
+
+                        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 text-center">
+                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                                <dt class="text-xs text-slate-500">Encaissé sur l'année</dt>
+                                <dd class="text-base font-bold text-slate-900 mt-1" x-text="formatMoney(data.collectedThisYear)"></dd>
+                            </div>
+                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                                <dt class="text-xs text-slate-500">Solde dû global</dt>
+                                <dd class="text-base font-bold text-warning mt-1" x-text="formatMoney(data.outstandingBalance)"></dd>
+                            </div>
+                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100 col-span-2 sm:col-span-1">
+                                <dt class="text-xs text-slate-500">Taux global</dt>
+                                <dd class="text-base font-bold text-success mt-1" x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></dd>
+                            </div>
+                        </dl>
+
+                        <!-- Barre de progression annuelle -->
+                        <div class="mt-5 space-y-1.5">
+                            <div class="flex justify-between text-xs font-medium text-slate-600">
+                                <span>Progression du recouvrement annuel</span>
+                                <span x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></span>
+                            </div>
+                            <div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                                <div class="h-full rounded-full bg-indigo-600 transition-all duration-500"
+                                     :style="'width: ' + Math.min(100, Math.round((data.recoveryRate || data.yearlyRecoveryRate || 0) * 100)) + '%'"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BILAN DU MOIS EN COURS -->
+                    <div x-show="activeTab === 'dual' || activeTab === 'monthly'"
+                         :class="activeTab === 'monthly' ? 'lg:col-span-2' : ''"
+                         class="card p-6 border-l-4 border-emerald-600 bg-gradient-to-br from-white to-emerald-50/20 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">Mois en cours</span>
+                                <h3 class="text-lg font-bold text-slate-900 mt-1">Bilan Mensuel</h3>
+                            </div>
+                            <span class="text-2xl font-black text-emerald-600" x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></span>
+                        </div>
+
+                        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 text-center">
+                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                                <dt class="text-xs text-slate-500">Encaissé ce mois</dt>
+                                <dd class="text-base font-bold text-slate-900 mt-1" x-text="formatMoney(data.collectedThisMonth)"></dd>
+                            </div>
+                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
+                                <dt class="text-xs text-slate-500">Attendu ce mois</dt>
+                                <dd class="text-base font-bold text-slate-700 mt-1" x-text="formatMoney(data.expectedThisMonth || 0)"></dd>
+                            </div>
+                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100 col-span-2 sm:col-span-1">
+                                <dt class="text-xs text-slate-500">Taux mensuel</dt>
+                                <dd class="text-base font-bold text-emerald-600 mt-1" x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></dd>
+                            </div>
+                        </dl>
+
+                        <!-- Barre de progression mensuelle -->
+                        <div class="mt-5 space-y-1.5">
+                            <div class="flex justify-between text-xs font-medium text-slate-600">
+                                <span>Réalisation par rapport aux échéances du mois</span>
+                                <span x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></span>
+                            </div>
+                            <div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                                <div class="h-full rounded-full bg-emerald-600 transition-all duration-500"
+                                     :style="'width: ' + Math.min(100, Math.round((data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0)) * 100)) + '%'"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
  <!-- Diagrammes : recouvrement (donut) + comparaison jour/mois/année (barres), avec le détail en
  pourcentage de chaque chiffre affiché dans les cartes KPI ci-dessus. -->
  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">

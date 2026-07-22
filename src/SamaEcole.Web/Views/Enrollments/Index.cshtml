@@ -20,8 +20,12 @@
     .receipt-a5 {
         width: 210mm;
         min-height: 148mm;
+        height: 148mm;
         padding: 8mm;
         font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
     @@page {
@@ -34,8 +38,9 @@
         #receipt-printable, #receipt-printable * { visibility: visible !important; }
         #receipt-printable {
             position: absolute; left: 0; top: 0;
-            width: auto; min-height: 0;
-            margin: 0; padding: 0; box-shadow: none !important; border: 0 !important;
+            width: 210mm; height: 148mm; min-height: 148mm;
+            margin: 0; padding: 8mm; box-shadow: none !important; border: 0 !important;
+            display: flex !important; flex-direction: column !important; justify-content: space-between !important;
         }
         #receipt-printable, #receipt-printable * { break-inside: avoid; page-break-inside: avoid; }
         .no-print { display: none !important; }
@@ -300,7 +305,11 @@
  </button>
  <button type="button" x-on:click="downloadPdf()" class="btn-secondary">
  <icon name="download" class="w-5 h-5" />
- Télécharger le PDF
+ Reçu (PDF)
+ </button>
+ <button type="button" x-on:click="downloadCertificatePdf()" class="btn-secondary">
+ <icon name="document-text" class="w-5 h-5" />
+ Attestation d'inscription (PDF)
  </button>
  <button type="button" x-on:click="printReceipt()" class="btn-primary">
  <icon name="print" class="w-5 h-5" />
@@ -313,7 +322,7 @@
  <div x-show="pdfError" x-cloak class="no-print mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="pdfError"></div>
 
  @* Document imprimable A5 PAYSAGE : sobre, moderne, aux normes officielles *@
- <div id="receipt-printable" class="receipt-a5 bg-white border border-slate-200/80 mx-auto text-slate-800 shadow-sm rounded-xl">
+ <div id="receipt-printable" class="receipt-a5 bg-white border border-slate-200/80 mx-auto text-slate-800 shadow-sm rounded-xl flex flex-col justify-between min-h-[148mm]">
 
  <!-- A. En-tête Institutionnel (Header) -->
  <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-3">
@@ -329,34 +338,34 @@
  </div>
 
  <!-- B. Titre & Identifiant du Reçu -->
- <div class="my-4 flex justify-center">
+ <div class="my-3 flex justify-center">
  <div class="text-sm font-semibold tracking-wide text-slate-700 bg-slate-100 px-3 py-1 rounded-md border border-slate-200/60 shadow-2xs">
  REÇU D'INSCRIPTION — n° <span x-text="receiptReference()"></span>
  </div>
  </div>
 
- <!-- C. Corps du Reçu (2 Colonnes distinctes) -->
- <div class="grid grid-cols-2 gap-6 items-start">
+ <!-- C. Corps du Reçu (2 Colonnes distinctes avec respiration) -->
+ <div class="grid grid-cols-2 gap-6 items-start my-auto py-2">
 
  <!-- COLONNE GAUCHE (Informations Élève & Transaction) -->
- <div class="space-y-2 text-xs text-slate-600">
- <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5">
+ <div class="space-y-3 text-xs text-slate-600">
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-2">
  <span class="text-slate-500">Matricule :</span>
  <span class="font-bold text-slate-900" x-text="receipt.matricule"></span>
  </div>
- <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5">
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-2">
  <span class="text-slate-500">Nom complet :</span>
  <span class="font-bold text-slate-900" x-text="receipt.studentFullName"></span>
  </div>
- <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5">
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-2">
  <span class="text-slate-500">Classe &amp; Niveau :</span>
  <span class="font-medium text-slate-800" x-text="receipt.classroomName + (receipt.classroomLevel ? ' — ' + receipt.classroomLevel : '')"></span>
  </div>
- <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5">
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-2">
  <span class="text-slate-500">Année scolaire :</span>
  <span class="font-medium text-slate-800" x-text="receipt.schoolYearLabel"></span>
  </div>
- <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5" x-show="receipt.guardianName || receipt.guardianPhone" x-cloak>
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-2" x-show="receipt.guardianName || receipt.guardianPhone" x-cloak>
  <span class="text-slate-500">Tuteur &amp; Contact :</span>
  <span class="font-medium text-slate-800" x-text="(receipt.guardianName || '—') + (receipt.guardianPhone ? ' (' + receipt.guardianPhone + ')' : '')"></span>
  </div>
@@ -366,35 +375,35 @@
  </div>
  </div>
 
- <!-- COLONNE DROITE (Ventilation Comptable) -->
+ <!-- COLONNE DROITE (Ventilation Comptable avec padding vertical plus aéré) -->
  <div class="flex flex-col justify-between">
  <div class="rounded-xl border border-slate-200/80 overflow-hidden shadow-2xs">
  <table class="w-full text-xs">
  <thead>
  <tr class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
- <th class="text-left py-2 px-3 font-medium">Désignation des frais</th>
- <th class="text-right py-2 px-3 font-medium whitespace-nowrap">Montant (FCFA)</th>
+ <th class="text-left py-2.5 px-3 font-medium">Désignation des frais</th>
+ <th class="text-right py-2.5 px-3 font-medium whitespace-nowrap">Montant (FCFA)</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
  <template x-for="line in receipt.collectedLines" :key="line.designation">
  <tr class="border-b border-slate-100">
- <td class="py-2 px-3 text-slate-700" x-text="collectedLabel(line)"></td>
- <td class="py-2 px-3 text-right font-medium text-slate-900" x-text="formatMoney(line.amount)"></td>
+ <td class="py-2.5 px-3 text-slate-700" x-text="collectedLabel(line)"></td>
+ <td class="py-2.5 px-3 text-right font-medium text-slate-900" x-text="formatMoney(line.amount)"></td>
  </tr>
  </template>
  <tr x-show="receipt.collectedLines.length === 0" x-cloak class="border-b border-slate-100">
- <td class="py-2 px-3 text-slate-400 italic">Aucun frais encaissé ce jour</td>
- <td class="py-2 px-3 text-right font-medium text-slate-400">0 FCFA</td>
+ <td class="py-2.5 px-3 text-slate-400 italic">Aucun frais encaissé ce jour</td>
+ <td class="py-2.5 px-3 text-right font-medium text-slate-400">0 FCFA</td>
  </tr>
  <tr class="bg-indigo-50/50 text-indigo-950 font-bold border-t border-indigo-100">
- <td class="py-2 px-3 uppercase text-xs">Total encaissé</td>
- <td class="py-2 px-3 text-right text-sm" x-text="formatMoney(receipt.totalCollected)"></td>
+ <td class="py-2.5 px-3 uppercase text-xs">Total encaissé</td>
+ <td class="py-2.5 px-3 text-right text-sm" x-text="formatMoney(receipt.totalCollected)"></td>
  </tr>
  </tbody>
  </table>
  </div>
- <div class="mt-2 text-[11px] text-slate-500 flex justify-between items-center px-1">
+ <div class="mt-3 text-[11px] text-slate-500 flex justify-between items-center px-1">
  <span>Frais annuels : <strong class="font-semibold text-slate-700" x-text="formatMoney(receipt.totalDue)"></strong></span>
  <span class="text-slate-300">|</span>
  <span>Reste à payer : <strong class="font-semibold text-slate-700" x-text="formatMoney(receipt.totalDue - receipt.totalCollected)"></strong></span>
@@ -403,8 +412,8 @@
 
  </div>
 
- <!-- D. Pied de Page (Footer) -->
- <div class="mt-5 pt-3 border-t border-slate-100">
+ <!-- D. Pied de Page (Footer poussé tout en bas via margin-top: auto) -->
+ <div class="mt-auto pt-3 border-t border-slate-100">
  <!-- Note d'information (au centre) -->
  <p class="text-center text-xs italic text-slate-400 mb-3">
  Il est demandé aux parents de garder minutieusement leur reçu après le paiement.
@@ -437,6 +446,31 @@
  L'inscription de <span class="font-medium text-slate-900" x-text="receipt ? receipt.studentFullName : ''"></span>
  a bien été validée — reçu n° <span class="font-medium text-slate-900" x-text="receiptReference()"></span>.
  </confirm-dialog-body>
+ </modal-shell>
+
+ <!-- Modale de prévisualisation PDF et actions (Ticket JGK-F02 / Axe 4) -->
+ <modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
+     <div class="space-y-4">
+         <div x-show="pdfError" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="pdfError"></div>
+         
+         <div x-show="pdfPreviewUrl" class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden" style="height: 600px;">
+             <iframe :src="pdfPreviewUrl" id="enr-pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
+         </div>
+
+         <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+             <button type="button" x-on:click="closePdfPreview()" class="btn-secondary">
+                 Fermer
+             </button>
+             <button type="button" x-on:click="downloadPreviewPdf()" class="btn-secondary">
+                 <icon name="download" class="w-4 h-4" />
+                 Télécharger
+             </button>
+             <button type="button" x-on:click="printPreviewPdf()" class="btn-primary">
+                 <icon name="print" class="w-4 h-4" />
+                 Imprimer le PDF
+             </button>
+         </div>
+     </div>
  </modal-shell>
  </div>
 </div>

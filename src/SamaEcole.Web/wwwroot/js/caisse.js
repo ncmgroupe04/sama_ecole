@@ -196,37 +196,114 @@ document.addEventListener('alpine:init', () => {
             this.showConfirmDialog = false;
         },
 
+        formatDateOnly(dateStr) {
+            if (!dateStr) return '—';
+            try {
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                return d.toLocaleDateString('fr-FR');
+            } catch {
+                return dateStr;
+            }
+        },
+
+        statusBadgeVariant(status) {
+            switch (status) {
+                case 'Paid': return 'success';
+                case 'Overdue': return 'danger';
+                case 'Partial': return 'warning';
+                default: return 'neutral';
+            }
+        },
+
+        statusLabel(status) {
+            switch (status) {
+                case 'Paid': return 'Soldé';
+                case 'Overdue': return 'En retard';
+                case 'Partial': return 'Partiel';
+                case 'Pending': return 'En attente';
+                default: return status || '—';
+            }
+        },
+
+        payInstallment(inst) {
+            if (!inst || inst.remainingDue <= 0) return;
+            this.form.amount = inst.remainingDue;
+            const input = document.getElementById('caisse-amount');
+            if (input) {
+                input.focus();
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        },
+
         printReceipt() {
             window.print();
         },
 
-        /** Télécharge le reçu officiel en PDF (ticket JGK-F02), même mécanique que /inscriptions. */
-        async downloadPdf() {
-            if (!this.paymentResult) return;
+        showPdfModal: false,
+        pdfPreviewUrl: null,
+        pdfPreviewTitle: '',
+        pdfDownloadName: '',
+
+        async openPdfPreview(url, title, downloadName) {
             this.pdfError = null;
             try {
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                     await window.api.refreshOrRedirect();
                 }
 
-                const response = await fetch(`/api/v1/finance/payments/${this.paymentResult.paymentId}/receipt/pdf`, {
+                const response = await fetch(url, {
                     headers: { Authorization: `Bearer ${window.auth.accessToken}` },
                     credentials: 'same-origin'
                 });
-                if (!response.ok) throw new Error('Téléchargement du reçu impossible.');
+                if (!response.ok) throw new Error('Téléchargement du document impossible.');
 
                 const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `Recu-${this.receipt.receiptNumber}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                URL.revokeObjectURL(url);
+                if (this.pdfPreviewUrl) {
+                    URL.revokeObjectURL(this.pdfPreviewUrl);
+                }
+                this.pdfPreviewUrl = URL.createObjectURL(blob);
+                this.pdfPreviewTitle = title || 'Document officiel';
+                this.pdfDownloadName = downloadName || 'document.pdf';
+                this.showPdfModal = true;
             } catch (err) {
-                this.pdfError = err.message || 'Téléchargement du reçu impossible.';
+                this.pdfError = err.message || 'Erreur lors du chargement du document.';
             }
+        },
+
+        closePdfPreview() {
+            this.showPdfModal = false;
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = null;
+            }
+        },
+
+        printPreviewPdf() {
+            const iframe = document.getElementById('pdf-preview-frame');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.print();
+            }
+        },
+
+        downloadPreviewPdf() {
+            if (!this.pdfPreviewUrl) return;
+            const link = document.createElement('a');
+            link.href = this.pdfPreviewUrl;
+            link.download = this.pdfDownloadName || 'document.pdf';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        },
+
+        /** Ouvre la modale de prévisualisation PDF pour le reçu de caisse (ticket JGK-F02 / Axe 4). */
+        async downloadPdf() {
+            if (!this.paymentResult) return;
+            await this.openPdfPreview(
+                `/api/v1/finance/payments/${this.paymentResult.paymentId}/receipt/pdf`,
+                `Reçu de paiement n° ${this.paymentResult.receiptNumber}`,
+                `Recu-${this.paymentResult.receiptNumber}.pdf`
+            );
         },
 
         // ---------------------------------------------------------------- Affichage
