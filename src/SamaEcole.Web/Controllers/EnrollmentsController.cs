@@ -67,7 +67,8 @@ public class EnrollmentsController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetEnrollmentReceiptPdfQuery(id), cancellationToken);
 
-        return File(result.Content, "application/pdf", $"Recu-{result.ReceiptNumber}.pdf");
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"Recu-{result.ReceiptNumber}.pdf\"";
+        return File(result.Content, "application/pdf");
     }
 
     [HttpGet("{id:guid}/certificate")]
@@ -84,7 +85,8 @@ public class EnrollmentsController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetEnrollmentCertificatePdfQuery(id), cancellationToken);
 
-        return File(result.Content, "application/pdf", $"Certificat-{result.CertificateNumber}.pdf");
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"Certificat-{result.CertificateNumber}.pdf\"";
+        return File(result.Content, "application/pdf");
     }
 
     /// <summary>

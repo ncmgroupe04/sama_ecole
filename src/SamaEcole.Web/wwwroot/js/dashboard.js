@@ -180,6 +180,7 @@ document.addEventListener('alpine:init', () => {
          * Ouvre le reçu officiel en PDF dans une modale d'aperçu (avec impression ou téléchargement).
          */
         async previewReceipt(paymentId, receiptNumber) {
+            this.pdfLoadError = false;
             if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                 await window.api.refreshOrRedirect();
             }
@@ -188,11 +189,15 @@ document.addEventListener('alpine:init', () => {
                 headers: { Authorization: `Bearer ${window.auth.accessToken}` },
                 credentials: 'same-origin'
             });
-            if (!response.ok) return;
+            if (!response.ok) {
+                this.pdfLoadError = true;
+                return;
+            }
 
-            const blob = await response.blob();
+            const rawBlob = await response.blob();
+            const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
             if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
-            this.pdfPreviewUrl = URL.createObjectURL(blob);
+            this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
             this.pdfPreviewTitle = `Reçu officiel n° ${receiptNumber}`;
             this.pdfDownloadName = `Recu-${receiptNumber}.pdf`;
             this.showPdfModal = true;
@@ -204,6 +209,7 @@ document.addEventListener('alpine:init', () => {
                 URL.revokeObjectURL(this.pdfPreviewUrl);
                 this.pdfPreviewUrl = null;
             }
+            this.pdfLoadError = false;
         },
 
         printPreviewPdf() {

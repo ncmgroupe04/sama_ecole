@@ -40,6 +40,40 @@ document.addEventListener('alpine:init', () => {
         // d'abord ; le reçu ne s'affiche que si l'utilisateur choisit de l'imprimer/consulter.
         showConfirmDialog: false,
         showReceipt: false,
+        hasDraft: false,
+
+        init() {
+            if (window.formDraft && window.formDraft.has('caisse_form')) {
+                this.hasDraft = true;
+            }
+            this.$watch('form', (val) => {
+                if (window.formDraft && (val.amount || this.selectedStudent)) {
+                    window.formDraft.save('caisse_form', {
+                        form: val,
+                        student: this.selectedStudent
+                    });
+                }
+            });
+        },
+
+        restoreDraft() {
+            if (!window.formDraft) return;
+            const draft = window.formDraft.load('caisse_form');
+            if (!draft) return;
+            if (draft.student) {
+                this.selectStudent(draft.student).then(() => {
+                    if (draft.form) Object.assign(this.form, draft.form);
+                });
+            } else if (draft.form) {
+                Object.assign(this.form, draft.form);
+            }
+            this.hasDraft = false;
+        },
+
+        clearDraft() {
+            if (window.formDraft) window.formDraft.clear('caisse_form');
+            this.hasDraft = false;
+        },
 
         // ---------------------------------------------------------------- Recherche élève
 
@@ -150,6 +184,8 @@ document.addEventListener('alpine:init', () => {
                 // qu'ensuite, si l'utilisateur clique « Imprimer le reçu ».
                 this.showReceipt = false;
                 this.showConfirmDialog = true;
+                if (window.formDraft) window.formDraft.clear('caisse_form');
+                this.hasDraft = false;
             } catch (err) {
                 if (err.status === 409) {
                     // Solde modifié entre-temps par un autre caissier : jamais un écrasement silencieux
@@ -244,9 +280,11 @@ document.addEventListener('alpine:init', () => {
         pdfPreviewUrl: null,
         pdfPreviewTitle: '',
         pdfDownloadName: '',
+        pdfLoadError: false,
 
         async openPdfPreview(url, title, downloadName) {
             this.pdfError = null;
+            this.pdfLoadError = false;
             try {
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                     await window.api.refreshOrRedirect();
@@ -258,11 +296,12 @@ document.addEventListener('alpine:init', () => {
                 });
                 if (!response.ok) throw new Error('Téléchargement du document impossible.');
 
-                const blob = await response.blob();
+                const rawBlob = await response.blob();
+                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
                 if (this.pdfPreviewUrl) {
                     URL.revokeObjectURL(this.pdfPreviewUrl);
                 }
-                this.pdfPreviewUrl = URL.createObjectURL(blob);
+                this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
                 this.pdfPreviewTitle = title || 'Document officiel';
                 this.pdfDownloadName = downloadName || 'document.pdf';
                 this.showPdfModal = true;
@@ -277,6 +316,7 @@ document.addEventListener('alpine:init', () => {
                 URL.revokeObjectURL(this.pdfPreviewUrl);
                 this.pdfPreviewUrl = null;
             }
+            this.pdfLoadError = false;
         },
 
         printPreviewPdf() {
@@ -303,6 +343,15 @@ document.addEventListener('alpine:init', () => {
                 `/api/v1/finance/payments/${this.paymentResult.paymentId}/receipt/pdf`,
                 `Reçu de paiement n° ${this.paymentResult.receiptNumber}`,
                 `Recu-${this.paymentResult.receiptNumber}.pdf`
+            );
+        },
+
+        /** Ouvre l'aperçu et l'impression d'un reçu historique depuis le tableau des versements. */
+        async previewReceipt(paymentId, receiptNumber) {
+            await this.openPdfPreview(
+                `/api/v1/finance/payments/${paymentId}/receipt/pdf`,
+                `Reçu de paiement n° ${receiptNumber}`,
+                `Recu-${receiptNumber}.pdf`
             );
         },
 

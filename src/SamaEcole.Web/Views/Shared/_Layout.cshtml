@@ -6,6 +6,7 @@
  <title>@ViewData["Title"] - Sama Ecole</title>
  <!-- CSS généré dans wwwroot/css/site.css par `npm run build:css` (Tailwind, Décision D-13) -->
  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+ <link rel="manifest" href="~/manifest.json" />
 
  @* Scripts CLASSIQUES, donc exécutés avant le script différé d'Alpine, quel que soit leur
  emplacement dans le document : window.auth et window.api existent avant qu'Alpine ne
@@ -13,6 +14,8 @@
  <script src="~/js/auth.js" asp-append-version="true"></script>
  <script src="~/js/api.js" asp-append-version="true"></script>
  <script src="~/js/ui-components.js" asp-append-version="true"></script>
+ <script src="~/js/form-draft.js" asp-append-version="true"></script>
+ <script src="~/js/network-guard.js" asp-append-version="true"></script>
 
  @* Redirige vers /login AVANT le rendu du corps : sans session, l'utilisateur ne voit pas
  l'interface apparaître une fraction de seconde. Confort d'affichage, pas une protection —
@@ -272,6 +275,20 @@
  </button>
  </div>
  </header>
+
+ <!-- Bandeau d'alerte de surveillance réseau et mode déconnecté -->
+ <div x-data="networkGuardBanner()" x-cloak class="shrink-0 z-40">
+ <!-- Bandeau Hors-Ligne -->
+ <div x-show="!online" class="bg-amber-500 text-slate-950 text-xs sm:text-sm font-semibold px-6 py-2.5 flex items-center justify-center gap-3 text-center shadow-inner transition-all">
+ <icon name="alert-circle" class="w-4 h-4 shrink-0" />
+ <span>📡 Mode hors connexion : Les formulaires en cours (Caisse, Inscriptions) sont sauvegardés localement. Ils seront synchronisés au rétablissement d'Internet.</span>
+ </div>
+ <!-- Toast de Reconnexion -->
+ <div x-show="showReconnectedToast" class="bg-emerald-600 text-white text-xs sm:text-sm font-semibold px-6 py-2.5 flex items-center justify-center gap-3 text-center shadow-inner transition-all">
+ <icon name="checkmark-circle" class="w-4 h-4 shrink-0" />
+ <span>🌐 Connexion rétablie ! Vous pouvez à nouveau valider et synchroniser vos saisies en toute sécurité.</span>
+ </div>
+ </div>
 
  <!-- Zone de contenu -->
  <main class="flex-1 overflow-y-auto overflow-x-hidden p-8 lg:p-10">

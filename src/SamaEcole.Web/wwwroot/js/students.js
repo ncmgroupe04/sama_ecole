@@ -49,6 +49,7 @@ document.addEventListener('alpine:init', () => {
         pdfPreviewUrl: null,
         pdfPreviewTitle: '',
         pdfDownloadName: '',
+        pdfLoadError: false,
 
         // Slide-over state
         isCreateOpen: false,
@@ -792,11 +793,13 @@ document.addEventListener('alpine:init', () => {
                     alert("Erreur lors de la récupération du document officiel.");
                     return;
                 }
-                const blob = await response.blob();
+                const rawBlob = await response.blob();
+                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
                 if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = URL.createObjectURL(blob);
+                this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
                 this.pdfPreviewTitle = title;
                 this.pdfDownloadName = downloadName;
+                this.pdfLoadError = false;
                 this.showPdfModal = true;
             } catch (e) {
                 alert("Impossible de charger le document : " + e.message);
@@ -833,6 +836,7 @@ document.addEventListener('alpine:init', () => {
                 URL.revokeObjectURL(this.pdfPreviewUrl);
                 this.pdfPreviewUrl = null;
             }
+            this.pdfLoadError = false;
         },
 
         printPreviewPdf() {

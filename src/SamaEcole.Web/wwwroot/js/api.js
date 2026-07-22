@@ -55,6 +55,13 @@ window.api = {
     },
 
     async send(endpoint, method, body) {
+        if (!navigator.onLine) {
+            const error = new Error("📡 Connexion réseau indisponible. Votre saisie a été sauvegardée en mémoire sur votre navigateur. Veuillez retenter l'envoi dès le rétablissement de la connexion.");
+            error.code = 'NETWORK_OFFLINE';
+            error.status = 0;
+            throw error;
+        }
+
         const headers = {};
         const token = window.auth.accessToken;
 
@@ -69,12 +76,22 @@ window.api = {
             headers['Content-Type'] = 'application/json';
         }
 
-        return await fetch(`${this.baseUrl}${endpoint}`, {
-            method,
-            headers,
-            credentials: 'same-origin',
-            body: isFormData ? body : (body ? JSON.stringify(body) : undefined)
-        });
+        try {
+            return await fetch(`${this.baseUrl}${endpoint}`, {
+                method,
+                headers,
+                credentials: 'same-origin',
+                body: isFormData ? body : (body ? JSON.stringify(body) : undefined)
+            });
+        } catch (fetchErr) {
+            if (!navigator.onLine || fetchErr.name === 'TypeError' || (fetchErr.message && fetchErr.message.includes('Failed to fetch'))) {
+                const error = new Error("📡 Connexion au serveur interrompue pendant l'envoi. Votre saisie est conservée en mémoire dans le navigateur. Veuillez retenter dès que le réseau est rétabli.");
+                error.code = 'NETWORK_OFFLINE';
+                error.status = 0;
+                throw error;
+            }
+            throw fetchErr;
+        }
     },
 
     /**

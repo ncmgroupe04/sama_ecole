@@ -64,9 +64,39 @@ document.addEventListener('alpine:init', () => {
         // l'utilisateur choisit de l'imprimer/consulter — il n'est plus jeté directement à l'écran.
         showConfirmDialog: false,
         showReceipt: false,
+        hasDraft: false,
 
         async init() {
             await this.loadReferenceData();
+            if (window.formDraft && window.formDraft.has('enrollment_form')) {
+                this.hasDraft = true;
+            }
+            this.$watch('form', (val) => {
+                if (window.formDraft && (val.fullName || val.studentId || val.classroomId)) {
+                    window.formDraft.save('enrollment_form', {
+                        mode: this.mode,
+                        form: val,
+                        collected: this.collected,
+                        paymentMethod: this.paymentMethod
+                    });
+                }
+            });
+        },
+
+        restoreDraft() {
+            if (!window.formDraft) return;
+            const draft = window.formDraft.load('enrollment_form');
+            if (!draft) return;
+            if (draft.mode) this.selectMode(draft.mode);
+            if (draft.form) Object.assign(this.form, draft.form);
+            if (draft.collected) Object.assign(this.collected, draft.collected);
+            if (draft.paymentMethod) this.paymentMethod = draft.paymentMethod;
+            this.hasDraft = false;
+        },
+
+        clearDraft() {
+            if (window.formDraft) window.formDraft.clear('enrollment_form');
+            this.hasDraft = false;
         },
 
         async loadReferenceData() {
@@ -261,6 +291,8 @@ document.addEventListener('alpine:init', () => {
                 // qu'ensuite, si l'utilisateur clique « Imprimer le reçu ».
                 this.showReceipt = false;
                 this.showConfirmDialog = true;
+                if (window.formDraft) window.formDraft.clear('enrollment_form');
+                this.hasDraft = false;
             } catch (err) {
                 this.formErrors = window.api.toFieldErrors(err, "Erreur lors de l'inscription.");
             } finally {
@@ -334,9 +366,11 @@ document.addEventListener('alpine:init', () => {
         pdfPreviewUrl: null,
         pdfPreviewTitle: '',
         pdfDownloadName: '',
+        pdfLoadError: false,
 
         async openPdfPreview(url, title, downloadName) {
             this.pdfError = null;
+            this.pdfLoadError = false;
             try {
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                     await window.api.refreshOrRedirect();
@@ -348,11 +382,12 @@ document.addEventListener('alpine:init', () => {
                 });
                 if (!response.ok) throw new Error('Téléchargement du document impossible.');
 
-                const blob = await response.blob();
+                const rawBlob = await response.blob();
+                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
                 if (this.pdfPreviewUrl) {
                     URL.revokeObjectURL(this.pdfPreviewUrl);
                 }
-                this.pdfPreviewUrl = URL.createObjectURL(blob);
+                this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
                 this.pdfPreviewTitle = title || 'Document officiel';
                 this.pdfDownloadName = downloadName || 'document.pdf';
                 this.showPdfModal = true;
@@ -367,6 +402,7 @@ document.addEventListener('alpine:init', () => {
                 URL.revokeObjectURL(this.pdfPreviewUrl);
                 this.pdfPreviewUrl = null;
             }
+            this.pdfLoadError = false;
         },
 
         printPreviewPdf() {

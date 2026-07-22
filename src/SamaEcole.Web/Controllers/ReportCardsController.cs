@@ -48,7 +48,8 @@ public class ReportCardsController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetReportCardPdfQuery(request.StudentId, request.TermId), cancellationToken);
 
-        return File(result.Content, "application/pdf", result.FileName);
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+        return File(result.Content, "application/pdf");
     }
 
     /// <summary>
@@ -90,7 +91,8 @@ public class ReportCardsController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetClassReportCardsPdfQuery(classroomId, termId), cancellationToken);
 
-        return File(result.Content, "application/pdf", result.FileName);
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+        return File(result.Content, "application/pdf");
     }
 
     /// <summary>Préremplit l'écran de saisie — vide (deux null) si rien n'a encore été saisi pour ce trimestre.</summary>

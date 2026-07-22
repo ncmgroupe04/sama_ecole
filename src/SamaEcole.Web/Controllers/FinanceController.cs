@@ -11,6 +11,7 @@ using SamaEcole.Application.Finance.Queries.GetFeeHistory;
 using SamaEcole.Application.Finance.Queries.GetFinanceDashboard;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceipt;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceiptPdf;
+using SamaEcole.Application.Finance.Queries.GetPayments;
 using SamaEcole.Application.Finance.Queries.GetStudentBalance;
 using SamaEcole.Web.Authorization;
 using MediatR;
@@ -168,6 +169,23 @@ public class FinanceController(ISender mediator) : ControllerBase
     public async Task<IActionResult> StudentBalance(Guid studentId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetStudentBalanceQuery(studentId), cancellationToken));
 
+    /// <summary>Liste paginée et filtrée des encaissements de l'établissement (GET /finance/payments).</summary>
+    [HttpGet("payments")]
+    [ProducesResponseType<PaginatedPayments>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListPayments(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null,
+        [FromQuery] string? method = null, [FromQuery] Guid? classroomId = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await mediator.Send(
+            new GetPaymentsQuery
+            {
+                Page = page,
+                PageSize = pageSize,
+                Search = search,
+                Method = method,
+                ClassroomId = classroomId
+            }, cancellationToken));
+
     /// <summary>Encaisse un versement sur une inscription, avec verrou optimiste et reçu officiel (règles #4, #5).</summary>
     [HttpPost("payments")]
     [Authorize(Roles = PaymentWriters)]
@@ -200,7 +218,8 @@ public class FinanceController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetPaymentReceiptPdfQuery(id), cancellationToken);
 
-        return File(result.Content, "application/pdf", $"Recu-{result.ReceiptNumber}.pdf");
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"Recu-{result.ReceiptNumber}.pdf\"";
+        return File(result.Content, "application/pdf");
     }
 
     // ------------------------------------------------------------------ Tableau de bord (JGK-F04)

@@ -24,16 +24,19 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
     /// </list>
     /// </summary>
     private const string ContentSecurityPolicy =
-        "default-src 'self'; " +
-        "script-src 'self' 'unsafe-eval'; " +
+        "default-src 'self' blob: data:; " +
+        "script-src 'self' 'unsafe-eval' blob: data:; " +
         "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' https: data:; " +
-        "font-src 'self'; " +
-        "connect-src 'self'; " +
-        "object-src 'none'; " +
+        "img-src 'self' https: data: blob:; " +
+        "font-src 'self' data:; " +
+        "connect-src 'self' blob: data:; " +
+        "frame-src 'self' blob: data: chrome-extension: edge:; " +
+        "object-src 'self' blob: data: chrome-extension: edge:; " +
+        "worker-src 'self' blob: data: chrome-extension: edge:; " +
+        "child-src 'self' blob: data: chrome-extension: edge:; " +
         "base-uri 'self'; " +
         "form-action 'self'; " +
-        "frame-ancestors 'none'";
+        "frame-ancestors 'self' blob: data:";
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -43,9 +46,9 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
         // deviendrait un vecteur XSS).
         headers["X-Content-Type-Options"] = "nosniff";
 
-        // L'application ne s'affiche dans AUCUNE iframe : pas de cas d'usage légitime, et cela ferme
-        // le clickjacking.
-        headers["X-Frame-Options"] = "DENY";
+        // L'application permet l'affichage dans une iframe du même domaine (SAMEORIGIN) afin de
+        // supporter la prévisualisation des reçus et attestations PDF dans les modales.
+        headers["X-Frame-Options"] = "SAMEORIGIN";
 
         // Obsolète pour les navigateurs récents (qui s'appuient sur la CSP) mais encore lu par
         // d'anciens moteurs — exigé par le ticket JGK-F01.
