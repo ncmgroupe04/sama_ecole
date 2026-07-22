@@ -112,7 +112,7 @@ public class SelectFieldTagHelper : TagHelper
                         aria-label="{{ariaLabel}}"
                         :class="({{disabled}}) ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' : (open ? 'border-primary' : 'border-slate-200')"
                         class="{{buttonClass}}">
-                    <span :class="{{Model}} ? 'text-gray-900' : 'text-gray-400'" x-text="{{Model}} ? labelFor({{Model}}) : '{{placeholder}}'"></span>
+                    <span :class="({{Model}} ? 'text-gray-900' : 'text-gray-400') + ' truncate whitespace-nowrap'" x-text="{{Model}} ? labelFor({{Model}}) : '{{placeholder}}'"></span>
                     {{Svg("chevron-down", "w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-150")}}
                 </button>
 

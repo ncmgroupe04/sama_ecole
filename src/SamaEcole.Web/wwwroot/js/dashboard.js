@@ -91,6 +91,12 @@ document.addEventListener('alpine:init', () => {
         search: '',
         activeTab: 'dual', // 'dual' (côte à côte), 'annual' (bilan annuel), 'monthly' (bilan mensuel)
 
+        // Modale d'aperçu et d'impression du reçu officiel
+        showPdfModal: false,
+        pdfPreviewUrl: null,
+        pdfPreviewTitle: '',
+        pdfDownloadName: '',
+
         async init() {
             if (this.canView) await this.load();
         },
@@ -171,10 +177,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Télécharge le reçu officiel en PDF (même patron que enrollments.js/caisse.js) : l'API exige
-         * le jeton, on récupère donc le PDF en blob avec l'en-tête Authorization plutôt qu'un simple lien.
+         * Ouvre le reçu officiel en PDF dans une modale d'aperçu (avec impression ou téléchargement).
          */
-        async downloadReceipt(paymentId, receiptNumber) {
+        async previewReceipt(paymentId, receiptNumber) {
             if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                 await window.api.refreshOrRedirect();
             }
@@ -186,14 +191,34 @@ document.addEventListener('alpine:init', () => {
             if (!response.ok) return;
 
             const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
+            if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
+            this.pdfPreviewUrl = URL.createObjectURL(blob);
+            this.pdfPreviewTitle = `Reçu officiel n° ${receiptNumber}`;
+            this.pdfDownloadName = `Recu-${receiptNumber}.pdf`;
+            this.showPdfModal = true;
+        },
+
+        closePdfPreview() {
+            this.showPdfModal = false;
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = null;
+            }
+        },
+
+        printPreviewPdf() {
+            const iframe = document.getElementById('dash-pdf-preview-frame');
+            if (iframe && iframe.contentWindow) iframe.contentWindow.print();
+        },
+
+        downloadPreviewPdf() {
+            if (!this.pdfPreviewUrl) return;
             const link = document.createElement('a');
-            link.href = url;
-            link.download = `Recu-${receiptNumber}.pdf`;
+            link.href = this.pdfPreviewUrl;
+            link.download = this.pdfDownloadName || 'document.pdf';
             document.body.appendChild(link);
             link.click();
             link.remove();
-            URL.revokeObjectURL(url);
         }
     }));
 });

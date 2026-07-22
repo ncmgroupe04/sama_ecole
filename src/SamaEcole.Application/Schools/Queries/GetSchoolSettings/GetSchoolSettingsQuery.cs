@@ -44,6 +44,7 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         settings.AllowFinanceToModifyFees,
         settings.AllowFinanceToDeleteFees,
         settings.DirectorSignatureUrl,
+        settings.SecretarySignatureUrl,
         settings.CashierSignatureUrl,
         settings.OfficialStampUrl,
         settings.TypeEtablissement.ToString());
@@ -58,6 +59,7 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         SchoolSettingsDefaults.AllowSecretaryToManageGrading,
         SchoolSettingsDefaults.AllowFinanceToModifyFees,
         SchoolSettingsDefaults.AllowFinanceToDeleteFees,
+        null,
         null,
         null,
         null,

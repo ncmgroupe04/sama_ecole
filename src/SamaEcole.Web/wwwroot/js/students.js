@@ -44,6 +44,12 @@ document.addEventListener('alpine:init', () => {
         isSavingReportCardRemark: false,
         reportCardRemarkErrors: {},
 
+        // Modale d'aperçu et d'impression des documents officiels
+        showPdfModal: false,
+        pdfPreviewUrl: null,
+        pdfPreviewTitle: '',
+        pdfDownloadName: '',
+
         // Slide-over state
         isCreateOpen: false,
         isSubmitting: false,
@@ -771,6 +777,77 @@ document.addEventListener('alpine:init', () => {
                 Partial: 'status-badge-warning',
                 Cancelled: 'status-badge-danger'
             }[status] || 'status-badge-neutral';
+        },
+
+        async openPdfModalWithBlob(url, title, downloadName) {
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+                const response = await fetch(url, {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                    credentials: 'same-origin'
+                });
+                if (!response.ok) {
+                    alert("Erreur lors de la récupération du document officiel.");
+                    return;
+                }
+                const blob = await response.blob();
+                if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = URL.createObjectURL(blob);
+                this.pdfPreviewTitle = title;
+                this.pdfDownloadName = downloadName;
+                this.showPdfModal = true;
+            } catch (e) {
+                alert("Impossible de charger le document : " + e.message);
+            }
+        },
+
+        async openEnrollmentCertificatePreview(enrollmentId, yearLabel) {
+            await this.openPdfModalWithBlob(
+                `/api/v1/enrollments/${enrollmentId}/certificate/pdf`,
+                `Attestation d'inscription (${yearLabel})`,
+                `Attestation-Inscription-${enrollmentId}.pdf`
+            );
+        },
+
+        async openEnrollmentReceiptPreview(enrollmentId, yearLabel) {
+            await this.openPdfModalWithBlob(
+                `/api/v1/enrollments/${enrollmentId}/receipt/pdf`,
+                `Reçu d'inscription (${yearLabel})`,
+                `Recu-Inscription-${enrollmentId}.pdf`
+            );
+        },
+
+        async openPaymentReceiptPreview(paymentId, receiptNumber) {
+            await this.openPdfModalWithBlob(
+                `/api/v1/finance/payments/${paymentId}/receipt/pdf`,
+                `Reçu de paiement n° ${receiptNumber}`,
+                `Recu-${receiptNumber}.pdf`
+            );
+        },
+
+        closePdfPreview() {
+            this.showPdfModal = false;
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = null;
+            }
+        },
+
+        printPreviewPdf() {
+            const iframe = document.getElementById('stu-pdf-preview-frame');
+            if (iframe && iframe.contentWindow) iframe.contentWindow.print();
+        },
+
+        downloadPreviewPdf() {
+            if (!this.pdfPreviewUrl) return;
+            const link = document.createElement('a');
+            link.href = this.pdfPreviewUrl;
+            link.download = this.pdfDownloadName || 'document.pdf';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
         }
     }));
 });

@@ -66,6 +66,9 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// <summary>URL de l'image de la signature du directeur, injectée sur les reçus et bulletins.</summary>
     public string? DirectorSignatureUrl { get; set; }
 
+    /// <summary>URL de l'image de la signature du secrétariat, injectée sur les certificats et bulletins.</summary>
+    public string? SecretarySignatureUrl { get; set; }
+
     /// <summary>URL de l'image de la signature du caissier/service financier, injectée sur les reçus.</summary>
     public string? CashierSignatureUrl { get; set; }
 

@@ -28,6 +28,7 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
         builder.Property(s => s.AllowFinanceToDeleteFees).IsRequired();
 
         builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
+        builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);
         builder.Property(s => s.CashierSignatureUrl).HasMaxLength(500);
         builder.Property(s => s.OfficialStampUrl).HasMaxLength(500);
 

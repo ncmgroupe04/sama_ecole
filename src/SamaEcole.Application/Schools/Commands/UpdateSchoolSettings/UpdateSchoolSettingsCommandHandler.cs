@@ -48,6 +48,7 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.AllowFinanceToModifyFees = request.AllowFinanceToModifyFees;
         settings.AllowFinanceToDeleteFees = request.AllowFinanceToDeleteFees;
         settings.DirectorSignatureUrl = string.IsNullOrWhiteSpace(request.DirectorSignatureUrl) ? null : request.DirectorSignatureUrl.Trim();
+        settings.SecretarySignatureUrl = string.IsNullOrWhiteSpace(request.SecretarySignatureUrl) ? null : request.SecretarySignatureUrl.Trim();
         settings.CashierSignatureUrl = string.IsNullOrWhiteSpace(request.CashierSignatureUrl) ? null : request.CashierSignatureUrl.Trim();
         settings.OfficialStampUrl = string.IsNullOrWhiteSpace(request.OfficialStampUrl) ? null : request.OfficialStampUrl.Trim();
 
@@ -71,6 +72,7 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.AllowFinanceToModifyFees,
             settings.AllowFinanceToDeleteFees,
             settings.DirectorSignatureUrl,
+            settings.SecretarySignatureUrl,
             settings.CashierSignatureUrl,
             settings.OfficialStampUrl,
             settings.TypeEtablissement.ToString());

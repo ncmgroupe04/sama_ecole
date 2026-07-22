@@ -36,6 +36,7 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         bool AllowFinanceToModifyFees,
         bool AllowFinanceToDeleteFees,
         string? DirectorSignatureUrl = null,
+        string? SecretarySignatureUrl = null,
         string? CashierSignatureUrl = null,
         string? OfficialStampUrl = null,
         string TypeEtablissement = "Prive");
@@ -74,6 +75,7 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.AllowFinanceToModifyFees,
                 request.AllowFinanceToDeleteFees,
                 request.DirectorSignatureUrl,
+                request.SecretarySignatureUrl,
                 request.CashierSignatureUrl,
                 request.OfficialStampUrl,
                 request.TypeEtablissement),
@@ -96,6 +98,21 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         [FromServices] IWebHostEnvironment env,
         CancellationToken cancellationToken)
         => UploadSettingImageAsync(file, "signatures", "director-sig", tenantProvider, env, cancellationToken);
+
+    /// <summary>Upload local de l'image de la signature du secrétariat par le Directeur.</summary>
+    [HttpPost("secretary-signature")]
+    [HttpPost("/api/settings/upload-secretary-signature")]
+    [HttpPost("/api/v1/settings/upload-secretary-signature")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public Task<IActionResult> UploadSecretarySignature(
+        IFormFile? file,
+        [FromServices] ITenantProvider tenantProvider,
+        [FromServices] IWebHostEnvironment env,
+        CancellationToken cancellationToken)
+        => UploadSettingImageAsync(file, "signatures", "secretary-sig", tenantProvider, env, cancellationToken);
 
     /// <summary>Upload local de l'image de la signature du caissier/service financier par le Directeur.</summary>
     [HttpPost("cashier-signature")]

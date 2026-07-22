@@ -66,6 +66,7 @@ document.addEventListener('alpine:init', () => {
             allowFinanceToModifyFees: false,
             allowFinanceToDeleteFees: false,
             directorSignatureUrl: '',
+            secretarySignatureUrl: '',
             cashierSignatureUrl: '',
             officialStampUrl: '',
             // TypeEtablissement : Prive (défaut, module Finance actif) ou Public (module Finance masqué).
@@ -76,6 +77,8 @@ document.addEventListener('alpine:init', () => {
         configSaved: false,
         isUploadingDirectorSignature: false,
         directorSignatureUploadError: null,
+        isUploadingSecretarySignature: false,
+        secretarySignatureUploadError: null,
         isUploadingCashierSignature: false,
         cashierSignatureUploadError: null,
         isUploadingOfficialStamp: false,
@@ -143,6 +146,7 @@ document.addEventListener('alpine:init', () => {
                     allowFinanceToModifyFees: config.allowFinanceToModifyFees,
                     allowFinanceToDeleteFees: config.allowFinanceToDeleteFees,
                     directorSignatureUrl: config.directorSignatureUrl || '',
+                    secretarySignatureUrl: config.secretarySignatureUrl || '',
                     cashierSignatureUrl: config.cashierSignatureUrl || '',
                     officialStampUrl: config.officialStampUrl || '',
                     typeEtablissement: config.typeEtablissement || 'Prive'
@@ -263,6 +267,41 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async uploadSecretarySignatureFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            this.secretarySignatureUploadError = null;
+            if (file.size > 2 * 1024 * 1024) {
+                this.secretarySignatureUploadError = 'Le fichier dépasse la taille maximale autorisée (2 Mo).';
+                event.target.value = '';
+                return;
+            }
+
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                this.secretarySignatureUploadError = 'Format non supporté. Seuls PNG, JPEG et WEBP sont autorisés.';
+                event.target.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            this.isUploadingSecretarySignature = true;
+            try {
+                const data = await window.api.upload('/schools/current/settings/secretary-signature', formData);
+                if (data && data.url) {
+                    this.config.secretarySignatureUrl = data.url;
+                }
+            } catch (err) {
+                this.secretarySignatureUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+            } finally {
+                this.isUploadingSecretarySignature = false;
+                event.target.value = '';
+            }
+        },
+
         async uploadCashierSignatureFile(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
@@ -354,6 +393,7 @@ document.addEventListener('alpine:init', () => {
                     allowFinanceToModifyFees: this.config.allowFinanceToModifyFees,
                     allowFinanceToDeleteFees: this.config.allowFinanceToDeleteFees,
                     directorSignatureUrl: this.config.directorSignatureUrl || null,
+                    secretarySignatureUrl: this.config.secretarySignatureUrl || null,
                     cashierSignatureUrl: this.config.cashierSignatureUrl || null,
                     officialStampUrl: this.config.officialStampUrl || null,
                     typeEtablissement: this.config.typeEtablissement || 'Prive'
@@ -369,6 +409,7 @@ document.addEventListener('alpine:init', () => {
                     allowFinanceToModifyFees: saved.allowFinanceToModifyFees,
                     allowFinanceToDeleteFees: saved.allowFinanceToDeleteFees,
                     directorSignatureUrl: saved.directorSignatureUrl || '',
+                    secretarySignatureUrl: saved.secretarySignatureUrl || '',
                     cashierSignatureUrl: saved.cashierSignatureUrl || '',
                     officialStampUrl: saved.officialStampUrl || '',
                     typeEtablissement: saved.typeEtablissement || 'Prive'

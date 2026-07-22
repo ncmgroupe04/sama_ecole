@@ -16,6 +16,7 @@ public record SchoolSettingsDto(
     bool AllowFinanceToModifyFees,
     bool AllowFinanceToDeleteFees,
     string? DirectorSignatureUrl = null,
+    string? SecretarySignatureUrl = null,
     string? CashierSignatureUrl = null,
     string? OfficialStampUrl = null,
     string TypeEtablissement = "Prive");
