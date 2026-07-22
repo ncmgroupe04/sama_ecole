@@ -17,30 +17,29 @@
  débordement sur une 2e page se voit AVANT d'imprimer. Marges de 8 mm côté @@page, le reçu n'ayant
  pas de padding propre à l'impression — les deux se cumuleraient sinon. *@
 <style>
- .receipt-a5 {
- width: 210mm;
- min-height: 148mm;
- padding: 8mm;
- font-family: 'Times New Roman', Georgia, serif;
- }
+    .receipt-a5 {
+        width: 210mm;
+        min-height: 148mm;
+        padding: 8mm;
+        font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
 
- @@page {
- size: A5 landscape;
- margin: 8mm;
- }
+    @@page {
+        size: A5 landscape;
+        margin: 8mm;
+    }
 
- @@media print {
- body * { visibility: hidden !important; }
- #receipt-printable, #receipt-printable * { visibility: visible !important; }
- #receipt-printable {
- position: absolute; left: 0; top: 0;
- width: auto; min-height: 0; /* la feuille EST déjà l'A5 : pas de largeur forcée qui déborderait */
- margin: 0; padding: 0; box-shadow: none !important; border: 0 !important;
- }
- /* Un reçu tient sur UNE page : aucune coupure interne, jamais de page blanche en trop. */
- #receipt-printable, #receipt-printable * { break-inside: avoid; page-break-inside: avoid; }
- .no-print { display: none !important; }
- }
+    @@media print {
+        body * { visibility: hidden !important; }
+        #receipt-printable, #receipt-printable * { visibility: visible !important; }
+        #receipt-printable {
+            position: absolute; left: 0; top: 0;
+            width: auto; min-height: 0;
+            margin: 0; padding: 0; box-shadow: none !important; border: 0 !important;
+        }
+        #receipt-printable, #receipt-printable * { break-inside: avoid; page-break-inside: avoid; }
+        .no-print { display: none !important; }
+    }
 </style>
 
 <div x-data="enrollmentsView()">
@@ -313,126 +312,116 @@
  <!-- Échec de téléchargement du PDF (non imprimé). -->
  <div x-show="pdfError" x-cloak class="no-print mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="pdfError"></div>
 
- @* Document imprimable A5 PAYSAGE : noir et blanc, sobre, une seule page
- (docs/design-references/README.md §1). La largeur à l'écran (210mm) est celle de la
- zone imprimable d'un A5 paysage marges comprises — ce qu'on voit est ce qui sort. *@
- <div id="receipt-printable" class="receipt-a5 bg-white border border-slate-300 mx-auto text-slate-900">
+ @* Document imprimable A5 PAYSAGE : sobre, moderne, aux normes officielles *@
+ <div id="receipt-printable" class="receipt-a5 bg-white border border-slate-200/80 mx-auto text-slate-800 shadow-sm rounded-xl">
 
- <!-- En-tête : identité, coordonnées et mentions légales de l'établissement -->
- <div class="flex items-start justify-between gap-4 border-b border-slate-500 pb-2">
+ <!-- A. En-tête Institutionnel (Header) -->
+ <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-3">
  <div class="min-w-0">
- <h2 class="text-base font-bold uppercase leading-tight" x-text="receipt.schoolName"></h2>
- <p class="text-[9px] text-slate-700 mt-0.5" x-text="contactLine()"></p>
- @* NINEA / RCCM : mentions légales de l'entreprise, ce qui fait du reçu une pièce
- opposable. Absentes tant qu'elles ne sont pas saisies (Paramètres › Établissement). *@
- <p x-show="legalMentions()" x-cloak class="text-[9px] text-slate-700" x-text="legalMentions()"></p>
+ <h2 class="text-lg font-bold text-slate-900 uppercase tracking-tight" x-text="receipt.schoolName"></h2>
+ <p class="text-xs text-slate-500 mt-1" x-text="contactLine()"></p>
+ <p x-show="legalMentions()" x-cloak class="text-xs text-slate-500 mt-0.5" x-text="legalMentions()"></p>
  </div>
- <div class="shrink-0 w-16 h-16 border border-dashed border-slate-300 flex items-center justify-center text-[8px] text-slate-400 text-center">Logo officiel</div>
+ <div class="shrink-0 flex items-center justify-end">
+ <img x-show="receipt.schoolLogoUrl" :src="receipt.schoolLogoUrl" class="max-h-14 object-contain" alt="Logo" />
+ <div x-show="!receipt.schoolLogoUrl" class="h-14 w-14 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-[9px] text-slate-400 font-medium">Logo</div>
+ </div>
  </div>
 
- <!-- Titre -->
- <h3 class="text-center font-bold italic text-sm mt-2 mb-2.5">
- REÇU D'INSCRIPTION n° <span x-text="receiptReference()"></span>
- </h3>
+ <!-- B. Titre & Identifiant du Reçu -->
+ <div class="my-4 flex justify-center">
+ <div class="text-sm font-semibold tracking-wide text-slate-700 bg-slate-100 px-3 py-1 rounded-md border border-slate-200/60 shadow-2xs">
+ REÇU D'INSCRIPTION — n° <span x-text="receiptReference()"></span>
+ </div>
+ </div>
 
- <!-- Corps en deux colonnes : identité à gauche, encaissement à droite -->
- <div class="grid grid-cols-2 gap-5 items-start">
+ <!-- C. Corps du Reçu (2 Colonnes distinctes) -->
+ <div class="grid grid-cols-2 gap-6 items-start">
 
- <!-- Colonne gauche : élève, tuteur, règlement -->
- <table class="w-full text-[10px]">
- <tbody>
- <tr>
- <td class="py-0.5 pr-2 text-slate-600 w-2/5">Matricule</td>
- <td class="py-0.5 font-semibold" x-text="receipt.matricule"></td>
- </tr>
- <tr>
- <td class="py-0.5 pr-2 text-slate-600">Nom complet</td>
- <td class="py-0.5 font-semibold" x-text="receipt.studentFullName"></td>
- </tr>
- <tr>
- <td class="py-0.5 pr-2 text-slate-600">Classe d'affectation</td>
- <td class="py-0.5 font-semibold" x-text="receipt.classroomName + ' — ' + receipt.classroomLevel"></td>
- </tr>
- <tr>
- <td class="py-0.5 pr-2 text-slate-600">Année scolaire</td>
- <td class="py-0.5 font-semibold" x-text="receipt.schoolYearLabel"></td>
- </tr>
- <tr>
- <td class="py-0.5 pr-2 text-slate-600">Type de mouvement</td>
- <td class="py-0.5 font-semibold" x-text="typeLabel(receipt.type)"></td>
- </tr>
- <tr>
- <td class="py-0.5 pr-2 text-slate-600">Date de l'opération</td>
- <td class="py-0.5 font-semibold" x-text="formatDate(receipt.enrolledAt)"></td>
- </tr>
- <tr x-show="receipt.guardianName" x-cloak>
- <td class="py-0.5 pr-2 text-slate-600">Tuteur</td>
- <td class="py-0.5 font-semibold" x-text="receipt.guardianName"></td>
- </tr>
- <tr x-show="receipt.guardianPhone" x-cloak>
- <td class="py-0.5 pr-2 text-slate-600">Téléphone du tuteur</td>
- <td class="py-0.5 font-semibold" x-text="receipt.guardianPhone"></td>
- </tr>
- <tr>
- <td class="py-0.5 pr-2 text-slate-600">Mode de règlement</td>
- <td class="py-0.5 font-semibold" x-text="receipt.paymentMethod ? paymentMethodLabel(receipt.paymentMethod) : '—'"></td>
- </tr>
- </tbody>
- </table>
+ <!-- COLONNE GAUCHE (Informations Élève & Transaction) -->
+ <div class="space-y-2 text-xs text-slate-600">
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5">
+ <span class="text-slate-500">Matricule :</span>
+ <span class="font-bold text-slate-900" x-text="receipt.matricule"></span>
+ </div>
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5">
+ <span class="text-slate-500">Nom complet :</span>
+ <span class="font-bold text-slate-900" x-text="receipt.studentFullName"></span>
+ </div>
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5">
+ <span class="text-slate-500">Classe &amp; Niveau :</span>
+ <span class="font-medium text-slate-800" x-text="receipt.classroomName + (receipt.classroomLevel ? ' — ' + receipt.classroomLevel : '')"></span>
+ </div>
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5">
+ <span class="text-slate-500">Année scolaire :</span>
+ <span class="font-medium text-slate-800" x-text="receipt.schoolYearLabel"></span>
+ </div>
+ <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-1.5" x-show="receipt.guardianName || receipt.guardianPhone" x-cloak>
+ <span class="text-slate-500">Tuteur &amp; Contact :</span>
+ <span class="font-medium text-slate-800" x-text="(receipt.guardianName || '—') + (receipt.guardianPhone ? ' (' + receipt.guardianPhone + ')' : '')"></span>
+ </div>
+ <div class="flex justify-between items-baseline pb-1">
+ <span class="text-slate-500">Date &amp; Mode de règlement :</span>
+ <span class="font-medium text-slate-800" x-text="formatDate(receipt.enrolledAt) + (receipt.paymentMethod ? ' — ' + paymentMethodLabel(receipt.paymentMethod) : '')"></span>
+ </div>
+ </div>
 
- @* Colonne droite : VENTILATION de ce qui est entré en caisse ce jour-là — une ligne par
- frais réglé. Le dû annuel n'apparaît qu'en rappel sous le total : un reçu atteste
- d'un encaissement, pas d'une dette. *@
- <table class="w-full text-[10px] border border-slate-500 border-collapse">
+ <!-- COLONNE DROITE (Ventilation Comptable) -->
+ <div class="flex flex-col justify-between">
+ <div class="rounded-xl border border-slate-200/80 overflow-hidden shadow-2xs">
+ <table class="w-full text-xs">
  <thead>
- <tr class="border-b border-slate-500">
- <th class="text-left py-1 px-2 border-r border-slate-500 font-bold">Désignation des frais</th>
- <th class="text-right py-1 px-2 font-bold whitespace-nowrap">Montant (FCFA)</th>
+ <tr class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+ <th class="text-left py-2 px-3 font-medium">Désignation des frais</th>
+ <th class="text-right py-2 px-3 font-medium whitespace-nowrap">Montant (FCFA)</th>
  </tr>
  </thead>
- <tbody>
+ <tbody class="divide-y divide-slate-100">
  <template x-for="line in receipt.collectedLines" :key="line.designation">
- <tr class="border-b border-slate-300">
- <td class="py-1 px-2 border-r border-slate-500" x-text="collectedLabel(line)"></td>
- <td class="py-1 px-2 text-right" x-text="formatMoney(line.amount)"></td>
+ <tr class="border-b border-slate-100">
+ <td class="py-2 px-3 text-slate-700" x-text="collectedLabel(line)"></td>
+ <td class="py-2 px-3 text-right font-medium text-slate-900" x-text="formatMoney(line.amount)"></td>
  </tr>
  </template>
- <tr x-show="receipt.collectedLines.length === 0" x-cloak class="border-b border-slate-300">
- <td class="py-1 px-2 border-r border-slate-500 text-slate-600 italic">Aucun frais encaissé ce jour</td>
- <td class="py-1 px-2 text-right">0 FCFA</td>
+ <tr x-show="receipt.collectedLines.length === 0" x-cloak class="border-b border-slate-100">
+ <td class="py-2 px-3 text-slate-400 italic">Aucun frais encaissé ce jour</td>
+ <td class="py-2 px-3 text-right font-medium text-slate-400">0 FCFA</td>
  </tr>
- <tr class="border-t-2 border-slate-600 font-bold">
- <td class="py-1 px-2 border-r border-slate-500 uppercase">Total encaissé</td>
- <td class="py-1 px-2 text-right" x-text="formatMoney(receipt.totalCollected)"></td>
+ <tr class="bg-indigo-50/50 text-indigo-950 font-bold border-t border-indigo-100">
+ <td class="py-2 px-3 uppercase text-xs">Total encaissé</td>
+ <td class="py-2 px-3 text-right text-sm" x-text="formatMoney(receipt.totalCollected)"></td>
  </tr>
  </tbody>
- <tfoot>
- <tr class="text-[9px] text-slate-600">
- <td class="pt-1 px-2" colspan="2">
- Frais annuels : <span x-text="formatMoney(receipt.totalDue)"></span>
- · Reste à payer : <span class="font-semibold" x-text="formatMoney(receipt.totalDue - receipt.totalCollected)"></span>
- </td>
- </tr>
- </tfoot>
  </table>
  </div>
+ <div class="mt-2 text-[11px] text-slate-500 flex justify-between items-center px-1">
+ <span>Frais annuels : <strong class="font-semibold text-slate-700" x-text="formatMoney(receipt.totalDue)"></strong></span>
+ <span class="text-slate-300">|</span>
+ <span>Reste à payer : <strong class="font-semibold text-slate-700" x-text="formatMoney(receipt.totalDue - receipt.totalCollected)"></strong></span>
+ </div>
+ </div>
 
- <!-- Mention obligatoire (AGENTS.md règle #12) -->
- <p class="text-center text-[10px] italic mt-2.5">
+ </div>
+
+ <!-- D. Pied de Page (Footer) -->
+ <div class="mt-5 pt-3 border-t border-slate-100">
+ <!-- Note d'information (au centre) -->
+ <p class="text-center text-xs italic text-slate-400 mb-3">
  Il est demandé aux parents de garder minutieusement leur reçu après le paiement.
  </p>
-
- <!-- Bas de page -->
- <div class="flex justify-between items-end mt-3 text-[10px]">
+ <!-- Zone Basse (2 blocs côte à côte) -->
+ <div class="flex justify-between items-start text-xs">
  <div>
- <p class="italic" x-text="faitMention()"></p>
- <div class="mt-1 w-24 h-10 border border-dashed border-slate-300 flex items-center justify-center text-[8px] text-slate-400">Cachet officiel</div>
+ <p class="text-slate-600 font-medium" x-text="faitMention()"></p>
+ <div class="mt-2 w-32 h-14 border border-dashed border-slate-300 rounded-lg flex items-center justify-center text-[10px] text-slate-400">Cachet officiel</div>
  </div>
  <div class="text-right">
- <p class="italic">Signature du Directeur / Service Financier</p>
- <div class="mt-6 w-36 border-t border-slate-500 ml-auto"></div>
+ <p class="text-slate-600 font-medium">Signature du Directeur / Service Financier</p>
+ <div class="mt-12 w-48 border-b border-slate-300 ml-auto"></div>
  </div>
  </div>
+ </div>
+
  </div>
  </div>
 
