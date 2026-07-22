@@ -361,6 +361,27 @@ document.addEventListener('alpine:init', () => {
      */
     Alpine.data('sidebarNav', () => ({
         role: window.auth.role,
+
+        /**
+         * Vrai pour les établissements publics sénégalais : Caisse, Finance et Dashboard financier
+         * sont masqués dans la navigation (l'API reste accessible, c'est une contrainte d'affichage).
+         * Chargé en `init` via GET /schools/current/settings — non bloquant : en cas d'erreur
+         * réseau, la valeur reste false (mode Privé par défaut, accès complet Finance conservé).
+         */
+        isPublicSchool: false,
+
+        async init() {
+            // Super Admin plateforme : pas d'école, pas de settings. On laisse false.
+            if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') return;
+            try {
+                const s = await window.api.get('/schools/current/settings');
+                this.isPublicSchool = (s && s.typeEtablissement === 'Public');
+            } catch {
+                // Non bloquant : en cas d'erreur réseau, la sidebar reste complète (sûr par défaut).
+                this.isPublicSchool = false;
+            }
+        },
+
         canView(roles) { return roles.includes(this.role); }
     }));
 

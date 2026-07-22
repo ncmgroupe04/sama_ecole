@@ -42,7 +42,11 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         settings.TuitionMonthsPerYear,
         settings.AllowSecretaryToManageGrading,
         settings.AllowFinanceToModifyFees,
-        settings.AllowFinanceToDeleteFees);
+        settings.AllowFinanceToDeleteFees,
+        settings.DirectorSignatureUrl,
+        settings.CashierSignatureUrl,
+        settings.OfficialStampUrl,
+        settings.TypeEtablissement.ToString());
 
     private static SchoolSettingsDto Defaults() => new(
         SchoolSettingsDefaults.GradingScale.ToString(),
@@ -53,5 +57,9 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         SchoolSettingsDefaults.TuitionMonthsPerYear,
         SchoolSettingsDefaults.AllowSecretaryToManageGrading,
         SchoolSettingsDefaults.AllowFinanceToModifyFees,
-        SchoolSettingsDefaults.AllowFinanceToDeleteFees);
+        SchoolSettingsDefaults.AllowFinanceToDeleteFees,
+        null,
+        null,
+        null,
+        SchoolSettingsDefaults.TypeEtablissement.ToString());
 }

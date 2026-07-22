@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -46,6 +47,14 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.AllowSecretaryToManageGrading = request.AllowSecretaryToManageGrading;
         settings.AllowFinanceToModifyFees = request.AllowFinanceToModifyFees;
         settings.AllowFinanceToDeleteFees = request.AllowFinanceToDeleteFees;
+        settings.DirectorSignatureUrl = string.IsNullOrWhiteSpace(request.DirectorSignatureUrl) ? null : request.DirectorSignatureUrl.Trim();
+        settings.CashierSignatureUrl = string.IsNullOrWhiteSpace(request.CashierSignatureUrl) ? null : request.CashierSignatureUrl.Trim();
+        settings.OfficialStampUrl = string.IsNullOrWhiteSpace(request.OfficialStampUrl) ? null : request.OfficialStampUrl.Trim();
+
+        // TypeEtablissement : parse sécurisé — valeur invalide silencieusement ramenée à Prive (défaut).
+        settings.TypeEtablissement = Enum.TryParse<TypeEtablissement>(request.TypeEtablissement, ignoreCase: true, out var typeResult)
+            ? typeResult
+            : TypeEtablissement.Prive;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -60,6 +69,10 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.TuitionMonthsPerYear,
             settings.AllowSecretaryToManageGrading,
             settings.AllowFinanceToModifyFees,
-            settings.AllowFinanceToDeleteFees);
+            settings.AllowFinanceToDeleteFees,
+            settings.DirectorSignatureUrl,
+            settings.CashierSignatureUrl,
+            settings.OfficialStampUrl,
+            settings.TypeEtablissement.ToString());
     }
 }

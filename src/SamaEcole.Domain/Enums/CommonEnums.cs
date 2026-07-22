@@ -8,6 +8,23 @@ public enum EntityStatus
 }
 
 /// <summary>
+/// Type d'établissement : détermine si le module Finance (Caisse, recouvrement, frais mensuel,
+/// tableau de bord financier) est actif ou masqué. Les écoles publiques sénégalaises n'ont pas de
+/// recouvrement mensuel — seuls les frais ponctuels (APE, inscription) et les documents pédagogiques
+/// (certificats, bulletins) les concernent. Valeur par défaut : <see cref="Prive"/> — les écoles
+/// existantes conservent leur accès financier sans aucune migration manuelle.
+/// </summary>
+public enum TypeEtablissement
+{
+    /// <summary>École privée : accès complet Finance, Caisse, recouvrement mensuel, dashboard financier.</summary>
+    Prive,
+
+    /// <summary>École publique : module financier masqué dans la navigation. Documents pédagogiques mis en avant.</summary>
+    Public
+}
+
+
+/// <summary>
 /// Cycle d'enseignement d'une classe. Détermine notamment le barème de notation appliqué au bulletin :
 /// <c>Maternelle</c> et <c>Primaire</c> sont notés sur /10, <c>College</c> et <c>Lycee</c> sur /20
 /// (système sénégalais). DÉRIVÉ du champ <see cref="SamaEcole.Domain.Entities.Classroom.Level"/> par

@@ -1,4 +1,5 @@
 using SamaEcole.Domain.Common;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Domain.Entities;
 
@@ -61,6 +62,22 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// CanDeleteFeesHandler (SamaEcole.Web.Authorization). Faux par défaut.
     /// </summary>
     public bool AllowFinanceToDeleteFees { get; set; } = SchoolSettingsDefaults.AllowFinanceToDeleteFees;
+
+    /// <summary>URL de l'image de la signature du directeur, injectée sur les reçus et bulletins.</summary>
+    public string? DirectorSignatureUrl { get; set; }
+
+    /// <summary>URL de l'image de la signature du caissier/service financier, injectée sur les reçus.</summary>
+    public string? CashierSignatureUrl { get; set; }
+
+    /// <summary>URL de l'image du cachet officiel de l'établissement, injecté sur les reçus et bulletins.</summary>
+    public string? OfficialStampUrl { get; set; }
+
+    /// <summary>
+    /// Type d'établissement : Prive (défaut) ou Public. Pilote l'affichage du module Finance dans la
+    /// navigation (sidebar). Rertrocompat : les écoles existantes (colonne absente) obtiennent Prive
+    /// via la valeur par défaut de la migration — aucun accès financier ne leur est retiré.
+    /// </summary>
+    public TypeEtablissement TypeEtablissement { get; set; } = SchoolSettingsDefaults.TypeEtablissement;
 }
 
 /// <summary>
@@ -94,4 +111,7 @@ public static class SchoolSettingsDefaults
     /// <summary>Bornes du nombre de mensualités : au moins 1 mois, au plus l'année civile complète.</summary>
     public const int MinTuitionMonths = 1;
     public const int MaxTuitionMonths = 12;
+
+    /// <summary>Type d'établissement par défaut : Privé, pour garantir la rétrocompatibilité des écoles existantes.</summary>
+    public const TypeEtablissement TypeEtablissement = Enums.TypeEtablissement.Prive;
 }

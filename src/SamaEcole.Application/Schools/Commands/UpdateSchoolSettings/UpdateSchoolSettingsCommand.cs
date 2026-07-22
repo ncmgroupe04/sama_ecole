@@ -24,4 +24,9 @@ public record UpdateSchoolSettingsCommand(
     int TuitionMonthsPerYear,
     bool AllowSecretaryToManageGrading,
     bool AllowFinanceToModifyFees,
-    bool AllowFinanceToDeleteFees) : IRequest<SchoolSettingsDto>;
+    bool AllowFinanceToDeleteFees,
+    string? DirectorSignatureUrl = null,
+    string? CashierSignatureUrl = null,
+    string? OfficialStampUrl = null,
+    string TypeEtablissement = "Prive") : IRequest<SchoolSettingsDto>;
+

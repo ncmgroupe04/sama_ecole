@@ -1,3 +1,5 @@
+using System.IO;
+using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
 using SamaEcole.Application.Schools.Commands.UpdateGradingScale;
 using SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
@@ -6,6 +8,8 @@ using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace SamaEcole.Web.Controllers;
@@ -30,7 +34,11 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         int TuitionMonthsPerYear,
         bool AllowSecretaryToManageGrading,
         bool AllowFinanceToModifyFees,
-        bool AllowFinanceToDeleteFees);
+        bool AllowFinanceToDeleteFees,
+        string? DirectorSignatureUrl = null,
+        string? CashierSignatureUrl = null,
+        string? OfficialStampUrl = null,
+        string TypeEtablissement = "Prive");
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
@@ -64,10 +72,114 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.TuitionMonthsPerYear,
                 request.AllowSecretaryToManageGrading,
                 request.AllowFinanceToModifyFees,
-                request.AllowFinanceToDeleteFees),
+                request.AllowFinanceToDeleteFees,
+                request.DirectorSignatureUrl,
+                request.CashierSignatureUrl,
+                request.OfficialStampUrl,
+                request.TypeEtablissement),
             cancellationToken);
 
         return Ok(result);
+    }
+
+    /// <summary>Upload local de l'image de la signature du directeur par le Directeur.</summary>
+    [HttpPost("director-signature")]
+    [HttpPost("/api/settings/upload-director-signature")]
+    [HttpPost("/api/v1/settings/upload-director-signature")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public Task<IActionResult> UploadDirectorSignature(
+        IFormFile? file,
+        [FromServices] ITenantProvider tenantProvider,
+        [FromServices] IWebHostEnvironment env,
+        CancellationToken cancellationToken)
+        => UploadSettingImageAsync(file, "signatures", "director-sig", tenantProvider, env, cancellationToken);
+
+    /// <summary>Upload local de l'image de la signature du caissier/service financier par le Directeur.</summary>
+    [HttpPost("cashier-signature")]
+    [HttpPost("/api/settings/upload-cashier-signature")]
+    [HttpPost("/api/v1/settings/upload-cashier-signature")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public Task<IActionResult> UploadCashierSignature(
+        IFormFile? file,
+        [FromServices] ITenantProvider tenantProvider,
+        [FromServices] IWebHostEnvironment env,
+        CancellationToken cancellationToken)
+        => UploadSettingImageAsync(file, "signatures", "cashier-sig", tenantProvider, env, cancellationToken);
+
+    /// <summary>Upload local de l'image du cachet officiel par le Directeur.</summary>
+    [HttpPost("official-stamp")]
+    [HttpPost("/api/settings/upload-official-stamp")]
+    [HttpPost("/api/v1/settings/upload-official-stamp")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public Task<IActionResult> UploadOfficialStamp(
+        IFormFile? file,
+        [FromServices] ITenantProvider tenantProvider,
+        [FromServices] IWebHostEnvironment env,
+        CancellationToken cancellationToken)
+        => UploadSettingImageAsync(file, "stamps", "stamp", tenantProvider, env, cancellationToken);
+
+    private static async Task<IActionResult> UploadSettingImageAsync(
+        IFormFile? file,
+        string subFolder,
+        string prefix,
+        ITenantProvider tenantProvider,
+        IWebHostEnvironment env,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return new BadRequestObjectResult(new { message = "Aucun fichier fourni.", code = "FILE_MISSING" });
+        }
+
+        if (file.Length > 2 * 1024 * 1024)
+        {
+            return new BadRequestObjectResult(new { message = "Le fichier dépasse la taille maximale autorisée (2 Mo).", code = "FILE_TOO_LARGE" });
+        }
+
+        var allowedContentTypes = new[] { "image/png", "image/jpeg", "image/webp" };
+        if (!allowedContentTypes.Contains(file.ContentType.ToLowerInvariant()))
+        {
+            return new BadRequestObjectResult(new { message = "Format de fichier non supporté. Seuls PNG, JPEG et WEBP sont autorisés.", code = "INVALID_FILE_FORMAT" });
+        }
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (string.IsNullOrEmpty(ext) || !new[] { ".png", ".jpg", ".jpeg", ".webp" }.Contains(ext))
+        {
+            ext = file.ContentType.ToLowerInvariant() switch
+            {
+                "image/png" => ".png",
+                "image/jpeg" => ".jpg",
+                "image/webp" => ".webp",
+                _ => ".png"
+            };
+        }
+
+        var schoolId = tenantProvider.CurrentSchoolId?.ToString() ?? "unknown";
+        var fileName = $"{prefix}-{schoolId}-{Guid.NewGuid():N}{ext}";
+        var uploadDir = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", subFolder);
+
+        if (!Directory.Exists(uploadDir))
+        {
+            Directory.CreateDirectory(uploadDir);
+        }
+
+        var filePath = Path.Combine(uploadDir, fileName);
+        await using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream, cancellationToken);
+        }
+
+        var relativeUrl = $"/uploads/{subFolder}/{fileName}";
+        return new OkObjectResult(new { url = relativeUrl });
     }
 
     /// <summary>

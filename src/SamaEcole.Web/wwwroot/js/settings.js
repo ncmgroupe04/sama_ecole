@@ -64,11 +64,22 @@ document.addEventListener('alpine:init', () => {
             teacherMatriculeFormat: '',
             allowSecretaryToManageGrading: false,
             allowFinanceToModifyFees: false,
-            allowFinanceToDeleteFees: false
+            allowFinanceToDeleteFees: false,
+            directorSignatureUrl: '',
+            cashierSignatureUrl: '',
+            officialStampUrl: '',
+            // TypeEtablissement : Prive (défaut, module Finance actif) ou Public (module Finance masqué).
+            typeEtablissement: 'Prive'
         },
         configErrors: {},
         configSaving: false,
         configSaved: false,
+        isUploadingDirectorSignature: false,
+        directorSignatureUploadError: null,
+        isUploadingCashierSignature: false,
+        cashierSignatureUploadError: null,
+        isUploadingOfficialStamp: false,
+        officialStampUploadError: null,
 
         // --- Délégation de la configuration des notes (JGK-G02) ---
         // Getter, PAS une valeur figée au chargement : dépend de config.allowSecretaryToManageGrading,
@@ -130,7 +141,11 @@ document.addEventListener('alpine:init', () => {
                     teacherMatriculeFormat: config.teacherMatriculeFormat,
                     allowSecretaryToManageGrading: config.allowSecretaryToManageGrading,
                     allowFinanceToModifyFees: config.allowFinanceToModifyFees,
-                    allowFinanceToDeleteFees: config.allowFinanceToDeleteFees
+                    allowFinanceToDeleteFees: config.allowFinanceToDeleteFees,
+                    directorSignatureUrl: config.directorSignatureUrl || '',
+                    cashierSignatureUrl: config.cashierSignatureUrl || '',
+                    officialStampUrl: config.officialStampUrl || '',
+                    typeEtablissement: config.typeEtablissement || 'Prive'
                 };
             } catch (err) {
                 this.loadError = err.message || 'Erreur lors du chargement des paramètres.';
@@ -213,6 +228,111 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async uploadDirectorSignatureFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            this.directorSignatureUploadError = null;
+            if (file.size > 2 * 1024 * 1024) {
+                this.directorSignatureUploadError = 'Le fichier dépasse la taille maximale autorisée (2 Mo).';
+                event.target.value = '';
+                return;
+            }
+
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                this.directorSignatureUploadError = 'Format non supporté. Seuls PNG, JPEG et WEBP sont autorisés.';
+                event.target.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            this.isUploadingDirectorSignature = true;
+            try {
+                const data = await window.api.upload('/schools/current/settings/director-signature', formData);
+                if (data && data.url) {
+                    this.config.directorSignatureUrl = data.url;
+                }
+            } catch (err) {
+                this.directorSignatureUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+            } finally {
+                this.isUploadingDirectorSignature = false;
+                event.target.value = '';
+            }
+        },
+
+        async uploadCashierSignatureFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            this.cashierSignatureUploadError = null;
+            if (file.size > 2 * 1024 * 1024) {
+                this.cashierSignatureUploadError = 'Le fichier dépasse la taille maximale autorisée (2 Mo).';
+                event.target.value = '';
+                return;
+            }
+
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                this.cashierSignatureUploadError = 'Format non supporté. Seuls PNG, JPEG et WEBP sont autorisés.';
+                event.target.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            this.isUploadingCashierSignature = true;
+            try {
+                const data = await window.api.upload('/schools/current/settings/cashier-signature', formData);
+                if (data && data.url) {
+                    this.config.cashierSignatureUrl = data.url;
+                }
+            } catch (err) {
+                this.cashierSignatureUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+            } finally {
+                this.isUploadingCashierSignature = false;
+                event.target.value = '';
+            }
+        },
+
+        async uploadOfficialStampFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            this.officialStampUploadError = null;
+            if (file.size > 2 * 1024 * 1024) {
+                this.officialStampUploadError = 'Le fichier dépasse la taille maximale autorisée (2 Mo).';
+                event.target.value = '';
+                return;
+            }
+
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                this.officialStampUploadError = 'Format non supporté. Seuls PNG, JPEG et WEBP sont autorisés.';
+                event.target.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            this.isUploadingOfficialStamp = true;
+            try {
+                const data = await window.api.upload('/schools/current/settings/official-stamp', formData);
+                if (data && data.url) {
+                    this.config.officialStampUrl = data.url;
+                }
+            } catch (err) {
+                this.officialStampUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+            } finally {
+                this.isUploadingOfficialStamp = false;
+                event.target.value = '';
+            }
+        },
+
         // ---------------------------------------------------------------- Configuration
 
         // showConfirmation=false pour les 3 commutateurs de délégation (Configuration) : une bascule
@@ -232,7 +352,11 @@ document.addEventListener('alpine:init', () => {
                     tuitionMonthsPerYear: Number(this.config.tuitionMonthsPerYear),
                     allowSecretaryToManageGrading: this.config.allowSecretaryToManageGrading,
                     allowFinanceToModifyFees: this.config.allowFinanceToModifyFees,
-                    allowFinanceToDeleteFees: this.config.allowFinanceToDeleteFees
+                    allowFinanceToDeleteFees: this.config.allowFinanceToDeleteFees,
+                    directorSignatureUrl: this.config.directorSignatureUrl || null,
+                    cashierSignatureUrl: this.config.cashierSignatureUrl || null,
+                    officialStampUrl: this.config.officialStampUrl || null,
+                    typeEtablissement: this.config.typeEtablissement || 'Prive'
                 });
                 this.config = {
                     gradingScale: saved.gradingScale,
@@ -243,7 +367,11 @@ document.addEventListener('alpine:init', () => {
                     teacherMatriculeFormat: saved.teacherMatriculeFormat,
                     allowSecretaryToManageGrading: saved.allowSecretaryToManageGrading,
                     allowFinanceToModifyFees: saved.allowFinanceToModifyFees,
-                    allowFinanceToDeleteFees: saved.allowFinanceToDeleteFees
+                    allowFinanceToDeleteFees: saved.allowFinanceToDeleteFees,
+                    directorSignatureUrl: saved.directorSignatureUrl || '',
+                    cashierSignatureUrl: saved.cashierSignatureUrl || '',
+                    officialStampUrl: saved.officialStampUrl || '',
+                    typeEtablissement: saved.typeEtablissement || 'Prive'
                 };
                 this.configSaved = showConfirmation;
             } catch (err) {

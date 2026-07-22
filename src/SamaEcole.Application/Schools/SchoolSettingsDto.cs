@@ -14,4 +14,8 @@ public record SchoolSettingsDto(
     int TuitionMonthsPerYear,
     bool AllowSecretaryToManageGrading,
     bool AllowFinanceToModifyFees,
-    bool AllowFinanceToDeleteFees);
+    bool AllowFinanceToDeleteFees,
+    string? DirectorSignatureUrl = null,
+    string? CashierSignatureUrl = null,
+    string? OfficialStampUrl = null,
+    string TypeEtablissement = "Prive");

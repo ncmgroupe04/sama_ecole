@@ -358,6 +358,42 @@
  </div>
  </div>
 
+ @*
+ Type d'établissement (Ticket JGK-PUBL) : Privé = module Finance complet (Caisse, recouvrement,
+ dashboard financier). Public = module Finance masqué — seuls l'inscription avec frais ponctuels
+ et les documents pédagogiques (bulletins, certificats) sont mis en avant.
+ Réservé au Directeur : un changement de type masque ou révèle des menus entiers.
+ *@
+ <div x-show="isDirecteur" x-cloak class="border-t border-slate-100 pt-5">
+  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Type d'établissement</h3>
+  <p class="text-xs text-slate-400 mt-0.5 mb-4">
+   Détermine les modules visibles dans la navigation. Les écoles publiques n'ont pas de recouvrement mensuel.
+  </p>
+  <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-start w-fit">
+   <button type="button" id="cfg-type-prive"
+    x-on:click="config.typeEtablissement = 'Prive'; saveConfig(false)"
+    :disabled="configSaving"
+    :class="config.typeEtablissement === 'Prive' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
+    class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50">
+    <icon name="wallet" class="w-4 h-4" />
+    Privé — Finance complète
+   </button>
+   <button type="button" id="cfg-type-public"
+    x-on:click="config.typeEtablissement = 'Public'; saveConfig(false)"
+    :disabled="configSaving"
+    :class="config.typeEtablissement === 'Public' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
+    class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50">
+    <icon name="building" class="w-4 h-4" />
+    Public — Pédagogie uniquement
+   </button>
+  </div>
+  <p x-show="config.typeEtablissement === 'Public'" x-cloak class="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+   <strong>Mode Public actif</strong> — Les menus Finance, Caisse et le tableau de bord financier sont masqués pour tous les utilisateurs de cet établissement.
+   L'inscription reste disponible (frais APE ponctuels inclus) ainsi que tous les documents pédagogiques (bulletins, certificats).
+  </p>
+ </div>
+
+
  <div class="border-t border-slate-100 pt-5">
  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Format des matricules</h3>
  <p class="text-xs text-slate-400 mt-0.5 mb-3">Jetons disponibles : <code class="text-slate-600">{YEAR}</code> (année scolaire) et <code class="text-slate-600">{SEQ:n}</code> (compteur sur n chiffres).</p>
@@ -376,6 +412,127 @@
  placeholder="ENS-{YEAR}-{SEQ:3}"
  class="input-field font-mono disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
  <p x-show="configErrors.teachermatriculeformat" x-cloak x-text="configErrors.teachermatriculeformat" class="mt-1 text-xs text-danger"></p>
+ </div>
+ </div>
+ </div>
+
+ <div class="border-t border-slate-100 pt-5 space-y-5">
+ <div>
+ <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Signatures & Cachet Officiel</h3>
+ <p class="text-xs text-slate-400 mt-0.5 mb-3">Ces images sont automatiquement injectées au bas des reçus de caisse et des bulletins officiels.</p>
+ </div>
+
+ <!-- Signature du Directeur -->
+ <div>
+ <label for="cfg-director-sig" class="block text-sm font-medium text-slate-700">Signature du Directeur</label>
+ <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+ <div x-show="config.directorSignatureUrl" x-cloak class="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+ <img :src="config.directorSignatureUrl" alt="Signature Directeur" class="max-w-full max-h-full object-contain">
+ </div>
+ <div x-show="!config.directorSignatureUrl" x-cloak class="w-16 h-16 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center shrink-0 text-slate-400">
+ <icon name="image" class="w-6 h-6" />
+ </div>
+ <div class="flex-1 w-full space-y-2">
+ <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+ <div class="flex-1 flex items-center">
+ <input id="cfg-director-sig" type="url" x-model="config.directorSignatureUrl" maxlength="500" :disabled="!isDirecteur || isUploadingDirectorSignature"
+ placeholder="URL https://… ou fichier"
+ class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ </div>
+ <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+ <template x-if="!isUploadingDirectorSignature">
+ <span class="flex items-center gap-2">
+ <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <span>Choisir un fichier...</span>
+ </span>
+ </template>
+ <template x-if="isUploadingDirectorSignature">
+ <span class="flex items-center gap-2 text-indigo-600">
+ <icon name="loader" class="w-4 h-4 animate-spin" />
+ <span>Envoi...</span>
+ </span>
+ </template>
+ <input type="file" accept="image/png, image/jpeg, image/webp" class="hidden" :disabled="isUploadingDirectorSignature" x-on:change="uploadDirectorSignatureFile($event)">
+ </label>
+ </div>
+ <p x-show="directorSignatureUploadError" x-cloak x-text="directorSignatureUploadError" class="text-xs text-danger"></p>
+ </div>
+ </div>
+ </div>
+
+ <!-- Signature du Caissier / Finance -->
+ <div>
+ <label for="cfg-cashier-sig" class="block text-sm font-medium text-slate-700">Signature du Caissier / Finance</label>
+ <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+ <div x-show="config.cashierSignatureUrl" x-cloak class="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+ <img :src="config.cashierSignatureUrl" alt="Signature Caissier" class="max-w-full max-h-full object-contain">
+ </div>
+ <div x-show="!config.cashierSignatureUrl" x-cloak class="w-16 h-16 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center shrink-0 text-slate-400">
+ <icon name="image" class="w-6 h-6" />
+ </div>
+ <div class="flex-1 w-full space-y-2">
+ <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+ <div class="flex-1 flex items-center">
+ <input id="cfg-cashier-sig" type="url" x-model="config.cashierSignatureUrl" maxlength="500" :disabled="!isDirecteur || isUploadingCashierSignature"
+ placeholder="URL https://… ou fichier"
+ class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ </div>
+ <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+ <template x-if="!isUploadingCashierSignature">
+ <span class="flex items-center gap-2">
+ <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <span>Choisir un fichier...</span>
+ </span>
+ </template>
+ <template x-if="isUploadingCashierSignature">
+ <span class="flex items-center gap-2 text-indigo-600">
+ <icon name="loader" class="w-4 h-4 animate-spin" />
+ <span>Envoi...</span>
+ </span>
+ </template>
+ <input type="file" accept="image/png, image/jpeg, image/webp" class="hidden" :disabled="isUploadingCashierSignature" x-on:change="uploadCashierSignatureFile($event)">
+ </label>
+ </div>
+ <p x-show="cashierSignatureUploadError" x-cloak x-text="cashierSignatureUploadError" class="text-xs text-danger"></p>
+ </div>
+ </div>
+ </div>
+
+ <!-- Cachet Officiel -->
+ <div>
+ <label for="cfg-official-stamp" class="block text-sm font-medium text-slate-700">Cachet Officiel de l'Établissement</label>
+ <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+ <div x-show="config.officialStampUrl" x-cloak class="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+ <img :src="config.officialStampUrl" alt="Cachet Officiel" class="max-w-full max-h-full object-contain">
+ </div>
+ <div x-show="!config.officialStampUrl" x-cloak class="w-16 h-16 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center shrink-0 text-slate-400">
+ <icon name="image" class="w-6 h-6" />
+ </div>
+ <div class="flex-1 w-full space-y-2">
+ <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+ <div class="flex-1 flex items-center">
+ <input id="cfg-official-stamp" type="url" x-model="config.officialStampUrl" maxlength="500" :disabled="!isDirecteur || isUploadingOfficialStamp"
+ placeholder="URL https://… ou fichier"
+ class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ </div>
+ <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+ <template x-if="!isUploadingOfficialStamp">
+ <span class="flex items-center gap-2">
+ <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <span>Choisir un fichier...</span>
+ </span>
+ </template>
+ <template x-if="isUploadingOfficialStamp">
+ <span class="flex items-center gap-2 text-indigo-600">
+ <icon name="loader" class="w-4 h-4 animate-spin" />
+ <span>Envoi...</span>
+ </span>
+ </template>
+ <input type="file" accept="image/png, image/jpeg, image/webp" class="hidden" :disabled="isUploadingOfficialStamp" x-on:change="uploadOfficialStampFile($event)">
+ </label>
+ </div>
+ <p x-show="officialStampUploadError" x-cloak x-text="officialStampUploadError" class="text-xs text-danger"></p>
+ </div>
  </div>
  </div>
  </div>
