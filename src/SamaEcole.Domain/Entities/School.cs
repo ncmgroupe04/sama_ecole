@@ -16,6 +16,20 @@ public class School : AuditableEntity
     public string? LogoUrl { get; set; }
     public EntityStatus Status { get; set; } = EntityStatus.Active;
 
+    /// <summary>Adresse e-mail de contact de l'établissement, imprimée dans l'en-tête du reçu.</summary>
+    public string? Email { get; set; }
+
+    /// <summary>
+    /// Numéro d'Identification Nationale des Entreprises et Associations. Mention légale sénégalaise
+    /// portée par l'en-tête du reçu : c'est ce qui distingue une pièce comptable opposable d'un simple
+    /// justificatif interne. Null tant que le Directeur ne l'a pas saisi — la ligne s'imprime alors
+    /// sans cette mention, jamais avec un numéro inventé.
+    /// </summary>
+    public string? Ninea { get; set; }
+
+    /// <summary>Registre du Commerce et du Crédit Mobilier (RCCM) — même usage que <see cref="Ninea"/>.</summary>
+    public string? RegistreCommerce { get; set; }
+
     /// <summary>
     /// Inspection d'Académie de rattachement — ligne « IA : … » de l'en-tête du bulletin
     /// (docs/design-references/bulletin-reference.png, ex. « Thies »). Null tant que le Directeur ne

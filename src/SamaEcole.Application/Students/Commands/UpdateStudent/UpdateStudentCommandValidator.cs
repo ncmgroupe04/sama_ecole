@@ -18,7 +18,7 @@ public class UpdateStudentCommandValidator : AbstractValidator<UpdateStudentComm
         RuleFor(x => x.BirthDate).LessThan(DateOnly.FromDateTime(DateTime.UtcNow));
 
         RuleFor(x => x.GuardianName).MaximumLength(200).NoHtml();
-        RuleFor(x => x.GuardianPhone).MaximumLength(30).NoHtml();
+        RuleFor(x => x.GuardianPhone).MaximumLength(30).NoHtml().MustBeValidSenegalPhone();
 
         // Même contrat que CreateStudentCommandValidator : une adresse http(s), jamais un file:// ou
         // javascript: — la photo n'est jamais téléversée, seulement référencée par URL.

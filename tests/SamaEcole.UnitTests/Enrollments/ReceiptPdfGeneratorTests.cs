@@ -24,11 +24,17 @@ public class ReceiptPdfGeneratorTests
     private static EnrollmentReceiptDto Receipt(
         IReadOnlyList<EnrollmentFeeLineDto>? lines = null,
         string? phone = "+221 77 123 45 67",
-        string? city = "Dakar") => new(
+        string? city = "Dakar",
+        IReadOnlyList<CollectedFeeLineDto>? collected = null,
+        string? legalMentions = "SN-DKR-2020-B-1234") => new(
         EnrollmentId: Guid.NewGuid(),
         ReceiptNumber: "REC-2025-0002",
         SchoolName: "École Primaire Les Baobabs",
+        SchoolAddress: city is null ? null : $"Rue 12, Médina, {city}",
         SchoolPhone: phone,
+        SchoolEmail: legalMentions is null ? null : "contact@baobabs.sn",
+        SchoolNinea: legalMentions,
+        SchoolRegistreCommerce: legalMentions,
         SchoolCity: city,
         SchoolLogoUrl: "https://exemple.sn/logo.png",
         Matricule: "ELEV-2025-0008",
@@ -36,6 +42,8 @@ public class ReceiptPdfGeneratorTests
         ClassroomName: "CE1",
         ClassroomLevel: "Primaire",
         SchoolYearLabel: "2025-2026",
+        GuardianName: legalMentions is null ? null : "Ndèye Fall",
+        GuardianPhone: legalMentions is null ? null : "77 000 00 00",
         Type: nameof(EnrollmentType.NewEnrollment),
         Status: nameof(EnrollmentStatus.Confirmed),
         EnrolledAt: new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero),
@@ -44,7 +52,14 @@ public class ReceiptPdfGeneratorTests
             new("Droits d'inscription administrative", IsRecurring: false, UnitAmount: 25_000m, Months: 1, LineTotal: 25_000m),
             new("Mensualité", IsRecurring: true, UnitAmount: 15_000m, Months: 9, LineTotal: 135_000m)
         },
-        TotalDue: 160_000m);
+        TotalDue: 160_000m,
+        CollectedLines: collected ?? new List<CollectedFeeLineDto>
+        {
+            new("Droits d'inscription administrative", IsRecurring: false, Months: 1, Amount: 25_000m),
+            new("Mensualité", IsRecurring: true, Months: 1, Amount: 15_000m)
+        },
+        TotalCollected: collected?.Sum(c => c.Amount) ?? 40_000m,
+        PaymentMethod: nameof(PaymentMethod.Cash));
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -75,6 +90,26 @@ public class ReceiptPdfGeneratorTests
     {
         var pdf = new ReceiptPdfGenerator().Generate(
             Receipt(phone: null, city: null), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+    }
+
+    [Fact]
+    public void Generate_Is_Robust_To_Missing_Legal_Mentions_And_Guardian()
+    {
+        // Une école qui n'a pas encore saisi NINEA/RCCM ni le tuteur doit quand même pouvoir imprimer :
+        // la mention absente ne s'imprime pas, elle ne fait pas tomber le reçu.
+        var pdf = new ReceiptPdfGenerator().Generate(Receipt(legalMentions: null), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+    }
+
+    [Fact]
+    public void Generate_Is_Robust_To_An_Enrollment_Without_Any_Collection()
+    {
+        // Dossier ouvert sans versement : le reçu s'imprime avec un total encaissé de 0.
+        var pdf = new ReceiptPdfGenerator().Generate(
+            Receipt(collected: new List<CollectedFeeLineDto>()), logo: null);
 
         ShouldBeAValidPdf(pdf);
     }

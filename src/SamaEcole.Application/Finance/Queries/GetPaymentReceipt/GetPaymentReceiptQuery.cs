@@ -56,8 +56,12 @@ public class GetPaymentReceiptQueryHandler(
         return new PaymentReceiptDto(
             row.ReceiptNumber,
             school?.Name ?? string.Empty,
+            school?.Address,
+            school?.Email,
             school?.Phone,
             ReceiptCity.FromAddress(school?.Address),
+            school?.Ninea,
+            school?.RegistreCommerce,
             school?.LogoUrl,
             row.Matricule,
             row.FullName,

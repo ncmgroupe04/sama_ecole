@@ -29,43 +29,62 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
     {
         container.Page(page =>
         {
-            page.Size(PageSizes.A4);
-            page.Margin(2, Unit.Centimetre);
-            page.DefaultTextStyle(text => text.FontSize(11).FontColor(Colors.Black));
+            page.Size(PageSizes.A5.Landscape());
+            page.Margin(8, Unit.Millimetre);
+            page.DefaultTextStyle(text => text.FontSize(8).FontColor(Colors.Black));
 
             page.Content().Column(column =>
             {
                 ComposeHeader(column);
-                column.Item().PaddingTop(18).AlignCenter().Text($"REÇU DE PAIEMENT n° {receipt.ReceiptNumber}")
-                    .Bold().Italic().FontSize(15);
-                column.Item().PaddingTop(18).Element(ComposeInfoBlock);
-                column.Item().PaddingTop(14).Element(ComposeAmountsTable);
-                column.Item().PaddingTop(20).AlignCenter().Text(MandatoryMention).Italic();
-                column.Item().PaddingTop(36).Element(ComposeSignatures);
+
+                column.Item().PaddingTop(6).AlignCenter()
+                    .Text($"REÇU DE PAIEMENT n° {receipt.ReceiptNumber}").Bold().Italic().FontSize(11);
+
+                column.Item().PaddingTop(6).Row(row =>
+                {
+                    row.RelativeItem().Element(ComposeInfoBlock);
+                    row.ConstantItem(14);
+                    row.RelativeItem().Element(ComposeAmountsTable);
+                });
+
+                column.Item().PaddingTop(8).AlignCenter().Text(MandatoryMention).Italic().FontSize(8);
+                column.Item().PaddingTop(12).Element(ComposeSignatures);
             });
         });
     }
 
     private void ComposeHeader(ColumnDescriptor column)
     {
-        column.Item().BorderBottom(1).BorderColor(Colors.Grey.Medium).PaddingBottom(6).Row(row =>
+        column.Item().BorderBottom(1).BorderColor(Colors.Grey.Darken1).PaddingBottom(4).Row(row =>
         {
             row.RelativeItem().Column(header =>
             {
-                header.Item().Text(receipt.SchoolName.ToUpperInvariant()).Bold().FontSize(20);
-                header.Item().Text($"{receipt.SchoolName} | Téléphone : {receipt.SchoolPhone ?? "—————"}")
-                    .FontSize(9).FontColor(Colors.Grey.Medium);
+                header.Item().Text(receipt.SchoolName.ToUpperInvariant()).Bold().FontSize(13);
 
-                if (logo is not null)
+                var contact = JoinPresent(receipt.SchoolAddress, receipt.SchoolPhone, receipt.SchoolEmail);
+                if (contact.Length > 0)
                 {
-                    header.Item().PaddingTop(4).MaxHeight(48).MaxWidth(170).Image(logo).FitArea();
+                    header.Item().Text(contact).FontSize(7).FontColor(Colors.Grey.Darken2);
                 }
-                else
+
+                var legal = JoinPresent(
+                    receipt.SchoolNinea is null ? null : $"NINEA : {receipt.SchoolNinea}",
+                    receipt.SchoolRegistreCommerce is null ? null : $"RCCM : {receipt.SchoolRegistreCommerce}");
+                if (legal.Length > 0)
                 {
-                    header.Item().PaddingTop(2).Text("[Emplacement Logo Officiel]")
-                        .FontSize(9).FontColor(Colors.Grey.Medium);
+                    header.Item().Text(legal).FontSize(7).FontColor(Colors.Grey.Darken2);
                 }
             });
+
+            if (logo is not null)
+            {
+                row.ConstantItem(60).MaxHeight(42).Image(logo).FitArea();
+            }
+            else
+            {
+                row.ConstantItem(60).AlignRight().AlignMiddle()
+                    .Text("[Logo officiel]").FontSize(7).FontColor(Colors.Grey.Medium);
+            }
         });
     }
 
@@ -84,48 +103,51 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
 
     private static void InfoRow(ColumnDescriptor column, string label, string value)
     {
-        column.Item().PaddingVertical(2).Row(row =>
+        column.Item().PaddingVertical(1).Row(row =>
         {
-            row.ConstantItem(180).Text($"{label} :").FontColor(Colors.Grey.Darken2);
+            row.ConstantItem(95).Text($"{label} :").FontColor(Colors.Grey.Darken2);
             row.RelativeItem().Text(value).SemiBold();
         });
     }
 
     private void ComposeAmountsTable(IContainer container)
     {
-        container.Table(table =>
+        container.Column(column =>
         {
-            table.ColumnsDefinition(columns =>
+            column.Item().Table(table =>
             {
-                columns.RelativeColumn(3);
-                columns.RelativeColumn(1);
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(3);
+                    columns.RelativeColumn(2);
+                });
+
+                table.Header(header =>
+                {
+                    header.Cell().Element(HeaderCell).Text("Désignation").Bold();
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Montant (FCFA)").Bold();
+                });
+
+                table.Cell().Element(BodyCell).Text("Versement reçu").Bold();
+                table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.Amount)).Bold();
+
+                table.Cell().Element(BodyCell).Text("Montant total dû");
+                table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.TotalDue));
+
+                table.Cell().Element(BodyCell).Text("Déjà réglé à ce jour");
+                table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.AlreadyPaid));
+
+                table.Cell().Element(TotalCell).Text("RESTE À PAYER").Bold();
+                table.Cell().Element(TotalCell).AlignRight().Text(FormatMoney(receipt.RemainingBalance)).Bold();
             });
-
-            table.Header(header =>
-            {
-                header.Cell().Element(HeaderCell).Text("Désignation").Bold();
-                header.Cell().Element(HeaderCell).AlignRight().Text("Montant (FCFA)").Bold();
-            });
-
-            table.Cell().Element(BodyCell).Text("Versement reçu").Bold();
-            table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.Amount)).Bold();
-
-            table.Cell().Element(BodyCell).Text("Montant total dû");
-            table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.TotalDue));
-
-            table.Cell().Element(BodyCell).Text("Déjà réglé à ce jour");
-            table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.AlreadyPaid));
-
-            table.Cell().Element(TotalCell).Text("RESTE À PAYER").Bold();
-            table.Cell().Element(TotalCell).AlignRight().Text(FormatMoney(receipt.RemainingBalance)).Bold();
         });
 
         static IContainer HeaderCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten3).PaddingVertical(5).PaddingHorizontal(8);
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(5);
         static IContainer BodyCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(5).PaddingHorizontal(8);
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(5);
         static IContainer TotalCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(5).PaddingHorizontal(8);
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(5);
     }
 
     private void ComposeSignatures(IContainer container)
@@ -135,7 +157,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
             row.RelativeItem().Column(left =>
             {
                 left.Item().Text(FaitA()).Italic();
-                left.Item().PaddingTop(10).Text("[Cadre Cachet Officiel]").FontSize(9).FontColor(Colors.Grey.Medium);
+                left.Item().PaddingTop(6).Text("[Cadre Cachet Officiel]").FontSize(7).FontColor(Colors.Grey.Medium);
             });
 
             row.RelativeItem().AlignRight().Text("Signature du Directeur / Service Financier").Italic();
@@ -158,6 +180,9 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
         "MobileMoney" => "Mobile Money (Wave / Orange Money)",
         _ => method
     };
+
+    private static string JoinPresent(params string?[] parts) =>
+        string.Join("  ·  ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
 
     /// <summary>FCFA : entiers, séparateur de milliers par espace, sans décimales — la monnaie n'en a pas.</summary>
     private static string FormatMoney(decimal amount) =>

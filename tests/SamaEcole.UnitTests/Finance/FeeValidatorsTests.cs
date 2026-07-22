@@ -86,6 +86,37 @@ public class FeeValidatorsTests
     }
 
     [Fact]
+    public void Apply_Standard_Without_A_Level_Should_Pass()
+    {
+        // Périmètre absent = toutes les classes : le champ reste facultatif.
+        var command = new ApplyStandardFeeCommand { FeeCategoryId = Guid.NewGuid(), Amount = 15000, Level = null };
+
+        _applyValidator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Apply_Standard_On_A_Free_Form_Level_Should_Pass()
+    {
+        // Nomenclature LIBRE : aucune liste figée de niveaux, ici comme à la création d'une classe.
+        var command = new ApplyStandardFeeCommand { FeeCategoryId = Guid.NewGuid(), Amount = 15000, Level = "Cycle moyen" };
+
+        _applyValidator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Apply_Standard_On_A_Level_Containing_Html_Should_Fail()
+    {
+        var command = new ApplyStandardFeeCommand
+        {
+            FeeCategoryId = Guid.NewGuid(),
+            Amount = 15000,
+            Level = "<script>alert(1)</script>"
+        };
+
+        _applyValidator.Validate(command).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
     public void Update_With_A_Valid_Amount_Should_Pass()
     {
         var command = new UpdateClassFeeCommand(Guid.NewGuid(), 15000, RowVersion: 42);

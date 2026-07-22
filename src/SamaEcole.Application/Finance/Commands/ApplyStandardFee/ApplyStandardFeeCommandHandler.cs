@@ -37,32 +37,52 @@ public class ApplyStandardFeeCommandHandler(
             ]);
         }
 
-        var classroomIds = await dbContext.Classrooms
+        // Périmètre d'application : tout l'établissement, ou le seul niveau ciblé. La comparaison
+        // passe par lower() côté PostgreSQL — le niveau est saisi librement par l'école, « Collège »
+        // et « collège » doivent désigner les mêmes classes.
+        var level = request.Level?.Trim();
+        var normalizedLevel = string.IsNullOrEmpty(level) ? null : level.ToLowerInvariant();
+
+        var classroomsQuery = dbContext.Classrooms.AsQueryable();
+        if (normalizedLevel is not null)
+        {
+            classroomsQuery = classroomsQuery.Where(c => c.Level.ToLower() == normalizedLevel);
+        }
+
+        var classroomIds = await classroomsQuery
             .Select(c => c.Id)
             .ToListAsync(cancellationToken);
 
         if (classroomIds.Count == 0)
         {
-            // Aucune classe : rien à facturer. On ne crée pas une catégorie « fantôme » sans cible.
+            // Aucune cible : rien à facturer. On ne crée pas une catégorie « fantôme » sans classe,
+            // et un niveau vide est signalé sur SON champ — sinon l'utilisateur corrigerait le montant
+            // alors que c'est le périmètre qui ne désigne rien.
             throw new ValidationException([
-                new ValidationFailure(
-                    nameof(request.FeeCategoryId),
-                    "Aucune classe n'est encore définie : créez vos classes avant de paramétrer les frais.")
+                normalizedLevel is null
+                    ? new ValidationFailure(
+                        nameof(request.FeeCategoryId),
+                        "Aucune classe n'est encore définie : créez vos classes avant de paramétrer les frais.")
+                    : new ValidationFailure(
+                        nameof(request.Level),
+                        $"Aucune classe n'est rattachée au niveau « {level} ».")
             ]);
         }
 
-        // Lignes déjà présentes pour cette catégorie, indexées par classe. On suit ces entités (pas
-        // d'AsNoTracking) : on va potentiellement modifier leur montant, et EF a besoin de leur jeton
-        // xmin pour le verrou optimiste.
+        // Lignes déjà présentes pour cette catégorie DANS LE PÉRIMÈTRE, indexées par classe. Le filtre
+        // sur classroomIds n'est pas qu'une optimisation : hors périmètre, aucune entité n'est même
+        // chargée, donc aucun montant d'un autre niveau ne peut être modifié par mégarde. On suit ces
+        // entités (pas d'AsNoTracking) : on va potentiellement modifier leur montant, et EF a besoin
+        // de leur jeton xmin pour le verrou optimiste.
         var existingByClassroom = await dbContext.ClassFees
-            .Where(f => f.FeeCategoryId == request.FeeCategoryId)
+            .Where(f => f.FeeCategoryId == request.FeeCategoryId && classroomIds.Contains(f.ClassroomId))
             .ToDictionaryAsync(f => f.ClassroomId, cancellationToken);
 
         var now = timeProvider.GetUtcNow();
         int created = 0, updated = 0, skipped = 0;
 
-        // Une seule transaction : soit tout le barème bascule sur le standard, soit rien. Un échec au
-        // milieu ne doit pas laisser la moitié des classes réalignées et l'autre non.
+        // Une seule transaction : soit tout le périmètre bascule sur le standard, soit rien. Un échec
+        // au milieu ne doit pas laisser la moitié des classes réalignées et l'autre non.
         await dbContext.ExecuteInTransactionAsync(async ct =>
         {
             foreach (var classroomId in classroomIds)

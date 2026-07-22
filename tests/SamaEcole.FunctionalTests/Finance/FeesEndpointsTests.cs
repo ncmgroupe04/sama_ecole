@@ -84,10 +84,10 @@ public class FeesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
         return await _client.SendAsync(request);
     }
 
-    private async Task<ClassroomDto> CreateClassroomAsync(string token, string name)
+    private async Task<ClassroomDto> CreateClassroomAsync(string token, string name, string level = "Primaire")
     {
         var response = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", token,
-            new { name, level = "Primaire", capacity = 40 });
+            new { name, level, capacity = 40 });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<ClassroomDto>())!;
     }
@@ -100,10 +100,11 @@ public class FeesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
         return (await response.Content.ReadFromJsonAsync<FeeCategoryDto>())!;
     }
 
-    private async Task<ApplyResult> ApplyStandardAsync(string token, Guid categoryId, decimal amount, bool overwrite)
+    /// <summary><paramref name="level"/> null = toutes les classes ; sinon, le seul niveau ciblé.</summary>
+    private async Task<ApplyResult> ApplyStandardAsync(string token, Guid categoryId, decimal amount, bool overwrite, string? level = null)
     {
         var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/fees/apply-standard", token,
-            new { feeCategoryId = categoryId, amount, overwriteExisting = overwrite });
+            new { feeCategoryId = categoryId, amount, level, overwriteExisting = overwrite });
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         return (await response.Content.ReadFromJsonAsync<ApplyResult>())!;
     }
@@ -203,6 +204,67 @@ public class FeesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
 
         var after = await ListFeesAsync(token);
         after.Should().OnlyContain(f => f.Amount == 18000);
+    }
+
+    [Fact]
+    public async Task Applying_A_Standard_To_One_Level_Should_Only_Cover_That_Level()
+    {
+        // Périmètre par niveau : une école ne facture pas le Primaire au tarif du Lycée.
+        var token = await DirecteurTokenAsync();
+        await CreateClassroomAsync(token, "CI", level: "Primaire");
+        await CreateClassroomAsync(token, "6e A", level: "Collège");
+        await CreateClassroomAsync(token, "5e A", level: "Collège");
+        var category = await CreateCategoryAsync(token, "Mensualité");
+
+        var result = await ApplyStandardAsync(token, category.Id, 25000, overwrite: false, level: "Collège");
+
+        result.Created.Should().Be(2, "seules les deux classes du Collège sont dans le périmètre");
+        result.Skipped.Should().Be(0, "le Primaire n'est même pas parcouru");
+
+        var fees = await ListFeesAsync(token);
+        fees.Should().HaveCount(2, "aucune ligne ne doit naître hors du niveau ciblé");
+        fees.Should().OnlyContain(f => f.Level == "Collège" && f.Amount == 25000);
+    }
+
+    [Fact]
+    public async Task Re_Applying_A_Standard_On_One_Level_Should_Not_Touch_The_Other_Levels()
+    {
+        // Le cas qui coûte cher : une remise à plat (overwrite) d'un cycle ne doit pas déborder sur
+        // les montants des autres — ils ne sont ni réalignés, ni comptés.
+        var token = await DirecteurTokenAsync();
+        await CreateClassroomAsync(token, "CI", level: "Primaire");
+        await CreateClassroomAsync(token, "6e A", level: "Collège");
+        var category = await CreateCategoryAsync(token, "Mensualité");
+
+        await ApplyStandardAsync(token, category.Id, 10000, overwrite: false);
+
+        // Niveau saisi en minuscules : la nomenclature est libre côté école, le ciblage ignore la casse.
+        var result = await ApplyStandardAsync(token, category.Id, 25000, overwrite: true, level: "collège");
+
+        result.Updated.Should().Be(1, "seule la classe de Collège est réalignée");
+        result.Created.Should().Be(0);
+        result.Skipped.Should().Be(0);
+
+        var fees = await ListFeesAsync(token);
+        fees.Single(f => f.Level == "Collège").Amount.Should().Be(25000);
+        fees.Single(f => f.Level == "Primaire").Amount.Should().Be(10000, "les autres cycles gardent leur montant");
+    }
+
+    [Fact]
+    public async Task Applying_A_Standard_To_A_Level_Without_Classrooms_Should_Return_422()
+    {
+        // Un périmètre qui ne désigne aucune classe est une erreur de saisie, pas un no-op silencieux.
+        var token = await DirecteurTokenAsync();
+        await CreateClassroomAsync(token, "CI", level: "Primaire");
+        var category = await CreateCategoryAsync(token, "Mensualité");
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/fees/apply-standard", token,
+            new { feeCategoryId = category.Id, amount = 15000m, level = "Lycée", overwriteExisting = false });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        var fees = await ListFeesAsync(token);
+        fees.Should().BeEmpty("un périmètre vide n'écrit rien, pas même sur les autres niveaux");
     }
 
     [Fact]

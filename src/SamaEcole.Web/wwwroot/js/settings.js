@@ -44,11 +44,15 @@ document.addEventListener('alpine:init', () => {
         // --- Établissement (identité) ---
         profile: {
             name: '', address: '', phone: '', logoUrl: '',
-            inspectionAcademie: '', inspectionEducationFormation: '', nomLycee: ''
+            inspectionAcademie: '', inspectionEducationFormation: '', nomLycee: '',
+            // Coordonnées et mentions légales de l'en-tête du reçu (NINEA / RCCM).
+            email: '', ninea: '', registreCommerce: ''
         },
         profileErrors: {},
         profileSaving: false,
         profileSaved: false,
+        isUploadingLogo: false,
+        logoUploadError: null,
 
         // --- Configuration (réglages) ---
         config: {
@@ -112,7 +116,10 @@ document.addEventListener('alpine:init', () => {
                     logoUrl: profile.logoUrl || '',
                     inspectionAcademie: profile.inspectionAcademie || '',
                     inspectionEducationFormation: profile.inspectionEducationFormation || '',
-                    nomLycee: profile.nomLycee || ''
+                    nomLycee: profile.nomLycee || '',
+                    email: profile.email || '',
+                    ninea: profile.ninea || '',
+                    registreCommerce: profile.registreCommerce || ''
                 };
                 this.config = {
                     gradingScale: config.gradingScale,
@@ -146,7 +153,10 @@ document.addEventListener('alpine:init', () => {
                     logoUrl: this.profile.logoUrl || null,
                     inspectionAcademie: this.profile.inspectionAcademie || null,
                     inspectionEducationFormation: this.profile.inspectionEducationFormation || null,
-                    nomLycee: this.profile.nomLycee || null
+                    nomLycee: this.profile.nomLycee || null,
+                    email: this.profile.email || null,
+                    ninea: this.profile.ninea || null,
+                    registreCommerce: this.profile.registreCommerce || null
                 });
                 this.profile = {
                     name: saved.name || '',
@@ -155,13 +165,51 @@ document.addEventListener('alpine:init', () => {
                     logoUrl: saved.logoUrl || '',
                     inspectionAcademie: saved.inspectionAcademie || '',
                     inspectionEducationFormation: saved.inspectionEducationFormation || '',
-                    nomLycee: saved.nomLycee || ''
+                    nomLycee: saved.nomLycee || '',
+                    email: saved.email || '',
+                    ninea: saved.ninea || '',
+                    registreCommerce: saved.registreCommerce || ''
                 };
                 this.profileSaved = true;
             } catch (err) {
                 this.profileErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
             } finally {
                 this.profileSaving = false;
+            }
+        },
+
+        async uploadLogoFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            this.logoUploadError = null;
+            if (file.size > 2 * 1024 * 1024) {
+                this.logoUploadError = 'Le fichier dépasse la taille maximale autorisée (2 Mo).';
+                event.target.value = '';
+                return;
+            }
+
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                this.logoUploadError = 'Format non supporté. Seuls PNG, JPEG et WEBP sont autorisés.';
+                event.target.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            this.isUploadingLogo = true;
+            try {
+                const data = await window.api.upload('/schools/current/logo', formData);
+                if (data && data.url) {
+                    this.profile.logoUrl = data.url;
+                }
+            } catch (err) {
+                this.logoUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+            } finally {
+                this.isUploadingLogo = false;
+                event.target.value = '';
             }
         },
 

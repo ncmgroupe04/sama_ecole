@@ -1,4 +1,5 @@
 using FluentValidation;
+using SamaEcole.Application.Common.Validation;
 
 namespace SamaEcole.Application.Finance.Commands.ApplyStandardFee;
 
@@ -7,6 +8,14 @@ public class ApplyStandardFeeCommandValidator : AbstractValidator<ApplyStandardF
     public ApplyStandardFeeCommandValidator()
     {
         RuleFor(x => x.FeeCategoryId).NotEmpty();
+
+        // Périmètre facultatif : NULL/vide = toutes les classes. Renseigné, il suit la même règle que
+        // le niveau d'une classe (nomenclature LIBRE, jamais une énumération figée) — on borne donc la
+        // longueur et on refuse le HTML, sans imposer de liste. Un niveau qui ne désigne aucune classe
+        // est rejeté par le handler, qui seul connaît les classes de l'école.
+        RuleFor(x => x.Level)
+            .MaximumLength(50).NoHtml()
+            .When(x => !string.IsNullOrWhiteSpace(x.Level));
 
         // Zéro est permis (un frais peut être offert). Négatif ne l'est jamais : on facture, on ne
         // rembourse pas via le barème. Le plafond intercepte la faute de frappe — un zéro de trop

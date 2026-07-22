@@ -46,6 +46,15 @@ document.addEventListener('alpine:init', () => {
         formErrors: {},
         isSubmitting: false,
 
+        /**
+         * Encaissement du jour, ventilé : { [feeCategoryId]: { checked, months } }. Le guichet coche ce
+         * que le tuteur règle réellement (inscription, tenue, 1re mensualité…) ; seul ce qui est coché
+         * figure sur le reçu. Les MONTANTS ne sont pas transmis — le serveur les reprend du barème
+         * (règle #4) ; ce qui part dans la requête n'est que « cette catégorie, sur N mois ».
+         */
+        collected: {},
+        paymentMethod: 'Cash',
+
         // Reçu émis
         receipt: null,
         pdfError: null,
@@ -108,6 +117,7 @@ document.addEventListener('alpine:init', () => {
                 .map((f) => {
                     const months = f.isRecurring ? this.tuitionMonths : 1;
                     return {
+                        feeCategoryId: f.feeCategoryId,
                         designation: f.designation,
                         isRecurring: f.isRecurring,
                         unitAmount: f.unitAmount,
@@ -125,6 +135,52 @@ document.addEventListener('alpine:init', () => {
 
         hasFeesForSelectedClass() {
             return (this.feesByClassroom[this.form.classroomId] || []).length > 0;
+        },
+
+        // ---------------------------------------------------------------- Encaissement du jour
+
+        /**
+         * Réinitialise la sélection au changement de classe : les frais ne sont pas les mêmes d'une
+         * classe à l'autre, garder les cases cochées de la précédente encaisserait un frais inexistant.
+         *
+         * Pré-cochage du cas courant au guichet — les frais ponctuels (inscription, tenue, carnet…) et
+         * la PREMIÈRE mensualité. C'est ce que règle un tuteur le jour de l'inscription ; tout reste
+         * décochable, et le total encaissé est affiché en permanence au-dessus du bouton d'envoi.
+         */
+        resetCollected() {
+            this.collected = {};
+            this.previewLines().forEach((line) => {
+                this.collected[line.feeCategoryId] = { checked: true, months: 1 };
+            });
+        },
+
+        collectedEntry(line) {
+            return this.collected[line.feeCategoryId] ||= { checked: false, months: 1 };
+        },
+
+        /** Montant réellement encaissé pour une ligne : mensualité = unitaire × mois réglés, sinon total. */
+        collectedAmount(line) {
+            const entry = this.collectedEntry(line);
+            if (!entry.checked) return 0;
+            const months = Math.min(Math.max(Number(entry.months) || 1, 1), line.months);
+            return line.isRecurring ? line.unitAmount * months : line.lineTotal;
+        },
+
+        /** Somme encaissée le jour même — le seul montant qui figurera en gras sur le reçu. */
+        collectedTotal() {
+            return this.previewLines().reduce((sum, line) => sum + this.collectedAmount(line), 0);
+        },
+
+        /** Ce qu'on transmet au serveur : les catégories cochées et leur durée, jamais un montant. */
+        collectedPayload() {
+            return this.previewLines()
+                .filter((line) => this.collectedEntry(line).checked)
+                .map((line) => ({
+                    feeCategoryId: line.feeCategoryId,
+                    months: line.isRecurring
+                        ? Math.min(Math.max(Number(this.collectedEntry(line).months) || 1, 1), line.months)
+                        : 1
+                }));
         },
 
         // ---------------------------------------------------------------- Réinscription
@@ -171,12 +227,20 @@ document.addEventListener('alpine:init', () => {
             this.formErrors = {};
             this.isSubmitting = true;
 
+            // Encaissement du jour, commun aux deux modes : une réinscription se règle au guichet
+            // exactement comme une première inscription.
+            const collection = {
+                collectedFees: this.collectedPayload(),
+                paymentMethod: this.paymentMethod
+            };
+
             const command = this.mode === 'ReEnrollment'
                 ? {
                     type: 'ReEnrollment',
                     classroomId: this.form.classroomId,
                     isRepeating: this.form.isRepeating,
-                    studentId: this.form.studentId
+                    studentId: this.form.studentId,
+                    ...collection
                 }
                 : {
                     type: 'NewEnrollment',
@@ -187,7 +251,8 @@ document.addEventListener('alpine:init', () => {
                     birthPlace: this.form.birthPlace || null,
                     gender: this.form.gender,
                     guardianName: this.form.guardianName || null,
-                    guardianPhone: this.form.guardianPhone || null
+                    guardianPhone: this.form.guardianPhone || null,
+                    ...collection
                 };
 
             try {
@@ -250,6 +315,8 @@ document.addEventListener('alpine:init', () => {
             this.studentSearch = '';
             this.formErrors = {};
             this.mode = 'NewEnrollment';
+            this.collected = {};
+            this.paymentMethod = 'Cash';
         },
 
         printReceipt() {
@@ -301,6 +368,40 @@ document.addEventListener('alpine:init', () => {
 
         recurringSuffix(line) {
             return line.isRecurring ? ` (× ${line.months} mois)` : '';
+        },
+
+        /**
+         * Libellé d'une ligne ENCAISSÉE. Une mensualité porte le nombre de mois réellement réglés
+         * (« Mensualité (× 1 mois) ») : c'est vérifiable et jamais faux, là où nommer le mois couvert
+         * (« Mensualité d'octobre ») supposerait un échéancier que l'application ne tient pas encore.
+         */
+        collectedLabel(line) {
+            return line.isRecurring ? `${line.designation} (× ${line.months} mois)` : line.designation;
+        },
+
+        paymentMethodLabel(method) {
+            return {
+                Cash: 'Espèces',
+                Cheque: 'Chèque',
+                Transfer: 'Virement',
+                MobileMoney: 'Mobile Money'
+            }[method] || '—';
+        },
+
+        /** Ligne « NINEA … · RCCM … » de l'en-tête : n'imprime que les mentions réellement saisies. */
+        legalMentions() {
+            if (!this.receipt) return '';
+            return [
+                this.receipt.schoolNinea ? `NINEA : ${this.receipt.schoolNinea}` : null,
+                this.receipt.schoolRegistreCommerce ? `RCCM : ${this.receipt.schoolRegistreCommerce}` : null
+            ].filter(Boolean).join('  ·  ');
+        },
+
+        /** Ligne de coordonnées de l'en-tête : adresse · téléphone · e-mail, sans les trous. */
+        contactLine() {
+            if (!this.receipt) return '';
+            return [this.receipt.schoolAddress, this.receipt.schoolPhone, this.receipt.schoolEmail]
+                .filter(Boolean).join('  ·  ');
         },
 
         /** FCFA : entiers, séparateur de milliers français. Pas de décimales — la monnaie n'en a pas. */

@@ -40,4 +40,26 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     public string? Gender { get; init; }
     public string? GuardianName { get; init; }
     public string? GuardianPhone { get; init; }
+
+    // --- Encaissement du jour (ventilé) ---
+
+    /// <summary>
+    /// Frais réglés au guichet AU MOMENT de l'inscription, catégorie par catégorie. Liste vide = dossier
+    /// ouvert sans versement : l'inscription est créée, aucun paiement ne l'est, et le reçu s'imprime
+    /// avec un total encaissé de 0.
+    ///
+    /// Le client désigne QUOI est réglé, jamais COMBIEN : les montants sont repris du barème que le
+    /// serveur vient lui-même de figer (règle #4 — un montant n'est pas une donnée d'entrée).
+    /// </summary>
+    public IReadOnlyList<CollectedFeeInput> CollectedFees { get; init; } = [];
+
+    /// <summary>Mode de règlement du versement du jour. Ignoré si <see cref="CollectedFees"/> est vide.</summary>
+    public PaymentMethod PaymentMethod { get; init; } = PaymentMethod.Cash;
 }
+
+/// <summary>
+/// Une catégorie de frais réglée à l'inscription. <paramref name="Months"/> ne vaut que pour une
+/// mensualité (« le tuteur règle 2 mois d'avance ») : sur un frais ponctuel il est ignoré, la ligne
+/// étant réglée en entier ou pas du tout. Le serveur borne ce nombre au nombre de mois facturés.
+/// </summary>
+public record CollectedFeeInput(Guid FeeCategoryId, int Months = 1);

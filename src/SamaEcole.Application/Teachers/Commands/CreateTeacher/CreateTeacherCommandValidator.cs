@@ -12,7 +12,7 @@ public class CreateTeacherCommandValidator : AbstractValidator<CreateTeacherComm
         // EmailAddress() (mode ASP.NET Core) vérifie peu de choses au-delà du « @ » : sans NoHtml,
         // « <script>@x.com » passerait (JGK-F01).
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(255).NoHtml();
-        RuleFor(x => x.Phone).MaximumLength(30).NoHtml();
+        RuleFor(x => x.Phone).MaximumLength(30).NoHtml().MustBeValidSenegalPhone();
         RuleFor(x => x.BirthDate).LessThan(DateOnly.FromDateTime(DateTime.UtcNow));
         RuleFor(x => x.BirthPlace).MaximumLength(200).NoHtml();
 

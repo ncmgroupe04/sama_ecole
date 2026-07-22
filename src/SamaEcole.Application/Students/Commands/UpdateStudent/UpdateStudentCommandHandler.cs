@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
 using FluentValidation.Results;
 using MediatR;
@@ -34,13 +35,13 @@ public class UpdateStudentCommandHandler(IApplicationDbContext dbContext)
         // fait échouer SaveChangesAsync en 409, jamais un écrasement silencieux.
         dbContext.SetOriginalConcurrencyToken(student, request.RowVersion);
 
-        student.FullName = request.FullName;
+        student.FullName = request.FullName.ToTitleCase();
         student.BirthDate = request.BirthDate;
         student.BirthPlace = request.BirthPlace;
         student.Gender = request.Gender;
         student.ClassroomId = request.ClassroomId;
         student.PhotoUrl = request.PhotoUrl;
-        student.GuardianName = request.GuardianName;
+        student.GuardianName = request.GuardianName.ToTitleCase();
         student.GuardianPhone = request.GuardianPhone;
 
         await dbContext.SaveChangesAsync(cancellationToken);

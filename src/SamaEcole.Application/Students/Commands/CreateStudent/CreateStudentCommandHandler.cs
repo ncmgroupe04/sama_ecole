@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using FluentValidation.Results;
@@ -49,14 +50,14 @@ public class CreateStudentCommandHandler(
             {
                 SchoolId = schoolId,
                 Matricule = matricule,
-                FullName = request.FullName,
+                FullName = request.FullName.ToTitleCase(),
                 BirthDate = request.BirthDate,
                 BirthPlace = request.BirthPlace,
                 Gender = request.Gender,
                 ClassroomId = request.ClassroomId,
                 PhotoUrl = request.PhotoUrl,
                 PhotoData = request.PhotoData is null ? null : Convert.FromBase64String(request.PhotoData),
-                GuardianName = request.GuardianName,
+                GuardianName = request.GuardianName.ToTitleCase(),
                 GuardianPhone = request.GuardianPhone
             };
 

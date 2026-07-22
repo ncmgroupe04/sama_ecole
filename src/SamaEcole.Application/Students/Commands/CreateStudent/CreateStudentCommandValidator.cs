@@ -24,6 +24,7 @@ public class CreateStudentCommandValidator : AbstractValidator<CreateStudentComm
             .WithMessage("L'URL de la photo doit être une adresse http(s) valide.");
 
         RuleFor(x => x.PhotoData).MustBeValidPhotoData();
+        RuleFor(x => x.GuardianPhone).MustBeValidSenegalPhone();
     }
 
     private static bool BeAValidHttpUrl(string? url) =>

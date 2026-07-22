@@ -263,8 +263,13 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------ Suppression
 
         openDelete(subject) {
+            if (!subject) return;
             this.deletingSubject = { id: subject.id, name: subject.name, rowVersion: subject.rowVersion };
             this.deleteSubjectError = null;
+        },
+
+        deleteSubject(subject) {
+            this.openDelete(subject);
         },
 
         closeDelete() {
@@ -272,7 +277,11 @@ document.addEventListener('alpine:init', () => {
             this.deleteSubjectError = null;
         },
 
-        async confirmDelete() {
+        async confirmDelete(subject = null) {
+            if (subject && subject.id) {
+                this.openDelete(subject);
+                return;
+            }
             if (!this.deletingSubject) return;
 
             this.isDeletingSubject = true;

@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Enrollments;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,6 +41,8 @@ public class GetEnrollmentReceiptQueryHandler(
                 e.ReceiptNumber,
                 s.Matricule,
                 s.FullName,
+                s.GuardianName,
+                s.GuardianPhone,
                 ClassroomName = c.Name,
                 ClassroomLevel = c.Level,
                 YearLabel = y.Label,
@@ -53,9 +56,17 @@ public class GetEnrollmentReceiptQueryHandler(
         var lines = await dbContext.EnrollmentFeeLines.AsNoTracking()
             .Where(l => l.EnrollmentId == request.EnrollmentId)
             .OrderBy(l => l.IsRecurring).ThenBy(l => l.Designation)
-            .Select(l => new EnrollmentFeeLineDto(
-                l.Designation, l.IsRecurring, l.UnitAmount, l.Months, l.LineTotal))
             .ToListAsync(cancellationToken);
+
+        // Versement du jour de l'inscription : celui qui porte le MÊME numéro de reçu (voir
+        // CreateEnrollmentCommandHandler). Les encaissements ultérieurs passés en Caisse ont leur
+        // propre numéro et leur propre reçu — les additionner ici falsifierait cette pièce-ci.
+        var payment = await dbContext.Payments.AsNoTracking()
+            .FirstOrDefaultAsync(
+                p => p.EnrollmentId == request.EnrollmentId
+                     && p.ReceiptNumber == header.ReceiptNumber
+                     && p.Status != PaymentStatus.Cancelled,
+                cancellationToken);
 
         var school = await dbContext.Schools.AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == schoolId, cancellationToken);
@@ -64,7 +75,11 @@ public class GetEnrollmentReceiptQueryHandler(
             header.Id,
             header.ReceiptNumber,
             school?.Name ?? string.Empty,
+            school?.Address,
             school?.Phone,
+            school?.Email,
+            school?.Ninea,
+            school?.RegistreCommerce,
             ReceiptCity.FromAddress(school?.Address),
             school?.LogoUrl,
             header.Matricule,
@@ -72,10 +87,18 @@ public class GetEnrollmentReceiptQueryHandler(
             header.ClassroomName,
             header.ClassroomLevel,
             header.YearLabel,
+            header.GuardianName,
+            header.GuardianPhone,
             header.Type.ToString(),
             header.Status.ToString(),
             header.EnrolledAt,
-            lines,
-            header.TotalDue);
+            lines.Select(l => new EnrollmentFeeLineDto(
+                l.Designation, l.IsRecurring, l.UnitAmount, l.Months, l.LineTotal)).ToList(),
+            header.TotalDue,
+            lines.Where(l => l.MonthsCollected > 0)
+                .Select(l => new CollectedFeeLineDto(l.Designation, l.IsRecurring, l.MonthsCollected, l.AmountCollected))
+                .ToList(),
+            lines.Sum(l => l.AmountCollected),
+            payment?.Method.ToString());
     }
 }

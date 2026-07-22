@@ -72,10 +72,11 @@ document.addEventListener('alpine:init', () => {
         showCategoryAddedDialog: false,
         addedCategoryName: '',
 
-        // Application d'un montant standard (modale)
+        // Application d'un montant standard (modale). `level` = périmètre : chaîne vide = toutes les
+        // classes, sinon le seul niveau ciblé (le serveur ne touche alors pas aux autres cycles).
         isApplyOpen: false,
         isApplying: false,
-        applyForm: { amount: null, overwriteExisting: false },
+        applyForm: { amount: null, level: '', overwriteExisting: false },
         applyErrors: {},
         applyReport: null,
 
@@ -130,6 +131,17 @@ document.addEventListener('alpine:init', () => {
 
         get selectedCategory() {
             return this.categories.find((c) => c.id === this.selectedCategoryId) || null;
+        },
+
+        /**
+         * Segmented control des catégories (Views\Fees\Index.cshtml) : pastille blanche + texte
+         * primaire pour l'onglet actif, fond transparent + texte discret (éclairci au survol) pour
+         * les autres. Même gabarit que les onglets de /parametres (settings.js tabClass).
+         */
+        tabClass(categoryId) {
+            return this.selectedCategoryId === categoryId
+                ? 'bg-white text-primary font-semibold shadow-sm'
+                : 'font-medium text-slate-600 hover:bg-white/60 hover:text-slate-900';
         },
 
         /**
@@ -244,10 +256,19 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------- Montant standard (Option 1)
 
         openApplyStandard() {
-            this.applyForm = { amount: null, overwriteExisting: false };
+            // Le périmètre reprend le filtre de niveau actif sur la grille : quand on vient de
+            // consulter le Collège, c'est presque toujours le Collège qu'on veut tarifer.
+            this.applyForm = { amount: null, level: this.levelFilter, overwriteExisting: false };
             this.applyErrors = {};
             this.applyReport = null;
             this.isApplyOpen = true;
+        },
+
+        /** Classes réellement visées par le formulaire — sert au décompte affiché dans la modale. */
+        get applyTargetClassrooms() {
+            return this.applyForm.level
+                ? this.classrooms.filter((c) => c.level === this.applyForm.level)
+                : this.classrooms;
         },
 
         async submitApplyStandard() {
@@ -257,6 +278,9 @@ document.addEventListener('alpine:init', () => {
                 this.applyReport = await window.api.post('/finance/fees/apply-standard', {
                     feeCategoryId: this.selectedCategoryId,
                     amount: this.applyForm.amount,
+                    // Chaîne vide = « toutes les classes » : on envoie null, le contrat d'API ne
+                    // connaît que null ou un niveau réel (openapi.yaml, ApplyStandardFeeRequest).
+                    level: this.applyForm.level || null,
                     overwriteExisting: this.applyForm.overwriteExisting
                 });
                 await this.reloadFees();

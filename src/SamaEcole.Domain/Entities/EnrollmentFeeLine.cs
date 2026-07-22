@@ -41,4 +41,23 @@ public class EnrollmentFeeLine : AuditableEntity, ITenantEntity
 
     /// <summary>Total de la ligne = <see cref="UnitAmount"/> × <see cref="Months"/>, en FCFA.</summary>
     public decimal LineTotal { get; set; }
+
+    /// <summary>
+    /// Part de cette ligne RÉELLEMENT ENCAISSÉE au guichet le jour de l'inscription, en FCFA (0 si le
+    /// tuteur n'a pas réglé ce frais ce jour-là). C'est la ventilation imprimée sur le reçu : une
+    /// pièce comptable n'atteste que de ce qui est entré en caisse, jamais du dû annuel.
+    ///
+    /// Figée comme le reste de la ligne : réimprimer le reçu six mois plus tard doit redonner le
+    /// détail de CE versement, pas l'état courant du compte de l'élève. Les versements suivants
+    /// passent par la Caisse (JGK-F02) et ont leurs propres reçus.
+    /// </summary>
+    public decimal AmountCollected { get; set; }
+
+    /// <summary>
+    /// Nombre de mois couverts par <see cref="AmountCollected"/> sur une ligne récurrente (« Mensualité
+    /// (× 1 mois) » sur le reçu) ; 1 pour un frais ponctuel réglé, 0 si rien n'a été encaissé. Stocké
+    /// plutôt que déduit d'AmountCollected ÷ UnitAmount : une mensualité offerte (montant 0) rendrait
+    /// la division impossible, et le reçu doit rester exact dans ce cas aussi.
+    /// </summary>
+    public int MonthsCollected { get; set; }
 }

@@ -15,4 +15,9 @@ public record SchoolProfileDto(
     // En-tête administratif du bulletin (IA / IEF / LYCEE DE) — voir School pour la sémantique.
     string? InspectionAcademie,
     string? InspectionEducationFormation,
-    string? NomLycee);
+    string? NomLycee,
+
+    // Coordonnées et mentions légales de l'en-tête du reçu (NINEA / RCCM) — voir School.
+    string? Email,
+    string? Ninea,
+    string? RegistreCommerce);

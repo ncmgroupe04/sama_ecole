@@ -43,6 +43,24 @@ public class UpdateCurrentSchoolCommandValidator : AbstractValidator<UpdateCurre
         RuleFor(c => c.NomLycee)
             .MaximumLength(150).WithMessage("Le nom d'établissement du bulletin ne peut pas dépasser 150 caractères.")
             .NoHtml();
+
+        // Coordonnées et mentions légales de l'en-tête du reçu. Facultatives : une école qui n'a pas
+        // encore son RCCM doit pouvoir travailler — la mention manquante ne s'imprime simplement pas.
+        RuleFor(c => c.Email)
+            .MaximumLength(150).WithMessage("L'e-mail ne peut pas dépasser 150 caractères.")
+            .EmailAddress().When(c => !string.IsNullOrWhiteSpace(c.Email))
+            .WithMessage("L'adresse e-mail n'est pas valide.");
+
+        // Format NON contraint : le NINEA sénégalais a déjà changé de longueur, et le RCCM s'écrit
+        // « SN DKR 2020 B 1234 » avec des variantes selon le greffe. Une regex ici bloquerait des
+        // établissements parfaitement en règle ; on borne la longueur et on refuse le HTML, rien de plus.
+        RuleFor(c => c.Ninea)
+            .MaximumLength(50).WithMessage("Le NINEA ne peut pas dépasser 50 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.RegistreCommerce)
+            .MaximumLength(50).WithMessage("Le registre du commerce ne peut pas dépasser 50 caractères.")
+            .NoHtml();
     }
 
     private static bool BeAValidHttpUrl(string? url) =>

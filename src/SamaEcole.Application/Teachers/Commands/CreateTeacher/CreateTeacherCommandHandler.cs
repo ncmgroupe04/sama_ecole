@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -79,7 +80,7 @@ public class CreateTeacherCommandHandler(
             {
                 SchoolId = schoolId,
                 Matricule = matricule,
-                FullName = request.FullName,
+                FullName = request.FullName.ToTitleCase(),
                 Email = request.Email,
                 Phone = request.Phone,
                 BirthDate = request.BirthDate,

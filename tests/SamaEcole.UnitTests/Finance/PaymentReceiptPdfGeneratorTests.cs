@@ -22,8 +22,12 @@ public class PaymentReceiptPdfGeneratorTests
     private static PaymentReceiptDto Receipt(string? phone = "+221 77 123 45 67", string? city = "Dakar") => new(
         ReceiptNumber: "REC-2025-0007",
         SchoolName: "École Primaire Les Baobabs",
+        SchoolAddress: "123 Rue de l'École",
+        SchoolEmail: "contact@baobabs.sn",
         SchoolPhone: phone,
         SchoolCity: city,
+        SchoolNinea: "123456789",
+        SchoolRegistreCommerce: "SN-DKR-2025-B-1234",
         SchoolLogoUrl: "https://exemple.sn/logo.png",
         Matricule: "ELEV-2025-0008",
         StudentFullName: "Awa Fall",

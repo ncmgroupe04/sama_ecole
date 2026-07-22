@@ -16,4 +16,10 @@ public record UpdateCurrentSchoolCommand(
     // l'en-tête du bulletin (IA / IEF / LYCEE DE). Facultatifs — une ligne vide s'imprime vide.
     string? InspectionAcademie,
     string? InspectionEducationFormation,
-    string? NomLycee) : IRequest<SchoolProfileDto>;
+    string? NomLycee,
+
+    // Bloc « Coordonnées & mentions légales » : e-mail de contact et identifiants d'entreprise
+    // imprimés dans l'en-tête du reçu. Facultatifs — une mention absente ne s'imprime pas.
+    string? Email = null,
+    string? Ninea = null,
+    string? RegistreCommerce = null) : IRequest<SchoolProfileDto>;

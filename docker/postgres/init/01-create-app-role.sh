@@ -19,28 +19,26 @@ APP_PASSWORD="${DB_APP_PASSWORD:-changeme_app}"
 psql -v ON_ERROR_STOP=1 \
      --username "$POSTGRES_USER" \
      --dbname "$POSTGRES_DB" \
-     -v app_user="$APP_USER" \
-     -v app_password="$APP_PASSWORD" \
      -v app_db="$POSTGRES_DB" \
-     -v owner="$POSTGRES_USER" <<-'EOSQL'
-    DO $$
+     -v owner="$POSTGRES_USER" <<-EOSQL
+    DO \$\$
     BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'app_user') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$APP_USER') THEN
             EXECUTE format(
                 'CREATE ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS',
-                :'app_user', :'app_password');
+                '$APP_USER', '$APP_PASSWORD');
         END IF;
     END
-    $$;
+    \$\$;
 
-    GRANT CONNECT ON DATABASE :"app_db" TO :"app_user";
-    GRANT USAGE ON SCHEMA public TO :"app_user";
+    GRANT CONNECT ON DATABASE :"app_db" TO "$APP_USER";
+    GRANT USAGE ON SCHEMA public TO "$APP_USER";
 
     -- Les tables n'existent pas encore (les migrations tourneront plus tard) : ce default privilege
     -- garantit que celles créées ENSUITE par le propriétaire seront accessibles au rôle applicatif,
     -- sans avoir à repasser un GRANT après chaque migration.
     ALTER DEFAULT PRIVILEGES FOR ROLE :"owner" IN SCHEMA public
-        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"app_user";
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "$APP_USER";
 EOSQL
 
 echo "Rôle applicatif '$APP_USER' prêt (NOSUPERUSER, NOBYPASSRLS, propriétaire d'aucune table)."

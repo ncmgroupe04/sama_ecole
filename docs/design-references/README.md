@@ -6,25 +6,27 @@ Fichiers : `receipt-reference.png`, `bulletin-reference.png`, `dashboard-referen
 
 ---
 
-## 1. Reçu d'inscription (`receipt-reference.png`) — voir ticket JGK-E02
+## 1. Reçu d'inscription — voir ticket JGK-E02
 
-**Disposition, de haut en bas :**
+> **Cette section fait foi, PAS `receipt-reference.png`.** La maquette d'origine (A4 portrait, bloc unique) a été remplacée à la demande du client : format **A5 paysage**, corps en deux colonnes, mentions légales d'entreprise, et surtout un total qui n'affiche QUE l'encaissement réel. Le PNG est conservé à titre d'historique — en cas de divergence, c'est le texte ci-dessous qui s'applique.
 
-1. En-tête établissement, aligné à gauche : nom de l'école en gras et grande taille (ex. "DAROU KARIM SCHOOL"), puis une ligne grise plus petite "Nom école | Téléphone : [téléphone]", puis un emplacement réservé au logo officiel.
+**Format** : **A5 paysage (210 × 148 mm)**, une seule page, sans débordement — à l'écran comme à l'impression et à l'export PDF (`@page { size: A5 landscape }` côté web, `PageSizes.A5.Landscape()` côté QuestPDF).
+
+**Disposition :**
+
+1. **En-tête**, séparé du corps par un filet : à gauche le nom de l'école en gras et majuscules, puis une ligne de coordonnées (**adresse · téléphone · e-mail**) et une ligne de mentions légales (**NINEA · RCCM**) ; à droite l'emplacement du logo officiel. Chaque mention absente est simplement omise — jamais de séparateur orphelin ni de valeur inventée.
 2. Titre centré, en gras et italique : **"REÇU D'INSCRIPTION n° [référence]"** (ex. `REC-2025-0002`).
-3. Bloc d'informations en deux colonnes (étiquette à gauche, valeur à droite), une ligne par champ :
-   - Matricule
-   - Nom complet
-   - Classe d'affectation
-   - Année scolaire
-   - Type de mouvement (ex. "Nouvelle inscription", "Réinscription")
-   - Date de l'opération
-4. Tableau à deux colonnes **"Désignation des frais" / "Montant (FCFA)"** : une ligne par frais encaissé, puis une ligne finale en gras **"TOTAL ENCAISSÉ"** avec le montant total.
-5. **Texte obligatoire à ajouter sous le tableau, avant la signature** (nouvelle exigence, à intégrer sur tous les reçus générés) :
+3. **Corps sur deux colonnes** :
+   - **Colonne gauche — identité** (étiquette / valeur, une ligne par champ) : Matricule, Nom complet, Classe d'affectation, Année scolaire, Type de mouvement, Date de l'opération, Tuteur, Téléphone du tuteur, **Mode de règlement**.
+   - **Colonne droite — ventilation de l'encaissement** : tableau **"Désignation des frais" / "Montant (FCFA)"** avec **une ligne par frais réellement réglé ce jour-là** (droits d'inscription, tenue, carnet, mensualité…), une mensualité portant le nombre de mois couverts — « Mensualité (× 1 mois) ». Ligne finale en gras **"TOTAL ENCAISSÉ"**. Sous le tableau, en petits caractères : rappel des frais annuels et du reste à payer.
+4. **Règle comptable, non négociable** : le reçu n'atteste que de **la somme réellement entrée en caisse le jour même** — jamais du dû annuel cumulé. Un dossier ouvert sans versement s'imprime avec « Aucun frais encaissé ce jour » et un total de 0.
+5. **Texte obligatoire sous le corps, avant la signature** (à intégrer sur tous les reçus générés) :
    > *"Il est demandé aux parents de garder minutieusement leur reçu après le paiement."*
-6. Bas de page, deux colonnes : à gauche "Fait à [ville], le [date]" (italique) au-dessus de l'emplacement du cachet officiel ; à droite "Signature du Directeur / Service Financier" (italique).
+6. Bas de page, deux colonnes : à gauche "Fait à [ville], le [date]" (italique) au-dessus de l'emplacement du cachet officiel ; à droite "Signature du Directeur / Service Financier" (italique) au-dessus du trait de signature.
 
 **Style** : noir et blanc, sobre, tableaux à bordures simples, aucune couleur — document strictement administratif/imprimable.
+
+**Données à saisir en amont** : les mentions NINEA et RCCM, l'adresse et l'e-mail viennent de *Paramètres › Établissement* ; l'encaissement (frais cochés + mode de règlement) est saisi dans le formulaire d'inscription.
 
 ## 2. Bulletin de notes (`bulletin-reference.png`) — voir ticket JGK-G03
 

@@ -29,6 +29,7 @@ public class GetCurrentSchoolQueryHandler(IApplicationDbContext dbContext, ITena
 
         return new SchoolProfileDto(
             school.Name, school.Address, school.Phone, school.LogoUrl,
-            school.InspectionAcademie, school.InspectionEducationFormation, school.NomLycee);
+            school.InspectionAcademie, school.InspectionEducationFormation, school.NomLycee,
+            school.Email, school.Ninea, school.RegistreCommerce);
     }
 }

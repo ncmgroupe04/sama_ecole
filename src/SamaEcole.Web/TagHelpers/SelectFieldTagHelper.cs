@@ -86,7 +86,9 @@ public class SelectFieldTagHelper : TagHelper
         var placeholder = WebUtility.HtmlEncode(Placeholder);
         var searchPlaceholder = WebUtility.HtmlEncode(SearchPlaceholder);
         var ariaLabel = WebUtility.HtmlEncode(AriaLabel ?? Placeholder);
-        var extraClass = string.IsNullOrWhiteSpace(Class) ? "" : " " + Class;
+        var defaultMt = (Class?.Contains("mt-") == true || Class?.Contains("!mt-") == true || Class?.Contains("my-") == true) ? "" : "mt-1";
+        var extraClass = string.IsNullOrWhiteSpace(Class) ? "" : (string.IsNullOrWhiteSpace(defaultMt) ? Class : " " + Class);
+        var wrapperClasses = "relative flex items-center" + (Class?.Contains("w-") == true ? " " + string.Join(" ", Class.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(c => c.StartsWith("w-") || c.StartsWith("sm:w-") || c.StartsWith("md:w-") || c.StartsWith("lg:w-"))) : "");
         var onChange = string.IsNullOrWhiteSpace(OnChange) ? "" : $"; {OnChange}";
         var disabled = string.IsNullOrWhiteSpace(Disabled) ? "false" : $"({Disabled})";
 
@@ -99,15 +101,17 @@ public class SelectFieldTagHelper : TagHelper
             ? WebUtility.HtmlEncode(JsonSerializer.Serialize(Options, OptionsJsonSettings))
             : OptionsExpr;
 
+        var buttonClass = $"flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:text-sm {defaultMt}{extraClass}".Trim();
+
         output.Content.SetHtmlContent($$"""
-            <div class="relative" x-data="selectField()" x-effect="options = {{optionsSource}}">
+            <div class="{{wrapperClasses}}" x-data="selectField()" x-effect="options = {{optionsSource}}">
                 <input type="text" {{requiredAttr}}x-model="{{Model}}" tabindex="-1" aria-hidden="true"
                        class="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none -z-10" />
                 <button type="button" {{idAttr}}x-on:click="!({{disabled}}) && toggle()" :aria-expanded="open" aria-haspopup="listbox"
                         :disabled="{{disabled}}"
                         aria-label="{{ariaLabel}}"
-                        :class="({{disabled}}) ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' : (open ? 'border-primary' : 'border-gray-300')"
-                        class="mt-1{{extraClass}} flex w-full items-center justify-between gap-2 rounded-md border bg-white p-2 text-left shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:text-sm">
+                        :class="({{disabled}}) ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' : (open ? 'border-primary' : 'border-slate-200')"
+                        class="{{buttonClass}}">
                     <span :class="{{Model}} ? 'text-gray-900' : 'text-gray-400'" x-text="{{Model}} ? labelFor({{Model}}) : '{{placeholder}}'"></span>
                     {{Svg("chevron-down", "w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-150")}}
                 </button>

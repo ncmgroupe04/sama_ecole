@@ -1350,12 +1350,14 @@ paths:
   /finance/fees/apply-standard:
     post:
       tags: [Finance]
-      summary: Option 1 — appliquer un montant standard à toutes les classes d'une catégorie (Directeur)
+      summary: Option 1 — appliquer un montant standard à une catégorie, sur toute l'école ou un seul niveau (Directeur)
       description: >-
-        Applique un montant à toutes les classes en un geste (Volume 1 §7.4). `overwriteExisting` à
-        false (défaut) ne remplit que les classes encore vierges et PRÉSERVE les exceptions déjà
-        ajustées ; à true, réaligne aussi les classes existantes sur le montant standard. Chaque
-        changement est historisé.
+        Applique un montant à plusieurs classes en un geste (Volume 1 §7.4). `level` délimite le
+        périmètre : absent ou vide, toutes les classes ; renseigné, seules celles de ce niveau — les
+        autres cycles ne sont pas touchés. `overwriteExisting` à false (défaut) ne remplit que les
+        classes encore vierges du périmètre et PRÉSERVE les exceptions déjà ajustées ; à true,
+        réaligne aussi les classes existantes du périmètre sur le montant standard. Chaque changement
+        est historisé.
       requestBody:
         required: true
         content:
@@ -2067,15 +2069,30 @@ components:
     SchoolProfile:
       type: object
       description: >-
-        Identité de l'établissement courant (nom, coordonnées, logo). Éditable par le Directeur, reprise
-        sur le reçu d'inscription. `name` est obligatoire ; `logoUrl`, s'il est fourni, doit être une URL
-        http(s).
+        Identité de l'établissement courant (nom, coordonnées, logo, mentions légales). Éditable par le
+        Directeur, reprise dans l'en-tête du reçu d'inscription. `name` est obligatoire ; `logoUrl`,
+        s'il est fourni, doit être une URL http(s).
       required: [name]
       properties:
         name: { type: string, maxLength: 200 }
         address: { type: string, nullable: true, maxLength: 300 }
         phone: { type: string, nullable: true, maxLength: 30 }
+        email: { type: string, nullable: true, format: email, maxLength: 150 }
         logoUrl: { type: string, nullable: true, format: uri, maxLength: 500 }
+        ninea:
+          type: string
+          nullable: true
+          maxLength: 50
+          example: "005151978"
+          description: >-
+            Mention légale imprimée dans l'en-tête du reçu. Format LIBRE (la nomenclature officielle
+            a déjà changé) : seule la longueur est bornée. Absent = la mention ne s'imprime pas.
+        registreCommerce:
+          type: string
+          nullable: true
+          maxLength: 50
+          example: "SN DKR 2020 B 1234"
+          description: 'RCCM — même usage et mêmes règles que `ninea`.'
 
     SchoolSettings:
       type: object
@@ -2458,27 +2475,64 @@ components:
         gender: { type: string, enum: [M, F], description: NewEnrollment uniquement }
         guardianName: { type: string }
         guardianPhone: { type: string }
+        collectedFees:
+          type: array
+          description: >-
+            Frais RÉELLEMENT réglés au guichet le jour de l'inscription. Absent ou vide : dossier
+            ouvert sans versement — aucun paiement n'est créé et le reçu s'imprime à 0. Le client
+            désigne QUOI est réglé, jamais COMBIEN : les montants sont repris du barème que le serveur
+            vient de figer (règle #4). Une catégorie ne peut apparaître qu'une fois. Un versement est
+            matérialisé par un Payment portant le MÊME numéro de reçu que l'inscription.
+          items:
+            type: object
+            required: [feeCategoryId]
+            properties:
+              feeCategoryId: { type: string, format: uuid }
+              months:
+                type: integer
+                default: 1
+                minimum: 1
+                maximum: 24
+                description: >-
+                  Mois réglés d'avance sur une mensualité (borné serveur au nombre de mois facturés).
+                  Ignoré sur un frais ponctuel : il se règle en entier ou pas du tout.
+        paymentMethod:
+          type: string
+          enum: [Cash, Cheque, Transfer, MobileMoney]
+          default: Cash
+          description: Mode de règlement du versement du jour ; ignoré si `collectedFees` est vide.
 
     EnrollmentReceipt:
       type: object
-      description: Reçu d'inscription (JGK-E01). Le détail des frais est figé à l'inscription.
+      description: >-
+        Reçu d'inscription (JGK-E01), imprimé en A5 paysage. Le détail des frais est figé à
+        l'inscription. Deux montants à ne pas confondre : `totalCollected` est ce qui est RÉELLEMENT
+        entré en caisse ce jour-là (seul total imprimé en gras, ventilé par `collectedLines`), tandis
+        que `totalDue` est le dû annuel, rappelé sous le tableau avec le reste à payer.
       properties:
         enrollmentId: { type: string, format: uuid }
-        receiptNumber: { type: string, description: 'Numéro officiel unique du reçu (JGK-E02), ex. « REC-2025-0002 ».' }
+        receiptNumber: { type: string, description: 'Numéro officiel unique du reçu (JGK-E02), ex. « REC-2025-0002 ». Porté aussi par le versement du jour.' }
         schoolName: { type: string }
+        schoolAddress: { type: string, nullable: true }
         schoolPhone: { type: string, nullable: true }
+        schoolEmail: { type: string, nullable: true }
+        schoolNinea: { type: string, nullable: true, description: 'Mention légale de l''en-tête ; absente si non saisie.' }
+        schoolRegistreCommerce: { type: string, nullable: true, description: 'RCCM — idem.' }
         schoolCity: { type: string, nullable: true, description: 'Ville du bas de reçu (« Fait à … »), dérivée de l''adresse de l''école.' }
         matricule: { type: string }
         studentFullName: { type: string }
         classroomName: { type: string }
         classroomLevel: { type: string }
         schoolYearLabel: { type: string }
+        guardianName: { type: string, nullable: true }
+        guardianPhone: { type: string, nullable: true }
         type: { type: string, enum: [NewEnrollment, ReEnrollment] }
         status: { type: string, enum: [Pending, Confirmed, Cancelled, DroppedOut, Transferred] }
         enrolledAt: { type: string, format: date-time }
-        totalDue: { type: number }
+        totalDue: { type: number, description: 'Dû ANNUEL figé à l''inscription — jamais le montant du reçu.' }
         lines:
           type: array
+          description: Détail du dû annuel, figé à l'inscription.
           items:
             type: object
             properties:
@@ -2487,6 +2541,25 @@ components:
               unitAmount: { type: number }
               months: { type: integer }
               lineTotal: { type: number }
+        collectedLines:
+          type: array
+          description: >-
+            Ventilation de l'encaissement du jour — une ligne par frais réellement réglé au guichet.
+            Vide si le dossier a été ouvert sans versement.
+          items:
+            type: object
+            properties:
+              designation: { type: string }
+              isRecurring: { type: boolean }
+              months: { type: integer, description: 'Mois couverts pour une mensualité ; 1 pour un frais ponctuel.' }
+              amount: { type: number }
+        totalCollected: { type: number, description: 'Somme réellement encaissée ce jour — « TOTAL ENCAISSÉ » du reçu.' }
+        remainingBalance: { type: number, description: 'totalDue − totalCollected, rappelé sous le tableau.' }
+        paymentMethod:
+          type: string
+          nullable: true
+          enum: [Cash, Cheque, Transfer, MobileMoney]
+          description: 'Mode de règlement du versement du jour ; null quand rien n''a été encaissé.'
 
     ChangeEnrollmentStatusRequest:
       type: object
@@ -2639,12 +2712,22 @@ components:
       properties:
         feeCategoryId: { type: string, format: uuid }
         amount: { type: number, minimum: 0, example: 15000 }
+        level:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: Collège
+          description: >-
+            Périmètre d'application. Absent, vide ou null : toutes les classes de l'établissement.
+            Renseigné : seules les classes de ce niveau sont touchées, les autres cycles gardent leur
+            montant même avec overwriteExisting. Nomenclature libre (même champ que Classroom.level),
+            comparée sans tenir compte de la casse. Un niveau ne correspondant à aucune classe → 422.
         overwriteExisting:
           type: boolean
           default: false
           description: >-
             false : ne remplit que les classes vierges et préserve les exceptions. true : réaligne
-            toutes les classes sur le montant standard.
+            sur le montant standard toutes les classes du périmètre.
 
     ApplyStandardFeeResult:
       type: object

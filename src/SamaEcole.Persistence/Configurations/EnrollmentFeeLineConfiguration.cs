@@ -26,6 +26,12 @@ public class EnrollmentFeeLineConfiguration : IEntityTypeConfiguration<Enrollmen
         builder.Property(l => l.Months).IsRequired();
         builder.Property(l => l.LineTotal).IsRequired().HasPrecision(12, 2);
 
+        // Ventilation de l'encaissement d'inscription. Défaut 0 : les lignes déjà en base (inscriptions
+        // antérieures à cette évolution) valent « rien d'encaissé à l'inscription », ce qui est exact —
+        // leurs versements sont passés par la Caisse.
+        builder.Property(l => l.AmountCollected).IsRequired().HasPrecision(12, 2).HasDefaultValue(0m);
+        builder.Property(l => l.MonthsCollected).IsRequired().HasDefaultValue(0);
+
         builder.HasIndex(l => new { l.SchoolId, l.EnrollmentId });
 
         builder.HasOne<School>()

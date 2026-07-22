@@ -12,8 +12,12 @@ namespace SamaEcole.Application.Finance;
 public record PaymentReceiptDto(
     string ReceiptNumber,
     string SchoolName,
+    string? SchoolAddress,
+    string? SchoolEmail,
     string? SchoolPhone,
     string? SchoolCity,
+    string? SchoolNinea,
+    string? SchoolRegistreCommerce,
     string? SchoolLogoUrl,
     string Matricule,
     string StudentFullName,

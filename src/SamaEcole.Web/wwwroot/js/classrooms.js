@@ -9,45 +9,77 @@ document.addEventListener('alpine:init', () => {
     // (donnée héritée, future nomenclature) reste géré par otherGroups plutôt que silencieusement perdu.
     const MAIN_CYCLES = ['Primaire', 'Collège', 'Lycée', 'Crèche', 'Maternelle'];
 
-    // Succession pédagogique RÉELLE (CE1 < CI alphabétiquement serait faux) : chaque classe est
-    // rattachée au premier jeton qu'elle commence par (ex. « CE1 B » → CE1, « Terminale S1 » →
-    // Terminale) ; une classe hors nomenclature (ex. « Test Classe Verif ») part en fin de cycle.
-    // Un rang peut lister plusieurs jetons alternatifs (ex. Maternelle : sigle ou nom complet) —
-    // le premier qui correspond au début du nom de la classe détermine son rang.
+    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Valeurs de départ du formulaire « Nouvelle classe » (voir resetNewClassroom).
+    const DEFAULT_LEVEL = 'Primaire';
+    const DEFAULT_CAPACITY = 30;
+
+    // Plage Unicode des diacritiques combinants (U+0300 à U+036F), construite par code plutôt que par
+    // un littéral dans le code source — un pipeline de rendu texte en amont réécrit silencieusement
+    // cette séquence d'échappement en un vrai caractère combinant, corrompant la regex.
+    const COMBINING_MARKS = new RegExp('[' + String.fromCharCode(768) + '-' + String.fromCharCode(879) + ']', 'g');
+    const stripAccents = (s) => s.normalize('NFD').replace(COMBINING_MARKS, '');
+
+    // Libellés COMPLETS d'affichage, DANS L'ORDRE PÉDAGOGIQUE du cycle (6e → 3e, Seconde →
+    // Terminale). Chaque école saisit ses classes à sa façon (« 6e A », « 6 eme A », « Sixième A »,
+    // « 2nde S », « Tle L2 ») : la règle reconnaît ces variantes — chiffre, accents et espace
+    // intercalaire optionnels — et l'écran affiche toujours le libellé long, le suffixe de série
+    // (« A », « S1 », « L2 ») étant conservé tel qu'il a été saisi. Un nom déjà complet ne change pas.
+    // Le nom réel (recherche, édition, suppression, API) reste inchangé — seule l'étiquette est
+    // développée ; le nom enregistré reste lisible via l'attribut title (survol) de la même ligne.
+    // Table PAR CYCLE, jamais globale : « 2 A » n'est une « Seconde » qu'au Lycée. Primaire et
+    // Maternelle n'y figurent pas — « CE1 », « CM2 » ou « GS » sont déjà les libellés usuels.
+    const CLASS_FULL_NAMES = {
+        'Collège': [
+            [/^(?:6\s*(?:eme|e)?|sixieme)(?=\s|$)/i, 'Sixième'],
+            [/^(?:5\s*(?:eme|e)?|cinquieme)(?=\s|$)/i, 'Cinquième'],
+            [/^(?:4\s*(?:eme|e)?|quatrieme)(?=\s|$)/i, 'Quatrième'],
+            [/^(?:3\s*(?:eme|e)?|troisieme)(?=\s|$)/i, 'Troisième']
+        ],
+        'Lycée': [
+            [/^(?:2\s*(?:nde|nd|de|e)?|seconde)(?=\s|$)/i, 'Seconde'],
+            [/^(?:1\s*(?:ere|re|er|e)?|premiere)(?=\s|$)/i, 'Première'],
+            [/^(?:t(?:le|erm)|terminale)(?=\s|$)/i, 'Terminale']
+        ]
+    };
+
+    /**
+     * Étiquette affichée pour une classe : libellé de niveau en toutes lettres + suffixe d'origine.
+     * Le cycle est requis — c'est lui qui décide de la table de règles applicable.
+     */
+    function displayName(name, level) {
+        const rules = CLASS_FULL_NAMES[level];
+        if (!rules) return name;
+
+        // Les règles sont écrites SANS accents et testées sur le nom désaccentué (« 6ème » ≡ « 6eme »,
+        // « Premiere » ≡ « Première »). stripAccents ne change pas le nombre de caractères : la
+        // longueur reconnue découpe donc aussi le nom d'origine, dont on garde la fin telle quelle.
+        const trimmed = name.trim();
+        const normalized = stripAccents(trimmed);
+        const match = rules.find(([re]) => re.test(normalized));
+        return match ? match[1] + trimmed.slice(normalized.match(match[0])[0].length) : name;
+    }
+
+    // Succession pédagogique RÉELLE (CE1 < CI alphabétiquement serait faux, « 3ème » remonterait
+    // devant « 6ème ») : chaque classe est rattachée au premier jeton dont son libellé long (voir
+    // displayName) part — ex. « CE1 B » → CE1, « Tle S1 » → Terminale. Collège et Lycée reprennent
+    // l'ordre de CLASS_FULL_NAMES : une seule source pour l'affichage ET pour le tri, impossible de
+    // corriger l'un en oubliant l'autre. Un rang peut lister plusieurs jetons alternatifs (Maternelle :
+    // sigle ou nom complet). Une classe hors nomenclature (ex. « Test Classe Verif ») part en fin de cycle.
     const GRADE_ORDER = {
         'Maternelle': [['TPS', 'Toute Petite Section'], ['PS', 'Petite Section'], ['MS', 'Moyenne Section'], ['GS', 'Grande Section']],
         'Primaire': ['CI', 'CP', 'CE1', 'CE2', 'CM1', 'CM2'],
-        'Collège': [['6e', 'Sixième'], ['5e', 'Cinquième'], ['4e', 'Quatrième'], ['3e', 'Troisième']],
-        'Lycée': [['Seconde', '2nde', '2nd'], ['Première', '1ère', '1re'], ['Terminale', 'Tle']]
+        'Collège': CLASS_FULL_NAMES['Collège'].map(([, label]) => label),
+        'Lycée': CLASS_FULL_NAMES['Lycée'].map(([, label]) => label)
     };
-
-    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    // Abrégés D'AFFICHAGE seulement (grille compacte) : « Sixième A » → « 6ème A », « Seconde S »
-    // → « 2nde S », « Terminale S1 » → « Tle S1 ». Le nom réel (recherche, édition, suppression,
-    // API) reste inchangé — seule cette étiquette est raccourcie ; le nom complet reste lisible via
-    // l'attribut title (survol) posé sur la même ligne.
-    const CLASS_ABBREVIATIONS = [
-        [/^Sixième(?=\s|$)/i, '6ème'],
-        [/^Cinquième(?=\s|$)/i, '5ème'],
-        [/^Quatrième(?=\s|$)/i, '4ème'],
-        [/^Troisième(?=\s|$)/i, '3ème'],
-        [/^Seconde(?=\s|$)/i, '2nde'],
-        [/^Première(?=\s|$)/i, '1ère'],
-        [/^Terminale(?=\s|$)/i, 'Tle']
-    ];
-
-    function displayName(name) {
-        const match = CLASS_ABBREVIATIONS.find(([re]) => re.test(name));
-        return match ? name.replace(match[0], match[1]) : name;
-    }
 
     function gradeRank(level, name) {
         const tokens = GRADE_ORDER[level];
         if (!tokens) return -1;
-        const trimmed = name.trim();
+        const label = displayName(name, level).trim();
         return tokens.findIndex((entry) => (Array.isArray(entry) ? entry : [entry])
-            .some((token) => new RegExp(`^${escapeRegex(token)}(\\s|$)`, 'i').test(trimmed)));
+            .some((token) => new RegExp(`^${escapeRegex(token)}(\\s|$)`, 'i').test(label)));
     }
 
     function byGradeThenName(level) {
@@ -75,8 +107,8 @@ document.addEventListener('alpine:init', () => {
         isSubmitting: false,
         newClassroom: {
             name: '',
-            level: 'Primaire',
-            capacity: 30
+            level: DEFAULT_LEVEL,
+            capacity: DEFAULT_CAPACITY
         },
         createErrors: {},
 
@@ -113,8 +145,11 @@ document.addEventListener('alpine:init', () => {
          */
         get groups() {
             const q = this.search.trim().toLowerCase();
+            // La recherche porte sur le nom enregistré ET sur l'étiquette affichée : la liste montre
+            // « Seconde S », taper « Seconde » doit la trouver même si elle est enregistrée « 2nde S ».
             const visible = this.classrooms.filter((c) =>
-                (!q || c.name.toLowerCase().includes(q) || c.level.toLowerCase().includes(q)) &&
+                (!q || c.name.toLowerCase().includes(q) || displayName(c.name, c.level).toLowerCase().includes(q) ||
+                    c.level.toLowerCase().includes(q)) &&
                 (!this.levelFilter || c.level === this.levelFilter));
 
             const byLevel = new Map();
@@ -170,15 +205,42 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /**
+         * Vide le formulaire de création. `keepLevel` : on enchaîne une autre classe — le cycle saisi
+         * est conservé, on crée en général toutes les classes d'un même cycle à la suite (resélectionner
+         * « Lycée » à chaque classe est une friction inutile). Sinon on repart du niveau par défaut :
+         * la modale a été quittée, la saisie précédente n'a plus à survivre.
+         */
+        resetNewClassroom(keepLevel = false) {
+            this.newClassroom = {
+                name: '',
+                level: keepLevel ? this.newClassroom.level : (localStorage.getItem('classrooms_lastLevel') || DEFAULT_LEVEL),
+                capacity: DEFAULT_CAPACITY
+            };
+            this.createErrors = {};
+        },
+
+        openCreate() {
+            this.isCreateOpen = true;
+        },
+
+        /** Sortie explicite (Annuler, ✕, fond, Échap) : le formulaire repart de zéro, niveau compris. */
+        closeCreate() {
+            this.isCreateOpen = false;
+            this.resetNewClassroom();
+        },
+
         async submitCreate() {
             this.isSubmitting = true;
             this.createErrors = {};
             try {
                 await window.api.post('/classrooms', this.newClassroom);
 
+                localStorage.setItem('classrooms_lastLevel', this.newClassroom.level);
+                
                 this.isCreateOpen = false;
                 this.addedClassroomName = this.newClassroom.name;
-                this.newClassroom = { name: '', level: 'Primaire', capacity: 30 };
+                this.resetNewClassroom(true); // enchaînement possible : on garde le cycle
                 await this.loadClassrooms();
                 this.showAddedDialog = true; // confirmation « Classe ajoutée »
             } catch (err) {
@@ -239,8 +301,13 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------ Suppression
 
         openDelete(classroom) {
+            if (!classroom) return;
             this.deletingClassroom = { id: classroom.id, name: classroom.name, rowVersion: classroom.rowVersion };
             this.deleteClassroomError = null;
+        },
+
+        deleteClassroom(classroom) {
+            this.openDelete(classroom);
         },
 
         closeDelete() {
@@ -248,7 +315,11 @@ document.addEventListener('alpine:init', () => {
             this.deleteClassroomError = null;
         },
 
-        async confirmDelete() {
+        async confirmDelete(classroom = null) {
+            if (classroom && classroom.id) {
+                this.openDelete(classroom);
+                return;
+            }
             if (!this.deletingClassroom) return;
 
             this.isDeletingClassroom = true;
@@ -284,8 +355,8 @@ document.addEventListener('alpine:init', () => {
             return count + ' ' + (count > 1 ? plural : singular);
         },
 
-        displayName(name) {
-            return displayName(name);
+        displayName(name, level) {
+            return displayName(name, level);
         }
     }));
 });

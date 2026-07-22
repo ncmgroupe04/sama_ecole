@@ -13,6 +13,16 @@ using Xunit;
 namespace SamaEcole.IntegrationTests.Enrollments;
 
 /// <summary>
+/// Le Handler ne lit qu'un champ : l'auteur de l'encaissement du jour (Payment.ReceivedByUserId).
+/// </summary>
+file sealed class FakeCurrentUserService(Guid userId) : ICurrentUserService
+{
+    public Guid? UserId => userId;
+    public Role? Role => SamaEcole.Domain.Enums.Role.Secretariat;
+    public string? IpAddress => null;
+}
+
+/// <summary>
 /// Ticket JGK-E01 — l'inscription calcule-t-elle RÉELLEMENT le bon montant, génère-t-elle le
 /// matricule sans trou, et l'isolation tient-elle ? On exerce le vrai Handler contre un PostgreSQL
 /// réel sous le rôle applicatif (RLS active), pas seulement le DbContext.
@@ -72,8 +82,11 @@ public class EnrollmentTests : IAsyncLifetime
 
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
+    private static readonly Guid Caissier = Guid.Parse("eeeeeeee-0000-0000-0000-00000000000e");
+
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db, Guid schoolId) =>
-        new(db, new StubTenantProvider(schoolId), _db.NewGenerator(db), TimeProvider.System);
+        new(db, new StubTenantProvider(schoolId), new FakeCurrentUserService(Caissier),
+            _db.NewGenerator(db), TimeProvider.System);
 
     private static CreateEnrollmentCommand NewStudentCommand(string fullName) => new()
     {
