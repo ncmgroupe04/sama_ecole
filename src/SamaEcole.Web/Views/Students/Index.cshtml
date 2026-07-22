@@ -266,7 +266,7 @@
 
  <div class="space-y-3">
  <template x-for="entry in (studentDetail ? studentDetail.academicHistory : [])" :key="entry.enrollmentId">
- <div class="rounded-2xl border border-slate-200 p-6">
+ <div class="rounded-2xl border border-slate-200 p-6 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <div class="flex flex-wrap items-start justify-between gap-2">
  <div class="min-w-0">
  <div class="flex items-center gap-2">
@@ -396,16 +396,16 @@
  <div>
  <!-- Synthèse financière : reflète les inscriptions, pertinente même sans versement. -->
  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
- <div class="rounded-2xl border border-slate-200 p-6">
+ <div class="rounded-2xl border border-slate-200 p-6 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total dû</p>
  <p class="mt-1 text-lg font-bold text-slate-900" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
  </div>
- <div class="rounded-2xl border border-success/30 bg-success-bg p-6">
+ <div class="rounded-2xl border border-success/30 bg-success-bg p-6 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <p class="text-[11px] font-bold text-success uppercase tracking-wider">Total versé</p>
  <p class="mt-1 text-lg font-bold text-success" x-text="formatAmount(studentDetail.payments.totalPaid)"></p>
  </div>
  <!-- Solde : vert s'il est nul (soldé), orange s'il reste dû. -->
- <div class="rounded-2xl border p-6"
+ <div class="rounded-2xl border p-6 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg"
  :class="studentDetail.payments.remainingBalance > 0 ? 'border-warning/30 bg-warning-bg' : 'border-success/30 bg-success-bg'">
  <p class="text-[11px] font-bold uppercase tracking-wider"
  :class="studentDetail.payments.remainingBalance > 0 ? 'text-warning' : 'text-success'">Solde restant</p>

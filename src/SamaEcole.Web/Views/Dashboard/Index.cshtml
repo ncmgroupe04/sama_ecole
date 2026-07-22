@@ -61,7 +61,7 @@
 
  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
  <template x-if="!isLoading && data">
- <div class="card p-5">
+ <div class="card p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <p class="text-sm font-semibold text-slate-900">Répartition par genre</p>
  <p class="text-xs text-slate-500 mt-0.5">Élèves inscrits, année active.</p>
  <div class="mt-4 flex items-center gap-6">
@@ -94,7 +94,7 @@
  </template>
 
  <template x-if="!isLoading && data">
- <div class="card p-5">
+ <div class="card p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <p class="text-sm font-semibold text-slate-900">Taux de présence</p>
  <p class="text-xs text-slate-500 mt-0.5">Part des présences (dont retards) sur les appels du mois en cours.</p>
  <div class="mt-6">
@@ -163,7 +163,7 @@
  pourcentage de chaque chiffre affiché dans les cartes KPI ci-dessus. -->
  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
  <template x-if="!isLoading && data">
- <div class="card p-5">
+ <div class="card p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <p class="text-sm font-semibold text-slate-900">Recouvrement</p>
  <p class="text-xs text-slate-500 mt-0.5">Encaissé vs solde dû, année scolaire active.</p>
  <div class="mt-4 flex items-center gap-6">
@@ -190,7 +190,7 @@
  </template>
 
  <template x-if="!isLoading && data">
- <div class="card p-5">
+ <div class="card p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <p class="text-sm font-semibold text-slate-900">Encaissements</p>
  <p class="text-xs text-slate-500 mt-0.5">Comparaison jour / mois / année.</p>
  <div class="mt-5 space-y-3.5">

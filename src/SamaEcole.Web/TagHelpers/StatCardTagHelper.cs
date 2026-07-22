@@ -78,7 +78,7 @@ public class StatCardTagHelper : TagHelper
             """;
 
         output.Content.SetHtmlContent($"""
-            <div class="card flex items-center justify-between p-5 transition-shadow hover:shadow-md">
+            <div class="card flex items-center justify-between p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
                 <div>
                     <p class="mb-1 text-sm font-semibold text-gray-700">{label}</p>
                     <p class="text-2xl font-bold {pastilleText}">{value}</p>
