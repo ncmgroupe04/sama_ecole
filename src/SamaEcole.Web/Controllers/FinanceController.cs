@@ -44,7 +44,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/finance")]
 [Authorize]
-public class FinanceController(ISender mediator) : ControllerBase
+public class FinanceController(ISender mediator, ILogger<FinanceController> logger) : ControllerBase
 {
     public record UpdateFeeRequest(decimal Amount, uint RowVersion);
 
@@ -216,10 +216,23 @@ public class FinanceController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> PaymentReceiptPdf(Guid id, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetPaymentReceiptPdfQuery(id), cancellationToken);
+        try
+        {
+            var result = await mediator.Send(new GetPaymentReceiptPdfQuery(id), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le contenu PDF généré est vide pour le paiement {PaymentId}", id);
+                return NotFound(new { message = "Le document PDF de reçu est introuvable ou vide." });
+            }
 
-        Response.Headers["Content-Disposition"] = $"inline; filename=\"Recu-{result.ReceiptNumber}.pdf\"";
-        return File(result.Content, "application/pdf");
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Recu-{result.ReceiptNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du reçu PDF pour le paiement {PaymentId}", id);
+            return Problem(detail: ex.Message, title: "Erreur de génération du reçu PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     // ------------------------------------------------------------------ Tableau de bord (JGK-F04)

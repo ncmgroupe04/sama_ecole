@@ -28,7 +28,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/enrollments")]
 [Authorize]
-public class EnrollmentsController(ISender mediator) : ControllerBase
+public class EnrollmentsController(ISender mediator, ILogger<EnrollmentsController> logger) : ControllerBase
 {
     public record ChangeEnrollmentStatusRequest(EnrollmentStatus NewStatus, uint RowVersion);
 
@@ -65,10 +65,23 @@ public class EnrollmentsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ReceiptPdf(Guid id, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetEnrollmentReceiptPdfQuery(id), cancellationToken);
+        try
+        {
+            var result = await mediator.Send(new GetEnrollmentReceiptPdfQuery(id), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le reçu PDF généré est vide pour l'inscription {EnrollmentId}", id);
+                return NotFound(new { message = "Le reçu PDF d'inscription est introuvable ou vide." });
+            }
 
-        Response.Headers["Content-Disposition"] = $"inline; filename=\"Recu-{result.ReceiptNumber}.pdf\"";
-        return File(result.Content, "application/pdf");
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Recu-{result.ReceiptNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du reçu d'inscription PDF pour {EnrollmentId}", id);
+            return Problem(detail: ex.Message, title: "Erreur de génération du reçu PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     [HttpGet("{id:guid}/certificate")]
@@ -83,10 +96,23 @@ public class EnrollmentsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CertificatePdf(Guid id, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetEnrollmentCertificatePdfQuery(id), cancellationToken);
+        try
+        {
+            var result = await mediator.Send(new GetEnrollmentCertificatePdfQuery(id), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le certificat PDF généré est vide pour l'inscription {EnrollmentId}", id);
+                return NotFound(new { message = "L'attestation PDF est introuvable ou vide." });
+            }
 
-        Response.Headers["Content-Disposition"] = $"inline; filename=\"Certificat-{result.CertificateNumber}.pdf\"";
-        return File(result.Content, "application/pdf");
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Certificat-{result.CertificateNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du certificat PDF pour {EnrollmentId}", id);
+            return Problem(detail: ex.Message, title: "Erreur de génération du certificat PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     /// <summary>

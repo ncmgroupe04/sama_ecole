@@ -27,7 +27,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/report-cards")]
 [Authorize]
-public class ReportCardsController(ISender mediator) : ControllerBase
+public class ReportCardsController(ISender mediator, ILogger<ReportCardsController> logger) : ControllerBase
 {
     private const string ReportCardWriterRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)},{nameof(Role.Secretariat)}";
     private const string ReportCardDownloadRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)},{nameof(Role.Secretariat)}";
@@ -46,10 +46,23 @@ public class ReportCardsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> Generate(
         [FromBody] GenerateReportCardRequest request, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetReportCardPdfQuery(request.StudentId, request.TermId), cancellationToken);
+        try
+        {
+            var result = await mediator.Send(new GetReportCardPdfQuery(request.StudentId, request.TermId), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le bulletin PDF généré est vide (Élève: {StudentId}, Trimestre: {TermId})", request.StudentId, request.TermId);
+                return NotFound(new { message = "Le bulletin de notes PDF est introuvable ou vide." });
+            }
 
-        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
-        return File(result.Content, "application/pdf");
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du bulletin de notes PDF (Élève: {StudentId}, Trimestre: {TermId})", request.StudentId, request.TermId);
+            return Problem(detail: ex.Message, title: "Erreur de génération du bulletin PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     /// <summary>
@@ -89,10 +102,23 @@ public class ReportCardsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> DownloadClassBulletinsMergedPdf(
         [FromQuery] Guid classroomId, [FromQuery] Guid termId, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetClassReportCardsPdfQuery(classroomId, termId), cancellationToken);
+        try
+        {
+            var result = await mediator.Send(new GetClassReportCardsPdfQuery(classroomId, termId), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Les bulletins fusionnés PDF sont vides (Classe: {ClassroomId}, Trimestre: {TermId})", classroomId, termId);
+                return NotFound(new { message = "Le document PDF des bulletins est introuvable ou vide." });
+            }
 
-        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
-        return File(result.Content, "application/pdf");
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération des bulletins fusionnés PDF (Classe: {ClassroomId}, Trimestre: {TermId})", classroomId, termId);
+            return Problem(detail: ex.Message, title: "Erreur de génération des bulletins PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     /// <summary>Préremplit l'écran de saisie — vide (deux null) si rien n'a encore été saisi pour ce trimestre.</summary>

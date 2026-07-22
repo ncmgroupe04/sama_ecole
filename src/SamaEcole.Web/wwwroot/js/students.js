@@ -782,6 +782,11 @@ document.addEventListener('alpine:init', () => {
 
         async openPdfModalWithBlob(url, title, downloadName) {
             try {
+                if (!url || url.includes('undefined') || url.includes('null')) {
+                    throw new Error(`L'URL du document est invalide (${url}).`);
+                }
+                console.log("PDF URL:", url);
+
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                     await window.api.refreshOrRedirect();
                 }
@@ -790,19 +795,26 @@ document.addEventListener('alpine:init', () => {
                     credentials: 'same-origin'
                 });
                 if (!response.ok) {
-                    alert("Erreur lors de la récupération du document officiel.");
-                    return;
+                    const errText = await response.text();
+                    throw new Error(`Erreur ${response.status}: Récupération du document impossible (${errText || response.statusText}).`);
                 }
                 const rawBlob = await response.blob();
+                if (!rawBlob || rawBlob.size === 0) {
+                    throw new Error("Le document PDF reçu du serveur est vide (0 octet).");
+                }
                 const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
                 if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
                 this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
+                console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
                 this.pdfPreviewTitle = title;
                 this.pdfDownloadName = downloadName;
                 this.pdfLoadError = false;
                 this.showPdfModal = true;
             } catch (e) {
+                console.error("Erreur openPdfModalWithBlob (Students):", e);
                 alert("Impossible de charger le document : " + e.message);
+                this.pdfLoadError = true;
+                this.showPdfModal = true;
             }
         },
 

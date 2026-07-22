@@ -181,26 +181,42 @@ document.addEventListener('alpine:init', () => {
          */
         async previewReceipt(paymentId, receiptNumber) {
             this.pdfLoadError = false;
-            if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                await window.api.refreshOrRedirect();
-            }
+            try {
+                if (!paymentId || paymentId === 'undefined' || paymentId === 'null') {
+                    throw new Error("L'identifiant de paiement est invalide (" + paymentId + ").");
+                }
+                const url = `/api/v1/finance/payments/${paymentId}/receipt/pdf`;
+                console.log("PDF URL:", url);
 
-            const response = await fetch(`/api/v1/finance/payments/${paymentId}/receipt/pdf`, {
-                headers: { Authorization: `Bearer ${window.auth.accessToken}` },
-                credentials: 'same-origin'
-            });
-            if (!response.ok) {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch(url, {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                    credentials: 'same-origin'
+                });
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Erreur ${response.status}: Téléchargement du document impossible (${errText || response.statusText}).`);
+                }
+
+                const rawBlob = await response.blob();
+                if (!rawBlob || rawBlob.size === 0) {
+                    throw new Error("Le document PDF reçu est vide (0 octet).");
+                }
+                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
+                if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
+                console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
+                this.pdfPreviewTitle = `Reçu officiel n° ${receiptNumber}`;
+                this.pdfDownloadName = `Recu-${receiptNumber}.pdf`;
+                this.showPdfModal = true;
+            } catch (err) {
+                console.error("Erreur previewReceipt (Dashboard):", err);
                 this.pdfLoadError = true;
-                return;
+                this.showPdfModal = true;
             }
-
-            const rawBlob = await response.blob();
-            const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-            if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
-            this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
-            this.pdfPreviewTitle = `Reçu officiel n° ${receiptNumber}`;
-            this.pdfDownloadName = `Recu-${receiptNumber}.pdf`;
-            this.showPdfModal = true;
         },
 
         closePdfPreview() {

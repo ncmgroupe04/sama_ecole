@@ -286,6 +286,11 @@ document.addEventListener('alpine:init', () => {
             this.pdfError = null;
             this.pdfLoadError = false;
             try {
+                if (!url || url.includes('undefined') || url.includes('null')) {
+                    throw new Error(`L'identifiant ou l'URL du document est invalide (${url}).`);
+                }
+                console.log("PDF URL:", url);
+
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                     await window.api.refreshOrRedirect();
                 }
@@ -294,19 +299,29 @@ document.addEventListener('alpine:init', () => {
                     headers: { Authorization: `Bearer ${window.auth.accessToken}` },
                     credentials: 'same-origin'
                 });
-                if (!response.ok) throw new Error('Téléchargement du document impossible.');
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Erreur ${response.status}: Téléchargement du document impossible (${errText || response.statusText}).`);
+                }
 
                 const rawBlob = await response.blob();
+                if (!rawBlob || rawBlob.size === 0) {
+                    throw new Error("Le fichier PDF reçu est vide (0 octet).");
+                }
                 const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
                 if (this.pdfPreviewUrl) {
                     URL.revokeObjectURL(this.pdfPreviewUrl);
                 }
                 this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
+                console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
                 this.pdfPreviewTitle = title || 'Document officiel';
                 this.pdfDownloadName = downloadName || 'document.pdf';
                 this.showPdfModal = true;
             } catch (err) {
+                console.error("Erreur openPdfPreview (Caisse):", err);
                 this.pdfError = err.message || 'Erreur lors du chargement du document.';
+                this.pdfLoadError = true;
+                this.showPdfModal = true;
             }
         },
 
