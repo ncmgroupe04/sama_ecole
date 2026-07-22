@@ -101,7 +101,7 @@ public class SelectFieldTagHelper : TagHelper
             ? WebUtility.HtmlEncode(JsonSerializer.Serialize(Options, OptionsJsonSettings))
             : OptionsExpr;
 
-        var buttonClass = $"flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:text-sm {defaultMt}{extraClass}".Trim();
+        var buttonClass = $"flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-all focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm {defaultMt}{extraClass}".Trim();
 
         output.Content.SetHtmlContent($$"""
             <div class="{{wrapperClasses}}" x-data="selectField()" x-effect="options = {{optionsSource}}">
