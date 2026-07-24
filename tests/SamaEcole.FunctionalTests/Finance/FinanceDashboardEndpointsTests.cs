@@ -122,6 +122,8 @@ public class FinanceDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
         var enrollment = await SeedEnrolledStudentAsync();
         var finance = await FinanceTokenAsync();
 
+        await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions/open", finance, new { openingBalance = 0m });
+
         var first = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
             new { enrollmentId = enrollment.EnrollmentId, amount = 50_000m, method = "Cash" });
         first.StatusCode.Should().Be(HttpStatusCode.Created);

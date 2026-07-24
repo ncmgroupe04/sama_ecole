@@ -21,8 +21,8 @@ public class AttendanceScopeAuthorizer(
     public async Task EnsureCanTakeAttendanceAsync(
         Guid classroomId, Guid subjectId, Guid schoolYearId, CancellationToken cancellationToken)
     {
-        // Le Directeur et le Secrétariat gèrent l'appel de toutes les classes : aucune restriction.
-        if (currentUser.Role is Role.Directeur or Role.Secretariat)
+        // Le Directeur, le Secrétariat et le Surveillant gèrent l'appel de toutes les classes : aucune restriction.
+        if (currentUser.Role is Role.Directeur or Role.Secretariat or Role.Surveillant)
         {
             return;
         }
@@ -31,7 +31,7 @@ public class AttendanceScopeAuthorizer(
         // garde-fou couvre le cas où la méthode serait appelée hors de ce contexte.
         if (currentUser.Role != Role.Enseignant)
         {
-            throw new UnauthorizedAccessException("Seuls l'Enseignant, le Directeur et le Secrétariat peuvent faire l'appel.");
+            throw new UnauthorizedAccessException("Seuls l'Enseignant, le Directeur, le Secrétariat et le Surveillant peuvent faire l'appel.");
         }
 
         var userId = currentUser.UserId

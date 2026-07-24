@@ -43,9 +43,21 @@ public class PagesController : Controller
 
     // JGK-D06 : écran d'appel — roster d'une classe pour une date/matière/créneau, saisie des statuts.
     // C'est AttendanceController qui garde l'accès (saisie : Enseignant borné à ses classes, Directeur,
-    // Secrétariat) et la RLS qui isole.
+    // Secrétariat, Surveillant) et la RLS qui isole.
     [HttpGet("/presences")]
     public IActionResult Attendance() => View("~/Views/Attendance/Index.cshtml");
+
+    [HttpGet("/billets")]
+    public IActionResult Billets() => View("~/Views/Absences/Billets.cshtml");
+
+    [HttpGet("/pointage-profs")]
+    public IActionResult PointageProfs() => View("~/Views/Absences/PointageProfs.cshtml");
+
+    [HttpGet("/discipline")]
+    public IActionResult Discipline() => View("~/Views/Discipline/Index.cshtml");
+
+    [HttpGet("/billet-print")]
+    public IActionResult BilletPrint() => View("~/Views/Absences/BilletPrint.cshtml");
 
     [HttpGet("/matieres")]
     public IActionResult Subjects() => View("~/Views/Subjects/Index.cshtml");
@@ -96,4 +108,15 @@ public class PagesController : Controller
     // Paramètres (onglet dédié). On redirige l'ancienne adresse pour ne casser aucun lien existant.
     [HttpGet("/annees-scolaires")]
     public IActionResult SchoolYears() => RedirectToAction(nameof(Settings), new { tab = "annees-scolaires" });
+
+    // ------------------------------------------------------------------ Module Comptabilité & Fiscalité (JGK)
+
+    [HttpGet("/tresorerie")]
+    public IActionResult Treasury() => View("~/Views/Treasury/Index.cshtml");
+
+    [HttpGet("/paie")]
+    public IActionResult Payroll() => View("~/Views/Payroll/Index.cshtml");
+
+    [HttpGet("/fiscalite")]
+    public IActionResult Taxes() => View("~/Views/Taxes/Index.cshtml");
 }

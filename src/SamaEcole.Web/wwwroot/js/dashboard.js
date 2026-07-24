@@ -13,10 +13,15 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('mainDashboard', () => ({
         analyticsRole: window.auth.role === 'Directeur' || window.auth.role === 'SuperAdmin',
         financeRole: window.auth.role === 'Directeur' || window.auth.role === 'Finance',
+        surveillantRole: window.auth.role === 'Surveillant',
 
         isAnalyticsLoading: false,
         analyticsError: null,
         analyticsData: null,
+
+        isSurveillantLoading: false,
+        surveillantError: null,
+        surveillantData: null,
 
         isFinanceLoading: false,
         financeError: null,
@@ -35,6 +40,12 @@ document.addEventListener('alpine:init', () => {
         async init() {
             if (this.analyticsRole) this.loadAnalytics();
             if (this.financeRole) this.loadFinance();
+            if (this.surveillantRole) this.loadSurveillant();
+        },
+
+        get dashboardSubtitle() {
+            if (this.surveillantRole) return "Suivi quotidien des absences et de la discipline.";
+            return "Vue consolidée des activités et finances.";
         },
 
         async loadAnalytics() {
@@ -46,6 +57,26 @@ document.addEventListener('alpine:init', () => {
                 this.analyticsError = err.message || 'Erreur lors du chargement analytique.';
             } finally {
                 this.isAnalyticsLoading = false;
+            }
+        },
+
+        async loadSurveillant() {
+            this.isSurveillantLoading = true;
+            this.surveillantError = null;
+            try {
+                // Fictive endpoint for now, or real endpoint once implemented
+                this.surveillantData = await window.api.get('/reports/surveillant-dashboard');
+            } catch (err) {
+                this.surveillantError = err.message || 'Erreur lors du chargement des données surveillant.';
+                // Mock data for demo purposes since endpoint might not exist yet
+                this.surveillantData = {
+                    totalAbsentsToday: 12,
+                    totalRetardsToday: 5,
+                    teachersPresent: 45,
+                    teachersAbsent: 2
+                };
+            } finally {
+                this.isSurveillantLoading = false;
             }
         },
 

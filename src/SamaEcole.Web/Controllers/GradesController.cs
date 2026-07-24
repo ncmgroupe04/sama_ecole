@@ -78,7 +78,7 @@ public class GradesController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(query, cancellationToken));
 
     [HttpPost]
-    [Authorize(Roles = GradingRoles)]
+    [Authorize(Roles = nameof(Role.Enseignant))]
     [ProducesResponseType<GradeResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -98,7 +98,7 @@ public class GradesController(ISender mediator) : ControllerBase
     /// si une seule ligne est invalide) — voir ImportGradesCommandHandler.
     /// </summary>
     [HttpPost("import")]
-    [Authorize(Roles = GradingRoles)]
+    [Authorize(Roles = nameof(Role.Enseignant))]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]
     [ProducesResponseType<ImportGradesResult>(StatusCodes.Status200OK)]

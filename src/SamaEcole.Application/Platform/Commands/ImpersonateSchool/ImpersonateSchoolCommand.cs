@@ -63,7 +63,7 @@ public class ImpersonateSchoolCommandHandler(
         var now = timeProvider.GetUtcNow();
 
         var accessToken = tokenGenerator.GenerateImpersonation(
-            director.Id, school.Id, director.Role, superAdminId);
+            director.Id, director.FullName, school.Id, director.Role, superAdminId);
 
         // Entrée d'audit AVANT de renvoyer le jeton : une panne d'écriture ici ne doit jamais laisser
         // partir un accès non tracé.

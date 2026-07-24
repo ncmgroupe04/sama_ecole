@@ -91,6 +91,15 @@ public interface IApplicationDbContext
     /// <summary>Distinction cochée + observations du conseil des professeurs, par (élève, trimestre) — bulletin JGK-G03.</summary>
     DbSet<ReportCardRemark> ReportCardRemarks { get; }
 
+    DbSet<DisciplineRecord> DisciplineRecords { get; }
+    DbSet<AbsenceJustification> AbsenceJustifications { get; }
+    DbSet<LateArrival> LateArrivals { get; }
+    DbSet<TeacherAttendance> TeacherAttendances { get; }
+    
+    DbSet<EmployeeContract> EmployeeContracts { get; }
+    DbSet<FichePaie> FichePaies { get; }
+    DbSet<TaxeDeclaration> TaxeDeclarations { get; }
+
     /// <summary>
     /// Agrégats plateforme (console Super Admin) : entité SANS CLÉ adossée à la vue PostgreSQL
     /// `v_platform_dashboard_stats`, qui contourne la RLS via `security_invoker = false` +

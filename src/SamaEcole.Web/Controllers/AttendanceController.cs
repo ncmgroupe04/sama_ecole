@@ -26,10 +26,10 @@ public class AttendanceController(ISender mediator) : ControllerBase
         Guid ClassroomId, Guid SubjectId, DateOnly Date, string Period, IReadOnlyList<AttendanceEntry> Entries);
 
     private const string TakeRoles =
-        $"{nameof(Role.Enseignant)},{nameof(Role.Directeur)},{nameof(Role.Secretariat)}";
+        $"{nameof(Role.Enseignant)},{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Surveillant)}";
 
     private const string ViewRoles =
-        $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.SuperAdmin)}";
+        $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.SuperAdmin)},{nameof(Role.Surveillant)}";
 
     /// <summary>
     /// Grille d'appel d'une classe pour une date/matière/créneau (ticket JGK-D06). La restriction

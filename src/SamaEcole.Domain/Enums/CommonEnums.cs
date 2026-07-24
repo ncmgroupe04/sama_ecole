@@ -114,7 +114,11 @@ public enum PaymentCategory
     Tuition,
     Exam,
     Canteen,
-    Other
+    Other,
+    Transport,
+    Uniformes,
+    ActivitesPeriscolaires,
+    FournituresVente
 }
 
 public enum CashierSessionStatus
@@ -258,4 +262,21 @@ public enum MatriculeKind
     /// unique et sans trou, incrémentée dans la transaction d'inscription.
     /// </summary>
     Receipt
+}
+
+/// <summary>
+/// Type de sanction disciplinaire.
+/// </summary>
+public enum DisciplineType
+{
+    Avertissement,
+    Blame,
+    Retenue,
+    Exclusion
+}
+
+public enum ContractType
+{
+    Permanent,
+    Vacataire
 }

@@ -128,6 +128,8 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
         var enrollment = await SeedEnrolledStudentAsync();
         var finance = await FinanceTokenAsync();
 
+        await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions/open", finance, new { openingBalance = 0m });
+
         var payment = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
             new { enrollmentId = enrollment.EnrollmentId, amount = 50_000m, method = "Cash" });
         payment.StatusCode.Should().Be(HttpStatusCode.Created);

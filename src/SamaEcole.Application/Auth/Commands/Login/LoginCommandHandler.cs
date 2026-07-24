@@ -108,7 +108,7 @@ public class LoginCommandHandler(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var accessToken = tokenGenerator.Generate(user.Id, user.SchoolId, user.Role);
+        var accessToken = tokenGenerator.Generate(user.Id, user.FullName, user.SchoolId, user.Role);
 
         var refreshToken = RefreshTokenFactory.Create();
         await authStore.StoreRefreshTokenAsync(

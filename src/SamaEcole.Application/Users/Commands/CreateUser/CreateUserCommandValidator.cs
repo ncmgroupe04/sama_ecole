@@ -12,7 +12,7 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
     /// JGK-B01 (création d'établissement) : permettre à un Directeur d'en créer un autre par cette
     /// voie serait une escalade de privilège non demandée et non auditée comme telle.
     /// </summary>
-    private static readonly Role[] AssignableRoles = [Role.Secretariat, Role.Finance, Role.Enseignant];
+    private static readonly Role[] AssignableRoles = [Role.Secretariat, Role.Finance, Role.Enseignant, Role.Surveillant];
 
     public CreateUserCommandValidator()
     {
@@ -22,7 +22,7 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
 
         RuleFor(x => x.Role)
             .Must(role => AssignableRoles.Contains(role))
-            .WithMessage("Rôle non assignable ici : Secrétariat, Finance ou Enseignant uniquement.");
+            .WithMessage("Rôle non assignable ici : Secrétariat, Finance, Enseignant ou Surveillant uniquement.");
 
         RuleFor(x => x.Password).Custom((password, context) =>
         {

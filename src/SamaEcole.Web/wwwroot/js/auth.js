@@ -108,6 +108,11 @@
             return localStorage.getItem(STORAGE_KEYS.email) || '';
         },
 
+        get name() {
+            const claims = readClaims(this.accessToken);
+            return claims ? claims.name || '' : '';
+        },
+
         get role() {
             const claims = readClaims(this.accessToken);
             return claims ? claims.role || '' : '';
@@ -323,6 +328,7 @@ document.addEventListener('alpine:init', () => {
     /** Bandeau utilisateur de la barre supérieure : e-mail saisi à la connexion + rôle lu dans le JWT. */
     Alpine.data('sessionMenu', () => ({
         email: window.auth.email,
+        name: window.auth.name,
         role: window.auth.role,
         logout: () => window.auth.logout()
     }));

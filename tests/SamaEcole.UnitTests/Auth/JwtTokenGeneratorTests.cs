@@ -31,7 +31,7 @@ public class JwtTokenGeneratorTests
     [Fact]
     public void Token_Should_Carry_Sub_SchoolId_And_Role()
     {
-        var token = NewGenerator().Generate(UserId, SchoolId, Role.Directeur);
+        var token = NewGenerator().Generate(UserId, "Test User", SchoolId, Role.Directeur);
 
         var claims = Decode(token.Value).Claims.ToDictionary(c => c.Type, c => c.Value);
 
@@ -45,7 +45,7 @@ public class JwtTokenGeneratorTests
     {
         // Un Super Admin n'appartient à aucune école. Le claim doit être ABSENT, pas vide :
         // TenantProvider renvoie alors null, et la RLS ne laisse passer aucune donnée d'école.
-        var token = NewGenerator().Generate(UserId, schoolId: null, Role.SuperAdmin);
+        var token = NewGenerator().Generate(UserId, "Test User", schoolId: null, Role.SuperAdmin);
 
         var claims = Decode(token.Value).Claims.Select(c => c.Type);
 
@@ -55,7 +55,7 @@ public class JwtTokenGeneratorTests
     [Fact]
     public void Token_Should_Expire_And_Report_Its_Lifetime()
     {
-        var token = NewGenerator().Generate(UserId, SchoolId, Role.Enseignant);
+        var token = NewGenerator().Generate(UserId, "Test User", SchoolId, Role.Enseignant);
 
         token.ExpiresInSeconds.Should().Be(15 * 60);
         Decode(token.Value).ValidTo.Should().BeAfter(DateTime.UtcNow);
@@ -63,13 +63,13 @@ public class JwtTokenGeneratorTests
     }
 
     [Fact]
-    public void Generating_Without_A_Signing_Key_Should_Fail_Loudly()
+    public void Constructor_Should_Throw_When_SigningKey_Is_Missing()
     {
-        // Mieux vaut une exception explicite qu'un token signé avec une clé vide, qui serait forgeable.
         var generator = new JwtTokenGenerator(
-            Options.Create(new JwtOptions { SigningKey = "" }), TimeProvider.System);
+            Options.Create(new JwtOptions { AccessTokenMinutes = 15, SigningKey = "" }),
+            TimeProvider.System);
 
-        var act = () => generator.Generate(UserId, SchoolId, Role.Directeur);
+        var act = () => generator.Generate(UserId, "Test User", SchoolId, Role.Directeur);
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*SigningKey*");
     }

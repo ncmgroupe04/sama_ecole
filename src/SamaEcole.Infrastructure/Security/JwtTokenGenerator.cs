@@ -22,14 +22,14 @@ namespace SamaEcole.Infrastructure.Security;
 /// </summary>
 public class JwtTokenGenerator(IOptions<JwtOptions> options, TimeProvider timeProvider) : IJwtTokenGenerator
 {
-    public AccessToken Generate(Guid userId, Guid? schoolId, Role role)
-        => Generate(userId, schoolId, role, impersonatedByUserId: null);
+    public AccessToken Generate(Guid userId, string fullName, Guid? schoolId, Role role)
+        => Generate(userId, fullName, schoolId, role, impersonatedByUserId: null);
 
     /// <summary>Console Super Admin (bouton « Infiltrer ») — voir IJwtTokenGenerator.GenerateImpersonation.</summary>
-    public AccessToken GenerateImpersonation(Guid targetUserId, Guid targetSchoolId, Role targetRole, Guid impersonatedByUserId)
-        => Generate(targetUserId, targetSchoolId, targetRole, impersonatedByUserId);
+    public AccessToken GenerateImpersonation(Guid targetUserId, string fullName, Guid targetSchoolId, Role targetRole, Guid impersonatedByUserId)
+        => Generate(targetUserId, fullName, targetSchoolId, targetRole, impersonatedByUserId);
 
-    private AccessToken Generate(Guid userId, Guid? schoolId, Role role, Guid? impersonatedByUserId)
+    private AccessToken Generate(Guid userId, string fullName, Guid? schoolId, Role role, Guid? impersonatedByUserId)
     {
         var settings = options.Value;
 
@@ -46,6 +46,7 @@ public class JwtTokenGenerator(IOptions<JwtOptions> options, TimeProvider timePr
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new("role", role.ToString()),
+            new("name", fullName),
             // jti : identifiant unique du token, indispensable pour tracer/révoquer un access token précis.
             new(JwtRegisteredClaimNames.Jti, Guid.CreateVersion7().ToString())
         };

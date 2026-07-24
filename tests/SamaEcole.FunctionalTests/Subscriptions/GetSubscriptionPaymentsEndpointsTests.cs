@@ -200,6 +200,8 @@ public class GetSubscriptionPaymentsEndpointsTests(AuthApiFactory factory) : ICl
 
         var response = await ListPaymentsAsync(director.AccessToken, AuthApiFactory.EcoleId);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = (await response.Content.ReadFromJsonAsync<PaginatedPayments>())!;
+        result.Items.Should().BeEmpty();
     }
 }

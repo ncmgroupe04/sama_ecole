@@ -1,4 +1,5 @@
 using SamaEcole.Application.Finance;
+using SamaEcole.Application.Finance.Queries.GetTreasuryDashboard;
 using SamaEcole.Application.Finance.Commands.ApplyStandardFee;
 using SamaEcole.Application.Finance.Commands.CreateFeeCategory;
 using SamaEcole.Application.Finance.Commands.DeleteClassFee;
@@ -320,6 +321,32 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     {
         var result = await mediator.Send(new GetDailyClosingReportPdfQuery(id), cancellationToken);
         return File(result.Content, "application/pdf", result.FileName);
+    }
+
+    // ------------------------------------------------------------------ Module Comptabilité & Fiscalité (JGK)
+
+    [HttpGet("treasury")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<TreasuryDashboardDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> TreasuryDashboard(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new SamaEcole.Application.Finance.Queries.GetTreasuryDashboard.GetTreasuryDashboardQuery(), cancellationToken));
+
+    [HttpPost("payroll")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> GeneratePayroll([FromBody] SamaEcole.Application.Finance.Commands.GenerateFichePaie.GenerateFichePaieCommand command, CancellationToken cancellationToken)
+    {
+        var id = await mediator.Send(command, cancellationToken);
+        return CreatedAtAction(nameof(GeneratePayroll), new { id }, id);
+    }
+
+    [HttpPost("tax-declaration")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> GenerateTaxDeclaration([FromBody] SamaEcole.Application.Finance.Commands.GenerateTaxDeclaration.GenerateTaxDeclarationCommand command, CancellationToken cancellationToken)
+    {
+        var id = await mediator.Send(command, cancellationToken);
+        return CreatedAtAction(nameof(GenerateTaxDeclaration), new { id }, id);
     }
 }
 

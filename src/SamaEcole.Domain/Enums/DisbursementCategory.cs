@@ -6,5 +6,10 @@ public enum DisbursementCategory
     Maintenance,
     Fournitures,
     ChargesFixes,
-    Divers
+    Divers,
+    LoyerCharges,
+    EauElectricite,
+    TelecomsInternet,
+    Carburant,
+    AssurancesHonoraires
 }

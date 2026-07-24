@@ -113,7 +113,7 @@ public class ExportSchoolYearEndpointsTests : IClassFixture<AuthApiFactory>, IAs
 
         var finance = await FinanceTokenAsync();
         
-        var openSessionResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions", finance, new { openingBalance = 0m });
+        var openSessionResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions/open", finance, new { openingBalance = 0m });
         openSessionResponse.EnsureSuccessStatusCode();
 
         var payment = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,

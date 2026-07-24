@@ -9,7 +9,7 @@ namespace SamaEcole.Application.Common.Interfaces;
 /// </summary>
 public interface IJwtTokenGenerator
 {
-    AccessToken Generate(Guid userId, Guid? schoolId, Role role);
+    AccessToken Generate(Guid userId, string fullName, Guid? schoolId, Role role);
 
     /// <summary>
     /// Console Super Admin (bouton « Infiltrer ») : jeton de MÊME format qu'un jeton normal (mêmes
@@ -18,7 +18,7 @@ public interface IJwtTokenGenerator
     /// réel. Toujours plus court qu'un jeton normal et jamais accompagné d'un refresh token : une
     /// session d'impersonation ne se prolonge pas, elle expire pour de bon (docs/Volume_7_Security.md).
     /// </summary>
-    AccessToken GenerateImpersonation(Guid targetUserId, Guid targetSchoolId, Role targetRole, Guid impersonatedByUserId);
+    AccessToken GenerateImpersonation(Guid targetUserId, string fullName, Guid targetSchoolId, Role targetRole, Guid impersonatedByUserId);
 }
 
 /// <param name="ExpiresInSeconds">Durée de vie, exposée telle quelle dans AuthTokens.expiresIn (openapi.yaml).</param>

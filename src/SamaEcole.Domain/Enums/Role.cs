@@ -7,5 +7,6 @@ public enum Role
     Directeur,
     Secretariat,
     Finance,
-    Enseignant
+    Enseignant,
+    Surveillant
 }

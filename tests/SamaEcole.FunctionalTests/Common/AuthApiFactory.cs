@@ -561,7 +561,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             }),
             TimeProvider.System);
 
-        return generator.Generate(DirecteurId, EcoleId, Role.Directeur).Value;
+        return generator.Generate(DirecteurId, "Directeur de test", EcoleId, Role.Directeur).Value;
     }
 
     /// <summary>
