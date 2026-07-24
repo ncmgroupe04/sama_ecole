@@ -59,9 +59,9 @@ public class UpdateScheduleSlotCommandHandler(
                 ? "L'enseignant a déjà cours sur cette plage horaire."
                 : "La classe a déjà cours sur cette plage horaire.";
                 
-            throw new SamaEcole.Application.Common.Exceptions.ValidationException(
-                new Dictionary<string, string[]> { { "global", new[] { errorMessage } } }
-            );
+            throw new SamaEcole.Application.Common.Exceptions.ValidationException(new[] {
+                new FluentValidation.Results.ValidationFailure("global", errorMessage)
+            });
         }
 
         slot.TeacherId = request.TeacherId;

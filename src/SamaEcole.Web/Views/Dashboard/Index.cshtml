@@ -1,471 +1,480 @@
 @{
- ViewData["Title"] = "Tableau de bord";
+    ViewData["Title"] = "Tableau de bord";
 }
 
-@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
- <script src="~/js/dashboard.js" asp-append-version="true"></script>
+    <script src="~/js/dashboard.js" asp-append-version="true"></script>
 }
 
-@* JGK-R01 — Vue d'ensemble analytique de l'établissement (Directeur / Super Admin). Composant
- distinct du tableau de bord financier ci-dessous : périmètre de rôles différent (le Directeur voit
- les deux, la Finance seulement le financier, le Super Admin seulement l'analytique). *@
-<div x-data="dashboardAnalytics()" x-show="canView" x-cloak class="mb-10">
- <div>
- <h1 class="text-jgk-title font-bold text-slate-900">Tableau de bord</h1>
- <p class="text-jgk-subtitle text-slate-500 mt-1">Effectifs, ressources humaines, assiduité et abonnement de l'établissement.</p>
- </div>
+<div x-data="mainDashboard()" x-cloak class="pb-10">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-jgk-title font-bold text-slate-900">Tableau de bord</h1>
+            <p class="text-jgk-subtitle text-slate-500 mt-1">Vue consolidée des activités et finances.</p>
+        </div>
+    </div>
 
- @await Html.PartialAsync("_ErrorBanner")
+    @await Html.PartialAsync("_ErrorBanner")
 
- <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
- <template x-if="isLoading">
- <template x-for="i in 4" :key="i">
- <div class="card p-5 h-[92px] skeleton"></div>
- </template>
- </template>
-
- <template x-if="!isLoading && data">
- <stat-card label="Élèves inscrits (année active)" icon="users" accent="primary">
- <span x-text="data.enrollments.total"></span>
- <span class="ml-2 text-xs font-normal text-slate-500">
- <span x-text="data.enrollments.boys"></span> G · <span x-text="data.enrollments.girls"></span> F
- </span>
- </stat-card>
- </template>
- <template x-if="!isLoading && data">
- <stat-card label="Enseignants actifs" icon="book" accent="primary">
- <span x-text="data.activeTeachers"></span>
- </stat-card>
- </template>
- <template x-if="!isLoading && data">
- <stat-card label="Taux de présence (ce mois)" icon="checkmark-circle" accent="success">
- <span x-text="formatPercent(data.attendanceRate)"></span>
- </stat-card>
- </template>
- <template x-if="!isLoading && data">
- <stat-card label="Abonnement" icon="wallet" accent="primary">
- <span x-text="subscriptionValue()"></span>
- <span x-show="data.subscription" class="ml-2 text-[11px] font-normal text-slate-500"
- x-text="subscriptionStatusLabel()"></span>
- </stat-card>
- </template>
- </div>
-
- <!-- Bloc 2 : Vie scolaire & effectifs — répartition par genre (donut) + taux de présence
- (jauge), en section nommée et séparée du bloc KPI ci-dessus pour une lecture en sections
- plutôt qu'un empilement continu de cartes. -->
- <div class="mt-10">
- <h2 class="text-jgk-title font-bold text-slate-900">Vie scolaire &amp; effectifs</h2>
- <p class="text-jgk-subtitle text-slate-500 mt-1">Répartition des élèves par genre et assiduité du mois en cours.</p>
-
- <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
- <template x-if="!isLoading && data">
- <div class="card p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
- <p class="text-sm font-semibold text-slate-900">Répartition par genre</p>
- <p class="text-xs text-slate-500 mt-0.5">Élèves inscrits, année active.</p>
- <div class="mt-4 flex items-center gap-6">
- <svg viewBox="0 0 36 36" class="w-14 h-14 -rotate-90 shrink-0" role="img" aria-label="Répartition filles / garçons">
- <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="3.2"></circle>
- <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1D4ED8" stroke-width="3.2"
- stroke-linecap="round"
- :stroke-dasharray="boysFraction() + ' ' + (100 - boysFraction())"></circle>
- <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#BE185D" stroke-width="3.2"
- stroke-linecap="round"
- :stroke-dasharray="girlsFraction() + ' ' + (100 - girlsFraction())"
- :stroke-dashoffset="-boysFraction()"></circle>
- </svg>
- <dl class="space-y-2.5 text-sm">
- <div class="flex items-center gap-2">
- <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:#1D4ED8"></span>
- <dt class="text-slate-600">Garçons</dt>
- <dd class="font-bold text-slate-900" x-text="data.enrollments.boys"></dd>
- <dd class="text-slate-400" x-text="'(' + pct(data.enrollments.boys, data.enrollments.total) + ')'"></dd>
- </div>
- <div class="flex items-center gap-2">
- <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:#BE185D"></span>
- <dt class="text-slate-600">Filles</dt>
- <dd class="font-bold text-slate-900" x-text="data.enrollments.girls"></dd>
- <dd class="text-slate-400" x-text="'(' + pct(data.enrollments.girls, data.enrollments.total) + ')'"></dd>
- </div>
- </dl>
- </div>
- </div>
- </template>
-
- <template x-if="!isLoading && data">
- <div class="card p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
- <p class="text-sm font-semibold text-slate-900">Taux de présence</p>
- <p class="text-xs text-slate-500 mt-0.5">Part des présences (dont retards) sur les appels du mois en cours.</p>
- <div class="mt-6">
- <div class="flex items-baseline justify-between mb-1.5">
- <span class="text-2xl font-bold text-slate-900" x-text="formatPercent(data.attendanceRate)"></span>
- </div>
- <div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">
- <div class="h-full rounded-full bg-success transition-all"
- :style="'width: ' + Math.round((data.attendanceRate || 0) * 100) + '%'"></div>
- </div>
- <p x-show="data.attendanceRate === null" class="mt-2 text-xs text-slate-400">Aucun appel saisi ce mois-ci.</p>
- </div>
- </div>
- </template>
- </div>
- </div>
-</div>
-
-<div x-data="dashboardView()" class="pt-10 border-t border-slate-200">
- <div>
- <h1 class="text-jgk-title font-bold text-slate-900">Tableau de bord financier</h1>
- <p class="text-jgk-subtitle text-slate-500 mt-1">Encaissements et recouvrement de l'établissement sur l'année scolaire active.</p>
- </div>
-
- <!-- Rôle non autorisé : le Secrétariat compose le dû à l'inscription, il ne pilote pas la trésorerie (règle #4). -->
- <div x-show="!canView" x-cloak class="card mt-6 py-12 text-center">
- <p class="text-slate-500 font-medium">Seuls le Directeur et le service Finance ont accès au tableau de bord financier.</p>
- </div>
-
- <div x-show="canView" x-cloak>
-
- @await Html.PartialAsync("_ErrorBanner")
-
- <!-- Cartes KPI (4 cartes, docs/design-references/dashboard-reference.jpg) -->
- <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
- <template x-if="isLoading">
- <template x-for="i in 4" :key="i">
- <div class="card p-5 h-[92px] skeleton"></div>
- </template>
- </template>
-
- <template x-if="!isLoading && data">
- <stat-card label="Encaissé aujourd'hui" icon="wallet" accent="success">
- <span x-text="formatMoney(data.collectedToday)"></span>
- </stat-card>
- </template>
- <template x-if="!isLoading && data">
- <stat-card label="Encaissé ce mois" icon="wallet" accent="primary">
- <span x-text="formatMoney(data.collectedThisMonth)"></span>
- </stat-card>
- </template>
- <template x-if="!isLoading && data">
- <stat-card label="Encaissé cette année" icon="wallet" accent="primary">
- <span x-text="formatMoney(data.collectedThisYear)"></span>
- </stat-card>
- </template>
- <template x-if="!isLoading && data">
- <stat-card label="Solde dû" icon="alert-circle" accent="warning">
- <span x-text="formatMoney(data.outstandingBalance)"></span>
- <badge variant="warning" class="ml-2 text-[11px]"><span x-text="formatPercent(data.recoveryRate)"></span> recouvré</badge>
- </stat-card>
- </template>
- </div>
-
-            <!-- Navigation Onglets et Bilan Dual (Ticket JGK-F04 / Axe 3) -->
-            <div x-show="!isLoading && data" x-cloak class="flex flex-col gap-8 mt-8">
-                <!-- Bloc Supérieur (Bilan Dual et Diagrammes pleine largeur) -->
-                <div class="w-full space-y-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                    <div>
-                        <h2 class="text-jgk-title font-bold text-slate-900">Bilan Financier Dual</h2>
-                        <p class="text-jgk-subtitle text-slate-500 mt-1">Comparaison en temps réel entre l'exercice annuel et le mois en cours.</p>
-                    </div>
-                    <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide self-start sm:self-auto" role="tablist">
-                        <button type="button" role="tab" x-on:click="activeTab = 'dual'"
-                                :class="activeTab === 'dual' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-                                class="px-4 py-2.5 rounded-lg text-sm transition-all duration-200 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-                            Côte à côte (Dual)
-                        </button>
-                        <button type="button" role="tab" x-on:click="activeTab = 'annual'"
-                                :class="activeTab === 'annual' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-                                class="px-4 py-2.5 rounded-lg text-sm transition-all duration-200 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-                            Bilan Annuel
-                        </button>
-                        <button type="button" role="tab" x-on:click="activeTab = 'monthly'"
-                                :class="activeTab === 'monthly' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-                                class="px-4 py-2.5 rounded-lg text-sm transition-all duration-200 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-                            Bilan Mensuel
-                        </button>
-                    </nav>
-                    
+    <!-- 1. GRILLE DE KPI (HAUT DE PAGE) - RESTRUCTURATION 4 COLONNES -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        
+        <!-- Pédagogie (4 cartes) -->
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="analyticsRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Élèves inscrits</p>
+                <div class="mt-1 flex items-baseline gap-2">
+                    <p class="text-2xl font-bold text-slate-900" x-text="analyticsData?.enrollments?.total || 0"></p>
                 </div>
-                <!-- Contenu Bilan Dual (2 cartes haut) -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4 items-stretch">
-                    <!-- BILAN ANNUEL -->
-                    <div x-show="activeTab === 'dual' || activeTab === 'annual'"
-                         :class="activeTab === 'annual' ? 'lg:col-span-2' : ''"
-                         class="card p-4 border-l-4 border-indigo-600 bg-gradient-to-br from-white to-indigo-50/20 shadow-sm flex flex-col justify-between">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">Exercice actif</span>
-                                <h3 class="text-lg font-bold text-slate-900 mt-1">Bilan Annuel Global</h3>
-                            </div>
-                            <span class="text-2xl font-black text-indigo-600" x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></span>
-                        </div>
-
-                        <dl class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 text-center">
-                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                                <dt class="text-[10px] xl:text-xs text-slate-500">Encaissé</dt>
-                                <dd class="text-sm font-bold text-slate-900 mt-0.5" x-text="formatMoney(data.collectedThisYear)"></dd>
-                            </div>
-                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                                <dt class="text-[10px] xl:text-xs text-slate-500">Solde dû</dt>
-                                <dd class="text-sm font-bold text-warning mt-0.5" x-text="formatMoney(data.outstandingBalance)"></dd>
-                            </div>
-                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                                <dt class="text-[10px] xl:text-xs text-slate-500">Taux</dt>
-                                <dd class="text-sm font-bold text-success mt-0.5" x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></dd>
-                            </div>
-                        </dl>
-
-                        <div class="mt-3 space-y-1.5">
-                            <div class="flex justify-between text-xs font-medium text-slate-600">
-                                <span>Progression du recouvrement annuel</span>
-                                <span x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></span>
-                            </div>
-                            <div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                                <div class="h-full rounded-full bg-indigo-600 transition-all duration-500"
-                                     :style="'width: ' + Math.min(100, Math.round((data.recoveryRate || data.yearlyRecoveryRate || 0) * 100)) + '%'"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- BILAN DU MOIS EN COURS -->
-                    <div x-show="activeTab === 'dual' || activeTab === 'monthly'"
-                         :class="activeTab === 'monthly' ? 'lg:col-span-2' : ''"
-                         class="card p-4 border-l-4 border-emerald-600 bg-gradient-to-br from-white to-emerald-50/20 shadow-sm flex flex-col justify-between">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">Mois en cours</span>
-                                <h3 class="text-lg font-bold text-slate-900 mt-1">Bilan Mensuel</h3>
-                            </div>
-                            <span class="text-2xl font-black text-emerald-600" x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></span>
-                        </div>
-
-                        <dl class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 text-center">
-                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                                <dt class="text-[10px] xl:text-xs text-slate-500">Encaissé</dt>
-                                <dd class="text-sm font-bold text-slate-900 mt-0.5" x-text="formatMoney(data.collectedThisMonth)"></dd>
-                            </div>
-                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                                <dt class="text-[10px] xl:text-xs text-slate-500">Attendu</dt>
-                                <dd class="text-sm font-bold text-slate-700 mt-0.5" x-text="formatMoney(data.expectedThisMonth || 0)"></dd>
-                            </div>
-                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                                <dt class="text-[10px] xl:text-xs text-slate-500">Taux</dt>
-                                <dd class="text-sm font-bold text-emerald-600 mt-0.5" x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></dd>
-                            </div>
-                        </dl>
-
-                        <div class="mt-3 space-y-1.5">
-                            <div class="flex justify-between text-xs font-medium text-slate-600">
-                                <span>Réalisation par rapport aux échéances du mois</span>
-                                <span x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></span>
-                            </div>
-                            <div class="h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                                <div class="h-full rounded-full bg-emerald-600 transition-all duration-500"
-                                     :style="'width: ' + Math.min(100, Math.round((data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0)) * 100)) + '%'"></div>
-                            </div>
-                        </div>
-                </div> <!-- Fin BILAN DU MOIS -->
-                </div> <!-- Fin Grille Haut -->
-
-                <!-- Diagrammes inférieurs (2 cartes) -->
-                <div class="flex justify-between gap-4 mt-4">
-
- <template x-if="!isLoading && data">
- <div class="card p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between flex-1">
- <p class="text-sm font-semibold text-slate-900">Recouvrement</p>
- <p class="text-xs text-slate-500 mt-0.5">Encaissé vs solde dû, année scolaire active.</p>
- <div class="mt-3 flex items-center gap-6">
- <svg viewBox="0 0 36 36" class="w-12 h-12 -rotate-90 shrink-0" role="img" aria-label="Part recouvrée du solde dû">
- <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="3.2"></circle>
- <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1E8E3E" stroke-width="3.2"
- stroke-linecap="round"
- :stroke-dasharray="(data.recoveryRate * 100) + ' ' + (100 - data.recoveryRate * 100)"></circle>
- </svg>
- <dl class="space-y-1.5 text-sm">
- <div class="flex items-center gap-2">
- <span class="w-2.5 h-2.5 rounded-full shrink-0 bg-success"></span>
- <dt class="text-slate-600">Encaissé</dt>
- <dd class="font-bold text-slate-900" x-text="formatPercent(data.recoveryRate)"></dd>
- </div>
- <div class="flex items-center gap-2">
- <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:#E5E7EB"></span>
- <dt class="text-slate-600">Solde dû</dt>
- <dd class="font-bold text-slate-900" x-text="formatPercent(1 - data.recoveryRate)"></dd>
- </div>
- </dl>
- </div>
- </div>
- </template>
-
- <template x-if="!isLoading && data">
- <div class="card p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between flex-1">
- <p class="text-sm font-semibold text-slate-900">Encaissements</p>
- <p class="text-xs text-slate-500 mt-0.5">Comparaison jour / mois / année.</p>
- <div class="mt-3 space-y-1.5">
- <div>
- <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
- <span>Aujourd'hui</span>
- <span class="font-semibold text-slate-900" x-text="formatMoney(data.collectedToday)"></span>
- </div>
- <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden">
- <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedToday) + '%'"></div>
- </div>
- </div>
- <div>
- <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
- <span>Ce mois</span>
- <span class="font-semibold text-slate-900" x-text="formatMoney(data.collectedThisMonth)"></span>
- </div>
- <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden">
- <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedThisMonth) + '%'"></div>
- </div>
- </div>
- <div>
- <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
- <span>Cette année</span>
- <span class="font-semibold text-slate-900" x-text="formatMoney(data.collectedThisYear)"></span>
- </div>
- <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden">
- <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedThisYear) + '%'"></div>
- </div>
- </div>
- </div>
- <p class="mt-2.5 pt-2 border-t border-slate-100 text-[11px] text-slate-500 leading-tight">
- Aujourd'hui représente <span class="font-semibold text-slate-700" x-text="pct(data.collectedToday, data.collectedThisMonth)"></span> du mois en cours ·
- ce mois représente <span class="font-semibold text-slate-700" x-text="pct(data.collectedThisMonth, data.collectedThisYear)"></span> de l'année.
- </p>
- </div>
- </template>
-                </div> <!-- Fin Grille Bas -->
-                </div> <!-- Fin du Bloc Supérieur -->
-
-                <!-- Bloc Inférieur (Derniers paiements) -->
-                <div class="w-full">
-                    <!-- Derniers paiements -->
-                    <div class="card relative h-full">
- <div class="p-6 border-b border-slate-200 bg-slate-50/50 rounded-t-xl flex items-center justify-between gap-4">
- <div>
- <p class="text-sm font-semibold text-slate-900">Derniers paiements</p>
- <p class="text-xs text-slate-500 mt-0.5">Les 10 versements les plus récents encaissés à la caisse.</p>
- </div>
- <div class="relative w-full max-w-xs">
- <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
- <icon name="search" class="w-4 h-4 text-slate-400" />
- </span>
- <input type="search" x-model="search" placeholder="Élève, matricule, reçu…"
- aria-label="Rechercher dans les derniers paiements"
- class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-sm shadow-sm focus:border-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- </div>
- </div>
-
- <div class="overflow-x-auto">
- <table class="w-full text-left border-collapse table-auto text-sm">
- <thead>
- <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <th class="py-3 px-3 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
- <th class="py-3 px-3 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Matricule</th>
- <th class="py-3 px-3 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Reçu N°</th>
- <th class="py-3 px-3 text-right whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
- <th class="py-3 px-3 uppercase tracking-wider text-slate-500 font-semibold">Mode</th>
- <th class="py-3 px-3 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
- <th class="py-3 px-3 w-12 uppercase tracking-wider text-slate-500 font-semibold"><span class="sr-only">Reçu PDF</span></th>
- </tr>
- </thead>
- <tbody class="divide-y divide-slate-100">
- <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="!isLoading && filteredPayments().length === 0" x-cloak>
- <td colspan="7">
- <empty-state icon="wallet" title="Aucun paiement récent."
- hint="Les encaissements de la caisse apparaîtront ici." />
- </td>
- </tr>
-
- <template x-for="payment in filteredPayments()" :key="payment.paymentId">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
- <td class="py-3 px-3">
- <span class="inline-flex items-center gap-2">
- <span class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center text-xs font-medium uppercase"
- x-text="initials(payment.studentFullName)"></span>
- <span class="font-medium text-slate-900" x-text="payment.studentFullName"></span>
- </span>
- </td>
- <td class="py-3 px-3 font-mono text-xs text-slate-500 whitespace-nowrap" x-text="payment.matricule"></td>
- <td class="py-3 px-3 font-mono text-xs text-slate-500 whitespace-nowrap" x-text="payment.receiptNumber"></td>
- <td class="py-3 px-3 text-right font-medium whitespace-nowrap" x-text="formatMoney(payment.amount)"></td>
- <td class="py-3 px-3"><badge variant="neutral" x-text="methodLabel(payment.method)"></badge></td>
- <td class="py-3 px-3 text-slate-500 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
-                                <td class="py-3 px-3 text-center whitespace-nowrap">
-                                    <button type="button"
-                                            x-on:click="previewReceipt(payment.paymentId, payment.receiptNumber)"
-                                            title="Ouvrir l'aperçu du reçu (PDF)"
-                                            class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-200 text-slate-700 hover:text-indigo-700 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
-                                        <icon name="document-text" class="w-4 h-4 text-indigo-600 shrink-0" />
-                                        <span class="whitespace-nowrap">Aperçu / Reçu</span>
-                                    </button>
-                                </td>
-                            </tr>
- </template>
- </tbody>
- </table>
-    </div>
-    </div>
-    </div>
-    </div>
-
-    <!-- Modale d'Aperçu PDF -->
-    <modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
-        <div class="space-y-4">
-            <!-- Bandeau d'astuce et ouverture rapide -->
-            <div x-show="pdfPreviewUrl" class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-900 text-xs">
-                <div class="flex items-center gap-2 font-medium">
-                    <icon name="document-text" class="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span>Astuce : Si l'aperçu ne s'affiche pas dans le cadre ci-dessous, vous pouvez l'ouvrir directement ou le télécharger.</span>
-                </div>
-                <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                    <button type="button" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-2xs transition-colors flex items-center gap-1.5">
-                        <icon name="external-link" class="w-3.5 h-3.5" />
-                        <span>Ouvrir dans un nouvel onglet</span>
-                    </button>
-                </div>
+                <p class="text-[11px] text-slate-500 mt-1">Garçons : <span class="font-semibold text-slate-700" x-text="analyticsData?.enrollments?.boys || 0"></span> | Filles : <span class="font-semibold text-slate-700" x-text="analyticsData?.enrollments?.girls || 0"></span></p>
             </div>
+            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                <icon name="users" class="w-5 h-5 text-indigo-600"></icon>
+            </div>
+        </div>
 
-            <template x-if="pdfPreviewUrl && !pdfLoadError">
-                <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden relative" style="height: 600px;">
-                    <iframe :src="pdfPreviewUrl" x-on:error="pdfLoadError = true" id="dash-pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du reçu"></iframe>
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="analyticsRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Enseignants actifs</p>
+                <p class="text-2xl font-bold text-slate-900 mt-1" x-text="analyticsData?.activeTeachers || 0"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                <icon name="book" class="w-5 h-5 text-indigo-600"></icon>
+            </div>
+        </div>
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="analyticsRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Taux de présence (Mois)</p>
+                <p class="text-2xl font-bold text-emerald-600 mt-1" x-text="formatPercent(analyticsData?.attendanceRate)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                <icon name="checkmark-circle" class="w-5 h-5 text-emerald-600"></icon>
+            </div>
+        </div>
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="analyticsRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Salles occupées</p>
+                <p class="text-2xl font-bold text-indigo-600 mt-1" x-text="formatPercent(analyticsData?.todayOccupancyRate)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                <icon name="home" class="w-5 h-5 text-indigo-600"></icon>
+            </div>
+        </div>
+
+        <!-- Finance (8 cartes) -->
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Solde Net</p>
+                <p class="text-2xl font-bold text-success mt-1" x-text="formatMoney(financeData?.realBalance)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                <icon name="cash" class="w-5 h-5 text-success"></icon>
+            </div>
+        </div>
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Encaissement (Année)</p>
+                <p class="text-2xl font-bold text-indigo-600 mt-1" x-text="formatMoney(financeData?.collectedThisYear)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                <icon name="wallet" class="w-5 h-5 text-indigo-600"></icon>
+            </div>
+        </div>
+        
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Décaissements</p>
+                <p class="text-2xl font-bold text-danger mt-1" x-text="formatMoney(financeData?.totalDisbursements)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
+                <icon name="arrow-down" class="w-5 h-5 text-danger"></icon>
+            </div>
+        </div>
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Reste à recouvrer</p>
+                <p class="text-2xl font-bold text-warning mt-1" x-text="formatMoney(financeData?.outstandingBalance)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+                <icon name="alert-circle" class="w-5 h-5 text-warning"></icon>
+            </div>
+        </div>
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Encaissement (Aujourd'hui)</p>
+                <p class="text-2xl font-bold text-indigo-600 mt-1" x-text="formatMoney(financeData?.collectedToday)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                <icon name="wallet" class="w-5 h-5 text-indigo-600"></icon>
+            </div>
+        </div>
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Encaissement (Mois)</p>
+                <p class="text-2xl font-bold text-indigo-600 mt-1" x-text="formatMoney(financeData?.collectedThisMonth)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                <icon name="wallet" class="w-5 h-5 text-indigo-600"></icon>
+            </div>
+        </div>
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Attendu (Mois)</p>
+                <p class="text-2xl font-bold text-slate-600 mt-1" x-text="formatMoney(financeData?.expectedThisMonth)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
+                <icon name="calendar" class="w-5 h-5 text-slate-500"></icon>
+            </div>
+        </div>
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Taux Recouvrement</p>
+                <p class="text-2xl font-bold text-emerald-600 mt-1" x-text="formatPercent(financeData?.recoveryRate)"></p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                <icon name="trending-up" class="w-5 h-5 text-emerald-600"></icon>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 2. SECTION BASSE - RESTRUCTURATION (2 colonnes 50/50) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- COLONNE GAUCHE : Vie Scolaire & Planning -->
+        <div class="w-full bg-white p-5 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="analyticsRole">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                <h2 class="text-base font-bold text-slate-900">Vie Scolaire & Planning</h2>
+            </div>
+            
+            <template x-if="isAnalyticsLoading">
+                <div class="w-full h-48 skeleton rounded-lg"></div>
+            </template>
+            <template x-if="!isAnalyticsLoading && analyticsData">
+                <div class="flex flex-col space-y-5">
+                    
+                    <!-- Graphique & Salles -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Donut Genre -->
+                        <div class="flex flex-col items-center justify-center bg-slate-50/80 rounded-xl p-4 border border-slate-100 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                             <div class="relative w-20 h-20 shrink-0 mb-3">
+                                 <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                                     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="4"></circle>
+                                     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1D4ED8" stroke-width="4" stroke-linecap="round" :stroke-dasharray="boysFraction() + ' ' + (100 - boysFraction())"></circle>
+                                     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#BE185D" stroke-width="4" stroke-linecap="round" :stroke-dasharray="girlsFraction() + ' ' + (100 - girlsFraction())" :stroke-dashoffset="-boysFraction()"></circle>
+                                 </svg>
+                             </div>
+                             <div class="w-full flex justify-between text-xs px-2">
+                                 <div class="flex items-center gap-1.5">
+                                     <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                                     <span class="text-slate-600 font-medium">G: <span class="font-bold text-slate-900" x-text="analyticsData.enrollments.boys"></span></span>
+                                 </div>
+                                 <div class="flex items-center gap-1.5">
+                                     <span class="w-2.5 h-2.5 rounded-full bg-pink-600"></span>
+                                     <span class="text-slate-600 font-medium">F: <span class="font-bold text-slate-900" x-text="analyticsData.enrollments.girls"></span></span>
+                                 </div>
+                             </div>
+                        </div>
+                        
+                        <!-- Indicateurs -->
+                        <div class="flex flex-col justify-center gap-3 w-full">
+                             <!-- Gauge Présence -->
+                             <div class="bg-emerald-50 px-4 py-3 rounded-xl border border-emerald-100 flex items-center justify-between gap-3 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                                 <div>
+                                     <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-wide block">Présence</span>
+                                     <span class="text-base font-black text-emerald-800" x-text="formatPercent(analyticsData.attendanceRate)"></span>
+                                 </div>
+                                 <div class="relative w-10 h-10 shrink-0">
+                                     <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#D1FAE5" stroke-width="4"></circle>
+                                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#059669" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(analyticsData.attendanceRate, 1) + ' 100'"></circle>
+                                     </svg>
+                                 </div>
+                             </div>
+                             <!-- Gauge Salles Occupées -->
+                             <div class="bg-indigo-50 px-4 py-3 rounded-xl border border-indigo-100 flex items-center justify-between gap-3 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                                 <div>
+                                     <span class="text-[10px] font-bold text-indigo-700 uppercase tracking-wide block">Salles Occupées</span>
+                                     <span class="text-base font-black text-indigo-800" x-text="formatPercent(analyticsData.todayOccupancyRate)"></span>
+                                 </div>
+                                 <div class="relative w-10 h-10 shrink-0">
+                                     <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E0E7FF" stroke-width="4"></circle>
+                                         <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(analyticsData.todayOccupancyRate, 1) + ' 100'"></circle>
+                                     </svg>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Prochains cours -->
+                    <div class="pt-3 border-t border-slate-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Prochains cours (Aujourd'hui)</p>
+                        </div>
+                        <div class="max-h-[160px] overflow-y-auto pr-1 scrollbar-hide">
+                            <ul class="space-y-2.5">
+                                <template x-for="(cls, idx) in analyticsData.nextClasses" :key="idx">
+                                    <li class="flex items-center gap-3 text-xs bg-slate-50/80 p-2.5 rounded-lg border border-slate-100">
+                                        <span class="font-mono font-semibold text-indigo-700 bg-indigo-100/50 px-2 py-1 rounded border border-indigo-100 shrink-0" x-text="cls.startTime"></span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-bold text-slate-800 truncate" x-text="cls.subjectName"></p>
+                                            <p class="text-[10px] text-slate-500 truncate mt-0.5" x-text="cls.teacherName"></p>
+                                        </div>
+                                        <span class="font-semibold text-slate-600 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-2xs shrink-0" x-text="cls.roomNumber"></span>
+                                    </li>
+                                </template>
+                                <template x-if="!analyticsData.nextClasses || analyticsData.nextClasses.length === 0">
+                                    <li class="text-xs text-slate-400 text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-200">Aucun cours à venir.</li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </template>
-            <div x-show="!pdfPreviewUrl || pdfLoadError" x-cloak class="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300" style="min-height: 400px;">
-                <icon name="document-text" class="w-12 h-12 text-slate-400 mb-3" />
-                <p class="text-sm font-medium text-slate-700">L'aperçu intégré ne s'affiche pas dans votre navigateur.</p>
-                <p class="text-xs text-slate-500 mt-1 mb-6 max-w-md">Votre navigateur peut restreindre l'affichage des PDF dans un cadre. Vous pouvez ouvrir le document dans un nouvel onglet ou le télécharger directement.</p>
-                <div class="flex flex-wrap justify-center gap-3">
-                    <button type="button" x-show="pdfPreviewUrl" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="btn-primary text-xs">
-                        <icon name="external-link" class="w-4 h-4" />
-                        <span>Ouvrir dans un nouvel onglet</span>
+        </div>
+
+        <!-- COLONNE DROITE : Trésorerie & Bilan -->
+        <div class="w-full bg-white p-5 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                <h2 class="text-base font-bold text-slate-900">Trésorerie & Bilan</h2>
+                <nav class="flex p-1 space-x-1 bg-slate-100 rounded-lg" role="tablist">
+                    <button type="button" role="tab" x-on:click="activeTab = 'synth'"
+                            :class="activeTab === 'synth' ? 'bg-white text-indigo-600 font-semibold shadow-xs' : 'text-slate-600 font-medium hover:text-slate-900'"
+                            class="px-3 py-1.5 rounded-md text-xs transition-all duration-200 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95">
+                        Synthèse
                     </button>
-                    <button type="button" x-on:click="downloadPreviewPdf()" class="btn-secondary text-xs">
-                        <icon name="download" class="w-4 h-4" />
-                        <span>Télécharger le fichier</span>
+                    <button type="button" role="tab" x-on:click="activeTab = 'expenses'"
+                            :class="activeTab === 'expenses' ? 'bg-white text-indigo-600 font-semibold shadow-xs' : 'text-slate-600 font-medium hover:text-slate-900'"
+                            class="px-3 py-1.5 rounded-md text-xs transition-all duration-200 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95">
+                        Décaissements
                     </button>
-                </div>
+                </nav>
             </div>
-            <div class="flex flex-wrap justify-end gap-2 pt-2 border-t border-slate-100">
-                <button type="button" x-on:click="closePdfPreview()" class="btn-secondary">Fermer</button>
-                <button type="button" x-show="pdfPreviewUrl" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="btn-secondary">
-                    <icon name="external-link" class="w-4 h-4" />
-                    <span>Ouvrir dans un nouvel onglet</span>
-                </button>
-                <button type="button" x-on:click="downloadPreviewPdf()" class="btn-secondary">
-                    <icon name="download" class="w-4 h-4" />
-                    <span>Télécharger</span>
-                </button>
-                <button type="button" x-on:click="printPreviewPdf()" class="btn-primary">
-                    <icon name="print" class="w-4 h-4" />
-                    <span>Imprimer</span>
-                </button>
+            
+            <template x-if="isFinanceLoading">
+                <div class="w-full h-48 skeleton rounded-lg"></div>
+            </template>
+            <template x-if="!isFinanceLoading && financeData">
+                <div>
+                    
+                    <!-- TAB 1 : SYNTHÈSE (CORRECTION OBLIGATOIRE APPLIQUÉE) -->
+                    <div x-show="activeTab === 'synth'" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        
+                        <!-- Bilan Annuel Global -->
+                        <div class="w-full h-auto p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                            <div>
+                                <span class="text-sm font-bold text-slate-900 block mb-2 uppercase">Exercice Actif</span>
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="relative w-14 h-14 shrink-0">
+                                        <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="4"></circle>
+                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(financeData.recoveryRate || financeData.yearlyRecoveryRate, 1) + ' 100'"></circle>
+                                        </svg>
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <span class="text-[10px] font-bold text-slate-700" x-text="formatPercent(financeData.recoveryRate || financeData.yearlyRecoveryRate)"></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide block">Recouvrement</span>
+                                        <span class="text-xl font-bold text-indigo-600 block" x-text="formatPercent(financeData.recoveryRate || financeData.yearlyRecoveryRate)"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col gap-2">
+                                <div class="bg-white p-2.5 rounded border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-slate-500 uppercase">Encaissé</span>
+                                    <span class="text-sm font-bold text-slate-900" x-text="formatMoney(financeData.collectedThisYear)"></span>
+                                </div>
+                                <div class="bg-white p-2.5 rounded border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-slate-500 uppercase">Attendu</span>
+                                    <span class="text-sm font-bold text-warning" x-text="formatMoney(financeData.outstandingBalance)"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bilan Mensuel -->
+                        <div class="w-full h-auto p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                            <div>
+                                <span class="text-sm font-bold text-slate-900 block mb-2 uppercase">Mois en cours</span>
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="relative w-14 h-14 shrink-0">
+                                        <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="4"></circle>
+                                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#059669" stroke-width="4" stroke-linecap="round" :stroke-dasharray="pctVal(financeData.monthlyRecoveryRate || (financeData.expectedThisMonth ? (financeData.collectedThisMonth / financeData.expectedThisMonth) : 0), 1) + ' 100'"></circle>
+                                        </svg>
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <span class="text-[10px] font-bold text-slate-700" x-text="formatPercent(financeData.monthlyRecoveryRate || (financeData.expectedThisMonth ? (financeData.collectedThisMonth / financeData.expectedThisMonth) : 0))"></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide block">Recouvrement</span>
+                                        <span class="text-xl font-bold text-emerald-600 block" x-text="formatPercent(financeData.monthlyRecoveryRate || (financeData.expectedThisMonth ? (financeData.collectedThisMonth / financeData.expectedThisMonth) : 0))"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col gap-2">
+                                <div class="bg-white p-2.5 rounded border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-slate-500 uppercase">Encaissé</span>
+                                    <span class="text-sm font-bold text-slate-900" x-text="formatMoney(financeData.collectedThisMonth)"></span>
+                                </div>
+                                <div class="bg-white p-2.5 rounded border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-slate-500 uppercase">Attendu</span>
+                                    <span class="text-sm font-bold text-slate-600" x-text="formatMoney(financeData.expectedThisMonth)"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+
+                    <!-- TAB 2 : DÉCAISSEMENTS -->
+                    <div x-show="activeTab === 'expenses'" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="w-full h-auto p-4 bg-slate-50 rounded-lg border border-slate-100 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                            <p class="text-xs font-bold uppercase text-slate-500 text-center tracking-wide mb-3">Entrées vs Sorties</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="text-slate-600 font-medium">Encaissements</span>
+                                        <span class="font-bold text-success" x-text="formatMoney(financeData.collectedThisYear)"></span>
+                                    </div>
+                                    <div class="h-2 rounded-full bg-slate-200"><div class="h-full rounded-full bg-success" :style="'width: ' + pctVal(financeData.collectedThisYear, financeData.collectedThisYear + financeData.totalDisbursements) + '%'"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="text-slate-600 font-medium">Décaissements</span>
+                                        <span class="font-bold text-danger" x-text="formatMoney(financeData.totalDisbursements)"></span>
+                                    </div>
+                                    <div class="h-2 rounded-full bg-slate-200"><div class="h-full rounded-full bg-danger" :style="'width: ' + pctVal(financeData.totalDisbursements, financeData.collectedThisYear + financeData.totalDisbursements) + '%'"></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-full h-auto p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col sm:flex-row items-center gap-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
+                            <!-- Graphique Donut -->
+                            <div class="relative w-24 h-24 shrink-0">
+                                <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90 drop-shadow-sm">
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="4"></circle>
+                                    <template x-for="segment in disbursementSegments()" :key="segment.name">
+                                        <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="segment.color" stroke-width="4" stroke-linecap="round" 
+                                                :stroke-dasharray="segment.fraction + ' ' + (100 - segment.fraction)" 
+                                                :stroke-dashoffset="segment.offset"
+                                                class="transition-all duration-500 ease-out"></circle>
+                                    </template>
+                                </svg>
+                            </div>
+                            
+                            <!-- Légende -->
+                            <div class="flex-1 w-full">
+                                <p class="text-xs font-bold uppercase text-slate-500 tracking-wide mb-2 text-center sm:text-left">Catégories</p>
+                                <template x-if="financeData.totalDisbursements > 0">
+                                    <ul class="grid grid-cols-1 gap-1.5 max-h-[100px] overflow-y-auto pr-1 scrollbar-hide">
+                                      <template x-for="(cat, idx) in financeData.disbursementsByCategory" :key="cat.category">
+                                        <li class="flex items-center justify-between text-[11px] bg-white px-2 py-1.5 rounded shadow-sm border border-slate-100">
+                                          <div class="flex items-center gap-1.5 min-w-0">
+                                            <span class="w-2 h-2 rounded-full shrink-0" :style="'background-color: ' + getCategoryColor(idx)"></span>
+                                            <span class="text-slate-600 font-medium truncate" x-text="cat.category"></span>
+                                          </div>
+                                          <span class="font-bold text-slate-900 ml-2 shrink-0" x-text="pct(cat.amount, financeData.totalDisbursements)"></span>
+                                        </li>
+                                      </template>
+                                    </ul>
+                                </template>
+                                <template x-if="!financeData.totalDisbursements || financeData.totalDisbursements === 0">
+                                    <p class="text-xs text-slate-400 italic text-center sm:text-left">Aucune dépense</p>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- 3. FLUX & DERNIERS PAIEMENTS -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm mt-6 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+        <div class="p-5 border-b border-slate-200 bg-slate-50/50 rounded-t-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+             <div>
+                 <p class="text-sm font-semibold text-slate-900">Derniers paiements</p>
+                 <p class="text-xs text-slate-500 mt-0.5">Les 10 versements les plus récents encaissés à la caisse.</p>
+             </div>
+             <div class="relative w-full sm:max-w-xs">
+                 <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
+                     <icon name="search" class="w-4 h-4 text-slate-400" />
+                 </span>
+                 <input type="search" x-model="search" placeholder="Élève, matricule, reçu…"
+                        class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-sm shadow-sm focus:border-primary focus:ring-primary transition-all duration-200">
+             </div>
+        </div>
+
+        <div class="overflow-x-auto">
+             <table class="w-full text-left border-collapse table-auto text-sm">
+                 <thead>
+                     <tr class="bg-slate-50 border-b border-slate-200">
+                         <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold text-xs">Élève</th>
+                         <th class="py-3 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold text-xs">Matricule</th>
+                         <th class="py-3 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold text-xs">Reçu N°</th>
+                         <th class="py-3 px-4 text-right whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold text-xs">Montant</th>
+                         <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold text-xs">Mode</th>
+                         <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold text-xs">Date</th>
+                         <th class="py-3 px-4 w-12 uppercase tracking-wider text-slate-500 font-semibold text-xs"><span class="sr-only">Action</span></th>
+                     </tr>
+                 </thead>
+                 <tbody class="divide-y divide-slate-100">
+                     <template x-if="isFinanceLoading">
+                         <tr><td colspan="7" class="p-6"><div class="skeleton h-10 w-full rounded-lg"></div></td></tr>
+                     </template>
+                     <template x-for="payment in filteredPayments()" :key="payment.paymentId">
+                         <tr class="hover:bg-slate-50 transition-colors">
+                             <td class="py-3 px-4">
+                                 <span class="inline-flex items-center gap-2.5">
+                                     <span class="w-8 h-8 shrink-0 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold uppercase"
+                                           x-text="initials(payment.studentFullName)"></span>
+                                     <span class="font-semibold text-slate-900" x-text="payment.studentFullName"></span>
+                                 </span>
+                             </td>
+                             <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap" x-text="payment.matricule"></td>
+                             <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap" x-text="payment.receiptNumber"></td>
+                             <td class="py-3 px-4 text-right font-bold text-slate-900 whitespace-nowrap" x-text="formatMoney(payment.amount)"></td>
+                             <td class="py-3 px-4"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-semibold" x-text="methodLabel(payment.method)"></span></td>
+                             <td class="py-3 px-4 text-slate-500 text-xs whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
+                             <td class="py-3 px-4 text-right whitespace-nowrap">
+                                 <button type="button" x-on:click="previewReceipt(payment.paymentId, payment.receiptNumber)"
+                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-indigo-50 hover:text-indigo-600 active:scale-95 text-slate-700 text-xs font-semibold shadow-sm transition-all duration-200">
+                                     <icon name="document-text" class="w-4 h-4 text-indigo-600" />
+                                     <span>Aperçu</span>
+                                 </button>
+                             </td>
+                         </tr>
+                     </template>
+                 </tbody>
+             </table>
+        </div>
+    </div>
+
+    <!-- Modale PDF ... -->
+    <modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
+        <div class="space-y-4">
+            <template x-if="pdfPreviewUrl && !pdfLoadError">
+                <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden" style="height: 600px;">
+                    <iframe :src="pdfPreviewUrl" x-on:error="pdfLoadError = true" id="dash-pdf-preview-frame" class="w-full h-full border-0"></iframe>
+                </div>
+            </template>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <button type="button" x-on:click="closePdfPreview()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95 transition-all duration-200">Fermer</button>
+                <button type="button" x-on:click="downloadPreviewPdf()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95 transition-all duration-200">Télécharger</button>
+                <button type="button" x-on:click="printPreviewPdf()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200">Imprimer</button>
             </div>
         </div>
     </modal-shell>
 </div>
-
-

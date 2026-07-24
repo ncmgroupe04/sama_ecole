@@ -75,7 +75,7 @@
  // text-primary (#6366F1 DEFAULT) sur bg-indigo-50 ne tient que 3.99:1 — sous le seuil
  // WCAG AA 4.5:1 (Volume 5 §8). primary-700 (7.07:1 sur indigo-50, 7.90:1 sur blanc) le
  // respecte largement sans changer la teinte de marque utilisée ailleurs (logo, avatars).
- const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-2xl transition-colors";
+ const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-200 active:scale-95";
  const string LinkIdle = $"{LinkBase} text-slate-600 hover:bg-slate-50 hover:text-primary-700";
  const string LinkActive = $"{LinkBase} text-primary-700 bg-indigo-50 font-medium";
  const string LinkSoon = $"{LinkBase} text-slate-400 cursor-not-allowed select-none";
@@ -212,10 +212,16 @@
  @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
  y compris sur la page Classes : une indication de position fausse vaut moins que pas
  d'indication du tout. Un vrai fil d'ariane viendra avec l'arborescence des modules. *@
- <h2 class="hidden sm:block text-sm font-medium text-slate-900">@ViewData["Title"]</h2>
+ <h2 class="hidden sm:block text-2xl font-bold tracking-tight text-primary-700">@ViewData["Title"]</h2>
  </div>
 
  <div class="flex items-center gap-4">
+ <!-- Widget Horloge Digitale -->
+ <div x-data="digitalClock()" class="hidden lg:flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xl font-medium" x-cloak>
+ <icon name="clock" class="w-6 h-6" />
+ <span x-text="currentTime"></span>
+ </div>
+
  @* Indicateur d'ANNÉE SCOLAIRE ACTIVE (JGK-C01) : rend visible sur chaque écran l'exercice de
  travail courant, dont dépendent inscriptions, frais, notes et finances (résolu serveur via
  SchoolYear.IsActive, voir activeSchoolYearBadge()). Cliquable pour le seul Directeur — vers
@@ -224,7 +230,7 @@
  <div x-data="activeSchoolYearBadge()" x-show="loaded && label" x-cloak class="hidden sm:block">
  <a x-show="isDirecteur" x-cloak href="/annees-scolaires"
  title="Année scolaire active — gérer dans Paramètres › Années"
- class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-primary-700 text-sm font-medium hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+ class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-primary-700 text-sm font-medium hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
  <icon name="calendar" class="w-4 h-4" />
  <span x-text="label"></span>
  </a>
@@ -270,7 +276,7 @@
  x-on:click="logout()"
  title="Se déconnecter"
  aria-label="Se déconnecter"
- class="flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-danger rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+ class="flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-danger rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
  <icon name="sign-out" class="w-6 h-6" />
  <span class="hidden sm:inline text-sm font-medium">Déconnexion</span>
  </button>

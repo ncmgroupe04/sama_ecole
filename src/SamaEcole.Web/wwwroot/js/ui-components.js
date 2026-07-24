@@ -166,4 +166,27 @@ document.addEventListener('alpine:init', () => {
             return this.options.find((option) => option.value === value)?.label ?? '';
         }
     }));
+
+    Alpine.data('digitalClock', () => ({
+        currentTime: '',
+        init() {
+            this.updateClock();
+            setInterval(() => this.updateClock(), 1000);
+        },
+        updateClock() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('fr-FR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const timeStr = now.toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            const capitalizedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+            this.currentTime = `${capitalizedDate} • ${timeStr}`;
+        }
+    }));
 });

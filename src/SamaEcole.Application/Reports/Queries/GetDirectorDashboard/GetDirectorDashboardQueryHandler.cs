@@ -88,10 +88,41 @@ public class GetDirectorDashboardQueryHandler(
             }
         }
 
+        // ---- Emploi du Temps du Jour ----
+        var todayDayOfWeek = now.DayOfWeek;
+        var todaySlots = await dbContext.ScheduleSlots.AsNoTracking()
+            .Where(s => s.DayOfWeek == todayDayOfWeek)
+            .Include(s => s.Teacher)
+            .Include(s => s.Subject)
+            .Include(s => s.Classroom)
+            .ToListAsync(cancellationToken);
+
+        var activeClassroomsCount = await dbContext.Classrooms.AsNoTracking().CountAsync(cancellationToken);
+        var expectedSlotsPerClassroom = 8;
+        var totalExpectedSlots = activeClassroomsCount * expectedSlotsPerClassroom;
+
+        decimal todayOccupancyRate = totalExpectedSlots > 0 ? Math.Min(1.0m, (decimal)todaySlots.Count / totalExpectedSlots) : 0m;
+
+        var nowTime = TimeOnly.FromTimeSpan(now.TimeOfDay);
+        var nextClasses = todaySlots
+            .Where(s => s.EndTime > nowTime)
+            .OrderBy(s => s.StartTime)
+            .Take(4)
+            .Select(s => new NextClassDto(
+                s.StartTime.ToString("HH:mm"),
+                s.EndTime.ToString("HH:mm"),
+                s.Subject.Name,
+                s.Teacher.FullName,
+                s.RoomNumber ?? "-",
+                s.Classroom.Name))
+            .ToList();
+
         return new DirectorDashboardDto(
             new EnrollmentStatsDto(boys + girls, boys, girls),
             activeTeachers,
             attendanceRate,
-            subscriptionSummary);
+            subscriptionSummary,
+            todayOccupancyRate,
+            nextClasses);
     }
 }

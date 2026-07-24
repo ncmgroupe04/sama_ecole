@@ -27,7 +27,10 @@ public record FinanceDashboardDto(
     decimal ExpectedThisYear = 0m,
     decimal YearlyRecoveryRate = 0m,
     decimal TotalDisbursements = 0m,
-    decimal RealBalance = 0m);
+    decimal RealBalance = 0m,
+    IReadOnlyList<DisbursementCategoryTotal>? DisbursementsByCategory = null);
+
+public record DisbursementCategoryTotal(string Category, decimal Amount);
 
 public record RecentPaymentDto(
     Guid PaymentId,
@@ -130,10 +133,15 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext dbContext, Ti
             
         var realBalance = collectedThisYear - totalDisbursements;
 
+        var disbursementsByCategory = await dbContext.Disbursements.AsNoTracking()
+            .GroupBy(d => d.Category)
+            .Select(g => new DisbursementCategoryTotal(g.Key.ToString(), g.Sum(d => d.Amount)))
+            .ToListAsync(cancellationToken);
+
         return new FinanceDashboardDto(
             collectedToday, collectedThisMonth, collectedThisYear,
             outstandingBalance, recoveryRate, recentPayments,
             expectedThisMonth, monthlyRecoveryRate, totalDue, recoveryRate,
-            totalDisbursements, realBalance);
+            totalDisbursements, realBalance, disbursementsByCategory);
     }
 }

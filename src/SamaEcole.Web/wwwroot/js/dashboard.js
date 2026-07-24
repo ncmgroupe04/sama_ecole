@@ -10,47 +10,73 @@ document.addEventListener('alpine:init', () => {
      * présence du mois, abonnement). Réservée au Directeur et au Super Admin : confort d'affichage, la
      * garde réelle est ReportsController ([Authorize(Roles = "Directeur,SuperAdmin")]) + la RLS.
      */
-    Alpine.data('dashboardAnalytics', () => ({
-        canView: window.auth.role === 'Directeur' || window.auth.role === 'SuperAdmin',
+    Alpine.data('mainDashboard', () => ({
+        analyticsRole: window.auth.role === 'Directeur' || window.auth.role === 'SuperAdmin',
+        financeRole: window.auth.role === 'Directeur' || window.auth.role === 'Finance',
 
-        isLoading: false,
-        error: null,
-        data: null,
+        isAnalyticsLoading: false,
+        analyticsError: null,
+        analyticsData: null,
+
+        isFinanceLoading: false,
+        financeError: null,
+        financeData: null,
+        
+        search: '',
+        activeTab: 'synth', // 'synth', 'expenses'
+
+        // Modale PDF
+        showPdfModal: false,
+        pdfPreviewUrl: null,
+        pdfPreviewTitle: '',
+        pdfDownloadName: '',
+        pdfLoadError: false,
 
         async init() {
-            if (this.canView) await this.load();
+            if (this.analyticsRole) this.loadAnalytics();
+            if (this.financeRole) this.loadFinance();
         },
 
-        async load() {
-            this.isLoading = true;
-            this.error = null;
+        async loadAnalytics() {
+            this.isAnalyticsLoading = true;
+            this.analyticsError = null;
             try {
-                this.data = await window.api.get('/reports/dashboard');
+                this.analyticsData = await window.api.get('/reports/dashboard');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement du tableau de bord.';
+                this.analyticsError = err.message || 'Erreur lors du chargement analytique.';
             } finally {
-                this.isLoading = false;
+                this.isAnalyticsLoading = false;
             }
         },
 
-        /** Taux de présence : « — » quand aucun appel n'a encore été saisi ce mois (attendanceRate null). */
+        async loadFinance() {
+            this.isFinanceLoading = true;
+            this.financeError = null;
+            try {
+                this.financeData = await window.api.get('/finance/dashboard');
+            } catch (err) {
+                this.financeError = err.message || 'Erreur lors du chargement financier.';
+            } finally {
+                this.isFinanceLoading = false;
+            }
+        },
+
+        // --- ANALYTICS HELPERS ---
         formatPercent(rate) {
             if (rate === null || rate === undefined) return '—';
             return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 }).format(rate);
         },
 
-        /** Valeur principale de la carte Abonnement : jours restants, ou un libellé si pas d'échéance. */
         subscriptionValue() {
-            const sub = this.data && this.data.subscription;
+            const sub = this.analyticsData && this.analyticsData.subscription;
             if (!sub) return '—';
             if (sub.daysRemaining === null || sub.daysRemaining === undefined) return 'En attente';
             if (sub.daysRemaining < 0) return 'Expiré';
             return `${sub.daysRemaining} j`;
         },
 
-        /** Statut lisible à côté de la valeur (plan + statut brut de l'abonnement). */
         subscriptionStatusLabel() {
-            const sub = this.data && this.data.subscription;
+            const sub = this.analyticsData && this.analyticsData.subscription;
             if (!sub) return '';
             const statusLabels = {
                 AwaitingPayment: 'En attente de paiement', Active: 'Actif',
@@ -59,65 +85,22 @@ document.addEventListener('alpine:init', () => {
             return `${sub.plan} · ${statusLabels[sub.status] || sub.status}`;
         },
 
-        /** Pourcentage affiché (ex. « 42 % ») ; « 0 % » sur un total vide plutôt qu'une division par zéro. */
-        pct(part, total) {
-            if (!total) return '0 %';
-            return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 })
-                .format(part / total);
-        },
-
-        /** Part EXACTE (non arrondie) des garçons dans l'effectif, en points sur 100 — alimente le
-         * cercle du donut (circonférence de 100 avec r = 15.9155), où un arrondi laisserait un espace
-         * visible entre les deux segments. */
         boysFraction() {
-            if (!this.data || !this.data.enrollments.total) return 0;
-            return (this.data.enrollments.boys / this.data.enrollments.total) * 100;
+            if (!this.analyticsData || !this.analyticsData.enrollments.total) return 0;
+            return (this.analyticsData.enrollments.boys / this.analyticsData.enrollments.total) * 100;
         },
 
         girlsFraction() {
-            if (!this.data || !this.data.enrollments.total) return 0;
-            return (this.data.enrollments.girls / this.data.enrollments.total) * 100;
-        }
-    }));
-
-    Alpine.data('dashboardView', () => ({
-        // Seuls le Directeur et la Finance pilotent la trésorerie (règle #4, comme la Caisse). Confort
-        // d'affichage : l'API garde (FinanceController.Dashboard, [Authorize(Roles = "Directeur,Finance")]).
-        canView: window.auth.role === 'Directeur' || window.auth.role === 'Finance',
-
-        isLoading: false,
-        error: null,
-        data: null,
-        search: '',
-        activeTab: 'dual', // 'dual' (côte à côte), 'annual' (bilan annuel), 'monthly' (bilan mensuel)
-
-        // Modale d'aperçu et d'impression du reçu officiel
-        showPdfModal: false,
-        pdfPreviewUrl: null,
-        pdfPreviewTitle: '',
-        pdfDownloadName: '',
-
-        async init() {
-            if (this.canView) await this.load();
+            if (!this.analyticsData || !this.analyticsData.enrollments.total) return 0;
+            return (this.analyticsData.enrollments.girls / this.analyticsData.enrollments.total) * 100;
         },
 
-        async load() {
-            this.isLoading = true;
-            this.error = null;
-            try {
-                this.data = await window.api.get('/finance/dashboard');
-            } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement du tableau de bord.';
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
+        // --- FINANCE HELPERS ---
         filteredPayments() {
-            if (!this.data) return [];
+            if (!this.financeData) return [];
             const q = this.search.trim().toLowerCase();
-            if (!q) return this.data.recentPayments;
-            return this.data.recentPayments.filter((p) =>
+            if (!q) return this.financeData.recentPayments;
+            return this.financeData.recentPayments.filter((p) =>
                 p.matricule.toLowerCase().includes(q) ||
                 p.studentFullName.toLowerCase().includes(q) ||
                 p.receiptNumber.toLowerCase().includes(q));
@@ -127,7 +110,6 @@ document.addEventListener('alpine:init', () => {
             this.search = '';
         },
 
-        /** Initiales pour l'avatar de ligne (ex. « Awa Ndiaye » → « AN »), même idiome que le profil de la sidebar. */
         initials(fullName) {
             return (fullName || '')
                 .split(' ')
@@ -143,28 +125,47 @@ document.addEventListener('alpine:init', () => {
             return labels[method] || method;
         },
 
-        /** FCFA : entiers, séparateur de milliers français. Pas de décimales — la monnaie n'en a pas. */
         formatMoney(amount) {
             if (amount === null || amount === undefined) return '—';
             return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + ' FCFA';
         },
 
-        formatPercent(rate) {
-            return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 }).format(rate || 0);
-        },
-
-        /** Pourcentage affiché (ex. « 42 % ») ; « 0 % » sur un dénominateur vide plutôt qu'une division par zéro. */
         pct(part, total) {
             if (!total) return '0 %';
             return new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 })
                 .format(part / total);
         },
 
-        /** Largeur de barre (0-100) relative au plus grand des trois montants comparés — jour/mois/année
-         * partagent donc une même échelle plutôt que chacune sa propre barre pleine. Un minimum de 2 %
-         * garde la barre visible (donc cliquable/lisible) même sur un montant nul. */
+        pctVal(part, total) {
+            if (!total) return 0;
+            return Math.min(100, Math.round((part / total) * 100));
+        },
+
+        getCategoryColor(index) {
+            const colors = ['#F59E0B', '#EF4444', '#8B5CF6', '#10B981', '#3B82F6', '#EC4899', '#6366F1'];
+            return colors[index % colors.length];
+        },
+
+        disbursementSegments() {
+            if (!this.financeData || !this.financeData.disbursementsByCategory || !this.financeData.totalDisbursements) return [];
+            let currentOffset = 0;
+            return this.financeData.disbursementsByCategory.map((cat, index) => {
+                const fraction = (cat.amount / this.financeData.totalDisbursements) * 100;
+                const segment = {
+                    fraction: fraction,
+                    offset: currentOffset,
+                    color: this.getCategoryColor(index),
+                    name: cat.category,
+                    amount: cat.amount
+                };
+                currentOffset -= fraction; // subtract because offset is inverted on SVG
+                return segment;
+            });
+        },
+
         barWidth(amount) {
-            const max = Math.max(this.data.collectedToday, this.data.collectedThisMonth, this.data.collectedThisYear, 1);
+            if (!this.financeData) return 2;
+            const max = Math.max(this.financeData.collectedToday, this.financeData.collectedThisMonth, this.financeData.collectedThisYear, 1);
             return Math.max(2, Math.round((amount / max) * 100));
         },
 
@@ -176,17 +177,12 @@ document.addEventListener('alpine:init', () => {
             return `${day}/${month}/${d.getFullYear()}`;
         },
 
-        /**
-         * Ouvre le reçu officiel en PDF dans une modale d'aperçu (avec impression ou téléchargement).
-         */
         async previewReceipt(paymentId, receiptNumber) {
-            // Nettoyage global : fermer toutes les modales actives (fiche élève, etc.) pour éviter la superposition
             if (window.closeAllModals) {
                 window.closeAllModals();
-                await new Promise(resolve => setTimeout(resolve, 150)); // Attendre la fin de la transition CSS de fermeture
+                await new Promise(resolve => setTimeout(resolve, 150));
             }
 
-            // Nettoyer tout ancien Blob URL avant de tenter un nouveau chargement.
             if (this.pdfPreviewUrl) {
                 URL.revokeObjectURL(this.pdfPreviewUrl);
                 this.pdfPreviewUrl = null;
@@ -200,8 +196,6 @@ document.addEventListener('alpine:init', () => {
                     throw new Error("L'identifiant de paiement est invalide (" + paymentId + ").");
                 }
                 const url = `/api/v1/finance/payments/${paymentId}/receipt/pdf`;
-                console.log("PDF URL:", url);
-
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                     await window.api.refreshOrRedirect();
                 }
@@ -221,12 +215,10 @@ document.addEventListener('alpine:init', () => {
                 }
                 const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
                 this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
-                console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
             } catch (err) {
                 console.error("Erreur previewReceipt (Dashboard):", err);
                 this.pdfLoadError = true;
             }
-            // La modale s'ouvre TOUJOURS, même en cas d'erreur : les boutons restent fonctionnels.
             this.showPdfModal = true;
         },
 
@@ -269,7 +261,6 @@ document.addEventListener('alpine:init', () => {
 
         async downloadDailyCashRegisterPdf(dateStr) {
             try {
-                // If no date provided, use today's date formatted as YYYY-MM-DD
                 let dateParam = '';
                 if (dateStr) {
                     dateParam = `?date=${dateStr}`;
@@ -282,7 +273,6 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 const url = `/api/v1/finance/daily-cash-register/pdf${dateParam}`;
-                
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                     await window.api.refreshOrRedirect();
                 }

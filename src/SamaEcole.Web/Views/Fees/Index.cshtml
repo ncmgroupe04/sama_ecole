@@ -428,7 +428,7 @@
             <div class="space-y-4 mt-4">
                 <div>
                     <label class="form-label" for="disb_date">Date</label>
-                    <input type="date" id="disb_date" x-model="disbursementForm.date" required class="input-field" />
+                    <date-field id="disb_date" model="disbursementForm.date" />
                 </div>
                 <div>
                     <label class="form-label" for="disb_beneficiary">Bénéficiaire</label>
@@ -440,13 +440,7 @@
                 </div>
                 <div>
                     <label class="form-label" for="disb_category">Catégorie</label>
-                    <select id="disb_category" x-model="disbursementForm.category" required class="input-field">
-                        <option value="Salaires">Salaires</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="Fournitures">Fournitures</option>
-                        <option value="ChargesFixes">Charges Fixes</option>
-                        <option value="Divers">Divers</option>
-                    </select>
+                    <select-field id="disb_category" model="disbursementForm.category" options-expr="[{value:'Salaires', label:'Salaires'}, {value:'Maintenance', label:'Maintenance'}, {value:'Fournitures', label:'Fournitures'}, {value:'ChargesFixes', label:'Charges Fixes'}, {value:'Divers', label:'Divers'}]" />
                 </div>
                 <div>
                     <label class="form-label" for="disb_amount">Montant</label>
@@ -454,12 +448,7 @@
                 </div>
                 <div>
                     <label class="form-label" for="disb_method">Mode de paiement</label>
-                    <select id="disb_method" x-model="disbursementForm.paymentMethod" required class="input-field">
-                        <option value="Cash">Espèces</option>
-                        <option value="Cheque">Chèque</option>
-                        <option value="Transfer">Virement</option>
-                        <option value="MobileMoney">Mobile Money</option>
-                    </select>
+                    <select-field id="disb_method" model="disbursementForm.paymentMethod" options-expr="[{value:'Cash', label:'Espèces'}, {value:'Cheque', label:'Chèque'}, {value:'Transfer', label:'Virement'}, {value:'MobileMoney', label:'Mobile Money'}]" />
                 </div>
             </div>
 

@@ -55,13 +55,9 @@ public class CreateScheduleSlotCommandHandler(
 
         if (overlappingSlot != null)
         {
-            var errorMessage = overlappingSlot.TeacherId == request.TeacherId
-                ? "L'enseignant a déjà cours sur cette plage horaire."
-                : "La classe a déjà cours sur cette plage horaire.";
-                
-            throw new SamaEcole.Application.Common.Exceptions.ValidationException(
-                new Dictionary<string, string[]> { { "global", new[] { errorMessage } } }
-            );
+            throw new ValidationException(new[] {
+                new FluentValidation.Results.ValidationFailure("global", "Le créneau chevauche un autre cours existant (salle occupée, enseignant occupé, ou classe occupée).")
+            });
         }
 
         var slot = new ScheduleSlot

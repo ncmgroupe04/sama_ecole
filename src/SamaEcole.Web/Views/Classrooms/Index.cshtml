@@ -19,25 +19,12 @@
     Le titre, les KPI, les filtres et la recherche restent accessibles à tout
     moment même après un long scroll dans la grille de classes.
     ═══════════════════════════════════════════════════════════════════════════ *@
- <div class="sticky top-0 z-50 -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 pt-8 lg:px-10 lg:pt-10 pb-5 bg-white border-b border-slate-200 shadow-sm">
-
-  @* Titre + Bouton *@
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-   <div>
-    <h1 class="text-jgk-title font-bold text-slate-900">Classes</h1>
-    <p class="text-jgk-subtitle text-slate-500 mt-1">Gérez l'arborescence et les capacités d'accueil.</p>
-   </div>
-   <button x-show="canManage" x-cloak @@click="openCreate()"
-    class="btn-primary group">
-    <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
-    Nouvelle classe
-   </button>
-  </div>
+ <div class="sticky top-0 z-50 -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 pt-8 lg:px-10 lg:pt-10 pb-4 bg-white border-b border-slate-200 shadow-sm">
 
   @await Html.PartialAsync("_ErrorBanner")
 
-  @* KPI badges + Filtres *@
-  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  @* KPI badges + Filtres + Actions *@
+  <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mt-2">
    <div class="flex gap-4">
     <div class="flex items-center gap-2 px-4 py-2 bg-white/80 rounded-xl border border-slate-200/80 shadow-sm">
      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-50 text-primary-600">
@@ -59,7 +46,7 @@
     </div>
    </div>
 
-   <div class="flex items-center gap-3">
+   <div class="flex flex-wrap items-center gap-3">
     <select-field model="levelFilter" aria-label="Filtrer par niveau"
      placeholder="Tous les niveaux" class="!my-0 h-10 !py-2 !px-3 rounded-xl w-40 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" options="levelFilterOptions" />
 
@@ -71,6 +58,12 @@
       aria-label="Rechercher une classe"
       class="input-field !my-0 h-10 !py-2 pl-9 pr-3 rounded-xl w-full transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
     </div>
+
+    <button x-show="canManage" x-cloak @@click="openCreate()"
+     class="btn-primary group h-10 px-4 ml-auto">
+     <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
+     Nouvelle classe
+    </button>
    </div>
   </div>
  </div>
@@ -116,7 +109,7 @@
     l'intérieur affichent une JAUGE de remplissage dynamique.
     ═══════════════════════════════════════════════════════════════════════════ *@
  <div x-show="!isLoading && groups.length > 0" x-cloak
-  class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
+  class="mt-8 pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
   <template x-for="cycle in mainGroups" :key="cycle.level">
    <div class="bg-white rounded-2xl border border-slate-200/80 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg h-full flex flex-col overflow-hidden">
 

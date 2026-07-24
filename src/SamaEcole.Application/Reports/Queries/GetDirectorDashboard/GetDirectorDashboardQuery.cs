@@ -22,9 +22,13 @@ public record EnrollmentStatsDto(int Total, int Boys, int Girls);
 /// </summary>
 public record SubscriptionSummaryDto(string Plan, string Status, DateOnly? ExpiresAt, int? DaysRemaining);
 
+public record NextClassDto(string StartTime, string EndTime, string SubjectName, string TeacherName, string RoomNumber, string ClassroomName);
+
 public record DirectorDashboardDto(
     EnrollmentStatsDto Enrollments,
     int ActiveTeachers,
     /// <summary>Taux (0..1) = (Présents + Retards) / total des lignes d'appel du mois. Null si aucun appel ce mois.</summary>
     decimal? AttendanceRate,
-    SubscriptionSummaryDto? Subscription);
+    SubscriptionSummaryDto? Subscription,
+    decimal TodayOccupancyRate = 0m,
+    IReadOnlyList<NextClassDto>? NextClasses = null);
