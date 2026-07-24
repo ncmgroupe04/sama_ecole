@@ -283,8 +283,19 @@ document.addEventListener('alpine:init', () => {
         pdfLoadError: false,
 
         async openPdfPreview(url, title, downloadName) {
+            // Nettoyage global : fermer toutes les modales actives
+            if (window.closeAllModals) window.closeAllModals();
+
+            // Nettoyer tout ancien Blob URL avant de tenter un nouveau chargement.
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = null;
+            }
             this.pdfError = null;
             this.pdfLoadError = false;
+            this.pdfPreviewTitle = title || 'Document officiel';
+            this.pdfDownloadName = downloadName || 'document.pdf';
+
             try {
                 if (!url || url.includes('undefined') || url.includes('null')) {
                     throw new Error(`L'identifiant ou l'URL du document est invalide (${url}).`);
@@ -300,29 +311,24 @@ document.addEventListener('alpine:init', () => {
                     credentials: 'same-origin'
                 });
                 if (!response.ok) {
-                    const errText = await response.text();
+                    const errText = await response.text().catch(() => '');
                     throw new Error(`Erreur ${response.status}: Téléchargement du document impossible (${errText || response.statusText}).`);
                 }
 
                 const rawBlob = await response.blob();
                 if (!rawBlob || rawBlob.size === 0) {
-                    throw new Error("Le fichier PDF reçu est vide (0 octet).");
+                    throw new Error("Le fichier PDF reçu est vide (0 octet). Veuillez réessayer.");
                 }
                 const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-                if (this.pdfPreviewUrl) {
-                    URL.revokeObjectURL(this.pdfPreviewUrl);
-                }
                 this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
                 console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
-                this.pdfPreviewTitle = title || 'Document officiel';
-                this.pdfDownloadName = downloadName || 'document.pdf';
-                this.showPdfModal = true;
             } catch (err) {
                 console.error("Erreur openPdfPreview (Caisse):", err);
                 this.pdfError = err.message || 'Erreur lors du chargement du document.';
                 this.pdfLoadError = true;
-                this.showPdfModal = true;
             }
+            // La modale s'ouvre TOUJOURS, même en cas d'erreur : les boutons restent fonctionnels.
+            this.showPdfModal = true;
         },
 
         closePdfPreview() {
@@ -337,7 +343,18 @@ document.addEventListener('alpine:init', () => {
         printPreviewPdf() {
             const iframe = document.getElementById('pdf-preview-frame');
             if (iframe && iframe.contentWindow) {
-                iframe.contentWindow.print();
+                try {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                } catch {
+                    if (this.pdfPreviewUrl) {
+                        const win = window.open(this.pdfPreviewUrl, '_blank');
+                        if (win) win.print();
+                    }
+                }
+            } else if (this.pdfPreviewUrl) {
+                const win = window.open(this.pdfPreviewUrl, '_blank');
+                if (win) win.print();
             }
         },
 

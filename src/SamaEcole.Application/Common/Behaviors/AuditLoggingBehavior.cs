@@ -51,7 +51,8 @@ public class AuditLoggingBehavior<TRequest, TResponse>(
         }
         catch (Exception ex)
         {
-            await TryAppendAsync(actorId.Value, success: false, failureReason: ex.Message, cancellationToken);
+            var truncatedReason = ex.ToString();
+            await TryAppendAsync(actorId.Value, success: false, failureReason: truncatedReason, cancellationToken);
 
             throw;
         }
@@ -71,6 +72,11 @@ public class AuditLoggingBehavior<TRequest, TResponse>(
         }
 
         var (module, action) = DescribeRequest(typeof(TRequest));
+
+        // Truncation pour éviter les PostgresException 22001 (value too long)
+        module = module.Length > 50 ? module[..47] + "..." : module;
+        action = action.Length > 100 ? action[..97] + "..." : action;
+        failureReason = failureReason?.Length > 3950 ? failureReason[..3950] + "..." : failureReason;
 
         dbContext.AuditLogs.Add(new AuditLog
         {

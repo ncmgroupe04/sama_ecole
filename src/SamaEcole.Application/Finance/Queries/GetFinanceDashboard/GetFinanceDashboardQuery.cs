@@ -25,7 +25,9 @@ public record FinanceDashboardDto(
     decimal ExpectedThisMonth = 0m,
     decimal MonthlyRecoveryRate = 0m,
     decimal ExpectedThisYear = 0m,
-    decimal YearlyRecoveryRate = 0m);
+    decimal YearlyRecoveryRate = 0m,
+    decimal TotalDisbursements = 0m,
+    decimal RealBalance = 0m);
 
 public record RecentPaymentDto(
     Guid PaymentId,
@@ -123,9 +125,15 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext dbContext, Ti
             .Take(RecentPaymentsCount)
             .ToListAsync(cancellationToken);
 
+        var totalDisbursements = await dbContext.Disbursements.AsNoTracking()
+            .SumAsync(d => d.Amount, cancellationToken);
+            
+        var realBalance = collectedThisYear - totalDisbursements;
+
         return new FinanceDashboardDto(
             collectedToday, collectedThisMonth, collectedThisYear,
             outstandingBalance, recoveryRate, recentPayments,
-            expectedThisMonth, monthlyRecoveryRate, totalDue, recoveryRate);
+            expectedThisMonth, monthlyRecoveryRate, totalDue, recoveryRate,
+            totalDisbursements, realBalance);
     }
 }

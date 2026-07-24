@@ -22,6 +22,12 @@ public class Payment : AuditableEntity, ITenantEntity
 
     public Guid EnrollmentId { get; set; }
 
+    public Guid? CashierSessionId { get; set; }
+
+    public PaymentCategory Category { get; set; } = PaymentCategory.Tuition;
+
+    public string? ReferencePeriod { get; set; }
+
     /// <summary>Montant versé, en FCFA. Strictement positif, et jamais supérieur au solde restant.</summary>
     public decimal Amount { get; set; }
 
@@ -48,4 +54,10 @@ public class Payment : AuditableEntity, ITenantEntity
     public Guid ReceivedByUserId { get; set; }
 
     public DateTimeOffset PaidAt { get; set; }
+
+    public Enrollment Enrollment { get; set; } = null!;
+
+    public CashierSession? CashierSession { get; set; }
+
+    public ICollection<PaymentBreakdown> Breakdowns { get; set; } = new List<PaymentBreakdown>();
 }

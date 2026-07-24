@@ -28,6 +28,15 @@ public class SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<SmtpEmailSen
 
         using var mail = new MailMessage(smtp.FromAddress, message.To, message.Subject, message.Body);
 
+        if (message.Attachments is { Count: > 0 })
+        {
+            foreach (var att in message.Attachments)
+            {
+                var stream = new MemoryStream(att.Content);
+                var attachment = new Attachment(stream, att.Filename, att.ContentType);
+                mail.Attachments.Add(attachment);
+            }
+        }
         try
         {
             await client.SendMailAsync(mail, cancellationToken);

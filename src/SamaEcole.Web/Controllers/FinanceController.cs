@@ -11,12 +11,16 @@ using SamaEcole.Application.Finance.Queries.GetFeeHistory;
 using SamaEcole.Application.Finance.Queries.GetFinanceDashboard;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceipt;
 using SamaEcole.Application.Finance.Queries.GetPaymentReceiptPdf;
+using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Finance.Queries.GetPayments;
 using SamaEcole.Application.Finance.Queries.GetStudentBalance;
 using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SamaEcole.Application.Finance.Commands.OpenCashierSession;
+using SamaEcole.Application.Finance.Commands.CloseCashierSession;
+using SamaEcole.Application.Finance.Queries.GetDailyClosingReportPdf;
 
 namespace SamaEcole.Web.Controllers;
 
@@ -228,6 +232,10 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
             Response.Headers["Content-Disposition"] = $"inline; filename=\"Recu-{result.ReceiptNumber}.pdf\"";
             return File(result.Content, "application/pdf");
         }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du reçu PDF pour le paiement {PaymentId}", id);
@@ -248,4 +256,70 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Dashboard(CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetFinanceDashboardQuery(), cancellationToken));
+
+    [HttpGet("daily-cash-register/pdf")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DailyCashRegisterPdf(
+        [FromQuery] DateOnly? date, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var targetDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+            var result = await mediator.Send(new GetDailyCashRegisterPdfQuery(targetDate), cancellationToken);
+            
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le contenu PDF généré est vide pour le journal de caisse du {Date}", targetDate);
+                return NotFound(new { message = "Le document PDF du journal de caisse est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Journal_Caisse_{targetDate:yyyy-MM-dd}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du journal de caisse PDF.");
+            return Problem(
+                detail: "Une erreur interne est survenue lors de la génération du document.", 
+                title: "Erreur de génération", 
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    // ------------------------------------------------------------------ Caisse Sessions
+
+    [HttpPost("sessions/open")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<Guid>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> OpenSession([FromBody] OpenCashierSessionCommand command, CancellationToken cancellationToken)
+    {
+        var sessionId = await mediator.Send(command, cancellationToken);
+        return Ok(sessionId);
+    }
+
+    [HttpPost("sessions/{id}/close")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<CloseCashierSessionResult>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> CloseSession(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new CloseCashierSessionCommand(id), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("sessions/{id}/closing-report")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileResult))]
+    public async Task<IActionResult> GetClosingReportPdf(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetDailyClosingReportPdfQuery(id), cancellationToken);
+        return File(result.Content, "application/pdf", result.FileName);
+    }
 }
+

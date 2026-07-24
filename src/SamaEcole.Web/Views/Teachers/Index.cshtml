@@ -16,15 +16,31 @@
  </div>
  </div>
 
- <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
- <stat-card label="Total enseignants" icon="users" accent="primary">
- <span x-text="totalCount">0</span>
- </stat-card>
+ <!-- Navigation principale : Liste vs Emploi du Temps -->
+ <div class="mt-6 flex bg-slate-100 p-1 rounded-xl w-fit">
+    <button type="button" x-on:click="activeTab = 'teachers'" 
+            :class="activeTab === 'teachers' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+        Liste des Enseignants
+    </button>
+    <button type="button" x-on:click="activeTab = 'schedule'" 
+            :class="activeTab === 'schedule' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+        Emploi du Temps
+    </button>
  </div>
 
  @await Html.PartialAsync("_ErrorBanner")
 
- <div class="card mt-6 relative">
+ <!-- ONGLET 1: Liste des Enseignants -->
+ <div x-show="activeTab === 'teachers'" x-cloak>
+     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+     <stat-card label="Total enseignants" icon="users" accent="primary">
+     <span x-text="totalCount">0</span>
+     </stat-card>
+     </div>
+
+     <div class="card mt-6 relative">
  <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
  <div class="flex flex-wrap items-center gap-3">
  <div class="relative">
@@ -427,4 +443,84 @@
  La fiche de <span class="font-medium text-slate-900" x-text="addedTeacherName"></span> a bien été ajoutée et figure désormais dans la liste.
  </confirm-dialog-body>
  </modal-shell>
+ </div> <!-- Fin ONGLET 1 -->
+
+ <!-- ONGLET 2: Emploi du Temps -->
+ <div x-show="activeTab === 'schedule'" x-cloak>
+    <div class="flex items-center justify-between mt-6">
+        <h2 class="text-lg font-bold text-slate-900">Emploi du Temps</h2>
+        <div class="flex items-center gap-4">
+            <!-- Toggle Vue Enseignant / Vue Classe -->
+            <div class="flex bg-slate-100 p-1 rounded-xl">
+                <button type="button" x-on:click="scheduleViewMode = 'teacher'; loadSchedule()" 
+                        :class="scheduleViewMode === 'teacher' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900'"
+                        class="px-3 py-1.5 text-xs font-medium rounded-lg">Par Enseignant</button>
+                <button type="button" x-on:click="scheduleViewMode = 'classroom'; loadSchedule()" 
+                        :class="scheduleViewMode === 'classroom' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900'"
+                        class="px-3 py-1.5 text-xs font-medium rounded-lg">Par Classe</button>
+            </div>
+            
+            <!-- Sélecteur d'entité -->
+            <div x-show="scheduleViewMode === 'teacher'" class="w-64">
+                <select-field model="selectedScheduleTeacherId" placeholder="Choisir un enseignant..."
+                        options-expr="teachers.map(t => ({value: t.id, label: t.fullName}))" />
+                </div>
+                <div x-show="scheduleViewMode === 'teacher'">
+                    <label class="form-label" for="sched_class">Classe</label>
+                    <select-field model="scheduleForm.classroomId" required="true"
+                        options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
+                </div>
+                <div>
+                    <label class="form-label" for="sched_subject">Matière</label>
+                    <select-field model="scheduleForm.subjectId" required="true"
+                        options-expr="subjects.map(s => ({value: s.id, label: s.name}))" />
+                </div>
+                <div>
+                    <label class="form-label" for="sched_day">Jour</label>
+                    <select id="sched_day" x-model.number="scheduleForm.dayOfWeek" required class="input-field">
+                        <option value="1">Lundi</option>
+                        <option value="2">Mardi</option>
+                        <option value="3">Mercredi</option>
+                        <option value="4">Jeudi</option>
+                        <option value="5">Vendredi</option>
+                        <option value="6">Samedi</option>
+                    </select>
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="form-label" for="sched_start">Heure de début</label>
+                        <input type="time" id="sched_start" x-model="scheduleForm.startTime" required class="input-field" />
+                    </div>
+                    <div class="flex-1">
+                        <label class="form-label" for="sched_end">Heure de fin</label>
+                        <input type="time" id="sched_end" x-model="scheduleForm.endTime" required class="input-field" />
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label" for="sched_room">Salle (optionnel)</label>
+                    <input type="text" id="sched_room" x-model="scheduleForm.roomNumber" class="input-field" placeholder="Ex: Salle 12" />
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-on:click="closeCreateScheduleSlot()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isSubmittingSchedule" class="btn-primary">
+                    <span x-text="isSubmittingSchedule ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Modale : Supprimer un créneau -->
+    <modal-shell open="deletingScheduleSlot" on-close="closeDeleteScheduleSlot()" size="md">
+        <modal-title>Supprimer ce créneau</modal-title>
+        <modal-subtitle>Confirmez-vous la suppression de ce créneau ?</modal-subtitle>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" x-on:click="closeDeleteScheduleSlot()" class="btn-secondary">Annuler</button>
+            <button type="button" x-on:click="confirmDeleteScheduleSlot()" :disabled="isDeletingSchedule" class="btn-danger">
+                <span x-text="isDeletingSchedule ? 'Suppression...' : 'Supprimer'"></span>
+            </button>
+        </div>
+    </modal-shell>
+ </div>
 </div>

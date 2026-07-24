@@ -39,6 +39,16 @@ public class RecordPaymentCommandHandler(
 
         return await dbContext.ExecuteInTransactionAsync(async ct =>
         {
+            var activeSession = await dbContext.CashierSessions
+                .FirstOrDefaultAsync(s => s.CashierId == actorId && s.Status == CashierSessionStatus.Open, ct);
+
+            if (activeSession == null)
+            {
+                throw new ValidationException([
+                    new ValidationFailure("CashierSession", "Aucune session de caisse ouverte pour cet utilisateur.")
+                ]);
+            }
+
             // Inscription chargée SUIVIE (pas AsNoTracking) : c'est le xmin lu ici qui sert de jeton
             // optimiste au SaveChanges. Le Global Query Filter + la RLS bornent à l'école courante :
             // encaisser sur une inscription d'une autre école renvoie 404, jamais un versement silencieux.
@@ -82,6 +92,9 @@ public class RecordPaymentCommandHandler(
             {
                 SchoolId = schoolId,
                 EnrollmentId = enrollment.Id,
+                CashierSessionId = activeSession.Id,
+                Category = request.Category,
+                ReferencePeriod = request.ReferencePeriod,
                 Amount = request.Amount,
                 Method = request.Method,
                 Status = status,
@@ -90,6 +103,19 @@ public class RecordPaymentCommandHandler(
                 ReceivedByUserId = actorId,
                 PaidAt = timeProvider.GetUtcNow()
             };
+
+            if (request.Breakdowns != null && request.Breakdowns.Any())
+            {
+                foreach (var breakdown in request.Breakdowns)
+                {
+                    payment.Breakdowns.Add(new PaymentBreakdown
+                    {
+                        FeeCategoryId = breakdown.FeeCategoryId,
+                        AmountAllocated = breakdown.AmountAllocated
+                    });
+                }
+            }
+
             dbContext.Payments.Add(payment);
 
             // L'écriture qui compte pour la concurrence : UPDATE enrollments ... WHERE xmin = <valeur lue>.

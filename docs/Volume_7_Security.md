@@ -204,7 +204,7 @@ Fermé par défaut sur chaque établissement : le Directeur doit l'activer expli
 | Action | Directeur | Enseignant |
 |---|---|---|
 | Voir | ✔ | ✔ |
-| Saisir | ✖ | ✔ |
+| Saisir | ✔ | ✔ |
 | Modifier | ✔ | ✔ * |
 | Valider / Publier | ✔ | ✖ |
 

@@ -1,5 +1,6 @@
 using System.Net.Http;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Infrastructure.Documents;
 using SamaEcole.Infrastructure.Files;
 using SamaEcole.Infrastructure.Media;
@@ -45,6 +46,9 @@ public static class DependencyInjection
         // Référence de suivi d'une demande d'inscription self-service (ticket JGK-I01).
         services.AddSingleton<IRegistrationReferenceGenerator, RegistrationReferenceGenerator>();
 
+        services.AddSingleton<IQrCodeService, SamaEcole.Infrastructure.Services.QrCodeService>();
+
+
         // Envoi d'e-mails transactionnels (ticket JGK-G03, incl. le mot de passe provisoire du
         // Directeur — JGK-B01). Development : LoggingEmailSender, qui journalise en clair (pratique en
         // local, voir sa doc). Hors Development : SmtpEmailSender réel, et l'absence de configuration
@@ -56,16 +60,22 @@ public static class DependencyInjection
         if (isDevelopment)
         {
             services.AddSingleton<IEmailSender, LoggingEmailSender>();
+            services.AddSingleton<IWhatsAppSender, LoggingWhatsAppSender>();
         }
         else
         {
             EmailSenderGuard.EnsureEmailSenderIsConfigured(smtpOptions, isDevelopment);
             services.AddSingleton<IEmailSender, SmtpEmailSender>();
+            // Fallback pour WhatsApp en production tant que Twilio n'est pas implémenté
+            services.AddSingleton<IWhatsAppSender, LoggingWhatsAppSender>();
         }
 
         // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02) et certificat d'inscription (Axe 2). Sans état : des singletons suffisent.
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
         services.AddSingleton<IPaymentReceiptPdfGenerator, PaymentReceiptPdfGenerator>();
+        services.AddSingleton<IDailyCashRegisterPdfGenerator, DailyCashRegisterPdfGenerator>();
+        services.AddSingleton<IDailyClosingReportPdfGenerator, SamaEcole.Infrastructure.Documents.DailyClosingReportPdfGenerator>();
+        services.AddSingleton<ISchoolCardPdfGenerator, SamaEcole.Infrastructure.Documents.SchoolCardPdfGenerator>();
         services.AddSingleton<IEnrollmentCertificatePdfGenerator, EnrollmentCertificatePdfGenerator>();
 
         // Bulletin de notes PDF (ticket JGK-G03) — même moteur QuestPDF, même convention.
@@ -73,6 +83,7 @@ public static class DependencyInjection
 
         // Bulletins de classe fusionnés en un seul PDF, pour l'impression en lot — même moteur QuestPDF.
         services.AddSingleton<IClassBulletinsPdfGenerator, ClassBulletinsPdfGenerator>();
+        services.AddSingleton<IClassDeliberationPdfGenerator, ClassDeliberationPdfGenerator>();
 
         // Rapport d'assiduité PDF (ticket JGK-R03) — même moteur QuestPDF, sans état.
         services.AddSingleton<IAttendanceReportPdfGenerator, AttendanceReportPdfGenerator>();

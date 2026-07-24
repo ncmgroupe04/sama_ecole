@@ -21,7 +21,7 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('gradesView', () => ({
-        canEnterGrades: window.auth.role === 'Enseignant',
+        canEnterGrades: window.auth.role === 'Enseignant' || window.auth.role === 'Directeur',
         canCorrectGrades: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
         // Télécharger les bulletins de la classe (ZIP ou PDF fusionné) est ouvert au Directeur, à
@@ -38,6 +38,7 @@ document.addEventListener('alpine:init', () => {
         error: null,
 
         downloadingClassBulletins: false,
+        downloadingClassDeliberation: false,
         classBulletinsError: null,
 
         selectedClassroomId: '',
@@ -258,6 +259,33 @@ document.addEventListener('alpine:init', () => {
                 this.classBulletinsError = (err && err.message) || 'Téléchargement des bulletins impossible.';
             } finally {
                 this.downloadingClassBulletins = false;
+            }
+        },
+
+        async downloadClassDeliberationPdf() {
+            if (!this.hasClassAndTerm) return;
+            this.classBulletinsError = null;
+            this.downloadingClassDeliberation = true;
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch(
+                    `/api/v1/report-cards/class-deliberation/pdf?classroomId=${this.selectedClassroomId}&termId=${this.selectedTermId}`,
+                    {
+                        headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                        credentials: 'same-origin'
+                    });
+
+                if (!response.ok) throw await window.api.toError(response);
+
+                const blob = await response.blob();
+                this.triggerDownload(blob, `PV_Deliberation_${this.classNameFor(this.selectedClassroomId)}.pdf`);
+            } catch (err) {
+                this.classBulletinsError = (err && err.message) || 'Téléchargement du PV de délibération impossible.';
+            } finally {
+                this.downloadingClassDeliberation = false;
             }
         },
 

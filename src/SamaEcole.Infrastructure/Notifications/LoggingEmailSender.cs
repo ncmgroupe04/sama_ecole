@@ -17,10 +17,14 @@ public class LoggingEmailSender(ILogger<LoggingEmailSender> logger) : IEmailSend
 {
     public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
     {
+        var attachmentInfo = message.Attachments is { Count: > 0 }
+            ? $"\nPièces jointes : {message.Attachments.Count} fichier(s) joint(s)"
+            : string.Empty;
+
         logger.LogWarning(
             "E-mail NON ENVOYÉ (aucun adaptateur SMTP configuré — ticket JGK-G03).\n" +
-            "À : {To}\nObjet : {Subject}\n{Body}",
-            message.To, message.Subject, message.Body);
+            "À : {To}\nObjet : {Subject}\n{Body}{AttachmentInfo}",
+            message.To, message.Subject, message.Body, attachmentInfo);
 
         return Task.CompletedTask;
     }

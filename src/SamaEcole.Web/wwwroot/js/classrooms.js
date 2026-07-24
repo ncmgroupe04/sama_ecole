@@ -346,6 +346,33 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        // ------------------------------------------------------------ Téléchargement Cartes Scolaires
+        
+        async downloadSchoolCards(classroom) {
+            try {
+                const response = await fetch(`/api/v1/classrooms/${classroom.id}/school-cards`, {
+                    headers: { 'Authorization': `Bearer ${window.auth.getToken()}` }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Erreur lors de la génération des cartes scolaires.');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Cartes_Scolaires_${classroom.name}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error(err);
+                alert('Impossible de télécharger les cartes scolaires. Vérifiez qu\'il y a bien des élèves inscrits dans cette classe pour l\'année en cours.');
+            }
+        },
+
         // Utilities
         getTotalCapacity() {
             return this.classrooms.reduce((sum, c) => sum + (c.capacity || 0), 0);

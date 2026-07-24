@@ -37,8 +37,14 @@ public interface IApplicationDbContext
     /// <summary>Encaissements de caisse (ticket JGK-F02). Le solde vit sur l'inscription (verrou optimiste xmin).</summary>
     DbSet<Payment> Payments { get; }
 
+    DbSet<CashierSession> CashierSessions { get; }
+
+    DbSet<PaymentBreakdown> PaymentBreakdowns { get; }
+
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
+    DbSet<ScheduleSlot> ScheduleSlots { get; }
+    DbSet<Disbursement> Disbursements { get; }
 
     /// <summary>
     /// Demandes d'inscription self-service (ticket JGK-I01) : table plateforme (hors RLS/tenant) qui

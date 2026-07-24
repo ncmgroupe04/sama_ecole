@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SamaEcole.Application.Common.Exceptions;
 
 namespace SamaEcole.Application.Subscriptions.Queries.GetSubscriptionPayments;
 
@@ -20,8 +21,16 @@ public class GetSubscriptionPaymentsQueryHandler(IApplicationDbContext dbContext
         // même idiome que InitiateSubscriptionPaymentHandler.
         var subscription = await dbContext.Subscriptions
             .AsNoTracking()
-            .SingleOrDefaultAsync(s => s.SchoolId == schoolId, cancellationToken)
-            ?? throw new KeyNotFoundException("Aucun abonnement associé à votre établissement.");
+            .SingleOrDefaultAsync(s => s.SchoolId == schoolId, cancellationToken);
+
+        if (subscription == null)
+        {
+            return new PaginatedSubscriptionPayments(
+                new List<SubscriptionPaymentListItem>(), 0, request.Page, request.PageSize,
+                SamaEcole.Domain.Enums.SubscriptionStatus.AwaitingPayment,
+                SamaEcole.Domain.Enums.SubscriptionPlan.Standard,
+                null);
+        }
 
         // SubscriptionPayment, lui, EST une ITenantEntity : Global Query Filter + policy RLS cantonnent
         // déjà la lecture à l'école du JWT (même raisonnement que GetAuditLogsQueryHandler).

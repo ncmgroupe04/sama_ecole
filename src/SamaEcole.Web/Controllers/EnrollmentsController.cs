@@ -77,6 +77,10 @@ public class EnrollmentsController(ISender mediator, ILogger<EnrollmentsControll
             Response.Headers["Content-Disposition"] = $"inline; filename=\"Recu-{result.ReceiptNumber}.pdf\"";
             return File(result.Content, "application/pdf");
         }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du reçu d'inscription PDF pour {EnrollmentId}", id);
@@ -107,6 +111,10 @@ public class EnrollmentsController(ISender mediator, ILogger<EnrollmentsControll
 
             Response.Headers["Content-Disposition"] = $"inline; filename=\"Certificat-{result.CertificateNumber}.pdf\"";
             return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
         }
         catch (Exception ex)
         {

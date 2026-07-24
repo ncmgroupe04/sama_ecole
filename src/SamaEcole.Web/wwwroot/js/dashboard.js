@@ -180,7 +180,21 @@ document.addEventListener('alpine:init', () => {
          * Ouvre le reçu officiel en PDF dans une modale d'aperçu (avec impression ou téléchargement).
          */
         async previewReceipt(paymentId, receiptNumber) {
+            // Nettoyage global : fermer toutes les modales actives (fiche élève, etc.) pour éviter la superposition
+            if (window.closeAllModals) {
+                window.closeAllModals();
+                await new Promise(resolve => setTimeout(resolve, 150)); // Attendre la fin de la transition CSS de fermeture
+            }
+
+            // Nettoyer tout ancien Blob URL avant de tenter un nouveau chargement.
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = null;
+            }
             this.pdfLoadError = false;
+            this.pdfPreviewTitle = `Reçu officiel n° ${receiptNumber}`;
+            this.pdfDownloadName = `Recu-${receiptNumber}.pdf`;
+
             try {
                 if (!paymentId || paymentId === 'undefined' || paymentId === 'null') {
                     throw new Error("L'identifiant de paiement est invalide (" + paymentId + ").");
@@ -197,26 +211,23 @@ document.addEventListener('alpine:init', () => {
                     credentials: 'same-origin'
                 });
                 if (!response.ok) {
-                    const errText = await response.text();
+                    const errText = await response.text().catch(() => '');
                     throw new Error(`Erreur ${response.status}: Téléchargement du document impossible (${errText || response.statusText}).`);
                 }
 
                 const rawBlob = await response.blob();
                 if (!rawBlob || rawBlob.size === 0) {
-                    throw new Error("Le document PDF reçu est vide (0 octet).");
+                    throw new Error("Le document PDF reçu est vide (0 octet). Veuillez réessayer.");
                 }
                 const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-                if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
                 this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
                 console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
-                this.pdfPreviewTitle = `Reçu officiel n° ${receiptNumber}`;
-                this.pdfDownloadName = `Recu-${receiptNumber}.pdf`;
-                this.showPdfModal = true;
             } catch (err) {
                 console.error("Erreur previewReceipt (Dashboard):", err);
                 this.pdfLoadError = true;
-                this.showPdfModal = true;
             }
+            // La modale s'ouvre TOUJOURS, même en cas d'erreur : les boutons restent fonctionnels.
+            this.showPdfModal = true;
         },
 
         closePdfPreview() {
@@ -230,7 +241,20 @@ document.addEventListener('alpine:init', () => {
 
         printPreviewPdf() {
             const iframe = document.getElementById('dash-pdf-preview-frame');
-            if (iframe && iframe.contentWindow) iframe.contentWindow.print();
+            if (iframe && iframe.contentWindow) {
+                try {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                } catch {
+                    if (this.pdfPreviewUrl) {
+                        const win = window.open(this.pdfPreviewUrl, '_blank');
+                        if (win) win.print();
+                    }
+                }
+            } else if (this.pdfPreviewUrl) {
+                const win = window.open(this.pdfPreviewUrl, '_blank');
+                if (win) win.print();
+            }
         },
 
         downloadPreviewPdf() {
@@ -241,6 +265,58 @@ document.addEventListener('alpine:init', () => {
             document.body.appendChild(link);
             link.click();
             link.remove();
+        },
+
+        async downloadDailyCashRegisterPdf(dateStr) {
+            try {
+                // If no date provided, use today's date formatted as YYYY-MM-DD
+                let dateParam = '';
+                if (dateStr) {
+                    dateParam = `?date=${dateStr}`;
+                } else {
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    dateParam = `?date=${yyyy}-${mm}-${dd}`;
+                }
+
+                const url = `/api/v1/finance/daily-cash-register/pdf${dateParam}`;
+                
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch(url, {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) {
+                    const errText = await response.text().catch(() => '');
+                    throw new Error(`Erreur ${response.status}: Impossible de générer le journal de caisse (${errText || response.statusText}).`);
+                }
+
+                const rawBlob = await response.blob();
+                if (!rawBlob || rawBlob.size === 0) {
+                    throw new Error("Le document PDF généré est vide.");
+                }
+                
+                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `Journal_Caisse_${dateParam.replace('?date=', '')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+            } catch (err) {
+                console.error("Erreur downloadDailyCashRegisterPdf:", err);
+                alert(err.message || "Une erreur est survenue lors du téléchargement du journal de caisse.");
+            }
         }
     }));
 });

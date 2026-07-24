@@ -24,19 +24,17 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
     /// </list>
     /// </summary>
     private const string ContentSecurityPolicy =
-        "default-src 'self' blob: data:; " +
-        "script-src 'self' 'unsafe-eval' blob: data:; " +
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-eval'; " +
         "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' https: data: blob:; " +
+        "img-src 'self' https: data:; " +
         "font-src 'self' data:; " +
-        "connect-src 'self' blob: data:; " +
-        "frame-src 'self' blob: data: chrome-extension: edge:; " +
-        "object-src 'self' blob: data: chrome-extension: edge:; " +
-        "worker-src 'self' blob: data: chrome-extension: edge:; " +
-        "child-src 'self' blob: data: chrome-extension: edge:; " +
+        "connect-src 'self'; " +
+        "frame-src 'self' blob:; " +
+        "object-src 'none'; " +
         "base-uri 'self'; " +
         "form-action 'self'; " +
-        "frame-ancestors 'self' blob: data:";
+        "frame-ancestors 'none';";
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -46,9 +44,10 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
         // deviendrait un vecteur XSS).
         headers["X-Content-Type-Options"] = "nosniff";
 
-        // L'application permet l'affichage dans une iframe du même domaine (SAMEORIGIN) afin de
-        // supporter la prévisualisation des reçus et attestations PDF dans les modales.
-        headers["X-Frame-Options"] = "SAMEORIGIN";
+        // L'application bloque strictement l'affichage en iframe (DENY).
+        // La prévisualisation des PDF contourne cette restriction sans amoindrir la sécurité globale
+        // du site en convertissant d'abord le flux binaire en Blob URL 100 % local (côté navigateur).
+        headers["X-Frame-Options"] = "DENY";
 
         // Obsolète pour les navigateurs récents (qui s'appuient sur la CSP) mais encore lu par
         // d'anciens moteurs — exigé par le ticket JGK-F01.

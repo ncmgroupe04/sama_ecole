@@ -1,5 +1,7 @@
 using System.Text;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 using SamaEcole.Application.Enrollments;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Infrastructure.Documents;
@@ -70,7 +72,7 @@ public class ReceiptPdfGeneratorTests
     [Fact]
     public void Generate_Produces_A_Valid_Non_Trivial_Pdf()
     {
-        var pdf = new ReceiptPdfGenerator().Generate(Receipt(), logo: null);
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(Receipt(), logo: null);
 
         ShouldBeAValidPdf(pdf);
         pdf.Length.Should().BeGreaterThan(1000, "un reçu complet n'est pas un fichier vide");
@@ -79,7 +81,7 @@ public class ReceiptPdfGeneratorTests
     [Fact]
     public void Generate_Is_Robust_To_A_Class_Without_Any_Fees()
     {
-        var pdf = new ReceiptPdfGenerator().Generate(
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(
             Receipt(lines: new List<EnrollmentFeeLineDto>()), logo: null);
 
         ShouldBeAValidPdf(pdf);
@@ -88,7 +90,7 @@ public class ReceiptPdfGeneratorTests
     [Fact]
     public void Generate_Is_Robust_To_Missing_Phone_And_City()
     {
-        var pdf = new ReceiptPdfGenerator().Generate(
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(
             Receipt(phone: null, city: null), logo: null);
 
         ShouldBeAValidPdf(pdf);
@@ -99,7 +101,7 @@ public class ReceiptPdfGeneratorTests
     {
         // Une école qui n'a pas encore saisi NINEA/RCCM ni le tuteur doit quand même pouvoir imprimer :
         // la mention absente ne s'imprime pas, elle ne fait pas tomber le reçu.
-        var pdf = new ReceiptPdfGenerator().Generate(Receipt(legalMentions: null), logo: null);
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(Receipt(legalMentions: null), logo: null);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -108,7 +110,7 @@ public class ReceiptPdfGeneratorTests
     public void Generate_Is_Robust_To_An_Enrollment_Without_Any_Collection()
     {
         // Dossier ouvert sans versement : le reçu s'imprime avec un total encaissé de 0.
-        var pdf = new ReceiptPdfGenerator().Generate(
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(
             Receipt(collected: new List<CollectedFeeLineDto>()), logo: null);
 
         ShouldBeAValidPdf(pdf);
@@ -117,7 +119,7 @@ public class ReceiptPdfGeneratorTests
     [Fact]
     public void Generate_Embeds_A_Provided_Logo_Without_Error()
     {
-        var pdf = new ReceiptPdfGenerator().Generate(Receipt(), logo: TinyPng);
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(Receipt(), logo: TinyPng);
 
         // On ne peut pas « voir » l'image en test unitaire, mais on couvre la branche d'incrustation :
         // un logo valide doit produire un PDF valide, sans exception.
@@ -131,9 +133,9 @@ public class ReceiptPdfGeneratorTests
         // empêcher l'émission du reçu officiel — le générateur régénère alors sans le logo.
         var unreadable = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-        var act = () => new ReceiptPdfGenerator().Generate(Receipt(), logo: unreadable);
+        var act = () => new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(Receipt(), logo: unreadable);
 
         act.Should().NotThrow();
-        ShouldBeAValidPdf(new ReceiptPdfGenerator().Generate(Receipt(), logo: unreadable));
+        ShouldBeAValidPdf(new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(Receipt(), logo: unreadable));
     }
 }

@@ -2,6 +2,7 @@ using SamaEcole.Application.Classrooms.Commands.CreateClassroom;
 using SamaEcole.Application.Classrooms.Commands.DeleteClassroom;
 using SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
 using SamaEcole.Application.Classrooms.Queries.GetClassrooms;
+using SamaEcole.Application.Classrooms.Queries.GetSchoolCardsPdf;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -72,5 +73,26 @@ public class ClassroomsController(ISender mediator) : ControllerBase
     {
         await mediator.Send(new DeleteClassroomCommand(id, rowVersion), cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Génère et télécharge le PDF contenant les cartes scolaires (avec QR Code)
+    /// pour tous les élèves d'une classe pour l'année scolaire donnée.
+    /// </summary>
+    [HttpGet("{id:guid}/school-cards")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> DownloadSchoolCards(
+        Guid id, [FromQuery] Guid? schoolYearId, CancellationToken cancellationToken)
+    {
+        // Si non fourni, on prend l'année active
+        var targetYearId = schoolYearId ?? await mediator.Send(new SamaEcole.Application.SchoolYears.Queries.GetSchoolYears.GetSchoolYearsQuery(), cancellationToken)
+            .ContinueWith(t => t.Result?.FirstOrDefault(y => y.IsActive)?.Id ?? Guid.Empty);
+        
+        var pdfBytes = await mediator.Send(new GetSchoolCardsPdfQuery(id, targetYearId), cancellationToken);
+        return File(pdfBytes, "application/pdf", $"Cartes_Scolaires_{id}.pdf");
     }
 }

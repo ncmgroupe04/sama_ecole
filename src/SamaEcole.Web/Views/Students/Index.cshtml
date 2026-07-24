@@ -52,13 +52,13 @@
  (seul le total paginé est connu côté client) — « -- » reste honnête, un chiffre inventé
  ne le serait pas. À brancher quand un endpoint les fournira. -->
  <stat-card label="Filles" icon="users" accent="pink">
- <span>--</span>
+ <span x-text="girlsCount">0</span>
  </stat-card>
  <stat-card label="Garçons" icon="users" accent="blue">
- <span>--</span>
+ <span x-text="boysCount">0</span>
  </stat-card>
  <stat-card label="Inscriptions (Nouveau)" icon="document" accent="success">
- <span>--</span>
+ <span x-text="newEnrollmentsCount">0</span>
  </stat-card>
  </div>
 
@@ -162,7 +162,7 @@
  <modal-shell open="detailStudent" on-close="closeDetail()" title="Fiche élève">
  <div class="flex items-center gap-4 pb-5 border-b border-slate-100">
  <img x-show="detailStudent && detailStudent.photoDisplayUrl" :src="detailStudent ? detailStudent.photoDisplayUrl : ''" alt=""
- class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak>
+ class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak />
  <div x-show="!detailStudent || !detailStudent.photoDisplayUrl" :class="detailStudent ? initialsClasses(detailStudent.fullName) : ''" class="w-14 h-14 rounded-full flex items-center justify-center font-bold text-base flex-shrink-0" x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
  <p class="text-xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></p>
  </div>
@@ -211,36 +211,32 @@
  </dl>
  </div>
 
- <!-- Onglets : Historique scolaire / Notes & bulletins / Paiements (JGK-D02). -->
- <div class="mt-6 border-t border-slate-100 pt-5">
-
- <!-- Barre d'onglets. role=tablist + aria-selected : navigation accessible (Volume 5 §8). -->
- <div class="flex gap-1 border-b border-slate-200" role="tablist" aria-label="Sections de la fiche élève">
- <button type="button" role="tab" @@click="detailTab = 'history'"
- :aria-selected="detailTab === 'history'"
- :class="detailTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
- class="inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-t-md">
- <icon name="layers" class="w-4 h-4" />
- <span>Historique scolaire</span>
- </button>
- <button type="button" role="tab" @@click="detailTab = 'grades'"
- :aria-selected="detailTab === 'grades'"
- :class="detailTab === 'grades' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
- class="inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-t-md">
- <icon name="book" class="w-4 h-4" />
- <span>Notes &amp; bulletins</span>
- </button>
- <!-- Jamais pour l'Enseignant (Volume 7 « Finance ») : masquée ici pour l'ergonomie, mais
- c'est studentDetail.payments (absent de la réponse API pour ce rôle) qui protège
- réellement la donnée — voir GetStudentDetailQueryHandler. -->
- <button type="button" role="tab" x-show="canViewPayments" x-cloak @@click="detailTab = 'payments'"
- :aria-selected="detailTab === 'payments'"
- :class="detailTab === 'payments' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
- class="inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded-t-md">
- <icon name="wallet" class="w-4 h-4" />
- <span>Paiements</span>
- </button>
- </div>
+ <!-- Onglets : -->
+                <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Sections de la fiche élève">
+                    <button type="button" role="tab" @@click="detailTab = 'history'"
+                            :aria-selected="detailTab === 'history'"
+                            :class="detailTab === 'history' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
+                            class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
+                        <icon name="clock" class="w-4 h-4" />
+                        Historique scolaire
+                    </button>
+                    <button type="button" role="tab" @@click="detailTab = 'grades'"
+                            :aria-selected="detailTab === 'grades'"
+                            :class="detailTab === 'grades' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
+                            class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
+                        <icon name="academic-cap" class="w-4 h-4" />
+                        Notes & bulletins
+                    </button>
+                    <!-- Ticket JGK-D02 : Onglet Paiements (Lecture seule) -->
+                    <!-- Cet onglet n'est visible que par le Directeur ou la Finance (règle #4). -->
+                    <button type="button" role="tab" x-show="canViewPayments" x-cloak @@click="detailTab = 'payments'"
+                            :aria-selected="detailTab === 'payments'"
+                            :class="detailTab === 'payments' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
+                            class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
+                        <icon name="wallet" class="w-4 h-4" />
+                        Paiements
+                    </button>
+                </nav>
 
  <!-- Chargement : squelette pendant l'appel à GET /students/{id} (Volume 5 §1, connexion mobile). -->
  <div x-show="isLoadingDetails" x-cloak class="space-y-3 py-6">
@@ -372,6 +368,24 @@
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingTermId === term.termId ? 'Génération…' : 'Bulletin'"></span>
  </button>
+
+ <!-- Envoi WhatsApp -->
+ <button type="button" x-show="canDownloadReportCard" x-cloak
+ x-on:click="sendReportCard(term, 1)"
+ :disabled="sendingTermId === term.termId"
+ class="btn-secondary text-green-700 hover:bg-green-50 border-green-200 text-xs whitespace-nowrap">
+ <icon name="whatsapp" class="w-4 h-4" />
+ <span x-text="sendingTermId === term.termId ? 'Envoi…' : 'WhatsApp'"></span>
+ </button>
+
+ <!-- Envoi Email -->
+ <button type="button" x-show="canDownloadReportCard" x-cloak
+ x-on:click="sendReportCard(term, 0)"
+ :disabled="sendingTermId === term.termId"
+ class="btn-secondary text-blue-700 hover:bg-blue-50 border-blue-200 text-xs whitespace-nowrap">
+ <icon name="envelope" class="w-4 h-4" />
+ <span x-text="sendingTermId === term.termId ? 'Envoi…' : 'Email'"></span>
+ </button>
  </div>
  </div>
 
@@ -478,7 +492,6 @@
  </template>
  </div>
 
- </div>
  </div>
 
  <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-slate-200 pt-4">
@@ -894,7 +907,7 @@
 
  <template x-if="pdfPreviewUrl && !pdfLoadError">
  <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden relative" style="height: 600px;">
- <iframe :src="pdfPreviewUrl" x-on:error="pdfLoadError = true" id="stu-pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
+ <iframe :src="pdfPreviewUrl" id="stu-pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
  </div>
  </template>
  <div x-show="!pdfPreviewUrl || pdfLoadError" x-cloak class="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300" style="min-height: 400px;">

@@ -1,5 +1,7 @@
 using System.Text;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 using SamaEcole.Application.Finance;
 using SamaEcole.Infrastructure.Documents;
 using Xunit;
@@ -49,7 +51,7 @@ public class PaymentReceiptPdfGeneratorTests
     [Fact]
     public void Generate_Produces_A_Valid_Non_Trivial_Pdf()
     {
-        var pdf = new PaymentReceiptPdfGenerator().Generate(Receipt(), logo: null);
+        var pdf = new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>()).Generate(Receipt(), logo: null);
 
         ShouldBeAValidPdf(pdf);
         pdf.Length.Should().BeGreaterThan(1000, "un reçu complet n'est pas un fichier vide");
@@ -58,7 +60,7 @@ public class PaymentReceiptPdfGeneratorTests
     [Fact]
     public void Generate_Is_Robust_To_Missing_Phone_And_City()
     {
-        var pdf = new PaymentReceiptPdfGenerator().Generate(Receipt(phone: null, city: null), logo: null);
+        var pdf = new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>()).Generate(Receipt(phone: null, city: null), logo: null);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -66,7 +68,7 @@ public class PaymentReceiptPdfGeneratorTests
     [Fact]
     public void Generate_Embeds_A_Provided_Logo_Without_Error()
     {
-        var pdf = new PaymentReceiptPdfGenerator().Generate(Receipt(), logo: TinyPng);
+        var pdf = new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>()).Generate(Receipt(), logo: TinyPng);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -77,9 +79,9 @@ public class PaymentReceiptPdfGeneratorTests
         // Le filet de sécurité : des octets pathologiques ne doivent jamais empêcher l'émission du reçu.
         var unreadable = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-        var act = () => new PaymentReceiptPdfGenerator().Generate(Receipt(), logo: unreadable);
+        var act = () => new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>()).Generate(Receipt(), logo: unreadable);
 
         act.Should().NotThrow();
-        ShouldBeAValidPdf(new PaymentReceiptPdfGenerator().Generate(Receipt(), logo: unreadable));
+        ShouldBeAValidPdf(new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>()).Generate(Receipt(), logo: unreadable));
     }
 }

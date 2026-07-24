@@ -3,6 +3,12 @@
  * que sidebarNav/sessionMenu (auth.js) — pour rester disponibles sur tout écran hôte d'un
  * <date-field> (TagHelpers/DateFieldTagHelper.cs).
  */
+
+/** Fermeture globale et systématique de toutes les modales actives (modal-shell) */
+window.closeAllModals = function() {
+    window.dispatchEvent(new CustomEvent('close-modals'));
+};
+
 document.addEventListener('alpine:init', () => {
     /**
      * Navigation mois/année du calendrier maison. La VALEUR sélectionnée (lecture/écriture) est

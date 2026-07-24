@@ -464,8 +464,8 @@ document.addEventListener('alpine:init', () => {
         // l'onglet actif, fond transparent + texte discret (éclairci au survol) pour les autres.
         tabClass(name) {
             return this.tab === name
-                ? 'bg-white text-primary font-semibold shadow-sm'
-                : 'text-slate-600 hover:bg-white/60 hover:text-slate-900';
+                ? 'bg-white text-indigo-600 font-semibold shadow-sm'
+                : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50';
         }
     }));
 });

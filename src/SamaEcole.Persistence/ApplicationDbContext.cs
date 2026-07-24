@@ -27,8 +27,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
     public DbSet<EnrollmentFeeLine> EnrollmentFeeLines => Set<EnrollmentFeeLine>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<CashierSession> CashierSessions => Set<CashierSession>();
+    public DbSet<PaymentBreakdown> PaymentBreakdowns => Set<PaymentBreakdown>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
+    public DbSet<ScheduleSlot> ScheduleSlots => Set<ScheduleSlot>();
+    public DbSet<Disbursement> Disbursements => Set<Disbursement>();
     public DbSet<SchoolRegistrationRequest> SchoolRegistrationRequests => Set<SchoolRegistrationRequest>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<UserStatusHistory> UserStatusHistory => Set<UserStatusHistory>();

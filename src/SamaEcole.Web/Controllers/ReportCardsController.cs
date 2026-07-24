@@ -1,5 +1,6 @@
 using SamaEcole.Application.ReportCards;
 using SamaEcole.Application.ReportCards.Commands.UpsertReportCardRemark;
+using SamaEcole.Application.ReportCards.Queries.GetClassDeliberationPdf;
 using SamaEcole.Application.ReportCards.Queries.GetClassReportCardsPdf;
 using SamaEcole.Application.ReportCards.Queries.GetClassReportCardsZip;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
@@ -35,6 +36,7 @@ public class ReportCardsController(ISender mediator, ILogger<ReportCardsControll
     public record GenerateReportCardRequest(Guid StudentId, Guid TermId);
     public record UpsertReportCardRemarkRequest(
         Guid StudentId, Guid TermId, DisciplinaryMention? DisciplinaryMention, CouncilDecision? CouncilDecision, string? Observations);
+    public record SendReportCardRequest(Guid StudentId, Guid TermId, SamaEcole.Application.ReportCards.Commands.SendReportCard.CommunicationChannel Channel);
 
     [HttpPost("generate")]
     [Authorize(Roles = ReportCardDownloadRoles)]
@@ -58,12 +60,37 @@ public class ReportCardsController(ISender mediator, ILogger<ReportCardsControll
             Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
             return File(result.Content, "application/pdf");
         }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Erreur lors de la génération du bulletin de notes PDF (Élève: {StudentId}, Trimestre: {TermId})", request.StudentId, request.TermId);
-            return Problem(detail: ex.Message, title: "Erreur de génération du bulletin PDF", statusCode: StatusCodes.Status500InternalServerError);
+            logger.LogError(ex, "Erreur lors de la génération du bulletin PDF");
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Une erreur est survenue lors de la génération du bulletin." });
         }
     }
+
+    [HttpPost("send")]
+    [Authorize(Roles = ReportCardDownloadRoles)]
+    public async Task<IActionResult> SendReportCard([FromBody] SendReportCardRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await mediator.Send(new SamaEcole.Application.ReportCards.Commands.SendReportCard.SendReportCardCommand(request.StudentId, request.TermId, request.Channel), cancellationToken);
+            return Ok(new { message = "Bulletin envoyé avec succès." });
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Données invalides." });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de l'envoi du bulletin (StudentId: {StudentId})", request.StudentId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Une erreur est survenue lors de l'envoi du bulletin." });
+        }
+    }
+
 
     /// <summary>
     /// Bulletins de toute une classe pour un trimestre, en archive ZIP (un PDF par élève) — pratique pour
@@ -114,10 +141,52 @@ public class ReportCardsController(ISender mediator, ILogger<ReportCardsControll
             Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
             return File(result.Content, "application/pdf");
         }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération des bulletins fusionnés PDF (Classe: {ClassroomId}, Trimestre: {TermId})", classroomId, termId);
             return Problem(detail: ex.Message, title: "Erreur de génération des bulletins PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    /// <summary>
+    /// PV de délibération de toute une classe pour un trimestre, généré en UN SEUL document PDF
+    /// contenant les statistiques de la classe et la liste ordonnée des élèves avec leurs moyennes et mentions.
+    /// </summary>
+    [HttpGet("class-deliberation/pdf")]
+    [Authorize(Roles = ReportCardDownloadRoles)]
+    [EnableRateLimiting(SensitiveEndpointRateLimiting.ReportCardGenerationPolicyName)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DownloadClassDeliberationPdf(
+        [FromQuery] Guid classroomId, [FromQuery] Guid termId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetClassDeliberationPdfQuery(classroomId, termId), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le PV de délibération PDF est vide (Classe: {ClassroomId}, Trimestre: {TermId})", classroomId, termId);
+                return NotFound(new { message = "Le PV de délibération PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du PV de délibération PDF (Classe: {ClassroomId}, Trimestre: {TermId})", classroomId, termId);
+            return Problem(detail: ex.Message, title: "Erreur de génération du PV de délibération PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 

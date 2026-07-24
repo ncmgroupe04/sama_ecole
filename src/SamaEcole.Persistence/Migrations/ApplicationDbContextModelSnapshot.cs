@@ -110,8 +110,7 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("FailureReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("IpAddress")
                         .HasMaxLength(45)
@@ -150,6 +149,70 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasIndex("SchoolId", "OccurredAt");
 
                     b.ToTable("audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.CashierSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CashierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("ClosingBalance")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("OpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("OpeningBalance")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashierId");
+
+                    b.HasIndex("SchoolId", "CashierId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_cashier_sessions_SchoolId_CashierId_Open")
+                        .HasFilter("\"Status\" = 'Open'");
+
+                    b.ToTable("cashier_sessions", (string)null);
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.ClassFee", b =>
@@ -274,6 +337,71 @@ namespace SamaEcole.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("classrooms", (string)null);
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.Disbursement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Beneficiary")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ReceiptUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "Date");
+
+                    b.ToTable("Disbursements");
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.Enrollment", b =>
@@ -827,6 +955,14 @@ namespace SamaEcole.Persistence.Migrations
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
 
+                    b.Property<Guid?>("CashierSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -861,6 +997,10 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<Guid>("ReceivedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ReferencePeriod")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
@@ -877,6 +1017,8 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SchoolId", "CashierSessionId");
+
                     b.HasIndex("SchoolId", "EnrollmentId")
                         .HasDatabaseName("IX_payments_SchoolId_EnrollmentId");
 
@@ -888,6 +1030,55 @@ namespace SamaEcole.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_payments_amount_positive", "\"Amount\" > 0");
                         });
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.PaymentBreakdown", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AmountAllocated")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("FeeCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeeCategoryId");
+
+                    b.HasIndex("PaymentId");
+
+                    b.ToTable("payment_breakdowns", (string)null);
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.PlatformDashboardStats", b =>
@@ -1048,6 +1239,77 @@ namespace SamaEcole.Persistence.Migrations
                         .HasDatabaseName("UX_report_card_remarks_single_entry");
 
                     b.ToTable("report_card_remarks", (string)null);
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.ScheduleSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClassroomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DayOfWeek")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTeacherSubmitted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("RoomNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClassroomId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("SchoolId", "ClassroomId");
+
+                    b.HasIndex("SchoolId", "TeacherId");
+
+                    b.ToTable("ScheduleSlots");
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.School", b =>
@@ -2155,6 +2417,17 @@ namespace SamaEcole.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.CashierSession", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.User", "Cashier")
+                        .WithMany()
+                        .HasForeignKey("CashierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cashier");
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.ClassFee", b =>
                 {
                     b.HasOne("SamaEcole.Domain.Entities.School", null)
@@ -2323,12 +2596,41 @@ namespace SamaEcole.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("SamaEcole.Domain.Entities.Enrollment", null)
+                    b.HasOne("SamaEcole.Domain.Entities.CashierSession", "CashierSession")
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "CashierSessionId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SamaEcole.Domain.Entities.Enrollment", "Enrollment")
                         .WithMany()
                         .HasForeignKey("SchoolId", "EnrollmentId")
                         .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CashierSession");
+
+                    b.Navigation("Enrollment");
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.PaymentBreakdown", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.FeeCategory", "FeeCategory")
+                        .WithMany()
+                        .HasForeignKey("FeeCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Payment", "Payment")
+                        .WithMany("Breakdowns")
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FeeCategory");
+
+                    b.Navigation("Payment");
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.RefreshToken", b =>
@@ -2361,6 +2663,33 @@ namespace SamaEcole.Persistence.Migrations
                         .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.ScheduleSlot", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.Classroom", "Classroom")
+                        .WithMany()
+                        .HasForeignKey("ClassroomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Teacher", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Classroom");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.SchoolSettings", b =>
@@ -2558,6 +2887,11 @@ namespace SamaEcole.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.Payment", b =>
+                {
+                    b.Navigation("Breakdowns");
                 });
 #pragma warning restore 612, 618
         }

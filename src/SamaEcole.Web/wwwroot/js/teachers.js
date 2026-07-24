@@ -19,6 +19,53 @@ document.addEventListener('alpine:init', () => {
         search: '',
 
         canManage: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+        canManageSchedule: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+        
+        // Emploi du Temps (Schedule)
+        activeTab: 'teachers', // 'teachers' ou 'schedule'
+        scheduleViewMode: 'teacher', // 'teacher' ou 'classroom'
+        selectedScheduleTeacherId: '',
+        selectedScheduleClassroomId: '',
+        scheduleSlots: [],
+        isLoadingSchedule: false,
+        creatingScheduleSlot: false,
+        isSubmittingSchedule: false,
+        createScheduleError: null,
+        scheduleForm: { teacherId: '', classroomId: '', subjectId: '', dayOfWeek: 1, startTime: '08:00', endTime: '09:00', roomNumber: '' },
+        deletingScheduleSlot: null,
+        isDeletingSchedule: false,
+        
+        daysOfWeek: [
+            { value: 1, label: 'Lundi' },
+            { value: 2, label: 'Mardi' },
+            { value: 3, label: 'Mercredi' },
+            { value: 4, label: 'Jeudi' },
+            { value: 5, label: 'Vendredi' },
+            { value: 6, label: 'Samedi' }
+        ],
+
+        timeSlots: [
+            { label: '08h00 - 09h00', start: '08:00', end: '09:00', isPause: false },
+            { label: '09h00 - 10h00', start: '09:00', end: '10:00', isPause: false },
+            { label: '10h00 - 11h00', start: '10:00', end: '11:00', isPause: false },
+            { label: '11h00 - 12h00', start: '11:00', end: '12:00', isPause: false },
+            { label: 'PAUSE MIDI', start: '12:00', end: '15:00', isPause: true },
+            { label: '15h00 - 16h00', start: '15:00', end: '16:00', isPause: false },
+            { label: '16h00 - 17h00', start: '16:00', end: '17:00', isPause: false },
+            { label: '17h00 - 18h00', start: '17:00', end: '18:00', isPause: false },
+        ],
+
+        getSlotForDayAndTime(dayValue, startTime) {
+            // Note : L'API retourne startTime au format "08:00:00". On le formate pour le comparer.
+            return this.scheduleSlots.find(s => s.dayOfWeek === dayValue && s.startTime.substring(0, 5) === startTime);
+        },
+
+        get sortedScheduleSlots() {
+            return this.scheduleSlots.sort((a, b) => {
+                if (a.startTime !== b.startTime) return a.startTime.localeCompare(b.startTime);
+                return a.dayOfWeek - b.dayOfWeek;
+            });
+        },
         // Seul le Directeur peut lister les comptes (GET /users) : le champ de rattachement ne s'affiche
         // donc que pour lui. Le Secrétariat crée la fiche sans lien ; le Directeur le posera plus tard.
         canLinkAccount: window.auth.role === 'Directeur',
@@ -345,6 +392,100 @@ document.addEventListener('alpine:init', () => {
 
         initials(name) {
             return (name || '').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+        },
+
+        // ------------------------------------------------------------ Emploi du Temps
+
+        async loadSchedule() {
+            this.scheduleSlots = [];
+            
+            if (this.scheduleViewMode === 'teacher') {
+                if (!this.selectedScheduleTeacherId) return;
+                this.isLoadingSchedule = true;
+                try {
+                    this.scheduleSlots = await window.api.get(`/schedules/teacher/${this.selectedScheduleTeacherId}`);
+                } catch (err) {
+                    this.error = err.message || 'Erreur lors du chargement de l\'emploi du temps de l\'enseignant.';
+                } finally {
+                    this.isLoadingSchedule = false;
+                }
+            } else if (this.scheduleViewMode === 'classroom') {
+                if (!this.selectedScheduleClassroomId) return;
+                this.isLoadingSchedule = true;
+                try {
+                    this.scheduleSlots = await window.api.get(`/schedules/classroom/${this.selectedScheduleClassroomId}`);
+                } catch (err) {
+                    this.error = err.message || 'Erreur lors du chargement de l\'emploi du temps de la classe.';
+                } finally {
+                    this.isLoadingSchedule = false;
+                }
+            }
+        },
+
+        openCreateScheduleSlot() {
+            this.createScheduleError = null;
+            this.scheduleForm = {
+                teacherId: this.scheduleViewMode === 'teacher' ? this.selectedScheduleTeacherId : '',
+                classroomId: this.scheduleViewMode === 'classroom' ? this.selectedScheduleClassroomId : '',
+                subjectId: '',
+                dayOfWeek: 1,
+                startTime: '08:00',
+                endTime: '09:00',
+                roomNumber: ''
+            };
+            this.creatingScheduleSlot = true;
+        },
+
+        closeCreateScheduleSlot() {
+            this.creatingScheduleSlot = false;
+        },
+
+        async submitCreateScheduleSlot() {
+            this.createScheduleError = null;
+            this.isSubmittingSchedule = true;
+            try {
+                await window.api.post('/schedules', this.scheduleForm);
+                this.closeCreateScheduleSlot();
+                await this.loadSchedule();
+            } catch (err) {
+                this.createScheduleError = err.errors?.global?.[0] || err.message || 'Erreur lors de l\'enregistrement.';
+            } finally {
+                this.isSubmittingSchedule = false;
+            }
+        },
+
+        openDeleteScheduleSlot(slot) {
+            this.deleteScheduleError = null;
+            this.deletingScheduleSlot = slot;
+            this.isDeletingSchedule = false;
+        },
+
+        closeDeleteScheduleSlot() {
+            this.deletingScheduleSlot = null;
+        },
+
+        async confirmDeleteScheduleSlot() {
+            this.isDeletingSchedule = true;
+            this.deleteScheduleError = null;
+            try {
+                await window.api.delete(`/schedules/${this.deletingScheduleSlot.id}`);
+                this.closeDeleteScheduleSlot();
+                await this.loadSchedule();
+            } catch (err) {
+                this.deleteScheduleError = err.message || 'Erreur lors de la suppression du créneau.';
+            } finally {
+                this.isDeletingSchedule = false;
+            }
+        },
+
+        formatTime(timeSpanString) {
+            if (!timeSpanString) return '';
+            // TimeSpan from backend looks like "08:00:00"
+            const parts = timeSpanString.split(':');
+            if (parts.length >= 2) {
+                return `${parts[0]}h${parts[1] !== '00' ? parts[1] : ''}`;
+            }
+            return timeSpanString;
         },
 
         formatDate(dateStr) {

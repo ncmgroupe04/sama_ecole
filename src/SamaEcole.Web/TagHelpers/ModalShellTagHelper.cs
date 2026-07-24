@@ -69,7 +69,8 @@ public class ModalShellTagHelper : TagHelper
         output.Content.SetHtmlContent($"""
             <div x-show="{Open}" x-cloak
                  class="fixed inset-0 z-40 flex items-stretch justify-center sm:items-center sm:p-4"
-                 x-on:keydown.escape.window="{close}">
+                 x-on:keydown.escape.window="{close}"
+                 x-on:close-modals.window="{close}">
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"

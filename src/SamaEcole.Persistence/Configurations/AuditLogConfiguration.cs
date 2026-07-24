@@ -20,7 +20,7 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         builder.Property(a => a.Module).IsRequired().HasMaxLength(50);
         builder.Property(a => a.Action).IsRequired().HasMaxLength(100);
         builder.Property(a => a.Success).IsRequired();
-        builder.Property(a => a.FailureReason).HasMaxLength(1000);
+        builder.Property(a => a.FailureReason).HasColumnType("text");
         builder.Property(a => a.IpAddress).HasMaxLength(45); // IPv6 max
         builder.Property(a => a.OccurredAt).IsRequired();
 

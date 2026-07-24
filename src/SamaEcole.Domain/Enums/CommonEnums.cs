@@ -113,7 +113,15 @@ public enum PaymentCategory
     Enrollment,
     Tuition,
     Exam,
+    Canteen,
     Other
+}
+
+public enum CashierSessionStatus
+{
+    Open,
+    Closed,
+    Verified
 }
 
 public enum SubscriptionPlan

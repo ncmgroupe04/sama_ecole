@@ -3,6 +3,9 @@ document.addEventListener('alpine:init', () => {
         students: [],
         classrooms: [],
         totalCount: 0,
+        girlsCount: 0,
+        boysCount: 0,
+        newEnrollmentsCount: 0,
         page: 1,
         pageSize: 10,
         isLoading: false,
@@ -36,6 +39,7 @@ document.addEventListener('alpine:init', () => {
         // fois. Réservé au Directeur/Enseignant côté serveur (ReportCardsController) — même règle
         // qu'ici pour ne pas afficher un bouton qui répondrait 403.
         downloadingTermId: null,
+        sendingTermId: null,
         reportCardError: null,
 
         // Observations du conseil (distinction + texte), imprimées sur le bulletin — mêmes rôles que
@@ -161,6 +165,9 @@ document.addEventListener('alpine:init', () => {
                 const data = await window.api.get(`/students?${params.toString()}`);
                 this.students = data.items || [];
                 this.totalCount = data.totalCount || 0;
+                this.girlsCount = data.girlsCount || 0;
+                this.boysCount = data.boysCount || 0;
+                this.newEnrollmentsCount = data.newEnrollmentsCount || 0;
             } catch (err) {
                 this.error = err.message || "Erreur lors du chargement des élèves.";
             } finally {
@@ -188,6 +195,9 @@ document.addEventListener('alpine:init', () => {
          * est chargée depuis GET /students/{id}. L'onglet repart toujours sur « Historique ».
          */
         async openDetail(student) {
+            // Nettoyage global : fermer toutes les modales actives
+            if (window.closeAllModals) window.closeAllModals();
+
             this.detailStudent = student;
             this.studentDetail = null;
             this.detailError = null;
@@ -255,6 +265,41 @@ document.addEventListener('alpine:init', () => {
                 this.reportCardError = err.message || 'Téléchargement du bulletin impossible.';
             } finally {
                 this.downloadingTermId = null;
+            }
+        },
+
+        async sendReportCard(term, channel) {
+            if (!this.detailStudent) return;
+            this.reportCardError = null;
+            this.sendingTermId = term.termId;
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch('/api/v1/report-cards/send', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${window.auth.accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ studentId: this.detailStudent.id, termId: term.termId, channel: channel })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({ message: 'Envoi du bulletin impossible.' }));
+                    throw new Error(err.message);
+                }
+
+                // Show success notification or rely on a global toast if one exists, else alert
+                alert('Bulletin envoyé avec succès.');
+
+            } catch (err) {
+                this.reportCardError = err.message || 'Envoi du bulletin impossible.';
+                alert(this.reportCardError);
+            } finally {
+                this.sendingTermId = null;
             }
         },
 
@@ -781,6 +826,15 @@ document.addEventListener('alpine:init', () => {
         },
 
         async openPdfModalWithBlob(url, title, downloadName) {
+            // Nettoyer tout ancien Blob URL avant de tenter un nouveau chargement.
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+                this.pdfPreviewUrl = null;
+            }
+            this.pdfLoadError = false;
+            this.pdfPreviewTitle = title || 'Document officiel';
+            this.pdfDownloadName = downloadName || 'document.pdf';
+
             try {
                 if (!url || url.includes('undefined') || url.includes('null')) {
                     throw new Error(`L'URL du document est invalide (${url}).`);
@@ -795,27 +849,25 @@ document.addEventListener('alpine:init', () => {
                     credentials: 'same-origin'
                 });
                 if (!response.ok) {
-                    const errText = await response.text();
+                    const errText = await response.text().catch(() => '');
                     throw new Error(`Erreur ${response.status}: Récupération du document impossible (${errText || response.statusText}).`);
                 }
                 const rawBlob = await response.blob();
                 if (!rawBlob || rawBlob.size === 0) {
-                    throw new Error("Le document PDF reçu du serveur est vide (0 octet).");
+                    throw new Error("Le document PDF reçu du serveur est vide (0 octet). Veuillez réessayer.");
                 }
                 const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-                if (this.pdfPreviewUrl) URL.revokeObjectURL(this.pdfPreviewUrl);
                 this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
                 console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
-                this.pdfPreviewTitle = title;
-                this.pdfDownloadName = downloadName;
                 this.pdfLoadError = false;
-                this.showPdfModal = true;
             } catch (e) {
                 console.error("Erreur openPdfModalWithBlob (Students):", e);
-                alert("Impossible de charger le document : " + e.message);
+                // Pas d'alert() bloquante : on ouvre la modale en mode erreur, les boutons restent
+                // toujours fonctionnels (Fermer, Télécharger ouvre l'URL directe, Imprimer ne fait rien).
                 this.pdfLoadError = true;
-                this.showPdfModal = true;
             }
+            // La modale s'ouvre TOUJOURS, même en cas d'erreur : l'utilisateur peut la fermer proprement.
+            this.showPdfModal = true;
         },
 
         async openEnrollmentCertificatePreview(enrollmentId, yearLabel) {
@@ -853,7 +905,20 @@ document.addEventListener('alpine:init', () => {
 
         printPreviewPdf() {
             const iframe = document.getElementById('stu-pdf-preview-frame');
-            if (iframe && iframe.contentWindow) iframe.contentWindow.print();
+            if (iframe && iframe.contentWindow) {
+                try {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                } catch {
+                    if (this.pdfPreviewUrl) {
+                        const win = window.open(this.pdfPreviewUrl, '_blank');
+                        if (win) win.print();
+                    }
+                }
+            } else if (this.pdfPreviewUrl) {
+                const win = window.open(this.pdfPreviewUrl, '_blank');
+                if (win) win.print();
+            }
         },
 
         downloadPreviewPdf() {

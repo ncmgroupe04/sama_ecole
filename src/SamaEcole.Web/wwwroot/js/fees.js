@@ -28,6 +28,19 @@ document.addEventListener('alpine:init', () => {
         fees: [],
         selectedCategoryId: null,
 
+        activeTab: 'fees', // 'fees' ou 'disbursements'
+        disbursements: [],
+        isLoadingDisbursements: false,
+        
+        disbursementForm: { date: '', beneficiary: '', reason: '', category: 'Salaires', amount: null, paymentMethod: 'Cash' },
+        creatingDisbursement: false,
+        isSubmittingDisbursement: false,
+        createDisbursementError: null,
+
+        deletingDisbursement: null,
+        isDeletingDisbursement: false,
+        deleteDisbursementError: null,
+
         isLoading: false,
         error: null,
 
@@ -117,6 +130,8 @@ document.addEventListener('alpine:init', () => {
                 if (!this.categories.some((c) => c.id === this.selectedCategoryId)) {
                     this.selectedCategoryId = this.categories.length ? this.categories[0].id : null;
                 }
+
+                await this.loadDisbursements();
             } catch (err) {
                 this.error = err.message || 'Erreur lors du chargement des frais.';
             } finally {
@@ -140,8 +155,8 @@ document.addEventListener('alpine:init', () => {
          */
         tabClass(categoryId) {
             return this.selectedCategoryId === categoryId
-                ? 'bg-white text-primary font-semibold shadow-sm'
-                : 'font-medium text-slate-600 hover:bg-white/60 hover:text-slate-900';
+                ? 'bg-white text-indigo-600 font-semibold shadow-sm'
+                : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50';
         },
 
         /**
@@ -405,6 +420,79 @@ document.addEventListener('alpine:init', () => {
         closeHistory() {
             this.historyFor = null;
             this.historyEntries = [];
+        },
+
+        // ------------------------------------------------------------ Décaissements
+
+        async loadDisbursements() {
+            this.isLoadingDisbursements = true;
+            try {
+                this.disbursements = await window.api.get('/finance/disbursements');
+            } catch (err) {
+                this.error = err.message || 'Erreur lors du chargement des décaissements.';
+            } finally {
+                this.isLoadingDisbursements = false;
+            }
+        },
+
+        openCreateDisbursement() {
+            this.createDisbursementError = null;
+            this.disbursementForm = {
+                date: new Date().toISOString().split('T')[0],
+                beneficiary: '',
+                reason: '',
+                category: 'Salaires',
+                amount: null,
+                paymentMethod: 'Cash'
+            };
+            this.creatingDisbursement = true;
+        },
+
+        closeCreateDisbursement() {
+            this.creatingDisbursement = false;
+        },
+
+        async submitCreateDisbursement() {
+            this.createDisbursementError = null;
+            this.isSubmittingDisbursement = true;
+            try {
+                await window.api.post('/finance/disbursements', this.disbursementForm);
+                this.closeCreateDisbursement();
+                await this.loadDisbursements();
+            } catch (err) {
+                this.createDisbursementError = err.message || 'Erreur lors de l\'enregistrement.';
+            } finally {
+                this.isSubmittingDisbursement = false;
+            }
+        },
+
+        openDeleteDisbursement(disbursement) {
+            this.deleteDisbursementError = null;
+            this.deletingDisbursement = disbursement;
+        },
+
+        closeDeleteDisbursement() {
+            this.deletingDisbursement = null;
+        },
+
+        async confirmDeleteDisbursement() {
+            this.isDeletingDisbursement = true;
+            this.deleteDisbursementError = null;
+            try {
+                await window.api.delete(`/finance/disbursements/${this.deletingDisbursement.id}`);
+                this.closeDeleteDisbursement();
+                await this.loadDisbursements();
+            } catch (err) {
+                this.deleteDisbursementError = err.message || 'Erreur lors de l\'annulation.';
+            } finally {
+                this.isDeletingDisbursement = false;
+            }
+        },
+
+        formatDateOnly(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleDateString('fr-FR');
         },
 
         formatDate(iso) {

@@ -63,6 +63,18 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 "Accès refusé.",
                 null),
 
+            OperationCanceledException => (
+                (HttpStatusCode)499, // Client Closed Request
+                "CLIENT_CLOSED_REQUEST",
+                "La requête a été annulée par le client.",
+                null),
+
+            NotFoundException => (
+                HttpStatusCode.NotFound,
+                "NOT_FOUND",
+                exception.Message,
+                null),
+
             KeyNotFoundException => (
                 HttpStatusCode.NotFound,
                 "NOT_FOUND",

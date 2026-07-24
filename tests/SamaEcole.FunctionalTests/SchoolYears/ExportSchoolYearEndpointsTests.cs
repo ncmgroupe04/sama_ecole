@@ -112,8 +112,12 @@ public class ExportSchoolYearEndpointsTests : IClassFixture<AuthApiFactory>, IAs
         receipt.TotalDue.Should().Be(ExpectedTotal);
 
         var finance = await FinanceTokenAsync();
+        
+        var openSessionResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions", finance, new { openingBalance = 0m });
+        openSessionResponse.EnsureSuccessStatusCode();
+
         var payment = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
-            new { enrollmentId = receipt.EnrollmentId, amount = 50_000m, method = "MobileMoney" });
+            new { enrollmentId = receipt.EnrollmentId, amount = 50_000m, method = "MobileMoney", category = "Tuition" });
         payment.StatusCode.Should().Be(HttpStatusCode.Created);
 
         return year.Id;

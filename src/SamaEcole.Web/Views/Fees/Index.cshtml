@@ -8,28 +8,46 @@
 }
 
 <div x-data="feesView()">
- <!-- Titre et actions -->
  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
  <div>
- <h1 class="text-jgk-title font-bold text-slate-900">Paramétrage des frais</h1>
+ <h1 class="text-jgk-title font-bold text-slate-900">Finance</h1>
  <p class="text-jgk-subtitle text-slate-500 mt-1">
- Définissez un montant standard par catégorie, puis ajustez les exceptions classe par classe.
+ Gestion des paramètres de frais et des décaissements.
  </p>
  </div>
+ </div>
 
- <!-- Feature D : Directeur toujours, Finance seulement si AllowFinanceToModifyFees est délégué
- (même garde que Modifier/Supprimer sur les lignes du barème ci-dessous). -->
- <div class="flex items-center gap-2" x-show="canModifyFees" x-cloak>
- <button x-on:click="openCreateCategory()" class="btn-secondary">
- <icon name="plus" class="w-5 h-5" />
- Catégorie
- </button>
- <button x-on:click="openApplyStandard()" :disabled="!selectedCategoryId" class="btn-primary">
- <icon name="wallet" class="w-5 h-5" />
- Appliquer un montant standard
- </button>
+ <!-- Navigation principale : Paramétrage des frais vs Décaissements -->
+ <div class="mt-6 flex bg-slate-100 p-1 rounded-xl w-fit">
+    <button type="button" x-on:click="activeTab = 'fees'" 
+            :class="activeTab === 'fees' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+        Paramétrage des Frais
+    </button>
+    <button type="button" x-on:click="activeTab = 'disbursements'" 
+            :class="activeTab === 'disbursements' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+        Décaissements
+    </button>
  </div>
- </div>
+
+ <!-- ONGLET 1: Paramétrage des Frais -->
+ <div x-show="activeTab === 'fees'" x-cloak>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
+        <div>
+            <h2 class="text-lg font-bold text-slate-900">Paramétrage des frais</h2>
+        </div>
+        <div class="flex items-center gap-2" x-show="canModifyFees" x-cloak>
+        <button x-on:click="openCreateCategory()" class="btn-secondary">
+        <icon name="plus" class="w-5 h-5" />
+        Catégorie
+        </button>
+        <button x-on:click="openApplyStandard()" :disabled="!selectedCategoryId" class="btn-primary">
+        <icon name="wallet" class="w-5 h-5" />
+        Appliquer un montant standard
+        </button>
+        </div>
+    </div>
 
  @await Html.PartialAsync("_ErrorBanner")
 
@@ -45,12 +63,12 @@
  <!-- Onglets de catégories : segmented control (fond neutre unifié, pastille active blanche +
  ombre légère) — même gabarit que les onglets de /parametres. -->
  <div class="p-4">
- <nav class="flex flex-nowrap items-center gap-1 overflow-x-auto scrollbar-hide rounded-xl bg-slate-100 p-1" aria-label="Catégories de frais">
+ <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Catégories de frais">
  <template x-for="category in categories" :key="category.id">
  <div class="group flex shrink-0 items-center whitespace-nowrap rounded-lg transition-all"
  :class="tabClass(category.id)">
- <button type="button" x-on:click="selectedCategoryId = category.id"
- class="flex items-center gap-2 px-4 py-2 text-sm">
+ <button type="button" role="tab" x-on:click="selectedCategoryId = category.id"
+ class="flex items-center gap-2 px-4 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
  <span x-text="category.name"></span>
  @* bg-white + anneau : le badge neutre (bg-gray-100) disparaîtrait sur la piste slate-100 du
  segmented control ; ici il reste lisible aussi bien sur la pastille active que sur la piste. *@
@@ -337,10 +355,139 @@
  </confirm-dialog-body>
  </modal-shell>
 
- <!-- Confirmation : montant supprimé -->
- <modal-shell open="showFeeDeletedDialog" size="md" on-close="showFeeDeletedDialog = false" title="Montant supprimé">
- <confirm-dialog-body close-action="showFeeDeletedDialog = false">
- Le montant de <span class="font-medium text-slate-900" x-text="deletedFeeClassroomName"></span> a bien été supprimé.
- </confirm-dialog-body>
- </modal-shell>
+    <!-- Confirmation : montant supprimé -->
+    <modal-shell open="showFeeDeletedDialog" size="md" on-close="showFeeDeletedDialog = false" title="Montant supprimé">
+    <confirm-dialog-body close-action="showFeeDeletedDialog = false">
+    Le montant de <span class="font-medium text-slate-900" x-text="deletedFeeClassroomName"></span> a bien été supprimé.
+    </confirm-dialog-body>
+    </modal-shell>
+ </div>
+
+ <!-- ONGLET 2: Décaissements -->
+ <div x-show="activeTab === 'disbursements'" x-cloak>
+    <div class="flex items-center justify-between mt-6">
+        <h2 class="text-lg font-bold text-slate-900">Historique des décaissements</h2>
+        <button type="button" x-on:click="openCreateDisbursement()" class="btn-primary">
+            <icon name="plus" class="w-5 h-5" />
+            Nouveau Décaissement
+        </button>
+    </div>
+
+    <!-- Table Décaissements -->
+    <div class="card mt-6 relative">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Bénéficiaire</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Catégorie</th>
+                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Moyen</th>
+                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr x-show="isLoadingDisbursements" x-cloak>
+                        <td colspan="7" class="py-12 text-center text-slate-500">Chargement...</td>
+                    </tr>
+                    <tr x-show="!isLoadingDisbursements && disbursements.length === 0" x-cloak>
+                        <td colspan="7" class="py-12 text-center text-slate-500">Aucun décaissement enregistré.</td>
+                    </tr>
+                    <template x-for="d in disbursements" :key="d.id">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3 px-4 text-sm text-slate-900" x-text="formatDateOnly(d.date)"></td>
+                            <td class="py-3 px-4 text-sm font-medium text-slate-900" x-text="d.beneficiary"></td>
+                            <td class="py-3 px-4 text-sm text-slate-500" x-text="d.reason"></td>
+                            <td class="py-3 px-4 text-sm text-slate-900">
+                                <badge variant="neutral" x-text="d.category"></badge>
+                            </td>
+                            <td class="py-3 px-4 text-sm font-bold text-slate-900 text-right" x-text="formatMoney(d.amount)"></td>
+                            <td class="py-3 px-4 text-sm text-slate-500" x-text="d.paymentMethod"></td>
+                            <td class="py-3 px-4 text-right">
+                                <button type="button" x-on:click="openDeleteDisbursement(d)" class="text-danger hover:text-red-700 transition-colors p-1" title="Supprimer" aria-label="Supprimer">
+                                    <icon name="trash" class="w-5 h-5" />
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modale Nouveau Décaissement -->
+    <modal-shell open="creatingDisbursement" on-close="closeCreateDisbursement()" size="md">
+        <form x-on:submit.prevent="submitCreateDisbursement()">
+            <modal-title>Nouveau Décaissement</modal-title>
+            <modal-subtitle>Enregistrer une dépense ou un paiement sortant.</modal-subtitle>
+            
+            <div x-show="createDisbursementError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createDisbursementError"></div>
+
+            <div class="space-y-4 mt-4">
+                <div>
+                    <label class="form-label" for="disb_date">Date</label>
+                    <input type="date" id="disb_date" x-model="disbursementForm.date" required class="input-field" />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_beneficiary">Bénéficiaire</label>
+                    <input type="text" id="disb_beneficiary" x-model="disbursementForm.beneficiary" required maxlength="150" class="input-field" placeholder="Nom du fournisseur ou employé..." />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_reason">Motif</label>
+                    <input type="text" id="disb_reason" x-model="disbursementForm.reason" required maxlength="255" class="input-field" placeholder="Achat de fournitures..." />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_category">Catégorie</label>
+                    <select id="disb_category" x-model="disbursementForm.category" required class="input-field">
+                        <option value="Salaires">Salaires</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Fournitures">Fournitures</option>
+                        <option value="ChargesFixes">Charges Fixes</option>
+                        <option value="Divers">Divers</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="disb_amount">Montant</label>
+                    <input type="number" id="disb_amount" x-model.number="disbursementForm.amount" required min="1" step="1" class="input-field font-mono" placeholder="Ex: 50000" />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_method">Mode de paiement</label>
+                    <select id="disb_method" x-model="disbursementForm.paymentMethod" required class="input-field">
+                        <option value="Cash">Espèces</option>
+                        <option value="Cheque">Chèque</option>
+                        <option value="Transfer">Virement</option>
+                        <option value="MobileMoney">Mobile Money</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-on:click="closeCreateDisbursement()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isSubmittingDisbursement" class="btn-primary">
+                    <span x-text="isSubmittingDisbursement ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Modale Supprimer Décaissement -->
+    <modal-shell open="deletingDisbursement" on-close="closeDeleteDisbursement()" size="md">
+        <modal-title>Annuler ce décaissement</modal-title>
+        <modal-subtitle>
+            Voulez-vous vraiment annuler le décaissement pour <span class="font-semibold text-slate-900" x-text="deletingDisbursement ? deletingDisbursement.beneficiary : ''"></span> ?
+        </modal-subtitle>
+        
+        <div x-show="deleteDisbursementError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteDisbursementError"></div>
+        
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" x-on:click="closeDeleteDisbursement()" class="btn-secondary">Fermer</button>
+            <button type="button" x-on:click="confirmDeleteDisbursement()" :disabled="isDeletingDisbursement" class="btn-danger">
+                <span x-text="isDeletingDisbursement ? 'Annulation...' : 'Oui, annuler'"></span>
+            </button>
+        </div>
+    </modal-shell>
+ </div>
 </div>
+

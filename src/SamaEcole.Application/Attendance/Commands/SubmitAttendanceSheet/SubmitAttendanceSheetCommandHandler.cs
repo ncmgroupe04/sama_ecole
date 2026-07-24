@@ -13,7 +13,8 @@ public class SubmitAttendanceSheetCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
     ICurrentUserService currentUser,
-    AttendanceScopeAuthorizer scopeAuthorizer)
+    AttendanceScopeAuthorizer scopeAuthorizer,
+    IPublisher publisher)
     : IRequestHandler<SubmitAttendanceSheetCommand, SubmitAttendanceSheetResult>
 {
     public async Task<SubmitAttendanceSheetResult> Handle(SubmitAttendanceSheetCommand request, CancellationToken cancellationToken)
@@ -99,6 +100,21 @@ public class SubmitAttendanceSheetCommandHandler(
             }
 
             await dbContext.SaveChangesAsync(ct);
+
+            // Notification pour les retards et absences
+            foreach (var entry in request.Entries.Where(e => e.Status is AttendanceStatus.Late or AttendanceStatus.UnjustifiedAbsence or AttendanceStatus.JustifiedAbsence))
+            {
+                await publisher.Publish(new SamaEcole.Application.Attendance.Events.AttendanceRecordedEvent(
+                    schoolId,
+                    entry.StudentId,
+                    request.ClassroomId,
+                    request.SubjectId,
+                    request.Date,
+                    request.Period.Trim(),
+                    entry.Status,
+                    entry.Status == AttendanceStatus.Late ? entry.LateMinutes : 0
+                ), ct);
+            }
 
             return new SubmitAttendanceSheetResult(sheet.Id, request.Entries.Count);
         }, cancellationToken);

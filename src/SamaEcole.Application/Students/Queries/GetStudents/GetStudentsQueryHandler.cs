@@ -118,6 +118,24 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
                 r.GuardianPhone))
             .ToList();
 
-        return new PaginatedStudents(items, totalCount, request.Page, request.PageSize);
+        var girlsCount = await query.CountAsync(s => s.Gender == "F", cancellationToken);
+        var boysCount = await query.CountAsync(s => s.Gender == "M", cancellationToken);
+
+        int newEnrollmentsCount = 0;
+        var currentActiveYearId = await dbContext.SchoolYears.AsNoTracking()
+            .Where(y => y.IsActive)
+            .Select(y => (Guid?)y.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (currentActiveYearId != null)
+        {
+            newEnrollmentsCount = await query.CountAsync(s => dbContext.Enrollments.Any(e =>
+                e.StudentId == s.Id &&
+                e.SchoolYearId == currentActiveYearId &&
+                e.Status != EnrollmentStatus.Cancelled &&
+                e.Type == EnrollmentType.NewEnrollment), cancellationToken);
+        }
+
+        return new PaginatedStudents(items, totalCount, request.Page, request.PageSize, girlsCount, boysCount, newEnrollmentsCount);
     }
 }

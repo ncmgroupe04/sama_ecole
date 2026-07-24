@@ -522,7 +522,7 @@
 
          <template x-if="pdfPreviewUrl && !pdfLoadError">
              <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden relative" style="height: 600px;">
-                 <iframe :src="pdfPreviewUrl" x-on:error="pdfLoadError = true" id="enr-pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
+                 <iframe :src="pdfPreviewUrl" id="enr-pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
              </div>
          </template>
 

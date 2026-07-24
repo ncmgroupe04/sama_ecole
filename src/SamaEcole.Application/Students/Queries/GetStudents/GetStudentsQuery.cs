@@ -56,4 +56,11 @@ public record StudentListItem(
     string? GuardianName,
     string? GuardianPhone);
 
-public record PaginatedStudents(IReadOnlyList<StudentListItem> Items, int TotalCount, int Page, int PageSize);
+public record PaginatedStudents(
+    IReadOnlyList<StudentListItem> Items, 
+    int TotalCount, 
+    int Page, 
+    int PageSize,
+    int GirlsCount = 0,
+    int BoysCount = 0,
+    int NewEnrollmentsCount = 0);

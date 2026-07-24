@@ -13,4 +13,6 @@ public interface IEmailSender
     Task SendAsync(EmailMessage message, CancellationToken cancellationToken);
 }
 
-public record EmailMessage(string To, string Subject, string Body);
+public record EmailMessage(string To, string Subject, string Body, IReadOnlyList<EmailAttachment>? Attachments = null);
+
+public record EmailAttachment(string Filename, byte[] Content, string ContentType);

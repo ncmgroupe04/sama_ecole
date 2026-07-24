@@ -55,6 +55,11 @@
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingClassBulletins ? 'Génération…' : 'Bulletins (ZIP)'"></span>
  </button>
+ <button type="button" x-on:click="downloadClassDeliberationPdf()" :disabled="downloadingClassDeliberation"
+ class="btn-secondary whitespace-nowrap text-sm" title="PV de délibération du conseil de classe pour ce trimestre">
+ <icon name="download" class="w-4 h-4" />
+ <span x-text="downloadingClassDeliberation ? 'Génération…' : 'PV Délibération'"></span>
+ </button>
  </div>
 
  <!-- Mode de saisie alternatif : réservé à l'Enseignant, comme la saisie cellule par cellule. -->
@@ -75,9 +80,9 @@
  </div>
  </div>
 
- <!-- Rôle Directeur/Secrétariat : rappel que seule la correction (pas la saisie) leur est ouverte -->
+ <!-- Rôle Secrétariat : rappel que seule la correction (pas la saisie) leur est ouverte -->
  <div x-show="!canEnterGrades && hasSelection" x-cloak class="mt-4 rounded-xl border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
- Vous pouvez corriger une note déjà saisie, mais seul l'enseignant saisit une nouvelle note.
+ Vous pouvez corriger une note déjà saisie, mais vous ne pouvez pas saisir de nouvelle note.
  </div>
 
  <!-- Conflit de concurrence (AGENTS.md règle #5) -->

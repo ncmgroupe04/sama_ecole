@@ -252,7 +252,7 @@
                          <td class="py-2 px-3 text-slate-600" x-text="methodLabel(pay.method)"></td>
                          <td class="py-2 px-3 text-right font-bold text-slate-900" x-text="formatMoney(pay.amount)"></td>
                          <td class="py-2 px-3 text-center whitespace-nowrap">
-                             <button type="button" x-on:click="previewReceipt(pay.id, pay.receiptNumber)"
+                             <button type="button" x-on:click.stop="previewReceipt(pay.id, pay.receiptNumber)"
                                      title="Aperçu et impression du reçu PDF"
                                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
                                  <icon name="document-text" class="w-3.5 h-3.5 text-indigo-600 shrink-0" />
@@ -489,7 +489,7 @@
 
          <template x-if="pdfPreviewUrl && !pdfLoadError">
              <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden relative" style="height: 600px;">
-                 <iframe :src="pdfPreviewUrl" x-on:error="pdfLoadError = true" id="pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
+                 <iframe :src="pdfPreviewUrl" id="pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
              </div>
          </template>
 

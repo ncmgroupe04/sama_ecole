@@ -121,8 +121,14 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         return receipt;
     }
 
-    private static object PaymentBody(Guid enrollmentId, decimal amount, string method = "Cash") =>
-        new { enrollmentId, amount, method };
+    private static object PaymentBody(Guid enrollmentId, decimal amount, string method = "Cash", string category = "Tuition") =>
+        new { enrollmentId, amount, method, category };
+
+    private async Task OpenFinanceSessionAsync(string token)
+    {
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions", token, new { openingBalance = 0m });
+        response.EnsureSuccessStatusCode();
+    }
 
     /// <summary>Résout un élève par matricule, comme le fera la recherche de l'écran caisse.</summary>
     private async Task<Guid> ResolveStudentIdAsync(string token, string matricule)
@@ -138,6 +144,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     {
         var enrollment = await SeedEnrolledStudentAsync();
         var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
         var studentId = await ResolveStudentIdAsync(finance, enrollment.Matricule);
 
         var before = await SendAsync(HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance);
@@ -175,6 +182,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     {
         var enrollment = await SeedEnrolledStudentAsync();
         var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
             PaymentBody(enrollment.EnrollmentId, 50_000m, "MobileMoney"));
@@ -193,6 +201,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     {
         var enrollment = await SeedEnrolledStudentAsync();
         var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
 
         var full = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
             PaymentBody(enrollment.EnrollmentId, ExpectedTotal));
@@ -212,6 +221,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     {
         var enrollment = await SeedEnrolledStudentAsync();
         var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
             PaymentBody(enrollment.EnrollmentId, ExpectedTotal + 1m));
@@ -237,6 +247,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     {
         var enrollment = await SeedEnrolledStudentAsync();
         var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
 
         var payResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
             PaymentBody(enrollment.EnrollmentId, 25_000m));
@@ -258,6 +269,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     public async Task Paying_An_Unknown_Enrollment_Returns_404()
     {
         var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
             PaymentBody(Guid.NewGuid(), 5_000m));

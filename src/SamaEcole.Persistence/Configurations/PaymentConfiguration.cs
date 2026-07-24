@@ -30,6 +30,8 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.BalanceAfter).IsRequired().HasPrecision(12, 2);
         builder.Property(p => p.Method).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(p => p.Category).HasConversion<string>().HasMaxLength(30).IsRequired();
+        builder.Property(p => p.ReferencePeriod).HasMaxLength(20);
         builder.Property(p => p.ReceiptNumber).HasMaxLength(50).IsRequired();
         builder.Property(p => p.ReceivedByUserId).IsRequired();
         builder.Property(p => p.PaidAt).IsRequired();
@@ -52,10 +54,16 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .HasForeignKey(p => p.SchoolId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne<Enrollment>()
+        builder.HasOne(p => p.Enrollment)
             .WithMany()
             .HasForeignKey(p => new { p.SchoolId, p.EnrollmentId })
             .HasPrincipalKey(e => new { e.SchoolId, e.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(p => p.CashierSession)
+            .WithMany()
+            .HasForeignKey(p => new { p.SchoolId, p.CashierSessionId })
+            .HasPrincipalKey(s => new { s.SchoolId, s.Id })
             .OnDelete(DeleteBehavior.Restrict);
 
         // ReceivedByUserId reste une référence AUDIT (l'utilisateur qui a encaissé), toujours renseignée

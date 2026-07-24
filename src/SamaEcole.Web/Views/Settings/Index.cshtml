@@ -43,19 +43,19 @@
  <!-- Onglets : segmented control (fond neutre unifié, pastille active blanche + ombre légère).
  Changement purement visuel : seules les classes rendues par tabClass() (settings.js) évoluent. -->
  <div class="mt-6">
- <nav class="flex flex-nowrap items-center gap-1 overflow-x-auto scrollbar-hide rounded-xl bg-slate-100 p-1" aria-label="Onglets des paramètres">
- <button type="button" x-on:click="tab = 'etablissement'"
- class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all"
+ <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Onglets des paramètres">
+ <button type="button" role="tab" x-on:click="tab = 'etablissement'"
+ class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
  :class="tabClass('etablissement')">
  Établissement
  </button>
- <button type="button" x-on:click="tab = 'configuration'"
- class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all"
+ <button type="button" role="tab" x-on:click="tab = 'configuration'"
+ class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
  :class="tabClass('configuration')">
  Configuration
  </button>
- <button type="button" x-on:click="tab = 'annees-scolaires'"
- class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all"
+ <button type="button" role="tab" x-on:click="tab = 'annees-scolaires'"
+ class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
  :class="tabClass('annees-scolaires')">
  Années scolaires
  </button>
@@ -63,24 +63,24 @@
  [Authorize(Roles = Directeur)] (voir UsersController) — les autres rôles n'ont rien à
  faire sur cet onglet, contrairement à Établissement/Configuration qu'ils consultent en
  lecture seule. *@
- <button type="button" x-show="isDirecteur" x-cloak x-on:click="tab = 'utilisateurs'"
- class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all"
+ <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="tab = 'utilisateurs'"
+ class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
  :class="tabClass('utilisateurs')">
  Utilisateurs
  </button>
  @* Réservé au Directeur : GET /audit-logs est [Authorize(Roles = Directeur)] (voir
  AuditLogsController) — le journal de sécurité de tout l'établissement n'a pas sa place
  dans le rôle du Secrétariat ou de la Finance. *@
- <button type="button" x-show="isDirecteur" x-cloak x-on:click="tab = 'journal-audit'"
- class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all"
+ <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="tab = 'journal-audit'"
+ class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
  :class="tabClass('journal-audit')">
  Journal d'audit
  </button>
  @* Réservé au Directeur : GET /subscriptions/{schoolId}/payments est [Authorize(Roles =
  Directeur)] (voir SubscriptionsController, ticket JGK-I07) — la facturation de
  l'établissement ne concerne que lui. *@
- <button type="button" x-show="isDirecteur" x-cloak x-on:click="tab = 'facturation'"
- class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all"
+ <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="tab = 'facturation'"
+ class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
  :class="tabClass('facturation')">
  Facturation &amp; Historique
  </button>
@@ -711,3 +711,4 @@
  </modal-shell>
 
 </div>
+

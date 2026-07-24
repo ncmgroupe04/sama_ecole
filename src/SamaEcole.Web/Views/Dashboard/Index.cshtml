@@ -61,11 +61,11 @@
 
  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
  <template x-if="!isLoading && data">
- <div class="card p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+ <div class="card p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <p class="text-sm font-semibold text-slate-900">Répartition par genre</p>
  <p class="text-xs text-slate-500 mt-0.5">Élèves inscrits, année active.</p>
  <div class="mt-4 flex items-center gap-6">
- <svg viewBox="0 0 36 36" class="w-28 h-28 -rotate-90 shrink-0" role="img" aria-label="Répartition filles / garçons">
+ <svg viewBox="0 0 36 36" class="w-14 h-14 -rotate-90 shrink-0" role="img" aria-label="Répartition filles / garçons">
  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="3.2"></circle>
  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1D4ED8" stroke-width="3.2"
  stroke-linecap="round"
@@ -94,7 +94,7 @@
  </template>
 
  <template x-if="!isLoading && data">
- <div class="card p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+ <div class="card p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
  <p class="text-sm font-semibold text-slate-900">Taux de présence</p>
  <p class="text-xs text-slate-500 mt-0.5">Part des présences (dont retards) sur les appels du mois en cours.</p>
  <div class="mt-6">
@@ -160,36 +160,39 @@
  </div>
 
             <!-- Navigation Onglets et Bilan Dual (Ticket JGK-F04 / Axe 3) -->
-            <div x-show="!isLoading && data" x-cloak class="mt-8">
+            <div x-show="!isLoading && data" x-cloak class="flex flex-col gap-8 mt-8">
+                <!-- Bloc Supérieur (Bilan Dual et Diagrammes pleine largeur) -->
+                <div class="w-full space-y-6">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
                     <div>
                         <h2 class="text-jgk-title font-bold text-slate-900">Bilan Financier Dual</h2>
                         <p class="text-jgk-subtitle text-slate-500 mt-1">Comparaison en temps réel entre l'exercice annuel et le mois en cours.</p>
                     </div>
-                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-start sm:self-auto">
-                        <button type="button" x-on:click="activeTab = 'dual'"
-                                :class="activeTab === 'dual' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
-                                class="px-3 py-1.5 rounded-lg text-xs transition-all">
+                    <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide self-start sm:self-auto" role="tablist">
+                        <button type="button" role="tab" x-on:click="activeTab = 'dual'"
+                                :class="activeTab === 'dual' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
+                                class="px-4 py-2.5 rounded-lg text-sm transition-all duration-200 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
                             Côte à côte (Dual)
                         </button>
-                        <button type="button" x-on:click="activeTab = 'annual'"
-                                :class="activeTab === 'annual' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
-                                class="px-3 py-1.5 rounded-lg text-xs transition-all">
+                        <button type="button" role="tab" x-on:click="activeTab = 'annual'"
+                                :class="activeTab === 'annual' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
+                                class="px-4 py-2.5 rounded-lg text-sm transition-all duration-200 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
                             Bilan Annuel
                         </button>
-                        <button type="button" x-on:click="activeTab = 'monthly'"
-                                :class="activeTab === 'monthly' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
-                                class="px-3 py-1.5 rounded-lg text-xs transition-all">
+                        <button type="button" role="tab" x-on:click="activeTab = 'monthly'"
+                                :class="activeTab === 'monthly' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
+                                class="px-4 py-2.5 rounded-lg text-sm transition-all duration-200 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
                             Bilan Mensuel
                         </button>
-                    </div>
+                    </nav>
+                    
                 </div>
-                <!-- Contenu Bilan Dual -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                <!-- Contenu Bilan Dual (2 cartes haut) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4 items-stretch">
                     <!-- BILAN ANNUEL -->
                     <div x-show="activeTab === 'dual' || activeTab === 'annual'"
                          :class="activeTab === 'annual' ? 'lg:col-span-2' : ''"
-                         class="card p-6 border-l-4 border-indigo-600 bg-gradient-to-br from-white to-indigo-50/20 shadow-sm">
+                         class="card p-4 border-l-4 border-indigo-600 bg-gradient-to-br from-white to-indigo-50/20 shadow-sm flex flex-col justify-between">
                         <div class="flex items-center justify-between">
                             <div>
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">Exercice actif</span>
@@ -198,23 +201,22 @@
                             <span class="text-2xl font-black text-indigo-600" x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></span>
                         </div>
 
-                        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 text-center">
-                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
-                                <dt class="text-xs text-slate-500">Encaissé sur l'année</dt>
-                                <dd class="text-base font-bold text-slate-900 mt-1" x-text="formatMoney(data.collectedThisYear)"></dd>
+                        <dl class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 text-center">
+                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                                <dt class="text-[10px] xl:text-xs text-slate-500">Encaissé</dt>
+                                <dd class="text-sm font-bold text-slate-900 mt-0.5" x-text="formatMoney(data.collectedThisYear)"></dd>
                             </div>
-                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
-                                <dt class="text-xs text-slate-500">Solde dû global</dt>
-                                <dd class="text-base font-bold text-warning mt-1" x-text="formatMoney(data.outstandingBalance)"></dd>
+                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                                <dt class="text-[10px] xl:text-xs text-slate-500">Solde dû</dt>
+                                <dd class="text-sm font-bold text-warning mt-0.5" x-text="formatMoney(data.outstandingBalance)"></dd>
                             </div>
-                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100 col-span-2 sm:col-span-1">
-                                <dt class="text-xs text-slate-500">Taux global</dt>
-                                <dd class="text-base font-bold text-success mt-1" x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></dd>
+                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                                <dt class="text-[10px] xl:text-xs text-slate-500">Taux</dt>
+                                <dd class="text-sm font-bold text-success mt-0.5" x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></dd>
                             </div>
                         </dl>
 
-                        <!-- Barre de progression annuelle -->
-                        <div class="mt-5 space-y-1.5">
+                        <div class="mt-3 space-y-1.5">
                             <div class="flex justify-between text-xs font-medium text-slate-600">
                                 <span>Progression du recouvrement annuel</span>
                                 <span x-text="formatPercent(data.recoveryRate || data.yearlyRecoveryRate)"></span>
@@ -229,7 +231,7 @@
                     <!-- BILAN DU MOIS EN COURS -->
                     <div x-show="activeTab === 'dual' || activeTab === 'monthly'"
                          :class="activeTab === 'monthly' ? 'lg:col-span-2' : ''"
-                         class="card p-6 border-l-4 border-emerald-600 bg-gradient-to-br from-white to-emerald-50/20 shadow-sm">
+                         class="card p-4 border-l-4 border-emerald-600 bg-gradient-to-br from-white to-emerald-50/20 shadow-sm flex flex-col justify-between">
                         <div class="flex items-center justify-between">
                             <div>
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">Mois en cours</span>
@@ -238,23 +240,22 @@
                             <span class="text-2xl font-black text-emerald-600" x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></span>
                         </div>
 
-                        <dl class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100 text-center">
-                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
-                                <dt class="text-xs text-slate-500">Encaissé ce mois</dt>
-                                <dd class="text-base font-bold text-slate-900 mt-1" x-text="formatMoney(data.collectedThisMonth)"></dd>
+                        <dl class="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100 text-center">
+                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                                <dt class="text-[10px] xl:text-xs text-slate-500">Encaissé</dt>
+                                <dd class="text-sm font-bold text-slate-900 mt-0.5" x-text="formatMoney(data.collectedThisMonth)"></dd>
                             </div>
-                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
-                                <dt class="text-xs text-slate-500">Attendu ce mois</dt>
-                                <dd class="text-base font-bold text-slate-700 mt-1" x-text="formatMoney(data.expectedThisMonth || 0)"></dd>
+                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                                <dt class="text-[10px] xl:text-xs text-slate-500">Attendu</dt>
+                                <dd class="text-sm font-bold text-slate-700 mt-0.5" x-text="formatMoney(data.expectedThisMonth || 0)"></dd>
                             </div>
-                            <div class="bg-slate-50/80 p-3.5 rounded-xl border border-slate-100 col-span-2 sm:col-span-1">
-                                <dt class="text-xs text-slate-500">Taux mensuel</dt>
-                                <dd class="text-base font-bold text-emerald-600 mt-1" x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></dd>
+                            <div class="flex-1 bg-slate-50/80 p-2 rounded-xl border border-slate-100">
+                                <dt class="text-[10px] xl:text-xs text-slate-500">Taux</dt>
+                                <dd class="text-sm font-bold text-emerald-600 mt-0.5" x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></dd>
                             </div>
                         </dl>
 
-                        <!-- Barre de progression mensuelle -->
-                        <div class="mt-5 space-y-1.5">
+                        <div class="mt-3 space-y-1.5">
                             <div class="flex justify-between text-xs font-medium text-slate-600">
                                 <span>Réalisation par rapport aux échéances du mois</span>
                                 <span x-text="formatPercent(data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0))"></span>
@@ -264,24 +265,24 @@
                                      :style="'width: ' + Math.min(100, Math.round((data.monthlyRecoveryRate || (data.expectedThisMonth ? (data.collectedThisMonth / data.expectedThisMonth) : 0)) * 100)) + '%'"></div>
                             </div>
                         </div>
-                </div>
-            </div>
+                </div> <!-- Fin BILAN DU MOIS -->
+                </div> <!-- Fin Grille Haut -->
 
- <!-- Diagrammes : recouvrement (donut) + comparaison jour/mois/année (barres), avec le détail en
- pourcentage de chaque chiffre affiché dans les cartes KPI ci-dessus. -->
- <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                <!-- Diagrammes inférieurs (2 cartes) -->
+                <div class="flex justify-between gap-4 mt-4">
+
  <template x-if="!isLoading && data">
- <div class="card p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+ <div class="card p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between flex-1">
  <p class="text-sm font-semibold text-slate-900">Recouvrement</p>
  <p class="text-xs text-slate-500 mt-0.5">Encaissé vs solde dû, année scolaire active.</p>
- <div class="mt-4 flex items-center gap-6">
- <svg viewBox="0 0 36 36" class="w-28 h-28 -rotate-90 shrink-0" role="img" aria-label="Part recouvrée du solde dû">
+ <div class="mt-3 flex items-center gap-6">
+ <svg viewBox="0 0 36 36" class="w-12 h-12 -rotate-90 shrink-0" role="img" aria-label="Part recouvrée du solde dû">
  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="3.2"></circle>
  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#1E8E3E" stroke-width="3.2"
  stroke-linecap="round"
  :stroke-dasharray="(data.recoveryRate * 100) + ' ' + (100 - data.recoveryRate * 100)"></circle>
  </svg>
- <dl class="space-y-2.5 text-sm">
+ <dl class="space-y-1.5 text-sm">
  <div class="flex items-center gap-2">
  <span class="w-2.5 h-2.5 rounded-full shrink-0 bg-success"></span>
  <dt class="text-slate-600">Encaissé</dt>
@@ -298,16 +299,16 @@
  </template>
 
  <template x-if="!isLoading && data">
- <div class="card p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+ <div class="card p-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between flex-1">
  <p class="text-sm font-semibold text-slate-900">Encaissements</p>
  <p class="text-xs text-slate-500 mt-0.5">Comparaison jour / mois / année.</p>
- <div class="mt-5 space-y-3.5">
+ <div class="mt-3 space-y-1.5">
  <div>
  <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
  <span>Aujourd'hui</span>
  <span class="font-semibold text-slate-900" x-text="formatMoney(data.collectedToday)"></span>
  </div>
- <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+ <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden">
  <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedToday) + '%'"></div>
  </div>
  </div>
@@ -316,7 +317,7 @@
  <span>Ce mois</span>
  <span class="font-semibold text-slate-900" x-text="formatMoney(data.collectedThisMonth)"></span>
  </div>
- <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+ <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden">
  <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedThisMonth) + '%'"></div>
  </div>
  </div>
@@ -325,21 +326,24 @@
  <span>Cette année</span>
  <span class="font-semibold text-slate-900" x-text="formatMoney(data.collectedThisYear)"></span>
  </div>
- <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+ <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden">
  <div class="h-full rounded-full bg-primary" :style="'width: ' + barWidth(data.collectedThisYear) + '%'"></div>
  </div>
  </div>
  </div>
- <p class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500">
+ <p class="mt-2.5 pt-2 border-t border-slate-100 text-[11px] text-slate-500 leading-tight">
  Aujourd'hui représente <span class="font-semibold text-slate-700" x-text="pct(data.collectedToday, data.collectedThisMonth)"></span> du mois en cours ·
  ce mois représente <span class="font-semibold text-slate-700" x-text="pct(data.collectedThisMonth, data.collectedThisYear)"></span> de l'année.
  </p>
  </div>
  </template>
- </div>
+                </div> <!-- Fin Grille Bas -->
+                </div> <!-- Fin du Bloc Supérieur -->
 
- <!-- Derniers paiements -->
- <div class="card mt-6 relative">
+                <!-- Bloc Inférieur (Derniers paiements) -->
+                <div class="w-full">
+                    <!-- Derniers paiements -->
+                    <div class="card relative h-full">
  <div class="p-6 border-b border-slate-200 bg-slate-50/50 rounded-t-xl flex items-center justify-between gap-4">
  <div>
  <p class="text-sm font-semibold text-slate-900">Derniers paiements</p>
@@ -356,16 +360,16 @@
  </div>
 
  <div class="overflow-x-auto">
- <table class="w-full text-left border-collapse">
+ <table class="w-full text-left border-collapse table-auto text-sm">
  <thead>
  <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
- <th class="py-3 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Matricule</th>
- <th class="py-3 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Reçu N°</th>
- <th class="py-3 px-4 text-right whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
- <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Mode</th>
- <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
- <th class="py-3 px-4 w-12 uppercase tracking-wider text-slate-500 font-semibold"><span class="sr-only">Reçu PDF</span></th>
+ <th class="py-3 px-3 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
+ <th class="py-3 px-3 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Matricule</th>
+ <th class="py-3 px-3 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Reçu N°</th>
+ <th class="py-3 px-3 text-right whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
+ <th class="py-3 px-3 uppercase tracking-wider text-slate-500 font-semibold">Mode</th>
+ <th class="py-3 px-3 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+ <th class="py-3 px-3 w-12 uppercase tracking-wider text-slate-500 font-semibold"><span class="sr-only">Reçu PDF</span></th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
@@ -378,19 +382,19 @@
 
  <template x-for="payment in filteredPayments()" :key="payment.paymentId">
  <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
- <td class="py-3 px-4">
+ <td class="py-3 px-3">
  <span class="inline-flex items-center gap-2">
  <span class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center text-xs font-medium uppercase"
  x-text="initials(payment.studentFullName)"></span>
  <span class="font-medium text-slate-900" x-text="payment.studentFullName"></span>
  </span>
  </td>
- <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap" x-text="payment.matricule"></td>
- <td class="py-3 px-4 font-mono text-xs text-slate-500 whitespace-nowrap" x-text="payment.receiptNumber"></td>
- <td class="py-3 px-4 text-right font-medium whitespace-nowrap" x-text="formatMoney(payment.amount)"></td>
- <td class="py-3 px-4"><badge variant="neutral" x-text="methodLabel(payment.method)"></badge></td>
- <td class="py-3 px-4 text-slate-500 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
-                                <td class="py-3 px-4 text-center whitespace-nowrap">
+ <td class="py-3 px-3 font-mono text-xs text-slate-500 whitespace-nowrap" x-text="payment.matricule"></td>
+ <td class="py-3 px-3 font-mono text-xs text-slate-500 whitespace-nowrap" x-text="payment.receiptNumber"></td>
+ <td class="py-3 px-3 text-right font-medium whitespace-nowrap" x-text="formatMoney(payment.amount)"></td>
+ <td class="py-3 px-3"><badge variant="neutral" x-text="methodLabel(payment.method)"></badge></td>
+ <td class="py-3 px-3 text-slate-500 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
+                                <td class="py-3 px-3 text-center whitespace-nowrap">
                                     <button type="button"
                                             x-on:click="previewReceipt(payment.paymentId, payment.receiptNumber)"
                                             title="Ouvrir l'aperçu du reçu (PDF)"
@@ -403,6 +407,7 @@
  </template>
  </tbody>
  </table>
+    </div>
     </div>
     </div>
     </div>
@@ -462,3 +467,5 @@
         </div>
     </modal-shell>
 </div>
+
+

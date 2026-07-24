@@ -78,7 +78,7 @@ public class GradesController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(query, cancellationToken));
 
     [HttpPost]
-    [Authorize(Roles = nameof(Role.Enseignant))]
+    [Authorize(Roles = GradingRoles)]
     [ProducesResponseType<GradeResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -93,12 +93,12 @@ public class GradesController(ISender mediator) : ControllerBase
     /// <summary>
     /// Import de masse d'une colonne de notes (Devoir OU Composition) depuis un fichier CSV/Excel à
     /// deux colonnes (matricule, note) — mode de saisie alternatif à la grille cellule par cellule,
-    /// même permission que la saisie unitaire (docs/Volume_7_Security.md « Notes » : Saisir = Enseignant
-    /// seul). Tout le fichier est validé avant la moindre écriture (422 avec le détail ligne par ligne
+    /// même permission que la saisie unitaire (Saisir = Directeur ou Enseignant).
+    /// Tout le fichier est validé avant la moindre écriture (422 avec le détail ligne par ligne
     /// si une seule ligne est invalide) — voir ImportGradesCommandHandler.
     /// </summary>
     [HttpPost("import")]
-    [Authorize(Roles = nameof(Role.Enseignant))]
+    [Authorize(Roles = GradingRoles)]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]
     [ProducesResponseType<ImportGradesResult>(StatusCodes.Status200OK)]

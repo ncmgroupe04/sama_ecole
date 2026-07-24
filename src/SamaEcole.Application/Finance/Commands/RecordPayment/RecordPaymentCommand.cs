@@ -13,8 +13,17 @@ namespace SamaEcole.Application.Finance.Commands.RecordPayment;
 /// IAuditableRequest (JGK-H01) : « paiements » fait partie des écritures sensibles explicitement
 /// listées par le journal d'audit centralisé.
 /// </summary>
-public record RecordPaymentCommand(Guid EnrollmentId, decimal Amount, PaymentMethod Method)
+public record RecordPaymentCommand(
+    Guid EnrollmentId, 
+    decimal Amount, 
+    PaymentMethod Method,
+    PaymentCategory Category = PaymentCategory.Tuition,
+    string? ReferencePeriod = null,
+    List<PaymentBreakdownDto>? Breakdowns = null)
     : IRequest<RecordPaymentResult>, IAuditableRequest;
+
+public record PaymentBreakdownDto(Guid FeeCategoryId, decimal AmountAllocated);
+
 
 /// <summary>
 /// Résultat d'un encaissement : de quoi confirmer à la caisse et imprimer le reçu (le numéro officiel),

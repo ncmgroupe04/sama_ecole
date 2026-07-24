@@ -519,7 +519,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
     private static string FormatDate(DateOnly date) => date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
     /// <summary>Majuscules pour l'en-tête administratif ; chaîne vide si non renseigné (ligne imprimée vide).</summary>
-    private static string Upper(string? value) => value?.ToUpperInvariant() ?? "";
+    internal static string Upper(string? value) => value?.ToUpperInvariant() ?? "";
 
     /// <summary>« - » tant qu'aucun appel n'a été fait sur la période — jamais un zéro trompeur.</summary>
     internal static string FormatOptionalCount(int? value) => value?.ToString() ?? "-";

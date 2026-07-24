@@ -335,9 +335,8 @@ if (!app.Environment.IsDevelopment())
     // le profil local n'a pas de certificat de confiance publique et HSTS "collerait" au navigateur
     // au-delà de la durée de vie du process de dev.
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
-
-app.UseHttpsRedirection();
 app.UseStaticFiles(); // sert wwwroot/css/site.css compilé depuis Tailwind (Décision D-13)
 app.UseAuthentication();
 
