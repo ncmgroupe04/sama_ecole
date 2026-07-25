@@ -1,7 +1,144 @@
 @{
-    ViewData["Title"] = "Page en construction";
+    ViewData["Title"] = "Trésorerie";
 }
-<div class="p-8 text-center text-gray-500">
-    <h1 class="text-2xl font-bold">@ViewData["Title"]</h1>
-    <p class="mt-4">Cette page est actuellement en cours de développement.</p>
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/treasury.js" asp-append-version="true"></script>
+}
+
+<div x-data="treasuryView()">
+    <div>
+        <h1 class="text-jgk-title font-bold text-slate-900">Trésorerie</h1>
+        <p class="text-jgk-subtitle text-slate-500 mt-1">Position de caisse sur une période : encaissements (Caisse) et décaissements combinés.</p>
+    </div>
+
+    <!-- Cartes de synthèse -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        <template x-if="isLoading">
+            <template x-for="i in 4" :key="i">
+                <div class="card p-5 h-[92px] skeleton"></div>
+            </template>
+        </template>
+
+        <template x-if="!isLoading && data">
+            <stat-card label="Total encaissé" icon="wallet" accent="success">
+                <span x-text="formatAmount(data.totalCollected)"></span>
+            </stat-card>
+        </template>
+        <template x-if="!isLoading && data">
+            <stat-card label="Total décaissé" icon="document" accent="danger">
+                <span x-text="formatAmount(data.totalDisbursed)"></span>
+            </stat-card>
+        </template>
+        <template x-if="!isLoading && data">
+            <stat-card label="Solde net" icon="chart-multiple" :accent="data.netPosition >= 0 ? 'primary' : 'danger'">
+                <span x-text="formatAmount(data.netPosition)"></span>
+            </stat-card>
+        </template>
+        <template x-if="!isLoading && data">
+            <stat-card label="Reste à recouvrer" icon="alert-circle" accent="warning">
+                <span x-text="formatAmount(data.totalOutstandingDebt)"></span>
+            </stat-card>
+        </template>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <div class="card mt-6 relative">
+        <!-- Filtre de période -->
+        <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Du</label>
+                    <date-field model="startDate" aria-label="Date de début" class="mt-0" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Au</label>
+                    <date-field model="endDate" aria-label="Date de fin" class="mt-0" />
+                </div>
+                <button type="button" x-on:click="applyFilters()" class="btn-primary">
+                    <icon name="chart-multiple" class="w-4 h-4" />
+                    Actualiser
+                </button>
+                <button type="button" x-on:click="resetFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+                    Réinitialiser
+                </button>
+            </div>
+            <span class="text-sm text-slate-500" x-show="data" x-text="periodLabel()"></span>
+        </div>
+
+        <!-- Répartitions -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 border-b border-slate-200">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-700 mb-3">Encaissements par mode de paiement</h2>
+                <div class="space-y-2">
+                    <template x-if="!isLoading && data && data.collectedByMethod.length === 0">
+                        <p class="text-sm text-slate-400">Aucun encaissement sur cette période.</p>
+                    </template>
+                    <template x-for="item in (data ? data.collectedByMethod : [])" :key="item.label">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-slate-600" x-text="item.label"></span>
+                            <span class="font-semibold text-slate-900" x-text="formatAmount(item.amount)"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <div>
+                <h2 class="text-sm font-semibold text-slate-700 mb-3">Décaissements par catégorie</h2>
+                <div class="space-y-2">
+                    <template x-if="!isLoading && data && data.disbursedByCategory.length === 0">
+                        <p class="text-sm text-slate-400">Aucun décaissement sur cette période.</p>
+                    </template>
+                    <template x-for="item in (data ? data.disbursedByCategory : [])" :key="item.label">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-slate-600" x-text="item.label"></span>
+                            <span class="font-semibold text-slate-900" x-text="formatAmount(item.amount)"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fil d'activité récent -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head hover:bg-slate-50 transition-colors duration-150">
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Type</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Référence</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <template x-if="isLoading">
+                        <template x-for="i in 5" :key="i">
+                            <tr><td class="py-3 px-4" colspan="4"><div class="skeleton h-4 w-full"></div></td></tr>
+                        </template>
+                    </template>
+
+                    <tr x-show="!isLoading && (!data || data.recentTransactions.length === 0)" x-cloak>
+                        <td colspan="4">
+                            <empty-state icon="document" title="Aucun mouvement sur cette période."
+                                hint="Les encaissements de la Caisse et les décaissements enregistrés apparaîtront ici." />
+                        </td>
+                    </tr>
+
+                    <template x-if="!isLoading && data">
+                        <template x-for="(tx, index) in data.recentTransactions" :key="tx.kind + '-' + tx.date + '-' + index">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-medium" :class="kindBadgeClass(tx.kind)" x-text="tx.kind"></span>
+                                </td>
+                                <td class="py-3 px-4 text-slate-600" x-text="tx.label"></td>
+                                <td class="py-3 px-4 text-slate-600" x-text="formatDate(tx.date)"></td>
+                                <td class="py-3 px-4 text-right font-semibold text-slate-900" x-text="formatAmount(tx.amount)"></td>
+                            </tr>
+                        </template>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>

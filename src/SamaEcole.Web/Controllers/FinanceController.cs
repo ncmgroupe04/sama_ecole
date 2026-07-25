@@ -328,8 +328,9 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     [HttpGet("treasury")]
     [Authorize(Roles = "Directeur,Finance")]
     [ProducesResponseType<TreasuryDashboardDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> TreasuryDashboard(CancellationToken cancellationToken)
-        => Ok(await mediator.Send(new SamaEcole.Application.Finance.Queries.GetTreasuryDashboard.GetTreasuryDashboardQuery(), cancellationToken));
+    public async Task<IActionResult> TreasuryDashboard(
+        [FromQuery] DateOnly? startDate, [FromQuery] DateOnly? endDate, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetTreasuryDashboardQuery(startDate, endDate), cancellationToken));
 
     [HttpPost("payroll")]
     [Authorize(Roles = "Directeur,Finance")]
