@@ -464,14 +464,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Télécharge/Prévisualise le certificat d'inscription en PDF via la modale (Ticket JGK-E03 / Axe 2).
+         * Télécharge/Prévisualise le Certificat de Scolarité en PDF via la modale (Ticket JGK-E03 / Axe 2).
          */
         async downloadCertificatePdf() {
             if (!this.receipt) return;
             await this.openPdfPreview(
                 `/api/v1/enrollments/${this.receipt.enrollmentId}/certificate/pdf`,
-                `Certificat / Attestation d'inscription`,
-                `Certificat-Inscription-${this.receipt.matricule}.pdf`
+                `Certificat de Scolarité`,
+                `Certificat-Scolarite-${this.receipt.matricule}.pdf`
             );
         },
 
