@@ -22,6 +22,11 @@ using Microsoft.AspNetCore.Mvc;
 using SamaEcole.Application.Finance.Commands.OpenCashierSession;
 using SamaEcole.Application.Finance.Commands.CloseCashierSession;
 using SamaEcole.Application.Finance.Queries.GetDailyClosingReportPdf;
+using SamaEcole.Application.Finance.Commands.CreateEmployeeContract;
+using SamaEcole.Application.Finance.Queries.GetEmployeeContracts;
+using SamaEcole.Application.Finance.Queries.GetFichePaies;
+using SamaEcole.Application.Finance.Queries.GetPayslipPdf;
+using SamaEcole.Application.Finance.Queries.GetTaxDeclarations;
 
 namespace SamaEcole.Web.Controllers;
 
@@ -332,6 +337,27 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         [FromQuery] DateOnly? startDate, [FromQuery] DateOnly? endDate, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetTreasuryDashboardQuery(startDate, endDate), cancellationToken));
 
+    [HttpGet("employee-contracts")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<List<EmployeeContractDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetEmployeeContracts(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetEmployeeContractsQuery(), cancellationToken));
+
+    [HttpPost("employee-contracts")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreateEmployeeContract([FromBody] CreateEmployeeContractCommand command, CancellationToken cancellationToken)
+    {
+        var id = await mediator.Send(command, cancellationToken);
+        return CreatedAtAction(nameof(GetEmployeeContracts), new { id }, id);
+    }
+
+    [HttpGet("payroll")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<List<FichePaieListItemDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPayroll([FromQuery] int? month, [FromQuery] int? year, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetFichePaiesQuery(month, year), cancellationToken));
+
     [HttpPost("payroll")]
     [Authorize(Roles = "Directeur,Finance")]
     [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
@@ -340,6 +366,42 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         var id = await mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GeneratePayroll), new { id }, id);
     }
+
+    [HttpGet("payroll/{id:guid}/pdf")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPayslipPdf(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetPayslipPdfQuery(id), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le bulletin de paie PDF généré est vide pour la fiche {FichePaieId}", id);
+                return NotFound(new { message = "Le bulletin de paie PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Bulletin-{result.PayslipNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du bulletin de paie PDF pour {FichePaieId}", id);
+            return Problem(detail: ex.Message, title: "Erreur de génération du bulletin de paie PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpGet("tax-declarations")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<List<TaxDeclarationListItemDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTaxDeclarations([FromQuery] int? year, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetTaxDeclarationsQuery(year), cancellationToken));
 
     [HttpPost("tax-declaration")]
     [Authorize(Roles = "Directeur,Finance")]

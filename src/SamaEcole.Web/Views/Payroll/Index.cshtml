@@ -1,7 +1,337 @@
 @{
-    ViewData["Title"] = "Page en construction";
+    ViewData["Title"] = "Paie";
 }
-<div class="p-8 text-center text-gray-500">
-    <h1 class="text-2xl font-bold">@ViewData["Title"]</h1>
-    <p class="mt-4">Cette page est actuellement en cours de développement.</p>
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/payroll.js" asp-append-version="true"></script>
+}
+
+<div x-data="payrollView()">
+    <div>
+        <h1 class="text-jgk-title font-bold text-slate-900">Paie</h1>
+        <p class="text-jgk-subtitle text-slate-500 mt-1">Contrats du personnel, fiches de paie et déclarations fiscales.</p>
+    </div>
+
+    <!-- Onglets -->
+    <div class="mt-6">
+        <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Onglets Paie">
+            <button type="button" role="tab" x-on:click="tab = 'contrats'"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('contrats')">
+                Contrats
+            </button>
+            <button type="button" role="tab" x-on:click="tab = 'fiches'"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('fiches')">
+                Fiches de paie
+            </button>
+            <button type="button" role="tab" x-on:click="tab = 'fiscalite'"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('fiscalite')">
+                Déclarations fiscales
+            </button>
+        </nav>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- ============================= ONGLET CONTRATS ============================= -->
+    <div x-show="tab === 'contrats'" x-cloak class="mt-6">
+        <div class="card">
+            <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-slate-700">Contrats du personnel</h2>
+                <button type="button" x-on:click="openContractModal()" class="btn-primary">
+                    <icon name="plus" class="w-4 h-4" />
+                    Nouveau contrat
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Employé</th>
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Qualité</th>
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Type</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Salaire de base</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Taux horaire</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Prime transport</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr x-show="!isLoading && contracts.length === 0" x-cloak>
+                            <td colspan="6">
+                                <empty-state icon="document" title="Aucun contrat enregistré."
+                                    hint="Ajoutez un contrat pour pouvoir générer une fiche de paie." />
+                            </td>
+                        </tr>
+                        <template x-for="contract in contracts" :key="contract.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 font-medium text-slate-900" x-text="contract.employeeFullName"></td>
+                                <td class="py-3 px-4 text-slate-600" x-text="contract.employeeRole"></td>
+                                <td class="py-3 px-4 text-slate-600" x-text="contractTypeLabel(contract.type)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.baseSalary)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.hourlyRate)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.transportAllowance)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET FICHES DE PAIE ============================= -->
+    <div x-show="tab === 'fiches'" x-cloak class="mt-6">
+        <div class="card">
+            <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Mois</label>
+                        <select x-model="filterMonth" class="input-field mt-0">
+                            <option value="">Tous</option>
+                            <template x-for="m in 12" :key="m">
+                                <option :value="m" x-text="monthLabel(m)"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Année</label>
+                        <input type="number" x-model="filterYear" class="input-field mt-0 w-28" />
+                    </div>
+                    <button type="button" x-on:click="applyPayslipFilters()" class="btn-secondary">
+                        <icon name="chart-multiple" class="w-4 h-4" />
+                        Filtrer
+                    </button>
+                </div>
+                <button type="button" x-on:click="openPayslipModal()" class="btn-primary">
+                    <icon name="plus" class="w-4 h-4" />
+                    Générer une fiche
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Employé</th>
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Période</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Brut</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Net à payer</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Bulletin</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr x-show="!isLoading && payslips.length === 0" x-cloak>
+                            <td colspan="5">
+                                <empty-state icon="document" title="Aucune fiche de paie sur cette période."
+                                    hint="Générez une fiche pour un contrat existant." />
+                            </td>
+                        </tr>
+                        <template x-for="payslip in payslips" :key="payslip.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 font-medium text-slate-900" x-text="payslip.employeeFullName"></td>
+                                <td class="py-3 px-4 text-slate-600" x-text="monthLabel(payslip.month) + ' ' + payslip.year"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(payslip.grossSalary)"></td>
+                                <td class="py-3 px-4 text-right font-semibold text-slate-900" x-text="formatAmount(payslip.netSalary)"></td>
+                                <td class="py-3 px-4 text-right">
+                                    <button type="button" x-on:click="printPayslip(payslip.id)" :disabled="printingPayslipId === payslip.id"
+                                            class="btn-secondary inline-flex items-center gap-2 disabled:opacity-60">
+                                        <icon name="print" class="w-4 h-4" x-show="printingPayslipId !== payslip.id" />
+                                        <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingPayslipId === payslip.id" x-cloak />
+                                        <span x-text="printingPayslipId === payslip.id ? 'Génération...' : 'Bulletin PDF'"></span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET DÉCLARATIONS FISCALES ============================= -->
+    <div x-show="tab === 'fiscalite'" x-cloak class="mt-6">
+        <div class="card">
+            <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Année</label>
+                        <input type="number" x-model="filterTaxYear" class="input-field mt-0 w-28" />
+                    </div>
+                    <button type="button" x-on:click="applyTaxFilters()" class="btn-secondary">
+                        <icon name="chart-multiple" class="w-4 h-4" />
+                        Filtrer
+                    </button>
+                </div>
+                <button type="button" x-on:click="openTaxModal()" class="btn-primary">
+                    <icon name="plus" class="w-4 h-4" />
+                    Générer une déclaration
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Période</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">IPRES</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">CSS</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">VRS</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">BRS</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Total dû à l'État</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr x-show="!isLoading && taxDeclarations.length === 0" x-cloak>
+                            <td colspan="6">
+                                <empty-state icon="document" title="Aucune déclaration sur cette année."
+                                    hint="Générez une déclaration pour un mois où des fiches de paie existent." />
+                            </td>
+                        </tr>
+                        <template x-for="declaration in taxDeclarations" :key="declaration.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 font-medium text-slate-900" x-text="monthLabel(declaration.month) + ' ' + declaration.year"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalIpres)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalCss)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalVrs)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalBrs)"></td>
+                                <td class="py-3 px-4 text-right font-semibold text-slate-900" x-text="formatAmount(declaration.totalDueToState)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== Modale : Nouveau contrat ===================== -->
+    <modal-shell open="isContractModalOpen" title="Nouveau contrat">
+        <form x-on:submit.prevent="submitContract()" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Type d'employé</label>
+                <div class="mt-1 flex gap-4">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="radio" x-model="contractForm.employeeKind" value="teacher" /> Enseignant
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="radio" x-model="contractForm.employeeKind" value="user" /> Utilisateur (non-enseignant)
+                    </label>
+                </div>
+            </div>
+
+            <div x-show="contractForm.employeeKind === 'teacher'">
+                <label class="block text-sm font-medium text-slate-700">Enseignant <span class="text-red-500">*</span></label>
+                <select-field model="contractForm.teacherId" placeholder="Sélectionnez un enseignant..."
+                    options-expr="teachers.map(t => ({value: t.id, label: t.fullName + ' (' + t.matricule + ')'}))" />
+            </div>
+            <div x-show="contractForm.employeeKind === 'user'">
+                <label class="block text-sm font-medium text-slate-700">Utilisateur <span class="text-red-500">*</span></label>
+                <select-field model="contractForm.userId" placeholder="Sélectionnez un utilisateur..."
+                    options-expr="users.map(u => ({value: u.id, label: u.fullName + ' (' + u.role + ')'}))" />
+                <p class="mt-1 text-xs text-slate-400" x-show="users.length === 0">Aucun utilisateur accessible (réservé au Directeur).</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Type de contrat</label>
+                <select x-model="contractForm.type" class="input-field mt-1">
+                    <option value="Permanent">Permanent</option>
+                    <option value="Vacataire">Vacataire (horaire)</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div x-show="contractForm.type === 'Permanent'">
+                    <label class="block text-sm font-medium text-slate-700">Salaire de base (FCFA)</label>
+                    <input type="number" min="0" x-model="contractForm.baseSalary" class="input-field mt-1" />
+                </div>
+                <div x-show="contractForm.type === 'Vacataire'">
+                    <label class="block text-sm font-medium text-slate-700">Taux horaire (FCFA)</label>
+                    <input type="number" min="0" x-model="contractForm.hourlyRate" class="input-field mt-1" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Prime de transport (FCFA)</label>
+                    <input type="number" min="0" x-model="contractForm.transportAllowance" class="input-field mt-1" />
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" x-on:click="isContractModalOpen = false" class="btn-secondary">Annuler</button>
+                <button type="submit" class="btn-primary" :disabled="isSavingContract">
+                    <span x-show="!isSavingContract">Enregistrer</span>
+                    <span x-show="isSavingContract">Enregistrement...</span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- ===================== Modale : Générer une fiche de paie ===================== -->
+    <modal-shell open="isPayslipModalOpen" title="Générer une fiche de paie">
+        <form x-on:submit.prevent="submitPayslip()" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Contrat <span class="text-red-500">*</span></label>
+                <select-field model="payslipForm.employeeContractId" placeholder="Sélectionnez un contrat..."
+                    options-expr="contracts.map(c => ({value: c.id, label: c.employeeFullName + ' — ' + contractTypeLabel(c.type)}))" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Mois</label>
+                    <select x-model="payslipForm.month" class="input-field mt-1">
+                        <template x-for="m in 12" :key="m">
+                            <option :value="m" x-text="monthLabel(m)"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Année</label>
+                    <input type="number" x-model="payslipForm.year" class="input-field mt-1" />
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Heures travaillées (contrat Vacataire)</label>
+                <input type="number" min="0" x-model="payslipForm.hoursWorked" class="input-field mt-1" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Prime de transport (FCFA)</label>
+                <input type="number" min="0" x-model="payslipForm.transportAllowance" class="input-field mt-1" />
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" x-on:click="isPayslipModalOpen = false" class="btn-secondary">Annuler</button>
+                <button type="submit" class="btn-primary" :disabled="isGeneratingPayslip">
+                    <span x-show="!isGeneratingPayslip">Générer</span>
+                    <span x-show="isGeneratingPayslip">Génération...</span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- ===================== Modale : Générer une déclaration fiscale ===================== -->
+    <modal-shell open="isTaxModalOpen" title="Générer une déclaration fiscale">
+        <form x-on:submit.prevent="submitTaxDeclaration()" class="space-y-5">
+            <p class="text-sm text-slate-500">Agrège les charges sociales de toutes les fiches de paie du mois choisi.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Mois</label>
+                    <select x-model="taxForm.month" class="input-field mt-1">
+                        <template x-for="m in 12" :key="m">
+                            <option :value="m" x-text="monthLabel(m)"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Année</label>
+                    <input type="number" x-model="taxForm.year" class="input-field mt-1" />
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" x-on:click="isTaxModalOpen = false" class="btn-secondary">Annuler</button>
+                <button type="submit" class="btn-primary" :disabled="isGeneratingTax">
+                    <span x-show="!isGeneratingTax">Générer</span>
+                    <span x-show="isGeneratingTax">Génération...</span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
 </div>

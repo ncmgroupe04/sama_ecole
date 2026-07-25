@@ -81,6 +81,9 @@ public static class DependencyInjection
         // Billet d'entrée en classe A5 (module Surveillance) — même moteur QuestPDF, sans état.
         services.AddSingleton<IEntryTicketPdfGenerator, EntryTicketPdfGenerator>();
 
+        // Bulletin de paie A4 (module Comptabilité & Fiscalité) — même moteur QuestPDF, sans état.
+        services.AddSingleton<IPayslipPdfGenerator, PayslipPdfGenerator>();
+
         // Bulletin de notes PDF (ticket JGK-G03) — même moteur QuestPDF, même convention.
         services.AddSingleton<IReportCardPdfGenerator, ReportCardPdfGenerator>();
 
