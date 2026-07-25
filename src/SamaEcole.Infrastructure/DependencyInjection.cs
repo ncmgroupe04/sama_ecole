@@ -78,6 +78,9 @@ public static class DependencyInjection
         services.AddSingleton<ISchoolCardPdfGenerator, SamaEcole.Infrastructure.Documents.SchoolCardPdfGenerator>();
         services.AddSingleton<IEnrollmentCertificatePdfGenerator, EnrollmentCertificatePdfGenerator>();
 
+        // Billet d'entrée en classe A5 (module Surveillance) — même moteur QuestPDF, sans état.
+        services.AddSingleton<IEntryTicketPdfGenerator, EntryTicketPdfGenerator>();
+
         // Bulletin de notes PDF (ticket JGK-G03) — même moteur QuestPDF, même convention.
         services.AddSingleton<IReportCardPdfGenerator, ReportCardPdfGenerator>();
 
