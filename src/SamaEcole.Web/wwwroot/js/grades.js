@@ -318,6 +318,12 @@ document.addEventListener('alpine:init', () => {
          * verrouillées — même mécanique bas niveau que fetchClassBulletins (blob authentifié).
          */
         async downloadGradeSheet() {
+            if (!this.selectedClassroomId || !this.selectedSubjectId || !this.selectedTermId) {
+                console.error('Sélection classe/matière/trimestre invalide ou indéfinie', {
+                    classroomId: this.selectedClassroomId, subjectId: this.selectedSubjectId, termId: this.selectedTermId
+                });
+                return;
+            }
             this.downloadingGradeSheet = true;
             try {
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {

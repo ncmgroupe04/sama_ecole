@@ -76,6 +76,10 @@ document.addEventListener('alpine:init', () => {
 
         /** Convocation PDF, ouverte dans un nouvel onglet — même mécanique que discipline.js printPv. */
         async printNotice(recordId) {
+            if (!recordId || recordId === 'undefined') {
+                console.error('Identifiant de convocation invalide ou indéfini', recordId);
+                return;
+            }
             this.printingId = recordId;
             try {
                 const response = await fetch(`/api/v1/parent-summons/${recordId}/notice/pdf`, {

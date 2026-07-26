@@ -197,6 +197,10 @@ document.addEventListener('alpine:init', () => {
 
         /** Bulletin PDF : le jeton ne voyage pas en navigation classique — fetch brut + blob (même mécanique que Billets/Caisse). */
         async printPayslip(fichePaieId) {
+            if (!fichePaieId || fichePaieId === 'undefined') {
+                console.error('Identifiant de fiche de paie invalide ou indéfini', fichePaieId);
+                return;
+            }
             this.printingPayslipId = fichePaieId;
             try {
                 const response = await fetch(`/api/v1/finance/payroll/${fichePaieId}/pdf`, {
@@ -224,6 +228,10 @@ document.addEventListener('alpine:init', () => {
 
         /** Attestation de travail PDF — même mécanique que printPayslip (fetch brut + blob, nouvel onglet). */
         async downloadWorkCertificate(contract) {
+            if (!contract || !contract.id || contract.id === 'undefined') {
+                console.error('Identifiant de contrat invalide ou indéfini', contract && contract.id);
+                return;
+            }
             this.downloadingCertificateId = contract.id;
             try {
                 const response = await fetch(`/api/v1/finance/employee-contracts/${contract.id}/work-certificate/pdf`, {

@@ -108,6 +108,10 @@ document.addEventListener('alpine:init', () => {
          * Caisse (le jeton ne voyage pas sur une navigation classique).
          */
         async printBillet(lateArrivalId) {
+            if (!lateArrivalId || lateArrivalId === 'undefined') {
+                console.error('Identifiant de billet invalide ou indéfini', lateArrivalId);
+                return;
+            }
             this.printingId = lateArrivalId;
             try {
                 const response = await fetch(`/api/v1/billets/late-arrival/${lateArrivalId}/pdf`, {
@@ -188,6 +192,10 @@ document.addEventListener('alpine:init', () => {
 
         /** Billet de sortie A5 en PDF — même mécanique que printBillet. */
         async printExitBillet(earlyDepartureId) {
+            if (!earlyDepartureId || earlyDepartureId === 'undefined') {
+                console.error('Identifiant de billet de sortie invalide ou indéfini', earlyDepartureId);
+                return;
+            }
             this.printingExitId = earlyDepartureId;
             try {
                 const response = await fetch(`/api/v1/billets/early-departure/${earlyDepartureId}/pdf`, {

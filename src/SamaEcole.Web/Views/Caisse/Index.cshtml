@@ -245,14 +245,14 @@
                  </tr>
              </thead>
              <tbody class="divide-y divide-slate-100">
-                 <template x-for="pay in balance.paymentsHistory" :key="pay.id">
+                 <template x-for="pay in balance.paymentsHistory" :key="pay.paymentId">
                      <tr class="hover:bg-slate-50/70 transition-colors">
                          <td class="py-2 px-3 font-mono font-medium text-primary" x-text="pay.receiptNumber"></td>
                          <td class="py-2 px-3 text-slate-600" x-text="formatDate(pay.paidAt)"></td>
                          <td class="py-2 px-3 text-slate-600" x-text="methodLabel(pay.method)"></td>
                          <td class="py-2 px-3 text-right font-bold text-slate-900" x-text="formatMoney(pay.amount)"></td>
                          <td class="py-2 px-3 text-center whitespace-nowrap">
-                             <button type="button" x-on:click.stop="previewReceipt(pay.id, pay.receiptNumber)"
+                             <button type="button" x-on:click.stop="previewReceipt(pay.paymentId, pay.receiptNumber)"
                                      title="Aperçu et impression du reçu PDF"
                                      class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
                                  <icon name="document-text" class="w-3.5 h-3.5 text-indigo-600 shrink-0" />

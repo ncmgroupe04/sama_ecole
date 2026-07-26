@@ -285,6 +285,10 @@ document.addEventListener('alpine:init', () => {
          * l'en-tête Authorization plutôt qu'un simple lien.
          */
         async exportYear(year) {
+            if (!year || !year.id || year.id === 'undefined') {
+                console.error('Identifiant d\'année scolaire invalide ou indéfini', year && year.id);
+                return;
+            }
             this.exportingYearId = year.id;
             try {
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {

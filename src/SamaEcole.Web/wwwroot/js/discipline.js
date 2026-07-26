@@ -97,6 +97,10 @@ document.addEventListener('alpine:init', () => {
          * billets.js printBillet) : le jeton ne voyage pas sur une navigation classique.
          */
         async printPv(recordId) {
+            if (!recordId || recordId === 'undefined') {
+                console.error('Identifiant de dossier de discipline invalide ou indéfini', recordId);
+                return;
+            }
             this.printingId = recordId;
             try {
                 const response = await fetch(`/api/v1/discipline/${recordId}/pv/pdf`, {
