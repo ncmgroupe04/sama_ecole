@@ -74,7 +74,7 @@ public class ParentNoticeDocument(ParentNoticeDto notice, byte[]? logo, byte[] q
                 text.Span(FormatDateTime(notice.ScheduledAt)).Bold();
                 text.Span(" pour un entretien concernant votre enfant/pupille ");
                 text.Span(notice.StudentFullName).Bold();
-                text.Span($" (matricule {notice.Matricule}, classe {notice.ClassroomName}");
+                text.Span($" (matricule {MatriculeText.NoBreak(notice.Matricule)}, classe {notice.ClassroomName}");
                 if (!string.IsNullOrWhiteSpace(notice.SchoolYearLabel))
                 {
                     text.Span($", année scolaire {notice.SchoolYearLabel}");

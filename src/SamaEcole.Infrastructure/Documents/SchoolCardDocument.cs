@@ -122,7 +122,7 @@ public class SchoolCardDocument(SchoolCardBatchDto batch) : IDocument
                             info.Item().Text(text =>
                             {
                                 text.Span("Matricule : ").SemiBold().FontSize(7);
-                                text.Span(card.Matricule).FontSize(8);
+                                text.Span(MatriculeText.NoBreak(card.Matricule)).FontSize(8);
                             });
                         });
 

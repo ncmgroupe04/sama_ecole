@@ -123,7 +123,7 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
                 table.ColumnsDefinition(columns =>
                 {
                     columns.ConstantColumn(35); // Heure
-                    columns.ConstantColumn(55); // Matricule
+                    columns.ConstantColumn(78); // Matricule — largeur fixe, garantit une seule ligne
                     columns.RelativeColumn(3);  // Nom
                     columns.RelativeColumn(2);  // Reçu N°
                     columns.RelativeColumn(2);  // Mode
@@ -133,7 +133,7 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
                 table.Header(header =>
                 {
                     header.Cell().Element(HeaderCell).Text("Heure").Bold();
-                    header.Cell().Element(HeaderCell).Text("Matricule").Bold();
+                    header.Cell().Element(HeaderCell).Text("Matricule").Bold().FontSize(8f);
                     header.Cell().Element(HeaderCell).Text("Nom Complet").Bold();
                     header.Cell().Element(HeaderCell).Text("Reçu N°").Bold();
                     header.Cell().Element(HeaderCell).Text("Mode").Bold();
@@ -149,7 +149,7 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
                     foreach (var payment in report.Payments)
                     {
                         table.Cell().Element(BodyCell).Text(FormatTime(payment.PaidAt));
-                        table.Cell().Element(BodyCell).Text(payment.Matricule);
+                        table.Cell().Element(BodyCell).Text(MatriculeText.NoBreak(payment.Matricule)).FontSize(8f);
                         table.Cell().Element(BodyCell).Text(payment.StudentFullName);
                         table.Cell().Element(BodyCell).Text(payment.ReceiptNumber);
                         table.Cell().Element(BodyCell).Text(MethodLabel(payment.Method));

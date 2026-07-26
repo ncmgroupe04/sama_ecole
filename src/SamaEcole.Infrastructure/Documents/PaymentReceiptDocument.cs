@@ -9,8 +9,13 @@ namespace SamaEcole.Infrastructure.Documents;
 /// <summary>
 /// Reçu de PAIEMENT officiel en PDF (ticket JGK-F02). Même référence de design que le reçu d'inscription
 /// (docs/design-references/receipt-reference.png, AGENTS.md règle #12) : document strictement
-/// administratif, noir et blanc, bordures simples. Seuls le titre et le tableau des montants diffèrent —
-/// ici on certifie un versement et l'on rappelle le solde figé à cet instant.
+/// administratif, noir et blanc, bordures simples.
+///
+/// Le tableau des montants ne porte QUE le versement du jour (motif + montant, puis TOTAL PAYÉ) : le
+/// solde du compte (<see cref="PaymentReceiptDto.TotalDue"/>, <see cref="PaymentReceiptDto.AlreadyPaid"/>,
+/// <see cref="PaymentReceiptDto.RemainingBalance"/>) reste porté par le DTO pour un usage interne
+/// (Finance) mais ne figure plus sur le document remis au parent — un reçu atteste d'un encaissement,
+/// pas d'une dette.
 ///
 /// La mention obligatoire est une CONSTANTE (règle #12) : aucun appelant ne peut l'altérer ni l'omettre.
 /// </summary>
@@ -92,7 +97,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
     {
         container.Column(column =>
         {
-            InfoRow(column, "Matricule", receipt.Matricule);
+            InfoRow(column, "Matricule", MatriculeText.NoBreak(receipt.Matricule));
             InfoRow(column, "Nom complet", receipt.StudentFullName);
             InfoRow(column, "Classe d'affectation", receipt.ClassroomName);
             InfoRow(column, "Année scolaire", receipt.SchoolYearLabel);
@@ -128,17 +133,11 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
                     header.Cell().Element(HeaderCell).AlignRight().Text("Montant (FCFA)").Bold();
                 });
 
-                table.Cell().Element(BodyCell).Text("Versement reçu").Bold();
-                table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.Amount)).Bold();
+                table.Cell().Element(BodyCell).Text("Versement reçu");
+                table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.Amount));
 
-                table.Cell().Element(BodyCell).Text("Montant total dû");
-                table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.TotalDue));
-
-                table.Cell().Element(BodyCell).Text("Déjà réglé à ce jour");
-                table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(receipt.AlreadyPaid));
-
-                table.Cell().Element(TotalCell).Text("RESTE À PAYER").Bold();
-                table.Cell().Element(TotalCell).AlignRight().Text(FormatMoney(receipt.RemainingBalance)).Bold();
+                table.Cell().Element(TotalCell).Text("TOTAL PAYÉ").Bold();
+                table.Cell().Element(TotalCell).AlignRight().Text(FormatMoney(receipt.Amount)).Bold();
             });
         });
 

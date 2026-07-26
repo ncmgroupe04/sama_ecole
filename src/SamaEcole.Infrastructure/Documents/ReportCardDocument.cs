@@ -26,8 +26,12 @@ namespace SamaEcole.Infrastructure.Documents;
 /// Le logo n'apparaît PAS : l'en-tête de la référence est purement administratif (IA/IEF/établissement),
 /// sans aucun logo. Le paramètre est conservé pour ne pas casser le contrat
 /// IReportCardPdfGenerator — il est simplement ignoré à la mise en page.
+///
+/// <paramref name="directorSignature"/>/<paramref name="officialStamp"/> (Paramètres → Établissement,
+/// SchoolSettings) s'impriment dans le pied de page quand disponibles ; sinon on retombe sur les
+/// emplacements vides/en pointillés d'origine — jamais une image inventée.
 /// </summary>
-public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocument
+public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null) : IDocument
 {
     /// <summary>Filet noir standard de la référence (tableaux, encadrés).</summary>
     private const float RuleThickness = 0.75f;
@@ -197,7 +201,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
                 t.Span(reportCard.ClassroomName).Bold();
             });
 
-            table.Cell().Element(Cell).Text($"Matricule : {reportCard.Matricule}");
+            table.Cell().Element(Cell).Text($"Matricule : {MatriculeText.NoBreak(reportCard.Matricule)}");
             table.Cell().Element(Cell).Text($"Nbre d'élèves : {reportCard.ClassSize}");
             // Classe redoublée (feature F) : cochée [X] si l'inscription porte IsRepeating, [ ] sinon —
             // même convention de coche que la rangée des distinctions du conseil.
@@ -510,8 +514,26 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
 
             row.RelativeItem(1).Column(right =>
             {
-                right.Item().AlignCenter().Text("Le Chef d'Établissement").Bold();
-                right.Item().PaddingTop(3).AlignCenter().Height(46).Width(46).Svg(stampCircleSvg);
+                // Signature réelle si le Directeur l'a téléversée (Paramètres → Établissement) ; sinon
+                // simple espace réservé au-dessus du libellé, comme avant.
+                if (directorSignature is not null)
+                {
+                    right.Item().AlignCenter().Height(24).Image(directorSignature).FitArea();
+                }
+
+                right.Item().PaddingTop(directorSignature is not null ? 1 : 0).AlignCenter().Text("Le Chef d'Établissement").Bold();
+
+                right.Item().PaddingTop(3).AlignCenter().Height(46).Width(46).Element(stamp =>
+                {
+                    if (officialStamp is not null)
+                    {
+                        stamp.Image(officialStamp).FitArea();
+                    }
+                    else
+                    {
+                        stamp.Svg(stampCircleSvg);
+                    }
+                });
             });
         });
     }

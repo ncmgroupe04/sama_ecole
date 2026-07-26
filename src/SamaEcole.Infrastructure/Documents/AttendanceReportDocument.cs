@@ -70,7 +70,7 @@ public class AttendanceReportDocument(AttendanceReportExportModel model) : IDocu
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(1.3f);  // Matricule
+                columns.ConstantColumn(65);    // Matricule — largeur fixe pour tenir sur une seule ligne
                 columns.RelativeColumn(2.4f);  // Nom
                 columns.RelativeColumn(1.6f);  // Classe
                 columns.RelativeColumn(0.8f);  // Appels
@@ -105,7 +105,7 @@ public class AttendanceReportDocument(AttendanceReportExportModel model) : IDocu
 
             foreach (var s in model.Students)
             {
-                table.Cell().Element(BodyCell).Text(s.Matricule);
+                table.Cell().Element(BodyCell).Text(MatriculeText.NoBreak(s.Matricule)).FontSize(7.5f);
                 table.Cell().Element(BodyCell).Text(s.FullName);
                 table.Cell().Element(BodyCell).Text(s.ClassroomName);
                 table.Cell().Element(BodyCell).AlignCenter().Text(s.TotalCalls.ToString(CultureInfo.InvariantCulture));

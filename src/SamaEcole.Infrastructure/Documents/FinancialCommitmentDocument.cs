@@ -89,7 +89,7 @@ public class FinancialCommitmentDocument(FinancialCommitmentDto commitment, byte
             }
             text.Span(", responsable légal(e) de l'élève ");
             text.Span(commitment.StudentFullName).Bold();
-            text.Span($" (matricule {commitment.Matricule}, classe {commitment.ClassroomName}, année scolaire {commitment.SchoolYearLabel}), ");
+            text.Span($" (matricule {MatriculeText.NoBreak(commitment.Matricule)}, classe {commitment.ClassroomName}, année scolaire {commitment.SchoolYearLabel}), ");
             text.Span("reconnais devoir à l'établissement ");
             text.Span(commitment.SchoolName).Bold();
             text.Span(" la somme précisée ci-dessous, et m'engage à la régler selon l'échéancier convenu.");

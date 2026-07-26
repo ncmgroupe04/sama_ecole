@@ -111,7 +111,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
     {
         container.Column(column =>
         {
-            InfoRow(column, "Matricule", receipt.Matricule);
+            InfoRow(column, "Matricule", MatriculeText.NoBreak(receipt.Matricule));
             InfoRow(column, "Nom complet", receipt.StudentFullName);
             InfoRow(column, "Classe d'affectation", $"{receipt.ClassroomName} — {receipt.ClassroomLevel}");
             InfoRow(column, "Année scolaire", receipt.SchoolYearLabel);

@@ -76,7 +76,7 @@ public class ExitTicketDocument(ExitTicketDto ticket, byte[]? logo, byte[] qrCod
         container.Column(column =>
         {
             InfoRow(column, "Élève", ticket.StudentFullName);
-            InfoRow(column, "Matricule", ticket.Matricule);
+            InfoRow(column, "Matricule", MatriculeText.NoBreak(ticket.Matricule));
             InfoRow(column, "Classe", $"{ticket.ClassroomName} — {ticket.ClassroomLevel}");
             InfoRow(column, "Date", FormatDate(ticket.Date));
             InfoRow(column, "Heure de sortie", ticket.DepartureTime.ToString("HH:mm", CultureInfo.InvariantCulture));

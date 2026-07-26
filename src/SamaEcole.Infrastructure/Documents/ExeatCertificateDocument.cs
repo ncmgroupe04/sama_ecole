@@ -68,7 +68,7 @@ public class ExeatCertificateDocument(ExeatCertificateDto certificate, byte[]? l
                 text.Span(", certifie que l'élève ");
                 text.Span(certificate.StudentFullName).Bold();
                 text.Span($", né(e) le {FormatDate(certificate.StudentBirthDate)} à {certificate.StudentBirthPlace}, ");
-                text.Span($"immatriculé(e) sous le n° {certificate.Matricule}, ");
+                text.Span($"immatriculé(e) sous le n° {MatriculeText.NoBreak(certificate.Matricule)}, ");
                 text.Span("était inscrit(e) dans notre établissement en classe de ");
                 text.Span(certificate.ClassroomName).Bold();
                 text.Span(", au titre de l'année scolaire ");

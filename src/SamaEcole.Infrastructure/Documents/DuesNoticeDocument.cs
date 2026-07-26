@@ -99,7 +99,7 @@ public class DuesNoticeDocument(DuesNoticeDto notice, byte[]? logo, byte[] qrCod
             text.Justify();
             text.Span("Nous portons à votre connaissance que le compte scolaire de l'élève ");
             text.Span(notice.StudentFullName).Bold();
-            text.Span($" (matricule {notice.Matricule}, classe {notice.ClassroomName}, année scolaire {notice.SchoolYearLabel}) présente à ce jour ");
+            text.Span($" (matricule {MatriculeText.NoBreak(notice.Matricule)}, classe {notice.ClassroomName}, année scolaire {notice.SchoolYearLabel}) présente à ce jour ");
             text.Span("une ou plusieurs échéances de frais de scolarité échues et non réglées, détaillées ci-dessous.");
         });
     }

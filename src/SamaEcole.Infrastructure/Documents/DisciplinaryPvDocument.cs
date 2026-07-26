@@ -54,7 +54,7 @@ public class DisciplinaryPvDocument(DisciplinaryPvDto pv, byte[]? logo, byte[] q
         container.Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Column(column =>
         {
             InfoRow(column, "Élève", pv.StudentFullName);
-            InfoRow(column, "Matricule", pv.Matricule);
+            InfoRow(column, "Matricule", MatriculeText.NoBreak(pv.Matricule));
             InfoRow(column, "Né(e) le", FormatDate(pv.StudentBirthDate));
             InfoRow(column, "Classe", pv.ClassroomName);
             if (!string.IsNullOrWhiteSpace(pv.SchoolYearLabel))

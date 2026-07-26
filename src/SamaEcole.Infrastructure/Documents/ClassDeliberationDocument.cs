@@ -105,7 +105,7 @@ public class ClassDeliberationDocument(IReadOnlyList<ReportCardDto> reportCards,
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(1.2f); // Matricule
+                columns.ConstantColumn(78);   // Matricule — largeur fixe, garantit "ELEV-2025-0005" sur une seule ligne
                 columns.RelativeColumn(3f);   // Prénoms & Nom
                 columns.RelativeColumn(1f);   // Moyenne
                 columns.RelativeColumn(0.8f); // Rang
@@ -115,7 +115,7 @@ public class ClassDeliberationDocument(IReadOnlyList<ReportCardDto> reportCards,
 
             table.Header(header =>
             {
-                header.Cell().Element(HeaderCell).Text("Matricule").Bold();
+                header.Cell().Element(HeaderCell).Text("Matricule").Bold().FontSize(8.5f);
                 header.Cell().Element(HeaderCell).Text("Prénoms & Nom").Bold();
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Moyenne").Bold();
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Rang").Bold();
@@ -125,7 +125,7 @@ public class ClassDeliberationDocument(IReadOnlyList<ReportCardDto> reportCards,
 
             foreach (var student in reportCards)
             {
-                table.Cell().Element(BodyCell).Text(student.Matricule);
+                table.Cell().Element(BodyCell).Text(MatriculeText.NoBreak(student.Matricule)).FontSize(8.5f);
                 table.Cell().Element(BodyCell).Text(student.StudentFullName).Bold();
                 table.Cell().Element(BodyCell).AlignCenter().Text(ReportCardDocument.FormatGrade(student.GeneralAverage));
                 table.Cell().Element(BodyCell).AlignCenter().Text(student.GeneralRank.ToString());
