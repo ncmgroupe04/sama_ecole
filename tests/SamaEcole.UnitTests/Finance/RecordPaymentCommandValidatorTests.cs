@@ -62,4 +62,31 @@ public class RecordPaymentCommandValidatorTests
     {
         _validator.Validate(Valid() with { Method = method }).IsValid.Should().BeTrue();
     }
+
+    [Fact]
+    public void A_Null_Vat_Rate_Is_Accepted_As_Not_Subject_To_Vat()
+    {
+        _validator.Validate(Valid() with { VatRate = null }).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(0.18)]
+    [InlineData(1)]
+    public void A_Vat_Rate_Within_Zero_And_One_Is_Accepted(decimal vatRate)
+    {
+        _validator.Validate(Valid() with { VatRate = vatRate }).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(-0.01)]
+    [InlineData(1.01)]
+    [InlineData(18)] // Piège plausible : saisir "18" en pensant "18 %" au lieu de la fraction 0.18.
+    public void A_Vat_Rate_Outside_Zero_And_One_Is_Rejected(decimal vatRate)
+    {
+        var result = _validator.Validate(Valid() with { VatRate = vatRate });
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(RecordPaymentCommand.VatRate));
+    }
 }

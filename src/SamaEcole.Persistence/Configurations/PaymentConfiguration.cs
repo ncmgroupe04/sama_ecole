@@ -28,6 +28,8 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 
         builder.Property(p => p.Amount).IsRequired().HasPrecision(12, 2);
         builder.Property(p => p.BalanceAfter).IsRequired().HasPrecision(12, 2);
+        builder.Property(p => p.VatRate).HasPrecision(5, 4);
+        builder.Property(p => p.VatAmount).IsRequired().HasPrecision(12, 2).HasDefaultValue(0m);
         builder.Property(p => p.Method).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(p => p.Category).HasConversion<string>().HasMaxLength(30).IsRequired();
@@ -38,6 +40,10 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 
         // Le montant versé est strictement positif : garde-fou en base, en plus de la validation applicative.
         builder.ToTable(t => t.HasCheckConstraint("CK_payments_amount_positive", "\"Amount\" > 0"));
+
+        // Un taux de TVA (fraction) ne peut être négatif ni dépasser 100 % — garde-fou en base, en plus
+        // de la validation applicative (RecordPaymentCommandValidator).
+        builder.ToTable(t => t.HasCheckConstraint("CK_payments_vat_rate_range", "\"VatRate\" IS NULL OR (\"VatRate\" >= 0 AND \"VatRate\" <= 1)"));
 
         // Numéro de reçu officiel : unique par établissement, jamais réémis (même registre que le reçu
         // d'inscription, JGK-E02). L'index n'est pas filtré : un numéro consommé reste consommé.

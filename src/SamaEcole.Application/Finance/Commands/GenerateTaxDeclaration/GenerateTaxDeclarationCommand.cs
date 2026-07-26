@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Finance.Services;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Finance.Commands.GenerateTaxDeclaration;
 
@@ -38,18 +39,24 @@ public class GenerateTaxDeclarationCommandHandler(
             .Where(f => f.Month == request.Month && f.Year == request.Year)
             .ToListAsync(cancellationToken);
 
-        // 3. Fetch all Payments (Encaissements) to calculate TVA collected
-        // Note: Dans une vraie implémentation, on filtrerait sur les paiements assujettis à la TVA.
-        // On suppose que tous les SubscriptionPayments (qui sont en fait les paiements de l'école envers la plateforme)
-        // et les Payments (élèves envers école) n'ont pas forcément de TVA détaillée dans le modèle actuel.
-        // Pour respecter le ticket, on agrège simplement un montant fictif de TVA ou on demande 
-        // une saisie manuelle si le modèle ne capture pas le détail HT/TVA.
-        // Ici, on supposera 0 pour l'exemple, ou un calcul sur les frais assujettis.
-        decimal tvaCollected = 0m; 
-        
-        // 4. Fetch all Disbursements (Décaissements) to calculate TVA deductible
-        // Pareillement, si le décaissement a une TVA récupérable
-        decimal tvaDeductible = 0m;
+        // 3. TVA collectée : somme de VatAmount des encaissements du mois (Payment.VatRate/VatAmount,
+        // renseignés transaction par transaction à l'encaissement — voir RecordPaymentCommandHandler).
+        // Un paiement Cancelled n'a jamais représenté de l'argent réellement encaissé (même exclusion que
+        // le tableau de bord Trésorerie) ; Status == Partial, lui, EST un encaissement réel, donc inclus.
+        var startInclusive = new DateTimeOffset(new DateTime(request.Year, request.Month, 1), TimeSpan.Zero);
+        var endExclusive = startInclusive.AddMonths(1);
+
+        decimal tvaCollected = await context.Payments
+            .Where(p => p.Status != PaymentStatus.Cancelled && p.PaidAt >= startInclusive && p.PaidAt < endExclusive)
+            .SumAsync(p => p.VatAmount, cancellationToken);
+
+        // 4. TVA déductible : somme de VatAmount des décaissements du mois (Disbursement.VatRate/VatAmount).
+        var periodStart = DateOnly.FromDateTime(startInclusive.DateTime);
+        var periodEnd = DateOnly.FromDateTime(endExclusive.DateTime.AddDays(-1));
+
+        decimal tvaDeductible = await context.Disbursements
+            .Where(d => d.Date >= periodStart && d.Date <= periodEnd)
+            .SumAsync(d => d.VatAmount, cancellationToken);
 
         // 5. Generate Declaration
         var declaration = TaxCalculator.CalculateTaxDeclaration(

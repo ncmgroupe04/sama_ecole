@@ -31,6 +31,21 @@ public class Payment : AuditableEntity, ITenantEntity
     /// <summary>Montant versé, en FCFA. Strictement positif, et jamais supérieur au solde restant.</summary>
     public decimal Amount { get; set; }
 
+    /// <summary>
+    /// Taux de TVA appliqué à ce versement (fraction, ex. 0.18 pour 18 %), ou null si non assujetti —
+    /// les frais de scolarité (PaymentCategory.Tuition) sont typiquement exonérés au Sénégal, jamais
+    /// une hypothèse codée en dur ici : c'est la Finance qui déclare l'assujettissement au moment de
+    /// l'encaissement, transaction par transaction (aucune règle générale par catégorie n'est fiable).
+    /// </summary>
+    public decimal? VatRate { get; set; }
+
+    /// <summary>
+    /// Part de TVA comprise dans <see cref="Amount"/> (TTC), figée au moment de l'encaissement — jamais
+    /// recalculée depuis un taux qui pourrait changer plus tard (même logique de fidélité que
+    /// <see cref="BalanceAfter"/>). Zéro quand <see cref="VatRate"/> est null.
+    /// </summary>
+    public decimal VatAmount { get; set; }
+
     public PaymentMethod Method { get; set; }
 
     public PaymentStatus Status { get; set; }

@@ -14,12 +14,19 @@ namespace SamaEcole.Application.Finance.Commands.RecordPayment;
 /// listées par le journal d'audit centralisé.
 /// </summary>
 public record RecordPaymentCommand(
-    Guid EnrollmentId, 
-    decimal Amount, 
+    Guid EnrollmentId,
+    decimal Amount,
     PaymentMethod Method,
     PaymentCategory Category = PaymentCategory.Tuition,
     string? ReferencePeriod = null,
-    List<PaymentBreakdownDto>? Breakdowns = null)
+    List<PaymentBreakdownDto>? Breakdowns = null,
+
+    /// <summary>
+    /// Taux de TVA (fraction, ex. 0.18) si ce versement est assujetti, ou null (défaut) sinon — la
+    /// scolarité (Category par défaut) est typiquement exonérée. Déclaré explicitement par la Finance,
+    /// jamais déduit automatiquement d'une catégorie.
+    /// </summary>
+    decimal? VatRate = null)
     : IRequest<RecordPaymentResult>, IAuditableRequest;
 
 public record PaymentBreakdownDto(Guid FeeCategoryId, decimal AmountAllocated);

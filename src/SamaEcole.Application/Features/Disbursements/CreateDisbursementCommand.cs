@@ -1,6 +1,7 @@
 using FluentValidation;
 using MediatR;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Finance.Services;
 
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -15,7 +16,14 @@ public record CreateDisbursementCommand(
     PaymentMethod PaymentMethod,
     DateOnly Date,
     string Beneficiary,
-    string? ReceiptUrl) : IRequest<Guid>;
+    string? ReceiptUrl,
+
+    /// <summary>
+    /// Taux de TVA (fraction, ex. 0.18) payé au fournisseur si cette dépense est assujettie, ou null
+    /// (défaut) sinon — ex. Salaires n'est jamais assujettie. Déclaré explicitement par la Finance,
+    /// jamais déduit automatiquement d'une catégorie.
+    /// </summary>
+    decimal? VatRate = null) : IRequest<Guid>;
 
 public class CreateDisbursementCommandValidator : AbstractValidator<CreateDisbursementCommand>
 {
@@ -27,11 +35,14 @@ public class CreateDisbursementCommandValidator : AbstractValidator<CreateDisbur
         RuleFor(v => v.PaymentMethod).IsInEnum();
         RuleFor(v => v.Date).NotEmpty();
         RuleFor(v => v.Beneficiary).NotEmpty().MaximumLength(150);
+        RuleFor(v => v.VatRate)
+            .InclusiveBetween(0m, 1m).WithMessage("Le taux de TVA doit être compris entre 0 et 1 (ex. 0.18 pour 18 %).")
+            .When(v => v.VatRate.HasValue);
     }
 }
 
 public class CreateDisbursementCommandHandler(
-    IApplicationDbContext context, 
+    IApplicationDbContext context,
     ITenantProvider tenantProvider) : IRequestHandler<CreateDisbursementCommand, Guid>
 {
     public async Task<Guid> Handle(CreateDisbursementCommand request, CancellationToken cancellationToken)
@@ -42,6 +53,8 @@ public class CreateDisbursementCommandHandler(
             Reason = request.Reason,
             Category = request.Category,
             Amount = request.Amount,
+            VatRate = request.VatRate,
+            VatAmount = VatCalculator.ComputeVatAmount(request.Amount, request.VatRate),
             PaymentMethod = request.PaymentMethod,
             Date = request.Date,
             Beneficiary = request.Beneficiary,

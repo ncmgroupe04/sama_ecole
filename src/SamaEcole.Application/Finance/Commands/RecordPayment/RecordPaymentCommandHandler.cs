@@ -1,6 +1,7 @@
 using System.Globalization;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Finance.Services;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
@@ -96,6 +97,8 @@ public class RecordPaymentCommandHandler(
                 Category = request.Category,
                 ReferencePeriod = request.ReferencePeriod,
                 Amount = request.Amount,
+                VatRate = request.VatRate,
+                VatAmount = VatCalculator.ComputeVatAmount(request.Amount, request.VatRate),
                 Method = request.Method,
                 Status = status,
                 BalanceAfter = enrollment.TotalDue - newAmountPaid,

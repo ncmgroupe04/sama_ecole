@@ -18,5 +18,9 @@ public class RecordPaymentCommandValidator : AbstractValidator<RecordPaymentComm
 
         RuleFor(c => c.Method)
             .IsInEnum().WithMessage("Moyen de paiement invalide.");
+
+        RuleFor(c => c.VatRate)
+            .InclusiveBetween(0m, 1m).WithMessage("Le taux de TVA doit être compris entre 0 et 1 (ex. 0.18 pour 18 %).")
+            .When(c => c.VatRate.HasValue);
     }
 }
