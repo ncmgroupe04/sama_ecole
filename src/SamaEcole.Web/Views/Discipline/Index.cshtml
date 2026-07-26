@@ -94,7 +94,7 @@
                          x-transition:leave-start="translate-x-0" 
                          x-transition:leave-end="translate-x-full" 
                          class="pointer-events-auto w-screen max-w-md">
-                        <form @@submit.prevent="submitCreate" class="flex h-full flex-col bg-white shadow-xl">
+                        <form x-on:submit.prevent="submitCreate" novalidate class="flex h-full flex-col bg-white shadow-xl">
                             <!-- En-tête -->
                             <div class="px-6 py-6 sm:px-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                                 <div>
