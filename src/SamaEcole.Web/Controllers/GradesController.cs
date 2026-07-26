@@ -20,12 +20,13 @@ namespace SamaEcole.Web.Controllers;
 /// <summary>
 /// Tickets JGK-G01/G02 — /grades. Contrôleur mince : aucune logique métier ici (AGENTS.md règle #8).
 ///
-/// SAISIR une nouvelle note est réservé à l'Enseignant. CORRIGER ou ANNULER une note déjà saisie en
-/// base est réservé au Directeur et au Secrétariat — matrice d'autorisation "Photoshop", contrôle
-/// strict et NON révocable (contrairement à la délégation du barème/matières/mentions, qui repose sur
-/// SchoolSettings.AllowSecretaryToManageGrading) : l'Enseignant ne peut plus jamais modifier une note
-/// une fois enregistrée, une erreur de saisie se corrige exclusivement via ces deux rôles. Un seul
-/// endpoint « upsert » aurait mélangé ces permissions désormais distinctes.
+/// SAISIR une nouvelle note est ouvert au Directeur et à l'Enseignant (Volume_7_Security.md §14,
+/// table « Notes »). CORRIGER ou ANNULER une note déjà saisie en base est réservé au Directeur et au
+/// Secrétariat — matrice d'autorisation "Photoshop", contrôle strict et NON révocable (contrairement
+/// à la délégation du barème/matières/mentions, qui repose sur SchoolSettings.AllowSecretaryToManageGrading) :
+/// l'Enseignant ne peut plus jamais modifier une note une fois enregistrée, une erreur de saisie se
+/// corrige exclusivement via ces deux rôles. Un seul endpoint « upsert » aurait mélangé ces permissions
+/// désormais distinctes.
 /// </summary>
 [ApiController]
 [Route("api/v1/grades")]
@@ -78,7 +79,7 @@ public class GradesController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(query, cancellationToken));
 
     [HttpPost]
-    [Authorize(Roles = nameof(Role.Enseignant))]
+    [Authorize(Roles = GradingRoles)]
     [ProducesResponseType<GradeResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -98,7 +99,7 @@ public class GradesController(ISender mediator) : ControllerBase
     /// si une seule ligne est invalide) — voir ImportGradesCommandHandler.
     /// </summary>
     [HttpPost("import")]
-    [Authorize(Roles = nameof(Role.Enseignant))]
+    [Authorize(Roles = GradingRoles)]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]
     [ProducesResponseType<ImportGradesResult>(StatusCodes.Status200OK)]

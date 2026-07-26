@@ -280,3 +280,14 @@ public enum ContractType
     Permanent,
     Vacataire
 }
+
+/// <summary>
+/// Type d'une salle physique (module Infrastructures, <see cref="Entities.Room"/>).
+/// </summary>
+public enum RoomType
+{
+    SalleDeClasse,
+    Laboratoire,
+    Bureau,
+    Autre
+}

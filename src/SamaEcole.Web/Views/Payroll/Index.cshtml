@@ -56,11 +56,12 @@
                             <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Salaire de base</th>
                             <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Taux horaire</th>
                             <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Prime transport</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         <tr x-show="!isLoading && contracts.length === 0" x-cloak>
-                            <td colspan="6">
+                            <td colspan="7">
                                 <empty-state icon="document" title="Aucun contrat enregistré."
                                     hint="Ajoutez un contrat pour pouvoir générer une fiche de paie." />
                             </td>
@@ -73,6 +74,22 @@
                                 <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.baseSalary)"></td>
                                 <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.hourlyRate)"></td>
                                 <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.transportAllowance)"></td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button type="button" x-show="contract.type === 'Vacataire'" x-cloak
+                                                x-on:click="openHourRecordsModal(contract)" title="Voir/Ajouter des heures"
+                                                aria-label="Voir ou ajouter des heures"
+                                                class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                            <icon name="clock" class="w-4 h-4" />
+                                        </button>
+                                        <button type="button" x-on:click="downloadWorkCertificate(contract)" :disabled="downloadingCertificateId === contract.id"
+                                                title="Attestation de travail" aria-label="Télécharger l'attestation de travail"
+                                                class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-60 transition-colors">
+                                            <icon name="document-text" class="w-4 h-4" x-show="downloadingCertificateId !== contract.id" />
+                                            <icon name="loader" class="w-4 h-4 animate-spin" x-show="downloadingCertificateId === contract.id" x-cloak />
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         </template>
                     </tbody>
@@ -333,5 +350,78 @@
                 </button>
             </div>
         </form>
+    </modal-shell>
+
+    <!-- ===================== Modale : Fiche heures Vacataire ===================== -->
+    <modal-shell open="isHourRecordsModalOpen" title="Fiche heures — Vacataire">
+        <modal-subtitle><span x-text="hourRecordsContract ? hourRecordsContract.employeeFullName : ''"></span></modal-subtitle>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Mois</label>
+                <select x-model="hourRecordsFilter.month" x-on:change="loadHourRecords()" class="input-field mt-0">
+                    <template x-for="m in 12" :key="m">
+                        <option :value="m" x-text="monthLabel(m)"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Année</label>
+                <input type="number" x-model="hourRecordsFilter.year" x-on:change="loadHourRecords()" class="input-field mt-0 w-28" />
+            </div>
+            <button type="button" x-on:click="previewHourRecordSheet()" :disabled="downloadingHourRecordSheet" class="btn-secondary">
+                <icon name="download" class="w-4 h-4" />
+                <span x-text="downloadingHourRecordSheet ? 'Génération…' : 'Fiche heures (PDF)'"></span>
+            </button>
+        </div>
+
+        <div class="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-2 px-3 uppercase tracking-wider text-slate-500 font-semibold text-xs">Date</th>
+                        <th class="py-2 px-3 text-right uppercase tracking-wider text-slate-500 font-semibold text-xs">Heures</th>
+                        <th class="py-2 px-3 uppercase tracking-wider text-slate-500 font-semibold text-xs">Note</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr x-show="hourRecords.length === 0">
+                        <td colspan="3" class="py-6 text-center text-sm text-slate-400">Aucune heure enregistrée sur cette période.</td>
+                    </tr>
+                    <template x-for="record in hourRecords" :key="record.id">
+                        <tr>
+                            <td class="py-2 px-3 text-slate-600" x-text="record.date"></td>
+                            <td class="py-2 px-3 text-right text-slate-600" x-text="record.hours"></td>
+                            <td class="py-2 px-3 text-slate-500" x-text="record.note"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <form x-on:submit.prevent="submitHourRecord()" class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end border-t border-slate-100 pt-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Date <span class="text-red-500">*</span></label>
+                <input type="date" x-model="hourRecordForm.date" required class="input-field mt-1" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Heures <span class="text-red-500">*</span></label>
+                <input type="number" min="0" step="0.5" x-model="hourRecordForm.hours" required class="input-field mt-1" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Note</label>
+                <input type="text" x-model="hourRecordForm.note" class="input-field mt-1" />
+            </div>
+            <div class="sm:col-span-3 flex justify-end">
+                <button type="submit" class="btn-primary" :disabled="isSavingHourRecord">
+                    <span x-show="!isSavingHourRecord">Ajouter les heures</span>
+                    <span x-show="isSavingHourRecord">Enregistrement...</span>
+                </button>
+            </div>
+        </form>
+
+        <div class="mt-4 flex justify-end">
+            <button type="button" x-on:click="isHourRecordsModalOpen = false" class="btn-secondary">Fermer</button>
+        </div>
     </modal-shell>
 </div>

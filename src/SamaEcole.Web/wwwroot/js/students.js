@@ -55,6 +55,15 @@ document.addEventListener('alpine:init', () => {
         pdfDownloadName: '',
         pdfLoadError: false,
 
+        // Engagement financier (échéancier) : pas de liste persistée côté API (une seule note peut être
+        // consultée par id) — on garde en mémoire l'id du dernier engagement créé pour proposer son
+        // téléchargement immédiat, plutôt qu'un historique rechargé à l'ouverture de la fiche.
+        isCommitmentModalOpen: false,
+        isSavingCommitment: false,
+        commitmentForm: { amount: '', dueDate: '', terms: '' },
+        commitmentErrors: {},
+        createdCommitmentId: null,
+
         // Slide-over state
         isCreateOpen: false,
         isSubmitting: false,
@@ -768,6 +777,15 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
+         * Inscription ACTIVE de l'année en cours (au plus une par élève) : la Sommation impayés et
+         * l'Engagement financier sont rattachés à UNE inscription (Finance/DuesNotice, Finance/Commitment),
+         * contrairement au récapitulatif financier ci-dessus qui agrège toutes les années.
+         */
+        get activeEnrollmentId() {
+            return this.studentDetail?.academicHistory?.find(e => e.isActiveYear)?.enrollmentId || null;
+        },
+
+        /**
          * Coefficient AFFICHÉ, verrouillé à 1 en Primaire : ce cycle n'a pas de système de coefficients
          * (le serveur les renvoie déjà à 1, ce garde-fou empêche tout coefficient pondéré résiduel de
          * s'afficher) — cohérent avec la moyenne simple /10 et le bulletin primaire.
@@ -891,6 +909,56 @@ document.addEventListener('alpine:init', () => {
                 `/api/v1/finance/payments/${paymentId}/receipt/pdf`,
                 `Reçu de paiement n° ${receiptNumber}`,
                 `Recu-${receiptNumber}.pdf`
+            );
+        },
+
+        async openExeatCertificatePreview(enrollmentId, yearLabel) {
+            await this.openPdfModalWithBlob(
+                `/api/v1/enrollments/${enrollmentId}/exeat/pdf`,
+                `Certificat d'exéat (${yearLabel})`,
+                `Exeat-${enrollmentId}.pdf`
+            );
+        },
+
+        async openDuesNoticePreview(enrollmentId) {
+            await this.openPdfModalWithBlob(
+                `/api/v1/finance/enrollments/${enrollmentId}/dues-notice/pdf`,
+                'Sommation pour impayés',
+                `Sommation-${enrollmentId}.pdf`
+            );
+        },
+
+        openCreateCommitmentModal(enrollmentId) {
+            this.commitmentForm = { enrollmentId, amount: '', dueDate: '', terms: '' };
+            this.commitmentErrors = {};
+            this.isCommitmentModalOpen = true;
+        },
+
+        async submitCreateCommitment() {
+            this.isSavingCommitment = true;
+            this.commitmentErrors = {};
+            try {
+                const id = await window.api.post('/finance/commitments', {
+                    enrollmentId: this.commitmentForm.enrollmentId,
+                    amount: Number(this.commitmentForm.amount) || 0,
+                    dueDate: this.commitmentForm.dueDate,
+                    terms: this.commitmentForm.terms
+                });
+                this.createdCommitmentId = id;
+                this.isCommitmentModalOpen = false;
+                toast.success('Engagement financier enregistré.');
+            } catch (err) {
+                this.commitmentErrors = window.api.toFieldErrors(err, "Erreur lors de l'enregistrement de l'engagement.");
+            } finally {
+                this.isSavingCommitment = false;
+            }
+        },
+
+        async openCommitmentPreview(commitmentId) {
+            await this.openPdfModalWithBlob(
+                `/api/v1/finance/commitments/${commitmentId}/pdf`,
+                'Engagement financier',
+                `Engagement-${commitmentId}.pdf`
             );
         },
 

@@ -6,7 +6,15 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('disciplineView', () => ({
         records: [],
         isLoading: true,
-        
+        printingId: null,
+
+        // canView(...) référencé jusqu'ici en vue n'existe QUE dans le scope Alpine du sidebarNav()
+        // de _Layout.cshtml (une portée SŒUR de disciplineView(), jamais un ancêtre DOM) : l'appel
+        // levait une ReferenceError et Alpine masquait silencieusement le bouton pour tout le monde
+        // (x-show retombe sur false quand l'expression échoue). Rôles alignés sur DisciplineController
+        // (SuperAdmin/Directeur/Surveillant) — le Secrétariat n'a jamais pu créer de sanction côté API.
+        canManageDiscipline: window.auth.role === 'Directeur' || window.auth.role === 'Surveillant',
+
         // Modal de création
         isCreateOpen: false,
         isCreating: false,
@@ -82,6 +90,37 @@ document.addEventListener('alpine:init', () => {
             return new Date(dateStr).toLocaleDateString('fr-FR', {
                 year: 'numeric', month: 'long', day: 'numeric'
             });
+        },
+
+        /**
+         * PV de discipline en PDF, ouvert dans un nouvel onglet (même mécanique que
+         * billets.js printBillet) : le jeton ne voyage pas sur une navigation classique.
+         */
+        async printPv(recordId) {
+            this.printingId = recordId;
+            try {
+                const response = await fetch(`/api/v1/discipline/${recordId}/pv/pdf`, {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
+                });
+                if (!response.ok) {
+                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
+                }
+                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const win = window.open(url, '_blank');
+                if (!win) {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `PV-Discipline-${recordId}.pdf`;
+                    link.click();
+                }
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (error) {
+                console.error('PV discipline print error:', error);
+                toast.error(error.message || "Erreur lors de la génération du PV.");
+            } finally {
+                this.printingId = null;
+            }
         },
 
         getDisciplineBadge(type) {

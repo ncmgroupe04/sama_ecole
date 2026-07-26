@@ -35,6 +35,11 @@ public class PagesController : Controller
     [HttpGet("/classes")]
     public IActionResult Classrooms() => View("~/Views/Classrooms/Index.cshtml");
 
+    // Module Infrastructures : gestion physique des locaux (Bâtiments/Salles), indépendante des
+    // classes pédagogiques. BuildingsController/RoomsController gardent l'accès et la RLS isole.
+    [HttpGet("/infrastructures")]
+    public IActionResult Buildings() => View("~/Views/Buildings/Index.cshtml");
+
     // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
     // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
     // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.
@@ -55,6 +60,10 @@ public class PagesController : Controller
 
     [HttpGet("/discipline")]
     public IActionResult Discipline() => View("~/Views/Discipline/Index.cshtml");
+
+    // Convocations de parent/tuteur (module Vie Scolaire) — ParentSummonsController garde l'accès.
+    [HttpGet("/convocations")]
+    public IActionResult ParentSummons() => View("~/Views/ParentSummons/Index.cshtml");
 
     [HttpGet("/billet-print")]
     public IActionResult BilletPrint() => View("~/Views/Absences/BilletPrint.cshtml");

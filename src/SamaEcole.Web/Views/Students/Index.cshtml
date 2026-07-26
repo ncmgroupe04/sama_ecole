@@ -317,6 +317,16 @@
  <icon name="wallet" class="w-4 h-4 text-emerald-600 shrink-0" />
  <span class="whitespace-nowrap">Reçu / Imprimer</span>
  </button>
+ <!-- Certificat d'exéat : uniquement pour une inscription déjà passée à Abandon/Transfert (le
+ serveur renvoie 404 sinon — voir GetExeatCertificateQuery). -->
+ <template x-if="entry.status === 'DroppedOut' || entry.status === 'Transferred'">
+ <button type="button" x-on:click="openExeatCertificatePreview(entry.enrollmentId, entry.schoolYearLabel)"
+ title="Aperçu et impression du certificat d'exéat"
+ class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
+ <icon name="document-text" class="w-4 h-4 text-amber-600 shrink-0" />
+ <span class="whitespace-nowrap">Exéat / Imprimer</span>
+ </button>
+ </template>
  </div>
  </div>
  </template>
@@ -444,6 +454,33 @@
  x-text="formatAmount(studentDetail.payments.remainingBalance)"></p>
  </div>
  </div>
+
+ <!-- Sommation impayés + Engagement financier : rattachés à l'inscription ACTIVE de l'année en
+ cours (le reste du récapitulatif ci-dessus agrège toutes les années). -->
+ <template x-if="activeEnrollmentId">
+ <div class="mt-3 flex flex-wrap items-center gap-2.5">
+ <button type="button" x-show="studentDetail.payments.remainingBalance > 0" x-cloak
+ x-on:click="openDuesNoticePreview(activeEnrollmentId)"
+ title="Aperçu et impression de la sommation pour impayés"
+ class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-danger/30 bg-danger-bg hover:bg-red-100 text-danger text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
+ <icon name="alert-circle" class="w-4 h-4 shrink-0" />
+ <span class="whitespace-nowrap">Sommation impayés</span>
+ </button>
+ <button type="button" x-on:click="openCreateCommitmentModal(activeEnrollmentId)"
+ title="Créer un engagement financier (échéancier)"
+ class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary-200 bg-primary-50/70 hover:bg-primary-100 text-primary-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
+ <icon name="document-text" class="w-4 h-4 text-primary shrink-0" />
+ <span class="whitespace-nowrap">Nouvel engagement financier</span>
+ </button>
+ <button type="button" x-show="createdCommitmentId" x-cloak
+ x-on:click="openCommitmentPreview(createdCommitmentId)"
+ title="Aperçu et impression de l'engagement financier créé"
+ class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
+ <icon name="download" class="w-4 h-4 text-emerald-600 shrink-0" />
+ <span class="whitespace-nowrap">Télécharger l'engagement créé</span>
+ </button>
+ </div>
+ </template>
 
  <!-- Liste des versements. -->
  <div class="mt-5">
@@ -941,5 +978,37 @@
  </button>
  </div>
  </div>
+ </modal-shell>
+
+ <!-- Modale : Nouvel engagement financier (échéancier) -->
+ <modal-shell open="isCommitmentModalOpen" on-close="isCommitmentModalOpen = false" title="Nouvel engagement financier">
+ <modal-subtitle>Trace écrite d'un échéancier de paiement — ne modifie jamais le montant dû de l'inscription.</modal-subtitle>
+
+ <div x-show="commitmentErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="commitmentErrors.global"></div>
+
+ <form x-on:submit.prevent="submitCreateCommitment()" class="space-y-4">
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Montant (FCFA) <span class="text-danger">*</span></label>
+ <input type="number" min="0" x-model.number="commitmentForm.amount" required class="input-field mt-1" />
+ <p x-show="commitmentErrors.amount" x-cloak x-text="commitmentErrors.amount" class="mt-1 text-xs text-danger"></p>
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Échéance <span class="text-danger">*</span></label>
+ <input type="date" x-model="commitmentForm.dueDate" required class="input-field mt-1" />
+ <p x-show="commitmentErrors.dueDate" x-cloak x-text="commitmentErrors.dueDate" class="mt-1 text-xs text-danger"></p>
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Termes de l'engagement <span class="text-danger">*</span></label>
+ <textarea x-model="commitmentForm.terms" rows="4" required class="input-field mt-1" placeholder="Décrivez l'échéancier convenu..."></textarea>
+ <p x-show="commitmentErrors.terms" x-cloak x-text="commitmentErrors.terms" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="isCommitmentModalOpen = false" class="btn-secondary">Annuler</button>
+ <button type="submit" :disabled="isSavingCommitment" class="btn-primary">
+ <span x-text="isSavingCommitment ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
  </modal-shell>
 </div>

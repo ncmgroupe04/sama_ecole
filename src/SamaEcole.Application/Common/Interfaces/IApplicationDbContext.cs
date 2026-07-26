@@ -13,6 +13,12 @@ public interface IApplicationDbContext
     DbSet<Student> Students { get; }
     DbSet<Classroom> Classrooms { get; }
 
+    /// <summary>Bâtiments physiques de l'établissement (module Infrastructures).</summary>
+    DbSet<Building> Buildings { get; }
+
+    /// <summary>Salles physiques d'un bâtiment (module Infrastructures) — indépendant de Classroom.</summary>
+    DbSet<Room> Rooms { get; }
+
     /// <summary>Années scolaires (ticket JGK-C01) : le pivot des inscriptions, des frais et des bulletins.</summary>
     DbSet<SchoolYear> SchoolYears { get; }
 

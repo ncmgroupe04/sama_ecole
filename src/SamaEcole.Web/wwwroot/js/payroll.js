@@ -42,6 +42,16 @@ document.addEventListener('alpine:init', () => {
             transportAllowance: 0
         },
         printingPayslipId: null,
+        downloadingCertificateId: null,
+
+        // ---------------------------------------------------------------- Fiche heures Vacataire
+        isHourRecordsModalOpen: false,
+        hourRecordsContract: null,
+        hourRecordsFilter: { month: new Date().getMonth() + 1, year: new Date().getFullYear() },
+        hourRecords: [],
+        hourRecordForm: { date: new Date().toISOString().split('T')[0], hours: '', note: '' },
+        isSavingHourRecord: false,
+        downloadingHourRecordSheet: false,
 
         // ---------------------------------------------------------------- Déclarations fiscales
         taxDeclarations: [],
@@ -209,6 +219,105 @@ document.addEventListener('alpine:init', () => {
                 toast.error(err.message || 'Erreur lors de la génération du bulletin.');
             } finally {
                 this.printingPayslipId = null;
+            }
+        },
+
+        /** Attestation de travail PDF — même mécanique que printPayslip (fetch brut + blob, nouvel onglet). */
+        async downloadWorkCertificate(contract) {
+            this.downloadingCertificateId = contract.id;
+            try {
+                const response = await fetch(`/api/v1/finance/employee-contracts/${contract.id}/work-certificate/pdf`, {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
+                });
+                if (!response.ok) {
+                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
+                }
+                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const win = window.open(url, '_blank');
+                if (!win) {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Attestation-Travail-${contract.employeeFullName}.pdf`;
+                    link.click();
+                }
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (err) {
+                toast.error(err.message || "Erreur lors de la génération de l'attestation.");
+            } finally {
+                this.downloadingCertificateId = null;
+            }
+        },
+
+        // ---------------------------------------------------------------- Fiche heures Vacataire
+
+        openHourRecordsModal(contract) {
+            this.hourRecordsContract = contract;
+            this.hourRecordsFilter = { month: new Date().getMonth() + 1, year: new Date().getFullYear() };
+            this.hourRecordForm = { date: new Date().toISOString().split('T')[0], hours: '', note: '' };
+            this.isHourRecordsModalOpen = true;
+            this.loadHourRecords();
+        },
+
+        async loadHourRecords() {
+            if (!this.hourRecordsContract) return;
+            try {
+                const params = new URLSearchParams({ month: this.hourRecordsFilter.month, year: this.hourRecordsFilter.year });
+                this.hourRecords = await api.get(`/finance/employee-contracts/${this.hourRecordsContract.id}/hour-records?${params.toString()}`);
+            } catch (err) {
+                toast.error(err.message || 'Erreur lors du chargement des heures.');
+            }
+        },
+
+        async submitHourRecord() {
+            if (!this.hourRecordsContract || !this.hourRecordForm.date || !this.hourRecordForm.hours) {
+                toast.error('Veuillez renseigner la date et le nombre d\'heures.');
+                return;
+            }
+
+            this.isSavingHourRecord = true;
+            try {
+                await api.post(`/finance/employee-contracts/${this.hourRecordsContract.id}/hour-records`, {
+                    date: this.hourRecordForm.date,
+                    hours: Number(this.hourRecordForm.hours),
+                    note: this.hourRecordForm.note || null
+                });
+                toast.success('Heures ajoutées.');
+                this.hourRecordForm = { date: new Date().toISOString().split('T')[0], hours: '', note: '' };
+                await this.loadHourRecords();
+            } catch (err) {
+                toast.error(err.message || "Erreur lors de l'enregistrement des heures.");
+            } finally {
+                this.isSavingHourRecord = false;
+            }
+        },
+
+        /** Fiche heures PDF du mois/année sélectionné — même mécanique que printPayslip. */
+        async previewHourRecordSheet() {
+            if (!this.hourRecordsContract) return;
+            this.downloadingHourRecordSheet = true;
+            try {
+                const params = new URLSearchParams({ month: this.hourRecordsFilter.month, year: this.hourRecordsFilter.year });
+                const response = await fetch(
+                    `/api/v1/finance/employee-contracts/${this.hourRecordsContract.id}/hour-records/sheet/pdf?${params.toString()}`,
+                    { headers: { Authorization: `Bearer ${window.auth.accessToken}` } });
+                if (!response.ok) {
+                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
+                }
+                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const win = window.open(url, '_blank');
+                if (!win) {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Fiche-Heures-${this.hourRecordsContract.employeeFullName}.pdf`;
+                    link.click();
+                }
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (err) {
+                toast.error(err.message || 'Erreur lors de la génération de la fiche.');
+            } finally {
+                this.downloadingHourRecordSheet = false;
             }
         },
 

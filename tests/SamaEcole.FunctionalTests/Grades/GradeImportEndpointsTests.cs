@@ -10,7 +10,7 @@ namespace SamaEcole.FunctionalTests.Grades;
 
 /// <summary>
 /// POST /grades/import contre un vrai PostgreSQL, à travers la vraie pile HTTP — même permission que
-/// POST /grades (Saisir = Enseignant seul, docs/Volume_7_Security.md « Notes »).
+/// POST /grades (Saisir = Directeur ou Enseignant, docs/Volume_7_Security.md « Notes »).
 ///
 /// Le contrat central du ticket : le fichier est validé INTÉGRALEMENT avant la moindre écriture (une
 /// seule ligne en erreur → rien n'est enregistré), et un matricule d'un élève d'une AUTRE classe que
@@ -157,14 +157,16 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     }
 
     [Fact]
-    public async Task A_Directeur_Must_Not_Import_Grades()
+    public async Task A_Directeur_Can_Import_Grades()
     {
         var directeur = await DirecteurTokenAsync();
         var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
 
         var response = await ImportAsync(directeur, classroomId, subjectId, termId, "Devoir", $"{student1.Matricule};15");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = (await response.Content.ReadFromJsonAsync<ImportResultDto>())!;
+        result.Created.Should().Be(1);
     }
 
     [Fact]

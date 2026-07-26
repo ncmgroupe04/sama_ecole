@@ -19,6 +19,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<School> Schools => Set<School>();
     public DbSet<Student> Students => Set<Student>();
     public DbSet<Classroom> Classrooms => Set<Classroom>();
+    public DbSet<Building> Buildings => Set<Building>();
+    public DbSet<Room> Rooms => Set<Room>();
     public DbSet<SchoolYear> SchoolYears => Set<SchoolYear>();
     public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<FeeCategory> FeeCategories => Set<FeeCategory>();

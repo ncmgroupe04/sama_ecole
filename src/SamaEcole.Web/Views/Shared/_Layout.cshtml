@@ -82,103 +82,135 @@
  }
 
  <!-- Navigation -->
- <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto" x-data="sidebarNav()">
+ <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto" x-data="sidebarNav()">
 
- @* JGK-F04 : premier module à devenir un vrai lien plutôt qu'un <span> désactivé (le patron
- documenté ci-dessus : « chaque module devient un vrai lien le jour où son ticket est
- livré »). Le tableau de bord n'a de contenu que pour le Directeur/SuperAdmin (analytique)
- et le Directeur/Finance (trésorerie) : le Secrétariat et l'Enseignant n'y voyaient qu'un
- message « accès réservé », le lien leur est donc retiré. L'API reste la garde (règle #4). *@
  <a href="/tableau-de-bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance']) && !isPublicSchool || canView(['SuperAdmin', 'Directeur']) && isPublicSchool" x-cloak class="@(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
  <icon name="dashboard" class="w-6 h-6" />
  <span class="text-base font-medium">Tableau de bord</span>
  </a>
 
- <a href="/eleves" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" x-cloak class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
- <icon name="users" class="w-6 h-6" />
- <span class="text-base font-medium">Élèves</span>
- </a>
-
- @* Inscription/Réinscription : Directeur et Secrétariat seulement. Le service Finance ne
- compose jamais un montant dû (règle #4) — il encaisse depuis la Caisse — le lien lui est
- donc retiré. L'API répondait déjà 403 à une écriture de sa part. *@
- <a href="/inscriptions" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/inscriptions") ? LinkActive : LinkIdle)">
- <icon name="document" class="w-6 h-6" />
- <span class="text-base font-medium">Inscriptions</span>
- </a>
-
- <a href="/classes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/classes") ? LinkActive : LinkIdle)">
- <icon name="building" class="w-6 h-6" />
- <span class="text-base font-medium">Classes</span>
- </a>
-
- @* JGK-G02 : gestion des matières/coefficients déléguée au Secrétariat en plus du Directeur
- (docs/Volume_7_Security.md « Paramètres de l'école »). L'Enseignant reste en lecture
- seule (SubjectsController : GET ouvert à tous, POST = Directeur/Secrétariat). *@
- <a href="/matieres" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
+ <!-- Pôle : Gestion Scolaire -->
+ <div x-data="{ open: @(path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/rapports") ? "true" : "false") }" class="space-y-1">
+ <button x-on:click="open = !open" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700">
+ <div class="flex items-center gap-3">
  <icon name="book" class="w-6 h-6" />
- <span class="text-base font-medium">Matières</span>
+ <span class="text-base font-medium">Gestion Scolaire</span>
+ </div>
+ <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200" ::class="open ? 'rotate-180' : ''" />
+ </button>
+ <div x-show="open" x-collapse class="pl-4 space-y-1 mt-1">
+ <a href="/eleves" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
+ <icon name="users" class="w-5 h-5" />
+ <span class="text-sm font-medium">Élèves</span>
  </a>
-
- @* JGK-D06 : écran d'appel livré — le module devient un vrai lien. Saisie ouverte à
- l'Enseignant (borné à ses classes assignées côté API), au Directeur et au Secrétariat. *@
- <a href="/presences" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/presences") ? LinkActive : LinkIdle)">
- <icon name="checkmark-circle" class="w-6 h-6" />
- <span class="text-base font-medium">Présences</span>
+ <a href="/inscriptions" x-show="canView(['Directeur', 'Secretariat'])" class="@(path.StartsWith("/inscriptions") ? LinkActive : LinkIdle)">
+ <icon name="document" class="w-5 h-5" />
+ <span class="text-sm font-medium">Inscriptions</span>
  </a>
-
- @* JGK-D03/D04 : fiches enseignants livrées — le module devient un vrai lien. Consultation
- ouverte au Super Admin/Directeur/Secrétariat ; création/attribution : Directeur/Secrétariat. *@
- <a href="/enseignants" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/enseignants") ? LinkActive : LinkIdle)">
- <icon name="users" class="w-6 h-6" />
- <span class="text-base font-medium">Enseignants</span>
+ <a href="/classes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/classes") ? LinkActive : LinkIdle)">
+ <icon name="building" class="w-5 h-5" />
+ <span class="text-sm font-medium">Classes</span>
  </a>
-
- @* Tickets JGK-G01/G02 livrés (saisie de notes, moyennes) : chaque module devient un vrai
- lien le jour où son ticket est livré (patron documenté plus haut). Le bulletin PDF
- (JGK-G03) reste à venir — l'écran ci-dessous ne couvre que la saisie. Secrétariat inclus
- depuis la matrice d'autorisation "Photoshop" : il peut désormais corriger/annuler une
- note déjà saisie (GradesController.UpdateGradeRoles), donc voir cet écran. *@
- <a href="/notes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" x-cloak class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
- <icon name="book" class="w-6 h-6" />
- <span class="text-base font-medium">Notes et bulletins</span>
+ <a href="/infrastructures" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/infrastructures") ? LinkActive : LinkIdle)">
+ <icon name="building" class="w-5 h-5" />
+ <span class="text-sm font-medium">Bâtiments &amp; Salles</span>
  </a>
+ <a href="/matieres" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
+ <icon name="layers" class="w-5 h-5" />
+ <span class="text-sm font-medium">Matières</span>
+ </a>
+ <a href="/enseignants" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" class="@(path.StartsWith("/enseignants") ? LinkActive : LinkIdle)">
+ <icon name="users" class="w-5 h-5" />
+ <span class="text-sm font-medium">Enseignants</span>
+ </a>
+ <a href="/notes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
+ <icon name="document" class="w-5 h-5" />
+ <span class="text-sm font-medium">Notes et bulletins</span>
+ </a>
+ <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" class="@(path.StartsWith("/rapports") ? LinkActive : LinkIdle)">
+ <icon name="chart-multiple" class="w-5 h-5" />
+ <span class="text-sm font-medium">Rapports</span>
+ </a>
+ </div>
+ </div>
 
- <a href="/frais" x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" x-cloak class="@(path.StartsWith("/frais") ? LinkActive : LinkIdle)">
+ <!-- Pôle : Surveillance Générale -->
+ <div x-data="{ open: @(path.StartsWith("/presences") || path.StartsWith("/billets") || path.StartsWith("/discipline") || path.StartsWith("/convocations") || path.StartsWith("/pointage") ? "true" : "false") }" class="space-y-1">
+ <button x-on:click="open = !open" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700">
+ <div class="flex items-center gap-3">
+ <icon name="shield" class="w-6 h-6" />
+ <span class="text-base font-medium">Surveillance</span>
+ </div>
+ <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200" ::class="open ? 'rotate-180' : ''" />
+ </button>
+ <div x-show="open" x-collapse class="pl-4 space-y-1 mt-1">
+ <a href="/presences" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/presences") ? LinkActive : LinkIdle)">
+ <icon name="checkmark-circle" class="w-5 h-5" />
+ <span class="text-sm font-medium">Appel en classe</span>
+ </a>
+ <a href="/billets" x-show="canView(['Directeur', 'Surveillant'])" class="@(path.StartsWith("/billets") ? LinkActive : LinkIdle)">
+ <icon name="document" class="w-5 h-5" />
+ <span class="text-sm font-medium">Billets d'entrée</span>
+ </a>
+ <a href="/discipline" x-show="canView(['Directeur', 'Surveillant'])" class="@(path.StartsWith("/discipline") ? LinkActive : LinkIdle)">
+ <icon name="alert-circle" class="w-5 h-5" />
+ <span class="text-sm font-medium">Registre Discipline</span>
+ </a>
+ <a href="/convocations" x-show="canView(['Directeur', 'Surveillant'])" class="@(path.StartsWith("/convocations") ? LinkActive : LinkIdle)">
+ <icon name="alert-circle" class="w-5 h-5" />
+ <span class="text-sm font-medium">Convocations parent</span>
+ </a>
+ <a href="/pointage-profs" x-show="canView(['Directeur', 'Secretariat'])" class="@(path.StartsWith("/pointage") ? LinkActive : LinkIdle)">
+ <icon name="clock" class="w-5 h-5" />
+ <span class="text-sm font-medium">Pointage Profs</span>
+ </a>
+ </div>
+ </div>
+
+ <!-- Pôle : Comptabilité & Finance -->
+ <div x-data="{ open: @(path.StartsWith("/frais") || path.StartsWith("/caisse") || path.StartsWith("/paie") || path.StartsWith("/fiscalite") || path.StartsWith("/tresorerie") ? "true" : "false") }" x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" class="space-y-1">
+ <button x-on:click="open = !open" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700">
+ <div class="flex items-center gap-3">
  <icon name="wallet" class="w-6 h-6" />
- <span class="text-base font-medium">Finance</span>
+ <span class="text-base font-medium">Comptabilité</span>
+ </div>
+ <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200" ::class="open ? 'rotate-180' : ''" />
+ </button>
+ <div x-show="open" x-collapse class="pl-4 space-y-1 mt-1">
+ <a href="/caisse" class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
+ <icon name="payment" class="w-5 h-5" />
+ <span class="text-sm font-medium">Caisse (Encaissements)</span>
  </a>
-
- <a href="/caisse" x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" x-cloak class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
- <icon name="payment" class="w-6 h-6" />
- <span class="text-base font-medium">Caisse</span>
+ <a href="/frais" class="@(path.StartsWith("/frais") ? LinkActive : LinkIdle)">
+ <icon name="document" class="w-5 h-5" />
+ <span class="text-sm font-medium">Frais Scolaires</span>
  </a>
-
- @* JGK-R02 : le module Rapports devient un vrai lien (premier écran livré : assiduité).
- Directeur / Secrétariat / Super Admin — Finance et Enseignant exclus de la consultation
- transverse (Volume 7). L'API garde (ReportsController) reste la protection réelle. *@
- <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/rapports") ? LinkActive : LinkIdle)">
- <icon name="chart-multiple" class="w-6 h-6" />
- <span class="text-base font-medium">Rapports</span>
+ <a href="/paie" class="@(path.StartsWith("/paie") ? LinkActive : LinkIdle)">
+ <icon name="document" class="w-5 h-5" />
+ <span class="text-sm font-medium">Fiches de Paie</span>
  </a>
+ <a href="/fiscalite" class="@(path.StartsWith("/fiscalite") ? LinkActive : LinkIdle)">
+ <icon name="document" class="w-5 h-5" />
+ <span class="text-sm font-medium">VRS / IPRES (Taxes)</span>
+ </a>
+ <a href="/tresorerie" class="@(path.StartsWith("/tresorerie") ? LinkActive : LinkIdle)">
+ <icon name="chart-multiple" class="w-5 h-5" />
+ <span class="text-sm font-medium">Trésorerie</span>
+ </a>
+ </div>
+ </div>
 
- @* JGK-G02 : le Secrétariat gagne accès à l'onglet Configuration (barème + mentions,
- settings.js) en plus du Directeur — le reste de l'écran (Établissement, Utilisateurs,
- Journal d'audit, Facturation) reste en lecture seule ou masqué pour lui, voir Settings/Index.cshtml. *@
+ <!-- Administration (Super Admin / Params) -->
+ <div class="pt-2 mt-2 border-t border-slate-100 space-y-1">
  <a href="/parametres" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
  <icon name="settings" class="w-6 h-6" />
  <span class="text-base font-medium">Paramètres</span>
  </a>
-
- @* Administration (Volume 5 §3.2, explicitement Super Admin uniquement) : pointe désormais vers
- la console plateforme dédiée (layout _SuperAdminLayout, sombre) — le Super Admin n'y
- revient normalement jamais en pratique puisque son atterrissage par défaut (auth.js,
- defaultLandingForRole) l'y envoie directement dès la connexion. Ce lien ne reste utile
- que s'il navigue d'abord ailleurs puis revient ici par erreur. *@
  <a href="/admin" x-show="canView(['SuperAdmin'])" x-cloak class="@(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
  <icon name="layers" class="w-6 h-6" />
  <span class="text-base font-medium">Console Super Admin</span>
  </a>
+ </div>
  </nav>
 
  @* Profil réel de la session : l'e-mail est celui saisi à la connexion, le rôle est lu dans le

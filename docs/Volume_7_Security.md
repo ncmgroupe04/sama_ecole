@@ -176,6 +176,20 @@ Format : `Module.Action` — ex. `Students.Read`, `Students.Create`, `Finance.Ex
 | Voir / Consulter effectifs | ✔ | ✔ | ✔ |
 | Créer / Modifier | ✔ | ✔ | ✖ |
 
+**Bâtiments / Salles (module Infrastructures)**
+
+Gestion physique des locaux — INDÉPENDANTE des Classes (une Classe est un groupe pédagogique, un
+Bâtiment/une Salle est un local physique ; aucun lien entre les deux dans cette version).
+
+| Action | Directeur | Secrétariat | Enseignant |
+|---|---|---|---|
+| Voir | ✔ | ✔ | ✔ |
+| Créer / Modifier / Archiver | ✔ | ✔ | ✖ |
+
+Même matrice que Classes, par analogie (`BuildingsController.ManageRoles` = `RoomsController.ManageRoles`
+= `Directeur,Secretariat`) : ce sont ces deux rôles qui gèrent déjà l'organisation des classes au
+quotidien, aucune raison pour que les locaux physiques suivent une règle différente.
+
 **Inscriptions**
 
 | Action | Directeur | Secrétariat | Finance |

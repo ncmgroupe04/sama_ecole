@@ -9,6 +9,46 @@ window.closeAllModals = function() {
     window.dispatchEvent(new CustomEvent('close-modals'));
 };
 
+/**
+ * Notifications éphémères (succès/erreur), référencées comme `toast.success(...)`/`toast.error(...)`
+ * depuis discipline.js/billets.js/payroll.js — jusqu'ici jamais défini nulle part : chaque appel
+ * levait une ReferenceError silencieuse, interrompant le script AVANT la fermeture du slide-over ou
+ * le rafraîchissement de la liste (ex. discipline.js submitCreate), ce qui donnait l'impression d'un
+ * enregistrement resté sans effet alors que l'appel API avait réussi.
+ */
+window.toast = (function () {
+    function ensureContainer() {
+        let el = document.getElementById('app-toast-container');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'app-toast-container';
+            el.className = 'fixed top-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none';
+            document.body.appendChild(el);
+        }
+        return el;
+    }
+
+    function show(message, variant) {
+        const container = ensureContainer();
+        const el = document.createElement('div');
+        const styles = variant === 'error'
+            ? 'bg-danger-bg text-danger border-danger/30'
+            : 'bg-success-bg text-success border-success/30';
+        el.className = `pointer-events-auto max-w-sm w-full px-4 py-3 rounded-xl border shadow-lg text-sm font-medium ${styles} transition-opacity duration-200`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 200);
+        }, 4000);
+    }
+
+    return {
+        success(message) { show(message, 'success'); },
+        error(message) { show(message, 'error'); }
+    };
+})();
+
 document.addEventListener('alpine:init', () => {
     /**
      * Navigation mois/année du calendrier maison. La VALEUR sélectionnée (lecture/écriture) est

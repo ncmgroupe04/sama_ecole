@@ -485,6 +485,15 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             .SingleOrDefaultAsync(c => c.Id == id);
     }
 
+    /// <summary>Même raisonnement que GetClassroomAsync, pour vérifier le soft delete de DELETE /buildings/{id}.</summary>
+    public async Task<Building?> GetBuildingAsync(Guid id)
+    {
+        await using var owner = NewOwnerContext();
+
+        return await owner.Buildings.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(b => b.Id == id);
+    }
+
     /// <summary>Même raisonnement que GetClassroomAsync, pour vérifier le soft delete de DELETE /students/{id}.</summary>
     public async Task<Student?> GetStudentAsync(Guid id)
     {

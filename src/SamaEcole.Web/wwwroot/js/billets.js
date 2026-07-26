@@ -11,11 +11,20 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('billetsView', () => ({
+        tab: 'entree',
         lateArrivals: [],
         isLoading: true,
         printingId: null,
 
-        // Slide-over de création
+        // canView(...) référencé jusqu'ici en vue n'existe QUE dans le scope Alpine du sidebarNav()
+        // de _Layout.cshtml (une portée SŒUR de billetsView(), jamais un ancêtre DOM) : l'appel levait
+        // une ReferenceError et Alpine masquait silencieusement les deux boutons pour tout le monde.
+        // Rôles alignés sur AbsenceController, qui gouverne les DEUX créations (retard/sortie) :
+        // SuperAdmin/Directeur/Surveillant — le Secrétariat imprime le billet (BilletsController) mais
+        // ne crée pas le retard/la sortie lui-même.
+        canManageBillets: window.auth.role === 'Directeur' || window.auth.role === 'Surveillant',
+
+        // Slide-over de création (billet d'entrée)
         isCreateOpen: false,
         isCreating: false,
         students: [],
@@ -26,8 +35,23 @@ document.addEventListener('alpine:init', () => {
             reason: ''
         },
 
+        // ---------------------------------------------------------------- Billets de sortie (EarlyDeparture)
+        earlyDepartures: [],
+        isLoadingExits: true,
+        printingExitId: null,
+        isCreateExitOpen: false,
+        isCreatingExit: false,
+        exitForm: {
+            studentId: '',
+            date: new Date().toISOString().split('T')[0],
+            departureTime: '',
+            reason: '',
+            pickedUpBy: ''
+        },
+
         init() {
             this.loadLateArrivals();
+            this.loadEarlyDepartures();
             this.loadStudents();
         },
 
@@ -118,6 +142,85 @@ document.addEventListener('alpine:init', () => {
                 date: new Date().toISOString().split('T')[0],
                 minutes: 5,
                 reason: ''
+            };
+        },
+
+        // ---------------------------------------------------------------- Billets de sortie (EarlyDeparture)
+
+        async loadEarlyDepartures() {
+            this.isLoadingExits = true;
+            try {
+                this.earlyDepartures = await api.get('/absences/early-departures');
+            } catch (error) {
+                console.error('Early departures fetch error:', error);
+                toast.error(error.message || 'Erreur lors du chargement des sorties.');
+            } finally {
+                this.isLoadingExits = false;
+            }
+        },
+
+        async submitCreateExit() {
+            if (!this.exitForm.studentId || !this.exitForm.date || !this.exitForm.departureTime || !this.exitForm.reason) {
+                toast.error('Veuillez remplir tous les champs.');
+                return;
+            }
+
+            this.isCreatingExit = true;
+            try {
+                await api.post('/absences/early-departures', {
+                    studentId: this.exitForm.studentId,
+                    date: this.exitForm.date,
+                    departureTime: this.exitForm.departureTime,
+                    reason: this.exitForm.reason,
+                    pickedUpBy: this.exitForm.pickedUpBy || null
+                });
+                toast.success('Sortie enregistrée. Vous pouvez imprimer le billet.');
+                this.isCreateExitOpen = false;
+                this.resetExitForm();
+                await this.loadEarlyDepartures();
+            } catch (error) {
+                console.error('Early departure create error:', error);
+                toast.error(error.message || "Erreur lors de l'enregistrement.");
+            } finally {
+                this.isCreatingExit = false;
+            }
+        },
+
+        /** Billet de sortie A5 en PDF — même mécanique que printBillet. */
+        async printExitBillet(earlyDepartureId) {
+            this.printingExitId = earlyDepartureId;
+            try {
+                const response = await fetch(`/api/v1/billets/early-departure/${earlyDepartureId}/pdf`, {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
+                });
+                if (!response.ok) {
+                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
+                }
+                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const win = window.open(url, '_blank');
+                if (!win) {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `Billet-Sortie-${earlyDepartureId}.pdf`;
+                    link.click();
+                }
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (error) {
+                console.error('Exit billet print error:', error);
+                toast.error(error.message || "Erreur lors de la génération du billet.");
+            } finally {
+                this.printingExitId = null;
+            }
+        },
+
+        resetExitForm() {
+            this.exitForm = {
+                studentId: '',
+                date: new Date().toISOString().split('T')[0],
+                departureTime: '',
+                reason: '',
+                pickedUpBy: ''
             };
         },
 

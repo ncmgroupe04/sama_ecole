@@ -129,16 +129,18 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
     }
 
     [Fact]
-    public async Task A_Directeur_Must_Not_Enter_A_New_Grade()
+    public async Task A_Directeur_Can_Enter_A_New_Grade()
     {
-        // « Saisir » est réservé à l'Enseignant (docs/Volume_7_Security.md « Notes ») : le Directeur ne
-        // peut que corriger une note déjà saisie, jamais en créer une lui-même.
+        // « Saisir » est ouvert au Directeur et à l'Enseignant (docs/Volume_7_Security.md « Notes »).
         var directeur = await DirecteurTokenAsync();
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
 
         var response = await CreateGradeAsync(directeur, studentId, subjectId, termId, "Devoir", 15);
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var grade = (await response.Content.ReadFromJsonAsync<GradeDto>())!;
+        grade.Value.Should().Be(15);
+        grade.RowVersion.Should().NotBe(0u);
     }
 
     [Fact]
