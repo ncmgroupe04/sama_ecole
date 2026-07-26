@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -592,7 +593,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             .UseNpgsql(OwnerConnectionString)
             .Options;
 
-        return new ApplicationDbContext(options, new NoTenantProvider());
+        return new ApplicationDbContext(options, new NoTenantProvider(), NullLogger<ApplicationDbContext>.Instance);
     }
 
     private async Task ExecuteAsOwnerAsync(string sql)

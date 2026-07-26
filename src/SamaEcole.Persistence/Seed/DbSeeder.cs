@@ -2,6 +2,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SamaEcole.Persistence.Seed;
 
@@ -48,7 +49,7 @@ public static class DbSeeder
 
         // Aucun tenant : ni School ni User n'est une ITenantEntity, aucun Global Query Filter ne
         // s'applique donc à ce qui est semé ici.
-        await using var dbContext = new ApplicationDbContext(options, new NoTenantProvider());
+        await using var dbContext = new ApplicationDbContext(options, new NoTenantProvider(), NullLogger<ApplicationDbContext>.Instance);
 
         // Deux écoles, et pas une : c'est ce qui permet de constater à la main que l'isolation
         // multi-tenant fonctionne, sans avoir à monter un test.

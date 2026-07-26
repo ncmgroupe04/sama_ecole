@@ -3,6 +3,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Common;
 using SamaEcole.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace SamaEcole.Persistence;
@@ -13,7 +14,10 @@ namespace SamaEcole.Persistence;
 /// PostgreSQL (voir Migrations/) reste la protection réelle et doit bloquer même si ce
 /// filtre est un jour oublié sur une nouvelle entité.
 /// </summary>
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ITenantProvider tenantProvider)
+public class ApplicationDbContext(
+    DbContextOptions<ApplicationDbContext> options,
+    ITenantProvider tenantProvider,
+    ILogger<ApplicationDbContext> logger)
     : DbContext(options), IApplicationDbContext
 {
     public DbSet<School> Schools => Set<School>();
@@ -200,6 +204,27 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .FromSqlRaw("SELECT * FROM public.get_global_audit_logs({0}, {1})", limit, offset)
             .IgnoreQueryFilters()
             .ToListAsync(cancellationToken);
+
+    /// <inheritdoc cref="IApplicationDbContext.ToListOrEmptyOnMissingTableAsync{T}" />
+    public async Task<IReadOnlyList<T>> ToListOrEmptyOnMissingTableAsync<T>(
+        IQueryable<T> query, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await query.ToListAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            // TableName n'est pas peuplé par Postgres pour cette classe d'erreur (contrairement aux
+            // violations de contrainte) : MessageText, lui, cite toujours la relation manquante.
+            logger.LogWarning(ex,
+                "Lecture impossible : {PostgresMessage}. Les migrations EF sont-elles à jour sur cet " +
+                "environnement ? Lancez 'dotnet ef database update -p src/SamaEcole.Persistence " +
+                "-s src/SamaEcole.Web'. Liste vide renvoyée en attendant.",
+                ex.MessageText);
+            return [];
+        }
+    }
 
     public async Task<T> ExecuteInTransactionAsync<T>(
         Func<CancellationToken, Task<T>> operation,

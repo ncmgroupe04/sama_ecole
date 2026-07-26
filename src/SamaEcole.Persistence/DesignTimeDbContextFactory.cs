@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SamaEcole.Persistence;
 
@@ -25,7 +26,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Applicatio
             .UseNpgsql(connectionString) // Npgsql exclusivement — AGENTS.md règle #1.
             .Options;
 
-        return new ApplicationDbContext(options, new DesignTimeTenantProvider());
+        return new ApplicationDbContext(options, new DesignTimeTenantProvider(), NullLogger<ApplicationDbContext>.Instance);
     }
 
     /// <summary>Aucun tenant au design time : le Global Query Filter n'est jamais évalué par les migrations.</summary>

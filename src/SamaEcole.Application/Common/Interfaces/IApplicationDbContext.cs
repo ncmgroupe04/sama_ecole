@@ -151,4 +151,16 @@ public interface IApplicationDbContext
     Task<T> ExecuteInTransactionAsync<T>(
         Func<CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Exécute <paramref name="query"/> et retourne une liste vide — plutôt que de laisser remonter
+    /// une exception 500 brute — si la table sous-jacente n'existe pas encore (migration EF pas
+    /// encore appliquée sur cet environnement). Un avertissement est loggé côté serveur. Encapsulé ici
+    /// pour la même raison que <see cref="GetGlobalAuditLogsAsync"/> : seul SamaEcole.Persistence a le
+    /// droit de connaître Npgsql (AGENTS.md règle #1). Réservé aux écrans où une liste vide est un état
+    /// légitime et sans risque (ex. un module dont l'écran d'accueil ne doit jamais planter si la base
+    /// n'a pas encore migré) — ne pas l'utiliser pour masquer une vraie panne de lecture.
+    /// </summary>
+    Task<IReadOnlyList<T>> ToListOrEmptyOnMissingTableAsync<T>(
+        IQueryable<T> query, CancellationToken cancellationToken);
 }

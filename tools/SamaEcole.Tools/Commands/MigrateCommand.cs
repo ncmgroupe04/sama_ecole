@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SamaEcole.Tools.Commands;
 
@@ -50,7 +51,7 @@ public static class MigrateCommand
 
         // Aucun tenant : les migrations ne passent par aucun Global Query Filter, exactement comme au
         // design time (DesignTimeDbContextFactory).
-        await using var dbContext = new ApplicationDbContext(options, new NoTenantProvider());
+        await using var dbContext = new ApplicationDbContext(options, new NoTenantProvider(), NullLogger<ApplicationDbContext>.Instance);
 
         try
         {
