@@ -1,6 +1,8 @@
 using SamaEcole.Application.Absences.Commands.CreateAbsenceJustification;
+using SamaEcole.Application.Absences.Commands.CreateEarlyDeparture;
 using SamaEcole.Application.Absences.Commands.CreateLateArrival;
 using SamaEcole.Application.Absences.Queries.GetAbsenceJustifications;
+using SamaEcole.Application.Absences.Queries.GetEarlyDepartures;
 using SamaEcole.Application.Absences.Queries.GetLateArrivals;
 using SamaEcole.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -35,6 +37,19 @@ public class AbsenceController(IMediator _mediator) : ControllerBase
 
     [HttpPost("late-arrivals")]
     public async Task<ActionResult<Guid>> CreateLateArrival(CreateLateArrivalCommand command)
+    {
+        var id = await _mediator.Send(command);
+        return Ok(id);
+    }
+
+    [HttpGet("early-departures")]
+    public async Task<ActionResult<List<EarlyDepartureDto>>> GetEarlyDepartures()
+    {
+        return await _mediator.Send(new GetEarlyDeparturesQuery());
+    }
+
+    [HttpPost("early-departures")]
+    public async Task<ActionResult<Guid>> CreateEarlyDeparture(CreateEarlyDepartureCommand command)
     {
         var id = await _mediator.Send(command);
         return Ok(id);

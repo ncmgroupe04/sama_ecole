@@ -27,6 +27,17 @@ using SamaEcole.Application.Finance.Queries.GetEmployeeContracts;
 using SamaEcole.Application.Finance.Queries.GetFichePaies;
 using SamaEcole.Application.Finance.Queries.GetPayslipPdf;
 using SamaEcole.Application.Finance.Queries.GetTaxDeclarations;
+using SamaEcole.Application.Finance.Queries.GetDuesNotice;
+using SamaEcole.Application.Finance.Queries.GetDuesNoticePdf;
+using SamaEcole.Application.Finance.Queries.GetWorkCertificate;
+using SamaEcole.Application.Finance.Queries.GetWorkCertificatePdf;
+using SamaEcole.Application.Finance.Commands.CreateFinancialCommitment;
+using SamaEcole.Application.Finance.Queries.GetFinancialCommitment;
+using SamaEcole.Application.Finance.Queries.GetFinancialCommitmentPdf;
+using SamaEcole.Application.Finance.Commands.CreateTeacherHourRecord;
+using SamaEcole.Application.Finance.Queries.GetTeacherHourRecords;
+using SamaEcole.Application.Finance.Queries.GetHourRecordSheet;
+using SamaEcole.Application.Finance.Queries.GetHourRecordSheetPdf;
 
 namespace SamaEcole.Web.Controllers;
 
@@ -410,6 +421,192 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     {
         var id = await mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GenerateTaxDeclaration), new { id }, id);
+    }
+
+    // ------------------------------------------------------------------ Module Documents administratifs (cahier des charges élite)
+
+    // Sommation pour impayés : refuse (409, BusinessRuleException) pour un compte à jour — voir GetDuesNoticeQueryHandler.
+    [HttpGet("enrollments/{enrollmentId:guid}/dues-notice")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<DuesNoticeDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DuesNotice(Guid enrollmentId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDuesNoticeQuery(enrollmentId), cancellationToken));
+
+    [HttpGet("enrollments/{enrollmentId:guid}/dues-notice/pdf")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DuesNoticePdf(Guid enrollmentId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetDuesNoticePdfQuery(enrollmentId), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("La sommation PDF générée est vide pour l'inscription {EnrollmentId}", enrollmentId);
+                return NotFound(new { message = "La sommation PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Sommation-{result.NoticeNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (SamaEcole.Application.Common.Exceptions.BusinessRuleException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (409)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération de la sommation PDF pour {EnrollmentId}", enrollmentId);
+            return Problem(detail: ex.Message, title: "Erreur de génération de la sommation PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    // Attestation de travail : document RH interne (comme le bulletin de paie), pas de bandeau M.E.N.
+    [HttpGet("employee-contracts/{contractId:guid}/work-certificate")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<WorkCertificateDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> WorkCertificate(Guid contractId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetWorkCertificateQuery(contractId), cancellationToken));
+
+    [HttpGet("employee-contracts/{contractId:guid}/work-certificate/pdf")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> WorkCertificatePdf(Guid contractId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetWorkCertificatePdfQuery(contractId), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("L'attestation de travail PDF générée est vide pour le contrat {ContractId}", contractId);
+                return NotFound(new { message = "L'attestation de travail PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Attestation-Travail-{result.CertificateNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération de l'attestation de travail PDF pour {ContractId}", contractId);
+            return Problem(detail: ex.Message, title: "Erreur de génération de l'attestation de travail PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    // Engagement financier : trace écrite d'un échéancier, ne touche jamais TotalDue/AmountPaid (règle #4).
+    [HttpPost("commitments")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreateFinancialCommitment([FromBody] CreateFinancialCommitmentCommand command, CancellationToken cancellationToken)
+    {
+        var id = await mediator.Send(command, cancellationToken);
+        return CreatedAtAction(nameof(GetFinancialCommitment), new { id }, id);
+    }
+
+    [HttpGet("commitments/{id:guid}")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<FinancialCommitmentDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetFinancialCommitment(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetFinancialCommitmentQuery(id), cancellationToken));
+
+    [HttpGet("commitments/{id:guid}/pdf")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetFinancialCommitmentPdf(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetFinancialCommitmentPdfQuery(id), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("L'engagement financier PDF généré est vide pour {CommitmentId}", id);
+                return NotFound(new { message = "L'engagement financier PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Engagement-{result.CommitmentNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération de l'engagement financier PDF pour {CommitmentId}", id);
+            return Problem(detail: ex.Message, title: "Erreur de génération de l'engagement financier PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    // Fiche de suivi des heures (Vacataire) : détail jour par jour, distinct du calcul de paie lui-même.
+    [HttpPost("employee-contracts/{contractId:guid}/hour-records")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreateHourRecord(Guid contractId, [FromBody] CreateHourRecordRequest request, CancellationToken cancellationToken)
+    {
+        var id = await mediator.Send(new CreateTeacherHourRecordCommand(contractId, request.Date, request.Hours, request.Note), cancellationToken);
+        return CreatedAtAction(nameof(GetHourRecords), new { contractId }, id);
+    }
+
+    public record CreateHourRecordRequest(DateOnly Date, decimal Hours, string? Note);
+
+    [HttpGet("employee-contracts/{contractId:guid}/hour-records")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<List<TeacherHourRecordDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHourRecords(Guid contractId, [FromQuery] int? month, [FromQuery] int? year, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetTeacherHourRecordsQuery(contractId, month, year), cancellationToken));
+
+    [HttpGet("employee-contracts/{contractId:guid}/hour-records/sheet")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<HourRecordSheetDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetHourRecordSheet(Guid contractId, [FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetHourRecordSheetQuery(contractId, month, year), cancellationToken));
+
+    [HttpGet("employee-contracts/{contractId:guid}/hour-records/sheet/pdf")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetHourRecordSheetPdf(Guid contractId, [FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetHourRecordSheetPdfQuery(contractId, month, year), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("La fiche d'heures PDF générée est vide pour le contrat {ContractId}", contractId);
+                return NotFound(new { message = "La fiche d'heures PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Fiche-Heures-{result.SheetNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération de la fiche d'heures PDF pour le contrat {ContractId}", contractId);
+            return Problem(detail: ex.Message, title: "Erreur de génération de la fiche d'heures PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 }
 

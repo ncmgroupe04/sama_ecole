@@ -54,6 +54,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<EmployeeContract> EmployeeContracts => Set<EmployeeContract>();
     public DbSet<FichePaie> FichePaies => Set<FichePaie>();
     public DbSet<TaxeDeclaration> TaxeDeclarations => Set<TaxeDeclaration>();
+    public DbSet<EarlyDeparture> EarlyDepartures => Set<EarlyDeparture>();
+    public DbSet<ParentSummons> ParentSummons => Set<ParentSummons>();
+    public DbSet<FinancialCommitment> FinancialCommitments => Set<FinancialCommitment>();
+    public DbSet<TeacherHourRecord> TeacherHourRecords => Set<TeacherHourRecord>();
 
     // Console Super Admin — entités SANS CLÉ, jamais gérées par les migrations (voir OnModelCreating) :
     // la première est adossée à une vue réelle, la seconde n'existe qu'à travers FromSqlRaw.

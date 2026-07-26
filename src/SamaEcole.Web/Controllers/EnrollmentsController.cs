@@ -4,6 +4,8 @@ using SamaEcole.Application.Enrollments.Commands.ChangeEnrollmentStatus;
 using SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentCertificate;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentCertificatePdf;
+using SamaEcole.Application.Enrollments.Queries.GetExeatCertificate;
+using SamaEcole.Application.Enrollments.Queries.GetExeatCertificatePdf;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceipt;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentReceiptPdf;
 using SamaEcole.Domain.Enums;
@@ -120,6 +122,43 @@ public class EnrollmentsController(ISender mediator, ILogger<EnrollmentsControll
         {
             logger.LogError(ex, "Erreur lors de la génération du certificat PDF pour {EnrollmentId}", id);
             return Problem(detail: ex.Message, title: "Erreur de génération du certificat PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    // Certificat d'Exéat (VieScolaire) : n'existe que pour une inscription déjà DroppedOut/Transferred
+    // (ChangeEnrollmentStatusCommand). Lecture ouverte comme le certificat de scolarité.
+    [HttpGet("{id:guid}/exeat")]
+    [ProducesResponseType<ExeatCertificateDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Exeat(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetExeatCertificateQuery(id), cancellationToken));
+
+    [HttpGet("{id:guid}/exeat/pdf")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExeatPdf(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetExeatCertificatePdfQuery(id), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("L'exéat PDF généré est vide pour l'inscription {EnrollmentId}", id);
+                return NotFound(new { message = "Le certificat d'exéat PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Exeat-{result.CertificateNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération de l'exéat PDF pour {EnrollmentId}", id);
+            return Problem(detail: ex.Message, title: "Erreur de génération de l'exéat PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 

@@ -95,10 +95,14 @@ public interface IApplicationDbContext
     DbSet<AbsenceJustification> AbsenceJustifications { get; }
     DbSet<LateArrival> LateArrivals { get; }
     DbSet<TeacherAttendance> TeacherAttendances { get; }
-    
+    DbSet<EarlyDeparture> EarlyDepartures { get; }
+    DbSet<ParentSummons> ParentSummons { get; }
+
     DbSet<EmployeeContract> EmployeeContracts { get; }
     DbSet<FichePaie> FichePaies { get; }
     DbSet<TaxeDeclaration> TaxeDeclarations { get; }
+    DbSet<FinancialCommitment> FinancialCommitments { get; }
+    DbSet<TeacherHourRecord> TeacherHourRecords { get; }
 
     /// <summary>
     /// Agrégats plateforme (console Super Admin) : entité SANS CLÉ adossée à la vue PostgreSQL

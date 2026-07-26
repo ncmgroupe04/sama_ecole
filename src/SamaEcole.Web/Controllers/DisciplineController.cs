@@ -1,4 +1,6 @@
 using SamaEcole.Application.Discipline.Commands.CreateDisciplineRecord;
+using SamaEcole.Application.Discipline.Queries.GetDisciplinaryPv;
+using SamaEcole.Application.Discipline.Queries.GetDisciplinaryPvPdf;
 using SamaEcole.Application.Discipline.Queries.GetDisciplineRecords;
 using SamaEcole.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +12,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/discipline")]
 [Authorize(Roles = $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Surveillant)}")]
-public class DisciplineController(IMediator _mediator) : ControllerBase
+public class DisciplineController(IMediator _mediator, ILogger<DisciplineController> logger) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<DisciplineRecordDto>>> GetDisciplineRecords()
@@ -23,5 +25,40 @@ public class DisciplineController(IMediator _mediator) : ControllerBase
     {
         var id = await _mediator.Send(command);
         return Ok(id);
+    }
+
+    [HttpGet("{id:guid}/pv")]
+    [ProducesResponseType<DisciplinaryPvDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Pv(Guid id, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new GetDisciplinaryPvQuery(id), cancellationToken));
+
+    [HttpGet("{id:guid}/pv/pdf")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PvPdf(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new GetDisciplinaryPvPdfQuery(id), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("Le PV de discipline PDF généré est vide pour la sanction {DisciplineRecordId}", id);
+                return NotFound(new { message = "Le PV de discipline PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"PV-Discipline-{result.PvNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération du PV de discipline PDF pour {DisciplineRecordId}", id);
+            return Problem(detail: ex.Message, title: "Erreur de génération du PV de discipline PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 }

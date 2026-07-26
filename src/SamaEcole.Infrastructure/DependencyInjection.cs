@@ -78,8 +78,19 @@ public static class DependencyInjection
         services.AddSingleton<ISchoolCardPdfGenerator, SamaEcole.Infrastructure.Documents.SchoolCardPdfGenerator>();
         services.AddSingleton<IEnrollmentCertificatePdfGenerator, EnrollmentCertificatePdfGenerator>();
 
+        // Module Documents administratifs (cahier des charges élite) — nouveaux documents officiels,
+        // même moteur QuestPDF que ci-dessus, sans état.
+        services.AddSingleton<IExeatCertificatePdfGenerator, ExeatCertificatePdfGenerator>();
+        services.AddSingleton<IDisciplinaryPvPdfGenerator, DisciplinaryPvPdfGenerator>();
+        services.AddSingleton<IDuesNoticePdfGenerator, DuesNoticePdfGenerator>();
+        services.AddSingleton<IWorkCertificatePdfGenerator, WorkCertificatePdfGenerator>();
+        services.AddSingleton<IParentNoticePdfGenerator, ParentNoticePdfGenerator>();
+        services.AddSingleton<IFinancialCommitmentPdfGenerator, FinancialCommitmentPdfGenerator>();
+        services.AddSingleton<IHourRecordSheetPdfGenerator, HourRecordSheetPdfGenerator>();
+
         // Billet d'entrée en classe A5 (module Surveillance) — même moteur QuestPDF, sans état.
         services.AddSingleton<IEntryTicketPdfGenerator, EntryTicketPdfGenerator>();
+        services.AddSingleton<IExitTicketPdfGenerator, ExitTicketPdfGenerator>();
 
         // Bulletin de paie A4 (module Comptabilité & Fiscalité) — même moteur QuestPDF, sans état.
         services.AddSingleton<IPayslipPdfGenerator, PayslipPdfGenerator>();
