@@ -73,8 +73,8 @@ public class GetClassReportCardsTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(Ecole);
         var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
-        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir, 12), CancellationToken.None);
-        await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir, 16), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 12), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir1, 16), CancellationToken.None);
 
         var sender = new FakeMediator(db);
         var dataService = new ReportCardDataService(sender, db);
@@ -96,8 +96,8 @@ public class GetClassReportCardsTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(Ecole);
         var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
-        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir, 12), CancellationToken.None);
-        await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir, 16), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 12), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir1, 16), CancellationToken.None);
 
         var sender = new FakeMediator(db);
         var dataService = new ReportCardDataService(sender, db);

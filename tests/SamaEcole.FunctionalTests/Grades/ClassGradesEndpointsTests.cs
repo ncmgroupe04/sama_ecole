@@ -34,7 +34,8 @@ public class ClassGradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private record TermDto(Guid Id, string Label, int Order, DateOnly StartDate, DateOnly EndDate);
     private record StudentDto(Guid Id, string Matricule);
     private record GradeCellDto(Guid Id, decimal Value, uint RowVersion);
-    private record StudentGradeRowDto(Guid StudentId, string Matricule, string FullName, GradeCellDto? Devoir, GradeCellDto? Composition);
+    private record StudentGradeRowDto(
+        Guid StudentId, string Matricule, string FullName, GradeCellDto? Devoir1, GradeCellDto? Devoir2, GradeCellDto? Composition);
 
     private async Task<string> AccessTokenAsync(string email, string password)
     {
@@ -100,7 +101,8 @@ public class ClassGradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var rows = (await response.Content.ReadFromJsonAsync<List<StudentGradeRowDto>>())!;
         rows.Should().ContainSingle().Which.StudentId.Should().Be(studentId);
-        rows[0].Devoir.Should().BeNull();
+        rows[0].Devoir1.Should().BeNull();
+        rows[0].Devoir2.Should().BeNull();
         rows[0].Composition.Should().BeNull();
     }
 
@@ -112,15 +114,16 @@ public class ClassGradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var enseignant = await EnseignantTokenAsync();
 
         await SendAsync(HttpMethod.Post, "/api/v1/grades", enseignant,
-            new { studentId, subjectId, termId, evaluationType = "Devoir", value = 15 });
+            new { studentId, subjectId, termId, evaluationType = "Devoir1", value = 15 });
 
         var response = await SendAsync(HttpMethod.Get, ListUrl(classroomId, subjectId, termId), enseignant);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var row = (await response.Content.ReadFromJsonAsync<List<StudentGradeRowDto>>())!.Single();
-        row.Devoir.Should().NotBeNull();
-        row.Devoir!.Value.Should().Be(15);
-        row.Devoir.RowVersion.Should().NotBe(0u);
+        row.Devoir1.Should().NotBeNull();
+        row.Devoir1!.Value.Should().Be(15);
+        row.Devoir1.RowVersion.Should().NotBe(0u);
+        row.Devoir2.Should().BeNull();
         row.Composition.Should().BeNull();
     }
 

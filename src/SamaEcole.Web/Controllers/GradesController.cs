@@ -3,8 +3,9 @@ using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
 using SamaEcole.Application.Grades.Commands.CreateMention;
 using SamaEcole.Application.Grades.Commands.DeleteGrade;
-using SamaEcole.Application.Grades.Commands.ImportGrades;
+using SamaEcole.Application.Grades.Commands.ImportGradeSheet;
 using SamaEcole.Application.Grades.Queries.GetClassGrades;
+using SamaEcole.Application.Grades.Queries.GetGradeSheetExcel;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.Grades.Queries.GetMentions;
 using SamaEcole.Application.Grades.Commands.UpdateGrade;
@@ -36,8 +37,8 @@ public class GradesController(ISender mediator) : ControllerBase
     public record UpdateGradeRequest(decimal Value, uint RowVersion);
     public record CreateMentionRequest(string Label, decimal MinAverage);
 
-    public record ImportGradesRequest(
-        Guid ClassroomId, Guid SubjectId, Guid TermId, EvaluationType EvaluationType, IFormFile? File);
+    public record ImportGradeSheetRequest(
+        Guid ClassroomId, Guid SubjectId, Guid TermId, bool DryRun, IFormFile? File);
 
     /// <summary>SAISIR une note (POST) et le calcul des moyennes (GET calculate) : inchangés par la matrice "Photoshop".</summary>
     private const string GradingRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
@@ -92,20 +93,42 @@ public class GradesController(ISender mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Import de masse d'une colonne de notes (Devoir OU Composition) depuis un fichier CSV/Excel à
-    /// deux colonnes (matricule, note) — mode de saisie alternatif à la grille cellule par cellule,
-    /// même permission que la saisie unitaire (Saisir = Directeur ou Enseignant).
-    /// Tout le fichier est validé avant la moindre écriture (422 avec le détail ligne par ligne
-    /// si une seule ligne est invalide) — voir ImportGradesCommandHandler.
+    /// Génère la feuille de notes Excel (Matricule, Nom &amp; Prénom, Devoir 1, Devoir 2, Composition)
+    /// d'une classe/matière/trimestre, pré-remplie avec les notes déjà saisies — bouton « Télécharger la
+    /// feuille » de la modale d'import. Même permission de lecture que la grille de saisie.
     /// </summary>
-    [HttpPost("import")]
+    [HttpGet("sheet/export")]
+    [Authorize(Roles = ViewGradesRoles)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ExportSheet(
+        [FromQuery] Guid classroomId, [FromQuery] Guid subjectId, [FromQuery] Guid termId, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetGradeSheetExcelQuery(classroomId, subjectId, termId), cancellationToken);
+
+        return File(
+            result.Content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            result.FileName);
+    }
+
+    /// <summary>
+    /// Import de masse des trois épreuves (Devoir 1, Devoir 2, Composition) depuis un fichier Excel au
+    /// format large (une ligne par élève, une colonne par épreuve, reconnue par le NOM de son en-tête) —
+    /// mode de saisie alternatif à la grille cellule par cellule, même permission que la saisie unitaire
+    /// (Saisir = Directeur ou Enseignant). <c>dryRun=true</c> valide tout le fichier sans rien écrire
+    /// (aperçu) ; <c>dryRun=false</c> re-valide puis écrit dans une seule transaction si tout est valide
+    /// (422 avec le détail ligne par ligne sinon) — voir ImportGradeSheetCommandHandler.
+    /// </summary>
+    [HttpPost("sheet/import")]
     [Authorize(Roles = GradingRoles)]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(5 * 1024 * 1024)]
-    [ProducesResponseType<ImportGradesResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ImportGradeSheetResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-    public async Task<IActionResult> Import([FromForm] ImportGradesRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> ImportSheet([FromForm] ImportGradeSheetRequest request, CancellationToken cancellationToken)
     {
         if (request.File is null || request.File.Length == 0)
         {
@@ -115,8 +138,8 @@ public class GradesController(ISender mediator) : ControllerBase
         await using var stream = new MemoryStream();
         await request.File.CopyToAsync(stream, cancellationToken);
 
-        var result = await mediator.Send(new ImportGradesCommand(
-            request.ClassroomId, request.SubjectId, request.TermId, request.EvaluationType,
+        var result = await mediator.Send(new ImportGradeSheetCommand(
+            request.ClassroomId, request.SubjectId, request.TermId, request.DryRun,
             stream.ToArray(), request.File.FileName), cancellationToken);
 
         return Ok(result);

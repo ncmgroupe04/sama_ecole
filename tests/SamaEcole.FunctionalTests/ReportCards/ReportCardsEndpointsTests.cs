@@ -84,7 +84,7 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var termId = terms[0].Id;
 
         await SendAsync(HttpMethod.Post, "/api/v1/grades", enseignantToken,
-            new { studentId = student.Id, subjectId = subject.Id, termId, evaluationType = "Devoir", value = 15 });
+            new { studentId = student.Id, subjectId = subject.Id, termId, evaluationType = "Devoir1", value = 15 });
         await SendAsync(HttpMethod.Post, "/api/v1/grades", enseignantToken,
             new { studentId = student.Id, subjectId = subject.Id, termId, evaluationType = "Composition", value = 17 });
 

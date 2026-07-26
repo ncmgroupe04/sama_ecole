@@ -49,11 +49,13 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
             .GroupBy(r => new { r.SubjectId, r.Name, r.Coefficient })
             .Select(g =>
             {
-                var devoir = g.Where(r => r.EvaluationType == EvaluationType.Devoir).Select(r => (decimal?)r.Value).FirstOrDefault();
+                var devoir1 = g.Where(r => r.EvaluationType == EvaluationType.Devoir1).Select(r => (decimal?)r.Value).FirstOrDefault();
+                var devoir2 = g.Where(r => r.EvaluationType == EvaluationType.Devoir2).Select(r => (decimal?)r.Value).FirstOrDefault();
                 var composition = g.Where(r => r.EvaluationType == EvaluationType.Composition).Select(r => (decimal?)r.Value).FirstOrDefault();
+                var devoirAverage = GradeCalculator.DevoirAverage(devoir1, devoir2);
 
-                // Toujours non-null : le groupe vient d'au moins une ligne de note (Devoir ou Composition).
-                var average = GradeCalculator.SubjectAverage(devoir, composition)!.Value;
+                // Toujours non-null : le groupe vient d'au moins une ligne de note (Devoir1, Devoir2 ou Composition).
+                var average = GradeCalculator.SubjectAverage(devoir1, devoir2, composition)!.Value;
 
                 // Primaire : coefficient neutralisé à 1 → la moyenne générale devient une moyenne simple
                 // des matières. Le coefficient réel de la matière est volontairement ignoré (le primaire
@@ -63,8 +65,10 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
                 return new SubjectGradeDto(
                     g.Key.SubjectId,
                     g.Key.Name,
-                    devoir,
+                    devoir1,
+                    devoir2,
                     composition,
+                    devoirAverage,
                     average,
                     coefficient,
                     average * coefficient);

@@ -4,6 +4,7 @@ using SamaEcole.Persistence.Auth;
 using SamaEcole.Persistence.Interceptors;
 using SamaEcole.Persistence.Schools;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -62,7 +63,7 @@ public sealed class RlsTestDatabase : IAsyncDisposable
             .UseNpgsql(OwnerConnectionString)
             .Options;
 
-        return new ApplicationDbContext(options, new StubTenantProvider(null));
+        return new ApplicationDbContext(options, new StubTenantProvider(null), NullLogger<ApplicationDbContext>.Instance);
     }
 
     /// <summary>
@@ -77,7 +78,7 @@ public sealed class RlsTestDatabase : IAsyncDisposable
             .AddInterceptors(new TenantConnectionInterceptor(tenantProvider))
             .Options;
 
-        return new ApplicationDbContext(options, tenantProvider);
+        return new ApplicationDbContext(options, tenantProvider, NullLogger<ApplicationDbContext>.Instance);
     }
 
     public MatriculeGenerator NewGenerator(ApplicationDbContext dbContext) =>

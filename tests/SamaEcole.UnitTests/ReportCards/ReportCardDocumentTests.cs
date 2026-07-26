@@ -25,8 +25,8 @@ public class ReportCardDocumentTests
     {
         var subjects = Enumerable.Range(1, subjectCount)
             .Select(i => new SubjectGradeDto(
-                Guid.NewGuid(), $"Matière {i}", Devoir: 12 + i % 5, Composition: 10 + i % 8,
-                Average: 11 + i % 6, Coefficient: 1 + i % 4, WeightedPoints: (11 + i % 6) * (1 + i % 4)))
+                Guid.NewGuid(), $"Matière {i}", Devoir1: 12 + i % 5, Devoir2: null, Composition: 10 + i % 8,
+                DevoirAverage: 12 + i % 5, Average: 11 + i % 6, Coefficient: 1 + i % 4, WeightedPoints: (11 + i % 6) * (1 + i % 4)))
             .ToList();
 
         var ranks = subjects.ToDictionary(s => s.SubjectId, s => 1);

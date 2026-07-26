@@ -11,16 +11,29 @@ namespace SamaEcole.Application.Grades;
 public static class GradeCalculator
 {
     /// <summary>
-    /// Moyenne d'une matière : moyenne simple du Devoir et de la Composition présents. La saisie
-    /// progresse au fil du trimestre (Volume 1 §8.3) — la moyenne se calcule donc sur ce qui existe,
-    /// sans exiger que les deux évaluations soient renseignées.
+    /// Moyenne des deux devoirs : moyenne simple de Devoir1 et Devoir2 présents (l'un des deux vaut
+    /// pour la moyenne si l'autre n'est pas encore saisi). Étape 1 de la moyenne de matière —
+    /// <see cref="SubjectAverage"/> moyenne ensuite ce résultat avec la Composition.
     /// </summary>
-    public static decimal? SubjectAverage(decimal? devoir, decimal? composition) =>
-        (devoir, composition) switch
+    public static decimal? DevoirAverage(decimal? devoir1, decimal? devoir2) =>
+        AverageIfPresent(devoir1, devoir2);
+
+    /// <summary>
+    /// Moyenne d'une matière : moyenne des devoirs (<see cref="DevoirAverage"/>), puis moyenne simple
+    /// de ce résultat avec la Composition. La saisie progresse au fil du trimestre (Volume 1 §8.3) —
+    /// la moyenne se calcule donc sur ce qui existe, sans exiger que les trois évaluations soient
+    /// renseignées.
+    /// </summary>
+    public static decimal? SubjectAverage(decimal? devoir1, decimal? devoir2, decimal? composition) =>
+        AverageIfPresent(DevoirAverage(devoir1, devoir2), composition);
+
+    /// <summary>Moyenne simple de deux valeurs optionnelles — l'une des deux vaut pour la moyenne si l'autre est absente.</summary>
+    private static decimal? AverageIfPresent(decimal? a, decimal? b) =>
+        (a, b) switch
         {
-            ({ } d, { } c) => (d + c) / 2m,
-            ({ } d, null) => d,
-            (null, { } c) => c,
+            ({ } x, { } y) => (x + y) / 2m,
+            ({ } x, null) => x,
+            (null, { } y) => y,
             _ => null
         };
 

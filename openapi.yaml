@@ -1096,46 +1096,81 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
-  /grades/import:
+  /grades/sheet/export:
+    get:
+      tags: [Grades]
+      summary: Télécharger la feuille de notes Excel d'une classe/matière/trimestre
+      description: >-
+        Feuille Excel (Matricule, Nom & Prénom, Devoir 1, Devoir 2, Composition) pré-remplie avec les
+        notes déjà saisies — colonnes Matricule et Nom & Prénom verrouillées. Bouton « Télécharger la
+        feuille » de la modale d'import : l'enseignant la complète puis la réimporte via
+        POST /grades/sheet/import.
+      parameters:
+        - name: classroomId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: subjectId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: termId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Feuille de notes au format Excel (téléchargement)
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+        '403': { description: Réservé au Directeur, au Secrétariat et à l'Enseignant }
+        '404': { description: Classe, matière ou trimestre introuvable dans l'établissement courant }
+
+  /grades/sheet/import:
     post:
       tags: [Grades]
-      summary: Importer une colonne de notes depuis un fichier CSV/Excel (Enseignant uniquement)
+      summary: Importer les trois épreuves d'une classe/matière/trimestre depuis un fichier Excel (Enseignant uniquement)
       description: >-
-        Mode de saisie alternatif à POST /grades, même permission (Saisir = Enseignant seul). Le
-        fichier (CSV ou Excel) comporte deux colonnes — matricule, puis note — et remplit UNE colonne
-        (`evaluationType`) pour toute la classe. Le fichier est validé intégralement avant la moindre
-        écriture : une seule ligne invalide (matricule inconnu ou hors de la classe visée, doublon dans
-        le fichier, note hors barème) rejette l'import entier en 422 avec le détail ligne par ligne
-        (`details`, clé « Ligne N ») — jamais un import partiel. Une ligne déjà notée est corrigée
-        (upsert), pas dupliquée : un fichier corrigé après une première tentative en erreur peut être
-        renvoyé tel quel.
+        Mode de saisie alternatif à POST /grades, même permission (Saisir = Enseignant seul). Format
+        LARGE : une ligne par élève, une colonne par épreuve (Matricule, Devoir 1, Devoir 2,
+        Composition), colonnes reconnues par le NOM de leur en-tête — jamais par leur position — pour
+        exclure toute inversion. `dryRun=true` valide tout le fichier sans rien écrire (aperçu) ;
+        `dryRun=false` re-valide puis, si tout est valide, upsert chaque note dans une seule
+        transaction. Une seule ligne invalide (matricule inconnu ou hors de la classe visée, doublon
+        dans le fichier, note hors barème) rejette l'import entier en 422 avec le détail ligne par
+        ligne (`details`, clé « Ligne N ») — jamais un import partiel.
       requestBody:
         required: true
         content:
           multipart/form-data:
             schema:
               type: object
-              required: [classroomId, subjectId, termId, evaluationType, file]
+              required: [classroomId, subjectId, termId, dryRun, file]
               properties:
                 classroomId: { type: string, format: uuid }
                 subjectId: { type: string, format: uuid }
                 termId: { type: string, format: uuid }
-                evaluationType: { type: string, enum: [Devoir, Composition] }
+                dryRun:
+                  type: boolean
+                  description: true = aperçu (rien n'est écrit) ; false = confirmation (écrit si tout est valide).
                 file:
                   type: string
                   format: binary
-                  description: Fichier .csv ou .xlsx, deux colonnes (matricule, note). En-tête facultatif.
+                  description: >-
+                    Fichier .xlsx/.xls, colonnes Matricule, Devoir 1, Devoir 2, Composition (ordre
+                    libre). La ligne d'en-tête est obligatoire.
       responses:
         '200':
-          description: Import appliqué — décompte des lignes créées/corrigées/inchangées
+          description: Import (ou aperçu) appliqué — décompte des lignes créées/corrigées/inchangées
           content:
             application/json:
               schema: { $ref: '#/components/schemas/GradeImportResult' }
         '403': { description: Réservé à l'Enseignant }
         '422':
           description: >-
-            Fichier illisible/vide/mal formé, ou au moins une ligne invalide — `details` liste chaque
-            ligne fautive (« Ligne N »), rien n'est enregistré.
+            Fichier illisible/vide/mal formé (en-tête absent, colonnes ambiguës), ou au moins une ligne
+            invalide — `details` liste chaque ligne fautive (« Ligne N »), rien n'est enregistré.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2579,7 +2614,7 @@ components:
         studentId: { type: string, format: uuid }
         subjectId: { type: string, format: uuid }
         termId: { type: string, format: uuid }
-        evaluationType: { type: string, enum: [Devoir, Composition] }
+        evaluationType: { type: string, enum: [Devoir1, Devoir2, Composition] }
         value:
           type: number
           minimum: 0
@@ -2611,6 +2646,7 @@ components:
     GradeImportResult:
       type: object
       properties:
+        studentsMatched: { type: integer, description: Élèves reconnus par matricule dans le fichier. }
         created: { type: integer, description: Notes créées (élève sans note préalable pour cette clé). }
         updated: { type: integer, description: Notes corrigées (valeur différente de l'existante). }
         unchanged: { type: integer, description: Lignes dont la valeur importée égalait déjà la note existante. }
@@ -2627,13 +2663,17 @@ components:
     SubjectGrade:
       type: object
       description: >-
-        `devoir`/`composition` sont null si ce type d'évaluation n'a pas encore été saisi — la
-        moyenne se calcule alors sur ce qui existe.
+        `devoir1`/`devoir2`/`composition` sont null si ce type d'évaluation n'a pas encore été saisi.
+        `devoirAverage` est la moyenne de devoir1/devoir2 (null si aucun des deux n'est saisi) — c'est
+        elle qui s'imprime dans la colonne « Devoir » du bulletin. `average` moyenne devoirAverage et
+        composition — la moyenne se calcule sur ce qui existe, sans exiger que les trois soient saisis.
       properties:
         subjectId: { type: string, format: uuid }
         subjectName: { type: string }
-        devoir: { type: number, nullable: true }
+        devoir1: { type: number, nullable: true }
+        devoir2: { type: number, nullable: true }
         composition: { type: number, nullable: true }
+        devoirAverage: { type: number, nullable: true }
         average: { type: number }
         coefficient: { type: number }
         weightedPoints: { type: number, description: "average × coefficient" }

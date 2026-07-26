@@ -32,7 +32,9 @@ public class GradeSummaryEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
     private record TermDto(Guid Id, string Label, int Order, DateOnly StartDate, DateOnly EndDate);
     private record StudentDto(Guid Id, string Matricule);
     private record GradeDto(Guid Id, decimal Value, uint RowVersion);
-    private record SubjectGradeDto(Guid SubjectId, string SubjectName, decimal? Devoir, decimal? Composition, decimal Average, decimal Coefficient, decimal WeightedPoints);
+    private record SubjectGradeDto(
+        Guid SubjectId, string SubjectName, decimal? Devoir1, decimal? Devoir2, decimal? Composition,
+        decimal? DevoirAverage, decimal Average, decimal Coefficient, decimal WeightedPoints);
     private record GradeSummaryDto(Guid StudentId, Guid TermId, List<SubjectGradeDto> Subjects, decimal TotalCoefficients, decimal TotalPoints, decimal GeneralAverage, string? Mention);
     private record MentionDto(Guid? Id, string Label, decimal MinAverage);
 
@@ -111,7 +113,7 @@ public class GradeSummaryEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
         var enseignant = await EnseignantTokenAsync();
 
         await SendAsync(HttpMethod.Post, "/api/v1/grades", enseignant,
-            new { studentId, subjectId, termId, evaluationType = "Devoir", value = 16 });
+            new { studentId, subjectId, termId, evaluationType = "Devoir1", value = 16 });
         await SendAsync(HttpMethod.Post, "/api/v1/grades", enseignant,
             new { studentId, subjectId, termId, evaluationType = "Composition", value = 18 });
 

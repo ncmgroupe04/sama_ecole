@@ -100,13 +100,18 @@ public record TermReportDto(
     decimal? GeneralAverage,
     string? Mention);
 
-/// <summary>Une matière du bulletin : Devoir, Composition, moyenne dérivée et moyenne pondérée par le coefficient.</summary>
+/// <summary>
+/// Une matière du bulletin : Devoir1, Devoir2, Composition, moyenne des devoirs, moyenne de matière et
+/// moyenne pondérée par le coefficient.
+/// </summary>
 public record SubjectGradeDto(
     Guid SubjectId,
     string SubjectName,
     decimal Coefficient,
-    decimal? Devoir,
+    decimal? Devoir1,
+    decimal? Devoir2,
     decimal? Composition,
+    decimal? DevoirAverage,
     decimal? Average,
     decimal? WeightedAverage);
 
@@ -327,15 +332,20 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                     {
                         // Une note au plus par (matière, type d'évaluation) — la contrainte d'unicité de
                         // JGK-G01 le garantit ; FirstOrDefault reste tolérant côté lecture.
-                        var devoir = subject
-                            .Where(r => r.EvaluationType == EvaluationType.Devoir)
+                        var devoir1 = subject
+                            .Where(r => r.EvaluationType == EvaluationType.Devoir1)
+                            .Select(r => (decimal?)r.Value)
+                            .FirstOrDefault();
+                        var devoir2 = subject
+                            .Where(r => r.EvaluationType == EvaluationType.Devoir2)
                             .Select(r => (decimal?)r.Value)
                             .FirstOrDefault();
                         var composition = subject
                             .Where(r => r.EvaluationType == EvaluationType.Composition)
                             .Select(r => (decimal?)r.Value)
                             .FirstOrDefault();
-                        var average = GradeCalculator.SubjectAverage(devoir, composition);
+                        var devoirAverage = GradeCalculator.DevoirAverage(devoir1, devoir2);
+                        var average = GradeCalculator.SubjectAverage(devoir1, devoir2, composition);
 
                         // Primaire : coefficient neutralisé à 1 → la moyenne générale (ligne ci-dessous,
                         // via WeightedGeneralAverage) devient une moyenne simple. Le coefficient réel de
@@ -346,8 +356,10 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                             subject.Key.SubjectId,
                             subject.Key.SubjectName,
                             coefficient,
-                            devoir,
+                            devoir1,
+                            devoir2,
                             composition,
+                            devoirAverage,
                             average,
                             average is { } a ? a * coefficient : null);
                     })

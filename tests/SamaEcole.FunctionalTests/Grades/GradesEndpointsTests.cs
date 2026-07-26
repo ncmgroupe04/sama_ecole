@@ -120,7 +120,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var response = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 15);
+        var response = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 15);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var grade = (await response.Content.ReadFromJsonAsync<GradeDto>())!;
@@ -135,7 +135,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var directeur = await DirecteurTokenAsync();
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
 
-        var response = await CreateGradeAsync(directeur, studentId, subjectId, termId, "Devoir", 15);
+        var response = await CreateGradeAsync(directeur, studentId, subjectId, termId, "Devoir1", 15);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var grade = (await response.Content.ReadFromJsonAsync<GradeDto>())!;
@@ -150,7 +150,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var secretaire = await SecretaireTokenAsync();
 
-        var response = await CreateGradeAsync(secretaire, studentId, subjectId, termId, "Devoir", 13);
+        var response = await CreateGradeAsync(secretaire, studentId, subjectId, termId, "Devoir1", 13);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -163,7 +163,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var enseignant = await EnseignantTokenAsync();
 
         // Barème par défaut de l'école : 20 (SchoolSettingsDefaults.GradingScale).
-        var response = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 25);
+        var response = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 25);
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
@@ -175,7 +175,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (_, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var response = await CreateGradeAsync(enseignant, Guid.NewGuid(), subjectId, termId, "Devoir", 12);
+        var response = await CreateGradeAsync(enseignant, Guid.NewGuid(), subjectId, termId, "Devoir1", 12);
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
@@ -187,7 +187,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var devoir = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 10);
+        var devoir = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 10);
         var composition = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Composition", 18);
 
         devoir.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -204,7 +204,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
 
         var corrected = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", enseignant,
@@ -220,7 +220,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
 
         var corrected = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", directeur,
@@ -239,7 +239,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
 
         var secretaire = await SecretaireTokenAsync();
@@ -256,7 +256,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var directeur = await DirecteurTokenAsync();
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
-        await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
 
         var secretaire = await SecretaireTokenAsync();
         var classroomsResponse = await SendAsync(HttpMethod.Get, "/api/v1/classrooms", secretaire);
@@ -275,7 +275,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
 
         // Le Directeur corrige — la version en base bascule.
@@ -310,7 +310,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
 
         var response = await SendAsync(
@@ -326,7 +326,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
 
         var secretaire = await SecretaireTokenAsync();
@@ -343,7 +343,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
 
         var response = await SendAsync(
@@ -359,7 +359,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir", 12);
+        var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
         var staleVersion = grade.RowVersion;
 
@@ -390,7 +390,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var response = await _client.PostAsJsonAsync("/api/v1/grades", new
         {
             studentId = Guid.NewGuid(), subjectId = Guid.NewGuid(), termId = Guid.NewGuid(),
-            evaluationType = "Devoir", value = 12
+            evaluationType = "Devoir1", value = 12
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);

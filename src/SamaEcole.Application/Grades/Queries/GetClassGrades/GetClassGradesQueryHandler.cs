@@ -53,14 +53,16 @@ public class GetClassGradesQueryHandler(IApplicationDbContext dbContext)
         return students
             .Select(s =>
             {
-                var devoir = byStudent[s.Id].FirstOrDefault(g => g.EvaluationType == EvaluationType.Devoir);
+                var devoir1 = byStudent[s.Id].FirstOrDefault(g => g.EvaluationType == EvaluationType.Devoir1);
+                var devoir2 = byStudent[s.Id].FirstOrDefault(g => g.EvaluationType == EvaluationType.Devoir2);
                 var composition = byStudent[s.Id].FirstOrDefault(g => g.EvaluationType == EvaluationType.Composition);
 
                 return new StudentGradeRowDto(
                     s.Id,
                     s.Matricule,
                     s.FullName,
-                    devoir is null ? null : new GradeCellDto(devoir.Id, devoir.Value, devoir.RowVersion),
+                    devoir1 is null ? null : new GradeCellDto(devoir1.Id, devoir1.Value, devoir1.RowVersion),
+                    devoir2 is null ? null : new GradeCellDto(devoir2.Id, devoir2.Value, devoir2.RowVersion),
                     composition is null ? null : new GradeCellDto(composition.Id, composition.Value, composition.RowVersion));
             })
             .ToList();

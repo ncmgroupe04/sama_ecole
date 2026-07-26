@@ -82,9 +82,9 @@ public class GetReportCardPdfTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var createGrade = NewCreateGradeHandler(db);
 
-        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir, 18), CancellationToken.None);
-        await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir, 12), CancellationToken.None);
-        await createGrade.Handle(new CreateGradeCommand(EleveC, Matiere, Trimestre1, EvaluationType.Devoir, 8), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 18), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir1, 12), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveC, Matiere, Trimestre1, EvaluationType.Devoir1, 8), CancellationToken.None);
 
         var sender = new FakeMediator(db);
         var handler = new GetReportCardPdfQueryHandler(new ReportCardDataService(sender, db), new StubPdfGenerator(), Logo);
@@ -106,9 +106,9 @@ public class GetReportCardPdfTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Ecole);
         var createGrade = NewCreateGradeHandler(db);
 
-        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir, 15), CancellationToken.None);
-        await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir, 15), CancellationToken.None);
-        await createGrade.Handle(new CreateGradeCommand(EleveC, Matiere, Trimestre1, EvaluationType.Devoir, 10), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 15), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir1, 15), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveC, Matiere, Trimestre1, EvaluationType.Devoir1, 10), CancellationToken.None);
 
         var handler = new GetReportCardPdfQueryHandler(new ReportCardDataService(new FakeMediator(db), db), new StubPdfGenerator(), Logo);
 
@@ -129,7 +129,7 @@ public class GetReportCardPdfTests : IAsyncLifetime
         var createGrade = NewCreateGradeHandler(db);
 
         // Seul le 1er trimestre est noté ; le 2e trimestre n'a encore aucune note pour personne.
-        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir, 14), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 14), CancellationToken.None);
 
         var handler = new GetReportCardPdfQueryHandler(new ReportCardDataService(new FakeMediator(db), db), new StubPdfGenerator(), Logo);
 

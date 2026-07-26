@@ -108,7 +108,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         owner.Grades.Add(new Grade
         {
             SchoolId = EcoleA, StudentId = EleveComplet, SubjectId = MatiereA, TermId = TrimestreA,
-            EvaluationType = EvaluationType.Devoir, Value = 14
+            EvaluationType = EvaluationType.Devoir1, Value = 14
         });
 
         owner.Payments.Add(new Payment
@@ -202,7 +202,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         detail.AcademicHistory[0].Status.Should().Be(nameof(EnrollmentStatus.Confirmed));
 
         detail.Grades.Should().ContainSingle();
-        detail.Grades[0].Subjects.Should().ContainSingle(s => s.SubjectName == "Mathématiques" && s.Devoir == 14);
+        detail.Grades[0].Subjects.Should().ContainSingle(s => s.SubjectName == "Mathématiques" && s.Devoir1 == 14);
 
         detail.Payments.Should().NotBeNull();
         detail.Payments!.Entries.Should().ContainSingle();

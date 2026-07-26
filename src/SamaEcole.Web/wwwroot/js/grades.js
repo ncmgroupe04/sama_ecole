@@ -2,10 +2,10 @@
  * Écran de saisie des notes — tickets JGK-G01/G02.
  *
  * Trois sélecteurs (classe, matière, trimestre de l'année active) chargent une grille : une ligne par
- * élève, une colonne Devoir et une colonne Composition (GET /grades). Chaque cellule s'enregistre
- * seule à la perte de focus — POST /grades pour une note qui n'existe pas encore, PUT /grades/{id}
- * pour la corriger — sans bouton « Enregistrer » global : sur une classe de quarante élèves, un
- * enregistrement groupé forcerait à tout ressaisir après une seule erreur de saisie.
+ * élève, une colonne Devoir 1, une colonne Devoir 2 et une colonne Composition (GET /grades). Chaque
+ * cellule s'enregistre seule à la perte de focus — POST /grades pour une note qui n'existe pas encore,
+ * PUT /grades/{id} pour la corriger — sans bouton « Enregistrer » global : sur une classe de quarante
+ * élèves, un enregistrement groupé forcerait à tout ressaisir après une seule erreur de saisie.
  *
  * Matrice d'autorisation "Photoshop" — contrôle strict et NON révocable (GradesController) : SAISIR
  * (POST) une note qui n'existe pas encore reste réservé à l'Enseignant (canEnterGrades) ; CORRIGER
@@ -14,10 +14,13 @@
  * saisie. D'où deux conditions distinctes par cellule : vide → gouvernée par canEnterGrades ;
  * déjà notée → gouvernée par canCorrectGrades.
  *
- * Import CSV/Excel : mode de saisie ALTERNATIF, réservé lui aussi à l'Enseignant — un fichier à deux
- * colonnes (matricule, note) remplit en une fois UNE colonne (Devoir OU Composition) pour toute la
- * classe (POST /grades/import). Tout le fichier est validé côté serveur avant la moindre écriture :
- * soit il est intégralement accepté, soit rien n'est enregistré et chaque ligne en erreur est listée.
+ * Import Excel : mode de saisie ALTERNATIF, réservé lui aussi à l'Enseignant — une feuille large (une
+ * ligne par élève, une colonne par épreuve : Matricule, Devoir 1, Devoir 2, Composition, dans un ordre
+ * libre) remplit les trois colonnes de la classe en une fois (POST /grades/sheet/import). L'élève est
+ * identifié par son matricule, l'épreuve par le NOM de sa colonne — jamais par la position — pour
+ * exclure toute inversion. Un aperçu (dryRun) précède toujours l'écriture : tout le fichier est validé
+ * côté serveur avant la moindre écriture, soit il est intégralement accepté, soit rien n'est enregistré
+ * et chaque ligne en erreur est listée.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('gradesView', () => ({
@@ -50,14 +53,17 @@ document.addEventListener('alpine:init', () => {
         rows: [],
         conflictError: false,
 
-        // Import par fichier CSV/Excel.
+        // Import par fichier Excel.
         isImportOpen: false,
-        importEvaluationType: '', // 'devoir' | 'composition' — mêmes clés que data-field sur la grille
         importFile: null,
         importSubmitting: false,
         importErrors: [],
         importGlobalError: null,
         importSuccess: null,
+        // Aperçu (dryRun) : rempli après une vérification réussie, tant que rien n'a encore été écrit.
+        importPreview: null,
+        importPreviewSummary: '',
+        downloadingGradeSheet: false,
 
         get hasSelection() {
             return Boolean(this.selectedClassroomId && this.selectedSubjectId && this.selectedTermId);
@@ -117,7 +123,8 @@ document.addEventListener('alpine:init', () => {
                     studentId: r.studentId,
                     matricule: r.matricule,
                     fullName: r.fullName,
-                    devoir: this.toCell(r.devoir),
+                    devoir1: this.toCell(r.devoir1),
+                    devoir2: this.toCell(r.devoir2),
                     composition: this.toCell(r.composition)
                 }));
             } finally {
@@ -138,7 +145,7 @@ document.addEventListener('alpine:init', () => {
 
         /** POST/PUT partagent la casse EvaluationType du domaine (SamaEcole.Domain.Enums.EvaluationType). */
         evaluationTypeFor(field) {
-            return field === 'devoir' ? 'Devoir' : 'Composition';
+            return { devoir1: 'Devoir1', devoir2: 'Devoir2', composition: 'Composition' }[field];
         },
 
         async saveCell(rowIndex, field) {
@@ -290,52 +297,62 @@ document.addEventListener('alpine:init', () => {
         },
 
         openImport() {
-            this.importEvaluationType = '';
             this.importFile = null;
             this.importErrors = [];
             this.importGlobalError = null;
             this.importSuccess = null;
+            this.importPreview = null;
+            this.importPreviewSummary = '';
             this.isImportOpen = true;
         },
 
         onImportFileChange(event) {
             this.importFile = event.target.files[0] || null;
+            // Un nouveau fichier invalide l'aperçu précédent : il faut le revérifier avant d'écrire.
+            this.importPreview = null;
         },
 
         /**
-         * Modèle pré-rempli avec les matricules EXACTS de la classe déjà chargée (this.rows) : la
-         * première source d'erreur de matricule est un matricule retapé à la main, ce modèle l'élimine
-         * d'office. Généré côté client, sans aller-retour serveur : les données sont déjà sous les yeux.
+         * Feuille Excel générée côté serveur (GET /grades/sheet/export) : matricules, noms et notes
+         * déjà saisies de la classe/matière/trimestre courants, colonnes Matricule et Nom & Prénom
+         * verrouillées — même mécanique bas niveau que fetchClassBulletins (blob authentifié).
          */
-        downloadTemplate() {
-            if (!this.importEvaluationType) return;
+        async downloadGradeSheet() {
+            this.downloadingGradeSheet = true;
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
 
-            const lines = ['Matricule;Note'];
-            for (const row of this.rows) {
-                const cell = row[this.importEvaluationType];
-                lines.push(`${row.matricule};${cell && cell.value !== '' ? cell.value : ''}`);
+                const response = await fetch(
+                    `/api/v1/grades/sheet/export?classroomId=${this.selectedClassroomId}&subjectId=${this.selectedSubjectId}&termId=${this.selectedTermId}`,
+                    {
+                        headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                        credentials: 'same-origin'
+                    });
+
+                if (!response.ok) throw await window.api.toError(response);
+
+                const blob = await response.blob();
+                this.triggerDownload(blob, `Feuille-Notes-${this.classNameFor(this.selectedClassroomId)}.xlsx`);
+            } catch (err) {
+                this.importGlobalError = (err && err.message) || 'Téléchargement de la feuille impossible.';
+            } finally {
+                this.downloadingGradeSheet = false;
             }
-
-            // BOM UTF-8 : ouverture propre dans Excel FR (même convention que AttendanceReportCsv côté serveur).
-            const bom = String.fromCharCode(0xFEFF);
-            const blob = new Blob([bom + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `modele-notes-${this.importEvaluationType}.csv`;
-            link.click();
-            URL.revokeObjectURL(url);
         },
 
-        async submitImport() {
+        /**
+         * dryRun=true (« Vérifier ») : valide tout le fichier et affiche le résultat, RIEN n'est écrit —
+         * l'enseignant confirme ensuite en connaissance de cause. dryRun=false (« Confirmer ») : même
+         * validation, suivie de l'écriture en une transaction. Un nouveau fichier choisi après un
+         * aperçu revient obligatoirement à l'étape de vérification (voir onImportFileChange).
+         */
+        async submitImport(dryRun) {
             this.importGlobalError = null;
             this.importErrors = [];
             this.importSuccess = null;
 
-            if (!this.importEvaluationType) {
-                this.importGlobalError = "Choisissez d'abord la colonne à remplir : Devoir ou Composition.";
-                return;
-            }
             if (!this.importFile) {
                 this.importGlobalError = 'Choisissez un fichier à importer.';
                 return;
@@ -347,19 +364,28 @@ document.addEventListener('alpine:init', () => {
                 formData.append('classroomId', this.selectedClassroomId);
                 formData.append('subjectId', this.selectedSubjectId);
                 formData.append('termId', this.selectedTermId);
-                formData.append('evaluationType', this.evaluationTypeFor(this.importEvaluationType));
+                formData.append('dryRun', dryRun);
                 formData.append('file', this.importFile);
 
-                const result = await window.api.upload('/grades/import', formData);
+                const result = await window.api.upload('/grades/sheet/import', formData);
 
                 const parts = [];
                 if (result.created) parts.push(`${result.created} créée${result.created > 1 ? 's' : ''}`);
                 if (result.updated) parts.push(`${result.updated} corrigée${result.updated > 1 ? 's' : ''}`);
                 if (result.unchanged) parts.push(`${result.unchanged} déjà à jour`);
-                this.importSuccess = parts.length > 0 ? `Import réussi : ${parts.join(', ')}.` : 'Import réussi.';
-                this.importFile = null;
+                const summary = parts.length > 0
+                    ? `${result.studentsMatched} élève${result.studentsMatched > 1 ? 's' : ''} reconnu${result.studentsMatched > 1 ? 's' : ''} : ${parts.join(', ')}`
+                    : `${result.studentsMatched} élève${result.studentsMatched > 1 ? 's' : ''} reconnu${result.studentsMatched > 1 ? 's' : ''}`;
 
-                await this.reload();
+                if (dryRun) {
+                    this.importPreview = result;
+                    this.importPreviewSummary = summary;
+                } else {
+                    this.importSuccess = `Import réussi : ${summary}.`;
+                    this.importPreview = null;
+                    this.importFile = null;
+                    await this.reload();
+                }
             } catch (err) {
                 this.applyImportError(err);
             } finally {

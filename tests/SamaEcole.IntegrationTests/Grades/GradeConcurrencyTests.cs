@@ -70,7 +70,7 @@ public class GradeConcurrencyTests : IAsyncLifetime
             var grade = new Grade
             {
                 SchoolId = Ecole, StudentId = Eleve, SubjectId = Matiere, TermId = Trimestre,
-                EvaluationType = EvaluationType.Devoir, Value = 12
+                EvaluationType = EvaluationType.Devoir1, Value = 12
             };
             seed.Grades.Add(grade);
             await seed.SaveChangesAsync(CancellationToken.None);
@@ -139,14 +139,14 @@ public class GradeConcurrencyTests : IAsyncLifetime
         ctxA.Grades.Add(new Grade
         {
             SchoolId = Ecole, StudentId = Eleve, SubjectId = Matiere, TermId = Trimestre,
-            EvaluationType = EvaluationType.Devoir, Value = 12
+            EvaluationType = EvaluationType.Devoir1, Value = 12
         });
         await ctxA.SaveChangesAsync(CancellationToken.None);
 
         ctxB.Grades.Add(new Grade
         {
             SchoolId = Ecole, StudentId = Eleve, SubjectId = Matiere, TermId = Trimestre,
-            EvaluationType = EvaluationType.Devoir, Value = 15
+            EvaluationType = EvaluationType.Devoir1, Value = 15
         });
         var act = async () => await ctxB.SaveChangesAsync(CancellationToken.None);
 

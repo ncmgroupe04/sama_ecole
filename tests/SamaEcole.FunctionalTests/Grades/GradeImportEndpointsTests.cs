@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using ClosedXML.Excel;
 using FluentAssertions;
 using SamaEcole.FunctionalTests.Common;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -9,12 +10,16 @@ using Xunit;
 namespace SamaEcole.FunctionalTests.Grades;
 
 /// <summary>
-/// POST /grades/import contre un vrai PostgreSQL, à travers la vraie pile HTTP — même permission que
-/// POST /grades (Saisir = Directeur ou Enseignant, docs/Volume_7_Security.md « Notes »).
+/// GET /grades/sheet/export et POST /grades/sheet/import contre un vrai PostgreSQL, à travers la
+/// vraie pile HTTP — même permission que POST /grades (Saisir = Directeur ou Enseignant,
+/// docs/Volume_7_Security.md « Notes »).
 ///
-/// Le contrat central du ticket : le fichier est validé INTÉGRALEMENT avant la moindre écriture (une
-/// seule ligne en erreur → rien n'est enregistré), et un matricule d'un élève d'une AUTRE classe que
-/// celle visée par l'import est un motif de rejet à part entière.
+/// Le contrat central du ticket : les colonnes sont reconnues par le NOM de leur en-tête, jamais par
+/// leur position — un fichier dont les colonnes ont été réordonnées doit produire EXACTEMENT le même
+/// résultat qu'un fichier dans l'ordre d'origine (<see cref="Columns_In_A_Different_Order_Must_Still_Map_To_The_Right_Evaluation"/>).
+/// Le fichier est validé INTÉGRALEMENT avant la moindre écriture (une seule ligne en erreur → rien
+/// n'est enregistré), et un matricule d'un élève d'une AUTRE classe que celle visée par l'import est un
+/// motif de rejet à part entière.
 /// </summary>
 public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
 {
@@ -36,10 +41,11 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private record SchoolYearDto(Guid Id, string Label, DateOnly StartDate, DateOnly EndDate, bool IsActive, bool IsClosed);
     private record TermDto(Guid Id, string Label, int Order, DateOnly StartDate, DateOnly EndDate);
     private record StudentDto(Guid Id, string Matricule);
-    private record ImportResultDto(int Created, int Updated, int Unchanged);
+    private record ImportResultDto(int StudentsMatched, int Created, int Updated, int Unchanged);
     private record ErrorResponseDto(string Code, string Message, Dictionary<string, string[]>? Details, string TraceId);
     private record GradeCellDto(Guid Id, decimal Value, uint RowVersion);
-    private record StudentGradeRowDto(Guid StudentId, string Matricule, string FullName, GradeCellDto? Devoir, GradeCellDto? Composition);
+    private record StudentGradeRowDto(
+        Guid StudentId, string Matricule, string FullName, GradeCellDto? Devoir1, GradeCellDto? Devoir2, GradeCellDto? Composition);
 
     private async Task<string> AccessTokenAsync(string email, string password)
     {
@@ -54,6 +60,9 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private Task<string> EnseignantTokenAsync() =>
         AccessTokenAsync(AuthApiFactory.EnseignantEmail, AuthApiFactory.EnseignantPassword);
 
+    private Task<string> FinanceTokenAsync() =>
+        AccessTokenAsync(AuthApiFactory.FinanceEmail, AuthApiFactory.FinancePassword);
+
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string token, object? body = null)
     {
         var request = new HttpRequestMessage(method, url);
@@ -62,22 +71,48 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         return await _client.SendAsync(request);
     }
 
-    private async Task<HttpResponseMessage> ImportAsync(
-        string token, Guid classroomId, Guid subjectId, Guid termId, string evaluationType,
-        string fileContent, string fileName = "notes.csv")
+    /// <summary>Construit un classeur en mémoire — une ligne d'en-tête, puis une ligne par tableau de <paramref name="rows"/>.</summary>
+    private static byte[] BuildXlsx(string[] headers, IEnumerable<string?[]> rows)
+    {
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Notes");
+
+        for (var col = 0; col < headers.Length; col++)
+        {
+            sheet.Cell(1, col + 1).Value = headers[col];
+        }
+
+        var rowNumber = 2;
+        foreach (var row in rows)
+        {
+            for (var col = 0; col < row.Length; col++)
+            {
+                if (row[col] is { } value) sheet.Cell(rowNumber, col + 1).Value = value;
+            }
+            rowNumber++;
+        }
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    private async Task<HttpResponseMessage> ImportSheetAsync(
+        string token, Guid classroomId, Guid subjectId, Guid termId, bool dryRun,
+        byte[] fileContent, string fileName = "notes.xlsx")
     {
         using var content = new MultipartFormDataContent
         {
             { new StringContent(classroomId.ToString()), "classroomId" },
             { new StringContent(subjectId.ToString()), "subjectId" },
             { new StringContent(termId.ToString()), "termId" },
-            { new StringContent(evaluationType), "evaluationType" }
+            { new StringContent(dryRun.ToString()), "dryRun" }
         };
-        var fileBytes = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(fileContent));
-        fileBytes.Headers.ContentType = new MediaTypeHeaderValue("text/csv");
+        var fileBytes = new ByteArrayContent(fileContent);
+        fileBytes.Headers.ContentType = new MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         content.Add(fileBytes, "file", fileName);
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/grades/import") { Content = content };
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/grades/sheet/import") { Content = content };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return await _client.SendAsync(request);
     }
@@ -87,7 +122,7 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         SeedGradingContextAsync(string directeurToken)
     {
         var classroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeurToken,
-            // Classe du SECONDAIRE : le CSV importé porte des notes sur /20 (voir GradesEndpointsTests).
+            // Classe du SECONDAIRE : les fichiers importés portent des notes sur /20 (voir GradesEndpointsTests).
             new { name = "3e A", level = "Collège", capacity = 40 });
         var classroom = (await classroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
 
@@ -113,27 +148,89 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         return (classroom.Id, subject.Id, terms[0].Id, student1, student2);
     }
 
+    private async Task<List<StudentGradeRowDto>> GetGradesAsync(string token, Guid classroomId, Guid subjectId, Guid termId)
+    {
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/grades?classroomId={classroomId}&subjectId={subjectId}&termId={termId}", token);
+        return (await response.Content.ReadFromJsonAsync<List<StudentGradeRowDto>>())!;
+    }
+
     [Fact]
-    public async Task A_Well_Formed_Csv_Should_Create_Grades_For_Every_Student()
+    public async Task A_Well_Formed_Sheet_Should_Create_Grades_For_Every_Evaluation_And_Every_Student()
     {
         var directeur = await DirecteurTokenAsync();
         var (classroomId, subjectId, termId, student1, student2) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var csv = $"Matricule;Note\n{student1.Matricule};15\n{student2.Matricule};12,5";
-        var response = await ImportAsync(enseignant, classroomId, subjectId, termId, "Devoir", csv);
+        var headers = new[] { "Matricule", "Nom & Prénom", "Devoir 1", "Devoir 2", "Composition" };
+        var file = BuildXlsx(headers,
+        [
+            [student1.Matricule, "Premier Élève", "15", "14", null],
+            [student2.Matricule, "Second Élève", null, null, "12,5"]
+        ]);
+
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false, file);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = (await response.Content.ReadFromJsonAsync<ImportResultDto>())!;
-        result.Created.Should().Be(2);
+        result.StudentsMatched.Should().Be(2);
+        result.Created.Should().Be(3); // devoir1 + devoir2 (élève 1) + composition (élève 2)
         result.Updated.Should().Be(0);
 
-        var grades = await SendAsync(HttpMethod.Get,
-            $"/api/v1/grades?classroomId={classroomId}&subjectId={subjectId}&termId={termId}", directeur);
-        var rows = (await grades.Content.ReadFromJsonAsync<List<StudentGradeRowDto>>())!;
-        rows.Should().ContainSingle(r => r.StudentId == student1.Id && r.Devoir!.Value == 15);
-        rows.Should().ContainSingle(r => r.StudentId == student2.Id && r.Devoir!.Value == 12.5m,
+        var rows = await GetGradesAsync(directeur, classroomId, subjectId, termId);
+        rows.Should().ContainSingle(r => r.StudentId == student1.Id && r.Devoir1!.Value == 15 && r.Devoir2!.Value == 14 && r.Composition == null);
+        rows.Should().ContainSingle(r => r.StudentId == student2.Id && r.Composition!.Value == 12.5m && r.Devoir1 == null,
             "la notation FR à virgule (\"12,5\") doit être comprise comme une note décimale");
+    }
+
+    [Fact]
+    public async Task Columns_In_A_Different_Order_Must_Still_Map_To_The_Right_Evaluation()
+    {
+        // Le cœur du ticket : l'ORDRE des colonnes ne doit avoir aucune importance, seul le NOM de
+        // l'en-tête gouverne le mappage — sinon une simple réorganisation du fichier inverserait des notes.
+        var directeur = await DirecteurTokenAsync();
+        var (classroomId, subjectId, termId, student1, student2) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        // Composition avant Devoir 2 avant Devoir 1 avant Matricule — ordre volontairement inversé, et
+        // les lignes des deux élèves volontairement permutées par rapport à l'ordre "naturel".
+        var headers = new[] { "Composition", "Devoir 2", "Devoir 1", "Matricule" };
+        var file = BuildXlsx(headers,
+        [
+            ["8", "18", "17", student2.Matricule],
+            ["6", "12", "11", student1.Matricule]
+        ]);
+
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false, file);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var rows = await GetGradesAsync(directeur, classroomId, subjectId, termId);
+        rows.Should().ContainSingle(r =>
+            r.StudentId == student1.Id && r.Devoir1!.Value == 11 && r.Devoir2!.Value == 12 && r.Composition!.Value == 6);
+        rows.Should().ContainSingle(r =>
+            r.StudentId == student2.Id && r.Devoir1!.Value == 17 && r.Devoir2!.Value == 18 && r.Composition!.Value == 8);
+    }
+
+    [Fact]
+    public async Task A_Dry_Run_Should_Report_The_Result_Without_Writing_Anything()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        var file = BuildXlsx(["Matricule", "Devoir 1"], [[student1.Matricule, "15"]]);
+
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: true, file);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = (await response.Content.ReadFromJsonAsync<ImportResultDto>())!;
+        result.StudentsMatched.Should().Be(1);
+        result.Created.Should().Be(1);
+
+        var rows = await GetGradesAsync(directeur, classroomId, subjectId, termId);
+        rows.Should().ContainSingle(r => r.StudentId == student1.Id && r.Devoir1 == null,
+            "l'aperçu ne doit rien écrire, même quand tout le fichier est valide");
     }
 
     [Fact]
@@ -143,11 +240,12 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var (classroomId, subjectId, termId, student1, student2) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        await ImportAsync(enseignant, classroomId, subjectId, termId, "Devoir",
-            $"{student1.Matricule};10\n{student2.Matricule};10");
+        var headers = new[] { "Matricule", "Devoir 1" };
+        await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(headers, [[student1.Matricule, "10"], [student2.Matricule, "10"]]));
 
-        var second = await ImportAsync(enseignant, classroomId, subjectId, termId, "Devoir",
-            $"{student1.Matricule};14\n{student2.Matricule};10");
+        var second = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(headers, [[student1.Matricule, "14"], [student2.Matricule, "10"]]));
 
         second.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = (await second.Content.ReadFromJsonAsync<ImportResultDto>())!;
@@ -162,7 +260,8 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var directeur = await DirecteurTokenAsync();
         var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
 
-        var response = await ImportAsync(directeur, classroomId, subjectId, termId, "Devoir", $"{student1.Matricule};15");
+        var response = await ImportSheetAsync(directeur, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Matricule", "Devoir 1"], [[student1.Matricule, "15"]]));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = (await response.Content.ReadFromJsonAsync<ImportResultDto>())!;
@@ -176,11 +275,12 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var (classroomId, subjectId, termId, _, _) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var response = await ImportAsync(enseignant, classroomId, subjectId, termId, "Devoir", "ELEV-INCONNU-9999;15");
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Matricule", "Devoir 1"], [["ELEV-INCONNU-9999", "15"]]));
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
         var error = (await response.Content.ReadFromJsonAsync<ErrorResponseDto>())!;
-        error.Details.Should().ContainKey("Ligne 1");
+        error.Details.Should().ContainKey("Ligne 2", "la ligne 1 est l'en-tête, les données commencent à la ligne 2");
     }
 
     [Fact]
@@ -202,16 +302,15 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var enseignant = await EnseignantTokenAsync();
 
         // Import sur la PREMIÈRE classe, avec le matricule d'un élève de la SECONDE.
-        var response = await ImportAsync(enseignant, classroomId, subjectId, termId, "Devoir", $"{otherStudent.Matricule};15");
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Matricule", "Devoir 1"], [[otherStudent.Matricule, "15"]]));
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
 
         // Rien n'a été écrit sur la classe visée : ni sur l'élève étranger (rejeté), ni sur le vrai
         // élève de la classe (jamais mentionné dans ce fichier, donc logiquement toujours vierge).
-        var gradesTargetClass = await SendAsync(HttpMethod.Get,
-            $"/api/v1/grades?classroomId={classroomId}&subjectId={subjectId}&termId={termId}", directeur);
-        var rows = (await gradesTargetClass.Content.ReadFromJsonAsync<List<StudentGradeRowDto>>())!;
-        rows.Should().ContainSingle(r => r.StudentId == student1.Id && r.Devoir == null);
+        var rows = await GetGradesAsync(directeur, classroomId, subjectId, termId);
+        rows.Should().ContainSingle(r => r.StudentId == student1.Id && r.Devoir1 == null);
     }
 
     [Fact]
@@ -221,8 +320,8 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var csv = $"{student1.Matricule};15\n{student1.Matricule};10";
-        var response = await ImportAsync(enseignant, classroomId, subjectId, termId, "Devoir", csv);
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Matricule", "Devoir 1"], [[student1.Matricule, "15"], [student1.Matricule, "10"]]));
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
@@ -234,7 +333,8 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var response = await ImportAsync(enseignant, classroomId, subjectId, termId, "Devoir", $"{student1.Matricule};25");
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Matricule", "Devoir 1"], [[student1.Matricule, "25"]]));
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
@@ -242,21 +342,34 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     [Fact]
     public async Task One_Invalid_Line_Must_Prevent_The_Whole_File_From_Being_Applied()
     {
-        // La ligne 1 est valide, la ligne 2 porte un matricule inconnu : AUCUNE des deux ne doit être
+        // La ligne 2 est valide, la ligne 3 porte un matricule inconnu : AUCUNE des deux ne doit être
         // enregistrée — validation intégrale avant écriture, jamais un import partiel.
         var directeur = await DirecteurTokenAsync();
         var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var csv = $"{student1.Matricule};15\nELEV-INCONNU-9999;10";
-        var response = await ImportAsync(enseignant, classroomId, subjectId, termId, "Devoir", csv);
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Matricule", "Devoir 1"], [[student1.Matricule, "15"], ["ELEV-INCONNU-9999", "10"]]));
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
 
-        var grades = await SendAsync(HttpMethod.Get,
-            $"/api/v1/grades?classroomId={classroomId}&subjectId={subjectId}&termId={termId}", directeur);
-        var rows = (await grades.Content.ReadFromJsonAsync<List<StudentGradeRowDto>>())!;
-        rows.Should().ContainSingle(r => r.StudentId == student1.Id && r.Devoir == null,
+        var rows = await GetGradesAsync(directeur, classroomId, subjectId, termId);
+        rows.Should().ContainSingle(r => r.StudentId == student1.Id && r.Devoir1 == null,
             "la ligne valide ne doit pas être enregistrée tant que le fichier contient une autre ligne en erreur");
+    }
+
+    [Fact]
+    public async Task A_File_Without_A_Matricule_Header_Should_Be_Rejected()
+    {
+        // Le format LARGE exige la ligne d'en-tête : sans elle, aucun moyen fiable de savoir quelle
+        // colonne est le matricule et lesquelles sont les notes — jamais une hypothèse de position.
+        var directeur = await DirecteurTokenAsync();
+        var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Colonne A", "Colonne B"], [[student1.Matricule, "15"]]));
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]
@@ -266,8 +379,8 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
-        var response = await ImportAsync(
-            enseignant, classroomId, subjectId, termId, "Devoir", $"{student1.Matricule};15", fileName: "notes.docx");
+        var response = await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Matricule", "Devoir 1"], [[student1.Matricule, "15"]]), fileName: "notes.docx");
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
@@ -283,13 +396,49 @@ public class GradeImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
             { new StringContent(classroomId.ToString()), "classroomId" },
             { new StringContent(subjectId.ToString()), "subjectId" },
             { new StringContent(termId.ToString()), "termId" },
-            { new StringContent("Devoir"), "evaluationType" }
+            { new StringContent("false"), "dryRun" }
         };
-        var fileBytes = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes($"{student1.Matricule};15"));
-        content.Add(fileBytes, "file", "notes.csv");
+        var fileBytes = new ByteArrayContent(BuildXlsx(["Matricule", "Devoir 1"], [[student1.Matricule, "15"]]));
+        content.Add(fileBytes, "file", "notes.xlsx");
 
-        var response = await _client.PostAsync("/api/v1/grades/import", content);
+        var response = await _client.PostAsync("/api/v1/grades/sheet/import", content);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Exporting_Returns_A_Valid_Xlsx_Prefilled_With_Existing_Grades()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (classroomId, subjectId, termId, student1, _) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        await ImportSheetAsync(enseignant, classroomId, subjectId, termId, dryRun: false,
+            BuildXlsx(["Matricule", "Devoir 1"], [[student1.Matricule, "15"]]));
+
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/grades/sheet/export?classroomId={classroomId}&subjectId={subjectId}&termId={termId}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        using var workbook = new XLWorkbook(new MemoryStream(bytes));
+        var sheet = workbook.Worksheets.First();
+        var cellsText = sheet.CellsUsed().Select(c => c.GetString());
+        cellsText.Should().Contain(student1.Matricule);
+    }
+
+    [Fact]
+    public async Task A_Finance_Must_Not_Export_The_Grade_Sheet()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (classroomId, subjectId, termId, _, _) = await SeedGradingContextAsync(directeur);
+        var finance = await FinanceTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/grades/sheet/export?classroomId={classroomId}&subjectId={subjectId}&termId={termId}", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 }

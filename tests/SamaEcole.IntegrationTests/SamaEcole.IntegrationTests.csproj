@@ -20,6 +20,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SamaEcole.Persistence\SamaEcole.Persistence.csproj" />
     <ProjectReference Include="..\..\src\SamaEcole.Application\SamaEcole.Application.csproj" />
+    <!-- GradeSheetImportTests exerce le vrai GradeSheetImportParser (ClosedXML), pas un double : le
+         mappage par nom d'en-tête est précisément le comportement que ce test vérifie. -->
+    <ProjectReference Include="..\..\src\SamaEcole.Infrastructure\SamaEcole.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

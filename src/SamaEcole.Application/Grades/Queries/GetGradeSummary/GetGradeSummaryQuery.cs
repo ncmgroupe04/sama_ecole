@@ -12,15 +12,19 @@ namespace SamaEcole.Application.Grades.Queries.GetGradeSummary;
 public record GetGradeSummaryQuery(Guid StudentId, Guid TermId) : IRequest<GradeSummaryDto>;
 
 /// <summary>
-/// Moyenne d'une matière pour ce trimestre. <see cref="Devoir"/>/<see cref="Composition"/> sont null si
-/// ce type d'évaluation n'a pas encore été saisi — la moyenne se calcule alors sur ce qui existe, sans
-/// exiger que les deux soient renseignés (la saisie progresse au fil du trimestre).
+/// Moyenne d'une matière pour ce trimestre. <see cref="Devoir1"/>/<see cref="Devoir2"/>/
+/// <see cref="Composition"/> sont null si ce type d'évaluation n'a pas encore été saisi — la moyenne
+/// se calcule alors sur ce qui existe, sans exiger que les trois soient renseignés (la saisie progresse
+/// au fil du trimestre). <see cref="DevoirAverage"/> est la moyenne de Devoir1/Devoir2
+/// (GradeCalculator.DevoirAverage) — c'est elle qui s'imprime dans la colonne « Devoir » du bulletin.
 /// </summary>
 public record SubjectGradeDto(
     Guid SubjectId,
     string SubjectName,
-    decimal? Devoir,
+    decimal? Devoir1,
+    decimal? Devoir2,
     decimal? Composition,
+    decimal? DevoirAverage,
     decimal Average,
     decimal Coefficient,
     decimal WeightedPoints);

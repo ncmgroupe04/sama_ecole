@@ -246,7 +246,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
             foreach (var subject in reportCard.Subjects)
             {
                 table.Cell().Element(BodyCell).Text(subject.SubjectName);
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Devoir));
+                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Coefficient));
@@ -324,7 +324,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo) : IDocum
             foreach (var subject in reportCard.Subjects)
             {
                 table.Cell().Element(BodyCell).Text(subject.SubjectName);
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Devoir));
+                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
                 table.Cell().Element(BodyCell).Text(""); // T.H : signification non établie, case vide.

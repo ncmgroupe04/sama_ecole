@@ -201,12 +201,14 @@ public enum SubscriptionPaymentStatus
 }
 
 /// <summary>
-/// Type d'évaluation d'une note (ticket JGK-G01, Volume 1 §8.1) : le bulletin distingue une colonne
-/// Devoir d'une colonne Composition par matière, avant la moyenne pondérée — jamais une note unique.
+/// Type d'évaluation d'une note (ticket JGK-G01, Volume 1 §8.1) : deux devoirs (Devoir1, Devoir2) et
+/// une Composition par matière. La moyenne des devoirs (Devoir1/Devoir2) est ensuite moyennée avec la
+/// Composition pour la moyenne de matière (GradeCalculator) — jamais une note unique.
 /// </summary>
 public enum EvaluationType
 {
-    Devoir,
+    Devoir1,
+    Devoir2,
     Composition
 }
 

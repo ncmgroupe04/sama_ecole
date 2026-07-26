@@ -72,11 +72,11 @@ public class GradeSummaryTests : IAsyncLifetime
         var createGrade = NewCreateGradeHandler(db);
 
         // Maths (coeff 4) : Devoir 10, Composition 14 -> moyenne 12.
-        await createGrade.Handle(new CreateGradeCommand(Eleve, Maths, Trimestre, EvaluationType.Devoir, 10), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(Eleve, Maths, Trimestre, EvaluationType.Devoir1, 10), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(Eleve, Maths, Trimestre, EvaluationType.Composition, 14), CancellationToken.None);
 
         // Français (coeff 2) : Devoir 16 seul (Composition pas encore saisie) -> moyenne 16.
-        await createGrade.Handle(new CreateGradeCommand(Eleve, Francais, Trimestre, EvaluationType.Devoir, 16), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(Eleve, Francais, Trimestre, EvaluationType.Devoir1, 16), CancellationToken.None);
 
         var summary = await new GetGradeSummaryQueryHandler(db).Handle(
             new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);
@@ -84,13 +84,13 @@ public class GradeSummaryTests : IAsyncLifetime
         summary.Subjects.Should().HaveCount(2);
 
         var maths = summary.Subjects.Single(s => s.SubjectId == Maths);
-        maths.Devoir.Should().Be(10);
+        maths.Devoir1.Should().Be(10);
         maths.Composition.Should().Be(14);
         maths.Average.Should().Be(12);
         maths.WeightedPoints.Should().Be(48); // 12 * 4
 
         var francais = summary.Subjects.Single(s => s.SubjectId == Francais);
-        francais.Devoir.Should().Be(16);
+        francais.Devoir1.Should().Be(16);
         francais.Composition.Should().BeNull("la Composition n'a pas encore été saisie");
         francais.Average.Should().Be(16);
         francais.WeightedPoints.Should().Be(32); // 16 * 2
@@ -132,8 +132,8 @@ public class GradeSummaryTests : IAsyncLifetime
 
         // Maths (coeff 4) : 8. Français (coeff 2) : 6. En pondéré ce serait (8*4 + 6*2)/6 = 7,33…
         // En primaire (moyenne simple, coefficients ignorés) : (8 + 6) / 2 = 7.
-        await createGrade.Handle(new CreateGradeCommand(primaireEleve, Maths, Trimestre, EvaluationType.Devoir, 8), CancellationToken.None);
-        await createGrade.Handle(new CreateGradeCommand(primaireEleve, Francais, Trimestre, EvaluationType.Devoir, 6), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(primaireEleve, Maths, Trimestre, EvaluationType.Devoir1, 8), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(primaireEleve, Francais, Trimestre, EvaluationType.Devoir1, 6), CancellationToken.None);
 
         var summary = await new GetGradeSummaryQueryHandler(db).Handle(
             new GetGradeSummaryQuery(primaireEleve, Trimestre), CancellationToken.None);
@@ -175,7 +175,7 @@ public class GradeSummaryTests : IAsyncLifetime
         await seedSubject.SaveChangesAsync(CancellationToken.None);
 
         await NewCreateGradeHandler(db).Handle(
-            new CreateGradeCommand(Eleve, soloSubjectId, Trimestre, EvaluationType.Devoir, average), CancellationToken.None);
+            new CreateGradeCommand(Eleve, soloSubjectId, Trimestre, EvaluationType.Devoir1, average), CancellationToken.None);
 
         var summary = await new GetGradeSummaryQueryHandler(db).Handle(
             new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);
@@ -193,7 +193,7 @@ public class GradeSummaryTests : IAsyncLifetime
         await NewCreateMentionHandler(db).Handle(new CreateMentionCommand("Mention Maison", 5), CancellationToken.None);
 
         await NewCreateGradeHandler(db).Handle(
-            new CreateGradeCommand(Eleve, Maths, Trimestre, EvaluationType.Devoir, 6), CancellationToken.None);
+            new CreateGradeCommand(Eleve, Maths, Trimestre, EvaluationType.Devoir1, 6), CancellationToken.None);
 
         var summary = await new GetGradeSummaryQueryHandler(db).Handle(
             new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);

@@ -14,7 +14,7 @@ public class CreateGradeCommandValidatorTests
     private readonly CreateGradeCommandValidator _validator = new();
 
     private static CreateGradeCommand Valid() =>
-        new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), EvaluationType.Devoir, 15m);
+        new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), EvaluationType.Devoir1, 15m);
 
     [Fact]
     public void A_Well_Formed_Grade_Passes()
@@ -70,7 +70,7 @@ public class CreateGradeCommandValidatorTests
     }
 
     [Theory]
-    [InlineData(EvaluationType.Devoir)]
+    [InlineData(EvaluationType.Devoir1)]
     [InlineData(EvaluationType.Composition)]
     public void Every_Evaluation_Type_Is_Accepted(EvaluationType type)
     {

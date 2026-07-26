@@ -19,10 +19,11 @@ public record GetClassGradesQuery(Guid ClassroomId, Guid SubjectId, Guid TermId)
 /// </summary>
 public record GradeCellDto(Guid Id, decimal Value, uint RowVersion);
 
-/// <summary>Une ligne du tableau de saisie. Devoir/Composition sont null tant qu'aucune note n'a été saisie.</summary>
+/// <summary>Une ligne du tableau de saisie. Devoir1/Devoir2/Composition sont null tant qu'aucune note n'a été saisie.</summary>
 public record StudentGradeRowDto(
     Guid StudentId,
     string Matricule,
     string FullName,
-    GradeCellDto? Devoir,
+    GradeCellDto? Devoir1,
+    GradeCellDto? Devoir2,
     GradeCellDto? Composition);

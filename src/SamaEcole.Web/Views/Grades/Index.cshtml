@@ -116,7 +116,8 @@
  <th class="py-3 px-4 w-12 text-center uppercase tracking-wider text-slate-500 font-semibold">N°</th>
  <th class="py-3 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Matricule</th>
  <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
- <th class="py-3 px-4 w-40 text-center uppercase tracking-wider text-slate-500 font-semibold">Devoir <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+ <th class="py-3 px-4 w-40 text-center uppercase tracking-wider text-slate-500 font-semibold">Devoir 1 <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+ <th class="py-3 px-4 w-40 text-center uppercase tracking-wider text-slate-500 font-semibold">Devoir 2 <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
  <th class="py-3 px-4 w-40 text-center uppercase tracking-wider text-slate-500 font-semibold">Composition <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
  </tr>
  </thead>
@@ -131,18 +132,36 @@
  <div class="flex items-center gap-2 justify-center">
  <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
  class="input-field mt-0 w-20 text-center"
- :class="row.devoir.status === 'error' ? 'border-danger' : '' transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
- :data-row="index" data-field="devoir"
- :disabled="row.devoir.status === 'saving' || (row.devoir.id ? !canCorrectGrades : !canEnterGrades)"
- :title="row.devoir.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
- x-model="row.devoir.value"
- x-on:blur="saveCell(index, 'devoir')"
- x-on:keydown.enter.prevent="focusNextRow(index, 'devoir')" />
- <svg x-show="row.devoir.status === 'saving'" x-cloak aria-hidden="true" class="animate-spin w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
- <icon x-show="row.devoir.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
+ :class="row.devoir1.status === 'error' ? 'border-danger' : '' transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ :data-row="index" data-field="devoir1"
+ :disabled="row.devoir1.status === 'saving' || (row.devoir1.id ? !canCorrectGrades : !canEnterGrades)"
+ :title="row.devoir1.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
+ x-model="row.devoir1.value"
+ x-on:blur="saveCell(index, 'devoir1')"
+ x-on:keydown.enter.prevent="focusNextRow(index, 'devoir1')" />
+ <svg x-show="row.devoir1.status === 'saving'" x-cloak aria-hidden="true" class="animate-spin w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+ <icon x-show="row.devoir1.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
  </div>
- <p x-show="row.devoir.error" x-cloak x-text="row.devoir.error" class="mt-1 text-xs text-danger text-center"></p>
- <p x-show="row.devoir.status === 'saved'" x-cloak class="mt-1 text-xs text-success text-center">Enregistré</p>
+ <p x-show="row.devoir1.error" x-cloak x-text="row.devoir1.error" class="mt-1 text-xs text-danger text-center"></p>
+ <p x-show="row.devoir1.status === 'saved'" x-cloak class="mt-1 text-xs text-success text-center">Enregistré</p>
+ </td>
+
+ <td class="py-2 px-4">
+ <div class="flex items-center gap-2 justify-center">
+ <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
+ class="input-field mt-0 w-20 text-center"
+ :class="row.devoir2.status === 'error' ? 'border-danger' : '' transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ :data-row="index" data-field="devoir2"
+ :disabled="row.devoir2.status === 'saving' || (row.devoir2.id ? !canCorrectGrades : !canEnterGrades)"
+ :title="row.devoir2.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
+ x-model="row.devoir2.value"
+ x-on:blur="saveCell(index, 'devoir2')"
+ x-on:keydown.enter.prevent="focusNextRow(index, 'devoir2')" />
+ <svg x-show="row.devoir2.status === 'saving'" x-cloak aria-hidden="true" class="animate-spin w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+ <icon x-show="row.devoir2.status === 'saved'" x-cloak name="checkmark-circle" class="w-4 h-4 text-success" />
+ </div>
+ <p x-show="row.devoir2.error" x-cloak x-text="row.devoir2.error" class="mt-1 text-xs text-danger text-center"></p>
+ <p x-show="row.devoir2.status === 'saved'" x-cloak class="mt-1 text-xs text-success text-center">Enregistré</p>
  </td>
 
  <td class="py-2 px-4">
@@ -169,9 +188,9 @@
  </div>
  </div>
 
- <!-- Import de notes par fichier CSV/Excel : mode de saisie alternatif, réservé à l'Enseignant. -->
- <modal-shell open="isImportOpen" on-close="isImportOpen = false" title="Importer des notes (CSV/Excel)" size="lg">
- <modal-subtitle>Un fichier à deux colonnes : matricule, puis note — pour Devoir OU Composition, jamais les deux à la fois.</modal-subtitle>
+ <!-- Import de notes par fichier Excel : mode de saisie alternatif, réservé à l'Enseignant. -->
+ <modal-shell open="isImportOpen" on-close="isImportOpen = false" title="Importer la feuille de notes (Excel)" size="lg">
+ <modal-subtitle>Une ligne par élève, une colonne par épreuve — l'élève est identifié par son matricule, l'épreuve par le nom de sa colonne.</modal-subtitle>
 
  <div x-show="importGlobalError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="importGlobalError"></div>
 
@@ -189,44 +208,39 @@
  </ul>
  </div>
 
- <div class="space-y-4">
- <div>
- <label class="block text-sm font-medium text-slate-700">Colonne à remplir <span class="text-danger">*</span></label>
- <div class="mt-1.5 flex items-center gap-6">
- <label class="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
- <input type="radio" x-model="importEvaluationType" value="devoir" class="border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- Devoir
- </label>
- <label class="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
- <input type="radio" x-model="importEvaluationType" value="composition" class="border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- Composition
- </label>
- </div>
+ <!-- Aperçu (dryRun) : rien n'est encore écrit — l'enseignant confirme après avoir vu le résultat. -->
+ <div x-show="importPreview" x-cloak class="mb-4 rounded-xl border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
+ <span x-text="importPreviewSummary"></span> — vérifiez puis confirmez pour enregistrer.
  </div>
 
+ <div class="space-y-4">
  <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 flex items-center justify-between gap-3">
  <p class="text-xs text-slate-600">
- Le modèle reprend les matricules exacts des élèves de cette classe : évite toute erreur de matricule à la saisie.
+ La feuille reprend les matricules et notes déjà saisies de cette classe/matière/trimestre — les
+ colonnes Matricule et Nom &amp; Prénom sont verrouillées, seules les notes se modifient.
  </p>
- <button type="button" x-on:click="downloadTemplate()" :disabled="!importEvaluationType"
+ <button type="button" x-on:click="downloadGradeSheet()" :disabled="downloadingGradeSheet"
  class="btn-secondary whitespace-nowrap text-xs disabled:opacity-50 disabled:cursor-not-allowed">
  <icon name="download" class="w-4 h-4" />
- Modèle
+ <span x-text="downloadingGradeSheet ? 'Génération…' : 'Télécharger la feuille'"></span>
  </button>
  </div>
 
  <div>
  <label for="grades-import-file" class="block text-sm font-medium text-slate-700">Fichier <span class="text-danger">*</span></label>
- <input id="grades-import-file" type="file" accept=".csv,.xlsx,.xls" x-on:change="onImportFileChange($event)"
+ <input id="grades-import-file" type="file" accept=".xlsx,.xls" x-on:change="onImportFileChange($event)"
  class="input-field bg-white file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-primary file:cursor-pointer transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
- <p class="mt-1 text-xs text-slate-500">CSV ou Excel, deux colonnes (matricule, note) — une ligne d'en-tête est acceptée mais pas obligatoire.</p>
+ <p class="mt-1 text-xs text-slate-500">Excel, colonnes Matricule, Devoir 1, Devoir 2, Composition (ordre libre) — la ligne d'en-tête est obligatoire.</p>
  </div>
  </div>
 
  <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
  <button type="button" x-on:click="isImportOpen = false" class="btn-secondary">Fermer</button>
- <button type="button" x-on:click="submitImport()" :disabled="importSubmitting" class="btn-primary">
- <span x-text="importSubmitting ? 'Import en cours...' : 'Importer'"></span>
+ <button type="button" x-show="!importPreview" x-on:click="submitImport(true)" :disabled="importSubmitting" class="btn-primary">
+ <span x-text="importSubmitting ? 'Vérification...' : 'Vérifier le fichier'"></span>
+ </button>
+ <button type="button" x-show="importPreview" x-on:click="submitImport(false)" :disabled="importSubmitting" class="btn-primary">
+ <span x-text="importSubmitting ? 'Import en cours...' : 'Confirmer l\'import'"></span>
  </button>
  </div>
  </modal-shell>
