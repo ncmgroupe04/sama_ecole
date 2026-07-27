@@ -14,9 +14,16 @@
  s'initialise, et les écouteurs alpine:init sont enregistrés à temps. *@
  <script src="~/js/auth.js" asp-append-version="true"></script>
  <script src="~/js/api.js" asp-append-version="true"></script>
+ @* Contrôle d'accès par formule (affichage) — après api.js, dont il dépend. *@
+ <script src="~/js/features.js" asp-append-version="true"></script>
+ @* Sélecteur d'établissement (groupe scolaire) — dépend d'auth.js et api.js. *@
+ <script src="~/js/school-switcher.js" asp-append-version="true"></script>
  <script src="~/js/ui-components.js" asp-append-version="true"></script>
  <script src="~/js/form-draft.js" asp-append-version="true"></script>
  <script src="~/js/network-guard.js" asp-append-version="true"></script>
+ @* Moteur d'aperçu PDF partagé (window.pdfPreview) — doit exister avant que les Alpine.data()
+ des vues n'étalent `...window.pdfPreview.state()`, donc avant le script différé d'Alpine. *@
+ <script src="~/js/pdf-preview.js" asp-append-version="true"></script>
 
  @* Redirige vers /login AVANT le rendu du corps : sans session, l'utilisateur ne voit pas
  l'interface apparaître une fraction de seconde. Confort d'affichage, pas une protection —
@@ -27,6 +34,9 @@
  @* Alpine servi par nous, en version figée : ni CDN tiers, ni « 3.x.x » flottant.
  Voir _AuthLayout.cshtml pour le raisonnement complet. *@
  <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
+ @* Ouverture/fermeture des sous-menus du menu latéral (verrou anti-étirage/saut, voir
+ Styles/input.css [data-submenu]/.is-resetting) — indépendant d'Alpine, defer suffit. *@
+ <script src="~/js/sidebar-nav.js" asp-append-version="true" defer></script>
 </head>
 <body class="bg-stone-50 text-slate-900 font-sans h-screen flex flex-col overflow-hidden antialiased" x-data="{ sidebarOpen: false }">
  @await Html.PartialAsync("_IconSprite")
@@ -79,26 +89,33 @@
  const string LinkIdle = $"{LinkBase} text-slate-600 hover:bg-slate-50 hover:text-primary-700";
  const string LinkActive = $"{LinkBase} text-primary-700 bg-indigo-50 font-medium";
  const string LinkSoon = $"{LinkBase} text-slate-400 cursor-not-allowed select-none";
+
+ // État initial (ouvert/replié) des sous-menus, calculé côté serveur à partir de l'URL
+ // courante. L'ouverture/fermeture au clic est ensuite gérée par wwwroot/js/sidebar-nav.js
+ // (voir Styles/input.css pour les classes [data-submenu] / .is-closed).
+ bool gestionScolaireOpen = path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/rapports/assiduite");
+ bool surveillanceOpen = path.StartsWith("/presences") || path.StartsWith("/billets") || path.StartsWith("/discipline") || path.StartsWith("/convocations") || path.StartsWith("/pointage");
+ bool comptabiliteOpen = path.StartsWith("/frais") || path.StartsWith("/caisse") || path.StartsWith("/paie") || path.StartsWith("/fiscalite") || path.StartsWith("/tresorerie") || path.StartsWith("/rapports/financiers");
  }
 
  <!-- Navigation -->
- <nav class="flex-1 px-4 py-4 space-y-2 overflow-y-auto" x-data="sidebarNav()">
+ <nav class="sidebar-nav flex-1 px-4 py-4 space-y-2 overflow-y-auto" x-data="sidebarNav()">
 
- <a href="/tableau-de-bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance']) && !isPublicSchool || canView(['SuperAdmin', 'Directeur']) && isPublicSchool" x-cloak class="@(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
+ <a href="/tableau-de-bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance']) && !isPublicSchool || canView(['SuperAdmin', 'Directeur']) && isPublicSchool" x-cloak class="sidebar-link-main @(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
  <icon name="dashboard" class="w-6 h-6" />
  <span class="text-base font-medium">Tableau de bord</span>
  </a>
 
  <!-- Pôle : Gestion Scolaire -->
- <div x-data="{ open: @(path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/rapports") ? "true" : "false") }" class="space-y-1">
- <button x-on:click="open = !open" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700">
+ <div class="space-y-1">
+ <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="book" class="w-6 h-6" />
  <span class="text-base font-medium">Gestion Scolaire</span>
  </div>
- <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200" ::class="open ? 'rotate-180' : ''" />
+ <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200 @(gestionScolaireOpen ? "rotate-180" : "")" />
  </button>
- <div x-show="open" x-collapse class="pl-4 space-y-1 mt-1">
+ <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(gestionScolaireOpen ? "" : "is-closed")">
  <a href="/eleves" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
  <icon name="users" class="w-5 h-5" />
  <span class="text-sm font-medium">Élèves</span>
@@ -127,7 +144,7 @@
  <icon name="document" class="w-5 h-5" />
  <span class="text-sm font-medium">Notes et bulletins</span>
  </a>
- <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" class="@(path.StartsWith("/rapports") ? LinkActive : LinkIdle)">
+ <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" class="@(path.StartsWith("/rapports/assiduite") ? LinkActive : LinkIdle)">
  <icon name="chart-multiple" class="w-5 h-5" />
  <span class="text-sm font-medium">Rapports</span>
  </a>
@@ -135,15 +152,15 @@
  </div>
 
  <!-- Pôle : Surveillance Générale -->
- <div x-data="{ open: @(path.StartsWith("/presences") || path.StartsWith("/billets") || path.StartsWith("/discipline") || path.StartsWith("/convocations") || path.StartsWith("/pointage") ? "true" : "false") }" class="space-y-1">
- <button x-on:click="open = !open" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700">
+ <div class="space-y-1">
+ <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(surveillanceOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="shield" class="w-6 h-6" />
  <span class="text-base font-medium">Surveillance</span>
  </div>
- <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200" ::class="open ? 'rotate-180' : ''" />
+ <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200 @(surveillanceOpen ? "rotate-180" : "")" />
  </button>
- <div x-show="open" x-collapse class="pl-4 space-y-1 mt-1">
+ <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(surveillanceOpen ? "" : "is-closed")">
  <a href="/presences" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/presences") ? LinkActive : LinkIdle)">
  <icon name="checkmark-circle" class="w-5 h-5" />
  <span class="text-sm font-medium">Appel en classe</span>
@@ -160,7 +177,7 @@
  <icon name="alert-circle" class="w-5 h-5" />
  <span class="text-sm font-medium">Convocations parent</span>
  </a>
- <a href="/pointage-profs" x-show="canView(['Directeur', 'Secretariat'])" class="@(path.StartsWith("/pointage") ? LinkActive : LinkIdle)">
+ <a href="/pointage-profs" x-show="canView(['Directeur', 'Finance'])" class="@(path.StartsWith("/pointage") ? LinkActive : LinkIdle)">
  <icon name="clock" class="w-5 h-5" />
  <span class="text-sm font-medium">Pointage Profs</span>
  </a>
@@ -168,15 +185,15 @@
  </div>
 
  <!-- Pôle : Comptabilité & Finance -->
- <div x-data="{ open: @(path.StartsWith("/frais") || path.StartsWith("/caisse") || path.StartsWith("/paie") || path.StartsWith("/fiscalite") || path.StartsWith("/tresorerie") ? "true" : "false") }" x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" class="space-y-1">
- <button x-on:click="open = !open" class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700">
+ <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" class="space-y-1">
+ <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="wallet" class="w-6 h-6" />
  <span class="text-base font-medium">Comptabilité</span>
  </div>
- <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200" ::class="open ? 'rotate-180' : ''" />
+ <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200 @(comptabiliteOpen ? "rotate-180" : "")" />
  </button>
- <div x-show="open" x-collapse class="pl-4 space-y-1 mt-1">
+ <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(comptabiliteOpen ? "" : "is-closed")">
  <a href="/caisse" class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
  <icon name="payment" class="w-5 h-5" />
  <span class="text-sm font-medium">Caisse (Encaissements)</span>
@@ -197,16 +214,20 @@
  <icon name="chart-multiple" class="w-5 h-5" />
  <span class="text-sm font-medium">Trésorerie</span>
  </a>
+ <a href="/rapports/financiers" class="@(path.StartsWith("/rapports/financiers") ? LinkActive : LinkIdle)">
+ <icon name="chart-multiple" class="w-5 h-5" />
+ <span class="text-sm font-medium">Rapports financiers</span>
+ </a>
  </div>
  </div>
 
  <!-- Administration (Super Admin / Params) -->
  <div class="pt-2 mt-2 border-t border-slate-100 space-y-1">
- <a href="/parametres" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="@(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
+ <a href="/parametres" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="sidebar-link-main @(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
  <icon name="settings" class="w-6 h-6" />
  <span class="text-base font-medium">Paramètres</span>
  </a>
- <a href="/admin" x-show="canView(['SuperAdmin'])" x-cloak class="@(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
+ <a href="/admin" x-show="canView(['SuperAdmin'])" x-cloak class="sidebar-link-main @(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
  <icon name="layers" class="w-6 h-6" />
  <span class="text-base font-medium">Console Super Admin</span>
  </a>
@@ -248,6 +269,35 @@
  </div>
 
  <div class="flex items-center gap-4">
+ @* Sélecteur d'établissement (groupe scolaire) — INVISIBLE pour un compte mono-école :
+ hasMultipleSchools reste faux tant que GET /auth/my-schools renvoie moins de deux
+ entrées, ce qui est le cas de l'immense majorité des comptes. *@
+ <div x-data="schoolSwitcher()" x-show="hasMultipleSchools" x-cloak class="relative hidden sm:block">
+ <button type="button" x-on:click="isOpen = !isOpen" :disabled="isSwitching"
+ class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 disabled:opacity-60">
+ <icon name="building" class="w-4 h-4" />
+ <span class="max-w-[10rem] truncate" x-text="isSwitching ? 'Bascule…' : currentSchoolName"></span>
+ <icon name="chevron-down" class="w-3.5 h-3.5" />
+ </button>
+
+ <div x-show="isOpen" x-cloak x-on:click.outside="isOpen = false"
+ x-on:keydown.escape.window="isOpen = false"
+ class="absolute right-0 mt-2 w-64 rounded-xl bg-white p-2 shadow-lg ring-1 ring-slate-100 z-30">
+ <p class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">Mes établissements</p>
+
+ <template x-for="school in schools" :key="school.schoolId">
+ <button type="button" x-on:click="switchTo(school); isOpen = false"
+ :class="school.isCurrent ? 'bg-indigo-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'"
+ class="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors">
+ <span class="truncate" x-text="school.name"></span>
+ <icon name="check" class="w-4 h-4 shrink-0" x-show="school.isCurrent" />
+ </button>
+ </template>
+
+ <p x-show="error" x-cloak x-text="error" class="px-3 py-2 text-xs text-danger"></p>
+ </div>
+ </div>
+
  <!-- Widget Horloge Digitale -->
  <div x-data="digitalClock()" class="hidden lg:flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xl font-medium" x-cloak>
  <icon name="clock" class="w-6 h-6" />

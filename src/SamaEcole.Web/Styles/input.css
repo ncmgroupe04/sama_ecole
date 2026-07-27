@@ -39,19 +39,20 @@
   }
 
   .card {
-    @apply rounded-2xl border border-indigo-100/80 bg-white shadow-sm;
+    @apply rounded-2xl border border-slate-100 bg-white shadow-sm;
   }
 
   .input-field {
     @apply mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-300 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500;
   }
 
-  /* En-têtes de tableau — charte typographique (D-MAJ §2) : MAJUSCULES compactes 11px, gris bleuté
-     (slate-500), interlettrage élargi et graisse extrabold, pour l'esthétique professionnelle et dense
-     de la référence. Le CORPS des tableaux garde 13px (jeton jgk-table, .table-cell) : seul l'en-tête
-     rétrécit, ce qui accentue la hiérarchie en-tête/données. */
+  /* En-têtes de tableau — charte typographique harmonisée sur le Tableau de bord (revue design
+     calendriers/listes) : MAJUSCULES compactes, gris bleuté (slate-500), interlettrage élargi et
+     fond discret slate-50/80, pour l'esthétique professionnelle et dense de la référence. Le CORPS
+     des tableaux garde 13px (jeton jgk-table, .table-cell) : seul l'en-tête rétrécit, ce qui
+     accentue la hiérarchie en-tête/données. */
   .table-head {
-    @apply border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold uppercase tracking-wider text-slate-500;
+    @apply border-b border-slate-100 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500;
   }
 
   .table-cell {
@@ -136,6 +137,26 @@
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Sous-menus du menu latéral (_Layout.cshtml, sidebarNav) : max-height animée en CSS pur, jamais
+     x-collapse (plugin Alpine non embarqué dans wwwroot/js/vendor/alpine.min.js — le directive
+     restait un stub muet). .is-resetting force chaque [data-submenu] à se refermer INSTANTANÉMENT
+     (transition: none) dès qu'un lien principal est cliqué, avant que sidebar-nav.js ne rouvre la
+     seule cible visée sur la frame suivante : sans ce verrou, un clic rapide entre deux sections
+     laisse la transition max-height précédente en cours pendant le reflow du sous-menu suivant,
+     d'où l'effet d'étirage/saut fantôme sur les sous-menus (ex. Comptabilité). */
+  [data-submenu] {
+    overflow: hidden;
+    transition: max-height 0.2s cubic-bezier(0, 1, 0, 1);
+    will-change: max-height;
+  }
+
+  [data-submenu].is-closed,
+  .sidebar-nav.is-resetting [data-submenu] {
+    transition: none !important;
+    max-height: 0 !important;
+    display: none !important;
   }
 }
 
