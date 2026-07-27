@@ -48,7 +48,9 @@ public class GetClassReportCardsZipQueryHandler(
         }
 
         byte[]? logo = null;
-        var logoFetched = false;
+        byte[]? directorSignature = null;
+        byte[]? officialStamp = null;
+        var imagesFetched = false;
 
         using var memoryStream = new MemoryStream();
         using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
@@ -58,15 +60,18 @@ public class GetClassReportCardsZipQueryHandler(
             {
                 var reportCard = await dataService.BuildAsync(student.Id, request.TermId, cancellationToken);
 
-                // Le logo est le même pour toute la classe (même école) : récupéré une seule fois, au
-                // premier élève, plutôt qu'un aller-retour réseau répété pour chaque bulletin.
-                if (!logoFetched)
+                // Le logo, la signature et le cachet sont les mêmes pour toute la classe (même école) :
+                // récupérés une seule fois, au premier élève, plutôt qu'un aller-retour réseau répété
+                // pour chaque bulletin.
+                if (!imagesFetched)
                 {
                     logo = await logoProvider.TryFetchAsync(reportCard.SchoolLogoUrl, cancellationToken);
-                    logoFetched = true;
+                    directorSignature = await logoProvider.TryFetchAsync(reportCard.DirectorSignatureUrl, cancellationToken);
+                    officialStamp = await logoProvider.TryFetchAsync(reportCard.OfficialStampUrl, cancellationToken);
+                    imagesFetched = true;
                 }
 
-                var pdfBytes = pdfGenerator.Generate(reportCard, logo);
+                var pdfBytes = pdfGenerator.Generate(reportCard, logo, directorSignature, officialStamp);
 
                 var entryName = $"{index:D2}_{ClassBulletinsFileNaming.Sanitize(student.FullName)}.pdf";
                 var entry = archive.CreateEntry(entryName, CompressionLevel.Fastest);

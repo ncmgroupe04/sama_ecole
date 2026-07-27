@@ -1,3 +1,4 @@
+using SamaEcole.Domain.Enums;
 using MediatR;
 
 namespace SamaEcole.Application.Schools.Commands.CreateSchool;
@@ -17,7 +18,8 @@ public record CreateSchoolCommand(
     string Address,
     string? Phone,
     string DirectorEmail,
-    string? DirectorFullName) : IRequest<CreateSchoolResult>;
+    string? DirectorFullName,
+    SubscriptionPlan Plan) : IRequest<CreateSchoolResult>;
 
 /// <summary>
 /// Ne contient volontairement AUCUN mot de passe : celui du Directeur ne transite que par l'e-mail

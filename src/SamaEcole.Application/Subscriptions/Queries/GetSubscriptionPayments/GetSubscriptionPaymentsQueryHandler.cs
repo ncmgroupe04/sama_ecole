@@ -17,8 +17,8 @@ public class GetSubscriptionPaymentsQueryHandler(IApplicationDbContext dbContext
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
 
-        // Subscription n'implémente pas ITenantEntity (voir son commentaire de classe) : filtre manuel,
-        // même idiome que InitiateSubscriptionPaymentHandler.
+        // Subscription EST une ITenantEntity (voir son commentaire de classe) : Global Query Filter +
+        // policy RLS cantonnent déjà la lecture à l'école du JWT, comme SubscriptionPayment plus bas.
         var subscription = await dbContext.Subscriptions
             .AsNoTracking()
             .SingleOrDefaultAsync(s => s.SchoolId == schoolId, cancellationToken);

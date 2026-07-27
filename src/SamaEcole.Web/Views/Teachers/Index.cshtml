@@ -213,7 +213,7 @@
  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Attribuer une classe / matière (année active)</p>
  <div x-show="assignError" x-cloak class="mb-3 rounded-xl border-l-4 border-danger bg-danger-bg p-2.5 text-sm text-danger" x-text="assignError"></div>
  <div x-show="assignSuccess" x-cloak class="mb-3 rounded-xl border-l-4 border-success bg-success-bg p-2.5 text-sm text-success">Affectation enregistrée.</div>
- <form x-on:submit.prevent="submitAssign()" class="flex flex-col sm:flex-row sm:items-end gap-3">
+ <form x-on:submit.prevent="submitAssign()" novalidate class="flex flex-col sm:flex-row sm:items-end gap-3">
  <div class="flex-1">
  <label class="block text-xs font-medium text-slate-500 mb-1">Classe</label>
  <select-field model="assignForm.classroomId" required="true" class="mt-0 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Choisir…"
@@ -253,7 +253,7 @@
 
  <div x-show="teacherEditErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="teacherEditErrors.global"></div>
 
- <form x-on:submit.prevent="submitEditTeacher()" class="space-y-4">
+ <form x-on:submit.prevent="submitEditTeacher()" novalidate class="space-y-4">
  <div>
  <label class="block text-sm font-medium text-slate-700">Nom complet <span class="text-danger">*</span></label>
  <input type="text" x-model="editingTeacher.fullName" required class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
@@ -361,7 +361,7 @@
 
  <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
 
- <form x-on:submit.prevent="submitCreate()" class="space-y-4">
+ <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
  <div>
  <label class="block text-sm font-medium text-slate-700">Nom complet <span class="text-danger">*</span></label>
  <input type="text" x-model="newTeacher.fullName" required class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
@@ -494,16 +494,19 @@
             
             <table x-show="!isLoadingSchedule && ((scheduleViewMode === 'teacher' && selectedScheduleTeacherId) || (scheduleViewMode === 'classroom' && selectedScheduleClassroomId))" class="w-full text-left border-collapse min-w-[800px]" x-cloak>
                 <thead>
-                    <tr class="table-head">
-                        <th class="py-3 px-4 w-32 border-b border-r border-slate-200">Heure \ Jour</th>
+                    <tr class="bg-slate-50/50">
+                        <th class="py-3 px-4 w-32 border-b border-r border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Heure \ Jour</th>
                         <template x-for="day in daysOfWeek" :key="day.value">
-                            <th class="py-3 px-4 text-center border-b border-slate-200" x-text="day.label"></th>
+                            <th class="py-3 px-4 text-center border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider" x-text="day.label"></th>
                         </template>
                     </tr>
                 </thead>
                 <tbody>
                     <tr x-show="scheduleSlots.length === 0">
-                        <td colspan="7" class="py-12 text-center text-slate-500 border-b border-slate-100">Aucun créneau programmé. Cliquez sur "Nouveau Créneau" pour remplir la grille.</td>
+                        <td colspan="7">
+                            <empty-state icon="calendar" title="Aucun créneau programmé."
+                                hint="Cliquez sur « Nouveau Créneau » pour remplir la grille." />
+                        </td>
                     </tr>
                     <template x-for="time in timeSlots" :key="time.start">
                         <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 group">
@@ -518,8 +521,8 @@
                                 <td x-show="!time.isPause" class="py-2 px-2 text-center border-r border-slate-100 align-top w-40">
                                     <div x-data="{ slot: getSlotForDayAndTime(day.value, time.start) }" class="h-full min-h-[5rem]">
                                         <template x-if="slot">
-                                            <div class="bg-indigo-50 border-l-4 border-indigo-600 text-indigo-900 rounded-r p-2 text-left shadow-sm relative group/slot h-full flex flex-col">
-                                                <div class="font-bold text-[13px] leading-tight" x-text="slot.subjectName"></div>
+                                            <div class="bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg p-2 text-left shadow-sm relative group/slot h-full flex flex-col">
+                                                <div class="font-semibold text-xs leading-tight" x-text="slot.subjectName"></div>
                                                 <div class="text-[11px] mt-1 text-indigo-700 font-medium" x-show="scheduleViewMode === 'teacher'" x-text="slot.classroomName"></div>
                                                 <div class="text-[11px] mt-1 text-indigo-700 font-medium" x-show="scheduleViewMode === 'classroom'" x-text="slot.teacherName"></div>
                                                 <div class="text-[10px] mt-auto pt-1 text-indigo-500" x-show="slot.roomNumber" x-text="'Salle: ' + slot.roomNumber"></div>
@@ -550,7 +553,7 @@
 
         <!-- Modale : Créer un créneau -->
         <modal-shell open="creatingScheduleSlot" on-close="closeCreateScheduleSlot()" size="md">
-            <form x-on:submit.prevent="submitCreateScheduleSlot()">
+            <form x-on:submit.prevent="submitCreateScheduleSlot()" novalidate>
                 <modal-title>Nouveau créneau</modal-title>
                 
                 <div x-show="createScheduleError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createScheduleError"></div>

@@ -180,7 +180,7 @@
  <modal-shell open="isCreateBuildingOpen" on-close="closeCreateBuilding()" title="Nouveau bâtiment">
   <modal-subtitle>Nom et description du bâtiment physique.</modal-subtitle>
   <div x-show="createBuildingErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createBuildingErrors.global"></div>
-  <form x-on:submit.prevent="submitCreateBuilding()" class="space-y-4">
+  <form x-on:submit.prevent="submitCreateBuilding()" novalidate class="space-y-4">
    <div>
     <label class="block text-sm font-medium text-slate-700">Nom du bâtiment <span class="text-danger">*</span></label>
     <input type="text" x-model="newBuilding.name" required placeholder="ex: Bâtiment A" class="input-field">
@@ -203,7 +203,7 @@
  <modal-shell open="editingBuilding" on-close="closeEditBuilding()" title="Modifier le bâtiment">
   <modal-subtitle><span x-text="editingBuilding ? editingBuilding.name : ''"></span></modal-subtitle>
   <div x-show="editBuildingErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editBuildingErrors.global"></div>
-  <form x-on:submit.prevent="submitEditBuilding()" class="space-y-4">
+  <form x-on:submit.prevent="submitEditBuilding()" novalidate class="space-y-4">
    <div>
     <label class="block text-sm font-medium text-slate-700">Nom du bâtiment <span class="text-danger">*</span></label>
     <input type="text" x-model="editingBuilding.name" required maxlength="100" class="input-field">
@@ -248,7 +248,7 @@
  <modal-shell open="isCreateRoomOpen" on-close="closeCreateRoom()" title="Nouvelle salle">
   <modal-subtitle>Configurez une nouvelle salle et sa capacité physique.</modal-subtitle>
   <div x-show="createRoomErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createRoomErrors.global"></div>
-  <form x-on:submit.prevent="submitCreateRoom()" class="space-y-4">
+  <form x-on:submit.prevent="submitCreateRoom()" novalidate class="space-y-4">
    <div>
     <label class="block text-sm font-medium text-slate-700">Nom de la salle <span class="text-danger">*</span></label>
     <input type="text" x-model="newRoom.name" required placeholder="ex: Salle 101" class="input-field">
@@ -277,7 +277,7 @@
  <modal-shell open="editingRoom" on-close="closeEditRoom()" title="Modifier la salle">
   <modal-subtitle><span x-text="editingRoom ? editingRoom.name : ''"></span></modal-subtitle>
   <div x-show="editRoomErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editRoomErrors.global"></div>
-  <form x-on:submit.prevent="submitEditRoom()" class="space-y-4">
+  <form x-on:submit.prevent="submitEditRoom()" novalidate class="space-y-4">
    <div>
     <label class="block text-sm font-medium text-slate-700">Nom de la salle <span class="text-danger">*</span></label>
     <input type="text" x-model="editingRoom.name" required maxlength="100" class="input-field">

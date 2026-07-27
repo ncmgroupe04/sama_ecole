@@ -34,7 +34,7 @@ public class ExitTicketDocument(ExitTicketDto ticket, byte[]? logo, byte[] qrCod
                 column.Item().PaddingTop(8).AlignCenter()
                     .Text("BILLET DE SORTIE").Bold().FontSize(15);
                 column.Item().AlignCenter()
-                    .Text($"N° {ticket.TicketNumber}").Italic().FontSize(9).FontColor(Colors.Grey.Darken2);
+                    .Text($"N° {NoBreakText.NoBreak(ticket.TicketNumber)}").Italic().FontSize(9).FontColor(Colors.Grey.Darken2);
 
                 column.Item().PaddingTop(10).Element(ComposeInfoBlock);
                 column.Item().PaddingTop(8).Element(ComposeMotiveBlock);
@@ -76,7 +76,7 @@ public class ExitTicketDocument(ExitTicketDto ticket, byte[]? logo, byte[] qrCod
         container.Column(column =>
         {
             InfoRow(column, "Élève", ticket.StudentFullName);
-            InfoRow(column, "Matricule", MatriculeText.NoBreak(ticket.Matricule));
+            InfoRow(column, "Matricule", NoBreakText.NoBreak(ticket.Matricule));
             InfoRow(column, "Classe", $"{ticket.ClassroomName} — {ticket.ClassroomLevel}");
             InfoRow(column, "Date", FormatDate(ticket.Date));
             InfoRow(column, "Heure de sortie", ticket.DepartureTime.ToString("HH:mm", CultureInfo.InvariantCulture));

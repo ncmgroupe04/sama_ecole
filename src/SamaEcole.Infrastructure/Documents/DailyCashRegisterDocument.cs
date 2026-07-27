@@ -149,9 +149,9 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
                     foreach (var payment in report.Payments)
                     {
                         table.Cell().Element(BodyCell).Text(FormatTime(payment.PaidAt));
-                        table.Cell().Element(BodyCell).Text(MatriculeText.NoBreak(payment.Matricule)).FontSize(8f);
+                        table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(payment.Matricule)).FontSize(8f);
                         table.Cell().Element(BodyCell).Text(payment.StudentFullName);
-                        table.Cell().Element(BodyCell).Text(payment.ReceiptNumber);
+                        table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(payment.ReceiptNumber));
                         table.Cell().Element(BodyCell).Text(MethodLabel(payment.Method));
                         table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(payment.Amount)).Bold();
                     }

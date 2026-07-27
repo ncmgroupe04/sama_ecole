@@ -38,25 +38,25 @@ public class PaginationTagHelper : TagHelper
         var to = $"Math.min({Page} * {PageSize}, {Total})";
 
         output.Content.SetHtmlContent($$"""
-            <div class="flex flex-col items-center justify-between gap-4 border-t border-gray-200 p-4 sm:flex-row">
-                <div class="text-sm text-gray-500">
-                    Affichage de <span class="font-medium text-gray-900" x-text="{{from}}"></span>
-                    à <span class="font-medium text-gray-900" x-text="{{to}}"></span>
-                    sur <span class="font-medium text-gray-900" x-text="{{Total}}"></span> résultats
+            <div class="flex flex-col items-center justify-between gap-4 border-t border-slate-100 p-4 sm:flex-row">
+                <div class="text-sm text-slate-500">
+                    Affichage de <span class="font-medium text-slate-900" x-text="{{from}}"></span>
+                    à <span class="font-medium text-slate-900" x-text="{{to}}"></span>
+                    sur <span class="font-medium text-slate-900" x-text="{{Total}}"></span> résultats
                 </div>
-                <nav class="inline-flex rounded-md shadow-sm">
+                <nav class="inline-flex items-center gap-2">
                     <button type="button"
                             x-on:click="if ({{Page}} > 1) { {{Page}}--; {{OnChange}} }"
                             :disabled="{{Page}} === 1"
-                            class="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-50">
+                            class="inline-flex items-center rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50 disabled:opacity-50">
                         <span class="sr-only">Précédent</span>
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#icon-chevron-left"></use></svg>
                     </button>
-                    <span class="relative z-10 inline-flex items-center border border-primary bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700" x-text="{{Page}}"></span>
+                    <span class="inline-flex items-center rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700" x-text="{{Page}}"></span>
                     <button type="button"
                             x-on:click="if ({{Page}} * {{PageSize}} < {{Total}}) { {{Page}}++; {{OnChange}} }"
                             :disabled="{{Page}} * {{PageSize}} >= {{Total}}"
-                            class="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-50">
+                            class="inline-flex items-center rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50 disabled:opacity-50">
                         <span class="sr-only">Suivant</span>
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
                     </button>

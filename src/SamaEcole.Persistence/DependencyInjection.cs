@@ -52,6 +52,11 @@ public static class DependencyInjection
         // que ci-dessus pour lire/écrire subscription_payments et subscriptions.
         services.AddScoped<ISubscriptionPaymentStore, SubscriptionPaymentStore>();
 
+        // Attribution manuelle d'un accès offert par le Super Admin (module Tarification &
+        // Promotions) : même contournement RLS que ci-dessus, cette fois pour MODIFIER un abonnement
+        // existant plutôt que d'en amorcer un.
+        services.AddScoped<ISubscriptionAdminStore, SubscriptionAdminStore>();
+
         return services;
     }
 }

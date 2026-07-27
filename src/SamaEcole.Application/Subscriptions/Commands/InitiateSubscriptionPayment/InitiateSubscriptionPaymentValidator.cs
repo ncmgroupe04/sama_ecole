@@ -9,5 +9,6 @@ public class InitiateSubscriptionPaymentValidator : AbstractValidator<InitiateSu
         RuleFor(x => x.SchoolId).NotEmpty();
         RuleFor(x => x.Method).IsInEnum();
         RuleFor(x => x.BillingPeriod).IsInEnum();
+        RuleFor(x => x.PromoCode).MaximumLength(32);
     }
 }

@@ -195,7 +195,7 @@
 
  <div x-show="rejectErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="rejectErrors.global"></div>
 
- <form x-on:submit.prevent="submitReject()" class="space-y-4">
+ <form x-on:submit.prevent="submitReject()" novalidate class="space-y-4">
  <div>
  <label for="reject-reason" class="block text-sm font-medium text-slate-700">Motif du rejet <span class="text-danger">*</span></label>
  <textarea id="reject-reason" x-model="rejectReason" required maxlength="1000" rows="3"

@@ -15,7 +15,19 @@ public record InitiateSubscriptionPaymentCommand : IRequest<InitiateSubscription
     public required Guid SchoolId { get; init; }
     public required SubscriptionPaymentMethod Method { get; init; }
     public required BillingPeriod BillingPeriod { get; init; }
+
+    /// <summary>
+    /// Optionnel — module Tarification &amp; Promotions. RE-VALIDÉ intégralement côté serveur (jamais
+    /// l'aperçu de POST /subscriptions/validate-promo) : voir PromoCodeDiscountCalculator.
+    /// </summary>
+    public string? PromoCode { get; init; }
 }
 
-/// <summary>Miroir exact du schéma SubscriptionPaymentInitiateResult déjà documenté dans openapi.yaml.</summary>
-public record InitiateSubscriptionPaymentResult(Guid PaymentId, string RedirectUrl, SubscriptionPaymentStatus Status);
+/// <summary>
+/// Miroir du schéma SubscriptionPaymentInitiateResult (openapi.yaml), étendu pour les codes promo
+/// sans échange d'argent (FreeTrialMonths/FullDiscount, AGENTS.md règle #11) : dans ce cas
+/// <see cref="ActivatedWithoutPayment"/> vaut true, <see cref="RedirectUrl"/> est null — aucun
+/// guichet PayDunya à ouvrir, l'abonnement est déjà Actif.
+/// </summary>
+public record InitiateSubscriptionPaymentResult(
+    Guid? PaymentId, string? RedirectUrl, SubscriptionPaymentStatus? Status, bool ActivatedWithoutPayment = false);

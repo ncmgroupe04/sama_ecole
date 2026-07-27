@@ -25,7 +25,8 @@ public class CreateLateArrivalCommandHandler(
             StudentId = request.StudentId,
             Date = request.Date,
             Minutes = request.Minutes,
-            Reason = request.Reason
+            Reason = request.Reason,
+            Observations = request.Observations
         };
 
         _context.LateArrivals.Add(lateArrival);

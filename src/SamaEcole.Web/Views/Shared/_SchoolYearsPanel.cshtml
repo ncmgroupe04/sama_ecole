@@ -125,7 +125,7 @@
  <!-- Erreur globale (conflit de libellé, réseau…) -->
  <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
 
- <form x-on:submit.prevent="submitCreate()" class="space-y-4">
+ <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
  <div>
  <label for="year-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
  <input id="year-label" type="text" x-model="newYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
@@ -181,7 +181,7 @@
  <div x-show="editErrors.global || editErrors.id" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger"
  x-text="editErrors.global || editErrors.id"></div>
 
- <form x-on:submit.prevent="submitEdit()" class="space-y-4">
+ <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
  <div>
  <label for="edit-year-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
  <input id="edit-year-label" type="text" x-model="editingYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
@@ -247,7 +247,7 @@
  <p class="text-sm text-danger" x-text="activateErrors.global || activateErrors.id"></p>
  </div>
 
- <form x-on:submit.prevent="submitActivate()" class="mt-5">
+ <form x-on:submit.prevent="submitActivate()" novalidate class="mt-5">
  <label for="activate-password" class="block text-sm font-medium text-slate-700">
  Confirmez avec votre mot de passe <span class="text-danger">*</span>
  </label>

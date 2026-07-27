@@ -1,6 +1,7 @@
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using SamaEcole.Infrastructure.Documents;
 
 namespace SamaEcole.Infrastructure.Documents.Components;
 
@@ -71,7 +72,7 @@ public static class OfficialHeaderComponent
             row.ConstantItem(48).Height(48).Image(qrCodeImage).FitArea();
             row.RelativeItem().PaddingLeft(8).AlignMiddle().Column(column =>
             {
-                column.Item().Text($"Référence : {referenceNumber}").FontSize(7).FontColor(Colors.Grey.Darken2);
+                column.Item().Text($"Référence : {NoBreakText.NoBreak(referenceNumber)}").FontSize(7).FontColor(Colors.Grey.Darken2);
                 column.Item().Text("Document généré par Sama École — vérifiable par le QR code ci-contre")
                     .FontSize(7).FontColor(Colors.Grey.Darken2);
             });

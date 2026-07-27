@@ -43,7 +43,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
                 ComposeHeader(column);
 
                 column.Item().PaddingTop(6).AlignCenter()
-                    .Text($"REÇU DE PAIEMENT n° {receipt.ReceiptNumber}").Bold().Italic().FontSize(11);
+                    .Text($"REÇU DE PAIEMENT n° {NoBreakText.NoBreak(receipt.ReceiptNumber)}").Bold().Italic().FontSize(11);
 
                 column.Item().PaddingTop(6).Row(row =>
                 {
@@ -97,7 +97,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
     {
         container.Column(column =>
         {
-            InfoRow(column, "Matricule", MatriculeText.NoBreak(receipt.Matricule));
+            InfoRow(column, "Matricule", NoBreakText.NoBreak(receipt.Matricule));
             InfoRow(column, "Nom complet", receipt.StudentFullName);
             InfoRow(column, "Classe d'affectation", receipt.ClassroomName);
             InfoRow(column, "Année scolaire", receipt.SchoolYearLabel);

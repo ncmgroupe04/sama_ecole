@@ -101,7 +101,14 @@ public record ReportCardDto(
     // pour ce trimestre : la ligne/case/cadre s'imprime vide, jamais une valeur inventée.
     DisciplinaryMention? DisciplinaryMention,
     CouncilDecision? CouncilDecision,
-    string? CouncilObservations);
+    string? CouncilObservations,
+
+    // Cachet et signature du Chef d'Établissement (Paramètres → Établissement, SchoolSettings), déjà
+    // saisis par le Directeur mais jusqu'ici jamais imprimés sur aucun document : le bulletin dessinait
+    // un simple cercle en pointillés à la place. Null s'imprime comme avant (cercle/rien), jamais une
+    // image inventée.
+    string? DirectorSignatureUrl = null,
+    string? OfficialStampUrl = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -113,9 +120,11 @@ public class GetReportCardPdfQueryHandler(
     {
         var dto = await dataService.BuildAsync(request.StudentId, request.TermId, cancellationToken);
         var logo = await logoProvider.TryFetchAsync(dto.SchoolLogoUrl, cancellationToken);
+        var directorSignature = await logoProvider.TryFetchAsync(dto.DirectorSignatureUrl, cancellationToken);
+        var officialStamp = await logoProvider.TryFetchAsync(dto.OfficialStampUrl, cancellationToken);
 
         var fileName = $"Bulletin-{dto.Matricule}-{dto.TermLabel.Replace(' ', '-')}.pdf";
-        return new ReportCardPdfResult(pdfGenerator.Generate(dto, logo), fileName);
+        return new ReportCardPdfResult(pdfGenerator.Generate(dto, logo, directorSignature, officialStamp), fileName);
     }
 }
 
@@ -142,6 +151,11 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         var classroom = await dbContext.Classrooms.AsNoTracking().FirstAsync(c => c.Id == student.ClassroomId, cancellationToken);
         var school = await dbContext.Schools.AsNoTracking().FirstAsync(s => s.Id == student.SchoolId, cancellationToken);
         var schoolYear = await dbContext.SchoolYears.AsNoTracking().FirstAsync(y => y.Id == term.SchoolYearId, cancellationToken);
+
+        // Cachet/signature : sur SchoolSettings, pas School. Non trouvé (établissement pas encore
+        // paramétré) → null des deux côtés, jamais une valeur inventée.
+        var settings = await dbContext.SchoolSettings.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.SchoolId == student.SchoolId, cancellationToken);
 
         var classmateIds = await dbContext.Students.AsNoTracking()
             .Where(s => s.ClassroomId == student.ClassroomId)
@@ -284,7 +298,9 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             annualRank,
             remark?.DisciplinaryMention,
             remark?.CouncilDecision,
-            remark?.Observations);
+            remark?.Observations,
+            settings?.DirectorSignatureUrl,
+            settings?.OfficialStampUrl);
 
         return dto;
     }

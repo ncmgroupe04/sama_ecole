@@ -23,9 +23,11 @@ public class EntryTicketPdfGeneratorTests
     private static EntryTicketDto Ticket(
         string? phone = "+221 77 123 45 67",
         string? city = "Dakar",
-        string? legalMentions = "SN-DKR-2020-B-1234") => new(
+        string? legalMentions = "SN-DKR-2020-B-1234",
+        string? observations = null) => new(
         LateArrivalId: Guid.NewGuid(),
         TicketNumber: "BILLET-1A2B3C4D",
+        IssuedAt: new DateTimeOffset(2026, 10, 1, 8, 15, 0, TimeSpan.Zero),
         StudentFullName: "Awa Fall",
         Matricule: "ELEV-2025-0008",
         ClassroomName: "CE1",
@@ -33,6 +35,7 @@ public class EntryTicketPdfGeneratorTests
         Date: new DateTime(2026, 10, 1),
         Minutes: 15,
         Reason: "Transport en commun bloqué",
+        Observations: observations,
         SchoolName: "École Primaire Les Baobabs",
         SchoolAddress: city is null ? null : $"Rue 12, Médina, {city}",
         SchoolPhone: phone,
@@ -71,6 +74,16 @@ public class EntryTicketPdfGeneratorTests
         // Une école qui n'a pas encore saisi NINEA/RCCM doit quand même pouvoir imprimer un billet :
         // la mention absente ne s'imprime pas, elle ne fait pas tomber le document.
         var pdf = new EntryTicketPdfGenerator().Generate(Ticket(legalMentions: null), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+    }
+
+    [Fact]
+    public void Generate_Is_Robust_To_A_Provided_Observations_Note()
+    {
+        var pdf = new EntryTicketPdfGenerator().Generate(
+            Ticket(observations: "Avertissement verbal donné. Au prochain retard, convocation des parents."),
+            logo: null);
 
         ShouldBeAValidPdf(pdf);
     }

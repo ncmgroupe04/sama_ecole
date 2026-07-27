@@ -65,8 +65,10 @@ public class PagesController : Controller
     [HttpGet("/convocations")]
     public IActionResult ParentSummons() => View("~/Views/ParentSummons/Index.cshtml");
 
-    [HttpGet("/billet-print")]
-    public IActionResult BilletPrint() => View("~/Views/Absences/BilletPrint.cshtml");
+    // Pas de route /billet-print : le billet de retard et le billet de sortie sont des PDF A5 générés
+    // PAR LE SERVEUR (BilletsController, GetEntryTicketQuery), téléchargés depuis /billets par
+    // billets.js. Aucune page HTML d'impression n'est donc nécessaire — la vue de remplacement qui
+    // occupait cette route n'a jamais eu de contenu.
 
     [HttpGet("/matieres")]
     public IActionResult Subjects() => View("~/Views/Subjects/Index.cshtml");
@@ -90,6 +92,12 @@ public class PagesController : Controller
     [HttpGet("/rapports/assiduite")]
     public IActionResult AttendanceReport() => View("~/Views/Reports/Attendance.cshtml");
 
+    // JGK-F05 : consolidation des revenus + export comptable .xlsx. Même gabarit anonyme que
+    // ci-dessus — l'accès réel est gardé par FinancialReportsController, qui cumule
+    // [Authorize(Directeur, Finance)] ET [RequireFeature(AdvancedFinancialReports)].
+    [HttpGet("/rapports/financiers")]
+    public IActionResult FinancialReport() => View("~/Views/Reports/Financial.cshtml");
+
     // JGK-I03 : espace Super Admin de revue des demandes d'inscription self-service. Comme les autres
     // pages, [AllowAnonymous] côté vue (le JWT ne voyage pas en navigation) — c'est
     // AdminRegistrationRequestsController qui garde l'accès (Roles = SuperAdmin) et la RLS qui isole.
@@ -109,6 +117,11 @@ public class PagesController : Controller
 
     [HttpGet("/admin/facturation")]
     public IActionResult SuperAdminBilling() => View("~/Views/SuperAdmin/Billing.cshtml");
+
+    // Module Tarification, Réductions & Offres Promotionnelles — PromoCodesController (Roles =
+    // SuperAdmin) garde l'accès aux données, comme le reste de cette console.
+    [HttpGet("/admin/tarification")]
+    public IActionResult SuperAdminPricing() => View("~/Views/SuperAdmin/Pricing.cshtml");
 
     [HttpGet("/admin/securite")]
     public IActionResult SuperAdminSecurity() => View("~/Views/SuperAdmin/Security.cshtml");

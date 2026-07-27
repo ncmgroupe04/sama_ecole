@@ -30,5 +30,7 @@ public class CreateSchoolCommandValidator : AbstractValidator<CreateSchoolComman
         RuleFor(c => c.DirectorFullName)
             .MaximumLength(200).NoHtml()
             .When(c => !string.IsNullOrWhiteSpace(c.DirectorFullName));
+
+        RuleFor(c => c.Plan).IsInEnum();
     }
 }

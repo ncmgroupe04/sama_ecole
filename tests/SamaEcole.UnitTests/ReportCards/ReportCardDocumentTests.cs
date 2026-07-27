@@ -232,4 +232,41 @@ public class ReportCardDocumentTests
 
         pages.Should().Be(1);
     }
+
+    // PNG 1×1 transparent, valide — exerce l'incrustation réelle de la signature/du cachet sans dépendre du réseau.
+    private static readonly byte[] TinyPng = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+
+    /// <summary>
+    /// La signature du Chef d'Établissement et le cachet officiel (Paramètres → Établissement,
+    /// SchoolSettings) s'incrustent en pied de page sans faire déborder le bulletin, même au cas le
+    /// plus chargé (12 matières).
+    /// </summary>
+    [Fact]
+    public void A_Report_Card_With_Director_Signature_And_Official_Stamp_Fits_On_One_Page()
+    {
+        var pages = new ReportCardDocument(BuildReportCard(12), logo: null, directorSignature: TinyPng, officialStamp: TinyPng)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1);
+    }
+
+    /// <summary>
+    /// École qui n'a saisi qu'UN des deux (ex. le cachet mais pas encore la signature, ou l'inverse) :
+    /// ne doit pas planter ni faire déborder — chaque emplacement retombe indépendamment sur son état
+    /// vide d'origine.
+    /// </summary>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void A_Report_Card_With_Only_One_Of_Signature_Or_Stamp_Fits_On_One_Page(bool withSignature, bool withStamp)
+    {
+        var pages = new ReportCardDocument(
+                BuildReportCard(12), logo: null,
+                directorSignature: withSignature ? TinyPng : null,
+                officialStamp: withStamp ? TinyPng : null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1);
+    }
 }

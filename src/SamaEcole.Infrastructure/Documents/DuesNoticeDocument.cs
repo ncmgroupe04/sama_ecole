@@ -35,7 +35,7 @@ public class DuesNoticeDocument(DuesNoticeDto notice, byte[]? logo, byte[] qrCod
                 column.Item().PaddingTop(16).AlignCenter()
                     .Text("SOMMATION POUR IMPAYÉS").Bold().FontSize(15);
                 column.Item().AlignCenter()
-                    .Text($"N° {notice.NoticeNumber}").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    .Text($"N° {NoBreakText.NoBreak(notice.NoticeNumber)}").FontSize(8).FontColor(Colors.Grey.Darken1);
 
                 column.Item().PaddingTop(16).Text(FaitA()).AlignRight().Italic().FontSize(9);
 
@@ -99,7 +99,7 @@ public class DuesNoticeDocument(DuesNoticeDto notice, byte[]? logo, byte[] qrCod
             text.Justify();
             text.Span("Nous portons à votre connaissance que le compte scolaire de l'élève ");
             text.Span(notice.StudentFullName).Bold();
-            text.Span($" (matricule {MatriculeText.NoBreak(notice.Matricule)}, classe {notice.ClassroomName}, année scolaire {notice.SchoolYearLabel}) présente à ce jour ");
+            text.Span($" (matricule {NoBreakText.NoBreak(notice.Matricule)}, classe {notice.ClassroomName}, année scolaire {notice.SchoolYearLabel}) présente à ce jour ");
             text.Span("une ou plusieurs échéances de frais de scolarité échues et non réglées, détaillées ci-dessous.");
         });
     }

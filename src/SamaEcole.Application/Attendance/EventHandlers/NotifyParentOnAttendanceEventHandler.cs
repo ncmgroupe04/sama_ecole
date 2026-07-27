@@ -9,7 +9,7 @@ namespace SamaEcole.Application.Attendance.EventHandlers;
 public class NotifyParentOnAttendanceEventHandler(
     IApplicationDbContext dbContext,
     IWhatsAppSender whatsAppSender,
-    IEmailSender emailSender) : INotificationHandler<AttendanceRecordedEvent>
+    ISmsDispatcher smsDispatcher) : INotificationHandler<AttendanceRecordedEvent>
 {
     public async Task Handle(AttendanceRecordedEvent notification, CancellationToken cancellationToken)
     {
@@ -37,12 +37,20 @@ public class NotifyParentOnAttendanceEventHandler(
             await whatsAppSender.SendAsync(whatsAppMsg, cancellationToken);
         }
 
-        // Email (if we add GuardianEmail later, we could use it. For now, we only have GuardianPhone.
-        // We leave the email logic ready if an email is added to the student).
-        // if (!string.IsNullOrWhiteSpace(student.GuardianEmail))
-        // {
-        //     var emailMsg = new EmailMessage(student.GuardianEmail, "Alerte d'assiduité", messageBody);
-        //     await emailSender.SendAsync(emailMsg, cancellationToken);
-        // }
+        // SMS (offre Premium) — canal distinct de WhatsApp et non un repli : au Sénégal, une partie
+        // des tuteurs n'utilise pas WhatsApp, et l'école qui paie l'option veut joindre TOUT le monde.
+        //
+        // Aucune garde ici : formule, activation de l'alerte, solde et historique sont TOUS vérifiés
+        // par SmsDispatcher (point de passage unique). Il ne lève jamais — un opérateur injoignable
+        // ne doit pas faire échouer la saisie de l'appel qui a produit cet événement.
+        var smsBody =
+            $"{student.FullName} a été marqué(e) {statusText} le {notification.Date:dd/MM/yyyy} "
+            + $"({subject.Name}). Contactez la direction si besoin.";
+
+        await smsDispatcher.DispatchAsync(
+            new SmsDispatchRequest(
+                notification.SchoolId, student.GuardianPhone, smsBody,
+                SmsTrigger.AttendanceAlert, student.Id),
+            cancellationToken);
     }
 }

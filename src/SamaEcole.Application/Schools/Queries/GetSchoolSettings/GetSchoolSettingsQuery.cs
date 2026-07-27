@@ -47,7 +47,11 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         settings.SecretarySignatureUrl,
         settings.CashierSignatureUrl,
         settings.OfficialStampUrl,
-        settings.TypeEtablissement.ToString());
+        settings.TypeEtablissement.ToString(),
+        settings.SmsOnAttendanceAlert,
+        settings.SmsOnDuesReminder,
+        settings.SmsOnPaymentReceipt,
+        settings.SmsCreditBalance);
 
     private static SchoolSettingsDto Defaults() => new(
         SchoolSettingsDefaults.GradingScale.ToString(),
@@ -63,5 +67,9 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         null,
         null,
         null,
-        SchoolSettingsDefaults.TypeEtablissement.ToString());
+        SchoolSettingsDefaults.TypeEtablissement.ToString(),
+        SchoolSettingsDefaults.SmsAlertsEnabled,
+        SchoolSettingsDefaults.SmsAlertsEnabled,
+        SchoolSettingsDefaults.SmsAlertsEnabled,
+        SchoolSettingsDefaults.SmsCreditBalance);
 }

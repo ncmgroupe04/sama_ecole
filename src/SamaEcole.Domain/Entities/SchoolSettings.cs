@@ -81,6 +81,26 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// via la valeur par défaut de la migration — aucun accès financier ne leur est retiré.
     /// </summary>
     public TypeEtablissement TypeEtablissement { get; set; } = SchoolSettingsDefaults.TypeEtablissement;
+
+    /// <summary>
+    /// Solde de SMS restant, en SEGMENTS et non en messages (voir SmsMessage.SegmentCount) : un
+    /// message long en consomme plusieurs, et un solde compté en messages divergerait de la facture
+    /// de l'agrégateur.
+    ///
+    /// Décrémenté ATOMIQUEMENT en base par SmsDispatcher (UPDATE … WHERE solde ≥ coût), jamais par un
+    /// lire-modifier-écrire côté application : deux alertes simultanées sur la même école feraient
+    /// sinon disparaître un débit, et l'école enverrait des SMS qu'elle n'a pas payés.
+    /// </summary>
+    public int SmsCreditBalance { get; set; } = SchoolSettingsDefaults.SmsCreditBalance;
+
+    /// <summary>Alerter le parent par SMS à la saisie d'un retard ou d'une absence.</summary>
+    public bool SmsOnAttendanceAlert { get; set; } = SchoolSettingsDefaults.SmsAlertsEnabled;
+
+    /// <summary>Relancer par SMS les impayés de scolarité.</summary>
+    public bool SmsOnDuesReminder { get; set; } = SchoolSettingsDefaults.SmsAlertsEnabled;
+
+    /// <summary>Confirmer par SMS chaque encaissement, avec le lien vers le reçu.</summary>
+    public bool SmsOnPaymentReceipt { get; set; } = SchoolSettingsDefaults.SmsAlertsEnabled;
 }
 
 /// <summary>
@@ -117,4 +137,17 @@ public static class SchoolSettingsDefaults
 
     /// <summary>Type d'établissement par défaut : Privé, pour garantir la rétrocompatibilité des écoles existantes.</summary>
     public const TypeEtablissement TypeEtablissement = Enums.TypeEtablissement.Prive;
+
+    /// <summary>
+    /// Aucun crédit à l'ouverture : les SMS s'achètent. Un solde initial offert serait une décision
+    /// commerciale, pas une valeur par défaut technique — le Super Admin crédite explicitement.
+    /// </summary>
+    public const int SmsCreditBalance = 0;
+
+    /// <summary>
+    /// Alertes SMS désactivées tant que le Directeur ne les a pas explicitement activées — même
+    /// principe que les délégations ci-dessus. Écrire aux parents de toute une école ne doit jamais
+    /// être la conséquence silencieuse d'une montée de version.
+    /// </summary>
+    public const bool SmsAlertsEnabled = false;
 }

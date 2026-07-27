@@ -35,7 +35,7 @@ public class WorkCertificateDocument(WorkCertificateDto certificate, byte[]? log
                 column.Item().PaddingTop(24).AlignCenter()
                     .Text("ATTESTATION DE TRAVAIL").Bold().FontSize(16).Underline();
                 column.Item().PaddingTop(2).AlignCenter()
-                    .Text($"N° {certificate.CertificateNumber}").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    .Text($"N° {NoBreakText.NoBreak(certificate.CertificateNumber)}").FontSize(8).FontColor(Colors.Grey.Darken1);
 
                 column.Item().PaddingTop(28).Element(ComposeBody);
                 column.Item().PaddingTop(40).Element(ComposeSignature);

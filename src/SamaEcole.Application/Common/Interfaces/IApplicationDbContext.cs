@@ -49,6 +49,18 @@ public interface IApplicationDbContext
 
     DbSet<User> Users { get; }
     DbSet<Subscription> Subscriptions { get; }
+
+    /// <summary>Codes promo (module Tarification &amp; Promotions) : table plateforme, comme Subscriptions/Schools.</summary>
+    DbSet<PromoCode> PromoCodes { get; }
+
+    /// <summary>Historique des SMS envoyés (offre Premium) : table tenant, une ligne par tentative.</summary>
+    DbSet<SmsMessage> SmsMessages { get; }
+
+    /// <summary>
+    /// Établissements supplémentaires d'un utilisateur (groupe scolaire). Table plateforme, hors RLS
+    /// par nécessité — voir UserSchool.
+    /// </summary>
+    DbSet<UserSchool> UserSchools { get; }
     DbSet<ScheduleSlot> ScheduleSlots { get; }
     DbSet<Disbursement> Disbursements { get; }
 

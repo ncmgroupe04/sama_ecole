@@ -206,7 +206,7 @@ public class GetReportCardPdfTests : IAsyncLifetime
     {
         public static ReportCardDto? LastReportCard { get; private set; }
 
-        public byte[] Generate(ReportCardDto reportCard, byte[]? logo)
+        public byte[] Generate(ReportCardDto reportCard, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null)
         {
             LastReportCard = reportCard;
             return [1, 2, 3];

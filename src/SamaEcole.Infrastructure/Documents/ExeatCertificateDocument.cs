@@ -39,7 +39,7 @@ public class ExeatCertificateDocument(ExeatCertificateDto certificate, byte[]? l
                 column.Item().PaddingTop(24).AlignCenter()
                     .Text("CERTIFICAT D'EXÉAT").Bold().FontSize(16).Underline();
                 column.Item().PaddingTop(2).AlignCenter()
-                    .Text($"N° {certificate.CertificateNumber}").FontSize(9).FontColor(Colors.Grey.Darken2);
+                    .Text($"N° {NoBreakText.NoBreak(certificate.CertificateNumber)}").FontSize(9).FontColor(Colors.Grey.Darken2);
 
                 column.Item().PaddingTop(28).Element(ComposeBody);
                 column.Item().PaddingTop(40).Element(ComposeSignature);
@@ -68,7 +68,7 @@ public class ExeatCertificateDocument(ExeatCertificateDto certificate, byte[]? l
                 text.Span(", certifie que l'élève ");
                 text.Span(certificate.StudentFullName).Bold();
                 text.Span($", né(e) le {FormatDate(certificate.StudentBirthDate)} à {certificate.StudentBirthPlace}, ");
-                text.Span($"immatriculé(e) sous le n° {MatriculeText.NoBreak(certificate.Matricule)}, ");
+                text.Span($"immatriculé(e) sous le n° {NoBreakText.NoBreak(certificate.Matricule)}, ");
                 text.Span("était inscrit(e) dans notre établissement en classe de ");
                 text.Span(certificate.ClassroomName).Bold();
                 text.Span(", au titre de l'année scolaire ");

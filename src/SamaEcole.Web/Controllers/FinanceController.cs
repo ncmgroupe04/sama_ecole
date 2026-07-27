@@ -27,6 +27,7 @@ using SamaEcole.Application.Finance.Queries.GetEmployeeContracts;
 using SamaEcole.Application.Finance.Queries.GetFichePaies;
 using SamaEcole.Application.Finance.Queries.GetPayslipPdf;
 using SamaEcole.Application.Finance.Queries.GetTaxDeclarations;
+using SamaEcole.Application.Finance.Queries.GetTaxDeclarationPdf;
 using SamaEcole.Application.Finance.Queries.GetDuesNotice;
 using SamaEcole.Application.Finance.Queries.GetDuesNoticePdf;
 using SamaEcole.Application.Finance.Queries.GetWorkCertificate;
@@ -421,6 +422,36 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     {
         var id = await mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GenerateTaxDeclaration), new { id }, id);
+    }
+
+    [HttpGet("tax-declarations/{id:guid}/pdf")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTaxDeclarationPdf(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetTaxDeclarationPdfQuery(id), cancellationToken);
+            if (result?.Content == null || result.Content.Length == 0)
+            {
+                logger.LogWarning("La déclaration fiscale PDF générée est vide pour {TaxDeclarationId}", id);
+                return NotFound(new { message = "La déclaration fiscale PDF est introuvable ou vide." });
+            }
+
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"Declaration-Fiscale-{result.DeclarationNumber}.pdf\"";
+            return File(result.Content, "application/pdf");
+        }
+        catch (KeyNotFoundException)
+        {
+            throw; // Laisse le middleware d'exception le gérer (404)
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Erreur lors de la génération de la déclaration fiscale PDF pour {TaxDeclarationId}", id);
+            return Problem(detail: ex.Message, title: "Erreur de génération de la déclaration fiscale PDF", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     // ------------------------------------------------------------------ Module Documents administratifs (cahier des charges élite)

@@ -12,9 +12,12 @@ document.addEventListener('alpine:init', () => {
         // Rôles alignés sur ParentSummonsController (SuperAdmin/Directeur/Surveillant).
         canManageParentSummons: window.auth.role === 'Directeur' || window.auth.role === 'Surveillant',
 
-        // Slide-over de création
+        // Modale de création
         isCreateOpen: false,
         isCreating: false,
+        createErrors: {},
+        showAddedDialog: false,
+        addedRecordStudentName: '',
         students: [],
         form: {
             studentId: '',
@@ -49,26 +52,35 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async submitCreate() {
-            if (!this.form.studentId || !this.form.scheduledDate || !this.form.scheduledTime || !this.form.reason) {
-                toast.error('Veuillez remplir tous les champs.');
-                return;
-            }
+        openCreate() {
+            this.isCreateOpen = true;
+        },
 
+        /** Sortie explicite (Annuler, ✕, fond, Échap) : le formulaire repart de zéro. */
+        closeCreate() {
+            this.isCreateOpen = false;
+            this.resetForm();
+        },
+
+        async submitCreate() {
             this.isCreating = true;
+            this.createErrors = {};
             try {
+                const student = this.students.find(s => s.id === this.form.studentId);
                 await api.post('/parent-summons', {
                     studentId: this.form.studentId,
                     scheduledAt: new Date(`${this.form.scheduledDate}T${this.form.scheduledTime}`).toISOString(),
                     reason: this.form.reason
                 });
-                toast.success('Convocation enregistrée.');
+
                 this.isCreateOpen = false;
+                this.addedRecordStudentName = student ? student.fullName : '';
                 this.resetForm();
                 await this.loadRecords();
+                this.showAddedDialog = true;
             } catch (error) {
                 console.error('Parent summons create error:', error);
-                toast.error(error.message || "Erreur lors de l'enregistrement.");
+                this.createErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");
             } finally {
                 this.isCreating = false;
             }
@@ -113,6 +125,7 @@ document.addEventListener('alpine:init', () => {
                 scheduledTime: '',
                 reason: ''
             };
+            this.createErrors = {};
         },
 
         formatDateTime(dateStr) {

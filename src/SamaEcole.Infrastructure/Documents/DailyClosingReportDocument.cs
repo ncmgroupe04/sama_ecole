@@ -193,7 +193,7 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
                 foreach (var tx in report.Transactions)
                 {
                     table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(tx.Time).FontSize(8);
-                    table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(tx.ReceiptNumber).FontSize(8);
+                    table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(NoBreakText.NoBreak(tx.ReceiptNumber)).FontSize(8);
                     table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(tx.StudentName).FontSize(8);
                     table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(tx.Category).FontSize(8);
                     table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(2).Text(tx.Method).FontSize(8);

@@ -53,11 +53,13 @@ public class GetClassReportCardsPdfQueryHandler(
             reportCards.Add(await dataService.BuildAsync(studentId, request.TermId, cancellationToken));
         }
 
-        // Le logo est le même pour toute la classe (même école) : résolu une seule fois à partir du
-        // premier bulletin plutôt qu'un aller-retour réseau répété par élève.
+        // Le logo, la signature et le cachet sont les mêmes pour toute la classe (même école) : résolus
+        // une seule fois à partir du premier bulletin plutôt qu'un aller-retour réseau répété par élève.
         var logo = await logoProvider.TryFetchAsync(reportCards[0].SchoolLogoUrl, cancellationToken);
+        var directorSignature = await logoProvider.TryFetchAsync(reportCards[0].DirectorSignatureUrl, cancellationToken);
+        var officialStamp = await logoProvider.TryFetchAsync(reportCards[0].OfficialStampUrl, cancellationToken);
 
         var fileName = $"Bulletins_{ClassBulletinsFileNaming.Sanitize(classroom.Name)}_{ClassBulletinsFileNaming.Sanitize(term.Label)}.pdf";
-        return new ReportCardPdfResult(pdfGenerator.Generate(reportCards, logo), fileName);
+        return new ReportCardPdfResult(pdfGenerator.Generate(reportCards, logo, directorSignature, officialStamp), fileName);
     }
 }

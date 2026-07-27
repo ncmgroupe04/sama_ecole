@@ -27,6 +27,7 @@ public class RecordPaymentCommandHandler(
     ITenantProvider tenantProvider,
     ICurrentUserService currentUser,
     IMatriculeGenerator matriculeGenerator,
+    ISmsDispatcher smsDispatcher,
     TimeProvider timeProvider)
     : IRequestHandler<RecordPaymentCommand, RecordPaymentResult>
 {
@@ -38,7 +39,7 @@ public class RecordPaymentCommandHandler(
         var actorId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Utilisateur courant inconnu.");
 
-        return await dbContext.ExecuteInTransactionAsync(async ct =>
+        var result = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
             var activeSession = await dbContext.CashierSessions
                 .FirstOrDefaultAsync(s => s.CashierId == actorId && s.Status == CashierSessionStatus.Open, ct);
@@ -137,6 +138,44 @@ public class RecordPaymentCommandHandler(
                 enrollment.TotalDue - newAmountPaid,
                 status.ToString());
         }, cancellationToken);
+
+        await NotifyGuardianAsync(schoolId, request.EnrollmentId, result, cancellationToken);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Confirmation du versement au tuteur, APRÈS le commit — un SMS annonçant un encaissement que la
+    /// transaction annulerait ensuite serait un faux reçu. Même raisonnement que l'e-mail
+    /// d'activation d'abonnement, envoyé lui aussi hors transaction.
+    ///
+    /// N'échoue jamais l'encaissement : SmsDispatcher applique toutes les gardes (formule,
+    /// commutateur de l'école, solde, historique) et ne lève pas. Une caisse ne doit pas se bloquer
+    /// parce qu'un opérateur télécom est injoignable.
+    /// </summary>
+    private async Task NotifyGuardianAsync(
+        Guid schoolId, Guid enrollmentId, RecordPaymentResult result, CancellationToken cancellationToken)
+    {
+        var guardian = await (
+            from enrollment in dbContext.Enrollments.AsNoTracking()
+            where enrollment.Id == enrollmentId
+            join student in dbContext.Students.AsNoTracking() on enrollment.StudentId equals student.Id
+            select new { student.Id, student.FullName, student.GuardianPhone })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (guardian is null)
+        {
+            return;
+        }
+
+        var body =
+            $"Paiement reçu : {FormatMoney(result.Amount)} FCFA pour {guardian.FullName} "
+            + $"(reçu n° {result.ReceiptNumber}). Reste dû : {FormatMoney(result.RemainingBalance)} FCFA. "
+            + "Merci de conserver votre reçu.";
+
+        await smsDispatcher.DispatchAsync(
+            new SmsDispatchRequest(schoolId, guardian.GuardianPhone, body, SmsTrigger.PaymentReceipt, guardian.Id),
+            cancellationToken);
     }
 
     /// <summary>FCFA : entiers, séparateur de milliers par espace, sans décimales — comme sur le reçu.</summary>

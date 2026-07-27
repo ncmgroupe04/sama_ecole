@@ -17,15 +17,15 @@ public class ReportCardPdfGenerator : IReportCardPdfGenerator
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public byte[] Generate(ReportCardDto reportCard, byte[]? logo)
+    public byte[] Generate(ReportCardDto reportCard, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null)
     {
         try
         {
-            return new ReportCardDocument(reportCard, logo).GeneratePdf();
+            return new ReportCardDocument(reportCard, logo, directorSignature, officialStamp).GeneratePdf();
         }
-        catch (Exception) when (logo is not null)
+        catch (Exception) when (logo is not null || directorSignature is not null || officialStamp is not null)
         {
-            return new ReportCardDocument(reportCard, null).GeneratePdf();
+            return new ReportCardDocument(reportCard, null, null, null).GeneratePdf();
         }
     }
 }

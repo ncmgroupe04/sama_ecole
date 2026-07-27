@@ -222,7 +222,7 @@
 
     <!-- ===================== Modale : Nouveau contrat ===================== -->
     <modal-shell open="isContractModalOpen" title="Nouveau contrat">
-        <form x-on:submit.prevent="submitContract()" class="space-y-5">
+        <form x-on:submit.prevent="submitContract()" novalidate class="space-y-5">
             <div>
                 <label class="block text-sm font-medium text-slate-700">Type d'employé</label>
                 <div class="mt-1 flex gap-4">
@@ -282,7 +282,7 @@
 
     <!-- ===================== Modale : Générer une fiche de paie ===================== -->
     <modal-shell open="isPayslipModalOpen" title="Générer une fiche de paie">
-        <form x-on:submit.prevent="submitPayslip()" class="space-y-5">
+        <form x-on:submit.prevent="submitPayslip()" novalidate class="space-y-5">
             <div>
                 <label class="block text-sm font-medium text-slate-700">Contrat <span class="text-red-500">*</span></label>
                 <select-field model="payslipForm.employeeContractId" placeholder="Sélectionnez un contrat..."
@@ -325,7 +325,7 @@
 
     <!-- ===================== Modale : Générer une déclaration fiscale ===================== -->
     <modal-shell open="isTaxModalOpen" title="Générer une déclaration fiscale">
-        <form x-on:submit.prevent="submitTaxDeclaration()" class="space-y-5">
+        <form x-on:submit.prevent="submitTaxDeclaration()" novalidate class="space-y-5">
             <p class="text-sm text-slate-500">Agrège les charges sociales de toutes les fiches de paie du mois choisi.</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -399,7 +399,7 @@
             </table>
         </div>
 
-        <form x-on:submit.prevent="submitHourRecord()" class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end border-t border-slate-100 pt-4">
+        <form x-on:submit.prevent="submitHourRecord()" novalidate class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end border-t border-slate-100 pt-4">
             <div>
                 <label class="block text-sm font-medium text-slate-700">Date <span class="text-red-500">*</span></label>
                 <input type="date" x-model="hourRecordForm.date" required class="input-field mt-1" />

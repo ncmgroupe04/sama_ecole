@@ -62,6 +62,25 @@
  <select-field id="billing-period" model="billingPeriod" options="billingPeriodOptions" />
  </div>
 
+ <div>
+ <label for="promo-code" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Code promo / Parrainage (optionnel)</label>
+ <div class="flex gap-2">
+ <input id="promo-code" type="text" x-model="promoCode" x-on:input="promoResult = null; promoError = null"
+ placeholder="BIENVENUE2026"
+ class="flex-1 min-w-0 rounded-xl border border-gray-300 px-3 py-2 text-jgk-body uppercase placeholder:normal-case focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+ <button type="button" x-on:click="applyPromoCode()"
+ x-bind:disabled="!promoCode || isCheckingPromo"
+ class="btn-secondary shrink-0">
+ <span x-text="isCheckingPromo ? 'Vérification…' : 'Appliquer'"></span>
+ </button>
+ </div>
+ <p x-show="promoError" x-cloak x-text="promoError" class="mt-1.5 text-jgk-table text-danger"></p>
+ <p x-show="promoResult && promoResult.isValid" x-cloak class="mt-1.5 text-jgk-table text-success">
+ <span x-show="promoResult && promoResult.requiresPayment">Réduction appliquée — nouveau montant : <span x-text="formatXof(promoResult && promoResult.discountedAmount)"></span></span>
+ <span x-show="promoResult && !promoResult.requiresPayment">Accès offert — aucun paiement requis.</span>
+ </p>
+ </div>
+
  <button type="submit"
  x-bind:disabled="isSubmitting"
  x-bind:aria-busy="isSubmitting.toString()"

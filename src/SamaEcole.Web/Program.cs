@@ -14,7 +14,9 @@ using SamaEcole.Web.Middleware;
 using SamaEcole.Web.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Formatting.Compact;
@@ -133,6 +135,16 @@ builder.Services.AddScoped<IAuthorizationHandler, CanManageGradingScaleHandler>(
 builder.Services.AddScoped<IAuthorizationHandler, CanModifyFeesHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, CanDeleteFeesHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, SchoolResourceAuthorizationHandler>();
+
+// Contrôle d'accès par formule ([RequireFeature]) — les politiques « Feature:… » ne sont PAS
+// déclarées une à une ci-dessus : FeaturePolicyProvider les reconstruit à la volée depuis le nom
+// (patron officiel des politiques paramétrées), et délègue tout le reste au fournisseur par défaut.
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, FeaturePolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
+
+// Donne au refus « hors formule » le format d'erreur normalisé (code FEATURE_NOT_IN_PLAN) au lieu
+// d'un 403 au corps vide, pour que l'interface puisse proposer la montée en gamme.
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, FeatureAuthorizationResultHandler>();
 
 builder.Services
     .AddControllersWithViews() // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
@@ -337,7 +349,12 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles(); // sert wwwroot/css/site.css compilé depuis Tailwind (Décision D-13)
+// La table MIME par défaut d'ASP.NET Core ne connaît pas .mjs (module ES) : sans cette extension, les
+// GET sur wwwroot/js/vendor/pdf*.min.mjs renverraient 404 avant même d'atteindre le navigateur — le
+// moteur d'aperçu PDF (pdf-preview.js) échouerait à charger PDF.js pour TOUS les documents.
+var staticFileContentTypes = new FileExtensionContentTypeProvider();
+staticFileContentTypes.Mappings[".mjs"] = "text/javascript";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticFileContentTypes }); // sert wwwroot/css/site.css compilé depuis Tailwind (Décision D-13)
 app.UseAuthentication();
 
 // Ticket JGK-I04 — après UseAuthentication (il lui faut context.User déjà résolu pour lire le claim

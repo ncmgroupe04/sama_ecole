@@ -29,5 +29,12 @@ public record UpdateSchoolSettingsCommand(
     string? SecretarySignatureUrl = null,
     string? CashierSignatureUrl = null,
     string? OfficialStampUrl = null,
-    string TypeEtablissement = "Prive") : IRequest<SchoolSettingsDto>;
+    string TypeEtablissement = "Prive",
+
+    // Alertes SMS (offre Premium) — activation par TYPE d'événement : une école peut vouloir les
+    // alertes d'assiduité sans les relances d'impayés. Le SOLDE de crédits n'est délibérément PAS
+    // modifiable ici (voir SchoolSettingsDto.SmsCreditBalance) : les SMS s'achètent.
+    bool SmsOnAttendanceAlert = false,
+    bool SmsOnDuesReminder = false,
+    bool SmsOnPaymentReceipt = false) : IRequest<SchoolSettingsDto>;
 

@@ -166,7 +166,7 @@
  <modal-subtitle>Inscription, mensualité, cantine, transport… la liste est libre.</modal-subtitle>
 
  <div x-show="categoryErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="categoryErrors.global"></div>
- <form x-on:submit.prevent="submitCreateCategory()" class="space-y-4">
+ <form x-on:submit.prevent="submitCreateCategory()" novalidate class="space-y-4">
  <div>
  <label for="cat-name" class="block text-sm font-medium text-slate-700">Nom de la catégorie <span class="text-danger">*</span></label>
  <input id="cat-name" type="text" x-model="newCategory.name" required maxlength="60" placeholder="ex : Mensualité" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
@@ -217,7 +217,7 @@
 
  <div x-show="applyErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="applyErrors.global"></div>
 
- <form x-on:submit.prevent="submitApplyStandard()" class="space-y-4">
+ <form x-on:submit.prevent="submitApplyStandard()" novalidate class="space-y-4">
  @* Périmètre : « Toutes les classes » par défaut, puis les niveaux RÉELLEMENT présents dans
  l'école (knownLevels, déduit des classes) — la nomenclature des niveaux est libre, aucune
  liste figée ici. Cibler un niveau laisse les autres cycles intacts. *@
@@ -255,7 +255,7 @@
 
  <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
 
- <form x-on:submit.prevent="submitEdit()" class="space-y-4">
+ <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
  <div>
  <label for="edit-amount" class="block text-sm font-medium text-slate-700">Montant (FCFA) <span class="text-danger">*</span></label>
  <input id="edit-amount" type="number" x-model.number="editing.amount" required min="0" step="500"
@@ -419,7 +419,7 @@
 
     <!-- Modale Nouveau Décaissement -->
     <modal-shell open="creatingDisbursement" on-close="closeCreateDisbursement()" size="md">
-        <form x-on:submit.prevent="submitCreateDisbursement()">
+        <form x-on:submit.prevent="submitCreateDisbursement()" novalidate>
             <modal-title>Nouveau Décaissement</modal-title>
             <modal-subtitle>Enregistrer une dépense ou un paiement sortant.</modal-subtitle>
             

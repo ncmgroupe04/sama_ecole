@@ -36,7 +36,7 @@ public class ParentNoticeDocument(ParentNoticeDto notice, byte[]? logo, byte[] q
                 column.Item().PaddingTop(24).AlignCenter()
                     .Text("CONVOCATION").Bold().FontSize(16).Underline();
                 column.Item().PaddingTop(2).AlignCenter()
-                    .Text($"N° {notice.NoticeNumber}").FontSize(9).FontColor(Colors.Grey.Darken2);
+                    .Text($"N° {NoBreakText.NoBreak(notice.NoticeNumber)}").FontSize(9).FontColor(Colors.Grey.Darken2);
 
                 column.Item().PaddingTop(24).Text(FaitA()).AlignRight().Italic().FontSize(10);
 
@@ -74,7 +74,7 @@ public class ParentNoticeDocument(ParentNoticeDto notice, byte[]? logo, byte[] q
                 text.Span(FormatDateTime(notice.ScheduledAt)).Bold();
                 text.Span(" pour un entretien concernant votre enfant/pupille ");
                 text.Span(notice.StudentFullName).Bold();
-                text.Span($" (matricule {MatriculeText.NoBreak(notice.Matricule)}, classe {notice.ClassroomName}");
+                text.Span($" (matricule {NoBreakText.NoBreak(notice.Matricule)}, classe {notice.ClassroomName}");
                 if (!string.IsNullOrWhiteSpace(notice.SchoolYearLabel))
                 {
                     text.Span($", année scolaire {notice.SchoolYearLabel}");

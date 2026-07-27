@@ -52,7 +52,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
                 ComposeHeader(column);
 
                 column.Item().PaddingTop(6).AlignCenter()
-                    .Text($"REÇU D'INSCRIPTION n° {receipt.ReceiptNumber}").Bold().Italic().FontSize(11);
+                    .Text($"REÇU D'INSCRIPTION n° {NoBreakText.NoBreak(receipt.ReceiptNumber)}").Bold().Italic().FontSize(11);
 
                 // Corps en deux colonnes, l'écart central évitant que les deux blocs ne se touchent.
                 column.Item().PaddingTop(6).Row(row =>
@@ -111,7 +111,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
     {
         container.Column(column =>
         {
-            InfoRow(column, "Matricule", MatriculeText.NoBreak(receipt.Matricule));
+            InfoRow(column, "Matricule", NoBreakText.NoBreak(receipt.Matricule));
             InfoRow(column, "Nom complet", receipt.StudentFullName);
             InfoRow(column, "Classe d'affectation", $"{receipt.ClassroomName} — {receipt.ClassroomLevel}");
             InfoRow(column, "Année scolaire", receipt.SchoolYearLabel);

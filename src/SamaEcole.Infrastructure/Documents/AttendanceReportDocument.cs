@@ -105,7 +105,7 @@ public class AttendanceReportDocument(AttendanceReportExportModel model) : IDocu
 
             foreach (var s in model.Students)
             {
-                table.Cell().Element(BodyCell).Text(MatriculeText.NoBreak(s.Matricule)).FontSize(7.5f);
+                table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(s.Matricule)).FontSize(7.5f);
                 table.Cell().Element(BodyCell).Text(s.FullName);
                 table.Cell().Element(BodyCell).Text(s.ClassroomName);
                 table.Cell().Element(BodyCell).AlignCenter().Text(s.TotalCalls.ToString(CultureInfo.InvariantCulture));

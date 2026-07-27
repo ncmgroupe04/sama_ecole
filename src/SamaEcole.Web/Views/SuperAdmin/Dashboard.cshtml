@@ -35,20 +35,20 @@
  <!-- Cartes KPI -->
  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
  <template x-for="tile in kpiTiles" :key="tile.label">
- <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
- <div class="flex items-center justify-between">
- <p class="text-xs font-medium uppercase tracking-wider text-zinc-500" x-text="tile.label"></p>
- <div class="flex h-8 w-8 items-center justify-center rounded-2xl" :class="tile.iconBg">
+ <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+ <div class="min-w-0">
+ <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500" x-text="tile.label"></p>
+ <p class="mt-1 text-2xl font-black" :class="tile.iconText" x-text="isLoading ? '—' : tile.value"></p>
+ </div>
+ <div class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 ml-3" :class="tile.iconBg">
  @* <icon> est un TagHelper résolu côté SERVEUR (name= doit être un littéral connu à la
  compilation, voir TagHelpers/IconTagHelper.cs) : il ne peut pas prendre un nom
  d'icône dynamique venant d'Alpine. On retombe donc ici sur le <use> brut que le
  TagHelper génère lui-même en interne, avec un href lié côté client. *@
- <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4" :class="tile.iconText">
+ <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-5 h-5" :class="tile.iconText">
  <use :href="`#icon-${tile.icon}`"></use>
  </svg>
  </div>
- </div>
- <p class="mt-3 text-2xl font-semibold text-white" x-text="isLoading ? '—' : tile.value"></p>
  </div>
  </template>
  </div>

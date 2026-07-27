@@ -16,6 +16,10 @@ public class EarlyDepartureConfiguration : IEntityTypeConfiguration<EarlyDepartu
         builder.HasIndex(e => new { e.SchoolId, e.StudentId });
         builder.Property(e => e.Reason).HasMaxLength(1000);
         builder.Property(e => e.PickedUpBy).HasMaxLength(200);
+        // Date pure (saisie "JJ/MM/AAAA"), pas un instant : mappée en "date" plutôt que le "timestamp
+        // with time zone" par défaut de Npgsql pour DateTime, qui rejette tout DateTime dont le Kind
+        // n'est pas explicitement Utc (le JSON entrant a Kind=Unspecified) — voir LateArrivalConfiguration.
+        builder.Property(e => e.Date).HasColumnType("date");
     }
 }
 

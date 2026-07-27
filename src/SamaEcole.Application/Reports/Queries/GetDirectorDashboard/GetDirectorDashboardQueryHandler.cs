@@ -61,10 +61,10 @@ public class GetDirectorDashboardQueryHandler(
             ? Math.Round((decimal)presentLines / totalLines, 4)
             : null;
 
-        // ---- Abonnement (table PLATEFORME, hors périmètre tenant EF) ----
-        // Subscription n'implémente pas ITenantEntity : aucun Global Query Filter. La policy RLS de la
-        // table subscriptions borne néanmoins la lecture à l'école de la session. On lit par le SchoolId
-        // du JWT (jamais d'un paramètre client, règle #10) ; un Super Admin sans école n'a pas d'abonnement.
+        // ---- Abonnement ----
+        // Subscription implémente ITenantEntity : Global Query Filter EF Core + policy RLS bornent la
+        // lecture à l'école de la session. On lit par le SchoolId du JWT (jamais d'un paramètre client,
+        // règle #10) ; un Super Admin sans école n'a pas d'abonnement.
         SubscriptionSummaryDto? subscriptionSummary = null;
         if (tenantProvider.CurrentSchoolId is { } schoolId)
         {

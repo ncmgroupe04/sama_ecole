@@ -37,7 +37,7 @@ public class FinancialCommitmentDocument(FinancialCommitmentDto commitment, byte
                 column.Item().AlignCenter()
                     .Text("(Reconnaissance de dette et échéancier de paiement)").Italic().FontSize(9).FontColor(Colors.Grey.Darken2);
                 column.Item().AlignCenter()
-                    .Text($"N° {commitment.CommitmentNumber}").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    .Text($"N° {NoBreakText.NoBreak(commitment.CommitmentNumber)}").FontSize(8).FontColor(Colors.Grey.Darken1);
 
                 column.Item().PaddingTop(20).Element(ComposeBody);
                 column.Item().PaddingTop(14).Element(ComposeAmountBlock);
@@ -89,7 +89,7 @@ public class FinancialCommitmentDocument(FinancialCommitmentDto commitment, byte
             }
             text.Span(", responsable légal(e) de l'élève ");
             text.Span(commitment.StudentFullName).Bold();
-            text.Span($" (matricule {MatriculeText.NoBreak(commitment.Matricule)}, classe {commitment.ClassroomName}, année scolaire {commitment.SchoolYearLabel}), ");
+            text.Span($" (matricule {NoBreakText.NoBreak(commitment.Matricule)}, classe {commitment.ClassroomName}, année scolaire {commitment.SchoolYearLabel}), ");
             text.Span("reconnais devoir à l'établissement ");
             text.Span(commitment.SchoolName).Bold();
             text.Span(" la somme précisée ci-dessous, et m'engage à la régler selon l'échéancier convenu.");

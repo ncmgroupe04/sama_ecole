@@ -57,6 +57,12 @@ public class UpdateSchoolSettingsCommandHandler(
             ? typeResult
             : TypeEtablissement.Prive;
 
+        // SmsCreditBalance n'est PAS repris de la requête : il n'y figure pas (voir la commande).
+        // L'affectation ci-dessous porte uniquement sur les commutateurs d'activation.
+        settings.SmsOnAttendanceAlert = request.SmsOnAttendanceAlert;
+        settings.SmsOnDuesReminder = request.SmsOnDuesReminder;
+        settings.SmsOnPaymentReceipt = request.SmsOnPaymentReceipt;
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("Paramètres de l'établissement {SchoolId} mis à jour.", schoolId);
@@ -75,6 +81,10 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.SecretarySignatureUrl,
             settings.CashierSignatureUrl,
             settings.OfficialStampUrl,
-            settings.TypeEtablissement.ToString());
+            settings.TypeEtablissement.ToString(),
+            settings.SmsOnAttendanceAlert,
+            settings.SmsOnDuesReminder,
+            settings.SmsOnPaymentReceipt,
+            settings.SmsCreditBalance);
     }
 }

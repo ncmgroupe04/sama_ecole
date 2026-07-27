@@ -162,7 +162,7 @@
  </div>
  </div>
 
- <form x-on:submit.prevent="submit()" class="space-y-5">
+ <form x-on:submit.prevent="submit()" novalidate class="space-y-5">
 
  <!-- Erreur métier globale -->
  <div x-show="formErrors.global" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="formErrors.global"></div>
@@ -371,9 +371,6 @@
  </div>
  </div>
 
- <!-- Échec de téléchargement du PDF (non imprimé). -->
- <div x-show="pdfError" x-cloak class="no-print mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="pdfError"></div>
-
  @* Document imprimable A5 PAYSAGE : sobre, moderne, aux normes officielles *@
  <div id="receipt-printable" class="receipt-a5 receipt-container bg-white border border-slate-200/80 mx-auto text-slate-800 shadow-sm rounded-xl flex flex-col justify-between min-h-[148mm]">
 
@@ -502,64 +499,6 @@
  </modal-shell>
 
  <!-- Modale de prévisualisation PDF et actions (Ticket JGK-F02 / Axe 4) -->
- <modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
-     <div class="space-y-4">
-         <div x-show="pdfError" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="pdfError"></div>
-         
-         <!-- Bandeau d'astuce et ouverture rapide -->
-         <div x-show="pdfPreviewUrl" class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-900 text-xs">
-             <div class="flex items-center gap-2 font-medium">
-                 <icon name="document-text" class="w-4 h-4 text-indigo-600 shrink-0" />
-                 <span>Astuce : Si l'aperçu ne s'affiche pas dans le cadre ci-dessous, vous pouvez l'ouvrir directement ou le télécharger.</span>
-             </div>
-             <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                 <button type="button" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-2xs transition-colors flex items-center gap-1.5">
-                     <icon name="external-link" class="w-3.5 h-3.5" />
-                     <span>Ouvrir dans un nouvel onglet</span>
-                 </button>
-             </div>
-         </div>
-
-         <template x-if="pdfPreviewUrl && !pdfLoadError">
-             <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden relative" style="height: 600px;">
-                 <iframe :src="pdfPreviewUrl" id="enr-pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
-             </div>
-         </template>
-
-         <div x-show="!pdfPreviewUrl || pdfLoadError" x-cloak class="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300" style="min-height: 400px;">
-             <icon name="document-text" class="w-12 h-12 text-slate-400 mb-3" />
-             <p class="text-sm font-medium text-slate-700">L'aperçu intégré ne s'affiche pas dans votre navigateur.</p>
-             <p class="text-xs text-slate-500 mt-1 mb-6 max-w-md">Votre navigateur peut restreindre l'affichage des PDF dans un cadre. Vous pouvez ouvrir le document dans un nouvel onglet ou le télécharger directement.</p>
-             <div class="flex flex-wrap justify-center gap-3">
-                 <button type="button" x-show="pdfPreviewUrl" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="btn-primary text-xs">
-                     <icon name="external-link" class="w-4 h-4" />
-                     <span>Ouvrir dans un nouvel onglet</span>
-                 </button>
-                 <button type="button" x-on:click="downloadPreviewPdf()" class="btn-secondary text-xs">
-                     <icon name="download" class="w-4 h-4" />
-                     <span>Télécharger le fichier</span>
-                 </button>
-             </div>
-         </div>
-
-         <div class="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-100">
-             <button type="button" x-on:click="closePdfPreview()" class="btn-secondary">
-                 Fermer
-             </button>
-             <button type="button" x-show="pdfPreviewUrl" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="btn-secondary">
-                 <icon name="external-link" class="w-4 h-4" />
-                 <span>Ouvrir dans un nouvel onglet</span>
-             </button>
-             <button type="button" x-on:click="downloadPreviewPdf()" class="btn-secondary">
-                 <icon name="download" class="w-4 h-4" />
-                 Télécharger
-             </button>
-             <button type="button" x-on:click="printPreviewPdf()" class="btn-primary">
-                 <icon name="print" class="w-4 h-4" />
-                 Imprimer le PDF
-             </button>
-         </div>
-     </div>
- </modal-shell>
+ @await Html.PartialAsync("_PdfPreviewModal")
  </div>
 </div>

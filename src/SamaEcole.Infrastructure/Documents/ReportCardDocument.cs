@@ -201,7 +201,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 t.Span(reportCard.ClassroomName).Bold();
             });
 
-            table.Cell().Element(Cell).Text($"Matricule : {MatriculeText.NoBreak(reportCard.Matricule)}");
+            table.Cell().Element(Cell).Text($"Matricule : {NoBreakText.NoBreak(reportCard.Matricule)}");
             table.Cell().Element(Cell).Text($"Nbre d'élèves : {reportCard.ClassSize}");
             // Classe redoublée (feature F) : cochée [X] si l'inscription porte IsRepeating, [ ] sinon —
             // même convention de coche que la rangée des distinctions du conseil.

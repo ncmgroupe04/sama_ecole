@@ -37,7 +37,7 @@ public class DisciplinaryPvDocument(DisciplinaryPvDto pv, byte[]? logo, byte[] q
                 column.Item().PaddingTop(24).AlignCenter()
                     .Text("PROCÈS-VERBAL DE SANCTION DISCIPLINAIRE").Bold().FontSize(15).Underline();
                 column.Item().PaddingTop(2).AlignCenter()
-                    .Text($"N° {pv.PvNumber}").FontSize(9).FontColor(Colors.Grey.Darken2);
+                    .Text($"N° {NoBreakText.NoBreak(pv.PvNumber)}").FontSize(9).FontColor(Colors.Grey.Darken2);
 
                 column.Item().PaddingTop(24).Element(ComposeIdentityBlock);
                 column.Item().PaddingTop(16).Element(ComposeSanctionBlock);
@@ -54,7 +54,7 @@ public class DisciplinaryPvDocument(DisciplinaryPvDto pv, byte[]? logo, byte[] q
         container.Border(0.75f).BorderColor(Colors.Grey.Lighten1).Padding(8).Column(column =>
         {
             InfoRow(column, "Élève", pv.StudentFullName);
-            InfoRow(column, "Matricule", MatriculeText.NoBreak(pv.Matricule));
+            InfoRow(column, "Matricule", NoBreakText.NoBreak(pv.Matricule));
             InfoRow(column, "Né(e) le", FormatDate(pv.StudentBirthDate));
             InfoRow(column, "Classe", pv.ClassroomName);
             if (!string.IsNullOrWhiteSpace(pv.SchoolYearLabel))

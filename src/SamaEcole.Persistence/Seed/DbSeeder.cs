@@ -160,6 +160,31 @@ public static class DbSeeder
             }
         }
 
+        // Abonnements de démonstration — indispensables depuis le contrôle d'accès par formule
+        // ([RequireFeature]) : FeatureAuthorizationHandler REFUSE par défaut une école sans
+        // abonnement, et le développement se retrouverait privé de SMS et de rapports avancés. Les
+        // deux écoles sont donc dotées d'une formule Premium, active un an.
+        //
+        // Actives (et non AwaitingPayment) : sans quoi SubscriptionAwaitingPaymentMiddleware
+        // renverrait 403 sur TOUTE l'API dès la connexion à un compte de démonstration.
+        foreach (var schoolId in new[] { BaobabsId, TerangaId })
+        {
+            var hasSubscription = await dbContext.Subscriptions
+                .IgnoreQueryFilters()
+                .AnyAsync(s => s.SchoolId == schoolId, cancellationToken);
+
+            if (!hasSubscription)
+            {
+                dbContext.Subscriptions.Add(new Subscription
+                {
+                    SchoolId = schoolId,
+                    Plan = SubscriptionPlan.Premium,
+                    Status = SubscriptionStatus.Active,
+                    ExpiresAt = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(1)
+                });
+            }
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 

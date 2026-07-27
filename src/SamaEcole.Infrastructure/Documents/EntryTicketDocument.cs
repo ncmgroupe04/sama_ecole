@@ -7,15 +7,25 @@ using QuestPDF.Infrastructure;
 namespace SamaEcole.Infrastructure.Documents;
 
 /// <summary>
-/// Billet d'entrée en classe (A5). Remis par la Surveillance à un élève arrivé en retard pour
-/// l'autoriser à rejoindre son cours ; l'enseignant le conserve. Reproduit la même charte que les
-/// autres documents officiels (en-tête établissement, numéro, cadre motif, signature).
+/// Billet d'autorisation d'entrée en classe (A5 paysage). Remis par la Surveillance à un élève arrivé
+/// en retard pour l'autoriser à rejoindre son cours ; l'enseignant le conserve. Mise en page calquée à
+/// l'identique sur la maquette de référence fournie (bannière de titre, grille d'informations
+/// 2 colonnes x 3 rangées, pied de page à deux visas).
 /// </summary>
 public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo) : IDocument
 {
+    private const string HeadingColor = "#111827";
+    private const string AccentColor = "#475569";
+    private const string BannerBackground = "#F1F5F9";
+    private const string BannerBorder = "#E2E8F0";
+    private const string RuleColor = "#E2E8F0";
+
+    private const string DefaultObservationsNotice =
+        "L'élève désigné ci-dessus est autorisé à rejoindre sa classe. Ce billet est à remettre à l'enseignant.";
+
     public DocumentMetadata GetMetadata() => new()
     {
-        Title = $"Billet d'entrée {ticket.TicketNumber}",
+        Title = $"Billet d'autorisation d'entrée {ticket.TicketNumber}",
         Author = ticket.SchoolName
     };
 
@@ -24,123 +34,159 @@ public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo) : IDocumen
         container.Page(page =>
         {
             page.Size(PageSizes.A5.Landscape());
-            page.Margin(8, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(9).FontColor(Colors.Black));
+            page.Margin(15, Unit.Millimetre);
+            page.DefaultTextStyle(text => text.FontSize(9).FontColor(HeadingColor));
 
             page.Content().Column(column =>
             {
                 ComposeHeader(column);
-
-                column.Item().PaddingTop(8).AlignCenter()
-                    .Text("BILLET D'ENTRÉE EN CLASSE").Bold().FontSize(15);
-                column.Item().AlignCenter()
-                    .Text($"N° {ticket.TicketNumber}").Italic().FontSize(9).FontColor(Colors.Grey.Darken2);
-
-                column.Item().PaddingTop(10).Element(ComposeInfoBlock);
-
-                column.Item().PaddingTop(8).Element(ComposeMotiveBlock);
-
-                column.Item().PaddingTop(14).Element(ComposeSignatures);
+                column.Item().PaddingTop(10).Element(ComposeTitleBanner);
+                column.Item().PaddingTop(10).Element(ComposeInfoGrid);
+                column.Item().PaddingTop(14).Element(ComposeFooter);
             });
         });
     }
 
     private void ComposeHeader(ColumnDescriptor column)
     {
-        column.Item().BorderBottom(1).BorderColor(Colors.Grey.Darken1).PaddingBottom(4).Row(row =>
+        column.Item().Row(row =>
         {
-            row.RelativeItem().Column(header =>
-            {
-                header.Item().Text(ticket.SchoolName.ToUpperInvariant()).Bold().FontSize(13);
+            row.ConstantItem(50).Element(ComposeLogoBox);
 
-                var contact = JoinPresent(ticket.SchoolAddress, ticket.SchoolPhone, ticket.SchoolEmail);
+            row.RelativeItem().PaddingLeft(10).Column(header =>
+            {
+                header.Item().Text(ticket.SchoolName.ToUpperInvariant()).Bold().FontSize(14).FontColor(HeadingColor);
+
+                if (!string.IsNullOrWhiteSpace(ticket.SchoolAddress))
+                {
+                    header.Item().Text(ticket.SchoolAddress!).FontSize(8.5f).FontColor(AccentColor);
+                }
+
+                var contact = JoinPresent(
+                    ticket.SchoolPhone is null ? null : $"Tél: {ticket.SchoolPhone}",
+                    ticket.SchoolEmail is null ? null : $"Email: {ticket.SchoolEmail}");
                 if (contact.Length > 0)
                 {
-                    header.Item().Text(contact).FontSize(7).FontColor(Colors.Grey.Darken2);
+                    header.Item().Text(contact).FontSize(8.5f).FontColor(AccentColor);
                 }
 
                 var legal = JoinPresent(
-                    ticket.SchoolNinea is null ? null : $"NINEA : {ticket.SchoolNinea}",
-                    ticket.SchoolRegistreCommerce is null ? null : $"RCCM : {ticket.SchoolRegistreCommerce}");
+                    ticket.SchoolNinea is null ? null : $"NINEA: {ticket.SchoolNinea}",
+                    ticket.SchoolRegistreCommerce is null ? null : $"RCCM: {ticket.SchoolRegistreCommerce}");
                 if (legal.Length > 0)
                 {
-                    header.Item().Text(legal).FontSize(7).FontColor(Colors.Grey.Darken2);
+                    header.Item().PaddingTop(1).Text(legal).FontSize(7).FontColor(Colors.Grey.Medium);
                 }
             });
 
-            if (logo is not null)
-            {
-                row.ConstantItem(60).MaxHeight(42).Image(logo).FitArea();
-            }
-            else
-            {
-                row.ConstantItem(60).AlignRight().AlignMiddle()
-                    .Text("[Logo officiel]").FontSize(7).FontColor(Colors.Grey.Medium);
-            }
+            row.ConstantItem(130).AlignRight()
+                .Text("SURVEILLANCE GÉNÉRALE").Bold().FontSize(9).FontColor(AccentColor);
         });
     }
 
-    private void ComposeInfoBlock(IContainer container)
+    private void ComposeLogoBox(IContainer container)
+    {
+        if (logo is not null)
+        {
+            container.Border(1).BorderColor(Colors.Grey.Lighten1).Padding(3).Height(44).Image(logo).FitArea();
+        }
+        else
+        {
+            container.Border(1).BorderColor(Colors.Grey.Lighten1).Padding(3).Height(44).AlignCenter().AlignMiddle()
+                .Text("[Logo]").FontSize(6).FontColor(Colors.Grey.Medium);
+        }
+    }
+
+    private void ComposeTitleBanner(IContainer container)
     {
         container.Column(column =>
         {
-            InfoRow(column, "Élève", ticket.StudentFullName);
-            InfoRow(column, "Matricule", MatriculeText.NoBreak(ticket.Matricule));
-            InfoRow(column, "Classe", $"{ticket.ClassroomName} — {ticket.ClassroomLevel}");
-            InfoRow(column, "Date", FormatDate(ticket.Date));
-            InfoRow(column, "Retard constaté", $"{ticket.Minutes} minute(s)");
-        });
-    }
+            column.Item()
+                .Background(BannerBackground)
+                .Border(0.75f)
+                .BorderColor(BannerBorder)
+                .Padding(8)
+                .AlignCenter()
+                .Text("BILLET D'AUTORISATION D'ENTRÉE EN CLASSE").Bold().FontSize(14).FontColor(HeadingColor);
 
-    private static void InfoRow(ColumnDescriptor column, string label, string value)
-    {
-        column.Item().PaddingVertical(1).Row(row =>
-        {
-            row.ConstantItem(120).Text($"{label} :").FontColor(Colors.Grey.Darken2);
-            row.RelativeItem().Text(value).SemiBold();
-        });
-    }
-
-    private void ComposeMotiveBlock(IContainer container)
-    {
-        container.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten4).Padding(8).Column(column =>
-        {
-            column.Item().Text("MOTIF / OBSERVATION").Bold().FontSize(9).FontColor(Colors.Grey.Darken3);
-            column.Item().PaddingTop(4).Text(string.IsNullOrWhiteSpace(ticket.Reason) ? "—" : ticket.Reason)
-                .FontSize(9);
-            column.Item().PaddingTop(6).Text(text =>
+            column.Item().PaddingTop(4).AlignCenter().Text(text =>
             {
-                text.DefaultTextStyle(style => style.FontSize(8).Italic().LineHeight(1.3f));
-                text.Span("L'élève désigné ci-dessus est autorisé à rejoindre sa classe. Ce billet est à remettre à l'enseignant.");
+                text.Span("N°  ").FontSize(9).FontColor(AccentColor);
+                text.Span(NoBreakText.NoBreak(ticket.TicketNumber)).FontSize(9).FontColor(AccentColor).SemiBold();
             });
         });
     }
 
-    private void ComposeSignatures(IContainer container)
+    private void ComposeInfoGrid(IContainer container)
     {
-        container.Row(row =>
+        container.BorderTop(1).BorderColor(Colors.Grey.Darken1).Column(column =>
         {
-            row.RelativeItem().Column(left =>
-            {
-                left.Item().Text(FaitA()).Italic();
-                left.Item().PaddingTop(6).Text("[Cachet]").FontSize(7).FontColor(Colors.Grey.Medium);
-            });
+            ComposeGridRow(column, showRule: true,
+                left: c => ComposeCell(c, "Date & heure d'émission :", inner =>
+                    inner.Item().Text(FormatIssuedAt(ticket.IssuedAt)).Bold().FontSize(10).FontColor(HeadingColor)),
+                right: c => ComposeCell(c, "Identité de l'élève", inner =>
+                {
+                    inner.Item().Text(ticket.StudentFullName).Bold().FontSize(11).FontColor(HeadingColor);
+                    inner.Item().PaddingTop(1)
+                        .Text($"Matricule: {NoBreakText.NoBreak(ticket.Matricule)}").FontSize(9).FontColor(AccentColor);
+                }));
 
-            row.RelativeItem().AlignRight().Text("Signature du Surveillant").Italic();
+            ComposeGridRow(column, showRule: true,
+                left: c => ComposeCell(c, "Classe", inner =>
+                    inner.Item().Text(ticket.ClassroomName).Bold().FontSize(11).FontColor(HeadingColor)),
+                right: c => ComposeCell(c, "Motif du billet", inner =>
+                {
+                    inner.Item().Text($"RETARD DE {ticket.Minutes} MIN").Bold().FontSize(10).FontColor(HeadingColor);
+                    if (!string.IsNullOrWhiteSpace(ticket.Reason))
+                    {
+                        inner.Item().PaddingTop(1)
+                            .Text($"Raison déclarée : {ticket.Reason}").FontSize(9).FontColor(Colors.Grey.Darken2);
+                    }
+                }));
+
+            ComposeGridRow(column, showRule: false,
+                left: c => ComposeCell(c, "Décision de la surveillance", inner =>
+                    inner.Item().Text("ADMIS EN CLASSE").Bold().FontSize(10).FontColor(HeadingColor)),
+                right: c => ComposeCell(c, "Observations", inner =>
+                    inner.Item().Text(string.IsNullOrWhiteSpace(ticket.Observations) ? DefaultObservationsNotice : ticket.Observations)
+                        .Italic().FontSize(9).FontColor(Colors.Grey.Darken2)));
         });
     }
 
-    private string FaitA()
+    private static void ComposeGridRow(ColumnDescriptor column, bool showRule, Action<IContainer> left, Action<IContainer> right)
     {
-        var date = FormatDate(ticket.Date);
-        return string.IsNullOrWhiteSpace(ticket.SchoolCity)
-            ? $"Fait le {date}"
-            : $"Fait à {ticket.SchoolCity}, le {date}";
+        var item = showRule
+            ? column.Item().BorderBottom(0.5f).BorderColor(RuleColor).PaddingVertical(6)
+            : column.Item().PaddingVertical(6);
+
+        item.Row(row =>
+        {
+            row.RelativeItem().Element(left);
+            row.RelativeItem().PaddingLeft(16).Element(right);
+        });
+    }
+
+    private static void ComposeCell(IContainer container, string label, Action<ColumnDescriptor> content)
+    {
+        container.Column(inner =>
+        {
+            inner.Item().PaddingBottom(2).Text(label.ToUpperInvariant()).FontSize(8).FontColor(AccentColor).SemiBold();
+            content(inner);
+        });
+    }
+
+    private void ComposeFooter(IContainer container)
+    {
+        container.BorderTop(0.75f).BorderColor(Colors.Grey.Darken1).PaddingTop(10).Row(row =>
+        {
+            row.RelativeItem().Text("Visa du Professeur (à la réception)").FontSize(8).FontColor(Colors.Grey.Darken2);
+            row.RelativeItem().AlignRight().Text("Cachet & Signature du Surveillant").SemiBold().FontSize(8).FontColor(HeadingColor);
+        });
     }
 
     private static string JoinPresent(params string?[] parts) =>
-        string.Join("  ·  ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
+        string.Join(" | ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
 
-    private static string FormatDate(DateTime moment) =>
-        moment.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+    private static string FormatIssuedAt(DateTimeOffset issuedAt) =>
+        $"{issuedAt.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)} à {issuedAt.ToString("HH:mm", CultureInfo.InvariantCulture)}";
 }

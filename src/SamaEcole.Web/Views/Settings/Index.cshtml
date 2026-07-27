@@ -13,6 +13,7 @@
  <script src="~/js/users.js" asp-append-version="true"></script>
  <script src="~/js/audit-log.js" asp-append-version="true"></script>
  <script src="~/js/subscription-payments-history.js" asp-append-version="true"></script>
+ <script src="~/js/sms-settings.js" asp-append-version="true"></script>
 }
 
 <div x-data="settingsView()">
@@ -84,6 +85,18 @@
  :class="tabClass('facturation')">
  Facturation &amp; Historique
  </button>
+ @* Notifications SMS — offre Premium. L'onglet reste VISIBLE hors formule, avec un badge :
+ une fonctionnalité qu'on cache ne se vend pas. C'est SmsController ([RequireFeature])
+ qui refuse réellement l'accès, jamais ce x-show (voir features.js). *@
+ <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="tab = 'sms'"
+ class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1 inline-flex items-center gap-2"
+ :class="tabClass('sms')">
+ Notifications SMS
+ <span x-data="featureGate('SmsNotifications')" x-show="!allowed" x-cloak
+ class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+ Premium
+ </span>
+ </button>
  </nav>
  </div>
 
@@ -97,7 +110,7 @@
  <!-- ============================= ONGLET ÉTABLISSEMENT ============================= -->
  <div x-show="!isLoading && !loadError && tab === 'etablissement'" x-cloak class="mt-6">
  <div class="card p-6 w-full">
- <form x-on:submit.prevent="saveProfile()" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+ <form x-on:submit.prevent="saveProfile()" novalidate class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
  <!-- Colonne de gauche : Identité -->
  <div class="space-y-5">
@@ -336,7 +349,7 @@
  </div>
 
  <!-- Corps : réglages généraux (gauche) et mentions du bulletin (droite) -->
- <form x-on:submit.prevent="saveConfig()" class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+ <form x-on:submit.prevent="saveConfig()" novalidate class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
 
  <!-- Bloc 1 : Réglages généraux de l'établissement (Directeur seul) -->
  <div class="space-y-5">
@@ -666,13 +679,18 @@
  @await Html.PartialAsync("_SubscriptionPaymentsPanel")
  </div>
 
+ <!-- ============================= ONGLET NOTIFICATIONS SMS ============================= -->
+ <div x-show="isDirecteur && tab === 'sms'" x-cloak class="mt-6">
+ @await Html.PartialAsync("_SmsSettingsPanel")
+ </div>
+
  <!-- Création d'une mention -->
  <modal-shell open="isMentionCreateOpen" title="Nouvelle mention">
  <modal-subtitle>Le seuil est la moyenne minimale, sur 20, pour l'obtenir. Le bulletin du Primaire le transpose automatiquement sur 10.</modal-subtitle>
 
  <div x-show="mentionCreateErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="mentionCreateErrors.global"></div>
 
- <form x-on:submit.prevent="submitCreateMention()" class="space-y-4">
+ <form x-on:submit.prevent="submitCreateMention()" novalidate class="space-y-4">
  <div>
  <label for="mention-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
  <input id="mention-label" type="text" x-model="newMention.label" required maxlength="40" placeholder="ex : Excellent" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">

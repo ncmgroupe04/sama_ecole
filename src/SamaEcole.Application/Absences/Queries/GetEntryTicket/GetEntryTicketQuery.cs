@@ -16,6 +16,7 @@ public record GetEntryTicketQuery(Guid LateArrivalId) : IRequest<EntryTicketDto>
 public record EntryTicketDto(
     Guid LateArrivalId,
     string TicketNumber,
+    DateTimeOffset IssuedAt,
     string StudentFullName,
     string Matricule,
     string ClassroomName,
@@ -23,6 +24,7 @@ public record EntryTicketDto(
     DateTime Date,
     int Minutes,
     string Reason,
+    string? Observations,
     string SchoolName,
     string? SchoolAddress,
     string? SchoolPhone,
@@ -46,6 +48,7 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
             select new
             {
                 l.Id,
+                l.CreatedAt,
                 s.Matricule,
                 StudentFullName = s.FullName,
                 ClassroomName = c.Name,
@@ -53,6 +56,7 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
                 l.Date,
                 l.Minutes,
                 l.Reason,
+                l.Observations,
                 SchoolName = sch.Name,
                 SchoolAddress = sch.Address,
                 SchoolPhone = sch.Phone,
@@ -66,6 +70,7 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
         return new EntryTicketDto(
             row.Id,
             $"BILLET-{row.Id.ToString()[..8].ToUpperInvariant()}",
+            row.CreatedAt,
             row.StudentFullName,
             row.Matricule,
             row.ClassroomName,
@@ -73,6 +78,7 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
             row.Date,
             row.Minutes,
             row.Reason,
+            row.Observations,
             row.SchoolName,
             row.SchoolAddress,
             row.SchoolPhone,

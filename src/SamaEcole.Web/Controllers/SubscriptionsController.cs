@@ -1,5 +1,6 @@
 using SamaEcole.Application.Subscriptions.Commands.InitiateSubscriptionPayment;
 using SamaEcole.Application.Subscriptions.Queries.GetSubscriptionPayments;
+using SamaEcole.Application.Subscriptions.Queries.ValidatePromoCode;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
 using MediatR;
@@ -22,7 +23,10 @@ namespace SamaEcole.Web.Controllers;
 [Authorize(Roles = nameof(Role.Directeur))]
 public class SubscriptionsController(ISender mediator, IAuthorizationService authorizationService) : ControllerBase
 {
-    public record InitiatePaymentRequest(SubscriptionPaymentMethod Method, BillingPeriod BillingPeriod);
+    public record InitiatePaymentRequest(
+        SubscriptionPaymentMethod Method, BillingPeriod BillingPeriod, string? PromoCode = null);
+
+    public record ValidatePromoCodeRequest(string Code, BillingPeriod BillingPeriod);
 
     [HttpPost("{schoolId:guid}/payments")]
     [ProducesResponseType<InitiateSubscriptionPaymentResult>(StatusCodes.Status200OK)]
@@ -40,8 +44,30 @@ public class SubscriptionsController(ISender mediator, IAuthorizationService aut
             {
                 SchoolId = schoolId,
                 Method = request.Method,
-                BillingPeriod = request.BillingPeriod
+                BillingPeriod = request.BillingPeriod,
+                PromoCode = request.PromoCode
             },
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Aperçu en direct d'un code promo — module Tarification &amp; Promotions. Aucun SchoolId en
+    /// route : le tenant vient de la session (ITenantProvider), comme partout ailleurs — un Directeur
+    /// ne peut prévisualiser que SON PROPRE abonnement. Déjà couvert par l'allowlist
+    /// SubscriptionAwaitingPaymentMiddleware (préfixe /api/v1/subscriptions/) : accessible même en
+    /// mode restreint, comme l'initiation de paiement elle-même.
+    /// </summary>
+    [HttpPost("validate-promo")]
+    [ProducesResponseType<ValidatePromoCodeResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ValidatePromoCode(
+        [FromBody] ValidatePromoCodeRequest request, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new ValidatePromoCodeQuery { Code = request.Code, BillingPeriod = request.BillingPeriod },
             cancellationToken);
 
         return Ok(result);

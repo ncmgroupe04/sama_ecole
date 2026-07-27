@@ -4,6 +4,8 @@ using SamaEcole.Application.Auth.Commands.Login;
 using SamaEcole.Application.Auth.Commands.Logout;
 using SamaEcole.Application.Auth.Commands.Refresh;
 using SamaEcole.Application.Auth.Commands.ResetPassword;
+using SamaEcole.Application.Auth.Commands.SwitchSchool;
+using SamaEcole.Application.Auth.Queries.GetMySchools;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Web.Auth;
 using SamaEcole.Web.Contracts;
@@ -139,6 +141,39 @@ public class AuthController(
         RefreshTokenCookie.Delete(Response);
         return NoContent();
     }
+
+    /// <summary>
+    /// Établissements entre lesquels l'utilisateur peut basculer (groupe scolaire). Liste VIDE pour
+    /// un compte mono-école — le sélecteur ne s'affiche alors pas.
+    /// </summary>
+    [HttpGet("my-schools")]
+    [Authorize]
+    [ProducesResponseType<IReadOnlyList<SwitchableSchoolDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMySchools(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetMySchoolsQuery(), cancellationToken));
+
+    public record SwitchSchoolRequest(Guid SchoolId);
+
+    /// <summary>
+    /// Bascule vers un autre établissement du groupe : émet un NOUVEAU jeton portant l'école cible
+    /// (voir SwitchSchoolCommandHandler — jamais deux établissements dans un même jeton).
+    ///
+    /// Placé sous /auth/, préfixe allowlisté par SubscriptionAwaitingPaymentMiddleware : un promoteur
+    /// dont l'école courante est en attente de paiement doit pouvoir rejoindre celles qui sont à jour.
+    ///
+    /// Le refresh token n'est PAS renouvelé : il porte l'identité du compte, pas l'établissement
+    /// actif. Le renouvellement ramènera l'école d'origine, ce qui est le comportement attendu — une
+    /// bascule vaut pour la session en cours, pas indéfiniment.
+    /// </summary>
+    [HttpPost("switch-school")]
+    [Authorize]
+    [ProducesResponseType<SwitchSchoolResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SwitchSchool(
+        [FromBody] SwitchSchoolRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new SwitchSchoolCommand(request.SchoolId), cancellationToken));
 
     /// <summary>
     /// Pose le refresh token en cookie et ne renvoie au client que ce qu'il a le droit de voir.

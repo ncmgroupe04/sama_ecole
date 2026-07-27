@@ -59,9 +59,9 @@ public class SubscriptionAwaitingPaymentMiddleware(RequestDelegate next)
             return;
         }
 
-        // `subscriptions` n'implémente pas ITenantEntity (comme `schools`) : pas de Global Query Filter
-        // automatique, le filtre SchoolId est donc explicite ici. La policy RLS (table tenant côté
-        // PostgreSQL) borne de toute façon la même ligne en défense en profondeur (AGENTS.md règle #2).
+        // Subscription EST une ITenantEntity : Global Query Filter + policy RLS bornent déjà la lecture
+        // à l'école du JWT (AGENTS.md règle #2). Le Where explicite est conservé — il porte sur le MÊME
+        // claim que TenantProvider, et rend lisible ici la ligne qu'on interroge.
         var status = await dbContext.Subscriptions
             .AsNoTracking()
             .Where(s => s.SchoolId == schoolId)

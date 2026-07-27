@@ -18,6 +18,11 @@ document.addEventListener('alpine:init', () => {
         remindedSchoolIds: {},
         remindError: null,
 
+        grantAccessTarget: null,
+        grantAccessForm: { plan: 'Standard', durationMonths: 1 },
+        grantAccessError: null,
+        isGranting: false,
+
         async load() {
             this.isLoading = true;
             this.error = null;
@@ -46,10 +51,10 @@ document.addEventListener('alpine:init', () => {
             const suspended = this.subscriptions.filter((s) => s.status === 'Suspended').length;
 
             return [
-                { label: 'Abonnements actifs', value: active, valueClass: 'text-emerald-400' },
-                { label: 'En attente de paiement', value: awaiting, valueClass: 'text-sky-400' },
-                { label: 'Échéances < 7 jours', value: dueSoon, valueClass: 'text-amber-400' },
-                { label: 'Suspendus', value: suspended, valueClass: 'text-rose-400' }
+                { label: 'Abonnements actifs', value: active, valueClass: 'text-emerald-400', icon: 'checkmark-circle', iconBg: 'bg-emerald-500/15' },
+                { label: 'En attente de paiement', value: awaiting, valueClass: 'text-sky-400', icon: 'clock', iconBg: 'bg-sky-500/15' },
+                { label: 'Échéances < 7 jours', value: dueSoon, valueClass: 'text-amber-400', icon: 'alert-circle', iconBg: 'bg-amber-500/15' },
+                { label: 'Suspendus', value: suspended, valueClass: 'text-rose-400', icon: 'block', iconBg: 'bg-rose-500/15' }
             ];
         },
 
@@ -98,6 +103,33 @@ document.addEventListener('alpine:init', () => {
                 this.remindError = err.message || "Erreur lors de l'envoi du rappel.";
             } finally {
                 this.remindingSchoolId = null;
+            }
+        },
+
+        openGrantAccess(sub) {
+            this.grantAccessTarget = sub;
+            this.grantAccessForm = { plan: sub.plan || 'Standard', durationMonths: 1 };
+            this.grantAccessError = null;
+        },
+
+        closeGrantAccess() {
+            this.grantAccessTarget = null;
+        },
+
+        async confirmGrantAccess() {
+            this.isGranting = true;
+            this.grantAccessError = null;
+            try {
+                await window.api.post(
+                    `/admin/platform/schools/${this.grantAccessTarget.schoolId}/complimentary-access`,
+                    { plan: this.grantAccessForm.plan, durationMonths: this.grantAccessForm.durationMonths });
+
+                this.grantAccessTarget = null;
+                await this.load();
+            } catch (err) {
+                this.grantAccessError = err.message || "Erreur lors de l'attribution de l'accès.";
+            } finally {
+                this.isGranting = false;
             }
         }
     }));

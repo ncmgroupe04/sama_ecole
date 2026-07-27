@@ -9,7 +9,8 @@ namespace SamaEcole.Infrastructure.Documents;
 /// d'ouvrir un fichier par élève. Réutilise EXACTEMENT <see cref="ReportCardDocument.ComposePage"/> pour
 /// chaque élève : même mise en page que le bulletin individuel, aucune logique dupliquée.
 /// </summary>
-public class ClassBulletinsDocument(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo) : IDocument
+public class ClassBulletinsDocument(
+    IReadOnlyList<ReportCardDto> reportCards, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null) : IDocument
 {
     public DocumentMetadata GetMetadata() => new()
     {
@@ -21,7 +22,7 @@ public class ClassBulletinsDocument(IReadOnlyList<ReportCardDto> reportCards, by
     {
         foreach (var reportCard in reportCards)
         {
-            new ReportCardDocument(reportCard, logo).ComposePage(container);
+            new ReportCardDocument(reportCard, logo, directorSignature, officialStamp).ComposePage(container);
         }
     }
 }

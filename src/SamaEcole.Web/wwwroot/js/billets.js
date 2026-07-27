@@ -24,15 +24,19 @@ document.addEventListener('alpine:init', () => {
         // ne crée pas le retard/la sortie lui-même.
         canManageBillets: window.auth.role === 'Directeur' || window.auth.role === 'Surveillant',
 
-        // Slide-over de création (billet d'entrée)
+        // Modale de création (billet d'entrée)
         isCreateOpen: false,
         isCreating: false,
+        createErrors: {},
+        showAddedDialog: false,
+        addedLateArrivalName: '',
         students: [],
         form: {
             studentId: '',
             date: new Date().toISOString().split('T')[0],
             minutes: 5,
-            reason: ''
+            reason: '',
+            observations: ''
         },
 
         // ---------------------------------------------------------------- Billets de sortie (EarlyDeparture)
@@ -41,6 +45,9 @@ document.addEventListener('alpine:init', () => {
         printingExitId: null,
         isCreateExitOpen: false,
         isCreatingExit: false,
+        createExitErrors: {},
+        showAddedExitDialog: false,
+        addedEarlyDepartureName: '',
         exitForm: {
             studentId: '',
             date: new Date().toISOString().split('T')[0],
@@ -76,27 +83,37 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async submitCreate() {
-            if (!this.form.studentId || !this.form.date || !this.form.minutes || !this.form.reason) {
-                toast.error('Veuillez remplir tous les champs.');
-                return;
-            }
+        openCreate() {
+            this.isCreateOpen = true;
+        },
 
+        /** Sortie explicite (Annuler, ✕, fond, Échap) : le formulaire repart de zéro. */
+        closeCreate() {
+            this.isCreateOpen = false;
+            this.resetForm();
+        },
+
+        async submitCreate() {
             this.isCreating = true;
+            this.createErrors = {};
             try {
+                const student = this.students.find(s => s.id === this.form.studentId);
                 await api.post('/absences/late-arrivals', {
                     studentId: this.form.studentId,
                     date: this.form.date,
                     minutes: Number(this.form.minutes),
-                    reason: this.form.reason
+                    reason: this.form.reason,
+                    observations: this.form.observations
                 });
-                toast.success('Retard enregistré. Vous pouvez imprimer le billet.');
+
                 this.isCreateOpen = false;
+                this.addedLateArrivalName = student ? student.fullName : '';
                 this.resetForm();
                 await this.loadLateArrivals();
+                this.showAddedDialog = true;
             } catch (error) {
                 console.error('Late arrival create error:', error);
-                toast.error(error.message || "Erreur lors de l'enregistrement.");
+                this.createErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");
             } finally {
                 this.isCreating = false;
             }
@@ -145,8 +162,10 @@ document.addEventListener('alpine:init', () => {
                 studentId: '',
                 date: new Date().toISOString().split('T')[0],
                 minutes: 5,
-                reason: ''
+                reason: '',
+                observations: ''
             };
+            this.createErrors = {};
         },
 
         // ---------------------------------------------------------------- Billets de sortie (EarlyDeparture)
@@ -163,14 +182,21 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async submitCreateExit() {
-            if (!this.exitForm.studentId || !this.exitForm.date || !this.exitForm.departureTime || !this.exitForm.reason) {
-                toast.error('Veuillez remplir tous les champs.');
-                return;
-            }
+        openCreateExit() {
+            this.isCreateExitOpen = true;
+        },
 
+        /** Sortie explicite (Annuler, ✕, fond, Échap) : le formulaire repart de zéro. */
+        closeCreateExit() {
+            this.isCreateExitOpen = false;
+            this.resetExitForm();
+        },
+
+        async submitCreateExit() {
             this.isCreatingExit = true;
+            this.createExitErrors = {};
             try {
+                const student = this.students.find(s => s.id === this.exitForm.studentId);
                 await api.post('/absences/early-departures', {
                     studentId: this.exitForm.studentId,
                     date: this.exitForm.date,
@@ -178,13 +204,15 @@ document.addEventListener('alpine:init', () => {
                     reason: this.exitForm.reason,
                     pickedUpBy: this.exitForm.pickedUpBy || null
                 });
-                toast.success('Sortie enregistrée. Vous pouvez imprimer le billet.');
+
                 this.isCreateExitOpen = false;
+                this.addedEarlyDepartureName = student ? student.fullName : '';
                 this.resetExitForm();
                 await this.loadEarlyDepartures();
+                this.showAddedExitDialog = true;
             } catch (error) {
                 console.error('Early departure create error:', error);
-                toast.error(error.message || "Erreur lors de l'enregistrement.");
+                this.createExitErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");
             } finally {
                 this.isCreatingExit = false;
             }
@@ -230,6 +258,7 @@ document.addEventListener('alpine:init', () => {
                 reason: '',
                 pickedUpBy: ''
             };
+            this.createExitErrors = {};
         },
 
         formatDate(dateStr) {

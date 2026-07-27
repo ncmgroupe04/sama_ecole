@@ -135,6 +135,20 @@ public enum SubscriptionPlan
     Premium
 }
 
+/// <summary>
+/// Type de réduction porté par un code promo (module Tarification &amp; Promotions, espace Super
+/// Admin). FreeTrialMonths et FullDiscount ne font transiter aucun argent : ils court-circuitent
+/// l'agrégateur de paiement plutôt que de générer un paiement à 0 FCFA « confirmé » sans webhook
+/// (AGENTS.md règle #11).
+/// </summary>
+public enum PromoDiscountType
+{
+    Percentage,
+    FixedAmount,
+    FreeTrialMonths,
+    FullDiscount
+}
+
 public enum SubscriptionStatus
 {
     /// <summary>

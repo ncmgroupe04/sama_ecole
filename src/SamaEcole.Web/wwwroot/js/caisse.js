@@ -34,7 +34,6 @@ document.addEventListener('alpine:init', () => {
 
         paymentResult: null, // résultat brut du POST (paymentId, receiptNumber…)
         receipt: null,       // reçu complet, chargé après coup pour l'affichage/l'impression
-        pdfError: null,
 
         // Parcours après encaissement : une fenêtre de confirmation (« Paiement validé ») s'affiche
         // d'abord ; le reçu ne s'affiche que si l'utilisateur choisit de l'imprimer/consulter.
@@ -227,7 +226,6 @@ document.addEventListener('alpine:init', () => {
             this.formErrors = {};
             this.paymentResult = null;
             this.receipt = null;
-            this.pdfError = null;
             this.showReceipt = false;
             this.showConfirmDialog = false;
         },
@@ -276,97 +274,9 @@ document.addEventListener('alpine:init', () => {
             window.print();
         },
 
-        showPdfModal: false,
-        pdfPreviewUrl: null,
-        pdfPreviewTitle: '',
-        pdfDownloadName: '',
-        pdfLoadError: false,
-
-        async openPdfPreview(url, title, downloadName) {
-            // Nettoyage global : fermer toutes les modales actives
-            if (window.closeAllModals) window.closeAllModals();
-
-            // Nettoyer tout ancien Blob URL avant de tenter un nouveau chargement.
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfError = null;
-            this.pdfLoadError = false;
-            this.pdfPreviewTitle = title || 'Document officiel';
-            this.pdfDownloadName = downloadName || 'document.pdf';
-
-            try {
-                if (!url || url.includes('undefined') || url.includes('null')) {
-                    throw new Error(`L'identifiant ou l'URL du document est invalide (${url}).`);
-                }
-                console.log("PDF URL:", url);
-
-                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                    await window.api.refreshOrRedirect();
-                }
-
-                const response = await fetch(url, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
-                    credentials: 'same-origin'
-                });
-                if (!response.ok) {
-                    const errText = await response.text().catch(() => '');
-                    throw new Error(`Erreur ${response.status}: Téléchargement du document impossible (${errText || response.statusText}).`);
-                }
-
-                const rawBlob = await response.blob();
-                if (!rawBlob || rawBlob.size === 0) {
-                    throw new Error("Le fichier PDF reçu est vide (0 octet). Veuillez réessayer.");
-                }
-                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-                this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
-                console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
-            } catch (err) {
-                console.error("Erreur openPdfPreview (Caisse):", err);
-                this.pdfError = err.message || 'Erreur lors du chargement du document.';
-                this.pdfLoadError = true;
-            }
-            // La modale s'ouvre TOUJOURS, même en cas d'erreur : les boutons restent fonctionnels.
-            this.showPdfModal = true;
-        },
-
-        closePdfPreview() {
-            this.showPdfModal = false;
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfLoadError = false;
-        },
-
-        printPreviewPdf() {
-            const iframe = document.getElementById('pdf-preview-frame');
-            if (iframe && iframe.contentWindow) {
-                try {
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                } catch {
-                    if (this.pdfPreviewUrl) {
-                        const win = window.open(this.pdfPreviewUrl, '_blank');
-                        if (win) win.print();
-                    }
-                }
-            } else if (this.pdfPreviewUrl) {
-                const win = window.open(this.pdfPreviewUrl, '_blank');
-                if (win) win.print();
-            }
-        },
-
-        downloadPreviewPdf() {
-            if (!this.pdfPreviewUrl) return;
-            const link = document.createElement('a');
-            link.href = this.pdfPreviewUrl;
-            link.download = this.pdfDownloadName || 'document.pdf';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        },
+        // Aperçu PDF (reçu de caisse) — état + méthodes étalés depuis le moteur partagé
+        // (wwwroot/js/pdf-preview.js) ; downloadPdf/previewReceipt ci-dessous appellent openPdfPreview.
+        ...window.pdfPreview.state(),
 
         /** Ouvre la modale de prévisualisation PDF pour le reçu de caisse (ticket JGK-F02 / Axe 4). */
         async downloadPdf() {

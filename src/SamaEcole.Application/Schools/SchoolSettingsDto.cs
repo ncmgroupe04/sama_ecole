@@ -19,4 +19,15 @@ public record SchoolSettingsDto(
     string? SecretarySignatureUrl = null,
     string? CashierSignatureUrl = null,
     string? OfficialStampUrl = null,
-    string TypeEtablissement = "Prive");
+    string TypeEtablissement = "Prive",
+    bool SmsOnAttendanceAlert = false,
+    bool SmsOnDuesReminder = false,
+    bool SmsOnPaymentReceipt = false,
+
+    /// <summary>
+    /// EN LECTURE SEULE — présent dans le DTO (l'écran de paramétrage affiche le solde à côté des
+    /// commutateurs) mais ABSENT d'UpdateSchoolSettingsCommand : les crédits s'achètent, un Directeur
+    /// qui pourrait les fixer lui-même s'offrirait des SMS. Seul TopUpSmsCreditsCommand (Super Admin)
+    /// modifie cette valeur.
+    /// </summary>
+    int SmsCreditBalance = 0);

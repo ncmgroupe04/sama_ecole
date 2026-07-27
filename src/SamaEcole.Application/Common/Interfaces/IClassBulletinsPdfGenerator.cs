@@ -9,5 +9,5 @@ namespace SamaEcole.Application.Common.Interfaces;
 /// </summary>
 public interface IClassBulletinsPdfGenerator
 {
-    byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo);
+    byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null);
 }

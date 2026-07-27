@@ -14,11 +14,11 @@
             <p class="text-jgk-subtitle text-slate-500 mt-1">Retards et sorties anticipées, avec impression du billet A5 correspondant.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <button x-show="tab === 'entree' && canManageBillets" x-cloak @@click="isCreateOpen = true" class="btn-primary">
+            <button x-show="tab === 'entree' && canManageBillets" x-cloak @@click="openCreate()" class="btn-primary">
                 <icon name="plus" class="w-4 h-4" />
                 Enregistrer un retard
             </button>
-            <button x-show="tab === 'sortie' && canManageBillets" x-cloak @@click="isCreateExitOpen = true" class="btn-primary">
+            <button x-show="tab === 'sortie' && canManageBillets" x-cloak @@click="openCreateExit()" class="btn-primary">
                 <icon name="plus" class="w-4 h-4" />
                 Enregistrer une sortie
             </button>
@@ -40,46 +40,46 @@
     </nav>
 
     <!-- Tableau : Billets d'entrée -->
-    <div x-show="tab === 'entree'" x-cloak class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div x-show="tab === 'entree'" x-cloak class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left">
-                <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th class="px-6 py-4 font-semibold">Date</th>
-                        <th class="px-6 py-4 font-semibold">Élève</th>
-                        <th class="px-6 py-4 font-semibold">Retard</th>
-                        <th class="px-6 py-4 font-semibold">Motif</th>
-                        <th class="px-6 py-4 font-semibold text-right">Billet</th>
+            <table class="w-full text-sm text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Retard</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
+                        <th class="py-3.5 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Billet</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200">
+                <tbody class="divide-y divide-slate-100">
                     <template x-if="isLoading">
                         <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-slate-500">
+                            <td colspan="5" class="px-4 py-8 text-center text-slate-500">
                                 Chargement des retards...
                             </td>
                         </tr>
                     </template>
                     <template x-if="!isLoading && lateArrivals.length === 0">
                         <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-slate-500">
-                                Aucun retard enregistré.
+                            <td colspan="5">
+                                <empty-state icon="clock" title="Aucun retard enregistré."
+                                    hint="Les retards saisis par la Surveillance apparaîtront ici." />
                             </td>
                         </tr>
                     </template>
                     <template x-for="item in lateArrivals" :key="item.id">
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap text-slate-600" x-text="formatDate(item.date)"></td>
-                            <td class="px-6 py-4">
-                                <div class="font-medium text-slate-900" x-text="item.studentFullName"></div>
+                        <tr class="hover:bg-slate-50/60 transition-colors">
+                            <td class="px-4 py-4 whitespace-nowrap text-slate-600" x-text="formatDate(item.date)"></td>
+                            <td class="px-4 py-4">
+                                <div class="font-semibold text-slate-900" x-text="item.studentFullName"></div>
                                 <div class="text-xs text-slate-500" x-text="'Matricule : ' + item.studentMatricule"></div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
-                                      x-text="item.minutes + ' min'"></span>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <span class="status-badge-warning" x-text="item.minutes + ' min'"></span>
                             </td>
-                            <td class="px-6 py-4 text-slate-600 truncate max-w-xs" x-text="item.reason" :title="item.reason"></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="item.reason" :title="item.reason"></td>
+                            <td class="px-4 py-4 whitespace-nowrap text-right">
                                 <button @@click="printBillet(item.id)" :disabled="printingId === item.id"
                                         class="btn-secondary inline-flex items-center gap-2 disabled:opacity-60">
                                     <icon name="print" class="w-4 h-4" x-show="printingId !== item.id" />
@@ -94,124 +94,108 @@
         </div>
     </div>
 
-    <!-- Slide-over Création -->
-    <div x-show="isCreateOpen" style="display: none;" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-        <!-- Backdrop -->
-        <div x-show="isCreateOpen" x-transition.opacity class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+    <!-- Modale de création : Nouveau retard -->
+    <modal-shell open="isCreateOpen" on-close="closeCreate()" title="Nouveau retard">
+        <modal-subtitle>Enregistrer l'arrivée tardive d'un élève.</modal-subtitle>
 
-        <div class="fixed inset-0 overflow-hidden">
-            <div class="absolute inset-0 overflow-hidden">
-                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10 sm:pl-16">
-                    <div x-show="isCreateOpen"
-                         x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
-                         x-transition:enter-start="translate-x-full"
-                         x-transition:enter-end="translate-x-0"
-                         x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
-                         x-transition:leave-start="translate-x-0"
-                         x-transition:leave-end="translate-x-full"
-                         class="pointer-events-auto w-screen max-w-md">
-                        <form x-on:submit.prevent="submitCreate" novalidate class="flex h-full flex-col bg-white shadow-xl">
-                            <!-- En-tête -->
-                            <div class="px-6 py-6 sm:px-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                <div>
-                                    <h2 class="text-lg font-semibold text-slate-900" id="slide-over-title">Nouveau retard</h2>
-                                    <p class="text-sm text-slate-500 mt-1">Enregistrer l'arrivée tardive d'un élève.</p>
-                                </div>
-                                <button type="button" @@click="isCreateOpen = false" class="rounded-md bg-white text-slate-400 hover:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                                    <span class="sr-only">Fermer</span>
-                                    <icon name="x" class="h-6 w-6" />
-                                </button>
-                            </div>
-                            <!-- Contenu -->
-                            <div class="relative flex-1 px-6 py-6 sm:px-8 overflow-y-auto space-y-6">
+        <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-red-500">*</span></label>
-                                    <select x-model="form.studentId" class="input-field mt-1" required>
-                                        <option value="">Sélectionnez un élève...</option>
-                                        <template x-for="student in students" :key="student.id">
-                                            <option :value="student.id" x-text="student.fullName + ' (' + student.matricule + ')'"></option>
-                                        </template>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Date <span class="text-red-500">*</span></label>
-                                    <input type="date" x-model="form.date" class="input-field mt-1" required />
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Minutes de retard <span class="text-red-500">*</span></label>
-                                    <input type="number" min="1" x-model="form.minutes" class="input-field mt-1" required />
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Motif <span class="text-red-500">*</span></label>
-                                    <textarea x-model="form.reason" rows="4" class="input-field mt-1" placeholder="Motif du retard..." required></textarea>
-                                </div>
-
-                            </div>
-                            <!-- Pied de page -->
-                            <div class="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-100 bg-slate-50">
-                                <button type="button" @@click="isCreateOpen = false" class="btn-secondary">Annuler</button>
-                                <button type="submit" class="btn-primary" :disabled="isCreating">
-                                    <span x-show="!isCreating">Enregistrer</span>
-                                    <span x-show="isCreating" class="flex items-center gap-2">
-                                        <icon name="loader" class="w-4 h-4 animate-spin" />
-                                        Enregistrement...
-                                    </span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+        <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-danger">*</span></label>
+                <select-field model="form.studentId" required="true" aria-label="Élève concerné"
+                              placeholder="Sélectionnez un élève..."
+                              options-expr="students.map(s => ({value: s.id, label: s.fullName + ' (' + s.matricule + ')'}))" />
+                <p x-show="createErrors.studentid" x-text="createErrors.studentid" class="mt-1 text-xs text-danger"></p>
             </div>
-        </div>
-    </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Date <span class="text-danger">*</span></label>
+                <date-field model="form.date" required="true" aria-label="Date" />
+                <p x-show="createErrors.date" x-text="createErrors.date" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Minutes de retard <span class="text-danger">*</span></label>
+                <input type="number" min="1" x-model.number="form.minutes" required
+                       class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                <p x-show="createErrors.minutes" x-text="createErrors.minutes" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-danger">*</span></label>
+                <textarea x-model="form.reason" rows="4" placeholder="Motif du retard..." required
+                          class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"></textarea>
+                <p x-show="createErrors.reason" x-text="createErrors.reason" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Observations</label>
+                <textarea x-model="form.observations" rows="3" placeholder="Observations de la Surveillance (facultatif)..."
+                          class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"></textarea>
+                <p x-show="createErrors.observations" x-text="createErrors.observations" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+                <button type="button" @@click="closeCreate()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isCreating" class="btn-primary">
+                    <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* Confirmation : retard enregistré *@
+    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Retard enregistré">
+        <confirm-dialog-body close-action="showAddedDialog = false"
+                              new-action="showAddedDialog = false; openCreate()" new-label="Nouveau retard">
+            Le retard de <span class="font-medium text-slate-900" x-text="addedLateArrivalName"></span> a bien été enregistré et figure désormais dans la liste. Vous pouvez imprimer le billet correspondant.
+        </confirm-dialog-body>
+    </modal-shell>
 
     <!-- Tableau : Billets de sortie -->
-    <div x-show="tab === 'sortie'" x-cloak class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div x-show="tab === 'sortie'" x-cloak class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left">
-                <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th class="px-6 py-4 font-semibold">Date</th>
-                        <th class="px-6 py-4 font-semibold">Élève</th>
-                        <th class="px-6 py-4 font-semibold">Heure de sortie</th>
-                        <th class="px-6 py-4 font-semibold">Motif</th>
-                        <th class="px-6 py-4 font-semibold">Récupéré par</th>
-                        <th class="px-6 py-4 font-semibold text-right">Billet</th>
+            <table class="w-full text-sm text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Heure de sortie</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Récupéré par</th>
+                        <th class="py-3.5 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Billet</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200">
+                <tbody class="divide-y divide-slate-100">
                     <template x-if="isLoadingExits">
                         <tr>
-                            <td colspan="6" class="px-6 py-8 text-center text-slate-500">
+                            <td colspan="6" class="px-4 py-8 text-center text-slate-500">
                                 Chargement des sorties...
                             </td>
                         </tr>
                     </template>
                     <template x-if="!isLoadingExits && earlyDepartures.length === 0">
                         <tr>
-                            <td colspan="6" class="px-6 py-8 text-center text-slate-500">
-                                Aucune sortie anticipée enregistrée.
+                            <td colspan="6">
+                                <empty-state icon="sign-out" title="Aucune sortie anticipée enregistrée."
+                                    hint="Les sorties anticipées saisies par la Surveillance apparaîtront ici." />
                             </td>
                         </tr>
                     </template>
                     <template x-for="item in earlyDepartures" :key="item.id">
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap text-slate-600" x-text="formatDate(item.date)"></td>
-                            <td class="px-6 py-4">
-                                <div class="font-medium text-slate-900" x-text="item.studentFullName"></div>
+                        <tr class="hover:bg-slate-50/60 transition-colors">
+                            <td class="px-4 py-4 whitespace-nowrap text-slate-600" x-text="formatDate(item.date)"></td>
+                            <td class="px-4 py-4">
+                                <div class="font-semibold text-slate-900" x-text="item.studentFullName"></div>
                                 <div class="text-xs text-slate-500" x-text="'Matricule : ' + item.studentMatricule"></div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                      x-text="item.departureTime"></span>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <span class="status-badge-primary" x-text="item.departureTime"></span>
                             </td>
-                            <td class="px-6 py-4 text-slate-600 truncate max-w-xs" x-text="item.reason" :title="item.reason"></td>
-                            <td class="px-6 py-4 text-slate-600" x-text="item.pickedUpBy || '—'"></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="item.reason" :title="item.reason"></td>
+                            <td class="px-4 py-4 text-slate-600" x-text="item.pickedUpBy || '—'"></td>
+                            <td class="px-4 py-4 whitespace-nowrap text-right">
                                 <button @@click="printExitBillet(item.id)" :disabled="printingExitId === item.id"
                                         class="btn-secondary inline-flex items-center gap-2 disabled:opacity-60">
                                     <icon name="print" class="w-4 h-4" x-show="printingExitId !== item.id" />
@@ -226,79 +210,61 @@
         </div>
     </div>
 
-    <!-- Slide-over Création : Billet de sortie -->
-    <div x-show="isCreateExitOpen" style="display: none;" class="relative z-50" aria-labelledby="slide-over-exit-title" role="dialog" aria-modal="true">
-        <div x-show="isCreateExitOpen" x-transition.opacity class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+    <!-- Modale de création : Nouvelle sortie anticipée -->
+    <modal-shell open="isCreateExitOpen" on-close="closeCreateExit()" title="Nouvelle sortie anticipée">
+        <modal-subtitle>Enregistrer la sortie anticipée d'un élève.</modal-subtitle>
 
-        <div class="fixed inset-0 overflow-hidden">
-            <div class="absolute inset-0 overflow-hidden">
-                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10 sm:pl-16">
-                    <div x-show="isCreateExitOpen"
-                         x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
-                         x-transition:enter-start="translate-x-full"
-                         x-transition:enter-end="translate-x-0"
-                         x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
-                         x-transition:leave-start="translate-x-0"
-                         x-transition:leave-end="translate-x-full"
-                         class="pointer-events-auto w-screen max-w-md">
-                        <form x-on:submit.prevent="submitCreateExit" novalidate class="flex h-full flex-col bg-white shadow-xl">
-                            <div class="px-6 py-6 sm:px-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                <div>
-                                    <h2 class="text-lg font-semibold text-slate-900" id="slide-over-exit-title">Nouvelle sortie anticipée</h2>
-                                    <p class="text-sm text-slate-500 mt-1">Enregistrer la sortie anticipée d'un élève.</p>
-                                </div>
-                                <button type="button" @@click="isCreateExitOpen = false" class="rounded-md bg-white text-slate-400 hover:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                                    <span class="sr-only">Fermer</span>
-                                    <icon name="x" class="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div class="relative flex-1 px-6 py-6 sm:px-8 overflow-y-auto space-y-6">
+        <div x-show="createExitErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createExitErrors.global"></div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-red-500">*</span></label>
-                                    <select x-model="exitForm.studentId" class="input-field mt-1" required>
-                                        <option value="">Sélectionnez un élève...</option>
-                                        <template x-for="student in students" :key="student.id">
-                                            <option :value="student.id" x-text="student.fullName + ' (' + student.matricule + ')'"></option>
-                                        </template>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Date <span class="text-red-500">*</span></label>
-                                    <input type="date" x-model="exitForm.date" class="input-field mt-1" required />
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Heure de sortie <span class="text-red-500">*</span></label>
-                                    <input type="time" x-model="exitForm.departureTime" class="input-field mt-1" required />
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Motif <span class="text-red-500">*</span></label>
-                                    <textarea x-model="exitForm.reason" rows="3" class="input-field mt-1" placeholder="Motif de la sortie..." required></textarea>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Récupéré par</label>
-                                    <input type="text" x-model="exitForm.pickedUpBy" class="input-field mt-1" placeholder="Nom de la personne (optionnel)" />
-                                </div>
-
-                            </div>
-                            <div class="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-100 bg-slate-50">
-                                <button type="button" @@click="isCreateExitOpen = false" class="btn-secondary">Annuler</button>
-                                <button type="submit" class="btn-primary" :disabled="isCreatingExit">
-                                    <span x-show="!isCreatingExit">Enregistrer</span>
-                                    <span x-show="isCreatingExit" class="flex items-center gap-2">
-                                        <icon name="loader" class="w-4 h-4 animate-spin" />
-                                        Enregistrement...
-                                    </span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+        <form x-on:submit.prevent="submitCreateExit()" novalidate class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-danger">*</span></label>
+                <select-field model="exitForm.studentId" required="true" aria-label="Élève concerné"
+                              placeholder="Sélectionnez un élève..."
+                              options-expr="students.map(s => ({value: s.id, label: s.fullName + ' (' + s.matricule + ')'}))" />
+                <p x-show="createExitErrors.studentid" x-text="createExitErrors.studentid" class="mt-1 text-xs text-danger"></p>
             </div>
-        </div>
-    </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Date <span class="text-danger">*</span></label>
+                <date-field model="exitForm.date" required="true" aria-label="Date" />
+                <p x-show="createExitErrors.date" x-text="createExitErrors.date" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Heure de sortie <span class="text-danger">*</span></label>
+                <input type="time" x-model="exitForm.departureTime" required
+                       class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                <p x-show="createExitErrors.departuretime" x-text="createExitErrors.departuretime" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-danger">*</span></label>
+                <textarea x-model="exitForm.reason" rows="3" placeholder="Motif de la sortie..." required
+                          class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"></textarea>
+                <p x-show="createExitErrors.reason" x-text="createExitErrors.reason" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Récupéré par</label>
+                <input type="text" x-model="exitForm.pickedUpBy" placeholder="Nom de la personne (optionnel)"
+                       class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+                <button type="button" @@click="closeCreateExit()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isCreatingExit" class="btn-primary">
+                    <span x-text="isCreatingExit ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* Confirmation : sortie enregistrée *@
+    <modal-shell open="showAddedExitDialog" size="md" on-close="showAddedExitDialog = false" title="Sortie enregistrée">
+        <confirm-dialog-body close-action="showAddedExitDialog = false"
+                              new-action="showAddedExitDialog = false; openCreateExit()" new-label="Nouvelle sortie">
+            La sortie de <span class="font-medium text-slate-900" x-text="addedEarlyDepartureName"></span> a bien été enregistrée et figure désormais dans la liste. Vous pouvez imprimer le billet correspondant.
+        </confirm-dialog-body>
+    </modal-shell>
 </div>

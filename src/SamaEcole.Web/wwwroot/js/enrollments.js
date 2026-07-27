@@ -57,7 +57,6 @@ document.addEventListener('alpine:init', () => {
 
         // Reçu émis
         receipt: null,
-        pdfError: null,
 
         // Parcours après enregistrement : une fois l'inscription validée, on affiche d'abord une
         // fenêtre de confirmation (« Inscription validée »), et le reçu ne s'affiche que si
@@ -322,7 +321,6 @@ document.addEventListener('alpine:init', () => {
         closeReceipt() {
             this.showReceipt = false;
             this.receipt = null;
-            this.pdfError = null;
             const mode = this.mode;
             this.startNewEnrollment();
             this.mode = mode;
@@ -332,14 +330,7 @@ document.addEventListener('alpine:init', () => {
             this.receipt = null;
             this.showReceipt = false;
             this.showConfirmDialog = false;
-            this.showPdfModal = false;
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfPreviewTitle = '';
-            this.pdfDownloadName = '';
-            this.pdfError = null;
+            this.closePdfPreview();
             this.form = {
                 classroomId: '',
                 isRepeating: false,
@@ -362,94 +353,9 @@ document.addEventListener('alpine:init', () => {
             window.print();
         },
 
-        showPdfModal: false,
-        pdfPreviewUrl: null,
-        pdfPreviewTitle: '',
-        pdfDownloadName: '',
-        pdfLoadError: false,
-
-        async openPdfPreview(url, title, downloadName) {
-            // Nettoyer tout ancien Blob URL avant de tenter un nouveau chargement.
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfError = null;
-            this.pdfLoadError = false;
-            this.pdfPreviewTitle = title || 'Document officiel';
-            this.pdfDownloadName = downloadName || 'document.pdf';
-
-            try {
-                if (!url || url.includes('undefined') || url.includes('null')) {
-                    throw new Error(`L'identifiant ou l'URL du document est invalide (${url}).`);
-                }
-                console.log("PDF URL:", url);
-
-                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                    await window.api.refreshOrRedirect();
-                }
-
-                const response = await fetch(url, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
-                    credentials: 'same-origin'
-                });
-                if (!response.ok) {
-                    const errText = await response.text().catch(() => '');
-                    throw new Error(`Erreur ${response.status}: Téléchargement du document impossible (${errText || response.statusText}).`);
-                }
-
-                const rawBlob = await response.blob();
-                if (!rawBlob || rawBlob.size === 0) {
-                    throw new Error("Le fichier PDF reçu est vide (0 octet). Veuillez réessayer.");
-                }
-                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-                this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
-                console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
-            } catch (err) {
-                console.error("Erreur openPdfPreview (Enrollments):", err);
-                this.pdfError = err.message || 'Erreur lors du chargement du document.';
-                this.pdfLoadError = true;
-            }
-            // La modale s'ouvre TOUJOURS, même en cas d'erreur : les boutons restent fonctionnels.
-            this.showPdfModal = true;
-        },
-
-        closePdfPreview() {
-            this.showPdfModal = false;
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfLoadError = false;
-        },
-
-        printPreviewPdf() {
-            const iframe = document.getElementById('enr-pdf-preview-frame');
-            if (iframe && iframe.contentWindow) {
-                try {
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                } catch {
-                    if (this.pdfPreviewUrl) {
-                        const win = window.open(this.pdfPreviewUrl, '_blank');
-                        if (win) win.print();
-                    }
-                }
-            } else if (this.pdfPreviewUrl) {
-                const win = window.open(this.pdfPreviewUrl, '_blank');
-                if (win) win.print();
-            }
-        },
-
-        downloadPreviewPdf() {
-            if (!this.pdfPreviewUrl) return;
-            const link = document.createElement('a');
-            link.href = this.pdfPreviewUrl;
-            link.download = this.pdfDownloadName || 'document.pdf';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        },
+        // Aperçu PDF (reçu, certificat) — état + méthodes étalés depuis le moteur partagé
+        // (wwwroot/js/pdf-preview.js) ; downloadPdf/downloadCertificatePdf ci-dessous appellent openPdfPreview.
+        ...window.pdfPreview.state(),
 
         /**
          * Télécharge/Prévisualise le reçu officiel en PDF via la modale (Ticket JGK-E02 / Axe 4).

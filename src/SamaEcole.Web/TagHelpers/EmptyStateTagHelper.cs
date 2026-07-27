@@ -33,14 +33,14 @@ public class EmptyStateTagHelper : TagHelper
 
         var hint = string.IsNullOrWhiteSpace(Hint)
             ? ""
-            : $"""<p class="mt-1 text-xs text-gray-400">{WebUtility.HtmlEncode(Hint)}</p>""";
+            : $"""<p class="mt-1 text-xs text-slate-400">{WebUtility.HtmlEncode(Hint)}</p>""";
 
         output.Content.SetHtmlContent($"""
             <div class="flex flex-col items-center justify-center py-12 text-center">
-                <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-500">
                     <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#icon-{WebUtility.HtmlEncode(Icon)}"></use></svg>
                 </div>
-                <p class="font-medium text-gray-500">{WebUtility.HtmlEncode(Title)}</p>
+                <p class="font-medium text-slate-500">{WebUtility.HtmlEncode(Title)}</p>
                 {hint}
             </div>
             """);

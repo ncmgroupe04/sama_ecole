@@ -125,7 +125,7 @@ public class ClassDeliberationDocument(IReadOnlyList<ReportCardDto> reportCards,
 
             foreach (var student in reportCards)
             {
-                table.Cell().Element(BodyCell).Text(MatriculeText.NoBreak(student.Matricule)).FontSize(8.5f);
+                table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(student.Matricule)).FontSize(8.5f);
                 table.Cell().Element(BodyCell).Text(student.StudentFullName).Bold();
                 table.Cell().Element(BodyCell).AlignCenter().Text(ReportCardDocument.FormatGrade(student.GeneralAverage));
                 table.Cell().Element(BodyCell).AlignCenter().Text(student.GeneralRank.ToString());

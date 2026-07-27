@@ -77,6 +77,18 @@ public class CreateSchoolCommandHandler(
                 ?? throw new InvalidOperationException(
                     $"L'établissement {school.Id} possède déjà un utilisateur : il n'est pas à provisionner.");
 
+            // `subscriptions` aussi est sous RLS : même porte étroite que ApproveRegistrationRequestHandler.
+            // Comble un trou de ce chemin de création directe (Super Admin, module Tarification &
+            // Promotions) : sans cet appel, aucun abonnement n'existait pour une école créée ici — la
+            // seule voie qui en amorçait un jusqu'ici était l'approbation d'une demande self-service.
+            // AwaitingPayment, comme le parcours self-service : aucune date d'expiration tant que le
+            // premier paiement n'est pas confirmé (JGK-I06) — une offre gratuite se fait ensuite via
+            // « Offrir un accès » (GrantComplimentaryAccessCommand), pas ici.
+            _ = await provisioningStore.CreateInitialSubscriptionAsync(
+                school.Id, request.Plan, SubscriptionStatus.AwaitingPayment, ct)
+                ?? throw new InvalidOperationException(
+                    $"L'établissement {school.Id} possède déjà un abonnement : il n'est pas à provisionner.");
+
             return (school.Id, newDirectorId);
         }, cancellationToken);
 

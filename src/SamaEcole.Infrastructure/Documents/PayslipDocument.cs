@@ -39,7 +39,7 @@ public class PayslipDocument(PayslipDto payslip, byte[]? logo) : IDocument
                     .Text("BULLETIN DE PAIE").Bold().FontSize(15);
                 column.Item().AlignCenter().Text(PeriodLabel()).FontSize(10).FontColor(Colors.Grey.Darken2);
                 column.Item().AlignCenter()
-                    .Text($"N° {payslip.PayslipNumber}").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    .Text($"N° {NoBreakText.NoBreak(payslip.PayslipNumber)}").FontSize(8).FontColor(Colors.Grey.Darken1);
 
                 column.Item().PaddingTop(16).Element(ComposeEmployeeBlock);
                 column.Item().PaddingTop(14).Element(ComposeEarningsTable);

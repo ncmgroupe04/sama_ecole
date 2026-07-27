@@ -25,7 +25,8 @@ public class SchoolsController(ISender mediator) : ControllerBase
         string Address,
         string? Phone,
         string DirectorEmail,
-        string? DirectorFullName);
+        string? DirectorFullName,
+        SubscriptionPlan Plan);
 
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<SchoolSummary>>(StatusCodes.Status200OK)]
@@ -47,7 +48,8 @@ public class SchoolsController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(
             new CreateSchoolCommand(
-                request.Name, request.Address, request.Phone, request.DirectorEmail, request.DirectorFullName),
+                request.Name, request.Address, request.Phone, request.DirectorEmail, request.DirectorFullName,
+                request.Plan),
             cancellationToken);
 
         return CreatedAtAction(nameof(GetAll), new { id = result.SchoolId }, result);

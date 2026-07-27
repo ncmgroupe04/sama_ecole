@@ -15,9 +15,12 @@ document.addEventListener('alpine:init', () => {
         // (SuperAdmin/Directeur/Surveillant) — le Secrétariat n'a jamais pu créer de sanction côté API.
         canManageDiscipline: window.auth.role === 'Directeur' || window.auth.role === 'Surveillant',
 
-        // Modal de création
+        // Modale de création
         isCreateOpen: false,
         isCreating: false,
+        createErrors: {},
+        showAddedDialog: false,
+        addedRecordStudentName: '',
         students: [], // Liste pour le menu déroulant
         form: {
             studentId: '',
@@ -54,23 +57,32 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async submitCreate() {
-            if (!this.form.studentId || !this.form.date || !this.form.type || !this.form.reason) {
-                toast.error("Veuillez remplir tous les champs.");
-                return;
-            }
+        openCreate() {
+            this.isCreateOpen = true;
+        },
 
+        /** Sortie explicite (Annuler, ✕, fond, Échap) : le formulaire repart de zéro. */
+        closeCreate() {
+            this.isCreateOpen = false;
+            this.resetForm();
+        },
+
+        async submitCreate() {
             this.isCreating = true;
+            this.createErrors = {};
             try {
+                const student = this.students.find(s => s.id === this.form.studentId);
                 // window.api préfixe déjà /api/v1 ; il lève une erreur normalisée si la requête échoue.
                 await api.post('/discipline', this.form);
-                toast.success("Sanction ajoutée avec succès.");
+
                 this.isCreateOpen = false;
+                this.addedRecordStudentName = student ? student.fullName : '';
                 this.resetForm();
                 await this.loadRecords(); // Rafraîchit le tableau
+                this.showAddedDialog = true;
             } catch (error) {
                 console.error("Discipline create error:", error);
-                toast.error(error.message || "Erreur lors de l'enregistrement.");
+                this.createErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");
             } finally {
                 this.isCreating = false;
             }
@@ -83,6 +95,7 @@ document.addEventListener('alpine:init', () => {
                 type: 'Avertissement',
                 reason: ''
             };
+            this.createErrors = {};
         },
 
         formatDate(dateStr) {

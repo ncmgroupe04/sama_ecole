@@ -17,15 +17,15 @@ public class ClassBulletinsPdfGenerator : IClassBulletinsPdfGenerator
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo)
+    public byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null)
     {
         try
         {
-            return new ClassBulletinsDocument(reportCards, logo).GeneratePdf();
+            return new ClassBulletinsDocument(reportCards, logo, directorSignature, officialStamp).GeneratePdf();
         }
-        catch (Exception) when (logo is not null)
+        catch (Exception) when (logo is not null || directorSignature is not null || officialStamp is not null)
         {
-            return new ClassBulletinsDocument(reportCards, null).GeneratePdf();
+            return new ClassBulletinsDocument(reportCards, null, null, null).GeneratePdf();
         }
     }
 }

@@ -99,7 +99,7 @@
 
  <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
 
- <form x-on:submit.prevent="submitCreate()" class="space-y-4">
+ <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
  <div>
  <label for="user-fullname" class="block text-sm font-medium text-slate-700">Nom complet <span class="text-danger">*</span></label>
  <input id="user-fullname" type="text" x-model="newUser.fullName" required maxlength="200" placeholder="ex : Awa Ndiaye" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
@@ -155,7 +155,7 @@
 
  <div x-show="statusErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="statusErrors.global"></div>
 
- <form x-on:submit.prevent="submitStatusChange()" class="space-y-4">
+ <form x-on:submit.prevent="submitStatusChange()" novalidate class="space-y-4">
  <div>
  <label for="status-reason" class="block text-sm font-medium text-slate-700">Motif <span class="text-danger">*</span></label>
  <input id="status-reason" type="text" x-model="statusReason" required minlength="5" maxlength="500"
@@ -187,7 +187,7 @@
 
  <div x-show="passwordErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="passwordErrors.global"></div>
 
- <form x-on:submit.prevent="submitResetPassword()" class="space-y-4">
+ <form x-on:submit.prevent="submitResetPassword()" novalidate class="space-y-4">
  <div>
  <label for="reset-password" class="block text-sm font-medium text-slate-700">Nouveau mot de passe <span class="text-danger">*</span></label>
  <input id="reset-password" type="text" x-model="newPassword" required class="input-field font-mono transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">

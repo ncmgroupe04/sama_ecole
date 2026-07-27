@@ -14,7 +14,7 @@
             <p class="text-jgk-subtitle text-slate-500 mt-1">Convoquez un parent/tuteur pour un motif libre, distinct d'une sanction disciplinaire.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <button x-show="canManageParentSummons" x-cloak @@click="isCreateOpen = true" class="btn-primary">
+            <button x-show="canManageParentSummons" x-cloak @@click="openCreate()" class="btn-primary">
                 <icon name="plus" class="w-4 h-4" />
                 Nouvelle convocation
             </button>
@@ -22,41 +22,42 @@
     </div>
 
     <!-- Tableau -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left">
-                <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
-                    <tr>
-                        <th class="px-6 py-4 font-semibold">Élève</th>
-                        <th class="px-6 py-4 font-semibold">Date/heure convoquée</th>
-                        <th class="px-6 py-4 font-semibold">Motif</th>
-                        <th class="px-6 py-4 font-semibold text-right">Actions</th>
+            <table class="w-full text-sm text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date/heure convoquée</th>
+                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
+                        <th class="py-3.5 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200">
+                <tbody class="divide-y divide-slate-100">
                     <template x-if="isLoading">
                         <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-slate-500">
+                            <td colspan="4" class="px-4 py-8 text-center text-slate-500">
                                 Chargement des convocations...
                             </td>
                         </tr>
                     </template>
                     <template x-if="!isLoading && records.length === 0">
                         <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-slate-500">
-                                Aucune convocation enregistrée.
+                            <td colspan="4">
+                                <empty-state icon="envelope" title="Aucune convocation enregistrée."
+                                    hint="Les convocations de parents/tuteurs apparaîtront ici." />
                             </td>
                         </tr>
                     </template>
                     <template x-for="record in records" :key="record.id">
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-6 py-4">
-                                <div class="font-medium text-slate-900" x-text="record.studentFullName"></div>
+                        <tr class="hover:bg-slate-50/60 transition-colors">
+                            <td class="px-4 py-4">
+                                <div class="font-semibold text-slate-900" x-text="record.studentFullName"></div>
                                 <div class="text-xs text-slate-500" x-text="'Matricule : ' + record.studentMatricule"></div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-slate-600" x-text="formatDateTime(record.scheduledAt)"></td>
-                            <td class="px-6 py-4 text-slate-600 truncate max-w-xs" x-text="record.reason" :title="record.reason"></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <td class="px-4 py-4 whitespace-nowrap text-slate-600" x-text="formatDateTime(record.scheduledAt)"></td>
+                            <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="record.reason" :title="record.reason"></td>
+                            <td class="px-4 py-4 whitespace-nowrap text-right">
                                 <button type="button" @@click="printNotice(record.id)" :disabled="printingId === record.id"
                                         class="btn-secondary inline-flex items-center gap-2 disabled:opacity-60">
                                     <icon name="print" class="w-4 h-4" x-show="printingId !== record.id" />
@@ -71,74 +72,55 @@
         </div>
     </div>
 
-    <!-- Slide-over Création -->
-    <div x-show="isCreateOpen" style="display: none;" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-        <div x-show="isCreateOpen" x-transition.opacity class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"></div>
+    <!-- Modale de création -->
+    <modal-shell open="isCreateOpen" on-close="closeCreate()" title="Nouvelle convocation">
+        <modal-subtitle>Convoquer le parent/tuteur d'un élève.</modal-subtitle>
 
-        <div class="fixed inset-0 overflow-hidden">
-            <div class="absolute inset-0 overflow-hidden">
-                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10 sm:pl-16">
-                    <div x-show="isCreateOpen"
-                         x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
-                         x-transition:enter-start="translate-x-full"
-                         x-transition:enter-end="translate-x-0"
-                         x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
-                         x-transition:leave-start="translate-x-0"
-                         x-transition:leave-end="translate-x-full"
-                         class="pointer-events-auto w-screen max-w-md">
-                        <form x-on:submit.prevent="submitCreate" novalidate class="flex h-full flex-col bg-white shadow-xl">
-                            <div class="px-6 py-6 sm:px-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                <div>
-                                    <h2 class="text-lg font-semibold text-slate-900" id="slide-over-title">Nouvelle convocation</h2>
-                                    <p class="text-sm text-slate-500 mt-1">Convoquer le parent/tuteur d'un élève.</p>
-                                </div>
-                                <button type="button" @@click="isCreateOpen = false" class="rounded-md bg-white text-slate-400 hover:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-                                    <span class="sr-only">Fermer</span>
-                                    <icon name="x" class="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div class="relative flex-1 px-6 py-6 sm:px-8 overflow-y-auto space-y-6">
+        <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-red-500">*</span></label>
-                                    <select x-model="form.studentId" class="input-field mt-1" required>
-                                        <option value="">Sélectionnez un élève...</option>
-                                        <template x-for="student in students" :key="student.id">
-                                            <option :value="student.id" x-text="student.fullName + ' (' + student.matricule + ')'"></option>
-                                        </template>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Date de convocation <span class="text-red-500">*</span></label>
-                                    <input type="date" x-model="form.scheduledDate" class="input-field mt-1" required />
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Heure de convocation <span class="text-red-500">*</span></label>
-                                    <input type="time" x-model="form.scheduledTime" class="input-field mt-1" required />
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700">Motif <span class="text-red-500">*</span></label>
-                                    <textarea x-model="form.reason" rows="4" class="input-field mt-1" placeholder="Motif de la convocation..." required></textarea>
-                                </div>
-
-                            </div>
-                            <div class="flex items-center justify-end gap-3 px-6 py-5 border-t border-slate-100 bg-slate-50">
-                                <button type="button" @@click="isCreateOpen = false" class="btn-secondary">Annuler</button>
-                                <button type="submit" class="btn-primary" :disabled="isCreating">
-                                    <span x-show="!isCreating">Enregistrer</span>
-                                    <span x-show="isCreating" class="flex items-center gap-2">
-                                        <icon name="loader" class="w-4 h-4 animate-spin" />
-                                        Enregistrement...
-                                    </span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+        <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-danger">*</span></label>
+                <select-field model="form.studentId" required="true" aria-label="Élève concerné"
+                              placeholder="Sélectionnez un élève..."
+                              options-expr="students.map(s => ({value: s.id, label: s.fullName + ' (' + s.matricule + ')'}))" />
+                <p x-show="createErrors.studentid" x-text="createErrors.studentid" class="mt-1 text-xs text-danger"></p>
             </div>
-        </div>
-    </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Date de convocation <span class="text-danger">*</span></label>
+                <date-field model="form.scheduledDate" required="true" aria-label="Date de convocation" />
+                <p x-show="createErrors.scheduleddate" x-text="createErrors.scheduleddate" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Heure de convocation <span class="text-danger">*</span></label>
+                <input type="time" x-model="form.scheduledTime" required
+                       class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                <p x-show="createErrors.scheduledtime" x-text="createErrors.scheduledtime" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-danger">*</span></label>
+                <textarea x-model="form.reason" rows="4" placeholder="Motif de la convocation..." required
+                          class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"></textarea>
+                <p x-show="createErrors.reason" x-text="createErrors.reason" class="mt-1 text-xs text-danger"></p>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+                <button type="button" @@click="closeCreate()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isCreating" class="btn-primary">
+                    <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* Confirmation : convocation enregistrée *@
+    <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Convocation enregistrée">
+        <confirm-dialog-body close-action="showAddedDialog = false"
+                              new-action="showAddedDialog = false; openCreate()" new-label="Nouvelle convocation">
+            La convocation de <span class="font-medium text-slate-900" x-text="addedRecordStudentName"></span> a bien été enregistrée et figure désormais dans la liste.
+        </confirm-dialog-body>
+    </modal-shell>
 </div>

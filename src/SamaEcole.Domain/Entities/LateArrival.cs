@@ -11,4 +11,5 @@ public class LateArrival : AuditableEntity, ITenantEntity
     public DateTime Date { get; set; }
     public int Minutes { get; set; }
     public string Reason { get; set; } = null!;
+    public string? Observations { get; set; }
 }

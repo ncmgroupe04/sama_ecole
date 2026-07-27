@@ -158,7 +158,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
     /// l'agrégation en ZIP sans dépendre de la mise en page du bulletin.</summary>
     private sealed class StubPdfGenerator : IReportCardPdfGenerator
     {
-        public byte[] Generate(ReportCardDto reportCard, byte[]? logo) => [1, 2, 3];
+        public byte[] Generate(ReportCardDto reportCard, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null) => [1, 2, 3];
     }
 
     /// <summary>Capture la liste de ReportCardDto reçue, sans jamais générer de vrai PDF fusionné.</summary>
@@ -166,7 +166,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
     {
         public IReadOnlyList<ReportCardDto>? LastReportCards { get; private set; }
 
-        public byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo)
+        public byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo, byte[]? directorSignature = null, byte[]? officialStamp = null)
         {
             LastReportCards = reportCards;
             return [1, 2, 3];

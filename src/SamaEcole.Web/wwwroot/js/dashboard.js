@@ -30,12 +30,8 @@ document.addEventListener('alpine:init', () => {
         search: '',
         activeTab: 'synth', // 'synth', 'expenses'
 
-        // Modale PDF
-        showPdfModal: false,
-        pdfPreviewUrl: null,
-        pdfPreviewTitle: '',
-        pdfDownloadName: '',
-        pdfLoadError: false,
+        // Aperçu PDF (reçu) — état + méthodes étalés depuis le moteur partagé (wwwroot/js/pdf-preview.js).
+        ...window.pdfPreview.state(),
 
         async init() {
             if (this.analyticsRole) this.loadAnalytics();
@@ -208,86 +204,13 @@ document.addEventListener('alpine:init', () => {
             return `${day}/${month}/${d.getFullYear()}`;
         },
 
+        /** Ouvre la modale de prévisualisation PDF pour un reçu de paiement (tableau des derniers versements). */
         async previewReceipt(paymentId, receiptNumber) {
-            if (window.closeAllModals) {
-                window.closeAllModals();
-                await new Promise(resolve => setTimeout(resolve, 150));
-            }
-
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfLoadError = false;
-            this.pdfPreviewTitle = `Reçu officiel n° ${receiptNumber}`;
-            this.pdfDownloadName = `Recu-${receiptNumber}.pdf`;
-
-            try {
-                if (!paymentId || paymentId === 'undefined' || paymentId === 'null') {
-                    throw new Error("L'identifiant de paiement est invalide (" + paymentId + ").");
-                }
-                const url = `/api/v1/finance/payments/${paymentId}/receipt/pdf`;
-                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                    await window.api.refreshOrRedirect();
-                }
-
-                const response = await fetch(url, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
-                    credentials: 'same-origin'
-                });
-                if (!response.ok) {
-                    const errText = await response.text().catch(() => '');
-                    throw new Error(`Erreur ${response.status}: Téléchargement du document impossible (${errText || response.statusText}).`);
-                }
-
-                const rawBlob = await response.blob();
-                if (!rawBlob || rawBlob.size === 0) {
-                    throw new Error("Le document PDF reçu est vide (0 octet). Veuillez réessayer.");
-                }
-                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-                this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
-            } catch (err) {
-                console.error("Erreur previewReceipt (Dashboard):", err);
-                this.pdfLoadError = true;
-            }
-            this.showPdfModal = true;
-        },
-
-        closePdfPreview() {
-            this.showPdfModal = false;
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfLoadError = false;
-        },
-
-        printPreviewPdf() {
-            const iframe = document.getElementById('dash-pdf-preview-frame');
-            if (iframe && iframe.contentWindow) {
-                try {
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                } catch {
-                    if (this.pdfPreviewUrl) {
-                        const win = window.open(this.pdfPreviewUrl, '_blank');
-                        if (win) win.print();
-                    }
-                }
-            } else if (this.pdfPreviewUrl) {
-                const win = window.open(this.pdfPreviewUrl, '_blank');
-                if (win) win.print();
-            }
-        },
-
-        downloadPreviewPdf() {
-            if (!this.pdfPreviewUrl) return;
-            const link = document.createElement('a');
-            link.href = this.pdfPreviewUrl;
-            link.download = this.pdfDownloadName || 'document.pdf';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+            await this.openPdfPreview(
+                `/api/v1/finance/payments/${paymentId}/receipt/pdf`,
+                `Reçu officiel n° ${receiptNumber}`,
+                `Recu-${receiptNumber}.pdf`
+            );
         },
 
         async downloadDailyCashRegisterPdf(dateStr) {

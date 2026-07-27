@@ -70,6 +70,25 @@ public static class DependencyInjection
             services.AddSingleton<IWhatsAppSender, LoggingWhatsAppSender>();
         }
 
+        // Notifications SMS (offre Premium). Contrairement au SMTP, une configuration absente ne fait
+        // PAS échouer le démarrage : les SMS sont optionnels et rien n'est exposé sans eux — mais
+        // retomber silencieusement sur l'adaptateur qui journalise ferait croire à une école Premium
+        // que ses parents sont alertés. D'où l'avertissement explicite de SmsServiceGuard.
+        var smsOptions = configuration.GetSection(SmsOptions.SectionName).Get<SmsOptions>() ?? new SmsOptions();
+        services.Configure<SmsOptions>(configuration.GetSection(SmsOptions.SectionName));
+
+        if (!isDevelopment && smsOptions.IsConfigured)
+        {
+            // AddHttpClient plutôt qu'un HttpClient construit à la main : gestion du pool de
+            // connexions et du recyclage DNS, comme pour tout appel sortant durable.
+            services.AddHttpClient<ISmsService, HttpSmsService>(client =>
+                client.Timeout = TimeSpan.FromSeconds(15));
+        }
+        else
+        {
+            services.AddSingleton<ISmsService, LoggingSmsService>();
+        }
+
         // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02) et certificat d'inscription (Axe 2). Sans état : des singletons suffisent.
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
         services.AddSingleton<IPaymentReceiptPdfGenerator, PaymentReceiptPdfGenerator>();
@@ -95,6 +114,9 @@ public static class DependencyInjection
         // Bulletin de paie A4 (module Comptabilité & Fiscalité) — même moteur QuestPDF, sans état.
         services.AddSingleton<IPayslipPdfGenerator, PayslipPdfGenerator>();
 
+        // Déclaration fiscale mensuelle A4 (module Comptabilité & Fiscalité) — même moteur QuestPDF, sans état.
+        services.AddSingleton<ITaxDeclarationPdfGenerator, TaxDeclarationPdfGenerator>();
+
         // Bulletin de notes PDF (ticket JGK-G03) — même moteur QuestPDF, même convention.
         services.AddSingleton<IReportCardPdfGenerator, ReportCardPdfGenerator>();
 
@@ -109,6 +131,10 @@ public static class DependencyInjection
         // « bibliothèques »). Sans état : un singleton suffit, comme les générateurs de documents ci-dessus.
         services.AddSingleton<IGradeSheetImportParser, GradeSheetImportParser>();
         services.AddSingleton<IGradeSheetExcelGenerator, GradeSheetExcelGenerator>();
+
+        // Export comptable de la consolidation des revenus (rapports financiers avancés) — même
+        // bibliothèque, aucune nouvelle dépendance.
+        services.AddSingleton<IRevenueReportExcelGenerator, RevenueReportExcelGenerator>();
 
         // Import d'élèves par fichier CSV/Excel (même bibliothèque ClosedXML, aucune nouvelle dépendance).
         services.AddSingleton<IStudentImportFileParser, StudentImportFileParser>();
