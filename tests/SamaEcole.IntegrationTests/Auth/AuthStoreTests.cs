@@ -171,6 +171,28 @@ public class AuthStoreTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Revoking_Refresh_Tokens_By_School_Should_Only_Affect_That_Schools_Users()
+    {
+        // Ticket JGK-B01 — suspension d'établissement. `refresh_tokens` n'a pas de SchoolId : la
+        // fonction SECURITY DEFINER doit le retrouver via `users`, qui EST sous RLS. Sans elle, un
+        // Super Admin sans tenant ne verrait aucune ligne d'aucune école.
+        await using var db = _db.NewAppContext(schoolId: null);
+        var store = _db.NewAuthStore(db);
+
+        await store.StoreRefreshTokenAsync(DirecteurA, "hash-a", DateTimeOffset.UtcNow.AddDays(14), CancellationToken.None);
+        await store.StoreRefreshTokenAsync(DirecteurB, "hash-b", DateTimeOffset.UtcNow.AddDays(14), CancellationToken.None);
+
+        var revoked = await store.RevokeAllRefreshTokensForSchoolAsync(EcoleA, CancellationToken.None);
+        revoked.Should().Be(1);
+
+        var tokenA = await store.FindRefreshTokenAsync("hash-a", CancellationToken.None);
+        var tokenB = await store.FindRefreshTokenAsync("hash-b", CancellationToken.None);
+
+        tokenA!.RevokedAt.Should().NotBeNull("suspendre l'école A doit couper les sessions de ses utilisateurs");
+        tokenB!.RevokedAt.Should().BeNull("l'école B n'est pas concernée par la suspension de l'école A");
+    }
+
+    [Fact]
     public async Task Application_Role_Must_Not_Read_Users_Through_Its_Own_Sql()
     {
         // Le rôle applicatif ne doit disposer QUE des trois fonctions d'authentification pour voir

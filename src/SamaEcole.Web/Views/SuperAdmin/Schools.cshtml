@@ -132,6 +132,24 @@
  <icon name="eye" class="w-3.5 h-3.5" />
  Infiltrer
  </button>
+ <button type="button" x-show="school.status === 'Active'" x-on:click="openStatusConfirm(school, 'Suspended')"
+ title="Suspendre cet établissement"
+ class="inline-flex items-center gap-1.5 rounded-xl px-2 py-1 text-xs font-medium text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition-colors">
+ <icon name="alert-circle" class="w-3.5 h-3.5" />
+ Suspendre
+ </button>
+ <button type="button" x-show="school.status !== 'Active'" x-on:click="openStatusConfirm(school, 'Active')"
+ title="Réactiver cet établissement"
+ class="inline-flex items-center gap-1.5 rounded-xl px-2 py-1 text-xs font-medium text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors">
+ <icon name="checkmark-circle" class="w-3.5 h-3.5" />
+ Réactiver
+ </button>
+ <button type="button" x-show="school.status !== 'Blocked'" x-on:click="openStatusConfirm(school, 'Blocked')"
+ title="Bloquer cet établissement"
+ class="inline-flex items-center gap-1.5 rounded-xl px-2 py-1 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors">
+ <icon name="block" class="w-3.5 h-3.5" />
+ Bloquer
+ </button>
  </td>
  </tr>
  </template>
@@ -193,6 +211,40 @@
  <button type="button" x-on:click="confirmImpersonate()" :disabled="isImpersonating"
  class="rounded-2xl bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 transition-colors disabled:opacity-50">
  <span x-text="isImpersonating ? 'Ouverture…' : 'Confirmer'"></span>
+ </button>
+ </div>
+ </div>
+ </div>
+
+ @* Confirmation changement de statut — motif obligatoire (même exigence que la suspension d'un
+ compte utilisateur, ChangeUserStatusCommandValidator) : l'historique doit rester exploitable des
+ mois plus tard. *@
+ <div x-show="statusTarget" x-cloak
+ class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+ x-on:keydown.escape.window="closeStatusConfirm()">
+ <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
+ <h2 class="text-base font-semibold text-white" x-text="statusModalTitle()"></h2>
+ <p class="mt-2 text-sm text-zinc-400">
+ <span x-text="statusTarget ? statusTarget.name : ''" class="font-medium text-zinc-100"></span>
+ <template x-if="statusTarget && statusTarget.newStatus !== 'Active'">
+ <span> — toutes les sessions ouvertes de cet établissement seront immédiatement révoquées.</span>
+ </template>
+ </p>
+
+ <label class="mt-4 block text-xs font-medium uppercase tracking-wider text-zinc-500">Motif (obligatoire)</label>
+ <textarea x-model="statusReason" rows="3" placeholder="Ex. Impayé constaté, fermeture administrative…"
+ class="mt-1.5 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"></textarea>
+
+ <div x-show="statusError" x-cloak class="mt-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300" x-text="statusError"></div>
+
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeStatusConfirm()" :disabled="isChangingStatus"
+ class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50">
+ Annuler
+ </button>
+ <button type="button" x-on:click="confirmStatusChange()" :disabled="isChangingStatus"
+ class="rounded-2xl bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 transition-colors disabled:opacity-50">
+ <span x-text="isChangingStatus ? 'Application…' : 'Confirmer'"></span>
  </button>
  </div>
  </div>

@@ -3,6 +3,7 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace SamaEcole.Application.Auth.Commands.Refresh;
@@ -18,6 +19,7 @@ namespace SamaEcole.Application.Auth.Commands.Refresh;
 /// prolonger sa session en silence.
 /// </summary>
 public class RefreshTokenCommandHandler(
+    IApplicationDbContext dbContext,
     IAuthStore authStore,
     IJwtTokenGenerator tokenGenerator,
     AuthSettings settings,
@@ -63,6 +65,24 @@ public class RefreshTokenCommandHandler(
             logger.LogWarning("Refresh refusé : compte {UserId} absent ou inactif.", stored.UserId);
             await authStore.RevokeAllRefreshTokensAsync(stored.UserId, cancellationToken);
             throw new InvalidCredentialsException();
+        }
+
+        if (user.SchoolId is { } schoolId)
+        {
+            // Même relecture "à chaud" que le statut du compte ci-dessus : l'établissement a pu être
+            // suspendu/bloqué par le Super Admin depuis l'émission du refresh token (ticket JGK-B01).
+            // `schools` n'est pas sous RLS, un EF classique suffit.
+            var school = await dbContext.Schools
+                .AsNoTracking()
+                .SingleOrDefaultAsync(s => s.Id == schoolId, cancellationToken);
+
+            if (school is null || school.Status is not EntityStatus.Active)
+            {
+                logger.LogWarning(
+                    "Refresh refusé : établissement {SchoolId} au statut {Status}.", schoolId, school?.Status);
+                await authStore.RevokeAllRefreshTokensAsync(stored.UserId, cancellationToken);
+                throw new InvalidCredentialsException();
+            }
         }
 
         await authStore.RevokeRefreshTokenAsync(stored.Id, cancellationToken);

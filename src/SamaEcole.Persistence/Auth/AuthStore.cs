@@ -108,6 +108,16 @@ public class AuthStore(ApplicationDbContext dbContext, TimeProvider timeProvider
                 cancellationToken);
     }
 
+    public async Task<int> RevokeAllRefreshTokensForSchoolAsync(Guid schoolId, CancellationToken cancellationToken)
+    {
+        await using var command = await CreateCommandAsync(
+            "SELECT revoke_refresh_tokens_by_school(@schoolId)", cancellationToken);
+        command.Parameters.AddWithValue("schoolId", schoolId);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is int count ? count : 0;
+    }
+
     public async Task StorePasswordResetTokenAsync(
         Guid userId,
         string tokenHash,

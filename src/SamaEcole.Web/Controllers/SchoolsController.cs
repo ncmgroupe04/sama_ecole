@@ -1,3 +1,4 @@
+using SamaEcole.Application.Schools.Commands.ChangeSchoolStatus;
 using SamaEcole.Application.Schools.Commands.CreateSchool;
 using SamaEcole.Application.Schools.Queries.GetSchools;
 using SamaEcole.Domain.Enums;
@@ -53,5 +54,28 @@ public class SchoolsController(ISender mediator) : ControllerBase
             cancellationToken);
 
         return CreatedAtAction(nameof(GetAll), new { id = result.SchoolId }, result);
+    }
+
+    public record ChangeStatusRequest(EntityStatus Status, string Reason);
+
+    /// <summary>
+    /// Active/suspend/bloque un établissement (module Établissements &amp; Abonnements). Coupe
+    /// immédiatement les sessions de tous les utilisateurs de l'école visée dès que le nouveau statut
+    /// n'est pas Active (voir ChangeSchoolStatusCommandHandler) — sans quoi une suspension ne suspend
+    /// rien tant que les refresh tokens déjà émis restent valables (jusqu'à 14 jours).
+    /// </summary>
+    [HttpPatch("{schoolId:guid}/status")]
+    [ProducesResponseType<ChangeSchoolStatusResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ChangeStatus(
+        Guid schoolId, [FromBody] ChangeStatusRequest request, CancellationToken cancellationToken)
+    {
+        // L'id vient de la route, jamais du corps : il ne doit pas pouvoir diverger.
+        var result = await mediator.Send(
+            new ChangeSchoolStatusCommand(schoolId, request.Status, request.Reason), cancellationToken);
+
+        return Ok(result);
     }
 }

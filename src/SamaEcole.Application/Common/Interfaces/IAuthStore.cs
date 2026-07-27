@@ -46,6 +46,15 @@ public interface IAuthStore
     Task<int> RevokeAllRefreshTokensAsync(Guid userId, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Révoque tous les refresh tokens actifs de TOUS les utilisateurs d'une école (suspension/blocage
+    /// d'établissement par le Super Admin — ticket JGK-B01). `users` est sous RLS et l'appelant n'a
+    /// aucun SchoolId de session : passe par la fonction SECURITY DEFINER
+    /// revoke_refresh_tokens_by_school (migration AddSchoolStatusManagement). Renvoie le nombre de
+    /// sessions effectivement coupées.
+    /// </summary>
+    Task<int> RevokeAllRefreshTokensForSchoolAsync(Guid schoolId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Enregistre une demande de réinitialisation et PÉRIME toutes les demandes en cours du même
     /// compte : sans cela, chaque clic sur « mot de passe oublié » laisserait un lien valide de plus en
     /// circulation, et le compte resterait ouvert par le plus ancien e-mail encore accessible.

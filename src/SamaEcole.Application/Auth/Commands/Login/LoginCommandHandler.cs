@@ -2,6 +2,7 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace SamaEcole.Application.Auth.Commands.Login;
@@ -22,6 +23,7 @@ namespace SamaEcole.Application.Auth.Commands.Login;
 /// de PlatformAuditLogs, hors périmètre MVP — docs/Volume_3_DDS.md §2.3).
 /// </summary>
 public class LoginCommandHandler(
+    IApplicationDbContext dbContext,
     IAuthStore authStore,
     IAuditLogStore auditLogStore,
     ICurrentUserService currentUser,
@@ -60,6 +62,24 @@ public class LoginCommandHandler(
             logger.LogWarning("Échec de connexion : compte {UserId} au statut {Status}.", user.Id, user.Status);
             await TryAuditAsync(user, success: false, $"Compte au statut {user.Status}.", now, cancellationToken);
             throw new InvalidCredentialsException();
+        }
+
+        if (user.SchoolId is { } schoolId)
+        {
+            // `schools` n'est pas sous RLS (elle définit le tenant) : lisible normalement même avant
+            // qu'un tenant existe. Un établissement Suspendu/Bloqué (Super Admin, ticket JGK-B01) ne
+            // doit plus délivrer de token — même raisonnement que le statut du COMPTE ci-dessus.
+            var school = await dbContext.Schools
+                .AsNoTracking()
+                .SingleOrDefaultAsync(s => s.Id == schoolId, cancellationToken);
+
+            if (school is null || school.Status is not EntityStatus.Active)
+            {
+                logger.LogWarning(
+                    "Échec de connexion : établissement {SchoolId} au statut {Status}.", schoolId, school?.Status);
+                await TryAuditAsync(user, success: false, $"Établissement au statut {school?.Status}.", now, cancellationToken);
+                throw new InvalidCredentialsException();
+            }
         }
 
         if (!passwordHasher.Verify(user.PasswordHash, request.Password))

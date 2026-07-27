@@ -22,6 +22,11 @@ document.addEventListener('alpine:init', () => {
         isImpersonating: false,
         impersonateError: null,
 
+        statusTarget: null, // { id, name, currentStatus, newStatus }
+        statusReason: '',
+        isChangingStatus: false,
+        statusError: null,
+
         async load() {
             this.isLoading = true;
             this.error = null;
@@ -91,6 +96,47 @@ document.addEventListener('alpine:init', () => {
             } catch (err) {
                 this.impersonateError = err.message || "Erreur lors de l'infiltration.";
                 this.isImpersonating = false;
+            }
+        },
+
+        // ------------------------------------------------------------ Changement de statut
+
+        openStatusConfirm(school, newStatus) {
+            this.statusTarget = { id: school.id, name: school.name, newStatus };
+            this.statusReason = '';
+            this.statusError = null;
+        },
+
+        closeStatusConfirm() {
+            this.statusTarget = null;
+        },
+
+        statusModalTitle() {
+            const labels = { Active: 'Réactiver l\'établissement', Suspended: 'Suspendre l\'établissement', Blocked: 'Bloquer l\'établissement' };
+            return this.statusTarget ? (labels[this.statusTarget.newStatus] || 'Changer le statut') : '';
+        },
+
+        async confirmStatusChange() {
+            if (!this.statusTarget) return;
+
+            if (!this.statusReason.trim()) {
+                this.statusError = 'Le motif est obligatoire.';
+                return;
+            }
+
+            this.isChangingStatus = true;
+            this.statusError = null;
+            try {
+                await window.api.patch(`/schools/${this.statusTarget.id}/status`, {
+                    status: this.statusTarget.newStatus,
+                    reason: this.statusReason.trim()
+                });
+                this.closeStatusConfirm();
+                await this.load();
+            } catch (err) {
+                this.statusError = err.message || 'Erreur lors du changement de statut.';
+            } finally {
+                this.isChangingStatus = false;
             }
         }
     }));

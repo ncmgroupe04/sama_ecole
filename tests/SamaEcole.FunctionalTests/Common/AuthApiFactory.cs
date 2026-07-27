@@ -258,6 +258,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // (DebtorAgingHostedService, Étape 5). Le worker est testé pour lui-même en invoquant
         // GenerateDebtorReminderBatchesCommand explicitement.
         Environment.SetEnvironmentVariable("Finance__DebtorAging__Enabled", "false");
+
+        // Même raison encore : COUPE les alertes d'expiration et le passage automatique en lecture
+        // seule (SubscriptionLifecycleHostedService, ticket JGK-B03). Le worker est testé pour
+        // lui-même via ISubscriptionAdminStore.ExpireOverdueSubscriptionsAsync.
+        Environment.SetEnvironmentVariable("Subscriptions__Lifecycle__Enabled", "false");
     }
 
     private static void ClearEnvironment()
@@ -271,7 +276,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "RateLimiting__Registration__WindowMinutes", "RateLimiting__Login__PermitLimit",
                      "RateLimiting__Login__WindowMinutes", "RateLimiting__PasswordReset__PermitLimit",
                      "RateLimiting__PasswordReset__WindowMinutes", "Sms__Queue__Enabled",
-                     "Finance__DebtorAging__Enabled"
+                     "Finance__DebtorAging__Enabled", "Subscriptions__Lifecycle__Enabled"
                  })
         {
             Environment.SetEnvironmentVariable(key, null);

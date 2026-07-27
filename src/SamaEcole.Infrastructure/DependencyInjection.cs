@@ -3,6 +3,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Finance.Common;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Notifications;
+using SamaEcole.Application.Subscriptions;
 using SamaEcole.Infrastructure.Documents;
 using SamaEcole.Infrastructure.Files;
 using SamaEcole.Infrastructure.Finance;
@@ -11,6 +12,7 @@ using SamaEcole.Infrastructure.Multitenancy;
 using SamaEcole.Infrastructure.Notifications;
 using SamaEcole.Infrastructure.Payments;
 using SamaEcole.Infrastructure.Security;
+using SamaEcole.Infrastructure.Subscriptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -24,6 +26,9 @@ public static class DependencyInjection
 
     /// <summary>Sous-section « Finance:DebtorAging » (voir DebtorAgingSettings et .env.example).</summary>
     private const string DebtorAgingSettingsSection = "Finance:DebtorAging";
+
+    /// <summary>Sous-section « Subscriptions:Lifecycle » (voir SubscriptionLifecycleSettings et .env.example).</summary>
+    private const string SubscriptionLifecycleSettingsSection = "Subscriptions:Lifecycle";
 
     /// <param name="isDevelopment">
     /// Vient de <c>IHostEnvironment.IsDevelopment()</c> (résolu dans Program.cs, seul endroit qui
@@ -145,6 +150,19 @@ public static class DependencyInjection
         if (debtorAgingSettings.Enabled)
         {
             services.AddHostedService<DebtorAgingHostedService>();
+        }
+
+        // Alertes d'expiration 30/15/7 jours et passage automatique en lecture seule (ticket JGK-B03).
+        // Même garde que les deux workers ci-dessus : les tests fonctionnels le coupent
+        // (Subscriptions__Lifecycle__Enabled=false) pour qu'un abonnement basculé en ReadOnly pendant
+        // l'exécution d'un test ne rende pas son résultat non déterministe.
+        var subscriptionLifecycleSettings = configuration.GetSection(SubscriptionLifecycleSettingsSection)
+            .Get<SubscriptionLifecycleSettings>() ?? new SubscriptionLifecycleSettings();
+        services.AddSingleton(subscriptionLifecycleSettings);
+
+        if (subscriptionLifecycleSettings.Enabled)
+        {
+            services.AddHostedService<SubscriptionLifecycleHostedService>();
         }
 
         // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02) et certificat d'inscription (Axe 2). Sans état : des singletons suffisent.

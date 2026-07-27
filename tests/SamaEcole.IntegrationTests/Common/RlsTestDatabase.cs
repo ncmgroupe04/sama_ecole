@@ -3,6 +3,7 @@ using SamaEcole.Persistence;
 using SamaEcole.Persistence.Auth;
 using SamaEcole.Persistence.Interceptors;
 using SamaEcole.Persistence.Schools;
+using SamaEcole.Persistence.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
@@ -93,6 +94,9 @@ public sealed class RlsTestDatabase : IAsyncDisposable
 
     /// <summary>Provisionnement d'école (ticket JGK-B01), branché sur le rôle applicatif.</summary>
     public SchoolProvisioningStore NewProvisioningStore(ApplicationDbContext dbContext) => new(dbContext);
+
+    /// <summary>Attribution d'accès offert et expiration d'abonnement (JGK-B03), rôle applicatif.</summary>
+    public SubscriptionAdminStore NewSubscriptionAdminStore(ApplicationDbContext dbContext) => new(dbContext);
 
     private async Task ExecuteAsOwnerAsync(string sql)
     {

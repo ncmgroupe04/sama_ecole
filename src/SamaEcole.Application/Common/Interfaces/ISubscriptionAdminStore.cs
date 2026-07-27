@@ -22,4 +22,12 @@ public interface ISubscriptionAdminStore
         DateOnly expiresAt,
         Guid? promoCodeId,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Ticket JGK-B03 — passage automatique en lecture seule à expiration. Bascule TOUS les abonnements
+    /// Actifs dont l'échéance est dépassée sur <see cref="SubscriptionStatus.ReadOnly"/>, toutes écoles
+    /// confondues (SubscriptionLifecycleHostedService, hors requête HTTP, ne porte aucun tenant).
+    /// Renvoie les <c>SchoolId</c> effectivement basculés, pour notification du Directeur.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> ExpireOverdueSubscriptionsAsync(DateOnly asOf, CancellationToken cancellationToken);
 }
