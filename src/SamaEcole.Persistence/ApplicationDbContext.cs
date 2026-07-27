@@ -61,6 +61,7 @@ public class ApplicationDbContext(
     public DbSet<LateArrival> LateArrivals => Set<LateArrival>();
     public DbSet<TeacherAttendance> TeacherAttendances => Set<TeacherAttendance>();
     public DbSet<EmployeeContract> EmployeeContracts => Set<EmployeeContract>();
+    public DbSet<EmployeeContractHistory> EmployeeContractHistories => Set<EmployeeContractHistory>();
     public DbSet<FichePaie> FichePaies => Set<FichePaie>();
     public DbSet<TaxeDeclaration> TaxeDeclarations => Set<TaxeDeclaration>();
     public DbSet<EarlyDeparture> EarlyDepartures => Set<EarlyDeparture>();

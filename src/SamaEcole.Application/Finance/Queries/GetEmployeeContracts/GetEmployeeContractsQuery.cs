@@ -15,7 +15,9 @@ public record EmployeeContractDto(
     string Type,
     decimal BaseSalary,
     decimal HourlyRate,
-    decimal TransportAllowance);
+    decimal TransportAllowance,
+    DateOnly? EndDate,
+    uint RowVersion);
 
 public class GetEmployeeContractsQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetEmployeeContractsQuery, List<EmployeeContractDto>>
@@ -35,7 +37,9 @@ public class GetEmployeeContractsQueryHandler(IApplicationDbContext dbContext)
                 c.Type.ToString(),
                 c.BaseSalary,
                 c.HourlyRate,
-                c.TransportAllowance))
+                c.TransportAllowance,
+                c.EndDate,
+                EF.Property<uint>(c, "xmin")))
             .ToListAsync(cancellationToken);
     }
 }

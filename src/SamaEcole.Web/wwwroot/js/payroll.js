@@ -28,6 +28,16 @@ document.addEventListener('alpine:init', () => {
             transportAllowance: ''
         },
 
+        // Modification (Volume 1 §14.1) : augmentation de salaire ou révision du taux horaire sur un contrat ACTIF.
+        isEditContractModalOpen: false,
+        isSavingEditContract: false,
+        editContractForm: { id: '', type: '', baseSalary: '', hourlyRate: '', transportAllowance: '', reason: '', rowVersion: 0 },
+
+        // Clôture (Volume 1 §14.1) : jamais une suppression — le contrat reste consultable, mais ne génère plus de fiche de paie.
+        isCloseContractModalOpen: false,
+        isClosingContract: false,
+        closeContractForm: { id: '', employeeFullName: '', endDate: new Date().toISOString().split('T')[0], reason: '', rowVersion: 0 },
+
         // ---------------------------------------------------------------- Fiches de paie
         payslips: [],
         filterMonth: '',
@@ -138,6 +148,80 @@ document.addEventListener('alpine:init', () => {
                 toast.error(err.message || "Erreur lors de l'enregistrement du contrat.");
             } finally {
                 this.isSavingContract = false;
+            }
+        },
+
+        // Modification d'un contrat actif (Volume 1 §14.1).
+        openEditContractModal(contract) {
+            this.editContractForm = {
+                id: contract.id,
+                type: contract.type,
+                baseSalary: contract.baseSalary,
+                hourlyRate: contract.hourlyRate,
+                transportAllowance: contract.transportAllowance,
+                reason: '',
+                rowVersion: contract.rowVersion
+            };
+            this.isEditContractModalOpen = true;
+        },
+
+        async submitEditContract() {
+            if (!this.editContractForm.reason || this.editContractForm.reason.trim().length < 5) {
+                toast.error('Le motif est obligatoire (5 caractères minimum).');
+                return;
+            }
+
+            this.isSavingEditContract = true;
+            try {
+                await api.patch(`/finance/employee-contracts/${this.editContractForm.id}`, {
+                    baseSalary: Number(this.editContractForm.baseSalary) || 0,
+                    hourlyRate: Number(this.editContractForm.hourlyRate) || 0,
+                    transportAllowance: Number(this.editContractForm.transportAllowance) || 0,
+                    reason: this.editContractForm.reason.trim(),
+                    rowVersion: this.editContractForm.rowVersion
+                });
+                toast.success('Contrat modifié.');
+                this.isEditContractModalOpen = false;
+                await this.loadContracts();
+            } catch (err) {
+                toast.error(err.message || 'Erreur lors de la modification du contrat.');
+            } finally {
+                this.isSavingEditContract = false;
+            }
+        },
+
+        // Clôture définitive d'un contrat (Volume 1 §14.1) — jamais une suppression.
+        openCloseContractModal(contract) {
+            this.closeContractForm = {
+                id: contract.id,
+                employeeFullName: contract.employeeFullName,
+                endDate: new Date().toISOString().split('T')[0],
+                reason: '',
+                rowVersion: contract.rowVersion
+            };
+            this.isCloseContractModalOpen = true;
+        },
+
+        async submitCloseContract() {
+            if (!this.closeContractForm.reason || this.closeContractForm.reason.trim().length < 5) {
+                toast.error('Le motif est obligatoire (5 caractères minimum).');
+                return;
+            }
+
+            this.isClosingContract = true;
+            try {
+                await api.post(`/finance/employee-contracts/${this.closeContractForm.id}/close`, {
+                    endDate: this.closeContractForm.endDate,
+                    reason: this.closeContractForm.reason.trim(),
+                    rowVersion: this.closeContractForm.rowVersion
+                });
+                toast.success('Contrat clôturé.');
+                this.isCloseContractModalOpen = false;
+                await this.loadContracts();
+            } catch (err) {
+                toast.error(err.message || 'Erreur lors de la clôture du contrat.');
+            } finally {
+                this.isClosingContract = false;
             }
         },
 
@@ -384,6 +468,11 @@ document.addEventListener('alpine:init', () => {
         /** FCFA : entiers, séparateur de milliers français. Pas de décimales — la monnaie n'en a pas. */
         formatAmount(amount) {
             return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount || 0) + ' FCFA';
+        },
+
+        formatDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleDateString('fr-FR');
         },
 
         monthLabel(month) {

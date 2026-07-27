@@ -298,6 +298,18 @@ public enum ContractType
 }
 
 /// <summary>
+/// Nature d'un changement journalisé dans <see cref="Entities.EmployeeContractHistory"/> (Volume 1
+/// §14.1). <c>Amended</c> : changement de rémunération sur un contrat resté actif (salaire de base,
+/// taux horaire, prime de transport). <c>Closed</c> : clôture définitive — les montants ne changent
+/// pas, seule <see cref="Entities.EmployeeContract.EndDate"/> est posée.
+/// </summary>
+public enum EmployeeContractChangeType
+{
+    Amended,
+    Closed
+}
+
+/// <summary>
 /// Type d'une salle physique (module Infrastructures, <see cref="Entities.Room"/>).
 /// </summary>
 public enum RoomType

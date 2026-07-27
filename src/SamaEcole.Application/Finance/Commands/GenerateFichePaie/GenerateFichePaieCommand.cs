@@ -48,6 +48,13 @@ public class GenerateFichePaieCommandHandler(
             .FirstOrDefaultAsync(c => c.Id == request.EmployeeContractId, cancellationToken)
             ?? throw new NotFoundException(nameof(EmployeeContract), request.EmployeeContractId);
 
+        // Volume 1 §14.1 : un contrat clôturé ne génère plus aucune nouvelle fiche de paie — la
+        // dernière fiche due doit être générée AVANT la clôture (CloseEmployeeContractCommand).
+        if (contract.EndDate is not null)
+        {
+            throw new BusinessRuleException("Ce contrat est clôturé : impossible de générer une nouvelle fiche de paie.");
+        }
+
         // Si le contrat est horaire (Vacataire) et qu'aucune heure n'est fournie, c'est une erreur logique,
         // mais le validateur permet 0, donc ça calculera un salaire de 0.
         // Si c'est un CDI/CDD, le salaire de base est utilisé.

@@ -318,6 +318,15 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlInterpolatedAsync(
             $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SuperAdminPassword)} WHERE "Id" = {SuperAdminId};""");
 
+        // Paie (Volume 1 §14) : fiche_paies et employee_contract_histories référencent employee_contracts
+        // en Restrict, donc AVANT elle — et employee_contracts référence teachers/users en Restrict,
+        // donc AVANT la purge des utilisateurs juste en dessous. Sans cette purge, un contrat créé sur
+        // le compte Secrétaire partagé (JGK-A05) bloquerait le test suivant sur l'index unique
+        // TeacherId/UserId (un seul contrat ACTIF par personne).
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM fiche_paies;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM employee_contract_histories;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM employee_contracts;");
+
         // Écoles et comptes créés PAR les tests (ticket JGK-B01) : sans cette purge, une école créée
         // dans un test resterait provisionnée et fausserait le suivant. Les utilisateurs d'abord :
         // ils référencent les écoles.

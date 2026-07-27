@@ -18,9 +18,12 @@ public class EmployeeContractConfiguration : IEntityTypeConfiguration<EmployeeCo
         builder.Property(e => e.Type).HasConversion<string>().HasMaxLength(20);
 
         builder.HasIndex(e => e.SchoolId);
-        
-        builder.HasIndex(e => e.TeacherId).IsUnique().HasFilter("\"TeacherId\" IS NOT NULL");
-        builder.HasIndex(e => e.UserId).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
+
+        // Filtre étendu à "EndDate IS NULL" (Volume 1 §14.1) : un contrat CLÔTURÉ ne doit plus bloquer
+        // la création d'un nouveau contrat pour la même personne (reprise après un départ) — seul un
+        // contrat encore ACTIF doit être unique par enseignant/utilisateur.
+        builder.HasIndex(e => e.TeacherId).IsUnique().HasFilter("\"TeacherId\" IS NOT NULL AND \"EndDate\" IS NULL");
+        builder.HasIndex(e => e.UserId).IsUnique().HasFilter("\"UserId\" IS NOT NULL AND \"EndDate\" IS NULL");
 
         builder.HasOne<School>()
             .WithMany()

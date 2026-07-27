@@ -23,6 +23,8 @@ using SamaEcole.Application.Finance.Commands.OpenCashierSession;
 using SamaEcole.Application.Finance.Commands.CloseCashierSession;
 using SamaEcole.Application.Finance.Queries.GetDailyClosingReportPdf;
 using SamaEcole.Application.Finance.Commands.CreateEmployeeContract;
+using SamaEcole.Application.Finance.Commands.UpdateEmployeeContract;
+using SamaEcole.Application.Finance.Commands.CloseEmployeeContract;
 using SamaEcole.Application.Finance.Queries.GetEmployeeContracts;
 using SamaEcole.Application.Finance.Queries.GetFichePaies;
 using SamaEcole.Application.Finance.Queries.GetPayslipPdf;
@@ -369,6 +371,48 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     {
         var id = await mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetEmployeeContracts), new { id }, id);
+    }
+
+    public record UpdateEmployeeContractRequest(
+        decimal BaseSalary, decimal HourlyRate, decimal TransportAllowance, string Reason, uint RowVersion);
+
+    /// <summary>Augmentation de salaire ou révision du taux horaire (Volume 1 §14.1) — la seule voie de modification d'un contrat ACTIF.</summary>
+    [HttpPatch("employee-contracts/{id:guid}")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<UpdateEmployeeContractResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateEmployeeContract(
+        Guid id, [FromBody] UpdateEmployeeContractRequest request, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new UpdateEmployeeContractCommand(
+                id, request.BaseSalary, request.HourlyRate, request.TransportAllowance, request.Reason, request.RowVersion),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    public record CloseEmployeeContractRequest(DateOnly EndDate, string Reason, uint RowVersion);
+
+    /// <summary>Clôture définitive d'un contrat (Volume 1 §14.1) — jamais une suppression, voir CloseEmployeeContractCommand.</summary>
+    [HttpPost("employee-contracts/{id:guid}/close")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<CloseEmployeeContractResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CloseEmployeeContract(
+        Guid id, [FromBody] CloseEmployeeContractRequest request, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new CloseEmployeeContractCommand(id, request.EndDate, request.Reason, request.RowVersion),
+            cancellationToken);
+
+        return Ok(result);
     }
 
     [HttpGet("payroll")]

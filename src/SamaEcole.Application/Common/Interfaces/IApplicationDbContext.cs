@@ -117,6 +117,9 @@ public interface IApplicationDbContext
     DbSet<ParentSummons> ParentSummons { get; }
 
     DbSet<EmployeeContract> EmployeeContracts { get; }
+
+    /// <summary>Journal append-only des changements de contrat (Volume 1 §14.1) : on y AJOUTE, jamais plus.</summary>
+    DbSet<EmployeeContractHistory> EmployeeContractHistories { get; }
     DbSet<FichePaie> FichePaies { get; }
     DbSet<TaxeDeclaration> TaxeDeclarations { get; }
     DbSet<FinancialCommitment> FinancialCommitments { get; }

@@ -56,6 +56,7 @@
                             <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Salaire de base</th>
                             <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Taux horaire</th>
                             <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Prime transport</th>
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
                             <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
                         </tr>
                     </thead>
@@ -74,6 +75,10 @@
                                 <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.baseSalary)"></td>
                                 <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.hourlyRate)"></td>
                                 <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.transportAllowance)"></td>
+                                <td class="py-3 px-4">
+                                    <span x-show="!contract.endDate" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700">Actif</span>
+                                    <span x-show="contract.endDate" x-cloak class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600" x-text="'Clôturé le ' + formatDate(contract.endDate)"></span>
+                                </td>
                                 <td class="py-3 px-4 text-right">
                                     <div class="flex items-center justify-end gap-1">
                                         <button type="button" x-show="contract.type === 'Vacataire'" x-cloak
@@ -87,6 +92,18 @@
                                                 class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-60 transition-colors">
                                             <icon name="document-text" class="w-4 h-4" x-show="downloadingCertificateId !== contract.id" />
                                             <icon name="loader" class="w-4 h-4 animate-spin" x-show="downloadingCertificateId === contract.id" x-cloak />
+                                        </button>
+                                        <button type="button" x-show="!contract.endDate" x-cloak
+                                                x-on:click="openEditContractModal(contract)" title="Modifier le salaire/taux horaire"
+                                                aria-label="Modifier le contrat"
+                                                class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                            <icon name="pencil" class="w-4 h-4" />
+                                        </button>
+                                        <button type="button" x-show="!contract.endDate" x-cloak
+                                                x-on:click="openCloseContractModal(contract)" title="Clôturer le contrat"
+                                                aria-label="Clôturer le contrat"
+                                                class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                                            <icon name="block" class="w-4 h-4" />
                                         </button>
                                     </div>
                                 </td>
@@ -280,13 +297,75 @@
         </form>
     </modal-shell>
 
+    <!-- ===================== Modale : Modifier un contrat (Volume 1 §14.1) ===================== -->
+    <modal-shell open="isEditContractModalOpen" title="Modifier le contrat">
+        <form x-on:submit.prevent="submitEditContract()" novalidate class="space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div x-show="editContractForm.type === 'Permanent'">
+                    <label class="block text-sm font-medium text-slate-700">Salaire de base (FCFA)</label>
+                    <input type="number" min="0" x-model="editContractForm.baseSalary" class="input-field mt-1" />
+                </div>
+                <div x-show="editContractForm.type === 'Vacataire'">
+                    <label class="block text-sm font-medium text-slate-700">Taux horaire (FCFA)</label>
+                    <input type="number" min="0" x-model="editContractForm.hourlyRate" class="input-field mt-1" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Prime de transport (FCFA)</label>
+                    <input type="number" min="0" x-model="editContractForm.transportAllowance" class="input-field mt-1" />
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-red-500">*</span></label>
+                <textarea x-model="editContractForm.reason" rows="2" placeholder="Ex. Augmentation annuelle, révision du taux horaire…" class="input-field mt-1"></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" x-on:click="isEditContractModalOpen = false" class="btn-secondary">Annuler</button>
+                <button type="submit" class="btn-primary" :disabled="isSavingEditContract">
+                    <span x-show="!isSavingEditContract">Enregistrer</span>
+                    <span x-show="isSavingEditContract">Enregistrement...</span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- ===================== Modale : Clôturer un contrat (Volume 1 §14.1) ===================== -->
+    <modal-shell open="isCloseContractModalOpen" title="Clôturer le contrat">
+        <form x-on:submit.prevent="submitCloseContract()" novalidate class="space-y-5">
+            <p class="text-sm text-slate-500">
+                <span x-text="closeContractForm.employeeFullName" class="font-medium text-slate-700"></span> —
+                le contrat ne sera pas supprimé, mais restera clôturé : aucune nouvelle fiche de paie ne
+                pourra plus être générée à partir de lui.
+            </p>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Date de clôture <span class="text-red-500">*</span></label>
+                <input type="date" x-model="closeContractForm.endDate" required class="input-field mt-1" />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-red-500">*</span></label>
+                <textarea x-model="closeContractForm.reason" rows="2" placeholder="Ex. Fin de contrat, départ de l'établissement…" class="input-field mt-1"></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" x-on:click="isCloseContractModalOpen = false" class="btn-secondary">Annuler</button>
+                <button type="submit" class="btn-primary" :disabled="isClosingContract">
+                    <span x-show="!isClosingContract">Clôturer</span>
+                    <span x-show="isClosingContract">Clôture...</span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
     <!-- ===================== Modale : Générer une fiche de paie ===================== -->
     <modal-shell open="isPayslipModalOpen" title="Générer une fiche de paie">
         <form x-on:submit.prevent="submitPayslip()" novalidate class="space-y-5">
             <div>
                 <label class="block text-sm font-medium text-slate-700">Contrat <span class="text-red-500">*</span></label>
                 <select-field model="payslipForm.employeeContractId" placeholder="Sélectionnez un contrat..."
-                    options-expr="contracts.map(c => ({value: c.id, label: c.employeeFullName + ' — ' + contractTypeLabel(c.type)}))" />
+                    options-expr="contracts.filter(c => !c.endDate).map(c => ({value: c.id, label: c.employeeFullName + ' — ' + contractTypeLabel(c.type)}))" />
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
