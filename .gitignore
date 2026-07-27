@@ -28,3 +28,6 @@ sama_ecole_pg_data/
 # --- OS ---
 .DS_Store
 Thumbs.db
+
+# --- Résultats de tests (générés par `dotnet test`) ---
+TestResults/
