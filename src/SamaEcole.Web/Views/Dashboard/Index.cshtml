@@ -63,46 +63,52 @@
             </div>
         </div>
 
-        <!-- Finance (8 cartes) -->
-        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+        <!-- Finance (4 cartes majeures) -->
+        @* Les 4 indicateurs financiers MAJEURS (Solde Net, Encaissements, Décaissements, Reste à
+           recouvrer) portent une bordure d'accent + une ombre plus marquée que les cartes secondaires
+           ci-dessous, pour une hiérarchie visuelle claire — même grille, même ordre, même palette,
+           seule l'emphase change. *@
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-success shadow-md flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg cursor-pointer" x-show="financeRole">
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Solde Net</p>
                 <p class="text-2xl font-bold text-success mt-1" x-text="formatMoney(financeData?.realBalance)"></p>
             </div>
-            <div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-                <icon name="cash" class="w-5 h-5 text-success"></icon>
+            <div class="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                <icon name="cash" class="w-6 h-6 text-success"></icon>
             </div>
         </div>
 
-        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-indigo-600 shadow-md flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg cursor-pointer" x-show="financeRole">
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Encaissement (Année)</p>
                 <p class="text-2xl font-bold text-indigo-600 mt-1" x-text="formatMoney(financeData?.collectedThisYear)"></p>
             </div>
-            <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
-                <icon name="wallet" class="w-5 h-5 text-indigo-600"></icon>
+            <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                <icon name="wallet" class="w-6 h-6 text-indigo-600"></icon>
             </div>
         </div>
-        
-        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-danger shadow-md flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg cursor-pointer" x-show="financeRole">
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Décaissements</p>
                 <p class="text-2xl font-bold text-danger mt-1" x-text="formatMoney(financeData?.totalDisbursements)"></p>
             </div>
-            <div class="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
-                <icon name="arrow-down" class="w-5 h-5 text-danger"></icon>
+            <div class="w-12 h-12 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
+                <icon name="arrow-down" class="w-6 h-6 text-danger"></icon>
             </div>
         </div>
 
-        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+        <div class="w-full bg-white p-4 rounded-xl border border-slate-200 border-l-4 border-l-warning shadow-md flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg cursor-pointer" x-show="financeRole">
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Reste à recouvrer</p>
                 <p class="text-2xl font-bold text-warning mt-1" x-text="formatMoney(financeData?.outstandingBalance)"></p>
             </div>
-            <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
-                <icon name="alert-circle" class="w-5 h-5 text-warning"></icon>
+            <div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+                <icon name="alert-circle" class="w-6 h-6 text-warning"></icon>
             </div>
         </div>
+
+        <!-- Finance (4 cartes secondaires) -->
 
         <div class="w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
             <div>
@@ -150,9 +156,9 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         <!-- COLONNE GAUCHE : Vie Scolaire & Planning -->
-        <div class="w-full bg-white p-5 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="analyticsRole">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                <h2 class="text-base font-bold text-slate-900">Vie Scolaire & Planning</h2>
+        <div class="w-full bg-white p-6 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="analyticsRole">
+            <div class="flex items-center justify-between mb-5 border-b border-slate-100 pb-4">
+                <h2 class="text-[19px] font-bold text-slate-900">Vie Scolaire & Planning</h2>
             </div>
             
             <template x-if="isAnalyticsLoading">
@@ -243,9 +249,9 @@
         </div>
 
         <!-- COLONNE DROITE : Trésorerie & Bilan -->
-        <div class="w-full bg-white p-5 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                <h2 class="text-base font-bold text-slate-900">Trésorerie & Bilan</h2>
+        <div class="w-full bg-white p-6 rounded-xl border border-slate-200 shadow-sm transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer" x-show="financeRole">
+            <div class="flex items-center justify-between mb-5 border-b border-slate-100 pb-4">
+                <h2 class="text-[19px] font-bold text-slate-900">Trésorerie & Bilan</h2>
                 <nav class="flex p-1 space-x-1 bg-slate-100 rounded-lg" role="tablist">
                     <button type="button" role="tab" x-on:click="activeTab = 'synth'"
                             :class="activeTab === 'synth' ? 'bg-white text-indigo-600 font-semibold shadow-xs' : 'text-slate-600 font-medium hover:text-slate-900'"
@@ -362,14 +368,23 @@
                         <div class="w-full h-auto p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col sm:flex-row items-center gap-4 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-md cursor-pointer">
                             <!-- Graphique Donut -->
                             <div class="relative w-24 h-24 shrink-0">
+                                @* 7 <circle> fixes plutôt qu'un <template x-for="segment in ...">  : le contenu
+                                   d'un <template> est TOUJOURS analysé en namespace HTML, même quand ce
+                                   <template> est lui-même un enfant de <svg> — un <circle> qui en sort n'est
+                                   donc pas un SVGCircleElement mais un élément inconnu, invisible sans la
+                                   moindre erreur visible à l'écran (seule la console révélait "segment is not
+                                   defined" / "reading 'children'"). disbursementSegments() (dashboard.js)
+                                   retourne désormais un tableau de longueur fixe pour cette raison — même
+                                   correctif que paymentMethodSegments() (financial-report.js). *@
                                 <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90 drop-shadow-sm">
                                     <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#E5E7EB" stroke-width="4"></circle>
-                                    <template x-for="segment in disbursementSegments()" :key="segment.name">
-                                        <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="segment.color" stroke-width="4" stroke-linecap="round" 
-                                                :stroke-dasharray="segment.fraction + ' ' + (100 - segment.fraction)" 
-                                                :stroke-dashoffset="segment.offset"
-                                                class="transition-all duration-500 ease-out"></circle>
-                                    </template>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="disbursementSegments()[0].color" stroke-width="4" stroke-linecap="round" :stroke-dasharray="disbursementSegments()[0].fraction + ' ' + (100 - disbursementSegments()[0].fraction)" :stroke-dashoffset="disbursementSegments()[0].offset" class="transition-all duration-500 ease-out"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="disbursementSegments()[1].color" stroke-width="4" stroke-linecap="round" :stroke-dasharray="disbursementSegments()[1].fraction + ' ' + (100 - disbursementSegments()[1].fraction)" :stroke-dashoffset="disbursementSegments()[1].offset" class="transition-all duration-500 ease-out"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="disbursementSegments()[2].color" stroke-width="4" stroke-linecap="round" :stroke-dasharray="disbursementSegments()[2].fraction + ' ' + (100 - disbursementSegments()[2].fraction)" :stroke-dashoffset="disbursementSegments()[2].offset" class="transition-all duration-500 ease-out"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="disbursementSegments()[3].color" stroke-width="4" stroke-linecap="round" :stroke-dasharray="disbursementSegments()[3].fraction + ' ' + (100 - disbursementSegments()[3].fraction)" :stroke-dashoffset="disbursementSegments()[3].offset" class="transition-all duration-500 ease-out"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="disbursementSegments()[4].color" stroke-width="4" stroke-linecap="round" :stroke-dasharray="disbursementSegments()[4].fraction + ' ' + (100 - disbursementSegments()[4].fraction)" :stroke-dashoffset="disbursementSegments()[4].offset" class="transition-all duration-500 ease-out"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="disbursementSegments()[5].color" stroke-width="4" stroke-linecap="round" :stroke-dasharray="disbursementSegments()[5].fraction + ' ' + (100 - disbursementSegments()[5].fraction)" :stroke-dashoffset="disbursementSegments()[5].offset" class="transition-all duration-500 ease-out"></circle>
+                                    <circle cx="18" cy="18" r="15.9155" fill="none" :stroke="disbursementSegments()[6].color" stroke-width="4" stroke-linecap="round" :stroke-dasharray="disbursementSegments()[6].fraction + ' ' + (100 - disbursementSegments()[6].fraction)" :stroke-dashoffset="disbursementSegments()[6].offset" class="transition-all duration-500 ease-out"></circle>
                                 </svg>
                             </div>
                             
@@ -420,14 +435,14 @@
         <div class="overflow-x-auto">
              <table class="w-full text-left border-collapse table-auto text-sm">
                  <thead>
-                     <tr class="bg-slate-50 border-b border-slate-200">
-                         <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold text-xs">Élève</th>
-                         <th class="py-3 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold text-xs">Matricule</th>
-                         <th class="py-3 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold text-xs">Reçu N°</th>
-                         <th class="py-3 px-4 text-right whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold text-xs">Montant</th>
-                         <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold text-xs">Mode</th>
-                         <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold text-xs">Date</th>
-                         <th class="py-3 px-4 w-12 uppercase tracking-wider text-slate-500 font-semibold text-xs"><span class="sr-only">Action</span></th>
+                     <tr class="table-head">
+                         <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
+                         <th class="py-3.5 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Matricule</th>
+                         <th class="py-3.5 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Reçu N°</th>
+                         <th class="py-3.5 px-4 text-right whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
+                         <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Mode</th>
+                         <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+                         <th class="py-3.5 px-4 w-12 uppercase tracking-wider text-slate-500 font-semibold"><span class="sr-only">Action</span></th>
                      </tr>
                  </thead>
                  <tbody class="divide-y divide-slate-100">
@@ -463,18 +478,5 @@
     </div>
 
     <!-- Modale PDF ... -->
-    <modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
-        <div class="space-y-4">
-            <template x-if="pdfPreviewUrl && !pdfLoadError">
-                <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden" style="height: 600px;">
-                    <iframe :src="pdfPreviewUrl" x-on:error="pdfLoadError = true" id="dash-pdf-preview-frame" class="w-full h-full border-0"></iframe>
-                </div>
-            </template>
-            <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button type="button" x-on:click="closePdfPreview()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95 transition-all duration-200">Fermer</button>
-                <button type="button" x-on:click="downloadPreviewPdf()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 active:scale-95 transition-all duration-200">Télécharger</button>
-                <button type="button" x-on:click="printPreviewPdf()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200">Imprimer</button>
-            </div>
-        </div>
-    </modal-shell>
+    @await Html.PartialAsync("_PdfPreviewModal")
 </div>
