@@ -67,9 +67,28 @@
  class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
  <span>
  <span class="block text-sm font-medium text-slate-800">Relances d'impayés</span>
- <span class="block text-xs text-slate-500">Autorise l'envoi groupé depuis le module Finance.</span>
+ <span class="block text-xs text-slate-500">
+ Autorise l'envoi groupé depuis le module Finance et le calcul quotidien des lots de
+ relance brouillon (écran Recouvrement).
+ </span>
  </span>
  </label>
+
+ @* Seuil de retard (Étape 5) : n'a d'effet que si la relance d'impayés est activée ci-dessus —
+ un lot brouillon n'est jamais généré sans ce commutateur, le seuil ne fait qu'en cadrer le
+ calcul. *@
+ <div x-show="settings.smsOnDuesReminder" x-cloak class="ml-7 pl-3 border-l-2 border-slate-100">
+ <label for="sms-debtor-threshold" class="block text-sm font-medium text-slate-700">
+ Seuil de retard avant relance (jours)
+ </label>
+ <input id="sms-debtor-threshold" type="number" min="1" max="365"
+ x-model.number="settings.debtorReminderThresholdDays"
+ class="input-field mt-1 max-w-[8rem]" />
+ <p class="mt-1 text-xs text-slate-400">
+ Au-delà de ce nombre de jours, un débiteur entre dans un lot de relance brouillon généré
+ chaque nuit — l'envoi reste toujours déclenché à la main, classe par classe.
+ </p>
+ </div>
 
  <label class="flex items-start gap-3 cursor-pointer">
  <input type="checkbox" x-model="settings.smsOnPaymentReceipt"

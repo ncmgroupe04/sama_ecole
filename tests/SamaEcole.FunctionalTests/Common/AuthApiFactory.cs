@@ -253,6 +253,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // d'un test et son assertion : l'issue dépendrait du moment où le minuteur se déclenche.
         // Le worker est testé pour lui-même, en pilotant un tour explicitement (SmsQueueTests).
         Environment.SetEnvironmentVariable("Sms__Queue__Enabled", "false");
+
+        // Même raison : COUPE le calcul quotidien des lots de relance de débiteurs
+        // (DebtorAgingHostedService, Étape 5). Le worker est testé pour lui-même en invoquant
+        // GenerateDebtorReminderBatchesCommand explicitement.
+        Environment.SetEnvironmentVariable("Finance__DebtorAging__Enabled", "false");
     }
 
     private static void ClearEnvironment()
@@ -265,7 +270,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "Auth__RefreshTokenDays", "RateLimiting__Registration__PermitLimit",
                      "RateLimiting__Registration__WindowMinutes", "RateLimiting__Login__PermitLimit",
                      "RateLimiting__Login__WindowMinutes", "RateLimiting__PasswordReset__PermitLimit",
-                     "RateLimiting__PasswordReset__WindowMinutes", "Sms__Queue__Enabled"
+                     "RateLimiting__PasswordReset__WindowMinutes", "Sms__Queue__Enabled",
+                     "Finance__DebtorAging__Enabled"
                  })
         {
             Environment.SetEnvironmentVariable(key, null);
@@ -324,6 +330,13 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // dans un test resterait Open pour le suivant — qui se ferait refuser l'ouverture d'une nouvelle
         // session (« déjà une session ouverte », 422) sur ce même compte partagé entre tous les tests.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM cashier_sessions;");
+
+        // Échéanciers personnalisés et lots de relance (Étape 5) : ils référencent inscriptions ET
+        // classes en Restrict, donc AVANT elles — les tables enfants (items/échéances) d'abord.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM debtor_reminder_batch_items;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM fee_installments;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM debtor_reminder_batches;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM fee_installment_plans;");
 
         // Inscriptions (ticket JGK-E01), AVANT les tables qu'elles référencent en Restrict (élèves,
         // classes, années, catégories de frais). Les lignes de frais d'abord : elles pointent l'inscription.

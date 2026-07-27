@@ -39,6 +39,13 @@ using SamaEcole.Application.Finance.Commands.CreateTeacherHourRecord;
 using SamaEcole.Application.Finance.Queries.GetTeacherHourRecords;
 using SamaEcole.Application.Finance.Queries.GetHourRecordSheet;
 using SamaEcole.Application.Finance.Queries.GetHourRecordSheetPdf;
+using SamaEcole.Application.Finance.Commands.CreateFeeInstallmentPlan;
+using SamaEcole.Application.Finance.Commands.ApplyFeeInstallmentPlanToClassroom;
+using SamaEcole.Application.Finance.Commands.SendDebtorReminderBatch;
+using SamaEcole.Application.Finance.Commands.DismissDebtorReminderBatch;
+using SamaEcole.Application.Finance.Commands.GenerateDebtorReminderBatches;
+using SamaEcole.Application.Finance.Queries.GetDebtorReminderBatches;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Web.Controllers;
 
@@ -638,6 +645,79 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
             logger.LogError(ex, "Erreur lors de la génération de la fiche d'heures PDF pour le contrat {ContractId}", contractId);
             return Problem(detail: ex.Message, title: "Erreur de génération de la fiche d'heures PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
+    }
+
+    // ------------------------------------------------------------------ Échéanciers personnalisés (Étape 5)
+
+    [HttpPost("enrollments/{enrollmentId:guid}/installment-plan")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<Guid>(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CreateFeeInstallmentPlan(
+        Guid enrollmentId, [FromBody] CreateFeeInstallmentPlanRequest request, CancellationToken cancellationToken)
+    {
+        var id = await mediator.Send(
+            new CreateFeeInstallmentPlanCommand(enrollmentId, request.Reason, request.Installments),
+            cancellationToken);
+
+        // Pas de route "GET plan par id" dédiée : le plan se consulte via le solde de l'élève
+        // (GetStudentBalanceQuery), qui l'intègre déjà — un Location vers une autre ressource
+        // (studentId, pas enrollmentId) serait trompeur.
+        return StatusCode(StatusCodes.Status201Created, id);
+    }
+
+    public record CreateFeeInstallmentPlanRequest(string? Reason, IReadOnlyList<CreateFeeInstallmentLine> Installments);
+
+    [HttpPost("classrooms/{classroomId:guid}/installment-plan")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<ApplyFeeInstallmentPlanToClassroomResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ApplyFeeInstallmentPlanToClassroom(
+        Guid classroomId, [FromBody] ApplyFeeInstallmentPlanToClassroomRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new ApplyFeeInstallmentPlanToClassroomCommand(classroomId, request.Reason, request.Template),
+            cancellationToken));
+
+    public record ApplyFeeInstallmentPlanToClassroomRequest(string? Reason, IReadOnlyList<InstallmentTemplateLine> Template);
+
+    // ------------------------------------------------------------------ Recouvrement — lots de relance (Étape 5)
+
+    [HttpGet("dues-reminder-batches")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<List<DebtorReminderBatchDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDebtorReminderBatches(
+        [FromQuery] DebtorReminderBatchStatus? status, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDebtorReminderBatchesQuery(status), cancellationToken));
+
+    /// <summary>
+    /// Force le recalcul immédiat des brouillons (normalement calculés chaque nuit par
+    /// DebtorAgingHostedService) — utile pour ne pas attendre le tour suivant après un réglage du
+    /// seuil de retard, par exemple.
+    /// </summary>
+    [HttpPost("dues-reminder-batches/recompute")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<int>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RecomputeDebtorReminderBatches(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GenerateDebtorReminderBatchesCommand(), cancellationToken));
+
+    [HttpPost("dues-reminder-batches/{id:guid}/send")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<SendDebtorReminderBatchResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SendDebtorReminderBatch(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new SendDebtorReminderBatchCommand(id), cancellationToken));
+
+    [HttpPost("dues-reminder-batches/{id:guid}/dismiss")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DismissDebtorReminderBatch(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DismissDebtorReminderBatchCommand(id), cancellationToken);
+        return NoContent();
     }
 }
 

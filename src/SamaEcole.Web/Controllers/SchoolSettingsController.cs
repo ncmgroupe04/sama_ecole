@@ -39,7 +39,11 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         string? SecretarySignatureUrl = null,
         string? CashierSignatureUrl = null,
         string? OfficialStampUrl = null,
-        string TypeEtablissement = "Prive");
+        string TypeEtablissement = "Prive",
+        bool SmsOnAttendanceAlert = false,
+        bool SmsOnDuesReminder = false,
+        bool SmsOnPaymentReceipt = false,
+        int DebtorReminderThresholdDays = 7);
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
@@ -78,7 +82,11 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.SecretarySignatureUrl,
                 request.CashierSignatureUrl,
                 request.OfficialStampUrl,
-                request.TypeEtablissement),
+                request.TypeEtablissement,
+                request.SmsOnAttendanceAlert,
+                request.SmsOnDuesReminder,
+                request.SmsOnPaymentReceipt,
+                request.DebtorReminderThresholdDays),
             cancellationToken);
 
         return Ok(result);

@@ -252,7 +252,7 @@ public class SendReportCardCommandTests : IAsyncLifetime
             SmsDispatchRequest request, CancellationToken cancellationToken)
         {
             LastRequest = request;
-            return Task.FromResult(SmsDispatchOutcome.Queued);
+            return Task.FromResult(SmsDispatchOutcome.Queued(Guid.NewGuid()));
         }
     }
 

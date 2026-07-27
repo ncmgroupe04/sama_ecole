@@ -1,3 +1,5 @@
+using SamaEcole.Application.Finance.Queries.GetDebtorAgingExport;
+using SamaEcole.Application.Finance.Queries.GetDebtorAgingReport;
 using SamaEcole.Application.Finance.Queries.GetRevenueConsolidation;
 using SamaEcole.Application.Finance.Queries.GetRevenueConsolidationExcel;
 using SamaEcole.Domain.Enums;
@@ -42,6 +44,27 @@ public class FinancialReportsController(ISender mediator) : ControllerBase
     {
         var file = await mediator.Send(
             new GetRevenueConsolidationExcelQuery { From = from, To = to }, cancellationToken);
+
+        return File(
+            file.Content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            file.FileName);
+    }
+
+    /// <summary>Liste des débiteurs (Étape 5), avec le nombre de jours de retard — Volume 1 §7.5.</summary>
+    [HttpGet("debtor-aging")]
+    [ProducesResponseType<DebtorAgingReportDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetDebtorAgingReport(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDebtorAgingReportQuery(), cancellationToken));
+
+    /// <summary>Même rapport, au format comptable téléchargeable (.xlsx).</summary>
+    [HttpGet("debtor-aging/excel")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetDebtorAgingExcel(CancellationToken cancellationToken)
+    {
+        var file = await mediator.Send(new GetDebtorAgingExportQuery(), cancellationToken);
 
         return File(
             file.Content,

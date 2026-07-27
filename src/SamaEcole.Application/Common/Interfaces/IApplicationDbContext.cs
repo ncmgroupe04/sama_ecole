@@ -122,6 +122,18 @@ public interface IApplicationDbContext
     DbSet<FinancialCommitment> FinancialCommitments { get; }
     DbSet<TeacherHourRecord> TeacherHourRecords { get; }
 
+    /// <summary>Échéancier personnalisé d'une inscription (Étape 5 — recouvrement). Au plus un actif par inscription.</summary>
+    DbSet<FeeInstallmentPlan> FeeInstallmentPlans { get; }
+
+    /// <summary>Échéances d'un FeeInstallmentPlan — montants et dates librement négociés.</summary>
+    DbSet<FeeInstallment> FeeInstallments { get; }
+
+    /// <summary>Lot de relance de débiteurs généré chaque nuit par classe (Étape 5 — recouvrement semi-automatique).</summary>
+    DbSet<DebtorReminderBatch> DebtorReminderBatches { get; }
+
+    /// <summary>Débiteurs candidats d'un DebtorReminderBatch, avec leur ancienneté de retard au moment de la génération.</summary>
+    DbSet<DebtorReminderBatchItem> DebtorReminderBatchItems { get; }
+
     /// <summary>
     /// Agrégats plateforme (console Super Admin) : entité SANS CLÉ adossée à la vue PostgreSQL
     /// `v_platform_dashboard_stats`, qui contourne la RLS via `security_invoker = false` +

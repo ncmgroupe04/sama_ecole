@@ -11,7 +11,10 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('smsSettingsView', () => ({
-        settings: { smsOnAttendanceAlert: false, smsOnDuesReminder: false, smsOnPaymentReceipt: false },
+        settings: {
+            smsOnAttendanceAlert: false, smsOnDuesReminder: false, smsOnPaymentReceipt: false,
+            debtorReminderThresholdDays: 7
+        },
         creditBalance: null,
 
         entries: [],
@@ -32,6 +35,7 @@ document.addEventListener('alpine:init', () => {
                 this.settings.smsOnAttendanceAlert = settings.smsOnAttendanceAlert;
                 this.settings.smsOnDuesReminder = settings.smsOnDuesReminder;
                 this.settings.smsOnPaymentReceipt = settings.smsOnPaymentReceipt;
+                this.settings.debtorReminderThresholdDays = settings.debtorReminderThresholdDays;
                 this.creditBalance = settings.smsCreditBalance;
 
                 const history = await window.api.get(`/sms/history?page=${this.page}&pageSize=${this.pageSize}`);
@@ -64,7 +68,8 @@ document.addEventListener('alpine:init', () => {
                     ...current,
                     smsOnAttendanceAlert: this.settings.smsOnAttendanceAlert,
                     smsOnDuesReminder: this.settings.smsOnDuesReminder,
-                    smsOnPaymentReceipt: this.settings.smsOnPaymentReceipt
+                    smsOnPaymentReceipt: this.settings.smsOnPaymentReceipt,
+                    debtorReminderThresholdDays: this.settings.debtorReminderThresholdDays
                 });
 
                 this.saveSuccess = true;

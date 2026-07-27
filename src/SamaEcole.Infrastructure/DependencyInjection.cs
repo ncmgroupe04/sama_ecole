@@ -1,9 +1,11 @@
 using System.Net.Http;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Finance.Common;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Notifications;
 using SamaEcole.Infrastructure.Documents;
 using SamaEcole.Infrastructure.Files;
+using SamaEcole.Infrastructure.Finance;
 using SamaEcole.Infrastructure.Media;
 using SamaEcole.Infrastructure.Multitenancy;
 using SamaEcole.Infrastructure.Notifications;
@@ -19,6 +21,9 @@ public static class DependencyInjection
 {
     /// <summary>Sous-section « Sms:Queue » (voir SmsQueueSettings et .env.example).</summary>
     private const string SmsQueueSettingsSection = "Sms:Queue";
+
+    /// <summary>Sous-section « Finance:DebtorAging » (voir DebtorAgingSettings et .env.example).</summary>
+    private const string DebtorAgingSettingsSection = "Finance:DebtorAging";
 
     /// <param name="isDevelopment">
     /// Vient de <c>IHostEnvironment.IsDevelopment()</c> (résolu dans Program.cs, seul endroit qui
@@ -129,6 +134,19 @@ public static class DependencyInjection
             services.AddHostedService<SmsQueueHostedService>();
         }
 
+        // Calcul quotidien des lots de relance de débiteurs (Étape 5 — recouvrement semi-automatique).
+        // Même garde que la file SMS : les tests fonctionnels le coupent (Finance__DebtorAging__Enabled=false)
+        // pour qu'un lot brouillon créé pendant l'exécution d'un test ne rende pas son résultat non
+        // déterministe.
+        var debtorAgingSettings = configuration.GetSection(DebtorAgingSettingsSection).Get<DebtorAgingSettings>()
+                                   ?? new DebtorAgingSettings();
+        services.AddSingleton(debtorAgingSettings);
+
+        if (debtorAgingSettings.Enabled)
+        {
+            services.AddHostedService<DebtorAgingHostedService>();
+        }
+
         // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02) et certificat d'inscription (Axe 2). Sans état : des singletons suffisent.
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
         services.AddSingleton<IPaymentReceiptPdfGenerator, PaymentReceiptPdfGenerator>();
@@ -175,6 +193,10 @@ public static class DependencyInjection
         // Export comptable de la consolidation des revenus (rapports financiers avancés) — même
         // bibliothèque, aucune nouvelle dépendance.
         services.AddSingleton<IRevenueReportExcelGenerator, RevenueReportExcelGenerator>();
+
+        // Export comptable des débiteurs (Étape 5 — recouvrement) — même bibliothèque, aucune nouvelle
+        // dépendance.
+        services.AddSingleton<IDebtorAgingExcelGenerator, DebtorAgingExcelGenerator>();
 
         // Import d'élèves par fichier CSV/Excel (même bibliothèque ClosedXML, aucune nouvelle dépendance).
         services.AddSingleton<IStudentImportFileParser, StudentImportFileParser>();

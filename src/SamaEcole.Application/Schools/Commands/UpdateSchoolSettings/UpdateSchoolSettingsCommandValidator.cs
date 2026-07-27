@@ -38,6 +38,13 @@ public class UpdateSchoolSettingsCommandValidator : AbstractValidator<UpdateScho
         RuleFor(c => c.TeacherMatriculeFormat)
             .Must(format => MatriculeFormat.Validate(format) is null)
             .WithMessage(c => MatriculeFormat.Validate(c.TeacherMatriculeFormat) ?? string.Empty);
+
+        RuleFor(c => c.DebtorReminderThresholdDays)
+            .InclusiveBetween(
+                SchoolSettingsDefaults.MinDebtorReminderThresholdDays,
+                SchoolSettingsDefaults.MaxDebtorReminderThresholdDays)
+            .WithMessage(
+                $"Le seuil de retard doit être compris entre {SchoolSettingsDefaults.MinDebtorReminderThresholdDays} et {SchoolSettingsDefaults.MaxDebtorReminderThresholdDays} jours.");
     }
 
     private static int ParseScale(string? scale) =>

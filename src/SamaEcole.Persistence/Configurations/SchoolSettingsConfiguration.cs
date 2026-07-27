@@ -27,6 +27,13 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
         builder.Property(s => s.AllowFinanceToModifyFees).IsRequired();
         builder.Property(s => s.AllowFinanceToDeleteFees).IsRequired();
 
+        // Défaut en base = 7 (SchoolSettingsDefaults.DebtorReminderThresholdDays) : les écoles déjà
+        // existantes reçoivent la même valeur par défaut qu'une école neuve, jamais 0 (qui relancerait
+        // dès le premier jour de retard).
+        builder.Property(s => s.DebtorReminderThresholdDays)
+            .IsRequired()
+            .HasDefaultValue(SamaEcole.Domain.Entities.SchoolSettingsDefaults.DebtorReminderThresholdDays);
+
         builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
         builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);
         builder.Property(s => s.CashierSignatureUrl).HasMaxLength(500);

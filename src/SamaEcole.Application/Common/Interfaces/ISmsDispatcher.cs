@@ -36,10 +36,17 @@ public record SmsDispatchRequest(
 /// n'est qu'inscrit en file. Prétendre le contraire à l'appelant serait faux. Le sort réel de
 /// l'envoi (Sent, Delivered, Failed) se lit dans l'historique, alimenté par le worker et le DLR.
 /// </summary>
-public record SmsDispatchOutcome(bool IsQueued, string? Reason)
+/// <param name="MessageId">
+/// Identifiant de la ligne SmsMessage écrite pour cette tentative — null uniquement quand AUCUNE
+/// ligne n'a été écrite (ex. aucun numéro de téléphone renseigné, seul cas qui retourne avant
+/// l'historisation). Permet à un appelant qui orchestre plusieurs envois (ex.
+/// SendDebtorReminderBatchCommand) de relier chaque destinataire à sa trace, sans réinterroger
+/// l'historique par déduction.
+/// </param>
+public record SmsDispatchOutcome(bool IsQueued, string? Reason, Guid? MessageId = null)
 {
-    public static SmsDispatchOutcome Queued => new(true, null);
+    public static SmsDispatchOutcome Queued(Guid messageId) => new(true, null, messageId);
 
     /// <summary>Volontairement non mis en file : hors formule, alerte désactivée, sans numéro, solde épuisé.</summary>
-    public static SmsDispatchOutcome Skipped(string reason) => new(false, reason);
+    public static SmsDispatchOutcome Skipped(string reason, Guid? messageId = null) => new(false, reason, messageId);
 }

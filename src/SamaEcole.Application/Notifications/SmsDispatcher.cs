@@ -92,21 +92,21 @@ public class SmsDispatcher(
 
         if (debited == 0)
         {
-            await RecordAsync(request, SmsDeliveryStatus.InsufficientCredit,
+            var refusedId = await RecordAsync(request, SmsDeliveryStatus.InsufficientCredit,
                 "Solde SMS épuisé.", cost, cancellationToken);
 
             logger.LogWarning(
                 "SMS non envoyé pour l'établissement {SchoolId} : solde insuffisant ({Cost} segment(s) requis).",
                 request.SchoolId, cost);
 
-            return SmsDispatchOutcome.Skipped("Solde SMS épuisé.");
+            return SmsDispatchOutcome.Skipped("Solde SMS épuisé.", refusedId);
         }
 
         // Éligible IMMÉDIATEMENT (NextAttemptAt = maintenant) : le worker le prendra à son prochain
         // tour. Aucun appel réseau ici — c'est tout l'objet de la file.
-        await RecordAsync(request, SmsDeliveryStatus.Pending, null, cost, cancellationToken);
+        var messageId = await RecordAsync(request, SmsDeliveryStatus.Pending, null, cost, cancellationToken);
 
-        return SmsDispatchOutcome.Queued;
+        return SmsDispatchOutcome.Queued(messageId);
     }
 
     private static bool IsTriggerEnabled(SchoolSettings settings, SmsTrigger trigger) => trigger switch
@@ -124,7 +124,7 @@ public class SmsDispatcher(
         _ => true
     };
 
-    private async Task RecordAsync(
+    private async Task<Guid> RecordAsync(
         SmsDispatchRequest request,
         SmsDeliveryStatus status,
         string? failureReason,
@@ -133,7 +133,7 @@ public class SmsDispatcher(
     {
         var now = timeProvider.GetUtcNow();
 
-        dbContext.SmsMessages.Add(new SmsMessage
+        var message = new SmsMessage
         {
             SchoolId = request.SchoolId,
             Recipient = request.Recipient!,
@@ -148,8 +148,11 @@ public class SmsDispatcher(
             // Seul un message EN FILE est éligible à une remise. Un refus pour solde épuisé n'est pas
             // à retenter : il est écrit dans l'historique et s'arrête là, d'où le null.
             NextAttemptAt = status == SmsDeliveryStatus.Pending ? now : null
-        });
+        };
 
+        dbContext.SmsMessages.Add(message);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        return message.Id;
     }
 }

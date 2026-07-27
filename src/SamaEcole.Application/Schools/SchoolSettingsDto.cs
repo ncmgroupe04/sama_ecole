@@ -30,4 +30,7 @@ public record SchoolSettingsDto(
     /// qui pourrait les fixer lui-même s'offrirait des SMS. Seul TopUpSmsCreditsCommand (Super Admin)
     /// modifie cette valeur.
     /// </summary>
-    int SmsCreditBalance = 0);
+    int SmsCreditBalance = 0,
+
+    /// <summary>Jours de retard avant qu'un débiteur n'entre dans un lot de relance brouillon (Étape 5).</summary>
+    int DebtorReminderThresholdDays = 7);

@@ -67,6 +67,10 @@ public class ApplicationDbContext(
     public DbSet<ParentSummons> ParentSummons => Set<ParentSummons>();
     public DbSet<FinancialCommitment> FinancialCommitments => Set<FinancialCommitment>();
     public DbSet<TeacherHourRecord> TeacherHourRecords => Set<TeacherHourRecord>();
+    public DbSet<FeeInstallmentPlan> FeeInstallmentPlans => Set<FeeInstallmentPlan>();
+    public DbSet<FeeInstallment> FeeInstallments => Set<FeeInstallment>();
+    public DbSet<DebtorReminderBatch> DebtorReminderBatches => Set<DebtorReminderBatch>();
+    public DbSet<DebtorReminderBatchItem> DebtorReminderBatchItems => Set<DebtorReminderBatchItem>();
 
     // Console Super Admin — entités SANS CLÉ, jamais gérées par les migrations (voir OnModelCreating) :
     // la première est adossée à une vue réelle, la seconde n'existe qu'à travers FromSqlRaw.

@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Enrollments;
+using SamaEcole.Application.Finance.Common;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -67,35 +68,26 @@ public class GetDuesNoticeQueryHandler(IApplicationDbContext dbContext, TimeProv
             .ThenBy(l => l.Designation)
             .ToListAsync(cancellationToken);
 
+        // Un plan personnalisé ACTIF (Étape 5) prime sur la synthèse mensuelle uniforme — même règle
+        // que GetStudentBalanceQuery, pour que le montant dû et les échéances en retard restent
+        // cohérents entre les deux écrans.
+        var customInstallments = await dbContext.FeeInstallmentPlans.AsNoTracking()
+            .Where(p => p.EnrollmentId == row.Enrollment.Id && p.Status == FeeInstallmentPlanStatus.Active)
+            .SelectMany(p => dbContext.FeeInstallments.Where(i => i.FeeInstallmentPlanId == p.Id))
+            .OrderBy(i => i.SequenceNo)
+            .ToListAsync(cancellationToken);
+
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().DateTime);
-        var remainingPaid = row.Enrollment.AmountPaid;
-        var overdue = new List<DuesNoticeInstallmentDto>();
 
-        foreach (var line in lines)
-        {
-            if (!line.IsRecurring || line.Months <= 1)
-            {
-                AccountFor(line.Designation, line.LineTotal, row.SchoolYearStart);
-            }
-            else
-            {
-                for (int m = 1; m <= line.Months; m++)
-                {
-                    AccountFor($"{line.Designation} (Mois {m})", line.UnitAmount, row.SchoolYearStart.AddMonths(m - 1));
-                }
-            }
-        }
-
-        void AccountFor(string designation, decimal amount, DateOnly dueDate)
-        {
-            var paidForThis = Math.Min(remainingPaid, amount);
-            remainingPaid -= paidForThis;
-            var remainingDue = amount - paidForThis;
-            if (remainingDue > 0 && dueDate < today)
-            {
-                overdue.Add(new DuesNoticeInstallmentDto(designation, remainingDue, dueDate));
-            }
-        }
+        // Comportement historique préservé : une échéance PARTIELLEMENT payée mais dont la date est
+        // dépassée reste une sommation légitime pour son reliquat — l'état "Overdue" du calculateur
+        // exige lui un paiement nul, plus strict (voir GetStudentBalanceQuery), donc on filtre ici sur
+        // le fait brut (reliquat positif + date dépassée) plutôt que sur ce statut.
+        var overdue = InstallmentScheduleCalculator
+            .Calculate(row.Enrollment.AmountPaid, today, lines, row.SchoolYearStart, customInstallments)
+            .Where(c => c.RemainingDue > 0 && c.DueDate < today)
+            .Select(c => new DuesNoticeInstallmentDto(c.Label, c.RemainingDue, c.DueDate))
+            .ToList();
 
         if (overdue.Count == 0)
         {

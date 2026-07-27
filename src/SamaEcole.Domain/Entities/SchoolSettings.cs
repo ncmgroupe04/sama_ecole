@@ -101,6 +101,14 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
 
     /// <summary>Confirmer par SMS chaque encaissement, avec le lien vers le reçu.</summary>
     public bool SmsOnPaymentReceipt { get; set; } = SchoolSettingsDefaults.SmsAlertsEnabled;
+
+    /// <summary>
+    /// Nombre de jours de retard au-delà duquel DebtorAgingHostedService inclut un débiteur dans un
+    /// lot de relance brouillon (Étape 5 — recouvrement). N'a d'effet que si <see cref="SmsOnDuesReminder"/>
+    /// est actif : ce réglage cadre le calcul, il ne l'active pas — même logique de double
+    /// interrupteur que pour l'application d'un barème (portée, puis activation).
+    /// </summary>
+    public int DebtorReminderThresholdDays { get; set; } = SchoolSettingsDefaults.DebtorReminderThresholdDays;
 }
 
 /// <summary>
@@ -150,4 +158,11 @@ public static class SchoolSettingsDefaults
     /// être la conséquence silencieuse d'une montée de version.
     /// </summary>
     public const bool SmsAlertsEnabled = false;
+
+    /// <summary>Une semaine de retard avant qu'un débiteur n'entre dans un lot de relance brouillon.</summary>
+    public const int DebtorReminderThresholdDays = 7;
+
+    /// <summary>Bornes du seuil de retard : au moins 1 jour, au plus une année scolaire complète.</summary>
+    public const int MinDebtorReminderThresholdDays = 1;
+    public const int MaxDebtorReminderThresholdDays = 365;
 }

@@ -51,7 +51,8 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         settings.SmsOnAttendanceAlert,
         settings.SmsOnDuesReminder,
         settings.SmsOnPaymentReceipt,
-        settings.SmsCreditBalance);
+        settings.SmsCreditBalance,
+        settings.DebtorReminderThresholdDays);
 
     private static SchoolSettingsDto Defaults() => new(
         SchoolSettingsDefaults.GradingScale.ToString(),
@@ -71,5 +72,6 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         SchoolSettingsDefaults.SmsAlertsEnabled,
         SchoolSettingsDefaults.SmsAlertsEnabled,
         SchoolSettingsDefaults.SmsAlertsEnabled,
-        SchoolSettingsDefaults.SmsCreditBalance);
+        SchoolSettingsDefaults.SmsCreditBalance,
+        SchoolSettingsDefaults.DebtorReminderThresholdDays);
 }

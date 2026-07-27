@@ -62,6 +62,7 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.SmsOnAttendanceAlert = request.SmsOnAttendanceAlert;
         settings.SmsOnDuesReminder = request.SmsOnDuesReminder;
         settings.SmsOnPaymentReceipt = request.SmsOnPaymentReceipt;
+        settings.DebtorReminderThresholdDays = request.DebtorReminderThresholdDays;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -85,6 +86,7 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.SmsOnAttendanceAlert,
             settings.SmsOnDuesReminder,
             settings.SmsOnPaymentReceipt,
-            settings.SmsCreditBalance);
+            settings.SmsCreditBalance,
+            settings.DebtorReminderThresholdDays);
     }
 }

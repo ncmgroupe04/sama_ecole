@@ -36,5 +36,8 @@ public record UpdateSchoolSettingsCommand(
     // modifiable ici (voir SchoolSettingsDto.SmsCreditBalance) : les SMS s'achètent.
     bool SmsOnAttendanceAlert = false,
     bool SmsOnDuesReminder = false,
-    bool SmsOnPaymentReceipt = false) : IRequest<SchoolSettingsDto>;
+    bool SmsOnPaymentReceipt = false,
+
+    /// <summary>Jours de retard avant qu'un débiteur n'entre dans un lot de relance brouillon (Étape 5).</summary>
+    int DebtorReminderThresholdDays = 7) : IRequest<SchoolSettingsDto>;
 

@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Finance.Common;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -77,6 +78,14 @@ public class GetStudentBalanceQueryHandler(IApplicationDbContext dbContext, Time
             .ThenBy(l => l.Designation)
             .ToListAsync(cancellationToken);
 
+        // Un plan personnalisé ACTIF (Étape 5) prime sur la synthèse mensuelle uniforme — au plus un
+        // existe par inscription (index unique partiel, FeeInstallmentPlanConfiguration).
+        var customInstallments = await dbContext.FeeInstallmentPlans.AsNoTracking()
+            .Where(p => p.EnrollmentId == row.Enrollment.Id && p.Status == FeeInstallmentPlanStatus.Active)
+            .SelectMany(p => dbContext.FeeInstallments.Where(i => i.FeeInstallmentPlanId == p.Id))
+            .OrderBy(i => i.SequenceNo)
+            .ToListAsync(cancellationToken);
+
         var payments = await dbContext.Payments.AsNoTracking()
             .Where(p => p.EnrollmentId == row.Enrollment.Id && p.Status != PaymentStatus.Cancelled)
             .OrderByDescending(p => p.PaidAt)
@@ -90,52 +99,20 @@ public class GetStudentBalanceQueryHandler(IApplicationDbContext dbContext, Time
 
         var now = timeProvider.GetUtcNow();
         var todayDateOnly = DateOnly.FromDateTime(now.DateTime);
-        var remainingPaid = row.Enrollment.AmountPaid;
-        var installments = new List<InstallmentDto>();
 
-        foreach (var line in lines)
-        {
-            if (!line.IsRecurring || line.Months <= 1)
-            {
-                var instAmount = line.LineTotal;
-                var paidForThis = Math.Min(remainingPaid, instAmount);
-                remainingPaid -= paidForThis;
-                var remainingDue = instAmount - paidForThis;
-                string status = remainingDue <= 0 ? "Paid" : (paidForThis > 0 ? "Partial" : (row.SchoolYear.StartDate < todayDateOnly ? "Overdue" : "Pending"));
-                var dueDateOffset = new DateTimeOffset(row.SchoolYear.StartDate.ToDateTime(TimeOnly.MinValue), now.Offset);
+        var calculated = InstallmentScheduleCalculator.Calculate(
+            row.Enrollment.AmountPaid, todayDateOnly, lines, row.SchoolYear.StartDate, customInstallments);
 
-                installments.Add(new InstallmentDto(
-                    $"LINE-{line.Id}",
-                    line.Designation,
-                    instAmount,
-                    paidForThis,
-                    remainingDue,
-                    dueDateOffset,
-                    status));
-            }
-            else
-            {
-                for (int m = 1; m <= line.Months; m++)
-                {
-                    var instAmount = line.UnitAmount;
-                    var paidForThis = Math.Min(remainingPaid, instAmount);
-                    remainingPaid -= paidForThis;
-                    var remainingDue = instAmount - paidForThis;
-                    var dueDate = row.SchoolYear.StartDate.AddMonths(m - 1);
-                    string status = remainingDue <= 0 ? "Paid" : (paidForThis > 0 ? "Partial" : (dueDate < todayDateOnly ? "Overdue" : "Pending"));
-                    var dueDateOffset = new DateTimeOffset(dueDate.ToDateTime(TimeOnly.MinValue), now.Offset);
-
-                    installments.Add(new InstallmentDto(
-                        $"MONTH-{line.Id}-{m}",
-                        $"{line.Designation} (Mois {m})",
-                        instAmount,
-                        paidForThis,
-                        remainingDue,
-                        dueDateOffset,
-                        status));
-                }
-            }
-        }
+        var installments = calculated
+            .Select(c => new InstallmentDto(
+                c.Id,
+                c.Label,
+                c.Amount,
+                c.AmountPaid,
+                c.RemainingDue,
+                new DateTimeOffset(c.DueDate.ToDateTime(TimeOnly.MinValue), now.Offset),
+                c.Status.ToString()))
+            .ToList();
 
         return new StudentBalanceDto(
             row.Enrollment.Id,
