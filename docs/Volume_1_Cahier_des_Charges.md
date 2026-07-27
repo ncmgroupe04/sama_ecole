@@ -1,13 +1,18 @@
-# JANGALEKAT
+# SAMA ECOLE
 
 # VOLUME 1 — Cahier des Charges Fonctionnel
 
-**Version :** 2.0
+**Version :** 2.1
 **Statut :** Validé — remplace intégralement les versions 1.0 à 1.4
-**Changements de cette version :**
+**Changements de la v2.0 :**
 - Suppression de toute référence au mode local / LAN / hors connexion (voir Volume 0 v2.0 — l'application est en ligne dès le lancement).
 - Fusion et déduplication des différentes « mises à jour » (1.1 à 1.4) en un seul document organisé par domaine fonctionnel, et non plus par ordre chronologique de rédaction.
 - Séparation explicite entre exigences **MVP** et exigences **Post-MVP** (renvoi au Volume 1.5, Chapitre 7, pour l'arbitrage définitif).
+
+**Changements de la v2.1 (27/07/2026) — rattrapage documentaire :**
+- Ajout des chapitres **14 à 21**, qui spécifient des modules **déjà livrés en production** et jusqu'ici absents de ce cahier des charges : Paie, Caisse, Trésorerie, Fiscalité, Discipline & Convocations, Infrastructures, Documents administratifs, Emploi du temps & Pointage. Ces chapitres décrivent l'existant, pas un reste à faire.
+- Le chapitre **§13 (Portails Parents et Élèves & Messagerie) est reporté en V3** et sort du périmètre V1 — voir l'encadré en tête de ce chapitre et le Volume 1.5 §8.
+- Reprise du nom de produit **Sama Ecole** (le document portait encore l'ancien nom Jangalekat).
 
 ---
 
@@ -25,6 +30,15 @@
 10. Paramétrage général de l'établissement
 11. Gestion des abonnements (multi-écoles)
 12. Uniformisation transverse (dates, affichage des notes)
+13. Portails Parents et Élèves & Messagerie — **reporté en V3, hors périmètre V1**
+14. Paie & Bulletins de salaire
+15. Caisse & Journal de caisse
+16. Trésorerie & Décaissements
+17. Fiscalité & Gestion de la TVA
+18. Discipline & Convocations des parents
+19. Infrastructures (Bâtiments & Salles)
+20. Documents administratifs officiels
+21. Emploi du temps & Pointage des enseignants
 
 ---
 
@@ -170,12 +184,12 @@ Catégories paramétrables par l'établissement : inscription, réinscription, m
 
 > **Note ajoutée en cours de développement (plateforme à ~70%)** : cette précision ne modifie **aucune** règle technique déjà codée — elle documente un comportement déjà couvert par le paramétrage existant (§7.4), pour lever toute ambiguïté future.
 
-Jangalekat s'adresse aussi bien aux établissements **privés** qu'**publics** (école publique, collège, lycée) :
+Sama Ecole s'adresse aussi bien aux établissements **privés** qu'**publics** (école publique, collège, lycée) :
 
 - Un établissement **privé** utilise typiquement des frais de scolarité mensuels sur l'année scolaire (~9 mois), configurés via §7.4.
 - Un établissement **public** sénégalais ne facture en général pas de scolarité mensuelle (enseignement gratuit/subventionné) — il peut alors régler chaque catégorie de frais à **0** ou la laisser simplement inutilisée (ex. seule la coopérative scolaire ou la cantine sont configurées), sans qu'aucun mode ou champ "établissement public" distinct ne soit nécessaire dans le modèle de données.
 - Le module Finance reste donc **strictement le même** pour les deux cas — la différence est uniquement dans les valeurs saisies par l'établissement lors de son propre paramétrage, jamais dans une logique conditionnelle du code.
-- L'abonnement Jangalekat lui-même (Volume 1 §11.1) reste indépendant de cette distinction : un établissement public paie son abonnement plateforme comme tout autre établissement, que ses frais de scolarité internes soient à zéro ou non.
+- L'abonnement Sama Ecole lui-même (Volume 1 §11.1) reste indépendant de cette distinction : un établissement public paie son abonnement plateforme comme tout autre établissement, que ses frais de scolarité internes soient à zéro ou non.
 
 **Vérification recommandée (pas une reprise de développement)** : demander simplement à l'agent de code de confirmer que le ticket JGK-F01 (paramétrage des frais) accepte bien un montant à 0 pour une catégorie sans erreur de validation — si c'est déjà le cas, aucune action supplémentaire n'est nécessaire.
 
@@ -366,17 +380,34 @@ Un seul paramètre global (`Paramètres → Format des dates`), appliqué à tou
 
 ### 12.2 Résultat attendu
 
-À l'issue de ce cahier des charges, Jangalekat couvre : administration, scolarité, inscriptions, bulletins, gestion pédagogique, gestion financière, gestion des abonnements multi-écoles, contrôle des accès, statistiques académiques et financières — adapté aux écoles maternelles, primaires, collèges, lycées et centres de formation du Sénégal, opérable entièrement en ligne.
+À l'issue de ce cahier des charges, Sama Ecole couvre : administration, scolarité, inscriptions, bulletins, gestion pédagogique, gestion financière, paie du personnel, caisse et trésorerie, fiscalité, vie scolaire (discipline, convocations, pointage), infrastructures, documents administratifs officiels, gestion des abonnements multi-écoles, contrôle des accès, statistiques académiques et financières — adapté aux écoles maternelles, primaires, collèges, lycées et centres de formation du Sénégal, opérable entièrement en ligne.
 
 ---
 
 ## 13. Portails Parents et Élèves & Messagerie
 
-**Nouvelle exigence** : Jangalekat ne se limite pas à un outil de gestion interne à l'établissement — la plateforme met en relation les **enseignants** avec les **parents d'élèves** (tous niveaux) et avec les **élèves eux-mêmes** (Collège et Lycée uniquement).
+> ## ⛔ CHAPITRE HORS PÉRIMÈTRE V1 — REPORTÉ EN V3
+>
+> **Statut (27/07/2026) : spécifié, non implémenté, non planifié en V1.** L'intégralité des sous-sections 13.1 à 13.6 ci-dessous est reportée à la **version V3** (Volume 1.5 §8). Le niveau de détail de ce chapitre ne vaut **pas** engagement de livraison — c'est précisément l'avertissement du Volume 1.5 §7 : « toute fonctionnalité listée en dehors du MVP est Post-MVP par défaut, quel que soit son niveau de détail dans le Volume 1 ».
+>
+> **Ce que la V1 livre à la place.** La communication de l'établissement vers les familles est **sortante uniquement**, sans compte ni portail pour le destinataire :
+> - **Notifications SMS** vers les parents (absences, retards, relances d'impayés) — voir §13.7 ci-dessous ;
+> - **Notifications WhatsApp** sur le même canal sortant ;
+> - **E-mail transactionnel** ;
+> - **Documents remis en main propre ou imprimés** : convocation de parent (§18), avis d'échéance (§20), bulletin de notes, reçus.
+>
+> **Conséquences opérationnelles, à respecter tant que la V3 n'est pas ouverte :**
+> - Les rôles `Parent` et `Eleve` **ne doivent pas** être ajoutés à l'énumération `Role`, ni apparaître dans un `[Authorize]`.
+> - Aucun endpoint de consultation ouvert à un tiers qui n'est pas personnel de l'établissement.
+> - Une convocation de parent (§18) n'est **pas** un portail : c'est un document interne, sans compte ni accès en ligne.
+>
+> Ce report ne remet en cause ni le modèle de données ni la sécurité : le jour où le portail s'ouvrira, l'isolation Parent→ses enfants devra respecter à la lettre le double verrou Global Query Filter EF Core **et** policy RLS PostgreSQL (Volume 3 §2), appliqué cette fois *à l'intérieur* d'un même établissement.
+
+**Exigence initiale (conservée pour la V3)** : Sama Ecole ne se limite pas à un outil de gestion interne à l'établissement — la plateforme met en relation les **enseignants** avec les **parents d'élèves** (tous niveaux) et avec les **élèves eux-mêmes** (Collège et Lycée uniquement).
 
 ### 13.1 Rattachement Parent ↔ Élève
 
-- Un Parent (Tuteur) peut être rattaché à **plusieurs enfants**, y compris dans des classes ou établissements différents s'il utilise Jangalekat pour plusieurs de ses enfants.
+- Un Parent (Tuteur) peut être rattaché à **plusieurs enfants**, y compris dans des classes ou établissements différents s'il utilise Sama Ecole pour plusieurs de ses enfants.
 - Un Élève peut avoir **plusieurs Parents/Tuteurs** rattachés (père, mère, tuteur légal), chacun avec son propre compte.
 - Le rattachement est saisi par le Secrétariat au moment de l'inscription (Volume 1 §6) et peut être complété/corrigé ultérieurement par le Directeur.
 - Chaque Parent ne voit **que** les enfants qui lui sont explicitement rattachés — jamais les autres élèves de la classe, même de la même fratrie si non rattachée.
@@ -417,6 +448,227 @@ Un seul paramètre global (`Paramètres → Format des dates`), appliqué à tou
 ### 13.6 Isolation et sécurité (rappel)
 
 Le détail technique de l'isolation Parent→ses enfants et Élève→lui-même est spécifié au Volume 7 (Sécurité), §Portails Parents/Élèves — cette isolation est une extension du même principe déjà appliqué à l'isolation entre établissements (Row-Level Security), appliquée cette fois à l'intérieur d'un même établissement.
+
+### 13.7 Ce que la V1 livre réellement — notifications sortantes (LIVRÉ)
+
+Seule sous-section de ce chapitre effectivement en production. Elle remplace le portail : l'établissement **pousse** l'information vers la famille, la famille ne vient pas la consulter.
+
+**Canaux :**
+
+| Canal | Déclencheur | Statut |
+|---|---|---|
+| SMS | Absence ou retard d'un élève (à l'enregistrement de l'appel) | Livré |
+| SMS | Confirmation d'encaissement d'un paiement | Livré |
+| SMS | Relance d'impayés (envoi groupé déclenché par le Directeur/Finance) | Livré |
+| WhatsApp | Absence ou retard d'un élève | Livré |
+| E-mail | Réinitialisation de mot de passe, cycle de vie de l'abonnement, demandes d'inscription | Livré |
+
+**Règles :**
+
+- Les notifications SMS sont réservées à la formule **Premium** (`Feature.SmsNotifications`). Une école en formule **Primaire** ou **Standard** voit l'option signalée comme premium, et le serveur refuse l'envoi — le contrôle n'est jamais porté par le seul badge de l'interface.
+- Tout SMS sortant passe par un **point de passage unique** (`SmsDispatcher`), qui vérifie dans l'ordre : numéro du tuteur renseigné, formule de l'établissement, **activation de ce type d'alerte** dans les paramètres de l'école, puis solde de crédits. Aucun envoi ne contourne ce passage.
+- Chaque **type d'alerte** (absence, retard, paiement, relance d'impayés) s'active ou se désactive indépendamment : une école peut vouloir prévenir des absences sans relancer les impayés par SMS.
+- Le **débit du solde de crédits est atomique** : la vérification du solde et sa décrémentation sont une seule opération en base. Deux alertes simultanées pour la même école ne peuvent pas consommer deux fois le même crédit.
+- Chaque message est **historisé** avec son statut (envoyé, échec, solde insuffisant) et son coût en segments. L'historique est consultable par le Directeur et le rôle Finance.
+- Le message ne contient jamais de note ni de donnée médicale : il signale un fait (absence, retard, paiement, échéance) et invite à contacter l'établissement.
+- **La relance d'impayés en masse est déclenchée à la main** par le Directeur ou la Finance — jamais automatiquement : écrire à toutes les familles d'un coup est une décision, pas un effet de bord. Elle est cadrable à une seule classe.
+- La relance ne vise que les inscriptions **confirmées** présentant un reliquat : une inscription annulée ou transférée n'est jamais relancée.
+- Un envoi en masse **n'échoue pas en bloc** si un message ne part pas : le résultat rapporte le nombre d'envois réussis, le nombre d'écartés et le premier motif d'écart, à charge pour l'utilisateur de décider de la suite.
+
+---
+
+## 14. Paie & Bulletins de salaire
+
+**Statut : livré.** Écran `/paie`. Rôles : Directeur, Finance.
+
+### 14.1 Contrats du personnel
+
+- L'établissement enregistre un **contrat** par membre du personnel : enseignant titulaire, enseignant vacataire, personnel administratif ou de service.
+- Un contrat porte le type de rémunération : **salaire mensuel fixe** ou **taux horaire** (vacataires).
+- Un contrat n'est jamais supprimé physiquement (règle transverse de suppression logique) : il est **clôturé** à une date, et reste consultable pour l'historique de paie et les attestations.
+
+### 14.2 Calcul et édition de la paie
+
+- La fiche de paie est générée **par employé et par mois**, à la demande, jamais automatiquement à date fixe.
+- Elle calcule : le **brut** (salaire de base, ou heures × taux horaire pour un vacataire), les **retenues salariales** (IPRES sur base plafonnée, BRS), les **charges patronales** (IPRES employeur, CSS sur base plafonnée, CFCE), et le **net à payer**.
+- Le bulletin de salaire est édité en **PDF A4** à l'en-tête de l'établissement.
+- Une fiche de paie générée est un **instantané** : une modification ultérieure du contrat ne réécrit pas une fiche déjà produite.
+
+### 14.3 Suivi des heures des vacataires
+
+- Les heures effectuées par un vacataire sont déclarées au fil de l'eau et consolidées dans une **fiche de suivi** imprimable (PDF), destinée à être signée.
+- Cette fiche est volontairement **découplée du calcul automatique de la paie** : elle sert de pièce justificative vérifiable, et le montant dû reste saisi puis validé par un humain. C'est un choix de contrôle, pas une limitation technique.
+
+### 14.4 Attestation de travail
+
+- Une **attestation de travail** (PDF officiel) est éditable à tout moment à partir d'un contrat, y compris clôturé.
+
+---
+
+## 15. Caisse & Journal de caisse
+
+**Statut : livré.** Écran `/caisse`. Rôles : Directeur, Finance.
+
+### 15.1 Session de caisse
+
+- La journée d'encaissement s'ouvre par une **session de caisse**, avec un fonds de caisse initial déclaré.
+- Tous les encaissements de guichet de la journée (§7) sont rattachés à la session ouverte.
+- La session se **clôture** explicitement, ce qui fige son périmètre.
+
+### 15.2 Rapport de clôture
+
+- À la clôture, le système calcule le **solde de fermeture théorique** : fonds d'ouverture + somme des encaissements de la session. Les paiements annulés en sont exclus, sans être effacés.
+- Une session close **ne peut pas être re-clôturée**. Tout redressement se fait par une écriture nouvelle et tracée — le service Finance ne réécrit jamais l'historique (règle §7.2).
+- Le **rapport de clôture** (PDF) présente : fonds d'ouverture, total encaissé, ventilation par **mode de paiement** et par **catégorie de frais**, et le **détail des transactions** (heure, numéro de reçu, élève, catégorie, mode, montant).
+
+> **Limite connue — le rapprochement de caisse n'est pas implémenté.** Le système ne demande pas au caissier le **montant physiquement compté** en fin de journée, et ne calcule donc **aucun écart de caisse**. Le solde affiché est théorique : il dit ce qui *devrait* être en caisse, pas ce qui y est.
+>
+> C'est une lacune fonctionnelle assumée à ce stade, pas un oubli de rédaction : le rapprochement — confronter l'espèce comptée au calcul, faire apparaître l'écart, le motiver et le tracer — est précisément le contrôle qui donne sa valeur à une caisse. Il reste à spécifier et à construire (saisie du montant compté à la clôture, persistance de l'écart, motif obligatoire au-delà d'un seuil) **avant** de présenter le module Caisse comme complet à un établissement.
+
+### 15.3 Journal de caisse
+
+- Le **journal de caisse du jour** (bordereau) est éditable en PDF : liste chronologique des encaissements, totaux par mode de paiement (espèces, Mobile Money, virement, chèque).
+- Le rapport se **recalcule** à partir des paiements de la session — il n'est pas figé dans un document opaque, et reste donc reproductible à l'identique après coup.
+
+---
+
+## 16. Trésorerie & Décaissements
+
+**Statut : livré.** Écran `/tresorerie`. Rôles : Directeur, Finance.
+
+### 16.1 Décaissements
+
+- L'établissement enregistre ses **sorties de caisse** : achats, charges, salaires versés, frais divers, avec catégorie, date, bénéficiaire et pièce justificative.
+- L'annulation d'un décaissement est une **suppression logique** tracée, jamais un effacement.
+
+### 16.2 Vision consolidée
+
+- Le tableau de bord Trésorerie présente **encaissements et décaissements consolidés** sur une période, et le **solde** qui en résulte.
+- Un décaissement ne modifie **jamais** le solde d'une inscription : les deux flux sont indépendants et ne se compensent pas. Un impayé élève reste un impayé même si l'école a par ailleurs dépensé la somme (règle §7.2).
+
+### 16.3 Rapport financier consolidé et export comptable
+
+- Le **rapport de consolidation des revenus** est consultable sur une période choisie, depuis l'écran `/rapports/financiers`.
+- Ce rapport est **exportable au format `.xlsx`** pour transmission au comptable, sur exactement les mêmes bornes de période que celles affichées à l'écran : l'export est le même rapport dans un autre format, jamais un second calcul.
+- Les rapports financiers consolidés et les exports comptables sont réservés aux formules **Standard** et **Premium** (`Feature.AdvancedFinancialReports`) : en formule **Primaire**, le bouton d'export est **désactivé et signalé**, jamais masqué — l'utilisateur doit comprendre ce que la formule supérieure lui apporterait.
+
+---
+
+## 17. Fiscalité & Gestion de la TVA
+
+**Statut : livré.** Écran `/fiscalite`. Rôles : Directeur, Finance.
+
+### 17.1 Déclarations
+
+- L'établissement génère une **déclaration fiscale et sociale mensuelle** (mois + année), éditée en **PDF officiel** prêt à être déposé.
+- La déclaration consolide :
+  - la **TVA collectée** — somme de la TVA portée par les encaissements du mois (le taux et le montant de TVA sont renseignés **transaction par transaction** à l'encaissement, pas déduits après coup) ;
+  - la **TVA déductible** — somme de la TVA portée par les décaissements du mois ;
+  - les **charges sociales** — agrégées à partir des fiches de paie du mois (§14).
+- Un encaissement **annulé** n'entre pas dans la TVA collectée : il n'a jamais représenté d'argent réellement perçu. Un encaissement **partiel**, lui, est bien un encaissement réel et compte.
+
+### 17.2 Règles
+
+- Une déclaration est un **instantané daté** : elle fige les montants du mois au moment de sa génération.
+- **Une seule déclaration par mois.** Une seconde génération pour la même période est **refusée** — elle ne remplace pas silencieusement la première, et ne crée pas de doublon dont on ne saurait plus lequel a été déposé.
+- **Conséquence à connaître :** si les données du mois changent après la génération (paiement régularisé, fiche de paie corrigée), la déclaration déjà produite **n'est pas rejouable en l'état**. Le circuit de correction — annuler puis regénérer, ou produire une déclaration rectificative distincte — n'est **pas implémenté** et reste à arbitrer.
+
+> **Limite connue — les barèmes sont figés dans le code.** Les taux et plafonds sociaux appliqués par le calcul de paie (§14.2) — IPRES salarié 5,6 % et employeur 8,4 %, CSS 7 %, CFCE 3 %, BRS 5 %, plafonds mensuels IPRES 360 000 FCFA et CSS 63 000 FCFA — sont des **constantes du code**, et non des paramètres de l'établissement.
+>
+> Deux conséquences à connaître : un changement de barème par l'administration sénégalaise impose **une livraison logicielle**, et le nouveau taux s'applique **rétroactivement** à tout recalcul d'un mois antérieur, ce qui est faux comptablement. Rendre ces barèmes paramétrables **avec date d'effet** — pour qu'un recalcul de mars conserve le barème de mars — est le prérequis avant tout déploiement à grande échelle du module Paie.
+
+---
+
+## 18. Discipline & Convocations des parents
+
+**Statut : livré.** Rôles : Directeur, Surveillant.
+
+### 18.1 Registre disciplinaire
+
+- Le Surveillant général enregistre les **faits disciplinaires** : date, élève, nature du fait, sanction éventuelle, suites données.
+- Un fait enregistré n'est **jamais effacé**. Une erreur de saisie se corrige par une mention rectificative tracée — le registre disciplinaire est une pièce à charge comme à décharge, sa valeur tient à son intégrité.
+- Un **procès-verbal de discipline** (PDF officiel, en-tête M.E.N.) est éditable à partir de chaque fait.
+
+### 18.2 Convocations des parents
+
+- L'établissement crée une **convocation** du parent ou du tuteur : motif, date et heure du rendez-vous, élève concerné.
+- Un **avis de convocation** (PDF officiel) est édité pour remise en main propre à l'élève, ou envoi.
+- **Une convocation n'est pas un portail parent** (§13) : elle ne crée aucun compte, n'ouvre aucun accès en consultation, et ne constitue pas une amorce du chapitre 13. C'est un registre interne de la Vie scolaire.
+
+---
+
+## 19. Infrastructures (Bâtiments & Salles)
+
+**Statut : livré.** Écran `/infrastructures`. Écriture : Directeur, Secrétariat.
+
+### 19.1 Référentiel des locaux
+
+- L'établissement décrit ses **bâtiments**, et les **salles** que chacun contient (nom, capacité).
+- La suppression d'un bâtiment ou d'une salle est **logique**.
+
+### 19.2 Règles
+
+- La **lecture est ouverte à tous les rôles** de l'établissement : un enseignant a besoin de connaître les salles pour lire son emploi du temps (§21). Seule l'écriture est restreinte.
+- Un établissement qui n'a pas encore renseigné ses locaux voit une **liste vide**, jamais une erreur : le module est facultatif et ne bloque aucun autre.
+- La capacité d'une salle est **purement descriptive** : elle est saisie et affichée, mais n'est confrontée à aucun effectif et ne déclenche aucune alerte. Le contrôle des places se fait au niveau de la **classe** (§6.3), pas de la salle. Brancher la capacité de salle sur l'affectation d'un créneau (§21) reste à arbitrer — et devrait alerter plutôt qu'interdire, la décision revenant au Directeur.
+
+---
+
+## 20. Documents administratifs officiels
+
+**Statut : livré.** Huit documents PDF, en complément de ceux déjà spécifiés aux chapitres 6, 7 et 8 (reçu d'inscription, reçu de paiement, certificat de scolarité, bulletin de notes, carte scolaire, billet d'entrée).
+
+### 20.1 Les huit documents
+
+| # | Document | Émis depuis | Famille |
+|---|---|---|---|
+| 1 | Certificat d'exéat | Inscription | Vie scolaire |
+| 2 | Procès-verbal de discipline | Fait disciplinaire (§18) | Vie scolaire |
+| 3 | Avis de convocation parent | Convocation (§18) | Vie scolaire |
+| 4 | Billet de sortie | Sortie anticipée d'un élève | Vie scolaire |
+| 5 | Avis d'échéance / sommation pour impayés | Inscription (§7) | Finance |
+| 6 | Engagement financier (reconnaissance de dette) | Inscription (§7) | Finance |
+| 7 | Attestation de travail | Contrat employé (§14) | Paie |
+| 8 | Fiche de suivi des heures | Contrat employé (§14) | Paie |
+
+### 20.2 Règles de forme
+
+- **Génération côté serveur, mise en page à points fixes A4/A5.** Aucun débordement de page n'est possible, contrairement à une impression pilotée par le navigateur dont le rendu varie d'un poste à l'autre.
+- Les documents de la famille **Vie scolaire** portent l'**en-tête officiel M.E.N.** (République du Sénégal / Ministère / Inspection d'Académie / IEF) et un **QR code anti-fraude**. Ceux des familles **Finance** et **Paie** portent l'en-tête de l'établissement.
+- Le QR code encode un **identifiant de vérification**, jamais des données personnelles.
+- Chaque document est **prévisualisable à l'écran** avant impression.
+- Le reçu d'inscription et le bulletin de notes suivent **exactement** les gabarits de `docs/design-references/` — reproduction fidèle, pas d'interprétation créative.
+
+### 20.3 Règles de fond
+
+- Un **engagement financier** ne modifie jamais, à lui seul, le montant dû d'une inscription : c'est une reconnaissance de dette et un échéancier, pas une écriture financière (règle §7.2).
+- Un **avis d'échéance** ne peut être émis que s'il existe effectivement un impayé — une sommation pour une dette inexistante est refusée par le système, pas seulement déconseillée.
+- Tout document est émis **dans le périmètre de l'établissement courant**. Une fuite d'en-tête ou de données entre établissements est traitée comme un défaut de sécurité, pas comme un défaut d'affichage.
+
+---
+
+## 21. Emploi du temps & Pointage des enseignants
+
+**Statut : livré.**
+
+### 21.1 Emploi du temps
+
+- L'emploi du temps est construit par **créneaux** : jour, heure de début, heure de fin, enseignant, classe, matière, salle.
+- Il se consulte **par enseignant** et **par classe**.
+- **Détection de chevauchement** à la création comme à la modification : un créneau est refusé s'il recouvre un créneau existant pour le même enseignant ou pour la même classe. Le message précise laquelle des deux contraintes est violée.
+
+### 21.2 Qui peut faire quoi
+
+- Le **Directeur**, le **Secrétariat** et le **Super Admin** construisent l'emploi du temps de tout l'établissement.
+- Un **Enseignant** ne peut créer, modifier ou supprimer un créneau que **pour lui-même**. Les trois verbes sont couverts : un contrôle qui interdirait de créer un créneau au nom d'un collègue tout en laissant le modifier ou le supprimer ne protégerait rien.
+- Un enseignant ne peut pas non plus **réattribuer** son créneau à un collègue, ni s'approprier celui d'un autre.
+- Les créneaux proposés par un enseignant restent **distinguables** de ceux posés par l'administration, qui garde ainsi la main sur l'emploi du temps officiel.
+- Un compte Enseignant non rattaché à une fiche enseignant est refusé avec un message qui **indique l'action corrective** (demander le rattachement au Directeur), plutôt qu'un refus muet.
+
+### 21.3 Pointage des enseignants
+
+- Le Surveillant général ou le Directeur enregistre la **présence des enseignants** par date.
+- Le pointage alimente le suivi d'assiduité du personnel et, pour les vacataires, recoupe la fiche de suivi des heures (§14.3) — sans s'y substituer.
 
 ---
 

@@ -2,6 +2,9 @@ using System.Reflection;
 using FluentValidation;
 using SamaEcole.Application.Attendance;
 using SamaEcole.Application.Common.Behaviors;
+using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Features.Schedules;
+using SamaEcole.Application.Notifications;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 using SamaEcole.Application.Reports;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +24,10 @@ public static class DependencyInjection
         // soumission d'une fiche de présence. Scoped — elle lit le tenant/compte de la requête courante.
         services.AddScoped<AttendanceScopeAuthorizer>();
 
+        // Contrôle de propriété des créneaux d'emploi du temps : partagé par la création, la
+        // modification et la suppression. Scoped — il lit le compte de la requête courante.
+        services.AddScoped<ScheduleOwnershipAuthorizer>();
+
         // Agrégation d'assiduité (tickets JGK-R02/R03) : partagée par le rapport paginé et l'export
         // de fichier. Scoped — elle lit sous la RLS de la requête courante.
         services.AddScoped<AttendanceReportAggregator>();
@@ -28,6 +35,10 @@ public static class DependencyInjection
         // Calcul du ReportCardDto d'un élève (JGK-G03) : partagé par le bulletin individuel et les
         // bulletins de classe (ZIP, PDF fusionné). Scoped — elle lit sous la RLS de la requête courante.
         services.AddScoped<ReportCardDataService>();
+
+        // Point de passage unique de tout SMS sortant (formule, commutateur d'école, solde,
+        // historique) — voir SmsDispatcher. Scoped : il écrit sous la RLS de la requête courante.
+        services.AddScoped<ISmsDispatcher, SmsDispatcher>();
 
         // Ordre significatif : ValidationBehavior D'ABORD, pour qu'une requête mal formée s'arrête
         // avant d'atteindre AuditLoggingBehavior — une erreur de saisie n'est pas une « écriture

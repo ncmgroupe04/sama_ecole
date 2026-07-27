@@ -2,9 +2,10 @@
 
 # VOLUME 4 — API Design Specification (ADS)
 
-**Version :** 2.0
+**Version :** 2.1
 **Statut :** Document de référence — remplace la version 1.0
-**Changements de cette version :** ajout du chapitre Authentification (absent de la v1.0) ; suppression des références à la synchronisation locale/LAN/SaaS et au poste de travail local (§0.11, §0.17 de la v1.0), non pertinentes pour une plateforme en ligne.
+**Changements de la v2.0 :** ajout du chapitre Authentification (absent de la v1.0) ; suppression des références à la synchronisation locale/LAN/SaaS et au poste de travail local (§0.11, §0.17 de la v1.0), non pertinentes pour une plateforme en ligne.
+**Changements de la v2.1 (27/07/2026) — rattrapage documentaire :** ajout des chapitres 12 à 20, qui décrivent des modules **déjà livrés en production** et jusqu'ici absents de ce volume (Paie, Caisse, Trésorerie, Fiscalité, Discipline & Convocations, Infrastructures, Documents administratifs, Emploi du temps & Pointage, Notifications sortantes SMS/WhatsApp). Ces chapitres documentent l'existant : ils ne décrivent aucune route à construire. Le §11 signale par ailleurs l'export global de données comme **reporté** (voir Volume 1.5 §8).
 
 ---
 
@@ -22,6 +23,17 @@
 9. API Bulletins
 10. API Présences
 11. API Paramètres
+12. API Paie & Bulletins de salaire
+13. API Caisse & Journal de caisse
+14. API Trésorerie & Décaissements
+15. API Fiscalité & TVA
+16. API Discipline & Convocations
+17. API Infrastructures (Bâtiments & Salles)
+18. API Documents administratifs
+19. API Emploi du temps & Pointage enseignants
+20. API Notifications sortantes (SMS / WhatsApp)
+
+> **Chapitres 12 à 20 — modules livrés.** Contrairement aux chapitres 1 à 11, rédigés avant construction, ces chapitres ont été écrits **après** la mise en production pour rattraper l'écart entre le code et la documentation. Les routes qui y figurent sont celles réellement exposées par les contrôleurs de `src/SamaEcole.Web/Controllers/` ; en cas de divergence future, le code fait foi et ce volume doit être corrigé.
 
 ---
 
@@ -234,6 +246,224 @@ Chaque JWT contient les claims `sub` (UserId), `schoolId`, `role`. Le middleware
 | `GET` / `PUT` | `/api/v1/settings/school` | Paramètres établissement (logo, cachet, signature, format de date) |
 | `GET` / `PUT` | `/api/v1/settings/grading` | Système de notation par niveau/classe |
 | `GET` / `PUT` | `/api/v1/settings/registration-numbers` | Format des matricules |
-| `GET` | `/api/v1/exports/school-data` | Export complet des données de l'établissement (remplace la « sauvegarde manuelle » locale — Volume 1.5 §3) |
+| ~~`GET`~~ | ~~`/api/v1/exports/school-data`~~ | **Reporté après la V1** — voir la note ci-dessous |
+
+> **Export global « Exporter mes données » — reporté.** Cette route était spécifiée mais n'a jamais été implémentée ; elle est actée pour la **version suivante** (Volume 1.5 §8). En V1, un Directeur qui doit sortir ses données dispose des exports **par domaine** déjà livrés, qui couvrent les besoins réels de reporting et d'archivage : rapport financier consolidé `.xlsx` (§14), export des présences (`GET /api/v1/reports/attendance/export`), import/export Excel des notes, et l'ensemble des PDF officiels du §18. La sauvegarde intégrale de la base reste, elle, une responsabilité d'infrastructure (Volume 9) — jamais une action utilisateur.
+
+---
+
+## 12. API Paie & Bulletins de salaire
+
+Gestion des contrats du personnel (enseignants titulaires, vacataires, personnel administratif), calcul de la paie mensuelle et édition du bulletin de salaire PDF.
+
+**Rôles :** `Directeur`, `Finance`. Aucun employé ne consulte sa propre fiche via l'API en V1 (pas de portail employé — Volume 1.5 §8).
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/finance/employee-contracts` | Liste des contrats du personnel |
+| `POST` | `/api/v1/finance/employee-contracts` | Créer un contrat (type, salaire de base ou taux horaire) |
+| `GET` | `/api/v1/finance/payroll` | Liste des fiches de paie (filtrable par période) |
+| `POST` | `/api/v1/finance/payroll` | Générer la fiche de paie d'un employé pour un mois donné |
+| `GET` | `/api/v1/finance/payroll/{id}/pdf` | Bulletin de salaire (PDF A4) |
+| `POST` | `/api/v1/finance/employee-contracts/{contractId}/hour-records` | Déclarer des heures effectuées (vacataires) |
+| `GET` | `/api/v1/finance/employee-contracts/{contractId}/hour-records` | Relevé des heures déclarées |
+| `GET` | `/api/v1/finance/employee-contracts/{contractId}/hour-records/sheet` | Fiche de suivi des heures (données) |
+| `GET` | `/api/v1/finance/employee-contracts/{contractId}/hour-records/sheet/pdf` | Fiche de suivi des heures (PDF) |
+| `GET` | `/api/v1/finance/employee-contracts/{contractId}/work-certificate` | Attestation de travail (données) |
+| `GET` | `/api/v1/finance/employee-contracts/{contractId}/work-certificate/pdf` | Attestation de travail (PDF) |
+
+**Règles :**
+- Le calcul de la paie — brut (salaire de base, ou heures × taux horaire), retenues salariales (IPRES plafonnée, BRS), charges patronales (IPRES employeur, CSS plafonnée, CFCE), net à payer — est porté par `PayrollCalculator` dans la couche Application, jamais par le contrôleur ni par l'entité (règle #8 d'`AGENTS.md`).
+- Les heures déclarées via `hour-records` constituent une **fiche de suivi vérifiable**, volontairement non branchée sur le calcul automatique de la paie : le montant dû à un vacataire reste saisi et validé par un humain.
+- Un contrat n'est jamais supprimé physiquement (règle #6) : il est clôturé.
+
+---
+
+## 13. API Caisse & Journal de caisse
+
+Ouverture/fermeture de la caisse de guichet, journal des encaissements de la journée et rapport de clôture.
+
+**Rôles :** `Directeur`, `Finance`.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `POST` | `/api/v1/finance/sessions/open` | Ouvrir une session de caisse (fonds de caisse initial) |
+| `POST` | `/api/v1/finance/sessions/{id}/close` | Clôturer la session — ne prend que l'identifiant de session |
+| `GET` | `/api/v1/finance/sessions/{id}/closing-report` | Rapport de clôture (PDF) — ventilation par mode de paiement et par catégorie de frais, détail des transactions |
+| `GET` | `/api/v1/finance/daily-cash-register/pdf` | Journal de caisse du jour (PDF, bordereau) |
+| `GET` | `/api/v1/finance/dashboard` | Tableau de bord financier (encaissé jour/mois/année, recouvrement) |
+
+**Règles :**
+- La clôture **calcule** le solde de fermeture : `fonds d'ouverture + somme des paiements non annulés de la session`. Elle ne prend **aucun montant en paramètre**.
+- Une session déjà close ne peut pas être re-clôturée : la seconde tentative est rejetée en `400`. Tout redressement passe par une écriture nouvelle, jamais par une modification rétroactive (règle #4).
+- Les paiements annulés sont **exclus** du total, sans être effacés.
+- Le rapport de clôture est reproductible à l'identique après coup : il se recalcule à partir des paiements de la session, il n'est pas figé dans un blob.
+
+> **Limite connue — pas de rapprochement de caisse.** La clôture n'enregistre pas le **montant physiquement compté** par le caissier, et ne calcule donc **aucun écart** (`compté − théorique`). Le solde produit est purement théorique. Le contrôle qui donne sa valeur à une caisse — confronter l'espèce comptée au calcul — reste à construire ; il suppose un champ « montant compté » dans la commande de clôture et sa persistance sur la session. À arbitrer avant d'annoncer un module Caisse complet.
+
+---
+
+## 14. API Trésorerie & Décaissements
+
+Vision consolidée entrées/sorties et registre des décaissements (dépenses de l'établissement).
+
+**Rôles :** `Directeur`, `Finance`, `SuperAdmin`.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/finance/treasury` | Tableau de bord Trésorerie — encaissements et décaissements consolidés, solde |
+| `GET` | `/api/v1/finance/disbursements` | Liste des décaissements (filtrable par période/catégorie) |
+| `POST` | `/api/v1/finance/disbursements` | Enregistrer un décaissement |
+| `DELETE` | `/api/v1/finance/disbursements/{id}` | Annuler un décaissement (suppression **logique**, règle #6) |
+| `GET` | `/api/v1/finance/reports/revenue` | Consolidation des revenus sur une période (JSON) |
+| `GET` | `/api/v1/finance/reports/revenue/excel` | Le même rapport au format comptable `.xlsx` (ClosedXML) |
+
+**Règles :**
+- `GET /finance/reports/revenue/excel` renvoie le fichier avec `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` et un `Content-Disposition: attachment`. Il est consommé par l'écran `/rapports/financiers`.
+- Les bornes de période (`from`, `to`) de l'export `.xlsx` sont **exactement** celles du rapport affiché à l'écran : l'export est le même rapport dans un autre format, jamais un second calcul.
+- Un décaissement ne modifie jamais le solde d'une inscription (règle #4) : les deux flux sont indépendants et ne se compensent pas.
+
+---
+
+## 15. API Fiscalité & TVA
+
+Déclaration fiscale et sociale **mensuelle** : TVA collectée, TVA déductible, charges sociales issues des fiches de paie.
+
+**Rôles :** `Directeur`, `Finance`.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/finance/tax-declarations` | Liste des déclarations générées |
+| `POST` | `/api/v1/finance/tax-declaration` | Générer la déclaration d'un mois (`month`, `year`) |
+| `GET` | `/api/v1/finance/tax-declarations/{id}/pdf` | Déclaration au format PDF officiel |
+
+**Règles :**
+- La TVA n'est **pas recalculée après coup** : taux et montant sont portés **par transaction** (`Payment.VatRate/VatAmount`, `Disbursement.VatRate/VatAmount`) au moment de l'encaissement ou du décaissement. La déclaration ne fait que les sommer.
+- Un paiement `Cancelled` est **exclu** de la TVA collectée ; un paiement `Partial` est **inclus** — c'est un encaissement réel.
+- Une déclaration est un **instantané daté** des montants du mois.
+- **Une seule déclaration par (mois, année)** : une seconde tentative est rejetée en `409` (`BusinessRuleException`), plutôt que d'écraser la première ou de créer un doublon indiscernable.
+
+> **Limite connue — pas de circuit de rectification.** Si les données du mois changent après génération (paiement régularisé, fiche de paie corrigée), la déclaration existante ne peut être ni régénérée ni remplacée : ni annulation, ni déclaration rectificative. À arbitrer.
+
+> **Limite connue — barèmes en dur.** Les taux et plafonds sociaux (IPRES salarié 5,6 % / employeur 8,4 %, CSS 7 %, CFCE 3 %, BRS 5 %, plafonds IPRES 360 000 et CSS 63 000 FCFA) sont des **constantes du code** (`PayrollCalculator`), et non des paramètres d'établissement. Un changement de barème par l'administration impose donc **une livraison logicielle**, et s'applique rétroactivement à tout recalcul. Les rendre paramétrables **avec date d'effet** — pour qu'un recalcul d'un mois passé conserve le barème de l'époque — est le prérequis avant un déploiement à grande échelle.
+
+---
+
+## 16. API Discipline & Convocations
+
+Registre disciplinaire de la Vie scolaire et convocations des parents/tuteurs.
+
+**Rôles :** `Directeur`, `Surveillant`, `SuperAdmin`.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/discipline` | Liste des faits disciplinaires |
+| `POST` | `/api/v1/discipline` | Enregistrer un fait disciplinaire |
+| `GET` | `/api/v1/discipline/{id}/pv` | Procès-verbal de discipline (données) |
+| `GET` | `/api/v1/discipline/{id}/pv/pdf` | Procès-verbal de discipline (PDF officiel) |
+| `GET` | `/api/v1/parent-summons` | Liste des convocations |
+| `POST` | `/api/v1/parent-summons` | Créer une convocation de parent/tuteur |
+| `GET` | `/api/v1/parent-summons/{id}/notice` | Avis de convocation (données) |
+| `GET` | `/api/v1/parent-summons/{id}/notice/pdf` | Avis de convocation (PDF officiel) |
+
+**Règles :**
+- Une convocation n'est **pas un portail parent** : c'est un document interne imprimé et remis en main propre ou envoyé. Elle ne crée aucun compte, n'ouvre aucun accès en consultation, et ne préfigure pas le §13 du Volume 1 (reporté en V3).
+- Un fait disciplinaire enregistré n'est jamais effacé (règle #6) — une erreur de saisie se corrige par une mention rectificative tracée.
+
+---
+
+## 17. API Infrastructures (Bâtiments & Salles)
+
+Référentiel des locaux : bâtiments de l'établissement et salles qu'ils contiennent.
+
+**Rôles :** lecture ouverte à tout utilisateur authentifié de l'école ; écriture réservée au `Directeur`/`Secretariat`/`SuperAdmin`.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/buildings` | Liste des bâtiments (avec leurs salles) |
+| `POST` | `/api/v1/buildings` | Créer un bâtiment |
+| `PUT` | `/api/v1/buildings/{id}` | Modifier un bâtiment |
+| `DELETE` | `/api/v1/buildings/{id}` | Supprimer un bâtiment (logique) |
+| `POST` | `/api/v1/rooms` | Créer une salle rattachée à un bâtiment |
+| `PUT` | `/api/v1/rooms/{id}` | Modifier une salle (nom, capacité) |
+| `DELETE` | `/api/v1/rooms/{id}` | Supprimer une salle (logique) |
+
+**Règles :**
+- La lecture est volontairement ouverte à tous les rôles de l'établissement : un enseignant a besoin de connaître les salles pour lire son emploi du temps (§19).
+- `GET /buildings` renvoie une **liste vide** (`200`), jamais une erreur `500`, sur un établissement dont la migration Infrastructures n'a pas encore été appliquée.
+
+---
+
+## 18. API Documents administratifs
+
+Huit documents officiels PDF, générés côté serveur avec QuestPDF (mise en page A4/A5 à points fixes — aucun débordement de page possible, contrairement à une impression navigateur). Les documents de la famille Vie scolaire portent l'en-tête officiel M.E.N. (République / Ministère / IA / IEF) et un QR code anti-fraude ; ceux des familles Finance et Paie portent l'en-tête de l'établissement.
+
+| # | Document | Route PDF | Famille |
+|---|---|---|---|
+| 1 | Certificat d'exéat | `GET /api/v1/enrollments/{id}/exeat/pdf` | Vie scolaire |
+| 2 | Procès-verbal de discipline | `GET /api/v1/discipline/{id}/pv/pdf` | Vie scolaire |
+| 3 | Avis de convocation parent | `GET /api/v1/parent-summons/{id}/notice/pdf` | Vie scolaire |
+| 4 | Billet de sortie | `GET /api/v1/billets/early-departure/{id}/pdf` | Vie scolaire |
+| 5 | Avis d'échéance / sommation pour impayés | `GET /api/v1/finance/enrollments/{enrollmentId}/dues-notice/pdf` | Finance |
+| 6 | Engagement financier | `GET /api/v1/finance/commitments/{id}/pdf` | Finance |
+| 7 | Attestation de travail | `GET /api/v1/finance/employee-contracts/{contractId}/work-certificate/pdf` | Paie |
+| 8 | Fiche de suivi des heures | `GET /api/v1/finance/employee-contracts/{contractId}/hour-records/sheet/pdf` | Paie |
+
+Chaque document expose en plus une route **sans** `/pdf` renvoyant les mêmes données en JSON, utilisée par l'aperçu à l'écran avant impression.
+
+**Documents officiels antérieurs, hors de ce module mais de même facture :** reçu d'inscription (`/enrollments/{id}/receipt/pdf`), reçu de paiement (`/finance/payments/{id}/receipt/pdf`), certificat de scolarité (`/enrollments/{id}/certificate/pdf`), billet d'entrée (`/billets/late-arrival/{id}/pdf`), cartes scolaires d'une classe (`/classrooms/{id}/school-cards`), bulletin de notes et PV de délibération (Chapitre 9), journal de caisse (§13), déclaration fiscale (§15), bulletin de salaire (§12).
+
+**Règles :**
+- Le reçu d'inscription et le bulletin de notes suivent **exactement** `docs/design-references/` (règle #12) — aucune interprétation créative.
+- Toute requête de document joint son établissement via une entité tenant (`Enrollment`, `EmployeeContract`, …). **Ne jamais** lire `Schools` directement pour récupérer l'en-tête : `School` n'implémente pas `ITenantEntity` (elle *définit* le tenant, elle ne lui appartient pas) et n'a donc aucun filtre automatique — le piège classique de fuite d'en-tête inter-écoles.
+- Le QR code encode un identifiant de vérification, jamais des données personnelles.
+
+---
+
+## 19. API Emploi du temps & Pointage enseignants
+
+Construction de l'emploi du temps hebdomadaire et pointage des présences enseignants.
+
+**Rôles :** emploi du temps — `Directeur`, `Secretariat`, `Enseignant`, `SuperAdmin` ; pointage — `Directeur`, `Surveillant`, `SuperAdmin`.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/schedules/teacher/{teacherId}` | Emploi du temps d'un enseignant |
+| `GET` | `/api/v1/schedules/classroom/{classroomId}` | Emploi du temps d'une classe |
+| `POST` | `/api/v1/schedules` | Créer un créneau |
+| `PUT` | `/api/v1/schedules/{id}` | Modifier un créneau |
+| `DELETE` | `/api/v1/schedules/{id}` | Supprimer un créneau |
+| `GET` | `/api/v1/teacher-attendance?date=` | Pointage des enseignants pour une date |
+| `POST` | `/api/v1/teacher-attendance` | Enregistrer un pointage |
+
+**Règles :**
+- **Contrôle de propriété (règle #10).** Un `Enseignant` ne peut créer ou modifier un créneau que pour **lui-même** : le `TeacherId` reçu dans le corps de la requête est rapproché de sa propre fiche via `Teacher.UserId`, jamais accepté sur parole. Une tentative pour un autre enseignant est rejetée (`403`). Le JWT ne porte que l'identifiant du **compte** — d'où la remontée compte → fiche. `Directeur`/`Secretariat`/`SuperAdmin` construisent l'emploi du temps de tout l'établissement et ne sont pas bornés.
+- Un compte `Enseignant` non rattaché à une fiche enseignant est rejeté explicitement, avec un message qui indique l'action corrective (demander le rattachement au Directeur) plutôt qu'un `403` muet.
+- **Détection de chevauchement** à la création comme à la modification : un créneau est refusé (`400`) s'il recouvre un créneau existant pour le même enseignant ou la même classe.
+- Les créneaux proposés par un enseignant sont marqués `IsTeacherSubmitted` — ils restent distinguables de ceux posés par l'administration.
+
+---
+
+## 20. API Notifications sortantes (SMS / WhatsApp)
+
+Communication **sortante** vers les familles. C'est ce que la V1 livre à la place du portail Parents/Élèves, reporté en V3 (Volume 1 §13, Volume 1.5 §8.1).
+
+**Rôles :** `Directeur`, `Finance`.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/sms/history` | Historique des SMS envoyés (statut, coût en segments, motif d'échec) |
+| `POST` | `/api/v1/sms/dues-reminders` | Relance d'impayés par SMS, cadrable à une classe (`classroomId` optionnel) |
+
+Les autres envois ne sont pas des endpoints : ils partent en **réaction à un événement métier** — absence ou retard enregistré (SMS + WhatsApp), paiement encaissé (SMS).
+
+**Règles :**
+- Point de passage unique `SmsDispatcher` : **aucun** envoi ne le contourne. Il contrôle, dans l'ordre, le numéro du tuteur, la formule de l'école (`Feature.SmsNotifications`, Premium), l'activation du type d'alerte dans les paramètres de l'école, puis le solde de crédits.
+- **Débit atomique du solde** : la condition sur le solde et la décrémentation sont un seul `UPDATE` exécuté par PostgreSQL. Un lire-modifier-écrire côté application perdrait un débit dès que deux alertes partent simultanément pour la même école (même esprit que la règle #5).
+- Tout message est **historisé** avec son statut (`Sent`, `Failed`, `InsufficientCredit`) et son coût.
+- `POST /sms/dues-reminders` **ne renvoie pas d'erreur** si certains SMS ne partent pas : il retourne `{ sentCount, skippedCount, firstSkipReason }`. Un envoi partiel est un résultat, pas un échec — l'utilisateur décide de la suite.
+- La relance ne vise que les inscriptions `Confirmed` présentant un reliquat.
+
+---
 
 **Fin du Volume 4.**

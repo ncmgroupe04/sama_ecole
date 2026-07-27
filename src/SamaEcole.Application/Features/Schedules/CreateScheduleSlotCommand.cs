@@ -32,25 +32,26 @@ public class CreateScheduleSlotCommandValidator : AbstractValidator<CreateSchedu
 }
 
 public class CreateScheduleSlotCommandHandler(
-    IApplicationDbContext context, 
+    IApplicationDbContext context,
     ITenantProvider tenantProvider,
-    ICurrentUserService currentUserService) : IRequestHandler<CreateScheduleSlotCommand, Guid>
+    ICurrentUserService currentUserService,
+    ScheduleOwnershipAuthorizer ownershipAuthorizer) : IRequestHandler<CreateScheduleSlotCommand, Guid>
 {
     public async Task<Guid> Handle(CreateScheduleSlotCommand request, CancellationToken cancellationToken)
     {
         var isTeacher = currentUserService.Role == SamaEcole.Domain.Enums.Role.Enseignant;
-        var teacherId = request.TeacherId;
 
-        // Si l'utilisateur est un enseignant, on force son propre TeacherId pour éviter
-        // qu'il ne crée des créneaux pour d'autres enseignants.
-        // TODO: Validate that the current teacher corresponds to this TeacherId.
-        // For now, we trust the rule #4 / RBAC, but ideally we match User ID to Teacher record.
+        // Un Enseignant ne propose de créneau QUE pour lui-même : le TeacherId du corps de requête est
+        // rapproché de SA fiche, jamais accepté sur parole (règle #10). Pas de créneau existant à la
+        // création, d'où le null. Voir ScheduleOwnershipAuthorizer.
+        var teacherId = await ownershipAuthorizer.EnsureOwnsAsync(
+            request.TeacherId, currentSlotTeacherId: null, cancellationToken);
 
         var overlappingSlot = await context.ScheduleSlots
             .Where(s => s.DayOfWeek == request.DayOfWeek 
                      && s.StartTime < request.EndTime 
                      && s.EndTime > request.StartTime)
-            .Where(s => s.TeacherId == request.TeacherId || s.ClassroomId == request.ClassroomId)
+            .Where(s => s.TeacherId == teacherId || s.ClassroomId == request.ClassroomId)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (overlappingSlot != null)

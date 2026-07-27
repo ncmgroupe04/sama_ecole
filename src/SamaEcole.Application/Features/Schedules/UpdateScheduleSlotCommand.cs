@@ -35,8 +35,9 @@ public class UpdateScheduleSlotCommandValidator : AbstractValidator<UpdateSchedu
 }
 
 public class UpdateScheduleSlotCommandHandler(
-    IApplicationDbContext context, 
-    ICurrentUserService currentUserService) : IRequestHandler<UpdateScheduleSlotCommand>
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService,
+    ScheduleOwnershipAuthorizer ownershipAuthorizer) : IRequestHandler<UpdateScheduleSlotCommand>
 {
     public async Task Handle(UpdateScheduleSlotCommand request, CancellationToken cancellationToken)
     {
@@ -45,26 +46,33 @@ public class UpdateScheduleSlotCommandHandler(
 
         var isTeacher = currentUserService.Role == SamaEcole.Domain.Enums.Role.Enseignant;
 
+        // Un Enseignant ne modifie QUE ses propres créneaux, et ne peut pas les réattribuer à un
+        // collègue : le propriétaire actuel (slot.TeacherId) ET le propriétaire demandé sont tous les
+        // deux confrontés à sa fiche (règle #10). Sans ce contrôle, le verrou posé à la création serait
+        // contournable en deux appels — créer pour soi, puis réattribuer.
+        var teacherId = await ownershipAuthorizer.EnsureOwnsAsync(
+            request.TeacherId, currentSlotTeacherId: slot.TeacherId, cancellationToken);
+
         var overlappingSlot = await context.ScheduleSlots
             .Where(s => s.Id != request.Id) // Exclude current slot
-            .Where(s => s.DayOfWeek == request.DayOfWeek 
-                     && s.StartTime < request.EndTime 
+            .Where(s => s.DayOfWeek == request.DayOfWeek
+                     && s.StartTime < request.EndTime
                      && s.EndTime > request.StartTime)
-            .Where(s => s.TeacherId == request.TeacherId || s.ClassroomId == request.ClassroomId)
+            .Where(s => s.TeacherId == teacherId || s.ClassroomId == request.ClassroomId)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (overlappingSlot != null)
         {
-            var errorMessage = overlappingSlot.TeacherId == request.TeacherId
+            var errorMessage = overlappingSlot.TeacherId == teacherId
                 ? "L'enseignant a déjà cours sur cette plage horaire."
                 : "La classe a déjà cours sur cette plage horaire.";
-                
+
             throw new SamaEcole.Application.Common.Exceptions.ValidationException(new[] {
                 new FluentValidation.Results.ValidationFailure("global", errorMessage)
             });
         }
 
-        slot.TeacherId = request.TeacherId;
+        slot.TeacherId = teacherId;
         slot.ClassroomId = request.ClassroomId;
         slot.SubjectId = request.SubjectId;
         slot.DayOfWeek = request.DayOfWeek;

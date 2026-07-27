@@ -57,6 +57,27 @@ npm run watch:css --prefix src/SamaEcole.Web  # recompile en continu pendant le 
 
 La solution `.NET` (`SamaEcole.sln`, 5 projets `src/`, 3 projets `tests/`, 1 projet `tools/`) est déjà initialisée et compile une fois `dotnet restore` exécuté avec accès à NuGet. Le module `Students` (`CreateStudentCommand` + Handler + Validator + `StudentsController`) sert de **pattern de référence** à suivre pour tous les tickets de `docs/BACKLOG_TICKETS.md` : même structure Command/Handler/Validator, même gestion du tenant via `ITenantProvider`, même génération de matricule dans le Handler.
 
+## Périmètre V1 (état au 27/07/2026)
+
+État détaillé : **`ACTIVE_CONTEXT.md`** à la racine. En résumé :
+
+- **Hors périmètre V1 — reporté en V3 :** le module « Portails Parents et Élèves & Messagerie »
+  (`docs/Volume_1_Cahier_des_Charges.md` §13, sous-sections 13.1 à 13.6 — encadré de report en tête
+  du chapitre, justification au `docs/Volume_1.5_PRD.md` §8.1). Ne pas ajouter les rôles
+  `Parent`/`Eleve`, ni d'endpoint de consultation ouvert à un tiers non-personnel de l'établissement.
+  La communication vers les parents en V1 est **sortante uniquement** : SMS et WhatsApp (formule
+  Premium, `Feature.SmsNotifications`), e-mail, et documents remis en main propre. Une convocation de
+  parent (§18) n'est pas un portail.
+- **Hors périmètre V1 — acté pour la version suivante :** l'export **global** « Exporter mes données »
+  du Directeur (`GET /api/v1/exports/school-data`, jamais implémenté). Ne pas le construire sans
+  arbitrage. Les exports **par domaine** existent et couvrent les besoins réels : rapport financier
+  `.xlsx`, export des présences, import/export Excel des notes, PDF officiels. → `docs/Volume_4_API_Design.md` §11.
+- **Livrés et intégrés :** Paie, Trésorerie, Caisse, TVA/Fiscalité, Discipline & Convocations,
+  Infrastructures (Bâtiments & Salles), Documents administratifs (8 PDF), Emploi du temps &
+  Pointage enseignants, et Rapports financiers (écran `/rapports/financiers` + export `.xlsx`).
+  Spécification fonctionnelle : `docs/Volume_1_Cahier_des_Charges.md` §14 à §21. Routes :
+  `docs/Volume_4_API_Design.md` §12 à §19.
+
 ## Où trouver quoi (ne pas tout lire à chaque tâche — ouvrir le volume pertinent)
 
 | Besoin | Volume |
@@ -71,6 +92,7 @@ La solution `.NET` (`SamaEcole.sln`, 5 projets `src/`, 3 projets `tests/`, 1 pro
 | Cas de test, critère de qualité | `Volume_8_Test_Strategy.md` |
 | Déploiement, CI/CD, supervision | `Volume_9_Deployment_Operations.md` |
 | Ticket de développement prêt à l'emploi | `docs/BACKLOG_TICKETS.md` |
+| Ce qui est livré / ce qui est hors périmètre V1 | `ACTIVE_CONTEXT.md` (racine) |
 | Schéma entité-relation visuel | `docs/ERD.md` |
 | Données de test | `docs/seed-data.json` |
 | **Reçu, bulletin, dashboard — design à reproduire à l'identique** | `docs/design-references/` — voir règle ci-dessous |
