@@ -131,8 +131,8 @@
  <td class="py-2 px-4">
  <div class="flex items-center gap-2 justify-center">
  <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
- class="input-field mt-0 w-20 text-center"
- :class="row.devoir1.status === 'error' ? 'border-danger' : '' transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ class="input-field mt-0 w-20 text-center transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ :class="row.devoir1.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="devoir1"
  :disabled="row.devoir1.status === 'saving' || (row.devoir1.id ? !canCorrectGrades : !canEnterGrades)"
  :title="row.devoir1.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
@@ -149,8 +149,8 @@
  <td class="py-2 px-4">
  <div class="flex items-center gap-2 justify-center">
  <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
- class="input-field mt-0 w-20 text-center"
- :class="row.devoir2.status === 'error' ? 'border-danger' : '' transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ class="input-field mt-0 w-20 text-center transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ :class="row.devoir2.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="devoir2"
  :disabled="row.devoir2.status === 'saving' || (row.devoir2.id ? !canCorrectGrades : !canEnterGrades)"
  :title="row.devoir2.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
@@ -167,8 +167,8 @@
  <td class="py-2 px-4">
  <div class="flex items-center gap-2 justify-center">
  <input type="number" min="0" :max="gradingScale" :placeholder="'0 – ' + gradingScale"
- class="input-field mt-0 w-20 text-center"
- :class="row.composition.status === 'error' ? 'border-danger' : '' transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ class="input-field mt-0 w-20 text-center transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ :class="row.composition.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="composition"
  :disabled="row.composition.status === 'saving' || (row.composition.id ? !canCorrectGrades : !canEnterGrades)"
  :title="row.composition.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"

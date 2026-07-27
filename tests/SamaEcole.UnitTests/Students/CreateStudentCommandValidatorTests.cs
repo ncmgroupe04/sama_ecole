@@ -80,4 +80,42 @@ public class CreateStudentCommandValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(command.FullName));
     }
+
+    [Fact]
+    public void Should_Fail_When_GuardianEmail_Is_Not_A_Valid_Address()
+    {
+        var command = new CreateStudentCommand
+        {
+            FullName = "Awa Fall",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
+            Gender = "F",
+            ClassroomId = Guid.NewGuid(),
+            GuardianEmail = "pas-un-email"
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.GuardianEmail));
+    }
+
+    [Fact]
+    public void Should_Succeed_When_GuardianEmail_Is_Absent()
+    {
+        // Facultatif : un élève dont le tuteur n'a pas d'e-mail doit rester enregistrable.
+        var command = new CreateStudentCommand
+        {
+            FullName = "Awa Fall",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
+            Gender = "F",
+            ClassroomId = Guid.NewGuid(),
+            GuardianEmail = null
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
 }

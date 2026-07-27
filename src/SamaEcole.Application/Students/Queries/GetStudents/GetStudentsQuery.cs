@@ -54,7 +54,9 @@ public record StudentListItem(
     string? PhotoDisplayUrl,
 
     string? GuardianName,
-    string? GuardianPhone);
+    string? GuardianPhone,
+    string? GuardianEmail,
+    string? Address);
 
 public record PaginatedStudents(
     IReadOnlyList<StudentListItem> Items, 

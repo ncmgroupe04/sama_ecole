@@ -48,4 +48,8 @@ public class Student : AuditableEntity, ITenantEntity
 
     public string? GuardianName { get; set; }
     public string? GuardianPhone { get; set; }
+    public string? GuardianEmail { get; set; }
+
+    /// <summary>Adresse du domicile de l'élève (facultative, distincte des coordonnées du tuteur).</summary>
+    public string? Address { get; set; }
 }

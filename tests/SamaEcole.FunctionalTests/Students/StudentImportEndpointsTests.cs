@@ -224,6 +224,21 @@ public class StudentImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsync
     }
 
     [Fact]
+    public async Task An_Invalid_Guardian_Email_Is_Rejected()
+    {
+        const string header = "Nom complet;Date de naissance;Lieu de naissance;Genre;Classe;Tuteur;Téléphone;E-mail;Adresse";
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 A");
+
+        var csv = $"{header}\nAwa Ndiaye;12/03/2015;Dakar;F;{classroom.Name};;;pas-un-email;";
+
+        var response = await ImportAsync(directeur, csv, dryRun: true);
+
+        var result = (await response.Content.ReadFromJsonAsync<ImportResultDto>())!;
+        result.Rows.Single().FieldErrors.Should().ContainKey("guardianEmail");
+    }
+
+    [Fact]
     public async Task Confirming_A_File_With_An_Invalid_Row_Rejects_The_Whole_Batch_And_Writes_Nothing()
     {
         // AGENTS.md règle #5 / le cœur de la demande "réseau" : jamais un import partiel. La ligne 1 est

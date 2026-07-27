@@ -32,6 +32,11 @@ public class SendReportCardCommandHandler(
             throw new ValidationException([new ValidationFailure("Channel", "Le numéro WhatsApp du tuteur n'est pas renseigné pour cet élève.")]);
         }
 
+        if (string.IsNullOrWhiteSpace(student.GuardianEmail) && (request.Channel == CommunicationChannel.Email || request.Channel == CommunicationChannel.Both))
+        {
+            throw new ValidationException([new ValidationFailure("Channel", "L'e-mail du tuteur n'est pas renseigné pour cet élève.")]);
+        }
+
         // Generate the PDF
         var pdfResult = await mediator.Send(new GetReportCardPdfQuery(request.StudentId, request.TermId), cancellationToken);
 
@@ -46,13 +51,11 @@ public class SendReportCardCommandHandler(
             await whatsAppSender.SendAsync(whatsAppMsg, cancellationToken);
         }
 
-        // Email (if email is supported in the future or GuardianPhone is used as fallback, wait, we don't have GuardianEmail right now.
-        // We will mock the email send to "tutor@example.com" if Email is selected, just for demonstration until GuardianEmail is added to Student).
+        // Email
         if (request.Channel is CommunicationChannel.Email or CommunicationChannel.Both)
         {
             var emailAttachment = new EmailAttachment(pdfResult.FileName, pdfResult.Content, "application/pdf");
-            // Placeholder: On utilise une adresse email fictive ou celle du tuteur si ajoutée plus tard.
-            var emailMsg = new EmailMessage("tutor@example.com", "Bulletin de notes", messageBody, [emailAttachment]);
+            var emailMsg = new EmailMessage(student.GuardianEmail!, "Bulletin de notes", messageBody, [emailAttachment]);
             await emailSender.SendAsync(emailMsg, cancellationToken);
         }
     }

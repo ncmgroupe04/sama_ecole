@@ -20,6 +20,15 @@ public class UpdateStudentCommandValidator : AbstractValidator<UpdateStudentComm
         RuleFor(x => x.GuardianName).MaximumLength(200).NoHtml();
         RuleFor(x => x.GuardianPhone).MaximumLength(30).NoHtml().MustBeValidSenegalPhone();
 
+        // EmailAddress() vérifie peu au-delà du « @ » : sans NoHtml, « <script>@x.com » passerait.
+        RuleFor(x => x.GuardianEmail)
+            .MaximumLength(255).WithMessage("L'e-mail du tuteur ne peut pas dépasser 255 caractères.")
+            .EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.GuardianEmail))
+            .WithMessage("L'adresse e-mail du tuteur n'est pas valide.")
+            .NoHtml();
+
+        RuleFor(x => x.Address).MaximumLength(300).NoHtml();
+
         // Même contrat que CreateStudentCommandValidator : une adresse http(s), jamais un file:// ou
         // javascript: — la photo n'est jamais téléversée, seulement référencée par URL.
         RuleFor(x => x.PhotoUrl)

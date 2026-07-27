@@ -25,6 +25,15 @@ public class CreateStudentCommandValidator : AbstractValidator<CreateStudentComm
 
         RuleFor(x => x.PhotoData).MustBeValidPhotoData();
         RuleFor(x => x.GuardianPhone).MustBeValidSenegalPhone();
+
+        // EmailAddress() vérifie peu au-delà du « @ » : sans NoHtml, « <script>@x.com » passerait.
+        RuleFor(x => x.GuardianEmail)
+            .MaximumLength(255).WithMessage("L'e-mail du tuteur ne peut pas dépasser 255 caractères.")
+            .EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.GuardianEmail))
+            .WithMessage("L'adresse e-mail du tuteur n'est pas valide.")
+            .NoHtml();
+
+        RuleFor(x => x.Address).MaximumLength(300).NoHtml();
     }
 
     private static bool BeAValidHttpUrl(string? url) =>

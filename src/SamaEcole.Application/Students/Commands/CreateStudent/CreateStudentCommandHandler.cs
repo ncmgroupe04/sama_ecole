@@ -58,7 +58,9 @@ public class CreateStudentCommandHandler(
                 PhotoUrl = request.PhotoUrl,
                 PhotoData = request.PhotoData is null ? null : Convert.FromBase64String(request.PhotoData),
                 GuardianName = request.GuardianName.ToTitleCase(),
-                GuardianPhone = request.GuardianPhone
+                GuardianPhone = request.GuardianPhone,
+                GuardianEmail = request.GuardianEmail,
+                Address = request.Address
             };
 
             dbContext.Students.Add(student);

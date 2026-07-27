@@ -48,12 +48,9 @@ document.addEventListener('alpine:init', () => {
         isSavingReportCardRemark: false,
         reportCardRemarkErrors: {},
 
-        // Modale d'aperçu et d'impression des documents officiels
-        showPdfModal: false,
-        pdfPreviewUrl: null,
-        pdfPreviewTitle: '',
-        pdfDownloadName: '',
-        pdfLoadError: false,
+        // Modale d'aperçu et d'impression des documents officiels — état + méthodes étalés depuis
+        // le moteur partagé (wwwroot/js/pdf-preview.js) ; voir openPdfModalWithBlob ci-dessous.
+        ...window.pdfPreview.state(),
 
         // Engagement financier (échéancier) : pas de liste persistée côté API (une seule note peut être
         // consultée par id) — on garde en mémoire l'id du dernier engagement créé pour proposer son
@@ -76,7 +73,9 @@ document.addEventListener('alpine:init', () => {
             photoUrl: '',
             photoData: '', // Feature B — base64 déjà compressé (photo-compress.js), rempli par <photo-dropzone>.
             guardianName: '',
-            guardianPhone: ''
+            guardianPhone: '',
+            guardianEmail: '',
+            address: ''
         },
         createErrors: {},
 
@@ -109,7 +108,7 @@ document.addEventListener('alpine:init', () => {
         // Édition de la fiche (modale). Sourcée depuis studentDetail.identity (fraîchement chargée,
         // RowVersion inclus) plutôt que la ligne de liste `detailStudent`, qui peut être périmée et ne
         // porte pas le jeton de concurrence — le bouton n'est donc proposé qu'une fois studentDetail chargé.
-        editingStudent: null, // { fullName, birthDate, birthPlace, gender, classroomId, photoUrl, photoDisplayUrl, guardianName, guardianPhone, rowVersion }
+        editingStudent: null, // { fullName, birthDate, birthPlace, gender, classroomId, photoUrl, photoDisplayUrl, guardianName, guardianPhone, guardianEmail, address, rowVersion }
         isSavingStudentEdit: false,
         studentEditErrors: {},
         showStudentEditedDialog: false,
@@ -371,6 +370,8 @@ document.addEventListener('alpine:init', () => {
                 photoDisplayUrl: identity.photoDisplayUrl || '', // Aperçu <photo-dropzone> uniquement.
                 guardianName: identity.guardianName || '',
                 guardianPhone: identity.guardianPhone || '',
+                guardianEmail: identity.guardianEmail || '',
+                address: identity.address || '',
                 rowVersion: identity.rowVersion
             };
             this.studentEditErrors = {};
@@ -575,7 +576,7 @@ document.addEventListener('alpine:init', () => {
                 // Fermer la modale et réinitialiser
                 this.isCreateOpen = false;
                 this.addedStudentName = this.newStudent.fullName;
-                this.newStudent = { fullName: '', birthDate: '', birthPlace: '', gender: 'M', classroomId: '', photoUrl: '', photoData: '', guardianName: '', guardianPhone: '' };
+                this.newStudent = { fullName: '', birthDate: '', birthPlace: '', gender: 'M', classroomId: '', photoUrl: '', photoData: '', guardianName: '', guardianPhone: '', guardianEmail: '', address: '' };
 
                 // Rafraîchir la liste
                 this.page = 1;
@@ -843,51 +844,6 @@ document.addEventListener('alpine:init', () => {
             }[status] || 'status-badge-neutral';
         },
 
-        async openPdfModalWithBlob(url, title, downloadName) {
-            // Nettoyer tout ancien Blob URL avant de tenter un nouveau chargement.
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfLoadError = false;
-            this.pdfPreviewTitle = title || 'Document officiel';
-            this.pdfDownloadName = downloadName || 'document.pdf';
-
-            try {
-                if (!url || url.includes('undefined') || url.includes('null')) {
-                    throw new Error(`L'URL du document est invalide (${url}).`);
-                }
-                console.log("PDF URL:", url);
-
-                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                    await window.api.refreshOrRedirect();
-                }
-                const response = await fetch(url, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
-                    credentials: 'same-origin'
-                });
-                if (!response.ok) {
-                    const errText = await response.text().catch(() => '');
-                    throw new Error(`Erreur ${response.status}: Récupération du document impossible (${errText || response.statusText}).`);
-                }
-                const rawBlob = await response.blob();
-                if (!rawBlob || rawBlob.size === 0) {
-                    throw new Error("Le document PDF reçu du serveur est vide (0 octet). Veuillez réessayer.");
-                }
-                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-                this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
-                console.log("PDF Blob URL assigned to iframe:", this.pdfPreviewUrl);
-                this.pdfLoadError = false;
-            } catch (e) {
-                console.error("Erreur openPdfModalWithBlob (Students):", e);
-                // Pas d'alert() bloquante : on ouvre la modale en mode erreur, les boutons restent
-                // toujours fonctionnels (Fermer, Télécharger ouvre l'URL directe, Imprimer ne fait rien).
-                this.pdfLoadError = true;
-            }
-            // La modale s'ouvre TOUJOURS, même en cas d'erreur : l'utilisateur peut la fermer proprement.
-            this.showPdfModal = true;
-        },
-
         async openEnrollmentCertificatePreview(enrollmentId, yearLabel) {
             await this.openPdfModalWithBlob(
                 `/api/v1/enrollments/${enrollmentId}/certificate/pdf`,
@@ -962,41 +918,6 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
-        closePdfPreview() {
-            this.showPdfModal = false;
-            if (this.pdfPreviewUrl) {
-                URL.revokeObjectURL(this.pdfPreviewUrl);
-                this.pdfPreviewUrl = null;
-            }
-            this.pdfLoadError = false;
-        },
-
-        printPreviewPdf() {
-            const iframe = document.getElementById('stu-pdf-preview-frame');
-            if (iframe && iframe.contentWindow) {
-                try {
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                } catch {
-                    if (this.pdfPreviewUrl) {
-                        const win = window.open(this.pdfPreviewUrl, '_blank');
-                        if (win) win.print();
-                    }
-                }
-            } else if (this.pdfPreviewUrl) {
-                const win = window.open(this.pdfPreviewUrl, '_blank');
-                if (win) win.print();
-            }
-        },
-
-        downloadPreviewPdf() {
-            if (!this.pdfPreviewUrl) return;
-            const link = document.createElement('a');
-            link.href = this.pdfPreviewUrl;
-            link.download = this.pdfDownloadName || 'document.pdf';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        }
+        // closePdfPreview / printPreviewPdf / downloadPreviewPdf : voir window.pdfPreview.state().
     }));
 });

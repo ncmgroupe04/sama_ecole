@@ -207,6 +207,14 @@
  <div>
  <dt class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Téléphone</dt>
  <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianPhone ? detailStudent.guardianPhone : '—'"></dd>
+                </div>
+                <div>
+                    <dt class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">E-mail</dt>
+                    <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianEmail ? detailStudent.guardianEmail : '—'"></dd>
+                </div>
+                <div>
+                    <dt class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Adresse</dt>
+                    <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.address ? detailStudent.address : '—'"></dd>
  </div>
  </dl>
  </div>
@@ -646,6 +654,18 @@
  <label class="block text-sm font-medium text-slate-700">Téléphone du tuteur</label>
  <input type="text" x-model="editingStudent.guardianPhone" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
  <p x-show="studentEditErrors.guardianphone" x-text="studentEditErrors.guardianphone" class="mt-1 text-xs text-danger"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">E-mail du tuteur</label>
+                    <input type="email" x-model="editingStudent.guardianEmail" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                    <p x-show="studentEditErrors.guardianemail" x-text="studentEditErrors.guardianemail" class="mt-1 text-xs text-danger"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Adresse</label>
+                    <input type="text" x-model="editingStudent.address" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                    <p x-show="studentEditErrors.address" x-text="studentEditErrors.address" class="mt-1 text-xs text-danger"></p>
  </div>
 
  <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -809,6 +829,17 @@
  <div>
  <label class="block text-sm font-medium text-slate-700">Téléphone du tuteur</label>
  <input type="text" x-model="newStudent.guardianPhone" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">E-mail du tuteur</label>
+                    <input type="email" x-model="newStudent.guardianEmail" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+                    <p x-show="createErrors.guardianemail" x-text="createErrors.guardianemail" class="mt-1 text-xs text-danger"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Adresse</label>
+                    <input type="text" x-model="newStudent.address" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
  </div>
 
  <!-- Boutons d'action -->
@@ -879,6 +910,8 @@
  <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Classe</th>
  <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Tuteur</th>
  <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Tél. tuteur</th>
+                                    <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">E-mail tuteur</th>
+                                    <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Adresse</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
@@ -892,6 +925,8 @@
  <td class="py-1.5 px-2" :class="importCellClass(row, 'classroomName')" :title="row.fieldErrors.classroomName || ''" x-text="row.classroomName"></td>
  <td class="py-1.5 px-2" :class="importCellClass(row, 'guardianName')" :title="row.fieldErrors.guardianName || ''" x-text="row.guardianName"></td>
  <td class="py-1.5 px-2" :class="importCellClass(row, 'guardianPhone')" :title="row.fieldErrors.guardianPhone || ''" x-text="row.guardianPhone"></td>
+                                    <td class="py-1.5 px-2" :class="importCellClass(row, 'guardianEmail')" :title="row.fieldErrors.guardianEmail || ''" x-text="row.guardianEmail"></td>
+                                    <td class="py-1.5 px-2" :class="importCellClass(row, 'address')" :title="row.fieldErrors.address || ''" x-text="row.address"></td>
  </tr>
  </template>
  </tbody>
@@ -926,59 +961,7 @@
  </modal-shell>
 
  <!-- Modale d'Aperçu PDF (Certificats et Reçus) -->
- <modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
- <div class="space-y-4">
- <!-- Bandeau d'astuce et ouverture rapide -->
- <div x-show="pdfPreviewUrl" class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-900 text-xs">
- <div class="flex items-center gap-2 font-medium">
- <icon name="document-text" class="w-4 h-4 text-indigo-600 shrink-0" />
- <span>Astuce : Si l'aperçu ne s'affiche pas dans le cadre ci-dessous, vous pouvez l'ouvrir directement ou le télécharger.</span>
- </div>
- <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
- <button type="button" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-2xs transition-colors flex items-center gap-1.5">
- <icon name="external-link" class="w-3.5 h-3.5" />
- <span>Ouvrir dans un nouvel onglet</span>
- </button>
- </div>
- </div>
-
- <template x-if="pdfPreviewUrl && !pdfLoadError">
- <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-hidden relative" style="height: 600px;">
- <iframe :src="pdfPreviewUrl" id="stu-pdf-preview-frame" class="w-full h-full border-0" title="Prévisualisation du document"></iframe>
- </div>
- </template>
- <div x-show="!pdfPreviewUrl || pdfLoadError" x-cloak class="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300" style="min-height: 400px;">
- <icon name="document-text" class="w-12 h-12 text-slate-400 mb-3" />
- <p class="text-sm font-medium text-slate-700">L'aperçu intégré ne s'affiche pas dans votre navigateur.</p>
- <p class="text-xs text-slate-500 mt-1 mb-6 max-w-md">Votre navigateur peut restreindre l'affichage des PDF dans un cadre. Vous pouvez ouvrir le document dans un nouvel onglet ou le télécharger directement.</p>
- <div class="flex flex-wrap justify-center gap-3">
- <button type="button" x-show="pdfPreviewUrl" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="btn-primary text-xs">
- <icon name="external-link" class="w-4 h-4" />
- <span>Ouvrir dans un nouvel onglet</span>
- </button>
- <button type="button" x-on:click="downloadPreviewPdf()" class="btn-secondary text-xs">
- <icon name="download" class="w-4 h-4" />
- <span>Télécharger le fichier</span>
- </button>
- </div>
- </div>
- <div class="flex flex-wrap justify-end gap-2 pt-2 border-t border-slate-100">
- <button type="button" x-on:click="closePdfPreview()" class="btn-secondary">Fermer</button>
- <button type="button" x-show="pdfPreviewUrl" x-on:click="window.open(pdfPreviewUrl, '_blank')" class="btn-secondary">
- <icon name="external-link" class="w-4 h-4" />
- <span>Ouvrir dans un nouvel onglet</span>
- </button>
- <button type="button" x-on:click="downloadPreviewPdf()" class="btn-secondary">
- <icon name="download" class="w-4 h-4" />
- <span>Télécharger</span>
- </button>
- <button type="button" x-on:click="printPreviewPdf()" class="btn-primary">
- <icon name="print" class="w-4 h-4" />
- <span>Imprimer</span>
- </button>
- </div>
- </div>
- </modal-shell>
+ @await Html.PartialAsync("_PdfPreviewModal")
 
  <!-- Modale : Nouvel engagement financier (échéancier) -->
  <modal-shell open="isCommitmentModalOpen" on-close="isCommitmentModalOpen = false" title="Nouvel engagement financier">

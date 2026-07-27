@@ -68,6 +68,8 @@ public record StudentIdentityDto(
 
     string? GuardianName,
     string? GuardianPhone,
+    string? GuardianEmail,
+    string? Address,
     uint RowVersion);
 
 /// <summary>
@@ -155,6 +157,8 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                 s.PhotoData,
                 s.GuardianName,
                 s.GuardianPhone,
+                s.GuardianEmail,
+                s.Address,
                 RowVersion = EF.Property<uint>(s, "xmin"),
 
                 // Sous-requête pour le nom de classe : une classe supprimée (soft delete) sort du Global
@@ -181,6 +185,8 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
             PhotoDisplay.ToDisplayUrl(student.PhotoData, student.PhotoUrl),
             student.GuardianName,
             student.GuardianPhone,
+            student.GuardianEmail,
+            student.Address,
             student.RowVersion);
 
         // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20), et NON un réglage

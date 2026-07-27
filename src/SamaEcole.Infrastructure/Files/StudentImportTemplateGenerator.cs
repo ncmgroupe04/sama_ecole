@@ -13,7 +13,7 @@ public class StudentImportTemplateGenerator : IStudentImportTemplateGenerator
     private static readonly string[] Headers =
     [
         "Nom complet", "Date de naissance (jj/mm/aaaa)", "Lieu de naissance", "Genre (M/F)",
-        "Classe", "Nom du tuteur", "Téléphone du tuteur"
+        "Classe", "Nom du tuteur", "Téléphone du tuteur", "E-mail du tuteur", "Adresse"
     ];
 
     public byte[] Generate(IReadOnlyList<string> classroomNames)
@@ -38,6 +38,8 @@ public class StudentImportTemplateGenerator : IStudentImportTemplateGenerator
         sheet.Cell(2, 5).Value = classroomNames.Count > 0 ? classroomNames[0] : "CM2 A";
         sheet.Cell(2, 6).Value = "Moussa Ndiaye";
         sheet.Cell(2, 7).Value = "+221771234567";
+        sheet.Cell(2, 8).Value = "moussa.ndiaye@example.com";
+        sheet.Cell(2, 9).Value = "Cité Keur Gorgui, Dakar";
 
         sheet.Columns(1, Headers.Length).AdjustToContents();
 

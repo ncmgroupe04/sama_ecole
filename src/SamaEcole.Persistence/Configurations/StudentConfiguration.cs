@@ -36,6 +36,8 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         // Pas de HasMaxLength sur PhotoData : bytea PostgreSQL n'a pas de longueur fixe déclarée côté
         // schéma, la borne de taille (PhotoValidation.MaxPhotoBytes) est une règle applicative.
         builder.Property(s => s.PhotoData);
+        builder.Property(s => s.GuardianEmail).HasMaxLength(255);
+        builder.Property(s => s.Address).HasMaxLength(300);
 
         // Un matricule est unique par école, pas globalement.
         builder.HasIndex(s => new { s.SchoolId, s.Matricule }).IsUnique();

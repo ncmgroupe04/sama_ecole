@@ -27,7 +27,7 @@ public class ImportStudentsCommandHandler(
 
     private record ParsedStudentRow(
         string FullName, DateOnly BirthDate, string BirthPlace, string Gender, Guid ClassroomId,
-        string? GuardianName, string? GuardianPhone);
+        string? GuardianName, string? GuardianPhone, string? GuardianEmail, string? Address);
 
     public async Task<ImportStudentsResult> Handle(ImportStudentsCommand request, CancellationToken cancellationToken)
     {
@@ -71,7 +71,7 @@ public class ImportStudentsCommandHandler(
             results.Add(new ImportStudentsRowResult(
                 row.RowNumber, fieldErrors.Count == 0,
                 row.FullName, row.BirthDate, row.BirthPlace, row.Gender, row.ClassroomName,
-                row.GuardianName, row.GuardianPhone,
+                row.GuardianName, row.GuardianPhone, row.GuardianEmail, row.Address,
                 fieldErrors));
 
             if (parsed is not null)
@@ -122,7 +122,9 @@ public class ImportStudentsCommandHandler(
                     Gender = parsed.Gender,
                     ClassroomId = parsed.ClassroomId,
                     GuardianName = parsed.GuardianName,
-                    GuardianPhone = parsed.GuardianPhone
+                    GuardianPhone = parsed.GuardianPhone,
+                    GuardianEmail = parsed.GuardianEmail,
+                    Address = parsed.Address
                 });
             }
 
@@ -226,6 +228,30 @@ public class ImportStudentsCommandHandler(
             errors["guardianPhone"] = SafeTextValidation.ErrorMessage;
         }
 
+        var guardianEmail = row.GuardianEmail.Trim();
+        if (guardianEmail.Length > 255)
+        {
+            errors["guardianEmail"] = "L'e-mail du tuteur ne peut pas dépasser 255 caractères.";
+        }
+        else if (guardianEmail.Length > 0 && !IsValidEmail(guardianEmail))
+        {
+            errors["guardianEmail"] = "L'e-mail du tuteur n'est pas valide.";
+        }
+        else if (!SafeTextValidation.IsSafeText(guardianEmail))
+        {
+            errors["guardianEmail"] = SafeTextValidation.ErrorMessage;
+        }
+
+        var address = row.Address.Trim();
+        if (address.Length > 300)
+        {
+            errors["address"] = "L'adresse ne peut pas dépasser 300 caractères.";
+        }
+        else if (!SafeTextValidation.IsSafeText(address))
+        {
+            errors["address"] = SafeTextValidation.ErrorMessage;
+        }
+
         if (errors.Count > 0)
         {
             return (errors, null);
@@ -234,6 +260,23 @@ public class ImportStudentsCommandHandler(
         return (errors, new ParsedStudentRow(
             fullName, birthDate, birthPlace, gender, classroomId,
             guardianName.Length == 0 ? null : guardianName,
-            guardianPhone.Length == 0 ? null : guardianPhone));
+            guardianPhone.Length == 0 ? null : guardianPhone,
+            guardianEmail.Length == 0 ? null : guardianEmail,
+            address.Length == 0 ? null : address));
+    }
+
+    /// <summary>Même contrat que EmailAddress() de FluentValidation (CreateStudentCommandValidator) : un
+    /// contrôle de format simple, pas une vérification d'existence du domaine.</summary>
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            _ = new System.Net.Mail.MailAddress(email);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 }

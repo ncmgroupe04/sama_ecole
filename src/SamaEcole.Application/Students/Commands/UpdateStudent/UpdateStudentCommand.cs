@@ -25,6 +25,8 @@ public record UpdateStudentCommand(
     string? PhotoUrl,
     string? GuardianName,
     string? GuardianPhone,
+    string? GuardianEmail,
+    string? Address,
     uint RowVersion) : IRequest<UpdateStudentResult>;
 
 public record UpdateStudentResult(Guid Id, uint RowVersion);

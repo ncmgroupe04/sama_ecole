@@ -43,6 +43,8 @@ public class UpdateStudentCommandHandler(IApplicationDbContext dbContext)
         student.PhotoUrl = request.PhotoUrl;
         student.GuardianName = request.GuardianName.ToTitleCase();
         student.GuardianPhone = request.GuardianPhone;
+        student.GuardianEmail = request.GuardianEmail;
+        student.Address = request.Address;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

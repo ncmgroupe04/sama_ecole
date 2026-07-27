@@ -26,7 +26,7 @@ public record ImportStudentsCommand(byte[] FileContent, string FileName, bool Dr
 /// l'écran d'aperçu peut ainsi colorer précisément la ou les cellules fautives, comme demandé pour la
 /// rentrée scolaire — une date mal formée n'empêche pas de voir que le lieu de naissance, lui, est bon.
 /// Clés de <see cref="FieldErrors"/> : "fullName", "birthDate", "birthPlace", "gender", "classroomName",
-/// "guardianName", "guardianPhone".
+/// "guardianName", "guardianPhone", "guardianEmail", "address".
 /// </summary>
 public record ImportStudentsRowResult(
     int RowNumber,
@@ -38,6 +38,8 @@ public record ImportStudentsRowResult(
     string ClassroomName,
     string GuardianName,
     string GuardianPhone,
+    string GuardianEmail,
+    string Address,
     IReadOnlyDictionary<string, string> FieldErrors);
 
 public record ImportStudentsResult(

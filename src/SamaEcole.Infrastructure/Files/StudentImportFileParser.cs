@@ -8,7 +8,7 @@ using FluentValidation.Results;
 namespace SamaEcole.Infrastructure.Files;
 
 /// <summary>
-/// Lit un fichier d'import d'élèves CSV ou Excel (sept colonnes fixes, voir StudentImportFileRow).
+/// Lit un fichier d'import d'élèves CSV ou Excel (neuf colonnes fixes, voir StudentImportFileRow).
 /// Aucune validation MÉTIER ici (format de date, existence de la classe...) — seulement la structure du
 /// fichier : c'est ImportStudentsCommandHandler qui résout chaque ligne.
 ///
@@ -19,7 +19,7 @@ public class StudentImportFileParser : IStudentImportFileParser
 {
     /// <summary>Nombre de colonnes attendu (voir StudentImportFileRow) — les colonnes manquantes en fin
     /// de ligne (tuteur non renseigné) sont complétées par des chaînes vides, jamais une erreur.</summary>
-    private const int ColumnCount = 7;
+    private const int ColumnCount = 9;
 
     public IReadOnlyList<StudentImportFileRow> Parse(byte[] fileContent, string fileName)
     {
@@ -73,7 +73,7 @@ public class StudentImportFileParser : IStudentImportFileParser
             while (fields.Count < ColumnCount) fields.Add("");
 
             rows.Add(new StudentImportFileRow(
-                i + 1, fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6]));
+                i + 1, fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8]));
         }
 
         return rows;
@@ -156,7 +156,7 @@ public class StudentImportFileParser : IStudentImportFileParser
                 }
 
                 rows.Add(new StudentImportFileRow(
-                    xlRow.RowNumber(), fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6]));
+                    xlRow.RowNumber(), fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8]));
             }
 
             return rows;

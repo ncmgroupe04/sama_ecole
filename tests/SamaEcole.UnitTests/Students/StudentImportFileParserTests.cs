@@ -8,7 +8,7 @@ using Xunit;
 namespace SamaEcole.UnitTests.Students;
 
 /// <summary>
-/// StudentImportFileParser lit la STRUCTURE d'un fichier CSV/Excel à sept colonnes fixes, sans
+/// StudentImportFileParser lit la STRUCTURE d'un fichier CSV/Excel à neuf colonnes fixes, sans
 /// connaître les classes de l'école (résolues par ImportStudentsCommandHandler contre l'état en base) :
 /// ces tests portent uniquement sur ce que le fichier, pris seul, permet ou non de lire.
 ///

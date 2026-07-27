@@ -98,7 +98,9 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
                 s.PhotoUrl,
                 s.PhotoData,
                 s.GuardianName,
-                s.GuardianPhone
+                s.GuardianPhone,
+                s.GuardianEmail,
+                s.Address
             })
             .ToListAsync(cancellationToken);
 
@@ -115,7 +117,9 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
                 r.PhotoUrl,
                 PhotoDisplay.ToDisplayUrl(r.PhotoData, r.PhotoUrl),
                 r.GuardianName,
-                r.GuardianPhone))
+                r.GuardianPhone,
+                r.GuardianEmail,
+                r.Address))
             .ToList();
 
         var girlsCount = await query.CountAsync(s => s.Gender == "F", cancellationToken);
