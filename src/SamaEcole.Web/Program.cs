@@ -7,6 +7,7 @@ using SamaEcole.Application;
 using SamaEcole.Application.Auth;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Infrastructure;
+using SamaEcole.Infrastructure.Notifications;
 using SamaEcole.Persistence;
 using SamaEcole.Persistence.Seed;
 using SamaEcole.Web.Authorization;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Formatting.Compact;
@@ -300,6 +302,26 @@ var app = builder.Build();
 // (superutilisateur, BYPASSRLS, ou propriétaire des tables) : l'isolation multi-tenant serait
 // silencieusement inopérante (ticket JGK-A03, AGENTS.md règle #2).
 await app.Services.EnsureRuntimeRoleCannotBypassRlsAsync();
+
+// Canaux sortants non configurés : AVERTIT sans empêcher le démarrage (voir SmsServiceGuard pour la
+// justification de cette différence avec RlsGuard/EmailSenderGuard). Emis ici, et non dans
+// AddInfrastructure, parce que c'est le premier endroit où un ILogger existe — sans cet appel, les
+// gardes ne seraient qu'un texte que personne n'affiche jamais.
+foreach (var warning in new[]
+         {
+             SmsServiceGuard.DescribeMisconfiguration(
+                 app.Services.GetRequiredService<IOptions<SmsOptions>>().Value,
+                 app.Environment.IsDevelopment()),
+             SmsServiceGuard.DescribeWhatsAppMisconfiguration(
+                 app.Services.GetRequiredService<IOptions<WhatsAppOptions>>().Value,
+                 app.Environment.IsDevelopment())
+         })
+{
+    if (warning is not null)
+    {
+        app.Logger.LogWarning("{Warning}", warning);
+    }
+}
 
 // Ticket JGK-F01 — en-têtes de sécurité (nosniff, X-Frame-Options, CSP…) sur TOUTES les réponses, y
 // compris Swagger UI ci-dessous. Posé EN TOUT PREMIER dans le pipeline : UseSwaggerUI et

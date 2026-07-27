@@ -24,17 +24,28 @@
 
  <div x-data="featureGate('SmsNotifications')" x-show="allowed" x-cloak>
 
- <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+ @* grid-cols-1 puis sm:grid-cols-3 : les trois compteurs tiennent côte à côte dès la tablette et
+ s'empilent sur mobile, où l'écran Paramètres est le plus souvent consulté. *@
+ <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
  <stat-card size="compact" label="Solde SMS restant" icon="envelope" accent="primary">
  <span x-text="creditBalance !== null ? creditBalance + ' segment(s)' : '—'"></span>
  </stat-card>
  <stat-card size="compact" label="Envois enregistrés" icon="document" accent="primary">
  <span x-text="totalCount"></span>
  </stat-card>
+ <stat-card size="compact" label="En attente d'envoi" icon="clock" accent="primary">
+ <span x-text="pendingCount"></span>
+ </stat-card>
  </div>
 
  <p class="mt-2 text-xs text-slate-500">
  Un SMS long est facturé en plusieurs segments. Pour recharger votre solde, contactez Sama Ecole.
+ </p>
+
+ @* Les envois passent par une file : sans cette phrase, un Directeur qui vient de lancer une
+ relance et lit « En attente » croirait à une panne. *@
+ <p x-show="pendingCount > 0" x-cloak class="mt-1 text-xs text-slate-500">
+ Les messages en attente partent automatiquement dans les minutes qui suivent.
  </p>
 
  <!-- Commutateurs -->

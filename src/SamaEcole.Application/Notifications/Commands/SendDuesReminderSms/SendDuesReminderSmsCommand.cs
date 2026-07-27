@@ -14,15 +14,21 @@ namespace SamaEcole.Application.Notifications.Commands.SendDuesReminderSms;
 /// Portée facultative par classe : relancer une classe entière est le geste courant en fin de mois ;
 /// sans <see cref="ClassroomId"/>, la relance couvre tout l'établissement.
 ///
-/// N'ÉCHOUE PAS si un SMS ne part pas : le résultat rapporte combien sont partis et combien ont été
-/// écartés (sans numéro, solde épuisé…), ce qui laisse l'utilisateur décider de la suite.
+/// N'ÉCHOUE PAS si un SMS ne part pas : le résultat rapporte combien ont été MIS EN FILE et combien
+/// ont été écartés (sans numéro, solde épuisé…), ce qui laisse l'utilisateur décider de la suite.
 /// </summary>
 public record SendDuesReminderSmsCommand : IRequest<DuesReminderSmsResult>
 {
     public Guid? ClassroomId { get; init; }
 }
 
-public record DuesReminderSmsResult(int SentCount, int SkippedCount, string? FirstSkipReason);
+/// <summary>
+/// <paramref name="QueuedCount"/> compte les messages ACCEPTÉS EN FILE, pas les messages remis : la
+/// remise est asynchrone (SmsQueueProcessor) et n'est pas connue au retour de la requête. Nommer ce
+/// compteur « Sent » afficherait à la Finance un nombre d'envois réussis que personne n'a encore
+/// constaté. L'issue réelle se consulte dans l'historique.
+/// </summary>
+public record DuesReminderSmsResult(int QueuedCount, int SkippedCount, string? FirstSkipReason);
 
 public class SendDuesReminderSmsCommandHandler(
     IApplicationDbContext dbContext,
@@ -55,7 +61,7 @@ public class SendDuesReminderSmsCommandHandler(
             })
             .ToListAsync(cancellationToken);
 
-        var sentCount = 0;
+        var queuedCount = 0;
         var skippedCount = 0;
         string? firstSkipReason = null;
 
@@ -69,9 +75,9 @@ public class SendDuesReminderSmsCommandHandler(
                 new SmsDispatchRequest(schoolId, debtor.GuardianPhone, body, SmsTrigger.DuesReminder, debtor.Id),
                 cancellationToken);
 
-            if (outcome.IsSent)
+            if (outcome.IsQueued)
             {
-                sentCount++;
+                queuedCount++;
             }
             else
             {
@@ -81,9 +87,9 @@ public class SendDuesReminderSmsCommandHandler(
         }
 
         logger.LogInformation(
-            "Relance d'impayés par SMS pour l'établissement {SchoolId} : {Sent} envoyé(s), {Skipped} écarté(s).",
-            schoolId, sentCount, skippedCount);
+            "Relance d'impayés par SMS pour l'établissement {SchoolId} : {Queued} mis en file, {Skipped} écarté(s).",
+            schoolId, queuedCount, skippedCount);
 
-        return new DuesReminderSmsResult(sentCount, skippedCount, firstSkipReason);
+        return new DuesReminderSmsResult(queuedCount, skippedCount, firstSkipReason);
     }
 }

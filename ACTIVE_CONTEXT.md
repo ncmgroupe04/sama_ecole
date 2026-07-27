@@ -30,7 +30,9 @@ Conséquences concrètes pour toute personne — ou tout agent — qui travaille
   dans un `[Authorize]`, tant que la V3 n'est pas ouverte.
 - Aucun endpoint public de consultation par un tiers non-personnel de l'établissement.
 - La communication avec les parents en V1 passe **exclusivement** par les canaux sortants déjà
-  livrés : notification SMS (`SmsDispatcher`, formule Premium) et e-mail transactionnel.
+  livrés : notification SMS (`SmsDispatcher`, formule Premium), WhatsApp et e-mail transactionnel.
+  Ces envois passent désormais par une **file d'attente** (statuts `Pending` → `Sent` → `Delivered`,
+  accusés de réception signés) — voir §4 ci-dessous.
 - Les convocations de parent/tuteur (`/convocations`) ne sont **pas** un portail : c'est un registre
   interne du module Vie Scolaire, imprimé et remis en main propre.
 
@@ -77,3 +79,29 @@ les sprints précédents.
    modification en laissant supprimer ne protégeait rien.
 4. **Vue orpheline supprimée.** `Views/Absences/BilletPrint.cshtml` (« Page en construction ») et sa
    route `/billet-print` : les billets d'entrée et de sortie sont des PDF A5 générés côté serveur.
+
+---
+
+## 4. Notifications sortantes — file d'attente et accusés de réception (27/07/2026)
+
+Le canal SMS existait mais envoyait **en ligne**, dans la requête ou l'événement métier. Il passe
+désormais par une file. Spécification : `docs/Volume_4_API_Design.md` §20.
+
+- **Mise en file plutôt qu'envoi direct.** `SmsDispatcher` conserve ses quatre gardes (formule,
+  commutateur d'école, débit atomique du solde, historisation) mais inscrit le message en `Pending`
+  au lieu d'appeler l'agrégateur. `SmsQueueHostedService` le remet hors requête, avec report
+  exponentiel plafonné et abandon après `MaxAttempts` — l'abandon **recrédite** le solde.
+- **Statuts complets.** `Pending` → `Sent` → `Delivered` ou `Failed`. « Envoyé » (accepté par
+  l'agrégateur) et « Livré » (confirmé par accusé de réception) sont volontairement distincts : seul
+  le second atteste qu'un parent a été prévenu.
+- **Webhook DLR signé** — `POST /api/v1/webhooks/sms/{provider}`, public, HMAC-SHA256 du corps brut.
+  Fermé par défaut : sans `Sms__WebhookSecret`, tout est rejeté en 401.
+- **Le worker n'a aucun tenant** et ne peut donc rien voir sous RLS. Il passe par trois fonctions
+  `SECURITY DEFINER` au périmètre étroit (migration `AddSmsQueue`), **jamais** par le rôle
+  propriétaire — même idiome que `SchoolProvisioningStore` (règle #2). `SmsQueueTests` fige cette
+  contrainte : un `DbContext` sans tenant voit zéro ligne, la fonction voit la file.
+- **Nouveau déclencheur** : mise à disposition d'un bulletin (`SmsTrigger.ReportCard`) — un SMS
+  d'avis en plus du PDF envoyé par WhatsApp/e-mail, un SMS ne transportant pas de pièce jointe.
+- **Fournisseur WhatsApp réel** (`HttpWhatsAppSender`, API Cloud de Meta) en remplacement du repli
+  qui se contentait de journaliser en production. Configuration absente ⇒ pas d'échec au démarrage,
+  mais un avertissement explicite — `SmsServiceGuard`, jusqu'ici jamais appelé, l'est désormais.

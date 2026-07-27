@@ -247,6 +247,12 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // ici : c'est de la configuration ASP.NET, pas du code applicatif.
         Environment.SetEnvironmentVariable("RateLimiting__PasswordReset__PermitLimit", "1000");
         Environment.SetEnvironmentVariable("RateLimiting__PasswordReset__WindowMinutes", "5");
+
+        // COUPE le dépilage de la file SMS. Sans cela, SmsQueueHostedService tournerait en tâche de
+        // fond pendant toute la suite et ferait passer un message de Pending à Sent entre l'action
+        // d'un test et son assertion : l'issue dépendrait du moment où le minuteur se déclenche.
+        // Le worker est testé pour lui-même, en pilotant un tour explicitement (SmsQueueTests).
+        Environment.SetEnvironmentVariable("Sms__Queue__Enabled", "false");
     }
 
     private static void ClearEnvironment()
@@ -259,7 +265,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "Auth__RefreshTokenDays", "RateLimiting__Registration__PermitLimit",
                      "RateLimiting__Registration__WindowMinutes", "RateLimiting__Login__PermitLimit",
                      "RateLimiting__Login__WindowMinutes", "RateLimiting__PasswordReset__PermitLimit",
-                     "RateLimiting__PasswordReset__WindowMinutes"
+                     "RateLimiting__PasswordReset__WindowMinutes", "Sms__Queue__Enabled"
                  })
         {
             Environment.SetEnvironmentVariable(key, null);

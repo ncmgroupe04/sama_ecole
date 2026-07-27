@@ -38,6 +38,20 @@ public class SmsMessageConfiguration : IEntityTypeConfiguration<SmsMessage>
         // exactement cette lecture (voir GetSmsHistoryQuery).
         builder.HasIndex(m => new { m.SchoolId, m.SentAt });
 
+        // Index de FILE, volontairement PARTIEL (filtre sur le statut) : le worker cherche des
+        // messages en attente toutes les quelques secondes, alors que la table est un journal qui ne
+        // fait que croître. Sans le filtre, l'index grossirait avec l'historique entier pour ne
+        // servir qu'une poignée de lignes vivantes. Non préfixé par SchoolId : le worker balaie
+        // TOUTES les écoles (voir claim_pending_sms).
+        builder.HasIndex(m => m.NextAttemptAt)
+            .HasDatabaseName("IX_sms_messages_queue")
+            .HasFilter("\"Status\" = 'Pending'");
+
+        // L'accusé de réception ne connaît que la référence du fournisseur : c'est par elle que le
+        // webhook DLR retrouve la ligne, d'où un index dédié.
+        builder.HasIndex(m => m.ProviderMessageId)
+            .HasFilter("\"ProviderMessageId\" IS NOT NULL");
+
         builder.HasOne<School>()
             .WithMany()
             .HasForeignKey(m => m.SchoolId)

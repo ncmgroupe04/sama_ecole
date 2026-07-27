@@ -30,8 +30,19 @@ public class SmsOptions
     /// </summary>
     public string AuthScheme { get; set; } = "App";
 
+    /// <summary>
+    /// Secret partagé servant à authentifier les accusés de réception (HMAC-SHA256 du corps brut).
+    /// DISTINCT de <see cref="ApiKey"/> à dessein : la clé d'API sert à parler à l'agrégateur, ce
+    /// secret-ci à reconnaître l'agrégateur qui nous parle. Les confondre ferait d'une fuite de la
+    /// clé sortante une autorisation d'écrire dans notre historique.
+    /// </summary>
+    public string WebhookSecret { get; set; } = string.Empty;
+
     public bool IsConfigured =>
         IsValueConfigured(BaseUrl) && IsValueConfigured(ApiKey) && IsValueConfigured(SenderId);
+
+    /// <summary>Sans lui, le webhook d'accusés refuse TOUT appel (échec sûr par défaut).</summary>
+    public bool IsWebhookSecretConfigured => IsValueConfigured(WebhookSecret);
 
     private static bool IsValueConfigured(string value) =>
         !string.IsNullOrWhiteSpace(value) && value != "REMPLACER";

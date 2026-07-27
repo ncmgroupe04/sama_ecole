@@ -2,6 +2,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Persistence.Auth;
 using SamaEcole.Persistence.AuditLogs;
 using SamaEcole.Persistence.Interceptors;
+using SamaEcole.Persistence.Notifications;
 using SamaEcole.Persistence.Schools;
 using SamaEcole.Persistence.Subscriptions;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,11 @@ public static class DependencyInjection
         // Promotions) : même contournement RLS que ci-dessus, cette fois pour MODIFIER un abonnement
         // existant plutôt que d'en amorcer un.
         services.AddScoped<ISubscriptionAdminStore, SubscriptionAdminStore>();
+
+        // File des SMS : le worker et le webhook DLR n'ont AUCUN tenant (ni JWT, ni
+        // app.current_school_id), donc aucune ligne visible sous RLS. Même contournement étroit que
+        // ci-dessus — trois fonctions SECURITY DEFINER, et rien de plus.
+        services.AddScoped<ISmsQueueStore, SmsQueueStore>();
 
         return services;
     }

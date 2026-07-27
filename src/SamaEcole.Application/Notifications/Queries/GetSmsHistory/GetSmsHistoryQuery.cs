@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,12 +29,18 @@ public record SmsHistoryItem(
     int SegmentCount,
     string? FailureReason);
 
+/// <param name="PendingCount">
+/// Messages encore en file. Affiché à part parce qu'il répond à la question que se pose l'école
+/// juste après une relance de masse — « est-ce parti ? » — à laquelle le total, qui compte aussi
+/// l'historique ancien, ne répond pas.
+/// </param>
 public record PaginatedSmsHistory(
     IReadOnlyList<SmsHistoryItem> Items,
     int TotalCount,
     int Page,
     int PageSize,
-    int CreditBalance);
+    int CreditBalance,
+    int PendingCount);
 
 public class GetSmsHistoryQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetSmsHistoryQuery, PaginatedSmsHistory>
@@ -44,6 +51,9 @@ public class GetSmsHistoryQueryHandler(IApplicationDbContext dbContext)
         var query = dbContext.SmsMessages.AsNoTracking();
 
         var totalCount = await query.CountAsync(cancellationToken);
+
+        var pendingCount = await query.CountAsync(
+            m => m.Status == SmsDeliveryStatus.Pending, cancellationToken);
 
         var items = await query
             .OrderByDescending(m => m.SentAt)
@@ -61,6 +71,7 @@ public class GetSmsHistoryQueryHandler(IApplicationDbContext dbContext)
             .Select(s => s.SmsCreditBalance)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return new PaginatedSmsHistory(items, totalCount, request.Page, request.PageSize, creditBalance);
+        return new PaginatedSmsHistory(
+            items, totalCount, request.Page, request.PageSize, creditBalance, pendingCount);
     }
 }

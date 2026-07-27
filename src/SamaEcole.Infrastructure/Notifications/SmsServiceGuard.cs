@@ -26,4 +26,19 @@ public static class SmsServiceGuard
             + "Development : les envois seront JOURNALISÉS et non transmis. Toute école souscrivant "
             + "l'offre Premium croira ses parents alertés sans qu'aucun SMS ne parte.";
     }
+
+    /// <summary>
+    /// Même raisonnement pour WhatsApp : canal optionnel, donc pas d'échec au démarrage — mais un
+    /// bulletin « envoyé » qui n'a fait que passer dans les journaux est un mensonge silencieux.
+    /// </summary>
+    public static string? DescribeWhatsAppMisconfiguration(WhatsAppOptions options, bool isDevelopment)
+    {
+        if (isDevelopment || options.IsConfigured)
+        {
+            return null;
+        }
+
+        return "Aucun fournisseur WhatsApp configuré (section 'WhatsApp' — voir .env.example) en "
+            + "dehors de Development : les messages et bulletins seront JOURNALISÉS et non transmis.";
+    }
 }

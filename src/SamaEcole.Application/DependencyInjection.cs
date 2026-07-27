@@ -40,6 +40,10 @@ public static class DependencyInjection
         // historique) — voir SmsDispatcher. Scoped : il écrit sous la RLS de la requête courante.
         services.AddScoped<ISmsDispatcher, SmsDispatcher>();
 
+        // Dépilage de la file (voir SmsQueueProcessor). Scoped comme le store dont il dépend : le
+        // service hébergé ouvre une portée par tour plutôt que de retenir un DbContext à vie.
+        services.AddScoped<ISmsQueueProcessor, SmsQueueProcessor>();
+
         // Ordre significatif : ValidationBehavior D'ABORD, pour qu'une requête mal formée s'arrête
         // avant d'atteindre AuditLoggingBehavior — une erreur de saisie n'est pas une « écriture
         // sensible » au sens du journal d'audit (JGK-H01), seul un Handler effectivement atteint l'est.

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
+using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
 
 namespace SamaEcole.Application.ReportCards.Commands.SendReportCard;
@@ -12,6 +13,7 @@ public class SendReportCardCommandHandler(
     IMediator mediator,
     IWhatsAppSender whatsAppSender,
     IEmailSender emailSender,
+    ISmsDispatcher smsDispatcher,
     ITenantProvider tenantProvider) : IRequestHandler<SendReportCardCommand>
 {
     public async Task Handle(SendReportCardCommand request, CancellationToken cancellationToken)
@@ -58,5 +60,23 @@ public class SendReportCardCommandHandler(
             var emailMsg = new EmailMessage(student.GuardianEmail!, "Bulletin de notes", messageBody, [emailAttachment]);
             await emailSender.SendAsync(emailMsg, cancellationToken);
         }
+
+        // SMS d'AVIS, en complément et non en remplacement : un SMS ne transporte pas de pièce
+        // jointe, il annonce seulement que le bulletin est disponible. Envoyé quel que soit le canal
+        // choisi — au Sénégal, une partie des tuteurs n'ouvre ni WhatsApp ni sa boîte mail, et le
+        // SMS est le seul canal qui les atteint à coup sûr.
+        //
+        // Aucune garde ici : formule, activation, solde et historique sont tous vérifiés par
+        // SmsDispatcher, qui ne lève jamais. L'échec d'un avis ne doit pas annuler l'envoi du
+        // bulletin lui-même, déjà parti ci-dessus.
+        await smsDispatcher.DispatchAsync(
+            new SmsDispatchRequest(
+                schoolId,
+                student.GuardianPhone,
+                $"Le bulletin de notes de {student.FullName} est disponible. "
+                + "Rapprochez-vous de l'établissement pour le retirer.",
+                SmsTrigger.ReportCard,
+                student.Id),
+            cancellationToken);
     }
 }

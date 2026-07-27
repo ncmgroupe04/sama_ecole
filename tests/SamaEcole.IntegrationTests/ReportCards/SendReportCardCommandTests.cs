@@ -3,6 +3,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.ReportCards.Commands.SendReportCard;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using SamaEcole.IntegrationTests.Common;
 using MediatR;
 using Xunit;
@@ -75,10 +76,17 @@ public class SendReportCardCommandTests : IAsyncLifetime
     private static SendReportCardCommandHandler MakeHandler(
         IApplicationDbContext ctx, ITenantProvider tenantProvider,
         out FakeWhatsAppSender whatsApp, out FakeEmailSender email)
+        => MakeHandler(ctx, tenantProvider, out whatsApp, out email, out _);
+
+    private static SendReportCardCommandHandler MakeHandler(
+        IApplicationDbContext ctx, ITenantProvider tenantProvider,
+        out FakeWhatsAppSender whatsApp, out FakeEmailSender email, out FakeSmsDispatcher sms)
     {
         whatsApp = new FakeWhatsAppSender();
         email = new FakeEmailSender();
-        return new SendReportCardCommandHandler(ctx, new FakeMediator(), whatsApp, email, tenantProvider);
+        sms = new FakeSmsDispatcher();
+
+        return new SendReportCardCommandHandler(ctx, new FakeMediator(), whatsApp, email, sms, tenantProvider);
     }
 
     [Fact]
@@ -93,6 +101,29 @@ public class SendReportCardCommandTests : IAsyncLifetime
         whatsApp.LastMessage!.To.Should().Be("+221771234567");
         whatsApp.LastMessage.Attachments.Should().ContainSingle().Which.ContentType.Should().Be("application/pdf");
         email.LastMessage.Should().BeNull("le canal Email n'a pas été demandé");
+    }
+
+    /// <summary>
+    /// Le SMS d'avis part EN PLUS du canal choisi, jamais à sa place : il ne transporte pas le PDF,
+    /// il signale seulement que le bulletin est disponible. Au Sénégal, une partie des tuteurs
+    /// n'ouvre ni WhatsApp ni sa boîte mail — sans cet avis, ils ne sauraient rien.
+    /// </summary>
+    [Fact]
+    public async Task Report_Card_Also_Queues_An_Sms_Notice_To_The_Guardian()
+    {
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var handler = MakeHandler(ctx, new FixedTenantProvider(EcoleA), out var whatsApp, out _, out var sms);
+
+        await handler.Handle(
+            new SendReportCardCommand(EleveAvecTelephone, Guid.NewGuid(), CommunicationChannel.WhatsApp),
+            CancellationToken.None);
+
+        whatsApp.LastMessage.Should().NotBeNull("le canal demandé reste servi");
+
+        sms.LastRequest.Should().NotBeNull();
+        sms.LastRequest!.Trigger.Should().Be(SmsTrigger.ReportCard);
+        sms.LastRequest.Recipient.Should().Be("+221771234567");
+        sms.LastRequest.StudentId.Should().Be(EleveAvecTelephone);
     }
 
     [Fact]
@@ -206,6 +237,22 @@ public class SendReportCardCommandTests : IAsyncLifetime
         {
             LastMessage = message;
             return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>
+    /// Le vrai SmsDispatcher lirait l'abonnement et les réglages de l'école, que ce test ne sème pas
+    /// — et qui ne prouveraient rien de plus ici : ses gardes sont couvertes par SmsQueueTests.
+    /// </summary>
+    private sealed class FakeSmsDispatcher : ISmsDispatcher
+    {
+        public SmsDispatchRequest? LastRequest { get; private set; }
+
+        public Task<SmsDispatchOutcome> DispatchAsync(
+            SmsDispatchRequest request, CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            return Task.FromResult(SmsDispatchOutcome.Queued);
         }
     }
 

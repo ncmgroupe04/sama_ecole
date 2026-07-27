@@ -41,5 +41,30 @@ public class SmsMessage : AuditableEntity, ITenantEntity
     /// <summary>Élève concerné, quand l'envoi en découle (assiduité, impayé, reçu). Null pour un envoi manuel.</summary>
     public Guid? StudentId { get; set; }
 
+    /// <summary>
+    /// Moment où l'établissement a DÉCLENCHÉ l'envoi (saisie du retard, encaissement), et non celui
+    /// de la remise au fournisseur — c'est la date attendue par l'école dans son historique, et la
+    /// clé de tri de celui-ci. La remise effective se lit sur <see cref="DispatchedAt"/>.
+    /// </summary>
     public DateTimeOffset SentAt { get; set; }
+
+    /// <summary>Remise au fournisseur par le worker. Null tant que le message est en file.</summary>
+    public DateTimeOffset? DispatchedAt { get; set; }
+
+    /// <summary>Remise au téléphone confirmée par l'accusé de réception. Null sans DLR reçu.</summary>
+    public DateTimeOffset? DeliveredAt { get; set; }
+
+    /// <summary>
+    /// Nombre de remises tentées auprès du fournisseur. Au-delà du plafond, le message passe en
+    /// <see cref="SmsDeliveryStatus.Failed"/> et le solde est recrédité — sans quoi une panne
+    /// prolongée de l'agrégateur ferait boucler la file indéfiniment.
+    /// </summary>
+    public int AttemptCount { get; set; }
+
+    /// <summary>
+    /// Date d'éligibilité à la prochaine tentative. Sert DEUX rôles à la fois : le report exponentiel
+    /// entre deux essais, et le bail d'exclusivité posé au moment où un worker réclame le message —
+    /// ce qui empêche deux instances de l'application d'envoyer le même SMS en double.
+    /// </summary>
+    public DateTimeOffset? NextAttemptAt { get; set; }
 }

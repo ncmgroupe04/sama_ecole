@@ -1,6 +1,7 @@
 using System.Net.Http;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
+using SamaEcole.Application.Notifications;
 using SamaEcole.Infrastructure.Documents;
 using SamaEcole.Infrastructure.Files;
 using SamaEcole.Infrastructure.Media;
@@ -16,6 +17,9 @@ namespace SamaEcole.Infrastructure;
 
 public static class DependencyInjection
 {
+    /// <summary>Sous-section « Sms:Queue » (voir SmsQueueSettings et .env.example).</summary>
+    private const string SmsQueueSettingsSection = "Sms:Queue";
+
     /// <param name="isDevelopment">
     /// Vient de <c>IHostEnvironment.IsDevelopment()</c> (résolu dans Program.cs, seul endroit qui
     /// connaît l'environnement d'hébergement) : jamais dérivé d'une variable de configuration
@@ -60,13 +64,28 @@ public static class DependencyInjection
         if (isDevelopment)
         {
             services.AddSingleton<IEmailSender, LoggingEmailSender>();
-            services.AddSingleton<IWhatsAppSender, LoggingWhatsAppSender>();
         }
         else
         {
             EmailSenderGuard.EnsureEmailSenderIsConfigured(smtpOptions, isDevelopment);
             services.AddSingleton<IEmailSender, SmtpEmailSender>();
-            // Fallback pour WhatsApp en production tant que Twilio n'est pas implémenté
+        }
+
+        // WhatsApp — même règle de choix que les SMS, et pour la même raison : une configuration
+        // absente ne fait PAS échouer le démarrage (le canal est optionnel), mais elle ne doit pas
+        // non plus laisser croire qu'un bulletin est parti. LoggingWhatsAppSender journalise en clair
+        // « NON ENVOYÉ », et SmsServiceGuard avertit au démarrage hors Development.
+        var whatsAppOptions = configuration.GetSection(WhatsAppOptions.SectionName).Get<WhatsAppOptions>()
+                              ?? new WhatsAppOptions();
+        services.Configure<WhatsAppOptions>(configuration.GetSection(WhatsAppOptions.SectionName));
+
+        if (!isDevelopment && whatsAppOptions.IsConfigured)
+        {
+            services.AddHttpClient<IWhatsAppSender, HttpWhatsAppSender>(client =>
+                client.Timeout = TimeSpan.FromSeconds(30));
+        }
+        else
+        {
             services.AddSingleton<IWhatsAppSender, LoggingWhatsAppSender>();
         }
 
@@ -87,6 +106,27 @@ public static class DependencyInjection
         else
         {
             services.AddSingleton<ISmsService, LoggingSmsService>();
+        }
+
+        // Lecteur d'accusés de réception. Enregistré dans TOUS les environnements, y compris
+        // Development : il refuse de lui-même tout appel tant qu'aucun secret n'est configuré
+        // (IsWebhookSecretConfigured), il n'y a donc pas de porte ouverte à refermer ici.
+        services.AddSingleton<ISmsDeliveryReceiptReader, HmacSmsDeliveryReceiptReader>();
+
+        // Réglages du dépilage de la file. Instance SINGLETON plutôt qu'IOptions : le service hébergé
+        // en a besoin dès son démarrage, avant toute portée de requête, et ces valeurs ne changent
+        // pas à chaud.
+        var queueSettings = configuration.GetSection(SmsQueueSettingsSection).Get<SmsQueueSettings>()
+                            ?? new SmsQueueSettings();
+        services.AddSingleton(queueSettings);
+
+        // Le dépilage ne démarre QUE s'il est activé (les tests fonctionnels le coupent : un worker
+        // qui bascule un message de Pending à Sent au milieu d'une assertion rendrait la suite non
+        // déterministe). En Development il tourne comme en production, avec LoggingSmsService en
+        // guise de fournisseur — c'est ce qui rend la file observable en local.
+        if (queueSettings.Enabled)
+        {
+            services.AddHostedService<SmsQueueHostedService>();
         }
 
         // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02) et certificat d'inscription (Axe 2). Sans état : des singletons suffisent.
@@ -139,6 +179,10 @@ public static class DependencyInjection
         // Import d'élèves par fichier CSV/Excel (même bibliothèque ClosedXML, aucune nouvelle dépendance).
         services.AddSingleton<IStudentImportFileParser, StudentImportFileParser>();
         services.AddSingleton<IStudentImportTemplateGenerator, StudentImportTemplateGenerator>();
+
+        // Import du corps professoral par fichier CSV/Excel — même patron que l'import d'élèves.
+        services.AddSingleton<ITeacherImportFileParser, TeacherImportFileParser>();
+        services.AddSingleton<ITeacherImportTemplateGenerator, TeacherImportTemplateGenerator>();
 
         // Récupération du logo de l'établissement pour le reçu (JGK-E02). Client HTTP dédié :
         //  * garde anti-SSRF au moment de la connexion (l'URL vient du Directeur — cf. SsrfSafeConnect) ;

@@ -452,17 +452,25 @@ Communication **sortante** vers les familles. C'est ce que la V1 livre à la pla
 
 | Méthode | Route | Description |
 |---|---|---|
-| `GET` | `/api/v1/sms/history` | Historique des SMS envoyés (statut, coût en segments, motif d'échec) |
+| `GET` | `/api/v1/sms/history` | Historique des SMS envoyés (statut, coût en segments, motif d'échec) + solde et nombre de messages en file |
 | `POST` | `/api/v1/sms/dues-reminders` | Relance d'impayés par SMS, cadrable à une classe (`classroomId` optionnel) |
+| `POST` | `/api/v1/webhooks/sms/{provider}` | **Public** — accusés de réception (DLR) de l'agrégateur. Signature HMAC obligatoire |
 
-Les autres envois ne sont pas des endpoints : ils partent en **réaction à un événement métier** — absence ou retard enregistré (SMS + WhatsApp), paiement encaissé (SMS).
+Les autres envois ne sont pas des endpoints : ils partent en **réaction à un événement métier** — absence ou retard enregistré (SMS + WhatsApp), paiement encaissé (SMS), bulletin mis à disposition (SMS d'avis + WhatsApp/e-mail pour le PDF).
+
+**File d'attente.** Un déclencheur métier n'appelle jamais l'agrégateur lui-même : il **inscrit** le message en file (`Pending`) et rend la main. `SmsQueueHostedService` le remet ensuite hors requête, avec report exponentiel et abandon au bout de `MaxAttempts`. Trois raisons : une relance sur 400 familles ne tient plus la requête HTTP ouverte ; une panne de l'agrégateur devient un envoi différé et non une alerte perdue ; et la saisie d'un retard n'attend plus un service tiers pour se conclure.
+
+Cycle de vie : `Pending` → `Sent` (accepté par l'agrégateur) → `Delivered` (accusé de réception) ou `Failed`. `Sent` et `Delivered` sont distincts à dessein — seul le second atteste qu'un parent a reçu l'alerte.
 
 **Règles :**
 - Point de passage unique `SmsDispatcher` : **aucun** envoi ne le contourne. Il contrôle, dans l'ordre, le numéro du tuteur, la formule de l'école (`Feature.SmsNotifications`, Premium), l'activation du type d'alerte dans les paramètres de l'école, puis le solde de crédits.
-- **Débit atomique du solde** : la condition sur le solde et la décrémentation sont un seul `UPDATE` exécuté par PostgreSQL. Un lire-modifier-écrire côté application perdrait un débit dès que deux alertes partent simultanément pour la même école (même esprit que la règle #5).
-- Tout message est **historisé** avec son statut (`Sent`, `Failed`, `InsufficientCredit`) et son coût.
-- `POST /sms/dues-reminders` **ne renvoie pas d'erreur** si certains SMS ne partent pas : il retourne `{ sentCount, skippedCount, firstSkipReason }`. Un envoi partiel est un résultat, pas un échec — l'utilisateur décide de la suite.
+- **Débit atomique du solde, dès la mise en file** : la condition sur le solde et la décrémentation sont un seul `UPDATE` exécuté par PostgreSQL. Débiter à la remise laisserait une relance de masse accepter mille messages sur un solde de cent. Ce qui ne part finalement pas (abandon, accusé négatif) est **recrédité**.
+- Le worker et le webhook DLR s'exécutent **sans tenant** : ils passent par trois fonctions PostgreSQL `SECURITY DEFINER` au périmètre étroit (`claim_pending_sms`, `settle_sms_attempt`, `apply_sms_delivery_receipt`), jamais par le rôle propriétaire — qui désactiverait la RLS de toute la base en silence (règle #2).
+- La réclamation d'un lot pose un **bail** (`FOR UPDATE SKIP LOCKED` + `NextAttemptAt` repoussé) : deux instances de l'application ne peuvent pas envoyer deux fois le même SMS au parent.
+- Tout message est **historisé** avec son statut (`Pending`, `Sent`, `Delivered`, `Failed`, `InsufficientCredit`) et son coût.
+- `POST /sms/dues-reminders` **ne renvoie pas d'erreur** si certains SMS ne partent pas : il retourne `{ queuedCount, skippedCount, firstSkipReason }`. `queuedCount` compte les messages **acceptés en file**, jamais les messages remis — la remise est asynchrone et inconnue au retour de la requête.
 - La relance ne vise que les inscriptions `Confirmed` présentant un reliquat.
+- Le webhook DLR est **fermé par défaut** : sans `Sms__WebhookSecret`, toute signature est rejetée (401). Un accusé sans correspondance (rejeu, message inconnu) renvoie `200` — un statut d'échec ferait réémettre l'agrégateur en boucle.
 
 ---
 

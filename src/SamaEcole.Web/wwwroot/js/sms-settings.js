@@ -18,6 +18,7 @@ document.addEventListener('alpine:init', () => {
         page: 1,
         pageSize: 20,
         totalCount: 0,
+        pendingCount: 0,
 
         isLoading: false,
         isSaving: false,
@@ -37,6 +38,7 @@ document.addEventListener('alpine:init', () => {
                 this.entries = history.items;
                 this.totalCount = history.totalCount;
                 this.creditBalance = history.creditBalance;
+                this.pendingCount = history.pendingCount;
             } catch (err) {
                 // 403 FEATURE_NOT_IN_PLAN : l'école n'a pas l'option. Le bandeau d'incitation est
                 // déjà affiché par featureGate — inutile d'empiler un second message d'erreur.
@@ -81,20 +83,28 @@ document.addEventListener('alpine:init', () => {
         triggerLabel(trigger) {
             return {
                 AttendanceAlert: 'Assiduité', DuesReminder: 'Relance impayé',
-                PaymentReceipt: 'Reçu de paiement', Manual: 'Envoi manuel'
+                PaymentReceipt: 'Reçu de paiement', ReportCard: 'Bulletin',
+                Manual: 'Envoi manuel'
             }[trigger] || trigger;
         },
 
+        // « Envoyé » et « Livré » sont DEUX choses distinctes, et l'école doit pouvoir les
+        // distinguer : « Envoyé » signifie accepté par l'opérateur, « Livré » que le téléphone du
+        // parent l'a bien reçu (accusé de réception). Les confondre ferait conclure à tort qu'un
+        // parent a été prévenu.
         statusLabel(status) {
             return {
-                Sent: 'Envoyé', Failed: 'Échec', InsufficientCredit: 'Solde épuisé'
+                Pending: 'En attente', Sent: 'Envoyé', Delivered: 'Livré',
+                Failed: 'Échec', InsufficientCredit: 'Solde épuisé'
             }[status] || status;
         },
 
         statusBadge(status) {
             const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ';
             return base + ({
-                Sent: 'bg-success-bg text-success',
+                Pending: 'bg-slate-100 text-slate-600',
+                Sent: 'bg-sky-100 text-sky-700',
+                Delivered: 'bg-success-bg text-success',
                 Failed: 'bg-danger-bg text-danger',
                 InsufficientCredit: 'bg-amber-100 text-amber-700'
             }[status] || 'bg-slate-100 text-slate-600');
