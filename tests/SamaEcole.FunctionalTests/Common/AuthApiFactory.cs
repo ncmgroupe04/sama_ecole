@@ -313,6 +313,12 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Encaissements (ticket JGK-F02) : ils référencent l'inscription en Restrict, donc AVANT elle.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM payments;");
 
+        // Sessions de caisse (module Caisse) : payments.CashierSessionId les référence, donc APRÈS la
+        // purge des encaissements. Sans cette ligne, la session ouverte par le compte Finance/Directeur
+        // dans un test resterait Open pour le suivant — qui se ferait refuser l'ouverture d'une nouvelle
+        // session (« déjà une session ouverte », 422) sur ce même compte partagé entre tous les tests.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM cashier_sessions;");
+
         // Inscriptions (ticket JGK-E01), AVANT les tables qu'elles référencent en Restrict (élèves,
         // classes, années, catégories de frais). Les lignes de frais d'abord : elles pointent l'inscription.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM enrollment_fee_lines;");
@@ -460,16 +466,18 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     /// <summary>
     /// Lit l'abonnement d'une école directement en base (ticket JGK-I06) : vérifie l'activation
-    /// (Status, ExpiresAt) déclenchée par le traitement du webhook. Pas d'IgnoreQueryFilters ici :
-    /// Subscription n'implémente PAS ITenantEntity (voir son commentaire de classe), donc aucun Global
-    /// Query Filter ne s'applique — seule la policy RLS la protège, et le rôle PROPRIÉTAIRE (utilisé par
-    /// NewOwnerContext) en est exempté nativement par PostgreSQL.
+    /// (Status, ExpiresAt) déclenchée par le traitement du webhook. IgnoreQueryFilters, même
+    /// raisonnement que GetSubscriptionPaymentAsync : Subscription implémente ITenantEntity et
+    /// NewOwnerContext() utilise NoTenantProvider (CurrentSchoolId => null) — sans ceci, le Global
+    /// Query Filter deviendrait « SchoolId == null » et ne trouverait JAMAIS aucune ligne réelle. La
+    /// policy RLS, elle, exempte nativement le rôle PROPRIÉTAIRE utilisé ici.
     /// </summary>
     public async Task<Subscription?> GetSubscriptionAsync(Guid schoolId)
     {
         await using var owner = NewOwnerContext();
 
-        return await owner.Subscriptions.AsNoTracking().SingleOrDefaultAsync(s => s.SchoolId == schoolId);
+        return await owner.Subscriptions.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(s => s.SchoolId == schoolId);
     }
 
     /// <summary>

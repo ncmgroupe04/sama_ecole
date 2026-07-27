@@ -185,7 +185,7 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     /// </summary>
     private async Task RecordPaymentAsync(string financeToken, Guid enrollmentId, decimal amount)
     {
-        var sessionResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions", financeToken, new { openingBalance = 0m });
+        var sessionResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions/open", financeToken, new { openingBalance = 0m });
         if (!sessionResponse.IsSuccessStatusCode && sessionResponse.StatusCode != HttpStatusCode.Conflict)
             sessionResponse.EnsureSuccessStatusCode();
 

@@ -126,7 +126,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
     private async Task OpenFinanceSessionAsync(string token)
     {
-        var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions", token, new { openingBalance = 0m });
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions/open", token, new { openingBalance = 0m });
         response.EnsureSuccessStatusCode();
     }
 

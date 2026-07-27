@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
+using SamaEcole.Domain.Enums;
 using SamaEcole.FunctionalTests.Common;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
@@ -41,6 +42,7 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
     private record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount);
     private record FeeCategoryDto(Guid Id, string Name, bool IsRecurring);
     private record Receipt(Guid EnrollmentId, string ReceiptNumber, string Matricule, decimal TotalDue);
+    private record SchoolResult(Guid SchoolId, string Name, Guid DirectorUserId, string DirectorEmail);
     private record AuditLogEntry(
         Guid Id, string ActorFullName, string Module, string Action, bool Success,
         string? FailureReason, string? IpAddress, DateTimeOffset OccurredAt);
@@ -230,6 +232,11 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
         });
 
         createSchool.StatusCode.Should().Be(HttpStatusCode.Created);
+        var school = (await createSchool.Content.ReadFromJsonAsync<SchoolResult>())!;
+
+        // Une école tout juste créée est AwaitingPayment (AGENTS.md règle #11) : sans confirmation du
+        // premier paiement, SubscriptionAwaitingPaymentMiddleware bloquerait GET /audit-logs lui-même.
+        await _factory.SetSubscriptionStatusAsync(school.SchoolId, SubscriptionStatus.Active);
 
         var email = _factory.Emails.LastTo("directrice@filaos.sn");
         email.Should().NotBeNull();
