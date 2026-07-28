@@ -1,0 +1,46 @@
+@model SamaEcole.Web.Controllers.DevPaydunyaCheckoutViewModel
+@{
+ ViewData["Title"] = "Guichet PayDunya simulé (Dev)";
+ Layout = null;
+}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>@ViewData["Title"]</title>
+ <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen">
+ <div class="min-h-screen flex items-center justify-center p-6">
+ <div id="dev-checkout"
+ data-reference="@Model.Reference"
+ data-internal-payment-id="@Model.InternalPaymentId"
+ class="w-full max-w-md text-center bg-white border border-warning/30 rounded-xl shadow-sm p-8">
+
+ <div class="mx-auto w-12 h-12 rounded-full bg-warning-bg flex items-center justify-center mb-4">
+ <svg aria-hidden="true" class="w-6 h-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+ </div>
+
+ <p class="text-jgk-table uppercase tracking-wide text-warning font-semibold mb-1">Environnement de développement</p>
+ <h1 class="text-jgk-title font-bold text-slate-900 mb-2">Guichet PayDunya simulé</h1>
+ <p class="text-jgk-body text-slate-500 mb-6 leading-relaxed">
+ Aucun compte marchand PayDunya n'est configuré en local (voir .env.example, section
+ PayDunya). Ce guichet FACTICE confirme le paiement via le même webhook que l'agrégateur
+ réel utiliserait, pour te permettre de tester la suite du parcours sans compte marchand.
+ </p>
+
+ <div class="text-left bg-slate-50 rounded-2xl px-4 py-3 mb-6 text-jgk-body space-y-1">
+ <p class="flex justify-between gap-4"><span class="text-slate-500">Montant</span><span class="font-medium">@Model.Amount.ToString("N0") XOF</span></p>
+ <p class="flex justify-between gap-4"><span class="text-slate-500">Description</span><span class="font-medium text-right">@Model.Description</span></p>
+ </div>
+
+ <p id="dev-checkout-status" class="text-jgk-body font-medium text-slate-700" role="status" aria-live="polite">
+ Simulation du paiement en cours…
+ </p>
+ </div>
+ </div>
+
+ <script src="~/js/dev-paydunya-checkout.js" asp-append-version="true"></script>
+</body>
+</html>

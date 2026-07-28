@@ -1,0 +1,229 @@
+@{
+ ViewData["Title"] = "Demandes d'inscription";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+ <script src="~/js/admin-registration-requests.js" asp-append-version="true"></script>
+}
+
+<div x-data="registrationRequestsView()">
+ <!-- Titre -->
+ <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div>
+ <h1 class="text-jgk-title font-bold text-slate-900">Demandes d'inscription</h1>
+ <p class="text-jgk-subtitle text-slate-500 mt-1">
+ Examinez les établissements candidats, puis validez ou rejetez leur demande.
+ </p>
+ </div>
+ </div>
+
+ <!-- Accès réservé (confort d'affichage — l'API garde de toute façon) -->
+ <div x-show="!isSuperAdmin" x-cloak class="card mt-6 p-8 text-center text-slate-500">
+ Cet espace est réservé au Super Administrateur.
+ </div>
+
+ <div x-show="isSuperAdmin" x-cloak>
+ <!-- Filtres par statut -->
+ <div class="mt-6 flex flex-wrap items-center gap-2">
+ <template x-for="option in [
+ { value: 'Pending', label: 'En attente' },
+ { value: 'Approved', label: 'Approuvées' },
+ { value: 'Rejected', label: 'Rejetées' },
+ { value: 'All', label: 'Toutes' }
+ ]" :key="option.value">
+ <button type="button"
+ x-on:click="statusFilter = option.value; load()"
+ :class="statusFilter === option.value
+ ? 'bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out-600 text-white'
+ : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out"
+ class="rounded-2xl px-3 py-1.5 text-sm font-medium transition-colors">
+ <span x-text="option.label"></span>
+ </button>
+ </template>
+ </div>
+
+ @await Html.PartialAsync("_ErrorBanner")
+
+ <!-- Tableau -->
+ <div class="card mt-6">
+ <div class="overflow-x-auto">
+ <table class="w-full text-left border-collapse">
+ <thead>
+ <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Établissement</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Directeur</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Formule</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Soumise le</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
+ <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-if="isLoading">
+ <template x-for="i in 3" :key="i">
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out"><td class="py-3 px-4" colspan="6"><div class="skeleton h-4 w-full"></div></td></tr>
+ </template>
+ </template>
+
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="!isLoading && requests.length === 0" x-cloak>
+ <td colspan="6">
+ <empty-state icon="document" title="Aucune demande dans cette catégorie."
+ hint="Les nouvelles demandes d'inscription apparaîtront ici." />
+ </td>
+ </tr>
+
+ <template x-for="request in requests" :key="request.id">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <td class="py-3 px-4">
+ <p class="font-medium text-slate-900" x-text="request.schoolName"></p>
+ <p class="text-xs text-slate-400"
+ x-text="[request.city, request.region].filter(Boolean).join(', ')"></p>
+ </td>
+ <td class="py-3 px-4">
+ <p class="text-slate-900" x-text="request.directorFullName"></p>
+ <p class="text-xs text-slate-400" x-text="request.directorEmail"></p>
+ </td>
+ <td class="py-3 px-4"><badge variant="neutral" x-text="planLabel(request.requestedPlan)"></badge></td>
+ <td class="py-3 px-4 text-slate-600" x-text="formatDate(request.submittedAt)"></td>
+ <td class="py-3 px-4">
+ <span :class="statusBadgeVariant(request.status)" x-text="statusLabel(request.status)"></span>
+ </td>
+ <td class="py-3 px-4 text-right whitespace-nowrap">
+ <span class="inline-flex items-center gap-1">
+ <button type="button" x-on:click="openDetail(request)"
+ class="text-xs font-medium text-slate-500 hover:text-slate-700 px-1.5 py-1">
+ Détails
+ </button>
+ <template x-if="request.status === 'Pending'">
+ <span class="inline-flex items-center gap-1">
+ <button type="button" x-on:click="openApprove(request)"
+ class="text-xs font-medium text-success hover:underline px-1.5 py-1">
+ Approuver
+ </button>
+ <button type="button" x-on:click="openReject(request)"
+ class="text-xs font-medium text-danger hover:underline px-1.5 py-1">
+ Rejeter
+ </button>
+ </span>
+ </template>
+ </span>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+
+ <!-- Détails d'une demande -->
+ <modal-shell open="detailTarget" on-close="closeDetail()" title="Détail de la demande" size="lg">
+ <template x-if="detailTarget">
+ <div class="space-y-5">
+ <div class="flex items-center justify-between gap-4">
+ <span class="font-mono text-sm text-slate-500" x-text="detailTarget.trackingReference"></span>
+ <span :class="statusBadgeVariant(detailTarget.status)" x-text="statusLabel(detailTarget.status)"></span>
+ </div>
+
+ <div>
+ <h4 class="text-jgk-table font-semibold uppercase tracking-wide text-slate-400">Établissement</h4>
+ <dl class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+ <div><dt class="text-slate-500">Nom</dt><dd class="text-slate-900" x-text="detailTarget.schoolName"></dd></div>
+ <div><dt class="text-slate-500">Formule souhaitée</dt><dd class="text-slate-900" x-text="planLabel(detailTarget.requestedPlan)"></dd></div>
+ <div><dt class="text-slate-500">Ville / Région</dt><dd class="text-slate-900" x-text="[detailTarget.city, detailTarget.region].filter(Boolean).join(', ') || '—'"></dd></div>
+ <div><dt class="text-slate-500">Effectif estimé</dt><dd class="text-slate-900" x-text="detailTarget.estimatedStudentCount ?? '—'"></dd></div>
+ <div class="sm:col-span-2"><dt class="text-slate-500">Adresse</dt><dd class="text-slate-900" x-text="detailTarget.schoolAddress || '—'"></dd></div>
+ </dl>
+ </div>
+
+ <div>
+ <h4 class="text-jgk-table font-semibold uppercase tracking-wide text-slate-400">Responsable</h4>
+ <dl class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+ <div><dt class="text-slate-500">Nom complet</dt><dd class="text-slate-900" x-text="detailTarget.directorFullName"></dd></div>
+ <div><dt class="text-slate-500">Téléphone</dt><dd class="text-slate-900" x-text="detailTarget.directorPhone"></dd></div>
+ <div class="sm:col-span-2"><dt class="text-slate-500">E-mail</dt><dd class="text-slate-900" x-text="detailTarget.directorEmail"></dd></div>
+ </dl>
+ </div>
+
+ <div x-show="detailTarget.status === 'Rejected' && detailTarget.rejectionReason" x-cloak
+ class="rounded-2xl bg-danger-bg px-4 py-3">
+ <p class="text-jgk-table font-medium text-danger">Motif du rejet</p>
+ <p class="mt-1 text-sm text-slate-700" x-text="detailTarget.rejectionReason"></p>
+ </div>
+
+ <div class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+ <template x-if="detailTarget.status === 'Pending'">
+ <span class="inline-flex gap-3">
+ <button type="button" x-on:click="openReject(detailTarget)" class="btn-danger">Rejeter</button>
+ <button type="button" x-on:click="openApprove(detailTarget)" class="btn-primary">Approuver</button>
+ </span>
+ </template>
+ <button type="button" x-show="detailTarget.status !== 'Pending'" x-on:click="closeDetail()" class="btn-secondary">Fermer</button>
+ </div>
+ </div>
+ </template>
+ </modal-shell>
+
+ <!-- Confirmation d'approbation -->
+ <modal-shell open="approveTarget" on-close="closeApprove()" size="md">
+ <modal-title>Approuver la demande</modal-title>
+ <modal-subtitle>
+ Cette action crée l'établissement, le compte Directeur et son abonnement (en attente de paiement).
+ Le Directeur pourra alors se connecter. Confirmez-vous ?
+ </modal-subtitle>
+
+ <div x-show="approveError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="approveError"></div>
+
+ <div class="rounded-2xl bg-slate-50 px-4 py-3 text-sm" x-show="approveTarget" x-cloak>
+ <p class="font-medium text-slate-900" x-text="approveTarget && approveTarget.schoolName"></p>
+ <p class="text-slate-500" x-text="approveTarget && (approveTarget.directorFullName + ' · ' + approveTarget.directorEmail)"></p>
+ </div>
+
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeApprove()" class="btn-secondary">Annuler</button>
+ <button type="button" x-on:click="submitApprove()" :disabled="isApproving" class="btn-primary">
+ <span x-text="isApproving ? 'Création en cours…' : 'Approuver et créer l\'école'"></span>
+ </button>
+ </div>
+ </modal-shell>
+
+ <!-- Rejet (motif obligatoire) -->
+ <modal-shell open="rejectTarget" on-close="closeReject()" size="md">
+ <modal-title>Rejeter la demande</modal-title>
+ <modal-subtitle>Le motif ci-dessous sera communiqué au demandeur. Aucune école n'est créée.</modal-subtitle>
+
+ <div x-show="rejectErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="rejectErrors.global"></div>
+
+ <form x-on:submit.prevent="submitReject()" novalidate class="space-y-4">
+ <div>
+ <label for="reject-reason" class="block text-sm font-medium text-slate-700">Motif du rejet <span class="text-danger">*</span></label>
+ <textarea id="reject-reason" x-model="rejectReason" required maxlength="1000" rows="3"
+ placeholder="ex : Informations incomplètes, établissement non identifiable…" class="input-field"></textarea>
+ <p x-show="rejectErrors.reason" x-cloak x-text="rejectErrors.reason" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeReject()" class="btn-secondary">Annuler</button>
+ <button type="submit" :disabled="isRejecting" class="btn-danger">
+ <span x-text="isRejecting ? 'Enregistrement…' : 'Confirmer le rejet'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Confirmation : demande approuvée -->
+ <modal-shell open="approvedResult" size="md" on-close="approvedResult = null" title="Demande approuvée">
+ <confirm-dialog-body close-action="approvedResult = null">
+ L'établissement <span class="font-medium text-slate-900" x-text="approvedResult ? approvedResult.schoolName : ''"></span>
+ a été créé. <span x-text="approvedResult ? approvedResult.directorFullName : ''"></span> peut désormais se connecter.
+ </confirm-dialog-body>
+ </modal-shell>
+
+ <!-- Confirmation : demande rejetée -->
+ <modal-shell open="rejectedResult" size="md" on-close="rejectedResult = null" title="Demande rejetée">
+ <confirm-dialog-body close-action="rejectedResult = null">
+ La demande de <span class="font-medium text-slate-900" x-text="rejectedResult ? rejectedResult.schoolName : ''"></span> a bien été rejetée.
+ </confirm-dialog-body>
+ </modal-shell>
+</div>

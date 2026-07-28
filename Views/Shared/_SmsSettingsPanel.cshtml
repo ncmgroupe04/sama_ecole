@@ -1,0 +1,161 @@
+@*
+ Onglet Notifications SMS (offre Premium) — commutateurs d'alerte, solde et historique des envois.
+ Le composant Alpine smsSettingsView() est défini dans wwwroot/js/sms-settings.js, que la page hôte
+ (Settings/Index.cshtml) charge dans sa section Scripts.
+
+ Les commutateurs sont enregistrés par le MÊME PUT /schools/current/settings que le reste de l'écran
+ Paramètres : ils vivent sur SchoolSettings, pas dans une table à part. Le SOLDE, lui, est en lecture
+ seule — les crédits s'achètent, et seul le Super Admin les accorde (voir TopUpSmsCreditsCommand).
+*@
+<div x-data="smsSettingsView()" x-init="load()">
+ <div>
+ <h2 class="text-lg font-semibold text-slate-900">Notifications SMS</h2>
+ <p class="text-sm text-slate-500 mt-1">
+ Alertes automatiques aux parents : retards et absences, relances d'impayés, confirmations de paiement.
+ </p>
+ </div>
+
+ @* Hors formule : on explique et on incite, on ne masque pas. *@
+ <div x-data="featureGate('SmsNotifications')" x-show="!allowed" x-cloak
+ class="mt-6 rounded-xl border-l-4 border-amber-400 bg-amber-50 p-4">
+ <p class="text-sm font-medium text-amber-900">Fonctionnalité réservée à la formule Premium</p>
+ <p class="mt-1 text-sm text-amber-800" x-text="label"></p>
+ </div>
+
+ <div x-data="featureGate('SmsNotifications')" x-show="allowed" x-cloak>
+
+ @* grid-cols-1 puis sm:grid-cols-3 : les trois compteurs tiennent côte à côte dès la tablette et
+ s'empilent sur mobile, où l'écran Paramètres est le plus souvent consulté. *@
+ <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+ <stat-card size="compact" label="Solde SMS restant" icon="envelope" accent="primary">
+ <span x-text="creditBalance !== null ? creditBalance + ' segment(s)' : '—'"></span>
+ </stat-card>
+ <stat-card size="compact" label="Envois enregistrés" icon="document" accent="primary">
+ <span x-text="totalCount"></span>
+ </stat-card>
+ <stat-card size="compact" label="En attente d'envoi" icon="clock" accent="primary">
+ <span x-text="pendingCount"></span>
+ </stat-card>
+ </div>
+
+ <p class="mt-2 text-xs text-slate-500">
+ Un SMS long est facturé en plusieurs segments. Pour recharger votre solde, contactez Sama Ecole.
+ </p>
+
+ @* Les envois passent par une file : sans cette phrase, un Directeur qui vient de lancer une
+ relance et lit « En attente » croirait à une panne. *@
+ <p x-show="pendingCount > 0" x-cloak class="mt-1 text-xs text-slate-500">
+ Les messages en attente partent automatiquement dans les minutes qui suivent.
+ </p>
+
+ <!-- Commutateurs -->
+ <div class="card mt-6 p-6">
+ <h3 class="text-sm font-semibold text-slate-900">Alertes automatiques</h3>
+
+ <div class="mt-4 space-y-4">
+ <label class="flex items-start gap-3 cursor-pointer">
+ <input type="checkbox" x-model="settings.smsOnAttendanceAlert"
+ class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+ <span>
+ <span class="block text-sm font-medium text-slate-800">Retards et absences</span>
+ <span class="block text-xs text-slate-500">Le tuteur est prévenu dès la saisie de l'appel.</span>
+ </span>
+ </label>
+
+ <label class="flex items-start gap-3 cursor-pointer">
+ <input type="checkbox" x-model="settings.smsOnDuesReminder"
+ class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+ <span>
+ <span class="block text-sm font-medium text-slate-800">Relances d'impayés</span>
+ <span class="block text-xs text-slate-500">
+ Autorise l'envoi groupé depuis le module Finance et le calcul quotidien des lots de
+ relance brouillon (écran Recouvrement).
+ </span>
+ </span>
+ </label>
+
+ @* Seuil de retard (Étape 5) : n'a d'effet que si la relance d'impayés est activée ci-dessus —
+ un lot brouillon n'est jamais généré sans ce commutateur, le seuil ne fait qu'en cadrer le
+ calcul. *@
+ <div x-show="settings.smsOnDuesReminder" x-cloak class="ml-7 pl-3 border-l-2 border-slate-100">
+ <label for="sms-debtor-threshold" class="block text-sm font-medium text-slate-700">
+ Seuil de retard avant relance (jours)
+ </label>
+ <input id="sms-debtor-threshold" type="number" min="1" max="365"
+ x-model.number="settings.debtorReminderThresholdDays"
+ class="input-field mt-1 max-w-[8rem]" />
+ <p class="mt-1 text-xs text-slate-400">
+ Au-delà de ce nombre de jours, un débiteur entre dans un lot de relance brouillon généré
+ chaque nuit — l'envoi reste toujours déclenché à la main, classe par classe.
+ </p>
+ </div>
+
+ <label class="flex items-start gap-3 cursor-pointer">
+ <input type="checkbox" x-model="settings.smsOnPaymentReceipt"
+ class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+ <span>
+ <span class="block text-sm font-medium text-slate-800">Confirmations de paiement</span>
+ <span class="block text-xs text-slate-500">Un SMS de confirmation après chaque encaissement.</span>
+ </span>
+ </label>
+ </div>
+
+ <div x-show="saveError" x-cloak class="mt-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="saveError"></div>
+ <div x-show="saveSuccess" x-cloak class="mt-4 rounded-xl border-l-4 border-success bg-success-bg p-3 text-sm text-success">
+ Préférences enregistrées.
+ </div>
+
+ <div class="mt-6 flex justify-end">
+ <button type="button" x-on:click="save()" :disabled="isSaving" class="btn-primary">
+ <span x-text="isSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </div>
+
+ <!-- Historique -->
+ <div class="card mt-6">
+ <div class="overflow-x-auto">
+ <table class="w-full text-left border-collapse">
+ <thead>
+ <tr class="table-head">
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Destinataire</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Segments</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-if="isLoading">
+ <template x-for="i in 5" :key="i">
+ <tr><td class="py-3 px-4" colspan="5"><div class="skeleton h-4 w-full"></div></td></tr>
+ </template>
+ </template>
+
+ <tr x-show="!isLoading && entries.length === 0" x-cloak>
+ <td colspan="5">
+ <empty-state icon="envelope" title="Aucun SMS envoyé pour le moment."
+ hint="Les alertes apparaîtront ici dès qu'un envoi aura eu lieu." />
+ </td>
+ </tr>
+
+ <template x-for="entry in entries" :key="entry.id">
+ <tr class="hover:bg-slate-50 transition-colors duration-150">
+ <td class="py-3 px-4 text-slate-600 whitespace-nowrap" x-text="formatDate(entry.sentAt)"></td>
+ <td class="py-3 px-4 font-mono text-xs text-slate-700" x-text="entry.recipient"></td>
+ <td class="py-3 px-4 text-slate-700" x-text="triggerLabel(entry.trigger)"></td>
+ <td class="py-3 px-4">
+ <span :class="statusBadge(entry.status)" x-text="statusLabel(entry.status)"></span>
+ <span x-show="entry.failureReason" x-cloak class="block text-xs text-slate-400" x-text="entry.failureReason"></span>
+ </td>
+ <td class="py-3 px-4 text-slate-600" x-text="entry.segmentCount"></td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+
+ <pagination page="page" page-size="pageSize" total="totalCount" on-change="load()" />
+ </div>
+ </div>
+</div>

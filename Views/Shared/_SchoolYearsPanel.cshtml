@@ -1,0 +1,276 @@
+@*
+ Panneau de gestion des années scolaires (ticket JGK-C01), extrait pour être RÉUTILISÉ comme onglet
+ de l'écran Paramètres. Le composant Alpine schoolYearsView() est défini dans wwwroot/js/school-years.js,
+ que la page hôte (Settings/Index.cshtml) charge dans sa section Scripts — une partial ne peut pas
+ déclarer @@section elle-même.
+*@
+<div x-data="schoolYearsView()">
+ <!-- Titre et bouton Nouvelle année -->
+ <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div>
+ <h2 class="text-lg font-semibold text-slate-900">Années scolaires</h2>
+ <p class="text-sm text-slate-500 mt-1">
+ L'année active est l'exercice sur lequel travaille l'établissement : inscriptions, frais et bulletins s'y rattachent.
+ </p>
+ </div>
+
+ @* Réservé au Directeur (Volume 7 §15). Masquer le bouton n'est qu'un confort : l'API répond
+ 403 à qui l'appellerait quand même. *@
+ <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-primary">
+ <icon name="plus" class="w-5 h-5" />
+ Nouvelle année
+ </button>
+ </div>
+
+ @await Html.PartialAsync("_ErrorBanner")
+
+ <!-- Synthèse et tableau -->
+ <div class="card mt-6 relative">
+
+ <div class="p-6 border-b border-slate-200 bg-slate-50/50 rounded-t-xl flex gap-6">
+ <stat-card size="compact" label="Année active" icon="checkmark-circle" accent="primary">
+ <span x-cloak :class="activeYear() ? 'text-slate-900' : 'text-warning'"
+ x-text="activeYear() ? activeYear().label : 'Aucune'"></span>
+ </stat-card>
+ <stat-card size="compact" label="Années enregistrées" icon="layers" accent="primary">
+ <span x-text="years.length"></span>
+ </stat-card>
+ </div>
+
+ <div class="overflow-x-auto">
+ <table class="w-full text-left border-collapse">
+ <thead>
+ <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Libellé</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Période</th>
+ <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
+ <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Action</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-if="isLoading">
+ <template x-for="i in 3" :key="i">
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out"><td class="py-3 px-4" colspan="4"><div class="skeleton h-4 w-full"></div></td></tr>
+ </template>
+ </template>
+
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="!isLoading && years.length === 0" x-cloak>
+ <td colspan="4">
+ <empty-state icon="layers" title="Aucune année scolaire n'est enregistrée."
+ hint="La première année créée devient l'année active de l'établissement." />
+ </td>
+ </tr>
+
+ <template x-for="(year, index) in years" :key="year.id || index">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <td class="py-3 px-4 font-bold text-slate-900">
+ <span class="inline-flex items-center gap-2">
+ <span aria-hidden="true" class="w-2 h-2 rounded-full"
+ :class="year.isActive ? 'bg-success' : 'bg-slate-300'"></span>
+ <span x-text="year.label"></span>
+ </span>
+ </td>
+ <td class="py-3 px-4 text-slate-600"
+ x-text="`${formatDate(year.startDate)} — ${formatDate(year.endDate)}`"></td>
+ <td class="py-3 px-4">
+ <span :class="statusClass(year)" x-text="statusLabel(year)"></span>
+ </td>
+ <td class="py-3 px-4 text-right whitespace-nowrap">
+ <button x-show="canActivate(year)" x-cloak
+ x-on:click="openActivate(year)"
+ class="px-3 py-1.5 text-xs font-medium text-primary-700 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-colors">
+ Activer
+ </button>
+
+ @* Corriger le libellé ou la période — typiquement prolonger l'année en cours de
+ quelques semaines. Proposé sur l'année ACTIVE comme sur une année à venir, mais
+ jamais sur une année terminée (canEdit) : l'API refuse de toute façon en 422. *@
+ <button x-show="canEdit(year)" x-cloak
+ x-on:click="openEdit(year)"
+ title="Modifier le libellé et les dates de cette année"
+ class="ml-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+ Modifier
+ </button>
+
+ @* Une année terminée est en lecture seule (ticket JGK-C01) : on le DIT,
+ au lieu d'afficher un bouton grisé dont personne ne devine la raison. *@
+ <span x-show="year.isClosed" x-cloak
+ class="inline-flex items-center gap-1 text-xs text-slate-400">
+ <icon name="archive" class="w-3.5 h-3.5" />
+ Lecture seule
+ </span>
+
+ @* Réservé au Directeur (GET /school-years/{id}/export est [Authorize(Roles
+ = Directeur)]) : croise élèves et paiements, un périmètre plus large
+ qu'un seul rôle métier. Disponible pour toute année, pas seulement les
+ années closes — un export à mi-parcours reste un besoin légitime. *@
+ <button x-show="isDirecteur" x-cloak
+ x-on:click="exportYear(year)" :disabled="exportingYearId === year.id"
+ title="Exporter les données de cette année (ZIP : élèves, paiements, classes)"
+ class="ml-1 p-1.5 text-slate-400 hover:text-primary rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-colors disabled:opacity-50">
+ <icon name="download" class="w-4 h-4" />
+ </button>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <!-- Création d'une année scolaire -->
+ <modal-shell open="isCreateOpen" title="Nouvelle année scolaire">
+ <modal-subtitle>Créer une année ne fait pas basculer l'établissement dessus : elle reste inactive jusqu'à son activation.</modal-subtitle>
+
+ <!-- Erreur globale (conflit de libellé, réseau…) -->
+ <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+
+ <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
+ <div>
+ <label for="year-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
+ <input id="year-label" type="text" x-model="newYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="createErrors.label" x-cloak x-text="createErrors.label" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div>
+ <label for="year-start" class="block text-sm font-medium text-slate-700">Date de début <span class="text-danger">*</span></label>
+ <date-field id="year-start" model="newYear.startDate" required="true" />
+ @* Le chevauchement est rapporté sur ce champ : c'est la période qui est en cause,
+ et c'est là que l'API place l'erreur (StartDate). *@
+ <p x-show="createErrors.startdate" x-cloak x-text="createErrors.startdate" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div>
+ <label for="year-end" class="block text-sm font-medium text-slate-700">Date de fin <span class="text-danger">*</span></label>
+ <date-field id="year-end" model="newYear.endDate" required="true" />
+ <p x-show="createErrors.enddate" x-cloak x-text="createErrors.enddate" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <p class="text-xs text-slate-500">
+ La rentrée sénégalaise a lieu en octobre : une année court généralement d'octobre à juillet.
+ </p>
+
+ <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+ <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">
+ Annuler
+ </button>
+ <button type="submit" :disabled="isSubmitting" class="btn-primary">
+ <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Confirmation : année scolaire ajoutée -->
+ <modal-shell open="showAddedDialog" size="md" on-close="showAddedDialog = false" title="Année scolaire ajoutée">
+ <confirm-dialog-body close-action="showAddedDialog = false"
+ new-action="showAddedDialog = false; openCreate()" new-label="Nouvelle année">
+ L'année <span class="font-medium text-slate-900" x-text="addedYearLabel"></span> a bien été ajoutée. Elle reste inactive jusqu'à son activation.
+ </confirm-dialog-body>
+ </modal-shell>
+
+ @*
+ Modification du libellé et de la période. Glissée sur le côté comme le formulaire de création
+ (même nature : une saisie), et non centrée comme l'activation — corriger des dates ne déplace
+ aucune donnée d'un exercice à l'autre, c'est l'activation qui engage l'établissement.
+ *@
+ <modal-shell open="isEditOpen" on-close="closeEdit()" title="Modifier l'année scolaire">
+ <modal-subtitle>Les trimestres sont recalés sur la nouvelle période. Les notes déjà saisies restent attachées à leur trimestre.</modal-subtitle>
+
+ <!-- Erreur non rattachable à un champ : année terminée, libellé en doublon, réseau… -->
+ <div x-show="editErrors.global || editErrors.id" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger"
+ x-text="editErrors.global || editErrors.id"></div>
+
+ <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
+ <div>
+ <label for="edit-year-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
+ <input id="edit-year-label" type="text" x-model="editingYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="editErrors.label" x-cloak x-text="editErrors.label" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div>
+ <label for="edit-year-start" class="block text-sm font-medium text-slate-700">Date de début <span class="text-danger">*</span></label>
+ <date-field id="edit-year-start" model="editingYear.startDate" required="true" />
+ <p x-show="editErrors.startdate" x-cloak x-text="editErrors.startdate" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div>
+ <label for="edit-year-end" class="block text-sm font-medium text-slate-700">Date de fin <span class="text-danger">*</span></label>
+ <date-field id="edit-year-end" model="editingYear.endDate" required="true" />
+ <p x-show="editErrors.enddate" x-cloak x-text="editErrors.enddate" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+ <button type="button" x-on:click="closeEdit()" class="btn-secondary">
+ Annuler
+ </button>
+ <button type="submit" :disabled="isSavingEdit" class="btn-primary">
+ <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Confirmation : année scolaire modifiée -->
+ <modal-shell open="showEditedDialog" size="md" on-close="showEditedDialog = false" title="Année scolaire modifiée">
+ <confirm-dialog-body close-action="showEditedDialog = false">
+ L'année <span class="font-medium text-slate-900" x-text="editedYearLabel"></span> a bien été mise à jour.
+ </confirm-dialog-body>
+ </modal-shell>
+
+ @*
+ Modale de DOUBLE CONFIRMATION (docs/Volume_7_Security.md §16 — « changement de l'année scolaire
+ active »). Volontairement centrée et non glissée sur le côté comme le formulaire de création :
+ ce n'est pas une saisie de plus, c'est un acte qui engage tout l'établissement, et l'écran doit
+ s'arrêter pour le dire.
+ *@
+ <modal-shell open="yearToActivate" on-close="closeActivate()" title="Changer l'année scolaire active" size="md">
+ <div class="flex items-start gap-4">
+ <div aria-hidden="true" class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-warning-bg">
+ <icon name="alert-circle" class="h-6 w-6 text-warning" />
+ </div>
+ <div class="flex-1">
+ <p class="text-sm text-slate-600">
+ L'établissement basculera sur
+ <span class="font-semibold text-slate-900" x-text="yearToActivate?.label"></span>.
+ Les inscriptions, les frais et les bulletins saisis à partir de maintenant s'y rattacheront.
+ </p>
+ <p x-show="activeYear()" x-cloak class="mt-2 text-sm text-slate-600">
+ <span class="font-semibold text-slate-900" x-text="activeYear()?.label"></span>
+ cessera d'être l'année active — une seule année l'est à la fois.
+ </p>
+ </div>
+ </div>
+
+ <!-- Erreur non rattachable à un champ : année terminée, réseau… -->
+ <div x-show="activateErrors.global || activateErrors.id" x-cloak class="mt-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3">
+ <p class="text-sm text-danger" x-text="activateErrors.global || activateErrors.id"></p>
+ </div>
+
+ <form x-on:submit.prevent="submitActivate()" novalidate class="mt-5">
+ <label for="activate-password" class="block text-sm font-medium text-slate-700">
+ Confirmez avec votre mot de passe <span class="text-danger">*</span>
+ </label>
+ @* autocomplete="current-password" : le gestionnaire de mots de passe du navigateur
+ propose le bon, sans que l'utilisateur ait à le retaper de mémoire. *@
+ <input id="activate-password" type="password" x-model="password" required
+ autocomplete="current-password"
+ x-effect="if (yearToActivate) $nextTick(() => $el.focus())" class="input-field">
+ <p x-show="activateErrors.password" x-cloak x-text="activateErrors.password" class="mt-1 text-xs text-danger"></p>
+
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeActivate()" class="btn-secondary">Annuler</button>
+ <button type="submit" :disabled="isActivating" class="btn-primary">
+ <span x-text="isActivating ? 'Activation...' : 'Activer cette année'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Confirmation : année scolaire activée -->
+ <modal-shell open="showActivatedDialog" size="md" on-close="showActivatedDialog = false" title="Année scolaire activée">
+ <confirm-dialog-body close-action="showActivatedDialog = false">
+ L'établissement travaille désormais sur <span class="font-medium text-slate-900" x-text="activatedYearLabel"></span>.
+ </confirm-dialog-body>
+ </modal-shell>
+</div>
