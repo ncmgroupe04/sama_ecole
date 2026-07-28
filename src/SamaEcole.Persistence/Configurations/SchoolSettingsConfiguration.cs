@@ -1,0 +1,48 @@
+using SamaEcole.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace SamaEcole.Persistence.Configurations;
+
+/// <summary>Paramètres d'établissement (ticket JGK-B02). Table tenant : RLS + Global Query Filter.</summary>
+public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettings>
+{
+    public void Configure(EntityTypeBuilder<SchoolSettings> builder)
+    {
+        builder.ToTable("school_settings");
+
+        builder.HasKey(s => s.Id);
+
+        // UNE seule ligne de réglages par école : deux lignes concurrentes signifieraient que la
+        // moitié des inscriptions utiliserait un format et l'autre moitié un autre.
+        builder.HasIndex(s => s.SchoolId).IsUnique();
+
+        builder.Property(s => s.GradingScale).IsRequired();
+        builder.Property(s => s.StudentMatriculeFormat).IsRequired().HasMaxLength(50);
+        builder.Property(s => s.TeacherMatriculeFormat).IsRequired().HasMaxLength(50);
+        builder.Property(s => s.AutoLogoutMinutes).IsRequired();
+        builder.Property(s => s.DateFormat).IsRequired().HasMaxLength(30);
+        builder.Property(s => s.TuitionMonthsPerYear).IsRequired();
+        builder.Property(s => s.AllowSecretaryToManageGrading).IsRequired();
+        builder.Property(s => s.AllowFinanceToModifyFees).IsRequired();
+        builder.Property(s => s.AllowFinanceToDeleteFees).IsRequired();
+
+        // Défaut en base = 7 (SchoolSettingsDefaults.DebtorReminderThresholdDays) : les écoles déjà
+        // existantes reçoivent la même valeur par défaut qu'une école neuve, jamais 0 (qui relancerait
+        // dès le premier jour de retard).
+        builder.Property(s => s.DebtorReminderThresholdDays)
+            .IsRequired()
+            .HasDefaultValue(SamaEcole.Domain.Entities.SchoolSettingsDefaults.DebtorReminderThresholdDays);
+
+        builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
+        builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);
+        builder.Property(s => s.CashierSignatureUrl).HasMaxLength(500);
+        builder.Property(s => s.OfficialStampUrl).HasMaxLength(500);
+        builder.Property(s => s.SurveillantSignatureUrl).HasMaxLength(500);
+
+        builder.HasOne<School>()
+            .WithMany()
+            .HasForeignKey(s => s.SchoolId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

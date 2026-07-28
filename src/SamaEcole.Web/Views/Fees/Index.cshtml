@@ -1,0 +1,482 @@
+@{
+ ViewData["Title"] = "Finance - Paramétrage des frais";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+ <script src="~/js/fees.js" asp-append-version="true"></script>
+}
+
+<div x-data="feesView()">
+ <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div>
+ <h1 class="text-jgk-title font-bold text-slate-900">Finance</h1>
+ <p class="text-jgk-subtitle text-slate-500 mt-1">
+ Gestion des paramètres de frais et des décaissements.
+ </p>
+ </div>
+ </div>
+
+ <!-- Navigation principale : Paramétrage des frais vs Décaissements -->
+ <div class="mt-6 flex bg-slate-100 p-1 rounded-xl w-fit">
+    <button type="button" x-on:click="activeTab = 'fees'" 
+            :class="activeTab === 'fees' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+        Paramétrage des Frais
+    </button>
+    <button type="button" x-on:click="activeTab = 'disbursements'" 
+            :class="activeTab === 'disbursements' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'"
+            class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+        Décaissements
+    </button>
+ </div>
+
+ <!-- ONGLET 1: Paramétrage des Frais -->
+ <div x-show="activeTab === 'fees'" x-cloak>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
+        <div>
+            <h2 class="text-lg font-bold text-slate-900">Paramétrage des frais</h2>
+        </div>
+        <div class="flex items-center gap-2" x-show="canModifyFees" x-cloak>
+        <button x-on:click="openCreateCategory()" class="btn-secondary">
+        <icon name="plus" class="w-5 h-5" />
+        Catégorie
+        </button>
+        <button x-on:click="openApplyStandard()" :disabled="!selectedCategoryId" class="btn-primary">
+        <icon name="wallet" class="w-5 h-5" />
+        Appliquer un montant standard
+        </button>
+        </div>
+    </div>
+
+ @await Html.PartialAsync("_ErrorBanner")
+
+ <!-- État vide : aucune catégorie -->
+ <div x-show="!isLoading && categories.length === 0" x-cloak class="card mt-6">
+ <empty-state icon="wallet" title="Aucune catégorie de frais n'est configurée."
+ hint="Créez une catégorie (inscription, mensualité, cantine…) pour commencer." />
+ </div>
+
+ <!-- Grille -->
+ <div x-show="categories.length > 0" x-cloak class="card mt-6 relative">
+
+ <!-- Onglets de catégories : segmented control (fond neutre unifié, pastille active blanche +
+ ombre légère) — même gabarit que les onglets de /parametres. -->
+ <div class="p-4">
+ <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Catégories de frais">
+ <template x-for="category in categories" :key="category.id">
+ <div class="group flex shrink-0 items-center whitespace-nowrap rounded-lg transition-all"
+ :class="tabClass(category.id)">
+ <button type="button" role="tab" x-on:click="selectedCategoryId = category.id"
+ class="flex items-center gap-2 px-4 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
+ <span x-text="category.name"></span>
+ @* bg-white + anneau : le badge neutre (bg-gray-100) disparaîtrait sur la piste slate-100 du
+ segmented control ; ici il reste lisible aussi bien sur la pastille active que sur la piste. *@
+ <badge x-show="category.isRecurring" x-cloak variant="neutral" class="bg-white text-[10px] uppercase tracking-wide text-slate-600 ring-1 ring-inset ring-slate-200">Mensuel</badge>
+ </button>
+ <button x-show="canDeleteFees" x-cloak type="button" x-on:click="openDeleteCategory(category)"
+ class="mr-2 p-1 text-slate-400 hover:text-danger rounded-lg transition-colors"
+ title="Supprimer la catégorie">
+ <icon name="trash-2" class="w-4 h-4" />
+ </button>
+ </div>
+ </template>
+ </nav>
+ </div>
+
+ <!-- Synthèse de la catégorie sélectionnée + recherche/filtre -->
+ <div class="p-6 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100">
+ <div class="flex gap-6">
+ <stat-card size="compact" label="Classes" icon="building" accent="primary">
+ <span x-text="classrooms.length"></span>
+ </stat-card>
+ <stat-card size="compact" label="Montants définis" icon="wallet">
+ <span :class="definedCount === classrooms.length ? 'text-success' : 'text-warning'"
+ x-text="definedCount + ' / ' + classrooms.length"></span>
+ </stat-card>
+ </div>
+
+ <div class="flex items-center gap-3">
+ <select-field model="levelFilter" aria-label="Filtrer par niveau" class="!my-0 h-10 !py-2 !px-3 rounded-xl w-40 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Tous les niveaux"
+ options-expr="[{value:'', label:'Tous les niveaux'}].concat(knownLevels.map(level => ({value: level, label: level})))" />
+
+ <div class="relative w-full sm:w-56 flex items-center">
+ <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+ <icon name="search" class="w-4 h-4 text-slate-400" />
+ </span>
+ <input type="search" x-model="search" placeholder="Rechercher une classe…"
+ aria-label="Rechercher une classe"
+ class="input-field !my-0 h-10 !py-2 pl-9 pr-3 rounded-xl w-full transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+ </div>
+ </div>
+ </div>
+
+ <!-- Aucune classe -->
+ <div x-show="classrooms.length === 0" x-cloak>
+ <empty-state icon="building" title="Aucune classe n'est encore définie."
+ hint="Créez vos classes avant de paramétrer leurs frais." />
+ </div>
+
+ <!-- Tableau des classes -->
+ <div x-show="classrooms.length > 0" x-cloak class="overflow-x-auto">
+ <table class="w-full text-left border-collapse">
+ <thead>
+ <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <sort-th column="name" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('name')" class="py-3 px-4">Classe</sort-th>
+ <sort-th column="level" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('level')" class="py-3 px-4">Niveau</sort-th>
+ <sort-th column="amount" sort-key="sortKey" sort-dir="sortDir" on-sort="toggleSort('amount')" class="py-3 px-4 text-right">Montant</sort-th>
+ <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="rows.length === 0" x-cloak>
+ <td colspan="4">
+ <empty-state icon="search" title="Aucune classe ne correspond à la recherche."
+ hint="Essayez un autre nom, niveau ou filtre." />
+ </td>
+ </tr>
+
+ <template x-for="row in rows" :key="row.classroom.id">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <td class="py-3 px-4 font-medium text-slate-900" x-text="row.classroom.name"></td>
+ <td class="py-3 px-4"><badge variant="neutral" x-text="row.classroom.level"></badge></td>
+ <td class="py-3 px-4 text-right font-bold" :class="row.fee ? 'text-slate-900' : 'text-slate-300'">
+ <span x-show="row.fee" x-text="formatMoney(row.fee ? row.fee.amount : null)"></span>
+ <span x-show="!row.fee" x-cloak class="text-xs font-medium text-slate-400 italic">non défini</span>
+ </td>
+ <td class="py-3 px-4 text-right whitespace-nowrap">
+ <row-actions show="row.fee">
+ <row-action icon="clock" label="Historique" on-click="openHistory(row)" />
+ <row-action icon="pencil" label="Modifier" on-click="openEdit(row)" show="canModifyFees" />
+ <row-action icon="trash-2" label="Supprimer" on-click="openDeleteFee(row)" variant="danger" show="canDeleteFees" />
+ </row-actions>
+ <span x-show="canModifyFees && !row.fee" x-cloak class="text-xs text-slate-400 italic">
+ Appliquez un standard
+ </span>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <!-- Création d'une catégorie de frais -->
+ <modal-shell open="isCategoryOpen" title="Nouvelle catégorie de frais">
+ <modal-subtitle>Inscription, mensualité, cantine, transport… la liste est libre.</modal-subtitle>
+
+ <div x-show="categoryErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="categoryErrors.global"></div>
+ <form x-on:submit.prevent="submitCreateCategory()" novalidate class="space-y-4">
+ <div>
+ <label for="cat-name" class="block text-sm font-medium text-slate-700">Nom de la catégorie <span class="text-danger">*</span></label>
+ <input id="cat-name" type="text" x-model="newCategory.name" required maxlength="60" placeholder="ex : Mensualité" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="categoryErrors.name" x-cloak x-text="categoryErrors.name" class="mt-1 text-xs text-danger"></p>
+ </div>
+ <div class="flex items-start gap-2">
+ <input id="cat-recurring" type="checkbox" x-model="newCategory.isRecurring" class="mt-1 rounded-xl border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label for="cat-recurring" class="text-sm text-slate-700">
+ Frais mensuel (dû chaque mois)
+ <span class="block text-xs text-slate-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
+ </label>
+ </div>
+ <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+ <button type="button" x-on:click="isCategoryOpen = false" class="btn-secondary">Annuler</button>
+ <button type="submit" :disabled="isSavingCategory" class="btn-primary">
+ <span x-text="isSavingCategory ? 'Enregistrement...' : 'Créer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Confirmation : catégorie de frais ajoutée -->
+ <modal-shell open="showCategoryAddedDialog" size="md" on-close="showCategoryAddedDialog = false" title="Catégorie ajoutée">
+ <confirm-dialog-body close-action="showCategoryAddedDialog = false"
+ new-action="showCategoryAddedDialog = false; openCreateCategory()" new-label="Nouvelle catégorie">
+ La catégorie <span class="font-medium text-slate-900" x-text="addedCategoryName"></span> a bien été ajoutée et est désormais disponible dans la grille.
+ </confirm-dialog-body>
+ </modal-shell>
+
+ <!-- Modale : appliquer un montant standard -->
+ <modal-shell open="isApplyOpen" size="md">
+ <modal-title>Montant standard — <span class="text-indigo-100" x-text="selectedCategory ? selectedCategory.name : ''"></span></modal-title>
+ @* Le décompte suit le périmètre choisi : il doit dire ce qui va RÉELLEMENT être écrit, pas le
+ total de l'école — c'est le seul garde-fou avant un geste qui touche plusieurs classes. *@
+ <modal-subtitle>
+ Ce montant s'appliquera à
+ <span class="font-semibold" x-text="applyTargetClassrooms.length"></span>
+ classe(s) en une fois
+ <span x-show="applyForm.level" x-cloak>— niveau <span class="font-semibold" x-text="applyForm.level"></span></span><span x-show="!applyForm.level">, toute l'école</span>.
+ </modal-subtitle>
+
+ <!-- Compte-rendu après application -->
+ <div x-show="applyReport" x-cloak class="mb-4 rounded-xl border-l-4 border-success bg-success-bg p-3 text-sm text-success">
+ <span x-text="applyReport ? applyReport.created : 0"></span> créée(s),
+ <span x-text="applyReport ? applyReport.updated : 0"></span> réalignée(s),
+ <span x-text="applyReport ? applyReport.skipped : 0"></span> inchangée(s).
+ </div>
+
+ <div x-show="applyErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="applyErrors.global"></div>
+
+ <form x-on:submit.prevent="submitApplyStandard()" novalidate class="space-y-4">
+ @* Périmètre : « Toutes les classes » par défaut, puis les niveaux RÉELLEMENT présents dans
+ l'école (knownLevels, déduit des classes) — la nomenclature des niveaux est libre, aucune
+ liste figée ici. Cibler un niveau laisse les autres cycles intacts. *@
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Périmètre d'application</label>
+ <select-field model="applyForm.level" aria-label="Périmètre d'application" placeholder="Toutes les classes"
+ options-expr="[{value:'', label:'Toutes les classes'}].concat(knownLevels.map(level => ({value: level, label: level})))" />
+ <p x-show="applyErrors.level" x-cloak x-text="applyErrors.level" class="mt-1 text-xs text-danger"></p>
+ </div>
+ <div>
+ <label for="apply-amount" class="block text-sm font-medium text-slate-700">Montant (FCFA) <span class="text-danger">*</span></label>
+ <input id="apply-amount" type="number" x-model.number="applyForm.amount" required min="0" step="500" placeholder="ex : 15000" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="applyErrors.amount" x-cloak x-text="applyErrors.amount" class="mt-1 text-xs text-danger"></p>
+ </div>
+ <div class="flex items-start gap-2">
+ <input id="apply-overwrite" type="checkbox" x-model="applyForm.overwriteExisting" class="mt-1 rounded-xl border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label for="apply-overwrite" class="text-sm text-slate-700">
+ Écraser les montants déjà définis
+ <span class="block text-xs text-slate-400">Décoché, les exceptions ajustées classe par classe sont préservées.</span>
+ </label>
+ </div>
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="isApplyOpen = false" class="btn-secondary">Fermer</button>
+ <button type="submit" :disabled="isApplying" class="btn-primary">
+ <span x-text="isApplying ? 'Application...' : 'Appliquer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Modale : modifier une exception -->
+ <modal-shell open="editing" on-close="closeEdit()" size="md">
+ <modal-title>Montant — <span class="text-indigo-100" x-text="editing ? editing.classroomName : ''"></span></modal-title>
+ <modal-subtitle><span x-text="selectedCategory ? selectedCategory.name : ''"></span></modal-subtitle>
+
+ <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
+
+ <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
+ <div>
+ <label for="edit-amount" class="block text-sm font-medium text-slate-700">Montant (FCFA) <span class="text-danger">*</span></label>
+ <input id="edit-amount" type="number" x-model.number="editing.amount" required min="0" step="500"
+ x-effect="if (editing) $nextTick(() => $el.focus())" class="input-field">
+ <p x-show="editErrors.amount" x-cloak x-text="editErrors.amount" class="mt-1 text-xs text-danger"></p>
+ </div>
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeEdit()" class="btn-secondary">Annuler</button>
+ <button type="submit" :disabled="isSavingEdit" class="btn-primary">
+ <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Modale : historique -->
+ <modal-shell open="historyFor" on-close="closeHistory()" size="lg">
+ <modal-title>Historique — <span class="text-indigo-100" x-text="historyFor ? historyFor.classroomName : ''"></span></modal-title>
+
+ <div x-show="isLoadingHistory" class="py-8 text-center text-sm text-slate-400">Chargement…</div>
+
+ <div x-show="!isLoadingHistory && historyEntries.length === 0" x-cloak class="py-8 text-center text-sm text-slate-400">
+ Aucune modification enregistrée.
+ </div>
+
+ <ul x-show="!isLoadingHistory && historyEntries.length > 0" x-cloak class="max-h-80 divide-y divide-slate-100 overflow-y-auto">
+ <template x-for="(entry, index) in historyEntries" :key="index">
+ <li class="flex items-start justify-between gap-4 py-3">
+ <div>
+ <p class="text-sm text-slate-900">
+ <span x-show="entry.oldAmount !== null" x-cloak>
+ <span class="text-slate-400 line-through" x-text="formatMoney(entry.oldAmount)"></span>
+ <span class="text-slate-400">→</span>
+ </span>
+ <span class="font-semibold" x-text="formatMoney(entry.newAmount)"></span>
+ <span x-show="entry.oldAmount === null" x-cloak class="ml-1 text-xs text-slate-400">(définition initiale)</span>
+ </p>
+ <p class="mt-0.5 text-xs text-slate-500" x-text="'par ' + entry.changedByName"></p>
+ </div>
+ <span class="whitespace-nowrap text-xs text-slate-400" x-text="formatDate(entry.changedAt)"></span>
+ </li>
+ </template>
+ </ul>
+ </modal-shell>
+
+ <!-- Confirmation : suppression d'une catégorie (cascade sur tout son barème) -->
+ <modal-shell open="deletingCategory" on-close="closeDeleteCategory()" size="md">
+ <modal-title>Supprimer la catégorie</modal-title>
+ <modal-subtitle>
+ <span class="font-semibold text-slate-900" x-text="deletingCategory ? deletingCategory.name : ''"></span>
+ et tous les montants déjà définis pour cette catégorie disparaîtront de cet écran.
+ </modal-subtitle>
+
+ <div x-show="deleteCategoryError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteCategoryError"></div>
+
+ <p class="text-sm text-slate-500">
+ L'historique comptable des paiements déjà encaissés reste intact : cette action n'efface aucune donnée financière, elle masque seulement la catégorie pour les nouvelles inscriptions.
+ </p>
+
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeDeleteCategory()" class="btn-secondary">Annuler</button>
+ <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-danger">
+ <span x-text="isDeletingCategory ? 'Suppression...' : 'Supprimer la catégorie'"></span>
+ </button>
+ </div>
+ </modal-shell>
+
+ <!-- Confirmation : suppression d'une ligne de barème -->
+ <modal-shell open="deletingFee" on-close="closeDeleteFee()" size="md">
+ <modal-title>Supprimer ce montant</modal-title>
+ <modal-subtitle>
+ <span class="font-semibold text-slate-900" x-text="deletingFee ? deletingFee.classroomName : ''"></span>
+ n'aura plus de montant défini pour cette catégorie tant qu'un nouveau ne sera pas fixé.
+ </modal-subtitle>
+
+ <div x-show="deleteFeeError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteFeeError"></div>
+
+ <div class="mt-6 flex justify-end gap-3">
+ <button type="button" x-on:click="closeDeleteFee()" class="btn-secondary">Annuler</button>
+ <button type="button" x-on:click="confirmDeleteFee()" :disabled="isDeletingFee" class="btn-danger">
+ <span x-text="isDeletingFee ? 'Suppression...' : 'Supprimer'"></span>
+ </button>
+ </div>
+ </modal-shell>
+
+ <!-- Confirmation : catégorie supprimée -->
+ <modal-shell open="showCategoryDeletedDialog" size="md" on-close="showCategoryDeletedDialog = false" title="Catégorie supprimée">
+ <confirm-dialog-body close-action="showCategoryDeletedDialog = false">
+ La catégorie <span class="font-medium text-slate-900" x-text="deletedCategoryName"></span> a bien été supprimée.
+ </confirm-dialog-body>
+ </modal-shell>
+
+ <!-- Confirmation : montant modifié -->
+ <modal-shell open="showFeeEditedDialog" size="md" on-close="showFeeEditedDialog = false" title="Montant modifié">
+ <confirm-dialog-body close-action="showFeeEditedDialog = false">
+ Le montant de <span class="font-medium text-slate-900" x-text="editedFeeClassroomName"></span> est désormais de <span class="font-medium text-slate-900" x-text="formatMoney(editedFeeAmount)"></span>.
+ </confirm-dialog-body>
+ </modal-shell>
+
+    <!-- Confirmation : montant supprimé -->
+    <modal-shell open="showFeeDeletedDialog" size="md" on-close="showFeeDeletedDialog = false" title="Montant supprimé">
+    <confirm-dialog-body close-action="showFeeDeletedDialog = false">
+    Le montant de <span class="font-medium text-slate-900" x-text="deletedFeeClassroomName"></span> a bien été supprimé.
+    </confirm-dialog-body>
+    </modal-shell>
+ </div>
+
+ <!-- ONGLET 2: Décaissements -->
+ <div x-show="activeTab === 'disbursements'" x-cloak>
+    <div class="flex items-center justify-between mt-6">
+        <h2 class="text-lg font-bold text-slate-900">Historique des décaissements</h2>
+        <button type="button" x-on:click="openCreateDisbursement()" class="btn-primary">
+            <icon name="plus" class="w-5 h-5" />
+            Nouveau Décaissement
+        </button>
+    </div>
+
+    <!-- Table Décaissements -->
+    <div class="card mt-6 relative">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Bénéficiaire</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Catégorie</th>
+                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
+                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Moyen</th>
+                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr x-show="isLoadingDisbursements" x-cloak>
+                        <td colspan="7" class="py-12 text-center text-slate-500">Chargement...</td>
+                    </tr>
+                    <tr x-show="!isLoadingDisbursements && disbursements.length === 0" x-cloak>
+                        <td colspan="7" class="py-12 text-center text-slate-500">Aucun décaissement enregistré.</td>
+                    </tr>
+                    <template x-for="d in disbursements" :key="d.id">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3 px-4 text-sm text-slate-900" x-text="formatDateOnly(d.date)"></td>
+                            <td class="py-3 px-4 text-sm font-medium text-slate-900" x-text="d.beneficiary"></td>
+                            <td class="py-3 px-4 text-sm text-slate-500" x-text="d.reason"></td>
+                            <td class="py-3 px-4 text-sm text-slate-900">
+                                <badge variant="neutral" x-text="d.category"></badge>
+                            </td>
+                            <td class="py-3 px-4 text-sm font-bold text-slate-900 text-right" x-text="formatMoney(d.amount)"></td>
+                            <td class="py-3 px-4 text-sm text-slate-500" x-text="d.paymentMethod"></td>
+                            <td class="py-3 px-4 text-right">
+                                <button type="button" x-on:click="openDeleteDisbursement(d)" class="text-danger hover:text-red-700 transition-colors p-1" title="Supprimer" aria-label="Supprimer">
+                                    <icon name="trash" class="w-5 h-5" />
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modale Nouveau Décaissement -->
+    <modal-shell open="creatingDisbursement" on-close="closeCreateDisbursement()" size="md">
+        <form x-on:submit.prevent="submitCreateDisbursement()" novalidate>
+            <modal-title>Nouveau Décaissement</modal-title>
+            <modal-subtitle>Enregistrer une dépense ou un paiement sortant.</modal-subtitle>
+            
+            <div x-show="createDisbursementError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createDisbursementError"></div>
+
+            <div class="space-y-4 mt-4">
+                <div>
+                    <label class="form-label" for="disb_date">Date</label>
+                    <date-field id="disb_date" model="disbursementForm.date" />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_beneficiary">Bénéficiaire</label>
+                    <input type="text" id="disb_beneficiary" x-model="disbursementForm.beneficiary" required maxlength="150" class="input-field" placeholder="Nom du fournisseur ou employé..." />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_reason">Motif</label>
+                    <input type="text" id="disb_reason" x-model="disbursementForm.reason" required maxlength="255" class="input-field" placeholder="Achat de fournitures..." />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_category">Catégorie</label>
+                    <select-field id="disb_category" model="disbursementForm.category" options-expr="[{value:'Salaires', label:'Salaires'}, {value:'Maintenance', label:'Maintenance'}, {value:'Fournitures', label:'Fournitures'}, {value:'ChargesFixes', label:'Charges Fixes'}, {value:'Divers', label:'Divers'}]" />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_amount">Montant</label>
+                    <input type="number" id="disb_amount" x-model.number="disbursementForm.amount" required min="1" step="1" class="input-field font-mono" placeholder="Ex: 50000" />
+                </div>
+                <div>
+                    <label class="form-label" for="disb_method">Mode de paiement</label>
+                    <select-field id="disb_method" model="disbursementForm.paymentMethod" options-expr="[{value:'Cash', label:'Espèces'}, {value:'Cheque', label:'Chèque'}, {value:'Transfer', label:'Virement'}, {value:'MobileMoney', label:'Mobile Money'}]" />
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" x-on:click="closeCreateDisbursement()" class="btn-secondary">Annuler</button>
+                <button type="submit" :disabled="isSubmittingDisbursement" class="btn-primary">
+                    <span x-text="isSubmittingDisbursement ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Modale Supprimer Décaissement -->
+    <modal-shell open="deletingDisbursement" on-close="closeDeleteDisbursement()" size="md">
+        <modal-title>Annuler ce décaissement</modal-title>
+        <modal-subtitle>
+            Voulez-vous vraiment annuler le décaissement pour <span class="font-semibold text-slate-900" x-text="deletingDisbursement ? deletingDisbursement.beneficiary : ''"></span> ?
+        </modal-subtitle>
+        
+        <div x-show="deleteDisbursementError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteDisbursementError"></div>
+        
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" x-on:click="closeDeleteDisbursement()" class="btn-secondary">Fermer</button>
+            <button type="button" x-on:click="confirmDeleteDisbursement()" :disabled="isDeletingDisbursement" class="btn-danger">
+                <span x-text="isDeletingDisbursement ? 'Annulation...' : 'Oui, annuler'"></span>
+            </button>
+        </div>
+    </modal-shell>
+ </div>
+</div>
+

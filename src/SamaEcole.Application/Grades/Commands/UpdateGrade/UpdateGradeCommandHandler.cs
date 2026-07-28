@@ -1,0 +1,44 @@
+using SamaEcole.Application.Common.Interfaces;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace SamaEcole.Application.Grades.Commands.UpdateGrade;
+
+public class UpdateGradeCommandHandler(IApplicationDbContext dbContext)
+    : IRequestHandler<UpdateGradeCommand, GradeResult>
+{
+    public async Task<GradeResult> Handle(UpdateGradeCommand request, CancellationToken cancellationToken)
+    {
+        // Le Global Query Filter + la policy RLS bornent déjà la recherche à l'école courante : viser
+        // une note d'une autre école renvoie 404, jamais une modification silencieuse.
+        var grade = await dbContext.Grades
+            .FirstOrDefaultAsync(g => g.Id == request.Id, cancellationToken)
+            ?? throw new KeyNotFoundException($"Note {request.Id} introuvable.");
+
+        // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20) — backstop du
+        // contrôle déjà tenu par UpdateGradeCommandValidator, sur la même base pour ne pas le contredire.
+        var gradingScale = await GradingScaleGuard.ResolveScaleForStudentAsync(dbContext, grade.StudentId, cancellationToken);
+        GradingScaleGuard.EnsureWithinScale(request.Value, gradingScale, nameof(request.Value));
+
+        // Valeur inchangée : ne rien écrire, rien à arbitrer par le verrou optimiste.
+        if (grade.Value == request.Value)
+        {
+            return new GradeResult(grade.Id, grade.Value, request.RowVersion);
+        }
+
+        // Cœur du verrou optimiste (AGENTS.md règle #5) : le jeton LU PAR LE CLIENT devient la valeur
+        // d'origine imposée à EF. Si la note a changé en base depuis sa lecture, l'UPDATE
+        // « WHERE xmin = <jeton client> » ne touche aucune ligne et SaveChangesAsync refuse en 409.
+        dbContext.SetOriginalConcurrencyToken(grade, request.RowVersion);
+        grade.Value = request.Value;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var newRowVersion = await dbContext.Grades.AsNoTracking()
+            .Where(g => g.Id == grade.Id)
+            .Select(g => EF.Property<uint>(g, "xmin"))
+            .FirstAsync(cancellationToken);
+
+        return new GradeResult(grade.Id, grade.Value, newRowVersion);
+    }
+}

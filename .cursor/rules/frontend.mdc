@@ -1,0 +1,11 @@
+---
+description: Règles frontend Razor / Tailwind CSS / UI
+globs: src/SamaEcole.Web/Views/**/*.cshtml,src/SamaEcole.Web/wwwroot/**/*,src/SamaEcole.Web/tailwind.config.js
+alwaysApply: false
+---
+
+- Respecter le design system défini dans `docs/Volume_5_UIUX_Design.md` (palette, typographie, composants), implémenté via **Tailwind CSS** (décision D-13, Volume 0 §0.13) — jamais de CSS custom hors utilitaires Tailwind, jamais de couleur/espacement en valeur brute qui dupliquerait `tailwind.config.js`.
+- Utiliser exclusivement les classes utilitaires et le thème étendu (`bg-primary`, `text-danger`, points de rupture `sm`/`md`/`lg` alignés sur Volume 5 §2.4) — pas de Bootstrap, pas de framework CSS concurrent.
+- Toute vue affichant des données d'école doit passer par l'API/les Query MediatR déjà filtrées par tenant — jamais de requête directe à la base depuis une vue ou un contrôleur MVC sans passer par la couche Application.
+- Formulaires sensibles (paiement, note) : gérer explicitement le cas `409 Conflict` renvoyé par l'API (modification concurrente) avec un message clair à l'utilisateur, jamais un échec silencieux.
+- Accessibilité et responsive : cible desktop + tablette au minimum, voir `docs/Volume_5_UIUX_Design.md` §Responsive.

@@ -1,0 +1,59 @@
+@{
+ ViewData["Title"] = "Tableau de bord";
+ Layout = "_SuperAdminLayout";
+}
+
+@* Cet écran consomme le VRAI GET /api/v1/admin/platform/dashboard (PlatformController, migration
+ AddPlatformAdminViews). Limité aux quatre agrégats de la vue `v_platform_dashboard_stats` — voir le
+ commentaire de wwwroot/js/superadmin-dashboard.js pour ce qui reste volontairement hors périmètre
+ (MRR, effectifs cumulés, notes saisies, santé serveur). *@
+<div x-data="superAdminDashboard()" x-init="load()">
+
+ <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div>
+ <h1 class="text-xl font-semibold text-white">Tableau de bord plateforme</h1>
+ <p class="text-sm text-zinc-500 mt-1">Vue d'ensemble de tous les établissements Sama Ecole.</p>
+ </div>
+ <button type="button" x-on:click="load()" :disabled="isLoading"
+ class="inline-flex items-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50">
+ <icon name="chart-multiple" class="w-4 h-4" />
+ <span x-text="isLoading ? 'Actualisation…' : 'Actualiser'"></span>
+ </button>
+ </div>
+
+ <div x-show="isDemoData" x-cloak
+ class="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-start gap-2">
+ <icon name="alert-circle" class="w-[18px] h-[18px] shrink-0 mt-0.5" />
+ <span>
+ Backend d'agrégation plateforme introuvable (<code class="text-amber-200">GET /admin/platform/dashboard</code>) —
+ les chiffres ci-dessous sont des données de démonstration, pas des données réelles.
+ </span>
+ </div>
+
+ <div x-show="error" x-cloak class="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
+
+ <!-- Cartes KPI -->
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+ <template x-for="tile in kpiTiles" :key="tile.label">
+ <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+ <div class="min-w-0">
+ <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500" x-text="tile.label"></p>
+ <p class="mt-1 text-2xl font-black" :class="tile.iconText" x-text="isLoading ? '—' : tile.value"></p>
+ </div>
+ <div class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 ml-3" :class="tile.iconBg">
+ @* <icon> est un TagHelper résolu côté SERVEUR (name= doit être un littéral connu à la
+ compilation, voir TagHelpers/IconTagHelper.cs) : il ne peut pas prendre un nom
+ d'icône dynamique venant d'Alpine. On retombe donc ici sur le <use> brut que le
+ TagHelper génère lui-même en interne, avec un href lié côté client. *@
+ <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-5 h-5" :class="tile.iconText">
+ <use :href="`#icon-${tile.icon}`"></use>
+ </svg>
+ </div>
+ </div>
+ </template>
+ </div>
+</div>
+
+@section Scripts {
+ <script src="~/js/superadmin-dashboard.js" asp-append-version="true"></script>
+}

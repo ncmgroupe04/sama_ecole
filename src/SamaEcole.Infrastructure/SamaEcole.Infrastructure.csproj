@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SamaEcole.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.1" />
+    <!-- Version alignée sur ce que résout déjà Authentication.JwtBearer 9.0.1 dans SamaEcole.Web :
+         épingler une autre version rejouerait un downgrade NU1605 et casserait la restauration. -->
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.0.1" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
+    <PackageReference Include="QuestPDF" Version="2024.10.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SamaEcole.Application\SamaEcole.Application.csproj" />
+  </ItemGroup>
+
+  <!-- ReportCardDocument expose son formatage décimal (FormatGrade/FormatOptionalGrade) en `internal`
+       pour être testé directement (Volume 1 §8.5), sans en faire une API publique. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SamaEcole.UnitTests" />
+  </ItemGroup>
+
+</Project>

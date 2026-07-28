@@ -1,0 +1,11 @@
+---
+description: Règles base de données, migrations EF Core, multi-tenant
+globs: src/SamaEcole.Persistence/**/*.cs,**/Migrations/**/*.cs
+alwaysApply: false
+---
+
+- Une seule base de données cible : PostgreSQL (Npgsql). N'ajouter aucun autre provider.
+- Toute nouvelle table métier doit : porter `school_id uuid not null`, avoir une policy `ROW LEVEL SECURITY` PostgreSQL équivalente au Global Query Filter EF Core défini côté C#, et être ajoutée au test d'isolation multi-tenant (`docs/Volume_8_Test_Strategy.md` §5) — pas d'exception.
+- Ne jamais modifier une migration déjà committée/appliquée : toujours en créer une nouvelle (`dotnet ef migrations add <Nom>`).
+- Le schéma de référence est `docs/Volume_3_DDS.md` et le diagramme `docs/ERD.md` — toute divergence entre le code et ces documents doit être signalée, pas silencieusement résolue dans un sens ou l'autre.
+- Les colonnes d'audit (`created_at`, `updated_at`, `created_by`, `updated_by`) et l'identifiant `uuid v7` sont obligatoires sur toute table métier.
