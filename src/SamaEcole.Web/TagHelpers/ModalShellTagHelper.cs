@@ -68,7 +68,7 @@ public class ModalShellTagHelper : TagHelper
         output.TagName = null; // pas de <modal-shell> littéral au rendu : uniquement le HTML ci-dessous.
         output.Content.SetHtmlContent($"""
             <div x-show="{Open}" x-cloak
-                 class="fixed inset-0 z-40 flex items-stretch justify-center sm:items-center sm:p-4"
+                 class="fixed inset-0 z-[60] flex items-stretch justify-center sm:items-center sm:p-4"
                  x-on:keydown.escape.window="{close}"
                  x-on:close-modals.window="{close}">
                 <div x-show="{Open}"
