@@ -1,0 +1,145 @@
+using System.Net;
+using Microsoft.AspNetCore.Razor.TagHelpers;
+
+namespace SamaEcole.Web.TagHelpers;
+
+/// <summary>
+/// Panneau de formulaire partagé (« Ajouter une classe », « Ajouter un élève »…) : centré avec fond
+/// assombri sur ordinateur/tablette, plein écran sur mobile où une petite boîte serait trop exiguë
+/// (Volume 5 §2.4 — points de rupture responsive, seuil `sm:` de Tailwind ≈ 640px). Une seule
+/// implémentation, partagée par tous les écrans (Volume 5 §2 et §7 : « composants réutilisables
+/// développés une seule fois »), plutôt que redupliquée dans chaque vue comme c'était le cas jusqu'ici
+/// (panneau latéral copié-collé dans Students/Classrooms/Subjects/Fees/_SchoolYearsPanel).
+///
+/// Fermeture par le fond, le bouton ✕, ou Échap — même convention que les dialogues déjà centrés du
+/// module Finance (Volume 5 §5 : « navigation clavier complète »).
+///
+/// Usage :
+/// <code>
+/// &lt;modal-shell open="isCreateOpen" title="Ajouter une classe"&gt;
+///     &lt;modal-subtitle&gt;Texte fixe ou liaison Alpine (x-text) libre.&lt;/modal-subtitle&gt;
+///     ... corps du formulaire, inchangé ...
+/// &lt;/modal-shell&gt;
+/// </code>
+///
+/// <see cref="Open"/> et <see cref="OnClose"/> sont des EXPRESSIONS Alpine.js (ex. « isCreateOpen »,
+/// « detailStudent »), jamais des données utilisateur : elles sont émises telles quelles, exactement
+/// comme tout attribut x-show/x-on écrit directement dans une vue Razor par le développeur.
+/// </summary>
+[HtmlTargetElement("modal-shell")]
+public class ModalShellTagHelper : TagHelper
+{
+    /// <summary>Expression Alpine de visibilité (booléen, ou objet dont la troncature pilote l'affichage).</summary>
+    public string Open { get; set; } = "false";
+
+    /// <summary>
+    /// Titre affiché dans l'en-tête violet. Texte simple, encodé automatiquement. Pour un titre
+    /// DYNAMIQUE (liaison Alpine), utiliser plutôt un enfant &lt;modal-title&gt; qui prend le dessus.
+    /// </summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Largeur maximale sur écran ≥ sm : md | lg | xl | 2xl | 3xl (défaut). Les formulaires courts
+    /// (montant, confirmation) respirent mieux en md/lg ; le défaut 3xl préserve les usages existants.
+    /// </summary>
+    public string Size { get; set; } = "3xl";
+
+    /// <summary>
+    /// Expression Alpine exécutée à la fermeture (fond, ✕, Échap). Par défaut « {Open} = false » ; à
+    /// fournir explicitement quand <see cref="Open"/> n'est pas un booléen simple — ex. la fiche élève
+    /// se ferme par « detailStudent = null », pas par une affectation à false.
+    /// </summary>
+    public string? OnClose { get; set; }
+
+    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
+    {
+        // GetChildContentAsync exécute aussi les <modal-subtitle>/<modal-title> imbriqués, qui écrivent
+        // dans context.Items (partagé par référence tout au long de l'arborescence) avant que ce parent
+        // ne le relise juste après — le patron documenté de communication enfant → ancêtre des Tag Helpers.
+        var body = (await output.GetChildContentAsync()).GetContent();
+        var subtitle = context.Items.TryGetValue(ModalSubtitleTagHelper.ItemsKey, out var value) ? (string)value! : null;
+        var titleSlot = context.Items.TryGetValue(ModalTitleTagHelper.ItemsKey, out var t) ? (string)t! : null;
+        var close = string.IsNullOrWhiteSpace(OnClose) ? $"{Open} = false" : OnClose;
+
+        // Un <modal-title> (HTML brut, liaisons Alpine possibles) l'emporte sur l'attribut title encodé.
+        var titleHtml = titleSlot ?? WebUtility.HtmlEncode(Title);
+        var maxWidth = MaxWidthClass(Size);
+
+        output.TagName = null; // pas de <modal-shell> littéral au rendu : uniquement le HTML ci-dessous.
+        output.Content.SetHtmlContent($"""
+            <div x-show="{Open}" x-cloak
+                 class="fixed inset-0 z-[60] flex items-stretch justify-center sm:items-center sm:p-4"
+                 x-on:keydown.escape.window="{close}"
+                 x-on:close-modals.window="{close}">
+                <div x-show="{Open}"
+                     x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                     x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 bg-gray-500 bg-opacity-75" x-on:click="{close}"></div>
+
+                <div x-show="{Open}"
+                     x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
+                     x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
+                     class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl sm:my-8 sm:h-auto sm:max-h-[90vh] sm:w-full {maxWidth} sm:rounded-xl">
+                    <div class="flex-shrink-0 bg-primary px-4 py-4 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-medium text-white">{titleHtml}</h2>
+                            <button type="button" x-on:click="{close}" class="rounded-md bg-primary text-indigo-200 hover:text-white focus:outline-none">
+                                <span class="sr-only">Fermer</span>
+                                <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><use href="#icon-x"></use></svg>
+                            </button>
+                        </div>
+                        {(subtitle is null ? "" : $"""<div class="mt-1 text-sm text-indigo-200">{subtitle}</div>""")}
+                    </div>
+                    <div class="relative flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+                        {body}
+                    </div>
+                </div>
+            </div>
+            """);
+    }
+
+    /// <summary>Classes littérales (jamais interpolées) pour que Tailwind les voie au scan du CSS.</summary>
+    private static string MaxWidthClass(string size) => size.ToLowerInvariant() switch
+    {
+        "md" => "sm:max-w-md",
+        "lg" => "sm:max-w-lg",
+        "xl" => "sm:max-w-xl",
+        "2xl" => "sm:max-w-2xl",
+        _ => "sm:max-w-3xl"
+    };
+}
+
+/// <summary>
+/// Sous-titre libre du panneau (texte fixe ou lié en Alpine, ex. <c>x-text="detailStudent.matricule"</c>).
+/// N'émet rien à sa propre place : son contenu est absorbé par <see cref="ModalShellTagHelper"/> parent,
+/// qui le replace dans l'en-tête.
+/// </summary>
+[HtmlTargetElement("modal-subtitle", ParentTag = "modal-shell")]
+public class ModalSubtitleTagHelper : TagHelper
+{
+    internal const string ItemsKey = "SamaEcole.ModalSubtitle";
+
+    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
+    {
+        context.Items[ItemsKey] = (await output.GetChildContentAsync()).GetContent();
+        output.SuppressOutput();
+    }
+}
+
+/// <summary>
+/// Titre HTML libre du panneau, pour un titre DYNAMIQUE que l'attribut <c>title</c> (texte encodé) ne
+/// peut pas porter — ex. « Montant standard — <span x-text="selectedCategory.name"></span> ». Même
+/// mécanisme que <see cref="ModalSubtitleTagHelper"/> : le contenu est absorbé par le parent et replacé
+/// dans le &lt;h2&gt; de l'en-tête. S'il est présent, il l'emporte sur l'attribut <c>title</c>.
+/// </summary>
+[HtmlTargetElement("modal-title", ParentTag = "modal-shell")]
+public class ModalTitleTagHelper : TagHelper
+{
+    internal const string ItemsKey = "SamaEcole.ModalTitle";
+
+    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
+    {
+        context.Items[ItemsKey] = (await output.GetChildContentAsync()).GetContent();
+        output.SuppressOutput();
+    }
+}

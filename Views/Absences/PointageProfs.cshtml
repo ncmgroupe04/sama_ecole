@@ -1,0 +1,113 @@
+@{
+    ViewData["Title"] = "Pointage Profs";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/pointage-profs.js" asp-append-version="true"></script>
+}
+
+<div x-data="pointageProfsView()" class="space-y-6">
+    <div>
+        <h1 class="text-jgk-title font-bold text-slate-900">Pointage Profs</h1>
+        <p class="text-jgk-subtitle text-slate-500 mt-1">Relevé d'heures des enseignants vacataires — base de calcul de leur bulletin de paie.</p>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- ===================== Sélection ===================== -->
+    <div class="card p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-slate-700">Enseignant vacataire <span class="text-red-500">*</span></label>
+                <select-field model="selectedContractId" placeholder="Sélectionnez un enseignant vacataire..."
+                    options-expr="vacataireContracts.map(c => ({value: c.id, label: c.employeeFullName}))"
+                    on-change="loadHourRecords()" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Mois</label>
+                <select-field model="filter.month" placeholder="Sélectionnez un mois..." on-change="loadHourRecords()"
+                    options-expr="[{value:1,label:'Janvier'},{value:2,label:'Février'},{value:3,label:'Mars'},{value:4,label:'Avril'},{value:5,label:'Mai'},{value:6,label:'Juin'},{value:7,label:'Juillet'},{value:8,label:'Août'},{value:9,label:'Septembre'},{value:10,label:'Octobre'},{value:11,label:'Novembre'},{value:12,label:'Décembre'}]" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Année</label>
+                <input type="number" x-model="filter.year" x-on:change="loadHourRecords()" class="input-field mt-0" />
+            </div>
+        </div>
+
+        <div class="mt-4 flex justify-end">
+            <button type="button" x-on:click="downloadHourRecordSheet()" :disabled="!selectedContractId || downloadingSheet" class="btn-secondary">
+                <icon name="download" class="w-4 h-4" x-show="!downloadingSheet" />
+                <icon name="loader" class="w-4 h-4 animate-spin" x-show="downloadingSheet" x-cloak />
+                <span x-text="downloadingSheet ? 'Génération...' : 'Fiche heures (PDF)'"></span>
+            </button>
+        </div>
+    </div>
+
+    <template x-if="!selectedContractId">
+        <div class="card p-6">
+            <empty-state icon="clock" title="Aucun enseignant vacataire sélectionné."
+                hint="Choisissez un enseignant vacataire ci-dessus pour consulter ou saisir son relevé d'heures." />
+        </div>
+    </template>
+
+    <div x-show="selectedContractId" x-cloak class="space-y-6">
+        <!-- ===================== Relevé d'heures ===================== -->
+        <div class="card">
+            <div class="p-6 border-b border-slate-200">
+                <h2 class="text-sm font-semibold text-slate-700">Relevé d'heures</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
+                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Heures</th>
+                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Note</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr x-show="!isLoading && hourRecords.length === 0" x-cloak>
+                            <td colspan="3">
+                                <empty-state icon="document" title="Aucune heure enregistrée sur cette période."
+                                    hint="Ajoutez une ligne d'heures ci-dessous." />
+                            </td>
+                        </tr>
+                        <template x-for="record in hourRecords" :key="record.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 text-slate-600" x-text="record.date"></td>
+                                <td class="py-3 px-4 text-right text-slate-600" x-text="record.hours"></td>
+                                <td class="py-3 px-4 text-slate-500" x-text="record.note"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===================== Saisir des heures ===================== -->
+        <div class="card p-6">
+            <h2 class="text-sm font-semibold text-slate-700 mb-4">Ajouter des heures</h2>
+            <form x-on:submit.prevent="submitHourRecord()" novalidate class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Date <span class="text-red-500">*</span></label>
+                    <input type="date" x-model="hourRecordForm.date" required class="input-field mt-1" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Heures <span class="text-red-500">*</span></label>
+                    <input type="number" min="0" step="0.5" x-model="hourRecordForm.hours" required class="input-field mt-1" />
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-slate-700">Note</label>
+                    <input type="text" x-model="hourRecordForm.note" class="input-field mt-1" />
+                </div>
+                <div class="sm:col-span-4 flex justify-end">
+                    <button type="submit" class="btn-primary" :disabled="isSavingHourRecord">
+                        <span x-show="!isSavingHourRecord">Ajouter les heures</span>
+                        <span x-show="isSavingHourRecord">Enregistrement...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

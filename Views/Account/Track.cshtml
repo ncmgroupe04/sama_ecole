@@ -1,0 +1,101 @@
+@{
+ ViewData["Title"] = "Suivi de ma demande d'inscription";
+ Layout = "_AuthLayout";
+}
+
+<div class="min-h-screen flex items-center justify-center p-6 sm:p-12">
+ <div class="w-full max-w-lg" x-data="trackingForm()">
+
+ <!-- Logo -->
+ <div class="flex items-center justify-center gap-2 mb-8">
+ <div class="w-9 h-9 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center font-bold text-lg">S</div>
+ <span class="font-bold text-lg text-slate-900 tracking-tight">Sama Ecole</span>
+ </div>
+
+ <div class="text-center mb-8">
+ <h1 class="text-jgk-title font-bold text-slate-900">Suivi de ma demande d'inscription</h1>
+ <p class="text-jgk-body text-slate-500 mt-2">
+ Retrouvez l'état de votre dossier à l'aide de la référence reçue par e-mail.
+ </p>
+ </div>
+
+ <!-- Recherche -->
+ <form x-on:submit.prevent="submit()" novalidate class="flex flex-col sm:flex-row gap-3">
+ <label for="trackingReference" class="sr-only">Référence de suivi</label>
+ <input id="trackingReference"
+ type="text"
+ x-model="trackingReference"
+ placeholder="REG-XXXXXXXX"
+ autocomplete="off"
+ x-bind:aria-invalid="error ? 'true' : 'false'"
+ class="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body uppercase placeholder:text-slate-400 placeholder:normal-case focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+
+ <button type="submit"
+ x-bind:disabled="isSubmitting"
+ x-bind:aria-busy="isSubmitting.toString()"
+ class="flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-md transition-all duration-200 ease-in-out rounded-xl px-5 py-3 text-jgk-body font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed">
+ <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+ <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+ <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+ </svg>
+ <span x-text="isSubmitting ? 'Recherche…' : 'Rechercher'">Rechercher</span>
+ </button>
+ </form>
+
+ <!-- Message d'erreur -->
+ <div x-cloak
+ x-show="error"
+ x-transition.opacity
+ role="alert"
+ aria-live="polite"
+ class="mt-6 flex items-start gap-3 rounded-2xl bg-danger/10 border border-danger/20 px-4 py-3">
+ <svg aria-hidden="true" class="w-5 h-5 text-danger shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5.07 19H19a2 2 0 001.75-2.96l-6.93-12a2 2 0 00-3.5 0l-6.93 12A2 2 0 005.07 19z" /></svg>
+ <p class="text-jgk-body text-danger" x-text="error"></p>
+ </div>
+
+ <!-- Résultat -->
+ <div x-cloak x-show="result" x-transition.opacity class="mt-6 rounded-xl border border-slate-200 p-6">
+ <div class="flex items-start justify-between gap-4">
+ <div>
+ <p class="text-jgk-table text-slate-500 uppercase tracking-wide">Établissement</p>
+ <p class="mt-0.5 text-jgk-subtitle font-semibold text-slate-900" x-text="result && result.schoolName"></p>
+ </div>
+ <span class="shrink-0 inline-flex items-center rounded-full px-3 py-1 text-jgk-table font-medium"
+ x-bind:class="result && statusBadgeClass(result.status)"
+ x-text="result && statusLabel(result.status)"></span>
+ </div>
+
+ <p class="mt-4 text-jgk-body text-slate-500">
+ Demande soumise le <span class="font-medium text-slate-700" x-text="result && formatDate(result.submittedAt)"></span>
+ </p>
+
+ <!-- Motif de rejet : affiché uniquement si la demande a été rejetée. -->
+ <div x-cloak x-show="result && result.status === 'Rejected' && result.rejectionReason"
+ class="mt-4 rounded-2xl bg-danger-bg px-4 py-3">
+ <p class="text-jgk-table font-medium text-danger">Motif du rejet</p>
+ <p class="mt-1 text-jgk-body text-slate-700" x-text="result && result.rejectionReason"></p>
+ </div>
+
+ <!-- En attente : rassure sur la suite, sans donner de délai qu'on ne maîtrise pas. -->
+ <p x-cloak x-show="result && result.status === 'Pending'" class="mt-4 text-jgk-table text-slate-500">
+ Votre dossier est en cours d'examen par notre équipe. Revenez consulter cette page à tout moment.
+ </p>
+
+ <!-- Approuvée : la demande devient une école, seul le compte Directeur permet la suite. -->
+ <p x-cloak x-show="result && result.status === 'Approved'" class="mt-4 text-jgk-table text-slate-500">
+ Votre demande a été validée. Un e-mail de confirmation vous a été adressé avec les informations
+ pour vous connecter.
+ </p>
+ </div>
+
+ <p class="mt-8 text-center text-jgk-table text-slate-500">
+ <a href="/login" class="text-primary font-medium hover:underline">Retour à la connexion</a>
+ ·
+ <a href="/inscription" class="text-primary font-medium hover:underline">Inscrire mon établissement</a>
+ </p>
+ </div>
+</div>
+
+@section Scripts {
+ <script src="~/js/tracking.js" asp-append-version="true"></script>
+}
