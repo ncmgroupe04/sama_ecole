@@ -11,12 +11,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   mainLinks.forEach(link => {
     link.addEventListener('click', () => {
+      const targetSubmenu = link.nextElementSibling;
+      const isTargetSubmenu = targetSubmenu && targetSubmenu.hasAttribute('data-submenu');
+
+      // Capturé AVANT de tout refermer : un reclic sur le sous-menu DÉJÀ ouvert doit le
+      // laisser fermé (bascule), pas le rouvrir aussitôt — sans cette lecture précoce, le
+      // menu actif se comportait comme s'il n'y avait qu'un état "ouvert", jamais "fermé".
+      const wasOpen = isTargetSubmenu && !targetSubmenu.classList.contains('is-closed');
+
       sidebarNav?.classList.add('is-resetting');
 
       submenus.forEach(menu => {
         menu.classList.add('is-closed');
         menu.style.maxHeight = '0px';
       });
+
+      if (wasOpen) {
+        // Bascule vers fermé : rien à rouvrir, juste lever le verrou de transition posé
+        // ci-dessus pour que le prochain clic (sur ce menu ou un autre) anime normalement.
+        requestAnimationFrame(() => sidebarNav?.classList.remove('is-resetting'));
+        return;
+      }
 
       requestAnimationFrame(() => {
         // Lever le verrou AVANT de lire scrollHeight : tant que .is-resetting force
@@ -27,8 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // rapides décrit dans le rapport.
         sidebarNav?.classList.remove('is-resetting');
 
-        const targetSubmenu = link.nextElementSibling;
-        if (targetSubmenu && targetSubmenu.hasAttribute('data-submenu')) {
+        if (isTargetSubmenu) {
           targetSubmenu.classList.remove('is-closed');
           // Force un recalcul de style : sans ce point de mesure intermédiaire, le
           // dévoilement (display:none -> block) et la fixation de la hauteur finale se

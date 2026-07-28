@@ -59,6 +59,10 @@
  </div>
 
  <div class="flex items-center gap-3" x-show="canManage" x-cloak>
+ <button type="button" x-on:click="openImport()" class="btn-secondary">
+ <icon name="upload" class="w-4 h-4" />
+ Importer des enseignants
+ </button>
  <button type="button" x-on:click="openCreate()" class="btn-primary">
  <icon name="plus" class="w-4 h-4" />
  Ajouter un enseignant
@@ -448,6 +452,98 @@
  new-action="showAddedDialog = false; openCreate()" new-label="Nouvel enseignant">
  La fiche de <span class="font-medium text-slate-900" x-text="addedTeacherName"></span> a bien été ajoutée et figure désormais dans la liste.
  </confirm-dialog-body>
+ </modal-shell>
+
+ <!-- Import de masse du corps professoral : aperçu AVANT écriture, même patron que Students/Index.cshtml. -->
+ <modal-shell open="isImportOpen" on-close="closeImport()" title="Importer des enseignants" size="3xl">
+ <modal-subtitle>Fichier CSV ou Excel, un enseignant par ligne. Rien n'est enregistré tant que l'aperçu n'est pas entièrement valide.</modal-subtitle>
+
+ <div x-show="importError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="importError"></div>
+
+ <!-- Zone de dépôt du fichier : masquée une fois qu'un import a été confirmé, pour laisser la place au résumé de succès. -->
+ <div x-show="!(importResult && importResult.committed)" x-cloak>
+ <div x-on:dragover.prevent="importDragging = true" x-on:dragleave.prevent="importDragging = false"
+ x-on:drop.prevent="importDragging = false; onImportFileSelected($event.dataTransfer.files[0])"
+ x-on:click="$refs.teacherImportFileInput.click()"
+ :class="importDragging ? 'border-primary bg-primary/5' : 'border-slate-300 hover:border-primary'"
+ class="rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors">
+ <icon name="upload" class="w-8 h-8 text-slate-400 mx-auto" />
+ <p class="mt-2 text-sm">
+ <span x-show="!importFileName" class="text-slate-600">Glissez votre fichier ici, ou <span class="text-primary font-medium">cliquez pour le choisir</span>.</span>
+ <span x-show="importFileName" x-text="importFileName" class="font-medium text-slate-900"></span>
+ </p>
+ <p class="text-xs text-slate-400 mt-1">Fichier .csv ou .xlsx, 1000 lignes maximum.</p>
+ <input type="file" accept=".csv,.xlsx,.xls" x-ref="teacherImportFileInput" class="hidden transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ x-on:change="onImportFileSelected($event.target.files[0])" x-on:click.stop="">
+ </div>
+
+ <div x-show="isPreviewing" x-cloak class="mt-4 flex items-center justify-center py-6">
+ <svg aria-hidden="true" class="animate-spin h-6 w-6 text-primary" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+ <span class="ml-2 text-sm text-slate-500">Analyse du fichier…</span>
+ </div>
+
+ <!-- Aperçu ligne par ligne : cellules en rouge = champ invalide, survol = détail de l'erreur. -->
+ <div x-show="importPreview" x-cloak class="mt-4">
+ <p class="text-sm text-slate-700 mb-2">
+ <span x-text="importPreview ? importPreview.totalRows : 0"></span> ligne(s) détectée(s) —
+ <span class="text-success font-medium" x-text="importPreview ? importPreview.validRows : 0"></span> valide(s),
+ <span class="text-danger font-medium" x-text="importPreview ? importPreview.invalidRows : 0"></span> invalide(s).
+ </p>
+
+ <div class="max-h-80 overflow-auto rounded-2xl border border-slate-200">
+ <table class="w-full min-w-[900px] text-left border-collapse text-xs">
+ <thead>
+ <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <th class="py-2 px-2 w-10 uppercase tracking-wider text-slate-500 font-semibold">L.</th>
+ <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Nom complet</th>
+ <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">E-mail</th>
+ <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Téléphone</th>
+ <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Naissance</th>
+ <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Lieu</th>
+ <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Matières</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-for="row in (importPreview ? importPreview.rows : [])" :key="row.rowNumber">
+ <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <td class="py-1.5 px-2 text-slate-400" x-text="row.rowNumber"></td>
+ <td class="py-1.5 px-2" :class="importCellClass(row, 'fullName')" :title="row.fieldErrors.fullName || ''" x-text="row.fullName"></td>
+ <td class="py-1.5 px-2" :class="importCellClass(row, 'email')" :title="row.fieldErrors.email || ''" x-text="row.email"></td>
+ <td class="py-1.5 px-2" :class="importCellClass(row, 'phone')" :title="row.fieldErrors.phone || ''" x-text="row.phone"></td>
+ <td class="py-1.5 px-2" :class="importCellClass(row, 'birthDate')" :title="row.fieldErrors.birthDate || ''" x-text="row.birthDate"></td>
+ <td class="py-1.5 px-2" :class="importCellClass(row, 'birthPlace')" :title="row.fieldErrors.birthPlace || ''" x-text="row.birthPlace"></td>
+ <td class="py-1.5 px-2" :class="importCellClass(row, 'subjects')" :title="row.fieldErrors.subjects || ''" x-text="row.subjects"></td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
+
+ <p x-show="importPreview && importPreview.invalidRows > 0" x-cloak class="mt-2 text-xs text-danger">
+ Corrigez les cellules en rouge dans votre fichier (survolez-les pour le détail), puis redéposez-le ci-dessus.
+ </p>
+ </div>
+ </div>
+
+ <!-- Résumé de succès, après confirmation. -->
+ <div x-show="importResult && importResult.committed" x-cloak class="rounded-xl border-l-4 border-success bg-success-bg p-6 text-sm text-success">
+ <span class="font-semibold" x-text="importResult ? importResult.created : 0"></span> enseignant(s) importé(s) avec succès — ils figurent désormais dans la liste.
+ </div>
+
+ <div class="mt-6 flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-4">
+ <button type="button" @@click="downloadImportTemplate()" class="btn-secondary">
+ <icon name="download" class="w-4 h-4" />
+ <span>Télécharger le modèle</span>
+ </button>
+ <div class="flex gap-3">
+ <button type="button" @@click="closeImport()" class="btn-secondary">Fermer</button>
+ <button type="button"
+ x-show="importPreview && importPreview.invalidRows === 0 && importPreview.validRows > 0 && !(importResult && importResult.committed)"
+ x-cloak @@click="confirmImport()" :disabled="isImporting" class="btn-primary">
+ <span x-text="isImporting ? 'Import en cours…' : ('Confirmer l\'import (' + (importPreview ? importPreview.validRows : 0) + ' enseignants)')"></span>
+ </button>
+ </div>
+ </div>
  </modal-shell>
  </div>
 

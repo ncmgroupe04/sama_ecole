@@ -2,6 +2,8 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
 using SamaEcole.Application.Grades.Commands.CreateMention;
+using SamaEcole.Application.Grades.Commands.UpdateMention;
+using SamaEcole.Application.Grades.Commands.DeleteMention;
 using SamaEcole.Application.Grades.Commands.DeleteGrade;
 using SamaEcole.Application.Grades.Commands.ImportGradeSheet;
 using SamaEcole.Application.Grades.Queries.GetClassGrades;
@@ -217,5 +219,35 @@ public class GradesController(ISender mediator) : ControllerBase
         var result = await mediator.Send(new CreateMentionCommand(request.Label, request.MinAverage), cancellationToken);
 
         return CreatedAtAction(nameof(ListMentions), result);
+    }
+
+    public record UpdateMentionRequest(string Label, decimal MinAverage);
+
+    /// <summary>Corrige le libellé/seuil d'une mention en cas d'erreur de saisie — sans repasser par une suppression puis recréation de toute la liste.</summary>
+    [HttpPatch("mentions/{id:guid}")]
+    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
+    [ProducesResponseType<MentionDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateMention(
+        Guid id, [FromBody] UpdateMentionRequest request, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new UpdateMentionCommand(id, request.Label, request.MinAverage), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>Suppression logique (AGENTS.md règle #6) — jamais un effacement physique.</summary>
+    [HttpDelete("mentions/{id:guid}")]
+    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteMention(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new DeleteMentionCommand(id), cancellationToken);
+        return NoContent();
     }
 }

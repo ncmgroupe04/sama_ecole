@@ -12,15 +12,15 @@ public class ExitTicketPdfGenerator : IExitTicketPdfGenerator
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public byte[] Generate(ExitTicketDto ticket, byte[]? logo, byte[] qrCodeImage)
+    public byte[] Generate(ExitTicketDto ticket, byte[]? logo, byte[] qrCodeImage, byte[]? surveillantSignature)
     {
         try
         {
-            return new ExitTicketDocument(ticket, logo, qrCodeImage).GeneratePdf();
+            return new ExitTicketDocument(ticket, logo, qrCodeImage, surveillantSignature).GeneratePdf();
         }
-        catch (Exception) when (logo is not null)
+        catch (Exception) when (logo is not null || surveillantSignature is not null)
         {
-            return new ExitTicketDocument(ticket, null, qrCodeImage).GeneratePdf();
+            return new ExitTicketDocument(ticket, null, qrCodeImage, null).GeneratePdf();
         }
     }
 }

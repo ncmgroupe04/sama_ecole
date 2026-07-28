@@ -39,6 +39,7 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         string? SecretarySignatureUrl = null,
         string? CashierSignatureUrl = null,
         string? OfficialStampUrl = null,
+        string? SurveillantSignatureUrl = null,
         string TypeEtablissement = "Prive",
         bool SmsOnAttendanceAlert = false,
         bool SmsOnDuesReminder = false,
@@ -82,6 +83,7 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.SecretarySignatureUrl,
                 request.CashierSignatureUrl,
                 request.OfficialStampUrl,
+                request.SurveillantSignatureUrl,
                 request.TypeEtablissement,
                 request.SmsOnAttendanceAlert,
                 request.SmsOnDuesReminder,
@@ -136,6 +138,21 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         [FromServices] IWebHostEnvironment env,
         CancellationToken cancellationToken)
         => UploadSettingImageAsync(file, "signatures", "cashier-sig", tenantProvider, env, cancellationToken);
+
+    /// <summary>Upload local de l'image de la signature du Surveillant Général par le Directeur.</summary>
+    [HttpPost("surveillant-signature")]
+    [HttpPost("/api/settings/upload-surveillant-signature")]
+    [HttpPost("/api/v1/settings/upload-surveillant-signature")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public Task<IActionResult> UploadSurveillantSignature(
+        IFormFile? file,
+        [FromServices] ITenantProvider tenantProvider,
+        [FromServices] IWebHostEnvironment env,
+        CancellationToken cancellationToken)
+        => UploadSettingImageAsync(file, "signatures", "surveillant-sig", tenantProvider, env, cancellationToken);
 
     /// <summary>Upload local de l'image du cachet officiel par le Directeur.</summary>
     [HttpPost("official-stamp")]

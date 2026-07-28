@@ -12,7 +12,7 @@ namespace SamaEcole.Infrastructure.Documents;
 /// l'identique sur la maquette de référence fournie (bannière de titre, grille d'informations
 /// 2 colonnes x 3 rangées, pied de page à deux visas).
 /// </summary>
-public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo) : IDocument
+public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo, byte[]? surveillantSignature = null) : IDocument
 {
     private const string HeadingColor = "#111827";
     private const string AccentColor = "#475569";
@@ -180,7 +180,19 @@ public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo) : IDocumen
         container.BorderTop(0.75f).BorderColor(Colors.Grey.Darken1).PaddingTop(10).Row(row =>
         {
             row.RelativeItem().Text("Visa du Professeur (à la réception)").FontSize(8).FontColor(Colors.Grey.Darken2);
-            row.RelativeItem().AlignRight().Text("Cachet & Signature du Surveillant").SemiBold().FontSize(8).FontColor(HeadingColor);
+
+            row.RelativeItem().Column(right =>
+            {
+                // Signature réelle si le Surveillant Général l'a téléversée (Paramètres → Établissement) ;
+                // sinon simple libellé, comme avant (même patron que ReportCardDocument).
+                if (surveillantSignature is not null)
+                {
+                    right.Item().AlignRight().Height(20).Image(surveillantSignature).FitArea();
+                }
+
+                right.Item().PaddingTop(surveillantSignature is not null ? 1 : 0).AlignRight()
+                    .Text("Cachet & Signature du Surveillant").SemiBold().FontSize(8).FontColor(HeadingColor);
+            });
         });
     }
 

@@ -32,7 +32,8 @@ public record EntryTicketDto(
     string? SchoolCity,
     string? SchoolNinea,
     string? SchoolRegistreCommerce,
-    string? SchoolLogoUrl);
+    string? SchoolLogoUrl,
+    string? SurveillantSignatureUrl);
 
 public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetEntryTicketQuery, EntryTicketDto>
@@ -67,6 +68,12 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
             }).FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Retard introuvable : {request.LateArrivalId}");
 
+        // Global Query Filter + RLS bornent déjà cette lecture à l'école courante (même tenant que
+        // LateArrivals ci-dessus) : au plus une ligne de réglages par école (JGK-B02).
+        var surveillantSignatureUrl = await dbContext.SchoolSettings.AsNoTracking()
+            .Select(set => set.SurveillantSignatureUrl)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new EntryTicketDto(
             row.Id,
             $"BILLET-{row.Id.ToString()[..8].ToUpperInvariant()}",
@@ -86,6 +93,7 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
             ReceiptCity.FromAddress(row.SchoolAddress),
             row.Ninea,
             row.RegistreCommerce,
-            row.LogoUrl);
+            row.LogoUrl,
+            surveillantSignatureUrl);
     }
 }

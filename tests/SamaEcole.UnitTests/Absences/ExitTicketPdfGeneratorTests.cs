@@ -32,7 +32,8 @@ public class ExitTicketPdfGeneratorTests
         SchoolCity: "Dakar",
         SchoolNinea: "123456789",
         SchoolRegistreCommerce: null,
-        SchoolLogoUrl: "https://exemple.sn/logo.png");
+        SchoolLogoUrl: "https://exemple.sn/logo.png",
+        SurveillantSignatureUrl: null);
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -43,7 +44,7 @@ public class ExitTicketPdfGeneratorTests
     [Fact]
     public void Generate_Produces_A_Valid_Non_Trivial_Pdf()
     {
-        var pdf = new ExitTicketPdfGenerator().Generate(Ticket(), logo: null, qrCodeImage: TinyPng);
+        var pdf = new ExitTicketPdfGenerator().Generate(Ticket(), logo: null, qrCodeImage: TinyPng, surveillantSignature: null);
 
         ShouldBeAValidPdf(pdf);
         pdf.Length.Should().BeGreaterThan(300, "un billet complet n'est pas un fichier vide");
@@ -52,7 +53,15 @@ public class ExitTicketPdfGeneratorTests
     [Fact]
     public void Generate_Is_Robust_When_No_Pickup_Person_Is_Recorded()
     {
-        var pdf = new ExitTicketPdfGenerator().Generate(Ticket(pickedUpBy: null), logo: null, qrCodeImage: TinyPng);
+        var pdf = new ExitTicketPdfGenerator().Generate(Ticket(pickedUpBy: null), logo: null, qrCodeImage: TinyPng, surveillantSignature: null);
+
+        ShouldBeAValidPdf(pdf);
+    }
+
+    [Fact]
+    public void Generate_Embeds_A_Provided_Surveillant_Signature_Without_Error()
+    {
+        var pdf = new ExitTicketPdfGenerator().Generate(Ticket(), logo: null, qrCodeImage: TinyPng, surveillantSignature: TinyPng);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -62,7 +71,7 @@ public class ExitTicketPdfGeneratorTests
     {
         var unreadable = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-        var act = () => new ExitTicketPdfGenerator().Generate(Ticket(), logo: unreadable, qrCodeImage: TinyPng);
+        var act = () => new ExitTicketPdfGenerator().Generate(Ticket(), logo: unreadable, qrCodeImage: TinyPng, surveillantSignature: null);
 
         act.Should().NotThrow();
     }

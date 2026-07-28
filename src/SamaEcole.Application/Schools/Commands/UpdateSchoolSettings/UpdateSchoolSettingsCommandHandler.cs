@@ -51,6 +51,7 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.SecretarySignatureUrl = string.IsNullOrWhiteSpace(request.SecretarySignatureUrl) ? null : request.SecretarySignatureUrl.Trim();
         settings.CashierSignatureUrl = string.IsNullOrWhiteSpace(request.CashierSignatureUrl) ? null : request.CashierSignatureUrl.Trim();
         settings.OfficialStampUrl = string.IsNullOrWhiteSpace(request.OfficialStampUrl) ? null : request.OfficialStampUrl.Trim();
+        settings.SurveillantSignatureUrl = string.IsNullOrWhiteSpace(request.SurveillantSignatureUrl) ? null : request.SurveillantSignatureUrl.Trim();
 
         // TypeEtablissement : parse sécurisé — valeur invalide silencieusement ramenée à Prive (défaut).
         settings.TypeEtablissement = Enum.TryParse<TypeEtablissement>(request.TypeEtablissement, ignoreCase: true, out var typeResult)
@@ -82,6 +83,7 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.SecretarySignatureUrl,
             settings.CashierSignatureUrl,
             settings.OfficialStampUrl,
+            settings.SurveillantSignatureUrl,
             settings.TypeEtablissement.ToString(),
             settings.SmsOnAttendanceAlert,
             settings.SmsOnDuesReminder,

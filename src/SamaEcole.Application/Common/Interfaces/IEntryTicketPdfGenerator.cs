@@ -16,5 +16,5 @@ namespace SamaEcole.Application.Common.Interfaces;
 /// </summary>
 public interface IEntryTicketPdfGenerator
 {
-    byte[] Generate(EntryTicketDto ticket, byte[]? logo);
+    byte[] Generate(EntryTicketDto ticket, byte[]? logo, byte[]? surveillantSignature);
 }

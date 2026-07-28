@@ -1,11 +1,15 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Teachers.Commands.AssignTeacher;
 using SamaEcole.Application.Teachers.Commands.CreateTeacher;
 using SamaEcole.Application.Teachers.Commands.DeleteTeacher;
+using SamaEcole.Application.Teachers.Commands.ImportTeachers;
 using SamaEcole.Application.Teachers.Commands.SetTeacherPhoto;
 using SamaEcole.Application.Teachers.Commands.UpdateTeacher;
 using SamaEcole.Application.Teachers.Queries.GetTeacherById;
+using SamaEcole.Application.Teachers.Queries.GetTeacherImportTemplate;
 using SamaEcole.Application.Teachers.Queries.GetTeachers;
 using SamaEcole.Domain.Enums;
+using FluentValidation.Results;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +30,8 @@ namespace SamaEcole.Web.Controllers;
 public class TeachersController(ISender mediator) : ControllerBase
 {
     public record AssignTeacherRequest(Guid ClassroomId, Guid SubjectId);
+
+    public record ImportTeachersRequest(IFormFile? File, bool DryRun);
 
     public record SetTeacherPhotoRequest(string? PhotoData, uint RowVersion);
 
@@ -60,6 +66,53 @@ public class TeachersController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(Create), new { id = result.Id }, result);
+    }
+
+    /// <summary>
+    /// Import de masse du corps professoral (fichier CSV/Excel, un enseignant par ligne) — bouton
+    /// « Télécharger le modèle Excel d'exemple » de l'écran d'import. Même contrat que
+    /// StudentsController.DownloadImportTemplate.
+    /// </summary>
+    [HttpGet("import/template")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> DownloadImportTemplate(CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetTeacherImportTemplateQuery(), cancellationToken);
+        return File(
+            result.Content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            result.FileName);
+    }
+
+    /// <summary>
+    /// Import de masse (<c>dryRun=true</c> pour l'aperçu, rien n'est écrit ; <c>dryRun=false</c> pour la
+    /// confirmation, 422 si la moindre ligne est invalide, RIEN écrit ; sinon les enseignants sont créés
+    /// en une seule transaction). Voir ImportTeachersCommand pour le pourquoi de ce contrat en deux
+    /// appels — même contrat que StudentsController.Import.
+    /// </summary>
+    [HttpPost("import")]
+    [Authorize(Roles = ManageRoles)]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    [ProducesResponseType<ImportTeachersResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Import([FromForm] ImportTeachersRequest request, CancellationToken cancellationToken)
+    {
+        if (request.File is null || request.File.Length == 0)
+        {
+            throw new ValidationException([new ValidationFailure("File", "Aucun fichier n'a été fourni.")]);
+        }
+
+        await using var stream = new MemoryStream();
+        await request.File.CopyToAsync(stream, cancellationToken);
+
+        var result = await mediator.Send(
+            new ImportTeachersCommand(stream.ToArray(), request.File.FileName, request.DryRun), cancellationToken);
+
+        return Ok(result);
     }
 
     /// <summary>

@@ -43,7 +43,8 @@ public class EntryTicketPdfGeneratorTests
         SchoolCity: city,
         SchoolNinea: legalMentions,
         SchoolRegistreCommerce: legalMentions,
-        SchoolLogoUrl: "https://exemple.sn/logo.png");
+        SchoolLogoUrl: "https://exemple.sn/logo.png",
+        SurveillantSignatureUrl: null);
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -54,7 +55,7 @@ public class EntryTicketPdfGeneratorTests
     [Fact]
     public void Generate_Produces_A_Valid_Non_Trivial_Pdf()
     {
-        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(), logo: null);
+        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(), logo: null, surveillantSignature: null);
 
         ShouldBeAValidPdf(pdf);
         pdf.Length.Should().BeGreaterThan(1000, "un billet complet n'est pas un fichier vide");
@@ -63,7 +64,7 @@ public class EntryTicketPdfGeneratorTests
     [Fact]
     public void Generate_Is_Robust_To_Missing_Phone_And_City()
     {
-        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(phone: null, city: null), logo: null);
+        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(phone: null, city: null), logo: null, surveillantSignature: null);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -73,7 +74,7 @@ public class EntryTicketPdfGeneratorTests
     {
         // Une école qui n'a pas encore saisi NINEA/RCCM doit quand même pouvoir imprimer un billet :
         // la mention absente ne s'imprime pas, elle ne fait pas tomber le document.
-        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(legalMentions: null), logo: null);
+        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(legalMentions: null), logo: null, surveillantSignature: null);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -83,7 +84,7 @@ public class EntryTicketPdfGeneratorTests
     {
         var pdf = new EntryTicketPdfGenerator().Generate(
             Ticket(observations: "Avertissement verbal donné. Au prochain retard, convocation des parents."),
-            logo: null);
+            logo: null, surveillantSignature: null);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -91,7 +92,15 @@ public class EntryTicketPdfGeneratorTests
     [Fact]
     public void Generate_Embeds_A_Provided_Logo_Without_Error()
     {
-        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(), logo: TinyPng);
+        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(), logo: TinyPng, surveillantSignature: null);
+
+        ShouldBeAValidPdf(pdf);
+    }
+
+    [Fact]
+    public void Generate_Embeds_A_Provided_Surveillant_Signature_Without_Error()
+    {
+        var pdf = new EntryTicketPdfGenerator().Generate(Ticket(), logo: null, surveillantSignature: TinyPng);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -103,9 +112,9 @@ public class EntryTicketPdfGeneratorTests
         // du billet — le générateur régénère alors sans le logo.
         var unreadable = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-        var act = () => new EntryTicketPdfGenerator().Generate(Ticket(), logo: unreadable);
+        var act = () => new EntryTicketPdfGenerator().Generate(Ticket(), logo: unreadable, surveillantSignature: null);
 
         act.Should().NotThrow();
-        ShouldBeAValidPdf(new EntryTicketPdfGenerator().Generate(Ticket(), logo: unreadable));
+        ShouldBeAValidPdf(new EntryTicketPdfGenerator().Generate(Ticket(), logo: unreadable, surveillantSignature: null));
     }
 }

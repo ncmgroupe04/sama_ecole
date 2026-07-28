@@ -37,7 +37,8 @@ public class DisciplinaryPvPdfGeneratorTests
         InspectionEducationFormation: "Dakar 1",
         HeadingPrefix: "ÉCOLE ÉLÉMENTAIRE DE",
         HeadingName: "Popenguine",
-        SchoolLogoUrl: "https://exemple.sn/logo.png");
+        SchoolLogoUrl: "https://exemple.sn/logo.png",
+        SurveillantSignatureUrl: null);
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -48,7 +49,7 @@ public class DisciplinaryPvPdfGeneratorTests
     [Fact]
     public void Generate_Produces_A_Valid_Non_Trivial_Pdf()
     {
-        var pdf = new DisciplinaryPvPdfGenerator().Generate(Pv(), logo: null, qrCodeImage: TinyPng);
+        var pdf = new DisciplinaryPvPdfGenerator().Generate(Pv(), logo: null, qrCodeImage: TinyPng, surveillantSignature: null);
 
         ShouldBeAValidPdf(pdf);
         pdf.Length.Should().BeGreaterThan(500, "un PV complet n'est pas un fichier vide");
@@ -58,7 +59,7 @@ public class DisciplinaryPvPdfGeneratorTests
     public void Generate_Is_Robust_When_No_Guardian_Contact_Is_Registered()
     {
         var pdf = new DisciplinaryPvPdfGenerator().Generate(
-            Pv(guardianName: null, guardianPhone: null), logo: null, qrCodeImage: TinyPng);
+            Pv(guardianName: null, guardianPhone: null), logo: null, qrCodeImage: TinyPng, surveillantSignature: null);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -70,7 +71,15 @@ public class DisciplinaryPvPdfGeneratorTests
     [InlineData("Exclusion temporaire")]
     public void Generate_Handles_Every_Sanction_Type(string sanctionType)
     {
-        var pdf = new DisciplinaryPvPdfGenerator().Generate(Pv(sanctionType: sanctionType), logo: null, qrCodeImage: TinyPng);
+        var pdf = new DisciplinaryPvPdfGenerator().Generate(Pv(sanctionType: sanctionType), logo: null, qrCodeImage: TinyPng, surveillantSignature: null);
+
+        ShouldBeAValidPdf(pdf);
+    }
+
+    [Fact]
+    public void Generate_Embeds_A_Provided_Surveillant_Signature_Without_Error()
+    {
+        var pdf = new DisciplinaryPvPdfGenerator().Generate(Pv(), logo: null, qrCodeImage: TinyPng, surveillantSignature: TinyPng);
 
         ShouldBeAValidPdf(pdf);
     }
@@ -80,7 +89,7 @@ public class DisciplinaryPvPdfGeneratorTests
     {
         var unreadable = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-        var act = () => new DisciplinaryPvPdfGenerator().Generate(Pv(), logo: unreadable, qrCodeImage: TinyPng);
+        var act = () => new DisciplinaryPvPdfGenerator().Generate(Pv(), logo: unreadable, qrCodeImage: TinyPng, surveillantSignature: null);
 
         act.Should().NotThrow();
     }

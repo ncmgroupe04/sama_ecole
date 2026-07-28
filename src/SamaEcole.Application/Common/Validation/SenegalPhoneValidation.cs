@@ -16,4 +16,8 @@ public static class SenegalPhoneValidation
             .Must(phone => string.IsNullOrWhiteSpace(phone) || SenegalPhoneRegex.IsMatch(phone))
             .WithMessage("Le numéro de téléphone doit être un numéro sénégalais valide (ex: 77 123 45 67).");
     }
+
+    /// <summary>Même règle que <see cref="MustBeValidSenegalPhone{T}"/>, hors contexte FluentValidation
+    /// (validation ligne par ligne d'un import de masse — voir ImportTeachersCommandHandler).</summary>
+    public static bool IsValidSenegalPhone(string phone) => SenegalPhoneRegex.IsMatch(phone);
 }

@@ -20,8 +20,9 @@ public class GetDisciplinaryPvPdfQueryHandler(
         var pv = await mediator.Send(new GetDisciplinaryPvQuery(request.DisciplineRecordId), cancellationToken);
 
         var logo = await logoProvider.TryFetchAsync(pv.SchoolLogoUrl, cancellationToken);
+        var surveillantSignature = await logoProvider.TryFetchAsync(pv.SurveillantSignatureUrl, cancellationToken);
         var qrCode = qrCodeService.GenerateQrCode($"https://app.samaecole.sn/verify?ref={pv.PvNumber}");
 
-        return new DisciplinaryPvPdfResult(pdfGenerator.Generate(pv, logo, qrCode), pv.PvNumber);
+        return new DisciplinaryPvPdfResult(pdfGenerator.Generate(pv, logo, qrCode, surveillantSignature), pv.PvNumber);
     }
 }

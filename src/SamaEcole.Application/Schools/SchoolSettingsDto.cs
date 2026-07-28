@@ -19,6 +19,7 @@ public record SchoolSettingsDto(
     string? SecretarySignatureUrl = null,
     string? CashierSignatureUrl = null,
     string? OfficialStampUrl = null,
+    string? SurveillantSignatureUrl = null,
     string TypeEtablissement = "Prive",
     bool SmsOnAttendanceAlert = false,
     bool SmsOnDuesReminder = false,

@@ -34,7 +34,8 @@ public record DisciplinaryPvDto(
     string? InspectionEducationFormation,
     string HeadingPrefix,
     string? HeadingName,
-    string? SchoolLogoUrl);
+    string? SchoolLogoUrl,
+    string? SurveillantSignatureUrl);
 
 public class GetDisciplinaryPvQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetDisciplinaryPvQuery, DisciplinaryPvDto>
@@ -82,6 +83,12 @@ public class GetDisciplinaryPvQueryHandler(IApplicationDbContext dbContext)
             .Select(y => y.Label)
             .FirstOrDefaultAsync(cancellationToken);
 
+        // Global Query Filter + RLS bornent déjà cette lecture à l'école courante (même tenant que
+        // DisciplineRecords ci-dessus) : au plus une ligne de réglages par école (JGK-B02).
+        var surveillantSignatureUrl = await dbContext.SchoolSettings.AsNoTracking()
+            .Select(set => set.SurveillantSignatureUrl)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new DisciplinaryPvDto(
             row.Id,
             $"PV-{row.Id.ToString()[..8].ToUpperInvariant()}",
@@ -102,6 +109,7 @@ public class GetDisciplinaryPvQueryHandler(IApplicationDbContext dbContext)
             row.InspectionEducationFormation,
             SchoolHeading.PrefixFor(row.Cycle),
             SchoolHeading.StripCyclePrefix(row.NomLycee),
-            row.LogoUrl);
+            row.LogoUrl,
+            surveillantSignatureUrl);
     }
 }

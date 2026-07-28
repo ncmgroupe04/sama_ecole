@@ -19,7 +19,8 @@ public class GetEntryTicketPdfQueryHandler(
         var ticket = await mediator.Send(new GetEntryTicketQuery(request.LateArrivalId), cancellationToken);
 
         var logo = await logoProvider.TryFetchAsync(ticket.SchoolLogoUrl, cancellationToken);
+        var surveillantSignature = await logoProvider.TryFetchAsync(ticket.SurveillantSignatureUrl, cancellationToken);
 
-        return new EntryTicketPdfResult(pdfGenerator.Generate(ticket, logo), ticket.TicketNumber);
+        return new EntryTicketPdfResult(pdfGenerator.Generate(ticket, logo, surveillantSignature), ticket.TicketNumber);
     }
 }

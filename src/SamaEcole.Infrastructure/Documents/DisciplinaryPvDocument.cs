@@ -12,7 +12,8 @@ namespace SamaEcole.Infrastructure.Documents;
 /// officiels destinés à la famille (en-tête M.E.N., <see cref="OfficialHeaderComponent"/>). Remis en
 /// double exemplaire : un pour le dossier de l'élève, un pour le tuteur.
 /// </summary>
-public class DisciplinaryPvDocument(DisciplinaryPvDto pv, byte[]? logo, byte[] qrCodeImage) : IDocument
+public class DisciplinaryPvDocument(
+    DisciplinaryPvDto pv, byte[]? logo, byte[] qrCodeImage, byte[]? surveillantSignature = null) : IDocument
 {
     public DocumentMetadata GetMetadata() => new()
     {
@@ -123,6 +124,25 @@ public class DisciplinaryPvDocument(DisciplinaryPvDto pv, byte[]? logo, byte[] q
                 left.Item().PaddingTop(30).AlignCenter()
                     .Text("[Signature et Cachet]").FontSize(8).FontColor(Colors.Grey.Medium);
             });
+
+            row.RelativeItem().Column(middle =>
+            {
+                middle.Item().AlignCenter().Text("Constaté par").FontSize(10);
+                middle.Item().PaddingTop(4).AlignCenter().Text("Le Surveillant Général").FontSize(10);
+
+                // Signature réelle si le Surveillant Général l'a téléversée (Paramètres → Établissement) ;
+                // sinon même espace réservé que pour le Chef d'Établissement ci-dessus.
+                if (surveillantSignature is not null)
+                {
+                    middle.Item().PaddingTop(6).AlignCenter().Height(24).Image(surveillantSignature).FitArea();
+                }
+                else
+                {
+                    middle.Item().PaddingTop(30).AlignCenter()
+                        .Text("[Signature et Cachet]").FontSize(8).FontColor(Colors.Grey.Medium);
+                }
+            });
+
             row.RelativeItem().Column(right =>
             {
                 right.Item().AlignCenter().Text("Pris connaissance").FontSize(10);

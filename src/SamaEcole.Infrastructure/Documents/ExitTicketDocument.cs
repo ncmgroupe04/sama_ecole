@@ -11,7 +11,7 @@ namespace SamaEcole.Infrastructure.Documents;
 /// Billet de sortie en classe (A5), pendant de <see cref="EntryTicketDocument"/> pour une sortie
 /// anticipée déjà enregistrée par la Surveillance. Remis au parent/à la personne qui récupère l'élève.
 /// </summary>
-public class ExitTicketDocument(ExitTicketDto ticket, byte[]? logo, byte[] qrCodeImage) : IDocument
+public class ExitTicketDocument(ExitTicketDto ticket, byte[]? logo, byte[] qrCodeImage, byte[]? surveillantSignature = null) : IDocument
 {
     public DocumentMetadata GetMetadata() => new()
     {
@@ -114,7 +114,18 @@ public class ExitTicketDocument(ExitTicketDto ticket, byte[]? logo, byte[] qrCod
                 left.Item().Text(FaitA()).Italic();
             });
 
-            row.RelativeItem().AlignRight().Text("Signature du Surveillant").Italic();
+            row.RelativeItem().Column(right =>
+            {
+                // Signature réelle si le Surveillant Général l'a téléversée (Paramètres → Établissement) ;
+                // sinon simple libellé, comme avant (même patron que EntryTicketDocument).
+                if (surveillantSignature is not null)
+                {
+                    right.Item().AlignRight().Height(20).Image(surveillantSignature).FitArea();
+                }
+
+                right.Item().PaddingTop(surveillantSignature is not null ? 1 : 0).AlignRight()
+                    .Text("Signature du Surveillant").Italic();
+            });
         });
     }
 

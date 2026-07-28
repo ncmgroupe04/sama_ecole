@@ -173,10 +173,23 @@ document.addEventListener('alpine:init', () => {
             return colors[index % colors.length];
         },
 
+        /**
+         * Tableau de longueur FIXE (MAX_DISBURSEMENT_SEGMENTS), jamais parcouru par un `<template
+         * x-for>` dans le SVG appelant : le contenu d'un <template> est TOUJOURS analysé en namespace
+         * HTML, y compris quand ce <template> est lui-même un enfant de <svg> — un <circle> qui en
+         * sortirait ne serait donc pas un SVGCircleElement mais un élément inconnu, invisible sans la
+         * moindre erreur visible à l'écran (le donut restait un simple anneau gris, sans le moindre
+         * signal d'échec). D'où un nombre FIXE de <circle> écrits en dur dans la vue (Index.cshtml),
+         * jamais une boucle — même correctif que paymentMethodSegments() (financial-report.js).
+         */
         disbursementSegments() {
-            if (!this.financeData || !this.financeData.disbursementsByCategory || !this.financeData.totalDisbursements) return [];
+            const MAX_DISBURSEMENT_SEGMENTS = 7; // longueur de la palette getCategoryColor()
+            const empty = { fraction: 0, offset: 0, color: '#E5E7EB', name: '', amount: 0 };
+            if (!this.financeData || !this.financeData.disbursementsByCategory || !this.financeData.totalDisbursements) {
+                return Array(MAX_DISBURSEMENT_SEGMENTS).fill(empty);
+            }
             let currentOffset = 0;
-            return this.financeData.disbursementsByCategory.map((cat, index) => {
+            const segments = this.financeData.disbursementsByCategory.map((cat, index) => {
                 const fraction = (cat.amount / this.financeData.totalDisbursements) * 100;
                 const segment = {
                     fraction: fraction,
@@ -188,6 +201,8 @@ document.addEventListener('alpine:init', () => {
                 currentOffset -= fraction; // subtract because offset is inverted on SVG
                 return segment;
             });
+            while (segments.length < MAX_DISBURSEMENT_SEGMENTS) segments.push(empty);
+            return segments;
         },
 
         barWidth(amount) {

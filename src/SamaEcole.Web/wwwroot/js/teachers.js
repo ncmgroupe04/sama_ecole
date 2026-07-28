@@ -76,6 +76,17 @@ document.addEventListener('alpine:init', () => {
         newTeacher: { fullName: '', email: '', phone: '', birthDate: '', birthPlace: '', photoUrl: '', photoData: '', subjectIds: [], userId: '' },
         createErrors: {},
 
+        // Import de masse (corps professoral) : aperçu AVANT écriture — même contrat que students.js.
+        isImportOpen: false,
+        importDragging: false,
+        importFile: null, // File brut choisi/déposé, renvoyé tel quel au serveur (aucune transformation cliente).
+        importFileName: '',
+        isPreviewing: false,
+        isImporting: false,
+        importPreview: null, // Dernière réponse dryRun=true (ImportTeachersResult) : { totalRows, validRows, invalidRows, rows }
+        importResult: null, // Réponse de la confirmation (dryRun=false) une fois committed=true.
+        importError: null, // Rejet global (extension non supportée, fichier vide/corrompu, >1000 lignes).
+
         // Confirmation « Enseignant ajouté » affichée après un enregistrement réussi.
         showAddedDialog: false,
         addedTeacherName: '',
@@ -165,6 +176,121 @@ document.addEventListener('alpine:init', () => {
         resetFilters() {
             this.search = '';
             this.applyFilters();
+        },
+
+        // ------------------------------------------------------------ Import de masse (corps professoral)
+
+        openImport() {
+            this.isImportOpen = true;
+            this.resetImportState();
+        },
+
+        closeImport() {
+            this.isImportOpen = false;
+            this.resetImportState();
+            // La liste peut avoir grossi (import confirmé pendant que la modale était ouverte) : on la
+            // recharge systématiquement à la fermeture plutôt que de suivre chaque cas un par un.
+            this.page = 1;
+            this.loadTeachers();
+        },
+
+        resetImportState() {
+            this.importDragging = false;
+            this.importFile = null;
+            this.importFileName = '';
+            this.isPreviewing = false;
+            this.isImporting = false;
+            this.importPreview = null;
+            this.importResult = null;
+            this.importError = null;
+        },
+
+        /** Un fichier choisi (clic) ou déposé (drag&drop) lance IMMÉDIATEMENT l'aperçu — pas de bouton intermédiaire. */
+        onImportFileSelected(file) {
+            if (!file) return;
+            this.importFile = file;
+            this.importFileName = file.name;
+            this.importPreview = null;
+            this.importResult = null;
+            this.importError = null;
+            this.previewImport();
+        },
+
+        /** dryRun=true : valide l'intégralité du fichier SANS RIEN écrire (voir ImportTeachersCommand). */
+        async previewImport() {
+            if (!this.importFile) return;
+
+            this.isPreviewing = true;
+            this.importError = null;
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                formData.append('dryRun', 'true');
+                this.importPreview = await window.api.upload('/teachers/import', formData);
+            } catch (err) {
+                this.importError = (err && err.message) || "Erreur lors de l'analyse du fichier.";
+            } finally {
+                this.isPreviewing = false;
+            }
+        },
+
+        /**
+         * dryRun=false, sur LE MÊME fichier déjà prévisualisé : le serveur re-valide intégralement (l'état
+         * a pu changer depuis l'aperçu — un e-mail devenu en doublon, par ex.) et n'écrit QUE si le
+         * fichier est encore entièrement valide, en une seule transaction (aucun import partiel).
+         */
+        async confirmImport() {
+            if (!this.importFile || !this.importPreview || this.importPreview.invalidRows > 0) return;
+
+            this.isImporting = true;
+            this.importError = null;
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                formData.append('dryRun', 'false');
+                this.importResult = await window.api.upload('/teachers/import', formData);
+            } catch (err) {
+                // Un rejet ici (422) signifie que l'état a changé depuis l'aperçu : on relance un aperçu
+                // pour montrer la situation à jour plutôt que de laisser une erreur générique sans détail.
+                this.importError = (err && err.message) || "Erreur lors de l'import.";
+                await this.previewImport();
+            } finally {
+                this.isImporting = false;
+            }
+        },
+
+        /** Bouton « Télécharger le modèle » : même mécanique fetch+blob que students.js.downloadImportTemplate. */
+        async downloadImportTemplate() {
+            try {
+                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                    await window.api.refreshOrRedirect();
+                }
+
+                const response = await fetch('/api/v1/teachers/import/template', {
+                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
+                    credentials: 'same-origin'
+                });
+                if (!response.ok) throw new Error('Téléchargement du modèle impossible.');
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'Modele-Import-Enseignants.xlsx';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                this.importError = (err && err.message) || 'Téléchargement du modèle impossible.';
+            }
+        },
+
+        /** Classes Tailwind d'une cellule de l'aperçu : rouge si CE champ précis est en erreur. */
+        importCellClass(row, field) {
+            return row.fieldErrors && row.fieldErrors[field]
+                ? 'bg-danger-bg text-danger font-medium'
+                : 'text-gray-700';
         },
 
         openCreate() {

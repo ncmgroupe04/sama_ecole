@@ -29,6 +29,7 @@ public record UpdateSchoolSettingsCommand(
     string? SecretarySignatureUrl = null,
     string? CashierSignatureUrl = null,
     string? OfficialStampUrl = null,
+    string? SurveillantSignatureUrl = null,
     string TypeEtablissement = "Prive",
 
     // Alertes SMS (offre Premium) — activation par TYPE d'événement : une école peut vouloir les

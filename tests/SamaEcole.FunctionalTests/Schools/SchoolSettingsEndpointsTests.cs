@@ -27,7 +27,12 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         int AutoLogoutMinutes,
         string DateFormat,
         int TuitionMonthsPerYear,
-        bool AllowSecretaryToManageGrading);
+        bool AllowSecretaryToManageGrading,
+        string? DirectorSignatureUrl,
+        string? SecretarySignatureUrl,
+        string? CashierSignatureUrl,
+        string? OfficialStampUrl,
+        string? SurveillantSignatureUrl);
 
     private async Task<Tokens> LoginAsync(string email, string password)
     {
@@ -196,6 +201,37 @@ public class SchoolSettingsEndpointsTests(AuthApiFactory factory) : IClassFixtur
         var response = await PutSettingsAsync(directeur.AccessToken, ValidBody(autoLogout: 0));
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task A_Directeur_Should_Persist_The_Surveillant_Signature_Url()
+    {
+        // Régression : SchoolSettingsController mappe sa propre UpdateSettingsRequest à la main
+        // (voir project_schoolsettings_controller_bug_fixed) — un champ ajouté au DTO sans être
+        // reporté dans ce mapping serait accepté par l'API sans jamais atteindre SchoolSettings.
+        var directeur = await LoginAsDirecteurAsync();
+
+        var body = new
+        {
+            gradingScale = "20",
+            studentMatriculeFormat = "ELEV-{YEAR}-{SEQ:4}",
+            teacherMatriculeFormat = "ENS-{YEAR}-{SEQ:3}",
+            autoLogoutMinutes = 10,
+            dateFormat = "dd/MM/yyyy",
+            tuitionMonthsPerYear = 9,
+            allowSecretaryToManageGrading = false,
+            surveillantSignatureUrl = "/uploads/signatures/surveillant-sig-test.png"
+        };
+
+        var response = await PutSettingsAsync(directeur.AccessToken, body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var putResult = (await response.Content.ReadFromJsonAsync<Settings>())!;
+        putResult.SurveillantSignatureUrl.Should().Be("/uploads/signatures/surveillant-sig-test.png");
+
+        // Relu depuis la base, pas seulement renvoyé par le PUT.
+        var reread = (await (await GetSettingsAsync(directeur.AccessToken)).Content.ReadFromJsonAsync<Settings>())!;
+        reread.SurveillantSignatureUrl.Should().Be("/uploads/signatures/surveillant-sig-test.png");
     }
 
     [Fact]

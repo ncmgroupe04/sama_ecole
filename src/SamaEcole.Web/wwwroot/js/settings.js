@@ -69,6 +69,7 @@ document.addEventListener('alpine:init', () => {
             secretarySignatureUrl: '',
             cashierSignatureUrl: '',
             officialStampUrl: '',
+            surveillantSignatureUrl: '',
             // TypeEtablissement : Prive (défaut, module Finance actif) ou Public (module Finance masqué).
             typeEtablissement: 'Prive'
         },
@@ -83,6 +84,8 @@ document.addEventListener('alpine:init', () => {
         cashierSignatureUploadError: null,
         isUploadingOfficialStamp: false,
         officialStampUploadError: null,
+        isUploadingSurveillantSignature: false,
+        surveillantSignatureUploadError: null,
 
         // --- Délégation de la configuration des notes (JGK-G02) ---
         // Getter, PAS une valeur figée au chargement : dépend de config.allowSecretaryToManageGrading,
@@ -101,6 +104,14 @@ document.addEventListener('alpine:init', () => {
         mentionCreateErrors: {},
         showMentionAddedDialog: false,
         addedMentionLabel: '',
+
+        // Édition/suppression (correction d'une erreur de saisie sans repasser par toute la liste).
+        editingMention: null,
+        mentionEditErrors: {},
+        isSavingMentionEdit: false,
+        deletingMention: null,
+        deleteMentionError: null,
+        isDeletingMention: false,
 
         init() {
             const requested = new URLSearchParams(window.location.search).get('tab');
@@ -149,6 +160,7 @@ document.addEventListener('alpine:init', () => {
                     secretarySignatureUrl: config.secretarySignatureUrl || '',
                     cashierSignatureUrl: config.cashierSignatureUrl || '',
                     officialStampUrl: config.officialStampUrl || '',
+                    surveillantSignatureUrl: config.surveillantSignatureUrl || '',
                     typeEtablissement: config.typeEtablissement || 'Prive'
                 };
             } catch (err) {
@@ -372,6 +384,41 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async uploadSurveillantSignatureFile(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            this.surveillantSignatureUploadError = null;
+            if (file.size > 2 * 1024 * 1024) {
+                this.surveillantSignatureUploadError = 'Le fichier dépasse la taille maximale autorisée (2 Mo).';
+                event.target.value = '';
+                return;
+            }
+
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                this.surveillantSignatureUploadError = 'Format non supporté. Seuls PNG, JPEG et WEBP sont autorisés.';
+                event.target.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            this.isUploadingSurveillantSignature = true;
+            try {
+                const data = await window.api.upload('/schools/current/settings/surveillant-signature', formData);
+                if (data && data.url) {
+                    this.config.surveillantSignatureUrl = data.url;
+                }
+            } catch (err) {
+                this.surveillantSignatureUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+            } finally {
+                this.isUploadingSurveillantSignature = false;
+                event.target.value = '';
+            }
+        },
+
         // ---------------------------------------------------------------- Configuration
 
         // showConfirmation=false pour les 3 commutateurs de délégation (Configuration) : une bascule
@@ -396,6 +443,7 @@ document.addEventListener('alpine:init', () => {
                     secretarySignatureUrl: this.config.secretarySignatureUrl || null,
                     cashierSignatureUrl: this.config.cashierSignatureUrl || null,
                     officialStampUrl: this.config.officialStampUrl || null,
+                    surveillantSignatureUrl: this.config.surveillantSignatureUrl || null,
                     typeEtablissement: this.config.typeEtablissement || 'Prive'
                 });
                 this.config = {
@@ -412,6 +460,7 @@ document.addEventListener('alpine:init', () => {
                     secretarySignatureUrl: saved.secretarySignatureUrl || '',
                     cashierSignatureUrl: saved.cashierSignatureUrl || '',
                     officialStampUrl: saved.officialStampUrl || '',
+                    surveillantSignatureUrl: saved.surveillantSignatureUrl || '',
                     typeEtablissement: saved.typeEtablissement || 'Prive'
                 };
                 this.configSaved = showConfirmation;
@@ -450,6 +499,67 @@ document.addEventListener('alpine:init', () => {
                 this.mentionCreateErrors = window.api.toFieldErrors(err, 'Erreur lors de la création de la mention.');
             } finally {
                 this.mentionSubmitting = false;
+            }
+        },
+
+        // ------------------------------------------------------------ Édition d'une mention
+
+        openEditMention(mention) {
+            if (!mention || !mention.id) return;
+            this.editingMention = { id: mention.id, label: mention.label, minAverage: mention.minAverage };
+            this.mentionEditErrors = {};
+        },
+
+        closeEditMention() {
+            this.editingMention = null;
+            this.mentionEditErrors = {};
+        },
+
+        async submitEditMention() {
+            if (!this.editingMention) return;
+
+            this.isSavingMentionEdit = true;
+            this.mentionEditErrors = {};
+            try {
+                await window.api.patch(`/grades/mentions/${this.editingMention.id}`, {
+                    label: this.editingMention.label,
+                    minAverage: this.editingMention.minAverage
+                });
+                this.closeEditMention();
+                this.mentions = await window.api.get('/grades/mentions');
+            } catch (err) {
+                this.mentionEditErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification de la mention.');
+            } finally {
+                this.isSavingMentionEdit = false;
+            }
+        },
+
+        // ------------------------------------------------------------ Suppression d'une mention
+
+        openDeleteMention(mention) {
+            if (!mention || !mention.id) return;
+            this.deletingMention = { id: mention.id, label: mention.label };
+            this.deleteMentionError = null;
+        },
+
+        closeDeleteMention() {
+            this.deletingMention = null;
+            this.deleteMentionError = null;
+        },
+
+        async confirmDeleteMention() {
+            if (!this.deletingMention) return;
+
+            this.isDeletingMention = true;
+            this.deleteMentionError = null;
+            try {
+                await window.api.delete(`/grades/mentions/${this.deletingMention.id}`);
+                this.deletingMention = null;
+                this.mentions = await window.api.get('/grades/mentions');
+            } catch (err) {
+                this.deleteMentionError = err.message || 'Erreur lors de la suppression de la mention.';
+            } finally {
+                this.isDeletingMention = false;
             }
         },
 

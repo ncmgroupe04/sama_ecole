@@ -75,6 +75,9 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// <summary>URL de l'image du cachet officiel de l'établissement, injecté sur les reçus et bulletins.</summary>
     public string? OfficialStampUrl { get; set; }
 
+    /// <summary>URL de l'image de la signature du Surveillant Général, injectée sur les documents de Vie Scolaire (billets d'entrée/sortie, fiches de discipline).</summary>
+    public string? SurveillantSignatureUrl { get; set; }
+
     /// <summary>
     /// Type d'établissement : Prive (défaut) ou Public. Pilote l'affichage du module Finance dans la
     /// navigation (sidebar). Rertrocompat : les écoles existantes (colonne absente) obtiennent Prive

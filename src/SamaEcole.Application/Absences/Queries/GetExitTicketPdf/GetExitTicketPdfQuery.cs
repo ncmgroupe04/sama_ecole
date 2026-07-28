@@ -20,8 +20,9 @@ public class GetExitTicketPdfQueryHandler(
         var ticket = await mediator.Send(new GetExitTicketQuery(request.EarlyDepartureId), cancellationToken);
 
         var logo = await logoProvider.TryFetchAsync(ticket.SchoolLogoUrl, cancellationToken);
+        var surveillantSignature = await logoProvider.TryFetchAsync(ticket.SurveillantSignatureUrl, cancellationToken);
         var qrCode = qrCodeService.GenerateQrCode($"https://app.samaecole.sn/verify?ref={ticket.TicketNumber}");
 
-        return new ExitTicketPdfResult(pdfGenerator.Generate(ticket, logo, qrCode), ticket.TicketNumber);
+        return new ExitTicketPdfResult(pdfGenerator.Generate(ticket, logo, qrCode, surveillantSignature), ticket.TicketNumber);
     }
 }

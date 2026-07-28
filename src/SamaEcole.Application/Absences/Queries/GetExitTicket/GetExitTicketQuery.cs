@@ -29,7 +29,8 @@ public record ExitTicketDto(
     string? SchoolCity,
     string? SchoolNinea,
     string? SchoolRegistreCommerce,
-    string? SchoolLogoUrl);
+    string? SchoolLogoUrl,
+    string? SurveillantSignatureUrl);
 
 public class GetExitTicketQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetExitTicketQuery, ExitTicketDto>
@@ -63,6 +64,12 @@ public class GetExitTicketQueryHandler(IApplicationDbContext dbContext)
             }).FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Sortie anticipée introuvable : {request.EarlyDepartureId}");
 
+        // Global Query Filter + RLS bornent déjà cette lecture à l'école courante (même tenant que
+        // EarlyDepartures ci-dessus) : au plus une ligne de réglages par école (JGK-B02).
+        var surveillantSignatureUrl = await dbContext.SchoolSettings.AsNoTracking()
+            .Select(set => set.SurveillantSignatureUrl)
+            .FirstOrDefaultAsync(cancellationToken);
+
         return new ExitTicketDto(
             row.Id,
             $"SORTIE-{row.Id.ToString()[..8].ToUpperInvariant()}",
@@ -81,6 +88,7 @@ public class GetExitTicketQueryHandler(IApplicationDbContext dbContext)
             ReceiptCity.FromAddress(row.SchoolAddress),
             row.Ninea,
             row.RegistreCommerce,
-            row.LogoUrl);
+            row.LogoUrl,
+            surveillantSignatureUrl);
     }
 }

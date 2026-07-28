@@ -39,7 +39,14 @@
       "Bash(tar -tzf pdfjs-dist-6.1.200.tgz)",
       "Bash(grep -E \"^package/\\(build|legacy/build\\)/[^/]+$\")",
       "Bash(tar -xzf pdfjs-dist-6.1.200.tgz)",
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(xargs -I{} sh -c 'echo ==={}===; cat {}')",
+      "Bash(tasklist //FI \"PID eq 22460\")",
+      "Bash(tasklist //FI \"IMAGENAME eq dotnet.exe\")",
+      "Bash(taskkill //PID 22460 //F)",
+      "Bash(docker compose *)",
+      "Bash(xargs grep -l \"IHttpContextAccessor\")",
+      "Bash(dotnet test *)"
     ],
     "additionalDirectories": [
       "\\tmp"
