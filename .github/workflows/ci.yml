@@ -37,7 +37,7 @@ jobs:
         run: dotnet restore SamaEcole.sln
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build SamaEcole.sln --no-restore --configuration Release
 
       # Rôle applicatif : NOSUPERUSER + NOBYPASSRLS, propriétaire d'aucune table. C'est lui qui doit
       # subir les policies RLS (ticket JGK-A03). Le service postgres de GitHub n'exécute pas les
