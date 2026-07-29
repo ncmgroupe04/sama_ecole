@@ -1,6 +1,8 @@
 # --- .NET ---
 bin/
 obj/
+**/bin/
+**/obj/
 *.user
 *.suo
 .vs/
@@ -10,6 +12,8 @@ artifacts/
 .env
 *.env.local
 appsettings.*.Local.json
+appsettings.Development.json
+appsettings*.Secret.json
 
 # --- Frontend / outillage ---
 node_modules/
