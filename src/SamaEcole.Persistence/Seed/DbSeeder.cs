@@ -110,6 +110,7 @@ public static class DbSeeder
             NewUser("secretariat@baobabs.sn", "Moussa Diop", Role.Secretariat, BaobabsId, passwordHash),
             NewUser("finance@baobabs.sn", "Aissatou Ba", Role.Finance, BaobabsId, passwordHash),
             NewUser("enseignant@baobabs.sn", "Ibrahima Sarr", Role.Enseignant, BaobabsId, passwordHash),
+            NewUser("surveillant@baobabs.sn", "Cheikh Mbaye", Role.Surveillant, BaobabsId, passwordHash),
 
             // SchoolId null : le Super Admin n'appartient à aucun établissement (voir User.SchoolId).
             NewUser("superadmin@sama-ecole.sn", "Super Admin Sama Ecole", Role.SuperAdmin, null, passwordHash)
