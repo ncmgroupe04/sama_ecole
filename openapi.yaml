@@ -2473,25 +2473,6 @@ paths:
               schema: { $ref: '#/components/schemas/SmsDeliveryReceiptResult' }
         '401': { description: Signature absente ou invalide }
 
-  /audit-logs:
-    get:
-      tags: [Audit]
-      summary: Consulter le journal d'audit de l'établissement
-      parameters:
-        - $ref: '#/components/parameters/PageNumber'
-        - $ref: '#/components/parameters/PageSize'
-        - name: action
-          in: query
-          schema: { type: string }
-        - name: from
-          in: query
-          schema: { type: string, format: date-time }
-        - name: to
-          in: query
-          schema: { type: string, format: date-time }
-      responses:
-        '200': { description: Liste paginée d'événements d'audit }
-
 components:
   securitySchemes:
     bearerAuth:
