@@ -66,7 +66,8 @@ document.addEventListener('alpine:init', () => {
         roleLabel(role) {
             return {
                 Directeur: 'Directeur', Secretariat: 'Secrétariat',
-                Finance: 'Finance', Enseignant: 'Enseignant', SuperAdmin: 'Super Admin'
+                Finance: 'Finance', Enseignant: 'Enseignant', Surveillant: 'Surveillant',
+                SuperAdmin: 'Super Admin'
             }[role] || role;
         },
 

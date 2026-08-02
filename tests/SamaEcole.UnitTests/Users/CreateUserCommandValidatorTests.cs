@@ -22,6 +22,7 @@ public class CreateUserCommandValidatorTests
     [InlineData(Role.Secretariat)]
     [InlineData(Role.Finance)]
     [InlineData(Role.Enseignant)]
+    [InlineData(Role.Surveillant)]
     public void Every_Assignable_Role_Should_Pass(Role role)
     {
         _validator.Validate(ValidCommand(role)).IsValid.Should().BeTrue();
