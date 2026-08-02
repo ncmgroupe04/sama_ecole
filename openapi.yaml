@@ -6,7 +6,7 @@ info:
     Toutes les routes (sauf /auth/*) exigent un JWT Bearer valide.
     Le tenant (SchoolId) est dérivé du claim `schoolId` du token, jamais d'un paramètre de requête.
     Référence fonctionnelle complète : docs/Volume_4_API_Design.md
-  version: "1.0.0"
+  version: "1.1.0"
 servers:
   - url: https://api.sama-ecole.sn/v1
     description: Production
@@ -37,6 +37,8 @@ tags:
   - name: Payments
   - name: Reports
   - name: Audit
+  - name: Platform
+  - name: Notifications
 
 paths:
   /auth/login:
@@ -320,6 +322,132 @@ paths:
         '404': { description: Établissement introuvable }
         '409': { description: Aucun compte Directeur actif pour cet établissement }
 
+  /admin/platform/schools/{schoolId}/complimentary-access:
+    post:
+      tags: [Platform]
+      summary: Offrir un accès gratuit/complémentaire à un établissement (Super Admin uniquement)
+      description: >-
+        Aucun paiement : AGENTS.md règle #11 ne s'applique pas ici, ce n'est pas une confirmation
+        d'encaissement. Écrit directement l'abonnement via la fonction SECURITY DEFINER
+        `grant_complimentary_subscription` (le Super Admin n'a pas de SchoolId propre pour une écriture
+        EF normale sur une table RLS). `durationMonths` entre 1 et 60.
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GrantComplimentaryAccessRequest' }
+      responses:
+        '204': { description: Accès complémentaire accordé }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Aucun abonnement associé à cet établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/platform/schools/{schoolId}/sms-credits:
+    post:
+      tags: [Platform]
+      summary: Créditer le solde SMS d'un établissement (Super Admin uniquement)
+      description: >-
+        Incrément atomique de `SchoolSettings.SmsCreditBalance` (en segments), hors RLS via
+        `IgnoreQueryFilters` — le Super Admin n'a pas de tenant. `segments` entre 1 et 1 000 000.
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TopUpSmsCreditsRequest' }
+      responses:
+        '200':
+          description: Nouveau solde
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  creditBalance: { type: integer }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Aucun paramétrage trouvé pour cet établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/platform/users/{userId}/schools:
+    post:
+      tags: [Platform]
+      summary: Rattacher un utilisateur à un établissement supplémentaire (Super Admin uniquement)
+      description: Idempotent — rattacher un établissement déjà associé répond 204 sans rien modifier.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AttachSchoolRequest' }
+      responses:
+        '204': { description: Établissement rattaché }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Utilisateur ou établissement introuvable }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/promo-codes:
+    get:
+      tags: [Platform]
+      summary: Lister les codes promo (Super Admin uniquement)
+      responses:
+        '200':
+          description: Liste des codes promo
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/PromoCode' } }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+    post:
+      tags: [Platform]
+      summary: Créer un code promo (Super Admin uniquement)
+      description: >-
+        `code` est normalisé en MAJUSCULES et doit être unique (409 sinon, contrainte base). Selon
+        `discountType` : Percentage (0,01-100 %) ou FixedAmount (> 0) réduisent le montant à payer ;
+        FreeTrialMonths ou FullDiscount activent l'abonnement SANS AUCUN paiement — `durationMonths`
+        devient alors obligatoire.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PromoCodeCreateRequest' }
+      responses:
+        '201':
+          description: Code promo créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PromoCodeCreateResult' }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '409': { description: Ce code existe déjà }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/promo-codes/{id}/deactivate:
+    post:
+      tags: [Platform]
+      summary: Désactiver un code promo (Super Admin uniquement)
+      description: >-
+        Bascule `isActive` à faux (AGENTS.md règle #6 — jamais de suppression physique).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Code promo désactivé }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Code promo introuvable }
+
   /schools:
     get:
       tags: [Schools]
@@ -336,6 +464,36 @@ paths:
             schema: { $ref: '#/components/schemas/SchoolCreateRequest' }
       responses:
         '201': { description: Établissement créé }
+
+  /schools/{schoolId}/status:
+    patch:
+      tags: [Schools]
+      summary: Suspendre / bloquer / réactiver un établissement (Super Admin uniquement)
+      description: >-
+        Toute valeur autre qu'Active révoque IMMÉDIATEMENT les refresh tokens de tous les
+        utilisateurs de l'établissement (fonction SECURITY DEFINER `revoke_refresh_tokens_by_school`) ;
+        réactiver n'en révoque aucun. `reason` obligatoire (5 à 500 caractères), historisé (entrée
+        d'audit `Schools`/`ChangeStatus:{ancien}->{nouveau} ({reason})`, attribuée à l'établissement
+        ciblé). Une transition vers le statut déjà en cours répond 422 (pas d'effet de bord silencieux).
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangeSchoolStatusRequest' }
+      responses:
+        '200':
+          description: Statut mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChangeSchoolStatusResult' }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+        '404': { description: Établissement introuvable }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /schools/current:
     get:
@@ -381,13 +539,155 @@ paths:
     put:
       tags: [Schools]
       summary: Mettre à jour les paramètres (Directeur uniquement)
+      description: >-
+        `smsCreditBalance` est en lecture seule (absent du corps envoyé) : il ne se crédite que via
+        POST /admin/platform/schools/{schoolId}/sms-credits (Super Admin). Les champs `*SignatureUrl`/
+        `officialStampUrl` (dont `surveillantSignatureUrl`) sont de simples URL — le fichier transite
+        par les endpoints de téléversement dédiés (POST .../director-signature, etc.).
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/SchoolSettings' }
       responses:
-        '200': { description: Paramètres mis à jour }
+        '200':
+          description: Paramètres mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolSettings' }
+        '403': { description: Réservé au Directeur }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /schools/current/settings/director-signature:
+    post:
+      tags: [Schools]
+      summary: Téléverser la signature du Directeur (Directeur uniquement)
+      description: >-
+        multipart/form-data, champ `file` — image/png, image/jpeg ou image/webp, 2 Mio maximum.
+        Renvoie l'URL relative à reporter ensuite dans `directorSignatureUrl` via
+        PUT /schools/current/settings (flux en deux temps : téléverser, puis enregistrer l'URL). Même
+        contrat pour secretary-signature, cashier-signature, surveillant-signature et official-stamp
+        (préfixe de fichier différent seulement).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Fichier enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignatureUploadResult' }
+        '400':
+          description: "Fichier manquant, trop volumineux (> 2 Mio) ou format non supporté"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: string, enum: [FILE_MISSING, FILE_TOO_LARGE, INVALID_FILE_FORMAT] }
+                  message: { type: string }
+        '403': { description: Réservé au Directeur }
+
+  /schools/current/settings/secretary-signature:
+    post:
+      tags: [Schools]
+      summary: Téléverser la signature du Secrétariat (Directeur uniquement)
+      description: Même contrat que POST /schools/current/settings/director-signature.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Fichier enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignatureUploadResult' }
+        '400': { description: "Fichier manquant, trop volumineux (> 2 Mio) ou format non supporté" }
+        '403': { description: Réservé au Directeur }
+
+  /schools/current/settings/cashier-signature:
+    post:
+      tags: [Schools]
+      summary: Téléverser la signature de la Caisse (Directeur uniquement)
+      description: Même contrat que POST /schools/current/settings/director-signature.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Fichier enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignatureUploadResult' }
+        '400': { description: "Fichier manquant, trop volumineux (> 2 Mio) ou format non supporté" }
+        '403': { description: Réservé au Directeur }
+
+  /schools/current/settings/surveillant-signature:
+    post:
+      tags: [Schools]
+      summary: Téléverser la signature du Surveillant Général (Directeur uniquement)
+      description: >-
+        Même contrat que POST /schools/current/settings/director-signature. L'URL renvoyée alimente
+        `surveillantSignatureUrl`, injectée sur les billets d'entrée/sortie et les fiches de discipline
+        (Vie Scolaire).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Fichier enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignatureUploadResult' }
+        '400': { description: "Fichier manquant, trop volumineux (> 2 Mio) ou format non supporté" }
+        '403': { description: Réservé au Directeur }
+
+  /schools/current/settings/official-stamp:
+    post:
+      tags: [Schools]
+      summary: Téléverser le cachet officiel de l'établissement (Directeur uniquement)
+      description: Même contrat que POST /schools/current/settings/director-signature.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Fichier enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignatureUploadResult' }
+        '400': { description: "Fichier manquant, trop volumineux (> 2 Mio) ou format non supporté" }
+        '403': { description: Réservé au Directeur }
 
   /school-years:
     get:
@@ -1594,6 +1894,113 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/FinanceDashboard' }
 
+  /finance/employee-contracts:
+    get:
+      tags: [Finance]
+      summary: Lister les contrats du personnel (Directeur, ou Finance) — Volume 1 §14.1
+      description: >-
+        Liste complète de l'établissement, actifs et clôturés confondus (`endDate` distingue les
+        deux) — pas de pagination ni de filtre à ce jour.
+      responses:
+        '200':
+          description: Liste des contrats
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/EmployeeContract' } }
+        '403': { description: Réservé au Directeur et à la Finance }
+    post:
+      tags: [Finance]
+      summary: Créer un contrat (embauche) — Directeur, ou Finance
+      description: >-
+        Lié à un enseignant (`teacherId`) OU à un utilisateur non-enseignant (`userId`), jamais les
+        deux ni aucun. Un contrat Permanent exige `baseSalary` > 0, un contrat Vacataire exige
+        `hourlyRate` > 0. Une personne ne peut avoir qu'un seul contrat ACTIF à la fois (index
+        partiel PostgreSQL, `endDate IS NULL`) — une tentative en double répond 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmployeeContractCreateRequest' }
+      responses:
+        '201':
+          description: Contrat créé (identifiant)
+          content:
+            application/json:
+              schema: { type: string, format: uuid }
+        '403': { description: Réservé au Directeur et à la Finance }
+        '404': { description: Enseignant ou utilisateur introuvable }
+        '409': { description: Cette personne a déjà un contrat actif }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /finance/employee-contracts/{id}:
+    patch:
+      tags: [Finance]
+      summary: Avenant — réviser le salaire/taux/prime d'un contrat ACTIF, verrouillage optimiste
+      description: >-
+        Seule voie de modification des termes d'un contrat actif (le type de contrat n'est PAS
+        modifiable ici : un changement de type est un nouveau contrat, pas un avenant). `reason`
+        obligatoire (5 à 500 caractères), historisé dans EmployeeContractHistory
+        (ChangeType=Amended). `rowVersion` (xmin) : 409 si le contrat a été modifié entre-temps —
+        409 également si le contrat est déjà clôturé.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateEmployeeContractRequest' }
+      responses:
+        '200':
+          description: Contrat mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UpdateEmployeeContractResult' }
+        '403': { description: Réservé au Directeur et à la Finance }
+        '404': { description: Contrat introuvable dans cet établissement }
+        '409':
+          description: Contrat déjà clôturé, ou modifié par un autre utilisateur entre-temps
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /finance/employee-contracts/{id}/close:
+    post:
+      tags: [Finance]
+      summary: Clôturer définitivement un contrat — Directeur, ou Finance
+      description: >-
+        Irréversible par conception (pas de « rouvrir » : une reprise crée un nouveau contrat).
+        Historisé (ChangeType=Closed). Générer une nouvelle fiche de paie sur un contrat clôturé est
+        ensuite refusé (409, garde-fou de paie) — la dernière fiche due doit être générée AVANT la
+        clôture. `rowVersion` (xmin) : 409 si le contrat a été modifié entre-temps.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CloseEmployeeContractRequest' }
+      responses:
+        '200':
+          description: Contrat clôturé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CloseEmployeeContractResult' }
+        '403': { description: Réservé au Directeur et à la Finance }
+        '404': { description: Contrat introuvable dans cet établissement }
+        '409':
+          description: Contrat déjà clôturé, ou modifié par un autre utilisateur entre-temps
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /reports/dashboard:
     get:
       tags: [Reports]
@@ -1920,6 +2327,29 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '502': { description: L'agrégateur de paiement a refusé la demande ou est injoignable }
 
+  /subscriptions/validate-promo:
+    post:
+      tags: [Subscriptions]
+      summary: Prévisualiser un code promo sur l'abonnement courant (Directeur)
+      description: >-
+        Aperçu seul : un code invalide/expiré/épuisé répond 200 avec `isValid: false` et un message,
+        pas une erreur — c'est une saisie en cours de frappe, pas une transaction. Le même calcul
+        (PromoCodeDiscountCalculator) est réappliqué, indépendamment, au moment réel du paiement
+        (POST /subscriptions/{schoolId}/payments) : cette route ne réserve ni ne consomme l'usage.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ValidatePromoCodeRequest' }
+      responses:
+        '200':
+          description: Résultat de la prévisualisation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidatePromoCodeResult' }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Aucun abonnement associé à votre établissement }
+
   /webhooks/payments/{provider}:
     post:
       tags: [Payments]
@@ -1970,6 +2400,78 @@ paths:
             schema: { $ref: '#/components/schemas/SubscriptionUpdateRequest' }
       responses:
         '200': { description: Abonnement mis à jour }
+
+  /sms/history:
+    get:
+      tags: [Notifications]
+      summary: Historique des SMS envoyés (Directeur, ou Finance) — formule Premium
+      description: >-
+        Réservé aux établissements avec Feature.SmsNotifications (formule Premium, AGENTS.md). Inclut
+        le solde de crédits restant et le nombre de messages encore en file (`pendingCount`) — les
+        envois sont mis en file d'attente (SmsQueueHostedService), jamais synchrones.
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Historique paginé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedSmsHistory' }
+        '403': { description: "Réservé au Directeur et à la Finance, ou formule sans SMS" }
+
+  /sms/dues-reminders:
+    post:
+      tags: [Notifications]
+      summary: Envoyer une relance SMS de solde impayé (Directeur, ou Finance) — formule Premium
+      description: >-
+        Met en file un SMS par élève débiteur (établissement entier si `classroomId` omis). Chaque
+        message débite immédiatement le crédit SMS de l'établissement ; un solde insuffisant fait
+        compter l'élève dans `skippedCount` plutôt que d'échouer toute la relance.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendDuesRemindersRequest' }
+      responses:
+        '200':
+          description: Relance mise en file
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DuesReminderSmsResult' }
+        '403': { description: "Réservé au Directeur et à la Finance, ou formule sans SMS" }
+
+  /webhooks/sms/{provider}:
+    post:
+      tags: [Notifications]
+      summary: Accusé de livraison SMS de l'agrégateur (Infobip) — signature HMAC-SHA256 obligatoire
+      description: >-
+        Même principe que /webhooks/payments/{provider} : AllowAnonymous, sécurité entièrement dans la
+        vérification de signature du corps brut (en-tête `X-Signature`, HMAC-SHA256 avec
+        `SmsOptions.WebhookSecret`, comparaison à temps constant). Idempotent — un accusé déjà appliqué
+        n'est pas retraité.
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, example: Infobip }
+        - name: X-Signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, description: "Payload brut de l'agrégateur (format DLR Infobip)" }
+      responses:
+        '200':
+          description: Accusé traité (ou déjà traité — idempotence)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SmsDeliveryReceiptResult' }
+        '401': { description: Signature absente ou invalide }
 
   /audit-logs:
     get:
@@ -2117,7 +2619,7 @@ components:
       properties:
         totalSchools: { type: integer }
         totalUsers: { type: integer }
-        totalRevenue: { type: number, format: decimal, description: Somme des paiements d'abonnement CONFIRMÉS uniquement (AGENTS.md règle #11). }
+        totalRevenue: { type: number, format: decimal, description: "Somme des paiements d'abonnement CONFIRMÉS uniquement (AGENTS.md règle #11)." }
         activeSubscriptions: { type: integer }
 
     GlobalAuditLogItem:
@@ -2206,6 +2708,11 @@ components:
 
     SchoolSettings:
       type: object
+      description: >-
+        Corps identique en GET et PUT /schools/current/settings. Les cinq champs `*SignatureUrl`/
+        `officialStampUrl` (dont `surveillantSignatureUrl`) sont de simples URL (chaîne, 500
+        caractères max) : le fichier lui-même transite par un endpoint de téléversement dédié
+        (POST .../director-signature, etc.) qui renvoie l'URL à reporter ici.
       properties:
         gradingScale: { type: string, enum: ["10", "20"] }
         studentMatriculeFormat: { type: string, example: "ELEV-{YEAR}-{SEQ:4}" }
@@ -2233,6 +2740,43 @@ components:
             Délègue à la Finance le droit de supprimer une catégorie de frais ou une ligne de
             barème (voir CanDeleteFeesHandler). Commutateur distinct du précédent : supprimer est un
             geste plus lourd de conséquences qu'ajuster un montant. Fermé par défaut.
+        directorSignatureUrl:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Injectée sur le reçu d'inscription et le bulletin de notes.
+        secretarySignatureUrl: { type: string, nullable: true, maxLength: 500 }
+        cashierSignatureUrl:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Injectée sur le reçu d'inscription.
+        officialStampUrl: { type: string, nullable: true, maxLength: 500 }
+        surveillantSignatureUrl:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: >-
+            Injectée sur les documents de Vie Scolaire (billets d'entrée/sortie, fiches de
+            discipline). Ajoutée par la migration AddSurveillantSignatureToSchoolSettings.
+        typeEtablissement:
+          type: string
+          default: Prive
+          description: "Format libre, aucune contrainte serveur au-delà de la longueur — imprimé sur les documents officiels."
+        smsOnAttendanceAlert: { type: boolean, default: false, description: "Formule Premium (Feature.SmsNotifications)." }
+        smsOnDuesReminder: { type: boolean, default: false }
+        smsOnPaymentReceipt: { type: boolean, default: false }
+        smsCreditBalance:
+          type: integer
+          default: 0
+          readOnly: true
+          description: >-
+            Lecture seule — absent du corps envoyé en PUT (crédité uniquement par le Super Admin via
+            POST /admin/platform/schools/{schoolId}/sms-credits).
+        debtorReminderThresholdDays:
+          type: integer
+          default: 7
+          description: Ancienneté minimale (jours) d'une créance avant qu'elle ne devienne relançable.
 
     SchoolYearCreateRequest:
       type: object
@@ -2791,7 +3335,7 @@ components:
 
     FeeCategoryCreateRequest:
       type: object
-      description: Pas de `schoolId` : il est déduit du JWT. La liste est libre (Volume 1 §7.1).
+      description: "Pas de `schoolId` : il est déduit du JWT. La liste est libre (Volume 1 §7.1)."
       required: [name]
       properties:
         name: { type: string, maxLength: 60, example: "Mensualité" }
@@ -3123,13 +3667,26 @@ components:
       properties:
         method: { type: string, enum: [MobileMoney, BankTransfer, Card] }
         billingPeriod: { type: string, enum: [Monthly, Yearly] }
+        promoCode:
+          type: string
+          nullable: true
+          maxLength: 32
+          description: Revalidé côté serveur, indépendamment d'un éventuel appel préalable à POST /subscriptions/validate-promo.
 
     SubscriptionPaymentInitiateResult:
       type: object
+      description: >-
+        Si le code promo couvre l'intégralité (discountType FreeTrialMonths/FullDiscount),
+        l'abonnement est activé IMMÉDIATEMENT sans appel agrégateur : paymentId/redirectUrl/status
+        sont alors null et activatedWithoutPayment vaut true.
       properties:
-        paymentId: { type: string, format: uuid }
-        redirectUrl: { type: string, format: uri, description: "URL de la page de paiement hébergée par l'agrégateur (PayDunya/CinetPay)" }
-        status: { type: string, enum: [Initiated] }
+        paymentId: { type: string, format: uuid, nullable: true }
+        redirectUrl: { type: string, format: uri, nullable: true, description: "URL de la page de paiement hébergée par l'agrégateur (PayDunya/CinetPay)" }
+        status: { type: string, enum: [Initiated, Confirmed, Failed], nullable: true }
+        activatedWithoutPayment:
+          type: boolean
+          default: false
+          description: Vrai lorsque le code promo a intégralement couvert l'abonnement — aucun paiement n'a eu lieu.
 
     SubscriptionPaymentHistoryItem:
       type: object
@@ -3155,3 +3712,233 @@ components:
         subscriptionStatus: { type: string, enum: [AwaitingPayment, Active, Suspended, ReadOnly] }
         subscriptionPlan: { type: string, enum: [Primaire, Standard, Premium] }
         subscriptionExpiresAt: { type: string, format: date, nullable: true }
+
+    ChangeSchoolStatusRequest:
+      type: object
+      required: [status, reason]
+      properties:
+        status: { type: string, enum: [Active, Suspended, Blocked] }
+        reason: { type: string, minLength: 5, maxLength: 500 }
+
+    ChangeSchoolStatusResult:
+      type: object
+      properties:
+        schoolId: { type: string, format: uuid }
+        previousStatus: { type: string, enum: [Active, Suspended, Blocked] }
+        newStatus: { type: string, enum: [Active, Suspended, Blocked] }
+        revokedSessions:
+          type: integer
+          description: Nombre de refresh tokens révoqués par ce changement (0 lors d'une réactivation).
+
+    PromoCode:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, example: "RENTREE2026" }
+        discountType: { type: string, enum: [Percentage, FixedAmount, FreeTrialMonths, FullDiscount] }
+        discountValue: { type: number }
+        durationMonths: { type: integer, nullable: true }
+        maxUses: { type: integer, nullable: true }
+        currentUses: { type: integer }
+        startDateUtc: { type: string, format: date-time }
+        endDateUtc: { type: string, format: date-time }
+        isActive: { type: boolean }
+        beneficiarySchoolNames:
+          type: array
+          items: { type: string }
+          description: Écoles ayant déjà consommé ce code.
+
+    PromoCodeCreateRequest:
+      type: object
+      required: [code, discountType, startDateUtc, endDateUtc]
+      properties:
+        code:
+          type: string
+          maxLength: 32
+          pattern: '^[A-Za-z0-9_-]+$'
+          description: Normalisé en MAJUSCULES côté serveur avant stockage/vérification d'unicité.
+        discountType: { type: string, enum: [Percentage, FixedAmount, FreeTrialMonths, FullDiscount] }
+        discountValue:
+          type: number
+          description: "0,01 à 100 pour Percentage ; > 0 pour FixedAmount ; ignoré pour FreeTrialMonths/FullDiscount."
+        durationMonths:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Obligatoire et > 0 pour FreeTrialMonths et FullDiscount.
+        maxUses: { type: integer, nullable: true, minimum: 1 }
+        startDateUtc: { type: string, format: date-time }
+        endDateUtc: { type: string, format: date-time, description: Doit être postérieure à startDateUtc. }
+
+    PromoCodeCreateResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+
+    GrantComplimentaryAccessRequest:
+      type: object
+      required: [plan, durationMonths]
+      properties:
+        plan: { type: string, enum: [Primaire, Standard, Premium] }
+        durationMonths: { type: integer, minimum: 1, maximum: 60 }
+
+    TopUpSmsCreditsRequest:
+      type: object
+      required: [segments]
+      properties:
+        segments: { type: integer, minimum: 1, maximum: 1000000 }
+
+    AttachSchoolRequest:
+      type: object
+      required: [schoolId]
+      properties:
+        schoolId: { type: string, format: uuid }
+
+    ValidatePromoCodeRequest:
+      type: object
+      required: [code, billingPeriod]
+      properties:
+        code: { type: string, maxLength: 32 }
+        billingPeriod: { type: string, enum: [Monthly, Yearly] }
+
+    ValidatePromoCodeResult:
+      type: object
+      properties:
+        isValid: { type: boolean }
+        message:
+          type: string
+          nullable: true
+          description: "Motif d'invalidité (code inconnu, expiré, épuisé…) — présent seulement si isValid=false."
+        baseAmount: { type: number, nullable: true }
+        discountedAmount: { type: number, nullable: true }
+        requiresPayment:
+          type: boolean
+          description: Faux pour FreeTrialMonths/FullDiscount — le paiement peut être sauté entièrement.
+
+    EmployeeContract:
+      type: object
+      description: Ligne de GET /finance/employee-contracts (Volume 1 §14.1).
+      properties:
+        id: { type: string, format: uuid }
+        teacherId: { type: string, format: uuid, nullable: true }
+        userId: { type: string, format: uuid, nullable: true }
+        employeeFullName: { type: string }
+        employeeRole: { type: string, example: Enseignant }
+        type: { type: string, enum: [Permanent, Vacataire] }
+        baseSalary: { type: number }
+        hourlyRate: { type: number }
+        transportAllowance: { type: number }
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Null tant que le contrat est actif ; posé par POST .../close.
+        rowVersion:
+          type: integer
+          format: int64
+          description: Jeton de concurrence (xmin) à renvoyer sur PATCH/close.
+
+    EmployeeContractCreateRequest:
+      type: object
+      description: Lié à teacherId OU userId, jamais les deux ni aucun.
+      required: [type, baseSalary, hourlyRate, transportAllowance]
+      properties:
+        teacherId: { type: string, format: uuid, nullable: true }
+        userId: { type: string, format: uuid, nullable: true }
+        type: { type: string, enum: [Permanent, Vacataire] }
+        baseSalary: { type: number, minimum: 0, description: "Obligatoire (> 0) si type=Permanent." }
+        hourlyRate: { type: number, minimum: 0, description: "Obligatoire (> 0) si type=Vacataire." }
+        transportAllowance: { type: number, minimum: 0 }
+
+    UpdateEmployeeContractRequest:
+      type: object
+      required: [baseSalary, hourlyRate, transportAllowance, reason, rowVersion]
+      properties:
+        baseSalary: { type: number, minimum: 0 }
+        hourlyRate: { type: number, minimum: 0 }
+        transportAllowance: { type: number, minimum: 0 }
+        reason: { type: string, minLength: 5, maxLength: 500 }
+        rowVersion:
+          type: integer
+          format: int64
+          description: Jeton de concurrence (xmin) renvoyé par le dernier GET /finance/employee-contracts.
+
+    UpdateEmployeeContractResult:
+      type: object
+      properties:
+        contractId: { type: string, format: uuid }
+        baseSalary: { type: number }
+        hourlyRate: { type: number }
+        transportAllowance: { type: number }
+        rowVersion:
+          type: integer
+          format: int64
+          description: Nouveau jeton après écriture, pour enchaîner une modification sans recharger.
+
+    CloseEmployeeContractRequest:
+      type: object
+      required: [endDate, reason, rowVersion]
+      properties:
+        endDate: { type: string, format: date }
+        reason: { type: string, minLength: 5, maxLength: 500 }
+        rowVersion:
+          type: integer
+          format: int64
+          description: Jeton de concurrence (xmin) renvoyé par le dernier GET /finance/employee-contracts.
+
+    CloseEmployeeContractResult:
+      type: object
+      description: Pas de rowVersion en retour — la clôture est terminale, aucune modification ultérieure n'est attendue.
+      properties:
+        contractId: { type: string, format: uuid }
+        endDate: { type: string, format: date }
+
+    SignatureUploadResult:
+      type: object
+      properties:
+        url:
+          type: string
+          description: >-
+            URL relative du fichier enregistré, à reporter dans le champ *SignatureUrl/officialStampUrl
+            correspondant via PUT /schools/current/settings.
+
+    PaginatedSmsHistory:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/SmsHistoryItem' } }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+        creditBalance: { type: integer }
+        pendingCount: { type: integer }
+
+    SmsHistoryItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sentAt: { type: string, format: date-time }
+        recipient: { type: string }
+        body: { type: string }
+        trigger: { type: string, enum: [AttendanceAlert, DuesReminder, PaymentReceipt, ReportCard, Manual] }
+        status: { type: string, enum: [Pending, Sent, Delivered, Failed, InsufficientCredit] }
+        segmentCount: { type: integer }
+        failureReason: { type: string, nullable: true }
+
+    SendDuesRemindersRequest:
+      type: object
+      properties:
+        classroomId: { type: string, format: uuid, nullable: true, description: Omis = tout l'établissement. }
+
+    DuesReminderSmsResult:
+      type: object
+      properties:
+        queuedCount: { type: integer }
+        skippedCount: { type: integer }
+        firstSkipReason: { type: string, nullable: true }
+
+    SmsDeliveryReceiptResult:
+      type: object
+      properties:
+        appliedCount: { type: integer }
+        ignoredCount: { type: integer }
