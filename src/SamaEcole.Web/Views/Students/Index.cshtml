@@ -32,6 +32,11 @@
  <p class="text-jgk-subtitle text-slate-500 mt-1">Gérez les inscriptions et les dossiers des élèves.</p>
  </div>
  <div class="flex items-center gap-2 shrink-0">
+ <!-- Export PDF (docs/Volume_7_Security.md §15) : Directeur, Secrétariat, Finance — jamais l'Enseignant. -->
+ <button x-show="canExportStudents" x-cloak @@click="exportStudentsPdf()" class="btn-secondary">
+ <icon name="document-text" class="w-4 h-4" />
+ Exporter en PDF
+ </button>
  <button x-show="canManageStudent" x-cloak @@click="openImport()" class="btn-secondary">
  <icon name="upload" class="w-4 h-4" />
  Importer des élèves
@@ -563,6 +568,11 @@
 
  <div x-show="reportCardRemarkErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="reportCardRemarkErrors.global"></div>
 
+ <!-- modal-shell masque en CSS (x-show) mais laisse le formulaire dans le DOM : sans ce x-if, Alpine
+ évalue "editingReportCardRemark.disciplinaryMention" dès l'initialisation, alors que l'état par
+ défaut est null (fermé) — TypeError à chaque tick réactif, bien avant toute ouverture de la
+ modale. Même pattern que l'onglet Paiements plus haut (template x-if="studentDetail && ..."). -->
+ <template x-if="editingReportCardRemark">
  <form x-on:submit.prevent="submitReportCardRemark()" novalidate class="space-y-4">
  <div>
  <label class="block text-sm font-medium text-slate-700">Distinction</label>
@@ -591,6 +601,7 @@
  </button>
  </div>
  </form>
+ </template>
  </modal-shell>
 
  <!-- Modification de la fiche élève : le matricule n'est jamais modifiable (AGENTS.md règle #3). -->

@@ -90,6 +90,10 @@ document.addEventListener('alpine:init', () => {
         // est côté API.
         canManageStudent: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
+        // Export PDF (docs/Volume_7_Security.md §15, matrice Élèves) : Directeur, Secrétariat et
+        // Finance — jamais l'Enseignant, contrairement à la lecture (StudentsController.ExportRoles).
+        canExportStudents: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat' || window.auth.role === 'Finance',
+
         // Saisir les observations du conseil (Blâme… Félicitations) est ouvert au Directeur, à
         // l'Enseignant ET au Secrétariat côté serveur (ReportCardsController.ReportCardWriterRoles) —
         // le Secrétariat assure ainsi le suivi administratif au même titre que la direction.
@@ -195,6 +199,28 @@ document.addEventListener('alpine:init', () => {
             this.genderFilter = '';
             this.yearScope = 'active'; // on revient à la vue par défaut (inscrits de l'année active), pas à « tous »
             this.applyFilters();
+        },
+
+        /**
+         * Export PDF (GET /students/export/pdf) : reprend les filtres Classe et Année actuellement
+         * affichés à l'écran — le PDF reflète alors exactement la liste que l'utilisateur regarde,
+         * pas un export « tout le monde » surprenant. La recherche texte et le genre, eux, ne sont
+         * pas repris : ce sont des filtres d'écran, pas des critères d'un document imprimable.
+         */
+        async exportStudentsPdf() {
+            const params = new URLSearchParams();
+            if (this.classroomFilter) params.set('classroomId', this.classroomFilter);
+            if (this.yearScope === 'active') params.set('activeYearOnly', 'true');
+
+            const classroom = this.classrooms.find(c => c.id === this.classroomFilter);
+            const title = classroom ? `Liste des élèves — ${classroom.name}` : 'Liste des élèves';
+            const dateSuffix = new Date().toISOString().slice(0, 10);
+
+            await this.openPdfModalWithBlob(
+                `/api/v1/students/export/pdf?${params.toString()}`,
+                title,
+                `Eleves-${dateSuffix}.pdf`
+            );
         },
 
         /**
