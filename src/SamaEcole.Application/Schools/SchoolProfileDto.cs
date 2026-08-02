@@ -20,4 +20,12 @@ public record SchoolProfileDto(
     // Coordonnées et mentions légales de l'en-tête du reçu (NINEA / RCCM) — voir School.
     string? Email,
     string? Ninea,
-    string? RegistreCommerce);
+    string? RegistreCommerce,
+
+    // Annuaire public (B2C) — voir School.IsPubliclyListed. Ces champs ne sortent JAMAIS d'ici vers un
+    // visiteur anonyme : l'annuaire a son propre contrat (PublicSchoolDto), servi depuis une vue
+    // distincte. Ils n'apparaissent dans ce DTO que pour que le Directeur pilote sa propre fiche.
+    bool IsPubliclyListed = false,
+    string? City = null,
+    string? Region = null,
+    string? PublicDescription = null);

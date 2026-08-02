@@ -22,4 +22,12 @@ public record UpdateCurrentSchoolCommand(
     // imprimés dans l'en-tête du reçu. Facultatifs — une mention absente ne s'imprime pas.
     string? Email = null,
     string? Ninea = null,
-    string? RegistreCommerce = null) : IRequest<SchoolProfileDto>;
+    string? RegistreCommerce = null,
+
+    // Bloc « Annuaire public » : consentement de publication et données de vitrine. Facultatifs, et
+    // le consentement est FAUX par défaut — une charge utile qui omettrait le champ ne publie donc
+    // jamais l'établissement par accident (voir School.IsPubliclyListed).
+    bool IsPubliclyListed = false,
+    string? City = null,
+    string? Region = null,
+    string? PublicDescription = null) : IRequest<SchoolProfileDto>;

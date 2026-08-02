@@ -35,4 +35,12 @@ public static class SensitiveEndpointRateLimiting
     /// de passe est un geste rare, une limite basse ne gêne aucun usage légitime.
     /// </summary>
     public const string PasswordResetPolicyName = "auth-password-reset";
+
+    /// <summary>
+    /// GET /public/schools et /public/schools/{id} — annuaire B2C. Routes ANONYMES et destinées à être
+    /// parcourues : la limite est donc large (elle ne doit gêner aucun visiteur qui feuillette les
+    /// pages), mais elle existe, car un endpoint public non borné est une invitation au moissonnage
+    /// systématique de l'annuaire et à la saturation du serveur depuis une seule source.
+    /// </summary>
+    public const string PublicDirectoryPolicyName = "public-directory";
 }

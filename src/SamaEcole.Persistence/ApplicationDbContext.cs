@@ -79,6 +79,9 @@ public class ApplicationDbContext(
     public DbSet<GlobalAuditLogEntry> GlobalAuditLogEntries => Set<GlobalAuditLogEntry>();
     public DbSet<PlatformSubscriptionRow> PlatformSubscriptions => Set<PlatformSubscriptionRow>();
 
+    /// <summary>Annuaire public (B2C) — vue en lecture seule, voir <see cref="PublicSchoolListing"/>.</summary>
+    public DbSet<PublicSchoolListing> PublicSchoolDirectory => Set<PublicSchoolListing>();
+
     // Compteurs de matricules : écrits uniquement par MatriculeGenerator (INSERT ... ON CONFLICT),
     // jamais manipulés à la main par un Handler. Volontairement absent d'IApplicationDbContext.
     public DbSet<MatriculeSequence> MatriculeSequences => Set<MatriculeSequence>();
@@ -121,6 +124,16 @@ public class ApplicationDbContext(
         {
             e.HasNoKey();
             e.ToView("v_platform_subscriptions");
+        });
+
+        // Annuaire PUBLIC (B2C) — quatrième entité SANS CLÉ, même mécanisme : lit
+        // `public_school_directory` (migration AddPublicSchoolDirectory), qui fige la liste des
+        // colonnes ET la condition de consentement. C'est cette vue, et non le code appelant, qui
+        // garantit qu'aucune école sans consentement ni aucune colonne sensible n'est atteignable.
+        modelBuilder.Entity<PublicSchoolListing>(e =>
+        {
+            e.HasNoKey();
+            e.ToView("public_school_directory");
         });
 
         // Le verrou optimiste xmin du barème (ClassFee, AGENTS.md règle #5) est configuré dans

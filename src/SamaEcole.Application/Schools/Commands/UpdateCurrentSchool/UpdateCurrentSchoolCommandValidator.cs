@@ -61,6 +61,29 @@ public class UpdateCurrentSchoolCommandValidator : AbstractValidator<UpdateCurre
         RuleFor(c => c.RegistreCommerce)
             .MaximumLength(50).WithMessage("Le registre du commerce ne peut pas dépasser 50 caractères.")
             .NoHtml();
+
+        // Annuaire public. NoHtml() compte double ici : ces trois champs sont les SEULS de
+        // l'application à être servis tels quels à des visiteurs anonymes — une balise passée dans une
+        // présentation d'établissement serait rendue sur la vitrine, pour tout le monde.
+        RuleFor(c => c.City)
+            .MaximumLength(120).WithMessage("La ville ne peut pas dépasser 120 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.Region)
+            .MaximumLength(120).WithMessage("La région ne peut pas dépasser 120 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.PublicDescription)
+            .MaximumLength(2000).WithMessage("La présentation publique ne peut pas dépasser 2000 caractères.")
+            .NoHtml();
+
+        // Une école ne peut pas entrer dans l'annuaire sans ville : c'est le premier critère de
+        // recherche d'un parent, et une fiche sans localisation y serait invisible ou trompeuse.
+        // Contrainte appliquée SEULEMENT à la publication — une école non listée reste libre de ne rien
+        // renseigner.
+        RuleFor(c => c.City)
+            .NotEmpty().When(c => c.IsPubliclyListed)
+            .WithMessage("La ville est obligatoire pour figurer dans l'annuaire public.");
     }
 
     private static bool BeAValidHttpUrl(string? url) =>

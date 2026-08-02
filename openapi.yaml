@@ -1736,6 +1736,81 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/RateLimited' }
 
+  /public/schools:
+    get:
+      tags: [PublicDirectory]
+      summary: Annuaire public des établissements (B2C)
+      description: >-
+        Anonyme et en LECTURE SEULE. Ne liste que les établissements dont le Directeur a explicitement
+        activé `isPubliclyListed` (faux par défaut) et dont le statut est actif : ni l'inscription, ni
+        l'approbation, ni l'activation d'abonnement ne publient un établissement.
+        Étanchéité garantie par la BASE, pas par ce contrôleur : (1) la RLS échoue en fermeture — une
+        requête anonyme n'a pas de tenant, les policies des tables élèves/notes/paiements comparent leur
+        SchoolId à NULL et ne renvoient aucune ligne ; (2) la vue `public_school_directory` fige les
+        colonnes servies (ni NINEA, ni RCCM, ni statut, ni champs d'audit) et la condition de
+        consentement ; (3) l'API Data Supabase est fermée, cet annuaire n'est joignable que par cette
+        route. Limitation de débit par IP (429 au-delà).
+      security: []
+      parameters:
+        - name: search
+          in: query
+          description: Recherche sur le nom de l'établissement (insensible à la casse)
+          schema: { type: string, maxLength: 100 }
+        - name: city
+          in: query
+          description: Filtre exact sur la ville
+          schema: { type: string, maxLength: 120 }
+        - name: region
+          in: query
+          description: Filtre exact sur la région
+          schema: { type: string, maxLength: 120 }
+        - name: cycle
+          in: query
+          description: >-
+            Cycle proposé, en valeur brute de l'énumération (jamais le libellé accentué). Un cycle
+            inconnu est rejeté en 422 plutôt que de produire un annuaire faussement vide.
+          schema:
+            type: string
+            enum: [Primaire, College, Lycee, Maternelle]
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          description: Plafonné à 48 — cet endpoint est anonyme, la taille de page ne peut pas être dictée par l'appelant.
+          schema: { type: integer, minimum: 1, maximum: 48, default: 12 }
+      responses:
+        '200':
+          description: Page d'établissements consentants
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedPublicSchools' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /public/schools/{schoolId}:
+    get:
+      tags: [PublicDirectory]
+      summary: Fiche publique d'un établissement
+      description: >-
+        Anonyme. Un identifiant valide dont l'établissement n'a pas consenti (ou est suspendu/archivé)
+        renvoie le MÊME 404 qu'un identifiant inexistant : un 403 confirmerait l'existence d'un
+        établissement ayant précisément refusé sa publication.
+      security: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Fiche de l'établissement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicSchool' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
   /admin/registration-requests:
     get:
       tags: [RegistrationRequests]
@@ -2971,6 +3046,45 @@ components:
         status: { type: string, enum: [Pending, Approved, Rejected] }
         submittedAt: { type: string, format: date-time }
         rejectionReason: { type: string, nullable: true, description: "Renseigné uniquement si status = Rejected (motif obligatoire côté Super Admin, ticket JGK-I03)" }
+
+    PublicSchool:
+      type: object
+      description: >-
+        Fiche telle que servie à un visiteur ANONYME. Contrat volontairement plus pauvre que celui du
+        Directeur sur son propre établissement (SchoolProfile) : ni NINEA, ni RCCM, ni statut, ni
+        en-têtes administratifs (IA/IEF), ni champs d'audit. Cette restriction n'est pas seulement
+        contractuelle — la vue SQL `public_school_directory` qui alimente cette réponse ne projette
+        physiquement pas ces colonnes.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: "École Primaire Les Baobabs" }
+        city: { type: string, nullable: true, example: "Dakar" }
+        region: { type: string, nullable: true, example: "Dakar" }
+        description:
+          type: string
+          nullable: true
+          description: Présentation rédigée par le Directeur. N'apparaît sur aucun document officiel.
+        logoUrl: { type: string, nullable: true }
+        address: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        cycles:
+          type: array
+          description: >-
+            Cycles réellement proposés, en libellés lisibles et dans l'ordre pédagogique — DÉRIVÉS des
+            classes ouvertes par l'établissement, jamais d'une liste déclarative qui deviendrait fausse
+            dès la rentrée suivante. Vide tant qu'aucune classe n'existe.
+          items: { type: string, example: "Primaire" }
+
+    PaginatedPublicSchools:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PublicSchool' }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
 
     RegistrationRequestListItem:
       type: object

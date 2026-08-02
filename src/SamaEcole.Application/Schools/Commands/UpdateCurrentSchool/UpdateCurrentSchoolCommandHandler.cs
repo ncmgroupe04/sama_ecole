@@ -39,13 +39,32 @@ public class UpdateCurrentSchoolCommandHandler(
         school.Ninea = Normalize(request.Ninea);
         school.RegistreCommerce = Normalize(request.RegistreCommerce);
 
+        // Annuaire public : c'est ICI, et nulle part ailleurs, que le consentement de publication
+        // bascule. Aucune approbation d'inscription ni aucun traitement automatique ne le positionne —
+        // publier un établissement reste un geste délibéré de son Directeur.
+        var wasPubliclyListed = school.IsPubliclyListed;
+        school.IsPubliclyListed = request.IsPubliclyListed;
+        school.City = Normalize(request.City);
+        school.Region = Normalize(request.Region);
+        school.PublicDescription = Normalize(request.PublicDescription);
+
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Identité de l'établissement {SchoolId} mise à jour.", schoolId);
+
+        // Journalisé à part : entrer dans un annuaire public ou en sortir est un changement de
+        // visibilité vis-à-vis de tiers, pas une correction de fiche comme les autres.
+        if (wasPubliclyListed != school.IsPubliclyListed)
+        {
+            logger.LogInformation(
+                "Établissement {SchoolId} : publication dans l'annuaire public {NewState}.",
+                schoolId, school.IsPubliclyListed ? "ACTIVÉE" : "DÉSACTIVÉE");
+        }
 
         return new SchoolProfileDto(
             school.Name, school.Address, school.Phone, school.LogoUrl,
             school.InspectionAcademie, school.InspectionEducationFormation, school.NomLycee,
-            school.Email, school.Ninea, school.RegistreCommerce);
+            school.Email, school.Ninea, school.RegistreCommerce,
+            school.IsPubliclyListed, school.City, school.Region, school.PublicDescription);
     }
 
     /// <summary>Chaîne vide ⇒ null : un champ optionnel effacé par le Directeur redevient NULL, pas "".</summary>

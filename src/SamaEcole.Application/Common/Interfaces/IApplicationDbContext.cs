@@ -13,6 +13,15 @@ public interface IApplicationDbContext
     DbSet<Student> Students { get; }
     DbSet<Classroom> Classrooms { get; }
 
+    /// <summary>
+    /// Annuaire PUBLIC des établissements (B2C) — vue en LECTURE SEULE <c>public_school_directory</c>,
+    /// jamais la table <c>schools</c>. La vue fige les colonnes exposées et la condition de consentement
+    /// (voir <see cref="PublicSchoolListing"/> et la migration AddPublicSchoolDirectory) : c'est elle,
+    /// et non le Handler, qui garantit qu'aucune donnée sensible ni aucune école non consentante n'est
+    /// atteignable par ce chemin anonyme.
+    /// </summary>
+    DbSet<PublicSchoolListing> PublicSchoolDirectory { get; }
+
     /// <summary>Bâtiments physiques de l'établissement (module Infrastructures).</summary>
     DbSet<Building> Buildings { get; }
 

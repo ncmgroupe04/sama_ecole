@@ -162,6 +162,29 @@ Chaque JWT contient les claims `sub` (UserId), `schoolId`, `role`. Le middleware
 | `GET` | `/api/v1/subscriptions/{schoolId}/payments` | Directeur | Historique des paiements de l'établissement |
 | `POST` | `/api/v1/webhooks/payments/{provider}` | **Aucune** (public, vérifié par signature HMAC) | Callback de l'agrégateur (PayDunya/CinetPay) confirmant ou infirmant un paiement — voir Volume 7 §Paiements pour la vérification obligatoire de signature |
 
+## 2ter. API Annuaire public des établissements (B2C)
+
+Vitrine grand public : la seule surface de l'application servie à un visiteur n'appartenant à aucun établissement. **Lecture seule et entièrement anonyme** — aucun verbe d'écriture n'y est exposé.
+
+| Méthode | Route | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/public/schools` | **Aucune** (public) | Annuaire paginé des établissements ayant consenti. Filtres : `search` (nom), `city`, `region`, `cycle`, `page`, `pageSize` (≤ 48) |
+| `GET` | `/api/v1/public/schools/{schoolId}` | **Aucune** (public) | Fiche d'un établissement de l'annuaire |
+
+**Consentement explicite.** Une école n'y figure que si son Directeur a activé `isPubliclyListed` via `PUT /api/v1/schools/current` (§11) — **faux par défaut**. L'inscription, l'approbation par le Super Admin et l'activation de l'abonnement ne publient jamais un établissement : seul un geste délibéré de son Directeur le fait. La ville est obligatoire pour publier (premier critère de recherche d'un parent).
+
+**Étanchéité — trois barrières indépendantes** (voir Volume 7 §8) :
+
+1. **La RLS échoue en fermeture.** Une requête anonyme n'a pas de tenant : `app.current_school_id` est absente, les policies des tables élèves/notes/paiements comparent leur `SchoolId` à `NULL` et ne renvoient aucune ligne. Ce n'est pas un filtre applicatif qu'on aurait pensé à écrire, c'est le comportement par défaut de la base.
+2. **La vue `public_school_directory`** (migration `AddPublicSchoolDirectory`) fige la liste des colonnes servies et la condition de consentement. Les Handlers n'interrogent qu'elle, jamais la table `schools`. NINEA, RCCM, statut, champs d'audit et en-têtes administratifs (IA/IEF) sont hors de portée, même d'un `SELECT *`.
+3. **L'API Data de Supabase (PostgREST) est fermée** : schéma `public` retiré des schémas exposés, aucun droit sur `anon`/`authenticated`. L'annuaire n'est joignable que par ce contrôleur, donc toujours à travers le rate limiting et la journalisation.
+
+**Cycles proposés** (« filières ») : dérivés des classes réellement ouvertes par l'établissement, jamais d'une liste déclarative qui deviendrait fausse dès la rentrée suivante. La vue les agrège hors RLS — contournement nécessaire (un visiteur anonyme n'a pas de tenant) et borné à des libellés de cycle pour des écoles consentantes.
+
+**404 plutôt que 403** sur la fiche d'une école non listée : un 403 confirmerait son existence, ce que refuse précisément un établissement ayant choisi de ne pas être publié.
+
+> **Périmètre.** Cet annuaire n'ouvre aucun accès aux données d'un établissement (ni élèves, ni notes, ni présences, ni finances). Il ne constitue donc pas le « portail Parents et Élèves » reporté en V3 (Volume 1 §13) : c'est une vitrine d'établissements, au même titre qu'une plaquette.
+
 ## 3. API Utilisateurs
 
 | Méthode | Route | Description |

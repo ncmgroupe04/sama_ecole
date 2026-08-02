@@ -198,6 +198,12 @@ var loginWindowMinutes = builder.Configuration.GetValue("RateLimiting:Login:Wind
 
 var passwordResetPermitLimit = builder.Configuration.GetValue("RateLimiting:PasswordReset:PermitLimit", 5);
 var passwordResetWindowMinutes = builder.Configuration.GetValue("RateLimiting:PasswordReset:WindowMinutes", 15);
+
+// Annuaire public (B2C) : volontairement large — feuilleter des pages de résultats est l'usage normal
+// de cet écran, et une limite basse casserait la navigation d'un visiteur légitime avant de gêner un
+// moissonneur. Ce plafond borne le débit, il ne prétend pas empêcher la copie d'un annuaire public.
+var publicDirectoryPermitLimit = builder.Configuration.GetValue("RateLimiting:PublicDirectory:PermitLimit", 120);
+var publicDirectoryWindowMinutes = builder.Configuration.GetValue("RateLimiting:PublicDirectory:WindowMinutes", 1);
 var reportCardPermitLimit = builder.Configuration.GetValue("RateLimiting:ReportCardGeneration:PermitLimit", 20);
 var reportCardWindowMinutes = builder.Configuration.GetValue("RateLimiting:ReportCardGeneration:WindowMinutes", 1);
 
@@ -237,6 +243,19 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = loginPermitLimit,
             Window = TimeSpan.FromMinutes(loginWindowMinutes),
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy(SensitiveEndpointRateLimiting.PublicDirectoryPolicyName, httpContext =>
+    {
+        // Par IP : l'annuaire est anonyme, il n'y a aucun utilisateur sur qui partitionner.
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = publicDirectoryPermitLimit,
+            Window = TimeSpan.FromMinutes(publicDirectoryWindowMinutes),
             QueueLimit = 0
         });
     });

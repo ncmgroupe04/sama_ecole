@@ -29,6 +29,19 @@ public class SchoolConfiguration : IEntityTypeConfiguration<School>
         builder.Property(s => s.InspectionEducationFormation).HasMaxLength(150);
         builder.Property(s => s.NomLycee).HasMaxLength(150);
 
+        // Annuaire public. Ville/région sont des libellés courts (critères de recherche) ; la
+        // présentation est bornée à 2000 caractères — assez pour un paragraphe de vitrine, trop peu
+        // pour qu'un champ public devienne un vecteur de stockage arbitraire.
+        builder.Property(s => s.City).HasMaxLength(120);
+        builder.Property(s => s.Region).HasMaxLength(120);
+        builder.Property(s => s.PublicDescription).HasMaxLength(2000);
+
+        // Index PARTIEL : l'annuaire ne requête que les écoles ayant consenti, une infime minorité au
+        // début. Indexer la table entière ferait payer l'écriture de toutes les autres pour rien.
+        builder.HasIndex(s => new { s.City, s.Region })
+            .HasDatabaseName("IX_schools_public_directory")
+            .HasFilter("\"IsPubliclyListed\" = TRUE AND \"IsDeleted\" = FALSE");
+
         builder.HasQueryFilter(s => !s.IsDeleted);
     }
 }

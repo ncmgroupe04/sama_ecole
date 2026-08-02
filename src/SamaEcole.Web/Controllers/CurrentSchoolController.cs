@@ -37,7 +37,15 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
         // Coordonnées et mentions légales imprimées sur le reçu (NINEA / RCCM).
         string? Email,
         string? Ninea,
-        string? RegistreCommerce);
+        string? RegistreCommerce,
+
+        // Annuaire public (B2C). Défauts explicites : ce type est mappé À LA MAIN vers la commande
+        // ci-dessous — tout champ ajouté ici DOIT être répercuté dans l'appel, sans quoi il serait
+        // accepté par l'API puis silencieusement perdu (l'écueil déjà rencontré sur les réglages SMS).
+        bool IsPubliclyListed = false,
+        string? City = null,
+        string? Region = null,
+        string? PublicDescription = null);
 
     /// <summary>
     /// LECTURE ouverte à tout utilisateur de l'école : le nom et les coordonnées s'affichent sur le
@@ -60,7 +68,8 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
             new UpdateCurrentSchoolCommand(
                 request.Name, request.Address, request.Phone, request.LogoUrl,
                 request.InspectionAcademie, request.InspectionEducationFormation, request.NomLycee,
-                request.Email, request.Ninea, request.RegistreCommerce),
+                request.Email, request.Ninea, request.RegistreCommerce,
+                request.IsPubliclyListed, request.City, request.Region, request.PublicDescription),
             cancellationToken));
 
     /// <summary>Upload local d'un fichier image (logo) par le Directeur.</summary>

@@ -54,4 +54,38 @@ public class School : AuditableEntity
     /// son préfixe — AUCUN repli sur Name, même partiel (voir ReportCardDocument.ComposeHeader).
     /// </summary>
     public string? NomLycee { get; set; }
+
+    // ------------------------------------------------------------------ Annuaire public (B2C)
+
+    /// <summary>
+    /// Consentement du Directeur à figurer dans l'annuaire PUBLIC des établissements.
+    ///
+    /// FAUX par défaut, et ce défaut est une décision, pas une commodité : publier le nom, la ville et
+    /// les coordonnées d'un établissement est une diffusion vers des tiers, qui n'a pas à découler
+    /// implicitement d'une inscription à un logiciel de gestion. Seul le Directeur bascule ce drapeau,
+    /// depuis Paramètres → Établissement.
+    ///
+    /// Une école retirée de l'annuaire (repassée à faux) disparaît immédiatement des réponses publiques :
+    /// le filtre est appliqué à CHAQUE requête, jamais mis en cache côté serveur.
+    /// </summary>
+    public bool IsPubliclyListed { get; set; }
+
+    /// <summary>
+    /// Ville, en donnée STRUCTURÉE — contrairement à <see cref="Address"/> qui reste du texte libre
+    /// destiné à l'impression. C'est le principal critère de recherche d'un parent dans l'annuaire, et
+    /// filtrer par sous-chaîne sur une adresse libre donnerait des résultats faux (« Rue de Dakar » à
+    /// Thiès). Alimentée à l'approbation depuis la demande d'inscription, qui la saisit déjà.
+    /// </summary>
+    public string? City { get; set; }
+
+    /// <summary>Région administrative (Dakar, Thiès, Saint-Louis…) — même usage que <see cref="City"/>.</summary>
+    public string? Region { get; set; }
+
+    /// <summary>
+    /// Présentation rédigée par le Directeur pour l'annuaire public. N'apparaît sur AUCUN document
+    /// officiel (reçu, bulletin, attestation) : c'est un texte de vitrine, pas une mention légale.
+    /// Null tant qu'il n'a rien saisi — la fiche s'affiche alors sans paragraphe de présentation,
+    /// jamais avec un texte inventé à sa place.
+    /// </summary>
+    public string? PublicDescription { get; set; }
 }
