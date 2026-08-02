@@ -63,6 +63,7 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     private Task<string> DirecteurTokenAsync() => TokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);
     private Task<string> SecretaireTokenAsync() => TokenAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
     private Task<string> FinanceTokenAsync() => TokenAsync(AuthApiFactory.FinanceEmail, AuthApiFactory.FinancePassword);
+    private Task<string> EnseignantTokenAsync() => TokenAsync(AuthApiFactory.EnseignantEmail, AuthApiFactory.EnseignantPassword);
 
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, string token, object? body = null)
     {
@@ -263,6 +264,34 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
         var bytes = await pdfResponse.Content.ReadAsByteArrayAsync();
         Encoding.ASCII.GetString(bytes, 0, 5).Should().Be("%PDF-", "l'en-tête magique d'un PDF");
+    }
+
+    [Fact]
+    public async Task Listing_Payments_Is_Reserved_To_Directeur_And_Finance()
+    {
+        // GET /finance/payments expose montants, méthodes et élèves pour toute l'école — pas un reçu
+        // individuel où le tenant vient du JWT. Un Enseignant ne doit pas pouvoir la parcourir.
+        var enseignant = await EnseignantTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Get, "/api/v1/finance/payments", enseignant);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Finance_Can_List_Payments()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+
+        var pay = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
+            PaymentBody(enrollment.EnrollmentId, 30_000m));
+        pay.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var response = await SendAsync(HttpMethod.Get, "/api/v1/finance/payments", finance);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

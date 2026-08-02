@@ -200,9 +200,16 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     public async Task<IActionResult> StudentBalance(Guid studentId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetStudentBalanceQuery(studentId), cancellationToken));
 
-    /// <summary>Liste paginée et filtrée des encaissements de l'établissement (GET /finance/payments).</summary>
+    /// <summary>
+    /// Liste paginée et filtrée des encaissements de l'établissement (GET /finance/payments). Réservé
+    /// à Directeur et Finance, comme Dashboard/TreasuryDashboard : contrairement à un reçu individuel
+    /// (StudentBalance/PaymentReceipt, dont le tenant vient du JWT et qui ne révèle qu'un paiement
+    /// précis), cette liste expose tous les encaissements de l'école — montants, méthodes, élèves.
+    /// </summary>
     [HttpGet("payments")]
+    [Authorize(Roles = "Directeur,Finance")]
     [ProducesResponseType<PaginatedPayments>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListPayments(
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null,
         [FromQuery] string? method = null, [FromQuery] Guid? classroomId = null,
