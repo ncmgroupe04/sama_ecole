@@ -198,6 +198,12 @@ quotidien, aucune raison pour que les locaux physiques suivent une règle diffé
 | Annulation | ✔ | ✔ | ✖ |
 | Impression | ✔ | ✔ | ✔ |
 
+La lecture des documents (reçu d'inscription, certificat de scolarité, exeat) est en réalité ouverte à
+tout rôle authentifié de l'école, Enseignant compris : l'établissement d'appartenance vient du JWT, un
+document d'une autre école reste introuvable (404 — `EnrollmentsController.Receipt`/`Certificate`/`Exeat`,
+commentaire « lecture ouverte comme le certificat de scolarité »). Seule l'ÉCRITURE (nouvelle inscription,
+réinscription, annulation) reste réservée à Directeur et Secrétariat (`EnrollmentWriters`).
+
 **Finance**
 
 | Action | Directeur | Finance |
@@ -213,16 +219,27 @@ délégation « configurer le barème » avec l'ajustement classe par classe dé
 façonnent le même objet, jamais une inscription déjà passée (`FinanceController`, `CanModifyFeesHandler`).
 Fermé par défaut sur chaque établissement : le Directeur doit l'activer explicitement dans Paramètres.
 
+La consultation d'un reçu individuel (`GET /finance/payments/{id}/receipt`) et du solde d'un élève
+(`GET /finance/students/{id}/balance`) est, à l'inverse, une lecture ouverte à tout rôle de l'école (même
+logique que les documents d'inscription ci-dessus) : l'écran caisse doit pouvoir afficher ces informations
+à un Secrétariat ou un Enseignant qui oriente un parent, sans pour autant donner accès à la liste globale
+des encaissements (`GET /finance/payments`, restreinte à Directeur et Finance, `FinanceController.ListPayments`)
+ni au tableau de bord financier agrégé.
+
 **Notes**
 
-| Action | Directeur | Enseignant |
-|---|---|---|
-| Voir | ✔ | ✔ |
-| Saisir | ✔ | ✔ |
-| Modifier | ✔ | ✔ * |
-| Valider / Publier | ✔ | ✖ |
+| Action | Directeur | Secrétariat | Enseignant |
+|---|---|---|---|
+| Voir | ✔ | ✔ | ✔ |
+| Saisir | ✔ | ✖ | ✔ |
+| Modifier / Annuler une note déjà saisie | ✔ | ✔ | ✖ |
+| Valider / Publier | ✔ | ✖ | ✖ |
 
-\* Jusqu'à la publication du bulletin, qui verrouille la saisie (Volume 2 §5.2).
+Le Secrétariat peut corriger ou annuler une note déjà enregistrée, au même titre que le Directeur.
+L'Enseignant, y compris auteur de la saisie initiale, ne peut en revanche plus la modifier une fois
+enregistrée — contrôle strict et non révocable, dit modèle « Photoshop » (`GradesController.UpdateGradeRoles`
+= `Directeur,Secretariat`, distinct de `GradesController.GradingRoles` = `Directeur,Enseignant`, réservé à
+la saisie initiale). Une erreur de saisie se corrige donc exclusivement via le Directeur ou le Secrétariat.
 
 **Bulletins**
 
