@@ -203,6 +203,9 @@ public static class DependencyInjection
         // Rapport d'assiduité PDF (ticket JGK-R03) — même moteur QuestPDF, sans état.
         services.AddSingleton<IAttendanceReportPdfGenerator, AttendanceReportPdfGenerator>();
 
+        // Export PDF des élèves (Volume_7_Security.md §15, matrice Élèves) — même moteur QuestPDF, sans état.
+        services.AddSingleton<IStudentsExportPdfGenerator, StudentsExportPdfGenerator>();
+
         // Import/export de la feuille de notes au format Excel large (ClosedXML, Volume_2_SDS.md
         // « bibliothèques »). Sans état : un singleton suffit, comme les générateurs de documents ci-dessus.
         services.AddSingleton<IGradeSheetImportParser, GradeSheetImportParser>();

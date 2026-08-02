@@ -7,6 +7,7 @@ using SamaEcole.Application.Students.Commands.UpdateStudent;
 using SamaEcole.Application.Students.Queries.GetStudentDetail;
 using SamaEcole.Application.Students.Queries.GetStudentImportTemplate;
 using SamaEcole.Application.Students.Queries.GetStudents;
+using SamaEcole.Application.Students.Queries.GetStudentsExportPdf;
 using FluentValidation.Results;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -46,6 +47,10 @@ public class StudentsController(ISender mediator) : ControllerBase
 
     private const string ManageRoles = "Directeur,Secretariat";
 
+    /// <summary>Export PDF (docs/Volume_7_Security.md §15, matrice Élèves) : ni Finance ni Enseignant
+    /// n'administre la fiche élève, mais Finance en a besoin pour ses propres listes de recouvrement.</summary>
+    private const string ExportRoles = "Directeur,Secretariat,Finance";
+
     /// <summary>
     /// La requête est liée depuis la chaîne de requête. Elle ne porte PAS de SchoolId : l'école est
     /// lue dans le JWT (AGENTS.md règle #10) — l'accepter du client permettrait de lire les élèves
@@ -67,6 +72,28 @@ public class StudentsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDetail(Guid id, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetStudentDetailQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Liste tabulaire des élèves en PDF, filtrable par classe et par année active — même périmètre
+    /// que <see cref="List"/>, sans pagination. Réservé à Directeur/Secrétariat/Finance
+    /// (docs/Volume_7_Security.md §15), à l'exclusion de l'Enseignant.
+    /// </summary>
+    [HttpGet("export/pdf")]
+    [Authorize(Roles = ExportRoles)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ExportPdf(
+        [FromQuery] Guid? classroomId, [FromQuery] bool activeYearOnly, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetStudentsExportPdfQuery { ClassroomId = classroomId, ActiveYearOnly = activeYearOnly },
+            cancellationToken);
+
+        Response.Headers["Content-Disposition"] =
+            $"inline; filename=\"Eleves_{DateTime.UtcNow:yyyy-MM-dd}.pdf\"";
+        return File(result.Content, "application/pdf");
+    }
 
     [HttpPost]
     [Authorize(Roles = ManageRoles)]
