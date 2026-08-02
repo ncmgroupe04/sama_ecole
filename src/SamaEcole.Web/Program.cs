@@ -360,8 +360,9 @@ if (app.Environment.IsDevelopment())
     // Semer exige le rôle PROPRIÉTAIRE : `users` est sous RLS, et le rôle applicatif n'y accède que
     // par les fonctions du chemin de login (migration AddAuthentication). Sans chaîne « Migrations »
     // configurée, on ne sème pas — c'est le cas des tests fonctionnels, qui sèment leur propre jeu.
-    var ownerConnectionString = builder.Configuration.GetConnectionString("Migrations");
-
+    var ownerConnectionString = builder.Configuration["DATABASE_OWNER_CONNECTION_STRING"] 
+    ?? builder.Configuration.GetConnectionString("Migrations") 
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
     if (!string.IsNullOrWhiteSpace(ownerConnectionString))
     {
         using var scope = app.Services.CreateScope();

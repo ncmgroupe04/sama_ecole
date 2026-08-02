@@ -90,7 +90,7 @@ public class ModalShellTagHelper : TagHelper
                         </div>
                         {(subtitle is null ? "" : $"""<div class="mt-1 text-sm text-indigo-200">{subtitle}</div>""")}
                     </div>
-                    <div class="relative flex-1 overflow-y-auto px-4 py-6 sm:px-6">
+                    <div class="relative flex-1 overflow-y-auto min-h-0 px-4 py-6 sm:px-6">
                         {body}
                     </div>
                 </div>
