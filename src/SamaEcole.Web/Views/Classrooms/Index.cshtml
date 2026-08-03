@@ -139,7 +139,7 @@
        <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
          <span aria-hidden="true" class="w-2 h-2 rounded-full bg-primary-400 shrink-0"></span>
-         <span class="font-semibold text-slate-800 truncate" x-text="displayName(classroom.name, cycle.level)" :title="classroom.name"></span>
+         <a :href="`/eleves?classroomId=${classroom.id}`" class="font-semibold text-slate-800 truncate hover:text-primary-600 transition-colors" x-text="displayName(classroom.name, cycle.level)" :title="'Voir les élèves de ' + classroom.name"></a>
         </div>
 
         @* Jauge de remplissage *@
@@ -159,8 +159,10 @@
        @* Actions (toujours visibles pour accès direct) *@
        <template x-if="canManage">
         <div class="shrink-0 flex items-center gap-1">
-         <button type="button" @@click="downloadSchoolCards(classroom)" title="Cartes scolaires" aria-label="Télécharger les cartes scolaires"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+         <button type="button" @@click="classroom.studentCount > 0 ? downloadSchoolCards(classroom) : null" :title="!classroom.studentCount ? 'Aucun élève dans cette classe' : 'Cartes scolaires'" aria-label="Télécharger les cartes scolaires"
+          :disabled="!classroom.studentCount"
+          :class="!classroom.studentCount ? 'opacity-30 cursor-not-allowed' : 'hover:text-blue-600 hover:bg-blue-50'"
+          class="p-1.5 rounded-lg text-slate-400 transition-colors">
           <icon name="payment" class="w-4 h-4" />
          </button>
          <button type="button" @@click="openEdit(classroom)" title="Modifier" aria-label="Modifier la classe"
@@ -207,7 +209,7 @@
        <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2">
          <span aria-hidden="true" class="w-2 h-2 rounded-full bg-primary-400"></span>
-         <span class="font-semibold text-slate-800" x-text="displayName(classroom.name, group.level)" :title="classroom.name"></span>
+         <a :href="`/eleves?classroomId=${classroom.id}`" class="font-semibold text-slate-800 hover:text-primary-600 transition-colors" x-text="displayName(classroom.name, group.level)" :title="'Voir les élèves de ' + classroom.name"></a>
         </div>
         <div class="mt-1.5 flex items-center gap-2">
          <div class="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -223,8 +225,10 @@
        </div>
        <template x-if="canManage">
         <div class="shrink-0 flex items-center gap-1">
-         <button type="button" @@click="downloadSchoolCards(classroom)" title="Cartes scolaires" aria-label="Télécharger les cartes scolaires"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+         <button type="button" @@click="classroom.studentCount > 0 ? downloadSchoolCards(classroom) : null" :title="!classroom.studentCount ? 'Aucun élève dans cette classe' : 'Cartes scolaires'" aria-label="Télécharger les cartes scolaires"
+          :disabled="!classroom.studentCount"
+          :class="!classroom.studentCount ? 'opacity-30 cursor-not-allowed' : 'hover:text-blue-600 hover:bg-blue-50'"
+          class="p-1.5 rounded-lg text-slate-400 transition-colors">
           <icon name="payment" class="w-4 h-4" />
          </button>
          <button type="button" @@click="openEdit(classroom)" title="Modifier" aria-label="Modifier la classe"

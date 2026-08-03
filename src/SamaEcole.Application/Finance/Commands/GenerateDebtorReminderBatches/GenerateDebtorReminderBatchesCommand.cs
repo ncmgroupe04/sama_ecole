@@ -4,6 +4,7 @@ using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace SamaEcole.Application.Finance.Commands.GenerateDebtorReminderBatches;
 
@@ -22,7 +23,8 @@ public record GenerateDebtorReminderBatchesCommand : IRequest<int>;
 public class GenerateDebtorReminderBatchesCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ILogger<GenerateDebtorReminderBatchesCommandHandler> logger)
     : IRequestHandler<GenerateDebtorReminderBatchesCommand, int>
 {
     public async Task<int> Handle(GenerateDebtorReminderBatchesCommand request, CancellationToken cancellationToken)
@@ -34,8 +36,30 @@ public class GenerateDebtorReminderBatchesCommandHandler(
         // aucun brouillon n'est généré tant que le Directeur n'a pas explicitement activé les relances
         // SMS — générer des lots qu'aucune école n'a demandés serait un travail inutile et confus.
         var settings = await dbContext.SchoolSettings.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        if (settings is null || !settings.SmsOnDuesReminder)
+        if (settings is null)
         {
+            // Distinct d'un opt-out délibéré (SmsOnDuesReminder = false, cas normal ci-dessous) :
+            // une école sans aucune ligne SchoolSettings n'a jamais été paramétrée — un signal utile
+            // pour repérer un établissement mal provisionné, invisible tant que ce tour ne fait que
+            // rendre 0 silencieusement (DebtorAgingHostedService.cs).
+            logger.LogWarning(
+                "Calcul des lots de relance ignoré pour l'établissement {SchoolId} : aucun paramétrage (SchoolSettings) configuré.",
+                schoolId);
+            return 0;
+        }
+
+        if (!settings.SmsOnDuesReminder)
+        {
+            return 0;
+        }
+
+        var hasActiveSchoolYear = await dbContext.SchoolYears.AsNoTracking()
+            .AnyAsync(y => y.IsActive, cancellationToken);
+        if (!hasActiveSchoolYear)
+        {
+            logger.LogWarning(
+                "Calcul des lots de relance ignoré pour l'établissement {SchoolId} : aucune année scolaire active.",
+                schoolId);
             return 0;
         }
 

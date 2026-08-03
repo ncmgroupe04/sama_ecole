@@ -28,16 +28,18 @@ public class GetSchoolCardsPdfQueryHandler(
             .FirstOrDefaultAsync(y => y.Id == request.SchoolYearId && y.SchoolId == schoolId, cancellationToken)
             ?? throw new KeyNotFoundException($"SchoolYear {request.SchoolYearId} not found");
 
-        var students = await (from e in dbContext.Enrollments.AsNoTracking()
-                              join s in dbContext.Students.AsNoTracking() on e.StudentId equals s.Id
-                              where e.ClassroomId == request.ClassroomId 
-                                    && e.SchoolYearId == request.SchoolYearId 
-                                    && e.SchoolId == schoolId
-                              orderby s.FullName
-                              select s).ToListAsync(cancellationToken);
+        // Même convention que GetStudentsExportPdf/GetClassGrades/Attendance/ReportCards : la classe
+        // courante d'un élève est Student.ClassroomId, pas une jointure sur Enrollments — sinon un
+        // élève réaffecté de classe après son inscription initiale (UpdateStudent ne touche que
+        // Student.ClassroomId, jamais l'Enrollment de l'année) disparaît à tort de ses propres cartes
+        // scolaires alors qu'il apparaît bien dans l'effectif affiché par GetClassroomsQuery.
+        var students = await dbContext.Students.AsNoTracking()
+            .Where(s => s.ClassroomId == request.ClassroomId)
+            .OrderBy(s => s.FullName)
+            .ToListAsync(cancellationToken);
 
         if (students.Count == 0)
-            throw new ValidationException([new FluentValidation.Results.ValidationFailure("ClassroomId", "Aucun élève inscrit dans cette classe pour l'année scolaire spécifiée.")]);
+            throw new ValidationException([new FluentValidation.Results.ValidationFailure("ClassroomId", "Aucun élève inscrit dans cette classe.")]);
 
         var cards = students.Select(student =>
         {

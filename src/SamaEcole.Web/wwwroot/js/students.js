@@ -151,6 +151,10 @@ document.addEventListener('alpine:init', () => {
 
         // Initialisation
         init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('classroomId')) {
+                this.classroomFilter = urlParams.get('classroomId');
+            }
             this.loadClassrooms();
             this.loadStudents();
         },

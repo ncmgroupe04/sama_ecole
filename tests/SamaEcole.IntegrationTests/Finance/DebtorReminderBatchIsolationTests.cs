@@ -135,7 +135,8 @@ public class DebtorReminderBatchIsolationTests : IAsyncLifetime
     {
         await using var context = _db.NewAppContext(schoolId);
         var handler = new GenerateDebtorReminderBatchesCommandHandler(
-            context, new FixedTenantProvider(schoolId), TimeProvider.System);
+            context, new FixedTenantProvider(schoolId), TimeProvider.System,
+            NullLogger<GenerateDebtorReminderBatchesCommandHandler>.Instance);
 
         return await handler.Handle(new GenerateDebtorReminderBatchesCommand(), CancellationToken.None);
     }

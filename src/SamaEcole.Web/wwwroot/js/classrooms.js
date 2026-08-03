@@ -351,7 +351,7 @@ document.addEventListener('alpine:init', () => {
         async downloadSchoolCards(classroom) {
             try {
                 const response = await fetch(`/api/v1/classrooms/${classroom.id}/school-cards`, {
-                    headers: { 'Authorization': `Bearer ${window.auth.getToken()}` }
+                    headers: { 'Authorization': `Bearer ${window.auth.accessToken}` }
                 });
                 
                 if (!response.ok) {
