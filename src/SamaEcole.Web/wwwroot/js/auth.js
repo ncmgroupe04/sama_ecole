@@ -392,14 +392,31 @@ document.addEventListener('alpine:init', () => {
     }));
 
     /**
-     * Indicateur réseau de la barre d'état (Volume 5 §9). navigator.onLine ne prouve pas qu'Internet
-     * répond — seulement que l'interface réseau est active — mais il détecte le cas qui compte ici :
-     * la coupure franche, fréquente sur une connexion mobile sénégalaise.
+     * Indicateur réseau de la barre d'état (Volume 5 §9).
+     *
+     * Il s'aligne sur window.networkGuard plutôt que d'écouter `online`/`offline` pour son compte :
+     * ces événements ne reflètent que l'état de l'interface réseau, tandis que le guard confirme par
+     * une sonde que le SERVEUR répond. Deux voyants de la même page qui mesurent deux choses
+     * différentes finissent par se contredire à l'écran — pastille verte en bas, badge orange en
+     * haut — et c'est le voyant optimiste que l'utilisateur croit.
+     *
+     * networkGuard est chargé après auth.js, mais `alpine:init` ne se déclenche qu'une fois tous les
+     * scripts classiques exécutés : il est donc toujours présent ici. Le repli sur navigator.onLine
+     * ne sert qu'aux gabarits qui n'incluraient pas network-guard.js.
      */
     Alpine.data('networkStatus', () => ({
-        online: navigator.onLine,
+        online: window.networkGuard ? window.networkGuard.isOnline : navigator.onLine,
 
         init() {
+            if (window.networkGuard) {
+                // 'checking' est transitoire : y réagir ferait virer la pastille au rouge à chaque
+                // vérification de routine, alors que rien n'est encore établi.
+                window.networkGuard.onChange((online, state) => {
+                    if (state !== 'checking') this.online = online;
+                });
+                return;
+            }
+
             window.addEventListener('online', () => { this.online = true; });
             window.addEventListener('offline', () => { this.online = false; });
         }

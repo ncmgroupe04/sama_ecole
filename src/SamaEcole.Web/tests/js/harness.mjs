@@ -1,0 +1,127 @@
+/**
+ * Bac à sable minimal pour tester les scripts de wwwroot/js sous `node --test`.
+ *
+ * Ces fichiers sont des scripts CLASSIQUES qui s'attachent à `window` (pas des modules ES) : ils ne
+ * peuvent pas être importés. On les évalue donc dans un contexte `node:vm` où l'on injecte des
+ * doublures de `window`, `document`, `navigator`, `localStorage` et `fetch`, ce qui permet de piloter
+ * exactement les scénarios qui comptent — coupure réseau en plein envoi, serveur injoignable alors
+ * que l'interface réseau est active, brouillon expiré — sans navigateur ni dépendance npm.
+ *
+ * Volontairement sans Alpine : les composants déclarés via Alpine.data() sont de simples fabriques
+ * d'objets, qu'on instancie directement. On teste leur logique, pas le moteur de réactivité.
+ */
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import vm from 'node:vm';
+
+const JS_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'wwwroot', 'js');
+
+function createLocalStorage() {
+    const store = new Map();
+    return {
+        get length() { return store.size; },
+        key(index) { return Array.from(store.keys())[index] ?? null; },
+        getItem(key) { return store.has(key) ? store.get(key) : null; },
+        setItem(key, value) { store.set(String(key), String(value)); },
+        removeItem(key) { store.delete(String(key)); },
+        clear() { store.clear(); }
+    };
+}
+
+function createEventTarget() {
+    const listeners = new Map();
+    return {
+        addEventListener(type, cb) {
+            if (!listeners.has(type)) listeners.set(type, []);
+            listeners.get(type).push(cb);
+        },
+        dispatchEvent(event) {
+            (listeners.get(event.type) || []).forEach((cb) => cb(event));
+            return true;
+        },
+        /** Déclenche un événement par son nom, pour les tests. */
+        emit(type, detail) {
+            this.dispatchEvent({ type, detail });
+        }
+    };
+}
+
+/**
+ * Charge un ou plusieurs scripts de wwwroot/js dans un contexte isolé.
+ *
+ * @param {string[]} files      noms de fichiers, dans l'ordre de chargement du _Layout
+ * @param {object}   options
+ * @param {boolean}  options.onLine   valeur initiale de navigator.onLine
+ * @param {Function} options.fetch    doublure de fetch
+ * @param {object}   options.preload  propriétés posées sur `window` AVANT l'évaluation (ex. auth)
+ */
+export function loadScripts(files, options = {}) {
+    const windowTarget = createEventTarget();
+    const documentTarget = createEventTarget();
+    const alpineComponents = new Map();
+
+    const win = Object.assign(windowTarget, {
+        location: { protocol: 'https:', hostname: 'localhost', pathname: '/' },
+        ...(options.preload || {})
+    });
+
+    const sandbox = {
+        window: win,
+        document: documentTarget,
+        navigator: { onLine: options.onLine !== false },
+        localStorage: createLocalStorage(),
+        fetch: options.fetch || (async () => ({ ok: true, status: 200, json: async () => ({}) })),
+        Alpine: { data: (name, factory) => alpineComponents.set(name, factory) },
+        console: { log() {}, warn() {}, error() {}, debug() {} },
+        setTimeout,
+        clearTimeout,
+        CustomEvent,
+        AbortController,
+        FormData
+    };
+
+    sandbox.globalThis = sandbox;
+    vm.createContext(sandbox);
+
+    files.forEach((file) => {
+        const fullPath = path.join(JS_DIR, file);
+        vm.runInContext(readFileSync(fullPath, 'utf8'), sandbox, { filename: fullPath });
+    });
+
+    return {
+        sandbox,
+        window: win,
+        navigator: sandbox.navigator,
+        localStorage: sandbox.localStorage,
+
+        /** Rejoue l'événement `alpine:init` pour enregistrer les composants Alpine.data(). */
+        initAlpine() {
+            documentTarget.emit('alpine:init');
+            return alpineComponents;
+        },
+
+        /** Instancie un composant Alpine et exécute son init(). */
+        component(name) {
+            if (alpineComponents.size === 0) this.initAlpine();
+            const instance = alpineComponents.get(name)();
+            if (typeof instance.init === 'function') instance.init();
+            return instance;
+        }
+    };
+}
+
+/** Laisse les promesses en attente se résoudre (les reprises utilisent setTimeout). */
+export function flush(ms = 20) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Ramène un objet issu du contexte vm dans le realm du test. `node:vm` donne au bac à sable ses
+ * propres constructeurs : un objet créé là-bas n'a pas le même `Object.prototype` qu'ici, et
+ * `assert.deepStrictEqual` échoue sur la comparaison de prototypes alors que les données sont
+ * identiques — d'où le passage par JSON.
+ */
+export function plain(value) {
+    return JSON.parse(JSON.stringify(value));
+}

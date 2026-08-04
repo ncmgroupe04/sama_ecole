@@ -7,9 +7,20 @@
  * ou de fermeture accidentelle d'onglet, puis à les restaurer à la réouverture.
  */
 window.formDraft = {
-    getStorageKey(key) {
+    /**
+     * Préfixe portant le SchoolId du tenant courant. Il n'y a pas de RLS dans un localStorage : ce
+     * cloisonnement par clé est le SEUL qui existe côté navigateur, et c'est lui qui garantit qu'un
+     * compte multi-établissement (school-switcher.js) ne voit jamais reparaître, dans l'école B, un
+     * brouillon saisi pour l'école A. Ne jamais construire une clé de brouillon autrement (même
+     * principe que ITenantCacheKeyFactory côté serveur — AGENTS.md règle 2).
+     */
+    prefix() {
         const schoolId = window.auth?.schoolId || 'global';
-        return `draft_samaecole_${schoolId}_${key}`;
+        return `draft_samaecole_${schoolId}_`;
+    },
+
+    getStorageKey(key) {
+        return `${this.prefix()}${key}`;
     },
 
     /**
@@ -23,6 +34,7 @@ window.formDraft = {
                 savedAt: new Date().toISOString(),
                 payload: sanitized
             }));
+            this.notifyChange();
         } catch (e) {
             console.warn('Erreur lors de la sauvegarde du brouillon :', e);
         }
@@ -66,6 +78,67 @@ window.formDraft = {
     clear(key) {
         try {
             localStorage.removeItem(this.getStorageKey(key));
+            this.notifyChange();
+        } catch (e) {
+            // Ignorer
+        }
+    },
+
+    /**
+     * Inventaire des brouillons NON EXPIRÉS du tenant courant, alimentant le compteur du badge de
+     * connectivité (network-guard.js). Les clés sont collectées AVANT d'être chargées : `load()`
+     * purge les brouillons de plus de 24 h, et supprimer une entrée en plein parcours indexé de
+     * localStorage décale les index restants, sautant silencieusement une entrée sur deux.
+     */
+    list() {
+        const drafts = [];
+
+        try {
+            const prefix = this.prefix();
+            const storageKeys = [];
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const storageKey = localStorage.key(i);
+                if (storageKey && storageKey.startsWith(prefix)) {
+                    storageKeys.push(storageKey);
+                }
+            }
+
+            storageKeys.forEach((storageKey) => {
+                const key = storageKey.slice(prefix.length);
+                let savedAt = null;
+
+                try {
+                    savedAt = JSON.parse(localStorage.getItem(storageKey) || '{}').savedAt || null;
+                } catch (e) {
+                    // Entrée illisible : load() ci-dessous renverra null, elle sera ignorée.
+                }
+
+                // load() applique l'expiration à 24 h et purge au passage.
+                if (this.load(key) !== null) {
+                    drafts.push({ key, savedAt });
+                }
+            });
+        } catch (e) {
+            return drafts;
+        }
+
+        return drafts;
+    },
+
+    /** Nombre de brouillons conservés sur ce poste pour le tenant courant. */
+    count() {
+        return this.list().length;
+    },
+
+    /**
+     * Signale un changement d'inventaire pour que le badge de la barre supérieure se remette à jour
+     * sans interrogation périodique. `storage` (l'événement natif) ne convient pas : il ne se
+     * déclenche QUE dans les autres onglets, jamais dans celui qui écrit.
+     */
+    notifyChange() {
+        try {
+            window.dispatchEvent(new CustomEvent('samaecole:drafts-changed'));
         } catch (e) {
             // Ignorer
         }

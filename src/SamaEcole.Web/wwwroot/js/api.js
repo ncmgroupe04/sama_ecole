@@ -12,8 +12,20 @@
 // jamais côté serveur au moment du rendu de la page (voir le commentaire de classe du middleware).
 const SUBSCRIPTION_RESTRICTED_PATH = '/abonnement/paiement';
 
+/**
+ * Codes HTTP qui décrivent une indisponibilité PASSAGÈRE de l'infrastructure, pas un refus : un
+ * reverse-proxy qui n'a pas encore de backend prêt (502), un redémarrage applicatif (503), une
+ * requête coupée en amont (504). Un 4xx n'est jamais rejoué — le serveur a compris et a dit non.
+ */
+const TRANSIENT_HTTP_STATUSES = [502, 503, 504];
+
 window.api = {
     baseUrl: '/api/v1',
+
+    // 3 tentatives = 2 reprises, soit ~1,6 s de patience au pire avant de rendre la main. Au-delà,
+    // l'utilisateur croit l'écran figé et recharge la page — ce qui annule le bénéfice.
+    retryMaxAttempts: 3,
+    retryBaseDelayMs: 400,
 
     async request(endpoint, method = 'GET', body = null) {
         // Renouvellement PRÉVENTIF : si l'on sait déjà que le jeton est périmé, inutile de dépenser
@@ -22,14 +34,14 @@ window.api = {
             await this.refreshOrRedirect();
         }
 
-        let response = await this.send(endpoint, method, body);
+        let response = await this.sendWithRetry(endpoint, method, body);
 
         // Filet de sécurité : le jeton a pu être révoqué côté serveur, ou l'horloge du poste être
         // décalée au point que le renouvellement préventif n'ait pas vu venir l'expiration. Une seule
         // reprise — si le second appel échoue encore, insister ne ferait que boucler.
         if (response.status === 401 && window.auth.isAuthenticated()) {
             await this.refreshOrRedirect();
-            response = await this.send(endpoint, method, body);
+            response = await this.sendWithRetry(endpoint, method, body);
         }
 
         if (response.status === 401) {
@@ -52,6 +64,63 @@ window.api = {
 
         if (response.status === 204) return null;
         return await response.json();
+    },
+
+    /**
+     * Reprise automatique des défaillances RÉSEAU passagères — le vrai quotidien d'une connexion
+     * mobile sénégalaise : une requête part pendant un micro-basculement d'antenne et meurt seule,
+     * alors que la suivante, 400 ms plus tard, passe sans problème.
+     *
+     * ┌─ RÈGLE ABSOLUE ────────────────────────────────────────────────────────────────────────┐
+     * │ Seules les LECTURES (GET) sont rejouées. Jamais un POST/PUT/PATCH/DELETE.               │
+     * └────────────────────────────────────────────────────────────────────────────────────────┘
+     *
+     * Un `fetch` qui échoue ne dit PAS si le serveur a traité la requête : la coupure peut être
+     * survenue sur la réponse, la transaction étant déjà validée. Rejouer un POST /payments, c'est
+     * donc encaisser deux fois le même versement ; rejouer une inscription, c'est consommer deux
+     * matricules (AGENTS.md règle 3) pour un seul élève. Aucune reprise automatique ne peut
+     * distinguer ces cas — c'est précisément ce qu'un identifiant d'idempotence serveur résoudrait,
+     * et il n'en existe pas. L'écriture échouée remonte donc telle quelle à l'écran, qui conserve la
+     * saisie (form-draft.js) et laisse l'utilisateur décider de renvoyer.
+     */
+    isRetryable(method) {
+        return String(method).toUpperCase() === 'GET';
+    },
+
+    /** Palier exponentiel + gigue : deux onglets coupés ensemble ne repartent pas à la même seconde. */
+    backoffDelayMs(attempt) {
+        return (this.retryBaseDelayMs * Math.pow(2, attempt - 1)) + Math.floor(Math.random() * 100);
+    },
+
+    delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    },
+
+    async sendWithRetry(endpoint, method, body) {
+        const maxAttempts = this.isRetryable(method) ? this.retryMaxAttempts : 1;
+
+        for (let attempt = 1; ; attempt++) {
+            const isLastAttempt = attempt >= maxAttempts;
+
+            try {
+                const response = await this.send(endpoint, method, body);
+
+                if (!isLastAttempt && TRANSIENT_HTTP_STATUSES.includes(response.status)) {
+                    await this.delay(this.backoffDelayMs(attempt));
+                    continue;
+                }
+
+                return response;
+            } catch (error) {
+                // `navigator.onLine` à false : le poste est franchement déconnecté, insister ne fait
+                // que retarder le message d'erreur que l'utilisateur doit voir tout de suite.
+                if (isLastAttempt || error.code !== 'NETWORK_OFFLINE' || !navigator.onLine) {
+                    throw error;
+                }
+
+                await this.delay(this.backoffDelayMs(attempt));
+            }
+        }
     },
 
     async send(endpoint, method, body) {
