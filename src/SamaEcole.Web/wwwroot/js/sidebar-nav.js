@@ -9,6 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const mainLinks = document.querySelectorAll('.sidebar-link-main');
   const submenus = document.querySelectorAll('[data-submenu]');
 
+  // Chevron (icon name="chevron-down") de chaque bouton d'accordéon — le rendu serveur
+  // (_Layout.cshtml) ne pose la classe rotate-180 qu'à la charge de page, d'après l'URL
+  // courante ; elle ne bougeait plus ensuite au clic, la flèche restait figée pendant que le
+  // sous-menu se dépliait/repliait sous elle. `.sidebar-chevron` la rend adressable ici, quel
+  // que soit son niveau d'imbrication dans le bouton.
+  const chevronOf = link => link.querySelector('.sidebar-chevron');
+
   mainLinks.forEach(link => {
     link.addEventListener('click', () => {
       const targetSubmenu = link.nextElementSibling;
@@ -26,11 +33,26 @@ document.addEventListener('DOMContentLoaded', () => {
         menu.style.maxHeight = '0px';
       });
 
+      // Toutes les flèches repartent à plat, et tous les boutons d'accordéon repassent à
+      // aria-expanded="false" — même remise à zéro que les sous-menus ci-dessus, avant de
+      // rouvrir la seule cible visée (ou aucune, si le clic ferme le menu actif).
+      mainLinks.forEach(mainLink => {
+        const submenu = mainLink.nextElementSibling;
+        if (!submenu || !submenu.hasAttribute('data-submenu')) return;
+        chevronOf(mainLink)?.classList.remove('rotate-180');
+        mainLink.setAttribute('aria-expanded', 'false');
+      });
+
       if (wasOpen) {
         // Bascule vers fermé : rien à rouvrir, juste lever le verrou de transition posé
         // ci-dessus pour que le prochain clic (sur ce menu ou un autre) anime normalement.
         requestAnimationFrame(() => sidebarNav?.classList.remove('is-resetting'));
         return;
+      }
+
+      if (isTargetSubmenu) {
+        chevronOf(link)?.classList.add('rotate-180');
+        link.setAttribute('aria-expanded', 'true');
       }
 
       requestAnimationFrame(() => {

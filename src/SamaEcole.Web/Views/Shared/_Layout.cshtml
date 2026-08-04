@@ -109,14 +109,19 @@
  <span class="text-base font-medium">Tableau de bord</span>
  </a>
 
- <!-- Pôle : Gestion Scolaire -->
- <div class="space-y-1">
+ <!-- Pôle : Gestion Scolaire
+ x-show du bloc parent (texte + icône) = UNION des rôles de tous les sous-menus ci-dessous
+ (Élèves, Inscriptions, Classes, Infrastructures, Matières, Enseignants, Notes, Rapports) :
+ sans cette union, un rôle qui n'a accès à AUCUN sous-menu (le Surveillant, ici) voyait
+ quand même l'en-tête et l'accordéon vides — un pôle de menu sans destination. Si un
+ sous-menu ci-dessous gagne ou perd un rôle, cette liste doit être mise à jour en écho. -->
+ <div class="space-y-1" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" x-cloak>
  <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="book" class="w-6 h-6" />
  <span class="text-base font-medium">Gestion Scolaire</span>
  </div>
- <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200 @(gestionScolaireOpen ? "rotate-180" : "")" />
+ <icon name="chevron-down" class="sidebar-chevron w-4 h-4 transition-transform duration-200 @(gestionScolaireOpen ? "rotate-180" : "")" />
  </button>
  <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(gestionScolaireOpen ? "" : "is-closed")">
  <a href="/eleves" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
@@ -154,14 +159,18 @@
  </div>
  </div>
 
- <!-- Pôle : Surveillance Générale -->
- <div class="space-y-1">
+ <!-- Pôle : Surveillance Générale
+ x-show du bloc parent = UNION des rôles des sous-menus (Appel en classe, Billets, Discipline,
+ Convocations, Pointage Profs) — même raisonnement que Gestion Scolaire ci-dessus. Le Super
+ Admin n'a accès à aucun de ces sous-menus (console plateforme, pas d'établissement) : le
+ pôle lui reste donc masqué, comme au Surveillant pour Gestion Scolaire. -->
+ <div class="space-y-1" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Finance', 'Surveillant'])" x-cloak>
  <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(surveillanceOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="shield" class="w-6 h-6" />
  <span class="text-base font-medium">Surveillance</span>
  </div>
- <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200 @(surveillanceOpen ? "rotate-180" : "")" />
+ <icon name="chevron-down" class="sidebar-chevron w-4 h-4 transition-transform duration-200 @(surveillanceOpen ? "rotate-180" : "")" />
  </button>
  <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(surveillanceOpen ? "" : "is-closed")">
  <a href="/presences" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/presences") ? LinkActive : LinkIdle)">
@@ -187,14 +196,18 @@
  </div>
  </div>
 
- <!-- Pôle : Comptabilité & Finance -->
- <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" class="space-y-1">
+ <!-- Pôle : Comptabilité & Finance
+ x-show déjà aligné sur les rôles des 6 sous-menus (Caisse, Frais, Paie, Fiscalité, Trésorerie,
+ Rapports financiers) : tous réservés à Directeur/Finance côté API (FinanceController), donc
+ aucune union supplémentaire à calculer ici — seul x-cloak manquait, ajouté pour éviter le
+ flash d'affichage avant l'hydratation d'Alpine (même garde que les autres pôles). -->
+ <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" x-cloak class="space-y-1">
  <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="wallet" class="w-6 h-6" />
  <span class="text-base font-medium">Comptabilité</span>
  </div>
- <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200 @(comptabiliteOpen ? "rotate-180" : "")" />
+ <icon name="chevron-down" class="sidebar-chevron w-4 h-4 transition-transform duration-200 @(comptabiliteOpen ? "rotate-180" : "")" />
  </button>
  <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(comptabiliteOpen ? "" : "is-closed")">
  <a href="/caisse" class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
@@ -312,6 +325,29 @@
  <span x-text="currentTime"></span>
  </div>
 
+ @* Badge de CONNECTIVITÉ (Volume 5 §9). Trois états : vert « Connecté », bleu clignotant
+ « Vérification… », orange « Hors ligne ». Le compteur éventuel dénombre des BROUILLONS de
+ formulaire conservés sur le poste (localStorage), PAS des opérations en attente d'envoi : il
+ n'existe aucune file de synchronisation et il n'en existera pas (Volume 0 §0.13, décisions D-01
+ et D-09). Le libellé le dit explicitement — « saisies conservées », jamais « en attente de
+ synchronisation » — pour qu'un caissier ne quitte jamais son poste en croyant qu'un encaissement
+ partira tout seul. Le bouton relance une sonde HEAD vers le serveur : aucun effet de bord, donc
+ ouvert à tous les rôles, contrairement à une resynchronisation qui écrirait des données. *@
+ <div x-data="connectivityBadge()" x-cloak class="hidden sm:flex items-center shrink-0">
+ <span class="inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-l-full text-sm font-medium"
+ :class="badgeClass()" :title="title()">
+ <span aria-hidden="true" class="w-2 h-2 rounded-full shrink-0" :class="dotClass()"></span>
+ <span class="whitespace-nowrap" x-text="label()"></span>
+ </span>
+ <button type="button" x-on:click="recheck()" :disabled="checking()"
+ title="Vérifier la connexion au serveur"
+ aria-label="Vérifier la connexion au serveur"
+ :class="badgeClass()"
+ class="inline-flex items-center px-2 py-1.5 rounded-r-full hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+ <icon name="globe" class="w-4 h-4" />
+ </button>
+ </div>
+
  @* Indicateur d'ANNÉE SCOLAIRE ACTIVE (JGK-C01) : rend visible sur chaque écran l'exercice de
  travail courant, dont dépendent inscriptions, frais, notes et finances (résolu serveur via
  SchoolYear.IsActive, voir activeSchoolYearBadge()). Cliquable pour le seul Directeur — vers
@@ -374,15 +410,20 @@
 
  <!-- Bandeau d'alerte de surveillance réseau et mode déconnecté -->
  <div x-data="networkGuardBanner()" x-cloak class="shrink-0 z-40">
- <!-- Bandeau Hors-Ligne -->
- <div x-show="!online" class="bg-amber-500 text-slate-950 text-xs sm:text-sm font-semibold px-6 py-2.5 flex items-center justify-center gap-3 text-center shadow-inner transition-all">
+ @* Le texte de ce bandeau annonçait « sauvegardés localement […] seront synchronisés au
+ rétablissement d'Internet ». C'était faux, et faux du côté dangereux : aucune file de
+ synchronisation n'existe (Volume 0 §0.13, D-01/D-09), donc rien ne « repart » tout seul.
+ Une caissière lisant cette phrase pouvait fermer sa session en croyant l'encaissement
+ acquis. Le message dit maintenant ce qui est vrai : la saisie est retenue à l'écran, et
+ c'est l'utilisateur qui devra la valider une fois la connexion revenue. *@
+ <div x-show="offline" class="bg-warning text-white text-xs sm:text-sm font-semibold px-6 py-2.5 flex items-center justify-center gap-3 text-center shadow-inner transition-all">
  <icon name="alert-circle" class="w-4 h-4 shrink-0" />
- <span>📡 Mode hors connexion : Les formulaires en cours (Caisse, Inscriptions) sont sauvegardés localement. Ils seront synchronisés au rétablissement d'Internet.</span>
+ <span>📡 Connexion perdue : aucun enregistrement n'est possible pour le moment. Votre saisie en cours reste à l'écran — validez-la à nouveau dès le retour du réseau.</span>
  </div>
  <!-- Toast de Reconnexion -->
- <div x-show="showReconnectedToast" class="bg-emerald-600 text-white text-xs sm:text-sm font-semibold px-6 py-2.5 flex items-center justify-center gap-3 text-center shadow-inner transition-all">
+ <div x-show="showReconnectedToast" class="bg-success text-white text-xs sm:text-sm font-semibold px-6 py-2.5 flex items-center justify-center gap-3 text-center shadow-inner transition-all">
  <icon name="checkmark-circle" class="w-4 h-4 shrink-0" />
- <span>🌐 Connexion rétablie ! Vous pouvez à nouveau valider et synchroniser vos saisies en toute sécurité.</span>
+ <span>🌐 Connexion rétablie. Vous pouvez de nouveau valider vos saisies : pensez à renvoyer un formulaire resté en attente.</span>
  </div>
  </div>
 
