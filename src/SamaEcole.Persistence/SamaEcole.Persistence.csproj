@@ -14,6 +14,13 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- Lues UNIQUEMENT par DesignTimeDbContextFactory (outillage `dotnet ef`), pour que les migrations
+         résolvent leur chaîne de connexion par la même chaîne de configuration que l'application —
+         appsettings + user-secrets + variables d'environnement — et ne partent plus sur une base
+         codée en dur. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
