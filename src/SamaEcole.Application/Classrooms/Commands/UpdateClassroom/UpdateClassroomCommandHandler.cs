@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
 
-public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext)
+public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext, IKpiCacheService kpiCache)
     : IRequestHandler<UpdateClassroomCommand, ClassroomResult>
 {
     public async Task<ClassroomResult> Handle(UpdateClassroomCommand request, CancellationToken cancellationToken)
@@ -36,6 +36,10 @@ public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext)
         classroom.TargetLevel = ClassroomPromotion.NormalizeTargetLevel(request.IsAccelerated, request.TargetLevel);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Voir DeleteClassroomCommandHandler : le taux d'occupation du dashboard Directeur reste sinon
+        // figé jusqu'à 7 min après un changement de capacité ou de statut passerelle.
+        kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
 
         var newRowVersion = await dbContext.Classrooms.AsNoTracking()
             .Where(c => c.Id == classroom.Id)

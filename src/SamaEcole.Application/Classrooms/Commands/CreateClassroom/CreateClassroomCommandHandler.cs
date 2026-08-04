@@ -6,7 +6,8 @@ namespace SamaEcole.Application.Classrooms.Commands.CreateClassroom;
 
 public class CreateClassroomCommandHandler(
     IApplicationDbContext dbContext,
-    ITenantProvider tenantProvider)
+    ITenantProvider tenantProvider,
+    IKpiCacheService kpiCache)
     : IRequestHandler<CreateClassroomCommand, CreateClassroomResult>
 {
     public async Task<CreateClassroomResult> Handle(CreateClassroomCommand request, CancellationToken cancellationToken)
@@ -39,6 +40,10 @@ public class CreateClassroomCommandHandler(
         // traduit la violation en ConcurrencyConflictException → 409, jamais un écrasement
         // silencieux ni un 500 (AGENTS.md règle #5).
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Voir DeleteClassroomCommandHandler : le taux d'occupation du dashboard Directeur reste sinon
+        // figé jusqu'à 7 min après l'ouverture d'une nouvelle classe.
+        kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
 
         return new CreateClassroomResult(
             classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle,

@@ -7,7 +7,8 @@ namespace SamaEcole.Application.Classrooms.Commands.DeleteClassroom;
 
 public class DeleteClassroomCommandHandler(
     IApplicationDbContext dbContext,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    IKpiCacheService kpiCache)
     : IRequestHandler<DeleteClassroomCommand, Unit>
 {
     public async Task<Unit> Handle(DeleteClassroomCommand request, CancellationToken cancellationToken)
@@ -38,6 +39,11 @@ public class DeleteClassroomCommandHandler(
         classroom.SoftDelete(actorId.ToString());
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Le taux d'occupation du dashboard Directeur (GetDirectorDashboardQueryHandler) compte les
+        // classes actives : sans invalidation il resterait figé jusqu'à 7 min (KpiCacheSettings.TtlMinutes)
+        // après l'archivage d'une classe.
+        kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
 
         return Unit.Value;
     }

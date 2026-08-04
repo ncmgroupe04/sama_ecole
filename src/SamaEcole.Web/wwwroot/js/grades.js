@@ -167,7 +167,15 @@ document.addEventListener('alpine:init', () => {
             }
 
             const value = Number(cell.value);
-            if (Number.isNaN(value) || value === cell.original) return;
+            if (Number.isNaN(value)) {
+                // Saisie non numérique au blur : sans ce retour, la valeur invalide reste affichée
+                // sans jamais être enregistrée — l'enseignant croit la note prise en compte jusqu'au
+                // prochain rechargement de la grille, où elle disparaît silencieusement.
+                cell.status = 'error';
+                cell.error = 'Note invalide : entrez un nombre.';
+                return;
+            }
+            if (value === cell.original) return;
 
             cell.status = 'saving';
             cell.error = null;
