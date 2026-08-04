@@ -22,6 +22,7 @@ public record UpdateTeacherCommand(
     string? Phone,
     DateOnly BirthDate,
     string? BirthPlace,
+    string? Address,
     string? PhotoUrl,
     IReadOnlyList<Guid> SubjectIds,
     uint RowVersion) : IRequest<UpdateTeacherResult>;

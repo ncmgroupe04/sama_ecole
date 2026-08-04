@@ -17,6 +17,10 @@ public record CreateTeacherCommand : IRequest<CreateTeacherResult>
     public required DateOnly BirthDate { get; init; }
 
     public string? BirthPlace { get; init; }
+
+    /// <summary>Adresse de résidence (facultative) — voir <see cref="Domain.Entities.Teacher.Address"/>.</summary>
+    public string? Address { get; init; }
+
     public string? PhotoUrl { get; init; }
 
     /// <summary>Photo téléversée (feature B), déjà compressée côté client, en base64 — voir Teacher.PhotoData.</summary>

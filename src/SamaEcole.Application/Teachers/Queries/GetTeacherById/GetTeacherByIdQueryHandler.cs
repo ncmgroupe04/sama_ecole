@@ -48,6 +48,7 @@ public class GetTeacherByIdQueryHandler(IApplicationDbContext dbContext)
             teacher.Entity.Phone,
             teacher.Entity.BirthDate,
             teacher.Entity.BirthPlace,
+            teacher.Entity.Address,
             teacher.Entity.PhotoUrl,
             PhotoDisplay.ToDisplayUrl(teacher.Entity.PhotoData, teacher.Entity.PhotoUrl),
             teacher.Entity.Status.ToString(),

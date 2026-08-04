@@ -42,6 +42,7 @@ public class UpdateTeacherCommandHandler(IApplicationDbContext dbContext)
         teacher.Phone = request.Phone;
         teacher.BirthDate = request.BirthDate;
         teacher.BirthPlace = request.BirthPlace;
+        teacher.Address = request.Address;
         teacher.PhotoUrl = request.PhotoUrl;
 
         // Réconcilie les qualifications (TeacherSubject) avec la liste soumise : retire celles qui ne

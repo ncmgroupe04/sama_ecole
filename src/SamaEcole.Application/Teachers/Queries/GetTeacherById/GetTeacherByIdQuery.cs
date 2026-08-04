@@ -28,6 +28,7 @@ public record TeacherProfileDto(
     string? Phone,
     DateOnly BirthDate,
     string? BirthPlace,
+    string? Address,
 
     /// <summary>URL externe BRUTE — round-trip fidèle pour l'édition (voir StudentListItem.PhotoUrl).</summary>
     string? PhotoUrl,

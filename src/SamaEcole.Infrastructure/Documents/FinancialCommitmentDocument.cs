@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Finance.Queries.GetFinancialCommitment;
 using SamaEcole.Infrastructure.Documents.Components;
 using QuestPDF.Fluent;
@@ -85,7 +86,7 @@ public class FinancialCommitmentDocument(FinancialCommitmentDto commitment, byte
             text.Span(string.IsNullOrWhiteSpace(commitment.GuardianName) ? "le tuteur / la tutrice" : commitment.GuardianName).Bold();
             if (!string.IsNullOrWhiteSpace(commitment.GuardianPhone))
             {
-                text.Span($" ({commitment.GuardianPhone})");
+                text.Span($" ({PhoneFormatter.FormatSenegal(commitment.GuardianPhone)})");
             }
             text.Span(", responsable légal(e) de l'élève ");
             text.Span(commitment.StudentFullName).Bold();

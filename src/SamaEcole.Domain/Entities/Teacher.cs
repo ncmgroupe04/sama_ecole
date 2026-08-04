@@ -26,6 +26,9 @@ public class Teacher : AuditableEntity, ITenantEntity
 
     public string? BirthPlace { get; set; }
 
+    /// <summary>Adresse de résidence (facultative) — même contrat que <see cref="Student.Address"/>.</summary>
+    public string? Address { get; set; }
+
     /// <summary>URL de la photo d'identité — même contrat que <see cref="Student.PhotoUrl"/>.</summary>
     public string? PhotoUrl { get; set; }
 

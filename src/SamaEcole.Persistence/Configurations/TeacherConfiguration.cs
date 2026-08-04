@@ -28,6 +28,7 @@ public class TeacherConfiguration : IEntityTypeConfiguration<Teacher>
         builder.Property(t => t.FullName).IsRequired().HasMaxLength(200);
         builder.Property(t => t.Email).IsRequired().HasMaxLength(255);
         builder.Property(t => t.BirthPlace).HasMaxLength(200);
+        builder.Property(t => t.Address).HasMaxLength(300);
         builder.Property(t => t.PhotoUrl).HasMaxLength(500);
         builder.Property(t => t.PhotoData);
         builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);

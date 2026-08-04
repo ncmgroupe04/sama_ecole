@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Students;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -68,15 +69,23 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
     {
         container.Table(table =>
         {
+            // Les colonnes à contenu de LARGEUR FIXE (matricule, date, genre, téléphone) sont en
+            // ConstantColumn : leur gabarit ne varie pas d'un élève à l'autre, une largeur relative
+            // les faisait déborder dès que le tableau se resserrait. NoBreakText ne suffit pas —
+            // il neutralise la coupure sur le tiret, pas le repli d'un texte plus large que sa
+            // colonne : « ELEV-2025-0001 » et « 08/08/2008 » repassaient à la ligne (constaté au
+            // rendu, 2026-08-03). L'espace nécessaire est repris sur Classe (« CM2 A », très court).
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(65);    // Matricule
-                columns.RelativeColumn(2.2f);  // Nom complet
-                columns.RelativeColumn(1.3f);  // Classe
-                columns.RelativeColumn(1.0f);  // Naissance
-                columns.RelativeColumn(0.6f);  // Genre
-                columns.RelativeColumn(1.6f);  // Tuteur
-                columns.RelativeColumn(1.3f);  // Téléphone tuteur
+                columns.ConstantColumn(78);     // Matricule — « ELEV‑2025‑0001 » sur une seule ligne
+                columns.RelativeColumn(2.2f);   // Nom complet
+                columns.RelativeColumn(0.75f);  // Classe — codes courts (« CM2 A »), l'en-tête fait la largeur
+                columns.ConstantColumn(62);     // Naissance — « 08/08/2008 » sur une seule ligne
+                columns.ConstantColumn(36);     // Genre — « M »/« F », l'en-tête fait la largeur
+                columns.RelativeColumn(1.8f);   // Tuteur
+                // Dimensionnée sur la forme LONGUE (« +221 77 000 00 00 »), pas sur « 77 000 00 00 » :
+                // une école qui saisit l'indicatif verrait sinon la fin du numéro passer à la ligne.
+                columns.ConstantColumn(88);     // Tél. tuteur
             });
 
             table.Header(header =>
@@ -105,7 +114,7 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
                 table.Cell().Element(BodyCell).AlignCenter().Text(Format(s.BirthDate));
                 table.Cell().Element(BodyCell).AlignCenter().Text(s.Gender);
                 table.Cell().Element(BodyCell).Text(s.GuardianName ?? "—");
-                table.Cell().Element(BodyCell).Text(s.GuardianPhone ?? "—");
+                table.Cell().Element(BodyCell).Text(NoBreakText.NoBreak(PhoneFormatter.FormatSenegalOr(s.GuardianPhone)));
             }
 
             static IContainer HeaderCell(IContainer c) =>

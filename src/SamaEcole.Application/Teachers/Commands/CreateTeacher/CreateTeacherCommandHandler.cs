@@ -85,6 +85,7 @@ public class CreateTeacherCommandHandler(
                 Phone = request.Phone,
                 BirthDate = request.BirthDate,
                 BirthPlace = request.BirthPlace,
+                Address = request.Address,
                 PhotoUrl = request.PhotoUrl,
                 PhotoData = request.PhotoData is null ? null : Convert.FromBase64String(request.PhotoData),
                 UserId = request.UserId

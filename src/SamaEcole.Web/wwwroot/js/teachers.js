@@ -73,7 +73,7 @@ document.addEventListener('alpine:init', () => {
         // Slide-over création
         isCreateOpen: false,
         isSubmitting: false,
-        newTeacher: { fullName: '', email: '', phone: '', birthDate: '', birthPlace: '', photoUrl: '', photoData: '', subjectIds: [], userId: '' },
+        newTeacher: { fullName: '', email: '', phone: '', birthDate: '', birthPlace: '', address: '', photoUrl: '', photoData: '', subjectIds: [], userId: '' },
         createErrors: {},
 
         // Import de masse (corps professoral) : aperçu AVANT écriture — même contrat que students.js.
@@ -309,6 +309,7 @@ document.addEventListener('alpine:init', () => {
                     phone: this.newTeacher.phone || null,
                     birthDate: this.newTeacher.birthDate,
                     birthPlace: this.newTeacher.birthPlace || null,
+                    address: this.newTeacher.address || null,
                     photoUrl: this.newTeacher.photoUrl || null,
                     photoData: this.newTeacher.photoData || null,
                     subjectIds: this.newTeacher.subjectIds,
@@ -363,6 +364,7 @@ document.addEventListener('alpine:init', () => {
                 phone: this.detail.phone || '',
                 birthDate: this.detail.birthDate,
                 birthPlace: this.detail.birthPlace || '',
+                address: this.detail.address || '',
                 photoUrl: this.detail.photoUrl || '', // URL brute, jamais la photo téléversée (round-trip fidèle).
                 photoDisplayUrl: this.detail.photoDisplayUrl || '', // Aperçu <photo-dropzone> uniquement.
                 // La fiche ne renvoie que les NOMS des matières qualifiées (voir TeacherProfileDto) :

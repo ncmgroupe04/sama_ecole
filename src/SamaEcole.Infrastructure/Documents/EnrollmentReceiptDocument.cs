@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Enrollments;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -125,7 +126,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
 
             if (!string.IsNullOrWhiteSpace(receipt.GuardianPhone))
             {
-                InfoRow(column, "Téléphone du tuteur", receipt.GuardianPhone);
+                InfoRow(column, "Téléphone du tuteur", PhoneFormatter.FormatSenegal(receipt.GuardianPhone)!);
             }
 
             InfoRow(column, "Mode de règlement", PaymentMethodLabel(receipt.PaymentMethod));

@@ -41,6 +41,7 @@ public class TeachersController(ISender mediator) : ControllerBase
         string? Phone,
         DateOnly BirthDate,
         string? BirthPlace,
+        string? Address,
         string? PhotoUrl,
         IReadOnlyList<Guid> SubjectIds,
         uint RowVersion);
@@ -165,7 +166,7 @@ public class TeachersController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(
             new UpdateTeacherCommand(
                 id, request.FullName, request.Email, request.Phone, request.BirthDate, request.BirthPlace,
-                request.PhotoUrl, request.SubjectIds, request.RowVersion),
+                request.Address, request.PhotoUrl, request.SubjectIds, request.RowVersion),
             cancellationToken));
 
     /// <summary>

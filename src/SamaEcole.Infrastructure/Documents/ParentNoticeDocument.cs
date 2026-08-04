@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.VieScolaire.Queries.GetParentNotice;
 using SamaEcole.Infrastructure.Documents.Components;
 using QuestPDF.Fluent;
@@ -57,7 +58,7 @@ public class ParentNoticeDocument(ParentNoticeDto notice, byte[]? logo, byte[] q
             text.Span(string.IsNullOrWhiteSpace(notice.GuardianName) ? "Parent / Tuteur" : notice.GuardianName);
             if (!string.IsNullOrWhiteSpace(notice.GuardianPhone))
             {
-                text.Span($" ({notice.GuardianPhone})");
+                text.Span($" ({PhoneFormatter.FormatSenegal(notice.GuardianPhone)})");
             }
         });
     }

@@ -110,7 +110,7 @@
  </div>
  </div>
  </td>
- <td class="py-3 px-4 text-slate-500" x-text="teacher.phone || '—'"></td>
+ <td class="py-3 px-4 text-slate-500" x-text="$phone(teacher.phone)"></td>
  <td class="py-3 px-4">
  <div class="flex flex-wrap gap-1">
  <template x-for="s in teacher.subjects" :key="s">
@@ -159,7 +159,7 @@
  </div>
  <div>
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Téléphone</dt>
- <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.phone || '—'"></dd>
+ <dd class="mt-1 text-base font-medium text-slate-900" x-text="$phone(detail.phone)"></dd>
  </div>
  <div>
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date de naissance</dt>
@@ -168,6 +168,10 @@
  <div>
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lieu de naissance</dt>
  <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.birthPlace || '—'"></dd>
+ </div>
+ <div>
+ <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Adresse de résidence</dt>
+ <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.address || '—'"></dd>
  </div>
  <div>
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Statut</dt>
@@ -289,6 +293,12 @@
  </div>
 
  <div>
+ <label class="block text-sm font-medium text-slate-700">Adresse de résidence</label>
+ <input type="text" x-model="editingTeacher.address" maxlength="300" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="teacherEditErrors.address" x-text="teacherEditErrors.address" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div>
  <label class="block text-sm font-medium text-slate-700">Photo</label>
  <photo-dropzone preview="editingTeacher.photoDisplayUrl"
  on-change="uploadTeacherPhoto(photoBase64)" />
@@ -394,6 +404,12 @@
  <label class="block text-sm font-medium text-slate-700">Lieu de naissance</label>
  <input type="text" x-model="newTeacher.birthPlace" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
  <p x-show="createErrors.birthplace" x-text="createErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+ </div>
+
+ <div>
+ <label class="block text-sm font-medium text-slate-700">Adresse de résidence</label>
+ <input type="text" x-model="newTeacher.address" maxlength="300" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <p x-show="createErrors.address" x-text="createErrors.address" class="mt-1 text-xs text-danger"></p>
  </div>
 
  <div>

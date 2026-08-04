@@ -15,6 +15,7 @@ public class CreateTeacherCommandValidator : AbstractValidator<CreateTeacherComm
         RuleFor(x => x.Phone).MaximumLength(30).NoHtml().MustBeValidSenegalPhone();
         RuleFor(x => x.BirthDate).LessThan(DateOnly.FromDateTime(DateTime.UtcNow));
         RuleFor(x => x.BirthPlace).MaximumLength(200).NoHtml();
+        RuleFor(x => x.Address).MaximumLength(300).NoHtml();
 
         // Même contrat que LogoUrl / Student.PhotoUrl : une adresse http(s), jamais un file:// ou
         // javascript: — la photo n'est jamais téléversée, seulement référencée par URL.

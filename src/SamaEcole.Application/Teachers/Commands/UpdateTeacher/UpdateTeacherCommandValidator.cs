@@ -15,6 +15,7 @@ public class UpdateTeacherCommandValidator : AbstractValidator<UpdateTeacherComm
         RuleFor(x => x.Phone).MaximumLength(30).NoHtml().MustBeValidSenegalPhone();
         RuleFor(x => x.BirthDate).LessThan(DateOnly.FromDateTime(DateTime.UtcNow));
         RuleFor(x => x.BirthPlace).MaximumLength(200).NoHtml();
+        RuleFor(x => x.Address).MaximumLength(300).NoHtml();
 
         RuleFor(x => x.PhotoUrl)
             .MaximumLength(500).WithMessage("L'URL de la photo ne peut pas dépasser 500 caractères.")

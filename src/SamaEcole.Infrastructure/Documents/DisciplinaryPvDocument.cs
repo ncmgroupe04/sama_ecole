@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Discipline.Queries.GetDisciplinaryPv;
 using SamaEcole.Infrastructure.Documents.Components;
 using QuestPDF.Fluent;
@@ -102,7 +103,7 @@ public class DisciplinaryPvDocument(
                 text.Span(pv.GuardianName).FontColor(Colors.Black).SemiBold();
                 if (!string.IsNullOrWhiteSpace(pv.GuardianPhone))
                 {
-                    text.Span($" ({pv.GuardianPhone})");
+                    text.Span($" ({PhoneFormatter.FormatSenegal(pv.GuardianPhone)})");
                 }
                 text.Span(".");
             }

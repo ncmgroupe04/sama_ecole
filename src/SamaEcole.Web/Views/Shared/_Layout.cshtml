@@ -19,6 +19,9 @@
  @* Sélecteur d'établissement (groupe scolaire) — dépend d'auth.js et api.js. *@
  <script src="~/js/school-switcher.js" asp-append-version="true"></script>
  <script src="~/js/ui-components.js" asp-append-version="true"></script>
+ @* Formatage d'affichage partagé (magic Alpine $phone) — script classique, donc exécuté avant
+ Alpine (différé) : l'écouteur alpine:init est enregistré à temps. *@
+ <script src="~/js/formatters.js" asp-append-version="true"></script>
  <script src="~/js/form-draft.js" asp-append-version="true"></script>
  <script src="~/js/network-guard.js" asp-append-version="true"></script>
  @* Moteur d'aperçu PDF partagé (window.pdfPreview) — doit exister avant que les Alpine.data()

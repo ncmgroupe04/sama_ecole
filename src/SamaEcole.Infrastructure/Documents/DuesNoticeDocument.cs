@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Finance.Queries.GetDuesNotice;
 using SamaEcole.Infrastructure.Documents.Components;
 using QuestPDF.Fluent;
@@ -86,7 +87,7 @@ public class DuesNoticeDocument(DuesNoticeDto notice, byte[]? logo, byte[] qrCod
             text.Span(string.IsNullOrWhiteSpace(notice.GuardianName) ? "Tuteur / Responsable légal" : notice.GuardianName);
             if (!string.IsNullOrWhiteSpace(notice.GuardianPhone))
             {
-                text.Span($" ({notice.GuardianPhone})");
+                text.Span($" ({PhoneFormatter.FormatSenegal(notice.GuardianPhone)})");
             }
         });
     }

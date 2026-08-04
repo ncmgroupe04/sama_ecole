@@ -33,8 +33,8 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
 
     /// <summary>Miroir de GetTeacherByIdQuery.TeacherProfileDto — seuls les champs utiles aux tests d'Update/Delete.</summary>
     private record TeacherProfileDto(
-        Guid Id, string FullName, string Email, string? Phone, DateOnly BirthDate, string? BirthPlace, string? PhotoUrl,
-        string Status, List<string> Subjects, uint RowVersion);
+        Guid Id, string FullName, string Email, string? Phone, DateOnly BirthDate, string? BirthPlace, string? Address,
+        string? PhotoUrl, string Status, List<string> Subjects, uint RowVersion);
 
     private record TeacherUpdateResult(Guid Id, uint RowVersion);
 
@@ -292,6 +292,50 @@ public class TeachersEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     }
 
     // ---------------------------------------------------------------- PUT /teachers/{id}
+
+    /// <summary>
+    /// Aller-retour COMPLET de l'adresse de résidence : POST puis GET, PUT puis GET. Un test qui se
+    /// contenterait du 201/200 ne prouverait rien — TeachersController recompose la commande champ par
+    /// champ depuis UpdateTeacherRequest, et un champ oublié dans ce mappage se perd en silence, sans
+    /// erreur ni test rouge (c'est exactement ce qui était arrivé à SchoolSettingsController).
+    /// </summary>
+    [Fact]
+    public async Task A_Teacher_Address_Should_Survive_Creation_And_Update()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var subjectId = await CreateSubjectAsync(directeur, "Histoire");
+
+        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
+        {
+            fullName = "Awa Ndour",
+            email = "awa.ndour@sama-ecole.sn",
+            birthDate = "1990-02-20",
+            address = "Rue 12, Médina, Dakar",
+            subjectIds = new[] { subjectId }
+        });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = (await createResponse.Content.ReadFromJsonAsync<TeacherResult>())!;
+
+        var afterCreate = await FetchTeacherAsync(directeur, created.Id);
+        afterCreate.Address.Should().Be("Rue 12, Médina, Dakar");
+
+        var updateResponse = await SendAsync(HttpMethod.Put, $"/api/v1/teachers/{created.Id}", directeur, new
+        {
+            fullName = "Awa Ndour",
+            email = "awa.ndour@sama-ecole.sn",
+            phone = (string?)null,
+            birthDate = "1990-02-20",
+            birthPlace = (string?)null,
+            address = "Cité Keur Gorgui, Villa 24, Dakar",
+            photoUrl = (string?)null,
+            subjectIds = new[] { subjectId },
+            rowVersion = afterCreate.RowVersion
+        });
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var afterUpdate = await FetchTeacherAsync(directeur, created.Id);
+        afterUpdate.Address.Should().Be("Cité Keur Gorgui, Villa 24, Dakar");
+    }
 
     [Fact]
     public async Task A_Directeur_Can_Update_A_Teacher()
