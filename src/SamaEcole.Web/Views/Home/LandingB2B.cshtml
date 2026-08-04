@@ -1,0 +1,236 @@
+@* 
+    Vue: Views/Home/LandingB2B.cshtml 
+    Description: Landing Page B2B (Vitrine du Logiciel)
+*@
+
+@{
+    ViewData["Title"] = "Sama Ecole - Le logiciel de gestion scolaire complet";
+    Layout = "_LayoutPublic"; // Assuming a public layout exists
+}
+
+<!-- Hero Section -->
+<section class="relative bg-white overflow-hidden">
+    <div class="max-w-7xl mx-auto">
+        <div class="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32 pt-20">
+            <main class="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
+                <div class="sm:text-center lg:text-left">
+                    <h1 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+                        <span class="block xl:inline">Gérez votre établissement</span>
+                        <span class="block text-indigo-600 xl:inline">en toute sérénité</span>
+                    </h1>
+                    <p class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
+                        Sama Ecole est la plateforme SaaS n°1 au Sénégal pour l'administration scolaire. Finances, notes, présences et communication centralisées en un seul endroit.
+                    </p>
+                    <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
+                        <div class="rounded-md shadow">
+                            @* /inscription : formulaire self-service réel (ticket JGK-I01, AccountController.Register)
+                               — pas de modale de contact séparée à maintenir en double. *@
+                            <a href="/inscription" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10 transition-colors">
+                                Demander une démo
+                            </a>
+                        </div>
+                        <div class="mt-3 sm:mt-0 sm:ml-3">
+                            <a href="#tarifs" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 md:py-4 md:text-lg md:px-10 transition-colors">
+                                Voir les tarifs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div class="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 bg-gray-50">
+        <!-- Remplacer par une belle illustration de dashboard -->
+        <div class="h-56 w-full object-cover sm:h-72 md:h-96 lg:w-full lg:h-full bg-gradient-to-br from-indigo-100 to-white flex items-center justify-center">
+            <svg class="w-32 h-32 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        </div>
+    </div>
+</section>
+
+<!-- Modules / Features Section — six blocs, un par domaine fonctionnel réellement livré (voir
+     ACTIVE_CONTEXT.md pour le périmètre V1). Rôles cités dans le module Sécurité : les cinq RÉELS
+     de Domain/Enums/Role.cs (Directeur, Secrétariat, Finance, Enseignant, Surveillant) — pas de rôle
+     Parent/Élève, le portail correspondant est explicitement hors périmètre V1 (AGENTS.md). -->
+<section id="modules" class="py-16 bg-gray-50 overflow-hidden lg:py-24">
+    <div class="relative max-w-xl mx-auto px-4 sm:px-6 lg:px-8 lg:max-w-7xl">
+        <div class="relative">
+            <h2 class="text-center text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                Toute la gestion de votre établissement, un seul logiciel
+            </h2>
+            <p class="mt-4 max-w-3xl mx-auto text-center text-xl text-gray-500">
+                Six domaines, une seule plateforme : voici précisément ce que Sama Ecole prend en charge au quotidien.
+            </p>
+        </div>
+
+        <div class="mt-12 lg:mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="bg-white rounded-2xl border border-gray-200 p-8">
+                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                    <icon name="users" class="h-6 w-6" />
+                </div>
+                <h3 class="mt-5 text-xl font-bold text-gray-900">Gestion Scolaire & Administrative</h3>
+                <p class="mt-3 text-base text-gray-500">
+                    Inscription, réinscription et suivi complet des fiches élèves et parents, du premier jour à la sortie.
+                    Les classes, l'affectation des enseignants et l'emploi du temps se pilotent depuis un même écran.
+                    Cartes scolaires, certificats de scolarité et listes d'émargement s'éditent automatiquement, sans ressaisie.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-200 p-8">
+                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                    <icon name="document-text" class="h-6 w-6" />
+                </div>
+                <h3 class="mt-5 text-xl font-bold text-gray-900">Suivi Académique & Bulletins de Notes</h3>
+                <p class="mt-3 text-base text-gray-500">
+                    Les enseignants saisissent devoirs et compositions directement en ligne, matière par matière.
+                    Moyennes, rangs et appréciations sont calculés automatiquement selon le système éducatif.
+                    Bulletins trimestriels ou semestriels et relevés de notes se génèrent aussitôt en PDF, prêts à imprimer.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-200 p-8">
+                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                    <icon name="wallet" class="h-6 w-6" />
+                </div>
+                <h3 class="mt-5 text-xl font-bold text-gray-900">Comptabilité, Recouvrement & Facturation</h3>
+                <p class="mt-3 text-base text-gray-500">
+                    Frais de scolarité, inscriptions et impayés sont suivis en temps réel, par classe comme par élève.
+                    Chaque paiement génère automatiquement son reçu, caisse et dépenses restant traçables au quotidien.
+                    Les retardataires reçoivent des relances automatisées, et la direction garde un tableau de bord financier à jour.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-200 p-8">
+                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                    <icon name="eye" class="h-6 w-6" />
+                </div>
+                <h3 class="mt-5 text-xl font-bold text-gray-900">Surveillance, Discipline & Présences</h3>
+                <p class="mt-3 text-base text-gray-500">
+                    Le pointage quotidien des absences et des retards se fait classe par classe, justificatifs à l'appui.
+                    Les incidents de discipline, avertissements et rapports destinés au conseil de classe sont centralisés et consultables à tout moment.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-200 p-8">
+                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                    <icon name="bell" class="h-6 w-6" />
+                </div>
+                <h3 class="mt-5 text-xl font-bold text-gray-900">Communication SMS & Parents</h3>
+                <p class="mt-3 text-base text-gray-500">
+                    Convocations, rappels de paiement ou bulletins peuvent être envoyés par SMS, en un clic, à un parent ou à toute une classe.
+                    La communication avec les tuteurs reste directe et transparente, sans dépendre du carnet de correspondance papier.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-200 p-8">
+                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
+                    <icon name="shield" class="h-6 w-6" />
+                </div>
+                <h3 class="mt-5 text-xl font-bold text-gray-900">Sécurité, Multi-Rôles & Paramétrage</h3>
+                <p class="mt-3 text-base text-gray-500">
+                    Chaque utilisateur — Directeur, Secrétariat, Finance, Enseignant, Surveillant — n'accède qu'à ce que son rôle autorise.
+                    Cycles, matières, coefficients et en-tête officiel de l'établissement se paramètrent une fois, pour tous les documents générés ensuite.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Tarifs Section — trois formules réelles (SubscriptionPlan : Primaire/Standard/Premium,
+     PlanFeatures.cs). Pas de montant chiffré : le CDC (Volume_1_Cahier_des_Charges.md §11.1) marque
+     sa grille FCFA comme indicative, non encore validée commercialement — chaque carte renvoie donc
+     vers /inscription pour un devis plutôt que d'afficher un prix. -->
+<section id="tarifs" class="py-16 bg-white lg:py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+            <h2 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                Une formule pour chaque taille d'établissement
+            </h2>
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">
+                Le socle métier (élèves, classes, notes, inscriptions, encaissement, bulletins, documents) est inclus dans toutes les formules.
+            </p>
+        </div>
+
+        <div class="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div class="rounded-2xl border border-gray-200 p-8 flex flex-col">
+                <h3 class="text-lg font-semibold text-gray-900">Primaire</h3>
+                <p class="mt-2 text-sm text-gray-500">Pour un établissement à effectif réduit — jusqu'à 500 élèves.</p>
+                <ul class="mt-6 space-y-3 text-sm text-gray-600 flex-1">
+                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Gestion élèves, classes et inscriptions</li>
+                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Notes, bulletins et présences</li>
+                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Encaissement et documents officiels</li>
+                </ul>
+                <a href="/inscription?plan=Primaire" class="mt-8 block w-full text-center px-5 py-3 border border-indigo-600 rounded-md text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">
+                    Demander un devis
+                </a>
+            </div>
+
+            <div class="rounded-2xl border-2 border-indigo-600 p-8 flex flex-col relative">
+                <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white">Recommandée</span>
+                <h3 class="text-lg font-semibold text-gray-900">Standard</h3>
+                <p class="mt-2 text-sm text-gray-500">Pour un établissement de taille moyenne — jusqu'à 2 000 élèves.</p>
+                <ul class="mt-6 space-y-3 text-sm text-gray-600 flex-1">
+                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Tout ce qui est inclus dans Primaire</li>
+                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Rapports financiers consolidés et exports comptables</li>
+                </ul>
+                <a href="/inscription?plan=Standard" class="mt-8 block w-full text-center px-5 py-3 rounded-md text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
+                    Demander un devis
+                </a>
+            </div>
+
+            <div class="rounded-2xl border border-gray-200 p-8 flex flex-col">
+                <h3 class="text-lg font-semibold text-gray-900">Premium</h3>
+                <p class="mt-2 text-sm text-gray-500">Pour un établissement à effectif illimité, ou un groupe scolaire.</p>
+                <ul class="mt-6 space-y-3 text-sm text-gray-600 flex-1">
+                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Tout ce qui est inclus dans Standard</li>
+                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Notifications SMS aux parents</li>
+                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Groupe scolaire (plusieurs établissements)</li>
+                </ul>
+                <a href="/inscription?plan=Premium" class="mt-8 block w-full text-center px-5 py-3 border border-indigo-600 rounded-md text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">
+                    Demander un devis
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section id="contact" class="py-16 bg-gray-50 lg:py-24">
+    <div class="max-w-2xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+            Une question avant de vous lancer ?
+        </h2>
+        <p class="mt-4 text-lg text-gray-500">
+            Décrivez-nous votre établissement dans le formulaire d'inscription : notre équipe revoit chaque
+            demande et revient vers vous pour organiser une démonstration. Vous préférez nous parler directement ?
+        </p>
+
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="tel:+221763545916" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                +221 76 354 59 16
+            </a>
+            <a href="https://wa.me/221763545916" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-md border border-green-600 bg-green-50 text-sm font-semibold text-green-700 hover:bg-green-100 transition-colors">
+                <icon name="whatsapp" class="h-5 w-5 text-green-600" />
+                Discuter sur WhatsApp
+            </a>
+        </div>
+
+        <a href="/inscription" class="mt-8 inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
+            Remplir le formulaire
+        </a>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="bg-indigo-700">
+    <div class="max-w-2xl mx-auto text-center py-16 px-4 sm:py-20 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-extrabold text-white sm:text-4xl">
+            <span class="block">Prêt à moderniser votre école ?</span>
+        </h2>
+        <p class="mt-4 text-lg leading-6 text-indigo-200">
+            Rejoignez des dizaines d'établissements qui font déjà confiance à Sama Ecole.
+        </p>
+        <a href="/inscription" class="mt-8 w-full inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50 sm:w-auto transition-colors">
+            Demander une démo gratuite
+        </a>
+    </div>
+</section>

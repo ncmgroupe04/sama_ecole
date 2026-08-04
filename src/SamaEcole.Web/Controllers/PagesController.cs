@@ -141,4 +141,17 @@ public class PagesController : Controller
 
     [HttpGet("/fiscalite")]
     public IActionResult Taxes() => View("~/Views/Taxes/Index.cshtml");
+
+    // ------------------------------------------------------------------ Vitrine publique (marketing)
+
+    // Page vitrine B2B : présente le logiciel aux directeurs/gérants d'établissement. Contenu
+    // statique, aucun appel API — donc rien à garder côté serveur au-delà de [AllowAnonymous].
+    [HttpGet("/vitrine")]
+    public IActionResult LandingB2B() => View("~/Views/Home/LandingB2B.cshtml");
+
+    // Annuaire B2C (orientation des familles) — même principe que PublicDirectoryController :
+    // vitrine anonyme, en lecture seule. Gabarit statique pour l'instant ; le branchement sur
+    // GET /api/v1/public/schools reste à faire (voir PublicDirectoryController).
+    [HttpGet("/annuaire")]
+    public IActionResult AnnuaireB2C() => View("~/Views/Home/AnnuaireB2C.cshtml");
 }

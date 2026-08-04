@@ -71,6 +71,16 @@ document.addEventListener('alpine:init', () => {
         error: null,
         trackingReference: null,
 
+        // Pré-remplit la formule quand on arrive depuis une carte tarifaire de la vitrine
+        // (/inscription?plan=Premium) — une simple commodité d'affichage, jamais fait confiance
+        // côté serveur : CreateRegistrationRequestCommand revalide requestedPlan indépendamment.
+        init() {
+            const plan = new URLSearchParams(window.location.search).get('plan');
+            if (['Primaire', 'Standard', 'Premium'].includes(plan)) {
+                this.requestedPlan = plan;
+            }
+        },
+
         async submit() {
             this.error = null;
             this.isSubmitting = true;

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>@ViewData["Title"] - Sama Ecole</title>
+ <link rel="icon" type="image/png" href="~/images/logo-school.png" />
+ <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+ @* auth.js/api.js sont chargés même ici : l'Annuaire B2C (AnnuaireB2C.cshtml) consomme
+ GET /api/v1/public/schools via window.api, le client HTTP unique de l'app. La route est
+ [AllowAnonymous] côté serveur (PublicDirectoryController) — sans jeton, window.auth se
+ contente de ne poser aucun en-tête Authorization ; réécrire un fetch séparé pour cette
+ seule page dupliquerait la gestion d'erreurs déjà centralisée dans api.js. *@
+ <script src="~/js/auth.js" asp-append-version="true"></script>
+ <script src="~/js/api.js" asp-append-version="true"></script>
+ <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
+</head>
+<body class="bg-white text-slate-900 font-sans antialiased min-h-screen">
+ @await Html.PartialAsync("_IconSprite")
+ @* Nav minimale de la vitrine publique — distincte de _Layout.cshtml (l'app connectée) et
+ _AuthLayout.cshtml (login) : ces pages sont anonymes, aucun garde d'accès (require-session.js)
+ n'y est chargé. *@
+ <header class="border-b border-slate-100">
+ <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+ <a href="/vitrine" class="font-extrabold text-lg text-indigo-600">Sama Ecole</a>
+ <nav class="flex items-center gap-6 text-sm font-medium text-slate-600">
+ @* Ancres vers /vitrine — depuis toute autre page publique (ex. /annuaire), le navigateur
+ navigue d'abord vers /vitrine puis saute à la section ; depuis /vitrine lui-même, la
+ navigation reste sur place et défile grâce à `scroll-smooth` sur <html> ci-dessus. *@
+ <a href="/vitrine#modules" class="hover:text-indigo-600">Modules</a>
+ <a href="/vitrine#tarifs" class="hover:text-indigo-600">Tarifs</a>
+ <a href="/vitrine#contact" class="hover:text-indigo-600">Contact</a>
+ <a href="/annuaire" class="hover:text-indigo-600">Trouver une école</a>
+ <a href="/login" class="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">Se connecter</a>
+ </nav>
+ </div>
+ </header>
+ @RenderBody()
+ @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

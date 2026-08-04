@@ -1,0 +1,156 @@
+@*
+    Vue: Views/Home/AnnuaireB2C.cshtml
+    Description: Page Annuaire B2C (Portail d'orientation)
+*@
+
+@{
+    ViewData["Title"] = "Trouvez l'école idéale - Sama Ecole";
+    Layout = "_LayoutPublic";
+}
+
+@section Scripts {
+    <script src="~/js/public-directory.js" asp-append-version="true"></script>
+}
+
+@* GetPublicSchoolsQuery (PublicDirectoryController) n'accepte que trois critères : recherche sur le
+   nom, ville exacte, et UN SEUL cycle à la fois — pas de filtre "type d'établissement" (public/privé),
+   la vue SQL public_school_directory ne l'expose pas. *@
+<div x-data="publicDirectoryView()">
+
+<!-- Header & Search Bar -->
+<div class="bg-indigo-700 py-16 sm:py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            Trouvez l'établissement idéal pour votre enfant
+        </h1>
+        <p class="mt-4 max-w-2xl text-xl text-indigo-200 mx-auto">
+            Recherchez parmi les établissements du Sénégal référencés sur Sama Ecole.
+        </p>
+
+        <!-- Search Form -->
+        <div class="mt-10 max-w-3xl mx-auto">
+            <form class="flex flex-col sm:flex-row shadow-lg rounded-lg overflow-hidden bg-white" x-on:submit.prevent="applyFilters()">
+                <div class="flex-1 min-w-0 px-4 py-3 border-b sm:border-b-0 sm:border-r border-gray-200">
+                    <label for="search" class="sr-only">Nom de l'école</label>
+                    <div class="flex items-center">
+                        <icon name="search" class="h-5 w-5 text-gray-400 mr-2 shrink-0" />
+                        <input type="text" name="search" id="search" x-model="search" x-on:input.debounce.400ms="applyFilters()"
+                               class="block w-full focus:ring-0 focus:outline-none border-none sm:text-lg" placeholder="Ex: Lycée d'Excellence...">
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0 px-4 py-3 border-b sm:border-b-0 sm:border-r border-gray-200">
+                    <label for="location" class="sr-only">Ville</label>
+                    <div class="flex items-center">
+                        <icon name="globe" class="h-5 w-5 text-gray-400 mr-2 shrink-0" />
+                        <input type="text" name="location" id="location" x-model="city" x-on:input.debounce.400ms="applyFilters()"
+                               class="block w-full focus:ring-0 focus:outline-none border-none sm:text-lg" placeholder="Dakar, Thiès...">
+                    </div>
+                </div>
+                <button type="submit" class="w-full sm:w-auto flex items-center justify-center px-8 py-3 sm:py-4 border border-transparent text-base font-medium text-white bg-indigo-600 hover:bg-indigo-800 transition-colors">
+                    Rechercher
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Filters & Results Grid -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="flex flex-col md:flex-row gap-8">
+
+        <!-- Sidebar Filters -->
+        <aside class="w-full md:w-64 flex-shrink-0">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Filtres</h2>
+
+            <div class="border-t border-gray-200 pt-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Niveau</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <input id="level-all" name="level" type="radio" value="" x-model="cycle" x-on:change="applyFilters()"
+                               class="h-4 w-4 text-indigo-600 border-gray-300">
+                        <label for="level-all" class="ml-3 text-sm text-gray-600">Tous les niveaux</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="level-primaire" name="level" type="radio" value="Primaire" x-model="cycle" x-on:change="applyFilters()"
+                               class="h-4 w-4 text-indigo-600 border-gray-300">
+                        <label for="level-primaire" class="ml-3 text-sm text-gray-600">Préscolaire / Primaire</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="level-college" name="level" type="radio" value="College" x-model="cycle" x-on:change="applyFilters()"
+                               class="h-4 w-4 text-indigo-600 border-gray-300">
+                        <label for="level-college" class="ml-3 text-sm text-gray-600">Collège</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="level-lycee" name="level" type="radio" value="Lycee" x-model="cycle" x-on:change="applyFilters()"
+                               class="h-4 w-4 text-indigo-600 border-gray-300">
+                        <label for="level-lycee" class="ml-3 text-sm text-gray-600">Lycée</label>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Results Grid -->
+        <main class="flex-1">
+            <div class="mb-4 flex items-center justify-between">
+                <p class="text-sm text-gray-500" x-show="!isLoading && !error">
+                    Affichage de <span class="font-medium text-gray-900" x-text="rangeStart"></span>-<span class="font-medium text-gray-900" x-text="rangeEnd"></span> sur <span class="font-medium text-gray-900" x-text="totalCount"></span> écoles
+                </p>
+            </div>
+
+            <div x-show="error" x-cloak class="mb-6 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="error"></div>
+
+            <div x-show="isLoading" x-cloak class="py-16 text-center text-sm text-gray-500">
+                Chargement des établissements…
+            </div>
+
+            <template x-if="!isLoading && !error && schools.length === 0">
+                <empty-state icon="building" title="Aucun établissement ne correspond à votre recherche."
+                             hint="Essayez un autre nom, une autre ville, ou retirez le filtre de niveau." />
+            </template>
+
+            <div x-show="!isLoading && schools.length > 0" x-cloak class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <template x-for="school in schools" :key="school.id">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                        <div class="h-32 bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center">
+                            <img :src="school.logoUrl" x-show="school.logoUrl" class="max-h-full max-w-full object-contain bg-white p-2" alt="">
+                            <span x-show="!school.logoUrl" class="text-3xl font-bold text-white" x-text="school.name.charAt(0)"></span>
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <h3 class="text-lg font-bold text-gray-900 truncate" x-text="school.name"></h3>
+                            <p class="text-sm text-gray-500 flex items-center mt-1 mb-3" x-show="school.city || school.region">
+                                <icon name="globe" class="shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
+                                <span x-text="[school.city, school.region].filter(Boolean).join(', ')"></span>
+                            </p>
+                            <p class="text-sm text-gray-500 mb-4 line-clamp-2" x-show="school.description" x-text="school.description"></p>
+                            <div class="flex flex-wrap gap-2 mb-4 mt-auto">
+                                <template x-for="cycleLabel in school.cycles" :key="cycleLabel">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800" x-text="cycleLabel"></span>
+                                </template>
+                            </div>
+                            <div class="flex flex-col gap-1 text-sm border-t border-gray-100 pt-3" x-show="school.phone || school.email">
+                                <a :href="'tel:' + school.phone" x-show="school.phone" x-text="school.phone" class="text-indigo-600 hover:underline"></a>
+                                <a :href="'mailto:' + school.email" x-show="school.email" x-text="school.email" class="text-indigo-600 hover:underline"></a>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Pagination -->
+            <div class="mt-8 flex items-center justify-between border-t border-gray-200 pt-6" x-show="totalCount > 0">
+                <button type="button" x-on:click="goToPage(-1)" :disabled="page <= 1"
+                        class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                    <icon name="chevron-left" class="mr-2 h-4 w-4 text-gray-400" />
+                    Précédent
+                </button>
+                <span class="text-sm text-gray-500">Page <span x-text="page"></span> sur <span x-text="totalPages"></span></span>
+                <button type="button" x-on:click="goToPage(1)" :disabled="page >= totalPages"
+                        class="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                    Suivant
+                    <icon name="chevron-right" class="ml-2 h-4 w-4 text-gray-400" />
+                </button>
+            </div>
+        </main>
+    </div>
+</div>
+</div>
