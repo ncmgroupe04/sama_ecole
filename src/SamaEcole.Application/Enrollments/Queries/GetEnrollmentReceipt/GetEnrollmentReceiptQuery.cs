@@ -45,6 +45,7 @@ public class GetEnrollmentReceiptQueryHandler(
                 s.GuardianPhone,
                 ClassroomName = c.Name,
                 ClassroomLevel = c.Level,
+                c.IsAccelerated,
                 YearLabel = y.Label,
                 e.Type,
                 e.Status,
@@ -99,6 +100,7 @@ public class GetEnrollmentReceiptQueryHandler(
                 .Select(l => new CollectedFeeLineDto(l.Designation, l.IsRecurring, l.MonthsCollected, l.AmountCollected))
                 .ToList(),
             lines.Sum(l => l.AmountCollected),
-            payment?.Method.ToString());
+            payment?.Method.ToString(),
+            header.IsAccelerated);
     }
 }

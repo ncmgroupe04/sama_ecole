@@ -81,6 +81,13 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 column.Spacing(3);
                 column.Item().Element(ComposeHeader);
                 column.Item().Element(ComposeTitle);
+                // Classe passerelle / accélérée : mention juste sous le titre, AVANT le bloc d'identité —
+                // elle qualifie tout le bulletin. Rien ne s'insère pour une classe ordinaire, dont la
+                // mise en page reste exactement celle de la référence visuelle (AGENTS.md règle #12).
+                if (reportCard.AcceleratedPathLabel is not null)
+                {
+                    column.Item().Element(ComposeAcceleratedMention);
+                }
                 column.Item().Element(ComposeIdentity);
                 // Primaire (/10) : tableau épuré sans coefficients/appréciations et SANS rangée de
                 // distinctions du conseil. Secondaire (/20) : rendu d'origine, strictement inchangé.
@@ -160,6 +167,18 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             rule.Item().LineHorizontal(RuleThickness).LineColor(Colors.Black);
         });
     }
+
+    /// <summary>
+    /// Mention du cursus accéléré (« Cursus Accéléré Passerelle — CI → CP »), centrée sous le titre.
+    /// Composée UNIQUEMENT pour une classe passerelle : l'appelant ne l'insère pas autrement, et le
+    /// bulletin d'une classe ordinaire ne gagne pas même une ligne vide.
+    ///
+    /// Sans encadré ni filet : le gabarit de la référence est fait de blocs bordés, en ajouter un de plus
+    /// concurrencerait le titre. L'italique suffit à la lire comme une qualification du document.
+    /// </summary>
+    private void ComposeAcceleratedMention(IContainer container) =>
+        container.PaddingTop(1.5f).AlignCenter()
+            .Text(reportCard.AcceleratedPathLabel).Italic().Bold().FontSize(8f);
 
     /// <summary>
     /// Bloc d'identité encadré, trois lignes fixes : Prénoms/Nom (gras, corps plus grand), naissance et

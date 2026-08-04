@@ -221,4 +221,52 @@ public class ReportsDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
         dashboard.AttendanceRate.Should().BeNull();
         dashboard.Subscription.Should().BeNull();
     }
+
+    /// <summary>
+    /// Régression du bug d'audit pré-déploiement (04/08/2026) : MemoryKpiCacheService.GetOrCreateAsync
+    /// appelait ITenantCacheKeyFactory.BuildKey AVANT de vérifier si un tenant existe, et BuildKey est
+    /// fail-closed par conception (lève UnauthorizedAccessException sans SchoolId — comportement voulu
+    /// pour toute AUTRE donnée tenant). Un Super Admin n'a pas de SchoolId : il recevait donc un 403 sur
+    /// ce dashboard dès que le cache était actif — cassé en production (Kpi:Cache:Enabled=true par
+    /// défaut) tout en restant invisible à CHAQUE AUTRE test de cette classe, puisqu'ils tournent tous
+    /// avec le cache coupé (voir AuthApiFactory.ApplyEnvironment). D'où une fabrique DÉDIÉE, cache
+    /// réellement actif, plutôt que de risquer les 580+ tests qui comptent sur le comportement par défaut.
+    /// </summary>
+    [Fact]
+    public async Task Super_Admin_With_Cache_Enabled_Still_Gets_200_Not_403()
+    {
+        // Cast explicite vers IAsyncLifetime : AuthApiFactory dérive de WebApplicationFactory<Program>,
+        // qui implémente elle-même IAsyncDisposable. `await using` résoudrait CETTE interface (dispose
+        // le host, jamais le conteneur Postgres) plutôt que le DisposeAsync d'IAsyncLifetime ci-dessous
+        // — celui qui appelle réellement _postgres.DisposeAsync(). D'où l'appel explicite en try/finally.
+        var factory = new AuthApiFactory { KpiCacheEnabled = true };
+        IAsyncLifetime lifetime = factory;
+        await lifetime.InitializeAsync();
+        try
+        {
+            var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+
+            var loginResponse = await client.PostAsJsonAsync("/api/v1/auth/login",
+                new { email = AuthApiFactory.SuperAdminEmail, password = AuthApiFactory.SuperAdminPassword });
+            loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var token = (await loginResponse.Content.ReadFromJsonAsync<Tokens>())!.AccessToken;
+
+            // Un premier appel peuple le cache (ou tenterait de le peupler) ; le second prouve que rien
+            // ne casse non plus sur un HIT — les deux doivent rester 200 avec des agrégats vides.
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/reports/dashboard");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                var response = await client.SendAsync(request);
+
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+                var dashboard = (await response.Content.ReadFromJsonAsync<DirectorDashboard>())!;
+                dashboard.Enrollments.Total.Should().Be(0);
+            }
+        }
+        finally
+        {
+            await lifetime.DisposeAsync();
+        }
+    }
 }

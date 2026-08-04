@@ -13,6 +13,15 @@ public record CreateClassroomCommand : IRequest<CreateClassroomResult>
     public required string Name { get; init; }
     public required string Level { get; init; }
     public int Capacity { get; init; }
+
+    /// <summary>
+    /// Classe passerelle / accélérée (option, faux par défaut) : l'année valide DEUX niveaux. Absent du
+    /// corps de requête d'un client existant → false, exactement le comportement d'avant l'option.
+    /// </summary>
+    public bool IsAccelerated { get; init; }
+
+    /// <summary>Second niveau validé, obligatoire quand — et seulement quand — <see cref="IsAccelerated"/>.</summary>
+    public string? TargetLevel { get; init; }
 }
 
 /// <summary>
@@ -20,4 +29,6 @@ public record CreateClassroomCommand : IRequest<CreateClassroomResult>
 /// client : il est renvoyé ici pour que l'appelant sache immédiatement quel barème et quel en-tête de
 /// bulletin sa classe vient de recevoir — il n'a aucun moyen de le déduire lui-même.
 /// </summary>
-public record CreateClassroomResult(Guid Id, string Name, string Level, int Capacity, CycleType Cycle);
+public record CreateClassroomResult(
+    Guid Id, string Name, string Level, int Capacity, CycleType Cycle,
+    bool IsAccelerated = false, string? TargetLevel = null);

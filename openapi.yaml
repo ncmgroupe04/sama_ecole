@@ -2873,6 +2873,24 @@ components:
             accepté à la création/mise à jour (défaut `College`).
         capacity: { type: integer, example: 40 }
         studentCount: { type: integer, example: 32, description: Effectif actuel, calculé côté base }
+        isAccelerated:
+          type: boolean
+          default: false
+          example: false
+          description: >-
+            Classe PASSERELLE / ACCÉLÉRÉE : l'année scolaire valide DEUX niveaux successifs
+            (« CI-CP », « 6e-5e » — parcours d'intégration des élèves venus des écoles coraniques).
+            Optionnelle : absente ou `false`, la classe se comporte exactement comme avant.
+        targetLevel:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: "CP"
+          description: >-
+            SECOND niveau validé en fin d'année par une classe accélérée. Null pour toute classe
+            ordinaire. Ce n'est pas un identifiant : il n'existe aucune table de niveaux (voir la
+            description de `level`) — c'est le libellé du niveau, dans la nomenclature du cycle
+            (CI/CP/CE1… au Primaire, Sixième…Troisième au Collège, Seconde/Première/Terminale au Lycée).
         rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
 
     ClassroomUpdateRequest:
@@ -2894,6 +2912,19 @@ components:
         name: { type: string, maxLength: 50, example: "CM2 B" }
         level: { type: string, maxLength: 50, example: "Primaire" }
         capacity: { type: integer, minimum: 1, maximum: 200, example: 40 }
+        isAccelerated:
+          type: boolean
+          default: false
+          description: Classe passerelle / accélérée validant DEUX niveaux — voir `Classroom.isAccelerated`.
+        targetLevel:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: "CP"
+          description: >-
+            Second niveau validé. OBLIGATOIRE quand `isAccelerated` vaut `true`, et refusé en 422 s'il
+            n'appartient pas au cycle de la classe ou s'il répète le niveau de départ. Ignoré (remis à
+            null) quand `isAccelerated` vaut `false` : une classe ordinaire ne garde pas de niveau cible.
 
     SubjectCreateRequest:
       type: object

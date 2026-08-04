@@ -172,7 +172,8 @@ public class CreateEnrollmentCommandHandler(
                 totalDue,
                 ToCollectedLines(lines),
                 totalCollected,
-                totalCollected > 0 ? request.PaymentMethod.ToString() : null);
+                totalCollected > 0 ? request.PaymentMethod.ToString() : null,
+                classroom.IsAccelerated);
         }, cancellationToken);
 
         // Une nouvelle inscription change à la fois le dû/attendu financier et les effectifs du

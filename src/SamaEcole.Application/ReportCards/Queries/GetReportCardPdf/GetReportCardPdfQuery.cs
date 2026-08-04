@@ -1,3 +1,4 @@
+using SamaEcole.Application.Classrooms;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
@@ -108,7 +109,18 @@ public record ReportCardDto(
     // un simple cercle en pointillés à la place. Null s'imprime comme avant (cercle/rien), jamais une
     // image inventée.
     string? DirectorSignatureUrl = null,
-    string? OfficialStampUrl = null);
+    string? OfficialStampUrl = null,
+
+    // Classe PASSERELLE / ACCÉLÉRÉE (option) : mention imprimée en en-tête du bulletin et du PV de
+    // délibération — « Cursus Accéléré Passerelle — CI → CP » (ClassroomPromotion.AcceleratedPathLabel).
+    // Null pour une classe ordinaire : rien ne s'imprime, le gabarit de la référence visuelle est
+    // strictement inchangé (AGENTS.md règle #12).
+    string? AcceleratedPathLabel = null,
+
+    // Niveaux effectivement validés par cet élève au titre de l'année, une fois la décision du conseil
+    // prononcée (ClassroomPromotion.ValidatedLevels) : DEUX pour un élève admis en classe passerelle, un
+    // seul en classe ordinaire, aucun tant que le conseil n'a pas statué ou s'il ne l'a pas admis.
+    IReadOnlyList<string>? ValidatedLevels = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -300,7 +312,13 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             remark?.CouncilDecision,
             remark?.Observations,
             settings?.DirectorSignatureUrl,
-            settings?.OfficialStampUrl);
+            settings?.OfficialStampUrl,
+
+            // Classe passerelle / accélérée (option). Les DEUX champs sortent du même moteur de
+            // délibération que la clôture d'année (ClassroomPromotion) : le bulletin ne peut pas
+            // annoncer un cursus que la promotion contredirait.
+            ClassroomPromotion.AcceleratedPathLabel(classroom),
+            ClassroomPromotion.ValidatedLevels(classroom, remark?.CouncilDecision));
 
         return dto;
     }

@@ -24,4 +24,11 @@ public record GetClassroomsQuery : IRequest<IReadOnlyList<ClassroomDto>>;
 /// l'écran de notes adapte l'attribut HTML <c>max</c> et le libellé de colonne selon la classe choisie.
 /// Sérialisé en chaîne ("Primaire" / "College" / "Lycee") via le JsonStringEnumConverter global.
 /// </summary>
-public record ClassroomDto(Guid Id, string Name, string Level, int Capacity, int StudentCount, CycleType Cycle, uint RowVersion);
+/// <summary>
+/// <see cref="IsAccelerated"/> / <see cref="TargetLevel"/> : classe passerelle validant DEUX niveaux
+/// (option, voir Classroom.TargetLevel). Faux/null pour l'immense majorité des classes — l'écran Classes
+/// n'affiche le badge et le formulaire ne déplie sa liste déroulante que lorsque la case est cochée.
+/// </summary>
+public record ClassroomDto(
+    Guid Id, string Name, string Level, int Capacity, int StudentCount, CycleType Cycle, uint RowVersion,
+    bool IsAccelerated = false, string? TargetLevel = null);

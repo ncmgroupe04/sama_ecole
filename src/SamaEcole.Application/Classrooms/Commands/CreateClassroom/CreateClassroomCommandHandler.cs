@@ -25,7 +25,12 @@ public class CreateClassroomCommandHandler(
             // ici qui laissait toute classe de Primaire sur le défaut College — bulletin intitulé
             // « COLLÈGE DE », notes sur /20 et moyenne pondérée, pour un CM2.
             Cycle = ClassroomCycle.CycleFor(level),
-            Capacity = request.Capacity
+            Capacity = request.Capacity,
+
+            // Classe passerelle / accélérée (option). Le second niveau n'est retenu que si la case est
+            // cochée — voir ClassroomPromotion.NormalizeTargetLevel : jamais de niveau cible orphelin.
+            IsAccelerated = request.IsAccelerated,
+            TargetLevel = ClassroomPromotion.NormalizeTargetLevel(request.IsAccelerated, request.TargetLevel)
         };
 
         dbContext.Classrooms.Add(classroom);
@@ -35,6 +40,8 @@ public class CreateClassroomCommandHandler(
         // silencieux ni un 500 (AGENTS.md règle #5).
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new CreateClassroomResult(classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle);
+        return new CreateClassroomResult(
+            classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle,
+            classroom.IsAccelerated, classroom.TargetLevel);
     }
 }

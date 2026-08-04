@@ -22,7 +22,14 @@ namespace SamaEcole.Web.Controllers;
 [Authorize]
 public class ClassroomsController(ISender mediator) : ControllerBase
 {
-    public record UpdateClassroomRequest(string Name, string Level, int Capacity, uint RowVersion);
+    /// <summary>
+    /// <paramref name="IsAccelerated"/> / <paramref name="TargetLevel"/> : classe passerelle validant
+    /// DEUX niveaux (option). Absents du corps de requête d'un client existant → false/null, soit
+    /// exactement le comportement d'avant l'option.
+    /// </summary>
+    public record UpdateClassroomRequest(
+        string Name, string Level, int Capacity, uint RowVersion,
+        bool IsAccelerated = false, string? TargetLevel = null);
 
     private const string ManageRoles = "Directeur,Secretariat";
 
@@ -55,7 +62,9 @@ public class ClassroomsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> Update(
         Guid id, [FromBody] UpdateClassroomRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(
-            new UpdateClassroomCommand(id, request.Name, request.Level, request.Capacity, request.RowVersion),
+            new UpdateClassroomCommand(
+                id, request.Name, request.Level, request.Capacity, request.RowVersion,
+                request.IsAccelerated, request.TargetLevel),
             cancellationToken));
 
     /// <summary>

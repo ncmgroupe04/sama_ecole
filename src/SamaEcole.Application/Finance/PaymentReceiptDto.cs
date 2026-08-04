@@ -28,4 +28,8 @@ public record PaymentReceiptDto(
     decimal TotalDue,
     decimal AlreadyPaid,
     decimal RemainingBalance,
-    DateTimeOffset PaidAt);
+    DateTimeOffset PaidAt,
+
+    // Classe PASSERELLE / ACCÉLÉRÉE (option) : même mention que sur le reçu d'inscription, pour que le
+    // reçu de caisse d'un élève de « CI-CP » dise la même chose que la pièce d'inscription qu'il complète.
+    bool IsAcceleratedClass = false);

@@ -46,6 +46,7 @@ public class GetPaymentReceiptQueryHandler(
                 s.Matricule,
                 s.FullName,
                 ClassroomName = c.Name,
+                c.IsAccelerated,
                 YearLabel = y.Label
             }).FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Paiement {request.PaymentId} introuvable.");
@@ -72,6 +73,7 @@ public class GetPaymentReceiptQueryHandler(
             row.TotalDue,
             row.TotalDue - row.BalanceAfter,
             row.BalanceAfter,
-            row.PaidAt);
+            row.PaidAt,
+            row.IsAccelerated);
     }
 }

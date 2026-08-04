@@ -59,6 +59,23 @@ Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bu
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
 les sprints précédents.
 
+### Classes passerelles / accélérées (04/08/2026) — option désactivée par défaut
+
+Une classe peut déclarer qu'elle valide **deux niveaux** en une année scolaire (« CI-CP », « 6e-5e »),
+pour les parcours d'intégration des élèves venus des écoles coraniques. `Classroom.IsAccelerated`
+(faux par défaut) + `Classroom.TargetLevel` (migration `AddAcceleratedClassrooms`, strictement additive).
+
+- **Pas de table de niveaux, et c'est délibéré.** `Classroom.Level` reste le CYCLE en texte libre ; le
+  niveau réel vit dans le nom de la classe. `TargetLevel` est donc un **libellé** (« CP », « Cinquième »),
+  pas un identifiant — introduire une énumération de niveaux est explicitement interdit (AGENTS.md,
+  `Classroom.Level`). La nomenclature par cycle et la reconnaissance du niveau depuis le nom vivent dans
+  `ClassroomGradeLevels`, seule source pour la liste déroulante de l'écran **et** pour la délibération.
+- **Délibération** : `ClassroomPromotion.ValidatedLevels` — un élève **admis** en classe passerelle valide
+  le niveau courant ET le niveau cible ; une classe ordinaire valide un seul niveau, comme avant. Aucune
+  décision (ou un redoublement/exclusion) ne valide rien.
+- **Documents** : mention « Cursus Accéléré Passerelle » sur le reçu d'inscription, le reçu de caisse, le
+  bulletin et le PV de délibération. Les documents d'une classe ordinaire sont inchangés au caractère près.
+
 ---
 
 ## 3. Points de conformité traités (sprint du 27/07/2026)

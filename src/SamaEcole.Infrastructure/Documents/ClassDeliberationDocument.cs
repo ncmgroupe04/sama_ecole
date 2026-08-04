@@ -62,7 +62,16 @@ public class ClassDeliberationDocument(IReadOnlyList<ReportCardDto> reportCards,
                 });
             });
 
-            column.Item().PaddingVertical(15).AlignCenter().Text("PROCÈS-VERBAL DE DÉLIBÉRATION").Bold().FontSize(16).Underline();
+            column.Item().PaddingTop(15).AlignCenter().Text("PROCÈS-VERBAL DE DÉLIBÉRATION").Bold().FontSize(16).Underline();
+
+            // Classe passerelle / accélérée : le PV DOIT dire que la délibération porte sur deux niveaux —
+            // c'est la pièce qui fait foi du passage. Rien ne s'imprime pour une classe ordinaire.
+            if (first.AcceleratedPathLabel is not null)
+            {
+                column.Item().PaddingTop(3).AlignCenter().Text(first.AcceleratedPathLabel).Italic().Bold().FontSize(11);
+            }
+
+            column.Item().PaddingBottom(15);
 
             // Statistiques globales de la classe
             var validAverages = reportCards.Where(r => r.GeneralAverage > 0).Select(r => r.GeneralAverage).ToList();
@@ -139,7 +148,16 @@ public class ClassDeliberationDocument(IReadOnlyList<ReportCardDto> reportCards,
                     _ => ""
                 };
                 
-                table.Cell().Element(BodyCell).Text(decisionText);
+                // Classe passerelle : la décision seule ne dit pas ce qui est ACQUIS. Un élève admis en
+                // « CI-CP » valide deux niveaux (ClassroomPromotion.ValidatedLevels) — le PV les nomme,
+                // sinon rien dans l'archive de l'école n'atteste du niveau sauté. Une classe ordinaire ne
+                // valide qu'un niveau, déjà porté par la colonne « Classe » de l'en-tête : on n'alourdit
+                // pas sa cellule pour répéter ce qui est écrit deux lignes plus haut.
+                var validatedLevels = student.ValidatedLevels ?? [];
+                table.Cell().Element(BodyCell).Text(
+                    first.AcceleratedPathLabel is not null && validatedLevels.Count > 1
+                        ? $"{decisionText} — niveaux validés : {string.Join(", ", validatedLevels)}"
+                        : decisionText);
             }
         });
 

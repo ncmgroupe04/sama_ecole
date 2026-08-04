@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Classrooms;
 using SamaEcole.Application.Common;
 using SamaEcole.Application.Finance;
 using QuestPDF.Fluent;
@@ -100,7 +101,10 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
         {
             InfoRow(column, "Matricule", NoBreakText.NoBreak(receipt.Matricule));
             InfoRow(column, "Nom complet", receipt.StudentFullName);
-            InfoRow(column, "Classe d'affectation", receipt.ClassroomName);
+            // Même mention que sur le reçu d'inscription pour une classe passerelle, rien de plus qu'avant
+            // pour une classe ordinaire — voir ClassroomPromotion.DisplayName.
+            InfoRow(column, "Classe d'affectation",
+                ClassroomPromotion.DisplayName(receipt.ClassroomName, receipt.IsAcceleratedClass));
             InfoRow(column, "Année scolaire", receipt.SchoolYearLabel);
             InfoRow(column, "Date du paiement", FormatDate(receipt.PaidAt));
             InfoRow(column, "Moyen de paiement", MethodLabel(receipt.Method));

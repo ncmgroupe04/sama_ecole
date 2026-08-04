@@ -21,7 +21,12 @@ public class ClassDeliberationDocumentTests
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    private static ReportCardDto BuildReportCard(string fullName, decimal generalAverage, int generalRank) => new(
+    private static ReportCardDto BuildReportCard(
+        string fullName,
+        decimal generalAverage,
+        int generalRank,
+        string? acceleratedPathLabel = null,
+        IReadOnlyList<string>? validatedLevels = null) => new(
         SchoolName: "École de test",
         SchoolLogoUrl: null,
         InspectionAcademie: "Thies",
@@ -55,7 +60,9 @@ public class ClassDeliberationDocumentTests
         AnnualRank: null,
         DisciplinaryMention: null,
         CouncilDecision: generalAverage >= 5m ? CouncilDecision.Admitted : CouncilDecision.AllowedToRepeat,
-        CouncilObservations: null);
+        CouncilObservations: null,
+        AcceleratedPathLabel: acceleratedPathLabel,
+        ValidatedLevels: validatedLevels);
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -88,6 +95,27 @@ public class ClassDeliberationDocumentTests
         var reportCards = Enumerable.Range(1, 40)
             .Select(i => BuildReportCard($"Élève {i:D2}", 5m + i % 5, i))
             .ToArray();
+
+        var bytes = new ClassDeliberationDocument(reportCards, logo: null).GeneratePdf();
+
+        ShouldBeAValidPdf(bytes);
+    }
+
+    /// <summary>
+    /// PV d'une classe PASSERELLE : l'en-tête porte la mention du cursus et la colonne « Décision du
+    /// Conseil » nomme les DEUX niveaux acquis par chaque élève admis — c'est ce PV qui fait foi du
+    /// passage, et rien d'autre dans l'archive de l'école n'attesterait du niveau sauté.
+    /// </summary>
+    [Fact]
+    public void Generate_Produces_A_Valid_Pv_For_An_Accelerated_Bridge_Class()
+    {
+        var reportCards = new[]
+        {
+            BuildReportCard("Zorro Diallo", 9m, 1, "Cursus Accéléré Passerelle — CI → CP", ["CI", "CP"]),
+            // Élève NON admis de la même classe : ValidatedLevels est vide, la cellule ne doit annoncer
+            // aucun niveau acquis alors même que la classe, elle, est bien une passerelle.
+            BuildReportCard("Awa Sow", 4m, 2, "Cursus Accéléré Passerelle — CI → CP", [])
+        };
 
         var bytes = new ClassDeliberationDocument(reportCards, logo: null).GeneratePdf();
 

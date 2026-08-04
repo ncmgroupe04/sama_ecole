@@ -93,7 +93,15 @@ document.addEventListener('alpine:init', () => {
         };
     }
 
-    Alpine.data('classroomsView', () => ({
+    /**
+     * `gradeLevels` : les niveaux (CI, CP… Terminale) proposés pour le SECOND niveau d'une classe
+     * passerelle, indexés par la valeur de la liste « Niveau ». Servis par la vue depuis
+     * ClassroomGradeLevels (C#) plutôt que recopiés ici : la validation serveur s'appuie sur la même
+     * table, et deux copies finiraient par se contredire — l'écran proposerait un niveau que l'API
+     * refuserait. Un objet vide reste un défaut sûr : la liste s'affiche alors vide, jamais une erreur.
+     */
+    Alpine.data('classroomsView', (gradeLevels = {}) => ({
+        gradeLevels,
         classrooms: [],
         isLoading: false,
         error: null,
@@ -108,7 +116,9 @@ document.addEventListener('alpine:init', () => {
         newClassroom: {
             name: '',
             level: DEFAULT_LEVEL,
-            capacity: DEFAULT_CAPACITY
+            capacity: DEFAULT_CAPACITY,
+            isAccelerated: false,
+            targetLevel: ''
         },
         createErrors: {},
 
@@ -122,7 +132,8 @@ document.addEventListener('alpine:init', () => {
         canManage: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
         // Édition (modale)
-        editing: null, // { id, name, level, capacity, rowVersion }
+        isEditOpen: false,
+        editing: { id: '', name: '', level: '', capacity: 0, rowVersion: 0, isAccelerated: false, targetLevel: '' },
         isSavingEdit: false,
         editErrors: {},
         showEditedDialog: false,
@@ -215,7 +226,11 @@ document.addEventListener('alpine:init', () => {
             this.newClassroom = {
                 name: '',
                 level: keepLevel ? this.newClassroom.level : (localStorage.getItem('classrooms_lastLevel') || DEFAULT_LEVEL),
-                capacity: DEFAULT_CAPACITY
+                capacity: DEFAULT_CAPACITY,
+                // La passerelle ne se reporte JAMAIS d'une classe à la suivante, même en enchaînant :
+                // c'est un cas particulier, l'oublier coché produirait des classes accélérées par accident.
+                isAccelerated: false,
+                targetLevel: ''
             };
             this.createErrors = {};
         },
@@ -244,6 +259,12 @@ document.addEventListener('alpine:init', () => {
                 await this.loadClassrooms();
                 this.showAddedDialog = true; // confirmation « Classe ajoutée »
             } catch (err) {
+                // La bannière createErrors.global (ci-dessus, dans la vue) est déjà le canal visible par
+                // l'utilisateur — ce console.error est un filet purement diagnostique : sur un réseau très
+                // lent, la requête peut prendre plusieurs secondes avant d'aboutir (succès OU échec), et
+                // sans trace ici un échec silencieux serait indiscernable d'un simple ralentissement au
+                // moment de déboguer depuis les outils navigateur.
+                console.error('classrooms: échec de la création', err);
                 this.createErrors = window.api.toFieldErrors(err, "Erreur lors de la création.");
             } finally {
                 this.isSubmitting = false;
@@ -258,18 +279,20 @@ document.addEventListener('alpine:init', () => {
                 name: classroom.name,
                 level: classroom.level,
                 capacity: classroom.capacity,
-                rowVersion: classroom.rowVersion
+                rowVersion: classroom.rowVersion,
+                isAccelerated: classroom.isAccelerated || false,
+                targetLevel: classroom.targetLevel || ''
             };
             this.editErrors = {};
+            this.isEditOpen = true;
         },
 
         closeEdit() {
-            this.editing = null;
-            this.editErrors = {};
+            this.isEditOpen = false;
         },
 
         async submitEdit() {
-            if (!this.editing) return;
+            if (!this.editing || !this.editing.id) return;
 
             this.isSavingEdit = true;
             this.editErrors = {};
@@ -278,13 +301,18 @@ document.addEventListener('alpine:init', () => {
                     name: this.editing.name,
                     level: this.editing.level,
                     capacity: this.editing.capacity,
-                    rowVersion: this.editing.rowVersion
+                    rowVersion: this.editing.rowVersion,
+                    isAccelerated: this.editing.isAccelerated,
+                    targetLevel: this.editing.isAccelerated ? this.editing.targetLevel : null
                 });
                 this.editedClassroomName = this.editing.name;
                 this.closeEdit();
                 await this.loadClassrooms();
                 this.showEditedDialog = true;
             } catch (err) {
+                // Voir le commentaire équivalent de submitCreate() : filet diagnostique, la bannière
+                // editErrors.global reste le canal visible par l'utilisateur.
+                console.error('classrooms: échec de la modification', err);
                 if (err.code === 'CONCURRENCY_CONFLICT') {
                     // Verrou optimiste (AGENTS.md règle #5) : jamais un écrasement silencieux — on
                     // recharge pour montrer l'état réel avant de laisser l'utilisateur réessayer.
@@ -371,6 +399,28 @@ document.addEventListener('alpine:init', () => {
                 console.error(err);
                 alert('Impossible de télécharger les cartes scolaires. Vérifiez qu\'il y a bien des élèves inscrits dans cette classe pour l\'année en cours.');
             }
+        },
+
+        /**
+         * Options du menu déroulant « second niveau validé » pour un cycle donné. Fonction PURE, appelée
+         * en plein rendu par options-expr (x-effect) : elle n'écrit rien, sans quoi chaque évaluation
+         * relancerait le rendu qui l'a déclenchée. Le nettoyage de la valeur devenue invalide se fait
+         * dans onLevelChanged, au moment du seul geste qui peut l'invalider.
+         *
+         * Cycle inconnu (donnée héritée, nomenclature future) → liste vide plutôt qu'une erreur.
+         */
+        gradeLevelsFor(level) {
+            return this.gradeLevels[level] || [];
+        },
+
+        /**
+         * Changement de cycle dans un formulaire de classe : le second niveau repart de zéro. « CP » n'a
+         * aucun sens sur une classe passée au Collège ; le garder afficherait un menu où la valeur
+         * sélectionnée ne figure pas, et le serveur la rejetterait (AcceleratedClassroomRules) sans que
+         * l'utilisateur voie d'où vient le refus.
+         */
+        onLevelChanged(form) {
+            if (form) form.targetLevel = '';
         },
 
         // Utilities

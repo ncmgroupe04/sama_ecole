@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Classrooms;
 using SamaEcole.Application.Common;
 using SamaEcole.Application.Enrollments;
 using QuestPDF.Fluent;
@@ -114,7 +115,11 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
         {
             InfoRow(column, "Matricule", NoBreakText.NoBreak(receipt.Matricule));
             InfoRow(column, "Nom complet", receipt.StudentFullName);
-            InfoRow(column, "Classe d'affectation", $"{receipt.ClassroomName} — {receipt.ClassroomLevel}");
+            // Classe passerelle / accélérée : le nom porte la mention du dispositif, parce que c'est SUR
+            // CE PAPIER que le tuteur constate que l'année qu'il règle en couvre deux niveaux. Classe
+            // ordinaire : la ligne est celle d'origine, au caractère près (AGENTS.md règle #12).
+            InfoRow(column, "Classe d'affectation",
+                $"{ClassroomPromotion.DisplayName(receipt.ClassroomName, receipt.IsAcceleratedClass)} — {receipt.ClassroomLevel}");
             InfoRow(column, "Année scolaire", receipt.SchoolYearLabel);
             InfoRow(column, "Type de mouvement", TypeLabel(receipt.Type));
             InfoRow(column, "Date de l'opération", FormatDate(receipt.EnrolledAt));

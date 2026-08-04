@@ -28,7 +28,9 @@ public class ReceiptPdfGeneratorTests
         string? phone = "+221 77 123 45 67",
         string? city = "Dakar",
         IReadOnlyList<CollectedFeeLineDto>? collected = null,
-        string? legalMentions = "SN-DKR-2020-B-1234") => new(
+        string? legalMentions = "SN-DKR-2020-B-1234",
+        bool isAcceleratedClass = false,
+        string classroomName = "CE1") => new(
         EnrollmentId: Guid.NewGuid(),
         ReceiptNumber: "REC-2025-0002",
         SchoolName: "École Primaire Les Baobabs",
@@ -41,7 +43,7 @@ public class ReceiptPdfGeneratorTests
         SchoolLogoUrl: "https://exemple.sn/logo.png",
         Matricule: "ELEV-2025-0008",
         StudentFullName: "Awa Fall",
-        ClassroomName: "CE1",
+        ClassroomName: classroomName,
         ClassroomLevel: "Primaire",
         SchoolYearLabel: "2025-2026",
         GuardianName: legalMentions is null ? null : "Ndèye Fall",
@@ -61,7 +63,8 @@ public class ReceiptPdfGeneratorTests
             new("Mensualité", IsRecurring: true, Months: 1, Amount: 15_000m)
         },
         TotalCollected: collected?.Sum(c => c.Amount) ?? 40_000m,
-        PaymentMethod: nameof(PaymentMethod.Cash));
+        PaymentMethod: nameof(PaymentMethod.Cash),
+        IsAcceleratedClass: isAcceleratedClass);
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -124,6 +127,27 @@ public class ReceiptPdfGeneratorTests
         // On ne peut pas « voir » l'image en test unitaire, mais on couvre la branche d'incrustation :
         // un logo valide doit produire un PDF valide, sans exception.
         ShouldBeAValidPdf(pdf);
+    }
+
+    /// <summary>
+    /// Classe PASSERELLE / ACCÉLÉRÉE : la ligne « Classe d'affectation » porte la mention du dispositif,
+    /// parce que le reçu est la seule pièce que le tuteur conserve — elle doit dire que l'année réglée
+    /// couvre deux niveaux.
+    ///
+    /// Ce que ce test couvre exactement : la NON-RÉGRESSION de la génération pour une classe passerelle
+    /// (le libellé composé ne fait pas tomber le rendu, quelle que soit sa longueur). Le CONTENU de la
+    /// ligne se vérifie sur ClassroomPromotion.DisplayName — voir ClassroomPromotionTests — que le
+    /// document appelle : aucune bibliothèque d'extraction de texte PDF n'est référencée ici, et en
+    /// ajouter une pour relire un libellé déjà couvert ne se justifie pas.
+    /// </summary>
+    [Fact]
+    public void Generate_Is_Robust_To_An_Accelerated_Bridge_Class()
+    {
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(
+            Receipt(isAcceleratedClass: true, classroomName: "CI-CP"), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+        pdf.Length.Should().BeGreaterThan(1000);
     }
 
     [Fact]

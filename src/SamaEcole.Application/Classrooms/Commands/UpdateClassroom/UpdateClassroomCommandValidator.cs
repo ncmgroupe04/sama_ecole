@@ -16,5 +16,7 @@ public class UpdateClassroomCommandValidator : AbstractValidator<UpdateClassroom
         RuleFor(x => x.Capacity)
             .GreaterThan(0).WithMessage("La capacité doit être supérieure à zéro.")
             .LessThanOrEqualTo(200).WithMessage("La capacité annoncée semble irréaliste (maximum 200).");
+
+        this.MustDeclareACoherentAcceleratedPath(x => x.IsAccelerated, x => x.TargetLevel, x => x.Name, x => x.Level);
     }
 }

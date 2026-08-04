@@ -30,6 +30,11 @@ public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext)
         // correction resterait cosmétique et le cycle figé sur sa valeur d'origine.
         classroom.Cycle = ClassroomCycle.CycleFor(classroom.Level);
 
+        // Classe passerelle / accélérée : décocher la case efface le second niveau
+        // (ClassroomPromotion.NormalizeTargetLevel), jamais un niveau cible orphelin laissé en base.
+        classroom.IsAccelerated = request.IsAccelerated;
+        classroom.TargetLevel = ClassroomPromotion.NormalizeTargetLevel(request.IsAccelerated, request.TargetLevel);
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var newRowVersion = await dbContext.Classrooms.AsNoTracking()
@@ -37,6 +42,8 @@ public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext)
             .Select(c => EF.Property<uint>(c, "xmin"))
             .FirstAsync(cancellationToken);
 
-        return new ClassroomResult(classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle, newRowVersion);
+        return new ClassroomResult(
+            classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle, newRowVersion,
+            classroom.IsAccelerated, classroom.TargetLevel);
     }
 }

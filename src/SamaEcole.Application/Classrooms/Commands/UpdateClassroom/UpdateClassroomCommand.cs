@@ -11,8 +11,14 @@ namespace SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
 /// <see cref="RowVersion"/> est le jeton xmin lu à la dernière consultation (ClassroomDto.RowVersion) :
 /// verrouillage optimiste (règle #5), même contrat que UpdateGradeCommand.
 /// </summary>
-public record UpdateClassroomCommand(Guid Id, string Name, string Level, int Capacity, uint RowVersion)
+/// <param name="IsAccelerated">Classe passerelle / accélérée (option). Décocher efface le second niveau.</param>
+/// <param name="TargetLevel">Second niveau validé, obligatoire quand — et seulement quand — la case est cochée.</param>
+public record UpdateClassroomCommand(
+    Guid Id, string Name, string Level, int Capacity, uint RowVersion,
+    bool IsAccelerated = false, string? TargetLevel = null)
     : IRequest<ClassroomResult>;
 
 /// <summary><see cref="Cycle"/> est recalculé depuis le niveau à chaque correction — voir CreateClassroomResult.</summary>
-public record ClassroomResult(Guid Id, string Name, string Level, int Capacity, CycleType Cycle, uint RowVersion);
+public record ClassroomResult(
+    Guid Id, string Name, string Level, int Capacity, CycleType Cycle, uint RowVersion,
+    bool IsAccelerated = false, string? TargetLevel = null);

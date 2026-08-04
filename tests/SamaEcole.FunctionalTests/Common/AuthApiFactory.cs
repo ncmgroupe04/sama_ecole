@@ -28,6 +28,19 @@ namespace SamaEcole.FunctionalTests.Common;
 /// </summary>
 public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    /// <summary>
+    /// Coupé par défaut pour TOUTE la suite (voir ApplyEnvironment) : un dashboard relu deux fois dans
+    /// la même classe de tests doit refléter l'état réel, pas une valeur mise en cache par une
+    /// assertion précédente. Un seul test a besoin du cache réellement ACTIF — celui qui prouve qu'un
+    /// Super Admin (sans SchoolId) reçoit 200 et non 403 quand MemoryKpiCacheService est sur le chemin
+    /// qui appelle vraiment BuildKey. Une PROPRIÉTÉ plutôt qu'un second constructeur : xUnit exige
+    /// qu'IClassFixture&lt;AuthApiFactory&gt; n'expose qu'un SEUL constructeur public ("may only define
+    /// a single public constructor") — le test dédié construit la fabrique lui-même (hors du mécanisme
+    /// de fixture d'xUnit) et pose cette propriété AVANT d'appeler InitializeAsync(), seul moment où
+    /// ApplyEnvironment() la lit.
+    /// </summary>
+    public bool KpiCacheEnabled { get; set; }
+
     private const string AppRole = "sama_ecole_app";
     private const string AppPassword = "app_password_for_tests";
 
@@ -264,10 +277,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // lui-même via ISubscriptionAdminStore.ExpireOverdueSubscriptionsAsync.
         Environment.SetEnvironmentVariable("Subscriptions__Lifecycle__Enabled", "false");
 
-        // COUPE le cache KPI des dashboards (MemoryKpiCacheService). Sans cela, un dashboard lu deux
-        // fois dans la même classe de tests refléterait la valeur mise en cache par une assertion
-        // précédente plutôt que l'état réel après une mutation.
-        Environment.SetEnvironmentVariable("Kpi__Cache__Enabled", "false");
+        // COUPE le cache KPI des dashboards par défaut (MemoryKpiCacheService). Sans cela, un dashboard
+        // lu deux fois dans la même classe de tests refléterait la valeur mise en cache par une
+        // assertion précédente plutôt que l'état réel après une mutation. _kpiCacheEnabled n'est mis à
+        // true que par la fabrique dédiée qui prouve le comportement du Super Admin CACHE ACTIF.
+        Environment.SetEnvironmentVariable("Kpi__Cache__Enabled", KpiCacheEnabled ? "true" : "false");
     }
 
     private static void ClearEnvironment()

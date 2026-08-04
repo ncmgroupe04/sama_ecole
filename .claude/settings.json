@@ -69,7 +69,21 @@
       "Bash(node test-student-address.js)",
       "Bash(node -e ' *)",
       "Bash(cp 'C:\\\\Users\\\\NCM\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-NCM-Documents-antigravity-sama-ecole\\\\9979e5ab-5d39-466a-9c61-ed201f0b81f5\\\\scratchpad/input_full_working.css' src/SamaEcole.Web/Styles/input.css)",
-      "Bash(cp 'C:\\\\Users\\\\NCM\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-NCM-Documents-antigravity-sama-ecole\\\\9979e5ab-5d39-466a-9c61-ed201f0b81f5\\\\scratchpad/Layout_full_working.cshtml' src/SamaEcole.Web/Views/Shared/_Layout.cshtml)"
+      "Bash(cp 'C:\\\\Users\\\\NCM\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-NCM-Documents-antigravity-sama-ecole\\\\9979e5ab-5d39-466a-9c61-ed201f0b81f5\\\\scratchpad/Layout_full_working.cshtml' src/SamaEcole.Web/Views/Shared/_Layout.cshtml)",
+      "Bash(docker info *)",
+      "Bash(npm ls *)",
+      "Bash(npx --version)",
+      "Bash(mkdir -p \"C:/Users/NCM/AppData/Local/Temp/claude/c--Users-NCM-Documents-antigravity-sama-ecole/ed102ea2-824e-4169-845c-8e11b5858721/scratchpad/sidebar-check\")",
+      "Bash(npm init *)",
+      "Bash(tasklist //FI \"PID eq 20360\")",
+      "Bash(wmic process *)",
+      "Bash(taskkill //PID 20360 //F)",
+      "Bash(PLAYWRIGHT_BROWSERS_PATH=\"C:/Users/NCM/AppData/Local/ms-playwright\" node run.js)",
+      "Bash(dotnet msbuild *)",
+      "Bash(tasklist //FI \"PID eq 23252\")",
+      "Bash(taskkill //PID 23252 //F)",
+      "Bash(git status *)",
+      "Bash(git restore *)"
     ],
     "additionalDirectories": [
       "\\tmp"

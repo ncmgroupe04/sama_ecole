@@ -100,6 +100,37 @@ public class ReportCardDocumentTests
         pages.Should().Be(1, "le bulletin primaire /10 au tableau épuré ne doit jamais déborder sur une seconde page A5");
     }
 
+    /// <summary>
+    /// Classe PASSERELLE / ACCÉLÉRÉE : la mention « Cursus Accéléré Passerelle — CI → CP » s'insère sous
+    /// le titre. C'est une LIGNE DE PLUS sur un gabarit A5 déjà calibré au plus juste — le cas le plus
+    /// chargé (12 matières, critère du ticket JGK-G03) doit donc encore tenir sur une seule page, sans
+    /// quoi l'option produirait des bulletins à deux pages pour les seules classes qui l'utilisent.
+    /// </summary>
+    [Fact]
+    public void An_Accelerated_Twelve_Subject_Report_Card_Still_Fits_On_A_Single_A5_Page()
+    {
+        var reportCard = BuildReportCard(12) with
+        {
+            AcceleratedPathLabel = "Cursus Accéléré Passerelle — CI → CP"
+        };
+
+        var pages = new ReportCardDocument(reportCard, logo: null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1, "la mention du cursus accéléré ne doit pas pousser le bulletin sur une seconde page A5");
+    }
+
+    /// <summary>
+    /// Symétrique du test ci-dessus : une classe ORDINAIRE n'insère rien du tout. C'est ce null qui
+    /// garantit que le gabarit de la référence visuelle (AGENTS.md règle #12) reste intact pour
+    /// l'immense majorité des bulletins.
+    /// </summary>
+    [Fact]
+    public void An_Ordinary_Report_Card_Carries_No_Accelerated_Mention()
+    {
+        BuildReportCard(12).AcceleratedPathLabel.Should().BeNull();
+    }
+
     [Fact]
     public void The_Generated_Document_Is_A_Valid_Non_Empty_Pdf()
     {

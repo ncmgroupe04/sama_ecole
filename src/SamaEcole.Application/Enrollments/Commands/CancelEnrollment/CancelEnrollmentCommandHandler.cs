@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Enrollments.Commands.CancelEnrollment;
 
-public class CancelEnrollmentCommandHandler(IApplicationDbContext dbContext)
+public class CancelEnrollmentCommandHandler(IApplicationDbContext dbContext, IKpiCacheService kpiCache)
     : IRequestHandler<CancelEnrollmentCommand, Unit>
 {
     public async Task<Unit> Handle(CancelEnrollmentCommand request, CancellationToken cancellationToken)
@@ -48,6 +48,12 @@ public class CancelEnrollmentCommandHandler(IApplicationDbContext dbContext)
         enrollment.Status = EnrollmentStatus.Cancelled;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Une annulation retire l'inscription du périmètre "Status != Cancelled" que lisent les deux
+        // dashboards KPI (solde dû, taux de recouvrement, effectifs) — sans invalidation, les agrégats
+        // en cache resteraient faux jusqu'à 7 minutes (KpiCacheSettings.TtlMinutes).
+        kpiCache.Invalidate(KpiCacheKeys.FinanceDashboard);
+        kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
 
         return Unit.Value;
     }

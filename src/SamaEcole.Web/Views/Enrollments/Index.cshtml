@@ -409,7 +409,9 @@
  </div>
  <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-2">
  <span class="text-slate-500">Classe &amp; Niveau :</span>
- <span class="font-medium text-slate-800" x-text="receipt.classroomName + (receipt.classroomLevel ? ' — ' + receipt.classroomLevel : '')"></span>
+ @* Classe passerelle : même mention qu'en PDF (ClassroomPromotion.DisplayName) — l'aperçu à
+    l'écran et la pièce imprimée ne doivent jamais dire deux choses. *@
+ <span class="font-medium text-slate-800" x-text="receipt.classroomName + (receipt.isAcceleratedClass ? ' (Cursus Accéléré Passerelle)' : '') + (receipt.classroomLevel ? ' — ' + receipt.classroomLevel : '')"></span>
  </div>
  <div class="flex justify-between items-baseline border-b border-slate-100/80 pb-2">
  <span class="text-slate-500">Année scolaire :</span>

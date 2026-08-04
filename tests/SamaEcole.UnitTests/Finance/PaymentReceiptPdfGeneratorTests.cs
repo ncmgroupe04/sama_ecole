@@ -21,7 +21,11 @@ public class PaymentReceiptPdfGeneratorTests
     private static readonly byte[] TinyPng = Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
 
-    private static PaymentReceiptDto Receipt(string? phone = "+221 77 123 45 67", string? city = "Dakar") => new(
+    private static PaymentReceiptDto Receipt(
+        string? phone = "+221 77 123 45 67",
+        string? city = "Dakar",
+        bool isAcceleratedClass = false,
+        string classroomName = "CE1") => new(
         ReceiptNumber: "REC-2025-0007",
         SchoolName: "École Primaire Les Baobabs",
         SchoolAddress: "123 Rue de l'École",
@@ -33,14 +37,15 @@ public class PaymentReceiptPdfGeneratorTests
         SchoolLogoUrl: "https://exemple.sn/logo.png",
         Matricule: "ELEV-2025-0008",
         StudentFullName: "Awa Fall",
-        ClassroomName: "CE1",
+        ClassroomName: classroomName,
         SchoolYearLabel: "2025-2026",
         Method: "MobileMoney",
         Amount: 30_000m,
         TotalDue: 160_000m,
         AlreadyPaid: 30_000m,
         RemainingBalance: 130_000m,
-        PaidAt: new DateTimeOffset(2026, 10, 5, 9, 0, 0, TimeSpan.Zero));
+        PaidAt: new DateTimeOffset(2026, 10, 5, 9, 0, 0, TimeSpan.Zero),
+        IsAcceleratedClass: isAcceleratedClass);
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -63,6 +68,21 @@ public class PaymentReceiptPdfGeneratorTests
         var pdf = new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>()).Generate(Receipt(phone: null, city: null), logo: null);
 
         ShouldBeAValidPdf(pdf);
+    }
+
+    /// <summary>
+    /// Reçu de caisse d'un élève de classe passerelle : même mention que sur le reçu d'inscription qu'il
+    /// complète. Couverture de NON-RÉGRESSION du rendu ; la composition du libellé elle-même est couverte
+    /// par ClassroomPromotionTests (aucun extracteur de texte PDF n'est référencé dans ce projet).
+    /// </summary>
+    [Fact]
+    public void Generate_Is_Robust_To_An_Accelerated_Bridge_Class()
+    {
+        var pdf = new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>())
+            .Generate(Receipt(isAcceleratedClass: true, classroomName: "CI-CP"), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+        pdf.Length.Should().BeGreaterThan(1000);
     }
 
     [Fact]

@@ -48,6 +48,16 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
             .HasDefaultValue(CycleType.College)
             .HasSentinel(CycleType.College);
 
+        // Classe passerelle / accélérée (option désactivée par défaut). HasDefaultValue(false) renseigne
+        // la colonne NOT NULL pour toutes les classes DÉJÀ en base sans downtime ; aucune sentinelle à
+        // régler ici, contrairement au Cycle ci-dessus : `false` EST default(bool), donc EF omet la
+        // valeur à l'INSERT et laisse le DEFAULT SGBD écrire exactement la même chose.
+        builder.Property(c => c.IsAccelerated).IsRequired().HasDefaultValue(false);
+
+        // Même gabarit que Level : nomenclature libre, 50 caractères. Nullable — une classe ordinaire
+        // n'a pas de second niveau.
+        builder.Property(c => c.TargetLevel).HasMaxLength(50);
+
         // Deux classes ne peuvent pas porter le même nom dans la même école — mais « CM2 A » peut
         // évidemment exister dans deux écoles différentes. Le soft delete fait partie de la clé :
         // sans lui, on ne pourrait jamais recréer une classe portant le nom d'une classe archivée.

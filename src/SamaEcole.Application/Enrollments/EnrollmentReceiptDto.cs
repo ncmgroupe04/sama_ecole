@@ -44,7 +44,12 @@ public record EnrollmentReceiptDto(
     decimal TotalCollected,
 
     // Mode de règlement du versement du jour ; null quand rien n'a été encaissé.
-    string? PaymentMethod)
+    string? PaymentMethod,
+
+    // Classe PASSERELLE / ACCÉLÉRÉE (option) : la ligne « Classe d'affectation » du reçu porte alors la
+    // mention du dispositif, l'année payée en couvrant deux niveaux. Faux pour une classe ordinaire —
+    // le reçu est alors rigoureusement identique à ce qu'il a toujours été.
+    bool IsAcceleratedClass = false)
 {
     /// <summary>Reste dû sur l'année APRÈS le versement du jour. Jamais négatif : l'encaissement est borné au dû.</summary>
     public decimal RemainingBalance => TotalDue - TotalCollected;

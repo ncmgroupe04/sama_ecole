@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Enrollments.Commands.ChangeEnrollmentStatus;
 
-public class ChangeEnrollmentStatusCommandHandler(IApplicationDbContext dbContext)
+public class ChangeEnrollmentStatusCommandHandler(IApplicationDbContext dbContext, IKpiCacheService kpiCache)
     : IRequestHandler<ChangeEnrollmentStatusCommand, Unit>
 {
     public async Task<Unit> Handle(ChangeEnrollmentStatusCommand request, CancellationToken cancellationToken)
@@ -31,6 +31,11 @@ public class ChangeEnrollmentStatusCommandHandler(IApplicationDbContext dbContex
         enrollment.Status = request.NewStatus;
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // Même raisonnement que CancelEnrollmentCommandHandler : un changement de statut (abandon,
+        // transfert...) sort l'inscription du périmètre "Status != Cancelled" des deux dashboards KPI.
+        kpiCache.Invalidate(KpiCacheKeys.FinanceDashboard);
+        kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
 
         return Unit.Value;
     }
