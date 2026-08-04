@@ -57,10 +57,23 @@ public class ConfirmDialogBodyTagHelper : TagHelper
                 """
             : $"""<button type="button" x-on:click="{CloseAction}" class="btn-primary">{CloseLabel}</button>""";
 
+        // <icon> est lui-même un TagHelper (IconTagHelper) : il ne se déclenche qu'à la COMPILATION
+        // Razor d'un .cshtml, jamais sur une chaîne HTML brute produite ICI, à l'exécution, par
+        // output.Content.SetHtmlContent. Un <icon name="checkmark-circle" /> injecté de cette façon
+        // atterrit donc chez le navigateur tel quel — un élément inconnu, invisible : c'était le
+        // cercle vide constaté (bg-success-bg affiché, mais aucune coche).
+        //
+        // Plutôt qu'un <use> statique vers le sprite Fluent (fill plein, rien à animer), un tracé
+        // dédié en contour (cercle puis coche, stroke-dasharray/-dashoffset — voir .cdb-success-icon*
+        // dans Styles/input.css) : le cercle se dessine, puis la coche, une seule fois à l'ouverture.
+        // Couleur success (tailwind.config.js) portée sur le <svg> et héritée par stroke="currentColor".
         output.Content.SetHtmlContent($"""
             <div class="text-center">
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
-                    <icon name="checkmark-circle" class="h-8 w-8 text-success" />
+                    <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" class="cdb-success-icon h-8 w-8 text-success">
+                        <circle class="cdb-success-icon-circle" cx="26" cy="26" r="25" stroke="currentColor" stroke-width="2" />
+                        <path class="cdb-success-icon-check" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                    </svg>
                 </div>
                 <p class="mt-4 text-sm text-gray-500">{message}</p>
             </div>

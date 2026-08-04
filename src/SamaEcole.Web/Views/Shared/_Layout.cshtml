@@ -388,8 +388,15 @@
  </div>
 
  <!-- Zone de contenu -->
- <main class="flex-1 overflow-y-auto overflow-x-hidden p-8 lg:p-10">
- <div class="max-w-7xl mx-auto space-y-6">
+ @* Le padding vit sur ce DIV, pas sur <main> lui-même : <main> est le conteneur défilant, et un
+ en-tête sticky en son sein se fige contre le bord de son PADDING-BOX, pas de son border-box —
+ top:0 s'arrêterait donc 2rem/2.5rem trop bas (exactement le padding de <main>), quelle que
+ soit la marge négative posée sur l'élément sticky pour ailleurs paraître plein cadre. En
+ gardant <main> sans padding, top:0 colle réellement contre son bord, juste sous le header. Ne
+ remettez pas ce padding sur <main> — voir .sticky-sub-header (Styles/input.css) et
+ Views/Classrooms|Subjects|Buildings/Index.cshtml, qui en dépendent. *@
+ <main class="flex-1 overflow-y-auto overflow-x-hidden">
+ <div class="max-w-7xl mx-auto space-y-6 p-8 lg:p-10">
  @RenderBody()
  </div>
  </main>

@@ -42,8 +42,103 @@
     @apply rounded-2xl border border-slate-100 bg-white shadow-sm;
   }
 
+  /* ---------------------------------------------------------------- Champs de formulaire
+     SOURCE UNIQUE de l'apparence d'un champ de saisie sur toute la plateforme (Élèves,
+     Enseignants, Classes, Paiements, Configuration, modales…). Un <input>, un <select> et un
+     <textarea> ont ici EXACTEMENT la même bordure, le même arrondi et le même halo de focus :
+     c'est la seule façon d'éviter que deux écrans voisins ne se répondent pas.
+
+     N'AJOUTEZ PLUS `transition-all duration-200 focus:ring-2 focus:ring-primary-500/20
+     focus:border-primary-500` derrière `input-field` dans les vues : cette chaîne était recopiée
+     dans une quarantaine d'endroits et REDÉFINISSAIT le focus au lieu de le compléter — d'où deux
+     halos différents selon l'écran. Tout est désormais dans la classe.
+
+     Hauteur : h-10 (40px) fixe. `py-3` produisait une hauteur DÉDUITE du contenu, donc variable
+     entre un <input> et un <select> mis côte à côte sur la même ligne — le défaut le plus visible
+     des barres de filtres. Les deux dérogations légitimes (textarea, select natif) sont traitées
+     juste en dessous, PAS par une classe concurrente dans les vues. */
   .input-field {
-    @apply mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-300 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500;
+    @apply mt-1 block h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+
+  /* Un <textarea> à hauteur fixe de 40px n'affiche qu'une ligne et demie : la hauteur devient un
+     PLANCHER, l'utilisateur garde la poignée de redimensionnement du navigateur. Rattaché au
+     sélecteur d'élément, donc aucune vue n'a à connaître l'exception. */
+  textarea.input-field {
+    @apply h-auto min-h-[5rem] py-2 leading-relaxed;
+  }
+
+  /* Le <select> natif réserve la place de sa flèche : sans padding droit, le texte de l'option la
+     plus longue passe dessous. py-0 rétablit le centrage vertical que la hauteur fixe impose. */
+  select.input-field {
+    @apply py-0 pr-9;
+  }
+
+  /* Champ en ERREUR de validation — appliqué en plus de `input-field` (`:class` Alpine le plus
+     souvent). Bordure ET halo rouges : la couleur seule ne suffit pas, le halo au focus doit
+     confirmer l'erreur au clavier comme à la souris (Volume 5 §8, accessibilité). */
+  .input-field-error {
+    @apply border-danger hover:border-danger focus:border-danger focus:ring-danger;
+  }
+
+  /* Étiquette de champ — la forme majoritaire du site (`block text-sm font-medium text-slate-700`),
+     désormais nommée. `form-label` était DÉJÀ écrit dans les vues (Fiche Enseignant, Frais) sans
+     avoir jamais été défini nulle part : ces étiquettes-là s'affichaient sans aucun style. */
+  .form-label {
+    @apply block text-sm font-medium text-slate-700;
+  }
+
+  /* Étiquette d'un champ obligatoire : l'astérisque est décoratif (aria-hidden implicite par
+     ::after), l'information réelle reste portée par l'attribut `required` du champ. */
+  .form-label-required::after {
+    content: " *";
+    @apply text-danger;
+  }
+
+  /* Variante COMPACTE, pour les barres de filtres au-dessus d'un tableau (Élèves, Assiduité, Paie,
+     Trésorerie, Rapports…) : l'étiquette y est un repère, pas le titre d'un champ de saisie, et la
+     forme pleine `form-label` alourdissait visiblement la barre. `mb-1` est intégré ici — un filtre
+     n'a pas le `mt-1` d'un champ de formulaire empilé. */
+  .form-label-sm {
+    @apply mb-1 block text-xs font-medium text-slate-500;
+  }
+
+  /* Variante sur FOND SOMBRE (panneaux Super Admin : Facturation, Tarifs). Même graisse et même
+     taille que `form-label-sm` — seule la couleur change, pour rester lisible en inversé. */
+  .form-label-inverse {
+    @apply mb-1 block text-xs font-medium text-zinc-400;
+  }
+
+  /* Message d'erreur SOUS un champ — la forme majoritaire (`mt-1 text-xs text-danger`), nommée.
+     À ne pas confondre avec `.form-error-banner`, qui annonce l'échec de TOUT le formulaire. */
+  .field-error {
+    @apply mt-1 text-xs text-danger;
+  }
+
+  /* Bandeau d'erreur en tête de formulaire ou de modale (échec d'enregistrement, erreur serveur). */
+  .form-error-banner {
+    @apply mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger;
+  }
+
+  /* Case à cocher / bouton radio : mêmes bordure et halo que `input-field`, sans la hauteur ni la
+     largeur pleine, qui n'ont pas de sens pour une case. */
+  .checkbox-field {
+    @apply h-4 w-4 rounded border-slate-300 text-primary-600 transition-all focus:ring-2 focus:ring-primary focus:ring-offset-0;
+  }
+
+  .radio-field {
+    @apply checkbox-field rounded-full;
+  }
+
+  /* Grille de champs sur deux colonnes (identité, coordonnées, période…). Remplace les
+     `grid grid-cols-1 sm:grid-cols-2 gap-3|4|5` choisis au cas par cas : trois gouttières
+     différentes pour la même intention de mise en page, d'un écran à l'autre.
+
+     Pas de `.form-stack` équivalent pour l'espacement VERTICAL : `space-y-4` sert aussi bien à
+     empiler des champs qu'à espacer des cartes ou des lignes de liste. Le remplacer partout par une
+     classe nommée « formulaire » aurait renommé des intentions qui n'en sont pas. */
+  .form-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2;
   }
 
   /* En-têtes de tableau — charte typographique harmonisée sur le Tableau de bord (revue design
@@ -83,6 +178,19 @@
     @apply status-badge bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary/20;
   }
 
+  /* Sous-header sticky (Classes, Matières, Bâtiments & Salles) : reste en haut de l'écran lors du
+     défilement, juste sous le header principal (jamais dessous — z-20 face au z-10 du header, et
+     surtout <main> n'a AUCUN padding : voir _Layout.cshtml). top-0 colle contre le bord de <main>,
+     le vrai conteneur défilant. -mx-8/-mt-8 (lg:-mx-10/-mt-10) annulent le padding du DIV qui
+     encadre @RenderBody() (celui-là a le padding, précisément pour que ces marges négatives aient
+     un padding à annuler) : sans eux l'en-tête resterait indenté au lieu de border à border.
+     N'ANNULEZ PAS top-0 par un top-8/lg:top-10 : ce fut la régression précédente — top:0 ne colle
+     correctement QUE si <main> reste sans padding ; un top positif ne fait que déplacer le
+     symptôme (bon uniquement tant que sa valeur suit le padding de <main> à la main). */
+  .sticky-sub-header {
+    @apply sticky top-0 z-20 isolate -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 py-4 lg:px-10 lg:py-4 bg-white border-b border-slate-200 shadow-sm;
+  }
+
   /* Squelette de chargement (Phase 3) : remplace le spinner brut plein-panneau là où un tableau se
      lit encore comme une liste (lignes de largeur variable) pendant l'attente réseau. Le halo animé
      est purement décoratif — jamais la seule information de statut (le rôle/aria reste porté par le
@@ -100,6 +208,56 @@
   @media (prefers-reduced-motion: reduce) {
     .skeleton::after {
       animation: none;
+    }
+  }
+
+  /* Coche animée des modales de succès (confirm-dialog-body, ConfirmDialogBodyTagHelper) : le cercle
+     se dessine, puis la coche, comme au premier affichage — jamais en boucle, ce n'est pas un
+     spinner. stroke-dasharray/-dashoffset plutôt qu'un sprite : le sprite Fluent est en fill plein
+     (pas de contour à dessiner), et ce tracé-ci doit rester net à toute taille sans dépendre d'un
+     fichier SVG externe. Couleurs alignées sur les tokens success/success-bg (tailwind.config.js),
+     pas un vert Tailwind générique, pour rester cohérent avec le reste de l'app. */
+  .cdb-success-icon {
+    animation: cdb-circle-scale 0.3s ease-out 0.1s both;
+  }
+
+  .cdb-success-icon-circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    animation: cdb-stroke-draw 0.5s cubic-bezier(0.65, 0, 0.45, 1) 0.1s forwards;
+  }
+
+  .cdb-success-icon-check {
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: cdb-stroke-draw 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+  }
+
+  @keyframes cdb-stroke-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes cdb-circle-scale {
+    0% {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cdb-success-icon,
+    .cdb-success-icon-circle,
+    .cdb-success-icon-check {
+      animation: none;
+      stroke-dashoffset: 0;
+      opacity: 1;
+      transform: none;
     }
   }
 
