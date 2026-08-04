@@ -1,3 +1,4 @@
+using SamaEcole.Application.Classrooms;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -131,18 +132,16 @@ public static class DbSeeder
         // sans incrémenter matricule_sequences, et le premier élève créé depuis l'interface
         // réclamerait un numéro déjà pris — violation d'unicité, pour un jeu de démonstration.
         // La liste démarre donc vide, et le premier élève passe par le vrai parcours d'inscription.
+        // Cycle DÉRIVÉ du niveau via ClassroomCycle.CycleFor, exactement comme le font
+        // CreateClassroomCommandHandler et UpdateClassroomCommandHandler. Le poser en dur ici, ou
+        // l'omettre, laisserait ces classes sur le défaut College de l'entité : « Primaire » sur le
+        // papier, mais notées sur /20 avec des coefficients (voir la remarque de ClassroomCycle).
+        // C'est précisément ce qui s'était produit — la migration BackfillClassroomCycleFromLevel a
+        // réparé les lignes existantes, mais le seeder recréait le défaut sur toute base neuve.
         var classrooms = new[]
         {
-            new Classroom
-            {
-                Id = Guid.Parse("c0000001-0000-0000-0000-000000000001"),
-                SchoolId = BaobabsId, Name = "CM2 A", Level = "Primaire", Capacity = 40
-            },
-            new Classroom
-            {
-                Id = Guid.Parse("c0000002-0000-0000-0000-000000000002"),
-                SchoolId = BaobabsId, Name = "CI B", Level = "Primaire", Capacity = 35
-            }
+            NewClassroom("c0000001-0000-0000-0000-000000000001", "CM2 A", "Primaire", 40),
+            NewClassroom("c0000002-0000-0000-0000-000000000002", "CI B", "Primaire", 35)
         };
 
         foreach (var classroom in classrooms)
@@ -151,13 +150,22 @@ public static class DbSeeder
             // SchoolId au tenant courant — or le seeder n'en a AUCUN. Sans cela, le test d'existence
             // répondrait « absente » à chaque démarrage, et le second relancerait l'insertion pour se
             // heurter à l'index unique. Le rôle propriétaire, lui, voit bien la ligne côté RLS.
-            var exists = await dbContext.Classrooms
+            var existing = await dbContext.Classrooms
                 .IgnoreQueryFilters()
-                .AnyAsync(c => c.Id == classroom.Id, cancellationToken);
+                .FirstOrDefaultAsync(c => c.Id == classroom.Id, cancellationToken);
 
-            if (!exists)
+            if (existing is null)
             {
                 dbContext.Classrooms.Add(classroom);
+            }
+            else if (existing.Cycle != classroom.Cycle)
+            {
+                // Rattrapage des bases de démonstration semées AVANT que le cycle ne soit dérivé ici :
+                // la migration de backfill ne repassera pas (elle a déjà tourné), et ces lignes
+                // resteraient sur College — donc en /20 — pour toujours. Limité aux deux classes de
+                // démonstration, reconnues par leur identifiant fixe : le seeder ne touche à aucune
+                // classe créée par l'utilisateur.
+                existing.Cycle = classroom.Cycle;
             }
         }
 
@@ -199,6 +207,21 @@ public static class DbSeeder
             Role = role,
             PasswordHash = passwordHash,
             Status = EntityStatus.Active
+        };
+
+    /// <summary>
+    /// Classe de démonstration à identifiant FIXE (rejouable d'un démarrage à l'autre), dont le cycle
+    /// est dérivé du niveau — jamais saisi à part. Voir <see cref="ClassroomCycle"/>.
+    /// </summary>
+    private static Classroom NewClassroom(string id, string name, string level, int capacity) =>
+        new()
+        {
+            Id = Guid.Parse(id),
+            SchoolId = BaobabsId,
+            Name = name,
+            Level = level,
+            Cycle = ClassroomCycle.CycleFor(level),
+            Capacity = capacity
         };
 
     private sealed class NoTenantProvider : ITenantProvider

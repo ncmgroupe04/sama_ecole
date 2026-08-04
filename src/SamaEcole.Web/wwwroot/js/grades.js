@@ -22,6 +22,12 @@
  * côté serveur avant la moindre écriture, soit il est intégralement accepté, soit rien n'est enregistré
  * et chaque ligne en erreur est listée.
  */
+
+// Miroir client de CycleTypeExtensions.UsesSimplifiedGrading (SamaEcole.Domain) : les cycles notés
+// sur /10. Toute évolution de l'énumération côté serveur doit être répercutée ici — c'est le seul
+// endroit du front qui décide du barème affiché.
+const SIMPLIFIED_GRADING_CYCLES = ['Primaire', 'Maternelle'];
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('gradesView', () => ({
         canEnterGrades: window.auth.role === 'Enseignant' || window.auth.role === 'Directeur',
@@ -76,12 +82,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         // Barème de saisie = celui du CYCLE de la classe sélectionnée, PAS un réglage global d'école :
-        // Primaire /10, Collège & Lycée /20 (système hybride). Même règle que côté serveur
-        // (CreateGradeCommandValidator.ResolveScaleForStudentAsync) — le serveur reste l'autorité, ceci
-        // n'est qu'un garde-fou de saisie (attribut max) et un repère visuel (« /10 » ou « /20 »).
+        // Maternelle & Primaire /10, Collège & Lycée /20 (système hybride). Même règle que côté serveur
+        // (CycleTypeExtensions.UsesSimplifiedGrading, appliquée par GradingScaleGuard) — le serveur
+        // reste l'autorité, ceci n'est qu'un garde-fou de saisie (attribut max) et un repère visuel.
+        // La liste DOIT rester alignée sur UsesSimplifiedGrading : n'y voir que « Primaire » affichait
+        // /20 en Maternelle, puis faisait rejeter la saisie par un 422 que rien n'annonçait à l'écran.
         get gradingScale() {
             const classroom = this.classrooms.find(c => c.id === this.selectedClassroomId);
-            return classroom && classroom.cycle === 'Primaire' ? 10 : 20;
+            return classroom && SIMPLIFIED_GRADING_CYCLES.includes(classroom.cycle) ? 10 : 20;
         },
 
         async init() {

@@ -31,7 +31,7 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
     public Task DisposeAsync() => Task.CompletedTask;
 
     private record Tokens(string AccessToken, int ExpiresIn);
-    private record ClassroomDto(Guid Id, string Name, string Level, int Capacity);
+    private record ClassroomDto(Guid Id, string Name, string Level, int Capacity, string? Cycle);
     private record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient);
     private record SchoolYearDto(Guid Id, string Label, DateOnly StartDate, DateOnly EndDate, bool IsActive, bool IsClosed);
     private record TermDto(Guid Id, string Label, int Order, DateOnly StartDate, DateOnly EndDate);
@@ -68,13 +68,16 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         SendAsync(HttpMethod.Post, "/api/v1/grades", token, new { studentId, subjectId, termId, evaluationType, value });
 
     /// <summary>Classe, matière, élève, année (et donc ses 3 trimestres auto-générés) — le décor complet.</summary>
-    private async Task<(Guid StudentId, Guid SubjectId, Guid TermId)> SeedGradingContextAsync(string directeurToken)
+    /// <param name="level">
+    /// Niveau de la classe, dont se déduit le CYCLE (ClassroomCycle) et donc le barème. « Collège » par
+    /// défaut : la majorité de ces tests saisissent des notes sur /20, qu'une classe « Primaire »
+    /// (plafonnée à /10) refuserait en 422.
+    /// </param>
+    private async Task<(Guid StudentId, Guid SubjectId, Guid TermId)> SeedGradingContextAsync(
+        string directeurToken, string level = "Collège")
     {
         var classroomResponse = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeurToken,
-            // Classe du SECONDAIRE : ces tests saisissent des notes sur /20. Le niveau détermine
-            // désormais le cycle (ClassroomCycle), et donc le barème — une classe « Primaire » plafonne
-            // à /10 et refuserait ces notes en 422.
-            new { name = "3e A", level = "Collège", capacity = 40 });
+            new { name = "3e A", level, capacity = 40 });
         var classroom = (await classroomResponse.Content.ReadFromJsonAsync<ClassroomDto>())!;
 
         var subjectResponse = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeurToken,
@@ -166,6 +169,62 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
         var response = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 25);
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    /// <summary>
+    /// Barème du PRIMAIRE : /10, et non le /20 du secondaire. 15 est une note parfaitement valide au
+    /// collège — c'est le cycle de la classe, pas un réglage d'école, qui doit la faire refuser ici.
+    /// Le serveur reste l'autorité : l'attribut max du champ de saisie n'est qu'un confort.
+    /// </summary>
+    [Theory]
+    [InlineData("Primaire")]
+    [InlineData("Maternelle")]
+    public async Task A_Grade_Above_Ten_Should_Return_422_For_A_Simplified_Grading_Cycle(string level)
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur, level);
+        var enseignant = await EnseignantTokenAsync();
+
+        var response = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 15);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    /// <summary>Contre-épreuve du test ci-dessus : sous le plafond /10, la saisie passe normalement.</summary>
+    [Theory]
+    [InlineData("Primaire")]
+    [InlineData("Maternelle")]
+    public async Task A_Grade_Within_Ten_Should_Be_Accepted_For_A_Simplified_Grading_Cycle(string level)
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur, level);
+        var enseignant = await EnseignantTokenAsync();
+
+        var response = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 8.5m);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    /// <summary>
+    /// Le cycle doit VOYAGER jusqu'au client : c'est `cycle` qui pilote l'affichage « /10 » ou « /20 »
+    /// et l'attribut max du champ de saisie (wwwroot/js/grades.js, SIMPLIFIED_GRADING_CYCLES). Une
+    /// classe créée « Primaire » mais renvoyée sur College afficherait un /20 trompeur, suivi d'un 422
+    /// que rien n'annonçait — la régression corrigée le 2026-08-03 côté seeder.
+    /// </summary>
+    [Theory]
+    [InlineData("Primaire", "Primaire")]
+    [InlineData("Maternelle", "Maternelle")]
+    [InlineData("Collège", "College")]
+    [InlineData("Lycée", "Lycee")]
+    public async Task A_Classroom_Should_Expose_The_Cycle_Derived_From_Its_Level(string level, string expectedCycle)
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeur,
+            new { name = $"Classe {level}", level, capacity = 30 });
+        var classroom = (await response.Content.ReadFromJsonAsync<ClassroomDto>())!;
+
+        classroom.Cycle.Should().Be(expectedCycle);
     }
 
     [Fact]
