@@ -115,7 +115,7 @@ public class CreateSchoolCommandHandler(
             $"""
              Bonjour {fullName},
 
-             Votre établissement « {schoolName} » vient d'être créé sur Sama Ecole.
+             Votre établissement « {schoolName} » vient d'être créé sur Unikol.
 
              Voici vos identifiants de connexion :
                E-mail       : {email}
@@ -125,7 +125,7 @@ public class CreateSchoolCommandHandler(
              """;
 
         await emailSender.SendAsync(
-            new EmailMessage(email, $"Vos identifiants Sama Ecole — {schoolName}", body),
+            new EmailMessage(email, $"Vos identifiants Unikol — {schoolName}", body),
             cancellationToken);
     }
 }

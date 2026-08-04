@@ -23,7 +23,16 @@ namespace SamaEcole.Persistence.Migrations
     /// </summary>
     public partial class EnableRowLevelSecurity : Migration
     {
-        /// <summary>Tables tenant. Toute nouvelle table portant un SchoolId doit être ajoutée ici.</summary>
+        /// <summary>
+        /// Tables tenant couvertes PAR CETTE migration au moment de sa création — pas la liste de
+        /// vérité actuelle. Chaque migration suivante qui introduit une table portant un SchoolId
+        /// active sa propre RLS + policy directement dans son propre fichier (voir par ex.
+        /// AddFeeInstallmentPlans, AddScheduleAndDisbursements, AddSurveillantEntities…) : ne pas
+        /// modifier ce tableau pour une migration déjà appliquée. La couverture réelle est vérifiée
+        /// dynamiquement, table par table, par tests/SamaEcole.IntegrationTests/Multitenancy/
+        /// RlsCoverageTests.cs, qui échoue en CI si une entité ITenantEntity n'a pas sa RLS+policy —
+        /// c'est cette suite, pas ce tableau, la source de vérité.
+        /// </summary>
         private static readonly string[] TenantTables = ["students", "subscriptions", "matricule_sequences"];
 
         private const string AppRole = "sama_ecole_app";

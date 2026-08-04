@@ -18,4 +18,10 @@ public class PlatformDashboardStats
     public decimal TotalRevenue { get; set; }
 
     public int ActiveSubscriptions { get; set; }
+
+    public decimal MRR { get; set; }
+
+    public decimal ForecastedRevenue30Days { get; set; }
+
+    public int ActiveSchools { get; set; }
 }

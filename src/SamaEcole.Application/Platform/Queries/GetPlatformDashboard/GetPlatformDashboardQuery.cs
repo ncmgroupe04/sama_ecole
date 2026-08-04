@@ -16,7 +16,11 @@ public record PlatformDashboardStatsDto(
     int TotalSchools,
     int TotalUsers,
     decimal TotalRevenue,
-    int ActiveSubscriptions);
+    int ActiveSubscriptions,
+    decimal MRR,
+    decimal ARR,
+    decimal ForecastedRevenue30Days,
+    decimal ARPU);
 
 public class GetPlatformDashboardQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetPlatformDashboardQuery, PlatformDashboardStatsDto>
@@ -31,7 +35,11 @@ public class GetPlatformDashboardQueryHandler(IApplicationDbContext dbContext)
             .AsNoTracking()
             .SingleAsync(cancellationToken);
 
+        var arr = stats.MRR * 12;
+        var arpu = stats.ActiveSchools > 0 ? stats.MRR / stats.ActiveSchools : 0;
+
         return new PlatformDashboardStatsDto(
-            stats.TotalSchools, stats.TotalUsers, stats.TotalRevenue, stats.ActiveSubscriptions);
+            stats.TotalSchools, stats.TotalUsers, stats.TotalRevenue, stats.ActiveSubscriptions,
+            stats.MRR, arr, stats.ForecastedRevenue30Days, arpu);
     }
 }

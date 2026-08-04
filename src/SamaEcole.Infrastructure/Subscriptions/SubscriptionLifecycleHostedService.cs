@@ -94,7 +94,7 @@ public class SubscriptionLifecycleHostedService(
                         $"""
                          Bonjour {directorFullName},
 
-                         L'abonnement Sama Ecole de l'établissement « {schoolName} » est arrivé à échéance.
+                         L'abonnement Unikol de l'établissement « {schoolName} » est arrivé à échéance.
                          L'accès est désormais en LECTURE SEULE : vos données restent consultables, mais
                          toute saisie (élèves, notes, paiements…) est bloquée tant que le renouvellement
                          n'est pas confirmé.
@@ -146,7 +146,7 @@ public class SubscriptionLifecycleHostedService(
                             $"""
                              Bonjour {directorFullName},
 
-                             L'abonnement Sama Ecole de l'établissement « {name} » arrive à échéance dans {daysBefore} jour(s).
+                             L'abonnement Unikol de l'établissement « {name} » arrive à échéance dans {daysBefore} jour(s).
 
                              Merci de renouveler votre abonnement depuis votre espace avant cette date, afin
                              de conserver un accès complet à la plateforme.

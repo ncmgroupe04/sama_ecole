@@ -143,7 +143,7 @@
 
             <form x-on:submit.prevent="submitCreate()" novalidate class="mt-4 space-y-4">
                 <div>
-                    <label class="block text-xs font-medium text-zinc-400 mb-1">Code</label>
+                    <label class="form-label-inverse">Code</label>
                     <input type="text" x-model="newCode.code" placeholder="BIENVENUE2026"
                            class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 uppercase placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
                     <p x-show="createErrors.code" x-text="createErrors.code" class="mt-1 text-xs text-rose-400"></p>
@@ -151,7 +151,7 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-medium text-zinc-400 mb-1">Type de remise</label>
+                        <label class="form-label-inverse">Type de remise</label>
                         <select x-model="newCode.discountType"
                                 class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
                             <option value="Percentage">Pourcentage</option>
@@ -161,7 +161,7 @@
                         </select>
                     </div>
                     <div x-show="requiresValue" x-cloak>
-                        <label class="block text-xs font-medium text-zinc-400 mb-1" x-text="newCode.discountType === 'Percentage' ? 'Valeur (%)' : 'Valeur (FCFA)'"></label>
+                        <label class="form-label-inverse" x-text="newCode.discountType === 'Percentage' ? 'Valeur (%)' : 'Valeur (FCFA)'"></label>
                         <input type="number" min="0" step="0.01" x-model.number="newCode.discountValue"
                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
                         <p x-show="createErrors.discountvalue" x-text="createErrors.discountvalue" class="mt-1 text-xs text-rose-400"></p>
@@ -170,13 +170,13 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-medium text-zinc-400 mb-1">Durée (mois)</label>
+                        <label class="form-label-inverse">Durée (mois)</label>
                         <input type="number" min="1" x-model.number="newCode.durationMonths"
                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
                         <p x-show="createErrors.durationmonths" x-text="createErrors.durationmonths" class="mt-1 text-xs text-rose-400"></p>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-zinc-400 mb-1">Limite d'utilisations</label>
+                        <label class="form-label-inverse">Limite d'utilisations</label>
                         <input type="number" min="1" x-model.number="newCode.maxUses" placeholder="Illimité"
                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
                     </div>
@@ -184,12 +184,12 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-medium text-zinc-400 mb-1">Date de début</label>
+                        <label class="form-label-inverse">Date de début</label>
                         <input type="date" x-model="newCode.startDate"
                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-zinc-400 mb-1">Date de fin</label>
+                        <label class="form-label-inverse">Date de fin</label>
                         <input type="date" x-model="newCode.endDate"
                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
                         <p x-show="createErrors.enddateutc" x-text="createErrors.enddateutc" class="mt-1 text-xs text-rose-400"></p>

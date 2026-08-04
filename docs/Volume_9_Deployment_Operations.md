@@ -13,6 +13,7 @@
 1. Objectif
 2. Architecture de déploiement (cloud, unique)
 3. Environnements
+3bis. Configuration & secrets
 4. Intégration et déploiement continus (CI/CD)
 5. Sauvegardes
 6. Restauration
@@ -71,6 +72,32 @@ Toutes les écoles (Directeur, Secrétariat, Finance, Enseignants) se connectent
 | **Développement** | Poste des développeurs, Docker Compose local, base PostgreSQL locale de test (jamais de données réelles) |
 | **Staging** | Réplique de la production, utilisée pour valider chaque déploiement et chaque migration avant mise en production |
 | **Production** | Environnement servant les écoles clientes réelles |
+
+## 3bis. Configuration & secrets
+
+Toute la configuration sensible (chaînes de connexion, clé de signature JWT, clés PayDunya, SMTP, SMS,
+WhatsApp) est fournie exclusivement par variable d'environnement — jamais committée dans un
+`appsettings*.json` (AGENTS.md, section « Ne jamais faire »).
+
+`.env.example`, à la racine du dépôt, documente **chaque** clé attendue, sa forme (convention ASP.NET
+Core `Section__Cle`), et si elle est requise ou optionnelle. C'est la référence unique — ne pas la
+laisser dériver du code : toute nouvelle section de configuration (nouvel `IOptions<T>`) doit y être
+ajoutée au moment où elle est introduite.
+
+- **Développement** : copier `.env.example` en `.env` (jamais committé — `.gitignore`) ; Docker Compose
+  le lit automatiquement (`docker-compose.yml`).
+- **Staging/Production** : les mêmes clés sont posées comme variables d'environnement sur la
+  plateforme d'hébergement (jamais dans un fichier versionné). Les gardes de démarrage
+  (`RlsGuard`, la vérification de `Jwt:SigningKey` dans `Program.cs`, `EmailSenderGuard`) font échouer
+  le déploiement plutôt que de démarrer silencieusement avec une configuration incomplète ou dangereuse
+  (ex. rôle PostgreSQL propriétaire branché sur l'application — AGENTS.md règle #2).
+- Les intégrations optionnelles à l'onboarding (PayDunya, SMTP, SMS, WhatsApp) utilisent le sentinel
+  `"REMPLACER"` comme valeur de configuration explicitement « non configurée » (`*Options.IsConfigured`
+  dans `SamaEcole.Infrastructure`) — permet de déployer une école sans SMS ni WhatsApp actifs sans que
+  l'application ne tente d'appeler un agrégateur avec des clés invalides.
+- Rotation d'un secret compromis : le remplacer côté plateforme d'hébergement puis redéployer (pas de
+  procédure applicative dédiée — aucun secret n'est mis en cache au-delà de la durée de vie du
+  processus).
 
 ## 4. Intégration et déploiement continus (CI/CD)
 

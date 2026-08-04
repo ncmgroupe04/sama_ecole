@@ -3,7 +3,7 @@
 <head>
  <meta charset="utf-8" />
  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
- <title>@ViewData["Title"] - Sama Ecole</title>
+ <title>@ViewData["Title"] - Unikol</title>
  <link rel="icon" type="image/png" href="~/images/logo-school.png" />
  <!-- CSS généré dans wwwroot/css/site.css par `npm run build:css` (Tailwind, Décision D-13) -->
  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -68,11 +68,11 @@
  
  <!-- En-tête Sidebar / Logo -->
  <div class="flex items-center justify-center h-16 border-b border-slate-100 px-6">
- <div class="flex items-center gap-2">
- <div class="w-8 h-8 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center" aria-hidden="true">
- <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" /></svg>
+ <div class="flex items-center gap-3">
+ <div class="w-12 h-12 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center" aria-hidden="true">
+ <svg class="w-[1.875rem] h-[1.875rem]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" /></svg>
  </div>
- <span class="font-bold text-lg text-slate-900 tracking-tight">Sama Ecole</span>
+ <span class="font-bold text-[1.6875rem] text-slate-900 tracking-tight">Unikol</span>
  </div>
  </div>
 
@@ -268,7 +268,7 @@
  @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
  y compris sur la page Classes : une indication de position fausse vaut moins que pas
  d'indication du tout. Un vrai fil d'ariane viendra avec l'arborescence des modules. *@
- <h2 class="hidden sm:block text-2xl font-bold tracking-tight text-primary-700">@ViewData["Title"]</h2>
+ <h2 class="hidden sm:block text-xs font-bold tracking-tight text-primary-700">@ViewData["Title"]</h2>
  </div>
 
  <div class="flex items-center gap-4">
@@ -345,19 +345,18 @@
  aria-label="Recherche globale — à venir"
  title="Recherche globale — à venir"
  placeholder="Rechercher…"
- class="w-64 pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-400 placeholder:text-slate-300 cursor-not-allowed transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+ class="w-64 pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-400 placeholder:text-slate-300 cursor-not-allowed" />
  </div> *@
 
  @* Utilisateur connecté : remplace l'ancienne cloche de notifications (module jamais livré).
  Aucun contexte d'authentification Razor côté serveur n'existe ici — l'access token JWT vit
- uniquement dans le navigateur (localStorage, voir auth.js) — donc l'e-mail de session, seule
- identité déjà exposée côté client (sessionMenu(), même source que le profil de la barre
- latérale), sert d'affichage : le nom complet manque tant qu'aucun endpoint ne l'expose
- (pas de GET /users/me). *@
+ uniquement dans le navigateur (localStorage, voir auth.js). Le nom complet vient du claim
+ `name` du JWT (User.FullName, JwtTokenGenerator), déjà exposé par sessionMenu() ; l'e-mail
+ reste affiché au bas de la barre latérale, donc pas dupliqué ici. *@
  <div x-data="sessionMenu()" class="flex items-center gap-2 px-1" :title="email">
  <div aria-hidden="true" class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center text-xs font-medium uppercase"
- x-text="email ? email[0] : '?'"></div>
- <span class="hidden sm:block text-sm font-medium text-slate-700 truncate max-w-[10rem]" x-text="email"></span>
+ x-text="(name || email) ? (name || email)[0] : '?'"></div>
+ <span class="hidden sm:block text-sm font-medium text-slate-700 truncate max-w-[10rem]" x-text="name || email"></span>
  </div>
 
  @* Déconnexion (Volume 5 §3.1). Révoque les refresh tokens côté serveur et purge le
@@ -416,7 +415,7 @@
  <span class="w-2 h-2 rounded-full" :class="online ? 'bg-success' : 'bg-danger'"></span>
  <span x-text="online ? 'Connecté' : 'Hors ligne — vérifiez votre réseau'"></span>
  </div>
- <span>Sama Ecole</span>
+ <span>Unikol</span>
  </footer>
  </div>
  </div>

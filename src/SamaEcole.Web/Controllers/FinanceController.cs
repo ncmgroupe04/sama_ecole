@@ -273,7 +273,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du reçu PDF pour le paiement {PaymentId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération du reçu PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du reçu PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -463,7 +463,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du bulletin de paie PDF pour {FichePaieId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération du bulletin de paie PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du bulletin de paie PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -508,7 +508,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération de la déclaration fiscale PDF pour {TaxDeclarationId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération de la déclaration fiscale PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération de la déclaration fiscale PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -554,7 +554,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération de la sommation PDF pour {EnrollmentId}", enrollmentId);
-            return Problem(detail: ex.Message, title: "Erreur de génération de la sommation PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération de la sommation PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -592,7 +592,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération de l'attestation de travail PDF pour {ContractId}", contractId);
-            return Problem(detail: ex.Message, title: "Erreur de génération de l'attestation de travail PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération de l'attestation de travail PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -639,7 +639,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération de l'engagement financier PDF pour {CommitmentId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération de l'engagement financier PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération de l'engagement financier PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -694,7 +694,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération de la fiche d'heures PDF pour le contrat {ContractId}", contractId);
-            return Problem(detail: ex.Message, title: "Erreur de génération de la fiche d'heures PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération de la fiche d'heures PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 

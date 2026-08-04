@@ -4,7 +4,7 @@
 *@
 
 @{
-    ViewData["Title"] = "Trouvez l'école idéale - Sama Ecole";
+    ViewData["Title"] = "Trouvez l'école idéale";
     Layout = "_LayoutPublic";
 }
 
@@ -24,7 +24,7 @@
             Trouvez l'établissement idéal pour votre enfant
         </h1>
         <p class="mt-4 max-w-2xl text-xl text-indigo-200 mx-auto">
-            Recherchez parmi les établissements du Sénégal référencés sur Sama Ecole.
+            Recherchez parmi les établissements du Sénégal référencés sur Unikol.
         </p>
 
         <!-- Search Form -->
@@ -67,22 +67,22 @@
                 <div class="space-y-3">
                     <div class="flex items-center">
                         <input id="level-all" name="level" type="radio" value="" x-model="cycle" x-on:change="applyFilters()"
-                               class="h-4 w-4 text-indigo-600 border-gray-300">
+                               class="radio-field">
                         <label for="level-all" class="ml-3 text-sm text-gray-600">Tous les niveaux</label>
                     </div>
                     <div class="flex items-center">
                         <input id="level-primaire" name="level" type="radio" value="Primaire" x-model="cycle" x-on:change="applyFilters()"
-                               class="h-4 w-4 text-indigo-600 border-gray-300">
+                               class="radio-field">
                         <label for="level-primaire" class="ml-3 text-sm text-gray-600">Préscolaire / Primaire</label>
                     </div>
                     <div class="flex items-center">
                         <input id="level-college" name="level" type="radio" value="College" x-model="cycle" x-on:change="applyFilters()"
-                               class="h-4 w-4 text-indigo-600 border-gray-300">
+                               class="radio-field">
                         <label for="level-college" class="ml-3 text-sm text-gray-600">Collège</label>
                     </div>
                     <div class="flex items-center">
                         <input id="level-lycee" name="level" type="radio" value="Lycee" x-model="cycle" x-on:change="applyFilters()"
-                               class="h-4 w-4 text-indigo-600 border-gray-300">
+                               class="radio-field">
                         <label for="level-lycee" class="ml-3 text-sm text-gray-600">Lycée</label>
                     </div>
                 </div>

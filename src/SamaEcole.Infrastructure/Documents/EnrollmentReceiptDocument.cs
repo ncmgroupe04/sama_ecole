@@ -79,7 +79,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
 
                 // Coordonnées puis mentions légales : chaque ligne n'affiche que ce qui est renseigné,
                 // sans séparateur orphelin ni « — » de remplissage.
-                var contact = JoinPresent(receipt.SchoolAddress, receipt.SchoolPhone, receipt.SchoolEmail);
+                var contact = JoinPresent(receipt.SchoolAddress, PhoneFormatter.FormatSenegal(receipt.SchoolPhone), receipt.SchoolEmail);
                 if (contact.Length > 0)
                 {
                     header.Item().Text(contact).FontSize(7).FontColor(Colors.Grey.Darken2);
@@ -155,8 +155,8 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
             {
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.RelativeColumn(3);
-                    columns.RelativeColumn(2);
+                    columns.RelativeColumn();                       // Désignation — libellé libre, prend le reste
+                    columns.ConstantColumn(PdfColumnWidths.Amount); // Montant — largeur fixe, jamais de repli
                 });
 
                 table.Header(header =>

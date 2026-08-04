@@ -20,7 +20,8 @@ public record PlatformSubscriptionDto(
     string Status,
     DateOnly? ExpiresAt,
     decimal? LastPaymentAmountXof,
-    DateTimeOffset? LastPaymentAt);
+    DateTimeOffset? LastPaymentAt,
+    string? LastPaymentBillingPeriod);
 
 public class GetPlatformSubscriptionsQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetPlatformSubscriptionsQuery, IReadOnlyList<PlatformSubscriptionDto>>
@@ -33,7 +34,7 @@ public class GetPlatformSubscriptionsQueryHandler(IApplicationDbContext dbContex
             .OrderBy(row => row.SchoolName)
             .Select(row => new PlatformSubscriptionDto(
                 row.SchoolId, row.SchoolName, row.Plan, row.Status,
-                row.ExpiresAt, row.LastPaymentAmountXof, row.LastPaymentAt))
+                row.ExpiresAt, row.LastPaymentAmountXof, row.LastPaymentAt, row.LastPaymentBillingPeriod))
             .ToListAsync(cancellationToken);
     }
 }

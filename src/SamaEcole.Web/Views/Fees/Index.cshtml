@@ -97,7 +97,7 @@
  </div>
 
  <div class="flex items-center gap-3">
- <select-field model="levelFilter" aria-label="Filtrer par niveau" class="!my-0 h-10 !py-2 !px-3 rounded-xl w-40 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Tous les niveaux"
+ <select-field model="levelFilter" aria-label="Filtrer par niveau" class="!my-0 w-40" placeholder="Tous les niveaux"
  options-expr="[{value:'', label:'Tous les niveaux'}].concat(knownLevels.map(level => ({value: level, label: level})))" />
 
  <div class="relative w-full sm:w-56 flex items-center">
@@ -106,7 +106,7 @@
  </span>
  <input type="search" x-model="search" placeholder="Rechercher une classe…"
  aria-label="Rechercher une classe"
- class="input-field !my-0 h-10 !py-2 pl-9 pr-3 rounded-xl w-full transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+ class="input-field !my-0 pl-9 pr-3 w-full" />
  </div>
  </div>
  </div>
@@ -137,7 +137,7 @@
  </tr>
 
  <template x-for="row in rows" :key="row.classroom.id">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
  <td class="py-3 px-4 font-medium text-slate-900" x-text="row.classroom.name"></td>
  <td class="py-3 px-4"><badge variant="neutral" x-text="row.classroom.level"></badge></td>
  <td class="py-3 px-4 text-right font-bold" :class="row.fee ? 'text-slate-900' : 'text-slate-300'">
@@ -165,15 +165,15 @@
  <modal-shell open="isCategoryOpen" title="Nouvelle catégorie de frais">
  <modal-subtitle>Inscription, mensualité, cantine, transport… la liste est libre.</modal-subtitle>
 
- <div x-show="categoryErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="categoryErrors.global"></div>
+ <div x-show="categoryErrors.global" x-cloak class="form-error-banner" x-text="categoryErrors.global"></div>
  <form x-on:submit.prevent="submitCreateCategory()" novalidate class="space-y-4">
  <div>
- <label for="cat-name" class="block text-sm font-medium text-slate-700">Nom de la catégorie <span class="text-danger">*</span></label>
- <input id="cat-name" type="text" x-model="newCategory.name" required maxlength="60" placeholder="ex : Mensualité" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="categoryErrors.name" x-cloak x-text="categoryErrors.name" class="mt-1 text-xs text-danger"></p>
+ <label for="cat-name" class="form-label form-label-required">Nom de la catégorie</label>
+ <input id="cat-name" type="text" x-model="newCategory.name" required maxlength="60" placeholder="ex : Mensualité" class="input-field" :class="categoryErrors.name && 'input-field-error'">
+ <p x-show="categoryErrors.name" x-cloak x-text="categoryErrors.name" class="field-error"></p>
  </div>
  <div class="flex items-start gap-2">
- <input id="cat-recurring" type="checkbox" x-model="newCategory.isRecurring" class="mt-1 rounded-xl border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <input id="cat-recurring" type="checkbox" x-model="newCategory.isRecurring" class="checkbox-field mt-1">
  <label for="cat-recurring" class="text-sm text-slate-700">
  Frais mensuel (dû chaque mois)
  <span class="block text-xs text-slate-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
@@ -215,25 +215,25 @@
  <span x-text="applyReport ? applyReport.skipped : 0"></span> inchangée(s).
  </div>
 
- <div x-show="applyErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="applyErrors.global"></div>
+ <div x-show="applyErrors.global" x-cloak class="form-error-banner" x-text="applyErrors.global"></div>
 
  <form x-on:submit.prevent="submitApplyStandard()" novalidate class="space-y-4">
  @* Périmètre : « Toutes les classes » par défaut, puis les niveaux RÉELLEMENT présents dans
  l'école (knownLevels, déduit des classes) — la nomenclature des niveaux est libre, aucune
  liste figée ici. Cibler un niveau laisse les autres cycles intacts. *@
  <div>
- <label class="block text-sm font-medium text-slate-700">Périmètre d'application</label>
+ <label class="form-label">Périmètre d'application</label>
  <select-field model="applyForm.level" aria-label="Périmètre d'application" placeholder="Toutes les classes"
  options-expr="[{value:'', label:'Toutes les classes'}].concat(knownLevels.map(level => ({value: level, label: level})))" />
- <p x-show="applyErrors.level" x-cloak x-text="applyErrors.level" class="mt-1 text-xs text-danger"></p>
+ <p x-show="applyErrors.level" x-cloak x-text="applyErrors.level" class="field-error"></p>
  </div>
  <div>
- <label for="apply-amount" class="block text-sm font-medium text-slate-700">Montant (FCFA) <span class="text-danger">*</span></label>
- <input id="apply-amount" type="number" x-model.number="applyForm.amount" required min="0" step="500" placeholder="ex : 15000" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="applyErrors.amount" x-cloak x-text="applyErrors.amount" class="mt-1 text-xs text-danger"></p>
+ <label for="apply-amount" class="form-label form-label-required">Montant (FCFA)</label>
+ <input id="apply-amount" type="number" x-model.number="applyForm.amount" required min="0" step="500" placeholder="ex : 15000" class="input-field" :class="applyErrors.amount && 'input-field-error'">
+ <p x-show="applyErrors.amount" x-cloak x-text="applyErrors.amount" class="field-error"></p>
  </div>
  <div class="flex items-start gap-2">
- <input id="apply-overwrite" type="checkbox" x-model="applyForm.overwriteExisting" class="mt-1 rounded-xl border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <input id="apply-overwrite" type="checkbox" x-model="applyForm.overwriteExisting" class="checkbox-field mt-1">
  <label for="apply-overwrite" class="text-sm text-slate-700">
  Écraser les montants déjà définis
  <span class="block text-xs text-slate-400">Décoché, les exceptions ajustées classe par classe sont préservées.</span>
@@ -257,10 +257,10 @@
 
  <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
  <div>
- <label for="edit-amount" class="block text-sm font-medium text-slate-700">Montant (FCFA) <span class="text-danger">*</span></label>
+ <label for="edit-amount" class="form-label form-label-required">Montant (FCFA)</label>
  <input id="edit-amount" type="number" x-model.number="editing.amount" required min="0" step="500"
  x-effect="if (editing) $nextTick(() => $el.focus())" class="input-field">
- <p x-show="editErrors.amount" x-cloak x-text="editErrors.amount" class="mt-1 text-xs text-danger"></p>
+ <p x-show="editErrors.amount" x-cloak x-text="editErrors.amount" class="field-error"></p>
  </div>
  <div class="mt-6 flex justify-end gap-3">
  <button type="button" x-on:click="closeEdit()" class="btn-secondary">Annuler</button>
@@ -309,7 +309,7 @@
  et tous les montants déjà définis pour cette catégorie disparaîtront de cet écran.
  </modal-subtitle>
 
- <div x-show="deleteCategoryError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteCategoryError"></div>
+ <div x-show="deleteCategoryError" x-cloak class="form-error-banner" x-text="deleteCategoryError"></div>
 
  <p class="text-sm text-slate-500">
  L'historique comptable des paiements déjà encaissés reste intact : cette action n'efface aucune donnée financière, elle masque seulement la catégorie pour les nouvelles inscriptions.
@@ -331,7 +331,7 @@
  n'aura plus de montant défini pour cette catégorie tant qu'un nouveau ne sera pas fixé.
  </modal-subtitle>
 
- <div x-show="deleteFeeError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteFeeError"></div>
+ <div x-show="deleteFeeError" x-cloak class="form-error-banner" x-text="deleteFeeError"></div>
 
  <div class="mt-6 flex justify-end gap-3">
  <button type="button" x-on:click="closeDeleteFee()" class="btn-secondary">Annuler</button>
@@ -423,7 +423,7 @@
             <modal-title>Nouveau Décaissement</modal-title>
             <modal-subtitle>Enregistrer une dépense ou un paiement sortant.</modal-subtitle>
             
-            <div x-show="createDisbursementError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createDisbursementError"></div>
+            <div x-show="createDisbursementError" x-cloak class="form-error-banner" x-text="createDisbursementError"></div>
 
             <div class="space-y-4 mt-4">
                 <div>
@@ -468,7 +468,7 @@
             Voulez-vous vraiment annuler le décaissement pour <span class="font-semibold text-slate-900" x-text="deletingDisbursement ? deletingDisbursement.beneficiary : ''"></span> ?
         </modal-subtitle>
         
-        <div x-show="deleteDisbursementError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteDisbursementError"></div>
+        <div x-show="deleteDisbursementError" x-cloak class="form-error-banner" x-text="deleteDisbursementError"></div>
         
         <div class="mt-6 flex justify-end gap-3">
             <button type="button" x-on:click="closeDeleteDisbursement()" class="btn-secondary">Fermer</button>

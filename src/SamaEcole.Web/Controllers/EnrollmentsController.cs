@@ -86,7 +86,7 @@ public class EnrollmentsController(ISender mediator, ILogger<EnrollmentsControll
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du reçu d'inscription PDF pour {EnrollmentId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération du reçu PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du reçu PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -121,7 +121,7 @@ public class EnrollmentsController(ISender mediator, ILogger<EnrollmentsControll
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du certificat PDF pour {EnrollmentId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération du certificat PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du certificat PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -158,7 +158,7 @@ public class EnrollmentsController(ISender mediator, ILogger<EnrollmentsControll
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération de l'exéat PDF pour {EnrollmentId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération de l'exéat PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération de l'exéat PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 

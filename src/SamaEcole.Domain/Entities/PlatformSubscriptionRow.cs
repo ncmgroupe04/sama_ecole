@@ -24,4 +24,6 @@ public class PlatformSubscriptionRow
     public decimal? LastPaymentAmountXof { get; set; }
 
     public DateTimeOffset? LastPaymentAt { get; set; }
+
+    public string? LastPaymentBillingPeriod { get; set; }
 }

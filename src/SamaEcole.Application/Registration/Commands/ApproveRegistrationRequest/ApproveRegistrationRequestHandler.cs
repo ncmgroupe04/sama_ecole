@@ -141,7 +141,7 @@ public class ApproveRegistrationRequestHandler(
             $"""
              Bonjour {fullName},
 
-             Bonne nouvelle : la demande d'inscription de l'établissement « {schoolName} » sur Sama Ecole
+             Bonne nouvelle : la demande d'inscription de l'établissement « {schoolName} » sur Unikol
              a été validée.
 
              Vous pouvez dès à présent vous connecter avec l'adresse e-mail de votre demande et le mot de
@@ -152,7 +152,7 @@ public class ApproveRegistrationRequestHandler(
              """;
 
         await emailSender.SendAsync(
-            new EmailMessage(email, "Votre inscription Sama Ecole est validée", body),
+            new EmailMessage(email, "Votre inscription Unikol est validée", body),
             cancellationToken);
     }
 }

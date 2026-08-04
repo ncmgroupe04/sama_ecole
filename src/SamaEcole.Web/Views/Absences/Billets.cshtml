@@ -98,42 +98,42 @@
     <modal-shell open="isCreateOpen" on-close="closeCreate()" title="Nouveau retard">
         <modal-subtitle>Enregistrer l'arrivée tardive d'un élève.</modal-subtitle>
 
-        <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+        <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
 
         <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Élève concerné</label>
                 <select-field model="form.studentId" required="true" aria-label="Élève concerné"
                               placeholder="Sélectionnez un élève..."
                               options-expr="students.map(s => ({value: s.id, label: s.fullName + ' (' + s.matricule + ')'}))" />
-                <p x-show="createErrors.studentid" x-text="createErrors.studentid" class="mt-1 text-xs text-danger"></p>
+                <p x-show="createErrors.studentid" x-text="createErrors.studentid" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Date <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Date</label>
                 <date-field model="form.date" required="true" aria-label="Date" />
-                <p x-show="createErrors.date" x-text="createErrors.date" class="mt-1 text-xs text-danger"></p>
+                <p x-show="createErrors.date" x-text="createErrors.date" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Minutes de retard <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Minutes de retard</label>
                 <input type="number" min="1" x-model.number="form.minutes" required
-                       class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
-                <p x-show="createErrors.minutes" x-text="createErrors.minutes" class="mt-1 text-xs text-danger"></p>
+                       class="input-field" :class="createErrors.minutes && 'input-field-error'" />
+                <p x-show="createErrors.minutes" x-text="createErrors.minutes" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Motif</label>
                 <textarea x-model="form.reason" rows="4" placeholder="Motif du retard..." required
-                          class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"></textarea>
-                <p x-show="createErrors.reason" x-text="createErrors.reason" class="mt-1 text-xs text-danger"></p>
+                          class="input-field"></textarea>
+                <p x-show="createErrors.reason" x-text="createErrors.reason" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Observations</label>
+                <label class="form-label">Observations</label>
                 <textarea x-model="form.observations" rows="3" placeholder="Observations de la Surveillance (facultatif)..."
-                          class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"></textarea>
-                <p x-show="createErrors.observations" x-text="createErrors.observations" class="mt-1 text-xs text-danger"></p>
+                          class="input-field"></textarea>
+                <p x-show="createErrors.observations" x-text="createErrors.observations" class="field-error"></p>
             </div>
 
             <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -214,41 +214,41 @@
     <modal-shell open="isCreateExitOpen" on-close="closeCreateExit()" title="Nouvelle sortie anticipée">
         <modal-subtitle>Enregistrer la sortie anticipée d'un élève.</modal-subtitle>
 
-        <div x-show="createExitErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createExitErrors.global"></div>
+        <div x-show="createExitErrors.global" x-cloak class="form-error-banner" x-text="createExitErrors.global"></div>
 
         <form x-on:submit.prevent="submitCreateExit()" novalidate class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Élève concerné</label>
                 <select-field model="exitForm.studentId" required="true" aria-label="Élève concerné"
                               placeholder="Sélectionnez un élève..."
                               options-expr="students.map(s => ({value: s.id, label: s.fullName + ' (' + s.matricule + ')'}))" />
-                <p x-show="createExitErrors.studentid" x-text="createExitErrors.studentid" class="mt-1 text-xs text-danger"></p>
+                <p x-show="createExitErrors.studentid" x-text="createExitErrors.studentid" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Date <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Date</label>
                 <date-field model="exitForm.date" required="true" aria-label="Date" />
-                <p x-show="createExitErrors.date" x-text="createExitErrors.date" class="mt-1 text-xs text-danger"></p>
+                <p x-show="createExitErrors.date" x-text="createExitErrors.date" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Heure de sortie <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Heure de sortie</label>
                 <input type="time" x-model="exitForm.departureTime" required
-                       class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
-                <p x-show="createExitErrors.departuretime" x-text="createExitErrors.departuretime" class="mt-1 text-xs text-danger"></p>
+                       class="input-field" :class="createExitErrors.departuretime && 'input-field-error'" />
+                <p x-show="createExitErrors.departuretime" x-text="createExitErrors.departuretime" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Motif</label>
                 <textarea x-model="exitForm.reason" rows="3" placeholder="Motif de la sortie..." required
-                          class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"></textarea>
-                <p x-show="createExitErrors.reason" x-text="createExitErrors.reason" class="mt-1 text-xs text-danger"></p>
+                          class="input-field"></textarea>
+                <p x-show="createExitErrors.reason" x-text="createExitErrors.reason" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Récupéré par</label>
+                <label class="form-label">Récupéré par</label>
                 <input type="text" x-model="exitForm.pickedUpBy" placeholder="Nom de la personne (optionnel)"
-                       class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                       class="input-field" />
             </div>
 
             <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">

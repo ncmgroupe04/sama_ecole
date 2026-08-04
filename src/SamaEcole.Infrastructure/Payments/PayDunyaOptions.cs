@@ -23,7 +23,7 @@ public class PayDunyaOptions
     public string CheckoutBaseUrl { get; set; } = "https://paydunya.com/checkout/invoice";
 
     /// <summary>
-    /// Origine PUBLIQUE de Sama Ecole, utilisée pour construire les URLs de retour/annulation/callback
+    /// Origine PUBLIQUE de Unikol, utilisée pour construire les URLs de retour/annulation/callback
     /// transmises à PayDunya (l'API et les pages Razor partagent le même hôte dans ce projet).
     /// </summary>
     public string PublicBaseUrl { get; set; } = string.Empty;

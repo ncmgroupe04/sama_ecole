@@ -40,7 +40,7 @@
  <icon name="search" class="w-4 h-4" />
  </span>
  <input type="search" x-model="searchQuery" placeholder="Rechercher une école…" aria-label="Rechercher une école"
- class="w-full rounded-2xl border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+ class="w-full rounded-2xl border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
  </div>
  <div class="flex flex-wrap items-center gap-2">
  <template x-for="option in [
@@ -70,18 +70,19 @@
  <th class="py-3 px-4 font-medium">Statut</th>
  <th class="py-3 px-4 font-medium">Échéance</th>
  <th class="py-3 px-4 font-medium">Dernier paiement</th>
+ <th class="py-3 px-4 font-medium">Valeur</th>
  <th class="py-3 px-4 font-medium text-right">Actions</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-zinc-800/80">
  <template x-if="isLoading">
  <template x-for="i in 4" :key="i">
- <tr><td class="py-3 px-4" colspan="6"><div class="h-4 w-full rounded-xl bg-zinc-800 animate-pulse"></div></td></tr>
+ <tr><td class="py-3 px-4" colspan="7"><div class="h-4 w-full rounded-xl bg-zinc-800 animate-pulse"></div></td></tr>
  </template>
  </template>
 
  <tr x-show="!isLoading && filteredSubscriptions.length === 0" x-cloak>
- <td colspan="6" class="py-12 text-center text-sm text-zinc-500">Aucun abonnement ne correspond à ces filtres.</td>
+ <td colspan="7" class="py-12 text-center text-sm text-zinc-500">Aucun abonnement ne correspond à ces filtres.</td>
  </tr>
 
  <template x-for="sub in filteredSubscriptions" :key="sub.schoolId">
@@ -93,6 +94,7 @@
  </td>
  <td class="py-3 px-4 whitespace-nowrap" :class="isDueSoon(sub.expiresAt) ? 'text-amber-400 font-medium' : 'text-zinc-400'" x-text="formatDate(sub.expiresAt)"></td>
  <td class="py-3 px-4 text-zinc-400 whitespace-nowrap" x-text="formatXof(sub.lastPaymentAmountXof)"></td>
+ <td class="py-3 px-4 text-zinc-400 whitespace-nowrap" x-text="formatPeriodicValue(sub.lastPaymentAmountXof, sub.lastPaymentBillingPeriod)"></td>
  <td class="py-3 px-4 text-right whitespace-nowrap">
  <button type="button" x-show="!remindedSchoolIds[sub.schoolId]" x-cloak
  x-on:click="remind(sub)" :disabled="remindingSchoolId === sub.schoolId"
@@ -127,6 +129,9 @@
  <span x-text="planLabel(sub.plan)"></span>
  <span :class="isDueSoon(sub.expiresAt) ? 'text-amber-400 font-medium' : ''" x-text="formatDate(sub.expiresAt)"></span>
  </div>
+ <div class="mt-2 text-xs text-zinc-400">
+ <span x-text="formatPeriodicValue(sub.lastPaymentAmountXof, sub.lastPaymentBillingPeriod)"></span>
+ </div>
  </div>
  </template>
  </div>
@@ -149,7 +154,7 @@
 
  <div class="mt-4 space-y-3">
  <div>
- <label class="block text-xs font-medium text-zinc-400 mb-1">Formule</label>
+ <label class="form-label-inverse">Formule</label>
  <select x-model="grantAccessForm.plan"
  class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
  <option value="Primaire">Primaire</option>
@@ -158,7 +163,7 @@
  </select>
  </div>
  <div>
- <label class="block text-xs font-medium text-zinc-400 mb-1">Durée (mois)</label>
+ <label class="form-label-inverse">Durée (mois)</label>
  <input type="number" min="1" max="60" x-model.number="grantAccessForm.durationMonths"
  class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
  </div>

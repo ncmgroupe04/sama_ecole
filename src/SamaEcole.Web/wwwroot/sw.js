@@ -1,5 +1,5 @@
 /**
- * Service Worker — Sama Ecole (PWA & Résilience des Assets Statiques).
+ * Service Worker — Unikol (PWA & Résilience des Assets Statiques).
  *
  * RÈGLES NON NÉGOCIABLES (AGENTS.md & Volume 0 §0.8) :
  * 1. Moteur de BDD = PostgreSQL exclusivement.

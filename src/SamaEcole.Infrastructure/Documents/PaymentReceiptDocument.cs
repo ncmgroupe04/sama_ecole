@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Finance;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -66,7 +67,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
             {
                 header.Item().Text(receipt.SchoolName.ToUpperInvariant()).Bold().FontSize(13);
 
-                var contact = JoinPresent(receipt.SchoolAddress, receipt.SchoolPhone, receipt.SchoolEmail);
+                var contact = JoinPresent(receipt.SchoolAddress, PhoneFormatter.FormatSenegal(receipt.SchoolPhone), receipt.SchoolEmail);
                 if (contact.Length > 0)
                 {
                     header.Item().Text(contact).FontSize(7).FontColor(Colors.Grey.Darken2);
@@ -123,8 +124,8 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
             {
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.RelativeColumn(3);
-                    columns.RelativeColumn(2);
+                    columns.RelativeColumn();                       // Désignation — libellé libre, prend le reste
+                    columns.ConstantColumn(PdfColumnWidths.Amount); // Montant — largeur fixe, jamais de repli
                 });
 
                 table.Header(header =>

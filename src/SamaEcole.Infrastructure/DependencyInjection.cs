@@ -205,6 +205,7 @@ public static class DependencyInjection
 
         // Export PDF des élèves (Volume_7_Security.md §15, matrice Élèves) — même moteur QuestPDF, sans état.
         services.AddSingleton<IStudentsExportPdfGenerator, StudentsExportPdfGenerator>();
+        services.AddSingleton<ITeachersExportPdfGenerator, TeachersExportPdfGenerator>();
 
         // Import/export de la feuille de notes au format Excel large (ClosedXML, Volume_2_SDS.md
         // « bibliothèques »). Sans état : un singleton suffit, comme les générateurs de documents ci-dessus.

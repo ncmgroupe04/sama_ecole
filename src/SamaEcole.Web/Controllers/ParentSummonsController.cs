@@ -62,7 +62,7 @@ public class ParentSummonsController(ISender mediator, ILogger<ParentSummonsCont
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération de la convocation PDF pour {ParentSummonsId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération de la convocation PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération de la convocation PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 }

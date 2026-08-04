@@ -67,25 +67,44 @@ La recherche porte sur les champs pertinents du module (matricule, nom, prénom,
 
 ### 0.4 Format des erreurs
 
+Toute erreur non gérée par un contrôleur remonte à `ExceptionHandlingMiddleware`, qui renvoie
+systématiquement cette enveloppe (jamais une exception brute, jamais un format `ProblemDetails`
+standard) :
+
 ```json
 {
-  "success": false,
-  "message": "Validation échouée.",
-  "errors": { "lastName": ["Le nom est obligatoire."] }
+  "code": "VALIDATION_ERROR",
+  "message": "Une ou plusieurs erreurs de validation se sont produites.",
+  "details": { "lastName": ["Le nom est obligatoire."] },
+  "traceId": "0HN...`"
 }
 ```
 
+`details` est `null` sauf pour `VALIDATION_ERROR` (dictionnaire champ → messages, issu de
+`FluentValidation`). `traceId` correspond à `HttpContext.TraceIdentifier` et sert à corréler avec les
+logs serveur (Volume 7).
+
 | Code | Signification | Statut HTTP |
 |---|---|---|
-| `ValidationError` | Erreur de saisie | 400 |
-| `Unauthorized` | Authentification requise ou expirée | 401 |
-| `Forbidden` | Permission insuffisante | 403 |
-| `NotFound` | Ressource inexistante | 404 |
-| `Conflict` | Doublon ou conflit de concurrence | 409 |
-| `BusinessRuleError` | Règle métier violée | 422 |
-| `InternalError` | Erreur interne | 500 |
+| `VALIDATION_ERROR` | Erreur de saisie (FluentValidation) | 422 |
+| `CONCURRENCY_CONFLICT` | Écriture concurrente (RowVersion/xmin) — règle #5 | 409 |
+| `BUSINESS_RULE_VIOLATION` | Règle métier bloquant l'opération vu l'état de la ressource | 409 |
+| `INVALID_CREDENTIALS` | Authentification échouée (message volontairement générique) | 401 |
+| `FORBIDDEN` | Permission insuffisante | 403 |
+| `NOT_FOUND` | Ressource inexistante | 404 |
+| `CLIENT_CLOSED_REQUEST` | Requête annulée côté client | 499 |
+| `PAYMENT_PROVIDER_ERROR` | Agrégateur de paiement (PayDunya/CinetPay) injoignable ou en erreur | 502 |
+| `INVALID_WEBHOOK_SIGNATURE` | Signature HMAC de webhook absente ou invalide (§12bis) | 401 |
+| `INTERNAL_ERROR` | Erreur interne non anticipée | 500 |
 
-Toute erreur est journalisée (Volume 7, journalisation de sécurité).
+Toute erreur est journalisée (Volume 7, journalisation de sécurité) ; seul `INTERNAL_ERROR` est loggé
+en `Error` avec la stack trace complète côté serveur — jamais renvoyée au client.
+
+Exception documentée : les endpoints de génération de PDF (reçus, bulletins, certificats, billets…)
+utilisent le format RFC 7807 `ProblemDetails` natif d'ASP.NET Core (`{type, title, status, detail}`)
+plutôt que cette enveloppe, car ils sont généralement ouverts par navigation directe du navigateur et
+non par le client `fetch()` JSON. Leur champ `detail` est toujours un message générique — jamais le
+message d'exception brut.
 
 ### 0.5 Fichiers
 
@@ -206,7 +225,13 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `PUT` | `/api/v1/students/{id}` | Modifier |
 | `POST` | `/api/v1/students/import` | Import de masse Excel/CSV (asynchrone, Post-MVP V1.1) |
 | `GET` | `/api/v1/students/export/excel` | Export |
+| `GET` | `/api/v1/students/export/pdf` | « LISTE DES ÉLÈVES » en PDF (filtres `classroomId`, `activeYearOnly`) — Directeur/Secrétariat/Finance |
+| `GET` | `/api/v1/teachers/export/pdf` | « LISTE DES ENSEIGNANTS » en PDF (filtre `status`) — Super Admin/Directeur/Secrétariat, **jamais Finance** |
 | *(mêmes endpoints en `/teachers`)* | | |
+
+> Les deux exports PDF partagent les largeurs de colonnes de `PdfColumnWidths` (Infrastructure/Documents) :
+> un matricule, une date ou un téléphone occupent la même largeur sur tous les documents imprimables de
+> la plateforme, et les téléphones passent tous par `PhoneFormatter.FormatSenegal`.
 
 ## 5. API Classes & Matières
 

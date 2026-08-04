@@ -1954,8 +1954,17 @@ namespace SamaEcole.Persistence.Migrations
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.PlatformDashboardStats", b =>
                 {
+                    b.Property<int>("ActiveSchools")
+                        .HasColumnType("integer");
+
                     b.Property<int>("ActiveSubscriptions")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("ForecastedRevenue30Days")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("MRR")
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("TotalRevenue")
                         .HasColumnType("numeric");
@@ -1981,6 +1990,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("LastPaymentAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastPaymentBillingPeriod")
+                        .HasColumnType("text");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -3268,6 +3280,10 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<DateOnly>("BirthDate")
                         .HasColumnType("date");

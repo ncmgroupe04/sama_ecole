@@ -14,8 +14,8 @@
  <div aria-hidden="true" class="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-white/5"></div>
 
  <div class="relative flex items-center gap-3">
- <div class="w-10 h-10 rounded-2xl bg-white text-primary flex items-center justify-center font-bold text-xl">S</div>
- <span class="font-bold text-xl tracking-tight">Sama Ecole</span>
+ <div class="w-10 h-10 rounded-2xl bg-white text-primary flex items-center justify-center font-bold text-xl">U</div>
+ <span class="font-bold text-xl tracking-tight">Unikol</span>
  </div>
 
  <div class="relative max-w-md">
@@ -41,7 +41,7 @@
  </ul>
  </div>
 
- <p class="relative text-white/60 text-jgk-table">© 2026 Sama Ecole — Sénégal</p>
+ <p class="relative text-white/60 text-jgk-table">© 2026 Unikol — Sénégal</p>
  </div>
 
  <!-- Formulaire -->
@@ -50,8 +50,8 @@
 
  <!-- Logo sur mobile -->
  <div class="flex lg:hidden items-center justify-center gap-2 mb-8">
- <div class="w-9 h-9 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center font-bold text-lg">S</div>
- <span class="font-bold text-lg text-slate-900 tracking-tight">Sama Ecole</span>
+ <div class="w-9 h-9 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white flex items-center justify-center font-bold text-lg">U</div>
+ <span class="font-bold text-lg text-slate-900 tracking-tight">Unikol</span>
  </div>
 
  <!-- ÉCRAN DE SUCCÈS : la référence de suivi remplace le formulaire une fois la demande reçue. -->
@@ -121,39 +121,39 @@
  <legend class="text-jgk-body font-semibold text-slate-900 mb-1">Votre établissement</legend>
 
  <div>
- <label for="schoolName" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Nom de l'établissement</label>
+ <label for="schoolName" class="form-label">Nom de l'établissement</label>
  <input id="schoolName" type="text" x-model="schoolName" required maxlength="200"
  placeholder="Complexe scolaire Les Baobabs"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  </div>
 
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div class="form-grid">
  <div>
- <label for="city" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Ville <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <label for="city" class="form-label">Ville <span class="text-slate-400 font-normal">(facultatif)</span></label>
  <input id="city" type="text" x-model="city" maxlength="100" placeholder="Dakar"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  </div>
  <div>
- <label for="region" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Région <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <label for="region" class="form-label">Région <span class="text-slate-400 font-normal">(facultatif)</span></label>
  <input id="region" type="text" x-model="region" maxlength="100" placeholder="Dakar"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  </div>
  </div>
 
  <div>
- <label for="schoolAddress" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Adresse <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <label for="schoolAddress" class="form-label">Adresse <span class="text-slate-400 font-normal">(facultatif)</span></label>
  <input id="schoolAddress" type="text" x-model="schoolAddress" maxlength="300" placeholder="Rue 12 x Avenue Bourguiba"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  </div>
 
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div class="form-grid">
  <div>
- <label for="estimatedStudentCount" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Effectif estimé <span class="text-slate-400 font-normal">(facultatif)</span></label>
+ <label for="estimatedStudentCount" class="form-label">Effectif estimé <span class="text-slate-400 font-normal">(facultatif)</span></label>
  <input id="estimatedStudentCount" type="number" min="1" x-model="estimatedStudentCount" placeholder="250"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  </div>
  <div>
- <label for="requestedPlan" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Formule souhaitée</label>
+ <label for="requestedPlan" class="form-label">Formule souhaitée</label>
  <select-field id="requestedPlan" model="requestedPlan" options="requestedPlanOptions" />
  </div>
  </div>
@@ -163,21 +163,21 @@
  <legend class="text-jgk-body font-semibold text-slate-900 mb-1">Vous, le responsable</legend>
 
  <div>
- <label for="directorFullName" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Nom complet</label>
+ <label for="directorFullName" class="form-label">Nom complet</label>
  <input id="directorFullName" type="text" x-model="directorFullName" required maxlength="200"
  placeholder="Awa Ndiaye"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  </div>
 
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div class="form-grid">
  <div>
- <label for="directorEmail" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Adresse e-mail</label>
+ <label for="directorEmail" class="form-label">Adresse e-mail</label>
  <input id="directorEmail" type="email" x-model="directorEmail" required maxlength="200"
  autocomplete="email" placeholder="awa@monecole.sn"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  </div>
  <div>
- <label for="directorPhone" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Téléphone</label>
+ <label for="directorPhone" class="form-label">Téléphone</label>
  <input id="directorPhone" type="tel" x-model="directorPhone" required maxlength="30"
  placeholder="+221 77 000 00 00"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
@@ -185,7 +185,7 @@
  </div>
 
  <div>
- <label for="directorPassword" class="block text-jgk-body font-medium text-slate-700 mb-1.5">Mot de passe</label>
+ <label for="directorPassword" class="form-label">Mot de passe</label>
  <div class="relative">
  <input id="directorPassword"
  x-bind:type="showPassword ? 'text' : 'password'"

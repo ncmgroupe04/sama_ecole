@@ -161,7 +161,7 @@ builder.Services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new() { Title = "Sama Ecole API", Version = "v1" });
+    options.SwaggerDoc("v1", new() { Title = "Unikol API", Version = "v1" });
 
     // Aligner Swagger sur le port 5000 (même que l'application)
     options.AddServer(new Microsoft.OpenApi.Models.OpenApiServer

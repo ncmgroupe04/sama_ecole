@@ -170,13 +170,13 @@
 
  <!-- Classe -->
  <div>
- <label for="enr-classroom" class="block text-sm font-medium text-slate-700">Classe d'affectation <span class="text-danger">*</span></label>
+ <label for="enr-classroom" class="form-label form-label-required">Classe d'affectation</label>
  @* on-change : les frais diffèrent d'une classe à l'autre — la sélection d'encaissement est
  recomposée sur le barème de la nouvelle classe (voir resetCollected). *@
  <select-field id="enr-classroom" model="form.classroomId" required="true"
  placeholder="— Choisir une classe —" on-change="resetCollected()"
  options-expr="[{value:'', label:'— Choisir une classe —'}].concat(classrooms.map(c => ({value: c.id, label: classroomLabel(c)})))" />
- <p x-show="formErrors.classroomid" x-cloak x-text="formErrors.classroomid" class="mt-1 text-xs text-danger"></p>
+ <p x-show="formErrors.classroomid" x-cloak x-text="formErrors.classroomid" class="field-error"></p>
  <p x-show="classrooms.length === 0" x-cloak class="mt-1 text-xs text-slate-400">
  Aucune classe définie. Créez vos classes avant d'inscrire (<a href="/classes" class="underline">Classes</a>).
  </p>
@@ -187,7 +187,7 @@
  réinscription — un élève peut redoubler qu'il soit nouveau dans l'école ou non. -->
  <label class="flex items-start gap-2.5 cursor-pointer select-none">
  <input type="checkbox" x-model="form.isRepeating"
- class="mt-0.5 h-4 w-4 rounded-xl border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="checkbox-field mt-0.5">
  <span class="text-sm text-slate-700">
  Classe redoublée
  <span class="block text-xs text-slate-400">L'élève redouble cette classe — la case sera cochée sur son bulletin.</span>
@@ -197,35 +197,35 @@
  <!-- Nouvelle inscription : état civil de l'élève -->
  <div x-show="mode === 'NewEnrollment'" x-cloak class="space-y-5">
  <div>
- <label for="enr-fullname" class="block text-sm font-medium text-slate-700">Nom complet de l'élève <span class="text-danger">*</span></label>
- <input id="enr-fullname" type="text" x-model="form.fullName" maxlength="200" placeholder="ex : Awa Ndiaye" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="formErrors.fullname" x-cloak x-text="formErrors.fullname" class="mt-1 text-xs text-danger"></p>
+ <label for="enr-fullname" class="form-label form-label-required">Nom complet de l'élève</label>
+ <input id="enr-fullname" type="text" x-model="form.fullName" maxlength="200" placeholder="ex : Awa Ndiaye" class="input-field" :class="formErrors.fullname && 'input-field-error'">
+ <p x-show="formErrors.fullname" x-cloak x-text="formErrors.fullname" class="field-error"></p>
  </div>
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+ <div class="form-grid">
  <div>
- <label for="enr-birthdate" class="block text-sm font-medium text-slate-700">Date de naissance <span class="text-danger">*</span></label>
+ <label for="enr-birthdate" class="form-label form-label-required">Date de naissance</label>
  <date-field id="enr-birthdate" model="form.birthDate" />
- <p x-show="formErrors.birthdate" x-cloak x-text="formErrors.birthdate" class="mt-1 text-xs text-danger"></p>
+ <p x-show="formErrors.birthdate" x-cloak x-text="formErrors.birthdate" class="field-error"></p>
  </div>
  <div>
- <label for="enr-gender" class="block text-sm font-medium text-slate-700">Genre <span class="text-danger">*</span></label>
+ <label for="enr-gender" class="form-label form-label-required">Genre</label>
  <select-field id="enr-gender" model="form.gender" options="genderOptions" />
- <p x-show="formErrors.gender" x-cloak x-text="formErrors.gender" class="mt-1 text-xs text-danger"></p>
+ <p x-show="formErrors.gender" x-cloak x-text="formErrors.gender" class="field-error"></p>
  </div>
  </div>
  <div>
- <label for="enr-birthplace" class="block text-sm font-medium text-slate-700">Lieu de naissance <span class="text-danger">*</span></label>
- <input id="enr-birthplace" type="text" x-model="form.birthPlace" maxlength="200" placeholder="ex : Dakar" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="formErrors.birthplace" x-cloak x-text="formErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+ <label for="enr-birthplace" class="form-label form-label-required">Lieu de naissance</label>
+ <input id="enr-birthplace" type="text" x-model="form.birthPlace" maxlength="200" placeholder="ex : Dakar" class="input-field" :class="formErrors.birthplace && 'input-field-error'">
+ <p x-show="formErrors.birthplace" x-cloak x-text="formErrors.birthplace" class="field-error"></p>
  </div>
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+ <div class="form-grid">
  <div>
- <label for="enr-guardian" class="block text-sm font-medium text-slate-700">Nom du tuteur</label>
- <input id="enr-guardian" type="text" x-model="form.guardianName" maxlength="200" placeholder="Parent / tuteur" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label for="enr-guardian" class="form-label">Nom du tuteur</label>
+ <input id="enr-guardian" type="text" x-model="form.guardianName" maxlength="200" placeholder="Parent / tuteur" class="input-field">
  </div>
  <div>
- <label for="enr-guardian-phone" class="block text-sm font-medium text-slate-700">Téléphone du tuteur</label>
- <input id="enr-guardian-phone" type="tel" x-model="form.guardianPhone" maxlength="30" placeholder="77 000 00 00" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label for="enr-guardian-phone" class="form-label">Téléphone du tuteur</label>
+ <input id="enr-guardian-phone" type="tel" x-model="form.guardianPhone" maxlength="30" placeholder="77 000 00 00" class="input-field">
  </div>
  </div>
  </div>
@@ -235,13 +235,13 @@
  <label for="enr-student-search" class="block text-sm font-semibold text-slate-700">Élève à réinscrire <span class="text-danger">*</span></label>
  <input id="enr-student-search" type="text" x-model="studentSearch" placeholder="Rechercher par nom ou matricule…"
  x-on:input="form.studentId = ''"
- class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="formErrors.studentid" x-cloak x-text="formErrors.studentid" class="mt-1 text-xs text-danger"></p>
+ class="input-field" :class="formErrors.studentid && 'input-field-error'">
+ <p x-show="formErrors.studentid" x-cloak x-text="formErrors.studentid" class="field-error"></p>
 
  <div class="mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-56 overflow-y-auto">
  <template x-for="s in filteredStudents()" :key="s.id">
  <button type="button" x-on:click="selectStudent(s)"
- class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out"
+ class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors transition-all duration-200 ease-in-out"
  :class="form.studentId === s.id ? 'bg-indigo-50' : ''">
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
  <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
@@ -291,7 +291,7 @@
  <label class="flex items-start justify-between gap-3 cursor-pointer select-none">
  <span class="flex items-start gap-2.5 min-w-0">
  <input type="checkbox" x-model="collectedEntry(line).checked"
- class="mt-0.5 h-4 w-4 shrink-0 rounded-xl border-slate-300 text-primary focus:ring-primary transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="checkbox-field mt-0.5 shrink-0">
  <span class="min-w-0">
  <span class="block text-sm text-slate-800" x-text="line.designation"></span>
  <span x-show="line.isRecurring" x-cloak class="block text-xs text-slate-400"
@@ -308,7 +308,7 @@
  <label class="text-xs text-slate-500" :for="'enr-months-' + line.feeCategoryId">Mois réglés</label>
  <input type="number" :id="'enr-months-' + line.feeCategoryId"
  x-model.number="collectedEntry(line).months" min="1" :max="line.months"
- class="input-field mt-0 w-20 py-1 text-sm transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field mt-0 w-20 py-1 text-sm">
  <span class="text-xs text-slate-400" x-text="'= ' + formatMoney(collectedAmount(line))"></span>
  </div>
  </li>

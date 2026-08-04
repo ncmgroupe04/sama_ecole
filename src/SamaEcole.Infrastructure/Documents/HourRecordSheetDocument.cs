@@ -89,9 +89,9 @@ public class HourRecordSheetDocument(HourRecordSheetDto sheet, byte[]? logo) : I
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(2);
-                columns.RelativeColumn(2);
-                columns.RelativeColumn(5);
+                columns.ConstantColumn(PdfColumnWidths.Date); // Date
+                columns.ConstantColumn(52);                   // Heures — « 7.5 », l'en-tête fait la largeur
+                columns.RelativeColumn();                     // Note — contenu libre, prend le reste
             });
 
             table.Header(header =>

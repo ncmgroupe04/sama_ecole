@@ -74,7 +74,7 @@ public class RejectRegistrationRequestHandler(
              """;
 
         await emailSender.SendAsync(
-            new EmailMessage(email, "Votre demande d'inscription Sama Ecole", body),
+            new EmailMessage(email, "Votre demande d'inscription Unikol", body),
             cancellationToken);
     }
 }

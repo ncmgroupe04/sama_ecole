@@ -76,35 +76,35 @@
     <modal-shell open="isCreateOpen" on-close="closeCreate()" title="Nouvelle convocation">
         <modal-subtitle>Convoquer le parent/tuteur d'un élève.</modal-subtitle>
 
-        <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+        <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
 
         <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-700">Élève concerné <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Élève concerné</label>
                 <select-field model="form.studentId" required="true" aria-label="Élève concerné"
                               placeholder="Sélectionnez un élève..."
                               options-expr="students.map(s => ({value: s.id, label: s.fullName + ' (' + s.matricule + ')'}))" />
-                <p x-show="createErrors.studentid" x-text="createErrors.studentid" class="mt-1 text-xs text-danger"></p>
+                <p x-show="createErrors.studentid" x-text="createErrors.studentid" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Date de convocation <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Date de convocation</label>
                 <date-field model="form.scheduledDate" required="true" aria-label="Date de convocation" />
-                <p x-show="createErrors.scheduleddate" x-text="createErrors.scheduleddate" class="mt-1 text-xs text-danger"></p>
+                <p x-show="createErrors.scheduleddate" x-text="createErrors.scheduleddate" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Heure de convocation <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Heure de convocation</label>
                 <input type="time" x-model="form.scheduledTime" required
-                       class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
-                <p x-show="createErrors.scheduledtime" x-text="createErrors.scheduledtime" class="mt-1 text-xs text-danger"></p>
+                       class="input-field" :class="createErrors.scheduledtime && 'input-field-error'" />
+                <p x-show="createErrors.scheduledtime" x-text="createErrors.scheduledtime" class="field-error"></p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-danger">*</span></label>
+                <label class="form-label form-label-required">Motif</label>
                 <textarea x-model="form.reason" rows="4" placeholder="Motif de la convocation..." required
-                          class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"></textarea>
-                <p x-show="createErrors.reason" x-text="createErrors.reason" class="mt-1 text-xs text-danger"></p>
+                          class="input-field"></textarea>
+                <p x-show="createErrors.reason" x-text="createErrors.reason" class="field-error"></p>
             </div>
 
             <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">

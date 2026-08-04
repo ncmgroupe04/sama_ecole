@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: Sama Ecole API
+  title: Unikol API
   description: >
-    API REST de la plateforme SaaS de gestion scolaire Sama Ecole.
+    API REST de la plateforme SaaS de gestion scolaire Unikol.
     Toutes les routes (sauf /auth/*) exigent un JWT Bearer valide.
     Le tenant (SchoolId) est dérivé du claim `schoolId` du token, jamais d'un paramètre de requête.
     Référence fonctionnelle complète : docs/Volume_4_API_Design.md
@@ -273,6 +273,26 @@ paths:
           content:
             application/json:
               schema: { type: array, items: { $ref: '#/components/schemas/PlatformSubscription' } }
+        '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
+
+  /admin/platform/revenue-projection:
+    get:
+      tags: [Platform]
+      summary: Projection de revenu sur 12 mois, basée sur les échéances réelles (Super Admin uniquement)
+      description: >-
+        Alimente le graphique de projection de l'Executive Dashboard. Pour chaque école à
+        l'abonnement Active, projette ses échéances de renouvellement futures (ExpiresAt, puis +N
+        fois la période de facturation de son dernier paiement confirmé) sur les 12 prochains mois et
+        cumule le montant attendu par mois. Contrairement au MRR (équivalent mensuel lissé), reflète
+        le cash réellement attendu mois par mois — un abonnement Yearly n'apparaît qu'au(x) mois de
+        son échéance. Aucune hypothèse de croissance (nouvelles écoles) : voir le Simulateur de
+        Croissance, purement côté client (ARPU × nombre d'écoles cible), pour ce scénario.
+      responses:
+        '200':
+          description: 12 points mensuels, du mois courant inclus aux 11 mois suivants
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/MonthlyRevenueProjection' } }
         '403': { description: Rôle appelant non autorisé (réservé au Super Admin) }
 
   /admin/platform/subscriptions/{schoolId}/remind:
@@ -1103,6 +1123,31 @@ paths:
               schema: { $ref: '#/components/schemas/TeacherResult' }
         '403': { description: Réservé au Directeur et au Secrétariat }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /teachers/export/pdf:
+    get:
+      tags: [Teachers]
+      summary: « LISTE DES ENSEIGNANTS » en PDF (A4 paysage, sans pagination)
+      description: >
+        Pendant de GET /students/export/pdf pour le corps professoral. Mêmes rôles que la
+        consultation de la liste (Volume_7_Security.md « Enseignants » : Super Admin, Directeur,
+        Secrétariat) — un export n'ouvre aucune donnée que le rôle ne puisse déjà lire à l'écran ;
+        le rôle Finance en est donc exclu, contrairement à l'export des élèves. Opération journalisée
+        dans les journaux d'audit (Volume_7_Security.md §7).
+      parameters:
+        - name: status
+          in: query
+          description: Filtre optionnel sur le statut. Omis = tous les statuts.
+          schema:
+            type: string
+            enum: [Active, Suspended, Blocked]
+      responses:
+        '200':
+          description: La liste des enseignants au format PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { description: Rôle non autorisé (Volume_7_Security.md « Enseignants ») }
 
   /teachers/{id}:
     get:
@@ -2602,6 +2647,10 @@ components:
         totalUsers: { type: integer }
         totalRevenue: { type: number, format: decimal, description: "Somme des paiements d'abonnement CONFIRMÉS uniquement (AGENTS.md règle #11)." }
         activeSubscriptions: { type: integer }
+        mrr: { type: number, format: decimal, description: "Monthly Recurring Revenue — somme, sur les écoles à l'abonnement Active, du dernier paiement confirmé ramené à un équivalent mensuel (Yearly / 12)." }
+        arr: { type: number, format: decimal, description: "Annual Recurring Revenue — MRR × 12." }
+        forecastedRevenue30Days: { type: number, format: decimal, description: "Cashflow prévisionnel : somme des derniers paiements confirmés des écoles dont l'abonnement Active échoit dans les 30 prochains jours (ExpiresAt, pas un historique)." }
+        arpu: { type: number, format: decimal, description: "Average Revenue Per User — MRR / nombre d'écoles à l'abonnement Active." }
 
     GlobalAuditLogItem:
       type: object
@@ -2638,6 +2687,16 @@ components:
         expiresAt: { type: string, format: date, nullable: true }
         lastPaymentAmountXof: { type: number, format: decimal, nullable: true }
         lastPaymentAt: { type: string, format: date-time, nullable: true }
+        lastPaymentBillingPeriod: { type: string, enum: [Monthly, Yearly], nullable: true, description: "Période de facturation du dernier paiement confirmé — alimente la colonne « Montant Contrat » de l'écran Abonnements & Facturation." }
+
+    MonthlyRevenueProjection:
+      type: object
+      description: >-
+        Un point de la courbe GET /admin/platform/revenue-projection : le cash attendu ce mois-là, basé
+        sur les échéances RÉELLES des abonnements Active (pas une hypothèse de croissance).
+      properties:
+        month: { type: string, example: "2026-09", description: "Année-mois (yyyy-MM)." }
+        projectedRevenue: { type: number, format: decimal }
 
     ImpersonateSchoolResult:
       type: object

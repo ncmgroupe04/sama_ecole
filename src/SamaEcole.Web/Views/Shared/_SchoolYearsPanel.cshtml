@@ -62,7 +62,7 @@
  </tr>
 
  <template x-for="(year, index) in years" :key="year.id || index">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
  <td class="py-3 px-4 font-bold text-slate-900">
  <span class="inline-flex items-center gap-2">
  <span aria-hidden="true" class="w-2 h-2 rounded-full"
@@ -123,27 +123,27 @@
  <modal-subtitle>Créer une année ne fait pas basculer l'établissement dessus : elle reste inactive jusqu'à son activation.</modal-subtitle>
 
  <!-- Erreur globale (conflit de libellé, réseau…) -->
- <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+ <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
 
  <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
  <div>
- <label for="year-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
- <input id="year-label" type="text" x-model="newYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="createErrors.label" x-cloak x-text="createErrors.label" class="mt-1 text-xs text-danger"></p>
+ <label for="year-label" class="form-label form-label-required">Libellé</label>
+ <input id="year-label" type="text" x-model="newYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field" :class="createErrors.label && 'input-field-error'">
+ <p x-show="createErrors.label" x-cloak x-text="createErrors.label" class="field-error"></p>
  </div>
 
  <div>
- <label for="year-start" class="block text-sm font-medium text-slate-700">Date de début <span class="text-danger">*</span></label>
+ <label for="year-start" class="form-label form-label-required">Date de début</label>
  <date-field id="year-start" model="newYear.startDate" required="true" />
  @* Le chevauchement est rapporté sur ce champ : c'est la période qui est en cause,
  et c'est là que l'API place l'erreur (StartDate). *@
- <p x-show="createErrors.startdate" x-cloak x-text="createErrors.startdate" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.startdate" x-cloak x-text="createErrors.startdate" class="field-error"></p>
  </div>
 
  <div>
- <label for="year-end" class="block text-sm font-medium text-slate-700">Date de fin <span class="text-danger">*</span></label>
+ <label for="year-end" class="form-label form-label-required">Date de fin</label>
  <date-field id="year-end" model="newYear.endDate" required="true" />
- <p x-show="createErrors.enddate" x-cloak x-text="createErrors.enddate" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.enddate" x-cloak x-text="createErrors.enddate" class="field-error"></p>
  </div>
 
  <p class="text-xs text-slate-500">
@@ -178,26 +178,26 @@
  <modal-subtitle>Les trimestres sont recalés sur la nouvelle période. Les notes déjà saisies restent attachées à leur trimestre.</modal-subtitle>
 
  <!-- Erreur non rattachable à un champ : année terminée, libellé en doublon, réseau… -->
- <div x-show="editErrors.global || editErrors.id" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger"
+ <div x-show="editErrors.global || editErrors.id" x-cloak class="form-error-banner"
  x-text="editErrors.global || editErrors.id"></div>
 
  <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
  <div>
- <label for="edit-year-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
- <input id="edit-year-label" type="text" x-model="editingYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="editErrors.label" x-cloak x-text="editErrors.label" class="mt-1 text-xs text-danger"></p>
+ <label for="edit-year-label" class="form-label form-label-required">Libellé</label>
+ <input id="edit-year-label" type="text" x-model="editingYear.label" required maxlength="20" placeholder="ex : 2026-2027" class="input-field" :class="editErrors.label && 'input-field-error'">
+ <p x-show="editErrors.label" x-cloak x-text="editErrors.label" class="field-error"></p>
  </div>
 
  <div>
- <label for="edit-year-start" class="block text-sm font-medium text-slate-700">Date de début <span class="text-danger">*</span></label>
+ <label for="edit-year-start" class="form-label form-label-required">Date de début</label>
  <date-field id="edit-year-start" model="editingYear.startDate" required="true" />
- <p x-show="editErrors.startdate" x-cloak x-text="editErrors.startdate" class="mt-1 text-xs text-danger"></p>
+ <p x-show="editErrors.startdate" x-cloak x-text="editErrors.startdate" class="field-error"></p>
  </div>
 
  <div>
- <label for="edit-year-end" class="block text-sm font-medium text-slate-700">Date de fin <span class="text-danger">*</span></label>
+ <label for="edit-year-end" class="form-label form-label-required">Date de fin</label>
  <date-field id="edit-year-end" model="editingYear.endDate" required="true" />
- <p x-show="editErrors.enddate" x-cloak x-text="editErrors.enddate" class="mt-1 text-xs text-danger"></p>
+ <p x-show="editErrors.enddate" x-cloak x-text="editErrors.enddate" class="field-error"></p>
  </div>
 
  <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -248,7 +248,7 @@
  </div>
 
  <form x-on:submit.prevent="submitActivate()" novalidate class="mt-5">
- <label for="activate-password" class="block text-sm font-medium text-slate-700">
+ <label for="activate-password" class="form-label">
  Confirmez avec votre mot de passe <span class="text-danger">*</span>
  </label>
  @* autocomplete="current-password" : le gestionnaire de mots de passe du navigateur
@@ -256,7 +256,7 @@
  <input id="activate-password" type="password" x-model="password" required
  autocomplete="current-password"
  x-effect="if (yearToActivate) $nextTick(() => $el.focus())" class="input-field">
- <p x-show="activateErrors.password" x-cloak x-text="activateErrors.password" class="mt-1 text-xs text-danger"></p>
+ <p x-show="activateErrors.password" x-cloak x-text="activateErrors.password" class="field-error"></p>
 
  <div class="mt-6 flex justify-end gap-3">
  <button type="button" x-on:click="closeActivate()" class="btn-secondary">Annuler</button>

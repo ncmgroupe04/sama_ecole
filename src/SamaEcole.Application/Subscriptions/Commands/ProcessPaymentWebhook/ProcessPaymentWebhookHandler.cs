@@ -123,12 +123,12 @@ public class ProcessPaymentWebhookHandler(
 
              Votre paiement a été confirmé : l'abonnement de « {result.SchoolName} » est maintenant actif.
 
-             Vous avez désormais accès à l'ensemble des modules de Sama Ecole (élèves, classes, notes,
+             Vous avez désormais accès à l'ensemble des modules de Unikol (élèves, classes, notes,
              finances…). Votre abonnement est valable jusqu'au {result.NewExpiresAt:dd/MM/yyyy}.
              """;
 
         await emailSender.SendAsync(
-            new EmailMessage(result.DirectorEmail, "Votre abonnement Sama Ecole est actif", body),
+            new EmailMessage(result.DirectorEmail, "Votre abonnement Unikol est actif", body),
             cancellationToken);
     }
 }

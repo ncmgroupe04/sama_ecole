@@ -54,7 +54,7 @@ public class BilletsController(ISender mediator, ILogger<BilletsController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du billet d'entrée PDF pour le retard {LateArrivalId}", lateArrivalId);
-            return Problem(detail: ex.Message, title: "Erreur de génération du billet d'entrée PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du billet d'entrée PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -91,7 +91,7 @@ public class BilletsController(ISender mediator, ILogger<BilletsController> logg
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du billet de sortie PDF pour la sortie {EarlyDepartureId}", earlyDepartureId);
-            return Problem(detail: ex.Message, title: "Erreur de génération du billet de sortie PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du billet de sortie PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 }

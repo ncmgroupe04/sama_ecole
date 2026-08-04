@@ -8,7 +8,7 @@ namespace SamaEcole.Web.Controllers;
 /// <summary>
 /// Guichet PayDunya SIMULÉ — n'existe que pour débloquer le test du parcours d'abonnement en
 /// développement local sans compte marchand PayDunya (voir DevPaymentService). [AllowAnonymous] : un
-/// vrai guichet PayDunya n'a pas non plus de session Sama Ecole.
+/// vrai guichet PayDunya n'a pas non plus de session Unikol.
 ///
 /// Repli défensif même si DevPaymentService n'est branché comme IPaymentService qu'en Development
 /// (DependencyInjection) : NotFound explicite si l'hôte n'est pas Development, au cas où cette route

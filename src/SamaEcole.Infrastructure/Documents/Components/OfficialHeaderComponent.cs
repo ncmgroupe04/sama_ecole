@@ -73,7 +73,7 @@ public static class OfficialHeaderComponent
             row.RelativeItem().PaddingLeft(8).AlignMiddle().Column(column =>
             {
                 column.Item().Text($"Référence : {NoBreakText.NoBreak(referenceNumber)}").FontSize(7).FontColor(Colors.Grey.Darken2);
-                column.Item().Text("Document généré par Sama École — vérifiable par le QR code ci-contre")
+                column.Item().Text("Document généré par Unikol — vérifiable par le QR code ci-contre")
                     .FontSize(7).FontColor(Colors.Grey.Darken2);
             });
         });

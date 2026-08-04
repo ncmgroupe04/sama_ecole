@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Absences.Queries.GetEntryTicket;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -63,7 +64,7 @@ public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo, byte[]? su
                 }
 
                 var contact = JoinPresent(
-                    ticket.SchoolPhone is null ? null : $"Tél: {ticket.SchoolPhone}",
+                    ticket.SchoolPhone is null ? null : $"Tél: {PhoneFormatter.FormatSenegal(ticket.SchoolPhone)}",
                     ticket.SchoolEmail is null ? null : $"Email: {ticket.SchoolEmail}");
                 if (contact.Length > 0)
                 {

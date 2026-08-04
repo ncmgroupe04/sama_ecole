@@ -204,14 +204,14 @@
     <modal-shell open="isTaxModalOpen" title="Générer une déclaration fiscale">
         <form x-on:submit.prevent="submitTaxDeclaration()" novalidate class="space-y-5">
             <p class="text-sm text-slate-500">Agrège les charges sociales de toutes les fiches de paie du mois choisi, ainsi que la TVA collectée/déductible de la période.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="form-grid">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Mois</label>
+                    <label class="form-label">Mois</label>
                     <select-field model="taxForm.month" placeholder="Sélectionnez un mois..."
                         options-expr="[{value:1,label:'Janvier'},{value:2,label:'Février'},{value:3,label:'Mars'},{value:4,label:'Avril'},{value:5,label:'Mai'},{value:6,label:'Juin'},{value:7,label:'Juillet'},{value:8,label:'Août'},{value:9,label:'Septembre'},{value:10,label:'Octobre'},{value:11,label:'Novembre'},{value:12,label:'Décembre'}]" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Année</label>
+                    <label class="form-label">Année</label>
                     <input type="number" x-model="taxForm.year" class="input-field mt-1" />
                 </div>
             </div>

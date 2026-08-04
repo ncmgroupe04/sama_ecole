@@ -19,7 +19,7 @@
     Le titre, les KPI, les filtres et la recherche restent accessibles à tout
     moment même après un long scroll dans la grille de classes.
     ═══════════════════════════════════════════════════════════════════════════ *@
- <div class="sticky top-8 lg:top-10 z-50 isolate -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 py-4 lg:px-10 lg:py-4 bg-white border-b border-slate-200 shadow-sm">
+  <div class="sticky-sub-header">
 
   @await Html.PartialAsync("_ErrorBanner")
 
@@ -48,7 +48,7 @@
 
    <div class="flex flex-wrap items-center gap-3">
     <select-field model="levelFilter" aria-label="Filtrer par niveau"
-     placeholder="Tous les niveaux" class="!my-0 h-10 !py-2 !px-3 rounded-xl w-40 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" options="levelFilterOptions" />
+     placeholder="Tous les niveaux" class="!my-0 w-40" options="levelFilterOptions" />
 
     <div class="relative w-full sm:w-56 flex items-center">
      <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -56,7 +56,7 @@
      </span>
      <input type="search" x-model="search" placeholder="Rechercher une classe…"
       aria-label="Rechercher une classe"
-      class="input-field !my-0 h-10 !py-2 pl-9 pr-3 rounded-xl w-full transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+      class="input-field !my-0 pl-9 pr-3 w-full" />
     </div>
 
     <button x-show="canManage" x-cloak @@click="openCreate()"
@@ -257,25 +257,25 @@
  <modal-shell open="isCreateOpen" on-close="closeCreate()" title="Nouvelle classe">
   <modal-subtitle>Configurez une nouvelle classe et sa capacité.</modal-subtitle>
 
-  <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+  <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
 
   <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
    <div>
-    <label class="block text-sm font-medium text-slate-700">Nom de la classe <span class="text-danger">*</span></label>
-    <input type="text" x-model="newClassroom.name" required placeholder="ex: CM2 B" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-    <p x-show="createErrors.name" x-text="createErrors.name" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Nom de la classe</label>
+    <input type="text" x-model="newClassroom.name" required placeholder="ex: CM2 B" class="input-field" :class="createErrors.name && 'input-field-error'">
+    <p x-show="createErrors.name" x-text="createErrors.name" class="field-error"></p>
    </div>
 
    <div>
-    <label class="block text-sm font-medium text-slate-700">Niveau <span class="text-danger">*</span></label>
+    <label class="form-label form-label-required">Niveau</label>
     <select-field model="newClassroom.level" required="true" aria-label="Niveau" options="classroomLevelOptions" />
-    <p x-show="createErrors.level" x-text="createErrors.level" class="mt-1 text-xs text-danger"></p>
+    <p x-show="createErrors.level" x-text="createErrors.level" class="field-error"></p>
    </div>
 
    <div>
-    <label class="block text-sm font-medium text-slate-700">Capacité d'accueil <span class="text-danger">*</span></label>
-    <input type="number" x-model.number="newClassroom.capacity" required min="1" max="100" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-    <p x-show="createErrors.capacity" x-text="createErrors.capacity" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Capacité d'accueil</label>
+    <input type="number" x-model.number="newClassroom.capacity" required min="1" max="100" class="input-field" :class="createErrors.capacity && 'input-field-error'">
+    <p x-show="createErrors.capacity" x-text="createErrors.capacity" class="field-error"></p>
    </div>
 
    <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -305,21 +305,21 @@
 
   <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
    <div>
-    <label class="block text-sm font-medium text-slate-700">Nom de la classe <span class="text-danger">*</span></label>
-    <input type="text" x-model="editing.name" required maxlength="50" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-    <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Nom de la classe</label>
+    <input type="text" x-model="editing.name" required maxlength="50" class="input-field" :class="editErrors.name && 'input-field-error'">
+    <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="field-error"></p>
    </div>
 
    <div>
-    <label class="block text-sm font-medium text-slate-700">Niveau <span class="text-danger">*</span></label>
+    <label class="form-label form-label-required">Niveau</label>
     <select-field model="editing.level" required="true" aria-label="Niveau" options="classroomLevelOptions" />
-    <p x-show="editErrors.level" x-cloak x-text="editErrors.level" class="mt-1 text-xs text-danger"></p>
+    <p x-show="editErrors.level" x-cloak x-text="editErrors.level" class="field-error"></p>
    </div>
 
    <div>
-    <label class="block text-sm font-medium text-slate-700">Capacité d'accueil <span class="text-danger">*</span></label>
-    <input type="number" x-model.number="editing.capacity" required min="1" max="200" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-    <p x-show="editErrors.capacity" x-cloak x-text="editErrors.capacity" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Capacité d'accueil</label>
+    <input type="number" x-model.number="editing.capacity" required min="1" max="200" class="input-field" :class="editErrors.capacity && 'input-field-error'">
+    <p x-show="editErrors.capacity" x-cloak x-text="editErrors.capacity" class="field-error"></p>
    </div>
 
    <div class="mt-6 flex justify-end gap-3">
@@ -346,7 +346,7 @@
    sera archivée et n'apparaîtra plus dans les sélecteurs de classe.
   </modal-subtitle>
 
-  <div x-show="deleteClassroomError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteClassroomError"></div>
+  <div x-show="deleteClassroomError" x-cloak class="form-error-banner" x-text="deleteClassroomError"></div>
 
   <p class="text-sm text-slate-500">
    Impossible si des élèves sont encore rattachés à cette classe : déplacez-les d'abord vers une autre classe.

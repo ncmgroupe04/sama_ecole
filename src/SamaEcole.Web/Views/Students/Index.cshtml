@@ -81,18 +81,18 @@
  </span>
  <input type="text" x-model="search" x-on:input.debounce.400ms="applyFilters()"
  placeholder="Rechercher un élève..." aria-label="Rechercher un élève"
- class="input-field mt-0 pl-9 pr-3 w-full transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+ class="input-field mt-0 pl-9 pr-3 w-full" />
  </div>
  <select-field model="classroomFilter" on-change="applyFilters()" aria-label="Filtrer par classe"
- class="mt-0 w-full sm:w-auto transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Classe : Toutes"
+ class="mt-0 w-full sm:w-auto" placeholder="Classe : Toutes"
  options-expr="[{value:'', label:'Classe : Toutes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
  <select-field model="genderFilter" on-change="applyFilters()" aria-label="Filtrer par genre"
- class="mt-0 w-full sm:w-auto transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Genre : Tous" options="genderFilterOptions" />
+ class="mt-0 w-full sm:w-auto" placeholder="Genre : Tous" options="genderFilterOptions" />
  @* Portée par année scolaire : « Inscrits cette année » (défaut) borne la liste à l'effectif
  rattaché à l'année active ; « Tous les élèves » rebascule sur l'annuaire complet pour retrouver
  un élève importé/créé pas encore (ré)inscrit. Voir studentsView.yearScope / GetStudentsQuery. *@
  <select-field model="yearScope" on-change="applyFilters()" aria-label="Portée par année scolaire"
- class="mt-0 w-full sm:w-auto transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" options="yearScopeOptions" />
+ class="mt-0 w-full sm:w-auto" options="yearScopeOptions" />
  </div>
  <button type="button" x-on:click="resetFilters()"
  class="mt-2 text-xs font-medium text-slate-400 hover:text-slate-700">
@@ -128,7 +128,7 @@
 
  <!-- Boucle sur les élèves -->
  <template x-for="student in students" :key="student.id">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
  <td class="py-2 px-4 w-[16%] font-medium text-slate-900 truncate" x-text="student.matricule"></td>
  <td class="py-2 px-4 w-[28%]">
  <div class="flex items-center gap-3 min-w-0">
@@ -199,6 +199,10 @@
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Classe</dt>
  <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent ? detailStudent.classroomName : ''"></dd>
  </div>
+ <div>
+ <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Adresse de résidence</dt>
+ <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.address ? detailStudent.address : '—'"></dd>
+ </div>
  </dl>
 
  <!-- Tuteur : bloc distinct pour séparer l'identité de l'élève du contact du tuteur. -->
@@ -217,10 +221,6 @@
                     <dt class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">E-mail</dt>
                     <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianEmail ? detailStudent.guardianEmail : '—'"></dd>
                 </div>
-                <div>
-                    <dt class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Adresse</dt>
-                    <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.address ? detailStudent.address : '—'"></dd>
- </div>
  </dl>
  </div>
 
@@ -357,7 +357,7 @@
 
  <!-- Erreur de génération/téléchargement du bulletin (JGK-G03), partagée par tous les trimestres. -->
  <div x-show="reportCardError" x-cloak
- class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger"
+ class="form-error-banner"
  x-text="reportCardError"></div>
 
  <div class="space-y-6">
@@ -568,7 +568,7 @@
  <modal-shell open="editingReportCardRemark" on-close="closeReportCardRemark()" title="Observations du conseil">
  <modal-subtitle>Distinction et observations du conseil des professeurs pour ce trimestre — imprimées sur le bulletin.</modal-subtitle>
 
- <div x-show="reportCardRemarkErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="reportCardRemarkErrors.global"></div>
+ <div x-show="reportCardRemarkErrors.global" x-cloak class="form-error-banner" x-text="reportCardRemarkErrors.global"></div>
 
  <!-- modal-shell masque en CSS (x-show) mais laisse le formulaire dans le DOM : sans ce x-if, Alpine
  évalue "editingReportCardRemark.disciplinaryMention" dès l'initialisation, alors que l'état par
@@ -577,23 +577,23 @@
  <template x-if="editingReportCardRemark">
  <form x-on:submit.prevent="submitReportCardRemark()" novalidate class="space-y-4">
  <div>
- <label class="block text-sm font-medium text-slate-700">Distinction</label>
+ <label class="form-label">Distinction</label>
  <select-field model="editingReportCardRemark.disciplinaryMention" aria-label="Distinction"
  placeholder="Aucune" options="disciplinaryMentionOptions" />
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Décision du Conseil</label>
+ <label class="form-label">Décision du Conseil</label>
  <select-field model="editingReportCardRemark.councilDecision" aria-label="Décision du Conseil"
  placeholder="Aucune / Non renseignée" options="councilDecisionOptions" />
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Observations du conseil des professeurs</label>
+ <label class="form-label">Observations du conseil des professeurs</label>
  <textarea x-model="editingReportCardRemark.observations" maxlength="300" rows="4"
  placeholder="ex : Bon trimestre, poursuivez vos efforts."
  class="input-field"></textarea>
- <p x-show="reportCardRemarkErrors.observations" x-cloak x-text="reportCardRemarkErrors.observations" class="mt-1 text-xs text-danger"></p>
+ <p x-show="reportCardRemarkErrors.observations" x-cloak x-text="reportCardRemarkErrors.observations" class="field-error"></p>
  </div>
 
  <div class="flex justify-end gap-3 pt-2 border-t border-slate-100">
@@ -610,76 +610,77 @@
  <modal-shell open="editingStudent" on-close="closeEditStudent()" title="Modifier la fiche">
  <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
 
- <div x-show="studentEditErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="studentEditErrors.global"></div>
+ <div x-show="studentEditErrors.global" x-cloak class="form-error-banner" x-text="studentEditErrors.global"></div>
 
  <form x-on:submit.prevent="submitEditStudent()" novalidate class="space-y-4">
  <div>
- <label class="block text-sm font-medium text-slate-700">Nom complet <span class="text-danger">*</span></label>
- <input type="text" x-model="editingStudent.fullName" required class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="studentEditErrors.fullname" x-text="studentEditErrors.fullname" class="mt-1 text-xs text-danger"></p>
+ <label class="form-label form-label-required">Nom complet</label>
+ <input type="text" x-model="editingStudent.fullName" required class="input-field" :class="studentEditErrors.fullname && 'input-field-error'">
+ <p x-show="studentEditErrors.fullname" x-text="studentEditErrors.fullname" class="field-error"></p>
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Date de naissance <span class="text-danger">*</span></label>
+ <label class="form-label form-label-required">Date de naissance</label>
  <date-field model="editingStudent.birthDate" required="true" aria-label="Date de naissance" />
- <p x-show="studentEditErrors.birthdate" x-text="studentEditErrors.birthdate" class="mt-1 text-xs text-danger"></p>
+ <p x-show="studentEditErrors.birthdate" x-text="studentEditErrors.birthdate" class="field-error"></p>
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Lieu de naissance <span class="text-danger">*</span></label>
- <input type="text" x-model="editingStudent.birthPlace" required maxlength="200" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="studentEditErrors.birthplace" x-text="studentEditErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+ <label class="form-label form-label-required">Lieu de naissance</label>
+ <input type="text" x-model="editingStudent.birthPlace" required maxlength="200" class="input-field" :class="studentEditErrors.birthplace && 'input-field-error'">
+ <p x-show="studentEditErrors.birthplace" x-text="studentEditErrors.birthplace" class="field-error"></p>
+ </div>
+
+ <!-- Adresse de résidence DE L'ÉLÈVE — distincte des coordonnées du tuteur ci-dessous. -->
+ <div>
+ <label class="form-label">Adresse de résidence</label>
+ <input type="text" x-model="editingStudent.address" maxlength="300" class="input-field" :class="studentEditErrors.address && 'input-field-error'">
+ <p x-show="studentEditErrors.address" x-text="studentEditErrors.address" class="field-error"></p>
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Genre <span class="text-danger">*</span></label>
+ <label class="form-label form-label-required">Genre</label>
  <select-field model="editingStudent.gender" aria-label="Genre" options="studentGenderOptions" />
- <p x-show="studentEditErrors.gender" x-text="studentEditErrors.gender" class="mt-1 text-xs text-danger"></p>
+ <p x-show="studentEditErrors.gender" x-text="studentEditErrors.gender" class="field-error"></p>
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Classe <span class="text-danger">*</span></label>
+ <label class="form-label form-label-required">Classe</label>
  <select-field model="editingStudent.classroomId" required="true" aria-label="Classe"
  placeholder="Sélectionner une classe"
  options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
- <p x-show="studentEditErrors.classroomid" x-text="studentEditErrors.classroomid" class="mt-1 text-xs text-danger"></p>
+ <p x-show="studentEditErrors.classroomid" x-text="studentEditErrors.classroomid" class="field-error"></p>
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Photo</label>
+ <label class="form-label">Photo</label>
  <photo-dropzone preview="editingStudent.photoDisplayUrl"
  on-change="uploadStudentPhoto(photoBase64)" />
- <p x-show="photoUploadError" x-cloak x-text="photoUploadError" class="mt-1 text-xs text-danger"></p>
+ <p x-show="photoUploadError" x-cloak x-text="photoUploadError" class="field-error"></p>
  <div class="mt-3">
- <label class="block text-xs font-medium text-slate-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
- <input type="text" x-model="editingStudent.photoUrl" placeholder="https://…" class="input-field mt-1 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label class="form-label-sm">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
+ <input type="text" x-model="editingStudent.photoUrl" placeholder="https://…" class="input-field mt-1">
  </div>
- <p x-show="studentEditErrors.photourl" x-text="studentEditErrors.photourl" class="mt-1 text-xs text-danger"></p>
- </div>
-
- <div>
- <label class="block text-sm font-medium text-slate-700">Nom du tuteur</label>
- <input type="text" x-model="editingStudent.guardianName" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="studentEditErrors.guardianname" x-text="studentEditErrors.guardianname" class="mt-1 text-xs text-danger"></p>
+ <p x-show="studentEditErrors.photourl" x-text="studentEditErrors.photourl" class="field-error"></p>
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Téléphone du tuteur</label>
- <input type="text" x-model="editingStudent.guardianPhone" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="studentEditErrors.guardianphone" x-text="studentEditErrors.guardianphone" class="mt-1 text-xs text-danger"></p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-slate-700">E-mail du tuteur</label>
-                    <input type="email" x-model="editingStudent.guardianEmail" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-                    <p x-show="studentEditErrors.guardianemail" x-text="studentEditErrors.guardianemail" class="mt-1 text-xs text-danger"></p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-slate-700">Adresse</label>
-                    <input type="text" x-model="editingStudent.address" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-                    <p x-show="studentEditErrors.address" x-text="studentEditErrors.address" class="mt-1 text-xs text-danger"></p>
+ <label class="form-label">Nom du tuteur</label>
+ <input type="text" x-model="editingStudent.guardianName" class="input-field" :class="studentEditErrors.guardianname && 'input-field-error'">
+ <p x-show="studentEditErrors.guardianname" x-text="studentEditErrors.guardianname" class="field-error"></p>
  </div>
+
+ <div>
+ <label class="form-label">Téléphone du tuteur</label>
+ <input type="text" x-model="editingStudent.guardianPhone" class="input-field" :class="studentEditErrors.guardianphone && 'input-field-error'">
+ <p x-show="studentEditErrors.guardianphone" x-text="studentEditErrors.guardianphone" class="field-error"></p>
+                </div>
+
+                <div>
+                    <label class="form-label">E-mail du tuteur</label>
+                    <input type="email" x-model="editingStudent.guardianEmail" class="input-field" :class="studentEditErrors.guardianemail && 'input-field-error'">
+                    <p x-show="studentEditErrors.guardianemail" x-text="studentEditErrors.guardianemail" class="field-error"></p>
+                </div>
 
  <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
  <button type="button" @@click="closeEditStudent()" class="btn-secondary">Annuler</button>
@@ -705,7 +706,7 @@
  sera archivée et n'apparaîtra plus dans la liste des élèves.
  </modal-subtitle>
 
- <div x-show="deleteStudentRecordError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteStudentRecordError"></div>
+ <div x-show="deleteStudentRecordError" x-cloak class="form-error-banner" x-text="deleteStudentRecordError"></div>
 
  <p class="text-sm text-slate-500">
  Réservé à une fiche créée par pure erreur de saisie : impossible si une inscription ou une note existe déjà pour cet élève.
@@ -733,7 +734,7 @@
  Année <span class="font-semibold text-slate-900" x-text="cancelingEnrollment ? cancelingEnrollment.schoolYearLabel : ''"></span>
  </modal-subtitle>
 
- <div x-show="cancelEnrollmentError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="cancelEnrollmentError"></div>
+ <div x-show="cancelEnrollmentError" x-cloak class="form-error-banner" x-text="cancelEnrollmentError"></div>
 
  <p class="text-sm text-slate-500">
  À réserver à une erreur de saisie : refusée si un reçu de paiement existe déjà pour cette inscription — utilisez plutôt « Déclarer un abandon/transfert » dans ce cas.
@@ -754,11 +755,11 @@
  Année <span class="font-semibold text-slate-900" x-text="changingEnrollmentStatus ? changingEnrollmentStatus.schoolYearLabel : ''"></span>
  </modal-subtitle>
 
- <div x-show="changeEnrollmentStatusError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="changeEnrollmentStatusError"></div>
+ <div x-show="changeEnrollmentStatusError" x-cloak class="form-error-banner" x-text="changeEnrollmentStatusError"></div>
 
  <form x-on:submit.prevent="submitChangeEnrollmentStatus()" novalidate class="space-y-4">
  <div>
- <label class="block text-sm font-medium text-slate-700">Nouveau statut <span class="text-danger">*</span></label>
+ <label class="form-label form-label-required">Nouveau statut</label>
  <select-field model="changingEnrollmentStatus.newStatus" required="true" aria-label="Nouveau statut"
  options="enrollmentStatusOptions" />
  <p class="mt-1 text-xs text-slate-400">
@@ -780,80 +781,84 @@
  <modal-subtitle>Le matricule sera généré automatiquement à l'enregistrement.</modal-subtitle>
 
  <!-- Erreur globale -->
- <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+ <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
 
  <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
  <!-- Nom complet -->
  <div>
- <label class="block text-sm font-medium text-slate-700">Nom complet <span class="text-danger">*</span></label>
- <input type="text" x-model="newStudent.fullName" required class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="createErrors.fullname" x-text="createErrors.fullname" class="mt-1 text-xs text-danger"></p>
+ <label class="form-label form-label-required">Nom complet</label>
+ <input type="text" x-model="newStudent.fullName" required class="input-field" :class="createErrors.fullname && 'input-field-error'">
+ <p x-show="createErrors.fullname" x-text="createErrors.fullname" class="field-error"></p>
  </div>
 
  <!-- Date de naissance -->
  <div>
- <label class="block text-sm font-medium text-slate-700">Date de naissance <span class="text-danger">*</span></label>
+ <label class="form-label form-label-required">Date de naissance</label>
  <date-field model="newStudent.birthDate" required="true" aria-label="Date de naissance" />
- <p x-show="createErrors.birthdate" x-text="createErrors.birthdate" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.birthdate" x-text="createErrors.birthdate" class="field-error"></p>
  </div>
 
  <!-- Lieu de naissance (obligatoire, feature E) -->
  <div>
- <label class="block text-sm font-medium text-slate-700">Lieu de naissance <span class="text-danger">*</span></label>
- <input type="text" x-model="newStudent.birthPlace" required maxlength="200" placeholder="ex : Dakar" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="createErrors.birthplace" x-text="createErrors.birthplace" class="mt-1 text-xs text-danger"></p>
+ <label class="form-label form-label-required">Lieu de naissance</label>
+ <input type="text" x-model="newStudent.birthPlace" required maxlength="200" placeholder="ex : Dakar" class="input-field" :class="createErrors.birthplace && 'input-field-error'">
+ <p x-show="createErrors.birthplace" x-text="createErrors.birthplace" class="field-error"></p>
+ </div>
+
+ <!-- Adresse de résidence DE L'ÉLÈVE — distincte des coordonnées du tuteur ci-dessous (voir
+ Student.Address). Placée ici, avec le reste de son identité, plutôt qu'entre les champs
+ « du tuteur » où elle se lisait comme l'adresse du tuteur lui-même. -->
+ <div>
+ <label class="form-label">Adresse de résidence</label>
+ <input type="text" x-model="newStudent.address" maxlength="300" class="input-field" :class="createErrors.address && 'input-field-error'">
+ <p x-show="createErrors.address" x-text="createErrors.address" class="field-error"></p>
  </div>
 
  <!-- Genre -->
  <div>
- <label class="block text-sm font-medium text-slate-700">Genre <span class="text-danger">*</span></label>
+ <label class="form-label form-label-required">Genre</label>
  <select-field model="newStudent.gender" aria-label="Genre" options="studentGenderOptions" />
- <p x-show="createErrors.gender" x-text="createErrors.gender" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.gender" x-text="createErrors.gender" class="field-error"></p>
  </div>
 
  <!-- Classe (Dynamique) -->
  <div>
- <label class="block text-sm font-medium text-slate-700">Classe <span class="text-danger">*</span></label>
+ <label class="form-label form-label-required">Classe</label>
  <select-field model="newStudent.classroomId" required="true" aria-label="Classe"
  placeholder="Sélectionner une classe"
  options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
- <p x-show="createErrors.classroomid" x-text="createErrors.classroomid" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.classroomid" x-text="createErrors.classroomid" class="field-error"></p>
  </div>
 
  <!-- Photo (feature B : upload local compressé, URL externe en alternative) -->
  <div>
- <label class="block text-sm font-medium text-slate-700">Photo</label>
+ <label class="form-label">Photo</label>
  <photo-dropzone preview="newStudent.photoData ? ('data:image/jpeg;base64,' + newStudent.photoData) : newStudent.photoUrl"
  on-change="newStudent.photoData = photoBase64" />
  <div class="mt-3">
- <label class="block text-xs font-medium text-slate-500">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
- <input type="text" x-model="newStudent.photoUrl" placeholder="https://…" class="input-field mt-1 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label class="form-label-sm">…ou une URL externe (utilisée seulement si aucune photo n'est déposée ci-dessus)</label>
+ <input type="text" x-model="newStudent.photoUrl" placeholder="https://…" class="input-field mt-1">
  </div>
- <p x-show="createErrors.photourl" x-text="createErrors.photourl" class="mt-1 text-xs text-danger"></p>
- <p x-show="createErrors.photodata" x-text="createErrors.photodata" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.photourl" x-text="createErrors.photourl" class="field-error"></p>
+ <p x-show="createErrors.photodata" x-text="createErrors.photodata" class="field-error"></p>
  </div>
 
  <!-- Tuteur -->
  <div>
- <label class="block text-sm font-medium text-slate-700">Nom du tuteur</label>
- <input type="text" x-model="newStudent.guardianName" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label class="form-label">Nom du tuteur</label>
+ <input type="text" x-model="newStudent.guardianName" class="input-field">
  </div>
 
  <div>
- <label class="block text-sm font-medium text-slate-700">Téléphone du tuteur</label>
- <input type="text" x-model="newStudent.guardianPhone" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label class="form-label">Téléphone du tuteur</label>
+ <input type="text" x-model="newStudent.guardianPhone" class="input-field">
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">E-mail du tuteur</label>
-                    <input type="email" x-model="newStudent.guardianEmail" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-                    <p x-show="createErrors.guardianemail" x-text="createErrors.guardianemail" class="mt-1 text-xs text-danger"></p>
+                    <label class="form-label">E-mail du tuteur</label>
+                    <input type="email" x-model="newStudent.guardianEmail" class="input-field" :class="createErrors.guardianemail && 'input-field-error'">
+                    <p x-show="createErrors.guardianemail" x-text="createErrors.guardianemail" class="field-error"></p>
                 </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-slate-700">Adresse</label>
-                    <input type="text" x-model="newStudent.address" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- </div>
 
  <!-- Boutons d'action -->
  <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -879,7 +884,7 @@
  <modal-shell open="isImportOpen" on-close="closeImport()" title="Importer des élèves" size="3xl">
  <modal-subtitle>Fichier CSV ou Excel, une classe par ligne. Rien n'est enregistré tant que l'aperçu n'est pas entièrement valide.</modal-subtitle>
 
- <div x-show="importError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="importError"></div>
+ <div x-show="importError" x-cloak class="form-error-banner" x-text="importError"></div>
 
  <!-- Zone de dépôt du fichier : masquée une fois qu'un import a été confirmé, pour laisser la place au résumé de succès. -->
  <div x-show="!(importResult && importResult.committed)" x-cloak>
@@ -894,7 +899,7 @@
  <span x-show="importFileName" x-text="importFileName" class="font-medium text-slate-900"></span>
  </p>
  <p class="text-xs text-slate-400 mt-1">Fichier .csv ou .xlsx, 1000 lignes maximum.</p>
- <input type="file" accept=".csv,.xlsx,.xls" x-ref="importFileInput" class="hidden transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+ <input type="file" accept=".csv,.xlsx,.xls" x-ref="importFileInput" class="hidden"
  x-on:change="onImportFileSelected($event.target.files[0])" x-on:click.stop="">
  </div>
 
@@ -946,7 +951,7 @@
  </table>
  </div>
 
- <p x-show="importPreview && importPreview.invalidRows > 0" x-cloak class="mt-2 text-xs text-danger">
+ <p x-show="importPreview && importPreview.invalidRows > 0" x-cloak class="field-error">
  Corrigez les cellules en rouge dans votre fichier (survolez-les pour le détail), puis redéposez-le ci-dessus.
  </p>
  </div>
@@ -980,23 +985,23 @@
  <modal-shell open="isCommitmentModalOpen" on-close="isCommitmentModalOpen = false" title="Nouvel engagement financier">
  <modal-subtitle>Trace écrite d'un échéancier de paiement — ne modifie jamais le montant dû de l'inscription.</modal-subtitle>
 
- <div x-show="commitmentErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="commitmentErrors.global"></div>
+ <div x-show="commitmentErrors.global" x-cloak class="form-error-banner" x-text="commitmentErrors.global"></div>
 
  <form x-on:submit.prevent="submitCreateCommitment()" novalidate class="space-y-4">
  <div>
- <label class="block text-sm font-medium text-slate-700">Montant (FCFA) <span class="text-danger">*</span></label>
- <input type="number" min="0" x-model.number="commitmentForm.amount" required class="input-field mt-1" />
- <p x-show="commitmentErrors.amount" x-cloak x-text="commitmentErrors.amount" class="mt-1 text-xs text-danger"></p>
+ <label class="form-label form-label-required">Montant (FCFA)</label>
+ <input type="number" min="0" x-model.number="commitmentForm.amount" required class="input-field mt-1" :class="commitmentErrors.amount && 'input-field-error'" />
+ <p x-show="commitmentErrors.amount" x-cloak x-text="commitmentErrors.amount" class="field-error"></p>
  </div>
  <div>
- <label class="block text-sm font-medium text-slate-700">Échéance <span class="text-danger">*</span></label>
- <input type="date" x-model="commitmentForm.dueDate" required class="input-field mt-1" />
- <p x-show="commitmentErrors.dueDate" x-cloak x-text="commitmentErrors.dueDate" class="mt-1 text-xs text-danger"></p>
+ <label class="form-label form-label-required">Échéance</label>
+ <input type="date" x-model="commitmentForm.dueDate" required class="input-field mt-1" :class="commitmentErrors.dueDate && 'input-field-error'" />
+ <p x-show="commitmentErrors.dueDate" x-cloak x-text="commitmentErrors.dueDate" class="field-error"></p>
  </div>
  <div>
- <label class="block text-sm font-medium text-slate-700">Termes de l'engagement <span class="text-danger">*</span></label>
+ <label class="form-label form-label-required">Termes de l'engagement</label>
  <textarea x-model="commitmentForm.terms" rows="4" required class="input-field mt-1" placeholder="Décrivez l'échéancier convenu..."></textarea>
- <p x-show="commitmentErrors.terms" x-cloak x-text="commitmentErrors.terms" class="mt-1 text-xs text-danger"></p>
+ <p x-show="commitmentErrors.terms" x-cloak x-text="commitmentErrors.terms" class="field-error"></p>
  </div>
 
  <div class="mt-6 flex justify-end gap-3">

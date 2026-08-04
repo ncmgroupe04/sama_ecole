@@ -12,7 +12,7 @@
  @* ═══════════════════════════════════════════════════════════════════════════
     STICKY HEADER — En-tête fixe opaque (même convention que Classes).
     ═══════════════════════════════════════════════════════════════════════════ *@
- <div class="sticky top-8 lg:top-10 z-50 isolate -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 py-4 lg:px-10 lg:py-4 bg-white border-b border-slate-200 shadow-sm">
+ <div class="sticky-sub-header">
 
   <div>
    <h1 class="text-jgk-title font-bold text-slate-900">Bâtiments &amp; Salles</h1>
@@ -60,7 +60,7 @@
      </span>
      <input type="search" x-model="search" placeholder="Rechercher un bâtiment ou une salle…"
       aria-label="Rechercher un bâtiment ou une salle"
-      class="input-field !my-0 h-10 !py-2 pl-9 pr-3 rounded-xl w-full transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+      class="input-field !my-0 pl-9 pr-3 w-full" />
     </div>
 
     <button x-show="canManage" x-cloak @@click="openCreateBuilding()" class="btn-primary group h-10 px-4 ml-auto">
@@ -179,17 +179,17 @@
 
  <modal-shell open="isCreateBuildingOpen" on-close="closeCreateBuilding()" title="Nouveau bâtiment">
   <modal-subtitle>Nom et description du bâtiment physique.</modal-subtitle>
-  <div x-show="createBuildingErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createBuildingErrors.global"></div>
+  <div x-show="createBuildingErrors.global" x-cloak class="form-error-banner" x-text="createBuildingErrors.global"></div>
   <form x-on:submit.prevent="submitCreateBuilding()" novalidate class="space-y-4">
    <div>
-    <label class="block text-sm font-medium text-slate-700">Nom du bâtiment <span class="text-danger">*</span></label>
-    <input type="text" x-model="newBuilding.name" required placeholder="ex: Bâtiment A" class="input-field">
-    <p x-show="createBuildingErrors.name" x-text="createBuildingErrors.name" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Nom du bâtiment</label>
+    <input type="text" x-model="newBuilding.name" required placeholder="ex: Bâtiment A" class="input-field" :class="createBuildingErrors.name && 'input-field-error'">
+    <p x-show="createBuildingErrors.name" x-text="createBuildingErrors.name" class="field-error"></p>
    </div>
    <div>
-    <label class="block text-sm font-medium text-slate-700">Description</label>
+    <label class="form-label">Description</label>
     <textarea x-model="newBuilding.description" rows="3" placeholder="ex: Bâtiment principal, 2 étages" class="input-field"></textarea>
-    <p x-show="createBuildingErrors.description" x-text="createBuildingErrors.description" class="mt-1 text-xs text-danger"></p>
+    <p x-show="createBuildingErrors.description" x-text="createBuildingErrors.description" class="field-error"></p>
    </div>
    <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
     <button type="button" @@click="closeCreateBuilding()" class="btn-secondary">Annuler</button>
@@ -205,14 +205,14 @@
   <div x-show="editBuildingErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editBuildingErrors.global"></div>
   <form x-on:submit.prevent="submitEditBuilding()" novalidate class="space-y-4">
    <div>
-    <label class="block text-sm font-medium text-slate-700">Nom du bâtiment <span class="text-danger">*</span></label>
-    <input type="text" x-model="editingBuilding.name" required maxlength="100" class="input-field">
-    <p x-show="editBuildingErrors.name" x-cloak x-text="editBuildingErrors.name" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Nom du bâtiment</label>
+    <input type="text" x-model="editingBuilding.name" required maxlength="100" class="input-field" :class="editBuildingErrors.name && 'input-field-error'">
+    <p x-show="editBuildingErrors.name" x-cloak x-text="editBuildingErrors.name" class="field-error"></p>
    </div>
    <div>
-    <label class="block text-sm font-medium text-slate-700">Description</label>
+    <label class="form-label">Description</label>
     <textarea x-model="editingBuilding.description" rows="3" class="input-field"></textarea>
-    <p x-show="editBuildingErrors.description" x-cloak x-text="editBuildingErrors.description" class="mt-1 text-xs text-danger"></p>
+    <p x-show="editBuildingErrors.description" x-cloak x-text="editBuildingErrors.description" class="field-error"></p>
    </div>
    <div class="mt-6 flex justify-end gap-3">
     <button type="button" x-on:click="closeEditBuilding()" class="btn-secondary">Annuler</button>
@@ -229,7 +229,7 @@
    <span class="font-semibold text-slate-900" x-text="deletingBuilding ? deletingBuilding.name : ''"></span>
    sera archivé et n'apparaîtra plus dans les sélecteurs.
   </modal-subtitle>
-  <div x-show="deleteBuildingError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteBuildingError"></div>
+  <div x-show="deleteBuildingError" x-cloak class="form-error-banner" x-text="deleteBuildingError"></div>
   <p class="text-sm text-slate-500">
    Impossible si des salles sont encore rattachées à ce bâtiment : supprimez-les d'abord.
   </p>
@@ -247,23 +247,23 @@
 
  <modal-shell open="isCreateRoomOpen" on-close="closeCreateRoom()" title="Nouvelle salle">
   <modal-subtitle>Configurez une nouvelle salle et sa capacité physique.</modal-subtitle>
-  <div x-show="createRoomErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createRoomErrors.global"></div>
+  <div x-show="createRoomErrors.global" x-cloak class="form-error-banner" x-text="createRoomErrors.global"></div>
   <form x-on:submit.prevent="submitCreateRoom()" novalidate class="space-y-4">
    <div>
-    <label class="block text-sm font-medium text-slate-700">Nom de la salle <span class="text-danger">*</span></label>
-    <input type="text" x-model="newRoom.name" required placeholder="ex: Salle 101" class="input-field">
-    <p x-show="createRoomErrors.name" x-text="createRoomErrors.name" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Nom de la salle</label>
+    <input type="text" x-model="newRoom.name" required placeholder="ex: Salle 101" class="input-field" :class="createRoomErrors.name && 'input-field-error'">
+    <p x-show="createRoomErrors.name" x-text="createRoomErrors.name" class="field-error"></p>
    </div>
    <div>
-    <label class="block text-sm font-medium text-slate-700">Type de salle <span class="text-danger">*</span></label>
+    <label class="form-label form-label-required">Type de salle</label>
     <select-field model="newRoom.type" required="true" aria-label="Type de salle"
      options-expr="[{value:'SalleDeClasse', label:'Salle de classe'},{value:'Laboratoire', label:'Laboratoire'},{value:'Bureau', label:'Bureau'},{value:'Autre', label:'Autre'}]" />
-    <p x-show="createRoomErrors.type" x-text="createRoomErrors.type" class="mt-1 text-xs text-danger"></p>
+    <p x-show="createRoomErrors.type" x-text="createRoomErrors.type" class="field-error"></p>
    </div>
    <div>
-    <label class="block text-sm font-medium text-slate-700">Capacité (places physiques) <span class="text-danger">*</span></label>
-    <input type="number" x-model.number="newRoom.capacity" required min="1" max="1000" class="input-field">
-    <p x-show="createRoomErrors.capacity" x-text="createRoomErrors.capacity" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Capacité (places physiques)</label>
+    <input type="number" x-model.number="newRoom.capacity" required min="1" max="1000" class="input-field" :class="createRoomErrors.capacity && 'input-field-error'">
+    <p x-show="createRoomErrors.capacity" x-text="createRoomErrors.capacity" class="field-error"></p>
    </div>
    <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
     <button type="button" @@click="closeCreateRoom()" class="btn-secondary">Annuler</button>
@@ -279,20 +279,20 @@
   <div x-show="editRoomErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editRoomErrors.global"></div>
   <form x-on:submit.prevent="submitEditRoom()" novalidate class="space-y-4">
    <div>
-    <label class="block text-sm font-medium text-slate-700">Nom de la salle <span class="text-danger">*</span></label>
-    <input type="text" x-model="editingRoom.name" required maxlength="100" class="input-field">
-    <p x-show="editRoomErrors.name" x-cloak x-text="editRoomErrors.name" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Nom de la salle</label>
+    <input type="text" x-model="editingRoom.name" required maxlength="100" class="input-field" :class="editRoomErrors.name && 'input-field-error'">
+    <p x-show="editRoomErrors.name" x-cloak x-text="editRoomErrors.name" class="field-error"></p>
    </div>
    <div>
-    <label class="block text-sm font-medium text-slate-700">Type de salle <span class="text-danger">*</span></label>
+    <label class="form-label form-label-required">Type de salle</label>
     <select-field model="editingRoom.type" required="true" aria-label="Type de salle"
      options-expr="[{value:'SalleDeClasse', label:'Salle de classe'},{value:'Laboratoire', label:'Laboratoire'},{value:'Bureau', label:'Bureau'},{value:'Autre', label:'Autre'}]" />
-    <p x-show="editRoomErrors.type" x-cloak x-text="editRoomErrors.type" class="mt-1 text-xs text-danger"></p>
+    <p x-show="editRoomErrors.type" x-cloak x-text="editRoomErrors.type" class="field-error"></p>
    </div>
    <div>
-    <label class="block text-sm font-medium text-slate-700">Capacité (places physiques) <span class="text-danger">*</span></label>
-    <input type="number" x-model.number="editingRoom.capacity" required min="1" max="1000" class="input-field">
-    <p x-show="editRoomErrors.capacity" x-cloak x-text="editRoomErrors.capacity" class="mt-1 text-xs text-danger"></p>
+    <label class="form-label form-label-required">Capacité (places physiques)</label>
+    <input type="number" x-model.number="editingRoom.capacity" required min="1" max="1000" class="input-field" :class="editRoomErrors.capacity && 'input-field-error'">
+    <p x-show="editRoomErrors.capacity" x-cloak x-text="editRoomErrors.capacity" class="field-error"></p>
    </div>
    <div class="mt-6 flex justify-end gap-3">
     <button type="button" x-on:click="closeEditRoom()" class="btn-secondary">Annuler</button>
@@ -309,7 +309,7 @@
    <span class="font-semibold text-slate-900" x-text="deletingRoom ? deletingRoom.name : ''"></span>
    sera archivée et n'apparaîtra plus dans la liste.
   </modal-subtitle>
-  <div x-show="deleteRoomError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteRoomError"></div>
+  <div x-show="deleteRoomError" x-cloak class="form-error-banner" x-text="deleteRoomError"></div>
   <div class="mt-6 flex justify-end gap-3">
    <button type="button" x-on:click="closeDeleteRoom()" class="btn-secondary">Annuler</button>
    <button type="button" x-on:click="confirmDeleteRoom()" :disabled="isDeletingRoom" class="btn-danger">

@@ -114,7 +114,7 @@ public static class DbSeeder
             NewUser("surveillant@baobabs.sn", "Cheikh Mbaye", Role.Surveillant, BaobabsId, passwordHash),
 
             // SchoolId null : le Super Admin n'appartient à aucun établissement (voir User.SchoolId).
-            NewUser("superadmin@sama-ecole.sn", "Super Admin Sama Ecole", Role.SuperAdmin, null, passwordHash)
+            NewUser("superadmin@sama-ecole.sn", "Super Admin Unikol", Role.SuperAdmin, null, passwordHash)
         };
 
         foreach (var user in users)

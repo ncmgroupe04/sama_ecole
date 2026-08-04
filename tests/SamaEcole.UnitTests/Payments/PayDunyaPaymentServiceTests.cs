@@ -71,7 +71,7 @@ public class PayDunyaPaymentServiceTests
         SchoolId: Guid.Parse("22222222-2222-2222-2222-222222222222"),
         Amount: 25_000m,
         Currency: "XOF",
-        Description: "Abonnement Sama Ecole — École Test — Standard (mensuel)",
+        Description: "Abonnement Unikol — École Test — Standard (mensuel)",
         CustomerName: "Awa Ndiaye",
         CustomerEmail: "awa@ecole-test.sn");
 

@@ -105,12 +105,12 @@ public class ClassDeliberationDocument(IReadOnlyList<ReportCardDto> reportCards,
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(78);   // Matricule — largeur fixe, garantit "ELEV-2025-0005" sur une seule ligne
+                columns.ConstantColumn(PdfColumnWidths.Identifier); // Matricule
                 columns.RelativeColumn(3f);   // Prénoms & Nom
                 columns.RelativeColumn(1f);   // Moyenne
                 columns.RelativeColumn(0.8f); // Rang
-                columns.RelativeColumn(1.5f); // Mention
-                columns.RelativeColumn(2.5f); // Décision / Observation
+                columns.RelativeColumn(1.2f); // Mention — libellés courts (« Bien », « Assez bien »)
+                columns.RelativeColumn(2.2f); // Décision / Observation
             });
 
             table.Header(header =>

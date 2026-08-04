@@ -101,7 +101,15 @@ public class SelectFieldTagHelper : TagHelper
             ? WebUtility.HtmlEncode(JsonSerializer.Serialize(Options, OptionsJsonSettings))
             : OptionsExpr;
 
-        var buttonClass = $"flex w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-all focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:text-sm {defaultMt}{extraClass}".Trim();
+        // Le déclencheur RÉUTILISE `.input-field` (Styles/input.css) au lieu de recomposer sa propre
+        // apparence : c'est ce qui garantit qu'un <select-field> posé à côté d'un <input class="input-field">
+        // a la même hauteur, le même arrondi, la même bordure et le même halo de focus. La chaîne
+        // recopiée ici auparavant (rounded-xl, border-slate-200, px-4 py-3) avait dérivé de input-field
+        // et produisait un composant visiblement plus haut et plus arrondi que ses voisins.
+        // `flex`/`text-left` surchargent le `block` de input-field : ils sont dans la couche
+        // `utilities`, qui l'emporte sur la couche `components` quel que soit l'ordre des classes.
+        // `mt-1` reste piloté par defaultMt, la vue pouvant l'annuler (mt-0) — d'où le !mt-0 possible.
+        var buttonClass = $"input-field flex items-center justify-between gap-2 text-left {defaultMt}{extraClass}".Trim();
 
         output.Content.SetHtmlContent($$"""
             <div class="{{wrapperClasses}}" x-data="selectField()" x-effect="options = {{optionsSource}}">
@@ -110,7 +118,7 @@ public class SelectFieldTagHelper : TagHelper
                 <button type="button" {{idAttr}}x-on:click="!({{disabled}}) && toggle()" :aria-expanded="open" aria-haspopup="listbox"
                         :disabled="{{disabled}}"
                         aria-label="{{ariaLabel}}"
-                        :class="({{disabled}}) ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed' : (open ? 'border-primary' : 'border-slate-200')"
+                        :class="({{disabled}}) ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : (open ? 'border-primary' : 'border-slate-300')"
                         class="{{buttonClass}}">
                     <span :class="({{Model}} ? 'text-gray-900' : 'text-gray-400') + ' truncate whitespace-nowrap'" x-text="{{Model}} ? labelFor({{Model}}) : '{{placeholder}}'"></span>
                     {{Svg("chevron-down", "w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-150")}}

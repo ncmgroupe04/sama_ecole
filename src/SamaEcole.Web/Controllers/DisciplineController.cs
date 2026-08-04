@@ -58,7 +58,7 @@ public class DisciplineController(IMediator _mediator, ILogger<DisciplineControl
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du PV de discipline PDF pour {DisciplineRecordId}", id);
-            return Problem(detail: ex.Message, title: "Erreur de génération du PV de discipline PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du PV de discipline PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 }

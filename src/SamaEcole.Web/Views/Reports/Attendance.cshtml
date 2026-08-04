@@ -45,16 +45,16 @@
  <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
  <div class="flex flex-wrap items-end gap-3">
  <div>
- <label class="block text-xs font-medium text-slate-500 mb-1">Classe</label>
- <select-field model="classId" aria-label="Filtrer par classe" class="mt-0 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" placeholder="Toutes les classes"
+ <label class="form-label-sm">Classe</label>
+ <select-field model="classId" aria-label="Filtrer par classe" class="mt-0" placeholder="Toutes les classes"
  options-expr="[{value:'', label:'Toutes les classes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
  </div>
  <div>
- <label class="block text-xs font-medium text-slate-500 mb-1">Du</label>
+ <label class="form-label-sm">Du</label>
  <date-field model="startDate" aria-label="Date de début" class="mt-0" />
  </div>
  <div>
- <label class="block text-xs font-medium text-slate-500 mb-1">Au</label>
+ <label class="form-label-sm">Au</label>
  <date-field model="endDate" aria-label="Date de fin" class="mt-0" />
  </div>
  <button type="button" x-on:click="applyFilters()" class="btn-primary">
@@ -77,9 +77,9 @@
  <div x-show="open" x-cloak x-on:click.outside="open = false"
  class="absolute right-0 mt-1 w-40 rounded-xl border border-slate-200 bg-white shadow-lg z-10 py-1">
  <button type="button" x-on:click="open = false; exportReport('pdf')"
- class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">Format PDF</button>
+ class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-all duration-200 ease-in-out">Format PDF</button>
  <button type="button" x-on:click="open = false; exportReport('csv')"
- class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">Format CSV (Excel)</button>
+ class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-all duration-200 ease-in-out">Format CSV (Excel)</button>
  </div>
  </div>
  </div>
@@ -115,7 +115,7 @@
 
  <template x-if="!isLoading && data">
  <template x-for="row in data.students" :key="row.studentId">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
  <td class="py-3 px-4">
  <div class="flex items-center gap-3">
  <div class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs" x-text="initials(row.fullName)"></div>

@@ -65,14 +65,14 @@ public class SendSubscriptionReminderCommandHandler(
             $"""
              Bonjour {fullName},
 
-             Ceci est un rappel concernant l'abonnement Sama Ecole de l'établissement « {schoolName} ».
+             Ceci est un rappel concernant l'abonnement Unikol de l'établissement « {schoolName} ».
 
              Merci de régulariser le paiement de votre abonnement dès que possible depuis votre espace,
              afin de conserver un accès complet à la plateforme.
              """;
 
         await emailSender.SendAsync(
-            new EmailMessage(email, "Rappel — Abonnement Sama Ecole", body),
+            new EmailMessage(email, "Rappel — Abonnement Unikol", body),
             cancellationToken);
     }
 }

@@ -8,7 +8,7 @@
  <div>
  <h2 class="text-lg font-semibold text-slate-900">Facturation & Historique</h2>
  <p class="text-sm text-slate-500 mt-1">
- Statut de votre abonnement et historique des paiements effectués auprès de Sama Ecole.
+ Statut de votre abonnement et historique des paiements effectués auprès de Unikol.
  </p>
  </div>
 
@@ -54,7 +54,7 @@
  </tr>
 
  <template x-for="entry in entries" :key="entry.id">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
  <td class="py-3 px-4 text-slate-600 whitespace-nowrap" x-text="formatDate(entry.initiatedAt)"></td>
  <td class="py-3 px-4 font-medium text-slate-900 whitespace-nowrap" x-text="formatAmount(entry.amount, entry.currency)"></td>
  <td class="py-3 px-4 text-slate-700" x-text="billingPeriodLabel(entry.billingPeriod)"></td>

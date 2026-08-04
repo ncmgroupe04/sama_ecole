@@ -1,42 +1,72 @@
 /**
- * Console Super Admin — Tableau de bord plateforme.
+ * Console Super Admin — Tableau de bord plateforme (Executive Dashboard).
  *
- * Consomme le vrai `GET /api/v1/admin/platform/dashboard` (PlatformController, migration
- * AddPlatformAdminViews : vue PostgreSQL `v_platform_dashboard_stats`, SECURITY DEFINER-like via
- * security_invoker = false). Volontairement limité aux QUATRE agrégats que cette vue expose
- * (établissements, utilisateurs, revenu confirmé, abonnements actifs) — le MRR sur 12 mois, les
- * effectifs élèves cumulés, les notes saisies et la santé serveur nécessiteraient chacun leur propre
- * agrégation (et pour la santé serveur, un monitoring dédié) : hors périmètre de cette vue, à
- * concevoir dans un futur ticket plutôt que d'inventer des chiffres ici.
+ * Consomme `GET /api/v1/admin/platform/dashboard` (agrégats : établissements, utilisateurs, revenu
+ * confirmé, abonnements actifs, MRR, ARR, cashflow prévisionnel 30j, ARPU — vue PostgreSQL
+ * `v_platform_dashboard_stats`, migration AddPlatformFinancialKpis) et
+ * `GET /api/v1/admin/platform/revenue-projection` (12 points mensuels, GetPlatformRevenueProjectionQuery)
+ * pour le graphique de projection : ce dernier reflète les échéances RÉELLES des abonnements Active,
+ * PAS une extrapolation — voir la doc de la query pour le détail du calcul. Le Simulateur de Croissance
+ * (ARR/MRR projeté pour N écoles cibles) est en revanche un calcul purement client (ARPU × N), aucune
+ * hypothèse de croissance n'existe côté serveur.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('superAdminDashboard', () => ({
         data: {},
+        projection: [],
         isLoading: false,
         isDemoData: false,
         error: null,
+        simulatorSchools: 100, // Valeur par défaut pour le simulateur
 
         async load() {
             this.isLoading = true;
             this.error = null;
             try {
-                this.data = await window.api.get('/admin/platform/dashboard');
+                const [dashboard, projection] = await Promise.all([
+                    window.api.get('/admin/platform/dashboard'),
+                    window.api.get('/admin/platform/revenue-projection')
+                ]);
+                this.data = dashboard;
+                this.projection = projection;
                 this.isDemoData = false;
             } catch (err) {
                 if (err.status === 404) {
                     this.data = demoDashboardData();
+                    this.projection = demoProjectionData();
                     this.isDemoData = true;
                 } else {
                     this.error = err.message || 'Erreur lors du chargement du tableau de bord.';
                 }
             } finally {
                 this.isLoading = false;
+                this.initializeChart();
             }
         },
 
         get kpiTiles() {
             const d = this.data;
             return [
+                {
+                    label: 'MRR', icon: 'wallet',
+                    iconBg: 'bg-sky-500/15', iconText: 'text-sky-400',
+                    value: this.formatCompactXof(d.mrr ?? 0)
+                },
+                {
+                    label: 'ARR', icon: 'chart-multiple',
+                    iconBg: 'bg-violet-500/15', iconText: 'text-violet-400',
+                    value: this.formatCompactXof(d.arr ?? 0)
+                },
+                {
+                    label: 'Prévisionnel (30j)', icon: 'wallet',
+                    iconBg: 'bg-emerald-500/15', iconText: 'text-emerald-400',
+                    value: this.formatCompactXof(d.forecastedRevenue30Days ?? 0)
+                },
+                {
+                    label: 'ARPU', icon: 'users',
+                    iconBg: 'bg-amber-500/15', iconText: 'text-amber-400',
+                    value: this.formatCompactXof(d.arpu ?? 0)
+                },
                 {
                     label: 'Établissements', icon: 'building',
                     iconBg: 'bg-sky-500/15', iconText: 'text-sky-400',
@@ -60,12 +90,70 @@ document.addEventListener('alpine:init', () => {
             ];
         },
 
+        initializeChart() {
+            if (!this.$refs.canvas || typeof Chart === 'undefined') return;
+
+            const ctx = this.$refs.canvas.getContext('2d');
+            if (this.chart) {
+                this.chart.destroy();
+            }
+
+            // Données RÉELLES (échéances des abonnements Active) — voir GetPlatformRevenueProjectionQuery.
+            const points = this.projection || [];
+            const labels = points.map((p) => this.formatMonthLabel(p.month));
+            const projectedRevenue = points.map((p) => p.projectedRevenue ?? 0);
+
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Revenu projeté',
+                        data: projectedRevenue,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { 
+                                color: '#9ca3af',
+                                callback: (value) => new Intl.NumberFormat('fr-FR', { notation: 'compact' }).format(value)
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#9ca3af' }
+                        }
+                    }
+                }
+            });
+        },
+
         formatCompactXof(amount) {
             return new Intl.NumberFormat('fr-FR', { notation: 'compact', style: 'currency', currency: 'XOF', maximumFractionDigits: 1 }).format(amount || 0);
         },
 
         formatCompactNumber(n) {
             return new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(n || 0);
+        },
+
+        /** `month` au format "yyyy-MM" (MonthlyRevenueProjectionDto) → libellé court localisé (ex. "sept."). */
+        formatMonthLabel(month) {
+            const [year, m] = (month || '').split('-').map(Number);
+            if (!year || !m) return '';
+            return new Date(year, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' });
         }
     }));
 });
@@ -76,6 +164,24 @@ function demoDashboardData() {
         totalSchools: 27,
         totalUsers: 184,
         totalRevenue: 4820000,
-        activeSubscriptions: 24
+        activeSubscriptions: 24,
+        mrr: 450000,
+        arr: 5400000,
+        forecastedRevenue30Days: 450000,
+        arpu: 22500
     };
+}
+
+/** Projection de démonstration (12 mois) — même bandeau que demoDashboardData(). */
+function demoProjectionData() {
+    const points = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        // Base mensuelle + un pic ponctuel pour illustrer un lot de renouvellements Yearly.
+        const projectedRevenue = 380000 + (i % 4 === 0 ? 150000 : 0);
+        points.push({ month, projectedRevenue });
+    }
+    return points;
 }

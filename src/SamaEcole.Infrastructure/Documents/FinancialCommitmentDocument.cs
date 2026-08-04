@@ -57,7 +57,7 @@ public class FinancialCommitmentDocument(FinancialCommitmentDto commitment, byte
             {
                 header.Item().Text(commitment.SchoolName.ToUpperInvariant()).Bold().FontSize(13);
 
-                var contact = JoinPresent(commitment.SchoolAddress, commitment.SchoolPhone);
+                var contact = JoinPresent(commitment.SchoolAddress, PhoneFormatter.FormatSenegal(commitment.SchoolPhone));
                 if (contact.Length > 0)
                 {
                     header.Item().Text(contact).FontSize(7).FontColor(Colors.Grey.Darken2);

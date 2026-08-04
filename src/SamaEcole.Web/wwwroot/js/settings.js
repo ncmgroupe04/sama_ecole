@@ -486,6 +486,12 @@ document.addEventListener('alpine:init', () => {
             this.isMentionCreateOpen = true;
         },
 
+        openCreateMentionFromDefault(mention) {
+            this.newMention = { label: mention.label, minAverage: mention.minAverage };
+            this.mentionCreateErrors = {};
+            this.isMentionCreateOpen = true;
+        },
+
         async submitCreateMention() {
             this.mentionSubmitting = true;
             this.mentionCreateErrors = {};

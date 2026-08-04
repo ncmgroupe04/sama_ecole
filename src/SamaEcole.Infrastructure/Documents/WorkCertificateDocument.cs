@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Finance.Queries.GetWorkCertificate;
 using SamaEcole.Infrastructure.Documents.Components;
 using QuestPDF.Fluent;
@@ -52,7 +53,7 @@ public class WorkCertificateDocument(WorkCertificateDto certificate, byte[]? log
             {
                 header.Item().Text(certificate.SchoolName.ToUpperInvariant()).Bold().FontSize(13);
 
-                var contact = JoinPresent(certificate.SchoolAddress, certificate.SchoolPhone);
+                var contact = JoinPresent(certificate.SchoolAddress, PhoneFormatter.FormatSenegal(certificate.SchoolPhone));
                 if (contact.Length > 0)
                 {
                     header.Item().Text(contact).FontSize(7).FontColor(Colors.Grey.Darken2);

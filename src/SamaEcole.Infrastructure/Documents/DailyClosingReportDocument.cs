@@ -172,12 +172,12 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
             {
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.ConstantColumn(40);
-                    columns.ConstantColumn(80);
-                    columns.RelativeColumn();
-                    columns.RelativeColumn();
-                    columns.ConstantColumn(60);
-                    columns.ConstantColumn(80);
+                    columns.ConstantColumn(PdfColumnWidths.Time);       // Heure
+                    columns.ConstantColumn(PdfColumnWidths.Identifier); // Reçu — « REC‑2025‑0002 » sur une seule ligne
+                    columns.RelativeColumn(2.6f);                       // Élève / Tiers — contenu libre, prend le reste
+                    columns.RelativeColumn(1.4f);                       // Catégorie — libellés courts
+                    columns.ConstantColumn(60);                         // Mode
+                    columns.ConstantColumn(PdfColumnWidths.Amount);     // Montant
                 });
 
                 table.Header(header =>

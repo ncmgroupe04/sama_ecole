@@ -84,8 +84,8 @@ public class TaxDeclarationDocument(TaxDeclarationDto declaration, byte[]? logo)
             {
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.RelativeColumn(4);
-                    columns.RelativeColumn(2);
+                    columns.RelativeColumn();                       // Cotisation — libellé libre, prend le reste
+                    columns.ConstantColumn(PdfColumnWidths.Amount); // Montant — largeur fixe, jamais de repli
                 });
 
                 table.Header(header =>
@@ -117,8 +117,8 @@ public class TaxDeclarationDocument(TaxDeclarationDto declaration, byte[]? logo)
             {
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.RelativeColumn(4);
-                    columns.RelativeColumn(2);
+                    columns.RelativeColumn();                       // Élément — libellé libre, prend le reste
+                    columns.ConstantColumn(PdfColumnWidths.Amount); // Montant — largeur fixe, jamais de repli
                 });
 
                 table.Header(header =>

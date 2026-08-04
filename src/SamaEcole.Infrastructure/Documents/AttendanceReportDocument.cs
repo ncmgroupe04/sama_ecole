@@ -70,9 +70,9 @@ public class AttendanceReportDocument(AttendanceReportExportModel model) : IDocu
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(65);    // Matricule — largeur fixe pour tenir sur une seule ligne
+                columns.ConstantColumn(PdfColumnWidths.Identifier); // Matricule
                 columns.RelativeColumn(2.4f);  // Nom
-                columns.RelativeColumn(1.6f);  // Classe
+                columns.RelativeColumn(1.1f);  // Classe — codes courts (« CM2 A »), resserrée au profit du nom
                 columns.RelativeColumn(0.8f);  // Appels
                 columns.RelativeColumn(0.8f);  // Présents
                 columns.RelativeColumn(0.8f);  // Retards

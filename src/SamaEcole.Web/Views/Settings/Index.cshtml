@@ -120,40 +120,40 @@
  </div>
 
  <div>
- <label for="school-name" class="block text-sm font-medium text-slate-700">Nom de l'établissement <span class="text-danger">*</span></label>
+ <label for="school-name" class="form-label form-label-required">Nom de l'établissement</label>
  <input id="school-name" type="text" x-model="profile.name" maxlength="200" :disabled="!isDirecteur"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="profileErrors.name" x-cloak x-text="profileErrors.name" class="mt-1 text-xs text-danger"></p>
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.name && 'input-field-error'">
+ <p x-show="profileErrors.name" x-cloak x-text="profileErrors.name" class="field-error"></p>
  </div>
 
  <div>
- <label for="school-address" class="block text-sm font-medium text-slate-700">Adresse</label>
+ <label for="school-address" class="form-label">Adresse</label>
  <input id="school-address" type="text" x-model="profile.address" maxlength="300" :disabled="!isDirecteur"
  placeholder="ex : Rue 12, Médina, Dakar"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500">
  <p class="mt-1 text-xs text-slate-400">La ville (dernier élément de l'adresse) apparaît dans le « Fait à … » du reçu.</p>
- <p x-show="profileErrors.address" x-cloak x-text="profileErrors.address" class="mt-1 text-xs text-danger"></p>
+ <p x-show="profileErrors.address" x-cloak x-text="profileErrors.address" class="field-error"></p>
  </div>
 
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+ <div class="form-grid">
  <div>
- <label for="school-phone" class="block text-sm font-medium text-slate-700">Téléphone</label>
+ <label for="school-phone" class="form-label">Téléphone</label>
  <input id="school-phone" type="tel" x-model="profile.phone" maxlength="30" :disabled="!isDirecteur"
  placeholder="+221 77 000 00 00"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="profileErrors.phone" x-cloak x-text="profileErrors.phone" class="mt-1 text-xs text-danger"></p>
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.phone && 'input-field-error'">
+ <p x-show="profileErrors.phone" x-cloak x-text="profileErrors.phone" class="field-error"></p>
  </div>
  <div>
- <label for="school-email" class="block text-sm font-medium text-slate-700">E-mail</label>
+ <label for="school-email" class="form-label">E-mail</label>
  <input id="school-email" type="email" x-model="profile.email" maxlength="150" :disabled="!isDirecteur"
  placeholder="ex : contact@monecole.sn"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="profileErrors.email" x-cloak x-text="profileErrors.email" class="mt-1 text-xs text-danger"></p>
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.email && 'input-field-error'">
+ <p x-show="profileErrors.email" x-cloak x-text="profileErrors.email" class="field-error"></p>
  </div>
  </div>
 
  <div>
- <label for="school-logo" class="block text-sm font-medium text-slate-700">Logo de l'établissement</label>
+ <label for="school-logo" class="form-label">Logo de l'établissement</label>
  
  <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
  <!-- Prévisualisation du logo existante -->
@@ -170,7 +170,7 @@
  <div class="flex-1 flex items-center">
  <input id="school-logo" type="url" x-model="profile.logoUrl" maxlength="500" :disabled="!isDirecteur || isUploadingLogo"
  placeholder="Saisir l'URL https://… ou importer un fichier"
- class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field !my-0 w-full disabled:bg-slate-50 disabled:text-slate-500">
  </div>
 
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -190,8 +190,8 @@
  </label>
  </div>
  <p class="text-xs text-slate-400">Formats acceptés : PNG, JPEG, WEBP. Taille maximale : 2 Mo.</p>
- <p x-show="logoUploadError" x-cloak x-text="logoUploadError" class="text-xs text-danger font-medium"></p>
- <p x-show="profileErrors.logourl" x-cloak x-text="profileErrors.logourl" class="text-xs text-danger"></p>
+ <p x-show="logoUploadError" x-cloak x-text="logoUploadError" class="field-error !mt-0 font-medium"></p>
+ <p x-show="profileErrors.logourl" x-cloak x-text="profileErrors.logourl" class="field-error !mt-0"></p>
  </div>
  </div>
  </div>
@@ -207,18 +207,18 @@
 
  <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
  <div>
- <label for="school-ninea" class="block text-sm font-medium text-slate-700">NINEA</label>
+ <label for="school-ninea" class="form-label">NINEA</label>
  <input id="school-ninea" type="text" x-model="profile.ninea" maxlength="50" :disabled="!isDirecteur"
  placeholder="ex : 005151978"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="profileErrors.ninea" x-cloak x-text="profileErrors.ninea" class="mt-1 text-xs text-danger"></p>
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.ninea && 'input-field-error'">
+ <p x-show="profileErrors.ninea" x-cloak x-text="profileErrors.ninea" class="field-error"></p>
  </div>
  <div>
- <label for="school-rccm" class="block text-sm font-medium text-slate-700">Registre du commerce (RCCM)</label>
+ <label for="school-rccm" class="form-label">Registre du commerce (RCCM)</label>
  <input id="school-rccm" type="text" x-model="profile.registreCommerce" maxlength="50" :disabled="!isDirecteur"
  placeholder="ex : SN DKR 2020 B 1234"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="profileErrors.registrecommerce" x-cloak x-text="profileErrors.registrecommerce" class="mt-1 text-xs text-danger"></p>
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.registrecommerce && 'input-field-error'">
+ <p x-show="profileErrors.registrecommerce" x-cloak x-text="profileErrors.registrecommerce" class="field-error"></p>
  </div>
  </div>
  </div>
@@ -230,29 +230,29 @@
  <p class="text-xs text-slate-400 mt-0.5">Ces trois lignes forment l'en-tête officiel du bulletin de notes.</p>
 
  <div class="mt-4 space-y-5">
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+ <div class="form-grid">
  <div>
- <label for="school-ia" class="block text-sm font-medium text-slate-700">Inspection d'Académie (IA)</label>
+ <label for="school-ia" class="form-label">Inspection d'Académie (IA)</label>
  <input id="school-ia" type="text" x-model="profile.inspectionAcademie" maxlength="150" :disabled="!isDirecteur"
  placeholder="ex : Thies"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="profileErrors.inspectionacademie" x-cloak x-text="profileErrors.inspectionacademie" class="mt-1 text-xs text-danger"></p>
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.inspectionacademie && 'input-field-error'">
+ <p x-show="profileErrors.inspectionacademie" x-cloak x-text="profileErrors.inspectionacademie" class="field-error"></p>
  </div>
  <div>
- <label for="school-ief" class="block text-sm font-medium text-slate-700">Inspection de l'Éducation (IEF)</label>
+ <label for="school-ief" class="form-label">Inspection de l'Éducation (IEF)</label>
  <input id="school-ief" type="text" x-model="profile.inspectionEducationFormation" maxlength="150" :disabled="!isDirecteur"
  placeholder="ex : Mbour 1"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="profileErrors.inspectioneducationformation" x-cloak x-text="profileErrors.inspectioneducationformation" class="mt-1 text-xs text-danger"></p>
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.inspectioneducationformation && 'input-field-error'">
+ <p x-show="profileErrors.inspectioneducationformation" x-cloak x-text="profileErrors.inspectioneducationformation" class="field-error"></p>
  </div>
  </div>
  <div>
- <label for="school-nom-lycee" class="block text-sm font-medium text-slate-700">Nom de l'établissement sur le bulletin</label>
+ <label for="school-nom-lycee" class="form-label">Nom de l'établissement sur le bulletin</label>
  <input id="school-nom-lycee" type="text" x-model="profile.nomLycee" maxlength="150" :disabled="!isDirecteur"
  placeholder="ex : Popenguine"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500">
  <p class="mt-1 text-xs text-slate-400">N'indiquez que le nom, sans préfixe : « ÉCOLE ÉLÉMENTAIRE DE », « COLLÈGE DE » ou « LYCÉE DE » est ajouté automatiquement selon le cycle de la classe de l'élève.</p>
- <p x-show="profileErrors.nomlycee" x-cloak x-text="profileErrors.nomlycee" class="mt-1 text-xs text-danger"></p>
+ <p x-show="profileErrors.nomlycee" x-cloak x-text="profileErrors.nomlycee" class="field-error"></p>
  </div>
  </div>
  </div>
@@ -360,23 +360,23 @@
 
  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
  <div>
- <label for="cfg-date" class="block text-sm font-medium text-slate-700">Format des dates</label>
+ <label for="cfg-date" class="form-label">Format des dates</label>
  <select-field id="cfg-date" model="config.dateFormat" disabled="!isDirecteur"
  options="dateFormatOptions" />
- <p x-show="configErrors.dateformat" x-cloak x-text="configErrors.dateformat" class="mt-1 text-xs text-danger"></p>
+ <p x-show="configErrors.dateformat" x-cloak x-text="configErrors.dateformat" class="field-error"></p>
  </div>
  <div>
- <label for="cfg-tuition" class="block text-sm font-medium text-slate-700">Mensualités par an</label>
+ <label for="cfg-tuition" class="form-label">Mensualités par an</label>
  <input id="cfg-tuition" type="number" min="1" max="12" x-model.number="config.tuitionMonthsPerYear" :disabled="!isDirecteur"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500">
  <p class="mt-1 text-xs text-slate-400">Tranches de scolarité (souvent 9 au Sénégal). Multiplie chaque mensualité au calcul du dû.</p>
- <p x-show="configErrors.tuitionmonthsperyear" x-cloak x-text="configErrors.tuitionmonthsperyear" class="mt-1 text-xs text-danger"></p>
+ <p x-show="configErrors.tuitionmonthsperyear" x-cloak x-text="configErrors.tuitionmonthsperyear" class="field-error"></p>
  </div>
  <div>
- <label for="cfg-logout" class="block text-sm font-medium text-slate-700">Déconnexion automatique (minutes)</label>
+ <label for="cfg-logout" class="form-label">Déconnexion automatique (minutes)</label>
  <input id="cfg-logout" type="number" min="1" max="480" x-model.number="config.autoLogoutMinutes" :disabled="!isDirecteur"
- class="input-field disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="configErrors.autologoutminutes" x-cloak x-text="configErrors.autologoutminutes" class="mt-1 text-xs text-danger"></p>
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="configErrors.autologoutminutes && 'input-field-error'">
+ <p x-show="configErrors.autologoutminutes" x-cloak x-text="configErrors.autologoutminutes" class="field-error"></p>
  </div>
  </div>
 
@@ -420,20 +420,20 @@
  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Format des matricules</h3>
  <p class="text-xs text-slate-400 mt-0.5 mb-3">Jetons disponibles : <code class="text-slate-600">{YEAR}</code> (année scolaire) et <code class="text-slate-600">{SEQ:n}</code> (compteur sur n chiffres).</p>
 
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+ <div class="form-grid">
  <div>
- <label for="cfg-mat-student" class="block text-sm font-medium text-slate-700">Élèves</label>
+ <label for="cfg-mat-student" class="form-label">Élèves</label>
  <input id="cfg-mat-student" type="text" x-model="config.studentMatriculeFormat" :disabled="!isDirecteur"
  placeholder="ELEV-{YEAR}-{SEQ:4}"
- class="input-field font-mono disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="configErrors.studentmatriculeformat" x-cloak x-text="configErrors.studentmatriculeformat" class="mt-1 text-xs text-danger"></p>
+ class="input-field font-mono disabled:bg-slate-50 disabled:text-slate-500" :class="configErrors.studentmatriculeformat && 'input-field-error'">
+ <p x-show="configErrors.studentmatriculeformat" x-cloak x-text="configErrors.studentmatriculeformat" class="field-error"></p>
  </div>
  <div>
- <label for="cfg-mat-teacher" class="block text-sm font-medium text-slate-700">Enseignants</label>
+ <label for="cfg-mat-teacher" class="form-label">Enseignants</label>
  <input id="cfg-mat-teacher" type="text" x-model="config.teacherMatriculeFormat" :disabled="!isDirecteur"
  placeholder="ENS-{YEAR}-{SEQ:3}"
- class="input-field font-mono disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="configErrors.teachermatriculeformat" x-cloak x-text="configErrors.teachermatriculeformat" class="mt-1 text-xs text-danger"></p>
+ class="input-field font-mono disabled:bg-slate-50 disabled:text-slate-500" :class="configErrors.teachermatriculeformat && 'input-field-error'">
+ <p x-show="configErrors.teachermatriculeformat" x-cloak x-text="configErrors.teachermatriculeformat" class="field-error"></p>
  </div>
  </div>
  </div>
@@ -446,7 +446,7 @@
 
  <!-- Signature du Directeur -->
  <div>
- <label for="cfg-director-sig" class="block text-sm font-medium text-slate-700">Signature du Directeur</label>
+ <label for="cfg-director-sig" class="form-label">Signature du Directeur</label>
  <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
  <div x-show="config.directorSignatureUrl" x-cloak class="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
  <img :src="config.directorSignatureUrl" alt="Signature Directeur" class="max-w-full max-h-full object-contain">
@@ -459,7 +459,7 @@
  <div class="flex-1 flex items-center">
  <input id="cfg-director-sig" type="url" x-model="config.directorSignatureUrl" maxlength="500" :disabled="!isDirecteur || isUploadingDirectorSignature"
  placeholder="URL https://… ou fichier"
- class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field !my-0 w-full disabled:bg-slate-50 disabled:text-slate-500">
  </div>
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingDirectorSignature">
@@ -477,14 +477,14 @@
  <input type="file" accept="image/png, image/jpeg, image/webp" class="hidden" :disabled="isUploadingDirectorSignature" x-on:change="uploadDirectorSignatureFile($event)">
  </label>
  </div>
- <p x-show="directorSignatureUploadError" x-cloak x-text="directorSignatureUploadError" class="text-xs text-danger"></p>
+ <p x-show="directorSignatureUploadError" x-cloak x-text="directorSignatureUploadError" class="field-error !mt-0"></p>
  </div>
  </div>
  </div>
 
  <!-- Signature du Secrétariat -->
  <div>
- <label for="cfg-secretary-sig" class="block text-sm font-medium text-slate-700">Signature du Secrétariat</label>
+ <label for="cfg-secretary-sig" class="form-label">Signature du Secrétariat</label>
  <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
  <div x-show="config.secretarySignatureUrl" x-cloak class="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
  <img :src="config.secretarySignatureUrl" alt="Signature Secrétariat" class="max-w-full max-h-full object-contain">
@@ -497,7 +497,7 @@
  <div class="flex-1 flex items-center">
  <input id="cfg-secretary-sig" type="url" x-model="config.secretarySignatureUrl" maxlength="500" :disabled="!isDirecteur || isUploadingSecretarySignature"
  placeholder="URL https://… ou fichier"
- class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field !my-0 w-full disabled:bg-slate-50 disabled:text-slate-500">
  </div>
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingSecretarySignature">
@@ -515,14 +515,14 @@
  <input type="file" accept="image/png, image/jpeg, image/webp" class="hidden" :disabled="isUploadingSecretarySignature" x-on:change="uploadSecretarySignatureFile($event)">
  </label>
  </div>
- <p x-show="secretarySignatureUploadError" x-cloak x-text="secretarySignatureUploadError" class="text-xs text-danger"></p>
+ <p x-show="secretarySignatureUploadError" x-cloak x-text="secretarySignatureUploadError" class="field-error !mt-0"></p>
  </div>
  </div>
  </div>
 
  <!-- Signature du Caissier / Finance -->
  <div>
- <label for="cfg-cashier-sig" class="block text-sm font-medium text-slate-700">Signature du Caissier / Finance</label>
+ <label for="cfg-cashier-sig" class="form-label">Signature du Caissier / Finance</label>
  <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
  <div x-show="config.cashierSignatureUrl" x-cloak class="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
  <img :src="config.cashierSignatureUrl" alt="Signature Caissier" class="max-w-full max-h-full object-contain">
@@ -535,7 +535,7 @@
  <div class="flex-1 flex items-center">
  <input id="cfg-cashier-sig" type="url" x-model="config.cashierSignatureUrl" maxlength="500" :disabled="!isDirecteur || isUploadingCashierSignature"
  placeholder="URL https://… ou fichier"
- class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field !my-0 w-full disabled:bg-slate-50 disabled:text-slate-500">
  </div>
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingCashierSignature">
@@ -553,14 +553,14 @@
  <input type="file" accept="image/png, image/jpeg, image/webp" class="hidden" :disabled="isUploadingCashierSignature" x-on:change="uploadCashierSignatureFile($event)">
  </label>
  </div>
- <p x-show="cashierSignatureUploadError" x-cloak x-text="cashierSignatureUploadError" class="text-xs text-danger"></p>
+ <p x-show="cashierSignatureUploadError" x-cloak x-text="cashierSignatureUploadError" class="field-error !mt-0"></p>
  </div>
  </div>
  </div>
 
  <!-- Signature du Surveillant Général -->
  <div>
- <label for="cfg-surveillant-sig" class="block text-sm font-medium text-slate-700">Signature du Surveillant Général</label>
+ <label for="cfg-surveillant-sig" class="form-label">Signature du Surveillant Général</label>
  <p class="text-xs text-slate-400 mt-0.5 mb-2">Utilisée sur les documents de Vie Scolaire (billets d'entrée/sortie, fiches de discipline).</p>
  <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
  <div x-show="config.surveillantSignatureUrl" x-cloak class="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
@@ -574,7 +574,7 @@
  <div class="flex-1 flex items-center">
  <input id="cfg-surveillant-sig" type="url" x-model="config.surveillantSignatureUrl" maxlength="500" :disabled="!isDirecteur || isUploadingSurveillantSignature"
  placeholder="URL https://… ou fichier"
- class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field !my-0 w-full disabled:bg-slate-50 disabled:text-slate-500">
  </div>
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingSurveillantSignature">
@@ -592,14 +592,14 @@
  <input type="file" accept="image/png, image/jpeg, image/webp" class="hidden" :disabled="isUploadingSurveillantSignature" x-on:change="uploadSurveillantSignatureFile($event)">
  </label>
  </div>
- <p x-show="surveillantSignatureUploadError" x-cloak x-text="surveillantSignatureUploadError" class="text-xs text-danger"></p>
+ <p x-show="surveillantSignatureUploadError" x-cloak x-text="surveillantSignatureUploadError" class="field-error !mt-0"></p>
  </div>
  </div>
  </div>
 
  <!-- Cachet Officiel -->
  <div>
- <label for="cfg-official-stamp" class="block text-sm font-medium text-slate-700">Cachet Officiel de l'Établissement</label>
+ <label for="cfg-official-stamp" class="form-label">Cachet Officiel de l'Établissement</label>
  <div class="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-4">
  <div x-show="config.officialStampUrl" x-cloak class="w-16 h-16 rounded-xl border border-slate-200 bg-white p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
  <img :src="config.officialStampUrl" alt="Cachet Officiel" class="max-w-full max-h-full object-contain">
@@ -612,7 +612,7 @@
  <div class="flex-1 flex items-center">
  <input id="cfg-official-stamp" type="url" x-model="config.officialStampUrl" maxlength="500" :disabled="!isDirecteur || isUploadingOfficialStamp"
  placeholder="URL https://… ou fichier"
- class="input-field !my-0 h-10 !py-2 !px-3 rounded-xl w-full disabled:bg-slate-50 disabled:text-slate-500 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ class="input-field !my-0 w-full disabled:bg-slate-50 disabled:text-slate-500">
  </div>
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingOfficialStamp">
@@ -630,7 +630,7 @@
  <input type="file" accept="image/png, image/jpeg, image/webp" class="hidden" :disabled="isUploadingOfficialStamp" x-on:change="uploadOfficialStampFile($event)">
  </label>
  </div>
- <p x-show="officialStampUploadError" x-cloak x-text="officialStampUploadError" class="text-xs text-danger"></p>
+ <p x-show="officialStampUploadError" x-cloak x-text="officialStampUploadError" class="field-error !mt-0"></p>
  </div>
  </div>
  </div>
@@ -679,18 +679,18 @@
  </td>
  </tr>
  <template x-for="(m, index) in mentions" :key="m.id || index">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
  <td class="py-2.5 px-4 font-medium text-slate-900" x-text="m.label"></td>
  <td class="py-2.5 px-4 text-right text-sm text-slate-500">
  À partir de <span class="font-semibold text-slate-900" x-text="formatAverage(m.minAverage)"></span>/20
  </td>
  <td class="py-2.5 px-4 text-right">
- <div class="flex items-center justify-end gap-1" x-show="canManageGradingConfig && m.id" x-cloak>
- <button type="button" x-on:click="openEditMention(m)" title="Modifier" aria-label="Modifier la mention"
+ <div class="flex items-center justify-end gap-1" x-show="canManageGradingConfig" x-cloak>
+ <button type="button" x-on:click="m.id ? openEditMention(m) : openCreateMentionFromDefault(m)" title="Modifier" aria-label="Modifier la mention"
  class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
  <icon name="pencil" class="w-4 h-4" />
  </button>
- <button type="button" x-on:click="openDeleteMention(m)" title="Supprimer" aria-label="Supprimer la mention"
+ <button type="button" x-on:click="m.id ? openDeleteMention(m) : openCreateMentionFromDefault(m)" title="Supprimer" aria-label="Supprimer la mention"
  class="p-1.5 rounded-lg text-slate-400 hover:text-danger hover:bg-danger-bg transition-colors">
  <icon name="trash-2" class="w-4 h-4" />
  </button>
@@ -740,20 +740,20 @@
  <modal-shell open="isMentionCreateOpen" title="Nouvelle mention">
  <modal-subtitle>Le seuil est la moyenne minimale, sur 20, pour l'obtenir. Le bulletin du Primaire le transpose automatiquement sur 10.</modal-subtitle>
 
- <div x-show="mentionCreateErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="mentionCreateErrors.global"></div>
+ <div x-show="mentionCreateErrors.global" x-cloak class="form-error-banner" x-text="mentionCreateErrors.global"></div>
 
  <form x-on:submit.prevent="submitCreateMention()" novalidate class="space-y-4">
  <div>
- <label for="mention-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
- <input id="mention-label" type="text" x-model="newMention.label" required maxlength="40" placeholder="ex : Excellent" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="mentionCreateErrors.label" x-cloak x-text="mentionCreateErrors.label" class="mt-1 text-xs text-danger"></p>
+ <label for="mention-label" class="form-label form-label-required">Libellé</label>
+ <input id="mention-label" type="text" x-model="newMention.label" required maxlength="40" placeholder="ex : Excellent" class="input-field" :class="mentionCreateErrors.label && 'input-field-error'">
+ <p x-show="mentionCreateErrors.label" x-cloak x-text="mentionCreateErrors.label" class="field-error"></p>
  </div>
 
  <div>
- <label for="mention-min-average" class="block text-sm font-medium text-slate-700">Seuil minimum <span class="text-danger">*</span></label>
+ <label for="mention-min-average" class="form-label form-label-required">Seuil minimum</label>
  <input id="mention-min-average" type="number" x-model.number="newMention.minAverage" required min="0" max="20" step="0.1"
- class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="mentionCreateErrors.minaverage" x-cloak x-text="mentionCreateErrors.minaverage" class="mt-1 text-xs text-danger"></p>
+ class="input-field" :class="mentionCreateErrors.minaverage && 'input-field-error'">
+ <p x-show="mentionCreateErrors.minaverage" x-cloak x-text="mentionCreateErrors.minaverage" class="field-error"></p>
  </div>
 
  <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -777,20 +777,20 @@
  <modal-shell open="editingMention" on-close="closeEditMention()" title="Modifier la mention">
  <modal-subtitle>Le seuil est la moyenne minimale, sur 20, pour l'obtenir. Le bulletin du Primaire le transpose automatiquement sur 10.</modal-subtitle>
 
- <div x-show="mentionEditErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="mentionEditErrors.global"></div>
+ <div x-show="mentionEditErrors.global" x-cloak class="form-error-banner" x-text="mentionEditErrors.global"></div>
 
  <form x-on:submit.prevent="submitEditMention()" novalidate class="space-y-4" x-show="editingMention">
  <div>
- <label for="mention-edit-label" class="block text-sm font-medium text-slate-700">Libellé <span class="text-danger">*</span></label>
- <input id="mention-edit-label" type="text" x-model="editingMention.label" required maxlength="40" placeholder="ex : Excellent" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="mentionEditErrors.label" x-cloak x-text="mentionEditErrors.label" class="mt-1 text-xs text-danger"></p>
+ <label for="mention-edit-label" class="form-label form-label-required">Libellé</label>
+ <input id="mention-edit-label" type="text" x-model="editingMention.label" required maxlength="40" placeholder="ex : Excellent" class="input-field" :class="mentionEditErrors.label && 'input-field-error'">
+ <p x-show="mentionEditErrors.label" x-cloak x-text="mentionEditErrors.label" class="field-error"></p>
  </div>
 
  <div>
- <label for="mention-edit-min-average" class="block text-sm font-medium text-slate-700">Seuil minimum <span class="text-danger">*</span></label>
+ <label for="mention-edit-min-average" class="form-label form-label-required">Seuil minimum</label>
  <input id="mention-edit-min-average" type="number" x-model.number="editingMention.minAverage" required min="0" max="20" step="0.1"
- class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="mentionEditErrors.minaverage" x-cloak x-text="mentionEditErrors.minaverage" class="mt-1 text-xs text-danger"></p>
+ class="input-field" :class="mentionEditErrors.minaverage && 'input-field-error'">
+ <p x-show="mentionEditErrors.minaverage" x-cloak x-text="mentionEditErrors.minaverage" class="field-error"></p>
  </div>
 
  <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">

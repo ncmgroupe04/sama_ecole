@@ -18,8 +18,19 @@ document.addEventListener('alpine:init', () => {
         error: null,
         search: '',
 
+        // Aperçu/impression PDF partagé (closePdfPreview, printPreviewPdf, downloadPreviewPdf) —
+        // même mixin que la liste des élèves, voir wwwroot/js/pdf-preview.js.
+        ...window.pdfPreview.state(),
+
         canManage: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
         canManageSchedule: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+
+        // Export PDF : mêmes rôles que la consultation de la liste (docs/Volume_7_Security.md
+        // « Enseignants ») — un export n'ouvre aucune donnée que le rôle ne puisse déjà lire.
+        canExportTeachers:
+            window.auth.role === 'SuperAdmin' ||
+            window.auth.role === 'Directeur' ||
+            window.auth.role === 'Secretariat',
         
         // Emploi du Temps (Schedule)
         activeTab: 'teachers', // 'teachers' ou 'schedule'
@@ -176,6 +187,22 @@ document.addEventListener('alpine:init', () => {
         resetFilters() {
             this.search = '';
             this.applyFilters();
+        },
+
+        /**
+         * Export PDF « LISTE DES ENSEIGNANTS » (GET /teachers/export/pdf). La recherche texte n'est
+         * PAS reprise, même raisonnement que pour les élèves : c'est un filtre d'écran, pas un
+         * critère de document imprimable. Le PDF couvre donc tout le corps professoral, sans
+         * pagination — ce que la liste écran ne peut pas montrer d'un seul tenant.
+         */
+        async exportTeachersPdf() {
+            const dateSuffix = new Date().toISOString().slice(0, 10);
+
+            await this.openPdfModalWithBlob(
+                '/api/v1/teachers/export/pdf',
+                'Liste des enseignants',
+                `Enseignants-${dateSuffix}.pdf`
+            );
         },
 
         // ------------------------------------------------------------ Import de masse (corps professoral)

@@ -16,7 +16,7 @@
     STICKY HEADER — En-tête fixe opaque (Ticket UI).
     Le titre, les KPI et la recherche restent accessibles à tout moment.
     ═══════════════════════════════════════════════════════════════════════════ *@
- <div class="sticky top-8 lg:top-10 z-50 isolate -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 py-4 lg:px-10 lg:py-4 bg-white border-b border-slate-200 shadow-sm">
+  <div class="sticky-sub-header">
 
   @await Html.PartialAsync("_ErrorBanner")
 
@@ -50,7 +50,7 @@
      </span>
      <input type="search" x-model="search" placeholder="Rechercher une matière ou un niveau…"
       aria-label="Rechercher une matière"
-      class="input-field !my-0 h-10 !py-2 pl-9 pr-3 rounded-xl w-full transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+      class="input-field !my-0 pl-9 pr-3 w-full" />
     </div>
 
     <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()"
@@ -231,29 +231,29 @@
  <modal-shell open="isCreateOpen" title="Nouvelle matière">
   <modal-subtitle>Rattachez la matière à un niveau et fixez son coefficient.</modal-subtitle>
 
-  <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+  <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
 
   <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
    <div>
-    <label for="subject-name" class="block text-sm font-medium text-slate-700">Nom de la matière <span class="text-danger">*</span></label>
+    <label for="subject-name" class="form-label form-label-required">Nom de la matière</label>
     <input id="subject-name" type="text" x-model="newSubject.name" required maxlength="80" placeholder="ex : Mathématiques"
-     class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-    <p x-show="createErrors.name" x-cloak x-text="createErrors.name" class="mt-1 text-xs text-danger"></p>
+     class="input-field" :class="createErrors.name && 'input-field-error'">
+    <p x-show="createErrors.name" x-cloak x-text="createErrors.name" class="field-error"></p>
    </div>
 
    @* ── Niveau : <select> au lieu de <input text> ── *@
    <div>
-    <label for="subject-level" class="block text-sm font-medium text-slate-700">Niveau <span class="text-danger">*</span></label>
+    <label for="subject-level" class="form-label form-label-required">Niveau</label>
     <select-field model="newSubject.level" required="true" aria-label="Niveau"
      placeholder="Sélectionner un niveau" options="subjectLevelOptions" />
-    <p x-show="createErrors.level" x-cloak x-text="createErrors.level" class="mt-1 text-xs text-danger"></p>
+    <p x-show="createErrors.level" x-cloak x-text="createErrors.level" class="field-error"></p>
    </div>
 
    <div>
-    <label for="subject-coefficient" class="block text-sm font-medium text-slate-700">Coefficient <span class="text-danger">*</span></label>
+    <label for="subject-coefficient" class="form-label form-label-required">Coefficient</label>
     <input id="subject-coefficient" type="number" x-model.number="newSubject.coefficient" required min="0.5" max="20" step="0.5"
-     class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-    <p x-show="createErrors.coefficient" x-cloak x-text="createErrors.coefficient" class="mt-1 text-xs text-danger"></p>
+     class="input-field" :class="createErrors.coefficient && 'input-field-error'">
+    <p x-show="createErrors.coefficient" x-cloak x-text="createErrors.coefficient" class="field-error"></p>
    </div>
 
    <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -283,23 +283,23 @@
 
   <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
    <div>
-    <label for="edit-subject-name" class="block text-sm font-medium text-slate-700">Nom de la matière <span class="text-danger">*</span></label>
-    <input id="edit-subject-name" type="text" x-model="editing.name" required maxlength="80" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-    <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="mt-1 text-xs text-danger"></p>
+    <label for="edit-subject-name" class="form-label form-label-required">Nom de la matière</label>
+    <input id="edit-subject-name" type="text" x-model="editing.name" required maxlength="80" class="input-field" :class="editErrors.name && 'input-field-error'">
+    <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="field-error"></p>
    </div>
 
    @* ── Niveau : <select> au lieu de <input text> ── *@
    <div>
-    <label for="edit-subject-level" class="block text-sm font-medium text-slate-700">Niveau <span class="text-danger">*</span></label>
+    <label for="edit-subject-level" class="form-label form-label-required">Niveau</label>
     <select-field model="editing.level" required="true" aria-label="Niveau"
      placeholder="Sélectionner un niveau" options="subjectLevelOptions" />
-    <p x-show="editErrors.level" x-cloak x-text="editErrors.level" class="mt-1 text-xs text-danger"></p>
+    <p x-show="editErrors.level" x-cloak x-text="editErrors.level" class="field-error"></p>
    </div>
 
    <div>
-    <label for="edit-subject-coefficient" class="block text-sm font-medium text-slate-700">Coefficient <span class="text-danger">*</span></label>
-    <input id="edit-subject-coefficient" type="number" x-model.number="editing.coefficient" required min="0.5" max="20" step="0.5" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
-    <p x-show="editErrors.coefficient" x-cloak x-text="editErrors.coefficient" class="mt-1 text-xs text-danger"></p>
+    <label for="edit-subject-coefficient" class="form-label form-label-required">Coefficient</label>
+    <input id="edit-subject-coefficient" type="number" x-model.number="editing.coefficient" required min="0.5" max="20" step="0.5" class="input-field" :class="editErrors.coefficient && 'input-field-error'">
+    <p x-show="editErrors.coefficient" x-cloak x-text="editErrors.coefficient" class="field-error"></p>
    </div>
 
    <div class="mt-6 flex justify-end gap-3">
@@ -326,7 +326,7 @@
    sera archivée et n'apparaîtra plus dans les sélecteurs de matière.
   </modal-subtitle>
 
-  <div x-show="deleteSubjectError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteSubjectError"></div>
+  <div x-show="deleteSubjectError" x-cloak class="form-error-banner" x-text="deleteSubjectError"></div>
 
   <p class="text-sm text-slate-500">
    Impossible si des notes existent déjà pour cette matière : son coefficient pilote encore le calcul des moyennes et des bulletins déjà émis.

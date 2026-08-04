@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -56,7 +57,7 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
             {
                 header.Item().Text(report.SchoolName.ToUpperInvariant()).Bold().FontSize(14);
 
-                var contact = JoinPresent(report.SchoolAddress, report.SchoolPhone, report.SchoolEmail);
+                var contact = JoinPresent(report.SchoolAddress, PhoneFormatter.FormatSenegal(report.SchoolPhone), report.SchoolEmail);
                 if (contact.Length > 0)
                 {
                     header.Item().Text(contact).FontSize(8).FontColor(Colors.Grey.Darken2);
@@ -122,12 +123,12 @@ public class DailyCashRegisterDocument(DailyCashRegisterDto report, byte[]? logo
             {
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.ConstantColumn(35); // Heure
-                    columns.ConstantColumn(78); // Matricule — largeur fixe, garantit une seule ligne
-                    columns.RelativeColumn(3);  // Nom
-                    columns.RelativeColumn(2);  // Reçu N°
-                    columns.RelativeColumn(2);  // Mode
-                    columns.RelativeColumn(2);  // Montant
+                    columns.ConstantColumn(PdfColumnWidths.Time);       // Heure
+                    columns.ConstantColumn(PdfColumnWidths.Identifier); // Matricule
+                    columns.RelativeColumn(3);                          // Nom — seule colonne à contenu libre, prend le reste
+                    columns.ConstantColumn(PdfColumnWidths.Identifier); // Reçu N° — « REC‑2025‑0002 », même gabarit qu'un matricule
+                    columns.RelativeColumn(1.2f);                       // Mode — libellés courts (« Espèces », « Wave »)
+                    columns.ConstantColumn(PdfColumnWidths.Amount);     // Montant
                 });
 
                 table.Header(header =>

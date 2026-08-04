@@ -36,7 +36,7 @@
  x-on:click="statusFilter = option.value; load()"
  :class="statusFilter === option.value
  ? 'bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out-600 text-white'
- : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out"
+ : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' transition-all duration-200 ease-in-out"
  class="rounded-2xl px-3 py-1.5 text-sm font-medium transition-colors">
  <span x-text="option.label"></span>
  </button>
@@ -74,7 +74,7 @@
  </tr>
 
  <template x-for="request in requests" :key="request.id">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
  <td class="py-3 px-4">
  <p class="font-medium text-slate-900" x-text="request.schoolName"></p>
  <p class="text-xs text-slate-400"
@@ -173,7 +173,7 @@
  Le Directeur pourra alors se connecter. Confirmez-vous ?
  </modal-subtitle>
 
- <div x-show="approveError" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="approveError"></div>
+ <div x-show="approveError" x-cloak class="form-error-banner" x-text="approveError"></div>
 
  <div class="rounded-2xl bg-slate-50 px-4 py-3 text-sm" x-show="approveTarget" x-cloak>
  <p class="font-medium text-slate-900" x-text="approveTarget && approveTarget.schoolName"></p>
@@ -193,14 +193,14 @@
  <modal-title>Rejeter la demande</modal-title>
  <modal-subtitle>Le motif ci-dessous sera communiqué au demandeur. Aucune école n'est créée.</modal-subtitle>
 
- <div x-show="rejectErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="rejectErrors.global"></div>
+ <div x-show="rejectErrors.global" x-cloak class="form-error-banner" x-text="rejectErrors.global"></div>
 
  <form x-on:submit.prevent="submitReject()" novalidate class="space-y-4">
  <div>
- <label for="reject-reason" class="block text-sm font-medium text-slate-700">Motif du rejet <span class="text-danger">*</span></label>
+ <label for="reject-reason" class="form-label form-label-required">Motif du rejet</label>
  <textarea id="reject-reason" x-model="rejectReason" required maxlength="1000" rows="3"
  placeholder="ex : Informations incomplètes, établissement non identifiable…" class="input-field"></textarea>
- <p x-show="rejectErrors.reason" x-cloak x-text="rejectErrors.reason" class="mt-1 text-xs text-danger"></p>
+ <p x-show="rejectErrors.reason" x-cloak x-text="rejectErrors.reason" class="field-error"></p>
  </div>
 
  <div class="mt-6 flex justify-end gap-3">

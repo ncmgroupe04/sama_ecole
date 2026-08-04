@@ -59,7 +59,7 @@ public class DuesNoticeDocument(DuesNoticeDto notice, byte[]? logo, byte[] qrCod
             {
                 header.Item().Text(notice.SchoolName.ToUpperInvariant()).Bold().FontSize(13);
 
-                var contact = JoinPresent(notice.SchoolAddress, notice.SchoolPhone);
+                var contact = JoinPresent(notice.SchoolAddress, PhoneFormatter.FormatSenegal(notice.SchoolPhone));
                 if (contact.Length > 0)
                 {
                     header.Item().Text(contact).FontSize(7).FontColor(Colors.Grey.Darken2);
@@ -111,9 +111,9 @@ public class DuesNoticeDocument(DuesNoticeDto notice, byte[]? logo, byte[] qrCod
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(5);
-                columns.RelativeColumn(2);
-                columns.RelativeColumn(2);
+                columns.RelativeColumn();                       // Échéance — libellé libre, prend le reste
+                columns.ConstantColumn(PdfColumnWidths.Date);   // Date d'exigibilité — l'année ne saute plus à la ligne
+                columns.ConstantColumn(PdfColumnWidths.Amount); // Montant dû
             });
 
             table.Header(header =>

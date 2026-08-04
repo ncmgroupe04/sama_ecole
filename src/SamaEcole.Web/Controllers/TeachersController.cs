@@ -8,6 +8,7 @@ using SamaEcole.Application.Teachers.Commands.UpdateTeacher;
 using SamaEcole.Application.Teachers.Queries.GetTeacherById;
 using SamaEcole.Application.Teachers.Queries.GetTeacherImportTemplate;
 using SamaEcole.Application.Teachers.Queries.GetTeachers;
+using SamaEcole.Application.Teachers.Queries.GetTeachersExportPdf;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
 using MediatR;
@@ -57,6 +58,26 @@ public class TeachersController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> List([FromQuery] GetTeachersQuery query, CancellationToken cancellationToken)
         => Ok(await mediator.Send(query, cancellationToken));
+
+    /// <summary>
+    /// « LISTE DES ENSEIGNANTS » en PDF — pendant de <c>StudentsController.ExportPdf</c>, même
+    /// périmètre que <see cref="List"/> sans pagination. Réservé aux mêmes rôles que la consultation
+    /// (docs/Volume_7_Security.md « Enseignants ») : un export n'ouvre aucune donnée que le rôle ne
+    /// puisse déjà lire à l'écran.
+    /// </summary>
+    [HttpGet("export/pdf")]
+    [Authorize(Roles = ViewRoles)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ExportPdf([FromQuery] EntityStatus? status, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetTeachersExportPdfQuery { Status = status }, cancellationToken);
+
+        Response.Headers["Content-Disposition"] =
+            $"inline; filename=\"Enseignants_{DateTime.UtcNow:yyyy-MM-dd}.pdf\"";
+        return File(result.Content, "application/pdf");
+    }
 
     [HttpPost]
     [Authorize(Roles = ManageRoles)]

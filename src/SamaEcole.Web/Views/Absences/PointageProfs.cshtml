@@ -19,18 +19,18 @@
     <div class="card p-6">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-slate-700">Enseignant vacataire <span class="text-red-500">*</span></label>
+                <label class="form-label">Enseignant vacataire <span class="text-red-500">*</span></label>
                 <select-field model="selectedContractId" placeholder="Sélectionnez un enseignant vacataire..."
                     options-expr="vacataireContracts.map(c => ({value: c.id, label: c.employeeFullName}))"
                     on-change="loadHourRecords()" />
             </div>
             <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Mois</label>
+                <label class="form-label-sm">Mois</label>
                 <select-field model="filter.month" placeholder="Sélectionnez un mois..." on-change="loadHourRecords()"
                     options-expr="[{value:1,label:'Janvier'},{value:2,label:'Février'},{value:3,label:'Mars'},{value:4,label:'Avril'},{value:5,label:'Mai'},{value:6,label:'Juin'},{value:7,label:'Juillet'},{value:8,label:'Août'},{value:9,label:'Septembre'},{value:10,label:'Octobre'},{value:11,label:'Novembre'},{value:12,label:'Décembre'}]" />
             </div>
             <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Année</label>
+                <label class="form-label-sm">Année</label>
                 <input type="number" x-model="filter.year" x-on:change="loadHourRecords()" class="input-field mt-0" />
             </div>
         </div>
@@ -90,15 +90,15 @@
             <h2 class="text-sm font-semibold text-slate-700 mb-4">Ajouter des heures</h2>
             <form x-on:submit.prevent="submitHourRecord()" novalidate class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Date <span class="text-red-500">*</span></label>
+                    <label class="form-label">Date <span class="text-red-500">*</span></label>
                     <input type="date" x-model="hourRecordForm.date" required class="input-field mt-1" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Heures <span class="text-red-500">*</span></label>
+                    <label class="form-label">Heures <span class="text-red-500">*</span></label>
                     <input type="number" min="0" step="0.5" x-model="hourRecordForm.hours" required class="input-field mt-1" />
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-slate-700">Note</label>
+                    <label class="form-label">Note</label>
                     <input type="text" x-model="hourRecordForm.note" class="input-field mt-1" />
                 </div>
                 <div class="sm:col-span-4 flex justify-end">

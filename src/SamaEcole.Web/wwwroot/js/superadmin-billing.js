@@ -93,6 +93,14 @@ document.addEventListener('alpine:init', () => {
             return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', maximumFractionDigits: 0 }).format(amount);
         },
 
+        formatPeriodicValue(amount, period) {
+            if (!amount) return '—';
+            const formattedAmount = this.formatXof(amount);
+            if (period === 'Monthly') return `${formattedAmount} / mois`;
+            if (period === 'Yearly') return `${formattedAmount} / an`;
+            return formattedAmount;
+        },
+
         async remind(sub) {
             this.remindingSchoolId = sub.schoolId;
             this.remindError = null;

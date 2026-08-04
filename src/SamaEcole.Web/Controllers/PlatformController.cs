@@ -5,6 +5,7 @@ using SamaEcole.Application.Platform.Commands.SendSubscriptionReminder;
 using SamaEcole.Application.Platform.Commands.TopUpSmsCredits;
 using SamaEcole.Application.Platform.Queries.GetPlatformActivity;
 using SamaEcole.Application.Platform.Queries.GetPlatformDashboard;
+using SamaEcole.Application.Platform.Queries.GetPlatformRevenueProjection;
 using SamaEcole.Application.Platform.Queries.GetPlatformSubscriptions;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -45,6 +46,12 @@ public class PlatformController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetSubscriptions(CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetPlatformSubscriptionsQuery(), cancellationToken));
+
+    [HttpGet("revenue-projection")]
+    [ProducesResponseType<IReadOnlyList<MonthlyRevenueProjectionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetRevenueProjection(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetPlatformRevenueProjectionQuery(), cancellationToken));
 
     [HttpPost("subscriptions/{schoolId:guid}/remind")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

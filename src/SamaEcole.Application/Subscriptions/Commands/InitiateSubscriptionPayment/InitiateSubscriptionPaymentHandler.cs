@@ -106,7 +106,7 @@ public class InitiateSubscriptionPaymentHandler(
         var paymentId = Guid.CreateVersion7();
 
         var description =
-            $"Abonnement Sama Ecole — {school.Name} — {subscription.Plan} "
+            $"Abonnement Unikol — {school.Name} — {subscription.Plan} "
             + $"({(request.BillingPeriod == Domain.Enums.BillingPeriod.Monthly ? "mensuel" : "annuel")})";
 
         var initiation = await paymentService.InitiatePaymentAsync(

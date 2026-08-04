@@ -108,9 +108,9 @@ public class PayslipDocument(PayslipDto payslip, byte[]? logo) : IDocument
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(4);
-                columns.RelativeColumn(2);
-                columns.RelativeColumn(2);
+                columns.RelativeColumn();                       // Élément — libellé libre, prend le reste
+                columns.ConstantColumn(PdfColumnWidths.Amount); // Part salariale
+                columns.ConstantColumn(PdfColumnWidths.Amount); // Part patronale
             });
 
             table.Header(header =>

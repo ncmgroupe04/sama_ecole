@@ -99,16 +99,16 @@
 
  <!-- Colonne recherche élève -->
  <div class="lg:col-span-1 card p-6">
- <label for="caisse-student-search" class="block text-sm font-medium text-slate-700">Rechercher un élève</label>
+ <label for="caisse-student-search" class="form-label">Rechercher un élève</label>
  <input id="caisse-student-search" type="text" x-model="studentSearch" placeholder="Nom ou matricule… (2 caractères min.)"
- x-on:input.debounce.300ms="searchStudents()" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ x-on:input.debounce.300ms="searchStudents()" class="input-field">
 
  <div x-show="studentSearchError" x-cloak class="mt-2 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="studentSearchError"></div>
 
  <div class="mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-96 overflow-y-auto">
  <template x-for="s in students" :key="s.id">
  <button type="button" x-on:click="selectStudent(s)"
- class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out"
+ class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors transition-all duration-200 ease-in-out"
  :class="selectedStudent && selectedStudent.id === s.id ? 'bg-indigo-50' : ''">
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
  <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
@@ -289,17 +289,17 @@
 
  <div x-show="formErrors.global" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="formErrors.global"></div>
 
- <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+ <div class="form-grid">
  <div>
- <label for="caisse-amount" class="block text-sm font-medium text-slate-700">Montant versé (FCFA) <span class="text-danger">*</span></label>
- <input id="caisse-amount" type="number" min="1" x-model.number="form.amount" placeholder="ex : 25000" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="formErrors.amount" x-cloak x-text="formErrors.amount" class="mt-1 text-xs text-danger"></p>
+ <label for="caisse-amount" class="form-label form-label-required">Montant versé (FCFA)</label>
+ <input id="caisse-amount" type="number" min="1" x-model.number="form.amount" placeholder="ex : 25000" class="input-field" :class="formErrors.amount && 'input-field-error'">
+ <p x-show="formErrors.amount" x-cloak x-text="formErrors.amount" class="field-error"></p>
  <button type="button" x-on:click="fillFullBalance()" class="mt-1 text-xs text-primary hover:underline">
  Régler le solde intégral (<span x-text="formatMoney(balance ? balance.remainingBalance : 0)"></span>)
  </button>
  </div>
  <div>
- <label for="caisse-method" class="block text-sm font-medium text-slate-700">Moyen de paiement <span class="text-danger">*</span></label>
+ <label for="caisse-method" class="form-label form-label-required">Moyen de paiement</label>
  <select-field id="caisse-method" model="form.method" options="paymentMethodOptions" />
  </div>
  </div>

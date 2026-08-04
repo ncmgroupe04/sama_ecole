@@ -51,7 +51,7 @@ public class PayDunyaPaymentService(
 
         var payload = new CreateInvoiceRequest(
             Invoice: new InvoiceDetails(request.Amount, request.Description),
-            Store: new StoreDetails("Sama Ecole"),
+            Store: new StoreDetails("Unikol"),
             Actions: new InvoiceActions(
                 CancelUrl: $"{config.PublicBaseUrl}/abonnement/paiement",
                 ReturnUrl: $"{config.PublicBaseUrl}/abonnement/paiement",

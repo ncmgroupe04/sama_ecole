@@ -63,7 +63,7 @@
  </tr>
 
  <template x-for="user in users" :key="user.id">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
  <td class="py-3 px-4 font-medium text-slate-900">
  <span class="inline-flex items-center gap-2">
  <span x-text="user.fullName"></span>
@@ -98,32 +98,32 @@
  <modal-shell open="isCreateOpen" title="Nouvel utilisateur">
  <modal-subtitle>Le mot de passe ci-dessous est celui du compte : communiquez-le vous-même à la personne concernée.</modal-subtitle>
 
- <div x-show="createErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="createErrors.global"></div>
+ <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
 
  <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
  <div>
- <label for="user-fullname" class="block text-sm font-medium text-slate-700">Nom complet <span class="text-danger">*</span></label>
- <input id="user-fullname" type="text" x-model="newUser.fullName" required maxlength="200" placeholder="ex : Awa Ndiaye" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="createErrors.fullname" x-cloak x-text="createErrors.fullname" class="mt-1 text-xs text-danger"></p>
+ <label for="user-fullname" class="form-label form-label-required">Nom complet</label>
+ <input id="user-fullname" type="text" x-model="newUser.fullName" required maxlength="200" placeholder="ex : Awa Ndiaye" class="input-field" :class="createErrors.fullname && 'input-field-error'">
+ <p x-show="createErrors.fullname" x-cloak x-text="createErrors.fullname" class="field-error"></p>
  </div>
 
  <div>
- <label for="user-email" class="block text-sm font-medium text-slate-700">E-mail <span class="text-danger">*</span></label>
- <input id="user-email" type="email" x-model="newUser.email" required maxlength="256" placeholder="nom@ecole.sn" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="createErrors.email" x-cloak x-text="createErrors.email" class="mt-1 text-xs text-danger"></p>
+ <label for="user-email" class="form-label form-label-required">E-mail</label>
+ <input id="user-email" type="email" x-model="newUser.email" required maxlength="256" placeholder="nom@ecole.sn" class="input-field" :class="createErrors.email && 'input-field-error'">
+ <p x-show="createErrors.email" x-cloak x-text="createErrors.email" class="field-error"></p>
  </div>
 
  <div>
- <label for="user-role" class="block text-sm font-medium text-slate-700">Rôle <span class="text-danger">*</span></label>
+ <label for="user-role" class="form-label form-label-required">Rôle</label>
  <select-field id="user-role" model="newUser.role" required="true" options="userRoleOptions" />
- <p x-show="createErrors.role" x-cloak x-text="createErrors.role" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.role" x-cloak x-text="createErrors.role" class="field-error"></p>
  </div>
 
  <div>
- <label for="user-password" class="block text-sm font-medium text-slate-700">Mot de passe <span class="text-danger">*</span></label>
- <input id="user-password" type="text" x-model="newUser.password" required class="input-field font-mono transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label for="user-password" class="form-label form-label-required">Mot de passe</label>
+ <input id="user-password" type="text" x-model="newUser.password" required class="input-field font-mono">
  <p class="mt-1 text-xs text-slate-400">Minimum 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial.</p>
- <p x-show="createErrors.password" x-cloak x-text="createErrors.password" class="mt-1 text-xs text-danger"></p>
+ <p x-show="createErrors.password" x-cloak x-text="createErrors.password" class="field-error"></p>
  </div>
 
  <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -154,14 +154,14 @@
  <modal-title><span x-text="statusTarget ? statusActionLabel(statusTarget.newStatus) : ''"></span> — <span x-text="statusTarget ? statusTarget.fullName : ''"></span></modal-title>
  <modal-subtitle>Ce changement révoque immédiatement les sessions ouvertes du compte, sauf réactivation.</modal-subtitle>
 
- <div x-show="statusErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="statusErrors.global"></div>
+ <div x-show="statusErrors.global" x-cloak class="form-error-banner" x-text="statusErrors.global"></div>
 
  <form x-on:submit.prevent="submitStatusChange()" novalidate class="space-y-4">
  <div>
- <label for="status-reason" class="block text-sm font-medium text-slate-700">Motif <span class="text-danger">*</span></label>
+ <label for="status-reason" class="form-label form-label-required">Motif</label>
  <input id="status-reason" type="text" x-model="statusReason" required minlength="5" maxlength="500"
- placeholder="ex : Départ de l'établissement" class="input-field transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
- <p x-show="statusErrors.reason" x-cloak x-text="statusErrors.reason" class="mt-1 text-xs text-danger"></p>
+ placeholder="ex : Départ de l'établissement" class="input-field" :class="statusErrors.reason && 'input-field-error'">
+ <p x-show="statusErrors.reason" x-cloak x-text="statusErrors.reason" class="field-error"></p>
  </div>
 
  <div class="mt-6 flex justify-end gap-3">
@@ -186,14 +186,14 @@
  <modal-title>Mot de passe — <span x-text="passwordTarget ? passwordTarget.fullName : ''"></span></modal-title>
  <modal-subtitle>Communiquez ce mot de passe vous-même : toutes les sessions ouvertes du compte seront fermées.</modal-subtitle>
 
- <div x-show="passwordErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="passwordErrors.global"></div>
+ <div x-show="passwordErrors.global" x-cloak class="form-error-banner" x-text="passwordErrors.global"></div>
 
  <form x-on:submit.prevent="submitResetPassword()" novalidate class="space-y-4">
  <div>
- <label for="reset-password" class="block text-sm font-medium text-slate-700">Nouveau mot de passe <span class="text-danger">*</span></label>
- <input id="reset-password" type="text" x-model="newPassword" required class="input-field font-mono transition-all duration-200 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500">
+ <label for="reset-password" class="form-label form-label-required">Nouveau mot de passe</label>
+ <input id="reset-password" type="text" x-model="newPassword" required class="input-field font-mono">
  <p class="mt-1 text-xs text-slate-400">Minimum 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial.</p>
- <p x-show="passwordErrors.newpassword" x-cloak x-text="passwordErrors.newpassword" class="mt-1 text-xs text-danger"></p>
+ <p x-show="passwordErrors.newpassword" x-cloak x-text="passwordErrors.newpassword" class="field-error"></p>
  </div>
 
  <div class="mt-6 flex justify-end gap-3">

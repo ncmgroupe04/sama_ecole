@@ -121,7 +121,7 @@
             <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                 <div class="flex flex-wrap items-end gap-3">
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Mois</label>
+                        <label class="form-label-sm">Mois</label>
                         <select x-model="filterMonth" class="input-field mt-0">
                             <option value="">Tous</option>
                             <template x-for="m in 12" :key="m">
@@ -130,7 +130,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Année</label>
+                        <label class="form-label-sm">Année</label>
                         <input type="number" x-model="filterYear" class="input-field mt-0 w-28" />
                     </div>
                     <button type="button" x-on:click="applyPayslipFilters()" class="btn-secondary">
@@ -189,7 +189,7 @@
             <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
                 <div class="flex flex-wrap items-end gap-3">
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1">Année</label>
+                        <label class="form-label-sm">Année</label>
                         <input type="number" x-model="filterTaxYear" class="input-field mt-0 w-28" />
                     </div>
                     <button type="button" x-on:click="applyTaxFilters()" class="btn-secondary">
@@ -241,48 +241,48 @@
     <modal-shell open="isContractModalOpen" title="Nouveau contrat">
         <form x-on:submit.prevent="submitContract()" novalidate class="space-y-5">
             <div>
-                <label class="block text-sm font-medium text-slate-700">Type d'employé</label>
+                <label class="form-label">Type d'employé</label>
                 <div class="mt-1 flex gap-4">
                     <label class="flex items-center gap-2 text-sm">
-                        <input type="radio" x-model="contractForm.employeeKind" value="teacher" /> Enseignant
+                        <input type="radio" class="radio-field" x-model="contractForm.employeeKind" value="teacher" /> Enseignant
                     </label>
                     <label class="flex items-center gap-2 text-sm">
-                        <input type="radio" x-model="contractForm.employeeKind" value="user" /> Utilisateur (non-enseignant)
+                        <input type="radio" class="radio-field" x-model="contractForm.employeeKind" value="user" /> Utilisateur (non-enseignant)
                     </label>
                 </div>
             </div>
 
             <div x-show="contractForm.employeeKind === 'teacher'">
-                <label class="block text-sm font-medium text-slate-700">Enseignant <span class="text-red-500">*</span></label>
+                <label class="form-label">Enseignant <span class="text-red-500">*</span></label>
                 <select-field model="contractForm.teacherId" placeholder="Sélectionnez un enseignant..."
                     options-expr="teachers.map(t => ({value: t.id, label: t.fullName + ' (' + t.matricule + ')'}))" />
             </div>
             <div x-show="contractForm.employeeKind === 'user'">
-                <label class="block text-sm font-medium text-slate-700">Utilisateur <span class="text-red-500">*</span></label>
+                <label class="form-label">Utilisateur <span class="text-red-500">*</span></label>
                 <select-field model="contractForm.userId" placeholder="Sélectionnez un utilisateur..."
                     options-expr="users.map(u => ({value: u.id, label: u.fullName + ' (' + u.role + ')'}))" />
                 <p class="mt-1 text-xs text-slate-400" x-show="users.length === 0">Aucun utilisateur accessible (réservé au Directeur).</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Type de contrat</label>
+                <label class="form-label">Type de contrat</label>
                 <select x-model="contractForm.type" class="input-field mt-1">
                     <option value="Permanent">Permanent</option>
                     <option value="Vacataire">Vacataire (horaire)</option>
                 </select>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="form-grid">
                 <div x-show="contractForm.type === 'Permanent'">
-                    <label class="block text-sm font-medium text-slate-700">Salaire de base (FCFA)</label>
+                    <label class="form-label">Salaire de base (FCFA)</label>
                     <input type="number" min="0" x-model="contractForm.baseSalary" class="input-field mt-1" />
                 </div>
                 <div x-show="contractForm.type === 'Vacataire'">
-                    <label class="block text-sm font-medium text-slate-700">Taux horaire (FCFA)</label>
+                    <label class="form-label">Taux horaire (FCFA)</label>
                     <input type="number" min="0" x-model="contractForm.hourlyRate" class="input-field mt-1" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Prime de transport (FCFA)</label>
+                    <label class="form-label">Prime de transport (FCFA)</label>
                     <input type="number" min="0" x-model="contractForm.transportAllowance" class="input-field mt-1" />
                 </div>
             </div>
@@ -300,23 +300,23 @@
     <!-- ===================== Modale : Modifier un contrat (Volume 1 §14.1) ===================== -->
     <modal-shell open="isEditContractModalOpen" title="Modifier le contrat">
         <form x-on:submit.prevent="submitEditContract()" novalidate class="space-y-5">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="form-grid">
                 <div x-show="editContractForm.type === 'Permanent'">
-                    <label class="block text-sm font-medium text-slate-700">Salaire de base (FCFA)</label>
+                    <label class="form-label">Salaire de base (FCFA)</label>
                     <input type="number" min="0" x-model="editContractForm.baseSalary" class="input-field mt-1" />
                 </div>
                 <div x-show="editContractForm.type === 'Vacataire'">
-                    <label class="block text-sm font-medium text-slate-700">Taux horaire (FCFA)</label>
+                    <label class="form-label">Taux horaire (FCFA)</label>
                     <input type="number" min="0" x-model="editContractForm.hourlyRate" class="input-field mt-1" />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Prime de transport (FCFA)</label>
+                    <label class="form-label">Prime de transport (FCFA)</label>
                     <input type="number" min="0" x-model="editContractForm.transportAllowance" class="input-field mt-1" />
                 </div>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-red-500">*</span></label>
+                <label class="form-label">Motif <span class="text-red-500">*</span></label>
                 <textarea x-model="editContractForm.reason" rows="2" placeholder="Ex. Augmentation annuelle, révision du taux horaire…" class="input-field mt-1"></textarea>
             </div>
 
@@ -340,12 +340,12 @@
             </p>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Date de clôture <span class="text-red-500">*</span></label>
+                <label class="form-label">Date de clôture <span class="text-red-500">*</span></label>
                 <input type="date" x-model="closeContractForm.endDate" required class="input-field mt-1" />
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Motif <span class="text-red-500">*</span></label>
+                <label class="form-label">Motif <span class="text-red-500">*</span></label>
                 <textarea x-model="closeContractForm.reason" rows="2" placeholder="Ex. Fin de contrat, départ de l'établissement…" class="input-field mt-1"></textarea>
             </div>
 
@@ -363,14 +363,14 @@
     <modal-shell open="isPayslipModalOpen" title="Générer une fiche de paie">
         <form x-on:submit.prevent="submitPayslip()" novalidate class="space-y-5">
             <div>
-                <label class="block text-sm font-medium text-slate-700">Contrat <span class="text-red-500">*</span></label>
+                <label class="form-label">Contrat <span class="text-red-500">*</span></label>
                 <select-field model="payslipForm.employeeContractId" placeholder="Sélectionnez un contrat..."
                     options-expr="contracts.filter(c => !c.endDate).map(c => ({value: c.id, label: c.employeeFullName + ' — ' + contractTypeLabel(c.type)}))" />
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="form-grid">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Mois</label>
+                    <label class="form-label">Mois</label>
                     <select x-model="payslipForm.month" class="input-field mt-1">
                         <template x-for="m in 12" :key="m">
                             <option :value="m" x-text="monthLabel(m)"></option>
@@ -378,17 +378,17 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Année</label>
+                    <label class="form-label">Année</label>
                     <input type="number" x-model="payslipForm.year" class="input-field mt-1" />
                 </div>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-slate-700">Heures travaillées (contrat Vacataire)</label>
+                <label class="form-label">Heures travaillées (contrat Vacataire)</label>
                 <input type="number" min="0" x-model="payslipForm.hoursWorked" class="input-field mt-1" />
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700">Prime de transport (FCFA)</label>
+                <label class="form-label">Prime de transport (FCFA)</label>
                 <input type="number" min="0" x-model="payslipForm.transportAllowance" class="input-field mt-1" />
             </div>
 
@@ -406,9 +406,9 @@
     <modal-shell open="isTaxModalOpen" title="Générer une déclaration fiscale">
         <form x-on:submit.prevent="submitTaxDeclaration()" novalidate class="space-y-5">
             <p class="text-sm text-slate-500">Agrège les charges sociales de toutes les fiches de paie du mois choisi.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="form-grid">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Mois</label>
+                    <label class="form-label">Mois</label>
                     <select x-model="taxForm.month" class="input-field mt-1">
                         <template x-for="m in 12" :key="m">
                             <option :value="m" x-text="monthLabel(m)"></option>
@@ -416,7 +416,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700">Année</label>
+                    <label class="form-label">Année</label>
                     <input type="number" x-model="taxForm.year" class="input-field mt-1" />
                 </div>
             </div>
@@ -437,7 +437,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Mois</label>
+                <label class="form-label-sm">Mois</label>
                 <select x-model="hourRecordsFilter.month" x-on:change="loadHourRecords()" class="input-field mt-0">
                     <template x-for="m in 12" :key="m">
                         <option :value="m" x-text="monthLabel(m)"></option>
@@ -445,7 +445,7 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Année</label>
+                <label class="form-label-sm">Année</label>
                 <input type="number" x-model="hourRecordsFilter.year" x-on:change="loadHourRecords()" class="input-field mt-0 w-28" />
             </div>
             <button type="button" x-on:click="previewHourRecordSheet()" :disabled="downloadingHourRecordSheet" class="btn-secondary">
@@ -480,15 +480,15 @@
 
         <form x-on:submit.prevent="submitHourRecord()" novalidate class="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end border-t border-slate-100 pt-4">
             <div>
-                <label class="block text-sm font-medium text-slate-700">Date <span class="text-red-500">*</span></label>
+                <label class="form-label">Date <span class="text-red-500">*</span></label>
                 <input type="date" x-model="hourRecordForm.date" required class="input-field mt-1" />
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700">Heures <span class="text-red-500">*</span></label>
+                <label class="form-label">Heures <span class="text-red-500">*</span></label>
                 <input type="number" min="0" step="0.5" x-model="hourRecordForm.hours" required class="input-field mt-1" />
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700">Note</label>
+                <label class="form-label">Note</label>
                 <input type="text" x-model="hourRecordForm.note" class="input-field mt-1" />
             </div>
             <div class="sm:col-span-3 flex justify-end">

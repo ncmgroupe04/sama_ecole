@@ -148,7 +148,7 @@ public class ReportCardsController(ISender mediator, ILogger<ReportCardsControll
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération des bulletins fusionnés PDF (Classe: {ClassroomId}, Trimestre: {TermId})", classroomId, termId);
-            return Problem(detail: ex.Message, title: "Erreur de génération des bulletins PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération des bulletins PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -186,7 +186,7 @@ public class ReportCardsController(ISender mediator, ILogger<ReportCardsControll
         catch (Exception ex)
         {
             logger.LogError(ex, "Erreur lors de la génération du PV de délibération PDF (Classe: {ClassroomId}, Trimestre: {TermId})", classroomId, termId);
-            return Problem(detail: ex.Message, title: "Erreur de génération du PV de délibération PDF", statusCode: StatusCodes.Status500InternalServerError);
+            return Problem(detail: "Une erreur interne est survenue lors de la génération du document.", title: "Erreur de génération du PV de délibération PDF", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 

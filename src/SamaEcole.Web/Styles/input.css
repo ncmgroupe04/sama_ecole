@@ -178,19 +178,6 @@
     @apply status-badge bg-primary-50 text-primary-700 ring-1 ring-inset ring-primary/20;
   }
 
-  /* Sous-header sticky (Classes, Matières, Bâtiments & Salles) : reste en haut de l'écran lors du
-     défilement, juste sous le header principal (jamais dessous — z-20 face au z-10 du header, et
-     surtout <main> n'a AUCUN padding : voir _Layout.cshtml). top-0 colle contre le bord de <main>,
-     le vrai conteneur défilant. -mx-8/-mt-8 (lg:-mx-10/-mt-10) annulent le padding du DIV qui
-     encadre @RenderBody() (celui-là a le padding, précisément pour que ces marges négatives aient
-     un padding à annuler) : sans eux l'en-tête resterait indenté au lieu de border à border.
-     N'ANNULEZ PAS top-0 par un top-8/lg:top-10 : ce fut la régression précédente — top:0 ne colle
-     correctement QUE si <main> reste sans padding ; un top positif ne fait que déplacer le
-     symptôme (bon uniquement tant que sa valeur suit le padding de <main> à la main). */
-  .sticky-sub-header {
-    @apply sticky top-0 z-20 isolate -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 py-4 lg:px-10 lg:py-4 bg-white border-b border-slate-200 shadow-sm;
-  }
-
   /* Squelette de chargement (Phase 3) : remplace le spinner brut plein-panneau là où un tableau se
      lit encore comme une liste (lignes de largeur variable) pendant l'attente réseau. Le halo animé
      est purement décoratif — jamais la seule information de statut (le rôle/aria reste porté par le
@@ -203,6 +190,19 @@
     content: "";
     @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent;
     animation: skeleton-shimmer 1.5s infinite;
+  }
+
+  /* Sous-header sticky (Classes, Matières, Bâtiments & Salles) : reste en haut de l'écran lors du
+     défilement, juste sous le header principal (jamais dessous — z-20 face au z-10 du header, et
+     surtout <main> n'a AUCUN padding : voir _Layout.cshtml). top-0 colle contre le bord de <main>,
+     le vrai conteneur défilant. -mx-8/-mt-8 (lg:-mx-10/-mt-10) annulent le padding du DIV qui
+     encadre @RenderBody() (celui-là a le padding, précisément pour que ces marges négatives aient
+     un padding à annuler) : sans eux l'en-tête resterait indenté au lieu de border à border.
+     N'ANNULEZ PAS top-0 par un top-8/lg:top-10 : ce fut la régression précédente — top:0 ne colle
+     correctement QUE si <main> reste sans padding ; un top positif ne fait que déplacer le
+     symptôme (bon uniquement tant que sa valeur suit le padding de <main> à la main). */
+  .sticky-sub-header {
+    @apply sticky top-0 z-20 isolate -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 py-4 lg:px-10 lg:py-4 bg-white border-b border-slate-200 shadow-sm;
   }
 
   @media (prefers-reduced-motion: reduce) {

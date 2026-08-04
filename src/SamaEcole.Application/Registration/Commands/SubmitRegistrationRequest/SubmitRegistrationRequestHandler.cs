@@ -105,7 +105,7 @@ public class SubmitRegistrationRequestHandler(
             $"""
              Bonjour {fullName},
 
-             Votre demande d'inscription de l'établissement « {schoolName} » sur Sama Ecole a bien été reçue.
+             Votre demande d'inscription de l'établissement « {schoolName} » sur Unikol a bien été reçue.
 
              Votre référence de suivi est : {trackingReference}
 
@@ -114,7 +114,7 @@ public class SubmitRegistrationRequestHandler(
              """;
 
         await emailSender.SendAsync(
-            new EmailMessage(email, "Votre demande d'inscription Sama Ecole", body),
+            new EmailMessage(email, "Votre demande d'inscription Unikol", body),
             cancellationToken);
     }
 }

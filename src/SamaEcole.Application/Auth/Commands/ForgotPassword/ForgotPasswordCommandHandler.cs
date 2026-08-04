@@ -55,11 +55,11 @@ public class ForgotPasswordCommandHandler(
         await emailSender.SendAsync(
             new EmailMessage(
                 To: user.Email,
-                Subject: "Réinitialisation de votre mot de passe Sama Ecole",
+                Subject: "Réinitialisation de votre mot de passe Unikol",
                 Body: $"""
                        Bonjour {user.FullName},
 
-                       Vous avez demandé à réinitialiser le mot de passe de votre compte Sama Ecole.
+                       Vous avez demandé à réinitialiser le mot de passe de votre compte Unikol.
                        Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :
 
                        {link}
@@ -69,7 +69,7 @@ public class ForgotPasswordCommandHandler(
                        Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de
                        passe actuel reste valable et aucune modification n'a été faite sur votre compte.
 
-                       L'équipe Sama Ecole
+                       L'équipe Unikol
                        """),
             cancellationToken);
 

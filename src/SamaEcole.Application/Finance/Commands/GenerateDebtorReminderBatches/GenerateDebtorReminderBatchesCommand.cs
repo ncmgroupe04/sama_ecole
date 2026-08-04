@@ -88,6 +88,26 @@ public class GenerateDebtorReminderBatchesCommandHandler(
             return 0;
         }
 
+        // Chargées une seule fois pour tous les débiteurs (au lieu de 2 requêtes par débiteur) —
+        // corrige une régression N+1 introduite lors de la fiabilisation du calcul (commit e7005bf).
+        var debtorEnrollmentIds = debtors.Select(d => d.Enrollment.Id).ToList();
+
+        var feeLinesByEnrollment = (await dbContext.EnrollmentFeeLines.AsNoTracking()
+                .Where(l => debtorEnrollmentIds.Contains(l.EnrollmentId))
+                .OrderBy(l => l.IsRecurring)
+                .ThenBy(l => l.Designation)
+                .ToListAsync(cancellationToken))
+            .GroupBy(l => l.EnrollmentId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var installmentsByEnrollment = (await dbContext.FeeInstallmentPlans.AsNoTracking()
+                .Where(p => debtorEnrollmentIds.Contains(p.EnrollmentId) && p.Status == FeeInstallmentPlanStatus.Active)
+                .SelectMany(p => dbContext.FeeInstallments.Where(i => i.FeeInstallmentPlanId == p.Id), (p, i) => new { p.EnrollmentId, Installment = i })
+                .OrderBy(x => x.Installment.SequenceNo)
+                .ToListAsync(cancellationToken))
+            .GroupBy(x => x.EnrollmentId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.Installment).ToList());
+
         var createdCount = 0;
 
         foreach (var group in debtors.GroupBy(d => d.Enrollment.ClassroomId))
@@ -96,17 +116,8 @@ public class GenerateDebtorReminderBatchesCommandHandler(
 
             foreach (var debtor in group)
             {
-                var lines = await dbContext.EnrollmentFeeLines.AsNoTracking()
-                    .Where(l => l.EnrollmentId == debtor.Enrollment.Id)
-                    .OrderBy(l => l.IsRecurring)
-                    .ThenBy(l => l.Designation)
-                    .ToListAsync(cancellationToken);
-
-                var customInstallments = await dbContext.FeeInstallmentPlans.AsNoTracking()
-                    .Where(p => p.EnrollmentId == debtor.Enrollment.Id && p.Status == FeeInstallmentPlanStatus.Active)
-                    .SelectMany(p => dbContext.FeeInstallments.Where(i => i.FeeInstallmentPlanId == p.Id))
-                    .OrderBy(i => i.SequenceNo)
-                    .ToListAsync(cancellationToken);
+                var lines = feeLinesByEnrollment.GetValueOrDefault(debtor.Enrollment.Id, []);
+                var customInstallments = installmentsByEnrollment.GetValueOrDefault(debtor.Enrollment.Id, []);
 
                 var overdue = InstallmentScheduleCalculator
                     .Calculate(debtor.Enrollment.AmountPaid, today, lines, debtor.SchoolYearStart, customInstallments)

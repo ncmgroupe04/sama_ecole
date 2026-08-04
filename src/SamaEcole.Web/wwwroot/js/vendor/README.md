@@ -33,6 +33,24 @@ cp package/standard_fonts/* src/SamaEcole.Web/wwwroot/js/vendor/pdfjs-standard-f
 
 Puis mettre à jour `PDFJS_VERSION` dans `wwwroot/js/pdf-preview.js` et le numéro de version ci-dessus.
 
+## chart.min.js — Chart.js 4.4.7 (build UMD)
+
+Graphique de projection (12 mois) de la console Super Admin (`superadmin-dashboard.js`). Auto-hébergé
+pour la même raison qu'Alpine.js ci-dessous — CSP `script-src 'self'` (JGK-F01, `SecurityHeadersMiddleware`)
+: un `<script src="https://cdn...">` y est de toute façon **bloqué par le navigateur**, CDN tiers ou
+non, ce n'est donc pas seulement une question de cohérence mais de fonctionnement réel. Chargé en
+`<script>` classique (pas de `defer`/`import()` différé) car la vue en a besoin dès `initializeChart()`,
+appelé à la fin de `load()`.
+
+Mettre à jour = remplacer le fichier par un commit relu, jamais par une résolution automatique :
+
+```bash
+curl -sL https://cdn.jsdelivr.net/npm/chart.js@<version>/dist/chart.umd.min.js \
+  -o src/SamaEcole.Web/wwwroot/js/vendor/chart.min.js
+```
+
+Puis mettre à jour le numéro de version ci-dessus.
+
 ## alpine.min.js — Alpine.js 3.15.12
 
 Servi depuis le projet, et non depuis un CDN, volontairement : l'écran de connexion reçoit les mots

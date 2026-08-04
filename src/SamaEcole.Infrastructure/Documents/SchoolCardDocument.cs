@@ -1,4 +1,5 @@
 using System.Net;
+using SamaEcole.Application.Common;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -70,7 +71,7 @@ public class SchoolCardDocument(SchoolCardBatchDto batch) : IDocument
                             header.Item().Text(batch.SchoolName.ToUpper()).Bold().FontSize(10).FontColor(Colors.Blue.Darken2);
                             header.Item().Text($"Année Scolaire {batch.SchoolYearName}").FontSize(7).FontColor(Colors.Grey.Darken1);
                             if (!string.IsNullOrWhiteSpace(batch.PhoneNumber))
-                                header.Item().Text($"Tél: {batch.PhoneNumber}").FontSize(6).FontColor(Colors.Grey.Darken1);
+                                header.Item().Text($"Tél: {PhoneFormatter.FormatSenegal(batch.PhoneNumber)}").FontSize(6).FontColor(Colors.Grey.Darken1);
                         });
                     });
 

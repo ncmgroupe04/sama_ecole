@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Absences.Queries.GetExitTicket;
 using SamaEcole.Infrastructure.Documents.Components;
 using QuestPDF.Fluent;
@@ -52,7 +53,7 @@ public class ExitTicketDocument(ExitTicketDto ticket, byte[]? logo, byte[] qrCod
             {
                 header.Item().Text(ticket.SchoolName.ToUpperInvariant()).Bold().FontSize(13);
 
-                var contact = JoinPresent(ticket.SchoolAddress, ticket.SchoolPhone, ticket.SchoolEmail);
+                var contact = JoinPresent(ticket.SchoolAddress, PhoneFormatter.FormatSenegal(ticket.SchoolPhone), ticket.SchoolEmail);
                 if (contact.Length > 0)
                 {
                     header.Item().Text(contact).FontSize(7).FontColor(Colors.Grey.Darken2);

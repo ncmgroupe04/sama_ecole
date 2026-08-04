@@ -30,7 +30,10 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
     private record Tokens(string AccessToken, int ExpiresIn);
 
     private record PlatformDashboardStatsDto(
-        int TotalSchools, int TotalUsers, decimal TotalRevenue, int ActiveSubscriptions);
+        int TotalSchools, int TotalUsers, decimal TotalRevenue, int ActiveSubscriptions,
+        decimal MRR, decimal ARR, decimal ForecastedRevenue30Days, decimal ARPU);
+
+    private record MonthlyRevenueProjectionDto(string Month, decimal ProjectedRevenue);
 
     private record GlobalAuditLogItem(
         Guid Id, Guid SchoolId, string SchoolName, Guid UserId, string ActorFullName,
@@ -60,22 +63,31 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
     }
 
     /// <summary>Sème une seconde école, hors de celle de test (EcoleId), avec un abonnement ACTIF et
-    /// un paiement CONFIRMÉ — le strict minimum pour prouver l'agrégation inter-écoles.</summary>
-    private async Task<Guid> SeedSecondSchoolWithConfirmedRevenueAsync(decimal confirmedAmount)
+    /// un paiement CONFIRMÉ — le strict minimum pour prouver l'agrégation inter-écoles. Les paramètres
+    /// optionnels (période de facturation, échéance, statut) servent aux tests des KPIs financiers
+    /// (MRR/ARR/ARPU/cashflow prévisionnel) et de la projection 12 mois, sans changer le comportement
+    /// des appelants existants (valeurs par défaut = comportement d'origine).</summary>
+    private async Task<Guid> SeedSecondSchoolWithConfirmedRevenueAsync(
+        decimal confirmedAmount,
+        BillingPeriod billingPeriod = BillingPeriod.Monthly,
+        DateOnly? expiresAt = null,
+        SubscriptionStatus subscriptionStatus = SubscriptionStatus.Active,
+        string schoolName = "École B - Test Plateforme")
     {
         var schoolId = Guid.NewGuid();
         var subscriptionId = Guid.NewGuid();
 
         await factory.SeedAsOwnerAsync(async db =>
         {
-            db.Schools.Add(new School { Id = schoolId, Name = "École B - Test Plateforme" });
+            db.Schools.Add(new School { Id = schoolId, Name = schoolName });
 
             db.Subscriptions.Add(new Subscription
             {
                 Id = subscriptionId,
                 SchoolId = schoolId,
                 Plan = SubscriptionPlan.Standard,
-                Status = SubscriptionStatus.Active
+                Status = subscriptionStatus,
+                ExpiresAt = expiresAt
             });
 
             db.SubscriptionPayments.Add(new SubscriptionPayment
@@ -85,7 +97,7 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
                 Amount = confirmedAmount,
                 Currency = "XOF",
                 Method = SubscriptionPaymentMethod.MobileMoney,
-                BillingPeriod = BillingPeriod.Monthly,
+                BillingPeriod = billingPeriod,
                 Provider = "PayDunya",
                 Status = SubscriptionPaymentStatus.Confirmed,
                 InitiatedAt = DateTimeOffset.UtcNow,
@@ -117,6 +129,38 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
         stats.TotalUsers.Should().Be(5, "les 5 comptes fixes seedés par AuthApiFactory, aucun ajouté ici");
         stats.TotalRevenue.Should().Be(37_000m, "seuls les paiements CONFIRMÉS comptent comme revenu (AGENTS.md règle #11)");
         stats.ActiveSubscriptions.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Financial_Kpis_Should_Only_Count_Schools_With_A_Currently_Active_Subscription()
+    {
+        // École de test (EcoleId) : aucun abonnement, n'apporte donc rien aux KPIs financiers.
+        //
+        // École A : abonnement Active, Monthly, échéance dans 10 jours — DOIT compter dans MRR ET dans
+        // le cashflow prévisionnel 30j.
+        // École B : abonnement Active, Yearly, échéance dans 400 jours — DOIT compter dans MRR (ramené
+        // à un équivalent mensuel, Amount / 12), mais PAS dans le cashflow 30j (hors fenêtre).
+        // École C : abonnement Suspended (résilié après son dernier paiement confirmé) — NE DOIT PAS
+        // compter dans MRR : sans le filtre sur le statut de l'abonnement, un paiement confirmé une
+        // fois compterait pour toujours (c'est le bug corrigé dans la migration AddPlatformFinancialKpis).
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        await SeedSecondSchoolWithConfirmedRevenueAsync(
+            25_000m, BillingPeriod.Monthly, today.AddDays(10), SubscriptionStatus.Active, "École A - KPI");
+        await SeedSecondSchoolWithConfirmedRevenueAsync(
+            300_000m, BillingPeriod.Yearly, today.AddDays(400), SubscriptionStatus.Active, "École B - KPI");
+        await SeedSecondSchoolWithConfirmedRevenueAsync(
+            50_000m, BillingPeriod.Monthly, today.AddDays(5), SubscriptionStatus.Suspended, "École C - KPI");
+
+        var superAdmin = await SuperAdminTokenAsync();
+        var response = await GetAsync("/api/v1/admin/platform/dashboard", superAdmin);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var stats = (await response.Content.ReadFromJsonAsync<PlatformDashboardStatsDto>())!;
+
+        stats.MRR.Should().Be(50_000m, "25 000 (École A, Monthly) + 300 000 / 12 (École B, Yearly) — École C exclue (abonnement Suspended)");
+        stats.ARR.Should().Be(600_000m, "MRR × 12");
+        stats.ForecastedRevenue30Days.Should().Be(25_000m, "seule l'échéance de l'École A tombe dans les 30 prochains jours");
+        stats.ARPU.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -239,12 +283,13 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
 
     private record PlatformSubscriptionDto(
         Guid SchoolId, string SchoolName, string Plan, string Status,
-        DateOnly? ExpiresAt, decimal? LastPaymentAmountXof, DateTimeOffset? LastPaymentAt);
+        DateOnly? ExpiresAt, decimal? LastPaymentAmountXof, DateTimeOffset? LastPaymentAt,
+        string? LastPaymentBillingPeriod);
 
     [Fact]
     public async Task SuperAdmin_Should_See_Subscriptions_Across_All_Schools()
     {
-        var schoolId = await SeedSecondSchoolWithConfirmedRevenueAsync(42_000m);
+        var schoolId = await SeedSecondSchoolWithConfirmedRevenueAsync(42_000m, BillingPeriod.Yearly);
 
         var superAdmin = await SuperAdminTokenAsync();
         var response = await GetAsync("/api/v1/admin/platform/subscriptions", superAdmin);
@@ -253,6 +298,7 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
         var subscriptions = (await response.Content.ReadFromJsonAsync<List<PlatformSubscriptionDto>>())!;
 
         var row = subscriptions.Should().ContainSingle(s => s.SchoolId == schoolId).Which;
+        row.LastPaymentBillingPeriod.Should().Be("Yearly", "colonne « Montant Contrat » de l'écran Abonnements & Facturation");
         row.Plan.Should().Be("Standard");
         row.Status.Should().Be("Active");
         row.LastPaymentAmountXof.Should().Be(42_000m);
@@ -272,6 +318,56 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
     public async Task Reading_The_Platform_Subscriptions_Without_A_Token_Should_Return_401()
     {
         var response = await GetAsync("/api/v1/admin/platform/subscriptions", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // ---------------------------------------------------------------- GET /admin/platform/revenue-projection
+
+    [Fact]
+    public async Task SuperAdmin_Should_See_A_Revenue_Projection_Reflecting_Real_Renewal_Dates()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var firstMonth = new DateOnly(today.Year, today.Month, 1);
+
+        // École D : Monthly, échéance au 1er du mois SUIVANT — se renouvelle ensuite chaque mois
+        // jusqu'à la fin de l'horizon (mois d'indice 1 à 11 inclus, jamais le mois courant, indice 0).
+        await SeedSecondSchoolWithConfirmedRevenueAsync(
+            10_000m, BillingPeriod.Monthly, firstMonth.AddMonths(1), SubscriptionStatus.Active, "École D - Projection");
+
+        // École E : Yearly, échéance au 1er du mois d'indice 3 — une SEULE occurrence dans l'horizon
+        // 12 mois (la suivante, +12 mois, en sort).
+        await SeedSecondSchoolWithConfirmedRevenueAsync(
+            120_000m, BillingPeriod.Yearly, firstMonth.AddMonths(3), SubscriptionStatus.Active, "École E - Projection");
+
+        var superAdmin = await SuperAdminTokenAsync();
+        var response = await GetAsync("/api/v1/admin/platform/revenue-projection", superAdmin);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var projection = (await response.Content.ReadFromJsonAsync<List<MonthlyRevenueProjectionDto>>())!;
+
+        projection.Should().HaveCount(12, "12 points mensuels, du mois courant inclus aux 11 mois suivants");
+        projection[0].Month.Should().Be(firstMonth.ToString("yyyy-MM"));
+        projection[0].ProjectedRevenue.Should().Be(0m, "aucune échéance ne tombe le mois courant dans ce scénario");
+        projection[1].ProjectedRevenue.Should().Be(10_000m, "seule École D (mensuelle) échoit ce mois-là");
+        projection[3].ProjectedRevenue.Should().Be(130_000m, "École D (10 000, mensuelle) ET École E (120 000, annuelle) échoient toutes deux ce mois-là");
+        projection[11].ProjectedRevenue.Should().Be(10_000m, "dernier mois de l'horizon : École D uniquement, École E ne revient qu'à +12 mois");
+    }
+
+    [Fact]
+    public async Task A_Directeur_Must_Not_Be_Allowed_To_Read_The_Revenue_Projection()
+    {
+        var directeur = await DirecteurTokenAsync();
+
+        var response = await GetAsync("/api/v1/admin/platform/revenue-projection", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Reading_The_Revenue_Projection_Without_A_Token_Should_Return_401()
+    {
+        var response = await GetAsync("/api/v1/admin/platform/revenue-projection", null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }

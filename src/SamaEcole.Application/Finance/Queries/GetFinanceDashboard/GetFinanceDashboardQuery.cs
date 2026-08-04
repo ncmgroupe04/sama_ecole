@@ -82,12 +82,8 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext dbContext, Ti
         var activeEnrollments = dbContext.Enrollments.AsNoTracking()
             .Where(e => e.Status != EnrollmentStatus.Cancelled && activeYear != null && e.SchoolYearId == activeYear.Id);
 
-        var totals = await activeEnrollments
-            .Select(e => new { e.TotalDue, e.AmountPaid })
-            .ToListAsync(cancellationToken);
-
-        var totalDue = totals.Sum(t => t.TotalDue);
-        var totalPaid = totals.Sum(t => t.AmountPaid);
+        var totalDue = await activeEnrollments.SumAsync(e => e.TotalDue, cancellationToken);
+        var totalPaid = await activeEnrollments.SumAsync(e => e.AmountPaid, cancellationToken);
         var outstandingBalance = totalDue - totalPaid;
         var recoveryRate = totalDue > 0 ? totalPaid / totalDue : 0m;
 
