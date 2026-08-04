@@ -9,15 +9,16 @@ using QuestPDF.Infrastructure;
 namespace SamaEcole.Infrastructure.Documents;
 
 /// <summary>
-/// Reçu d'inscription officiel en PDF (ticket JGK-E02). Suit la référence de design
-/// docs/design-references/README.md §1 (AGENTS.md règle #12) : document strictement administratif,
-/// noir et blanc, bordures simples, aucune couleur — et depuis la refonte, A5 PAYSAGE tenant sur une
-/// seule page, en-tête légal (NINEA/RCCM) puis corps en deux colonnes (identité à gauche, ventilation
-/// de l'encaissement à droite).
+/// Attestation d'inscription &amp; d'admission officielle en PDF (ticket JGK-E02). Suit la référence de
+/// design docs/design-references/README.md §1 (AGENTS.md règle #12) : document strictement
+/// administratif, noir et blanc, bordures simples, aucune couleur — A5 PAYSAGE tenant sur une seule
+/// page, en-tête légal (NINEA/RCCM), déclaration officielle, puis un bloc unique (pas de colonnes)
+/// aligné dessous : identité élève, tuteur, engagement financier global de l'année.
 ///
-/// Ce document n'imprime QUE ce qui est réellement entré en caisse le jour de l'inscription
-/// (<see cref="EnrollmentReceiptDto.CollectedLines"/>) : un reçu atteste d'un encaissement, jamais
-/// d'une dette. Le dû annuel et le reste à payer ne figurent qu'en rappel, sous le total.
+/// Document pédagogique et administratif, pas une pièce comptable : il atteste d'une INSCRIPTION, pas
+/// d'un encaissement. La ventilation détaillée de ce qui est réellement entré en caisse (et la mention
+/// obligatoire qui l'accompagne) vit désormais sur le reçu de caisse (<see cref="PaymentReceiptDocument"/>,
+/// AGENTS.md règle #12).
 ///
 /// Deux écarts assumés vis-à-vis des pixels de la maquette d'origine, qui n'est qu'un gabarit
 /// illustratif :
@@ -25,18 +26,12 @@ namespace SamaEcole.Infrastructure.Documents;
 ///     décimales), et non le « 25,000 » anglophone de la capture ;
 ///   * les dates sont au format jj/MM/aaaa (convention de l'application, SchoolSettings.DateFormat),
 ///     et non l'ISO de la capture.
-///
-/// La mention obligatoire est une CONSTANTE ici (AGENTS.md règle #12) : aucun appelant ne peut
-/// l'altérer ni l'omettre.
 /// </summary>
 public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? logo) : IDocument
 {
-    private const string MandatoryMention =
-        "Il est demandé aux parents de garder minutieusement leur reçu après le paiement.";
-
     public DocumentMetadata GetMetadata() => new()
     {
-        Title = $"Reçu d'inscription {receipt.ReceiptNumber}",
+        Title = $"Attestation d'inscription {receipt.ReceiptNumber}",
         Author = receipt.SchoolName
     };
 
@@ -54,19 +49,39 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
                 ComposeHeader(column);
 
                 column.Item().PaddingTop(6).AlignCenter()
-                    .Text($"REÇU D'INSCRIPTION n° {NoBreakText.NoBreak(receipt.ReceiptNumber)}").Bold().Italic().FontSize(11);
+                    .Text($"ATTESTATION D'INSCRIPTION & D'ADMISSION n° {NoBreakText.NoBreak(receipt.ReceiptNumber)}")
+                    .Bold().Italic().FontSize(11);
 
-                // Corps en deux colonnes, l'écart central évitant que les deux blocs ne se touchent.
-                column.Item().PaddingTop(6).Row(row =>
-                {
-                    row.RelativeItem().Element(ComposeInfoBlock);
-                    row.ConstantItem(14);
-                    row.RelativeItem().Element(ComposeCollectedTable);
-                });
+                column.Item().PaddingTop(8).Element(ComposeDeclaration);
 
-                column.Item().PaddingTop(8).AlignCenter().Text(MandatoryMention).Italic().FontSize(8);
-                column.Item().PaddingTop(12).Element(ComposeSignatures);
+                column.Item().PaddingTop(8).Element(ComposeBody);
+
+                column.Item().PaddingTop(16).Element(ComposeSignatures);
             });
+        });
+    }
+
+    /// <summary>
+    /// Le cœur de l'attestation : la phrase que le tuteur présente comme preuve d'inscription (visa,
+    /// bourse, changement d'établissement…). Année scolaire et classe y figurent déjà en toutes lettres,
+    /// donc pas répétées dans la grille d'informations qui suit.
+    /// </summary>
+    private void ComposeDeclaration(IContainer container)
+    {
+        container.Background(Colors.Grey.Lighten4).Border(0.75f).BorderColor(Colors.Grey.Darken1)
+            .Padding(8).Text(text =>
+        {
+            text.DefaultTextStyle(style => style.FontSize(9));
+            text.Justify();
+            text.Span("L'administration de l'établissement atteste que l'élève ");
+            text.Span(receipt.StudentFullName).SemiBold();
+            text.Span(" (Matricule : ");
+            text.Span(NoBreakText.NoBreak(receipt.Matricule)).SemiBold();
+            text.Span(") est régulièrement inscrit(e) au sein de notre établissement en classe de ");
+            text.Span(ClassroomPromotion.DisplayName(receipt.ClassroomName, receipt.IsAcceleratedClass)).SemiBold();
+            text.Span(" pour l'année scolaire ");
+            text.Span(receipt.SchoolYearLabel).SemiBold();
+            text.Span(".");
         });
     }
 
@@ -109,100 +124,50 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
         });
     }
 
-    private void ComposeInfoBlock(IContainer container)
+    /// <summary>
+    /// Bloc unique, aéré, sous la déclaration : identité de l'élève, tuteur, puis engagement financier
+    /// global de l'année — jamais la ventilation du jour, qui est désormais réservée au reçu de caisse
+    /// (<see cref="PaymentReceiptDocument"/>). Une attestation ne prouve pas un encaissement.
+    /// </summary>
+    private void ComposeBody(IContainer container)
     {
-        container.Column(column =>
+        container.Padding(4).Column(column =>
         {
             InfoRow(column, "Matricule", NoBreakText.NoBreak(receipt.Matricule));
             InfoRow(column, "Nom complet", receipt.StudentFullName);
             // Classe passerelle / accélérée : le nom porte la mention du dispositif, parce que c'est SUR
             // CE PAPIER que le tuteur constate que l'année qu'il règle en couvre deux niveaux. Classe
             // ordinaire : la ligne est celle d'origine, au caractère près (AGENTS.md règle #12).
-            InfoRow(column, "Classe d'affectation",
+            InfoRow(column, "Classe & Niveau",
                 $"{ClassroomPromotion.DisplayName(receipt.ClassroomName, receipt.IsAcceleratedClass)} — {receipt.ClassroomLevel}");
-            InfoRow(column, "Année scolaire", receipt.SchoolYearLabel);
-            InfoRow(column, "Type de mouvement", TypeLabel(receipt.Type));
-            InfoRow(column, "Date de l'opération", FormatDate(receipt.EnrolledAt));
 
-            if (!string.IsNullOrWhiteSpace(receipt.GuardianName))
+            if (!string.IsNullOrWhiteSpace(receipt.GuardianName) || !string.IsNullOrWhiteSpace(receipt.GuardianPhone))
             {
-                InfoRow(column, "Tuteur", receipt.GuardianName);
+                var phone = PhoneFormatter.FormatSenegal(receipt.GuardianPhone);
+                InfoRow(column, "Tuteur & Contact",
+                    (receipt.GuardianName ?? "—") + (phone is null ? string.Empty : $" ({phone})"));
             }
 
-            if (!string.IsNullOrWhiteSpace(receipt.GuardianPhone))
-            {
-                InfoRow(column, "Téléphone du tuteur", PhoneFormatter.FormatSenegal(receipt.GuardianPhone)!);
-            }
-
-            InfoRow(column, "Mode de règlement", PaymentMethodLabel(receipt.PaymentMethod));
+            InfoRow(column, "Frais d'inscription annuels engagés", $"{FormatMoney(receipt.TotalDue)} FCFA");
+            InfoRow(column, "Reste à payer global sur l'année", $"{FormatMoney(receipt.RemainingBalance)} FCFA", bold: true);
         });
     }
 
-    private static void InfoRow(ColumnDescriptor column, string label, string value)
+    private static void InfoRow(ColumnDescriptor column, string label, string value, bool bold = false)
     {
-        column.Item().PaddingVertical(1).Row(row =>
+        column.Item().PaddingVertical(1.5f).Row(row =>
         {
-            row.ConstantItem(95).Text($"{label} :").FontColor(Colors.Grey.Darken2);
-            row.RelativeItem().Text(value).SemiBold();
-        });
-    }
-
-    /// <summary>
-    /// Ventilation de l'encaissement du jour : une ligne par frais réglé, puis le TOTAL ENCAISSÉ. Le
-    /// dû annuel et le reste à payer sont relégués sous le tableau, en petit — ils informent le tuteur
-    /// sans jamais pouvoir être lus comme le montant versé.
-    /// </summary>
-    private void ComposeCollectedTable(IContainer container)
-    {
-        container.Column(column =>
-        {
-            column.Item().Table(table =>
+            row.ConstantItem(160).Text($"{label} :").FontColor(Colors.Grey.Darken2);
+            var valueText = row.RelativeItem().AlignRight().Text(value);
+            if (bold)
             {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn();                       // Désignation — libellé libre, prend le reste
-                    columns.ConstantColumn(PdfColumnWidths.Amount); // Montant — largeur fixe, jamais de repli
-                });
-
-                table.Header(header =>
-                {
-                    header.Cell().Element(HeaderCell).Text("Désignation des frais").Bold();
-                    header.Cell().Element(HeaderCell).AlignRight().Text("Montant (FCFA)").Bold();
-                });
-
-                if (receipt.CollectedLines.Count == 0)
-                {
-                    table.Cell().Element(BodyCell).Text("Aucun frais encaissé ce jour").Italic()
-                        .FontColor(Colors.Grey.Darken1);
-                    table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(0));
-                }
-                else
-                {
-                    foreach (var line in receipt.CollectedLines)
-                    {
-                        table.Cell().Element(BodyCell).Text(CollectedLabel(line));
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(line.Amount));
-                    }
-                }
-
-                table.Cell().Element(TotalCell).Text("TOTAL ENCAISSÉ").Bold();
-                table.Cell().Element(TotalCell).AlignRight().Text(FormatMoney(receipt.TotalCollected)).Bold();
-            });
-
-            column.Item().PaddingTop(3).Text(text =>
+                valueText.Bold();
+            }
+            else
             {
-                text.DefaultTextStyle(style => style.FontSize(7).FontColor(Colors.Grey.Darken2));
-                text.Span($"Frais annuels : {FormatMoney(receipt.TotalDue)}  ·  Reste à payer : ");
-                text.Span(FormatMoney(receipt.RemainingBalance)).SemiBold();
-            });
+                valueText.SemiBold();
+            }
         });
-
-        static IContainer HeaderCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(5);
-        static IContainer BodyCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(5);
-        static IContainer TotalCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(5);
     }
 
     private void ComposeSignatures(IContainer container)
@@ -215,7 +180,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
                 left.Item().PaddingTop(6).Text("[Cadre Cachet Officiel]").FontSize(7).FontColor(Colors.Grey.Medium);
             });
 
-            row.RelativeItem().AlignRight().Text("Signature du Directeur / Service Financier").Italic();
+            row.RelativeItem().AlignRight().Text("Signature du Directeur").Italic();
         });
     }
 
@@ -226,27 +191,6 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
             ? $"Fait le {date}"
             : $"Fait à {receipt.SchoolCity}, le {date}";
     }
-
-    private static string TypeLabel(string type) =>
-        type == "ReEnrollment" ? "Réinscription" : "Nouvelle inscription";
-
-    /// <summary>
-    /// Une mensualité porte le nombre de mois RÉELLEMENT réglés (« Mensualité (× 1 mois) ») : c'est
-    /// vérifiable et jamais faux, là où nommer le mois couvert (« Mensualité d'octobre ») supposerait
-    /// un échéancier que l'application ne tient pas encore.
-    /// </summary>
-    private static string CollectedLabel(CollectedFeeLineDto line) =>
-        line.IsRecurring ? $"{line.Designation} (× {line.Months} mois)" : line.Designation;
-
-    /// <summary>Null = aucun versement ce jour-là : on l'écrit « — » plutôt que d'inventer un mode.</summary>
-    private static string PaymentMethodLabel(string? method) => method switch
-    {
-        "Cash" => "Espèces",
-        "Cheque" => "Chèque",
-        "Transfer" => "Virement",
-        "MobileMoney" => "Mobile Money",
-        _ => "—"
-    };
 
     private static string JoinPresent(params string?[] parts) =>
         string.Join("  ·  ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));

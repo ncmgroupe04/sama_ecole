@@ -364,8 +364,8 @@ document.addEventListener('alpine:init', () => {
             if (!this.receipt) return;
             await this.openPdfPreview(
                 `/api/v1/enrollments/${this.receipt.enrollmentId}/receipt/pdf`,
-                `Reçu d'inscription n° ${this.receiptReference()}`,
-                `Recu-${this.receipt.receiptNumber}.pdf`
+                `Attestation d'inscription n° ${this.receiptReference()}`,
+                `Attestation-Inscription-${this.receipt.receiptNumber}.pdf`
             );
         },
 
@@ -393,24 +393,6 @@ document.addEventListener('alpine:init', () => {
 
         recurringSuffix(line) {
             return line.isRecurring ? ` (× ${line.months} mois)` : '';
-        },
-
-        /**
-         * Libellé d'une ligne ENCAISSÉE. Une mensualité porte le nombre de mois réellement réglés
-         * (« Mensualité (× 1 mois) ») : c'est vérifiable et jamais faux, là où nommer le mois couvert
-         * (« Mensualité d'octobre ») supposerait un échéancier que l'application ne tient pas encore.
-         */
-        collectedLabel(line) {
-            return line.isRecurring ? `${line.designation} (× ${line.months} mois)` : line.designation;
-        },
-
-        paymentMethodLabel(method) {
-            return {
-                Cash: 'Espèces',
-                Cheque: 'Chèque',
-                Transfer: 'Virement',
-                MobileMoney: 'Mobile Money'
-            }[method] || '—';
         },
 
         /** Ligne « NINEA … · RCCM … » de l'en-tête : n'imprime que les mentions réellement saisies. */

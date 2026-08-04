@@ -9,9 +9,11 @@ using QuestPDF.Infrastructure;
 namespace SamaEcole.Infrastructure.Documents;
 
 /// <summary>
-/// Reçu de PAIEMENT officiel en PDF (ticket JGK-F02). Même référence de design que le reçu d'inscription
-/// (docs/design-references/receipt-reference.png, AGENTS.md règle #12) : document strictement
-/// administratif, noir et blanc, bordures simples.
+/// Reçu de CAISSE officiel en PDF (ticket JGK-F02) — justificatif comptable immédiat, épuré à dessein :
+/// il ne porte que le flux de trésorerie de l'instant t, jamais l'état du dossier de l'élève (c'est le
+/// rôle de l'attestation d'inscription, <see cref="EnrollmentReceiptDocument"/>). Même référence de
+/// design que celle-ci (docs/design-references/receipt-reference.png, AGENTS.md règle #12) : document
+/// strictement administratif, noir et blanc, bordures simples.
 ///
 /// Le tableau des montants ne porte QUE le versement du jour (motif + montant, puis TOTAL PAYÉ) : le
 /// solde du compte (<see cref="PaymentReceiptDto.TotalDue"/>, <see cref="PaymentReceiptDto.AlreadyPaid"/>,
@@ -28,7 +30,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
 
     public DocumentMetadata GetMetadata() => new()
     {
-        Title = $"Reçu de paiement {receipt.ReceiptNumber}",
+        Title = $"Reçu de caisse {receipt.ReceiptNumber}",
         Author = receipt.SchoolName
     };
 
@@ -45,7 +47,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
                 ComposeHeader(column);
 
                 column.Item().PaddingTop(6).AlignCenter()
-                    .Text($"REÇU DE PAIEMENT n° {NoBreakText.NoBreak(receipt.ReceiptNumber)}").Bold().Italic().FontSize(11);
+                    .Text($"REÇU DE CAISSE n° {NoBreakText.NoBreak(receipt.ReceiptNumber)}").Bold().Italic().FontSize(11);
 
                 column.Item().PaddingTop(6).Row(row =>
                 {
@@ -106,8 +108,8 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
             InfoRow(column, "Classe d'affectation",
                 ClassroomPromotion.DisplayName(receipt.ClassroomName, receipt.IsAcceleratedClass));
             InfoRow(column, "Année scolaire", receipt.SchoolYearLabel);
-            InfoRow(column, "Date du paiement", FormatDate(receipt.PaidAt));
-            InfoRow(column, "Moyen de paiement", MethodLabel(receipt.Method));
+            InfoRow(column, "Date de règlement", FormatDate(receipt.PaidAt));
+            InfoRow(column, "Mode de paiement", MethodLabel(receipt.Method));
         });
     }
 
@@ -164,7 +166,7 @@ public class PaymentReceiptDocument(PaymentReceiptDto receipt, byte[]? logo) : I
                 left.Item().PaddingTop(6).Text("[Cadre Cachet Officiel]").FontSize(7).FontColor(Colors.Grey.Medium);
             });
 
-            row.RelativeItem().AlignRight().Text("Signature du Directeur / Service Financier").Italic();
+            row.RelativeItem().AlignRight().Text("Signature du Caissier / Agent").Italic();
         });
     }
 

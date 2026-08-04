@@ -6,27 +6,44 @@ Fichiers : `receipt-reference.png`, `bulletin-reference.png`, `dashboard-referen
 
 ---
 
-## 1. Reçu d'inscription — voir ticket JGK-E02
+## 1. Attestation d'inscription & d'admission — voir ticket JGK-E02
 
-> **Cette section fait foi, PAS `receipt-reference.png`.** La maquette d'origine (A4 portrait, bloc unique) a été remplacée à la demande du client : format **A5 paysage**, corps en deux colonnes, mentions légales d'entreprise, et surtout un total qui n'affiche QUE l'encaissement réel. Le PNG est conservé à titre d'historique — en cas de divergence, c'est le texte ci-dessous qui s'applique.
+> **Cette section fait foi, PAS `receipt-reference.png`.** La maquette d'origine (A4 portrait, bloc unique, intitulée « Reçu d'inscription ») a été remplacée à la demande du client, en deux temps : d'abord un format **A5 paysage** en deux colonnes, puis une refonte qui sépare clairement ce document (pièce ADMINISTRATIVE attestant une inscription) du reçu de caisse (pièce COMPTABLE attestant un encaissement, §1bis ci-dessous). Le PNG est conservé à titre d'historique — en cas de divergence, c'est le texte ci-dessous qui s'applique.
 
 **Format** : **A5 paysage (210 × 148 mm)**, une seule page, sans débordement — à l'écran comme à l'impression et à l'export PDF (`@page { size: A5 landscape }` côté web, `PageSizes.A5.Landscape()` côté QuestPDF).
 
 **Disposition :**
 
 1. **En-tête**, séparé du corps par un filet : à gauche le nom de l'école en gras et majuscules, puis une ligne de coordonnées (**adresse · téléphone · e-mail**) et une ligne de mentions légales (**NINEA · RCCM**) ; à droite l'emplacement du logo officiel. Chaque mention absente est simplement omise — jamais de séparateur orphelin ni de valeur inventée.
-2. Titre centré, en gras et italique : **"REÇU D'INSCRIPTION n° [référence]"** (ex. `REC-2025-0002`).
-3. **Corps sur deux colonnes** :
-   - **Colonne gauche — identité** (étiquette / valeur, une ligne par champ) : Matricule, Nom complet, Classe d'affectation, Année scolaire, Type de mouvement, Date de l'opération, Tuteur, Téléphone du tuteur, **Mode de règlement**.
-   - **Colonne droite — ventilation de l'encaissement** : tableau **"Désignation des frais" / "Montant (FCFA)"** avec **une ligne par frais réellement réglé ce jour-là** (droits d'inscription, tenue, carnet, mensualité…), une mensualité portant le nombre de mois couverts — « Mensualité (× 1 mois) ». Ligne finale en gras **"TOTAL ENCAISSÉ"**. Sous le tableau, en petits caractères : rappel des frais annuels et du reste à payer.
-4. **Règle comptable, non négociable** : le reçu n'atteste que de **la somme réellement entrée en caisse le jour même** — jamais du dû annuel cumulé. Un dossier ouvert sans versement s'imprime avec « Aucun frais encaissé ce jour » et un total de 0.
-5. **Texte obligatoire sous le corps, avant la signature** (à intégrer sur tous les reçus générés) :
+2. Titre centré, en gras et italique : **"ATTESTATION D'INSCRIPTION & D'ADMISSION n° [référence]"** (ex. `REC-2025-0002`).
+3. **Bloc déclaration officielle**, centré sous le titre : *"L'administration de [École] atteste par la présente que l'élève [Nom complet] (Matricule : [Matricule]) est régulièrement inscrit(e) au sein de notre établissement pour l'année scolaire [Année scolaire] en classe de [Classe]."*
+4. **Corps sur deux colonnes** :
+   - **Colonne gauche — élève & tuteur** (étiquette / valeur, une ligne par champ) : Nom & Prénom, Matricule, Classe & Cursus, Tuteur, Téléphone tuteur.
+   - **Colonne droite — engagement financier global** : Frais d'inscription annuels engagés, Reste à payer global sur l'année. Ce ne sont que des rappels d'engagement, jamais une ventilation d'encaissement — celle-ci vit exclusivement sur le reçu de caisse (§1bis).
+5. Bas de page, deux colonnes : à gauche "Fait à [ville], le [date]" (italique) au-dessus de l'emplacement du cachet officiel ; à droite "Signature du Directeur" (italique) au-dessus du trait de signature.
+
+**Style** : noir et blanc, sobre, aucune couleur — document strictement administratif/pédagogique, pas un justificatif comptable (pas de mention obligatoire de conservation du reçu, celle-ci reste propre au reçu de caisse).
+
+**Données à saisir en amont** : les mentions NINEA et RCCM, l'adresse et l'e-mail viennent de *Paramètres › Établissement*.
+
+## 1bis. Reçu de caisse — voir ticket JGK-F02
+
+**Format** : **A5 paysage (210 × 148 mm)**, une seule page, même en-tête que l'attestation (§1.1).
+
+**Philosophie** : document épuré, axé UNIQUEMENT sur le flux de trésorerie de l'instant t — jamais l'état du dossier de l'élève (dû annuel, reste à payer), qui n'a pas sa place ici.
+
+**Disposition :**
+
+1. Titre centré, en gras et italique : **"REÇU DE CAISSE n° [référence]"**.
+2. **Informations de transaction** (étiquette / valeur) : Matricule, Nom complet, Classe d'affectation, Année scolaire, Date de règlement, Mode de paiement (Espèces, Chèque, Virement, Mobile Money / Wave / Orange Money).
+3. **Tableau de règlement**, deux colonnes **"Désignation" / "Montant (FCFA)"** : une ligne "Versement reçu" (le montant remis par le tuteur), puis une ligne finale en gras **"TOTAL PAYÉ"**.
+4. **Texte obligatoire sous le tableau, avant la signature** (à intégrer sur tous les reçus de caisse générés) :
    > *"Il est demandé aux parents de garder minutieusement leur reçu après le paiement."*
-6. Bas de page, deux colonnes : à gauche "Fait à [ville], le [date]" (italique) au-dessus de l'emplacement du cachet officiel ; à droite "Signature du Directeur / Service Financier" (italique) au-dessus du trait de signature.
+5. Bas de page, deux colonnes : à gauche "Fait à [ville], le [date]" (italique) au-dessus de l'emplacement du cachet officiel ; à droite "Signature du Caissier / Agent" (italique) au-dessus du trait de signature.
 
-**Style** : noir et blanc, sobre, tableaux à bordures simples, aucune couleur — document strictement administratif/imprimable.
+**Style** : noir et blanc, sobre, tableau à bordures simples, aucune couleur.
 
-**Données à saisir en amont** : les mentions NINEA et RCCM, l'adresse et l'e-mail viennent de *Paramètres › Établissement* ; l'encaissement (frais cochés + mode de règlement) est saisi dans le formulaire d'inscription.
+**Règle comptable, non négociable** : le reçu n'atteste que de **la somme réellement entrée en caisse le jour même** — jamais du dû annuel cumulé.
 
 ## 2. Bulletin de notes (`bulletin-reference.png`) — voir ticket JGK-G03
 
