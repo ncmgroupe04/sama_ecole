@@ -12,12 +12,13 @@ namespace SamaEcole.Infrastructure.Documents;
 /// Attestation d'inscription &amp; d'admission officielle en PDF (ticket JGK-E02). Suit la référence de
 /// design docs/design-references/README.md §1 (AGENTS.md règle #12) : document strictement
 /// administratif, noir et blanc, bordures simples, aucune couleur — A5 PAYSAGE tenant sur une seule
-/// page, en-tête légal (NINEA/RCCM), déclaration officielle, puis un bloc unique (pas de colonnes)
-/// aligné dessous : identité élève, tuteur, engagement financier global de l'année.
+/// page, en-tête légal (NINEA/RCCM), déclaration officielle, puis un corps en deux colonnes (identité
+/// élève/tuteur à gauche, tableau des frais ENGAGÉS pour l'année à droite).
 ///
-/// Document pédagogique et administratif, pas une pièce comptable : il atteste d'une INSCRIPTION, pas
-/// d'un encaissement. La ventilation détaillée de ce qui est réellement entré en caisse (et la mention
-/// obligatoire qui l'accompagne) vit désormais sur le reçu de caisse (<see cref="PaymentReceiptDocument"/>,
+/// Document pédagogique et administratif, pas une pièce comptable : il atteste d'une INSCRIPTION. Le
+/// tableau n'imprime que l'ENGAGEMENT annuel (<see cref="EnrollmentReceiptDto.Lines"/> / TotalDue), pas
+/// ce qui est réellement entré en caisse un jour donné — cette ventilation-là (et la mention obligatoire
+/// qui l'accompagne) vit exclusivement sur le reçu de caisse (<see cref="PaymentReceiptDocument"/>,
 /// AGENTS.md règle #12).
 ///
 /// Deux écarts assumés vis-à-vis des pixels de la maquette d'origine, qui n'est qu'un gabarit
@@ -54,9 +55,19 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
 
                 column.Item().PaddingTop(8).Element(ComposeDeclaration);
 
-                column.Item().PaddingTop(8).Element(ComposeBody);
+                // Corps en deux colonnes, l'écart central évitant que les deux blocs ne se touchent.
+                column.Item().PaddingTop(8).Row(row =>
+                {
+                    row.RelativeItem().Element(ComposeInfoBlock);
+                    row.ConstantItem(14);
+                    row.RelativeItem().Element(ComposeFeesTable);
+                });
 
-                column.Item().PaddingTop(16).Element(ComposeSignatures);
+                column.Item().PaddingTop(6).AlignCenter()
+                    .Text("Montant à régler auprès du service de la comptabilité pour validation définitive du paiement.")
+                    .Bold().Italic().FontSize(8);
+
+                column.Item().PaddingTop(10).Element(ComposeSignatures);
             });
         });
     }
@@ -124,14 +135,10 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
         });
     }
 
-    /// <summary>
-    /// Bloc unique, aéré, sous la déclaration : identité de l'élève, tuteur, puis engagement financier
-    /// global de l'année — jamais la ventilation du jour, qui est désormais réservée au reçu de caisse
-    /// (<see cref="PaymentReceiptDocument"/>). Une attestation ne prouve pas un encaissement.
-    /// </summary>
-    private void ComposeBody(IContainer container)
+    /// <summary>Colonne gauche : identité de l'élève et de son tuteur.</summary>
+    private void ComposeInfoBlock(IContainer container)
     {
-        container.Padding(4).Column(column =>
+        container.Column(column =>
         {
             InfoRow(column, "Matricule", NoBreakText.NoBreak(receipt.Matricule));
             InfoRow(column, "Nom complet", receipt.StudentFullName);
@@ -147,28 +154,83 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
                 InfoRow(column, "Tuteur & Contact",
                     (receipt.GuardianName ?? "—") + (phone is null ? string.Empty : $" ({phone})"));
             }
-
-            InfoRow(column, "Frais d'inscription annuels engagés", $"{FormatMoney(receipt.TotalDue)} FCFA");
-            InfoRow(column, "Reste à payer global sur l'année", $"{FormatMoney(receipt.RemainingBalance)} FCFA", bold: true);
         });
     }
 
-    private static void InfoRow(ColumnDescriptor column, string label, string value, bool bold = false)
+    private static void InfoRow(ColumnDescriptor column, string label, string value)
     {
         column.Item().PaddingVertical(1.5f).Row(row =>
         {
-            row.ConstantItem(160).Text($"{label} :").FontColor(Colors.Grey.Darken2);
-            var valueText = row.RelativeItem().AlignRight().Text(value);
-            if (bold)
-            {
-                valueText.Bold();
-            }
-            else
-            {
-                valueText.SemiBold();
-            }
+            row.ConstantItem(80).Text($"{label} :").FontColor(Colors.Grey.Darken2);
+            row.RelativeItem().Text(value).SemiBold();
         });
     }
+
+    /// <summary>
+    /// Colonne droite : les frais ENGAGÉS pour l'année (<see cref="EnrollmentReceiptDto.Lines"/>), pas ce
+    /// qui est réellement entré en caisse — cette ventilation-là vit sur le reçu de caisse
+    /// (<see cref="PaymentReceiptDocument"/>). Le reste à payer est le solde après tous les versements
+    /// effectués à ce jour, pas seulement celui du jour de l'inscription.
+    /// </summary>
+    private void ComposeFeesTable(IContainer container)
+    {
+        container.Column(column =>
+        {
+            column.Item().Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn();                       // Désignation — libellé libre, prend le reste
+                    columns.ConstantColumn(PdfColumnWidths.Amount); // Montant — largeur fixe, jamais de repli
+                });
+
+                table.Header(header =>
+                {
+                    header.Cell().Element(HeaderCell).Text("Désignation des frais").Bold();
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Montant (FCFA)").Bold();
+                });
+
+                if (receipt.Lines.Count == 0)
+                {
+                    table.Cell().Element(BodyCell).Text("Aucun frais engagé").Italic().FontColor(Colors.Grey.Darken1);
+                    table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(0));
+                }
+                else
+                {
+                    foreach (var line in receipt.Lines)
+                    {
+                        table.Cell().Element(BodyCell).Text(LineLabel(line));
+                        table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(line.LineTotal));
+                    }
+                }
+
+                table.Cell().Element(TotalCell).Text("TOTAL ENGAGÉ").Bold();
+                table.Cell().Element(TotalCell).AlignRight().Text(FormatMoney(receipt.TotalDue)).Bold();
+            });
+
+            column.Item().PaddingTop(3).AlignRight().Text(text =>
+            {
+                text.DefaultTextStyle(style => style.FontSize(7.5f));
+                text.Span("Reste à payer : ").FontColor(Colors.Grey.Darken2);
+                text.Span($"{FormatMoney(receipt.RemainingBalance)} FCFA").Bold();
+            });
+        });
+
+        static IContainer HeaderCell(IContainer c) =>
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(5);
+        static IContainer BodyCell(IContainer c) =>
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(5);
+        static IContainer TotalCell(IContainer c) =>
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(5);
+    }
+
+    /// <summary>
+    /// Une mensualité porte le nombre de mois couverts par l'engagement annuel (« Mensualité (× 9 mois) »),
+    /// jamais réduit au nombre de mois réellement réglés — voir <see cref="PaymentReceiptDocument"/> pour
+    /// la ventilation de l'encaissement du jour, qui elle réduit à ce qui est effectivement payé.
+    /// </summary>
+    private static string LineLabel(EnrollmentFeeLineDto line) =>
+        line.IsRecurring ? $"{line.Designation} (× {line.Months} mois)" : line.Designation;
 
     private void ComposeSignatures(IContainer container)
     {
