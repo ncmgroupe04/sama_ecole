@@ -38,7 +38,12 @@
  <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
  <div class="min-w-0">
  <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500" x-text="tile.label"></p>
- <p class="mt-1 text-2xl font-black" :class="tile.iconText" x-text="isLoading ? '—' : tile.value"></p>
+ <template x-if="isLoading">
+ <div class="mt-1 h-8 w-16 rounded skeleton"></div>
+ </template>
+ <template x-if="!isLoading">
+ <p class="mt-1 text-2xl font-black" :class="tile.iconText" x-text="tile.value"></p>
+ </template>
  </div>
  <div class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 ml-3" :class="tile.iconBg">
  @* <icon> est un TagHelper résolu côté SERVEUR (name= doit être un littéral connu à la

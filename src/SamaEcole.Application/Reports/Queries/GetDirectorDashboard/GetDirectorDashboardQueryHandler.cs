@@ -8,10 +8,14 @@ namespace SamaEcole.Application.Reports.Queries.GetDirectorDashboard;
 public class GetDirectorDashboardQueryHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IKpiCacheService kpiCache)
     : IRequestHandler<GetDirectorDashboardQuery, DirectorDashboardDto>
 {
-    public async Task<DirectorDashboardDto> Handle(GetDirectorDashboardQuery request, CancellationToken cancellationToken)
+    public Task<DirectorDashboardDto> Handle(GetDirectorDashboardQuery request, CancellationToken cancellationToken) =>
+        kpiCache.GetOrCreateAsync(KpiCacheKeys.DirectorDashboard, ct => ComputeAsync(ct), cancellationToken);
+
+    private async Task<DirectorDashboardDto> ComputeAsync(CancellationToken cancellationToken)
     {
         // ---- Effectifs de l'année ACTIVE, ventilés par genre ----
         // Le SchoolId n'est jamais filtré à la main : le Global Query Filter + la policy RLS bornent
@@ -89,23 +93,21 @@ public class GetDirectorDashboardQueryHandler(
         }
 
         // ---- Emploi du Temps du Jour ----
+        // Projection SQL-side (pas de .Include ni de matérialisation d'entités complètes) : seuls le
+        // compte et les 6 champs scalaires nécessaires au DTO sont lus.
         var todayDayOfWeek = now.DayOfWeek;
-        var todaySlots = await dbContext.ScheduleSlots.AsNoTracking()
-            .Where(s => s.DayOfWeek == todayDayOfWeek)
-            .Include(s => s.Teacher)
-            .Include(s => s.Subject)
-            .Include(s => s.Classroom)
-            .ToListAsync(cancellationToken);
+        var todaySlotsCount = await dbContext.ScheduleSlots.AsNoTracking()
+            .CountAsync(s => s.DayOfWeek == todayDayOfWeek, cancellationToken);
 
         var activeClassroomsCount = await dbContext.Classrooms.AsNoTracking().CountAsync(cancellationToken);
         var expectedSlotsPerClassroom = 8;
         var totalExpectedSlots = activeClassroomsCount * expectedSlotsPerClassroom;
 
-        decimal todayOccupancyRate = totalExpectedSlots > 0 ? Math.Min(1.0m, (decimal)todaySlots.Count / totalExpectedSlots) : 0m;
+        decimal todayOccupancyRate = totalExpectedSlots > 0 ? Math.Min(1.0m, (decimal)todaySlotsCount / totalExpectedSlots) : 0m;
 
         var nowTime = TimeOnly.FromTimeSpan(now.TimeOfDay);
-        var nextClasses = todaySlots
-            .Where(s => s.EndTime > nowTime)
+        var nextClasses = await dbContext.ScheduleSlots.AsNoTracking()
+            .Where(s => s.DayOfWeek == todayDayOfWeek && s.EndTime > nowTime)
             .OrderBy(s => s.StartTime)
             .Take(4)
             .Select(s => new NextClassDto(
@@ -115,7 +117,7 @@ public class GetDirectorDashboardQueryHandler(
                 s.Teacher.FullName,
                 s.RoomNumber ?? "-",
                 s.Classroom.Name))
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         return new DirectorDashboardDto(
             new EnrollmentStatsDto(boys + girls, boys, girls),

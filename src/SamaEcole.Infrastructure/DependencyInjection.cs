@@ -4,6 +4,7 @@ using SamaEcole.Application.Finance.Common;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Notifications;
 using SamaEcole.Application.Subscriptions;
+using SamaEcole.Infrastructure.Caching;
 using SamaEcole.Infrastructure.Documents;
 using SamaEcole.Infrastructure.Files;
 using SamaEcole.Infrastructure.Finance;
@@ -30,6 +31,9 @@ public static class DependencyInjection
     /// <summary>Sous-section « Subscriptions:Lifecycle » (voir SubscriptionLifecycleSettings et .env.example).</summary>
     private const string SubscriptionLifecycleSettingsSection = "Subscriptions:Lifecycle";
 
+    /// <summary>Sous-section « Kpi:Cache » (voir KpiCacheSettings et .env.example).</summary>
+    private const string KpiCacheSettingsSection = "Kpi:Cache";
+
     /// <param name="isDevelopment">
     /// Vient de <c>IHostEnvironment.IsDevelopment()</c> (résolu dans Program.cs, seul endroit qui
     /// connaît l'environnement d'hébergement) : jamais dérivé d'une variable de configuration
@@ -43,10 +47,17 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-        // Aucun cache applicatif (Redis) n'est encore consommé en code à ce jour — enregistré par
-        // anticipation (Volume_6_Dev_Guide.md : Redis prévu dès la V1) pour qu'un futur ajout de cache
-        // n'ait JAMAIS à composer une clé "à la main" : voir ITenantCacheKeyFactory.
+        // Premier consommateur réel de ITenantCacheKeyFactory : cache des agrégats KPI (dashboards
+        // Finance/Directeur) derrière IMemoryCache. Le remplacement futur par Redis (IDistributedCache,
+        // Volume_6_Dev_Guide.md) se limite à une nouvelle implémentation de IKpiCacheService — aucun
+        // handler ne dépend de IMemoryCache directement.
         services.AddScoped<ITenantCacheKeyFactory, TenantCacheKeyFactory>();
+
+        services.AddMemoryCache();
+        var kpiCacheSettings = configuration.GetSection(KpiCacheSettingsSection).Get<KpiCacheSettings>()
+                                ?? new KpiCacheSettings();
+        services.AddSingleton(kpiCacheSettings);
+        services.AddScoped<IKpiCacheService, MemoryKpiCacheService>();
 
         // Authentification (ticket JGK-A04).
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));

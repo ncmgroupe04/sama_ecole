@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Net.Http.Headers;
 using Serilog;
 using Serilog.Formatting.Compact;
 
@@ -396,7 +397,23 @@ if (!app.Environment.IsDevelopment())
 // moteur d'aperçu PDF (pdf-preview.js) échouerait à charger PDF.js pour TOUS les documents.
 var staticFileContentTypes = new FileExtensionContentTypeProvider();
 staticFileContentTypes.Mappings[".mjs"] = "text/javascript";
-app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticFileContentTypes }); // sert wwwroot/css/site.css compilé depuis Tailwind (Décision D-13)
+app.UseStaticFiles(new StaticFileOptions // sert wwwroot/css/site.css compilé depuis Tailwind (Décision D-13)
+{
+    ContentTypeProvider = staticFileContentTypes,
+    OnPrepareResponse = ctx =>
+    {
+        // asp-append-version="true" (posé sur tout <link>/<script> CSS/JS de _Layout.cshtml et
+        // _AuthLayout.cshtml) fait varier l'URL (`?v=<hash de contenu>`) à chaque changement de
+        // fichier : un cache immuable d'un an n'y est donc jamais dangereux, l'URL change d'elle-même
+        // au prochain déploiement. Sans ce paramètre `v` (favicon, manifest.json, images non
+        // versionnées), la même immuabilité rendrait une mise à jour invisible pendant un an — ces
+        // requêtes reçoivent une politique bien plus courte.
+        var headers = ctx.Context.Response.GetTypedHeaders();
+        headers.CacheControl = ctx.Context.Request.Query.ContainsKey("v")
+            ? new CacheControlHeaderValue { Public = true, MaxAge = TimeSpan.FromDays(365), Extensions = { new NameValueHeaderValue("immutable") } }
+            : new CacheControlHeaderValue { Public = true, MaxAge = TimeSpan.FromHours(1) };
+    }
+});
 app.UseAuthentication();
 
 // Ticket JGK-I04 — après UseAuthentication (il lui faut context.User déjà résolu pour lire le claim

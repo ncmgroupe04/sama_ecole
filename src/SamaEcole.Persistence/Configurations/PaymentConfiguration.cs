@@ -55,6 +55,11 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.HasIndex(p => new { p.SchoolId, p.EnrollmentId })
             .HasDatabaseName("IX_payments_SchoolId_EnrollmentId");
 
+        // Dashboard Finance : 3 SumAsync par plage de date (jour/mois/année), toujours filtrés
+        // Status != Cancelled — sans cet index, ces requêtes scannent toute la table par école.
+        builder.HasIndex(p => new { p.SchoolId, p.Status, p.PaidAt })
+            .HasDatabaseName("IX_payments_SchoolId_Status_PaidAt");
+
         builder.HasOne<School>()
             .WithMany()
             .HasForeignKey(p => p.SchoolId)

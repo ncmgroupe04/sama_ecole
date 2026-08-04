@@ -14,7 +14,8 @@ public class SubmitAttendanceSheetCommandHandler(
     ITenantProvider tenantProvider,
     ICurrentUserService currentUser,
     AttendanceScopeAuthorizer scopeAuthorizer,
-    IPublisher publisher)
+    IPublisher publisher,
+    IKpiCacheService kpiCache)
     : IRequestHandler<SubmitAttendanceSheetCommand, SubmitAttendanceSheetResult>
 {
     public async Task<SubmitAttendanceSheetResult> Handle(SubmitAttendanceSheetCommand request, CancellationToken cancellationToken)
@@ -70,7 +71,7 @@ public class SubmitAttendanceSheetCommandHandler(
         // Écriture de la fiche ET des lignes élève dans UNE transaction : soit l'appel entier est
         // enregistré, soit rien. Une violation de l'index unique (classe, matière, date, créneau)
         // remonte en 409 via SaveChangesAsync (AGENTS.md règle #5), jamais un doublon silencieux.
-        return await dbContext.ExecuteInTransactionAsync(async ct =>
+        var result = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
             var sheet = new AttendanceSheet
             {
@@ -118,5 +119,11 @@ public class SubmitAttendanceSheetCommandHandler(
 
             return new SubmitAttendanceSheetResult(sheet.Id, request.Entries.Count);
         }, cancellationToken);
+
+        // Inconditionnel, pas seulement sur la branche Retard/Absence ci-dessus : un appel « tout
+        // présent » change aussi le taux de présence du dashboard Directeur.
+        kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
+
+        return result;
     }
 }

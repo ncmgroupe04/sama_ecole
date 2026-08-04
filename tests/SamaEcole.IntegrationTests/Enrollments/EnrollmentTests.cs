@@ -22,6 +22,16 @@ file sealed class FakeCurrentUserService(Guid userId) : ICurrentUserService
     public string? IpAddress => null;
 }
 
+/// <summary>Cache KPI désactivé : ces tests exercent le Handler directement, hors DI (donc hors le
+/// Kpi__Cache__Enabled=false posé par AuthApiFactory pour les tests fonctionnels).</summary>
+file sealed class NoOpKpiCacheService : IKpiCacheService
+{
+    public Task<T> GetOrCreateAsync<T>(string key, Func<CancellationToken, Task<T>> factory, CancellationToken cancellationToken) =>
+        factory(cancellationToken);
+
+    public void Invalidate(string key) { }
+}
+
 /// <summary>
 /// Ticket JGK-E01 — l'inscription calcule-t-elle RÉELLEMENT le bon montant, génère-t-elle le
 /// matricule sans trou, et l'isolation tient-elle ? On exerce le vrai Handler contre un PostgreSQL
@@ -86,7 +96,7 @@ public class EnrollmentTests : IAsyncLifetime
 
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db, Guid schoolId) =>
         new(db, new StubTenantProvider(schoolId), new FakeCurrentUserService(Caissier),
-            _db.NewGenerator(db), TimeProvider.System);
+            _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService());
 
     private static CreateEnrollmentCommand NewStudentCommand(string fullName) => new()
     {

@@ -29,7 +29,8 @@ public class CreateEnrollmentCommandHandler(
     ITenantProvider tenantProvider,
     ICurrentUserService currentUser,
     IMatriculeGenerator matriculeGenerator,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IKpiCacheService kpiCache)
     : IRequestHandler<CreateEnrollmentCommand, EnrollmentReceiptDto>
 {
     public async Task<EnrollmentReceiptDto> Handle(CreateEnrollmentCommand request, CancellationToken cancellationToken)
@@ -61,7 +62,7 @@ public class CreateEnrollmentCommandHandler(
                     "La classe indiquée n'existe pas dans votre établissement.")
             ]);
 
-        return await dbContext.ExecuteInTransactionAsync(async ct =>
+        var receipt = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
             var (student, matricule) = request.Type == EnrollmentType.NewEnrollment
                 ? await CreateStudentAsync(schoolId, request, ct)
@@ -173,6 +174,13 @@ public class CreateEnrollmentCommandHandler(
                 totalCollected,
                 totalCollected > 0 ? request.PaymentMethod.ToString() : null);
         }, cancellationToken);
+
+        // Une nouvelle inscription change à la fois le dû/attendu financier et les effectifs du
+        // dashboard Directeur — les deux caches doivent tomber, jamais un seul.
+        kpiCache.Invalidate(KpiCacheKeys.FinanceDashboard);
+        kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
+
+        return receipt;
     }
 
     /// <summary>

@@ -37,5 +37,10 @@ public class ScheduleSlotConfiguration : IEntityTypeConfiguration<ScheduleSlot>
         // Index
         builder.HasIndex(s => new { s.SchoolId, s.TeacherId });
         builder.HasIndex(s => new { s.SchoolId, s.ClassroomId });
+
+        // Dashboard Directeur : "prochains cours du jour" filtre sur DayOfWeek == aujourd'hui — sans
+        // index, la requête scanne tous les créneaux de l'école.
+        builder.HasIndex(s => new { s.SchoolId, s.DayOfWeek })
+            .HasDatabaseName("IX_schedule_slots_SchoolId_DayOfWeek");
     }
 }

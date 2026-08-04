@@ -41,13 +41,17 @@ public record RecentPaymentDto(
     string Method,
     DateTimeOffset PaidAt);
 
-public class GetFinanceDashboardQueryHandler(IApplicationDbContext dbContext, TimeProvider timeProvider)
+public class GetFinanceDashboardQueryHandler(
+    IApplicationDbContext dbContext, TimeProvider timeProvider, IKpiCacheService kpiCache)
     : IRequestHandler<GetFinanceDashboardQuery, FinanceDashboardDto>
 {
     /// <summary>Combien de derniers versements affichés sous les cartes KPI (docs/design-references/dashboard-reference.jpg).</summary>
     private const int RecentPaymentsCount = 10;
 
-    public async Task<FinanceDashboardDto> Handle(GetFinanceDashboardQuery request, CancellationToken cancellationToken)
+    public Task<FinanceDashboardDto> Handle(GetFinanceDashboardQuery request, CancellationToken cancellationToken) =>
+        kpiCache.GetOrCreateAsync(KpiCacheKeys.FinanceDashboard, ct => ComputeAsync(ct), cancellationToken);
+
+    private async Task<FinanceDashboardDto> ComputeAsync(CancellationToken cancellationToken)
     {
         // "Aujourd'hui" vient de TimeProvider, jamais de DateTime.UtcNow en dur : les tests contrôlent
         // l'horloge exactement comme CreateEnrollmentCommandHandler.
@@ -93,21 +97,21 @@ public class GetFinanceDashboardQueryHandler(IApplicationDbContext dbContext, Ti
             int monthIndex = (now.Year - activeYear.StartDate.Year) * 12 + now.Month - activeYear.StartDate.Month + 1;
             if (monthIndex >= 1)
             {
-                var feeLines = await dbContext.EnrollmentFeeLines.AsNoTracking()
-                    .Where(l => dbContext.Enrollments.Any(e => e.Id == l.EnrollmentId && e.Status != EnrollmentStatus.Cancelled && e.SchoolYearId == activeYear.Id))
-                    .ToListAsync(cancellationToken);
+                // Agrégation SQL plutôt qu'un ToListAsync + foreach : les deux conditions ne sont PAS
+                // exclusives (une ligne récurrente de 1 mois au monthIndex 1 compte dans les deux sommes,
+                // comme dans la boucle d'origine), donc deux SumAsync indépendants plutôt qu'un if/else.
+                var relevantLines = dbContext.EnrollmentFeeLines.AsNoTracking()
+                    .Where(l => dbContext.Enrollments.Any(e => e.Id == l.EnrollmentId && e.Status != EnrollmentStatus.Cancelled && e.SchoolYearId == activeYear.Id));
 
-                foreach (var line in feeLines)
-                {
-                    if (monthIndex == 1 && (!line.IsRecurring || line.Months <= 1))
-                    {
-                        expectedThisMonth += line.LineTotal;
-                    }
-                    if (line.IsRecurring && line.Months >= monthIndex)
-                    {
-                        expectedThisMonth += line.UnitAmount;
-                    }
-                }
+                var oneTimeTotal = monthIndex == 1
+                    ? await relevantLines.Where(l => !l.IsRecurring || l.Months <= 1)
+                        .SumAsync(l => (decimal?)l.LineTotal, cancellationToken) ?? 0m
+                    : 0m;
+
+                var recurringTotal = await relevantLines.Where(l => l.IsRecurring && l.Months >= monthIndex)
+                    .SumAsync(l => (decimal?)l.UnitAmount, cancellationToken) ?? 0m;
+
+                expectedThisMonth = oneTimeTotal + recurringTotal;
             }
         }
 

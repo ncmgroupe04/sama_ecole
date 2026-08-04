@@ -263,6 +263,11 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // seule (SubscriptionLifecycleHostedService, ticket JGK-B03). Le worker est testé pour
         // lui-même via ISubscriptionAdminStore.ExpireOverdueSubscriptionsAsync.
         Environment.SetEnvironmentVariable("Subscriptions__Lifecycle__Enabled", "false");
+
+        // COUPE le cache KPI des dashboards (MemoryKpiCacheService). Sans cela, un dashboard lu deux
+        // fois dans la même classe de tests refléterait la valeur mise en cache par une assertion
+        // précédente plutôt que l'état réel après une mutation.
+        Environment.SetEnvironmentVariable("Kpi__Cache__Enabled", "false");
     }
 
     private static void ClearEnvironment()
@@ -276,7 +281,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "RateLimiting__Registration__WindowMinutes", "RateLimiting__Login__PermitLimit",
                      "RateLimiting__Login__WindowMinutes", "RateLimiting__PasswordReset__PermitLimit",
                      "RateLimiting__PasswordReset__WindowMinutes", "Sms__Queue__Enabled",
-                     "Finance__DebtorAging__Enabled", "Subscriptions__Lifecycle__Enabled"
+                     "Finance__DebtorAging__Enabled", "Subscriptions__Lifecycle__Enabled",
+                     "Kpi__Cache__Enabled"
                  })
         {
             Environment.SetEnvironmentVariable(key, null);

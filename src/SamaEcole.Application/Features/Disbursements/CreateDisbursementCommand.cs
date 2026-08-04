@@ -43,7 +43,8 @@ public class CreateDisbursementCommandValidator : AbstractValidator<CreateDisbur
 
 public class CreateDisbursementCommandHandler(
     IApplicationDbContext context,
-    ITenantProvider tenantProvider) : IRequestHandler<CreateDisbursementCommand, Guid>
+    ITenantProvider tenantProvider,
+    IKpiCacheService kpiCache) : IRequestHandler<CreateDisbursementCommand, Guid>
 {
     public async Task<Guid> Handle(CreateDisbursementCommand request, CancellationToken cancellationToken)
     {
@@ -63,6 +64,8 @@ public class CreateDisbursementCommandHandler(
 
         context.Disbursements.Add(disbursement);
         await context.SaveChangesAsync(cancellationToken);
+
+        kpiCache.Invalidate(KpiCacheKeys.FinanceDashboard);
 
         return disbursement.Id;
     }

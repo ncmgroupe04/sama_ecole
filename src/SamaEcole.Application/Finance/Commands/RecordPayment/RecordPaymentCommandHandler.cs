@@ -28,7 +28,8 @@ public class RecordPaymentCommandHandler(
     ICurrentUserService currentUser,
     IMatriculeGenerator matriculeGenerator,
     ISmsDispatcher smsDispatcher,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IKpiCacheService kpiCache)
     : IRequestHandler<RecordPaymentCommand, RecordPaymentResult>
 {
     public async Task<RecordPaymentResult> Handle(RecordPaymentCommand request, CancellationToken cancellationToken)
@@ -138,6 +139,10 @@ public class RecordPaymentCommandHandler(
                 enrollment.TotalDue - newAmountPaid,
                 status.ToString());
         }, cancellationToken);
+
+        // Après commit seulement : un versement qui roll back ne doit pas invalider un cache qui restait
+        // pourtant correct. Un cache miss superflu est sans conséquence, contrairement à l'inverse.
+        kpiCache.Invalidate(KpiCacheKeys.FinanceDashboard);
 
         await NotifyGuardianAsync(schoolId, request.EnrollmentId, result, cancellationToken);
 
