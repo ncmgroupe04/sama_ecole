@@ -43,31 +43,34 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
             // A5 paysage : le format d'un reçu de caisse d'école, deux par feuille A4 à l'impression.
             page.Size(PageSizes.A5.Landscape());
             page.Margin(8, Unit.Millimetre);
-            page.DefaultTextStyle(text => text.FontSize(8).FontColor(Colors.Black));
+            // 7.5pt (au lieu de 8) : gagne de la hauteur sur toutes les lignes qui n'ont pas de taille
+            // explicite (identité, reste à payer, signatures) — nécessaire dès que le tableau des frais
+            // dépasse 3-4 lignes, sous peine de déborder de l'A5 paysage (148 mm de haut, marges incluses).
+            page.DefaultTextStyle(text => text.FontSize(7.5f).FontColor(Colors.Black));
 
             page.Content().Column(column =>
             {
                 ComposeHeader(column);
 
-                column.Item().PaddingTop(6).AlignCenter()
+                column.Item().PaddingTop(4).AlignCenter()
                     .Text($"ATTESTATION D'INSCRIPTION & D'ADMISSION n° {NoBreakText.NoBreak(receipt.ReceiptNumber)}")
-                    .Bold().Italic().FontSize(11);
+                    .Bold().Italic().FontSize(10);
 
-                column.Item().PaddingTop(8).Element(ComposeDeclaration);
+                column.Item().PaddingTop(4).Element(ComposeDeclaration);
 
                 // Corps en deux colonnes, l'écart central évitant que les deux blocs ne se touchent.
-                column.Item().PaddingTop(8).Row(row =>
+                column.Item().PaddingTop(4).Row(row =>
                 {
                     row.RelativeItem().Element(ComposeInfoBlock);
                     row.ConstantItem(14);
                     row.RelativeItem().Element(ComposeFeesTable);
                 });
 
-                column.Item().PaddingTop(6).AlignCenter()
+                column.Item().PaddingTop(4).AlignCenter()
                     .Text("Montant à régler auprès du service de la comptabilité pour validation définitive du paiement.")
-                    .Bold().Italic().FontSize(8);
+                    .Bold().Italic().FontSize(7.5f);
 
-                column.Item().PaddingTop(10).Element(ComposeSignatures);
+                column.Item().PaddingTop(4).Element(ComposeSignatures);
             });
         });
     }
@@ -80,9 +83,9 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
     private void ComposeDeclaration(IContainer container)
     {
         container.Background(Colors.Grey.Lighten4).Border(0.75f).BorderColor(Colors.Grey.Darken1)
-            .Padding(8).Text(text =>
+            .Padding(5).Text(text =>
         {
-            text.DefaultTextStyle(style => style.FontSize(9));
+            text.DefaultTextStyle(style => style.FontSize(8.5f));
             text.Justify();
             text.Span("L'administration de l'établissement atteste que l'élève ");
             text.Span(receipt.StudentFullName).SemiBold();
@@ -159,7 +162,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
 
     private static void InfoRow(ColumnDescriptor column, string label, string value)
     {
-        column.Item().PaddingVertical(1.5f).Row(row =>
+        column.Item().PaddingVertical(1f).Row(row =>
         {
             row.ConstantItem(80).Text($"{label} :").FontColor(Colors.Grey.Darken2);
             row.RelativeItem().Text(value).SemiBold();
@@ -186,42 +189,44 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
 
                 table.Header(header =>
                 {
-                    header.Cell().Element(HeaderCell).Text("Désignation des frais").Bold();
-                    header.Cell().Element(HeaderCell).AlignRight().Text("Montant (FCFA)").Bold();
+                    header.Cell().Element(HeaderCell).Text("Désignation des frais").Bold().FontSize(8.5f);
+                    header.Cell().Element(HeaderCell).AlignRight().Text("Montant (FCFA)").Bold().FontSize(8.5f);
                 });
 
                 if (receipt.Lines.Count == 0)
                 {
-                    table.Cell().Element(BodyCell).Text("Aucun frais engagé").Italic().FontColor(Colors.Grey.Darken1);
-                    table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(0));
+                    table.Cell().Element(BodyCell).Text("Aucun frais engagé").Italic().FontColor(Colors.Grey.Darken1).FontSize(8.5f);
+                    table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(0)).FontSize(8.5f);
                 }
                 else
                 {
                     foreach (var line in receipt.Lines)
                     {
-                        table.Cell().Element(BodyCell).Text(LineLabel(line));
-                        table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(line.LineTotal));
+                        table.Cell().Element(BodyCell).Text(LineLabel(line)).FontSize(8.5f);
+                        table.Cell().Element(BodyCell).AlignRight().Text(FormatMoney(line.LineTotal)).FontSize(8.5f);
                     }
                 }
 
-                table.Cell().Element(TotalCell).Text("TOTAL ENGAGÉ").Bold();
-                table.Cell().Element(TotalCell).AlignRight().Text(FormatMoney(receipt.TotalDue)).Bold();
+                table.Cell().Element(TotalCell).Text("TOTAL ENGAGÉ").Bold().FontSize(8.5f);
+                table.Cell().Element(TotalCell).AlignRight().Text(FormatMoney(receipt.TotalDue)).Bold().FontSize(8.5f);
             });
 
-            column.Item().PaddingTop(3).AlignRight().Text(text =>
+            column.Item().PaddingTop(2).AlignRight().Text(text =>
             {
-                text.DefaultTextStyle(style => style.FontSize(7.5f));
+                text.DefaultTextStyle(style => style.FontSize(7));
                 text.Span("Reste à payer : ").FontColor(Colors.Grey.Darken2);
                 text.Span($"{FormatMoney(receipt.RemainingBalance)} FCFA").Bold();
             });
         });
 
+        // PaddingVertical(2) (au lieu de 3) : chaque ligne de frais gagne ~2pt, ce qui compte vite sur un
+        // dossier à 5-6 lignes (mensualité, inscription, cantine, tenue, transport…).
         static IContainer HeaderCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(5);
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).Background(Colors.Grey.Lighten3).PaddingVertical(2).PaddingHorizontal(4);
         static IContainer BodyCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(5);
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(2).PaddingHorizontal(4);
         static IContainer TotalCell(IContainer c) =>
-            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(3).PaddingHorizontal(5);
+            c.Border(0.75f).BorderColor(Colors.Grey.Darken1).PaddingVertical(2).PaddingHorizontal(4);
     }
 
     /// <summary>
@@ -239,7 +244,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
             row.RelativeItem().Column(left =>
             {
                 left.Item().Text(FaitA()).Italic();
-                left.Item().PaddingTop(6).Text("[Cadre Cachet Officiel]").FontSize(7).FontColor(Colors.Grey.Medium);
+                left.Item().PaddingTop(4).Text("[Cadre Cachet Officiel]").FontSize(7).FontColor(Colors.Grey.Medium);
             });
 
             row.RelativeItem().AlignRight().Text("Signature du Directeur").Italic();

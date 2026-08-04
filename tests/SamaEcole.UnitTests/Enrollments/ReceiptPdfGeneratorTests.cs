@@ -162,4 +162,25 @@ public class ReceiptPdfGeneratorTests
         act.Should().NotThrow();
         ShouldBeAValidPdf(new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(Receipt(), logo: unreadable));
     }
+
+    /// <summary>
+    /// Ticket de compactage A5 : un dossier chargé (8 lignes de frais + tuteur renseigné) ne doit JAMAIS
+    /// déborder sur une deuxième page — la mise en page (padding/police) est calibrée pour ça. On ne
+    /// référence aucune bibliothèque d'extraction PDF (même raison que <see cref="Generate_Is_Robust_To_An_Accelerated_Bridge_Class"/>) :
+    /// le nombre de pages se lit directement dans l'objet racine `/Type /Pages /Count N` du PDF généré,
+    /// une structure stable pour les documents à page unique de QuestPDF/SkiaSharp.
+    /// </summary>
+    [Fact]
+    public void Generate_Stays_On_A_Single_Page_With_Many_Fee_Lines()
+    {
+        var manyLines = Enumerable.Range(1, 8)
+            .Select(i => new EnrollmentFeeLineDto($"Frais {i}", IsRecurring: i % 2 == 0, UnitAmount: 1000m * i, Months: 9, LineTotal: 9000m * i))
+            .ToList();
+
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(Receipt(lines: manyLines), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+        Encoding.ASCII.GetString(pdf).Should().Contain("/Count 1",
+            "un dossier avec beaucoup de frais doit rester sur une seule page A5 paysage, jamais déborder sur une deuxième");
+    }
 }
