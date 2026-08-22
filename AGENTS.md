@@ -13,7 +13,9 @@ dotnet test                                    # tous les tests
 dotnet test --filter Category=MultiTenant      # test critique d'isolation (docs/Volume_8_Test_Strategy.md §5)
 dotnet ef migrations add <Nom> -p src/SamaEcole.Persistence -s src/SamaEcole.Web
 dotnet ef database update -p src/SamaEcole.Persistence -s src/SamaEcole.Web
-docker compose up -d                           # Postgres + Redis en local
+docker compose up -d                           # Postgres + Redis en local (laisse le port 5000 libre)
+docker compose --profile app up -d             # idem + l'api conteneurisée sur le port 5000
+dotnet run --project src/SamaEcole.Web         # lance l'app (pas de `dotnet run` nu : aucun projet à la racine)
 npm install --prefix src/SamaEcole.Web        # dépendances Tailwind CSS
 npm run build:css --prefix src/SamaEcole.Web  # compile wwwroot/css/site.css depuis Tailwind
 npm run watch:css --prefix src/SamaEcole.Web  # recompile en continu pendant le développement

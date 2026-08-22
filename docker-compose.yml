@@ -56,6 +56,10 @@ services:
       context: .
       dockerfile: src/SamaEcole.Web/Dockerfile
     container_name: sama-ecole-api
+    # Profil "app" : `docker compose up -d` ne lance que Postgres + Redis (+ migrate), conformément
+    # à AGENTS.md §Commandes, et laisse le port 5000 libre pour `dotnet run`.
+    # Pour lancer aussi le conteneur api : `docker compose --profile app up -d`.
+    profiles: ["app"]
     depends_on:
       postgres:
         condition: service_healthy
