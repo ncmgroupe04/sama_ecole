@@ -16,5 +16,16 @@ public class UpdateSubjectCommandValidator : AbstractValidator<UpdateSubjectComm
         RuleFor(x => x.Coefficient)
             .GreaterThan(0).WithMessage("Le coefficient doit être supérieur à zéro.")
             .LessThanOrEqualTo(20).WithMessage("Le coefficient annoncé semble irréaliste (maximum 20).");
+
+        // Mêmes bornes qu'à la création, à la lettre (SubjectStructureRules) : une grille enregistrée
+        // doit rester modifiable.
+        RuleFor(x => x.MaxScore)
+            .Must(SubjectStructureRules.IsValidMaxScore).WithMessage(SubjectStructureRules.MaxScoreMessage);
+
+        RuleFor(x => x.DisplayOrder)
+            .InclusiveBetween(0, 999).WithMessage("L'ordre d'affichage doit être compris entre 0 et 999.");
+
+        RuleFor(x => x.Column1Header).MaximumLength(40).NoHtml();
+        RuleFor(x => x.Column2Header).MaximumLength(40).NoHtml();
     }
 }

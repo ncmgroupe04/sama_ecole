@@ -33,12 +33,29 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
             .FirstOrDefaultAsync(cancellationToken);
         var isPrimaire = cycle is { } c && c.UsesSimplifiedGrading();
 
+        // Barème du cycle : sert de repli aux matières sans MaxScore propre (toutes celles antérieures
+        // aux grilles APC) ET de barème d'expression de la moyenne générale, vers lequel chaque ligne
+        // est ramenée avant pondération.
+        var cycleScale = GradingScaleGuard.ScaleForCycle(cycle);
+
         var rows = await (
             from g in dbContext.Grades.AsNoTracking()
             join s in dbContext.Subjects.AsNoTracking() on g.SubjectId equals s.Id
             where g.StudentId == request.StudentId && g.TermId == request.TermId
-            select new { g.SubjectId, s.Name, s.Coefficient, g.EvaluationType, g.Value }
-            ).ToListAsync(cancellationToken);
+            select new
+            {
+                g.SubjectId,
+                s.Name,
+                s.Coefficient,
+                s.MaxScore,
+                s.ParentSubjectId,
+                ParentName = dbContext.Subjects.AsNoTracking()
+                    .Where(p => p.Id == s.ParentSubjectId)
+                    .Select(p => p.Name)
+                    .FirstOrDefault(),
+                g.EvaluationType,
+                g.Value
+            }).ToListAsync(cancellationToken);
 
         // Moyenne d'une matière : sur ce qui a été saisi (Devoir seul, Composition seule, ou les deux) —
         // la saisie progresse au fil du trimestre, exiger les deux figerait l'écran tant qu'il manque
@@ -46,7 +63,7 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
         // Formule PARTAGÉE avec GetStudentDetailQueryHandler (JGK-D02) via GradeCalculator — une seule
         // source de vérité pour la moyenne d'une matière et la moyenne générale pondérée.
         var subjects = rows
-            .GroupBy(r => new { r.SubjectId, r.Name, r.Coefficient })
+            .GroupBy(r => new { r.SubjectId, r.Name, r.Coefficient, r.MaxScore, r.ParentSubjectId, r.ParentName })
             .Select(g =>
             {
                 var devoir1 = g.Where(r => r.EvaluationType == EvaluationType.Devoir1).Select(r => (decimal?)r.Value).FirstOrDefault();
@@ -62,6 +79,15 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
                 // n'a pas de système de coefficients). Secondaire : le coefficient stocké s'applique.
                 var coefficient = isPrimaire ? 1m : g.Key.Coefficient;
 
+                // Barème PROPRE à la ligne (grilles APC : /40, /60, /24, /16…), à défaut celui du cycle.
+                var maxScore = GradeCalculator.EffectiveMaxScore(g.Key.MaxScore, cycleScale);
+
+                // La moyenne reste BRUTE, sur le barème de la ligne : c'est la note saisie, celle
+                // qu'imprime la colonne « Notes » en face de son « Sur ». Seuls les POINTS entrant dans
+                // la moyenne générale sont ramenés au barème du bulletin — deux lignes /60 et /20 y
+                // pèsent alors leur coefficient, et rien de plus.
+                var weightedPoints = GradeCalculator.Rebase(average, maxScore, cycleScale) * coefficient;
+
                 return new SubjectGradeDto(
                     g.Key.SubjectId,
                     g.Key.Name,
@@ -71,13 +97,21 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
                     devoirAverage,
                     average,
                     coefficient,
-                    average * coefficient);
+                    weightedPoints,
+                    maxScore,
+                    g.Key.ParentSubjectId,
+                    g.Key.ParentName);
             })
             .OrderBy(s => s.SubjectName)
             .ToList();
 
+        // Sur la moyenne RAMENÉE au barème du cycle, jamais sur la moyenne brute : c'est la seule façon
+        // qu'une grille APC mêlant /60, /40, /24 et /16 produise une moyenne générale lisible sur le
+        // barème du bulletin. Quand aucune matière ne fixe son propre barème — le cas de toutes les
+        // données existantes — la transposition est l'identité et le résultat est celui d'avant.
         var (totalCoefficients, totalPoints, generalAverageOrNull) =
-            GradeCalculator.WeightedGeneralAverage(subjects.Select(s => ((decimal?)s.Average, s.Coefficient)));
+            GradeCalculator.WeightedGeneralAverage(subjects.Select(s =>
+                ((decimal?)GradeCalculator.Rebase(s.Average, s.MaxScore, cycleScale), s.Coefficient)));
         var generalAverage = generalAverageOrNull ?? 0m;
 
         // Aucune matière notée : rien à qualifier, jamais une mention par défaut trompeuse. Le Primaire

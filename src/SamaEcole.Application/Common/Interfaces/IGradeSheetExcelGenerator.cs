@@ -10,7 +10,13 @@ namespace SamaEcole.Application.Common.Interfaces;
 /// </summary>
 public interface IGradeSheetExcelGenerator
 {
-    byte[] Generate(IReadOnlyList<GradeSheetStudentRow> rows, int gradingScale);
+    /// <summary>
+    /// <paramref name="gradingScale"/> est le barème de la MATIÈRE visée — celui que l'école lui a
+    /// fixé (grilles par compétences : /40, /60, /24…) ou, à défaut, celui du cycle de la classe. Il
+    /// gouverne à la fois l'en-tête des colonnes et la validation Excel des cellules, qui doivent dire
+    /// la même borne que celle appliquée à la réimportation.
+    /// </summary>
+    byte[] Generate(IReadOnlyList<GradeSheetStudentRow> rows, decimal gradingScale);
 }
 
 /// <summary>Une ligne de la feuille à générer : élève + ses notes déjà saisies (null si pas encore renseignée).</summary>

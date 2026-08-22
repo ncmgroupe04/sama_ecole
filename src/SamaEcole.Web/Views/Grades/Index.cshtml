@@ -32,7 +32,7 @@
  <label for="grades-subject" class="form-label">Matière</label>
  <select-field id="grades-subject" model="selectedSubjectId" on-change="reload()"
  placeholder="Sélectionnez une matière…"
- options-expr="[{value:'', label:'Sélectionnez une matière…'}].concat(subjects.map(s => ({value: s.id, label: s.name})))" />
+ options-expr="[{value:'', label:'Sélectionnez une matière…'}].concat(gradableSubjects.map(s => ({value: s.id, label: subjectLabel(s)})))" />
  </div>
  <div>
  <label for="grades-term" class="form-label">Trimestre</label>

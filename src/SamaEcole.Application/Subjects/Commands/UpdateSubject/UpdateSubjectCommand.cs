@@ -12,7 +12,30 @@ namespace SamaEcole.Application.Subjects.Commands.UpdateSubject;
 /// <c>UpdateSubjectResult</c> (et non <c>SubjectResult</c>, déjà pris par CreateSubjectCommand) pour
 /// éviter toute ambiguïté de type dans SubjectsController.
 /// </summary>
-public record UpdateSubjectCommand(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion)
+/// <remarks>
+/// Les champs de structure (<paramref name="ParentSubjectId"/> … <paramref name="Column2Header"/>) sont
+/// tous OPTIONNELS et à leur valeur neutre par défaut : l'appel d'origine — nom, niveau, coefficient —
+/// continue de compiler et de se comporter exactement comme avant.
+/// </remarks>
+public record UpdateSubjectCommand(
+    Guid Id,
+    string Name,
+    string Level,
+    decimal Coefficient,
+    uint RowVersion,
+    Guid? ParentSubjectId = null,
+    decimal? MaxScore = null,
+    int DisplayOrder = 0,
+    string? Column1Header = null,
+    string? Column2Header = null)
     : IRequest<UpdateSubjectResult>;
 
-public record UpdateSubjectResult(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion);
+public record UpdateSubjectResult(
+    Guid Id,
+    string Name,
+    string Level,
+    decimal Coefficient,
+    uint RowVersion,
+    Guid? ParentSubjectId = null,
+    decimal? MaxScore = null,
+    int DisplayOrder = 0);

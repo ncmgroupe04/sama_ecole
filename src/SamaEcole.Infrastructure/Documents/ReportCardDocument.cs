@@ -89,9 +89,16 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                     column.Item().Element(ComposeAcceleratedMention);
                 }
                 column.Item().Element(ComposeIdentity);
-                // Primaire (/10) : tableau épuré sans coefficients/appréciations et SANS rangée de
-                // distinctions du conseil. Secondaire (/20) : rendu d'origine, strictement inchangé.
-                column.Item().PaddingTop(2).Element(IsPrimaire ? ComposeGradesTablePrimaire : ComposeGradesTable);
+                // Trois tableaux possibles, dans cet ordre de priorité :
+                //   1. la GRILLE configurée par l'école (domaines → activités, barèmes propres), dès
+                //      qu'elle existe pour le niveau de la classe — elle est le choix explicite de
+                //      l'établissement et prime sur la déduction par cycle ;
+                //   2. Primaire (/10) : tableau épuré sans coefficients/appréciations ;
+                //   3. Secondaire (/20) : rendu d'origine, strictement inchangé.
+                column.Item().PaddingTop(2).Element(
+                    reportCard.EvaluationStructure is not null ? ComposeGradesTableApc
+                    : IsPrimaire ? ComposeGradesTablePrimaire
+                    : ComposeGradesTable);
                 if (!IsPrimaire)
                 {
                     column.Item().Element(ComposeDisciplinaryMentionsRow);
@@ -372,6 +379,118 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             c.Border(RuleThickness).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(3);
         IContainer BodyCell(IContainer c) =>
             c.Border(0.5f).BorderColor(Colors.Black).PaddingVertical(rowPadding).PaddingHorizontal(3);
+        static IContainer TotalCell(IContainer c) =>
+            c.Border(RuleThickness).BorderColor(Colors.Black).PaddingVertical(2.5f).PaddingHorizontal(3);
+    }
+
+    /// <summary>
+    /// Tableau d'évaluation HIÉRARCHIQUE, celui des grilles par compétences du primaire (APC) : un
+    /// domaine en première colonne, ses activités en seconde, puis Notes / Sur / Appréciations.
+    ///
+    /// Tout y vient de la configuration de l'école (<see cref="EvaluationStructureDto"/>) : les libellés
+    /// des deux premières colonnes, le nombre de domaines, le nombre d'activités de chacun, et le barème
+    /// « Sur » propre à chaque ligne. RIEN n'est codé en dur — trois écoles aux grilles différentes
+    /// obtiennent trois tableaux différents du même code.
+    ///
+    /// La FUSION de la première colonne est calculée, pas devinée : <c>RowSpan(group.Lines.Count)</c>.
+    /// Un domaine sans activité — une matière simple au milieu d'une grille par ailleurs hiérarchique —
+    /// n'a rien à fusionner : son nom occupe alors les deux premières colonnes (ColumnSpan), et la ligne
+    /// s'imprime normalement. C'est la rétrocompatibilité attendue pour le secondaire.
+    ///
+    /// Les cases de notes NON SAISIES restent vides, comme sur les modèles officiels : un bulletin
+    /// imprimé en cours de trimestre montre la grille entière, pas seulement ce qui est déjà noté.
+    /// </summary>
+    private void ComposeGradesTableApc(IContainer container)
+    {
+        var structure = reportCard.EvaluationStructure!;
+
+        // Même principe que les deux autres tableaux : l'interligne se resserre à mesure que les lignes
+        // se multiplient, pour qu'une grille à 16 activités (le modèle CI-CP) tienne sur la page A5 sans
+        // qu'une grille à 5 lignes n'y flotte. Bornes plus basses qu'ailleurs : ces grilles sont, par
+        // construction, les plus longues du produit.
+        var rowPadding = Math.Clamp(20f / Math.Max(structure.LineCount, 1), 1.1f, 5f);
+
+        container.Table(table =>
+        {
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(2.1f);  // Domaines / Activités (libellé configurable)
+                columns.RelativeColumn(2.6f);  // Activités / Contrôles (libellé configurable)
+                columns.RelativeColumn(0.9f);  // Notes
+                columns.RelativeColumn(0.7f);  // Sur
+                columns.RelativeColumn(2.2f);  // Appréciations
+            });
+
+            table.Header(header =>
+            {
+                header.Cell().Element(HeaderCell).Text(structure.Column1Header).Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).Text(structure.Column2Header).Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Notes").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Sur").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).Text("Appréciations").Bold().FontSize(7);
+            });
+
+            foreach (var group in structure.Groups)
+            {
+                var hasActivities = group.Lines.Count > 0 && group.Lines[0].Label is not null;
+
+                for (var i = 0; i < group.Lines.Count; i++)
+                {
+                    var line = group.Lines[i];
+
+                    if (!hasActivities)
+                    {
+                        // Matière simple : le nom couvre les deux colonnes de libellés, aucune fusion
+                        // verticale — exactement la ligne qu'imprimerait un tableau plat.
+                        table.Cell().ColumnSpan(2).Element(BodyCell).Text(group.Name).Bold();
+                    }
+                    else if (i == 0)
+                    {
+                        // Le nom du domaine, une seule fois, fusionné sur la hauteur de ses activités.
+                        table.Cell().RowSpan((uint)group.Lines.Count).Element(GroupCell)
+                            .AlignMiddle().Text(group.Name).Bold();
+                        table.Cell().Element(BodyCell).Text(line.Label);
+                    }
+                    else
+                    {
+                        // Lignes suivantes : QuestPDF place automatiquement la cellule après la zone
+                        // occupée par le RowSpan ci-dessus — rien à réserver pour la première colonne.
+                        table.Cell().Element(BodyCell).Text(line.Label);
+                    }
+
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(line.Score));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(line.MaxScore));
+                    table.Cell().Element(BodyCell).Text(line.Appreciation ?? "");
+                }
+            }
+
+            // Pied du tableau : moyenne générale et rang, puis l'assiduité du trimestre — les mêmes
+            // informations que les deux autres tableaux, dans la MÊME table pour que les filets
+            // verticaux restent alignés.
+            table.Cell().ColumnSpan(3).Element(TotalCell)
+                .Text($"Moyenne : {FormatGrade(reportCard.GeneralAverage)} /{reportCard.GradingScale}").Bold();
+            table.Cell().Element(TotalCell).AlignCenter().Text("Rang").Bold();
+            table.Cell().Element(TotalCell).AlignCenter().Text(reportCard.GeneralRank.ToString()).Bold();
+
+            // Les TROIS compteurs d'assiduité, comme les deux autres tableaux — cinq colonnes suffisent
+            // tout juste, à condition que le dernier libellé porte sa valeur (« Abs. Tot : 2 ») plutôt
+            // que d'exiger une sixième case qui n'existe pas.
+            table.Cell().Element(TotalCell).AlignCenter().Text("Absences");
+            table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Absences));
+            table.Cell().Element(TotalCell).AlignCenter().Text("Retards");
+            table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Retards));
+            table.Cell().Element(TotalCell).AlignCenter()
+                .Text($"Abs. Tot : {FormatOptionalCount(reportCard.TotalAbsences)}");
+        });
+
+        static IContainer HeaderCell(IContainer c) =>
+            c.Border(RuleThickness).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(3);
+        IContainer BodyCell(IContainer c) =>
+            c.Border(0.5f).BorderColor(Colors.Black).PaddingVertical(rowPadding).PaddingHorizontal(3);
+        // La cellule fusionnée du domaine porte le filet ÉPAIS : c'est ce qui fait lire le groupe comme
+        // un bloc sur les modèles officiels, là où les activités sont séparées d'un simple trait fin.
+        static IContainer GroupCell(IContainer c) =>
+            c.Border(RuleThickness).BorderColor(Colors.Black).PaddingVertical(2).PaddingHorizontal(3);
         static IContainer TotalCell(IContainer c) =>
             c.Border(RuleThickness).BorderColor(Colors.Black).PaddingVertical(2.5f).PaddingHorizontal(3);
     }

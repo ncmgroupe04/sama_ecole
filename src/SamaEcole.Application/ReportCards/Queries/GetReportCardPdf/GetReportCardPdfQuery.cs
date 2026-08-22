@@ -28,6 +28,40 @@ public record ReportCardPdfResult(byte[] Content, string FileName);
 public record ReportCardTermRecap(string TermLabel, int Order, decimal? Average);
 
 /// <summary>
+/// UNE ligne imprimée de la grille d'évaluation : « P. Alphabétique | 10 | 10 | Excellent ».
+///
+/// <see cref="Label"/> est null quand la matière n'a pas d'activités (une matière simple dans une grille
+/// qui en compte par ailleurs) : son nom occupe alors les DEUX premières colonnes, sans regroupement.
+/// <see cref="Score"/> est null tant que rien n'est noté — la case s'imprime vide, comme sur les grilles
+/// vierges distribuées aux enseignants, jamais un zéro qui vaudrait échec.
+/// </summary>
+public record EvaluationLineDto(Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation);
+
+/// <summary>
+/// Un DOMAINE et ses lignes : la première colonne du tableau porte <see cref="Name"/> une seule fois,
+/// fusionnée sur toute la hauteur du groupe (RowSpan = <c>Lines.Count</c>).
+/// </summary>
+public record EvaluationGroupDto(Guid SubjectId, string Name, IReadOnlyList<EvaluationLineDto> Lines);
+
+/// <summary>
+/// La grille d'évaluation COMPLÈTE d'un bulletin — configurée par l'école (Subject.ParentSubjectId,
+/// MaxScore, DisplayOrder, Column1Header/Column2Header), et non déduite des notes saisies : le tableau
+/// imprime TOUTES les lignes de la grille du niveau, notées ou non, exactement comme les modèles
+/// officiels du primaire.
+///
+/// Null sur <see cref="ReportCardDto.EvaluationStructure"/> quand le niveau n'a aucune hiérarchie —
+/// le bulletin retombe alors sur ses tableaux d'origine (secondaire, primaire simple), inchangés.
+/// </summary>
+public record EvaluationStructureDto(
+    string Column1Header,
+    string Column2Header,
+    IReadOnlyList<EvaluationGroupDto> Groups)
+{
+    /// <summary>Nombre de lignes imprimées — ce qui dimensionne l'interligne du tableau sur la page A5.</summary>
+    public int LineCount => Groups.Sum(g => g.Lines.Count);
+}
+
+/// <summary>
 /// Toutes les données du bulletin, déjà résolues et classées — <see cref="ReportCardPdfGenerator"/> (ou
 /// son équivalent Infrastructure) n'a plus qu'à mettre en page, aucun calcul ne s'y trouve.
 ///
@@ -120,7 +154,12 @@ public record ReportCardDto(
     // Niveaux effectivement validés par cet élève au titre de l'année, une fois la décision du conseil
     // prononcée (ClassroomPromotion.ValidatedLevels) : DEUX pour un élève admis en classe passerelle, un
     // seul en classe ordinaire, aucun tant que le conseil n'a pas statué ou s'il ne l'a pas admis.
-    IReadOnlyList<string>? ValidatedLevels = null);
+    IReadOnlyList<string>? ValidatedLevels = null,
+
+    // Grille d'évaluation par compétences (APC) configurée par l'école pour le NIVEAU de la classe.
+    // Null — le cas de tout niveau dont les matières sont restées plates, c'est-à-dire de toutes les
+    // données antérieures à cette option — laisse le bulletin sur ses tableaux d'origine.
+    EvaluationStructureDto? EvaluationStructure = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -260,6 +299,14 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             s => s.SubjectId,
             s => GradeCalculator.MentionFor(s.Average, appreciationScale));
 
+        // Grille d'évaluation par compétences configurée pour le NIVEAU de la classe (domaines →
+        // activités, barèmes propres, entêtes de colonnes). Null si ce niveau n'en déclare aucune : le
+        // bulletin reprend alors ses tableaux d'origine. Les appréciations de ses lignes se calculent
+        // sur le POURCENTAGE de réussite, avec les mentions de l'école telles qu'elles sont stockées
+        // (/20) — pas les seuils transposés ci-dessus, qui supposent une note déjà sur gradingScale.
+        var evaluationStructure = await EvaluationStructureBuilder.BuildAsync(
+            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, cancellationToken);
+
         var (absences, retards, totalAbsences) = await CountAttendanceAsync(
             student.Id, student.ClassroomId, term, cancellationToken);
 
@@ -318,7 +365,9 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             // délibération que la clôture d'année (ClassroomPromotion) : le bulletin ne peut pas
             // annoncer un cursus que la promotion contredirait.
             ClassroomPromotion.AcceleratedPathLabel(classroom),
-            ClassroomPromotion.ValidatedLevels(classroom, remark?.CouncilDecision));
+            ClassroomPromotion.ValidatedLevels(classroom, remark?.CouncilDecision),
+
+            evaluationStructure);
 
         return dto;
     }

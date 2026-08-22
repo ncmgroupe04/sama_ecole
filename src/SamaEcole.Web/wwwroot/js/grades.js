@@ -87,9 +87,39 @@ document.addEventListener('alpine:init', () => {
         // reste l'autorité, ceci n'est qu'un garde-fou de saisie (attribut max) et un repère visuel.
         // La liste DOIT rester alignée sur UsesSimplifiedGrading : n'y voir que « Primaire » affichait
         // /20 en Maternelle, puis faisait rejeter la saisie par un 422 que rien n'annonçait à l'écran.
+        /**
+         * Plafond de saisie : celui de la MATIÈRE sélectionnée quand l'école lui en a fixé un
+         * (grilles par compétences du primaire : /40, /60, /24, /16…), et à défaut celui du cycle de
+         * la classe (Primaire /10, Collège & Lycée /20). Exactement la résolution du serveur
+         * (GradeCalculator.EffectiveMaxScore) : plafonner à /20 une ligne notée sur 40 ferait refuser
+         * ici, dans le navigateur, une note que l'API accepterait.
+         */
         get gradingScale() {
+            const subject = this.subjects.find(s => s.id === this.selectedSubjectId);
+            if (subject && subject.maxScore) return Number(subject.maxScore);
+
             const classroom = this.classrooms.find(c => c.id === this.selectedClassroomId);
             return classroom && SIMPLIFIED_GRADING_CYCLES.includes(classroom.cycle) ? 10 : 20;
+        },
+
+        /**
+         * Les matières NOTABLES : tout sauf les domaines d'une grille par compétences. Un domaine
+         * (« Lang & Com. », « Français ») ne fait que regrouper des lignes sur le bulletin — la note
+         * se saisit sur ses activités. Le serveur refuse d'ailleurs une note sur un domaine ; le
+         * proposer ici n'offrirait qu'une impasse.
+         */
+        get gradableSubjects() {
+            const domainIds = new Set(
+                this.subjects.filter(s => s.parentSubjectId).map(s => s.parentSubjectId));
+            return this.subjects.filter(s => !domainIds.has(s.id));
+        },
+
+        /** « Français › Ressources » : sans son domaine, « Ressources » apparaîtrait plusieurs fois
+         *  à l'identique dans la liste, une par domaine qui en porte une. */
+        subjectLabel(subject) {
+            if (!subject.parentSubjectId) return subject.name;
+            const domain = this.subjects.find(s => s.id === subject.parentSubjectId);
+            return domain ? `${domain.name} › ${subject.name}` : subject.name;
         },
 
         async init() {

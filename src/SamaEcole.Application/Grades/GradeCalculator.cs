@@ -1,3 +1,5 @@
+using SamaEcole.Domain.Entities;
+
 namespace SamaEcole.Application.Grades;
 
 /// <summary>
@@ -68,6 +70,48 @@ public static class GradeCalculator
     /// </summary>
     public static string? MentionFor(decimal average, IReadOnlyList<(string Label, decimal MinAverage)> mentions) =>
         mentions.FirstOrDefault(m => average >= m.MinAverage).Label;
+
+    /// <summary>
+    /// Barème réellement applicable à une LIGNE d'évaluation : celui que l'école a fixé sur la matière
+    /// (<see cref="Subject.MaxScore"/> — 10, 16, 24, 40, 60… des grilles APC du primaire) et, à défaut,
+    /// celui du cycle de la classe (<see cref="GradingScaleGuard.ScaleForCycle"/>).
+    ///
+    /// Le repli n'est pas un détail : <c>MaxScore</c> est NULL sur toutes les matières antérieures à
+    /// cette option, et une valeur par défaut fixe (20) y aurait discrètement relevé le plafond du
+    /// primaire de /10 à /20. Le null dit « suis le cycle », pas « pas de barème ».
+    ///
+    /// Une valeur nulle ou négative en base serait absurde (division par zéro dans
+    /// <see cref="Rebase"/>) : le repli la traite comme absente plutôt que de propager l'aberration
+    /// jusqu'au bulletin.
+    /// </summary>
+    public static decimal EffectiveMaxScore(decimal? subjectMaxScore, int cycleScale)
+        => subjectMaxScore is { } max && max > 0 ? max : cycleScale;
+
+    /// <summary>
+    /// Ramène une note à un barème cible : <c>note ÷ barème d'origine × barème cible</c>. C'est ce qui
+    /// rend comparables les lignes d'une grille APC, où 45/60 et 18/24 valent tous deux 15/20 — les
+    /// moyenner brutes ferait peser une ligne notée sur 60 trois fois plus qu'une ligne sur 20, sans que
+    /// l'école ne l'ait jamais demandé (le coefficient, lui, est déclaré).
+    ///
+    /// Barème d'origine nul ou négatif → la note est rendue TELLE QUELLE plutôt que de diviser par zéro.
+    /// </summary>
+    public static decimal Rebase(decimal value, decimal fromScale, decimal toScale) =>
+        fromScale > 0 ? value * toScale / fromScale : value;
+
+    /// <summary>
+    /// Appréciation d'une LIGNE d'évaluation d'après son pourcentage de réussite (<c>note ÷ barème</c>),
+    /// sur l'échelle de mentions de l'école — exprimée, elle, sur <see cref="MentionScales.Reference"/>
+    /// (/20). Passer par le pourcentage est ce qui permet à une même échelle de qualifier « Excellent »
+    /// un 10/10 comme un 48/60, sans dupliquer un barème d'appréciations par valeur de « Sur ».
+    ///
+    /// Null quand rien n'est encore noté : la case du bulletin reste vide, jamais une appréciation
+    /// attribuée à une note absente.
+    /// </summary>
+    public static string? AppreciationFor(
+        decimal? score, decimal maxScore, IReadOnlyList<(string Label, decimal MinAverage)> mentionsOnReferenceScale) =>
+        score is { } value
+            ? MentionFor(Rebase(value, maxScore, MentionScales.Reference), mentionsOnReferenceScale)
+            : null;
 }
 
 /// <summary>

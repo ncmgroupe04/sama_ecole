@@ -20,13 +20,17 @@ public class GradeSheetExcelGenerator : IGradeSheetExcelGenerator
     private const int HeaderRow = 2;
     private const int FirstDataRow = 3;
 
-    public byte[] Generate(IReadOnlyList<GradeSheetStudentRow> rows, int gradingScale)
+    public byte[] Generate(IReadOnlyList<GradeSheetStudentRow> rows, decimal gradingScale)
     {
+        // « 40 » et non « 40,00 » : le barème vient d'une colonne numeric(5,2), et son affichage brut
+        // ferait lire « DEVOIR 1 (/40,00) » à l'enseignant.
+        var scale = gradingScale.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
+
         using var workbook = new XLWorkbook();
         var sheet = workbook.Worksheets.Add("Notes");
 
         sheet.Cell(1, 1).Value =
-            $"Saisir des notes entre 0 et {gradingScale}. Laisser vide en cas d'absence. " +
+            $"Saisir des notes entre 0 et {scale}. Laisser vide en cas d'absence. " +
             "Ne modifiez pas les colonnes Matricule et Nom & Prénom.";
         sheet.Range(1, 1, 1, CompositionColumn).Merge();
         sheet.Cell(1, 1).Style.Font.Italic = true;
@@ -37,7 +41,7 @@ public class GradeSheetExcelGenerator : IGradeSheetExcelGenerator
 
         var headers = new[]
         {
-            "MATRICULE", "NOM & PRÉNOM", $"DEVOIR 1 (/{gradingScale})", $"DEVOIR 2 (/{gradingScale})", $"COMPOSITION (/{gradingScale})"
+            "MATRICULE", "NOM & PRÉNOM", $"DEVOIR 1 (/{scale})", $"DEVOIR 2 (/{scale})", $"COMPOSITION (/{scale})"
         };
         for (var col = 0; col < headers.Length; col++)
         {
@@ -65,7 +69,10 @@ public class GradeSheetExcelGenerator : IGradeSheetExcelGenerator
         // côté serveur à l'import (GradingScaleGuard) — jamais la seule ligne de défense.
         foreach (var col in new[] { Devoir1Column, Devoir2Column, CompositionColumn })
         {
-            sheet.Range(FirstDataRow, col, lastRow, col).SetDataValidation().Decimal.Between(0, gradingScale);
+            // ClosedXML exprime ses bornes de validation en double : la conversion est explicite plutôt
+            // que subie, et sans perte utile ici (un barème est un petit nombre à deux décimales).
+            sheet.Range(FirstDataRow, col, lastRow, col)
+                .SetDataValidation().Decimal.Between(0, (double)gradingScale);
         }
 
         sheet.Columns(1, headers.Length).AdjustToContents();

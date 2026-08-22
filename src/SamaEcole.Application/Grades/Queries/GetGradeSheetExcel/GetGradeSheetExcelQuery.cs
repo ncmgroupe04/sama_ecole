@@ -61,7 +61,12 @@ public class GetGradeSheetExcelQueryHandler(
             })
             .ToList();
 
-        var gradingScale = GradingScaleGuard.ScaleForCycle(classroom.Cycle);
+        // Barème de la MATIÈRE (grilles par compétences : /40, /60, /24…) et, à défaut, celui du cycle
+        // de la classe. C'est la borne qu'appliquera la réimportation : annoncer « /20 » sur une ligne
+        // notée sur 40 ferait refuser par Excel une note que l'API accepte.
+        var cycleScale = GradingScaleGuard.ScaleForCycle(classroom.Cycle);
+        var gradingScale = await GradingScaleGuard.ResolveMaxScoreAsync(
+            dbContext, request.SubjectId, cycleScale, cancellationToken);
         var content = generator.Generate(rows, gradingScale);
 
         return new GradeSheetExcelResult(content, $"Feuille-Notes-{classroom.Name}.xlsx");

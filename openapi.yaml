@@ -945,7 +945,9 @@ paths:
       description: >-
         Le coefficient relève de la notation : réservé au Directeur (Volume 7 §15). Une même matière
         peut exister à plusieurs niveaux avec des coefficients différents — l'unicité porte sur
-        (niveau, nom), pas sur le nom seul.
+        (niveau, DOMAINE PARENT, nom), pas sur le nom seul : « Ressources » existe légitimement sous
+        « Français » ET sous « Maths » dans la même grille, mais deux matières de premier niveau de
+        même nom au même niveau restent refusées en 409.
       requestBody:
         required: true
         content:
@@ -968,8 +970,15 @@ paths:
   /subjects/{id}:
     put:
       tags: [Subjects]
-      summary: Corriger le libellé/niveau/coefficient d'une matière déjà créée
-      description: 'Même permission que la création (délégation Secrétariat via SchoolSettings, ticket JGK-G02).'
+      summary: Corriger le libellé/niveau/coefficient/structure d'une matière déjà créée
+      description: >-
+        Même permission que la création (délégation Secrétariat via SchoolSettings, ticket JGK-G02).
+
+        REMPLACEMENT COMPLET : omettre un champ de structure le remet à sa valeur par défaut —
+        `parentSubjectId` absent détache l'activité de son domaine, `maxScore` absent lui rend le
+        barème du cycle. Renvoyez la matière entière, y compris les champs que vous ne modifiez pas.
+
+        Déplacer un DOMAINE vers un autre `level` emmène ses activités avec lui.
       parameters:
         - name: id
           in: path
@@ -988,12 +997,15 @@ paths:
               schema: { $ref: '#/components/schemas/Subject' }
         '403': { description: Réservé au Directeur (ou au Secrétariat si la délégation est activée) }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { description: Jeton de concurrence périmé, ou (niveau, nom) déjà pris }
+        '409': { description: Jeton de concurrence périmé, ou (niveau, domaine, nom) déjà pris }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Subjects]
       summary: Archiver (soft delete) une matière créée par erreur
-      description: 'Refusée en 409 si des notes existent déjà pour cette matière.'
+      description: >-
+        Refusée en 409 si des notes existent déjà pour cette matière, ou s'il s'agit d'un domaine qui
+        porte encore des activités d'évaluation (elles seraient orphelines, donc absentes du bulletin
+        sans le moindre message) : supprimez-les ou rattachez-les à un autre domaine d'abord.
       parameters:
         - name: id
           in: path
@@ -1007,7 +1019,7 @@ paths:
         '204': { description: Matière archivée }
         '403': { description: Réservé au Directeur (ou au Secrétariat si la délégation est activée) }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { description: 'Jeton de concurrence périmé, ou des notes existent déjà pour cette matière' }
+        '409': { description: 'Jeton de concurrence périmé, notes déjà saisies, ou domaine portant encore des activités' }
 
   /students:
     get:
@@ -2942,6 +2954,51 @@ components:
           maximum: 20
           example: 4
         level: { type: string, maxLength: 50, example: "Primaire" }
+        parentSubjectId:
+          type: string
+          format: uuid
+          nullable: true
+          description: >-
+            Domaine auquel rattacher cette ligne d'évaluation (grilles par compétences du primaire) :
+            « Ressources » sous « Français », « P. Alphabétique » sous « Lang & Com. ». Absent ou null
+            crée une matière de premier niveau — le cas de toute matière du secondaire.
+            La hiérarchie compte DEUX niveaux au plus : viser une matière déjà rattachée à un domaine
+            est refusé en 422, tout comme viser un domaine inexistant dans l'établissement.
+            Une activité prend TOUJOURS le `level` de son domaine ; celui envoyé est ignoré.
+        maxScore:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+          exclusiveMinimum: true
+          maximum: 100
+          example: 40
+          description: >-
+            Barème propre à la ligne — la colonne « Sur » du bulletin (10, 16, 24, 40, 60…).
+            Null (le défaut) suit le barème du CYCLE de la classe : Primaire /10, Collège & Lycée /20.
+            C'est ce barème, et non celui du cycle, qui plafonne les notes saisies sur cette matière.
+        displayOrder:
+          type: integer
+          minimum: 0
+          maximum: 999
+          default: 0
+          description: >-
+            Rang d'affichage dans sa fratrie — l'ordre d'une grille est pédagogique, pas alphabétique
+            (« Ressources » précède « Compétences »). À égalité, le nom départage.
+        column1Header:
+          type: string
+          maxLength: 40
+          nullable: true
+          example: "Domaines"
+          description: >-
+            Entête de la 1re colonne du tableau du bulletin. Réglage de GRILLE : porté par les domaines
+            de premier niveau, ignoré (remis à null) sur une activité. Null → « Domaines ».
+        column2Header:
+          type: string
+          maxLength: 40
+          nullable: true
+          example: "Activités"
+          description: Entête de la 2e colonne. Même portée que `column1Header`. Null → « Activités ».
 
     Subject:
       type: object
@@ -2951,6 +3008,11 @@ components:
         level: { type: string, example: "Primaire" }
         coefficient: { type: number, format: double, example: 4 }
         rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
+        parentSubjectId: { type: string, format: uuid, nullable: true }
+        maxScore: { type: number, format: double, nullable: true, description: Null = barème du cycle de la classe }
+        displayOrder: { type: integer, example: 0 }
+        column1Header: { type: string, nullable: true }
+        column2Header: { type: string, nullable: true }
 
     SubjectUpdateRequest:
       allOf:

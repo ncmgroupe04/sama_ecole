@@ -17,7 +17,21 @@ namespace SamaEcole.Web.Controllers;
 [Authorize]
 public class SubjectsController(ISender mediator) : ControllerBase
 {
-    public record UpdateSubjectRequest(string Name, string Level, decimal Coefficient, uint RowVersion);
+    /// <summary>
+    /// Les champs de structure sont optionnels et à leur valeur neutre par défaut : un client qui ne les
+    /// envoie pas (l'écran des matières avant la configuration APC, un script existant) modifie la
+    /// matière exactement comme avant.
+    /// </summary>
+    public record UpdateSubjectRequest(
+        string Name,
+        string Level,
+        decimal Coefficient,
+        uint RowVersion,
+        Guid? ParentSubjectId = null,
+        decimal? MaxScore = null,
+        int DisplayOrder = 0,
+        string? Column1Header = null,
+        string? Column2Header = null);
 
     /// <summary>
     /// ÉCRITURE : Directeur, Secrétariat et Enseignant — accès inconditionnel, sans le garde-fou par
@@ -59,7 +73,10 @@ public class SubjectsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> Update(
         Guid id, [FromBody] UpdateSubjectRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(
-            new UpdateSubjectCommand(id, request.Name, request.Level, request.Coefficient, request.RowVersion),
+            new UpdateSubjectCommand(
+                id, request.Name, request.Level, request.Coefficient, request.RowVersion,
+                request.ParentSubjectId, request.MaxScore, request.DisplayOrder,
+                request.Column1Header, request.Column2Header),
             cancellationToken));
 
     /// <summary>

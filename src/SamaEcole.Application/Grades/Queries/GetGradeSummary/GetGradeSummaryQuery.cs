@@ -27,7 +27,19 @@ public record SubjectGradeDto(
     decimal? DevoirAverage,
     decimal Average,
     decimal Coefficient,
-    decimal WeightedPoints);
+    decimal WeightedPoints,
+
+    // Barème de la ligne — la colonne « Sur » du bulletin. Toujours résolu (jamais null) : la valeur
+    // fixée sur la matière, ou à défaut celle du cycle de la classe (GradeCalculator.EffectiveMaxScore).
+    // <see cref="Average"/> reste exprimée SUR CE BARÈME, brute : c'est la note que l'école a saisie et
+    // celle qu'imprime le bulletin. <see cref="WeightedPoints"/>, lui, est déjà ramené au barème du
+    // bulletin — sans quoi une ligne /60 pèserait trois fois une ligne /20 dans la moyenne générale.
+    decimal MaxScore = 20m,
+
+    // Domaine parent d'une grille APC (« Lang & Com. » pour « P. Alphabétique »). Null pour une matière
+    // de premier niveau — le cas de toute matière du secondaire.
+    Guid? ParentSubjectId = null,
+    string? ParentSubjectName = null);
 
 /// <summary>
 /// <see cref="Mention"/> est null tant qu'aucune matière n'est notée (rien à qualifier), ou si la

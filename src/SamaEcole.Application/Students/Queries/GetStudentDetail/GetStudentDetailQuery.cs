@@ -115,7 +115,13 @@ public record SubjectGradeDto(
     decimal? Composition,
     decimal? DevoirAverage,
     decimal? Average,
-    decimal? WeightedAverage);
+    decimal? WeightedAverage,
+
+    // Barème de la matière — la colonne « Sur » des grilles par compétences. Toujours résolu (jamais
+    // null) : la valeur fixée sur la matière, ou à défaut celle du cycle de la classe.
+    // <see cref="Average"/> est exprimée SUR CE BARÈME ; <see cref="WeightedAverage"/>, lui, est déjà
+    // ramené à celui de la fiche.
+    decimal MaxScore = 20m);
 
 /// <summary>Récapitulatif financier de l'élève + la liste de ses versements (le solde vit sur l'inscription).</summary>
 public record PaymentHistoryDto(
@@ -307,6 +313,7 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                 SubjectId = subj.Id,
                 SubjectName = subj.Name,
                 subj.Coefficient,
+                subj.MaxScore,
                 g.EvaluationType,
                 g.Value
             })
@@ -333,7 +340,7 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
             .Select(term =>
             {
                 var subjects = term
-                    .GroupBy(r => new { r.SubjectId, r.SubjectName, r.Coefficient })
+                    .GroupBy(r => new { r.SubjectId, r.SubjectName, r.Coefficient, r.MaxScore })
                     .Select(subject =>
                     {
                         // Une note au plus par (matière, type d'évaluation) — la contrainte d'unicité de
@@ -358,6 +365,18 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                         // la matière est ignoré (le primaire n'a pas de système de coefficients).
                         var coefficient = isPrimaire ? 1m : subject.Key.Coefficient;
 
+                        // Barème PROPRE à la matière (grilles par compétences : /40, /60, /24…), à défaut
+                        // celui du cycle. La moyenne affichée reste BRUTE, sur ce barème — c'est la note
+                        // que l'école a saisie ; seuls les points pondérés sont ramenés au barème de la
+                        // fiche, faute de quoi une ligne /60 y pèserait trois fois une ligne /20 et la
+                        // fiche contredirait le bulletin (GetGradeSummaryQueryHandler applique la même
+                        // transposition). Sans barème propre — toutes les données existantes — la
+                        // transposition est l'identité et le calcul est celui d'avant.
+                        var maxScore = GradeCalculator.EffectiveMaxScore(subject.Key.MaxScore, gradingScale);
+                        var rebased = average is { } raw
+                            ? GradeCalculator.Rebase(raw, maxScore, gradingScale)
+                            : (decimal?)null;
+
                         return new SubjectGradeDto(
                             subject.Key.SubjectId,
                             subject.Key.SubjectName,
@@ -367,13 +386,16 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                             composition,
                             devoirAverage,
                             average,
-                            average is { } a ? a * coefficient : null);
+                            rebased is { } r ? r * coefficient : null,
+                            maxScore);
                     })
                     .OrderBy(s => s.SubjectName)
                     .ToList();
 
                 var generalAverage = GradeCalculator
-                    .WeightedGeneralAverage(subjects.Select(s => (s.Average, s.Coefficient)))
+                    .WeightedGeneralAverage(subjects.Select(s =>
+                        (s.Average is { } a ? GradeCalculator.Rebase(a, s.MaxScore, gradingScale) : (decimal?)null,
+                         s.Coefficient)))
                     .GeneralAverage;
 
                 return new TermReportDto(

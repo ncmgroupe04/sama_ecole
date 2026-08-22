@@ -69,6 +69,22 @@ document.addEventListener('alpine:init', () => {
         return match ? match[1] : name;
     }
 
+    /**
+     * Un champ de formulaire laissé vide vaut '' en HTML — y compris le <select> « Aucun domaine » et
+     * les champs nombre. Le serveur, lui, distingue « absent » (null) de « vide » : un '' sur
+     * parentSubjectId ne se lit pas comme un Guid, et un '' sur maxScore serait un barème nul.
+     * Les blancs deviennent donc null AVANT l'envoi, une fois pour toutes plutôt qu'un champ à la fois.
+     */
+    function blankToNull(payload) {
+        const cleaned = { ...payload };
+        for (const key of Object.keys(cleaned)) {
+            if (cleaned[key] === '' || cleaned[key] === undefined || Number.isNaN(cleaned[key])) {
+                cleaned[key] = null;
+            }
+        }
+        return cleaned;
+    }
+
     Alpine.data('subjectsView', () => ({
         subjects: [],
         isLoading: false,
@@ -87,15 +103,26 @@ document.addEventListener('alpine:init', () => {
 
         isCreateOpen: false,
         isSubmitting: false,
-        newSubject: { name: '', level: '', coefficient: 1 },
+        newSubject: { name: '', level: '', coefficient: 1, parentSubjectId: '', maxScore: '', displayOrder: 0 },
         createErrors: {},
+
+        // ── Structure d'évaluation (grilles APC du primaire) ──
+        // Deux lectures du MÊME jeu de matières : la grille par catégories (l'écran d'origine, qui
+        // ignore entièrement la hiérarchie) et l'arbre domaine → activités, seul endroit d'où l'on
+        // configure les barèmes par ligne, l'ordre et les entêtes de colonnes du bulletin.
+        viewMode: 'categories',
+        structureLevel: '',
+        isReordering: false,
+        structureError: null,
+        headerDraft: { column1Header: '', column2Header: '' },
+        isSavingHeaders: false,
 
         // Confirmation « Matière ajoutée » affichée après un enregistrement réussi.
         showAddedDialog: false,
         addedSubjectName: '',
 
         // Édition (modale)
-        editing: null, // { id, name, level, coefficient, rowVersion }
+        editing: null, // { id, name, level, coefficient, rowVersion, parentSubjectId, maxScore, displayOrder, … }
         isSavingEdit: false,
         editErrors: {},
         showEditedDialog: false,
@@ -170,6 +197,196 @@ document.addEventListener('alpine:init', () => {
             return new Set(this.visibleSubjects.map((s) => s.level)).size;
         },
 
+        // ────────────────────────────────────────────────────────── Structure d'évaluation
+
+        /** Tous les niveaux configurés, dans l'ordre d'affichage des chips de sélection. */
+        get structureLevels() {
+            return [...new Set(this.subjects.map((s) => s.level))].sort((a, b) => a.localeCompare(b, 'fr'));
+        },
+
+        /**
+         * L'arbre du niveau sélectionné : domaines de premier niveau, chacun avec ses activités.
+         * L'ordre est celui que l'école a fixé (displayOrder), le nom ne départageant qu'à égalité —
+         * exactement la règle qu'applique le serveur, sans quoi l'écran mentirait sur ce que le
+         * bulletin imprimera.
+         */
+        get structureGroups() {
+            const level = this.structureLevel;
+            const atLevel = this.subjects.filter((s) => s.level === level);
+            const byOrder = (a, b) => (a.displayOrder - b.displayOrder) || a.name.localeCompare(b.name, 'fr');
+
+            return atLevel
+                .filter((s) => !s.parentSubjectId)
+                .sort(byOrder)
+                .map((root) => ({
+                    root,
+                    children: atLevel.filter((s) => s.parentSubjectId === root.id).sort(byOrder)
+                }));
+        },
+
+        /** Une grille est « hiérarchique » — et le bulletin bascule sur le tableau APC — dès qu'une
+         *  activité est rattachée à un domaine à ce niveau. C'est la règle exacte du serveur. */
+        get isHierarchicalLevel() {
+            return this.subjects.some((s) => s.level === this.structureLevel && s.parentSubjectId);
+        },
+
+        get structureLineCount() {
+            return this.structureGroups.reduce((n, g) => n + Math.max(g.children.length, 1), 0);
+        },
+
+        /** Les entêtes vivent sur le PREMIER domaine du niveau (voir EvaluationStructureBuilder) : c'est
+         *  lui que l'écran modifie quand on enregistre les libellés de colonnes. */
+        get headerCarrier() {
+            const groups = this.structureGroups;
+            return groups.length ? groups[0].root : null;
+        },
+
+        selectStructureLevel(level) {
+            this.structureLevel = level;
+            this.structureError = null;
+            const carrier = this.headerCarrier;
+            this.headerDraft = {
+                column1Header: (carrier && carrier.column1Header) || '',
+                column2Header: (carrier && carrier.column2Header) || ''
+            };
+        },
+
+        showStructure() {
+            this.viewMode = 'structure';
+            const level = this.structureLevels.includes(this.structureLevel)
+                ? this.structureLevel
+                : (this.structureLevels[0] || '');
+
+            // Toujours re-sélectionner, même si le niveau n'a pas changé : c'est ce qui recharge les
+            // entêtes de colonnes dans le formulaire depuis l'état réel des matières.
+            this.selectStructureLevel(level);
+        },
+
+        /**
+         * Libellé du barème d'une ligne : « Sur 40 » quand l'école en a fixé un, « Barème du cycle »
+         * sinon — et non « Sur — », qui laisserait croire à une donnée manquante là où c'est un choix
+         * (la ligne suit le /10 du primaire ou le /20 du secondaire, voir Subject.MaxScore).
+         */
+        maxScoreLabel(subject) {
+            const maxScore = subject && subject.maxScore;
+            return maxScore === null || maxScore === undefined || maxScore === ''
+                ? 'Barème du cycle'
+                : `Sur ${Number(maxScore).toLocaleString('fr-FR')}`;
+        },
+
+        /** Ouvre la création d'une ACTIVITÉ sous un domaine : le niveau et le parent sont imposés. */
+        openCreateActivity(root) {
+            const siblings = (this.structureGroups.find((g) => g.root.id === root.id) || {}).children || [];
+            this.newSubject = {
+                name: '',
+                level: root.level,
+                coefficient: root.coefficient,
+                parentSubjectId: root.id,
+                // Placée en fin de fratrie : une activité ajoutée ne vient jamais s'intercaler au milieu
+                // d'une grille déjà ordonnée.
+                displayOrder: siblings.length + 1,
+                maxScore: siblings.length ? siblings[siblings.length - 1].maxScore : null
+            };
+            this.createErrors = {};
+            this.isCreateOpen = true;
+        },
+
+        /** Ouvre la création d'un DOMAINE au niveau affiché. */
+        openCreateGroup() {
+            this.newSubject = {
+                name: '',
+                level: this.structureLevel,
+                coefficient: 1,
+                parentSubjectId: '',
+                displayOrder: this.structureGroups.length + 1,
+                maxScore: null
+            };
+            this.createErrors = {};
+            this.isCreateOpen = true;
+        },
+
+        /**
+         * Réordonne une fratrie (les domaines d'un niveau, ou les activités d'un domaine) d'un cran.
+         *
+         * Les rangs sont RENUMÉROTÉS de 1 à n après le déplacement, plutôt qu'échangés deux à deux :
+         * une grille dont toutes les lignes sont encore à 0 (le cas de toute matière antérieure à cette
+         * option) n'a aucun rang à échanger, et un simple échange n'y produirait aucun mouvement visible.
+         * Seules les lignes dont le rang change réellement sont enregistrées.
+         */
+        async moveSubject(siblings, index, direction) {
+            const target = index + direction;
+            if (this.isReordering || target < 0 || target >= siblings.length) return;
+
+            const ordered = siblings.slice();
+            const [moved] = ordered.splice(index, 1);
+            ordered.splice(target, 0, moved);
+
+            this.isReordering = true;
+            this.structureError = null;
+            try {
+                for (let i = 0; i < ordered.length; i++) {
+                    if (ordered[i].displayOrder === i + 1) continue;
+                    await this.saveSubject(ordered[i], { displayOrder: i + 1 });
+                }
+                await this.loadSubjects();
+            } catch (err) {
+                this.structureError = this.reorderMessage(err);
+                await this.loadSubjects();
+            } finally {
+                this.isReordering = false;
+            }
+        },
+
+        /** Enregistre les entêtes de colonnes du bulletin sur le premier domaine du niveau. */
+        async saveHeaders() {
+            const carrier = this.headerCarrier;
+            if (!carrier) return;
+
+            this.isSavingHeaders = true;
+            this.structureError = null;
+            try {
+                await this.saveSubject(carrier, {
+                    column1Header: this.headerDraft.column1Header.trim() || null,
+                    column2Header: this.headerDraft.column2Header.trim() || null
+                });
+                await this.loadSubjects();
+            } catch (err) {
+                this.structureError = this.reorderMessage(err);
+            } finally {
+                this.isSavingHeaders = false;
+            }
+        },
+
+        /**
+         * PUT d'une matière en ne changeant que les champs de `patch`. Le PUT étant un remplacement
+         * complet, TOUS les champs de structure doivent repartir — en omettre un le remettrait à sa
+         * valeur par défaut (un domaine perdrait ses activités, un barème /40 redeviendrait celui du
+         * cycle) sans que personne ne l'ait demandé.
+         */
+        saveSubject(subject, patch) {
+            const payload = {
+                name: subject.name,
+                level: subject.level,
+                coefficient: subject.coefficient,
+                rowVersion: subject.rowVersion,
+                parentSubjectId: subject.parentSubjectId,
+                maxScore: subject.maxScore,
+                displayOrder: subject.displayOrder ?? 0,
+                column1Header: subject.column1Header,
+                column2Header: subject.column2Header,
+                ...patch
+            };
+
+            return window.api.put(`/subjects/${subject.id}`, blankToNull(payload));
+        },
+
+        reorderMessage(err) {
+            if (err && err.code === 'CONCURRENCY_CONFLICT') {
+                return 'La structure vient d\'être modifiée par un autre utilisateur. Elle a été rafraîchie — réessayez.';
+            }
+            return (err && err.message) || 'Erreur lors de l\'enregistrement de la structure.';
+        },
+
         /**
          * Niveaux déjà utilisés, proposés en autocomplétion du champ « Niveau ». Confort de saisie
          * pour éviter qu'une même écriture — « Primaire » vs « primaire » — ne crée deux niveaux
@@ -192,16 +409,35 @@ document.addEventListener('alpine:init', () => {
             // Reprend le dernier niveau saisi : on crée en général toutes les matières d'un niveau à
             // la suite. Repartir d'un champ vide à chaque fois ferait retaper « Primaire » dix fois.
             const lastLevel = this.subjects.length ? this.subjects[this.subjects.length - 1].level : '';
-            this.newSubject = { name: '', level: lastLevel, coefficient: 1 };
+            this.newSubject = {
+                name: '', level: lastLevel, coefficient: 1,
+                parentSubjectId: '', maxScore: '', displayOrder: 0
+            };
             this.createErrors = {};
             this.isCreateOpen = true;
+        },
+
+        /** Les domaines auxquels une nouvelle ligne peut se rattacher : ceux du niveau saisi, et eux
+         *  seuls — une activité vit toujours au niveau de son domaine (SubjectHierarchyGuard). */
+        get parentOptionsForNewSubject() {
+            return this.subjects
+                .filter((s) => !s.parentSubjectId && s.level === this.newSubject.level)
+                .sort((a, b) => (a.displayOrder - b.displayOrder) || a.name.localeCompare(b.name, 'fr'));
+        },
+
+        /** Idem pour la modale d'édition, en excluant la matière elle-même. */
+        get parentOptionsForEditing() {
+            if (!this.editing) return [];
+            return this.subjects
+                .filter((s) => !s.parentSubjectId && s.level === this.editing.level && s.id !== this.editing.id)
+                .sort((a, b) => (a.displayOrder - b.displayOrder) || a.name.localeCompare(b.name, 'fr'));
         },
 
         async submitCreate() {
             this.isSubmitting = true;
             this.createErrors = {};
             try {
-                await window.api.post('/subjects', this.newSubject);
+                await window.api.post('/subjects', blankToNull(this.newSubject));
 
                 this.isCreateOpen = false;
                 this.addedSubjectName = this.newSubject.name;
@@ -222,7 +458,12 @@ document.addEventListener('alpine:init', () => {
                 name: subject.name,
                 level: subject.level,
                 coefficient: subject.coefficient,
-                rowVersion: subject.rowVersion
+                rowVersion: subject.rowVersion,
+                parentSubjectId: subject.parentSubjectId ?? '',
+                maxScore: subject.maxScore ?? null,
+                displayOrder: subject.displayOrder ?? 0,
+                column1Header: subject.column1Header ?? null,
+                column2Header: subject.column2Header ?? null
             };
             this.editErrors = {};
         },
@@ -238,12 +479,10 @@ document.addEventListener('alpine:init', () => {
             this.isSavingEdit = true;
             this.editErrors = {};
             try {
-                await window.api.put(`/subjects/${this.editing.id}`, {
-                    name: this.editing.name,
-                    level: this.editing.level,
-                    coefficient: this.editing.coefficient,
-                    rowVersion: this.editing.rowVersion
-                });
+                // TOUS les champs de structure repartent : le PUT remplace la matière entière, en
+                // omettre un le remettrait à sa valeur par défaut — corriger un simple libellé
+                // détacherait l'activité de son domaine et lui ferait perdre son barème.
+                await this.saveSubject(this.editing, {});
                 this.editedSubjectName = this.editing.name;
                 this.closeEdit();
                 await this.loadSubjects();

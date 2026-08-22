@@ -34,6 +34,17 @@ public class CreateGradeCommandHandler(IApplicationDbContext dbContext, ITenantP
             ]);
         }
 
+        // Un DOMAINE d'une grille APC (« Lang & Com. », « Maths ») n'est qu'un regroupement de lignes :
+        // la note se saisit sur ses activités (« P. Alphabétique », « Ressources »), jamais sur lui.
+        // L'accepter produirait une note invisible sur le bulletin — le tableau n'imprime que les lignes.
+        if (await dbContext.Subjects.AnyAsync(s => s.ParentSubjectId == request.SubjectId, cancellationToken))
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(request.SubjectId),
+                    "Cette matière est un domaine d'évaluation : saisissez la note sur l'une de ses activités.")
+            ]);
+        }
+
         if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
         {
             throw new ValidationException([
@@ -41,10 +52,13 @@ public class CreateGradeCommandHandler(IApplicationDbContext dbContext, ITenantP
             ]);
         }
 
-        // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20) — backstop du
-        // contrôle déjà tenu par CreateGradeCommandValidator, sur la même base pour ne pas le contredire.
-        var gradingScale = await GradingScaleGuard.ResolveScaleForStudentAsync(dbContext, request.StudentId, cancellationToken);
-        GradingScaleGuard.EnsureWithinScale(request.Value, gradingScale, nameof(request.Value));
+        // Barème de la LIGNE d'évaluation : celui que l'école a fixé sur la matière (grilles APC : /40,
+        // /60, /24, /16…) et, à défaut — le cas de toute matière antérieure à cette option — celui du
+        // CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20). Backstop du contrôle déjà
+        // tenu par CreateGradeCommandValidator, sur la même base pour ne pas le contredire.
+        var cycleScale = await GradingScaleGuard.ResolveScaleForStudentAsync(dbContext, request.StudentId, cancellationToken);
+        var maxScore = await GradingScaleGuard.ResolveMaxScoreAsync(dbContext, request.SubjectId, cycleScale, cancellationToken);
+        GradingScaleGuard.EnsureWithinScale(request.Value, maxScore, nameof(request.Value));
 
         // Aucune note ne doit déjà exister pour cette clé : l'index unique UX_grades_single_entry
         // rejette l'INSERT sinon (une autre création concurrente, ou une note déjà là), et

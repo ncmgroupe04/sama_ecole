@@ -16,5 +16,20 @@ public record GetSubjectsQuery : IRequest<IReadOnlyList<SubjectDto>>;
 /// <summary>
 /// <see cref="RowVersion"/> est le jeton xmin nécessaire à UpdateSubjectCommand et
 /// DeleteSubjectCommand (AGENTS.md règle #5) — même contrat que GradeCellDto.RowVersion.
+///
+/// Les champs de STRUCTURE (<see cref="ParentSubjectId"/> … <see cref="Column2Header"/>) décrivent les
+/// grilles d'évaluation par compétences du primaire (voir <see cref="SamaEcole.Domain.Entities.Subject"/>).
+/// Ils sortent tous à leur valeur neutre pour une matière ordinaire — l'écran des matières les ignore
+/// alors entièrement et affiche exactement la liste plate d'avant.
 /// </summary>
-public record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion);
+public record SubjectDto(
+    Guid Id,
+    string Name,
+    string Level,
+    decimal Coefficient,
+    uint RowVersion,
+    Guid? ParentSubjectId = null,
+    decimal? MaxScore = null,
+    int DisplayOrder = 0,
+    string? Column1Header = null,
+    string? Column2Header = null);

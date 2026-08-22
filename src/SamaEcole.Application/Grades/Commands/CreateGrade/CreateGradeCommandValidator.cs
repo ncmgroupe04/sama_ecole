@@ -4,9 +4,11 @@ namespace SamaEcole.Application.Grades.Commands.CreateGrade;
 
 /// <summary>
 /// Validation de forme uniquement — la borne supérieure de <see cref="CreateGradeCommand.Value"/>
-/// dépend du CYCLE de la classe de l'élève (Primaire /10, Collège &amp; Lycée /20), un état en base :
-/// ce contrôle vit dans le Handler via <see cref="GradingScaleGuard.ResolveScaleForStudentAsync"/>,
-/// comme tous les contrôles métier dépendant de la base (Volume 1 §8.2).
+/// dépend de la MATIÈRE visée (Subject.MaxScore : /40, /60, /24… des grilles par compétences) et, à
+/// défaut, du cycle de la classe de l'élève (Primaire /10, Collège &amp; Lycée /20). C'est un état en
+/// base : ce contrôle vit donc dans le Handler, via
+/// <see cref="GradingScaleGuard.ResolveMaxScoreAsync"/>, comme tous les contrôles métier dépendant de
+/// la base (Volume 1 §8.2).
 /// </summary>
 public class CreateGradeCommandValidator : AbstractValidator<CreateGradeCommand>
 {

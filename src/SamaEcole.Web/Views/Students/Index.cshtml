@@ -423,6 +423,9 @@
  <th class="py-2.5 px-3 text-center w-20 uppercase tracking-wider text-slate-500 font-semibold">Devoir</th>
  <th class="py-2.5 px-3 text-center w-24 uppercase tracking-wider text-slate-500 font-semibold">Compo.</th>
  <th class="py-2.5 px-3 text-center w-20 uppercase tracking-wider text-slate-500 font-semibold">Moy.</th>
+ @* « Sur » : le barème de la matière. Sans lui, une moyenne de 32 sur une ligne notée /40
+    (grilles par compétences du primaire) se lirait comme un 32 sur 20. *@
+ <th class="py-2.5 px-3 text-center w-16 uppercase tracking-wider text-slate-500 font-semibold">Sur</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
@@ -433,6 +436,7 @@
  <td class="py-2 px-3 text-center text-slate-700" x-text="formatGrade(subject.devoirAverage)"></td>
  <td class="py-2 px-3 text-center text-slate-700" x-text="formatGrade(subject.composition)"></td>
  <td class="py-2 px-3 text-center font-bold text-slate-900" x-text="formatGrade(subject.average)"></td>
+ <td class="py-2 px-3 text-center text-slate-500 tabular-nums" x-text="formatGrade(subject.maxScore)"></td>
  </tr>
  </template>
  </tbody>

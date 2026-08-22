@@ -76,6 +76,34 @@ pour les parcours d'intégration des élèves venus des écoles coraniques. `Cla
 - **Documents** : mention « Cursus Accéléré Passerelle » sur le reçu d'inscription, le reçu de caisse, le
   bulletin et le PV de délibération. Les documents d'une classe ordinaire sont inchangés au caractère près.
 
+### Structure d'évaluation modulable / grilles APC (22/08/2026) — option désactivée par défaut
+
+Le Directeur configure lui-même la grille d'évaluation d'un niveau, et le bulletin PDF s'y adapte : plus
+aucun tableau de matières codé en dur. Migration `AddHierarchicalEvaluationStructure`, strictement additive
+(cinq colonnes nullables ou à défaut neutre sur `subjects`).
+
+- **Deux niveaux, pas plus.** `Subject.ParentSubjectId` : un **domaine** (« Lang & Com. », « Français »)
+  porte des **activités** (« P. Alphabétique », « Ressources », « Compétences »). Le bulletin n'imprime
+  qu'une colonne de regroupement, dont le `RowSpan` se calcule sur le nombre d'activités — une troisième
+  profondeur n'aurait aucune colonne où s'afficher, `SubjectHierarchyGuard` la refuse en 422.
+- **`Subject.MaxScore` NULL veut dire « suis le barème du cycle »**, pas « pas de barème ». C'est ce repli
+  qui garantit qu'aucune donnée existante ne change : une valeur par défaut fixe à 20 aurait discrètement
+  relevé le plafond de tout le primaire, resté à /10. Résolution unique : `GradeCalculator.EffectiveMaxScore`,
+  utilisée par la saisie, la correction, l'import Excel, la feuille de notes et le bulletin.
+- **Les lignes de barèmes différents sont ramenées au barème du bulletin avant d'être moyennées**
+  (`GradeCalculator.Rebase`) : déclarer « Compétences /60 » n'est pas déclarer un poids. Le poids reste le
+  coefficient. L'appréciation d'une ligne se décide, elle, sur son **pourcentage** de réussite — une seule
+  échelle de mentions pour tous les « Sur ».
+- **Le bulletin imprime la grille ENTIÈRE**, cases vides comprises (`EvaluationStructureBuilder`), comme les
+  modèles officiels — là où le tableau du secondaire ne liste que les matières notées. Le niveau qui ne
+  déclare aucune hiérarchie retombe sur les tableaux d'origine, inchangés.
+- **Écran** : `/matieres`, onglet « Structure d'évaluation » — domaines, activités, barème par ligne,
+  réorganisation par flèches, entêtes des deux premières colonnes du bulletin.
+- **Index unique** : passé à (SchoolId, Level, **ParentSubjectId**, Name, IsDeleted) avec `NULLS NOT DISTINCT`
+  (PostgreSQL 15+). Sans cette clause, ajouter une colonne nullable à la clé aurait fait cesser à l'index
+  d'interdire deux matières de même nom au même niveau. Les deux moitiés de la règle sont testées contre un
+  vrai PostgreSQL (`SubjectStructureEndpointsTests`).
+
 ---
 
 ## 3. Points de conformité traités (sprint du 27/07/2026)

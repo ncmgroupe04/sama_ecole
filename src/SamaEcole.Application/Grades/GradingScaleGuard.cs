@@ -74,18 +74,39 @@ internal static class GradingScaleGuard
         => cycle is { } c && c.UsesSimplifiedGrading() ? 10 : 20;
 
     /// <summary>
+    /// Barème d'une matière donnée, cycle de la classe de l'élève compris — la résolution complète dont
+    /// ont besoin la saisie et la correction d'une note (CreateGrade/UpdateGrade). Matière introuvable
+    /// (impossible : l'appelant vient de la vérifier) → barème du cycle seul.
+    /// </summary>
+    public static async Task<decimal> ResolveMaxScoreAsync(
+        IApplicationDbContext dbContext, Guid subjectId, int cycleScale, CancellationToken cancellationToken)
+    {
+        var maxScore = await dbContext.Subjects.AsNoTracking()
+            .Where(s => s.Id == subjectId)
+            .Select(s => s.MaxScore)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return GradeCalculator.EffectiveMaxScore(maxScore, cycleScale);
+    }
+
+    /// <summary>
     /// Contrôle partagé (Create/Update/Mention) qui rend l'erreur de saisie sur le bon champ (422). Message
     /// NEUTRE volontairement, car le barème passé peut être celui du cycle de la classe (saisie de note,
-    /// via <see cref="ResolveScaleForStudentAsync"/> / <see cref="ResolveScaleForGradeAsync"/>) comme le
-    /// barème de référence des mentions (<see cref="MentionScales.Reference"/>).
+    /// via <see cref="ResolveScaleForStudentAsync"/> / <see cref="ResolveScaleForGradeAsync"/>), celui de
+    /// la matière (<see cref="ResolveMaxScoreAsync"/>) ou le barème de référence des mentions
+    /// (<see cref="MentionScales.Reference"/>).
     /// </summary>
-    public static void EnsureWithinScale(decimal value, int gradingScale, string propertyName)
+    public static void EnsureWithinScale(decimal value, decimal gradingScale, string propertyName)
     {
         if (value > gradingScale)
         {
             throw new ValidationException([
-                new ValidationFailure(propertyName, $"La note ne peut pas dépasser le barème ({gradingScale}).")
+                new ValidationFailure(propertyName, $"La note ne peut pas dépasser le barème ({FormatScale(gradingScale)}).")
             ]);
         }
     }
+
+    /// <summary>« 20 » et non « 20,00 » ; « 7,5 » garde sa décimale utile. Le message part à l'utilisateur.</summary>
+    internal static string FormatScale(decimal scale) =>
+        scale.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture).Replace('.', ',');
 }

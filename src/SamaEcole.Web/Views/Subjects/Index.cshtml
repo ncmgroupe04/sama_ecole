@@ -44,7 +44,26 @@
    </div>
 
    <div class="flex flex-wrap items-center gap-3">
-    <div class="relative w-full sm:w-64 flex items-center">
+    @* ── Bascule de lecture : la grille par catégories (vue d'origine) ou l'arbre
+         domaine → activités, seul endroit d'où se configure la grille du bulletin. ── *@
+    <div role="group" aria-label="Mode d'affichage" class="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+     <button type="button" x-on:click="viewMode = 'categories'"
+      :class="viewMode === 'categories' ? 'bg-primary-50 text-primary-700' : 'text-slate-500 hover:text-slate-700'"
+      :aria-pressed="viewMode === 'categories'"
+      class="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold transition-colors">
+      <icon name="book" class="w-3.5 h-3.5" />
+      Matières
+     </button>
+     <button type="button" x-on:click="showStructure()"
+      :class="viewMode === 'structure' ? 'bg-primary-50 text-primary-700' : 'text-slate-500 hover:text-slate-700'"
+      :aria-pressed="viewMode === 'structure'"
+      class="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold transition-colors">
+      <icon name="layers" class="w-3.5 h-3.5" />
+      Structure d'évaluation
+     </button>
+    </div>
+
+    <div x-show="viewMode === 'categories'" class="relative w-full sm:w-64 flex items-center">
      <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
       <icon name="search" class="w-4 h-4 text-slate-400" />
      </span>
@@ -86,7 +105,7 @@
  @* ═══════════════════════════════════════════════════════════════════════════
     EMPTY STATE
     ═══════════════════════════════════════════════════════════════════════════ *@
- <div x-show="!isLoading && visibleSubjects.length === 0" x-cloak class="mt-8">
+ <div x-show="viewMode === 'categories' && !isLoading && visibleSubjects.length === 0" x-cloak class="mt-8">
   <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
    <div class="mx-auto w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mb-4">
     <icon name="book" class="w-8 h-8 text-primary-400" />
@@ -104,7 +123,7 @@
     sm:/lg: (600px/1024px) — tailwind.config.js REMPLACE les breakpoints par
     défaut (Volume 5 §2.4) ; md:/xl: n'existent pas dans ce projet.
     ═══════════════════════════════════════════════════════════════════════════ *@
- <div x-show="!isLoading && visibleSubjects.length > 0" x-cloak
+ <div x-show="viewMode === 'categories' && !isLoading && visibleSubjects.length > 0" x-cloak
   class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch relative z-0">
   <template x-for="group in categoryGroups" :key="group.category">
    <div class="bg-white rounded-2xl border border-slate-200/80 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg h-full flex flex-col overflow-hidden">
@@ -179,7 +198,7 @@
  @* ═══════════════════════════════════════════════════════════════════════════
     FILET DE SÉCURITÉ — Matières sans catégorie reconnue
     ═══════════════════════════════════════════════════════════════════════════ *@
- <div x-show="!isLoading && otherSubjects.length > 0" x-cloak class="mt-6">
+ <div x-show="viewMode === 'categories' && !isLoading && otherSubjects.length > 0" x-cloak class="mt-6">
   <div class="bg-white rounded-2xl border border-slate-200/80 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg overflow-hidden">
    <div class="flex items-center justify-between gap-3 px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100">
     <div class="flex items-baseline gap-2.5 min-w-0">
@@ -222,6 +241,183 @@
  </div>
 
  @* ═══════════════════════════════════════════════════════════════════════════
+    STRUCTURE D'ÉVALUATION — grilles par compétences (APC) du primaire.
+    Un DOMAINE (« Lang & Com. », « Français ») porte des ACTIVITÉS
+    (« P. Alphabétique », « Ressources »), chacune avec son propre barème.
+    C'est cette configuration, et elle seule, que le bulletin PDF imprime :
+    entêtes de colonnes, ordre des lignes, colonne « Sur ». Rien n'est codé
+    en dur — trois écoles obtiennent trois bulletins différents.
+    ═══════════════════════════════════════════════════════════════════════════ *@
+ <div x-show="viewMode === 'structure'" x-cloak class="mt-8 space-y-6">
+
+  <div x-show="structureError" x-cloak class="form-error-banner" x-text="structureError"></div>
+
+  @* Sélecteur de niveau : une grille est propre à un niveau (CI-CP, CE1-CE2, CM1-CM2…). *@
+  <div class="flex flex-wrap items-center gap-2">
+   <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1">Niveau</span>
+   <template x-for="level in structureLevels" :key="level">
+    <button type="button" x-on:click="selectStructureLevel(level)"
+     :class="structureLevel === level ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-slate-600 border-slate-200 hover:border-primary-300'"
+     class="px-3 h-8 rounded-lg border text-xs font-semibold transition-colors" x-text="level"></button>
+   </template>
+   <p x-show="structureLevels.length === 0" x-cloak class="text-sm text-slate-400">
+    Créez d'abord une matière : son niveau apparaîtra ici.
+   </p>
+  </div>
+
+  <template x-if="structureLevel">
+   <div class="space-y-6">
+
+    @* ── Entêtes des deux premières colonnes du bulletin ── *@
+    <div class="bg-white rounded-2xl border border-slate-200/80 p-6">
+     <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div class="min-w-0">
+       <h3 class="text-sm font-bold text-slate-700">Entêtes des colonnes du bulletin</h3>
+       <p class="text-xs text-slate-400 mt-1">
+        « Domaines » / « Activités » au CI-CP, « Activités » / « Contrôles » au CE1-CE2.
+        Laissés vides, le bulletin retient « Domaines » et « Activités ».
+       </p>
+      </div>
+      @* Pastille dont la COULEUR change à l'exécution : <badge> fixe sa variante côté serveur, elle ne
+         peut donc pas suivre un état Alpine — on pose directement les classes .status-badge-*. *@
+      <span class="shrink-0 text-[10px]"
+       :class="isHierarchicalLevel ? 'status-badge-success' : 'status-badge-neutral'"
+       x-text="isHierarchicalLevel ? 'Bulletin hiérarchique actif' : 'Bulletin classique'"></span>
+     </div>
+
+     <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+      <div>
+       <label for="structure-col1" class="form-label">1re colonne</label>
+       <input id="structure-col1" type="text" maxlength="40" x-model="headerDraft.column1Header"
+        placeholder="Domaines" class="input-field" :disabled="!canManageSubject || !headerCarrier">
+      </div>
+      <div>
+       <label for="structure-col2" class="form-label">2e colonne</label>
+       <input id="structure-col2" type="text" maxlength="40" x-model="headerDraft.column2Header"
+        placeholder="Activités" class="input-field" :disabled="!canManageSubject || !headerCarrier">
+      </div>
+      <button type="button" x-on:click="saveHeaders()" x-show="canManageSubject"
+       :disabled="isSavingHeaders || !headerCarrier" class="btn-secondary h-10">
+       <span x-text="isSavingHeaders ? 'Enregistrement...' : 'Enregistrer les entêtes'"></span>
+      </button>
+     </div>
+    </div>
+
+    @* ── Les domaines et leurs activités ── *@
+    <template x-for="(group, groupIndex) in structureGroups" :key="group.root.id">
+     <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden">
+
+      @* Entête du domaine *@
+      <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-primary-50/40 to-transparent">
+       <div class="flex flex-col gap-0.5 shrink-0" x-show="canManageSubject">
+        <button type="button" title="Monter le domaine" aria-label="Monter le domaine"
+         x-on:click="moveSubject(structureGroups.map(g => g.root), groupIndex, -1)"
+         :disabled="groupIndex === 0 || isReordering"
+         class="p-0.5 rounded text-slate-400 hover:text-primary-600 disabled:opacity-30">
+         <icon name="arrow-up" class="w-4 h-4" />
+        </button>
+        <button type="button" title="Descendre le domaine" aria-label="Descendre le domaine"
+         x-on:click="moveSubject(structureGroups.map(g => g.root), groupIndex, 1)"
+         :disabled="groupIndex === structureGroups.length - 1 || isReordering"
+         class="p-0.5 rounded text-slate-400 hover:text-primary-600 disabled:opacity-30">
+         <icon name="arrow-down" class="w-4 h-4" />
+        </button>
+       </div>
+
+       <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+         <span class="font-bold text-slate-800 break-words" x-text="group.root.name"></span>
+         <badge variant="neutral" class="shrink-0 text-[10px]">
+          coef. <span x-text="formatCoefficient(group.root.coefficient)"></span>
+         </badge>
+         <badge x-show="group.children.length === 0" x-cloak variant="warning" class="shrink-0 text-[10px]"
+          x-text="maxScoreLabel(group.root)"></badge>
+        </div>
+        <span class="text-xs text-slate-400 mt-0.5 block"
+         x-text="group.children.length === 0
+          ? 'Matière simple — s\'imprime sur une seule ligne, sans regroupement.'
+          : group.children.length + (group.children.length > 1 ? ' activités' : ' activité')"></span>
+       </div>
+
+       <template x-if="canManageSubject">
+        <div class="shrink-0 flex items-center gap-1">
+         <button type="button" x-on:click="openCreateActivity(group.root)" title="Ajouter une activité"
+          class="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-semibold text-primary-600 hover:bg-primary-50 transition-colors">
+          <icon name="plus" class="w-3.5 h-3.5" />
+          Activité
+         </button>
+         <button type="button" x-on:click="openEdit(group.root)" title="Modifier le domaine" aria-label="Modifier le domaine"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+          <icon name="pencil" class="w-4 h-4" />
+         </button>
+         <button type="button" x-on:click="openDelete(group.root)" title="Supprimer le domaine" aria-label="Supprimer le domaine"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+          <icon name="trash-2" class="w-4 h-4" />
+         </button>
+        </div>
+       </template>
+      </div>
+
+      @* Activités du domaine *@
+      <div class="divide-y divide-slate-50 px-2">
+       <template x-for="(child, childIndex) in group.children" :key="child.id">
+        <div class="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50/80 transition-colors">
+         <div class="flex flex-col gap-0.5 shrink-0" x-show="canManageSubject">
+          <button type="button" title="Monter l'activité" aria-label="Monter l'activité"
+           x-on:click="moveSubject(group.children, childIndex, -1)"
+           :disabled="childIndex === 0 || isReordering"
+           class="p-0.5 rounded text-slate-400 hover:text-primary-600 disabled:opacity-30">
+           <icon name="arrow-up" class="w-3.5 h-3.5" />
+          </button>
+          <button type="button" title="Descendre l'activité" aria-label="Descendre l'activité"
+           x-on:click="moveSubject(group.children, childIndex, 1)"
+           :disabled="childIndex === group.children.length - 1 || isReordering"
+           class="p-0.5 rounded text-slate-400 hover:text-primary-600 disabled:opacity-30">
+           <icon name="arrow-down" class="w-3.5 h-3.5" />
+          </button>
+         </div>
+
+         <span aria-hidden="true" class="w-1.5 h-1.5 rounded-full bg-primary-400 shrink-0"></span>
+         <span class="flex-1 min-w-0 text-sm text-slate-700 break-words" x-text="child.name"></span>
+
+         <badge variant="neutral" class="shrink-0 text-[10px] tabular-nums" x-text="maxScoreLabel(child)"></badge>
+
+         <template x-if="canManageSubject">
+          <div class="shrink-0 flex items-center gap-1">
+           <button type="button" x-on:click="openEdit(child)" title="Modifier l'activité" aria-label="Modifier l'activité"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+            <icon name="pencil" class="w-4 h-4" />
+           </button>
+           <button type="button" x-on:click="openDelete(child)" title="Supprimer l'activité" aria-label="Supprimer l'activité"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+            <icon name="trash-2" class="w-4 h-4" />
+           </button>
+          </div>
+         </template>
+        </div>
+       </template>
+
+       <p x-show="group.children.length === 0" x-cloak class="py-4 px-4 text-xs text-slate-400">
+        Aucune activité — ajoutez « Ressources » et « Compétences », ou laissez la matière telle quelle.
+       </p>
+      </div>
+     </div>
+    </template>
+
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+     <p class="text-xs text-slate-400">
+      <span x-text="structureLineCount"></span> ligne(s) seront imprimées sur le bulletin de ce niveau.
+     </p>
+     <button type="button" x-show="canManageSubject" x-on:click="openCreateGroup()" class="btn-primary h-10 px-4">
+      <icon name="plus" class="w-5 h-5" />
+      Nouveau domaine
+     </button>
+    </div>
+   </div>
+  </template>
+ </div>
+
+ @* ═══════════════════════════════════════════════════════════════════════════
     MODALES — Création / Édition / Suppression / Confirmations
     ⚠️ Le champ Niveau est désormais un <select> (menu déroulant) au lieu
     d'un champ texte libre, avec les 5 niveaux normalisés.
@@ -254,6 +450,41 @@
     <input id="subject-coefficient" type="number" x-model.number="newSubject.coefficient" required min="0.5" max="20" step="0.5"
      class="input-field" :class="createErrors.coefficient && 'input-field-error'">
     <p x-show="createErrors.coefficient" x-cloak x-text="createErrors.coefficient" class="field-error"></p>
+   </div>
+
+   @* ── Structure d'évaluation : rattachement à un domaine et barème propre ── *@
+   <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Structure d'évaluation</p>
+
+    <div>
+     <label for="subject-parent" class="form-label">Domaine parent</label>
+     <select id="subject-parent" x-model="newSubject.parentSubjectId" class="input-field"
+      :class="createErrors.parentSubjectId && 'input-field-error'">
+      <option value="">— Aucun (matière de premier niveau)</option>
+      <template x-for="option in parentOptionsForNewSubject" :key="option.id">
+       <option :value="option.id" x-text="option.name"></option>
+      </template>
+     </select>
+     <p class="text-xs text-slate-400 mt-1">
+      Rattachez « Ressources » ou « P. Alphabétique » à son domaine pour que le bulletin les regroupe.
+     </p>
+     <p x-show="createErrors.parentSubjectId" x-cloak x-text="createErrors.parentSubjectId" class="field-error"></p>
+    </div>
+
+    <div>
+     <label for="subject-maxscore" class="form-label">Note maximale (colonne « Sur »)</label>
+     <input id="subject-maxscore" type="number" x-model.number="newSubject.maxScore" min="1" max="100" step="1"
+      placeholder="Vide = barème du cycle (Primaire /10, Collège & Lycée /20)"
+      class="input-field" :class="createErrors.maxScore && 'input-field-error'">
+     <p x-show="createErrors.maxScore" x-cloak x-text="createErrors.maxScore" class="field-error"></p>
+    </div>
+
+    <div>
+     <label for="subject-order" class="form-label">Ordre d'affichage</label>
+     <input id="subject-order" type="number" x-model.number="newSubject.displayOrder" min="0" max="999" step="1"
+      class="input-field" :class="createErrors.displayOrder && 'input-field-error'">
+     <p x-show="createErrors.displayOrder" x-cloak x-text="createErrors.displayOrder" class="field-error"></p>
+    </div>
    </div>
 
    <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
@@ -300,6 +531,55 @@
     <label for="edit-subject-coefficient" class="form-label form-label-required">Coefficient</label>
     <input id="edit-subject-coefficient" type="number" x-model.number="editing.coefficient" required min="0.5" max="20" step="0.5" class="input-field" :class="editErrors.coefficient && 'input-field-error'">
     <p x-show="editErrors.coefficient" x-cloak x-text="editErrors.coefficient" class="field-error"></p>
+   </div>
+
+   @* ── Structure d'évaluation ── *@
+   <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Structure d'évaluation</p>
+
+    <div>
+     <label for="edit-subject-parent" class="form-label">Domaine parent</label>
+     <select id="edit-subject-parent" x-model="editing.parentSubjectId" class="input-field"
+      :class="editErrors.parentSubjectId && 'input-field-error'">
+      <option value="">— Aucun (matière de premier niveau)</option>
+      <template x-for="option in parentOptionsForEditing" :key="option.id">
+       <option :value="option.id" x-text="option.name"></option>
+      </template>
+     </select>
+     <p x-show="editErrors.parentSubjectId" x-cloak x-text="editErrors.parentSubjectId" class="field-error"></p>
+    </div>
+
+    <div>
+     <label for="edit-subject-maxscore" class="form-label">Note maximale (colonne « Sur »)</label>
+     <input id="edit-subject-maxscore" type="number" x-model.number="editing.maxScore" min="1" max="100" step="1"
+      placeholder="Vide = barème du cycle (Primaire /10, Collège & Lycée /20)"
+      class="input-field" :class="editErrors.maxScore && 'input-field-error'">
+     <p x-show="editErrors.maxScore" x-cloak x-text="editErrors.maxScore" class="field-error"></p>
+    </div>
+
+    <div>
+     <label for="edit-subject-order" class="form-label">Ordre d'affichage</label>
+     <input id="edit-subject-order" type="number" x-model.number="editing.displayOrder" min="0" max="999" step="1"
+      class="input-field" :class="editErrors.displayOrder && 'input-field-error'">
+     <p x-show="editErrors.displayOrder" x-cloak x-text="editErrors.displayOrder" class="field-error"></p>
+    </div>
+
+    @* Les entêtes de colonnes ne se règlent que sur un DOMAINE : une activité n'a pas à nommer
+       les colonnes du tableau qui la contient. *@
+    <template x-if="!editing.parentSubjectId">
+     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+       <label for="edit-subject-col1" class="form-label">Entête 1re colonne</label>
+       <input id="edit-subject-col1" type="text" maxlength="40" x-model="editing.column1Header"
+        placeholder="Domaines" class="input-field">
+      </div>
+      <div>
+       <label for="edit-subject-col2" class="form-label">Entête 2e colonne</label>
+       <input id="edit-subject-col2" type="text" maxlength="40" x-model="editing.column2Header"
+        placeholder="Activités" class="input-field">
+      </div>
+     </div>
+    </template>
    </div>
 
    <div class="mt-6 flex justify-end gap-3">

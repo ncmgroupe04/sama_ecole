@@ -59,8 +59,11 @@ public class ImportGradeSheetCommandHandler(
             ]);
         }
 
-        // Barème du CYCLE de la classe visée (Primaire /10, Collège & Lycée /20), comme la saisie unitaire.
-        var gradingScale = await GradingScaleGuard.ResolveScaleForClassroomAsync(dbContext, request.ClassroomId, cancellationToken);
+        // Barème de la MATIÈRE importée (grilles APC : /40, /60, /24…) et, à défaut, celui du CYCLE de la
+        // classe visée (Primaire /10, Collège & Lycée /20) — exactement la résolution de la saisie
+        // unitaire, sans quoi le même fichier passerait à l'écran et échouerait à l'import.
+        var cycleScale = await GradingScaleGuard.ResolveScaleForClassroomAsync(dbContext, request.ClassroomId, cancellationToken);
+        var gradingScale = await GradingScaleGuard.ResolveMaxScoreAsync(dbContext, request.SubjectId, cycleScale, cancellationToken);
 
         // Lecture BRUTE du fichier : IGradeSheetImportParser lève déjà une ValidationException si le
         // format est illisible, l'en-tête absent, ou les colonnes ambiguës.
@@ -142,7 +145,7 @@ public class ImportGradeSheetCommandHandler(
                 if (value > gradingScale)
                 {
                     errors.Add(new ValidationFailure(
-                        field, $"La note de {label} ({value}) dépasse le barème du cycle de la classe ({gradingScale}) pour le matricule « {matricule} »."));
+                        field, $"La note de {label} ({value}) dépasse le barème de la matière ({GradingScaleGuard.FormatScale(gradingScale)}) pour le matricule « {matricule} »."));
                     continue;
                 }
 
