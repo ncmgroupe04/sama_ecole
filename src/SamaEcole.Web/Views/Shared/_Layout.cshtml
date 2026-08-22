@@ -64,7 +64,13 @@
  <div x-show="sidebarOpen" class="fixed inset-0 z-20 bg-slate-900 bg-opacity-50 transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
 
  <!-- Barre latérale -->
- <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
+ @* w-72 et non w-64 : à 16rem, l'espace restant pour un libellé principal (icône w-6, gap-3,
+ px-3 du lien, px-4 de la nav) tombe à ~164px, soit tout juste la largeur de « Aide &
+ Documentation » ou de « Console Super Admin » en text-base — les deux passaient à la ligne,
+ et un libellé de menu sur deux lignes casse l'alignement de toute la colonne. 18rem laisse
+ ~196px, avec la marge nécessaire pour un libellé un peu plus long. La barre est en flux
+ (lg:static) : aucun décalage codé en dur ailleurs ne dépend de cette largeur — vérifié. *@
+ <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
  
  <!-- En-tête Sidebar / Logo -->
  <div class="flex items-center justify-center h-16 border-b border-slate-100 px-6">
@@ -88,7 +94,11 @@
  // text-primary (#6366F1 DEFAULT) sur bg-indigo-50 ne tient que 3.99:1 — sous le seuil
  // WCAG AA 4.5:1 (Volume 5 §8). primary-700 (7.07:1 sur indigo-50, 7.90:1 sur blanc) le
  // respecte largement sans changer la teinte de marque utilisée ailleurs (logo, avatars).
- const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-200 active:scale-95";
+ @* whitespace-nowrap : un libellé de menu ne passe JAMAIS à la ligne. S'il ne tient pas, c'est
+ la barre qu'il faut élargir (voir w-72 sur l'aside) ou le libellé qu'il faut raccourcir —
+ pas la ligne qu'il faut casser, ce qui désaligne toute la colonne et fait sauter la hauteur
+ des lignes voisines. *@
+ const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 active:scale-95";
  const string LinkIdle = $"{LinkBase} text-slate-600 hover:bg-slate-50 hover:text-primary-700";
  const string LinkActive = $"{LinkBase} text-primary-700 bg-indigo-50 font-medium";
  const string LinkSoon = $"{LinkBase} text-slate-400 cursor-not-allowed select-none";
