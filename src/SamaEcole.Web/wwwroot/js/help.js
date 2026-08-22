@@ -82,8 +82,10 @@
                         "INDÉPENDANTE des classes pédagogiques : un local est un local, une classe est un groupe d'élèves.",
                     objectif:
                         "Disposer d'un inventaire fiable des locaux afin d'affecter les classes en connaissance de cause, de " +
-                        "mesurer le taux d'occupation réel et d'anticiper la saturation avant qu'elle ne se manifeste au " +
-                        "premier jour de classe.",
+                        "mesurer le taux d'occupation réel et d'anticiper la saturation avant qu'elle ne se manifeste au premier " +
+                        "jour de classe. Pour la direction, c'est l'instrument qui permet d'arbitrer l'ouverture d'une classe " +
+                        "supplémentaire sur une donnée mesurée plutôt que sur une impression, et de répondre sans délai à toute " +
+                        "demande de justification de la capacité d'accueil.",
                     probleme:
                         "L'inventaire des locaux réside le plus souvent dans la mémoire du surveillant général. Il en résulte " +
                         "des classes de cinquante élèves dans une salle de trente-cinq places, deux groupes convoqués " +
@@ -132,8 +134,11 @@
                         "cycle — CI/CP, CE1/CE2, CM1/CM2, Collège, Lycée — et commande le barème de notation appliqué : " +
                         "sur dix au primaire, sur vingt au collège et au lycée.",
                     objectif:
-                        "Constituer l'ossature autour de laquelle s'organisent les inscriptions, les affectations " +
-                        "d'enseignants, les grilles d'évaluation, les barèmes de frais et l'édition des bulletins.",
+                        "Constituer l'ossature autour de laquelle s'organisent les inscriptions, les affectations d'enseignants, " +
+                        "les grilles d'évaluation, les barèmes de frais et l'édition des bulletins. Pour le secrétariat, c'est la " +
+                        "nomenclature de référence à laquelle tout se rattache : un groupe correctement déclaré ici épargne des " +
+                        "dizaines de corrections ultérieures sur les inscriptions, les frais et les bulletins. Pour la direction, " +
+                        "c'est la base de tout comptage d'effectif.",
                     probleme:
                         "Une nomenclature de classes flottante — « CM2A » ici, « CM2 A » là, « cm2-a » ailleurs — disperse " +
                         "les effectifs entre des groupes fantômes, fausse les statistiques et interdit tout classement " +
@@ -228,8 +233,11 @@
                         "généré par l'application au moment de l'enregistrement — ainsi que ses AFFECTATIONS : le couple " +
                         "matière + classe pour lequel il est habilité à saisir des notes et à faire l'appel.",
                     objectif:
-                        "Circonscrire précisément le périmètre d'intervention de chaque enseignant et alimenter, à partir " +
-                        "d'une source unique, l'emploi du temps, le pointage des heures, la paie et les bulletins.",
+                        "Circonscrire précisément le périmètre d'intervention de chaque enseignant et alimenter, à partir d'une " +
+                        "source unique, l'emploi du temps, le pointage des heures, la paie et les bulletins. Pour la direction, " +
+                        "la fiche enseignant est le point de rattachement unique du corps professoral : elle rend visible, en un " +
+                        "seul écran, qui enseigne quoi et à qui, et fonde la responsabilité pédagogique de chaque saisie portée " +
+                        "au dossier d'un élève.",
                     probleme:
                         "Sans registre d'affectation, n'importe quel compte peut saisir des notes dans n'importe quelle " +
                         "matière, les heures effectuées se réconcilient de mémoire en fin de mois, et une erreur de saisie " +
@@ -278,8 +286,11 @@
                         "de son tuteur légal et sa photographie. Un MATRICULE unique lui est attribué au moment précis de " +
                         "l'enregistrement, et non à l'ouverture du formulaire.",
                     objectif:
-                        "Constituer une identité scolaire pérenne, opposable, qui suivra l'élève de son admission à sa " +
-                        "sortie et servira de clé unique à ses notes, à ses bulletins et à sa situation financière.",
+                        "Constituer une identité scolaire pérenne, opposable, qui suivra l'élève de son admission à sa sortie et " +
+                        "servira de clé unique à ses notes, à ses bulletins et à sa situation financière. Pour le secrétariat, " +
+                        "c'est la garantie qu'un même enfant ne sera jamais compté deux fois ni recherché en vain ; pour la " +
+                        "direction, c'est la source unique dont procèdent l'effectif déclaré, les documents officiels et le " +
+                        "dossier financier de la famille.",
                     probleme:
                         "Le registre papier autorise les homonymies non arbitrées, les dates de naissance divergentes d'un " +
                         "document à l'autre et les doublons créés par deux agents travaillant simultanément. Ces défauts se " +
@@ -320,8 +331,11 @@
                         "classe. Elle ne crée ni élève ni matricule : elle prolonge un dossier existant. Le changement de " +
                         "classe, quant à lui, redirige une inscription en cours vers un autre groupe du même exercice.",
                     objectif:
-                        "Reconduire la scolarité d'une cohorte entière en quelques minutes, tout en conservant l'intégralité " +
-                        "de l'historique — notes, bulletins, règlements, discipline — attaché au matricule d'origine.",
+                        "Reconduire la scolarité d'une cohorte entière en quelques minutes, tout en conservant l'intégralité de " +
+                        "l'historique — notes, bulletins, règlements, discipline — attaché au matricule d'origine. Pour le " +
+                        "secrétariat, la campagne de rentrée cesse d'être une ressaisie massive pour devenir un simple contrôle ; " +
+                        "pour la direction, la continuité du dossier rend enfin possible le suivi d'une cohorte sur plusieurs " +
+                        "années consécutives.",
                     probleme:
                         "Ressaisir chaque rentrée l'état civil de plusieurs centaines d'élèves consomme des semaines de " +
                         "travail et rompt le fil de l'historique : l'élève se retrouve doté de deux dossiers, ses bulletins " +
@@ -362,8 +376,11 @@
                         "Un échéancier PERSONNALISÉ peut lui être substitué pour tenir compte d'une situation familiale " +
                         "particulière.",
                     objectif:
-                        "Rendre exigible, à date certaine, ce que chaque famille doit à l'établissement, et fonder sur cette " +
-                        "base un recouvrement méthodique plutôt qu'une réclamation improvisée.",
+                        "Rendre exigible, à date certaine, ce que chaque famille doit à l'établissement, et fonder sur cette base " +
+                        "un recouvrement méthodique plutôt qu'une réclamation improvisée. Pour la direction, l'échéancier " +
+                        "transforme une créance diffuse en un calendrier d'encaissements prévisible ; pour le service financier, " +
+                        "il fournit au guichet la réponse exacte à la seule question qui compte vraiment : que doit cette " +
+                        "famille, et depuis quand ?",
                     probleme:
                         "Sans échéancier formalisé, nul ne sait qui doit quoi ni depuis quand. Le recouvrement se réduit à " +
                         "la mémoire du caissier, les familles de bonne foi sont relancées à tort tandis que les retards " +
@@ -413,8 +430,10 @@
                         "seconde est avertie du conflit plutôt que d'écraser silencieusement la première.",
                     objectif:
                         "Recueillir les notes une seule fois, à la source, dans un cadre borné par le barème et par les " +
-                        "affectations de l'enseignant, et alimenter directement les calculs et les bulletins sans aucune " +
-                        "reprise intermédiaire.",
+                        "affectations de l'enseignant, et alimenter directement les calculs et les bulletins sans aucune reprise " +
+                        "intermédiaire. Pour la direction, cela supprime la période d'incertitude qui sépare la remise des copies " +
+                        "de l'édition des bulletins : à tout instant, l'état d'avancement de la notation est visible classe par " +
+                        "classe et matière par matière.",
                     probleme:
                         "La chaîne classique — cahier de notes, puis tableur du surveillant, puis bulletin — comporte deux " +
                         "recopies manuelles, donc deux occasions d'erreur par élève et par matière. À l'échelle d'un " +
@@ -457,8 +476,11 @@
                         "hiérarchie de la grille, moyennes, rang, mention, appréciations et blocs de signature. Le bulletin " +
                         "s'édite individuellement ou pour une classe entière, en un seul document.",
                     objectif:
-                        "Délivrer un document officiel homogène, exact et immédiatement remettable, sans mise en page " +
-                        "manuelle ni recopie, et dans une présentation strictement identique d'une classe à l'autre.",
+                        "Délivrer un document officiel homogène, exact et immédiatement remettable, sans mise en page manuelle ni " +
+                        "recopie, et dans une présentation strictement identique d'une classe à l'autre. Pour le secrétariat, " +
+                        "l'édition d'une promotion entière devient l'affaire de quelques minutes au lieu de plusieurs journées ; " +
+                        "pour la direction, l'établissement présente aux familles un document uniforme, qui ne trahit ni la " +
+                        "classe ni l'agent qui l'a produit.",
                     probleme:
                         "Le bulletin composé sous traitement de texte varie d'une classe à l'autre, se désaligne dès qu'un " +
                         "nom est plus long que prévu, et suppose de recopier à la main des moyennes déjà calculées ailleurs. " +
@@ -500,8 +522,11 @@
                         "« Très Bien », « Bien », « Assez Bien », « Passable » — sont librement définis par la direction, " +
                         "chacun par la moyenne minimale qui y donne droit, exprimée sur vingt.",
                     objectif:
-                        "Garantir l'exactitude arithmétique et l'équité du classement, tout en laissant à l'établissement " +
-                        "la maîtrise de ses propres seuils d'appréciation.",
+                        "Garantir l'exactitude arithmétique et l'équité du classement, tout en laissant à l'établissement la " +
+                        "maîtrise de ses propres seuils d'appréciation. Pour la direction, c'est la fin des contestations " +
+                        "arithmétiques en conseil de classe : le calcul est reproductible et opposable, et la réclamation d'un " +
+                        "parent se vérifie à l'écran en quelques secondes plutôt qu'en refaisant l'opération à la main devant " +
+                        "lui.",
                     probleme:
                         "Les moyennes calculées à la main ou sous tableur souffrent d'erreurs de coefficient, de barèmes " +
                         "hétérogènes mal ramenés à une échelle commune et de rangs disputés en conseil de classe. Chaque " +
@@ -549,8 +574,10 @@
                         "frais annexes — tenue, transport, cantine, examens —, définis par catégorie et déclinés classe par " +
                         "classe. C'est cette grille, et elle seule, qui détermine le montant dû à chaque inscription.",
                     objectif:
-                        "Fixer une fois pour toutes le tarif applicable, de sorte que le montant réclamé à une famille ne " +
-                        "dépende jamais de l'agent qui l'accueille au guichet.",
+                        "Fixer une fois pour toutes le tarif applicable, de sorte que le montant réclamé à une famille ne dépende " +
+                        "jamais de l'agent qui l'accueille au guichet. Pour la direction, c'est l'instrument qui rend la " +
+                        "politique tarifaire de l'établissement explicite, comparable d'une classe à l'autre, et défendable aussi " +
+                        "bien devant les familles que devant le conseil d'administration.",
                     probleme:
                         "Lorsque le tarif est de tradition orale, chaque agent applique sa propre version, les remises " +
                         "s'accordent sans trace, et l'établissement se trouve dans l'incapacité de justifier des écarts " +
@@ -590,8 +617,10 @@
                         "Chaque encaissement donne lieu à un reçu numéroté, édité au format PDF, portant la mention " +
                         "réglementaire invitant les parents à conserver soigneusement leur reçu après paiement.",
                     objectif:
-                        "Constater sans délai tout versement, en délivrer la preuve à la famille, et tenir en permanence " +
-                        "un solde exact par élève.",
+                        "Constater sans délai tout versement, en délivrer la preuve à la famille, et tenir en permanence un solde " +
+                        "exact par élève. Pour le service financier, chaque versement devient immédiatement opposable, appuyé sur " +
+                        "un reçu numéroté ; pour la direction, la recette du jour cesse d'être une estimation pour devenir un " +
+                        "chiffre arrêté, rattaché à un agent et à une journée précise.",
                     probleme:
                         "Le carnet à souches se perd, se recopie mal et ne se totalise qu'en fin de journée. Les " +
                         "contestations de paiement sont alors indémontrables dans un sens comme dans l'autre, et le " +
@@ -632,8 +661,11 @@
                         "relances par SMS aux tuteurs. Les lots de relance sont préparés chaque nuit par l'application, " +
                         "mais demeurent à l'état de brouillon : aucun envoi de masse ne part sans un geste humain.",
                     objectif:
-                        "Substituer à une réclamation improvisée un recouvrement méthodique, équitable et traçable, qui " +
-                        "préserve la trésorerie de l'établissement sans exposer les familles à des relances injustifiées.",
+                        "Substituer à une réclamation improvisée un recouvrement méthodique, équitable et traçable, qui préserve " +
+                        "la trésorerie de l'établissement sans exposer les familles à des relances injustifiées. Pour la " +
+                        "direction, c'est la maîtrise du principal risque de trésorerie d'un établissement privé ; pour le " +
+                        "service financier, c'est une liste de travail ordonnée par ancienneté de créance, à la place d'une " +
+                        "chasse au retardataire menée de mémoire.",
                     probleme:
                         "Sans suivi structuré, les impayés ne se découvrent qu'au moment des bulletins ou des examens, " +
                         "c'est-à-dire trop tard pour être recouvrés sereinement. Les relances se font au jugé, certaines " +
@@ -683,8 +715,10 @@
                         "recettes encaissées, encours d'impayés, taux de recouvrement, assiduité et occupation des locaux. " +
                         "Les rapports financiers approfondissent cette vue et s'exportent au format Excel.",
                     objectif:
-                        "Donner à la direction une lecture immédiate et fiable de la situation de son établissement, sans " +
-                        "avoir à solliciter le secrétariat ni à consolider des tableaux à la main.",
+                        "Donner à la direction une lecture immédiate et fiable de la situation de son établissement, sans avoir à " +
+                        "solliciter le secrétariat ni à consolider des tableaux à la main. Pour la direction, c'est l'instrument " +
+                        "d'arbitrage : ouvrir une classe, recruter un enseignant, engager une dépense deviennent des décisions " +
+                        "fondées sur une mesure datée plutôt que sur une impression, et justifiables devant un tiers.",
                     probleme:
                         "Les indicateurs reconstitués à la demande arrivent tardivement, ne concordent pas entre eux et " +
                         "reposent sur des périmètres implicites. Les décisions — ouverture d'une classe, recrutement, " +
@@ -722,8 +756,10 @@
                         "est clôturée le soir en déclarant le solde constaté. L'application édite alors le rapport de " +
                         "clôture, qui rapproche le total théorique des encaissements du numéraire réellement compté.",
                     objectif:
-                        "Arrêter chaque journée sur un chiffre incontestable, détecter immédiatement tout écart de caisse, " +
-                        "et fixer la responsabilité de chaque caissier sur sa propre session.",
+                        "Arrêter chaque journée sur un chiffre incontestable, détecter immédiatement tout écart de caisse, et " +
+                        "fixer la responsabilité de chaque caissier sur sa propre session. Pour la direction, c'est la protection " +
+                        "la plus élémentaire contre les fuites de caisse ; pour le caissier lui-même, c'est la garantie qu'un " +
+                        "manquant survenu ailleurs ou un autre jour ne pourra jamais lui être imputé.",
                     probleme:
                         "Une caisse jamais arrêtée formellement rend tout écart indétectable : lorsqu'un manquant apparaît " +
                         "en fin de mois, il devient impossible d'en déterminer le jour, l'opération ou l'agent. Le soupçon " +
