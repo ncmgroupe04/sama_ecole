@@ -25,6 +25,14 @@
             title: 'Configuration initiale & Années scolaires',
             icon: 'calendar',
             summary: "Le socle de l'établissement : l'exercice académique de travail et les locaux qui l'accueillent.",
+            concept:
+                "Tout établissement travaille sur un EXERCICE : une année scolaire déclarée, bornée par deux dates et " +
+                "découpée en trimestres. Ce module installe ce cadre, ainsi que les murs qui l'abritent. Rien de ce qui suit " +
+                "n'a de sens sans lui : une inscription, un barème de frais, une note ou un bulletin ne sont jamais des " +
+                "données flottantes — elles appartiennent à un exercice, et à un seul. C'est pourquoi ce module se paramètre " +
+                "EN PREMIER, avant toute campagne de rentrée, et pourquoi Unikol n'autorise qu'une seule année active à la " +
+                "fois : l'ambiguïté sur l'exercice de travail est la première source d'erreurs durables dans un logiciel de " +
+                "gestion scolaire.",
             articles: [
                 {
                     id: 'annee-scolaire',
@@ -121,6 +129,14 @@
             title: 'Structure pédagogique & Matières modulables',
             icon: 'book',
             summary: "Les classes, les cycles, et le moteur d'évaluation qui épouse aussi bien l'APC du primaire que la notation du secondaire.",
+            concept:
+                "Une école est d'abord une organisation pédagogique : des groupes d'élèves — les classes —, rattachés à des " +
+                "niveaux, eux-mêmes réunis en cycles, et pour chaque niveau une grille d'évaluation. Ce module construit " +
+                "cette ossature. Sa particularité tient au moteur d'évaluation, conçu pour épouser DEUX traditions sans en " +
+                "privilégier aucune : la liste plate de matières coefficientées du secondaire, et la grille hiérarchique à " +
+                "deux étages — domaines et activités, aux barèmes hétérogènes — que l'Approche par les Compétences impose au " +
+                "primaire sénégalais. C'est ce paramétrage, et lui seul, qui détermine la forme exacte des bulletins " +
+                "imprimés.",
             articles: [
                 {
                     id: 'classes-cycles',
@@ -221,6 +237,13 @@
             title: 'Gestion du personnel & Enseignants',
             icon: 'users',
             summary: "Les fiches du corps enseignant, leurs matières, leurs classes et leur rattachement contractuel.",
+            concept:
+                "Le corps enseignant est décrit par deux objets distincts qu'il ne faut jamais confondre : la FICHE, qui " +
+                "décrit une personne — identité, matricule interne, conditions contractuelles —, et le COMPTE UTILISATEUR, " +
+                "qui ouvre un accès à l'application. À la fiche se rattachent les AFFECTATIONS, c'est-à-dire les couples " +
+                "matière + classe pour lesquels le professeur est habilité. Cette notion d'affectation est le pivot du module " +
+                ": elle borne ce que chacun voit et saisit, alimente l'emploi du temps et le pointage des heures, et fonde la " +
+                "responsabilité de chaque note portée au dossier d'un élève.",
             articles: [
                 {
                     id: 'enseignants',
@@ -273,6 +296,13 @@
             title: "Mouvements d'élèves — Inscriptions & Réinscriptions",
             icon: 'document',
             summary: "De l'accueil d'un nouvel élève à la reconduction annuelle, avec la production automatique de l'échéancier financier.",
+            concept:
+                "L'inscription est le point de convergence de tout le produit : l'acte unique qui relie un ÉLÈVE — son " +
+                "identité, son matricule —, une ANNÉE scolaire, une CLASSE et un BARÈME de frais. On distingue la première " +
+                "inscription, qui crée l'identité scolaire, de la réinscription, qui prolonge un dossier existant sans jamais " +
+                "le dupliquer. Dans les deux cas, la validation fige le montant dû ligne à ligne et ouvre le dossier " +
+                "financier de la famille : c'est ici, et nulle part ailleurs, que la scolarité d'un enfant devient une " +
+                "créance de l'établissement.",
             articles: [
                 {
                     id: 'premiere-inscription',
@@ -416,6 +446,13 @@
             title: 'Évaluations, saisie des notes & bulletins PDF',
             icon: 'chart-multiple',
             summary: "De la note portée par l'enseignant au bulletin officiel imprimé, en passant par les moyennes, les rangs et les appréciations.",
+            concept:
+                "Ce module transforme les appréciations des enseignants en un document officiel. La chaîne est volontairement " +
+                "à SENS UNIQUE : on saisit des notes, le serveur en dérive les moyennes, les totaux, le rang et la mention, " +
+                "et le bulletin ne fait que restituer ce calcul. Aucune moyenne ne se saisit à la main, aucun bulletin ne " +
+                "s'annote après coup. La difficulté tient à l'hétérogénéité des barèmes — une grille APC mêle des lignes sur " +
+                "60, 40, 24 et 16 : chaque note est donc ramenée à une échelle commune avant d'être pondérée par son " +
+                "coefficient, afin qu'un 45/60 et un 18/24 pèsent exactement le même poids.",
             articles: [
                 {
                     id: 'saisie-notes',
@@ -562,6 +599,13 @@
             title: 'Comptabilité, frais scolaires & caisse',
             icon: 'wallet',
             summary: "Du barème tarifaire à l'encaissement au guichet, jusqu'au suivi méthodique des impayés.",
+            concept:
+                "Trois notions se succèdent et ne doivent jamais être confondues. Le BARÈME est ce que l'établissement décide " +
+                "de facturer, par classe et par catégorie de frais. L'ÉCHÉANCIER est ce qu'une famille donnée doit, et à " +
+                "quelles dates. L'ENCAISSEMENT est ce qu'elle a effectivement versé. Le principe qui gouverne tout le module " +
+                "en découle : le service financier encaisse, il ne fixe ni ne corrige jamais un montant dû — toute révision " +
+                "relève du secrétariat ou de la direction, et demeure historisée. C'est cette séparation des rôles qui rend " +
+                "une caisse contrôlable.",
             articles: [
                 {
                     id: 'bareme-frais',
@@ -703,6 +747,13 @@
             title: 'Rapports, statistiques & audit',
             icon: 'shield',
             summary: "Les instruments de pilotage de la direction et la traçabilité des opérations quotidiennes.",
+            concept:
+                "Ce module ne produit aucune donnée : il RESTITUE celles que les six précédents ont saisies. D'où sa règle de " +
+                "lecture, qui vaut avertissement : un indicateur ne vaut jamais mieux que les saisies quotidiennes qui " +
+                "l'alimentent, et un chiffre surprenant trahit plus souvent une erreur d'écriture qu'un événement réel. On y " +
+                "trouve trois familles d'instruments : les tableaux de bord, qui donnent la situation à l'instant présent ; " +
+                "les rapports exportables, destinés au comptable et au conseil d'administration ; et le journal d'audit, qui " +
+                "retrace l'auteur, la date et la valeur antérieure de toute opération sensible.",
             articles: [
                 {
                     id: 'tableau-de-bord',
@@ -853,6 +904,10 @@
     const haystackOf = (section, article) =>
         normalize([
             section.title,
+            // Le concept du MODULE est indexé sur chacune de ses fiches : une recherche sur
+            // « exercice » ou « affectation » doit ramener le pôle qui les explique, pas seulement
+            // les fiches où le mot réapparaît par hasard.
+            section.concept,
             article.title,
             article.location,
             (article.roles || []).join(' '),

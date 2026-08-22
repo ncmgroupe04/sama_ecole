@@ -47,6 +47,30 @@ test('chaque fiche porte les six rubriques du squelette pédagogique, toutes ren
     }
 });
 
+test('chaque module explique son concept, pas seulement ses fiches', () => {
+    const help = helpCenter();
+
+    for (const section of help.sections) {
+        assert.equal(typeof section.concept, 'string', `module ${section.number} : concept absent`);
+        // Un pôle se résume en une ligne (summary) mais s'EXPLIQUE en un paragraphe : le seuil
+        // écarte le résumé déguisé en explication, qui laisserait le lecteur au même point.
+        assert.ok(section.concept.length >= 400,
+            `module ${section.number} : concept trop bref (${section.concept.length} caractères)`);
+        assert.ok(section.summary.length < section.concept.length,
+            `module ${section.number} : le résumé ne peut pas être plus long que le concept`);
+    }
+});
+
+test('la recherche atteint le concept des modules, pas seulement les fiches', () => {
+    const help = helpCenter();
+
+    // « sens unique » n'apparaît que dans le concept du module Évaluations — nulle part ailleurs.
+    help.search = 'sens unique';
+
+    assert.ok(help.resultCount > 0, 'le concept de module est absent de l’index de recherche');
+    assert.equal(help.visibleSections()[0].id, 'evaluations');
+});
+
 test('chaque fiche expose six blocs prêts à rendre, jamais un objet nu', () => {
     const help = helpCenter();
 

@@ -120,6 +120,17 @@
     </div>
    </div>
 
+   @* Concept du MODULE — le niveau que les fiches ne couvrent pas. Chaque fiche explique SA
+      fonctionnalité ; ce paragraphe explique le pôle : ce qu'il recouvre, les notions à ne pas
+      confondre, et l'ordre dans lequel ses fiches s'articulent. Il est indexé par la recherche
+      (voir haystackOf dans help.js), donc trouvable au même titre que le reste. *@
+   @* 3.25rem = largeur de la pastille d'icône du module (w-10) + gap-3 : le paragraphe s'aligne
+      ainsi sur le titre, et non sur l'icône. Valeur arbitraire assumée — l'échelle Tailwind par
+      défaut s'arrête à ml-12 (3rem) puis saute à ml-14 (3.5rem), ni l'une ni l'autre ne tombant juste. *@
+   <div class="rounded-xl border-l-2 border-primary-300 bg-white/70 px-4 py-3 ml-0 sm:ml-[3.25rem]">
+    <p class="text-sm leading-relaxed text-slate-600" x-text="section.concept"></p>
+   </div>
+
    <!-- Tiroirs du module -->
    <div class="space-y-3">
     <template x-for="article in matchingArticles(section)" :key="article.id">
