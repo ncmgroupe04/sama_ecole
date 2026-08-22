@@ -188,7 +188,7 @@
                         "Ouvrez Gestion Scolaire › Matières et sélectionnez le niveau concerné : les grilles sont propres à chaque niveau.",
                         "GRILLE SIMPLE (collège, lycée) : créez chaque matière avec son nom et son coefficient, et laissez le barème vide pour hériter de celui du cycle, soit /20.",
                         "GRILLE APC (primaire) : créez d'abord les DOMAINES parents — « Lang. & Com. », « Maths », « Éveil » — sans leur attribuer de barème, car un domaine n'est jamais noté.",
-                        "Ajoutez ensuite, sous chaque domaine, les ACTIVITÉS filles : nom, coefficient et barème propre (sur 40, sur 60, sur 24…) tel qu'il figure sur la grille officielle.",
+                        "Ajoutez ensuite, sous chaque domaine, les ACTIVITÉS filles : nom, coefficient et barème propre — sur 60, sur 40, sur 24 ou sur 16 — tel qu'il figure, ligne par ligne, sur la grille officielle.",
                         "Ordonnez les lignes au moyen des flèches de réorganisation : « Ressources » précède toujours « Compétences », et aucun tri automatique ne saurait le deviner.",
                         "Personnalisez, sur le premier domaine, les en-têtes des deux premières colonnes du bulletin : « Domaines » et « Activités » au CI-CP, « Activités » et « Contrôles » au CE1-CE2.",
                         "Prévisualisez un bulletin vierge de la classe afin de confronter la grille écran à la grille papier avant toute saisie de notes."
@@ -497,7 +497,8 @@
                         "Ensemble des grandeurs dérivées des notes : moyenne par matière, total des points, total des " +
                         "coefficients, moyenne générale, rang dans la classe, mention et appréciation. Toutes sont " +
                         "recalculées par le serveur, jamais saisies à la main. Les seuils de mention — « Excellent », " +
-                        "« Très Bien »… — sont paramétrables par la direction.",
+                        "« Très Bien », « Bien », « Assez Bien », « Passable » — sont librement définis par la direction, " +
+                        "chacun par la moyenne minimale qui y donne droit, exprimée sur vingt.",
                     objectif:
                         "Garantir l'exactitude arithmétique et l'équité du classement, tout en laissant à l'établissement " +
                         "la maîtrise de ses propres seuils d'appréciation.",
@@ -557,7 +558,7 @@
                     procedure: [
                         "Ouvrez Comptabilité › Frais Scolaires.",
                         "Vérifiez que l'année scolaire active est bien celle pour laquelle vous entendez paramétrer les tarifs.",
-                        "Créez les catégories de frais : inscription, mensualité, tenue, transport, examens…",
+                        "Créez les catégories de frais que pratique l'établissement : frais d'inscription, mensualité, tenue scolaire, transport, cantine, fournitures et frais d'examen.",
                         "Pour chaque classe, renseignez le montant applicable à chaque catégorie.",
                         "Précisez le caractère du frais : obligatoire ou facultatif, ponctuel ou récurrent.",
                         "Enregistrez. Le barème devient immédiatement opérant pour toute nouvelle inscription.",
@@ -598,7 +599,7 @@
                     procedure: [
                         "Ouvrez Comptabilité › Caisse (Encaissements) et ouvrez votre session de caisse en déclarant le fonds initial.",
                         "Recherchez l'élève par son matricule ou par son nom : sa situation financière s'affiche — total dû, déjà réglé, solde restant.",
-                        "Saisissez le montant versé et le mode de règlement : espèces, virement, mobile money…",
+                        "Saisissez le montant versé et le mode de règlement retenu : espèces, virement bancaire, chèque ou paiement mobile.",
                         "Vérifiez l'imputation proposée sur les lignes de frais, puis validez l'encaissement.",
                         "Le solde de l'inscription est mis à jour dans la transaction même : deux encaissements concurrents sur le même élève ne peuvent produire de sur-crédit.",
                         "Éditez le reçu PDF et remettez-le à la famille, en attirant son attention sur la nécessité de le conserver.",
@@ -756,15 +757,50 @@
     ];
 
     // Les six rubriques du squelette pédagogique, dans l'ordre d'affichage. La clé correspond au champ
-    // de l'article ; l'icône provient du sprite partagé (_IconSprite.cshtml).
+    // de l'article ; l'icône provient du sprite partagé (_IconSprite.cshtml) ; `kind` dit à la vue
+    // comment rendre le contenu — un paragraphe, des étapes numérotées, ou une liste à puces.
     const RUBRICS = [
-        { key: 'definition', label: 'Définition & Concept', icon: 'book', tone: 'slate' },
-        { key: 'objectif', label: 'Objectif & Utilité', icon: 'target', tone: 'primary' },
-        { key: 'probleme', label: 'Problème résolu', icon: 'lightbulb', tone: 'warning' },
-        { key: 'procedure', label: 'Procédure étape par étape', icon: 'document-text', tone: 'primary' },
-        { key: 'impacts', label: 'Impacts & Interconnexions', icon: 'link', tone: 'slate' },
-        { key: 'recommandations', label: 'Recommandations & Bonnes pratiques', icon: 'shield', tone: 'success' }
+        { key: 'definition', label: 'Définition & Concept', icon: 'book', tone: 'slate', kind: 'text' },
+        { key: 'objectif', label: 'Objectif & Utilité', icon: 'target', tone: 'primary', kind: 'text' },
+        { key: 'probleme', label: 'Problème résolu', icon: 'lightbulb', tone: 'warning', kind: 'text' },
+        { key: 'procedure', label: 'Procédure étape par étape', icon: 'document-text', tone: 'primary', kind: 'steps' },
+        { key: 'impacts', label: 'Impacts & Interconnexions', icon: 'link', tone: 'slate', kind: 'bullets' },
+        { key: 'recommandations', label: 'Recommandations & Bonnes pratiques', icon: 'shield', tone: 'success', kind: 'bullets' }
     ];
+
+    /**
+     * Aplatit les six rubriques d'un article en blocs prêts à rendre.
+     *
+     * La vue itère ces blocs et lit `block.text` / `block.items` DIRECTEMENT — elle n'appelle plus
+     * aucune méthode du composant pour aller chercher le contenu. C'est une correction de bug, pas
+     * une préférence de style : la vue appelait auparavant `valueOf(article, rubric)`, et le nom
+     * `valueOf` existe sur Object.prototype. Or le proxy de portée d'Alpine résout un identifiant
+     * ainsi :
+     *
+     *     get({objects}, name, receiver) {
+     *         return Reflect.get(objects.find(o => Reflect.has(o, name)) || {}, name, receiver)
+     *     }
+     *
+     * `Reflect.has` remonte la chaîne de prototypes. Dans un <template x-for>, le premier objet de
+     * la pile est la portée de boucle ({ article: … }) : `Reflect.has(portée, 'valueOf')` est donc
+     * VRAI par héritage, et c'est Object.prototype.valueOf qui était appelée — laquelle renvoie
+     * l'objet lui-même, affiché « [object Object] » par x-text. Renommer la méthode aurait suffi à
+     * masquer le symptôme ; ne plus appeler de méthode du tout supprime la classe de bug entière.
+     * Voir tests/js/help.test.mjs, qui interdit désormais tout nom hérité d'Object.prototype.
+     */
+    const blocksOf = article =>
+        RUBRICS.map(rubric => {
+            const value = article[rubric.key];
+            return {
+                key: rubric.key,
+                label: rubric.label,
+                icon: rubric.icon,
+                tone: rubric.tone,
+                kind: rubric.kind,
+                text: Array.isArray(value) ? '' : value,
+                items: Array.isArray(value) ? value : []
+            };
+        });
 
     // Recherche insensible à la casse ET aux accents : « echeancier » doit trouver « échéancier »,
     // sans quoi la barre de recherche punit l'utilisateur pressé qui ne tape pas les diacritiques.
@@ -794,11 +830,13 @@
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('helpCenter', () => ({
-            rubrics: RUBRICS,
+            // Blocs et index de recherche calculés UNE FOIS, au démarrage : la vue n'a plus qu'à
+            // lire des propriétés, sans appeler la moindre méthode du composant (voir blocksOf).
             sections: HELP_SECTIONS.map(section => ({
                 ...section,
                 articles: section.articles.map(article => ({
                     ...article,
+                    blocks: blocksOf(article),
                     haystack: haystackOf(section, article)
                 }))
             })),
@@ -881,15 +919,6 @@
                 }
                 const results = this.visibleSections().flatMap(section => this.matchingArticles(section));
                 this.openIds = results.length === 1 ? [results[0].id] : [];
-            },
-
-            /** Contenu d'une rubrique : chaîne unique (paragraphe) ou tableau (liste ordonnée/à puces). */
-            valueOf(article, rubric) {
-                return article[rubric.key];
-            },
-
-            isList(value) {
-                return Array.isArray(value);
             }
         }));
     });

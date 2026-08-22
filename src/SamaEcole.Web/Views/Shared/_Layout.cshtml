@@ -328,8 +328,12 @@
  débordant sur le contenu de la page en dessous — exactement le chevauchement remonté (reproduit à
  1024px, juste au seuil lg:). tailwind.config.js ne définit QUE sm/lg (pas de xl) : rester sur lg:
  est donc volontaire, pas un oubli — whitespace-nowrap seul absorbe le resserrement. *@
- <div x-data="digitalClock()" class="hidden lg:flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xl font-medium shrink-0 whitespace-nowrap" x-cloak>
- <icon name="clock" class="w-6 h-6 shrink-0" />
+ @* Gabarit volontairement DISCRET : la date s'affichait en text-xl dans un px-4 py-2, ce qui en
+ faisait le plus gros élément de la barre — plus imposant que le nom de l'utilisateur ou que
+ l'année scolaire active, alors qu'elle ne porte aucune information propre à l'établissement.
+ Ramenée au gabarit des autres pastilles (text-sm, px-2.5 py-1), elle s'y harmonise. *@
+ <div x-data="digitalClock()" class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium shrink-0 whitespace-nowrap" x-cloak>
+ <icon name="clock" class="w-4 h-4 shrink-0" />
  <span x-text="currentTime"></span>
  </div>
 

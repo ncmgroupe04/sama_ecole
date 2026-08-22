@@ -47,6 +47,55 @@ test('chaque fiche porte les six rubriques du squelette pédagogique, toutes ren
     }
 });
 
+test('chaque fiche expose six blocs prêts à rendre, jamais un objet nu', () => {
+    const help = helpCenter();
+
+    for (const section of help.sections) {
+        for (const article of section.articles) {
+            assert.equal(article.blocks.length, RUBRICS.length, `${article.id} : nombre de blocs inattendu`);
+
+            article.blocks.forEach((block, index) => {
+                assert.equal(block.key, RUBRICS[index], `${article.id} : ordre des rubriques modifié`);
+                assert.ok(block.label.trim().length > 0, `${article.id}/${block.key} : intitulé vide`);
+                assert.ok(['text', 'steps', 'bullets'].includes(block.kind), `${article.id}/${block.key} : kind inconnu`);
+
+                if (block.kind === 'text') {
+                    // Le symptôme du bug corrigé : x-text recevait un objet et affichait
+                    // « [object Object] ». Un bloc de texte doit être une CHAÎNE, toujours.
+                    assert.equal(typeof block.text, 'string', `${article.id}/${block.key} : le texte n'est pas une chaîne`);
+                    assert.ok(block.text.trim().length > 0, `${article.id}/${block.key} : texte vide`);
+                    assert.ok(!block.text.includes('[object'), `${article.id}/${block.key} : objet sérialisé dans le texte`);
+                    assert.equal(block.items.length, 0, `${article.id}/${block.key} : un bloc de texte ne porte pas d'items`);
+                } else {
+                    assert.ok(Array.isArray(block.items) && block.items.length > 0, `${article.id}/${block.key} : liste vide`);
+                    block.items.forEach(item => assert.equal(typeof item, 'string', `${article.id}/${block.key} : entrée non textuelle`));
+                    assert.equal(block.text, '', `${article.id}/${block.key} : une liste ne porte pas de texte`);
+                }
+            });
+        }
+    }
+});
+
+/**
+ * Le bug « [object Object] » venait de là, et d'une seule ligne : la vue appelait
+ * `valueOf(article, rubric)`. Le proxy de portée d'Alpine résout un identifiant avec
+ * `objects.find(o => Reflect.has(o, name))`, et `Reflect.has` remonte la chaîne de prototypes —
+ * la portée de boucle d'un x-for « possède » donc valueOf, toString, constructor, hasOwnProperty…
+ * par héritage. La méthode du composant n'était jamais atteinte. Ce test l'interdit pour de bon.
+ */
+test("aucun membre du composant ne porte un nom hérité d'Object.prototype", () => {
+    const help = helpCenter();
+    const herites = Object.getOwnPropertyNames(Object.prototype);
+
+    // Propriétés PROPRES uniquement : le prototype du composant est Object.prototype lui-même,
+    // l'inclure ferait échouer le test sur ses propres membres — ce qu'on cherche, ce sont les
+    // noms que le composant DÉFINIT et qui se trouvent aussi sur Object.prototype.
+    const collisions = Object.getOwnPropertyNames(help).filter(name => herites.includes(name));
+
+    assert.deepEqual(plain(collisions), [],
+        `noms masqués par Object.prototype dans une portée x-for : ${collisions.join(', ')}`);
+});
+
 test('les identifiants de fiche sont uniques — ils servent de clé de tiroir', () => {
     const help = helpCenter();
     const ids = help.sections.flatMap(section => section.articles.map(article => article.id));
