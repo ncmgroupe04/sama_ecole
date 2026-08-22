@@ -1,0 +1,896 @@
+/**
+ * Centre d'aide intégré (/aide) — guide utilisateur complet, consultable sans quitter
+ * l'application ni recharger la page.
+ *
+ * Le CONTENU vit ici, dans une structure de données, et non en dur dans le gabarit Razor : c'est
+ * ce qui permet à la barre de recherche de filtrer sur l'intégralité du texte (titre, définition,
+ * procédure, recommandations…) sans dupliquer une seconde fois chaque paragraphe dans un attribut
+ * de recherche. Ajouter un module d'aide = ajouter un objet à HELP_SECTIONS, rien d'autre.
+ *
+ * Chaque article suit le MÊME squelette pédagogique en six rubriques — définition, objectif,
+ * problème résolu, procédure, impacts, recommandations. Cette régularité n'est pas cosmétique :
+ * un utilisateur qui a lu un article sait où chercher dans tous les autres.
+ *
+ * Aucun appel réseau : la documentation est statique, donc consultable même quand l'API est
+ * injoignable — c'est précisément le moment où l'on a besoin d'aide.
+ */
+(function () {
+    'use strict';
+
+    const HELP_SECTIONS = [
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'configuration',
+            number: 1,
+            title: 'Configuration initiale & Années scolaires',
+            icon: 'calendar',
+            summary: "Le socle de l'établissement : l'exercice académique de travail et les locaux qui l'accueillent.",
+            articles: [
+                {
+                    id: 'annee-scolaire',
+                    title: "Ouverture et clôture d'une année académique",
+                    location: 'Paramètres › Années scolaires',
+                    href: '/parametres?tab=annees-scolaires',
+                    roles: ['Directeur'],
+                    definition:
+                        "L'année scolaire est l'exercice académique déclaré par l'établissement : un libellé (« 2026-2027 »), " +
+                        "une date d'ouverture, une date de clôture et les trimestres qui la découpent. Une seule année peut être " +
+                        "ACTIVE à un instant donné, et cette unicité est garantie par la base de données elle-même, non par une " +
+                        "simple précaution d'affichage.",
+                    objectif:
+                        "Rattacher sans ambiguïté chaque donnée produite — inscription, barème de frais, encaissement, note, " +
+                        "bulletin — à l'exercice auquel elle appartient véritablement. L'année active est le contexte implicite " +
+                        "de tout le travail quotidien : elle épargne à chaque agent d'avoir à préciser l'exercice à chaque saisie.",
+                    probleme:
+                        "Sans exercice de référence, deux rentrées finissent invariablement par se confondre. On retrouve alors " +
+                        "des réinscriptions imputées à l'année précédente, des tableaux d'effectifs qui additionnent deux " +
+                        "promotions et des recouvrements réclamés au titre d'un exercice déjà soldé. La correction, elle, se " +
+                        "fait dossier par dossier, longtemps après les faits.",
+                    procedure: [
+                        "Ouvrez Paramètres, puis l'onglet « Années scolaires ».",
+                        "Cliquez sur « Nouvelle année scolaire » et renseignez le libellé (« 2026-2027 »), la date de début et la date de fin de l'exercice.",
+                        "Déclarez les trimestres de l'année : leur découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
+                        "Vérifiez attentivement les dates saisies, puis enregistrez. L'année est créée à l'état « à venir » et n'a encore aucun effet sur l'application.",
+                        "Le jour de la rentrée, cliquez sur « Activer » en regard de l'année concernée. Par mesure de sécurité, la bascule exige la confirmation du mot de passe du Directeur.",
+                        "L'année précédente passe automatiquement en lecture seule : ses données demeurent intégralement consultables, mais ne sont plus modifiables.",
+                        "Si le calendrier se décale en cours d'exercice, une année en cours ou à venir reste corrigeable : prolonger la période recale les trimestres sans jamais altérer les notes déjà saisies."
+                    ],
+                    impacts: [
+                        "Inscriptions : toute nouvelle inscription est rattachée d'office à l'année active. Un élève ne peut détenir qu'une seule inscription active par année.",
+                        "Frais scolaires : les barèmes sont paramétrés par année. Une nouvelle année suppose de reconduire ou de réviser la grille tarifaire.",
+                        "Notes et bulletins : les trimestres déclarés ici alimentent directement les écrans de saisie et l'en-tête des bulletins.",
+                        "Comptabilité : les rapports financiers et les statistiques de la direction s'établissent sur le périmètre de l'exercice actif.",
+                        "Barre supérieure : l'année active est rappelée en permanence dans l'en-tête de l'application, afin que nul ne travaille par inadvertance sur le mauvais exercice."
+                    ],
+                    recommandations: [
+                        "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
+                        "N'activez jamais une année en cours de journée comptable : clôturez d'abord la caisse de l'exercice précédent.",
+                        "Contrôlez le découpage des trimestres avant la première saisie de notes ; le corriger après coup impose de vérifier chaque bulletin déjà édité.",
+                        "Une année révolue est volontairement verrouillée. Une donnée qui s'y révèle erronée fait l'objet d'une régularisation historisée sur l'exercice courant, jamais d'une réécriture du passé."
+                    ]
+                },
+                {
+                    id: 'infrastructures',
+                    title: 'Bâtiments, salles et capacités d’accueil',
+                    location: 'Gestion Scolaire › Bâtiments & Salles',
+                    href: '/infrastructures',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Cartographie physique de l'établissement, organisée en deux niveaux : le bâtiment (« Bloc A », " +
+                        "« Annexe Nord ») et les salles qu'il abrite, chacune dotée d'un type — salle de classe, laboratoire, " +
+                        "bureau, autre — et d'une capacité exprimée en places assises. Cette structure est délibérément " +
+                        "INDÉPENDANTE des classes pédagogiques : un local est un local, une classe est un groupe d'élèves.",
+                    objectif:
+                        "Disposer d'un inventaire fiable des locaux afin d'affecter les classes en connaissance de cause, de " +
+                        "mesurer le taux d'occupation réel et d'anticiper la saturation avant qu'elle ne se manifeste au " +
+                        "premier jour de classe.",
+                    probleme:
+                        "L'inventaire des locaux réside le plus souvent dans la mémoire du surveillant général. Il en résulte " +
+                        "des classes de cinquante élèves dans une salle de trente-cinq places, deux groupes convoqués " +
+                        "simultanément dans le même local, et l'impossibilité de justifier une capacité d'accueil devant " +
+                        "l'inspection académique.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Bâtiments & Salles.",
+                        "Créez d'abord le bâtiment : nom et description succincte (situation, étage, usage dominant).",
+                        "Depuis la fiche du bâtiment, ajoutez les salles une à une : nom, type et capacité en nombre de places.",
+                        "Renseignez une capacité SINCÈRE — le nombre de places réellement disponibles, et non le nombre théorique.",
+                        "Les indicateurs en tête d'écran totalisent en temps réel les bâtiments, les salles et la capacité globale de l'établissement.",
+                        "Une salle devenue inutilisable est archivée, jamais supprimée : l'historique des affectations passées demeure intact."
+                    ],
+                    impacts: [
+                        "Classes : l'affectation d'une classe à une salle confronte l'effectif inscrit à la capacité déclarée.",
+                        "Emploi du temps : les créneaux s'appuient sur les salles existantes pour prévenir les collisions d'occupation.",
+                        "Tableau de bord : la capacité totale nourrit les ratios d'occupation présentés à la direction.",
+                        "Dossiers administratifs : la capacité d'accueil déclarée est une pièce régulièrement exigée lors des visites de conformité."
+                    ],
+                    recommandations: [
+                        "Adoptez une nomenclature homogène et durable (« Bloc A — Salle 3 » plutôt que « salle du fond »).",
+                        "Actualisez la capacité après tout réaménagement mobilier : un chiffre obsolète alimente des ratios trompeurs.",
+                        "Distinguez rigoureusement les bureaux administratifs des salles de classe, sous peine de gonfler artificiellement la capacité pédagogique.",
+                        "Archivez plutôt que de supprimer : l'application ne pratique aucune suppression définitive des données de gestion, et c'est une garantie."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'pedagogie',
+            number: 2,
+            title: 'Structure pédagogique & Matières modulables',
+            icon: 'book',
+            summary: "Les classes, les cycles, et le moteur d'évaluation qui épouse aussi bien l'APC du primaire que la notation du secondaire.",
+            articles: [
+                {
+                    id: 'classes-cycles',
+                    title: 'Gestion des classes et des cycles',
+                    location: 'Gestion Scolaire › Classes',
+                    href: '/classes',
+                    roles: ['Directeur', 'Secrétariat', 'Enseignant'],
+                    definition:
+                        "La classe est le groupe pédagogique auquel un élève est inscrit pour une année donnée : un nom " +
+                        "(« CM2 A », « 3e B », « Terminale S2 »), un niveau et un effectif maximal. Le NIVEAU détermine le " +
+                        "cycle — CI/CP, CE1/CE2, CM1/CM2, Collège, Lycée — et commande le barème de notation appliqué : " +
+                        "sur dix au primaire, sur vingt au collège et au lycée.",
+                    objectif:
+                        "Constituer l'ossature autour de laquelle s'organisent les inscriptions, les affectations " +
+                        "d'enseignants, les grilles d'évaluation, les barèmes de frais et l'édition des bulletins.",
+                    probleme:
+                        "Une nomenclature de classes flottante — « CM2A » ici, « CM2 A » là, « cm2-a » ailleurs — disperse " +
+                        "les effectifs entre des groupes fantômes, fausse les statistiques et interdit tout classement " +
+                        "cohérent. À l'échelle d'une rentrée, la reprise manuelle représente plusieurs journées de travail.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Classes.",
+                        "Cliquez sur « Nouvelle classe » et renseignez le nom exact du groupe.",
+                        "Sélectionnez le niveau : ce choix détermine le cycle, et par conséquent le barème de notation qui s'appliquera aux bulletins.",
+                        "Indiquez l'effectif maximal souhaité, puis, le cas échéant, la salle d'affectation.",
+                        "Désignez le professeur principal ou le titulaire de la classe lorsque l'établissement pratique cet usage.",
+                        "Enregistrez. La classe devient immédiatement sélectionnable à l'inscription, à la saisie des notes et au paramétrage des frais."
+                    ],
+                    impacts: [
+                        "Inscriptions : la classe conditionne le barème de frais appliqué et donc le montant dû par la famille.",
+                        "Matières : les grilles d'évaluation sont attachées au NIVEAU ; deux classes de même niveau partagent la même grille.",
+                        "Notes : le cycle de la classe fixe le barème par défaut de chaque note saisie.",
+                        "Bulletins : le nom de la classe, son effectif et le rang de l'élève y figurent tels qu'ils sont enregistrés ici.",
+                        "Infrastructures : l'affectation d'une salle confronte l'effectif au nombre de places disponibles."
+                    ],
+                    recommandations: [
+                        "Arrêtez une convention de nommage AVANT la première création, et tenez-vous-y sans exception.",
+                        "Créez l'intégralité des classes avant d'ouvrir la campagne d'inscriptions : réaffecter un élève après coup impose de reconsidérer son barème de frais.",
+                        "Le niveau n'est pas une étiquette décorative : il gouverne le barème de notation. Une erreur à cet endroit se propage jusqu'aux bulletins.",
+                        "Une classe qui n'ouvre pas est archivée en fin d'exercice, jamais supprimée."
+                    ]
+                },
+                {
+                    id: 'apc-matieres',
+                    title: "Moteur d'évaluation APC & matières hiérarchiques",
+                    location: 'Gestion Scolaire › Matières',
+                    href: '/matieres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Le moteur d'évaluation modulaire d'Unikol autorise deux formes de grilles. La grille SIMPLE du " +
+                        "secondaire aligne des matières de premier niveau, chacune dotée d'un coefficient. La grille " +
+                        "HIÉRARCHIQUE du primaire, conforme à l'Approche par les Compétences, organise l'évaluation sur deux " +
+                        "étages : un DOMAINE parent (« Lang. & Com. », « Mathématiques ») porte des ACTIVITÉS filles " +
+                        "(« P. Alphabétique », « Vocabulaire », « Fluidité ») ou la paire « Ressources » / « Compétences ». " +
+                        "Chaque ligne d'évaluation peut recevoir son propre barème maximal — sur 10, 16, 24, 40, 60 — et son " +
+                        "propre rang d'affichage.",
+                    objectif:
+                        "Reproduire À L'IDENTIQUE la grille officielle de l'établissement, quelle qu'en soit la structure, " +
+                        "sans contraindre l'école à plier sa pédagogie aux limites du logiciel. La profondeur est " +
+                        "volontairement bornée à deux niveaux, exactement comme les grilles imprimées.",
+                    probleme:
+                        "La plupart des logiciels de gestion scolaire n'admettent qu'une liste plate de matières notées sur " +
+                        "vingt. Les écoles primaires sénégalaises, qui évaluent par domaines et par activités avec des " +
+                        "barèmes hétérogènes, se voient alors contraintes de tenir leurs bulletins sous tableur — d'où des " +
+                        "totaux recalculés à la main, des erreurs de report et des bulletins dont la présentation varie " +
+                        "d'une classe à l'autre.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Matières et sélectionnez le niveau concerné : les grilles sont propres à chaque niveau.",
+                        "GRILLE SIMPLE (collège, lycée) : créez chaque matière avec son nom et son coefficient, et laissez le barème vide pour hériter de celui du cycle, soit /20.",
+                        "GRILLE APC (primaire) : créez d'abord les DOMAINES parents — « Lang. & Com. », « Maths », « Éveil » — sans leur attribuer de barème, car un domaine n'est jamais noté.",
+                        "Ajoutez ensuite, sous chaque domaine, les ACTIVITÉS filles : nom, coefficient et barème propre (sur 40, sur 60, sur 24…) tel qu'il figure sur la grille officielle.",
+                        "Ordonnez les lignes au moyen des flèches de réorganisation : « Ressources » précède toujours « Compétences », et aucun tri automatique ne saurait le deviner.",
+                        "Personnalisez, sur le premier domaine, les en-têtes des deux premières colonnes du bulletin : « Domaines » et « Activités » au CI-CP, « Activités » et « Contrôles » au CE1-CE2.",
+                        "Prévisualisez un bulletin vierge de la classe afin de confronter la grille écran à la grille papier avant toute saisie de notes."
+                    ],
+                    impacts: [
+                        "Saisie des notes : l'écran de saisie reproduit fidèlement la hiérarchie ; les domaines parents y apparaissent en intitulé et n'acceptent aucune note.",
+                        "Calcul des moyennes : chaque note est ramenée au barème de référence avant pondération, de sorte qu'un 45/60 et un 18/24 pèsent identiquement — soit 15/20.",
+                        "Bulletins PDF : la fusion verticale de la première colonne, les en-têtes et l'ordre des lignes découlent directement de ce paramétrage.",
+                        "Coefficients : ils déterminent le total des points, le total des coefficients et la moyenne générale imprimée sur le bulletin."
+                    ],
+                    recommandations: [
+                        "Ayez la grille officielle imprimée sous les yeux durant tout le paramétrage : l'objectif est la reproduction exacte, non l'interprétation.",
+                        "N'attribuez jamais de barème à un domaine parent : sa valeur est celle de ses activités, et la saisie d'une note sur un parent est refusée.",
+                        "Un coefficient erroné fausse silencieusement l'ensemble des bulletins du niveau. Faites-le vérifier par un second regard avant la première saisie.",
+                        "Achevez la structure de la grille AVANT d'ouvrir la saisie aux enseignants : la remanier une fois les notes saisies impose de contrôler chaque moyenne.",
+                        "Une même matière porte légitimement des coefficients différents selon le niveau — « Mathématiques » vaut 4 au primaire et 6 en série scientifique. Ce n'est pas un doublon, c'est le cas normal."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'personnel',
+            number: 3,
+            title: 'Gestion du personnel & Enseignants',
+            icon: 'users',
+            summary: "Les fiches du corps enseignant, leurs matières, leurs classes et leur rattachement contractuel.",
+            articles: [
+                {
+                    id: 'enseignants',
+                    title: 'Profils des enseignants et affectations',
+                    location: 'Gestion Scolaire › Enseignants',
+                    href: '/enseignants',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "La fiche enseignant rassemble l'identité du professeur, ses coordonnées, son matricule interne — " +
+                        "généré par l'application au moment de l'enregistrement — ainsi que ses AFFECTATIONS : le couple " +
+                        "matière + classe pour lequel il est habilité à saisir des notes et à faire l'appel.",
+                    objectif:
+                        "Circonscrire précisément le périmètre d'intervention de chaque enseignant et alimenter, à partir " +
+                        "d'une source unique, l'emploi du temps, le pointage des heures, la paie et les bulletins.",
+                    probleme:
+                        "Sans registre d'affectation, n'importe quel compte peut saisir des notes dans n'importe quelle " +
+                        "matière, les heures effectuées se réconcilient de mémoire en fin de mois, et une erreur de saisie " +
+                        "reste sans auteur identifiable. La responsabilité pédagogique se dilue.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Enseignants, puis cliquez sur « Nouvel enseignant ».",
+                        "Renseignez l'état civil, le téléphone, l'adresse électronique et la spécialité. Le matricule est attribué automatiquement à l'enregistrement, jamais à l'ouverture du formulaire.",
+                        "Précisez la nature du rattachement — permanent ou vacataire — ainsi que les éléments contractuels utiles à la paie.",
+                        "Depuis la fiche détaillée, ajoutez les affectations : pour chaque matière enseignée, désignez la ou les classes concernées.",
+                        "Créez, si nécessaire, le compte utilisateur associé depuis Paramètres › Utilisateurs, en lui attribuant le rôle « Enseignant ».",
+                        "Un départ se traduit par l'archivage de la fiche : l'historique des notes saisies et des heures pointées demeure intégralement conservé."
+                    ],
+                    impacts: [
+                        "Saisie des notes : un enseignant ne voit et ne renseigne que les couples matière/classe qui lui sont affectés.",
+                        "Appel en classe : les classes proposées à l'appel découlent de ces mêmes affectations.",
+                        "Emploi du temps et pointage : les créneaux et les heures effectuées s'adossent aux affectations déclarées.",
+                        "Fiches de paie : les éléments contractuels de la fiche alimentent le calcul de la rémunération et les déclarations fiscales et sociales.",
+                        "Bulletins : le nom de l'enseignant peut figurer en regard de sa matière selon le modèle retenu."
+                    ],
+                    recommandations: [
+                        "Enregistrez les affectations avant l'ouverture de la première période de notation, faute de quoi les enseignants se heurteront à un écran de saisie vide.",
+                        "La fiche enseignant et le compte utilisateur sont deux objets distincts : le premier décrit une personne, le second ouvre un accès. Les deux sont nécessaires.",
+                        "Maintenez le numéro de téléphone à jour : il constitue le canal de rappel le plus rapide en cas d'absence imprévue.",
+                        "Vérifiez la spécialité déclarée avant toute affectation : elle vous prémunit contre l'attribution d'une matière à un professeur qui ne la traite pas."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'eleves',
+            number: 4,
+            title: "Mouvements d'élèves — Inscriptions & Réinscriptions",
+            icon: 'document',
+            summary: "De l'accueil d'un nouvel élève à la reconduction annuelle, avec la production automatique de l'échéancier financier.",
+            articles: [
+                {
+                    id: 'premiere-inscription',
+                    title: "Première inscription et saisie de l'état civil",
+                    location: 'Gestion Scolaire › Élèves',
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Acte fondateur du dossier scolaire : l'élève est créé dans le registre de l'établissement avec son " +
+                        "état civil complet — nom, prénoms, date et lieu de naissance, sexe, nationalité —, les coordonnées " +
+                        "de son tuteur légal et sa photographie. Un MATRICULE unique lui est attribué au moment précis de " +
+                        "l'enregistrement, et non à l'ouverture du formulaire.",
+                    objectif:
+                        "Constituer une identité scolaire pérenne, opposable, qui suivra l'élève de son admission à sa " +
+                        "sortie et servira de clé unique à ses notes, à ses bulletins et à sa situation financière.",
+                    probleme:
+                        "Le registre papier autorise les homonymies non arbitrées, les dates de naissance divergentes d'un " +
+                        "document à l'autre et les doublons créés par deux agents travaillant simultanément. Ces défauts se " +
+                        "révèlent au pire moment : à l'édition des bulletins ou lors de l'inscription aux examens officiels.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Élèves, puis cliquez sur « Nouvel élève ».",
+                        "Recherchez d'abord le nom dans le registre existant : cette précaution élémentaire évite la quasi-totalité des doublons.",
+                        "Saisissez l'état civil en le recopiant sur l'extrait de naissance, orthographe et accents compris — c'est cette graphie qui figurera sur tous les documents officiels.",
+                        "Renseignez le tuteur légal : nom, lien de parenté, téléphone et adresse. Ce numéro est celui qui recevra les notifications par SMS ou WhatsApp.",
+                        "Ajoutez la photographie de l'élève : elle est automatiquement compressée avant transmission et alimente la carte scolaire.",
+                        "Enregistrez. Le matricule est généré dans la transaction même, ce qui garantit l'absence de trou et de collision dans la numérotation.",
+                        "Procédez ensuite à l'inscription proprement dite : sélectionnez la classe, contrôlez le barème de frais proposé, puis validez.",
+                        "Éditez et remettez à la famille le reçu d'inscription ainsi que l'attestation, tous deux au format PDF."
+                    ],
+                    impacts: [
+                        "Comptabilité : la validation de l'inscription fige le montant total dû, ligne par ligne, et ouvre le dossier financier de l'élève.",
+                        "Échéancier : les échéances de règlement sont établies à partir du barème de la classe.",
+                        "Classe : l'effectif de la classe s'accroît immédiatement et se confronte à la capacité de la salle affectée.",
+                        "Notes : l'élève apparaît dès la validation dans les listes de saisie des notes et dans les feuilles d'appel.",
+                        "Documents : reçu, attestation d'inscription et carte scolaire sont produits à partir de cet état civil."
+                    ],
+                    recommandations: [
+                        "N'ouvrez jamais deux formulaires de création simultanément sur deux postes pour le même élève.",
+                        "Le matricule n'est jamais réservé à l'avance : un formulaire abandonné ne consomme aucun numéro. Ne cherchez donc pas à « garder » un matricule.",
+                        "Une erreur d'état civil se corrige par la fiche élève, et la correction est historisée. Ne créez jamais un second élève pour rectifier le premier.",
+                        "Le reçu doit impérativement être remis à la famille, revêtu de la mention réglementaire invitant les parents à le conserver avec soin.",
+                        "Contrôlez le numéro de téléphone du tuteur au moment de la saisie : un numéro erroné rend inopérante toute la chaîne de relance."
+                    ]
+                },
+                {
+                    id: 'reinscription',
+                    title: 'Réinscription et changement de classe',
+                    location: 'Gestion Scolaire › Inscriptions',
+                    href: '/inscriptions',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "La réinscription rattache un élève DÉJÀ enregistré à une nouvelle année scolaire et à une nouvelle " +
+                        "classe. Elle ne crée ni élève ni matricule : elle prolonge un dossier existant. Le changement de " +
+                        "classe, quant à lui, redirige une inscription en cours vers un autre groupe du même exercice.",
+                    objectif:
+                        "Reconduire la scolarité d'une cohorte entière en quelques minutes, tout en conservant l'intégralité " +
+                        "de l'historique — notes, bulletins, règlements, discipline — attaché au matricule d'origine.",
+                    probleme:
+                        "Ressaisir chaque rentrée l'état civil de plusieurs centaines d'élèves consomme des semaines de " +
+                        "travail et rompt le fil de l'historique : l'élève se retrouve doté de deux dossiers, ses bulletins " +
+                        "antérieurs deviennent introuvables et sa situation financière se scinde en deux.",
+                    procedure: [
+                        "Assurez-vous que la nouvelle année scolaire est ACTIVE et que ses barèmes de frais sont paramétrés.",
+                        "Ouvrez Gestion Scolaire › Inscriptions, puis choisissez « Réinscrire ».",
+                        "Recherchez l'élève par son matricule ou par son nom : sa fiche remonte avec l'intégralité de son historique.",
+                        "Sélectionnez la classe d'accueil de la nouvelle année ; l'application propose le barème correspondant.",
+                        "Vérifiez le montant dû et l'échéancier, puis validez la réinscription.",
+                        "CHANGEMENT DE CLASSE EN COURS D'ANNÉE : ouvrez l'inscription en cours et sélectionnez la nouvelle classe. Si le barème diffère, la régularisation est historisée et demeure traçable.",
+                        "Éditez le reçu de réinscription et remettez-le à la famille."
+                    ],
+                    impacts: [
+                        "Historique : notes, bulletins et règlements des exercices antérieurs restent attachés au même élève et demeurent consultables.",
+                        "Solde antérieur : un reliquat impayé de l'année précédente reste rattaché à l'inscription de cet exercice et n'est jamais reporté silencieusement.",
+                        "Effectifs : les effectifs de la classe d'origine et de la classe d'accueil sont mis à jour simultanément.",
+                        "Notes : un changement de classe en cours de trimestre appelle un contrôle des notes déjà saisies, les grilles pouvant différer d'un niveau à l'autre.",
+                        "Comptabilité : toute variation du montant dû est historisée avec son auteur, sa date et son motif."
+                    ],
+                    recommandations: [
+                        "Traitez les réinscriptions par classe entière plutôt qu'au fil de l'eau : les contrôles s'en trouvent grandement facilités.",
+                        "Soldez ou constatez formellement les impayés de l'exercice précédent avant de réinscrire, faute de quoi la dette se dilue dans le nouvel échéancier.",
+                        "Un changement de classe entre deux niveaux différents modifie la grille d'évaluation : vérifiez systématiquement les notes déjà saisies.",
+                        "Le service Finance ne modifie jamais de lui-même un montant issu d'une inscription : toute correction relève du Secrétariat ou de la Direction, et reste historisée."
+                    ]
+                },
+                {
+                    id: 'echeanciers',
+                    title: 'Affectation automatique des échéanciers financiers',
+                    location: 'Gestion Scolaire › Inscriptions',
+                    href: '/inscriptions',
+                    roles: ['Directeur', 'Secrétariat', 'Finance'],
+                    definition:
+                        "L'échéancier est le calendrier de règlement adossé à une inscription : montant total dû, décomposé " +
+                        "en lignes de frais figées à la validation, puis réparti en échéances datées. À défaut d'accord " +
+                        "particulier, Unikol synthétise des échéances mensuelles uniformes à partir du barème de la classe. " +
+                        "Un échéancier PERSONNALISÉ peut lui être substitué pour tenir compte d'une situation familiale " +
+                        "particulière.",
+                    objectif:
+                        "Rendre exigible, à date certaine, ce que chaque famille doit à l'établissement, et fonder sur cette " +
+                        "base un recouvrement méthodique plutôt qu'une réclamation improvisée.",
+                    probleme:
+                        "Sans échéancier formalisé, nul ne sait qui doit quoi ni depuis quand. Le recouvrement se réduit à " +
+                        "la mémoire du caissier, les familles de bonne foi sont relancées à tort tandis que les retards " +
+                        "réels passent inaperçus, et la trésorerie devient imprévisible.",
+                    procedure: [
+                        "Le montant dû est CALCULÉ par l'application à partir du barème de la classe : il n'est jamais saisi à la main lors de l'inscription.",
+                        "À la validation, le détail ligne à ligne est FIGÉ sur l'inscription : une révision ultérieure du barème ne modifiera pas rétroactivement les reçus déjà remis.",
+                        "Consultez l'échéancier depuis la fiche de l'inscription : chaque échéance y figure avec sa date d'exigibilité et son montant.",
+                        "ÉCHÉANCIER PERSONNALISÉ : créez un plan sur mesure pour une famille donnée, en fixant vous-même les dates et les montants convenus.",
+                        "Une renégociation ne modifie jamais le plan en vigueur : elle le remplace, l'ancien étant annulé mais conservé, de sorte que l'accord antérieur reste consultable.",
+                        "Chaque encaissement s'impute automatiquement sur le solde, et l'échéancier reflète en temps réel ce qui reste dû."
+                    ],
+                    impacts: [
+                        "Caisse : le caissier voit, à l'écran, le solde exact et l'échéance courante de l'élève qu'il encaisse.",
+                        "Recouvrement : le suivi des retards s'appuie sur les dates d'exigibilité de l'échéancier.",
+                        "Avis de sommes dues : l'avis remis à la famille est édité directement depuis l'échéancier.",
+                        "Trésorerie : les échéances à venir alimentent les prévisions d'encaissement de la direction.",
+                        "Rapports financiers : le rapprochement entre attendu et encaissé procède de cette même source."
+                    ],
+                    recommandations: [
+                        "Ne modifiez jamais un montant dû pour « faire tomber juste » : accordez plutôt une remise, laquelle est tracée et justifiée.",
+                        "Un accord d'échelonnement doit être saisi le jour même où il est consenti : un arrangement verbal non enregistré n'existe pas au regard du système.",
+                        "Contrôlez les barèmes en début d'exercice : ils sont figés sur chaque inscription au moment de sa validation.",
+                        "Les échéanciers personnalisés demeurent l'exception : leur multiplication rend le recouvrement illisible."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'evaluations',
+            number: 5,
+            title: 'Évaluations, saisie des notes & bulletins PDF',
+            icon: 'chart-multiple',
+            summary: "De la note portée par l'enseignant au bulletin officiel imprimé, en passant par les moyennes, les rangs et les appréciations.",
+            articles: [
+                {
+                    id: 'saisie-notes',
+                    title: 'Saisie sécurisée des notes par classe et par matière',
+                    location: 'Gestion Scolaire › Notes et bulletins',
+                    href: '/notes',
+                    roles: ['Directeur', 'Secrétariat', 'Enseignant'],
+                    definition:
+                        "Écran de notation qui présente, pour un triplet classe + matière + trimestre, la liste nominative " +
+                        "des élèves inscrits et permet d'y porter les notes de devoir et de composition. La saisie est " +
+                        "protégée par un verrou optimiste : si deux personnes modifient la même note simultanément, la " +
+                        "seconde est avertie du conflit plutôt que d'écraser silencieusement la première.",
+                    objectif:
+                        "Recueillir les notes une seule fois, à la source, dans un cadre borné par le barème et par les " +
+                        "affectations de l'enseignant, et alimenter directement les calculs et les bulletins sans aucune " +
+                        "reprise intermédiaire.",
+                    probleme:
+                        "La chaîne classique — cahier de notes, puis tableur du surveillant, puis bulletin — comporte deux " +
+                        "recopies manuelles, donc deux occasions d'erreur par élève et par matière. À l'échelle d'un " +
+                        "établissement, les erreurs de report se comptent par dizaines chaque trimestre, et se découvrent " +
+                        "généralement lorsque les parents ont déjà le bulletin en main.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Notes et bulletins.",
+                        "Sélectionnez successivement la classe, la matière et le trimestre. Un enseignant ne se voit proposer que ses propres affectations.",
+                        "La liste nominative s'affiche, accompagnée du barème applicable — celui de la ligne d'évaluation lorsqu'il est défini, celui du cycle à défaut.",
+                        "Saisissez les notes. Toute valeur excédant le barème est refusée à la saisie, et non découverte au moment du bulletin.",
+                        "Renseignez, selon la grille en vigueur, la note de devoir et la note de composition.",
+                        "IMPORT EN MASSE : téléchargez le modèle Excel de la classe, complétez-le hors ligne, puis réimportez-le. Les valeurs y sont contrôlées une à une avant intégration.",
+                        "Enregistrez. Chaque saisie est horodatée et attribuée à son auteur.",
+                        "Une note erronée se corrige sur ce même écran ; la modification est consignée dans le journal d'audit."
+                    ],
+                    impacts: [
+                        "Moyennes : chaque note est ramenée au barème de référence puis pondérée par le coefficient de la matière.",
+                        "Rangs : le classement de la classe se recalcule automatiquement à chaque enregistrement.",
+                        "Bulletins : le bulletin ne fait que restituer ces notes ; il n'existe aucune seconde saisie.",
+                        "Mentions : la moyenne générale détermine la mention selon les seuils définis par l'établissement.",
+                        "Audit : toute création ou modification de note est tracée, avec son auteur et son horodatage."
+                    ],
+                    recommandations: [
+                        "Saisissez les notes matière par matière et menez chaque matière à son terme : une grille partiellement renseignée produit une moyenne trompeuse.",
+                        "Vérifiez le barème affiché avant de commencer : une grille APC mêle légitimement des maxima de 60, 40, 24 et 16.",
+                        "En cas de conflit signalé, rechargez l'écran et reprenez votre saisie : un collègue a modifié la même note entre-temps. Ne forcez jamais.",
+                        "L'import Excel est le mode le plus sûr pour une classe nombreuse, mais contrôlez le rapport d'import avant de valider.",
+                        "N'éditez les bulletins qu'une fois TOUTES les matières saisies et contrôlées."
+                    ]
+                },
+                {
+                    id: 'bulletins-pdf',
+                    title: 'Génération des bulletins officiels au format PDF',
+                    location: 'Gestion Scolaire › Notes et bulletins',
+                    href: '/notes',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Production du bulletin de notes officiel, composé par le serveur au format PDF et reproduisant " +
+                        "fidèlement le modèle de référence de l'établissement : en-tête, tableau des matières respectant la " +
+                        "hiérarchie de la grille, moyennes, rang, mention, appréciations et blocs de signature. Le bulletin " +
+                        "s'édite individuellement ou pour une classe entière, en un seul document.",
+                    objectif:
+                        "Délivrer un document officiel homogène, exact et immédiatement remettable, sans mise en page " +
+                        "manuelle ni recopie, et dans une présentation strictement identique d'une classe à l'autre.",
+                    probleme:
+                        "Le bulletin composé sous traitement de texte varie d'une classe à l'autre, se désaligne dès qu'un " +
+                        "nom est plus long que prévu, et suppose de recopier à la main des moyennes déjà calculées ailleurs. " +
+                        "L'édition d'une promotion entière mobilise le secrétariat plusieurs jours par trimestre.",
+                    procedure: [
+                        "Assurez-vous au préalable que toutes les notes du trimestre sont saisies et contrôlées.",
+                        "Complétez, le cas échéant, les appréciations et les décisions du conseil des professeurs pour chaque élève.",
+                        "Ouvrez Gestion Scolaire › Notes et bulletins, puis sélectionnez la classe et le trimestre.",
+                        "BULLETIN INDIVIDUEL : depuis la ligne de l'élève, demandez l'aperçu. Le document s'affiche à l'écran avant toute impression.",
+                        "BULLETINS DE CLASSE : demandez l'édition groupée. Un unique document PDF réunit l'ensemble des bulletins de la classe, prêt pour l'impression en série.",
+                        "PROCÈS-VERBAL DE DÉLIBÉRATION : éditez, pour le conseil de classe, le tableau récapitulatif des moyennes et des rangs.",
+                        "Contrôlez l'aperçu, puis imprimez. Le document reflète l'état des données à l'instant de sa génération."
+                    ],
+                    impacts: [
+                        "Matières : la hiérarchie des domaines et des activités, l'ordre des lignes et les en-têtes de colonnes proviennent intégralement du paramétrage des matières.",
+                        "Notes : le bulletin n'est qu'une restitution ; il ne recalcule ni ne corrige rien.",
+                        "Mentions : les seuils paramétrés par l'établissement déterminent la mention imprimée.",
+                        "Appréciations : distinctions et observations du conseil figurent telles qu'elles ont été saisies.",
+                        "Établissement : le nom, le logo et les mentions officielles proviennent des Paramètres de l'école."
+                    ],
+                    recommandations: [
+                        "Éditez un bulletin témoin et faites-le relire avant de lancer l'impression d'une promotion entière.",
+                        "Un bulletin édité prématurément et déjà remis ne se rattrape plus : contrôlez l'exhaustivité des notes en amont.",
+                        "Vérifiez le logo et la dénomination de l'établissement dans les Paramètres avant la première édition de l'année.",
+                        "Conservez le PDF de chaque trimestre : il constitue la preuve de ce qui a été effectivement remis à la famille.",
+                        "N'annotez jamais un bulletin à la main : la correction se fait dans l'application, puis le document est réédité."
+                    ]
+                },
+                {
+                    id: 'moyennes-rangs',
+                    title: 'Moyennes, rangs, mentions et appréciations',
+                    location: 'Gestion Scolaire › Notes et bulletins',
+                    href: '/notes',
+                    roles: ['Directeur', 'Secrétariat', 'Enseignant'],
+                    definition:
+                        "Ensemble des grandeurs dérivées des notes : moyenne par matière, total des points, total des " +
+                        "coefficients, moyenne générale, rang dans la classe, mention et appréciation. Toutes sont " +
+                        "recalculées par le serveur, jamais saisies à la main. Les seuils de mention — « Excellent », " +
+                        "« Très Bien »… — sont paramétrables par la direction.",
+                    objectif:
+                        "Garantir l'exactitude arithmétique et l'équité du classement, tout en laissant à l'établissement " +
+                        "la maîtrise de ses propres seuils d'appréciation.",
+                    probleme:
+                        "Les moyennes calculées à la main ou sous tableur souffrent d'erreurs de coefficient, de barèmes " +
+                        "hétérogènes mal ramenés à une échelle commune et de rangs disputés en conseil de classe. Chaque " +
+                        "réclamation d'un parent impose alors de refaire le calcul devant lui.",
+                    procedure: [
+                        "Définissez les seuils de mention dans Paramètres › Configuration : libellé et moyenne minimale, exprimée sur vingt.",
+                        "Saisissez les notes : les moyennes, les totaux et le rang se recalculent à chaque enregistrement.",
+                        "Consultez la synthèse de la classe pour vérifier la cohérence d'ensemble avant le conseil.",
+                        "APPRÉCIATIONS : pour chaque élève, cochez la distinction retenue par le conseil — du blâme aux félicitations — et rédigez les observations.",
+                        "Renseignez la décision du conseil lorsque la période concernée l'exige.",
+                        "Tant qu'aucune appréciation n'a été saisie, le bulletin imprime les cases vierges plutôt qu'une valeur inventée."
+                    ],
+                    impacts: [
+                        "Barèmes hétérogènes : chaque note est ramenée au barème de référence avant pondération, de sorte qu'un 45/60 et un 18/24 pèsent identiquement.",
+                        "Coefficients : ils déterminent le total des points et la moyenne générale ; une erreur s'y propage jusqu'au rang.",
+                        "Rang : il se recalcule automatiquement dès qu'une note de la classe est modifiée.",
+                        "Bulletin : mention, rang et appréciations y sont imprimés tels qu'ils sont calculés ou saisis.",
+                        "Procès-verbal de délibération : il consolide moyennes et rangs pour le conseil de classe."
+                    ],
+                    recommandations: [
+                        "Arrêtez les seuils de mention en début d'exercice : les modifier après l'édition des bulletins crée une disparité entre trimestres.",
+                        "Une moyenne qui paraît aberrante trahit presque toujours un coefficient ou un barème mal renseigné, non une erreur de calcul.",
+                        "Ne saisissez jamais une moyenne à la main : elle est nécessairement dérivée des notes.",
+                        "Rédigez des appréciations circonstanciées et bienveillantes : elles constituent souvent le seul message écrit que la famille conserve."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'comptabilite',
+            number: 6,
+            title: 'Comptabilité, frais scolaires & caisse',
+            icon: 'wallet',
+            summary: "Du barème tarifaire à l'encaissement au guichet, jusqu'au suivi méthodique des impayés.",
+            articles: [
+                {
+                    id: 'bareme-frais',
+                    title: "Barème des frais d'inscription et des mensualités",
+                    location: 'Comptabilité › Frais Scolaires',
+                    href: '/frais',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Grille tarifaire de l'établissement pour un exercice donné : frais d'inscription, mensualités et " +
+                        "frais annexes — tenue, transport, cantine, examens —, définis par catégorie et déclinés classe par " +
+                        "classe. C'est cette grille, et elle seule, qui détermine le montant dû à chaque inscription.",
+                    objectif:
+                        "Fixer une fois pour toutes le tarif applicable, de sorte que le montant réclamé à une famille ne " +
+                        "dépende jamais de l'agent qui l'accueille au guichet.",
+                    probleme:
+                        "Lorsque le tarif est de tradition orale, chaque agent applique sa propre version, les remises " +
+                        "s'accordent sans trace, et l'établissement se trouve dans l'incapacité de justifier des écarts " +
+                        "constatés entre familles d'une même classe.",
+                    procedure: [
+                        "Ouvrez Comptabilité › Frais Scolaires.",
+                        "Vérifiez que l'année scolaire active est bien celle pour laquelle vous entendez paramétrer les tarifs.",
+                        "Créez les catégories de frais : inscription, mensualité, tenue, transport, examens…",
+                        "Pour chaque classe, renseignez le montant applicable à chaque catégorie.",
+                        "Précisez le caractère du frais : obligatoire ou facultatif, ponctuel ou récurrent.",
+                        "Enregistrez. Le barème devient immédiatement opérant pour toute nouvelle inscription.",
+                        "RÉVISION EN COURS D'ANNÉE : la modification d'un montant est historisée avec son auteur, sa date et son motif, et n'altère jamais les inscriptions déjà validées."
+                    ],
+                    impacts: [
+                        "Inscriptions : le montant total dû découle directement de ce barème et se fige, ligne par ligne, à la validation.",
+                        "Échéanciers : les échéances mensuelles se déduisent des montants récurrents du barème.",
+                        "Reçus : le détail imprimé sur le reçu reprend les lignes figées à l'inscription, et non le barème en vigueur au jour de l'impression.",
+                        "Rapports financiers : le montant attendu de l'exercice résulte de l'agrégation des barèmes appliqués.",
+                        "Historique : chaque révision tarifaire demeure consultable dans l'historique des modifications."
+                    ],
+                    recommandations: [
+                        "Paramétrez les barèmes AVANT d'activer la nouvelle année et d'ouvrir les inscriptions.",
+                        "Faites valider la grille par la direction avant sa mise en service : elle engage l'établissement vis-à-vis des familles.",
+                        "Une révision tarifaire en cours d'exercice ne s'applique qu'aux inscriptions postérieures. C'est délibéré : un reçu déjà remis ne saurait changer de montant.",
+                        "Distinguez soigneusement les frais obligatoires des frais facultatifs : cette distinction fonde le calcul des impayés.",
+                        "Le service Finance encaisse, il ne fixe pas les tarifs. Le paramétrage du barème relève de la direction."
+                    ]
+                },
+                {
+                    id: 'encaissement',
+                    title: 'Encaissement au guichet et reçus de paiement',
+                    location: 'Comptabilité › Caisse (Encaissements)',
+                    href: '/caisse',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Acte de caisse par lequel un versement de la famille est imputé sur le solde d'une inscription. " +
+                        "Chaque encaissement donne lieu à un reçu numéroté, édité au format PDF, portant la mention " +
+                        "réglementaire invitant les parents à conserver soigneusement leur reçu après paiement.",
+                    objectif:
+                        "Constater sans délai tout versement, en délivrer la preuve à la famille, et tenir en permanence " +
+                        "un solde exact par élève.",
+                    probleme:
+                        "Le carnet à souches se perd, se recopie mal et ne se totalise qu'en fin de journée. Les " +
+                        "contestations de paiement sont alors indémontrables dans un sens comme dans l'autre, et le " +
+                        "rapprochement entre la caisse physique et le registre relève de la reconstitution.",
+                    procedure: [
+                        "Ouvrez Comptabilité › Caisse (Encaissements) et ouvrez votre session de caisse en déclarant le fonds initial.",
+                        "Recherchez l'élève par son matricule ou par son nom : sa situation financière s'affiche — total dû, déjà réglé, solde restant.",
+                        "Saisissez le montant versé et le mode de règlement : espèces, virement, mobile money…",
+                        "Vérifiez l'imputation proposée sur les lignes de frais, puis validez l'encaissement.",
+                        "Le solde de l'inscription est mis à jour dans la transaction même : deux encaissements concurrents sur le même élève ne peuvent produire de sur-crédit.",
+                        "Éditez le reçu PDF et remettez-le à la famille, en attirant son attention sur la nécessité de le conserver.",
+                        "CORRECTION : un encaissement erroné est ANNULÉ — statut « annulé », conservé dans l'historique —, jamais effacé. La saisie correcte est ensuite reprise."
+                    ],
+                    impacts: [
+                        "Solde de l'élève : le cumul des versements s'impute immédiatement sur le montant dû de l'inscription.",
+                        "Échéancier : les échéances honorées se soldent au fur et à mesure des encaissements.",
+                        "Recouvrement : l'élève sort automatiquement de la liste des débiteurs dès que son solde est apuré.",
+                        "Clôture de caisse : chaque encaissement alimente le journal de la session de caisse ouverte.",
+                        "Trésorerie et rapports : les recettes du jour remontent dans les tableaux de bord de la direction."
+                    ],
+                    recommandations: [
+                        "N'encaissez jamais sans avoir ouvert votre session de caisse : le versement ne serait rattaché à aucune journée comptable.",
+                        "Remettez systématiquement le reçu, même pour un versement partiel. C'est l'unique preuve dont dispose la famille.",
+                        "Le service Finance ne modifie jamais un montant dû issu d'une inscription : il ne fait qu'y imputer des versements. Toute correction du montant dû relève du Secrétariat ou de la Direction.",
+                        "En cas de perte de connexion, l'application refuse tout enregistrement et vous en avertit : aucune saisie ne part « toute seule » au retour du réseau. Reprenez la validation vous-même.",
+                        "Un encaissement erroné s'annule et se ressaisit. Ne tentez jamais de le rectifier par un second versement compensatoire."
+                    ]
+                },
+                {
+                    id: 'recouvrement',
+                    title: 'Suivi des recouvrements, impayés et relances',
+                    location: 'Comptabilité › Caisse et Rapports financiers',
+                    href: '/caisse',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Dispositif de suivi des soldes débiteurs : identification des élèves dont une échéance est " +
+                        "dépassée, classement par ancienneté de la créance, édition d'un avis de sommes dues et envoi de " +
+                        "relances par SMS aux tuteurs. Les lots de relance sont préparés chaque nuit par l'application, " +
+                        "mais demeurent à l'état de brouillon : aucun envoi de masse ne part sans un geste humain.",
+                    objectif:
+                        "Substituer à une réclamation improvisée un recouvrement méthodique, équitable et traçable, qui " +
+                        "préserve la trésorerie de l'établissement sans exposer les familles à des relances injustifiées.",
+                    probleme:
+                        "Sans suivi structuré, les impayés ne se découvrent qu'au moment des bulletins ou des examens, " +
+                        "c'est-à-dire trop tard pour être recouvrés sereinement. Les relances se font au jugé, certaines " +
+                        "familles à jour sont importunées tandis que des retards anciens demeurent ignorés.",
+                    procedure: [
+                        "Consultez la liste des débiteurs : elle recense les inscriptions dont une échéance est échue et non réglée.",
+                        "Examinez l'ancienneté de la créance : un retard de huit jours et un retard de trois mois n'appellent pas le même traitement.",
+                        "AVIS DE SOMMES DUES : éditez le document PDF détaillant ce qui reste dû et remettez-le au tuteur.",
+                        "RELANCE PAR SMS : ouvrez le lot de relance préparé pour la classe, vérifiez nominativement les destinataires, retirez les cas litigieux, puis déclenchez l'envoi.",
+                        "L'envoi n'intervient qu'après cette validation explicite : aucune campagne ne part automatiquement.",
+                        "ARRANGEMENT : si la famille sollicite un délai, formalisez un échéancier personnalisé plutôt qu'une tolérance verbale.",
+                        "Suivez le taux de recouvrement dans Comptabilité › Rapports financiers, et exportez le rapport au format Excel pour le conseil d'administration."
+                    ],
+                    impacts: [
+                        "Échéanciers : c'est la date d'exigibilité de chaque échéance qui déclenche l'entrée en liste des débiteurs.",
+                        "Encaissement : tout versement retire aussitôt l'élève de la liste dès lors que son solde est apuré.",
+                        "SMS : la relance suppose un numéro de tuteur valide et la formule d'abonnement autorisant les notifications par SMS.",
+                        "Trésorerie : l'encours des impayés pèse directement sur les prévisions de trésorerie.",
+                        "Direction : le taux de recouvrement figure parmi les indicateurs du tableau de bord."
+                    ],
+                    recommandations: [
+                        "Relisez nominativement chaque lot avant envoi : une relance adressée à une famille à jour porte durablement atteinte à la relation.",
+                        "Relancez tôt et posément plutôt que tard et brutalement : un retard de quinze jours se règle souvent d'un simple message.",
+                        "N'exposez jamais publiquement la situation financière d'un élève, et ne l'écartez d'une activité pédagogique qu'après décision formelle de la direction.",
+                        "Consignez tout arrangement dans un échéancier personnalisé : un accord verbal non enregistré n'engage personne et ne protège pas la famille.",
+                        "Vérifiez la qualité des numéros de téléphone : un fichier de contacts défaillant réduit à néant l'efficacité du dispositif."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'pilotage',
+            number: 7,
+            title: 'Rapports, statistiques & audit',
+            icon: 'shield',
+            summary: "Les instruments de pilotage de la direction et la traçabilité des opérations quotidiennes.",
+            articles: [
+                {
+                    id: 'tableau-de-bord',
+                    title: 'Tableaux de bord de la direction',
+                    location: 'Tableau de bord et Rapports financiers',
+                    href: '/tableau-de-bord',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Synthèse chiffrée de l'établissement à l'instant présent : effectifs par classe et par niveau, " +
+                        "recettes encaissées, encours d'impayés, taux de recouvrement, assiduité et occupation des locaux. " +
+                        "Les rapports financiers approfondissent cette vue et s'exportent au format Excel.",
+                    objectif:
+                        "Donner à la direction une lecture immédiate et fiable de la situation de son établissement, sans " +
+                        "avoir à solliciter le secrétariat ni à consolider des tableaux à la main.",
+                    probleme:
+                        "Les indicateurs reconstitués à la demande arrivent tardivement, ne concordent pas entre eux et " +
+                        "reposent sur des périmètres implicites. Les décisions — ouverture d'une classe, recrutement, " +
+                        "investissement — se prennent alors sur une impression plutôt que sur une mesure.",
+                    procedure: [
+                        "Ouvrez le Tableau de bord : les indicateurs portent sur l'année scolaire ACTIVE.",
+                        "Consultez les effectifs par classe et par niveau, ainsi que leur évolution.",
+                        "Examinez les indicateurs financiers : montants attendus, encaissés et restant dus.",
+                        "Ouvrez Gestion Scolaire › Rapports pour le détail de l'assiduité par classe et par élève.",
+                        "Ouvrez Comptabilité › Rapports financiers pour la consolidation des recettes.",
+                        "Exportez le rapport financier au format Excel afin de le transmettre au comptable ou au conseil d'administration.",
+                        "Ouvrez Paramètres › Journal d'audit pour retracer une opération sensible : son auteur, sa date et la valeur antérieure."
+                    ],
+                    impacts: [
+                        "Périmètre : tous les indicateurs se rapportent à l'année scolaire active. Changer d'année change la lecture.",
+                        "Qualité des données : un indicateur ne vaut que ce que valent les saisies quotidiennes qui l'alimentent.",
+                        "Audit : toute opération sensible — note, paiement, révision de frais — est tracée avec son auteur et son horodatage.",
+                        "Export Excel : le fichier produit est destiné au comptable de l'établissement et respecte la présentation attendue."
+                    ],
+                    recommandations: [
+                        "Consultez le tableau de bord à jour fixe — chaque lundi, par exemple — plutôt qu'au gré des inquiétudes.",
+                        "Un écart soudain sur un indicateur trahit plus souvent une erreur de saisie qu'un événement réel : vérifiez avant de décider.",
+                        "Le journal d'audit ne sert pas à sanctionner mais à comprendre : il rétablit la chronologie exacte d'une opération contestée.",
+                        "Exportez et archivez le rapport financier à chaque fin de trimestre : c'est la photographie de l'exercice à cette date."
+                    ]
+                },
+                {
+                    id: 'cloture-caisse',
+                    title: 'Clôture de caisse et journée du secrétariat',
+                    location: 'Comptabilité › Caisse (Encaissements)',
+                    href: '/caisse',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Rituel comptable de fin de journée : la session de caisse ouverte le matin avec un fonds initial " +
+                        "est clôturée le soir en déclarant le solde constaté. L'application édite alors le rapport de " +
+                        "clôture, qui rapproche le total théorique des encaissements du numéraire réellement compté.",
+                    objectif:
+                        "Arrêter chaque journée sur un chiffre incontestable, détecter immédiatement tout écart de caisse, " +
+                        "et fixer la responsabilité de chaque caissier sur sa propre session.",
+                    probleme:
+                        "Une caisse jamais arrêtée formellement rend tout écart indétectable : lorsqu'un manquant apparaît " +
+                        "en fin de mois, il devient impossible d'en déterminer le jour, l'opération ou l'agent. Le soupçon " +
+                        "se répand alors sur l'ensemble du service.",
+                    procedure: [
+                        "À l'ouverture du guichet, ouvrez votre session de caisse en déclarant le fonds de caisse initial.",
+                        "Effectuez la journée d'encaissement : chaque versement est rattaché à cette session nominative.",
+                        "En fin de journée, comptez physiquement le numéraire en caisse.",
+                        "Ouvrez la clôture, déclarez le solde constaté, et confrontez-le au total théorique calculé par l'application.",
+                        "Justifiez tout écart avant de valider : un écart accepté sans explication est un écart perdu.",
+                        "Validez la clôture, puis éditez le rapport de clôture journalière au format PDF.",
+                        "Faites contresigner le rapport par la direction selon l'usage de l'établissement, et classez-le."
+                    ],
+                    impacts: [
+                        "Encaissements : aucun versement ne peut être enregistré hors d'une session de caisse ouverte.",
+                        "Trésorerie : les recettes de la journée clôturée alimentent la position de trésorerie de l'établissement.",
+                        "Rapports financiers : la consolidation des recettes repose sur les sessions clôturées.",
+                        "Audit : l'ouverture et la clôture sont tracées avec leur auteur et leur horodatage.",
+                        "Responsabilité : chaque session est nominative, ce qui circonscrit tout écart à un agent et à une journée."
+                    ],
+                    recommandations: [
+                        "Clôturez chaque jour, sans exception : une session laissée ouverte plusieurs jours ruine l'intérêt du dispositif.",
+                        "Comptez le numéraire AVANT de consulter le total théorique, afin de ne pas s'aligner inconsciemment sur le chiffre attendu.",
+                        "N'encaissez jamais sous la session d'un collègue : la responsabilité en serait faussée.",
+                        "Conservez les rapports de clôture : ils constituent la pièce justificative de la comptabilité de caisse.",
+                        "Clôturez impérativement la caisse avant toute bascule d'année scolaire."
+                    ]
+                }
+            ]
+        }
+    ];
+
+    // Les six rubriques du squelette pédagogique, dans l'ordre d'affichage. La clé correspond au champ
+    // de l'article ; l'icône provient du sprite partagé (_IconSprite.cshtml).
+    const RUBRICS = [
+        { key: 'definition', label: 'Définition & Concept', icon: 'book', tone: 'slate' },
+        { key: 'objectif', label: 'Objectif & Utilité', icon: 'target', tone: 'primary' },
+        { key: 'probleme', label: 'Problème résolu', icon: 'lightbulb', tone: 'warning' },
+        { key: 'procedure', label: 'Procédure étape par étape', icon: 'document-text', tone: 'primary' },
+        { key: 'impacts', label: 'Impacts & Interconnexions', icon: 'link', tone: 'slate' },
+        { key: 'recommandations', label: 'Recommandations & Bonnes pratiques', icon: 'shield', tone: 'success' }
+    ];
+
+    // Recherche insensible à la casse ET aux accents : « echeancier » doit trouver « échéancier »,
+    // sans quoi la barre de recherche punit l'utilisateur pressé qui ne tape pas les diacritiques.
+    const normalize = value =>
+        (value || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+    // Texte intégral d'un article, aplati une seule fois au démarrage : c'est sur cette chaîne que
+    // porte la recherche, jamais sur le DOM. Filtrer le DOM obligerait à tout rendre puis à le
+    // masquer, et surtout la recherche ne verrait pas ce qui est replié dans un tiroir fermé.
+    const haystackOf = (section, article) =>
+        normalize([
+            section.title,
+            article.title,
+            article.location,
+            (article.roles || []).join(' '),
+            article.definition,
+            article.objectif,
+            article.probleme,
+            (article.procedure || []).join(' '),
+            (article.impacts || []).join(' '),
+            (article.recommandations || []).join(' ')
+        ].join(' '));
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('helpCenter', () => ({
+            rubrics: RUBRICS,
+            sections: HELP_SECTIONS.map(section => ({
+                ...section,
+                articles: section.articles.map(article => ({
+                    ...article,
+                    haystack: haystackOf(section, article)
+                }))
+            })),
+
+            search: '',
+            // Tiroirs ouverts. Le mode « un seul à la fois » (par défaut) garde la page épurée ;
+            // l'utilisateur peut basculer en dépliage multiple pour comparer deux modules.
+            openIds: [],
+            allowMultiple: false,
+
+            get query() {
+                return normalize(this.search.trim());
+            },
+
+            get isSearching() {
+                return this.query.length > 0;
+            },
+
+            /** Articles d'une section retenus par la recherche courante. */
+            matchingArticles(section) {
+                if (!this.isSearching) return section.articles;
+                const q = this.query;
+                return section.articles.filter(article => article.haystack.includes(q));
+            },
+
+            /** Une section disparaît entièrement quand aucun de ses articles ne correspond. */
+            visibleSections() {
+                return this.sections.filter(section => this.matchingArticles(section).length > 0);
+            },
+
+            get resultCount() {
+                return this.visibleSections().reduce((total, section) => total + this.matchingArticles(section).length, 0);
+            },
+
+            get totalCount() {
+                return this.sections.reduce((total, section) => total + section.articles.length, 0);
+            },
+
+            isOpen(articleId) {
+                return this.openIds.includes(articleId);
+            },
+
+            toggle(articleId) {
+                if (this.isOpen(articleId)) {
+                    this.openIds = this.openIds.filter(id => id !== articleId);
+                    return;
+                }
+                this.openIds = this.allowMultiple ? [...this.openIds, articleId] : [articleId];
+            },
+
+            /** Bascule « un seul tiroir » ⇄ « plusieurs tiroirs » : on ne garde alors que le dernier ouvert. */
+            toggleMultiple() {
+                this.allowMultiple = !this.allowMultiple;
+                if (!this.allowMultiple && this.openIds.length > 1) {
+                    this.openIds = [this.openIds[this.openIds.length - 1]];
+                }
+            },
+
+            expandAll() {
+                this.allowMultiple = true;
+                this.openIds = this.visibleSections().flatMap(section =>
+                    this.matchingArticles(section).map(article => article.id)
+                );
+            },
+
+            collapseAll() {
+                this.openIds = [];
+            },
+
+            clearSearch() {
+                this.search = '';
+                this.openIds = [];
+            },
+
+            /** Une seule réponse : on l'ouvre d'emblée, l'utilisateur a déjà désigné ce qu'il cherchait. */
+            onSearchInput() {
+                if (!this.isSearching) {
+                    this.openIds = [];
+                    return;
+                }
+                const results = this.visibleSections().flatMap(section => this.matchingArticles(section));
+                this.openIds = results.length === 1 ? [results[0].id] : [];
+            },
+
+            /** Contenu d'une rubrique : chaîne unique (paragraphe) ou tableau (liste ordonnée/à puces). */
+            valueOf(article, rubric) {
+                return article[rubric.key];
+            },
+
+            isList(value) {
+                return Array.isArray(value);
+            }
+        }));
+    });
+})();

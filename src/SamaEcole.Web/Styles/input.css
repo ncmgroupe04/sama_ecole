@@ -316,6 +316,37 @@
     max-height: 0 !important;
     display: none !important;
   }
+
+  /* Tiroirs du Centre d'aide (Views/Help/Index.cshtml). Même contrainte que les sous-menus
+     ci-dessus — x-collapse n'existe pas dans l'Alpine embarqué — mais résolue autrement : ici la
+     hauteur du contenu VARIE ÉNORMÉMENT d'un article à l'autre (une procédure de huit étapes fait
+     plusieurs écrans), et une max-height forfaitaire tronquerait les plus longs ou rendrait
+     l'animation instantanée sur les plus courts. grid-template-rows 0fr → 1fr anime la hauteur
+     RÉELLE sans qu'aucun JavaScript n'ait à la mesurer, donc sans le point de mesure/reflow
+     qu'impose sidebar-nav.js. L'enfant direct porte overflow:hidden : sans lui, le contenu
+     déborde de la piste de grille au lieu d'être rogné pendant la transition. */
+  .help-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .help-panel.is-open {
+    grid-template-rows: 1fr;
+  }
+
+  .help-panel > * {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* Un utilisateur qui a désactivé les animations (vestibulaire, préférence système) obtient
+     l'ouverture immédiate plutôt qu'un compromis à moitié animé. */
+  @media (prefers-reduced-motion: reduce) {
+    .help-panel {
+      transition: none;
+    }
+  }
 }
 
 @keyframes skeleton-shimmer {

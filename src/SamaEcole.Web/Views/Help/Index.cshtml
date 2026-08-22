@@ -1,0 +1,256 @@
+@{
+    ViewData["Title"] = "Centre d'aide";
+}
+
+@* Le CONTENU du guide vit dans wwwroot/js/help.js, pas ici : c'est ce qui permet à la recherche de
+   porter sur l'intégralité du texte, y compris celui des tiroirs repliés (voir l'en-tête de help.js).
+   auth.js et api.js sont chargés par _Layout — les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/help.js" asp-append-version="true"></script>
+}
+
+<div x-data="helpCenter()">
+
+ @* ═══════════════════════════════════════════════════════════════════════════
+    EN-TÊTE — présentation du guide et moteur de recherche.
+    ═══════════════════════════════════════════════════════════════════════════ *@
+ <div class="sticky-sub-header">
+
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+   <div class="flex items-start gap-4">
+    <div aria-hidden="true" class="hidden sm:flex shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-600 to-primary-400 text-white items-center justify-center shadow-sm">
+     <icon name="help-circle" class="w-7 h-7" />
+    </div>
+    <div>
+     <h1 class="text-jgk-title font-bold text-slate-900">Centre d'aide</h1>
+     <p class="text-jgk-subtitle text-slate-500 mt-1">
+      Guide complet d'utilisation d'Unikol — chaque module y est expliqué, de sa raison d'être à sa mise en œuvre.
+     </p>
+    </div>
+   </div>
+
+   <div class="flex items-center gap-2 shrink-0">
+    <button type="button" x-on:click="expandAll()"
+            class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
+     <icon name="chevron-down" class="w-4 h-4" />
+     <span class="hidden sm:inline">Tout déplier</span>
+    </button>
+    <button type="button" x-on:click="collapseAll()"
+            class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-primary-700 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
+     <icon name="x" class="w-4 h-4" />
+     <span class="hidden sm:inline">Tout replier</span>
+    </button>
+   </div>
+  </div>
+
+  @* Recherche : filtre sur le texte INTÉGRAL de chaque article, accents et casse indifférents. *@
+  <div class="flex flex-col lg:flex-row lg:items-center gap-4 mt-4">
+   <div class="relative flex-1 flex items-center">
+    <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+     <icon name="search" class="w-5 h-5 text-slate-400" />
+    </span>
+    <input type="search"
+           x-model="search"
+           x-on:input="onSearchInput()"
+           aria-label="Rechercher dans le guide d'utilisation"
+           placeholder="Rechercher un sujet : bulletin, année scolaire, impayés, matricule, APC…"
+           class="w-full pl-12 pr-11 py-3 bg-white border border-slate-200 rounded-2xl text-jgk-body text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200" />
+    <button type="button" x-show="isSearching" x-cloak x-on:click="clearSearch()"
+            aria-label="Effacer la recherche"
+            class="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-danger transition-colors">
+     <icon name="x" class="w-4 h-4" />
+    </button>
+   </div>
+
+   @* Dépliage multiple : par défaut un seul tiroir reste ouvert, pour garder la page lisible. *@
+   <button type="button" x-on:click="toggleMultiple()"
+           :aria-pressed="allowMultiple ? 'true' : 'false'"
+           :class="allowMultiple ? 'bg-indigo-50 border-primary-200 text-primary-700' : 'bg-white border-slate-200 text-slate-600'"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-sm font-medium hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95 shrink-0">
+    <icon name="layers" class="w-4 h-4" />
+    <span x-text="allowMultiple ? 'Dépliage multiple activé' : 'Un seul tiroir à la fois'"></span>
+   </button>
+  </div>
+
+  <p class="mt-3 text-xs text-slate-500">
+   <span x-show="!isSearching" x-cloak>
+    <span x-text="totalCount"></span> fiches réparties en <span x-text="sections.length"></span> modules.
+    Cliquez sur un intitulé pour en déplier le détail.
+   </span>
+   <span x-show="isSearching" x-cloak>
+    <span x-text="resultCount"></span>
+    <span x-text="resultCount > 1 ? 'fiches correspondent' : 'fiche correspond'"></span>
+    à « <span class="font-medium text-slate-700" x-text="search"></span> ».
+   </span>
+  </p>
+ </div>
+
+ @* ═══════════════════════════════════════════════════════════════════════════
+    AUCUN RÉSULTAT
+    ═══════════════════════════════════════════════════════════════════════════ *@
+ <div x-show="isSearching && resultCount === 0" x-cloak
+      class="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+  <div aria-hidden="true" class="mx-auto w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+   <icon name="search" class="w-6 h-6" />
+  </div>
+  <p class="mt-4 text-jgk-body font-medium text-slate-700">Aucune fiche ne correspond à cette recherche.</p>
+  <p class="mt-1 text-sm text-slate-500">
+   Essayez un terme plus général — « notes », « frais », « inscription » — ou parcourez les modules ci-dessous.
+  </p>
+  <button type="button" x-on:click="clearSearch()"
+          class="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
+   <icon name="x" class="w-4 h-4" />
+   Effacer la recherche
+  </button>
+ </div>
+
+ @* ═══════════════════════════════════════════════════════════════════════════
+    MODULES — une carte par module, un tiroir par fiche.
+    ═══════════════════════════════════════════════════════════════════════════ *@
+ <template x-for="section in visibleSections()" :key="section.id">
+  <section class="space-y-3">
+
+   <!-- Intitulé du module -->
+   <div class="flex items-center gap-3 pt-2">
+    <div aria-hidden="true" class="shrink-0 w-10 h-10 rounded-xl bg-indigo-50 text-primary-700 flex items-center justify-center">
+     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use :href="'#icon-' + section.icon"></use></svg>
+    </div>
+    <div class="min-w-0">
+     <h2 class="text-jgk-subtitle font-bold text-slate-900 leading-tight">
+      <span class="text-primary-700">Module <span x-text="section.number"></span> —</span>
+      <span x-text="section.title"></span>
+     </h2>
+     <p class="text-sm text-slate-500 mt-0.5" x-text="section.summary"></p>
+    </div>
+   </div>
+
+   <!-- Tiroirs du module -->
+   <div class="space-y-3">
+    <template x-for="article in matchingArticles(section)" :key="article.id">
+     <article class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-200"
+              :class="isOpen(article.id) ? 'ring-1 ring-primary-200 border-primary-200' : 'hover:border-slate-300'">
+
+      <!-- En-tête cliquable du tiroir -->
+      <h3>
+       <button type="button"
+               x-on:click="toggle(article.id)"
+               :aria-expanded="isOpen(article.id) ? 'true' : 'false'"
+               :aria-controls="'help-panel-' + article.id"
+               class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
+               :class="isOpen(article.id) ? 'bg-indigo-50/60' : 'hover:bg-slate-50'">
+        <span class="flex items-start gap-3 min-w-0">
+         <span aria-hidden="true" class="mt-0.5 shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+               :class="isOpen(article.id) ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-500'">
+          <icon name="document-text" class="w-4 h-4" />
+         </span>
+         <span class="min-w-0">
+          <span class="block text-jgk-body font-semibold text-slate-900" x-text="article.title"></span>
+          <span class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+           <span class="inline-flex items-center gap-1">
+            <icon name="layers" class="w-3.5 h-3.5" />
+            <span x-text="article.location"></span>
+           </span>
+           <template x-for="role in article.roles" :key="role">
+            <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600" x-text="role"></span>
+           </template>
+          </span>
+         </span>
+        </span>
+        <icon name="chevron-down" class="w-5 h-5 shrink-0 text-slate-400 transition-transform duration-200"
+              x-bind:class="isOpen(article.id) ? 'rotate-180 text-primary-700' : ''" />
+       </button>
+      </h3>
+
+      @* Le panneau reste dans le DOM même replié : la recherche porte sur son texte, et un
+         x-if le retirerait de l'arbre — donc de toute impression de la page. La hauteur est
+         animée par grid-template-rows (voir .help-panel dans Styles/input.css). *@
+      <div class="help-panel" :class="isOpen(article.id) ? 'is-open' : ''"
+           :id="'help-panel-' + article.id"
+           :aria-hidden="isOpen(article.id) ? 'false' : 'true'">
+       <div>
+        <div class="px-5 pb-5 pt-1 border-t border-slate-100 space-y-5">
+
+         <!-- Les six rubriques du squelette pédagogique -->
+         <template x-for="rubric in rubrics" :key="rubric.key">
+          <div class="rounded-xl border border-slate-100 bg-stone-50/60 p-4">
+
+           <div class="flex items-center gap-2.5">
+            <span aria-hidden="true" class="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
+                  :class="{
+                    'bg-slate-200 text-slate-600': rubric.tone === 'slate',
+                    'bg-primary-100 text-primary-700': rubric.tone === 'primary',
+                    'bg-warning-bg text-warning': rubric.tone === 'warning',
+                    'bg-success-bg text-success': rubric.tone === 'success'
+                  }">
+             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use :href="'#icon-' + rubric.icon"></use></svg>
+            </span>
+            <h4 class="text-[13px] font-bold uppercase tracking-wider text-slate-500" x-text="rubric.label"></h4>
+           </div>
+
+           <!-- Rubrique rédigée en un seul paragraphe -->
+           <p x-show="!isList(valueOf(article, rubric))"
+              class="mt-3 text-jgk-body leading-relaxed text-slate-700"
+              x-text="valueOf(article, rubric)"></p>
+
+           <!-- Rubrique en étapes numérotées (procédure) -->
+           <ol x-show="isList(valueOf(article, rubric)) && rubric.key === 'procedure'"
+               class="mt-3 space-y-2.5">
+            <template x-for="(step, index) in valueOf(article, rubric)" :key="index">
+             <li class="flex gap-3">
+              <span aria-hidden="true"
+                    class="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center"
+                    x-text="index + 1"></span>
+              <span class="text-jgk-body leading-relaxed text-slate-700" x-text="step"></span>
+             </li>
+            </template>
+           </ol>
+
+           <!-- Rubrique en liste à puces (impacts, recommandations) -->
+           <ul x-show="isList(valueOf(article, rubric)) && rubric.key !== 'procedure'"
+               class="mt-3 space-y-2">
+            <template x-for="(item, index) in valueOf(article, rubric)" :key="index">
+             <li class="flex gap-3">
+              <span aria-hidden="true" class="shrink-0 mt-2 w-1.5 h-1.5 rounded-full"
+                    :class="rubric.tone === 'success' ? 'bg-success' : 'bg-primary-400'"></span>
+              <span class="text-jgk-body leading-relaxed text-slate-700" x-text="item"></span>
+             </li>
+            </template>
+           </ul>
+          </div>
+         </template>
+
+         <!-- Accès direct à l'écran documenté -->
+         <div class="flex justify-end pt-1">
+          <a :href="article.href"
+             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
+           <icon name="chevron-right" class="w-4 h-4" />
+           Ouvrir cet écran
+          </a>
+         </div>
+        </div>
+       </div>
+      </div>
+     </article>
+    </template>
+   </div>
+  </section>
+ </template>
+
+ @* ═══════════════════════════════════════════════════════════════════════════
+    PIED DE PAGE — ce que le guide ne couvre pas, et vers qui se tourner.
+    ═══════════════════════════════════════════════════════════════════════════ *@
+ <div x-show="!isSearching" x-cloak
+      class="rounded-2xl border border-slate-200 bg-white p-6 mt-4 flex flex-col sm:flex-row sm:items-center gap-4">
+  <div aria-hidden="true" class="shrink-0 w-11 h-11 rounded-xl bg-indigo-50 text-primary-700 flex items-center justify-center">
+   <icon name="envelope" class="w-5 h-5" />
+  </div>
+  <div class="flex-1">
+   <p class="text-jgk-body font-semibold text-slate-900">Une question que ce guide ne traite pas ?</p>
+   <p class="text-sm text-slate-500 mt-1">
+    Adressez-vous au Directeur de l'établissement, seul habilité à modifier les paramètres généraux,
+    ou au support Unikol pour toute difficulté technique. Précisez l'écran concerné et l'heure exacte
+    de l'incident : le journal d'audit permet alors d'en retracer le déroulement.
+   </p>
+  </div>
+ </div>
+</div>

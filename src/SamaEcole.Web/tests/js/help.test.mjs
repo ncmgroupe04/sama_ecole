@@ -1,0 +1,148 @@
+/**
+ * Centre d'aide intégré (wwwroot/js/help.js).
+ *
+ * Deux garanties comptent ici. La première est STRUCTURELLE : chaque fiche doit porter les six
+ * rubriques du squelette pédagogique — une fiche amputée d'« Impacts » ou de « Recommandations »
+ * s'afficherait sans erreur, avec un bloc vide, et personne ne s'en apercevrait avant qu'un
+ * utilisateur ne cherche la réponse qui manque. La seconde est la RECHERCHE : elle porte sur le
+ * texte intégral, y compris celui des tiroirs repliés, et doit ignorer les accents — un secrétaire
+ * pressé tape « echeancier », pas « échéancier ».
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { loadScripts, plain } from './harness.mjs';
+
+const RUBRICS = ['definition', 'objectif', 'probleme', 'procedure', 'impacts', 'recommandations'];
+
+function helpCenter() {
+    return loadScripts(['help.js']).component('helpCenter');
+}
+
+test('chaque fiche porte les six rubriques du squelette pédagogique, toutes renseignées', () => {
+    const help = helpCenter();
+
+    assert.ok(help.sections.length > 0, 'aucun module chargé');
+
+    for (const section of help.sections) {
+        assert.ok(section.articles.length > 0, `module vide : ${section.title}`);
+
+        for (const article of section.articles) {
+            for (const key of RUBRICS) {
+                const value = article[key];
+                assert.ok(value !== undefined && value !== null, `${article.id} : rubrique « ${key} » absente`);
+
+                if (Array.isArray(value)) {
+                    assert.ok(value.length > 0, `${article.id} : rubrique « ${key} » vide`);
+                    value.forEach(item => assert.ok(item.trim().length > 0, `${article.id} : « ${key} » contient une entrée vide`));
+                } else {
+                    assert.ok(value.trim().length > 0, `${article.id} : rubrique « ${key} » vide`);
+                }
+            }
+
+            // Le bouton « Ouvrir cet écran » doit mener quelque part : un href absent produirait un
+            // lien mort, exactement ce que _Layout.cshtml s'interdit pour le menu latéral.
+            assert.match(article.href, /^\//, `${article.id} : href invalide`);
+            assert.ok(article.roles.length > 0, `${article.id} : aucun rôle indiqué`);
+        }
+    }
+});
+
+test('les identifiants de fiche sont uniques — ils servent de clé de tiroir', () => {
+    const help = helpCenter();
+    const ids = help.sections.flatMap(section => section.articles.map(article => article.id));
+
+    assert.equal(new Set(ids).size, ids.length, 'deux fiches partagent le même identifiant');
+});
+
+test('la recherche ignore les accents et la casse', () => {
+    const help = helpCenter();
+
+    help.search = 'ECHEANCIER';
+    const sansAccent = help.resultCount;
+
+    help.search = 'échéancier';
+    const avecAccent = help.resultCount;
+
+    assert.ok(sansAccent > 0, 'la recherche sans accent ne trouve rien');
+    assert.equal(sansAccent, avecAccent);
+});
+
+test('la recherche porte sur le texte intégral, pas seulement sur les titres', () => {
+    const help = helpCenter();
+
+    // « carnet à souches » n'apparaît que dans la rubrique « Problème résolu » de l'encaissement.
+    help.search = 'carnet à souches';
+
+    assert.equal(help.resultCount, 1);
+    assert.equal(help.visibleSections()[0].articles.filter(a => a.haystack.includes('carnet a souches')).length, 1);
+});
+
+test('une recherche sans réponse ne laisse aucun module affiché', () => {
+    const help = helpCenter();
+    help.search = 'zzzz-inexistant';
+
+    assert.equal(help.resultCount, 0);
+    assert.equal(help.visibleSections().length, 0);
+});
+
+test('un résultat unique s’ouvre de lui-même, plusieurs résultats restent repliés', () => {
+    const help = helpCenter();
+
+    help.search = 'carnet à souches';
+    help.onSearchInput();
+    assert.deepEqual(plain(help.openIds), ['encaissement']);
+
+    help.search = 'bulletin';
+    help.onSearchInput();
+    assert.ok(help.resultCount > 1, 'le scénario suppose plusieurs réponses');
+    assert.deepEqual(plain(help.openIds), [], 'plusieurs réponses : aucune ne doit être présumée');
+});
+
+test('mode « un seul tiroir » : ouvrir le suivant referme le précédent', () => {
+    const help = helpCenter();
+
+    help.toggle('annee-scolaire');
+    help.toggle('infrastructures');
+
+    assert.deepEqual(plain(help.openIds), ['infrastructures']);
+    assert.equal(help.isOpen('annee-scolaire'), false);
+});
+
+test('mode « dépliage multiple » : les tiroirs s’accumulent, et la bascule inverse n’en garde qu’un', () => {
+    const help = helpCenter();
+    help.toggleMultiple();
+
+    help.toggle('annee-scolaire');
+    help.toggle('infrastructures');
+    assert.deepEqual(plain(help.openIds), ['annee-scolaire', 'infrastructures']);
+
+    // Retour au mode épuré : on conserve le DERNIER ouvert, celui que l'utilisateur regardait.
+    help.toggleMultiple();
+    assert.deepEqual(plain(help.openIds), ['infrastructures']);
+});
+
+test('un second clic sur un tiroir ouvert le referme', () => {
+    const help = helpCenter();
+
+    help.toggle('saisie-notes');
+    assert.equal(help.isOpen('saisie-notes'), true);
+
+    help.toggle('saisie-notes');
+    assert.equal(help.isOpen('saisie-notes'), false);
+});
+
+test('« Tout déplier » ne déplie que les fiches retenues par la recherche courante', () => {
+    const help = helpCenter();
+
+    help.search = 'bulletin';
+    help.expandAll();
+
+    assert.equal(help.openIds.length, help.resultCount);
+    assert.ok(help.openIds.length < help.totalCount, 'la recherche devait restreindre le périmètre');
+
+    // Effacer la recherche remet la page à plat : ni filtre, ni tiroir ouvert.
+    help.clearSearch();
+    assert.equal(help.search, '');
+    assert.deepEqual(plain(help.openIds), []);
+    assert.equal(help.resultCount, help.totalCount);
+});

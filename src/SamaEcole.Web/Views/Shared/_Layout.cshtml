@@ -247,6 +247,14 @@
  <icon name="layers" class="w-6 h-6" />
  <span class="text-base font-medium">Console Super Admin</span>
  </a>
+
+ @* Centre d'aide : documentation intégrée, aucune donnée d'établissement — donc aucun x-show de
+ rôle, contrairement aux entrées ci-dessus. Celui qui ne sait pas quoi faire est rarement celui
+ qui a le plus de droits. *@
+ <a href="/aide" class="sidebar-link-main @(path.StartsWith("/aide") ? LinkActive : LinkIdle)">
+ <icon name="help-circle" class="w-6 h-6" />
+ <span class="text-base font-medium">Aide &amp; Documentation</span>
+ </a>
  </div>
  </nav>
 
@@ -394,6 +402,17 @@
  x-text="(name || email) ? (name || email)[0] : '?'"></div>
  <span class="hidden sm:block text-sm font-medium text-slate-700 truncate max-w-[10rem]" x-text="name || email"></span>
  </div>
+
+ @* Centre d'aide (/aide). Placé juste avant la déconnexion, au bout de la barre : c'est le
+ réflexe attendu quand on ne sait plus quoi faire. Le libellé reste masqué sous `sm` pour
+ ne pas encombrer la barre sur mobile — l'icône et le title suffisent alors. *@
+ <a href="/aide"
+ title="Aide &amp; Documentation — guide d'utilisation d'Unikol"
+ aria-label="Ouvrir le centre d'aide"
+ class="flex items-center gap-2 px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95 @(path.StartsWith("/aide") ? "text-primary-700 bg-indigo-50" : "text-slate-400 hover:text-primary-700 hover:bg-slate-50")">
+ <icon name="help-circle" class="w-6 h-6" />
+ <span class="hidden sm:inline text-sm font-medium">Aide</span>
+ </a>
 
  @* Déconnexion (Volume 5 §3.1). Révoque les refresh tokens côté serveur et purge le
  cookie : fermer l'onglet ne suffisait pas, la session serait restée ouverte 14 jours. *@

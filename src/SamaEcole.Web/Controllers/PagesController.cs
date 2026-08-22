@@ -142,6 +142,15 @@ public class PagesController : Controller
     [HttpGet("/fiscalite")]
     public IActionResult Taxes() => View("~/Views/Taxes/Index.cshtml");
 
+    // ------------------------------------------------------------------ Centre d'aide
+
+    // Guide d'utilisation intégré. Contenu 100 % statique (wwwroot/js/help.js) : aucune donnée
+    // d'établissement n'y transite, donc aucun appel d'API à garder ici — et la page reste
+    // consultable quand le serveur d'API est injoignable, c'est-à-dire précisément quand
+    // l'utilisateur cherche de l'aide. Ouverte à tous les rôles, y compris au Super Admin.
+    [HttpGet("/aide")]
+    public IActionResult Help() => View("~/Views/Help/Index.cshtml");
+
     // ------------------------------------------------------------------ Vitrine publique (marketing)
 
     // Page vitrine B2B : présente le logiciel aux directeurs/gérants d'établissement. Contenu
