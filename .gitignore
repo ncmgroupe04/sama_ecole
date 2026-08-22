@@ -35,3 +35,8 @@ Thumbs.db
 
 # --- Résultats de tests (générés par `dotnet test`) ---
 TestResults/
+
+# --- Sortie de publication (`dotnet publish`) ---
+# Binaires, PDB et archives : ~138 Mo régénérables à chaque build, que `git add .` embarquait
+# jusqu'ici dans l'historique de façon irréversible.
+dist/
