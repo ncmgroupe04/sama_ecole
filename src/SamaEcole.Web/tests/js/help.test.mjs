@@ -47,6 +47,72 @@ test('chaque fiche porte les six rubriques du squelette pédagogique, toutes ren
     }
 });
 
+/**
+ * Bouton « Haut de page ». Le seul comportement qui mérite un test est celui qui se trompe
+ * silencieusement : dans cette application, ce n'est pas la fenêtre qui défile mais <main>
+ * (_Layout.cshtml : body en overflow-hidden). Un bouton qui appellerait window.scrollTo() se
+ * comporterait normalement à la lecture du code et ne ferait strictement RIEN à l'écran.
+ */
+function fakeScroller() {
+    return {
+        scrollTop: 0,
+        listeners: [],
+        scrolledTo: null,
+        removed: false,
+        addEventListener(type, fn) { this.listeners.push({ type, fn }); },
+        removeEventListener() { this.removed = true; },
+        scrollTo(options) { this.scrolledTo = options; }
+    };
+}
+
+function backToTop(scroller) {
+    // Instanciation manuelle : $el doit exister AVANT init(), ce que le raccourci
+    // component() du harness ne permet pas.
+    const factory = loadScripts(['help.js']).initAlpine().get('backToTop');
+    const instance = factory();
+    instance.$el = { closest: () => scroller };
+    instance.init();
+    return instance;
+}
+
+test('le bouton « Haut de page » écoute le conteneur défilant, pas la fenêtre', () => {
+    const scroller = fakeScroller();
+    const bouton = backToTop(scroller);
+
+    assert.equal(scroller.listeners.length, 1, 'aucun écouteur posé sur <main>');
+    assert.equal(scroller.listeners[0].type, 'scroll');
+    assert.equal(bouton.visible, false, 'le bouton ne doit pas s’afficher en haut de page');
+});
+
+test('le bouton n’apparaît qu’une fois le champ de recherche hors de vue', () => {
+    const scroller = fakeScroller();
+    const bouton = backToTop(scroller);
+    const onScroll = scroller.listeners[0].fn;
+
+    scroller.scrollTop = 200;
+    onScroll();
+    assert.equal(bouton.visible, false, 'apparition trop précoce : on proposerait de remonter là où on est');
+
+    scroller.scrollTop = 900;
+    onScroll();
+    assert.equal(bouton.visible, true);
+
+    scroller.scrollTop = 0;
+    onScroll();
+    assert.equal(bouton.visible, false, 'le bouton doit disparaître une fois en haut');
+});
+
+test('« Haut de page » ramène bien le conteneur, et le libère à la destruction', () => {
+    const scroller = fakeScroller();
+    const bouton = backToTop(scroller);
+
+    bouton.toTop();
+    assert.deepEqual(plain(scroller.scrolledTo), { top: 0, behavior: 'smooth' });
+
+    bouton.destroy();
+    assert.equal(scroller.removed, true, 'écouteur de défilement laissé attaché après destruction');
+});
+
 test('chaque module explique son concept, pas seulement ses fiches', () => {
     const help = helpCenter();
 

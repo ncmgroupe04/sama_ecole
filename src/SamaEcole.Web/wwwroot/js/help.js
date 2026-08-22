@@ -846,13 +846,21 @@
     // Les six rubriques du squelette pédagogique, dans l'ordre d'affichage. La clé correspond au champ
     // de l'article ; l'icône provient du sprite partagé (_IconSprite.cshtml) ; `kind` dit à la vue
     // comment rendre le contenu — un paragraphe, des étapes numérotées, ou une liste à puces.
+    //
+    // `tone` porte une TEINTE, pas un statut : les six rubriques ne sont ni des succès ni des
+    // erreurs, ce sont six angles de lecture qu'il s'agit de distinguer d'un coup d'œil quand un
+    // tiroir déplié occupe tout l'écran. Six teintes franchement séparées sur la roue chromatique,
+    // choisies pour leur sens : bleu pour ce qui informe, vert pour le but atteint, rose pour la
+    // douleur qu'on supprime, violet pour le mode opératoire, cyan pour les ondes de propagation,
+    // ambre pour la mise en garde. La traduction en classes vit dans la vue, seul endroit qui
+    // connaisse le vocabulaire Tailwind (Views/Help/Index.cshtml).
     const RUBRICS = [
-        { key: 'definition', label: 'Définition & Concept', icon: 'book', tone: 'slate', kind: 'text' },
-        { key: 'objectif', label: 'Objectif & Utilité', icon: 'target', tone: 'primary', kind: 'text' },
-        { key: 'probleme', label: 'Problème résolu', icon: 'lightbulb', tone: 'warning', kind: 'text' },
-        { key: 'procedure', label: 'Procédure étape par étape', icon: 'document-text', tone: 'primary', kind: 'steps' },
-        { key: 'impacts', label: 'Impacts & Interconnexions', icon: 'link', tone: 'slate', kind: 'bullets' },
-        { key: 'recommandations', label: 'Recommandations & Bonnes pratiques', icon: 'shield', tone: 'success', kind: 'bullets' }
+        { key: 'definition', label: 'Définition & Concept', icon: 'book', tone: 'blue', kind: 'text' },
+        { key: 'objectif', label: 'Objectif & Utilité', icon: 'target', tone: 'emerald', kind: 'text' },
+        { key: 'probleme', label: 'Problème résolu', icon: 'lightbulb', tone: 'rose', kind: 'text' },
+        { key: 'procedure', label: 'Procédure étape par étape', icon: 'document-text', tone: 'violet', kind: 'steps' },
+        { key: 'impacts', label: 'Impacts & Interconnexions', icon: 'link', tone: 'cyan', kind: 'bullets' },
+        { key: 'recommandations', label: 'Recommandations & Bonnes pratiques', icon: 'shield', tone: 'amber', kind: 'bullets' }
     ];
 
     /**
@@ -1010,6 +1018,57 @@
                 }
                 const results = this.visibleSections().flatMap(section => this.matchingArticles(section));
                 this.openIds = results.length === 1 ? [results[0].id] : [];
+            }
+        }));
+
+        /**
+         * Bouton « Haut de page » du Centre d'aide.
+         *
+         * Le piège tient en une ligne : dans cette application, ce n'est PAS la fenêtre qui défile.
+         * _Layout.cshtml pose `<body class="h-screen overflow-hidden">` et confie le défilement à
+         * `<main class="overflow-y-auto">`. `window.scrollY` vaut donc 0 en permanence, quel que soit
+         * l'endroit où l'on se trouve dans la page, et `window.scrollTo(0, 0)` n'a aucun effet
+         * observable. C'est sur `<main>` qu'il faut écouter, et c'est `<main>` qu'il faut ramener.
+         *
+         * Seuil à 400px plutôt qu'au premier pixel : le bouton ne doit apparaître qu'une fois le
+         * champ de recherche réellement hors de vue, sans quoi il propose de remonter là où l'on est.
+         */
+        Alpine.data('backToTop', () => ({
+            visible: false,
+            scroller: null,
+            handler: null,
+
+            init() {
+                this.scroller = this.$el.closest('main') || document.querySelector('main');
+                if (!this.scroller) return;
+
+                this.handler = () => {
+                    const next = this.scroller.scrollTop > 400;
+                    // Affectation seulement au CHANGEMENT : un écouteur de défilement se déclenche
+                    // des dizaines de fois par seconde, et écrire la même valeur dans un proxy
+                    // Alpine réveille malgré tout ses effets.
+                    if (next !== this.visible) this.visible = next;
+                };
+
+                this.scroller.addEventListener('scroll', this.handler, { passive: true });
+                this.handler();
+            },
+
+            destroy() {
+                if (this.scroller && this.handler) {
+                    this.scroller.removeEventListener('scroll', this.handler);
+                }
+            },
+
+            toTop() {
+                if (!this.scroller) return;
+
+                // Un défilement animé de plusieurs dizaines d'écrans est précisément ce que la
+                // préférence « animations réduites » cherche à éviter : on saute alors directement.
+                const reduced = typeof window.matchMedia === 'function'
+                    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                this.scroller.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
             }
         }));
     });

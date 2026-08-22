@@ -108,12 +108,12 @@
 
    <!-- Intitulé du module -->
    <div class="flex items-center gap-3 pt-2">
-    <div aria-hidden="true" class="shrink-0 w-10 h-10 rounded-xl bg-indigo-50 text-primary-700 flex items-center justify-center">
+    <div aria-hidden="true" class="shrink-0 bg-indigo-100 text-indigo-700 p-2 rounded-lg flex items-center justify-center">
      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use :href="'#icon-' + section.icon"></use></svg>
     </div>
     <div class="min-w-0">
-     <h2 class="text-jgk-subtitle font-bold text-slate-900 leading-tight">
-      <span class="text-primary-700">Module <span x-text="section.number"></span> —</span>
+     <h2 class="font-bold text-slate-900 text-lg leading-tight">
+      <span class="text-indigo-700">Module <span x-text="section.number"></span> —</span>
       <span x-text="section.title"></span>
      </h2>
      <p class="text-sm text-slate-500 mt-0.5" x-text="section.summary"></p>
@@ -123,19 +123,20 @@
    @* Concept du MODULE — le niveau que les fiches ne couvrent pas. Chaque fiche explique SA
       fonctionnalité ; ce paragraphe explique le pôle : ce qu'il recouvre, les notions à ne pas
       confondre, et l'ordre dans lequel ses fiches s'articulent. Il est indexé par la recherche
-      (voir haystackOf dans help.js), donc trouvable au même titre que le reste. *@
-   @* 3.25rem = largeur de la pastille d'icône du module (w-10) + gap-3 : le paragraphe s'aligne
-      ainsi sur le titre, et non sur l'icône. Valeur arbitraire assumée — l'échelle Tailwind par
-      défaut s'arrête à ml-12 (3rem) puis saute à ml-14 (3.5rem), ni l'une ni l'autre ne tombant juste. *@
-   <div class="rounded-xl border-l-2 border-primary-300 bg-white/70 px-4 py-3 ml-0 sm:ml-[3.25rem]">
-    <p class="text-sm leading-relaxed text-slate-600" x-text="section.concept"></p>
+      (voir haystackOf dans help.js), donc trouvable au même titre que le reste.
+
+      Le filet vertical épais tient lieu de marque de citation : le chapeau se lit comme la voix du
+      module, distincte de celle des fiches qu'il coiffe. Coins arrondis à DROITE seulement —
+      arrondir le côté du filet le réduirait à un liseré décoratif. *@
+   <div class="rounded-r-xl bg-indigo-50/50 border-l-4 border-l-indigo-600 border-y border-r border-indigo-100/80 p-4">
+    <p class="text-sm leading-relaxed text-slate-700" x-text="section.concept"></p>
    </div>
 
    <!-- Tiroirs du module -->
    <div class="space-y-3">
     <template x-for="article in matchingArticles(section)" :key="article.id">
-     <article class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-200"
-              :class="isOpen(article.id) ? 'ring-1 ring-primary-200 border-primary-200' : 'hover:border-slate-300'">
+     <article class="rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md overflow-hidden transition-all duration-200"
+              :class="isOpen(article.id) ? 'ring-1 ring-indigo-200 border-indigo-200 shadow-md' : ''">
 
       <!-- En-tête cliquable du tiroir -->
       <h3>
@@ -158,7 +159,7 @@
             <span x-text="article.location"></span>
            </span>
            <template x-for="role in article.roles" :key="role">
-            <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600" x-text="role"></span>
+            <span class="inline-flex items-center bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-md font-medium" x-text="role"></span>
            </template>
           </span>
          </span>
@@ -182,20 +183,48 @@
             chercher le contenu. C'est ce qui a corrigé l'affichage « [object Object] » — dans un
             x-for, un identifiant hérité d'Object.prototype (valueOf, toString…) est résolu par le
             proxy de portée d'Alpine sur le prototype, jamais sur le composant. Voir blocksOf(). *@
+         @* Une sous-carte par rubrique, au filet gauche coloré. Les six teintes ne décorent pas :
+            un tiroir déplié fait plusieurs écrans de haut, et c'est la couleur du filet qui permet
+            de retrouver « Procédure » ou « Recommandations » en faisant défiler, sans relire les
+            intitulés. Les classes sont écrites en toutes lettres ici — Tailwind analyse ce fichier
+            (tailwind.config.js, content) et ne saurait pas deviner une classe composée à la volée
+            depuis la valeur de block.tone. *@
          <template x-for="block in article.blocks" :key="block.key">
-          <div class="rounded-xl border border-slate-100 bg-stone-50/60 p-4">
+          <div class="rounded-xl border border-slate-100 border-l-4 p-4"
+               :class="{
+                 'border-l-blue-500 bg-blue-50/40': block.tone === 'blue',
+                 'border-l-emerald-500 bg-emerald-50/40': block.tone === 'emerald',
+                 'border-l-rose-500 bg-rose-50/40': block.tone === 'rose',
+                 'border-l-violet-500 bg-violet-50/40': block.tone === 'violet',
+                 'border-l-cyan-500 bg-cyan-50/40': block.tone === 'cyan',
+                 'border-l-amber-500 bg-amber-50/40': block.tone === 'amber'
+               }">
 
            <div class="flex items-center gap-2.5">
             <span aria-hidden="true" class="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
                   :class="{
-                    'bg-slate-200 text-slate-600': block.tone === 'slate',
-                    'bg-primary-100 text-primary-700': block.tone === 'primary',
-                    'bg-warning-bg text-warning': block.tone === 'warning',
-                    'bg-success-bg text-success': block.tone === 'success'
+                    'bg-blue-100 text-blue-700': block.tone === 'blue',
+                    'bg-emerald-100 text-emerald-700': block.tone === 'emerald',
+                    'bg-rose-100 text-rose-700': block.tone === 'rose',
+                    'bg-violet-100 text-violet-700': block.tone === 'violet',
+                    'bg-cyan-100 text-cyan-700': block.tone === 'cyan',
+                    'bg-amber-100 text-amber-700': block.tone === 'amber'
                   }">
              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use :href="'#icon-' + block.icon"></use></svg>
             </span>
-            <h4 class="text-[13px] font-bold uppercase tracking-wider text-slate-500" x-text="block.label"></h4>
+            @* L'intitulé prend la teinte de sa rubrique en nuance 700, et non un gris uniforme :
+               à 13px en capitales, text-slate-500 tombait à 4,6:1 sur ces fonds teintés, tout près
+               du seuil WCAG AA (Volume 5 §8). Les nuances 700 tiennent toutes au-delà de 7:1. *@
+            <h4 class="text-[13px] font-bold uppercase tracking-wider"
+                :class="{
+                  'text-blue-700': block.tone === 'blue',
+                  'text-emerald-700': block.tone === 'emerald',
+                  'text-rose-700': block.tone === 'rose',
+                  'text-violet-700': block.tone === 'violet',
+                  'text-cyan-700': block.tone === 'cyan',
+                  'text-amber-700': block.tone === 'amber'
+                }"
+                x-text="block.label"></h4>
            </div>
 
            <!-- Rubrique rédigée en un seul paragraphe -->
@@ -208,7 +237,7 @@
             <template x-for="(step, index) in block.items" :key="index">
              <li class="flex gap-3">
               <span aria-hidden="true"
-                    class="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary-600 text-white text-xs font-bold flex items-center justify-center"
+                    class="shrink-0 mt-0.5 w-6 h-6 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center"
                     x-text="index + 1"></span>
               <span class="text-jgk-body leading-relaxed text-slate-700" x-text="step"></span>
              </li>
@@ -220,7 +249,7 @@
             <template x-for="(item, index) in block.items" :key="index">
              <li class="flex gap-3">
               <span aria-hidden="true" class="shrink-0 mt-2 w-1.5 h-1.5 rounded-full"
-                    :class="block.tone === 'success' ? 'bg-success' : 'bg-primary-400'"></span>
+                    :class="block.tone === 'amber' ? 'bg-amber-500' : 'bg-cyan-500'"></span>
               <span class="text-jgk-body leading-relaxed text-slate-700" x-text="item"></span>
              </li>
             </template>
@@ -248,18 +277,41 @@
  @* ═══════════════════════════════════════════════════════════════════════════
     PIED DE PAGE — ce que le guide ne couvre pas, et vers qui se tourner.
     ═══════════════════════════════════════════════════════════════════════════ *@
+ @* UNE seule carte de conclusion, et non deux empilées : la synthèse du guide et le recours au
+    support disent des choses différentes mais s'adressent au même lecteur, au même moment — celui
+    qui arrive au bout sans avoir trouvé. Deux cartes grises l'une sur l'autre auraient dilué les
+    deux messages. Les comptes sont LIÉS (totalCount, sections.length), jamais écrits en dur : une
+    fiche ajoutée demain rendrait un « 16 fiches » figé silencieusement faux. *@
  <div x-show="!isSearching" x-cloak
-      class="rounded-2xl border border-slate-200 bg-white p-6 mt-4 flex flex-col sm:flex-row sm:items-center gap-4">
-  <div aria-hidden="true" class="shrink-0 w-11 h-11 rounded-xl bg-indigo-50 text-primary-700 flex items-center justify-center">
-   <icon name="envelope" class="w-5 h-5" />
+      class="mt-12 mb-6 p-6 bg-slate-50 border border-slate-200/80 rounded-2xl text-center flex flex-col items-center justify-center gap-2">
+  <div aria-hidden="true" class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-1">
+   <icon name="help-circle" class="w-5 h-5" />
   </div>
-  <div class="flex-1">
-   <p class="text-jgk-body font-semibold text-slate-900">Une question que ce guide ne traite pas ?</p>
-   <p class="text-sm text-slate-500 mt-1">
-    Adressez-vous au Directeur de l'établissement, seul habilité à modifier les paramètres généraux,
-    ou au support Unikol pour toute difficulté technique. Précisez l'écran concerné et l'heure exacte
-    de l'incident : le journal d'audit permet alors d'en retracer le déroulement.
-   </p>
-  </div>
+  <p class="text-sm font-medium text-slate-700">
+   Guide complet d'utilisation d'Unikol — chaque module y est expliqué, de sa raison d'être à sa mise en œuvre.
+  </p>
+  <p class="text-xs text-slate-500">
+   <span x-text="totalCount"></span> fiches réparties en <span x-text="sections.length"></span> modules.
+   Cliquez sur un intitulé pour en déplier le détail.
+  </p>
+  <p class="text-xs text-slate-500 max-w-2xl mt-3 pt-3 border-t border-slate-200/80">
+   Une question que ce guide ne traite pas ? Adressez-vous au Directeur de l'établissement, seul habilité
+   à modifier les paramètres généraux, ou au support Unikol pour toute difficulté technique. Précisez
+   l'écran concerné et l'heure exacte de l'incident : le journal d'audit permet alors d'en retracer le déroulement.
+  </p>
+ </div>
+
+ @* ═══════════════════════════════════════════════════════════════════════════
+    RETOUR EN HAUT — indispensable une fois « Tout déplier » utilisé : le guide fait alors
+    plusieurs dizaines d'écrans, et rien ne ramène au champ de recherche.
+    ═══════════════════════════════════════════════════════════════════════════ *@
+ <div x-data="backToTop()">
+  <button type="button" x-show="visible" x-cloak x-on:click="toTop()"
+          title="Revenir en haut du guide"
+          aria-label="Revenir en haut du guide"
+          class="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-indigo-600 text-white text-sm font-medium shadow-lg hover:bg-indigo-700 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 transition-all duration-200 active:scale-95">
+   <icon name="arrow-up" class="w-4 h-4" />
+   <span class="hidden sm:inline">Haut de page</span>
+  </button>
  </div>
 </div>
