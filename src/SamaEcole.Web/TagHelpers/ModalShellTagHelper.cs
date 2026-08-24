@@ -117,6 +117,7 @@ public class ModalShellTagHelper : TagHelper
         "lg" => "sm:max-w-lg",
         "xl" => "sm:max-w-xl",
         "2xl" => "sm:max-w-2xl",
+        "wide" => "sm:w-[85%] sm:max-w-6xl",
         _ => "sm:max-w-3xl"
     };
 }
