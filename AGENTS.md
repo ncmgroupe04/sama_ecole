@@ -18,7 +18,7 @@ docker compose --profile app up -d             # idem + l'api conteneurisée sur
 dotnet run --project src/SamaEcole.Web         # lance l'app (pas de `dotnet run` nu : aucun projet à la racine)
 npm install --prefix src/SamaEcole.Web        # dépendances Tailwind CSS
 npm run build:css --prefix src/SamaEcole.Web  # compile wwwroot/css/site.css depuis Tailwind
-npm run watch:css --prefix src/SamaEcole.Web  # recompile en continu pendant le développement
+npm run watch:css --prefix src/SamaEcole.Web  # recompile en continu pendant le développement (alias : npm run dev)
 ```
 
 ## Règles non négociables (ne jamais réinventer, ne jamais contourner)

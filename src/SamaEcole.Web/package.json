@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Outillage Tailwind CSS pour SamaEcole.Web — voir docs/Volume_5_UIUX_Design.md §2 et Volume_0 Décision D-13.",
   "scripts": {
+    "dev": "npm run watch:css",
     "build:css": "tailwindcss -i ./Styles/input.css -o ./wwwroot/css/site.css --minify",
     "watch:css": "tailwindcss -i ./Styles/input.css -o ./wwwroot/css/site.css --watch",
     "test": "node --test \"tests/js/*.test.mjs\""
