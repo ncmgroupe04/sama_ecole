@@ -164,95 +164,123 @@
  <!-- Fiche élève complète (ticket JGK-D02) : l'identité vient de la ligne de liste (affichage
  immédiat) ; l'historique scolaire, les notes et les paiements sont chargés depuis
  GET /students/{id} (studentDetail) et présentés en onglets ci-dessous. -->
- <modal-shell open="detailStudent" on-close="closeDetail()" title="Fiche élève">
- <div class="flex items-center gap-4 pb-5 border-b border-slate-100">
- <img x-show="detailStudent && detailStudent.photoDisplayUrl" :src="detailStudent ? detailStudent.photoDisplayUrl : ''" alt=""
- class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak />
- <div x-show="!detailStudent || !detailStudent.photoDisplayUrl" :class="detailStudent ? initialsClasses(detailStudent.fullName) : ''" class="w-14 h-14 rounded-full flex items-center justify-center font-bold text-base flex-shrink-0" x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
- <p class="text-xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></p>
- </div>
-
- <!-- Identité : deux colonnes alignées en lignes, valeurs en gras — plus dense et plus lisible
- qu'un champ par bloc vertical. -->
- <dl class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-5">
- <div>
- <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Matricule</dt>
- <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent ? detailStudent.matricule : ''"></dd>
- </div>
- <div>
- <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date de naissance</dt>
- <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent ? formatDate(detailStudent.birthDate) : ''"></dd>
- </div>
- <div>
- <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lieu de naissance</dt>
- <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.birthPlace ? detailStudent.birthPlace : '—'"></dd>
- </div>
- <div>
- <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Genre</dt>
- <dd class="mt-1.5">
- <span class="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-bold"
- :class="detailStudent && detailStudent.gender === 'F' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'"
- x-text="detailStudent ? (detailStudent.gender === 'F' ? 'Fille' : 'Garçon') : ''"></span>
- </dd>
- </div>
- <div>
- <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Classe</dt>
- <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent ? detailStudent.classroomName : ''"></dd>
- </div>
- <div>
- <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Adresse de résidence</dt>
- <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.address ? detailStudent.address : '—'"></dd>
- </div>
- </dl>
-
- <!-- Tuteur : bloc distinct pour séparer l'identité de l'élève du contact du tuteur. -->
- <div class="mt-6 bg-slate-50 rounded-2xl p-6 sm:p-5">
- <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Tuteur</p>
- <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-4">
- <div>
- <dt class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Nom</dt>
- <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianName ? detailStudent.guardianName : '—'"></dd>
- </div>
- <div>
- <dt class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Téléphone</dt>
- <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianPhone ? detailStudent.guardianPhone : '—'"></dd>
+ <modal-shell open="detailStudent" on-close="closeDetail()" hide-header="true" no-padding="true">
+    <div class="bg-white border-b border-slate-100 p-6 flex justify-between items-start">
+        <div class="flex items-center gap-4">
+            <img x-show="detailStudent && detailStudent.photoDisplayUrl" :src="detailStudent ? detailStudent.photoDisplayUrl : ''" alt=""
+                 class="w-16 h-16 rounded-full ring-4 ring-indigo-50 shadow-md object-cover flex-shrink-0" x-cloak />
+            <div x-show="!detailStudent || !detailStudent.photoDisplayUrl" :class="detailStudent ? initialsClasses(detailStudent.fullName) : ''" 
+                 class="w-16 h-16 rounded-full ring-4 ring-indigo-50 shadow-md flex items-center justify-center font-bold text-xl flex-shrink-0" 
+                 x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></h2>
+                <div class="mt-1.5 flex items-center gap-2">
+                    <span class="bg-indigo-50 text-indigo-700 font-medium px-2.5 py-0.5 text-xs rounded-full" x-text="detailStudent ? detailStudent.classroomName : ''"></span>
+                    <span class="bg-emerald-50 text-emerald-700 font-medium px-2.5 py-0.5 text-xs rounded-full">Actif</span>
                 </div>
-                <div>
-                    <dt class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">E-mail</dt>
-                    <dd class="mt-1 text-base font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianEmail ? detailStudent.guardianEmail : '—'"></dd>
+            </div>
+        </div>
+        <button type="button" @@click="closeDetail()" class="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-2 transition-all focus:outline-none shrink-0">
+            <span class="sr-only">Fermer</span>
+            <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 my-6 px-6">
+        <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Matricule</p>
+            <span class="font-mono bg-slate-100 text-slate-800 px-2 py-1 rounded text-sm font-semibold" x-text="detailStudent ? detailStudent.matricule : ''"></span>
+        </div>
+        <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Date de naissance
+            </p>
+            <p class="text-sm font-medium text-slate-900" x-text="detailStudent ? formatDate(detailStudent.birthDate) : ''"></p>
+        </div>
+        <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                Lieu de naissance
+            </p>
+            <p class="text-sm font-medium text-slate-900" x-text="detailStudent && detailStudent.birthPlace ? detailStudent.birthPlace : '—'"></p>
+        </div>
+        <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Genre</p>
+            <span class="inline-flex items-center font-medium text-xs px-2.5 py-1 rounded-full w-max"
+                  :class="detailStudent && detailStudent.gender === 'F' ? 'bg-pink-50 text-pink-600' : 'bg-blue-50 text-blue-600'"
+                  x-text="detailStudent ? (detailStudent.gender === 'F' ? 'Fille' : 'Garçon') : ''"></span>
+        </div>
+        <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Classe</p>
+            <p class="text-sm font-medium text-slate-900" x-text="detailStudent ? detailStudent.classroomName : ''"></p>
+        </div>
+        <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Adresse de résidence</p>
+            <template x-if="detailStudent && detailStudent.address">
+                <p class="text-sm font-medium text-slate-900" x-text="detailStudent.address"></p>
+            </template>
+            <template x-if="!detailStudent || !detailStudent.address">
+                <p class="text-slate-400 italic text-sm">Non renseignée</p>
+            </template>
+        </div>
+    </div>
+
+    <div class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Tuteur légal
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Nom</p>
+                <p class="text-sm font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianName ? detailStudent.guardianName : '—'"></p>
+            </div>
+            <div>
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Téléphone</p>
+                <div class="flex items-center gap-2">
+                    <p class="text-sm font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianPhone ? detailStudent.guardianPhone : '—'"></p>
+                    <template x-if="detailStudent && detailStudent.guardianPhone">
+                        <a :href="'tel:' + detailStudent.guardianPhone" class="p-1.5 rounded-lg bg-slate-200/50 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        </a>
+                    </template>
                 </div>
- </dl>
- </div>
+            </div>
+            <div>
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">E-mail</p>
+                <p class="text-sm font-bold text-slate-900 truncate" x-text="detailStudent && detailStudent.guardianEmail ? detailStudent.guardianEmail : '—'"></p>
+            </div>
+        </div>
+    </div>
 
  <!-- Onglets : -->
-                <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Sections de la fiche élève">
-                    <button type="button" role="tab" @@click="detailTab = 'history'"
-                            :aria-selected="detailTab === 'history'"
-                            :class="detailTab === 'history' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-                            class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-                        <icon name="clock" class="w-4 h-4" />
-                        Historique scolaire
-                    </button>
-                    <button type="button" role="tab" @@click="detailTab = 'grades'"
-                            :aria-selected="detailTab === 'grades'"
-                            :class="detailTab === 'grades' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-                            class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-                        <icon name="academic-cap" class="w-4 h-4" />
-                        Notes & bulletins
-                    </button>
-                    <!-- Ticket JGK-D02 : Onglet Paiements (Lecture seule) -->
-                    <!-- Cet onglet n'est visible que par le Directeur ou la Finance (règle #4). -->
-                    <button type="button" role="tab" x-show="canViewPayments" x-cloak @@click="detailTab = 'payments'"
-                            :aria-selected="detailTab === 'payments'"
-                            :class="detailTab === 'payments' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-                            class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-                        <icon name="wallet" class="w-4 h-4" />
-                        Paiements
-                    </button>
-                </nav>
+    <nav class="bg-slate-100/80 p-1.5 rounded-xl mx-6 mb-6 flex gap-2 border border-slate-200/50 overflow-x-auto scrollbar-hide" role="tablist" aria-label="Sections de la fiche élève">
+        <button type="button" role="tab" @@click="detailTab = 'history'"
+                :aria-selected="detailTab === 'history'"
+                :class="detailTab === 'history' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
+                class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
+            <icon name="clock" class="w-4 h-4" />
+            Historique scolaire
+        </button>
+        <button type="button" role="tab" @@click="detailTab = 'grades'"
+                :aria-selected="detailTab === 'grades'"
+                :class="detailTab === 'grades' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
+                class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
+            <icon name="academic-cap" class="w-4 h-4" />
+            Notes & bulletins
+        </button>
+        <button type="button" role="tab" x-show="canViewPayments" x-cloak @@click="detailTab = 'payments'"
+                :aria-selected="detailTab === 'payments'"
+                :class="detailTab === 'payments' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
+                class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
+            <icon name="wallet" class="w-4 h-4" />
+            Paiements
+        </button>
+    </nav>
 
  <!-- Chargement : squelette pendant l'appel à GET /students/{id} (Volume 5 §1, connexion mobile). -->
- <div x-show="isLoadingDetails" x-cloak class="space-y-3 py-6">
+ <div x-show="isLoadingDetails" x-cloak class="space-y-3 py-6 px-6">
  <div class="skeleton h-16 w-full"></div>
  <div class="skeleton h-16 w-full"></div>
  <div class="skeleton h-16 w-3/4"></div>
@@ -260,11 +288,11 @@
 
  <!-- Erreur de chargement de la fiche complète (l'identité reste affichée au-dessus). -->
  <div x-show="detailError" x-cloak
- class="my-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger"
+ class="my-4 mx-6 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger"
  x-text="detailError"></div>
 
  <!-- Contenu des onglets : uniquement une fois la fiche chargée sans erreur. -->
- <div x-show="!isLoadingDetails && !detailError && studentDetail" x-cloak>
+ <div x-show="!isLoadingDetails && !detailError && studentDetail" x-cloak class="px-6">
 
  <!-- ONGLET 1 — Historique scolaire : une carte par inscription (année, classe, type, statut). -->
  <div x-show="detailTab === 'history'" role="tabpanel" class="py-5">
@@ -550,7 +578,7 @@
 
  </div>
 
- <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-slate-200 pt-4">
+ <div class="px-6 pb-6 pt-4 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-slate-100 mt-4">
  <template x-if="canManageStudent && studentDetail">
  <div class="flex gap-2">
  <button type="button" @@click="openEditStudent()" class="btn-secondary">

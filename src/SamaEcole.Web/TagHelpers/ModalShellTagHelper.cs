@@ -45,6 +45,16 @@ public class ModalShellTagHelper : TagHelper
     public string Size { get; set; } = "3xl";
 
     /// <summary>
+    /// Masquer l'en-tête bleu par défaut pour créer un en-tête personnalisé dans le corps de la modale.
+    /// </summary>
+    public bool HideHeader { get; set; } = false;
+
+    /// <summary>
+    /// Supprimer les espacements internes (padding) du corps de la modale pour un rendu bord à bord.
+    /// </summary>
+    public bool NoPadding { get; set; } = false;
+
+    /// <summary>
     /// Expression Alpine exécutée à la fermeture (fond, ✕, Échap). Par défaut « {Open} = false » ; à
     /// fournir explicitement quand <see cref="Open"/> n'est pas un booléen simple — ex. la fiche élève
     /// se ferme par « detailStudent = null », pas par une affectation à false.
@@ -80,6 +90,7 @@ public class ModalShellTagHelper : TagHelper
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
                      class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl sm:my-8 sm:h-auto sm:max-h-[90vh] sm:w-full {maxWidth} sm:rounded-xl">
+                    {(HideHeader ? "" : $"""
                     <div class="flex-shrink-0 bg-primary px-4 py-4 sm:px-6">
                         <div class="flex items-center justify-between">
                             <h2 class="text-lg font-medium text-white">{titleHtml}</h2>
@@ -90,7 +101,8 @@ public class ModalShellTagHelper : TagHelper
                         </div>
                         {(subtitle is null ? "" : $"""<div class="mt-1 text-sm text-indigo-200">{subtitle}</div>""")}
                     </div>
-                    <div class="relative flex-1 overflow-y-auto min-h-0 px-4 py-6 sm:px-6">
+                    """)}
+                    <div class="relative flex-1 overflow-y-auto min-h-0 {(NoPadding ? "" : "px-4 py-6 sm:px-6")}">
                         {body}
                     </div>
                 </div>
