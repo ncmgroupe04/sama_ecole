@@ -248,11 +248,11 @@ def band(slide, x, y, w, h, text, label=None, accent=BLEU_ROI, size=11.5, fill=T
     para(tf, text, size=size, color=INK, line_spacing=1.25)
 
 
-def kpi(slide, x, y, w, h, value, label, accent=BLEU_ROI, unit=None):
+def kpi(slide, x, y, w, h, value, label, accent=BLEU_ROI, unit=None, value_size=26):
     shape(slide, x, y, w, h, fill=WHITE, line=LINE, kind=MSO_SHAPE.ROUNDED_RECTANGLE, radius=0.08)
     shape(slide, x, y, w, 0.075, fill=accent)
     tf = textbox(slide, x + 0.26, y + 0.30, w - 0.52, 0.52)
-    p = para(tf, value, size=26, color=INK, bold=True, line_spacing=1.0)
+    p = para(tf, value, size=value_size, color=INK, bold=True, line_spacing=1.0)
     if unit:
         style_run(p.add_run(), 12, accent, bold=True).text = " " + unit
     tf = textbox(slide, x + 0.26, y + 0.88, w - 0.52, 0.48)
@@ -578,7 +578,7 @@ def slide_10_pilotage(prs):
              ("Assiduité", "taux de présence du mois en cours, calculé sur les appels réels", SUCCESS),
              ("Occupation", "taux d'occupation des salles du jour et prochains cours", WARNING))
     for (value, label, accent), x in zip(tiles, xs):
-        kpi(slide, x, CONTENT_TOP, w, 1.62, value, label, accent=accent)
+        kpi(slide, x, CONTENT_TOP, w, 1.62, value, label, accent=accent, value_size=19)
     w2, xs2 = cols(3)
     card(slide, xs2[0], 4.00, w2, 2.36, "Rapports financiers consolidés", [
         "Recettes par cycle, par classe et par mode de paiement.",

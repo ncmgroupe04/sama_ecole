@@ -228,7 +228,9 @@
 
     <div class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm">
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-md">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </span>
             Tuteur légal
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -239,9 +241,9 @@
             <div>
                 <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Téléphone</p>
                 <div class="flex items-center gap-2">
-                    <p class="text-sm font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianPhone ? detailStudent.guardianPhone : '—'"></p>
+                    <p class="font-mono font-bold text-slate-900 text-base" x-text="detailStudent && detailStudent.guardianPhone ? formatPhoneSenegal(detailStudent.guardianPhone) : '—'"></p>
                     <template x-if="detailStudent && detailStudent.guardianPhone">
-                        <a :href="'tel:' + detailStudent.guardianPhone" class="p-1.5 rounded-lg bg-slate-200/50 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-colors">
+                        <a :href="'tel:' + detailStudent.guardianPhone" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 p-2 rounded-lg transition-all focus:outline-none">
                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                         </a>
                     </template>
@@ -260,21 +262,21 @@
                 :aria-selected="detailTab === 'history'"
                 :class="detailTab === 'history' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
                 class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-            <icon name="clock" class="w-4 h-4" />
+            <icon name="clock" class="w-4 h-4 text-indigo-600" />
             Historique scolaire
         </button>
         <button type="button" role="tab" @@click="detailTab = 'grades'"
                 :aria-selected="detailTab === 'grades'"
                 :class="detailTab === 'grades' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
                 class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-            <icon name="academic-cap" class="w-4 h-4" />
+            <icon name="academic-cap" class="w-4 h-4 text-blue-600" />
             Notes & bulletins
         </button>
         <button type="button" role="tab" x-show="canViewPayments" x-cloak @@click="detailTab = 'payments'"
                 :aria-selected="detailTab === 'payments'"
                 :class="detailTab === 'payments' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
                 class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-            <icon name="wallet" class="w-4 h-4" />
+            <icon name="wallet" class="w-4 h-4 text-emerald-600" />
             Paiements
         </button>
     </nav>
@@ -336,27 +338,27 @@
  <div class="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="group" aria-label="Actions de l'inscription">
  <template x-if="canManageStudent && canTransitionEnrollment(entry.status)">
  <button type="button" x-on:click="openChangeEnrollmentStatus(entry)"
- class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-warning-bg hover:bg-amber-100 text-warning text-xs font-semibold transition-all whitespace-nowrap shrink-0">
+ class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-amber-200/60 bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
  Déclarer un abandon/transfert
  </button>
  </template>
  <template x-if="canManageStudent && canTransitionEnrollment(entry.status)">
  <button type="button" x-on:click="openCancelEnrollment(entry)"
  title="Réservé aux inscriptions sans paiement encaissé"
- class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-danger-bg hover:bg-red-100 text-danger text-xs font-semibold transition-all whitespace-nowrap shrink-0">
+ class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg border border-rose-200/60 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
  Annuler l'inscription
  </button>
  </template>
  <button type="button" x-on:click="openEnrollmentCertificatePreview(entry.enrollmentId, entry.schoolYearLabel)"
  title="Aperçu et impression de l'attestation"
- class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-200 bg-primary-50/70 hover:bg-primary-100 text-primary-800 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
- <icon name="document-text" class="w-4 h-4 text-primary shrink-0" />
+ class="inline-flex items-center justify-center gap-1.5 p-2 rounded-lg border border-indigo-200/60 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
+ <icon name="document-text" class="w-4 h-4 text-indigo-700 shrink-0" />
  <span class="whitespace-nowrap">Attestation / Imprimer</span>
  </button>
  <button type="button" x-on:click="openEnrollmentReceiptPreview(entry.enrollmentId, entry.schoolYearLabel)"
  title="Aperçu et impression du reçu d'inscription"
- class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
- <icon name="wallet" class="w-4 h-4 text-emerald-600 shrink-0" />
+ class="inline-flex items-center justify-center gap-1.5 p-2 rounded-lg border border-emerald-200/60 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
+ <icon name="wallet" class="w-4 h-4 text-emerald-700 shrink-0" />
  <span class="whitespace-nowrap">Reçu / Imprimer</span>
  </button>
  <!-- Certificat d'exéat : uniquement pour une inscription déjà passée à Abandon/Transfert (le
@@ -364,8 +366,8 @@
  <template x-if="entry.status === 'DroppedOut' || entry.status === 'Transferred'">
  <button type="button" x-on:click="openExeatCertificatePreview(entry.enrollmentId, entry.schoolYearLabel)"
  title="Aperçu et impression du certificat d'exéat"
- class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-800 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
- <icon name="document-text" class="w-4 h-4 text-amber-600 shrink-0" />
+ class="inline-flex items-center justify-center gap-1.5 p-2 rounded-lg border border-indigo-200/60 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
+ <icon name="document-text" class="w-4 h-4 text-indigo-700 shrink-0" />
  <span class="whitespace-nowrap">Exéat / Imprimer</span>
  </button>
  </template>
@@ -579,19 +581,23 @@
  </div>
 
  <div class="px-6 pb-6 pt-4 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-slate-100 mt-4">
+ <div>
  <template x-if="canManageStudent && studentDetail">
- <div class="flex gap-2">
- <button type="button" @@click="openEditStudent()" class="btn-secondary">
- Modifier la fiche
- </button>
- <button type="button" @@click="openDeleteStudent()" class="text-sm font-medium text-danger bg-danger-bg hover:bg-red-100 px-5 py-2.5 rounded-xl transition-colors">
+ <button type="button" @@click="openDeleteStudent()" class="text-rose-600 hover:bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-semibold rounded-lg transition-colors">
  Supprimer
  </button>
- </div>
  </template>
- <button type="button" @@click="closeDetail()" class="btn-secondary sm:ml-auto">
+ </div>
+ <div class="flex gap-2 sm:ml-auto">
+ <template x-if="canManageStudent && studentDetail">
+ <button type="button" @@click="openEditStudent()" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2 text-sm font-medium rounded-lg transition-colors">
+ Modifier la fiche
+ </button>
+ </template>
+ <button type="button" @@click="closeDetail()" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2 text-sm font-medium rounded-lg shadow-sm transition-colors">
  Fermer
  </button>
+ </div>
  </div>
  </modal-shell>
 

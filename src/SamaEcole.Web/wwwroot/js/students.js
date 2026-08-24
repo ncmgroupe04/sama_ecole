@@ -745,6 +745,19 @@ document.addEventListener('alpine:init', () => {
             return date.toLocaleDateString('fr-FR');
         },
         
+        formatPhoneSenegal(number) {
+            if (!number) return '—';
+            const cleaned = number.toString().replace(/\D/g, '');
+            let local = cleaned;
+            if (local.startsWith('221') && local.length === 12) {
+                local = local.substring(3);
+            }
+            if (local.length === 9) {
+                return local.replace(/(\d{2})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4');
+            }
+            return number;
+        },
+        
         getInitials(name) {
             if (!name) return '??';
             return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
