@@ -104,6 +104,36 @@ aucun tableau de matières codé en dur. Migration `AddHierarchicalEvaluationStr
   d'interdire deux matières de même nom au même niveau. Les deux moitiés de la règle sont testées contre un
   vrai PostgreSQL (`SubjectStructureEndpointsTests`).
 
+### Zone de danger — réinitialisation des données d'essai (22/08/2026)
+
+Le Directeur teste l'application avec des données fictives, puis remet son établissement à neuf depuis
+l'onglet **Paramètres → Configuration**, en bas d'écran. `POST /schools/current/reset-data`, migration
+`AddSchoolDataReset`.
+
+- **Seule exception du produit à la règle #6** (aucune suppression physique). Elle est bornée : Directeur
+  uniquement, sur SON école, après saisie de `PURGER` ou du nom de l'établissement, et journalisée —
+  `ResetSchoolDataCommand` est `IAuditableRequest`, et `audit_logs` n'est pas purgé.
+- **Pourquoi une fonction PostgreSQL et non un `ExecuteDelete` EF Core.** Le rôle applicatif n'a
+  volontairement aucun droit de `DELETE` sur les tables métier — chaque migration lui accorde
+  « SELECT, INSERT, UPDATE, jamais DELETE », de sorte que la règle #6 est tenue par la base et pas
+  seulement par le code. Lui accorder le `DELETE` aurait affaibli cette garantie pour tout le produit,
+  définitivement, au bénéfice d'un seul écran. `reset_school_data` est donc `SECURITY DEFINER` : elle
+  ne donne pas un droit, elle donne UNE opération, dont la liste des tables et l'ordre des clés
+  étrangères vivent dans la base.
+- **Un `SECURITY DEFINER` est exempté de RLS** (droits du propriétaire). La fonction reconstitue donc
+  elle-même la barrière : elle refuse d'agir si `p_school_id` diffère de `app.current_school_id`, ou si
+  la session n'a aucun tenant. Les deux refus sont testés (`ResetSchoolDataTests`, catégorie
+  `MultiTenant`) — c'est la seule opération du produit où l'isolation ne repose pas sur les policies.
+- **Conservé** : comptes utilisateurs, fiche et réglages de l'école, années scolaires et trimestres,
+  classes, matières, mentions, enseignants, bâtiments/salles, barème des frais et son historique,
+  abonnement, journal d'audit. **Effacé** : élèves et tout ce qui pend à eux (inscriptions, échéanciers,
+  notes, appréciations de bulletin, appels, discipline, convocations, SMS), paiements, sessions de
+  caisse, décaissements, engagements financiers — et les **compteurs de matricules**, sans quoi le
+  premier élève recréé porterait `ELEV-2026-0043`.
+- **Les fichiers déjà téléversés ne sont pas supprimés** (photos d'élèves sous `wwwroot/uploads/`) : la
+  purge est transactionnelle en base, un effacement disque ne l'est pas et laisserait, en cas d'échec,
+  une incohérence pire que quelques fichiers orphelins devenus inatteignables.
+
 ---
 
 ## 3. Points de conformité traités (sprint du 27/07/2026)

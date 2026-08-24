@@ -58,6 +58,11 @@ public static class DependencyInjection
         // existant plutôt que d'en amorcer un.
         services.AddScoped<ISubscriptionAdminStore, SubscriptionAdminStore>();
 
+        // Purge « Zone de danger » de l'écran Paramètres : le Directeur remet SON école à neuf après
+        // une phase d'essai. Vit dans Persistence — elle contourne le Global Query Filter (pour
+        // atteindre aussi les lignes en suppression logique) et suit l'ordre des clés étrangères.
+        services.AddScoped<IResetSchoolDataService, ResetSchoolDataService>();
+
         // File des SMS : le worker et le webhook DLR n'ont AUCUN tenant (ni JWT, ni
         // app.current_school_id), donc aucune ligne visible sous RLS. Même contournement étroit que
         // ci-dessus — trois fonctions SECURITY DEFINER, et rien de plus.

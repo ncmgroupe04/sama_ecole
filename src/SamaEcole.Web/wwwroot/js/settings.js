@@ -113,6 +113,35 @@ document.addEventListener('alpine:init', () => {
         deleteMentionError: null,
         isDeletingMention: false,
 
+        // --- Zone de danger : réinitialisation des données de l'établissement ---
+        // Le bouton final reste inerte tant que resetConfirmationMatches est faux. C'est un confort :
+        // POST /schools/current/reset-data revérifie EXACTEMENT la même garde côté serveur, car un
+        // appel direct (curl, script) ne passe jamais par cette modale.
+        isResetSchoolOpen: false,
+        resetConfirmation: '',
+        resetError: null,
+        isResetting: false,
+        resetSummary: null,
+
+        // « PURGER » est comparé à la casse — comme côté serveur (ResetSchoolDataConfirmation.Keyword) :
+        // c'est le geste délibéré qui fait la valeur de la garde. Le nom de l'école, lui, tolère la
+        // casse et les espaces de bord : le Directeur le recopie, il n'a pas à en refaire la graphie.
+        get resetConfirmationMatches() {
+            const typed = (this.resetConfirmation || '').trim();
+            if (!typed) return false;
+
+            const schoolName = (this.profile.name || '').trim();
+            return typed === 'PURGER'
+                || (schoolName !== '' && typed.toLocaleLowerCase() === schoolName.toLocaleLowerCase());
+        },
+
+        // Le compte rendu du serveur liste TOUTES les tables, y compris celles à 0 ligne (utile au
+        // diagnostic) ; l'écran, lui, n'affiche que ce qui a réellement bougé.
+        get resetEntriesWithRows() {
+            if (!this.resetSummary || !this.resetSummary.entries) return [];
+            return this.resetSummary.entries.filter(entry => entry.rowsDeleted > 0);
+        },
+
         init() {
             const requested = new URLSearchParams(window.location.search).get('tab');
             if (['etablissement', 'configuration', 'annees-scolaires', 'utilisateurs', 'journal-audit', 'facturation'].includes(requested)) {
@@ -567,6 +596,52 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.isDeletingMention = false;
             }
+        },
+
+        // ------------------------------------------- Zone de danger (réinitialisation)
+
+        openResetSchool() {
+            this.resetConfirmation = '';
+            this.resetError = null;
+            this.isResetSchoolOpen = true;
+        },
+
+        closeResetSchool() {
+            // Ne se ferme pas pendant l'appel : la purge est déjà partie côté serveur, laisser croire
+            // qu'on l'a annulée en refermant la fenêtre serait mensonger.
+            if (this.isResetting) return;
+
+            this.isResetSchoolOpen = false;
+            this.resetConfirmation = '';
+            this.resetError = null;
+        },
+
+        async confirmResetSchool() {
+            if (!this.resetConfirmationMatches || this.isResetting) return;
+
+            this.isResetting = true;
+            this.resetError = null;
+            try {
+                const summary = await window.api.post('/schools/current/reset-data', {
+                    confirmation: this.resetConfirmation.trim()
+                });
+
+                this.isResetSchoolOpen = false;
+                this.resetConfirmation = '';
+                this.resetSummary = summary;
+            } catch (err) {
+                this.resetError = err.message || "La réinitialisation a échoué. Aucune donnée n'a été effacée.";
+            } finally {
+                this.isResetting = false;
+            }
+        },
+
+        // Rechargement COMPLET de la page, et pas seulement de cet écran : les compteurs du tableau de
+        // bord, les listes d'élèves et les totaux de caisse encore en mémoire dans d'autres composants
+        // décriraient une école qui n'existe plus.
+        closeResetSummary() {
+            this.resetSummary = null;
+            window.location.reload();
         },
 
         // Même contournement du sérialiseur decimal que Subjects.formatCoefficient (16.00 → 16).

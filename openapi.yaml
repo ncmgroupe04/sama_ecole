@@ -546,6 +546,41 @@ paths:
         '403': { description: Rôle non autorisé (écriture réservée au Directeur) }
         '422': { description: Données invalides (nom manquant, URL de logo invalide…) }
 
+  /schools/current/reset-data:
+    post:
+      tags: [Schools]
+      summary: Réinitialiser les données de l'établissement (Directeur uniquement)
+      description: >-
+        « Zone de danger » de l'écran Paramètres — remet l'établissement à neuf après une phase
+        d'essai. Efface DÉFINITIVEMENT (seule exception du produit à la suppression logique) les
+        élèves, inscriptions, notes, appréciations de bulletin, appels, sanctions, convocations, SMS,
+        paiements, sessions de caisse, décaissements et compteurs de matricules de l'établissement
+        déduit du JWT — jamais d'un identifiant fourni par l'appelant. Sont CONSERVÉS les comptes
+        utilisateurs, la fiche et les réglages de l'école, les années scolaires et trimestres, les
+        classes, matières, mentions, enseignants, le barème des frais et le journal d'audit.
+        `confirmation` doit valoir exactement `PURGER` (casse comprise) ou le nom de l'établissement
+        (casse indifférente) ; toute autre valeur est refusée en 422 sans rien effacer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation:
+                  type: string
+                  description: "`PURGER` ou le nom exact de l'établissement."
+                  example: PURGER
+      responses:
+        '200':
+          description: Établissement réinitialisé — compte rendu de ce qui a été effacé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchoolDataResetSummary' }
+        '403': { description: Réservé au Directeur }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /schools/current/settings:
     get:
       tags: [Schools]
@@ -2757,6 +2792,29 @@ components:
           maxLength: 50
           example: "SN DKR 2020 B 1234"
           description: 'RCCM — même usage et mêmes règles que `ninea`.'
+
+    SchoolDataResetSummary:
+      type: object
+      description: >-
+        Compte rendu d'une purge (POST /schools/current/reset-data) : ce qui a RÉELLEMENT été effacé,
+        pour que le Directeur puisse le vérifier. Toutes les entrées sont renvoyées, y compris celles
+        à zéro ligne.
+      properties:
+        totalRowsDeleted:
+          type: integer
+          example: 128
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                description: Nom fonctionnel du domaine purgé.
+                example: Élèves
+              rowsDeleted:
+                type: integer
+                example: 42
 
     SchoolSettings:
       type: object

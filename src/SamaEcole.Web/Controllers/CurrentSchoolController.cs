@@ -1,6 +1,7 @@
 using System.IO;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
+using SamaEcole.Application.Schools.Commands.ResetSchoolData;
 using SamaEcole.Application.Schools.Commands.UpdateCurrentSchool;
 using SamaEcole.Application.Schools.Queries.GetCurrentSchool;
 using SamaEcole.Domain.Enums;
@@ -25,6 +26,12 @@ namespace SamaEcole.Web.Controllers;
 [Authorize]
 public class CurrentSchoolController(ISender mediator) : ControllerBase
 {
+    /// <summary>
+    /// Garde de la « Zone de danger » : le mot-clé PURGER, ou le nom de l'établissement. Revérifiée
+    /// côté serveur — la modale ne protège que les appelants qui passent par l'interface.
+    /// </summary>
+    public record ResetSchoolDataRequest(string Confirmation);
+
     public record UpdateSchoolProfileRequest(
         string Name,
         string? Address,
@@ -71,6 +78,25 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
                 request.Email, request.Ninea, request.RegistreCommerce,
                 request.IsPubliclyListed, request.City, request.Region, request.PublicDescription),
             cancellationToken));
+
+    /// <summary>
+    /// « Zone de danger » de l'écran Paramètres — remet l'établissement COURANT à neuf : les élèves,
+    /// inscriptions, notes, bulletins et transactions saisis pendant la phase d'essai sont effacés
+    /// DÉFINITIVEMENT ; le compte du Directeur, les réglages de l'école et les années scolaires
+    /// restent. Réservé au Directeur, et cantonné à SON école : le SchoolId vient du JWT, jamais du
+    /// corps de la requête (AGENTS.md règle #10).
+    ///
+    /// POST plutôt que DELETE : la ressource visée n'est pas une entité identifiable mais une ACTION
+    /// sur l'école, et le mot de confirmation voyage dans le corps.
+    /// </summary>
+    [HttpPost("reset-data")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<SchoolDataResetSummary>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ResetData(
+        [FromBody] ResetSchoolDataRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new ResetSchoolDataCommand(request.Confirmation), cancellationToken));
 
     /// <summary>Upload local d'un fichier image (logo) par le Directeur.</summary>
     [HttpPost("logo")]

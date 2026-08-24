@@ -95,6 +95,14 @@ public sealed class RlsTestDatabase : IAsyncDisposable
     /// <summary>Provisionnement d'école (ticket JGK-B01), branché sur le rôle applicatif.</summary>
     public SchoolProvisioningStore NewProvisioningStore(ApplicationDbContext dbContext) => new(dbContext);
 
+    /// <summary>
+    /// Purge « Zone de danger » (réinitialisation des données d'essai), branchée sur le rôle
+    /// APPLICATIF : c'est le seul moyen de prouver que la RLS borde la suppression. Avec le rôle
+    /// propriétaire, un DELETE mal filtré viderait les autres écoles sans qu'aucun test ne bronche.
+    /// </summary>
+    public ResetSchoolDataService NewResetSchoolDataService(ApplicationDbContext dbContext) =>
+        new(dbContext, NullLogger<ResetSchoolDataService>.Instance);
+
     /// <summary>Attribution d'accès offert et expiration d'abonnement (JGK-B03), rôle applicatif.</summary>
     public SubscriptionAdminStore NewSubscriptionAdminStore(ApplicationDbContext dbContext) => new(dbContext);
 
