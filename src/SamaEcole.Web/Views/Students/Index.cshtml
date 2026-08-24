@@ -484,48 +484,71 @@
  <template x-if="studentDetail && studentDetail.payments">
  <div>
  <!-- Synthèse financière : reflète les inscriptions, pertinente même sans versement. -->
- <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
- <div class="rounded-2xl border border-slate-200 p-6 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
- <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total dû</p>
- <p class="mt-1 text-lg font-bold text-slate-900" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
+ <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+ <div class="bg-white border border-slate-200/80 shadow-sm rounded-2xl p-5 relative overflow-hidden">
+ <div class="flex items-start gap-4">
+ <div class="bg-slate-100 text-slate-700 p-2.5 rounded-xl shrink-0">
+ <icon name="document-text" class="w-5 h-5" />
  </div>
- <div class="rounded-2xl border border-success/30 bg-success-bg p-6 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
- <p class="text-[11px] font-bold text-success uppercase tracking-wider">Total versé</p>
- <p class="mt-1 text-lg font-bold text-success" x-text="formatAmount(studentDetail.payments.totalPaid)"></p>
+ <div>
+ <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total dû</p>
+ <p class="text-2xl font-extrabold text-slate-900 font-mono mt-1" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
  </div>
- <!-- Solde : vert s'il est nul (soldé), orange s'il reste dû. -->
- <div class="rounded-2xl border p-6 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg"
- :class="studentDetail.payments.remainingBalance > 0 ? 'border-warning/30 bg-warning-bg' : 'border-success/30 bg-success-bg'">
- <p class="text-[11px] font-bold uppercase tracking-wider"
- :class="studentDetail.payments.remainingBalance > 0 ? 'text-warning' : 'text-success'">Solde restant</p>
- <p class="mt-1 text-lg font-bold"
- :class="studentDetail.payments.remainingBalance > 0 ? 'text-warning' : 'text-success'"
- x-text="formatAmount(studentDetail.payments.remainingBalance)"></p>
+ </div>
+ </div>
+ <div class="bg-emerald-50/60 border border-emerald-200/60 shadow-sm rounded-2xl p-5 relative overflow-hidden">
+ <div class="flex items-start gap-4">
+ <div class="bg-emerald-100 text-emerald-700 p-2.5 rounded-xl shrink-0">
+ <icon name="check-circle" class="w-5 h-5" />
+ </div>
+ <div>
+ <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Total versé</p>
+ <p class="text-2xl font-extrabold text-emerald-700 font-mono mt-1" x-text="formatAmount(studentDetail.payments.totalPaid)"></p>
+ </div>
+ </div>
+ </div>
+ <div class="bg-amber-50/60 border border-amber-200/60 shadow-sm rounded-2xl p-5 relative overflow-hidden">
+ <div class="flex items-start gap-4">
+ <div class="bg-amber-100 text-amber-700 p-2.5 rounded-xl shrink-0">
+ <icon name="clock" class="w-5 h-5" />
+ </div>
+ <div>
+ <p class="text-xs font-bold text-amber-600 uppercase tracking-wider">Solde restant</p>
+ <p class="text-2xl font-extrabold text-amber-700 font-mono mt-1" x-text="formatAmount(studentDetail.payments.remainingBalance)"></p>
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="mt-4">
+ <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+ <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+ :style="'width: ' + (studentDetail.payments.totalDue > 0 ? Math.min((studentDetail.payments.totalPaid / studentDetail.payments.totalDue) * 100, 100) : 100) + '%'">
+ </div>
  </div>
  </div>
 
  <!-- Sommation impayés + Engagement financier : rattachés à l'inscription ACTIVE de l'année en
  cours (le reste du récapitulatif ci-dessus agrège toutes les années). -->
  <template x-if="activeEnrollmentId">
- <div class="mt-3 flex flex-wrap items-center gap-2.5">
+ <div class="mt-5 flex flex-wrap items-center gap-3">
  <button type="button" x-show="studentDetail.payments.remainingBalance > 0" x-cloak
  x-on:click="openDuesNoticePreview(activeEnrollmentId)"
  title="Aperçu et impression de la sommation pour impayés"
- class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-danger/30 bg-danger-bg hover:bg-red-100 text-danger text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
+ class="bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/70 px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm transition-all whitespace-nowrap shrink-0">
  <icon name="alert-circle" class="w-4 h-4 shrink-0" />
  <span class="whitespace-nowrap">Sommation impayés</span>
  </button>
  <button type="button" x-on:click="openCreateCommitmentModal(activeEnrollmentId)"
  title="Créer un engagement financier (échéancier)"
- class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary-200 bg-primary-50/70 hover:bg-primary-100 text-primary-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
- <icon name="document-text" class="w-4 h-4 text-primary shrink-0" />
+ class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm transition-all whitespace-nowrap shrink-0">
+ <icon name="document-text" class="w-4 h-4 shrink-0" />
  <span class="whitespace-nowrap">Nouvel engagement financier</span>
  </button>
  <button type="button" x-show="createdCommitmentId" x-cloak
  x-on:click="openCommitmentPreview(createdCommitmentId)"
  title="Aperçu et impression de l'engagement financier créé"
- class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
- <icon name="download" class="w-4 h-4 text-emerald-600 shrink-0" />
+ class="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/70 px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm transition-all whitespace-nowrap shrink-0">
+ <icon name="download" class="w-4 h-4 shrink-0" />
  <span class="whitespace-nowrap">Télécharger l'engagement créé</span>
  </button>
  </div>
@@ -538,33 +561,57 @@
  hint="Les versements encaissés pour cet élève apparaîtront ici." />
  </template>
 
- <div x-show="studentDetail.payments.entries.length > 0" class="overflow-x-auto rounded-2xl border border-slate-200">
+ <div x-show="studentDetail.payments.entries.length > 0" class="border border-slate-200/70 rounded-2xl overflow-hidden shadow-sm bg-white mt-4">
  <table class="w-full min-w-[560px] text-left border-collapse text-sm">
  <thead>
- <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <th class="py-2.5 px-3 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
- <th class="py-2.5 px-3 uppercase tracking-wider text-slate-500 font-semibold">N° reçu</th>
- <th class="py-2.5 px-3 text-right uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
- <th class="py-2.5 px-3 uppercase tracking-wider text-slate-500 font-semibold">Méthode</th>
- <th class="py-2.5 px-3 text-center uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
- <th class="py-2.5 px-3 text-center uppercase tracking-wider text-slate-500 font-semibold">Document</th>
+ <tr>
+ <th class="bg-slate-50/80 text-slate-500 font-semibold text-xs tracking-wider uppercase py-3.5 px-4 border-b border-slate-200/60">Date</th>
+ <th class="bg-slate-50/80 text-slate-500 font-semibold text-xs tracking-wider uppercase py-3.5 px-4 border-b border-slate-200/60">N° reçu</th>
+ <th class="bg-slate-50/80 text-slate-500 font-semibold text-xs tracking-wider uppercase py-3.5 px-4 border-b border-slate-200/60 text-right">Montant</th>
+ <th class="bg-slate-50/80 text-slate-500 font-semibold text-xs tracking-wider uppercase py-3.5 px-4 border-b border-slate-200/60">Méthode</th>
+ <th class="bg-slate-50/80 text-slate-500 font-semibold text-xs tracking-wider uppercase py-3.5 px-4 border-b border-slate-200/60 text-center">Statut</th>
+ <th class="bg-slate-50/80 text-slate-500 font-semibold text-xs tracking-wider uppercase py-3.5 px-4 border-b border-slate-200/60 text-center">Document</th>
  </tr>
  </thead>
- <tbody class="divide-y divide-slate-100">
+ <tbody>
  <template x-for="payment in studentDetail.payments.entries" :key="payment.paymentId">
- <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <td class="py-2 px-3 text-slate-700 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
- <td class="py-2 px-3 font-mono text-xs text-slate-600 whitespace-nowrap" x-text="payment.receiptNumber || '—'"></td>
- <td class="py-2 px-3 text-right font-bold text-slate-900 whitespace-nowrap" x-text="formatAmount(payment.amount)"></td>
- <td class="py-2 px-3 text-slate-700 whitespace-nowrap" x-text="paymentMethodLabel(payment.method)"></td>
- <td class="py-2 px-3 text-center">
- <span :class="paymentStatusBadge(payment.status)" x-text="paymentStatusLabel(payment.status)"></span>
+ <tr class="hover:bg-slate-50/60 transition-colors border-b border-slate-100 last:border-none">
+ <td class="py-3 px-4 text-slate-700 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
+ <td class="py-3 px-4 font-mono text-xs text-slate-600 whitespace-nowrap" x-text="payment.receiptNumber || '—'"></td>
+ <td class="py-3 px-4 text-right font-extrabold text-slate-900 font-mono whitespace-nowrap" x-text="formatAmount(payment.amount)"></td>
+ <td class="py-3 px-4 text-slate-700 whitespace-nowrap">
+     <span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-md font-medium inline-flex items-center gap-1"
+           :class="{
+               'bg-cyan-50 text-cyan-700': payment.method === 'Wave',
+               'bg-orange-50 text-orange-700': payment.method === 'OrangeMoney'
+           }">
+         <span x-text="paymentMethodLabel(payment.method)"></span>
+     </span>
  </td>
- <td class="py-2 px-3 text-center whitespace-nowrap">
+ <td class="py-3 px-4 text-center">
+     <template x-if="payment.status === 'Partial'">
+         <span class="bg-amber-50 text-amber-700 border border-amber-200/60 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5">
+             <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+             <span x-text="paymentStatusLabel(payment.status)"></span>
+         </span>
+     </template>
+     <template x-if="payment.status === 'Completed'">
+         <span class="bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5">
+             <icon name="check-circle" class="w-3.5 h-3.5" />
+             <span x-text="paymentStatusLabel(payment.status)"></span>
+         </span>
+     </template>
+     <template x-if="payment.status !== 'Partial' && payment.status !== 'Completed'">
+         <span class="bg-slate-50 text-slate-700 border border-slate-200/60 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5">
+             <span x-text="paymentStatusLabel(payment.status)"></span>
+         </span>
+     </template>
+ </td>
+ <td class="py-3 px-4 text-center whitespace-nowrap">
  <button type="button" x-on:click="openPaymentReceiptPreview(payment.paymentId, payment.receiptNumber)"
  title="Aperçu et impression du reçu PDF"
- class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
- <icon name="document-text" class="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+ class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 mx-auto shrink-0">
+ <icon name="document-text" class="w-4 h-4 text-indigo-600 shrink-0" />
  <span class="whitespace-nowrap">Aperçu / Imprimer</span>
  </button>
  </td>
