@@ -135,13 +135,21 @@ public class TeacherAssignmentLifecycleTests : IAsyncLifetime
                 new AssignTeacherCommand { TeacherId = Enseignant, ClassroomId = Classe, SubjectId = Matiere },
                 CancellationToken.None);
 
-            var thrown = await act.Should().ThrowAsync<ValidationException>(
-                "un doublon est une erreur de SAISIE, pas un incident technique");
+            // BusinessRuleException → 409, et non ValidationException → 422. Un doublon d'attribution
+            // est un CONFLIT d'état — la ressource existe déjà — pas une saisie mal formée : les deux
+            // champs envoyés sont valides, c'est la combinaison qui est déjà prise.
+            //
+            // C'est aussi le contrat PUBLIÉ (openapi.yaml : « 409 : Cette attribution (enseignant,
+            // classe, matière, année) existe déjà »), la convention du dépôt pour un doublon
+            // (Volume_4_API_Design.md §392) et le code que rendait l'index unique avant que le
+            // pré-contrôle n'existe. Ce pré-contrôle améliore le MESSAGE, il ne change pas le CODE —
+            // sans quoi il constituerait une rupture de contrat silencieuse pour les clients.
+            var thrown = await act.Should().ThrowAsync<BusinessRuleException>(
+                "un doublon est un conflit d'état, refusé en 409 comme le publie openapi.yaml");
 
             // Le message part vers un directeur ou un secrétariat, pas vers un développeur : il ne doit
             // porter ni nom de table, ni nom d'index, ni vocabulaire de base de données.
-            var message = string.Join(" ", thrown.Which.Errors.SelectMany(kv => kv.Value));
-            message.Should().NotContainAny(
+            thrown.Which.Message.Should().NotContainAny(
                 ["teacher_assignments", "IX_", "entité", "index", "contrainte", "SQL"]);
         }
     }
