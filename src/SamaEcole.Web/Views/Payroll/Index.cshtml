@@ -122,10 +122,10 @@
                 <div class="flex flex-wrap items-end gap-3">
                     <div>
                         <label class="form-label-sm">Mois</label>
-                        <select x-model="filterMonth" class="input-field mt-0">
-                            <option value="">Tous</option>
+                        <select x-model="filterMonth" class="input-field mt-0 font-semibold">
+                            <option value="" class="font-semibold">Tous</option>
                             <template x-for="m in 12" :key="m">
-                                <option :value="m" x-text="monthLabel(m)"></option>
+                                <option :value="m" x-text="monthLabel(m)" class="font-semibold"></option>
                             </template>
                         </select>
                     </div>
@@ -266,9 +266,9 @@
 
             <div>
                 <label class="form-label">Type de contrat</label>
-                <select x-model="contractForm.type" class="input-field mt-1">
-                    <option value="Permanent">Permanent</option>
-                    <option value="Vacataire">Vacataire (horaire)</option>
+                <select x-model="contractForm.type" class="input-field mt-1 font-semibold">
+                    <option value="Permanent" class="font-semibold">Permanent</option>
+                    <option value="Vacataire" class="font-semibold">Vacataire (horaire)</option>
                 </select>
             </div>
 
@@ -371,9 +371,9 @@
             <div class="form-grid">
                 <div>
                     <label class="form-label">Mois</label>
-                    <select x-model="payslipForm.month" class="input-field mt-1">
+                    <select x-model="payslipForm.month" class="input-field mt-1 font-semibold">
                         <template x-for="m in 12" :key="m">
-                            <option :value="m" x-text="monthLabel(m)"></option>
+                            <option :value="m" x-text="monthLabel(m)" class="font-semibold"></option>
                         </template>
                     </select>
                 </div>
@@ -409,9 +409,9 @@
             <div class="form-grid">
                 <div>
                     <label class="form-label">Mois</label>
-                    <select x-model="taxForm.month" class="input-field mt-1">
+                    <select x-model="taxForm.month" class="input-field mt-1 font-semibold">
                         <template x-for="m in 12" :key="m">
-                            <option :value="m" x-text="monthLabel(m)"></option>
+                            <option :value="m" x-text="monthLabel(m)" class="font-semibold"></option>
                         </template>
                     </select>
                 </div>
@@ -438,9 +438,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
             <div>
                 <label class="form-label-sm">Mois</label>
-                <select x-model="hourRecordsFilter.month" x-on:change="loadHourRecords()" class="input-field mt-0">
+                <select x-model="hourRecordsFilter.month" x-on:change="loadHourRecords()" class="input-field mt-0 font-semibold">
                     <template x-for="m in 12" :key="m">
-                        <option :value="m" x-text="monthLabel(m)"></option>
+                        <option :value="m" x-text="monthLabel(m)" class="font-semibold"></option>
                     </template>
                 </select>
             </div>

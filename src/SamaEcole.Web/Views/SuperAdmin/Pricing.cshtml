@@ -153,11 +153,11 @@
                     <div>
                         <label class="form-label-inverse">Type de remise</label>
                         <select x-model="newCode.discountType"
-                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
-                            <option value="Percentage">Pourcentage</option>
-                            <option value="FixedAmount">Montant fixe (FCFA)</option>
-                            <option value="FreeTrialMonths">Essai gratuit (mois)</option>
-                            <option value="FullDiscount">Offert à 100 %</option>
+                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold">
+                            <option value="Percentage" class="font-semibold">Pourcentage</option>
+                            <option value="FixedAmount" class="font-semibold">Montant fixe (FCFA)</option>
+                            <option value="FreeTrialMonths" class="font-semibold">Essai gratuit (mois)</option>
+                            <option value="FullDiscount" class="font-semibold">Offert à 100 %</option>
                         </select>
                     </div>
                     <div x-show="requiresValue" x-cloak>

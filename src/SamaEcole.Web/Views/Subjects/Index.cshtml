@@ -458,11 +458,11 @@
 
     <div>
      <label for="subject-parent" class="form-label">Domaine parent</label>
-     <select id="subject-parent" x-model="newSubject.parentSubjectId" class="input-field"
+     <select id="subject-parent" x-model="newSubject.parentSubjectId" class="input-field font-semibold"
       :class="createErrors.parentSubjectId && 'input-field-error'">
-      <option value="">— Aucun (matière de premier niveau)</option>
+      <option value="" class="font-semibold">— Aucun (matière de premier niveau)</option>
       <template x-for="option in parentOptionsForNewSubject" :key="option.id">
-       <option :value="option.id" x-text="option.name"></option>
+       <option :value="option.id" x-text="option.name" class="font-semibold"></option>
       </template>
      </select>
      <p class="text-xs text-slate-400 mt-1">
@@ -539,11 +539,11 @@
 
     <div>
      <label for="edit-subject-parent" class="form-label">Domaine parent</label>
-     <select id="edit-subject-parent" x-model="editing.parentSubjectId" class="input-field"
+     <select id="edit-subject-parent" x-model="editing.parentSubjectId" class="input-field font-semibold"
       :class="editErrors.parentSubjectId && 'input-field-error'">
-      <option value="">— Aucun (matière de premier niveau)</option>
+      <option value="" class="font-semibold">— Aucun (matière de premier niveau)</option>
       <template x-for="option in parentOptionsForEditing" :key="option.id">
-       <option :value="option.id" x-text="option.name"></option>
+       <option :value="option.id" x-text="option.name" class="font-semibold"></option>
       </template>
      </select>
      <p x-show="editErrors.parentSubjectId" x-cloak x-text="editErrors.parentSubjectId" class="field-error"></p>

@@ -36,10 +36,10 @@
  <label class="form-label-sm">Créneau</label>
  <input type="text" x-model="filters.period" list="attendance-periods" placeholder="Matin" class="input-field mt-0 w-40" />
  <datalist id="attendance-periods">
- <option value="Matin"></option>
- <option value="Après-midi"></option>
- <option value="1re heure"></option>
- <option value="2e heure"></option>
+ <option value="Matin" class="font-semibold"></option>
+ <option value="Après-midi" class="font-semibold"></option>
+ <option value="1re heure" class="font-semibold"></option>
+ <option value="2e heure" class="font-semibold"></option>
  </datalist>
  </div>
  <button type="button" x-on:click="loadRoster()" :disabled="!canLoad || isLoading" class="btn-modal-primary whitespace-nowrap group">

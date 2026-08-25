@@ -73,12 +73,12 @@ public class DateFieldTagHelper : TagHelper
         // options déjà présentes dans le HTML initial évitent la course : x-model trouve tout de suite
         // la bonne <option>. Plage d'années : 100 ans en arrière (date de naissance) et 5 en avant.
         var monthOptions = string.Concat(MonthNames.Select((name, index) =>
-            $"""<option value="{index}">{WebUtility.HtmlEncode(name)}</option>"""));
+            $"""<option value="{index}" class="font-semibold">{WebUtility.HtmlEncode(name)}</option>"""));
 
         var currentYear = DateTime.Now.Year;
         var yearOptions = string.Concat(
             Enumerable.Range(currentYear - 100, 106).Reverse()
-                .Select(year => $"""<option value="{year}">{year}</option>"""));
+                .Select(year => $"""<option value="{year}" class="font-semibold">{year}</option>"""));
 
         output.Content.SetHtmlContent($$"""
             <div class="relative" x-data="dateField()" x-effect="text = {{Model}} ? formatInput({{Model}}) : text">
