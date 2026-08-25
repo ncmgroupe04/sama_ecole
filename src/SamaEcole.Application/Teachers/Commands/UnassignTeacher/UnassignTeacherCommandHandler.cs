@@ -9,7 +9,8 @@ namespace SamaEcole.Application.Teachers.Commands.UnassignTeacher;
 
 public class UnassignTeacherCommandHandler(
     IApplicationDbContext dbContext,
-    ITenantProvider tenantProvider)
+    ITenantProvider tenantProvider,
+    ICurrentUserService currentUserService)
     : IRequestHandler<UnassignTeacherCommand>
 {
     public async Task Handle(UnassignTeacherCommand request, CancellationToken cancellationToken)
@@ -21,7 +22,7 @@ public class UnassignTeacherCommandHandler(
             .FirstOrDefaultAsync(a => a.Id == request.AssignmentId && a.TeacherId == request.TeacherId, cancellationToken)
             ?? throw new KeyNotFoundException($"Affectation introuvable.");
 
-        dbContext.TeacherAssignments.Remove(assignment);
+        assignment.SoftDelete(currentUserService.UserId?.ToString() ?? "System");
         
         await dbContext.SaveChangesAsync(cancellationToken);
     }

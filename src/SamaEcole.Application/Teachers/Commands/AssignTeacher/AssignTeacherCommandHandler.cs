@@ -54,6 +54,7 @@ public class AssignTeacherCommandHandler(
         }
 
         var assignmentExists = await dbContext.TeacherAssignments
+            .IgnoreQueryFilters()
             .AnyAsync(a => a.TeacherId == request.TeacherId 
                         && a.ClassroomId == request.ClassroomId
                         && a.SubjectId == request.SubjectId
