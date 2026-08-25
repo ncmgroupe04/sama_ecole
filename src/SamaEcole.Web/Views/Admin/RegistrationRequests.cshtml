@@ -156,10 +156,10 @@
  <template x-if="detailTarget.status === 'Pending'">
  <span class="inline-flex gap-3">
  <button type="button" x-on:click="openReject(detailTarget)" class="btn-modal-danger">Rejeter</button>
- <button type="button" x-on:click="openApprove(detailTarget)" class="btn-modal-primary">Approuver</button>
+ <button type="button" x-on:click="openApprove(detailTarget)" class="btn-modal-primary group">Approuver</button>
  </span>
  </template>
- <button type="button" x-show="detailTarget.status !== 'Pending'" x-on:click="closeDetail()" class="btn-modal-secondary">Fermer</button>
+ <button type="button" x-show="detailTarget.status !== 'Pending'" x-on:click="closeDetail()" class="btn-modal-secondary group">Fermer</button>
  </div>
  </div>
  </template>
@@ -181,8 +181,8 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeApprove()" class="btn-modal-secondary">Annuler</button>
- <button type="button" x-on:click="submitApprove()" :disabled="isApproving" class="btn-modal-primary">
+ <button type="button" x-on:click="closeApprove()" class="btn-modal-secondary group">Annuler</button>
+ <button type="button" x-on:click="submitApprove()" :disabled="isApproving" class="btn-modal-primary group">
  <span x-text="isApproving ? 'Création en cours…' : 'Approuver et créer l\'école'"></span>
  </button>
  </div>
@@ -204,7 +204,7 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeReject()" class="btn-modal-secondary">Annuler</button>
+ <button type="button" x-on:click="closeReject()" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isRejecting" class="btn-modal-danger">
  <span x-text="isRejecting ? 'Enregistrement…' : 'Confirmer le rejet'"></span>
  </button>

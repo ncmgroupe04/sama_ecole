@@ -33,16 +33,16 @@
  </div>
  <div class="flex items-center gap-2 shrink-0">
  <!-- Export PDF (docs/Volume_7_Security.md §15) : Directeur, Secrétariat, Finance — jamais l'Enseignant. -->
- <button x-show="canExportStudents" x-cloak @@click="exportStudentsPdf()" class="btn-modal-secondary">
+ <button x-show="canExportStudents" x-cloak @@click="exportStudentsPdf()" class="btn-modal-secondary group">
  <icon name="document-text" class="w-4 h-4" />
  Exporter en PDF
  </button>
- <button x-show="canManageStudent" x-cloak @@click="openImport()" class="btn-modal-secondary">
+ <button x-show="canManageStudent" x-cloak @@click="openImport()" class="btn-modal-secondary group">
  <icon name="upload" class="w-4 h-4" />
  Importer des élèves
  </button>
- <button x-show="canManageStudent" x-cloak @@click="isCreateOpen = true" class="btn-modal-primary">
- <icon name="plus" class="w-4 h-4" />
+ <button x-show="canManageStudent" x-cloak @@click="isCreateOpen = true" class="btn-modal-primary group">
+ <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
  Ajouter un élève
  </button>
  </div>
@@ -411,7 +411,7 @@
  <!-- Réservée au Directeur/Enseignant côté serveur (ReportCardsController). -->
  <button type="button" x-show="canEditReportCardRemark" x-cloak
  x-on:click="openReportCardRemark(term)"
- class="btn-modal-secondary text-xs whitespace-nowrap">
+ class="btn-modal-secondary text-xs whitespace-nowrap group">
  <icon name="pencil" class="w-4 h-4" />
  <span>Observations</span>
  </button>
@@ -419,7 +419,7 @@
  <button type="button" x-show="canDownloadReportCard" x-cloak
  x-on:click="downloadReportCard(term)"
  :disabled="downloadingTermId === term.termId"
- class="btn-modal-secondary text-xs whitespace-nowrap">
+ class="btn-modal-secondary text-xs whitespace-nowrap group">
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingTermId === term.termId ? 'Génération…' : 'Bulletin'"></span>
  </button>
@@ -428,7 +428,7 @@
  <button type="button" x-show="canDownloadReportCard" x-cloak
  x-on:click="sendReportCard(term, 1)"
  :disabled="sendingTermId === term.termId"
- class="btn-modal-secondary text-green-700 hover:bg-green-50 border-green-200 text-xs whitespace-nowrap">
+ class="btn-modal-secondary text-green-700 hover:bg-green-50 border-green-200 text-xs whitespace-nowrap group">
  <icon name="whatsapp" class="w-4 h-4" />
  <span x-text="sendingTermId === term.termId ? 'Envoi…' : 'WhatsApp'"></span>
  </button>
@@ -437,7 +437,7 @@
  <button type="button" x-show="canDownloadReportCard" x-cloak
  x-on:click="sendReportCard(term, 0)"
  :disabled="sendingTermId === term.termId"
- class="btn-modal-secondary text-blue-700 hover:bg-blue-50 border-blue-200 text-xs whitespace-nowrap">
+ class="btn-modal-secondary text-blue-700 hover:bg-blue-50 border-blue-200 text-xs whitespace-nowrap group">
  <icon name="envelope" class="w-4 h-4" />
  <span x-text="sendingTermId === term.termId ? 'Envoi…' : 'Email'"></span>
  </button>
@@ -682,8 +682,8 @@
  </div>
 
  <div class="flex justify-end gap-3 pt-2 border-t border-slate-100">
- <button type="button" x-on:click="closeReportCardRemark()" class="btn-modal-secondary mt-4">Annuler</button>
- <button type="submit" :disabled="isSavingReportCardRemark" class="btn-modal-primary mt-4">
+ <button type="button" x-on:click="closeReportCardRemark()" class="btn-modal-secondary mt-4 group">Annuler</button>
+ <button type="submit" :disabled="isSavingReportCardRemark" class="btn-modal-primary mt-4 group">
  <span x-text="isSavingReportCardRemark ? 'Enregistrement…' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -768,8 +768,8 @@
                 </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" @@click="closeEditStudent()" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isSavingStudentEdit" class="btn-modal-primary">
+ <button type="button" @@click="closeEditStudent()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isSavingStudentEdit" class="btn-modal-primary group">
  <span x-text="isSavingStudentEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -798,7 +798,7 @@
  </p>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" @@click="closeDeleteStudent()" class="btn-modal-secondary">Annuler</button>
+ <button type="button" @@click="closeDeleteStudent()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" @@click="confirmDeleteStudent()" :disabled="isDeletingStudentRecord" class="btn-modal-danger">
  <span x-text="isDeletingStudentRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
  </button>
@@ -826,7 +826,7 @@
  </p>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" @@click="closeCancelEnrollment()" class="btn-modal-secondary">Retour</button>
+ <button type="button" @@click="closeCancelEnrollment()" class="btn-modal-secondary group">Retour</button>
  <button type="button" @@click="confirmCancelEnrollment()" :disabled="isCancelingEnrollment" class="btn-modal-danger">
  <span x-text="isCancelingEnrollment ? 'Annulation...' : 'Annuler l\'inscription'"></span>
  </button>
@@ -853,8 +853,8 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" @@click="closeChangeEnrollmentStatus()" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isChangingEnrollmentStatus" class="btn-modal-primary">
+ <button type="button" @@click="closeChangeEnrollmentStatus()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isChangingEnrollmentStatus" class="btn-modal-primary group">
  <span x-text="isChangingEnrollmentStatus ? 'Enregistrement...' : 'Confirmer'"></span>
  </button>
  </div>
@@ -947,10 +947,10 @@
 
  <!-- Boutons d'action -->
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" @@click="isCreateOpen = false" class="btn-modal-secondary">
+ <button type="button" @@click="isCreateOpen = false" class="btn-modal-secondary group">
  Annuler
  </button>
- <button type="submit" :disabled="isSubmitting" class="btn-modal-primary">
+ <button type="submit" :disabled="isSubmitting" class="btn-modal-primary group">
  <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -1048,15 +1048,15 @@
  </div>
 
  <div class="mt-6 flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-4">
- <button type="button" @@click="downloadImportTemplate()" class="btn-modal-secondary">
+ <button type="button" @@click="downloadImportTemplate()" class="btn-modal-secondary group">
  <icon name="download" class="w-4 h-4" />
  <span>Télécharger le modèle</span>
  </button>
  <div class="flex gap-3">
- <button type="button" @@click="closeImport()" class="btn-modal-secondary">Fermer</button>
+ <button type="button" @@click="closeImport()" class="btn-modal-secondary group">Fermer</button>
  <button type="button"
  x-show="importPreview && importPreview.invalidRows === 0 && importPreview.validRows > 0 && !(importResult && importResult.committed)"
- x-cloak @@click="confirmImport()" :disabled="isImporting" class="btn-modal-primary">
+ x-cloak @@click="confirmImport()" :disabled="isImporting" class="btn-modal-primary group">
  <span x-text="isImporting ? 'Import en cours…' : ('Confirmer l\'import (' + (importPreview ? importPreview.validRows : 0) + ' élèves)')"></span>
  </button>
  </div>
@@ -1090,8 +1090,8 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="isCommitmentModalOpen = false" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isSavingCommitment" class="btn-modal-primary">
+ <button type="button" x-on:click="isCommitmentModalOpen = false" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isSavingCommitment" class="btn-modal-primary group">
  <span x-text="isSavingCommitment ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>

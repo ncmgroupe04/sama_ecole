@@ -41,8 +41,8 @@
         <div class="card">
             <div class="card-header">
                 <h2 class="text-sm font-semibold text-slate-700">Contrats du personnel</h2>
-                <button type="button" x-on:click="openContractModal()" class="btn-modal-primary">
-                    <icon name="plus" class="w-4 h-4" />
+                <button type="button" x-on:click="openContractModal()" class="btn-modal-primary group">
+                    <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                     Nouveau contrat
                 </button>
             </div>
@@ -133,13 +133,13 @@
                         <label class="form-label-sm">Année</label>
                         <input type="number" x-model="filterYear" class="input-field mt-0 w-28" />
                     </div>
-                    <button type="button" x-on:click="applyPayslipFilters()" class="btn-modal-secondary">
+                    <button type="button" x-on:click="applyPayslipFilters()" class="btn-modal-secondary group">
                         <icon name="chart-multiple" class="w-4 h-4" />
                         Filtrer
                     </button>
                 </div>
-                <button type="button" x-on:click="openPayslipModal()" class="btn-modal-primary">
-                    <icon name="plus" class="w-4 h-4" />
+                <button type="button" x-on:click="openPayslipModal()" class="btn-modal-primary group">
+                    <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                     Générer une fiche
                 </button>
             </div>
@@ -169,7 +169,7 @@
                                 <td class="py-3 px-4 text-right font-semibold text-slate-900 amount" x-text="formatAmount(payslip.netSalary)"></td>
                                 <td class="py-3 px-4 text-right">
                                     <button type="button" x-on:click="printPayslip(payslip.id)" :disabled="printingPayslipId === payslip.id"
-                                            class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60">
+                                            class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                         <icon name="print" class="w-4 h-4" x-show="printingPayslipId !== payslip.id" />
                                         <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingPayslipId === payslip.id" x-cloak />
                                         <span x-text="printingPayslipId === payslip.id ? 'Génération...' : 'Bulletin PDF'"></span>
@@ -192,13 +192,13 @@
                         <label class="form-label-sm">Année</label>
                         <input type="number" x-model="filterTaxYear" class="input-field mt-0 w-28" />
                     </div>
-                    <button type="button" x-on:click="applyTaxFilters()" class="btn-modal-secondary">
+                    <button type="button" x-on:click="applyTaxFilters()" class="btn-modal-secondary group">
                         <icon name="chart-multiple" class="w-4 h-4" />
                         Filtrer
                     </button>
                 </div>
-                <button type="button" x-on:click="openTaxModal()" class="btn-modal-primary">
-                    <icon name="plus" class="w-4 h-4" />
+                <button type="button" x-on:click="openTaxModal()" class="btn-modal-primary group">
+                    <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                     Générer une déclaration
                 </button>
             </div>
@@ -288,8 +288,8 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="button" x-on:click="isContractModalOpen = false" class="btn-modal-secondary">Annuler</button>
-                <button type="submit" class="btn-modal-primary" :disabled="isSavingContract">
+                <button type="button" x-on:click="isContractModalOpen = false" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" class="btn-modal-primary group" :disabled="isSavingContract">
                     <span x-show="!isSavingContract">Enregistrer</span>
                     <span x-show="isSavingContract">Enregistrement...</span>
                 </button>
@@ -321,8 +321,8 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="button" x-on:click="isEditContractModalOpen = false" class="btn-modal-secondary">Annuler</button>
-                <button type="submit" class="btn-modal-primary" :disabled="isSavingEditContract">
+                <button type="button" x-on:click="isEditContractModalOpen = false" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" class="btn-modal-primary group" :disabled="isSavingEditContract">
                     <span x-show="!isSavingEditContract">Enregistrer</span>
                     <span x-show="isSavingEditContract">Enregistrement...</span>
                 </button>
@@ -350,8 +350,8 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="button" x-on:click="isCloseContractModalOpen = false" class="btn-modal-secondary">Annuler</button>
-                <button type="submit" class="btn-modal-primary" :disabled="isClosingContract">
+                <button type="button" x-on:click="isCloseContractModalOpen = false" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" class="btn-modal-primary group" :disabled="isClosingContract">
                     <span x-show="!isClosingContract">Clôturer</span>
                     <span x-show="isClosingContract">Clôture...</span>
                 </button>
@@ -393,8 +393,8 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="button" x-on:click="isPayslipModalOpen = false" class="btn-modal-secondary">Annuler</button>
-                <button type="submit" class="btn-modal-primary" :disabled="isGeneratingPayslip">
+                <button type="button" x-on:click="isPayslipModalOpen = false" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" class="btn-modal-primary group" :disabled="isGeneratingPayslip">
                     <span x-show="!isGeneratingPayslip">Générer</span>
                     <span x-show="isGeneratingPayslip">Génération...</span>
                 </button>
@@ -422,8 +422,8 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="button" x-on:click="isTaxModalOpen = false" class="btn-modal-secondary">Annuler</button>
-                <button type="submit" class="btn-modal-primary" :disabled="isGeneratingTax">
+                <button type="button" x-on:click="isTaxModalOpen = false" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" class="btn-modal-primary group" :disabled="isGeneratingTax">
                     <span x-show="!isGeneratingTax">Générer</span>
                     <span x-show="isGeneratingTax">Génération...</span>
                 </button>
@@ -448,7 +448,7 @@
                 <label class="form-label-sm">Année</label>
                 <input type="number" x-model="hourRecordsFilter.year" x-on:change="loadHourRecords()" class="input-field mt-0 w-28" />
             </div>
-            <button type="button" x-on:click="previewHourRecordSheet()" :disabled="downloadingHourRecordSheet" class="btn-modal-secondary">
+            <button type="button" x-on:click="previewHourRecordSheet()" :disabled="downloadingHourRecordSheet" class="btn-modal-secondary group">
                 <icon name="download" class="w-4 h-4" />
                 <span x-text="downloadingHourRecordSheet ? 'Génération…' : 'Fiche heures (PDF)'"></span>
             </button>
@@ -492,7 +492,7 @@
                 <input type="text" x-model="hourRecordForm.note" class="input-field mt-1" />
             </div>
             <div class="sm:col-span-3 flex justify-end">
-                <button type="submit" class="btn-modal-primary" :disabled="isSavingHourRecord">
+                <button type="submit" class="btn-modal-primary group" :disabled="isSavingHourRecord">
                     <span x-show="!isSavingHourRecord">Ajouter les heures</span>
                     <span x-show="isSavingHourRecord">Enregistrement...</span>
                 </button>
@@ -500,7 +500,7 @@
         </form>
 
         <div class="mt-4 flex justify-end">
-            <button type="button" x-on:click="isHourRecordsModalOpen = false" class="btn-modal-secondary">Fermer</button>
+            <button type="button" x-on:click="isHourRecordsModalOpen = false" class="btn-modal-secondary group">Fermer</button>
         </div>
     </modal-shell>
 </div>

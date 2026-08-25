@@ -256,7 +256,7 @@
 
  <!-- Soumission -->
  <div class="pt-2 flex justify-end border-t border-slate-100">
- <button type="submit" :disabled="!canSubmit()" class="btn-modal-primary mt-4">
+ <button type="submit" :disabled="!canSubmit()" class="btn-modal-primary mt-4 group">
  <icon x-show="!isSubmitting" name="checkmark-circle" class="w-5 h-5" />
  <span x-text="isSubmitting ? 'Enregistrement…' : 'Inscrire l\'élève'"></span>
  </button>
@@ -350,21 +350,21 @@
  <span class="text-sm font-medium">Inscription enregistrée.</span>
  </div>
  <div class="flex flex-wrap items-center gap-2">
- <button type="button" x-on:click="closeReceipt()" class="btn-modal-secondary">
+ <button type="button" x-on:click="closeReceipt()" class="btn-modal-secondary group">
  Retour (Fermer)
  </button>
- <button type="button" x-on:click="startNewEnrollment()" class="btn-modal-secondary">
+ <button type="button" x-on:click="startNewEnrollment()" class="btn-modal-secondary group">
  Nouvelle inscription
  </button>
- <button type="button" x-on:click="downloadPdf()" class="btn-modal-secondary">
+ <button type="button" x-on:click="downloadPdf()" class="btn-modal-secondary group">
  <icon name="document-text" class="w-5 h-5 text-indigo-600" />
  Aperçu Attestation (PDF)
  </button>
- <button type="button" x-on:click="downloadCertificatePdf()" class="btn-modal-secondary">
+ <button type="button" x-on:click="downloadCertificatePdf()" class="btn-modal-secondary group">
  <icon name="document-text" class="w-5 h-5 text-primary" />
  Certificat de Scolarité (PDF)
  </button>
- <button type="button" x-on:click="printReceipt()" class="btn-modal-primary">
+ <button type="button" x-on:click="printReceipt()" class="btn-modal-primary group">
  <icon name="print" class="w-5 h-5" />
  Imprimer
  </button>

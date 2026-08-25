@@ -110,8 +110,8 @@
                 <p class="text-sm font-semibold text-slate-900">Historique des déclarations</p>
                 <p class="text-xs text-slate-500 mt-0.5">Année fiscale <span class="font-semibold text-slate-700" x-text="periodYear"></span> — filtrée par le sélecteur en haut de page.</p>
             </div>
-            <button type="button" x-on:click="openTaxModal()" class="btn-modal-primary">
-                <icon name="plus" class="w-4 h-4" />
+            <button type="button" x-on:click="openTaxModal()" class="btn-modal-primary group">
+                <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                 Générer une déclaration
             </button>
         </div>
@@ -148,7 +148,7 @@
                             <td class="py-3 px-4 text-right amount font-semibold text-slate-900" x-text="formatAmount(declaration.totalDueToState)"></td>
                             <td class="py-3 px-4 text-right">
                                 <button type="button" x-on:click="downloadDeclarationPdf(declaration.id)" :disabled="downloadingPdfId === declaration.id"
-                                        class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60">
+                                        class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                     <icon name="download" class="w-4 h-4" x-show="downloadingPdfId !== declaration.id" />
                                     <icon name="loader" class="w-4 h-4 animate-spin" x-show="downloadingPdfId === declaration.id" x-cloak />
                                     <span x-text="downloadingPdfId === declaration.id ? 'Génération...' : 'PDF'"></span>
@@ -178,8 +178,8 @@
             </div>
 
             <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="button" x-on:click="isTaxModalOpen = false" class="btn-modal-secondary">Annuler</button>
-                <button type="submit" class="btn-modal-primary" :disabled="isGeneratingTax">
+                <button type="button" x-on:click="isTaxModalOpen = false" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" class="btn-modal-primary group" :disabled="isGeneratingTax">
                     <span x-show="!isGeneratingTax">Générer</span>
                     <span x-show="isGeneratingTax">Génération...</span>
                 </button>

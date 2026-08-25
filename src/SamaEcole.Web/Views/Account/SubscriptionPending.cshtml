@@ -70,7 +70,7 @@
  class="flex-1 min-w-0 rounded-xl border border-gray-300 px-3 py-2 text-jgk-body uppercase placeholder:normal-case focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
  <button type="button" x-on:click="applyPromoCode()"
  x-bind:disabled="!promoCode || isCheckingPromo"
- class="btn-modal-secondary shrink-0">
+ class="btn-modal-secondary shrink-0 group">
  <span x-text="isCheckingPromo ? 'Vérification…' : 'Appliquer'"></span>
  </button>
  </div>
@@ -99,7 +99,7 @@
 
  <button type="button"
  x-on:click="window.auth.logout()"
- class="mt-6 btn-modal-secondary">
+ class="mt-6 btn-modal-secondary group">
  Se déconnecter
  </button>
  </div>

@@ -164,8 +164,8 @@
     </div>
 
     <div x-show="canManage" x-cloak class="px-4 pb-4 pt-1">
-     <button type="button" @@click="openCreateRoom(building)" class="btn-modal-secondary w-full text-sm justify-center">
-      <icon name="plus" class="w-4 h-4" />
+     <button type="button" @@click="openCreateRoom(building)" class="btn-modal-secondary w-full text-sm justify-center group">
+      <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
       Ajouter une salle
      </button>
     </div>
@@ -192,8 +192,8 @@
     <p x-show="createBuildingErrors.description" x-text="createBuildingErrors.description" class="field-error"></p>
    </div>
    <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-    <button type="button" @@click="closeCreateBuilding()" class="btn-modal-secondary">Annuler</button>
-    <button type="submit" :disabled="isSavingBuilding" class="btn-modal-primary">
+    <button type="button" @@click="closeCreateBuilding()" class="btn-modal-secondary group">Annuler</button>
+    <button type="submit" :disabled="isSavingBuilding" class="btn-modal-primary group">
      <span x-text="isSavingBuilding ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -215,8 +215,8 @@
     <p x-show="editBuildingErrors.description" x-cloak x-text="editBuildingErrors.description" class="field-error"></p>
    </div>
    <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-    <button type="button" x-on:click="closeEditBuilding()" class="btn-modal-secondary">Annuler</button>
-    <button type="submit" :disabled="isSavingEditBuilding" class="btn-modal-primary">
+    <button type="button" x-on:click="closeEditBuilding()" class="btn-modal-secondary group">Annuler</button>
+    <button type="submit" :disabled="isSavingEditBuilding" class="btn-modal-primary group">
      <span x-text="isSavingEditBuilding ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -234,7 +234,7 @@
    Impossible si des salles sont encore rattachées à ce bâtiment : supprimez-les d'abord.
   </p>
   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-   <button type="button" x-on:click="closeDeleteBuilding()" class="btn-modal-secondary">Annuler</button>
+   <button type="button" x-on:click="closeDeleteBuilding()" class="btn-modal-secondary group">Annuler</button>
    <button type="button" x-on:click="confirmDeleteBuilding()" :disabled="isDeletingBuilding" class="btn-modal-danger">
     <span x-text="isDeletingBuilding ? 'Suppression...' : 'Supprimer le bâtiment'"></span>
    </button>
@@ -266,8 +266,8 @@
     <p x-show="createRoomErrors.capacity" x-text="createRoomErrors.capacity" class="field-error"></p>
    </div>
    <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-    <button type="button" @@click="closeCreateRoom()" class="btn-modal-secondary">Annuler</button>
-    <button type="submit" :disabled="isSavingRoom" class="btn-modal-primary">
+    <button type="button" @@click="closeCreateRoom()" class="btn-modal-secondary group">Annuler</button>
+    <button type="submit" :disabled="isSavingRoom" class="btn-modal-primary group">
      <span x-text="isSavingRoom ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -295,8 +295,8 @@
     <p x-show="editRoomErrors.capacity" x-cloak x-text="editRoomErrors.capacity" class="field-error"></p>
    </div>
    <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-    <button type="button" x-on:click="closeEditRoom()" class="btn-modal-secondary">Annuler</button>
-    <button type="submit" :disabled="isSavingEditRoom" class="btn-modal-primary">
+    <button type="button" x-on:click="closeEditRoom()" class="btn-modal-secondary group">Annuler</button>
+    <button type="submit" :disabled="isSavingEditRoom" class="btn-modal-primary group">
      <span x-text="isSavingEditRoom ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -311,7 +311,7 @@
   </modal-subtitle>
   <div x-show="deleteRoomError" x-cloak class="form-error-banner" x-text="deleteRoomError"></div>
   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-   <button type="button" x-on:click="closeDeleteRoom()" class="btn-modal-secondary">Annuler</button>
+   <button type="button" x-on:click="closeDeleteRoom()" class="btn-modal-secondary group">Annuler</button>
    <button type="button" x-on:click="confirmDeleteRoom()" :disabled="isDeletingRoom" class="btn-modal-danger">
     <span x-text="isDeletingRoom ? 'Suppression...' : 'Supprimer la salle'"></span>
    </button>

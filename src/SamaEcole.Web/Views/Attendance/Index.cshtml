@@ -42,7 +42,7 @@
  <option value="2e heure"></option>
  </datalist>
  </div>
- <button type="button" x-on:click="loadRoster()" :disabled="!canLoad || isLoading" class="btn-modal-primary whitespace-nowrap">
+ <button type="button" x-on:click="loadRoster()" :disabled="!canLoad || isLoading" class="btn-modal-primary whitespace-nowrap group">
  <icon name="checkmark-circle" class="w-4 h-4" />
  <span x-text="isLoading ? 'Chargement…' : 'Charger l\'appel'"></span>
  </button>
@@ -62,7 +62,7 @@
  </div>
  <div class="flex items-center gap-3">
  <span x-show="alreadySubmitted" x-cloak class="text-xs font-medium text-warning">Appel déjà enregistré pour ce créneau.</span>
- <button type="button" x-on:click="submit()" :disabled="submitting || alreadySubmitted || entries.length === 0" class="btn-modal-primary">
+ <button type="button" x-on:click="submit()" :disabled="submitting || alreadySubmitted || entries.length === 0" class="btn-modal-primary group">
  <span x-text="submitting ? 'Enregistrement…' : 'Enregistrer l\'appel'"></span>
  </button>
  </div>

@@ -297,7 +297,7 @@
         placeholder="Activités" class="input-field" :disabled="!canManageSubject || !headerCarrier">
       </div>
       <button type="button" x-on:click="saveHeaders()" x-show="canManageSubject"
-       :disabled="isSavingHeaders || !headerCarrier" class="btn-modal-secondary h-10">
+       :disabled="isSavingHeaders || !headerCarrier" class="btn-modal-secondary h-10 group">
        <span x-text="isSavingHeaders ? 'Enregistrement...' : 'Enregistrer les entêtes'"></span>
       </button>
      </div>
@@ -343,7 +343,7 @@
         <div class="shrink-0 flex items-center gap-1">
          <button type="button" x-on:click="openCreateActivity(group.root)" title="Ajouter une activité"
           class="inline-flex items-center gap-1 px-2.5 h-8 rounded-lg text-xs font-semibold text-primary-600 hover:bg-primary-50 transition-colors">
-          <icon name="plus" class="w-3.5 h-3.5" />
+          <icon name="plus" class="w-3.5 h-3.5 transition-transform duration-200 group-hover:rotate-90" />
           Activité
          </button>
          <button type="button" x-on:click="openEdit(group.root)" title="Modifier le domaine" aria-label="Modifier le domaine"
@@ -408,8 +408,8 @@
      <p class="text-xs text-slate-400">
       <span x-text="structureLineCount"></span> ligne(s) seront imprimées sur le bulletin de ce niveau.
      </p>
-     <button type="button" x-show="canManageSubject" x-on:click="openCreateGroup()" class="btn-modal-primary h-10 px-4">
-      <icon name="plus" class="w-5 h-5" />
+     <button type="button" x-show="canManageSubject" x-on:click="openCreateGroup()" class="btn-modal-primary h-10 px-4 group">
+      <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
       Nouveau domaine
      </button>
     </div>
@@ -488,10 +488,10 @@
    </div>
 
    <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-    <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary">
+    <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary group">
      Annuler
     </button>
-    <button type="submit" :disabled="isSubmitting" class="btn-modal-primary">
+    <button type="submit" :disabled="isSubmitting" class="btn-modal-primary group">
      <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -583,8 +583,8 @@
    </div>
 
    <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-    <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary">Annuler</button>
-    <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary">
+    <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary group">Annuler</button>
+    <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary group">
      <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -613,7 +613,7 @@
   </p>
 
   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-   <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary">Annuler</button>
+   <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary group">Annuler</button>
    <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingSubject" class="btn-modal-danger">
     <span x-text="isDeletingSubject ? 'Suppression...' : 'Supprimer la matière'"></span>
    </button>

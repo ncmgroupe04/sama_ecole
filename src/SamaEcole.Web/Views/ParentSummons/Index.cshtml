@@ -14,8 +14,8 @@
             <p class="page-subtitle">Convoquez un parent/tuteur pour un motif libre, distinct d'une sanction disciplinaire.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <button x-show="canManageParentSummons" x-cloak @@click="openCreate()" class="btn-modal-primary">
-                <icon name="plus" class="w-4 h-4" />
+            <button x-show="canManageParentSummons" x-cloak @@click="openCreate()" class="btn-modal-primary group">
+                <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                 Nouvelle convocation
             </button>
         </div>
@@ -59,7 +59,7 @@
                             <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="record.reason" :title="record.reason"></td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
                                 <button type="button" @@click="printNotice(record.id)" :disabled="printingId === record.id"
-                                        class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60">
+                                        class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                     <icon name="print" class="w-4 h-4" x-show="printingId !== record.id" />
                                     <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingId === record.id" x-cloak />
                                     <span x-text="printingId === record.id ? 'Génération...' : 'Convocation PDF'"></span>
@@ -108,8 +108,8 @@
             </div>
 
             <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-                <button type="button" @@click="closeCreate()" class="btn-modal-secondary">Annuler</button>
-                <button type="submit" :disabled="isCreating" class="btn-modal-primary">
+                <button type="button" @@click="closeCreate()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isCreating" class="btn-modal-primary group">
                     <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
                 </button>
             </div>

@@ -16,8 +16,8 @@
 
  @* Réservé au Directeur (Volume 7 §15). Masquer le bouton n'est qu'un confort : l'API répond
  403 à qui l'appellerait quand même. *@
- <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-modal-primary">
- <icon name="plus" class="w-5 h-5" />
+ <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-modal-primary group">
+ <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
  Nouvelle année
  </button>
  </div>
@@ -151,10 +151,10 @@
  </p>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary">
+ <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary group">
  Annuler
  </button>
- <button type="submit" :disabled="isSubmitting" class="btn-modal-primary">
+ <button type="submit" :disabled="isSubmitting" class="btn-modal-primary group">
  <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -201,10 +201,10 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary">
+ <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary group">
  Annuler
  </button>
- <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary">
+ <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary group">
  <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -259,8 +259,8 @@
  <p x-show="activateErrors.password" x-cloak x-text="activateErrors.password" class="field-error"></p>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeActivate()" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isActivating" class="btn-modal-primary">
+ <button type="button" x-on:click="closeActivate()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isActivating" class="btn-modal-primary group">
  <span x-text="isActivating ? 'Activation...' : 'Activer cette année'"></span>
  </button>
  </div>

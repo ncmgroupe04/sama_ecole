@@ -18,8 +18,8 @@
  </p>
  </div>
 
- <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-modal-primary">
- <icon name="plus" class="w-5 h-5" />
+ <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-modal-primary group">
+ <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
  Nouvel utilisateur
  </button>
  </div>
@@ -127,8 +127,8 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isSubmitting" class="btn-modal-primary">
+ <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isSubmitting" class="btn-modal-primary group">
  <span x-text="isSubmitting ? 'Enregistrement...' : 'Créer le compte'"></span>
  </button>
  </div>
@@ -165,8 +165,8 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeStatusChange()" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isChangingStatus" class="btn-modal-primary">
+ <button type="button" x-on:click="closeStatusChange()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isChangingStatus" class="btn-modal-primary group">
  <span x-text="isChangingStatus ? 'Enregistrement...' : 'Confirmer'"></span>
  </button>
  </div>
@@ -197,8 +197,8 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeResetPassword()" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isResettingPassword" class="btn-modal-primary">
+ <button type="button" x-on:click="closeResetPassword()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isResettingPassword" class="btn-modal-primary group">
  <span x-text="isResettingPassword ? 'Enregistrement...' : 'Réinitialiser'"></span>
  </button>
  </div>

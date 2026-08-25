@@ -38,11 +38,11 @@
             <h2 class="text-lg font-bold text-slate-900">Paramétrage des frais</h2>
         </div>
         <div class="flex items-center gap-2" x-show="canModifyFees" x-cloak>
-        <button x-on:click="openCreateCategory()" class="btn-modal-secondary">
-        <icon name="plus" class="w-5 h-5" />
+        <button x-on:click="openCreateCategory()" class="btn-modal-secondary group">
+        <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
         Catégorie
         </button>
-        <button x-on:click="openApplyStandard()" :disabled="!selectedCategoryId" class="btn-modal-primary">
+        <button x-on:click="openApplyStandard()" :disabled="!selectedCategoryId" class="btn-modal-primary group">
         <icon name="wallet" class="w-5 h-5" />
         Appliquer un montant standard
         </button>
@@ -180,8 +180,8 @@
  </label>
  </div>
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="isCategoryOpen = false" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isSavingCategory" class="btn-modal-primary">
+ <button type="button" x-on:click="isCategoryOpen = false" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isSavingCategory" class="btn-modal-primary group">
  <span x-text="isSavingCategory ? 'Enregistrement...' : 'Créer'"></span>
  </button>
  </div>
@@ -240,8 +240,8 @@
  </label>
  </div>
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="isApplyOpen = false" class="btn-modal-secondary">Fermer</button>
- <button type="submit" :disabled="isApplying" class="btn-modal-primary">
+ <button type="button" x-on:click="isApplyOpen = false" class="btn-modal-secondary group">Fermer</button>
+ <button type="submit" :disabled="isApplying" class="btn-modal-primary group">
  <span x-text="isApplying ? 'Application...' : 'Appliquer'"></span>
  </button>
  </div>
@@ -263,8 +263,8 @@
  <p x-show="editErrors.amount" x-cloak x-text="editErrors.amount" class="field-error"></p>
  </div>
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary">Annuler</button>
- <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary">
+ <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary group">
  <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -316,7 +316,7 @@
  </p>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeDeleteCategory()" class="btn-modal-secondary">Annuler</button>
+ <button type="button" x-on:click="closeDeleteCategory()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-modal-danger">
  <span x-text="isDeletingCategory ? 'Suppression...' : 'Supprimer la catégorie'"></span>
  </button>
@@ -334,7 +334,7 @@
  <div x-show="deleteFeeError" x-cloak class="form-error-banner" x-text="deleteFeeError"></div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="closeDeleteFee()" class="btn-modal-secondary">Annuler</button>
+ <button type="button" x-on:click="closeDeleteFee()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" x-on:click="confirmDeleteFee()" :disabled="isDeletingFee" class="btn-modal-danger">
  <span x-text="isDeletingFee ? 'Suppression...' : 'Supprimer'"></span>
  </button>
@@ -367,8 +367,8 @@
  <div x-show="activeTab === 'disbursements'" x-cloak>
     <div class="flex items-center justify-between mt-6">
         <h2 class="text-lg font-bold text-slate-900">Historique des décaissements</h2>
-        <button type="button" x-on:click="openCreateDisbursement()" class="btn-modal-primary">
-            <icon name="plus" class="w-5 h-5" />
+        <button type="button" x-on:click="openCreateDisbursement()" class="btn-modal-primary group">
+            <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
             Nouveau Décaissement
         </button>
     </div>
@@ -453,8 +453,8 @@
             </div>
 
             <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-                <button type="button" x-on:click="closeCreateDisbursement()" class="btn-modal-secondary">Annuler</button>
-                <button type="submit" :disabled="isSubmittingDisbursement" class="btn-modal-primary">
+                <button type="button" x-on:click="closeCreateDisbursement()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSubmittingDisbursement" class="btn-modal-primary group">
                     <span x-text="isSubmittingDisbursement ? 'Enregistrement...' : 'Enregistrer'"></span>
                 </button>
             </div>
@@ -471,7 +471,7 @@
         <div x-show="deleteDisbursementError" x-cloak class="form-error-banner" x-text="deleteDisbursementError"></div>
         
         <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
-            <button type="button" x-on:click="closeDeleteDisbursement()" class="btn-modal-secondary">Fermer</button>
+            <button type="button" x-on:click="closeDeleteDisbursement()" class="btn-modal-secondary group">Fermer</button>
             <button type="button" x-on:click="confirmDeleteDisbursement()" :disabled="isDeletingDisbursement" class="btn-modal-danger">
                 <span x-text="isDeletingDisbursement ? 'Annulation...' : 'Oui, annuler'"></span>
             </button>

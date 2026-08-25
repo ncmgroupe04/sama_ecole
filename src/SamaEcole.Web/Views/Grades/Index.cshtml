@@ -46,17 +46,17 @@
  matière sélectionnée pour la saisie — ouvert au Directeur, à l'Enseignant et au Secrétariat. -->
  <div x-show="canDownloadReportCard && hasClassAndTerm" x-cloak class="flex gap-2">
  <button type="button" x-on:click="downloadClassBulletinsMergedPdf()" :disabled="downloadingClassBulletins"
- class="btn-modal-secondary whitespace-nowrap text-sm" title="Un seul PDF, une page par élève — pour l'impression en lot">
+ class="btn-modal-secondary whitespace-nowrap text-sm group" title="Un seul PDF, une page par élève — pour l'impression en lot">
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingClassBulletins ? 'Génération…' : 'Bulletins (PDF)'"></span>
  </button>
  <button type="button" x-on:click="downloadClassBulletinsZip()" :disabled="downloadingClassBulletins"
- class="btn-modal-secondary whitespace-nowrap text-sm" title="Une archive ZIP, un fichier par élève — pour l'envoi ou la sauvegarde">
+ class="btn-modal-secondary whitespace-nowrap text-sm group" title="Une archive ZIP, un fichier par élève — pour l'envoi ou la sauvegarde">
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingClassBulletins ? 'Génération…' : 'Bulletins (ZIP)'"></span>
  </button>
  <button type="button" x-on:click="downloadClassDeliberationPdf()" :disabled="downloadingClassDeliberation"
- class="btn-modal-secondary whitespace-nowrap text-sm" title="PV de délibération du conseil de classe pour ce trimestre">
+ class="btn-modal-secondary whitespace-nowrap text-sm group" title="PV de délibération du conseil de classe pour ce trimestre">
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingClassDeliberation ? 'Génération…' : 'PV Délibération'"></span>
  </button>
@@ -64,7 +64,7 @@
 
  <!-- Mode de saisie alternatif : réservé à l'Enseignant, comme la saisie cellule par cellule. -->
  <button type="button" x-show="canEnterGrades && hasSelection" x-cloak x-on:click="openImport()"
- class="btn-modal-secondary whitespace-nowrap">
+ class="btn-modal-secondary whitespace-nowrap group">
  <icon name="upload" class="w-4 h-4" />
  Importer un fichier
  </button>
@@ -220,7 +220,7 @@
  colonnes Matricule et Nom &amp; Prénom sont verrouillées, seules les notes se modifient.
  </p>
  <button type="button" x-on:click="downloadGradeSheet()" :disabled="downloadingGradeSheet"
- class="btn-modal-secondary whitespace-nowrap text-xs disabled:opacity-50 disabled:cursor-not-allowed">
+ class="btn-modal-secondary whitespace-nowrap text-xs disabled:opacity-50 disabled:cursor-not-allowed group">
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingGradeSheet ? 'Génération…' : 'Télécharger la feuille'"></span>
  </button>
@@ -235,11 +235,11 @@
  </div>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="isImportOpen = false" class="btn-modal-secondary">Fermer</button>
- <button type="button" x-show="!importPreview" x-on:click="submitImport(true)" :disabled="importSubmitting" class="btn-modal-primary">
+ <button type="button" x-on:click="isImportOpen = false" class="btn-modal-secondary group">Fermer</button>
+ <button type="button" x-show="!importPreview" x-on:click="submitImport(true)" :disabled="importSubmitting" class="btn-modal-primary group">
  <span x-text="importSubmitting ? 'Vérification...' : 'Vérifier le fichier'"></span>
  </button>
- <button type="button" x-show="importPreview" x-on:click="submitImport(false)" :disabled="importSubmitting" class="btn-modal-primary">
+ <button type="button" x-show="importPreview" x-on:click="submitImport(false)" :disabled="importSubmitting" class="btn-modal-primary group">
  <span x-text="importSubmitting ? 'Import en cours...' : 'Confirmer l\'import'"></span>
  </button>
  </div>
