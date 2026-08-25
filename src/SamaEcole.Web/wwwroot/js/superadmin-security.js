@@ -33,7 +33,7 @@ document.addEventListener('alpine:init', () => {
                     this.totalCount = this.entries.length;
                     this.isDemoData = true;
                 } else {
-                    this.error = err.message || 'Erreur lors du chargement du journal.';
+                    this.error = window.api.toMessage(err, 'Erreur lors du chargement du journal.');
                 }
             } finally {
                 this.isLoading = false;

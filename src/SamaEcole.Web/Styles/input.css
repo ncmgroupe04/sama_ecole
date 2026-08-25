@@ -133,9 +133,12 @@
     @apply mt-1 text-xs text-danger;
   }
 
-  /* Bandeau d'erreur en tête de formulaire ou de modale (échec d'enregistrement, erreur serveur). */
+  /* Bandeau d'erreur en tête de formulaire ou de modale (échec d'enregistrement, erreur serveur).
+     `leading-relaxed` : depuis que les messages du serveur EXPLIQUENT au lieu de constater (voir
+     UniqueConstraintCatalog et api.js `toMessage`), ce bandeau reçoit deux ou trois phrases et non
+     plus six mots. Un paragraphe en interligne serré, tout en rouge, se lit comme un bloc. */
   .form-error-banner {
-    @apply mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger;
+    @apply mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm leading-relaxed text-danger;
   }
 
   /* Case à cocher / bouton radio : mêmes bordure et halo que `input-field`, sans la hauteur ni la

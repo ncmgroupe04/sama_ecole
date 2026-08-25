@@ -100,7 +100,7 @@ document.addEventListener('alpine:init', () => {
                 this.students = page.items;
                 this.studentsLoaded = true;
             } catch (err) {
-                this.studentSearchError = err.message || 'Erreur lors de la recherche.';
+                this.studentSearchError = window.api.toMessage(err, 'Erreur lors de la recherche.');
             } finally {
                 this.isSearchingStudents = false;
             }
@@ -137,7 +137,7 @@ document.addEventListener('alpine:init', () => {
                 // erreur globale (le panneau dédié explique la marche à suivre).
                 this.balanceError = err.status === 404
                     ? 'Aucune inscription active.'
-                    : (err.message || 'Erreur lors du chargement du solde.');
+                    : (window.api.toMessage(err, 'Erreur lors du chargement du solde.'));
             } finally {
                 this.isLoadingBalance = false;
             }

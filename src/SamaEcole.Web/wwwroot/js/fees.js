@@ -133,7 +133,7 @@ document.addEventListener('alpine:init', () => {
 
                 await this.loadDisbursements();
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des frais.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des frais.');
             } finally {
                 this.isLoading = false;
             }
@@ -410,7 +410,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.historyEntries = await window.api.get(`/finance/fees/${row.fee.id}/history`);
             } catch (err) {
-                this.error = err.message || "Erreur lors du chargement de l'historique.";
+                this.error = window.api.toMessage(err, "Erreur lors du chargement de l'historique.");
                 this.historyFor = null;
             } finally {
                 this.isLoadingHistory = false;
@@ -429,7 +429,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.disbursements = await window.api.get('/finance/disbursements');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des décaissements.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des décaissements.');
             } finally {
                 this.isLoadingDisbursements = false;
             }
@@ -460,7 +460,7 @@ document.addEventListener('alpine:init', () => {
                 this.closeCreateDisbursement();
                 await this.loadDisbursements();
             } catch (err) {
-                this.createDisbursementError = err.message || 'Erreur lors de l\'enregistrement.';
+                this.createDisbursementError = window.api.toMessage(err, 'Erreur lors de l\'enregistrement.');
             } finally {
                 this.isSubmittingDisbursement = false;
             }
@@ -483,7 +483,7 @@ document.addEventListener('alpine:init', () => {
                 this.closeDeleteDisbursement();
                 await this.loadDisbursements();
             } catch (err) {
-                this.deleteDisbursementError = err.message || 'Erreur lors de l\'annulation.';
+                this.deleteDisbursementError = window.api.toMessage(err, 'Erreur lors de l\'annulation.');
             } finally {
                 this.isDeletingDisbursement = false;
             }

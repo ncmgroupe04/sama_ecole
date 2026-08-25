@@ -173,7 +173,7 @@ document.addEventListener('alpine:init', () => {
                 this.teachers = data.items || [];
                 this.totalCount = data.totalCount || 0;
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des enseignants.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des enseignants.');
             } finally {
                 this.isLoading = false;
             }
@@ -365,7 +365,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.detail = await window.api.get(`/teachers/${teacher.id}`);
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement de la fiche.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement de la fiche.');
             } finally {
                 this.detailLoading = false;
             }
@@ -528,7 +528,7 @@ document.addEventListener('alpine:init', () => {
                 this.detail = await window.api.get(`/teachers/${id}`);
                 this.assignSuccess = true; // formulaire déjà vide et prêt pour l'attribution suivante
             } catch (err) {
-                this.assignError = err.message || "Erreur lors de l'attribution.";
+                this.assignError = window.api.toMessage(err, "Erreur lors de l'attribution.");
             } finally {
                 this.assignSubmitting = false;
             }
@@ -558,7 +558,7 @@ document.addEventListener('alpine:init', () => {
                 this.detail = await window.api.get(`/teachers/${id}`);
                 this.closeDeleteAssignment();
             } catch (err) {
-                this.deleteAssignmentError = err.message || "Erreur lors de la suppression de l'affectation.";
+                this.deleteAssignmentError = window.api.toMessage(err, "Erreur lors de la suppression de l'affectation.");
             } finally {
                 this.isDeletingAssignment = false;
             }
@@ -590,7 +590,7 @@ document.addEventListener('alpine:init', () => {
                 try {
                     this.scheduleSlots = await window.api.get(`/schedules/teacher/${this.selectedScheduleTeacherId}`);
                 } catch (err) {
-                    this.error = err.message || 'Erreur lors du chargement de l\'emploi du temps de l\'enseignant.';
+                    this.error = window.api.toMessage(err, 'Erreur lors du chargement de l\'emploi du temps de l\'enseignant.');
                 } finally {
                     this.isLoadingSchedule = false;
                 }
@@ -600,7 +600,7 @@ document.addEventListener('alpine:init', () => {
                 try {
                     this.scheduleSlots = await window.api.get(`/schedules/classroom/${this.selectedScheduleClassroomId}`);
                 } catch (err) {
-                    this.error = err.message || 'Erreur lors du chargement de l\'emploi du temps de la classe.';
+                    this.error = window.api.toMessage(err, 'Erreur lors du chargement de l\'emploi du temps de la classe.');
                 } finally {
                     this.isLoadingSchedule = false;
                 }
@@ -633,7 +633,9 @@ document.addEventListener('alpine:init', () => {
                 this.closeCreateScheduleSlot();
                 await this.loadSchedule();
             } catch (err) {
-                this.createScheduleError = err.errors?.global?.[0] || err.message || 'Erreur lors de l\'enregistrement.';
+                // `err.errors` n'a jamais existé sur une erreur d'API : le format normalisé expose
+                // `details` (api.js, toError). Ce premier terme était donc toujours undefined.
+                this.createScheduleError = window.api.toMessage(err, 'Erreur lors de l\'enregistrement.');
             } finally {
                 this.isSubmittingSchedule = false;
             }
@@ -657,7 +659,7 @@ document.addEventListener('alpine:init', () => {
                 this.closeDeleteScheduleSlot();
                 await this.loadSchedule();
             } catch (err) {
-                this.deleteScheduleError = err.message || 'Erreur lors de la suppression du créneau.';
+                this.deleteScheduleError = window.api.toMessage(err, 'Erreur lors de la suppression du créneau.');
             } finally {
                 this.isDeletingSchedule = false;
             }

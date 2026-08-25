@@ -57,7 +57,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.users = await window.api.get('/users');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des utilisateurs.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des utilisateurs.');
             } finally {
                 this.isLoading = false;
             }
@@ -191,7 +191,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.historyEntries = await window.api.get(`/users/${user.id}/status-history`);
             } catch (err) {
-                this.error = err.message || "Erreur lors du chargement de l'historique.";
+                this.error = window.api.toMessage(err, "Erreur lors du chargement de l'historique.");
                 this.historyFor = null;
             } finally {
                 this.isLoadingHistory = false;

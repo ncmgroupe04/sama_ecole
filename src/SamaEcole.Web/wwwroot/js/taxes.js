@@ -77,7 +77,7 @@ document.addEventListener('alpine:init', () => {
                 if (this.periodYear) params.set('year', this.periodYear);
                 this.taxDeclarations = await api.get(`/finance/tax-declarations?${params.toString()}`);
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des déclarations fiscales.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des déclarations fiscales.');
             } finally {
                 this.isLoading = false;
             }
@@ -103,7 +103,7 @@ document.addEventListener('alpine:init', () => {
                 this.periodYear = Number(this.taxForm.year);
                 await this.loadTaxDeclarations();
             } catch (err) {
-                toast.error(err.message || 'Erreur lors de la génération de la déclaration.');
+                toast.error(window.api.toMessage(err, 'Erreur lors de la génération de la déclaration.'));
             } finally {
                 this.isGeneratingTax = false;
             }
@@ -134,7 +134,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (err) {
-                toast.error(err.message || "Erreur lors de la génération de l'état synthétique.");
+                toast.error(window.api.toMessage(err, "Erreur lors de la génération de l'état synthétique."));
             } finally {
                 this.downloadingPdfId = null;
             }

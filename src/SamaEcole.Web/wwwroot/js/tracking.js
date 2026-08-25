@@ -75,7 +75,7 @@ document.addEventListener('alpine:init', () => {
                 } else if (err.status === 429) {
                     this.error = 'Trop de vérifications depuis votre connexion. Réessayez dans quelques minutes.';
                 } else {
-                    this.error = err.message || 'Vérification impossible. Vérifiez votre réseau et réessayez.';
+                    this.error = window.api.toMessage(err, 'Vérification impossible. Vérifiez votre réseau et réessayez.');
                 }
             } finally {
                 this.isSubmitting = false;

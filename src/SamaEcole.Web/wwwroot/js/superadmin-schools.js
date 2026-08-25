@@ -33,7 +33,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.schools = await window.api.get('/schools');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des établissements.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des établissements.');
             } finally {
                 this.isLoading = false;
             }
@@ -94,7 +94,7 @@ document.addEventListener('alpine:init', () => {
                 window.auth.enterImpersonation(tokens);
                 window.location.assign('/tableau-de-bord');
             } catch (err) {
-                this.impersonateError = err.message || "Erreur lors de l'infiltration.";
+                this.impersonateError = window.api.toMessage(err, "Erreur lors de l'infiltration.");
                 this.isImpersonating = false;
             }
         },
@@ -134,7 +134,7 @@ document.addEventListener('alpine:init', () => {
                 this.closeStatusConfirm();
                 await this.load();
             } catch (err) {
-                this.statusError = err.message || 'Erreur lors du changement de statut.';
+                this.statusError = window.api.toMessage(err, 'Erreur lors du changement de statut.');
             } finally {
                 this.isChangingStatus = false;
             }

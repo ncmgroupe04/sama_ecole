@@ -2,6 +2,7 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Common;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Persistence.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -197,9 +198,16 @@ public class ApplicationDbContext(
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
         {
             // Traduit ici, et pas dans les Handlers : SamaEcole.Application ne doit pas connaître Npgsql.
-            // Une violation d'unicité est un conflit d'écriture concurrent -> 409, jamais un 500 ni un
-            // écrasement silencieux (AGENTS.md règle #5, docs/Volume_4_API_Design.md §0.4).
-            throw new ConcurrencyConflictException(pg.TableName ?? "inconnue", pg.ConstraintName ?? "contrainte d'unicité");
+            // Une violation d'unicité est un conflit d'écriture -> 409, jamais un 500 ni un doublon
+            // silencieux (AGENTS.md règle #5, docs/Volume_4_API_Design.md §0.4).
+            //
+            // Le message vient du catalogue et non des noms Npgsql : `pg.TableName` et
+            // `pg.ConstraintName` partaient jusqu'ici tels quels jusqu'à l'écran de l'utilisateur, qui
+            // lisait un nom de table et un nom d'index tronqué par PostgreSQL. Ces deux valeurs restent
+            // disponibles pour les journaux, via TechnicalDetail.
+            throw new DuplicateRecordException(
+                UniqueConstraintCatalog.Describe(pg.ConstraintName, pg.TableName),
+                $"{pg.TableName ?? "table inconnue"} / {pg.ConstraintName ?? "contrainte inconnue"}");
         }
     }
 

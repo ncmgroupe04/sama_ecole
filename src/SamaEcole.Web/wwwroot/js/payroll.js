@@ -92,7 +92,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.contracts = await api.get('/finance/employee-contracts');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des contrats.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des contrats.');
             } finally {
                 this.isLoading = false;
             }
@@ -145,7 +145,7 @@ document.addEventListener('alpine:init', () => {
                 this.isContractModalOpen = false;
                 await this.loadContracts();
             } catch (err) {
-                toast.error(err.message || "Erreur lors de l'enregistrement du contrat.");
+                toast.error(window.api.toMessage(err, "Erreur lors de l'enregistrement du contrat."));
             } finally {
                 this.isSavingContract = false;
             }
@@ -184,7 +184,7 @@ document.addEventListener('alpine:init', () => {
                 this.isEditContractModalOpen = false;
                 await this.loadContracts();
             } catch (err) {
-                toast.error(err.message || 'Erreur lors de la modification du contrat.');
+                toast.error(window.api.toMessage(err, 'Erreur lors de la modification du contrat.'));
             } finally {
                 this.isSavingEditContract = false;
             }
@@ -219,7 +219,7 @@ document.addEventListener('alpine:init', () => {
                 this.isCloseContractModalOpen = false;
                 await this.loadContracts();
             } catch (err) {
-                toast.error(err.message || 'Erreur lors de la clôture du contrat.');
+                toast.error(window.api.toMessage(err, 'Erreur lors de la clôture du contrat.'));
             } finally {
                 this.isClosingContract = false;
             }
@@ -236,7 +236,7 @@ document.addEventListener('alpine:init', () => {
                 if (this.filterYear) params.set('year', this.filterYear);
                 this.payslips = await api.get(`/finance/payroll?${params.toString()}`);
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des fiches de paie.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des fiches de paie.');
             } finally {
                 this.isLoading = false;
             }
@@ -273,7 +273,7 @@ document.addEventListener('alpine:init', () => {
                 this.isPayslipModalOpen = false;
                 await this.loadPayslips();
             } catch (err) {
-                toast.error(err.message || "Erreur lors de la génération de la fiche de paie.");
+                toast.error(window.api.toMessage(err, "Erreur lors de la génération de la fiche de paie."));
             } finally {
                 this.isGeneratingPayslip = false;
             }
@@ -304,7 +304,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (err) {
-                toast.error(err.message || 'Erreur lors de la génération du bulletin.');
+                toast.error(window.api.toMessage(err, 'Erreur lors de la génération du bulletin.'));
             } finally {
                 this.printingPayslipId = null;
             }
@@ -335,7 +335,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (err) {
-                toast.error(err.message || "Erreur lors de la génération de l'attestation.");
+                toast.error(window.api.toMessage(err, "Erreur lors de la génération de l'attestation."));
             } finally {
                 this.downloadingCertificateId = null;
             }
@@ -357,7 +357,7 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ month: this.hourRecordsFilter.month, year: this.hourRecordsFilter.year });
                 this.hourRecords = await api.get(`/finance/employee-contracts/${this.hourRecordsContract.id}/hour-records?${params.toString()}`);
             } catch (err) {
-                toast.error(err.message || 'Erreur lors du chargement des heures.');
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des heures.'));
             }
         },
 
@@ -378,7 +378,7 @@ document.addEventListener('alpine:init', () => {
                 this.hourRecordForm = { date: new Date().toISOString().split('T')[0], hours: '', note: '' };
                 await this.loadHourRecords();
             } catch (err) {
-                toast.error(err.message || "Erreur lors de l'enregistrement des heures.");
+                toast.error(window.api.toMessage(err, "Erreur lors de l'enregistrement des heures."));
             } finally {
                 this.isSavingHourRecord = false;
             }
@@ -407,7 +407,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (err) {
-                toast.error(err.message || 'Erreur lors de la génération de la fiche.');
+                toast.error(window.api.toMessage(err, 'Erreur lors de la génération de la fiche.'));
             } finally {
                 this.downloadingHourRecordSheet = false;
             }
@@ -423,7 +423,7 @@ document.addEventListener('alpine:init', () => {
                 if (this.filterTaxYear) params.set('year', this.filterTaxYear);
                 this.taxDeclarations = await api.get(`/finance/tax-declarations?${params.toString()}`);
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des déclarations fiscales.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des déclarations fiscales.');
             } finally {
                 this.isLoading = false;
             }
@@ -449,7 +449,7 @@ document.addEventListener('alpine:init', () => {
                 this.isTaxModalOpen = false;
                 await this.loadTaxDeclarations();
             } catch (err) {
-                toast.error(err.message || 'Erreur lors de la génération de la déclaration.');
+                toast.error(window.api.toMessage(err, 'Erreur lors de la génération de la déclaration.'));
             } finally {
                 this.isGeneratingTax = false;
             }

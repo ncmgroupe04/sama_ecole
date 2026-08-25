@@ -120,7 +120,7 @@ document.addEventListener('alpine:init', () => {
 
                     this.error = reasons.length
                         ? reasons.join(' ')
-                        : (err.message || 'Envoi impossible. Vérifiez votre réseau et réessayez.');
+                        : (window.api.toMessage(err, 'Envoi impossible. Vérifiez votre réseau et réessayez.'));
                 }
             } finally {
                 this.isSubmitting = false;

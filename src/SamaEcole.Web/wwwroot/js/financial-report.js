@@ -59,7 +59,7 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ from: this.from, to: this.to });
                 this.data = await window.api.get(`/finance/reports/revenue?${params.toString()}`);
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement du rapport financier.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement du rapport financier.');
                 this.data = null;
             } finally {
                 this.isLoading = false;
@@ -115,7 +115,7 @@ document.addEventListener('alpine:init', () => {
                 link.remove();
                 URL.revokeObjectURL(url);
             } catch (err) {
-                this.error = err.message || "Erreur lors de l'export du rapport financier.";
+                this.error = window.api.toMessage(err, "Erreur lors de l'export du rapport financier.");
             } finally {
                 this.exporting = false;
             }

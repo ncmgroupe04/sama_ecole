@@ -29,7 +29,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.subscriptions = await window.api.get('/admin/platform/subscriptions');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des abonnements.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des abonnements.');
             } finally {
                 this.isLoading = false;
             }
@@ -108,7 +108,7 @@ document.addEventListener('alpine:init', () => {
                 await window.api.post(`/admin/platform/subscriptions/${sub.schoolId}/remind`);
                 this.remindedSchoolIds[sub.schoolId] = true;
             } catch (err) {
-                this.remindError = err.message || "Erreur lors de l'envoi du rappel.";
+                this.remindError = window.api.toMessage(err, "Erreur lors de l'envoi du rappel.");
             } finally {
                 this.remindingSchoolId = null;
             }
@@ -135,7 +135,7 @@ document.addEventListener('alpine:init', () => {
                 this.grantAccessTarget = null;
                 await this.load();
             } catch (err) {
-                this.grantAccessError = err.message || "Erreur lors de l'attribution de l'accès.";
+                this.grantAccessError = window.api.toMessage(err, "Erreur lors de l'attribution de l'accès.");
             } finally {
                 this.isGranting = false;
             }

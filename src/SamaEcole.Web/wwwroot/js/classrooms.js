@@ -210,7 +210,7 @@ document.addEventListener('alpine:init', () => {
                 // Assume the response is either an array or has an items property
                 this.classrooms = Array.isArray(data) ? data : (data.items || []);
             } catch (err) {
-                this.error = err.message || "Erreur lors du chargement des classes.";
+                this.error = window.api.toMessage(err, "Erreur lors du chargement des classes.");
             } finally {
                 this.isLoading = false;
             }

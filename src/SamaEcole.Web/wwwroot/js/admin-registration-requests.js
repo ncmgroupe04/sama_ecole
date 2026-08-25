@@ -46,7 +46,7 @@ document.addEventListener('alpine:init', () => {
                 const query = this.statusFilter === 'All' ? '' : `?status=${this.statusFilter}`;
                 this.requests = await window.api.get(`/admin/registration-requests${query}`);
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des demandes.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des demandes.');
             } finally {
                 this.isLoading = false;
             }
@@ -111,7 +111,7 @@ document.addEventListener('alpine:init', () => {
                 await this.load();
                 this.approvedResult = { schoolName, directorFullName }; // confirmation « Demande approuvée »
             } catch (err) {
-                this.approveError = err.message || "Erreur lors de l'approbation.";
+                this.approveError = window.api.toMessage(err, "Erreur lors de l'approbation.");
             } finally {
                 this.isApproving = false;
             }

@@ -82,7 +82,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.buildings = await window.api.get('/buildings');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des bâtiments.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des bâtiments.');
             } finally {
                 this.isLoading = false;
             }

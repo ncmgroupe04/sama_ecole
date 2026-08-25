@@ -145,7 +145,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.subjects = await window.api.get('/subjects');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des matières.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des matières.');
             } finally {
                 this.isLoading = false;
             }

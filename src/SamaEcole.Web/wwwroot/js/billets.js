@@ -68,7 +68,7 @@ document.addEventListener('alpine:init', () => {
                 this.lateArrivals = await api.get('/absences/late-arrivals');
             } catch (error) {
                 console.error('Late arrivals fetch error:', error);
-                toast.error(error.message || 'Erreur lors du chargement des retards.');
+                toast.error(window.api.toMessage(error, 'Erreur lors du chargement des retards.'));
             } finally {
                 this.isLoading = false;
             }
@@ -151,7 +151,7 @@ document.addEventListener('alpine:init', () => {
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (error) {
                 console.error('Billet print error:', error);
-                toast.error(error.message || "Erreur lors de la génération du billet.");
+                toast.error(window.api.toMessage(error, "Erreur lors de la génération du billet."));
             } finally {
                 this.printingId = null;
             }
@@ -176,7 +176,7 @@ document.addEventListener('alpine:init', () => {
                 this.earlyDepartures = await api.get('/absences/early-departures');
             } catch (error) {
                 console.error('Early departures fetch error:', error);
-                toast.error(error.message || 'Erreur lors du chargement des sorties.');
+                toast.error(window.api.toMessage(error, 'Erreur lors du chargement des sorties.'));
             } finally {
                 this.isLoadingExits = false;
             }
@@ -244,7 +244,7 @@ document.addEventListener('alpine:init', () => {
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (error) {
                 console.error('Exit billet print error:', error);
-                toast.error(error.message || "Erreur lors de la génération du billet.");
+                toast.error(window.api.toMessage(error, "Erreur lors de la génération du billet."));
             } finally {
                 this.printingExitId = null;
             }

@@ -35,7 +35,7 @@ document.addEventListener('alpine:init', () => {
                 this.subscriptionPlan = data.subscriptionPlan;
                 this.subscriptionExpiresAt = data.subscriptionExpiresAt;
             } catch (err) {
-                this.error = err.message || "Erreur lors du chargement de l'historique des paiements.";
+                this.error = window.api.toMessage(err, "Erreur lors du chargement de l'historique des paiements.");
             } finally {
                 this.isLoading = false;
             }

@@ -185,7 +185,7 @@ document.addEventListener('alpine:init', () => {
                 this.boysCount = data.boysCount || 0;
                 this.newEnrollmentsCount = data.newEnrollmentsCount || 0;
             } catch (err) {
-                this.error = err.message || "Erreur lors du chargement des élèves.";
+                this.error = window.api.toMessage(err, "Erreur lors du chargement des élèves.");
             } finally {
                 this.isLoading = false;
             }
@@ -244,7 +244,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.studentDetail = await window.api.get(`/students/${student.id}`);
             } catch (err) {
-                this.detailError = err.message || "Impossible de charger la fiche complète de l'élève.";
+                this.detailError = window.api.toMessage(err, "Impossible de charger la fiche complète de l'élève.");
             } finally {
                 this.isLoadingDetails = false;
             }
@@ -300,7 +300,7 @@ document.addEventListener('alpine:init', () => {
                 link.remove();
                 URL.revokeObjectURL(url);
             } catch (err) {
-                this.reportCardError = err.message || 'Téléchargement du bulletin impossible.';
+                this.reportCardError = window.api.toMessage(err, 'Téléchargement du bulletin impossible.');
             } finally {
                 this.downloadingTermId = null;
             }
@@ -334,7 +334,7 @@ document.addEventListener('alpine:init', () => {
                 alert('Bulletin envoyé avec succès.');
 
             } catch (err) {
-                this.reportCardError = err.message || 'Envoi du bulletin impossible.';
+                this.reportCardError = window.api.toMessage(err, 'Envoi du bulletin impossible.');
                 alert(this.reportCardError);
             } finally {
                 this.sendingTermId = null;
@@ -355,7 +355,7 @@ document.addEventListener('alpine:init', () => {
                     observations: remark.observations || ''
                 };
             } catch (err) {
-                this.reportCardRemarkErrors = { global: err.message || 'Impossible de charger les observations du conseil.' };
+                this.reportCardRemarkErrors = { global: window.api.toMessage(err, 'Impossible de charger les observations du conseil.') };
             }
         },
 

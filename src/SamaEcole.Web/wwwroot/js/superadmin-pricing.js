@@ -23,7 +23,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.promoCodes = await window.api.get('/admin/promo-codes');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des codes promo.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des codes promo.');
             } finally {
                 this.isLoading = false;
             }
@@ -124,7 +124,7 @@ document.addEventListener('alpine:init', () => {
                 await window.api.post(`/admin/promo-codes/${code.id}/deactivate`);
                 code.isActive = false;
             } catch (err) {
-                this.error = err.message || 'Erreur lors de la désactivation.';
+                this.error = window.api.toMessage(err, 'Erreur lors de la désactivation.');
             } finally {
                 this.deactivatingId = null;
             }

@@ -50,7 +50,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.analyticsData = await window.api.get('/reports/dashboard');
             } catch (err) {
-                this.analyticsError = err.message || 'Erreur lors du chargement analytique.';
+                this.analyticsError = window.api.toMessage(err, 'Erreur lors du chargement analytique.');
             } finally {
                 this.isAnalyticsLoading = false;
             }
@@ -63,7 +63,7 @@ document.addEventListener('alpine:init', () => {
                 // Fictive endpoint for now, or real endpoint once implemented
                 this.surveillantData = await window.api.get('/reports/surveillant-dashboard');
             } catch (err) {
-                this.surveillantError = err.message || 'Erreur lors du chargement des données surveillant.';
+                this.surveillantError = window.api.toMessage(err, 'Erreur lors du chargement des données surveillant.');
                 // Mock data for demo purposes since endpoint might not exist yet
                 this.surveillantData = {
                     totalAbsentsToday: 12,
@@ -82,7 +82,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.financeData = await window.api.get('/finance/dashboard');
             } catch (err) {
-                this.financeError = err.message || 'Erreur lors du chargement financier.';
+                this.financeError = window.api.toMessage(err, 'Erreur lors du chargement financier.');
             } finally {
                 this.isFinanceLoading = false;
             }
@@ -274,7 +274,7 @@ document.addEventListener('alpine:init', () => {
                 setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
             } catch (err) {
                 console.error("Erreur downloadDailyCashRegisterPdf:", err);
-                alert(err.message || "Une erreur est survenue lors du téléchargement du journal de caisse.");
+                alert(window.api.toMessage(err, "Une erreur est survenue lors du téléchargement du journal de caisse."));
             }
         }
     }));

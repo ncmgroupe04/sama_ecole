@@ -37,7 +37,7 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ startDate: this.startDate, endDate: this.endDate });
                 this.data = await window.api.get(`/finance/treasury?${params.toString()}`);
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement de la trésorerie.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement de la trésorerie.');
                 this.data = null;
             } finally {
                 this.isLoading = false;

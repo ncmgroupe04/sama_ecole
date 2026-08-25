@@ -193,7 +193,7 @@ document.addEventListener('alpine:init', () => {
                     typeEtablissement: config.typeEtablissement || 'Prive'
                 };
             } catch (err) {
-                this.loadError = err.message || 'Erreur lors du chargement des paramètres.';
+                this.loadError = window.api.toMessage(err, 'Erreur lors du chargement des paramètres.');
             } finally {
                 this.isLoading = false;
             }
@@ -266,7 +266,7 @@ document.addEventListener('alpine:init', () => {
                     this.profile.logoUrl = data.url;
                 }
             } catch (err) {
-                this.logoUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+                this.logoUploadError = window.api.toMessage(err, 'Erreur lors de l\'envoi du fichier.');
             } finally {
                 this.isUploadingLogo = false;
                 event.target.value = '';
@@ -301,7 +301,7 @@ document.addEventListener('alpine:init', () => {
                     this.config.directorSignatureUrl = data.url;
                 }
             } catch (err) {
-                this.directorSignatureUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+                this.directorSignatureUploadError = window.api.toMessage(err, 'Erreur lors de l\'envoi du fichier.');
             } finally {
                 this.isUploadingDirectorSignature = false;
                 event.target.value = '';
@@ -336,7 +336,7 @@ document.addEventListener('alpine:init', () => {
                     this.config.secretarySignatureUrl = data.url;
                 }
             } catch (err) {
-                this.secretarySignatureUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+                this.secretarySignatureUploadError = window.api.toMessage(err, 'Erreur lors de l\'envoi du fichier.');
             } finally {
                 this.isUploadingSecretarySignature = false;
                 event.target.value = '';
@@ -371,7 +371,7 @@ document.addEventListener('alpine:init', () => {
                     this.config.cashierSignatureUrl = data.url;
                 }
             } catch (err) {
-                this.cashierSignatureUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+                this.cashierSignatureUploadError = window.api.toMessage(err, 'Erreur lors de l\'envoi du fichier.');
             } finally {
                 this.isUploadingCashierSignature = false;
                 event.target.value = '';
@@ -406,7 +406,7 @@ document.addEventListener('alpine:init', () => {
                     this.config.officialStampUrl = data.url;
                 }
             } catch (err) {
-                this.officialStampUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+                this.officialStampUploadError = window.api.toMessage(err, 'Erreur lors de l\'envoi du fichier.');
             } finally {
                 this.isUploadingOfficialStamp = false;
                 event.target.value = '';
@@ -441,7 +441,7 @@ document.addEventListener('alpine:init', () => {
                     this.config.surveillantSignatureUrl = data.url;
                 }
             } catch (err) {
-                this.surveillantSignatureUploadError = err.message || 'Erreur lors de l\'envoi du fichier.';
+                this.surveillantSignatureUploadError = window.api.toMessage(err, 'Erreur lors de l\'envoi du fichier.');
             } finally {
                 this.isUploadingSurveillantSignature = false;
                 event.target.value = '';
@@ -592,7 +592,7 @@ document.addEventListener('alpine:init', () => {
                 this.deletingMention = null;
                 this.mentions = await window.api.get('/grades/mentions');
             } catch (err) {
-                this.deleteMentionError = err.message || 'Erreur lors de la suppression de la mention.';
+                this.deleteMentionError = window.api.toMessage(err, 'Erreur lors de la suppression de la mention.');
             } finally {
                 this.isDeletingMention = false;
             }
@@ -630,7 +630,7 @@ document.addEventListener('alpine:init', () => {
                 this.resetConfirmation = '';
                 this.resetSummary = summary;
             } catch (err) {
-                this.resetError = err.message || "La réinitialisation a échoué. Aucune donnée n'a été effacée.";
+                this.resetError = window.api.toMessage(err, "La réinitialisation a échoué. Aucune donnée n'a été effacée.");
             } finally {
                 this.isResetting = false;
             }

@@ -34,6 +34,16 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 "Une ou plusieurs erreurs de validation se sont produites.",
                 validationEx.Errors),
 
+            // Doublon refusé par la base : la ligne existe déjà. Doit précéder le cas
+            // ConcurrencyConflictException ci-dessous — dont il hérite — sinon il ne serait jamais
+            // atteint, et l'utilisateur relirait « modifié par une autre personne » alors que
+            // personne n'a rien modifié. Code distinct pour que le client puisse les différencier.
+            DuplicateRecordException duplicateEx => (
+                HttpStatusCode.Conflict,
+                "DUPLICATE_RECORD",
+                duplicateEx.Message,
+                null),
+
             ConcurrencyConflictException concurrencyEx => (
                 HttpStatusCode.Conflict,
                 "CONCURRENCY_CONFLICT",
@@ -106,6 +116,18 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         if (statusCode == HttpStatusCode.InternalServerError)
         {
             logger.LogError(exception, "Erreur non gérée. TraceId: {TraceId}", traceId);
+        }
+
+        // Le conflit d'écriture est le seul cas où le message envoyé au client a été volontairement
+        // DÉPOUILLÉ de sa cause technique (table, contrainte). Sans cette trace, plus personne côté
+        // serveur ne saurait quelle contrainte a réellement cédé, et le catalogue de messages
+        // deviendrait impossible à compléter — d'où ce journal, corrélé par le même TraceId que la
+        // réponse renvoyée à l'utilisateur.
+        if (exception is ConcurrencyConflictException conflict)
+        {
+            logger.LogWarning(
+                "Conflit d'écriture ({Code}) sur {TechnicalDetail}. TraceId: {TraceId}",
+                code, conflict.TechnicalDetail, traceId);
         }
 
         context.Response.ContentType = "application/json";

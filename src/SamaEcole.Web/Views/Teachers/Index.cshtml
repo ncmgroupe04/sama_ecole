@@ -230,8 +230,29 @@
  <!-- Attribution d'une classe/matière (année active) — Directeur/Secrétariat -->
  <div class="mt-6 bg-slate-50 rounded-2xl p-6 sm:p-5" x-show="canManage" x-cloak>
  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Attribuer une classe / matière (année active)</p>
- <div x-show="assignError" x-cloak class="mb-3 rounded-xl border-l-4 border-danger bg-danger-bg p-2.5 text-sm text-danger" x-text="assignError"></div>
- <div x-show="assignSuccess" x-cloak class="mb-3 rounded-xl border-l-4 border-success bg-success-bg p-2.5 text-sm text-success">Affectation enregistrée.</div>
+ @* Bandeau d'explication, et non d'alarme. Le message qui arrive ici fait deux ou trois phrases
+ (voir UniqueConstraintCatalog et AssignTeacherCommandHandler) : il dit ce qui s'est passé,
+ pourquoi c'est refusé et quoi faire. L'ancien gabarit — une ligne serrée en p-2.5, sans titre
+ ni repère visuel — était calibré pour six mots ; un paragraphe s'y écrasait en un bloc rouge
+ illisible. Icône et intertitre donnent le point d'entrée, `leading-relaxed` rend le paragraphe
+ lisible, et le rouge reste cantonné aux accents plutôt que d'inonder le bloc. *@
+ <div x-show="assignError" x-cloak role="alert"
+ class="mb-3 flex items-start gap-3 rounded-xl border border-rose-200/70 bg-rose-50/70 p-4">
+ <span class="icon-chip-sm icon-chip-rose mt-0.5">
+ <icon name="alert-circle" class="w-4 h-4" />
+ </span>
+ <div class="min-w-0">
+ <p class="text-sm font-semibold text-rose-900">Affectation impossible</p>
+ <p class="mt-1 text-sm leading-relaxed text-rose-800" x-text="assignError"></p>
+ </div>
+ </div>
+ <div x-show="assignSuccess" x-cloak role="status"
+ class="mb-3 flex items-center gap-3 rounded-xl border border-emerald-200/70 bg-emerald-50/70 p-4">
+ <span class="icon-chip-sm icon-chip-emerald">
+ <icon name="checkmark-circle" class="w-4 h-4" />
+ </span>
+ <p class="text-sm font-medium text-emerald-900">Affectation enregistrée.</p>
+ </div>
  <form x-on:submit.prevent="submitAssign()" novalidate class="flex flex-col sm:flex-row sm:items-end gap-3">
  <div class="flex-1">
  <label class="form-label-sm">Classe</label>

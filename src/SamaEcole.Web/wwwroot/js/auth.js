@@ -317,7 +317,7 @@ document.addEventListener('alpine:init', () => {
                 // Le serveur renvoie le MÊME message pour un e-mail inconnu, un mot de passe faux et
                 // un compte verrouillé (LoginCommandHandler) : ne rien ajouter ici qui permettrait de
                 // distinguer les cas, sous peine de rouvrir l'énumération de comptes qu'il évite.
-                this.error = err.message || 'Connexion impossible. Vérifiez votre réseau et réessayez.';
+                this.error = window.api.toMessage(err, 'Connexion impossible. Vérifiez votre réseau et réessayez.');
                 this.password = '';
             } finally {
                 this.isSubmitting = false;

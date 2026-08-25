@@ -37,7 +37,7 @@ document.addEventListener('alpine:init', () => {
                 this.schools = data.items || [];
                 this.totalCount = data.totalCount || 0;
             } catch (err) {
-                this.error = err.message || "Impossible de charger l'annuaire des établissements.";
+                this.error = window.api.toMessage(err, "Impossible de charger l'annuaire des établissements.");
                 this.schools = [];
                 this.totalCount = 0;
             } finally {

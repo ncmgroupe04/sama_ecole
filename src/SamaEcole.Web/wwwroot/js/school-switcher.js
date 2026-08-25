@@ -50,7 +50,7 @@ document.addEventListener('alpine:init', () => {
                 window.auth.saveSession(tokens);
                 window.location.reload();
             } catch (err) {
-                this.error = err.message || "Bascule impossible vers cet établissement.";
+                this.error = window.api.toMessage(err, "Bascule impossible vers cet établissement.");
                 this.isSwitching = false;
             }
         }

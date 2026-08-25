@@ -35,7 +35,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.contracts = await api.get('/finance/employee-contracts');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des contrats.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des contrats.');
             } finally {
                 this.isLoading = false;
             }
@@ -51,7 +51,7 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ month: this.filter.month, year: this.filter.year });
                 this.hourRecords = await api.get(`/finance/employee-contracts/${this.selectedContractId}/hour-records?${params.toString()}`);
             } catch (err) {
-                toast.error(err.message || 'Erreur lors du chargement des heures.');
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des heures.'));
             } finally {
                 this.isLoading = false;
             }
@@ -74,7 +74,7 @@ document.addEventListener('alpine:init', () => {
                 this.hourRecordForm = { date: new Date().toISOString().split('T')[0], hours: '', note: '' };
                 await this.loadHourRecords();
             } catch (err) {
-                toast.error(err.message || "Erreur lors de l'enregistrement des heures.");
+                toast.error(window.api.toMessage(err, "Erreur lors de l'enregistrement des heures."));
             } finally {
                 this.isSavingHourRecord = false;
             }
@@ -103,7 +103,7 @@ document.addEventListener('alpine:init', () => {
                 }
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (err) {
-                toast.error(err.message || 'Erreur lors de la génération de la fiche.');
+                toast.error(window.api.toMessage(err, 'Erreur lors de la génération de la fiche.'));
             } finally {
                 this.downloadingSheet = false;
             }

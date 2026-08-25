@@ -47,7 +47,7 @@ document.addEventListener('alpine:init', () => {
                 // 403 FEATURE_NOT_IN_PLAN : l'école n'a pas l'option. Le bandeau d'incitation est
                 // déjà affiché par featureGate — inutile d'empiler un second message d'erreur.
                 if (err.code !== 'FEATURE_NOT_IN_PLAN') {
-                    this.saveError = err.message || "Chargement des notifications SMS impossible.";
+                    this.saveError = window.api.toMessage(err, "Chargement des notifications SMS impossible.");
                 }
             } finally {
                 this.isLoading = false;
@@ -74,7 +74,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.saveSuccess = true;
             } catch (err) {
-                this.saveError = err.message || "Enregistrement impossible.";
+                this.saveError = window.api.toMessage(err, "Enregistrement impossible.");
             } finally {
                 this.isSaving = false;
             }

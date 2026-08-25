@@ -37,7 +37,7 @@ document.addEventListener('alpine:init', () => {
                 this.records = await api.get('/parent-summons');
             } catch (error) {
                 console.error('Parent summons fetch error:', error);
-                toast.error(error.message || 'Erreur lors du chargement des convocations.');
+                toast.error(window.api.toMessage(error, 'Erreur lors du chargement des convocations.'));
             } finally {
                 this.isLoading = false;
             }
@@ -112,7 +112,7 @@ document.addEventListener('alpine:init', () => {
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (error) {
                 console.error('Parent notice print error:', error);
-                toast.error(error.message || 'Erreur lors de la génération de la convocation.');
+                toast.error(window.api.toMessage(error, 'Erreur lors de la génération de la convocation.'));
             } finally {
                 this.printingId = null;
             }

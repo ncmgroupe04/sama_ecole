@@ -206,6 +206,34 @@ window.api = {
         return { global: (error && error.message) || fallbackMessage };
     },
 
+    /**
+     * Traduit une erreur d'API en UNE phrase à afficher dans un bandeau.
+     *
+     * À utiliser partout où un écran montre un bandeau unique plutôt que des erreurs sous les champs.
+     * `error.message` seul ne suffit pas : sur un 422, le format normalisé
+     * (docs/Volume_4_API_Design.md §0.4) place dans `message` la phrase de service « Une ou plusieurs
+     * erreurs de validation se sont produites. » et garde l'explication RÉELLE dans `details`. Les
+     * écrans qui affichaient `err.message` montraient donc la phrase de service et jetaient
+     * l'explication — l'utilisateur apprenait qu'il y avait une erreur, jamais laquelle.
+     *
+     * Les détails sont joints par un espace : un même champ peut porter plusieurs reproches, et les
+     * cacher tous sauf un obligerait l'utilisateur à corriger en plusieurs allers-retours.
+     */
+    toMessage(error, fallbackMessage) {
+        const details = error && error.details;
+
+        if (details && typeof details === 'object' && !Array.isArray(details)) {
+            const phrases = Object.values(details)
+                .flatMap(v => (Array.isArray(v) ? v : [v]))
+                .map(v => String(v).trim())
+                .filter(Boolean);
+
+            if (phrases.length > 0) return phrases.join(' ');
+        }
+
+        return (error && error.message) || fallbackMessage;
+    },
+
     /** Format d'erreur normalisé (docs/Volume_4_API_Design.md §0.4), ou corps vide pour un 401 du middleware JWT. */
     async toError(response) {
         const payload = await response.json().catch(() => null);

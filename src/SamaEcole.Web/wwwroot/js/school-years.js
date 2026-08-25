@@ -63,7 +63,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.years = await window.api.get('/school-years');
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des années scolaires.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des années scolaires.');
             } finally {
                 this.isLoading = false;
             }

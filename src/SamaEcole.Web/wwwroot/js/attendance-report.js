@@ -62,7 +62,7 @@ document.addEventListener('alpine:init', () => {
                 this.data = await window.api.get(`/reports/attendance?${params.toString()}`);
                 this.totalCount = this.data.totalCount || 0;
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement du rapport.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement du rapport.');
                 this.data = null;
                 this.totalCount = 0;
             } finally {
@@ -127,7 +127,7 @@ document.addEventListener('alpine:init', () => {
                 link.remove();
                 URL.revokeObjectURL(url);
             } catch (err) {
-                this.error = err.message || "Erreur lors de l'export du rapport.";
+                this.error = window.api.toMessage(err, "Erreur lors de l'export du rapport.");
             } finally {
                 this.exporting = false;
             }

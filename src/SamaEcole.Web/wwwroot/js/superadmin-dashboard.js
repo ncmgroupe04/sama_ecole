@@ -36,7 +36,7 @@ document.addEventListener('alpine:init', () => {
                     this.projection = demoProjectionData();
                     this.isDemoData = true;
                 } else {
-                    this.error = err.message || 'Erreur lors du chargement du tableau de bord.';
+                    this.error = window.api.toMessage(err, 'Erreur lors du chargement du tableau de bord.');
                 }
             } finally {
                 this.isLoading = false;

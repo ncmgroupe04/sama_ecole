@@ -14,7 +14,19 @@ public class TeacherAssignmentConfiguration : IEntityTypeConfiguration<TeacherAs
         builder.Property(a => a.SchoolId).IsRequired();
 
         // Un même enseignant ne peut pas être attribué deux fois à la même classe/matière/année.
-        builder.HasIndex(a => new { a.TeacherId, a.ClassroomId, a.SubjectId, a.SchoolYearId }).IsUnique();
+        //
+        // Index PARTIEL (« NOT IsDeleted »), et c'est indispensable : le retrait d'une attribution est
+        // une suppression LOGIQUE (AGENTS.md règle #6), la ligne reste donc en base. Sans ce filtre,
+        // PostgreSQL continue de compter la ligne retirée — la place reste occupée par une attribution
+        // que l'utilisateur croit avoir supprimée, et l'établissement ne peut PLUS JAMAIS rendre cette
+        // matière à cet enseignant dans cette classe pour l'année en cours. Aucun écran ne permet de
+        // sortir de cette impasse.
+        //
+        // Même convention que EnrollmentConfiguration et SchoolConfiguration : sur une table à soft
+        // delete, un index unique est toujours partiel.
+        builder.HasIndex(a => new { a.TeacherId, a.ClassroomId, a.SubjectId, a.SchoolYearId })
+            .IsUnique()
+            .HasFilter("NOT \"IsDeleted\"");
         builder.HasIndex(a => a.SchoolId);
 
         builder.HasOne<School>()

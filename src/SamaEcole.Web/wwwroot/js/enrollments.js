@@ -127,7 +127,7 @@ document.addEventListener('alpine:init', () => {
                     });
                 });
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des données d\'inscription.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des données d\'inscription.');
             } finally {
                 this.isLoading = false;
             }
@@ -229,7 +229,7 @@ document.addEventListener('alpine:init', () => {
                 this.students = page.items;
                 this.studentsLoaded = true;
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement des élèves.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement des élèves.');
             }
         },
 

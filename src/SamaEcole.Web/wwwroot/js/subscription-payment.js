@@ -32,12 +32,12 @@ document.addEventListener('alpine:init', () => {
                 });
 
                 if (!result.isValid) {
-                    this.promoError = result.message || 'Ce code promo est invalide.';
+                    this.promoError = window.api.toMessage(result, 'Ce code promo est invalide.');
                 } else {
                     this.promoResult = result;
                 }
             } catch (err) {
-                this.promoError = err.message || 'Vérification du code promo impossible.';
+                this.promoError = window.api.toMessage(err, 'Vérification du code promo impossible.');
             } finally {
                 this.isCheckingPromo = false;
             }
@@ -72,7 +72,7 @@ document.addEventListener('alpine:init', () => {
                 // Quitte l'application : le guichet PayDunya est hébergé par l'agrégateur, pas par nous.
                 window.location.assign(result.redirectUrl);
             } catch (err) {
-                this.error = err.message || "Initiation du paiement impossible. Vérifiez votre réseau et réessayez.";
+                this.error = window.api.toMessage(err, "Initiation du paiement impossible. Vérifiez votre réseau et réessayez.");
                 this.isSubmitting = false;
             }
             // Pas de `finally` sur isSubmitting : en cas de succès, la page quitte de toute façon vers

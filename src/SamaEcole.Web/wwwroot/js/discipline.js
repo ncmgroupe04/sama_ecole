@@ -41,7 +41,7 @@ document.addEventListener('alpine:init', () => {
                 this.records = await api.get('/discipline');
             } catch (error) {
                 console.error("Discipline fetch error:", error);
-                toast.error(error.message || "Erreur lors du chargement des sanctions.");
+                toast.error(window.api.toMessage(error, "Erreur lors du chargement des sanctions."));
             } finally {
                 this.isLoading = false;
             }
@@ -134,7 +134,7 @@ document.addEventListener('alpine:init', () => {
                 setTimeout(() => URL.revokeObjectURL(url), 60000);
             } catch (error) {
                 console.error('PV discipline print error:', error);
-                toast.error(error.message || "Erreur lors de la génération du PV.");
+                toast.error(window.api.toMessage(error, "Erreur lors de la génération du PV."));
             } finally {
                 this.printingId = null;
             }

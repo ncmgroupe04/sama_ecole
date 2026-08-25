@@ -114,7 +114,7 @@ document.addEventListener('alpine:init', () => {
                 this.rosterLoaded = true;
             } catch (err) {
                 // 403 (enseignant non assigné), 422 (classe/matière/année invalide)… : on affiche le message serveur.
-                this.error = err.message || "Erreur lors du chargement de l'appel.";
+                this.error = window.api.toMessage(err, "Erreur lors du chargement de l'appel.");
             } finally {
                 this.isLoading = false;
             }
@@ -151,7 +151,7 @@ document.addEventListener('alpine:init', () => {
                 this.alreadySubmitted = true;
             } catch (err) {
                 // 409 : appel déjà enregistré pour ce créneau ; 403 : non assigné ; 422 : saisie invalide.
-                this.submitError = err.message || "Erreur lors de l'enregistrement de l'appel.";
+                this.submitError = window.api.toMessage(err, "Erreur lors de l'enregistrement de l'appel.");
             } finally {
                 this.submitting = false;
             }

@@ -34,7 +34,7 @@ document.addEventListener('alpine:init', () => {
                 this.entries = data.items || [];
                 this.totalCount = data.totalCount || 0;
             } catch (err) {
-                this.error = err.message || 'Erreur lors du chargement du journal.';
+                this.error = window.api.toMessage(err, 'Erreur lors du chargement du journal.');
             } finally {
                 this.isLoading = false;
             }
