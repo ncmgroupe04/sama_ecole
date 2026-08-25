@@ -123,7 +123,7 @@ public class DateFieldTagHelper : TagHelper
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-7 text-center text-xs font-medium text-gray-400 mb-1">
+                    <div class="grid grid-cols-7 text-center text-xs font-semibold text-gray-400 mb-1">
                         <template x-for="wd in weekdayLabels" :key="wd">
                             <span x-text="wd"></span>
                         </template>
@@ -139,7 +139,7 @@ public class DateFieldTagHelper : TagHelper
                                         'bg-primary-600 text-white font-semibold hover:bg-primary-600': {{Model}} === day.iso,
                                         'ring-1 ring-inset ring-primary-600': isToday(day.iso) && {{Model}} !== day.iso
                                     }"
-                                    class="mx-auto flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
+                                    class="mx-auto flex h-9 w-9 items-center justify-center rounded-lg font-semibold transition-colors"
                                     x-text="day.label"></button>
                         </template>
                     </div>
