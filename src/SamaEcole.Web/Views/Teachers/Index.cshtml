@@ -144,27 +144,35 @@
  </div>
 
  <!-- Fiche enseignant : infos + matières + affectations (historique) + attribution (Directeur/Secrétariat) -->
- <modal-shell open="detail" on-close="closeDetail()" title="Fiche enseignant">
+ <modal-shell open="detail" on-close="closeDetail()" title="Fiche enseignant" size="wide">
  <template x-if="detail">
  <div>
- <div class="flex items-center gap-4 pb-5 border-b border-slate-100">
+ <div class="flex items-center gap-5 pb-6 border-b border-slate-100">
  <img x-show="detail.photoDisplayUrl" :src="detail.photoDisplayUrl" alt=""
- class="w-14 h-14 rounded-full object-cover flex-shrink-0" x-cloak>
- <div x-show="!detail.photoDisplayUrl" class="w-14 h-14 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-base flex-shrink-0" x-text="initials(detail.fullName)"></div>
+ class="w-16 h-16 rounded-full ring-4 ring-indigo-50 shadow-md object-cover flex-shrink-0" x-cloak>
+ <div x-show="!detail.photoDisplayUrl" class="w-16 h-16 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-md ring-4 ring-indigo-50" x-text="initials(detail.fullName)"></div>
  <div>
- <p class="text-xl font-bold text-slate-900" x-text="detail.fullName"></p>
- <p class="text-sm text-slate-500 font-mono" x-text="detail.matricule"></p>
+ <p class="text-2xl font-bold text-slate-900" x-text="detail.fullName"></p>
+ <div class="flex items-center gap-2 mt-1.5">
+ <span class="bg-indigo-50 text-indigo-700 font-medium px-2.5 py-0.5 text-xs rounded-full font-mono" x-text="detail.matricule"></span>
+ <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold" :class="statusClass(detail.status)" x-text="statusLabel(detail.status)"></span>
+ </div>
  </div>
  </div>
 
- <dl class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-5">
+ <dl class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-6">
  <div>
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">E-mail</dt>
  <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.email"></dd>
  </div>
  <div>
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Téléphone</dt>
- <dd class="mt-1 text-base font-medium text-slate-900" x-text="$phone(detail.phone)"></dd>
+ <dd class="mt-1 flex items-center gap-2">
+ <span class="text-base font-bold text-slate-900 font-mono" x-text="$phone(detail.phone)"></span>
+ <a x-show="detail.phone" :href="'tel:' + detail.phone" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 p-1.5 rounded-lg transition-all" title="Appeler">
+ <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+ </a>
+ </dd>
  </div>
  <div>
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date de naissance</dt>
@@ -174,16 +182,9 @@
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Lieu de naissance</dt>
  <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.birthPlace || '—'"></dd>
  </div>
- <div>
+ <div class="sm:col-span-2 lg:col-span-4">
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Adresse de résidence</dt>
  <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.address || '—'"></dd>
- </div>
- <div>
- <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Statut</dt>
- <dd class="mt-1.5">
- <span class="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-bold"
- :class="statusClass(detail.status)" x-text="statusLabel(detail.status)"></span>
- </dd>
  </div>
  </dl>
 
