@@ -29,7 +29,12 @@ public record RecordPaymentCommand(
     decimal? VatRate = null)
     : IRequest<RecordPaymentResult>, IAuditableRequest;
 
-public record PaymentBreakdownDto(Guid FeeCategoryId, decimal AmountAllocated);
+/// <summary>
+/// Une ligne d'imputation du versement. <paramref name="Label"/> est le libellé facultatif de la colonne
+/// « Période / Note » du reçu (« Unique », « 2 jeux ») : laissé null, le reçu retombe sur la
+/// <c>ReferencePeriod</c> du versement. Descriptif uniquement, il n'entre dans aucun calcul.
+/// </summary>
+public record PaymentBreakdownDto(Guid FeeCategoryId, decimal AmountAllocated, string? Label = null);
 
 
 /// <summary>

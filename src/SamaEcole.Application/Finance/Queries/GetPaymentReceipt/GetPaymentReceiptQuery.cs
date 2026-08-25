@@ -42,6 +42,7 @@ public class GetPaymentReceiptQueryHandler(
                 p.BalanceAfter,
                 p.Method,
                 p.PaidAt,
+                p.ReferencePeriod,
                 e.TotalDue,
                 s.Matricule,
                 s.FullName,
@@ -50,6 +51,17 @@ public class GetPaymentReceiptQueryHandler(
                 YearLabel = y.Label
             }).FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Paiement {request.PaymentId} introuvable.");
+
+        // Ventilation du versement. Ordonnée par Id : l'identifiant est un UUID v7, donc ordonnable —
+        // les lignes ressortent dans l'ordre où la caisse les a saisies, sans colonne de rang à stocker.
+        // Liste vide si la caisse n'a rien ventilé : le reçu retombe alors sur sa ligne unique.
+        var lines = await (
+            from b in dbContext.PaymentBreakdowns.AsNoTracking()
+            join fc in dbContext.FeeCategories.AsNoTracking() on b.FeeCategoryId equals fc.Id
+            where b.PaymentId == request.PaymentId
+            orderby b.Id
+            select new PaymentReceiptLineDto(fc.Name, b.Label, b.AmountAllocated))
+            .ToListAsync(cancellationToken);
 
         var school = await dbContext.Schools.AsNoTracking()
             .FirstOrDefaultAsync(sc => sc.Id == schoolId, cancellationToken);
@@ -74,6 +86,8 @@ public class GetPaymentReceiptQueryHandler(
             row.TotalDue - row.BalanceAfter,
             row.BalanceAfter,
             row.PaidAt,
+            lines,
+            row.ReferencePeriod,
             row.IsAccelerated);
     }
 }

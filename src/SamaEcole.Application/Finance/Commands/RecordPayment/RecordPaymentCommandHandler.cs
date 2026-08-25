@@ -116,7 +116,10 @@ public class RecordPaymentCommandHandler(
                     payment.Breakdowns.Add(new PaymentBreakdown
                     {
                         FeeCategoryId = breakdown.FeeCategoryId,
-                        AmountAllocated = breakdown.AmountAllocated
+                        AmountAllocated = breakdown.AmountAllocated,
+                        // Vide normalisé à null : une chaîne blanche ferait échouer le repli sur
+                        // ReferencePeriod côté reçu et imprimerait une cellule vide sans raison.
+                        Label = string.IsNullOrWhiteSpace(breakdown.Label) ? null : breakdown.Label.Trim()
                     });
                 }
             }

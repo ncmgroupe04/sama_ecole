@@ -22,5 +22,14 @@ public class RecordPaymentCommandValidator : AbstractValidator<RecordPaymentComm
         RuleFor(c => c.VatRate)
             .InclusiveBetween(0m, 1m).WithMessage("Le taux de TVA doit être compris entre 0 et 1 (ex. 0.18 pour 18 %).")
             .When(c => c.VatRate.HasValue);
+
+        // Libellé de ligne du reçu : borné à la largeur de la colonne (payment_breakdowns.Label,
+        // 60 caractères). Sans cette règle, une saisie trop longue remonterait en erreur SQL
+        // plutôt qu'en 400 explicite — et la caisse ne saurait pas quoi corriger.
+        RuleForEach(c => c.Breakdowns)
+            .ChildRules(breakdown => breakdown.RuleFor(b => b.Label)
+                .MaximumLength(60)
+                .WithMessage("Le libellé d'une ligne de règlement ne peut pas dépasser 60 caractères."))
+            .When(c => c.Breakdowns != null);
     }
 }
