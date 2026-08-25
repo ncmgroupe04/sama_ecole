@@ -62,12 +62,36 @@ document.addEventListener('alpine:init', () => {
         },
 
         kindBadgeClass(kind) {
-            return kind === 'Encaissement' ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger';
+            // Classes du design system (.status-badge-*) plutôt qu'une paire bg/text écrite ici : la
+            // pastille de la Trésorerie doit être la même que celle de la Caisse ou des Frais, sans
+            // qu'un écran ait à connaître les codes couleur.
+            return kind === 'Encaissement' ? 'status-badge-success' : 'status-badge-danger';
         },
 
-        /** FCFA : entiers, séparateur de milliers français. Pas de décimales — la monnaie n'en a pas. */
+        /**
+         * Part d'un poste dans le total de SA colonne (encaissé ou décaissé), en pourcentage entier
+         * 0-100 — la largeur de la jauge, pas un libellé.
+         *
+         * Le total est le dénominateur, jamais le plus gros poste : « 60 % des encaissements en
+         * espèces » est ce qui intéresse le directeur ; « deux fois plus que le mobile money » ne se
+         * lit pas sur une barre. Un total nul rend 0 plutôt que NaN, qui produirait `width: NaN%` —
+         * une barre pleine dans certains navigateurs.
+         */
+        sharePct(amount, total) {
+            const t = Number(total) || 0;
+            if (t <= 0) return 0;
+            return Math.min(100, Math.max(0, Math.round((Number(amount) || 0) / t * 100)));
+        },
+
+        /** Même part, en texte, pour l'accompagnement du libellé (la couleur seule ne suffit pas). */
+        shareLabel(amount, total) {
+            return `${this.sharePct(amount, total)} %`;
+        },
+
+        /** Délègue à window.formatFCFA (wwwroot/js/formatters.js, chargé par _Layout) : source
+         *  unique du format monétaire, alignée sur le FormatMoney des PDF. Ne pas réécrire ici. */
         formatAmount(amount) {
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount || 0) + ' FCFA';
+            return window.formatFCFA(amount);
         },
 
         formatDate(dateStr) {

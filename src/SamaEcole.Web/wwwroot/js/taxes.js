@@ -141,7 +141,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         formatAmount(amount) {
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount || 0) + ' FCFA';
+            return window.formatFCFA(amount);
         },
 
         monthLabel(month) {

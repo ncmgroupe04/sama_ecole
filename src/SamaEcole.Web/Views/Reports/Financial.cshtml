@@ -8,9 +8,11 @@
 }
 
 <div x-data="financialReportView()">
-    <div>
-        <h1 class="text-jgk-title font-bold text-slate-900">Rapports financiers</h1>
-        <p class="text-jgk-subtitle text-slate-500 mt-1">Consolidation des encaissements sur une période, ventilée par cycle, par classe et par mode de paiement.</p>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Rapports financiers</h1>
+            <p class="page-subtitle">Consolidation des encaissements sur une période, ventilée par cycle, par classe et par mode de paiement.</p>
+        </div>
     </div>
 
     <!-- Cartes de synthèse -->
@@ -42,7 +44,7 @@
 
     <div class="card mt-6 relative">
         <!-- Filtre de période + export comptable -->
-        <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div class="filter-bar lg:items-end lg:justify-between">
             <div class="flex flex-wrap items-end gap-3">
                 <div>
                     <label class="form-label-sm">Du</label>
@@ -82,10 +84,10 @@
            librairie de graphes (Chart.js ou autre) : cette technique est déjà celle en place partout
            ailleurs dans l'application, sans dépendance JS supplémentaire à charger sur une connexion
            mobile sénégalaise moyenne (Volume 5 §1). *@
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 border-b border-slate-200">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 border-b border-slate-200/70">
             <!-- Évolution mensuelle des recettes -->
             <div class="lg:col-span-2">
-                <h2 class="text-sm font-semibold text-slate-700 mb-3">Évolution mensuelle des recettes</h2>
+                <h2 class="section-title mb-3">Évolution mensuelle des recettes</h2>
                 <template x-if="!isLoading && data && data.byMonth.length === 0">
                     <p class="text-sm text-slate-400">Aucun encaissement sur cette période.</p>
                 </template>
@@ -93,7 +95,7 @@
                     <div class="flex items-end gap-2 sm:gap-3 h-40 bg-slate-50/80 rounded-xl border border-slate-100 p-4">
                         <template x-for="month in data.byMonth" :key="month.period">
                             <div class="flex-1 h-full flex flex-col items-center justify-end gap-1.5 group">
-                                <span class="text-[11px] font-semibold text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                <span class="text-[11px] font-semibold text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity amount"
                                       x-text="formatAmount(month.amount)"></span>
                                 <div class="w-full max-w-[2.5rem] rounded-t-md bg-primary-500 transition-all duration-500 ease-out"
                                      :style="'height: ' + monthBarHeight(month.amount) + '%'"></div>
@@ -106,7 +108,7 @@
 
             <!-- Répartition par mode de paiement (donut) -->
             <div>
-                <h2 class="text-sm font-semibold text-slate-700 mb-3">Répartition par mode de paiement</h2>
+                <h2 class="section-title mb-3">Répartition par mode de paiement</h2>
                 <template x-if="!isLoading && data && data.byPaymentMethod.length === 0">
                     <p class="text-sm text-slate-400">Aucun encaissement sur cette période.</p>
                 </template>
@@ -146,7 +148,7 @@
 
             <!-- Répartition du chiffre d'affaires par classe -->
             <div>
-                <h2 class="text-sm font-semibold text-slate-700 mb-3">Chiffre d'affaires par classe</h2>
+                <h2 class="section-title mb-3">Chiffre d'affaires par classe</h2>
                 <template x-if="!isLoading && data && data.byClassroom.length === 0">
                     <p class="text-sm text-slate-400">Aucun encaissement sur cette période.</p>
                 </template>
@@ -156,10 +158,10 @@
                             <div>
                                 <div class="flex justify-between text-xs mb-1">
                                     <span class="text-slate-600 font-medium truncate" x-text="row.label"></span>
-                                    <span class="font-bold text-slate-900 shrink-0 ml-2" x-text="formatAmount(row.amount)"></span>
+                                    <span class="font-bold text-slate-900 shrink-0 ml-2 amount" x-text="formatAmount(row.amount)"></span>
                                 </div>
-                                <div class="h-2 rounded-full bg-slate-200">
-                                    <div class="h-full rounded-full bg-primary-500 transition-all duration-500 ease-out"
+                                <div class="progress-track">
+                                    <div class="progress-fill-primary"
                                          :style="'width: ' + pctVal(row.amount, data.byClassroom[0].amount) + '%'"></div>
                                 </div>
                             </div>
@@ -173,38 +175,53 @@
             </div>
         </div>
 
-        <!-- Ventilation par cycle et par mode de paiement -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 border-b border-slate-200">
+        @* Ventilation par cycle et par mode de paiement — la part de chaque poste était déjà écrite en
+           toutes lettres à côté du montant ; elle est désormais AUSSI portée par une jauge. Le
+           pourcentage seul oblige à comparer mentalement quatre nombres ; la barre range les postes
+           dans l'ordre en un coup d'oeil, sans rien retirer du chiffre exact. `share()` rapporte au
+           total encaissé de la période (financial-report.js), donc les barres d'une même colonne se
+           comparent entre elles. *@
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 border-b border-slate-200/70">
             <div>
-                <h2 class="text-sm font-semibold text-slate-700 mb-3">Encaissements par cycle</h2>
-                <div class="space-y-2">
+                <h2 class="section-title mb-3">Encaissements par cycle</h2>
+                <div class="space-y-3">
                     <template x-if="!isLoading && data && data.byCycle.length === 0">
                         <p class="text-sm text-slate-400">Aucun encaissement sur cette période.</p>
                     </template>
                     <template x-for="item in (data ? data.byCycle : [])" :key="item.label">
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="text-slate-600" x-text="item.label"></span>
-                            <span class="flex items-center gap-3">
-                                <span class="text-xs text-slate-400" x-text="formatPercent(share(item.amount))"></span>
-                                <span class="font-semibold text-slate-900" x-text="formatAmount(item.amount)"></span>
-                            </span>
+                        <div>
+                            <div class="flex items-baseline justify-between gap-3 mb-1.5">
+                                <span class="flex items-baseline gap-2 min-w-0">
+                                    <span class="text-sm text-slate-600 truncate" x-text="item.label"></span>
+                                    <span class="text-xs font-medium text-slate-400 shrink-0" x-text="formatPercent(share(item.amount))"></span>
+                                </span>
+                                <span class="amount text-sm font-semibold text-slate-900" x-text="formatAmount(item.amount)"></span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill-primary" :style="'width: ' + pctVal(item.amount, data.totalCollected) + '%'"></div>
+                            </div>
                         </div>
                     </template>
                 </div>
             </div>
             <div>
-                <h2 class="text-sm font-semibold text-slate-700 mb-3">Encaissements par mode de paiement</h2>
-                <div class="space-y-2">
+                <h2 class="section-title mb-3">Encaissements par mode de paiement</h2>
+                <div class="space-y-3">
                     <template x-if="!isLoading && data && data.byPaymentMethod.length === 0">
                         <p class="text-sm text-slate-400">Aucun encaissement sur cette période.</p>
                     </template>
                     <template x-for="item in (data ? data.byPaymentMethod : [])" :key="item.label">
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="text-slate-600" x-text="item.label"></span>
-                            <span class="flex items-center gap-3">
-                                <span class="text-xs text-slate-400" x-text="formatPercent(share(item.amount))"></span>
-                                <span class="font-semibold text-slate-900" x-text="formatAmount(item.amount)"></span>
-                            </span>
+                        <div>
+                            <div class="flex items-baseline justify-between gap-3 mb-1.5">
+                                <span class="flex items-baseline gap-2 min-w-0">
+                                    <span class="text-sm text-slate-600 truncate" x-text="item.label"></span>
+                                    <span class="text-xs font-medium text-slate-400 shrink-0" x-text="formatPercent(share(item.amount))"></span>
+                                </span>
+                                <span class="amount text-sm font-semibold text-slate-900" x-text="formatAmount(item.amount)"></span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill-success" :style="'width: ' + pctVal(item.amount, data.totalCollected) + '%'"></div>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -215,11 +232,11 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="table-head hover:bg-slate-50 transition-colors duration-150">
-                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Classe</th>
-                        <th class="py-3 px-4 text-center uppercase tracking-wider text-slate-500 font-semibold">Paiements</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Part</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Montant encaissé</th>
+                    <tr class="table-head">
+                        <th class="py-3 px-4">Classe</th>
+                        <th class="py-3 px-4 text-center">Paiements</th>
+                        <th class="py-3 px-4 text-right">Part</th>
+                        <th class="py-3 px-4 text-right">Montant encaissé</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -240,9 +257,9 @@
                         <template x-for="row in data.byClassroom" :key="row.label">
                             <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="py-3 px-4 font-medium text-slate-900" x-text="row.label"></td>
-                                <td class="py-3 px-4 text-center text-slate-600" x-text="row.paymentCount"></td>
-                                <td class="py-3 px-4 text-right text-slate-500" x-text="formatPercent(share(row.amount))"></td>
-                                <td class="py-3 px-4 text-right font-semibold text-slate-900" x-text="formatAmount(row.amount)"></td>
+                                <td class="py-3 px-4 text-center amount text-slate-600" x-text="row.paymentCount"></td>
+                                <td class="py-3 px-4 text-right amount text-slate-500" x-text="formatPercent(share(row.amount))"></td>
+                                <td class="py-3 px-4 text-right amount font-semibold text-slate-900" x-text="formatAmount(row.amount)"></td>
                             </tr>
                         </template>
                     </template>

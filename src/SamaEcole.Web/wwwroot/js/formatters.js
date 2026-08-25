@@ -62,12 +62,45 @@
         return formatSenegalPhone(phone);
     }
 
+    /**
+     * Montant en francs CFA : entier, milliers séparés, jamais de décimale — la monnaie n'en a pas.
+     *
+     * Miroir des documents PDF (`FormatMoney` de SamaEcole.Infrastructure.Documents : reçu
+     * d'inscription, reçu de caisse, rapport de clôture, avis d'impayé), qui écrivent
+     * `ToString("#,##0").Replace(",", " ")`. C'est la raison du séparateur choisi ici :
+     *
+     *   - `Intl.NumberFormat('fr-FR')` — la forme recopiée jusqu'ici dans huit scripts de vue —
+     *     insère une ESPACE FINE INSÉCABLE (U+202F). Le PDF, lui, insère une espace ordinaire. Le
+     *     même montant s'écrivait donc plus serré à l'écran que sur le reçu remis au parent.
+     *   - Une espace ORDINAIRE réaligne l'écran sur le PDF mais autorise le navigateur à couper
+     *     « 1 250 000 FCFA » en fin de ligne, au milieu du nombre.
+     *
+     *   D'où l'espace INSÉCABLE (U+00A0) : même largeur apparente que celle du PDF, et le montant
+     *   reste insécable dans un tableau étroit.
+     *
+     * Une valeur absente vaut zéro : une cellule financière vide se lit comme une donnée manquante,
+     * alors qu'un solde non renseigné vaut bien 0 FCFA côté API.
+     */
+    function formatFCFA(amount) {
+        // Échappement explicite plutôt que le caractère lui-même : une espace insécable et une espace
+        // ordinaire sont indiscernables dans un éditeur, et la première se fait « corriger » en la
+        // seconde au premier reformatage automatique du fichier.
+        const NBSP = '\u00A0';
+        const value = Number(amount) || 0;
+        const grouped = Math.round(value)
+            .toString()
+            .replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+        return `${grouped}${NBSP}FCFA`;
+    }
+
     window.formatSenegalPhone = formatSenegalPhone;
     window.formatSenegalPhoneOr = formatSenegalPhoneOr;
+    window.formatFCFA = formatFCFA;
 
-    // Exposé à Alpine comme magic $phone : `x-text="$phone(teacher.phone)"` dans les vues, sans avoir
-    // à câbler la fonction dans chaque composant.
+    // Exposés à Alpine comme magics $phone et $money : `x-text="$money(row.amount)"` dans les vues,
+    // sans avoir à câbler la fonction dans chaque composant.
     document.addEventListener('alpine:init', () => {
         Alpine.magic('phone', () => formatSenegalPhoneOr);
+        Alpine.magic('money', () => formatFCFA);
     });
 })();

@@ -465,9 +465,10 @@ document.addEventListener('alpine:init', () => {
             return type === 'Vacataire' ? 'Vacataire (horaire)' : 'Permanent';
         },
 
-        /** FCFA : entiers, séparateur de milliers français. Pas de décimales — la monnaie n'en a pas. */
+        /** Délègue à window.formatFCFA (wwwroot/js/formatters.js, chargé par _Layout) : source
+         *  unique du format monétaire, alignée sur le FormatMoney des PDF. Ne pas réécrire ici. */
         formatAmount(amount) {
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount || 0) + ' FCFA';
+            return window.formatFCFA(amount);
         },
 
         formatDate(iso) {

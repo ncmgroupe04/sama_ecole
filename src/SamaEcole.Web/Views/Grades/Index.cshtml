@@ -10,8 +10,8 @@
 <div x-data="gradesView()">
  <!-- Titre -->
  <div>
- <h1 class="text-jgk-title font-bold text-slate-900">Notes et bulletins</h1>
- <p class="text-jgk-subtitle text-slate-500 mt-1">
+ <h1 class="page-title">Notes et bulletins</h1>
+ <p class="page-subtitle">
  Sélectionnez une classe, une matière et un trimestre pour saisir ou corriger les notes.
  </p>
  </div>
@@ -112,18 +112,18 @@
  <div class="overflow-x-auto">
  <table class="w-full text-left border-collapse">
  <thead>
- <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <th class="py-3 px-4 w-12 text-center uppercase tracking-wider text-slate-500 font-semibold">N°</th>
- <th class="py-3 px-4 whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Matricule</th>
- <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
- <th class="py-3 px-4 w-40 text-center uppercase tracking-wider text-slate-500 font-semibold">Devoir 1 <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
- <th class="py-3 px-4 w-40 text-center uppercase tracking-wider text-slate-500 font-semibold">Devoir 2 <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
- <th class="py-3 px-4 w-40 text-center uppercase tracking-wider text-slate-500 font-semibold">Composition <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+ <tr class="table-head">
+ <th class="py-3 px-4 w-12 text-center">N°</th>
+ <th class="py-3 px-4 whitespace-nowrap">Matricule</th>
+ <th class="py-3 px-4">Élève</th>
+ <th class="py-3 px-4 w-40 text-center">Devoir 1 <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+ <th class="py-3 px-4 w-40 text-center">Devoir 2 <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
+ <th class="py-3 px-4 w-40 text-center">Composition <span class="text-slate-400 font-normal" x-text="'/ ' + gradingScale"></span></th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
  <template x-for="(row, index) in rows" :key="row.studentId">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors duration-150">
  <td class="py-2 px-4 text-center text-slate-400 font-medium" x-text="index + 1"></td>
  <td class="py-2 px-4 text-xs font-mono text-slate-500 whitespace-nowrap" x-text="row.matricule"></td>
  <td class="py-2 px-4 font-medium text-slate-900" x-text="row.fullName"></td>

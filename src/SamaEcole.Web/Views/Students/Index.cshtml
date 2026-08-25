@@ -28,8 +28,8 @@
  <!-- Titre de la page -->
  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
  <div>
- <h1 class="text-jgk-title font-bold text-slate-900">Élèves</h1>
- <p class="text-jgk-subtitle text-slate-500 mt-1">Gérez les inscriptions et les dossiers des élèves.</p>
+ <h1 class="page-title">Élèves</h1>
+ <p class="page-subtitle">Gérez les inscriptions et les dossiers des élèves.</p>
  </div>
  <div class="flex items-center gap-2 shrink-0">
  <!-- Export PDF (docs/Volume_7_Security.md §15) : Directeur, Secrétariat, Finance — jamais l'Enseignant. -->
@@ -73,8 +73,8 @@
  <div class="card mt-6 relative">
 
  <!-- Barre de filtres -->
- <div class="p-6 border-b border-slate-200">
- <div class="flex flex-wrap lg:flex-nowrap items-center gap-3">
+ <div class="filter-bar">
+ <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full">
  <div class="relative flex-1 min-w-[12rem] lg:max-w-xs">
  <span class="absolute inset-y-0 left-0 flex items-center pl-3">
  <icon name="search" class="w-4 h-4 text-slate-400" />
@@ -104,22 +104,22 @@
  <div class="overflow-x-auto">
  <table class="w-full min-w-[760px] table-fixed text-left border-collapse">
  <thead>
- <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <th class="py-3 px-4 w-[16%] text-left whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Matricule</th>
- <th class="py-3 px-4 w-[28%] text-left whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
- <th class="py-3 px-4 w-[20%] text-left whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Date de nais.</th>
- <th class="py-3 px-4 w-[18%] text-left whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Genre</th>
- <th class="py-3 px-4 w-[18%] text-right whitespace-nowrap uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+ <tr class="table-head">
+ <th class="py-3 px-4 w-[16%] text-left whitespace-nowrap">Matricule</th>
+ <th class="py-3 px-4 w-[28%] text-left whitespace-nowrap">Élève</th>
+ <th class="py-3 px-4 w-[20%] text-left whitespace-nowrap">Date de nais.</th>
+ <th class="py-3 px-4 w-[18%] text-left whitespace-nowrap">Genre</th>
+ <th class="py-3 px-4 w-[18%] text-right whitespace-nowrap">Actions</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
  <template x-if="isLoading">
  <template x-for="i in 5" :key="i">
- <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out"><td class="py-2 px-4" colspan="5"><div class="skeleton h-4 w-full"></div></td></tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150"><td class="py-2 px-4" colspan="5"><div class="skeleton h-4 w-full"></div></td></tr>
  </template>
  </template>
 
- <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="!isLoading && students.length === 0" x-cloak>
+ <tr class="hover:bg-slate-50 transition-colors duration-150" x-show="!isLoading && students.length === 0" x-cloak>
  <td colspan="5">
  <empty-state icon="users" title="Aucun élève trouvé."
  hint="Aucun élève inscrit pour l'année active ? Basculez sur « Tous les élèves », ajustez la recherche, ou ajoutez un élève." />
@@ -128,7 +128,7 @@
 
  <!-- Boucle sur les élèves -->
  <template x-for="student in students" :key="student.id">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors duration-150">
  <td class="py-2 px-4 w-[16%] font-medium text-slate-900 truncate" x-text="student.matricule"></td>
  <td class="py-2 px-4 w-[28%]">
  <div class="flex items-center gap-3 min-w-0">
@@ -175,8 +175,8 @@
             <div>
                 <h2 class="text-2xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></h2>
                 <div class="mt-1.5 flex items-center gap-2">
-                    <span class="bg-indigo-50 text-indigo-700 font-medium px-2.5 py-0.5 text-xs rounded-full" x-text="detailStudent ? detailStudent.classroomName : ''"></span>
-                    <span class="bg-emerald-50 text-emerald-700 font-medium px-2.5 py-0.5 text-xs rounded-full">Actif</span>
+                    <span class="status-badge-primary" x-text="detailStudent ? detailStudent.classroomName : ''"></span>
+                    <span class="status-badge-success"><span class="status-dot" aria-hidden="true"></span>Actif</span>
                 </div>
             </div>
         </div>
@@ -310,7 +310,7 @@
  <div class="min-w-0">
  <div class="flex items-center gap-2">
  <p class="font-bold text-slate-900" x-text="entry.schoolYearLabel"></p>
- <span x-show="entry.isActiveYear" class="status-badge-primary">Année active</span>
+ <span x-show="entry.isActiveYear" class="status-badge-primary"><span class="status-dot" aria-hidden="true"></span>Année active</span>
  </div>
  <p class="mt-1 text-sm text-slate-600">
  <span x-text="entry.classroomName"></span>
@@ -447,20 +447,20 @@
  <div class="overflow-x-auto rounded-2xl border border-slate-200">
  <table class="w-full min-w-[480px] text-left border-collapse text-sm">
  <thead>
- <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <th class="py-2.5 px-3 uppercase tracking-wider text-slate-500 font-semibold">Matière</th>
- <th class="py-2.5 px-3 text-center w-16 uppercase tracking-wider text-slate-500 font-semibold">Coef.</th>
- <th class="py-2.5 px-3 text-center w-20 uppercase tracking-wider text-slate-500 font-semibold">Devoir</th>
- <th class="py-2.5 px-3 text-center w-24 uppercase tracking-wider text-slate-500 font-semibold">Compo.</th>
- <th class="py-2.5 px-3 text-center w-20 uppercase tracking-wider text-slate-500 font-semibold">Moy.</th>
+ <tr class="table-head">
+ <th class="py-2.5 px-3">Matière</th>
+ <th class="py-2.5 px-3 text-center w-16">Coef.</th>
+ <th class="py-2.5 px-3 text-center w-20">Devoir</th>
+ <th class="py-2.5 px-3 text-center w-24">Compo.</th>
+ <th class="py-2.5 px-3 text-center w-20">Moy.</th>
  @* « Sur » : le barème de la matière. Sans lui, une moyenne de 32 sur une ligne notée /40
     (grilles par compétences du primaire) se lirait comme un 32 sur 20. *@
- <th class="py-2.5 px-3 text-center w-16 uppercase tracking-wider text-slate-500 font-semibold">Sur</th>
+ <th class="py-2.5 px-3 text-center w-16">Sur</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
  <template x-for="subject in term.subjects" :key="subject.subjectId">
- <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors duration-150">
  <td class="py-2 px-3 font-medium text-slate-900" x-text="subject.subjectName"></td>
  <td class="py-2 px-3 text-center text-slate-600" x-text="formatGrade(coefficientDisplay(subject))"></td>
  <td class="py-2 px-3 text-center text-slate-700" x-text="formatGrade(subject.devoirAverage)"></td>
@@ -492,7 +492,7 @@
  </div>
  <div>
  <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total dû</p>
- <p class="text-2xl font-extrabold text-slate-900 font-mono mt-1" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
+ <p class="text-2xl font-extrabold text-slate-900 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.totalDue)"></p>
  </div>
  </div>
  </div>
@@ -503,7 +503,7 @@
  </div>
  <div>
  <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Total versé</p>
- <p class="text-2xl font-extrabold text-emerald-700 font-mono mt-1" x-text="formatAmount(studentDetail.payments.totalPaid)"></p>
+ <p class="text-2xl font-extrabold text-emerald-700 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.totalPaid)"></p>
  </div>
  </div>
  </div>
@@ -514,7 +514,7 @@
  </div>
  <div>
  <p class="text-xs font-bold text-amber-600 uppercase tracking-wider">Solde restant</p>
- <p class="text-2xl font-extrabold text-amber-700 font-mono mt-1" x-text="formatAmount(studentDetail.payments.remainingBalance)"></p>
+ <p class="text-2xl font-extrabold text-amber-700 font-mono mt-1 amount" x-text="formatAmount(studentDetail.payments.remainingBalance)"></p>
  </div>
  </div>
  </div>
@@ -578,7 +578,7 @@
  <tr class="hover:bg-slate-50/60 transition-colors border-b border-slate-100 last:border-none">
  <td class="py-3 px-4 text-slate-700 whitespace-nowrap" x-text="formatDate(payment.paidAt)"></td>
  <td class="py-3 px-4 font-mono text-xs text-slate-600 whitespace-nowrap" x-text="payment.receiptNumber || '—'"></td>
- <td class="py-3 px-4 text-right font-extrabold text-slate-900 font-mono whitespace-nowrap" x-text="formatAmount(payment.amount)"></td>
+ <td class="py-3 px-4 text-right font-extrabold text-slate-900 font-mono whitespace-nowrap amount" x-text="formatAmount(payment.amount)"></td>
  <td class="py-3 px-4 text-slate-700 whitespace-nowrap">
      <span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-md font-medium inline-flex items-center gap-1"
            :class="{
@@ -1004,22 +1004,22 @@
  <div class="max-h-80 overflow-auto rounded-2xl border border-slate-200">
  <table class="w-full min-w-[900px] text-left border-collapse text-xs">
  <thead>
- <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <th class="py-2 px-2 w-10 uppercase tracking-wider text-slate-500 font-semibold">L.</th>
- <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Nom complet</th>
- <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Naissance</th>
- <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Lieu</th>
- <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Genre</th>
- <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Classe</th>
- <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Tuteur</th>
- <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Tél. tuteur</th>
-                                    <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">E-mail tuteur</th>
-                                    <th class="py-2 px-2 uppercase tracking-wider text-slate-500 font-semibold">Adresse</th>
+ <tr class="table-head">
+ <th class="py-2 px-2 w-10">L.</th>
+ <th class="py-2 px-2">Nom complet</th>
+ <th class="py-2 px-2">Naissance</th>
+ <th class="py-2 px-2">Lieu</th>
+ <th class="py-2 px-2">Genre</th>
+ <th class="py-2 px-2">Classe</th>
+ <th class="py-2 px-2">Tuteur</th>
+ <th class="py-2 px-2">Tél. tuteur</th>
+                                    <th class="py-2 px-2">E-mail tuteur</th>
+                                    <th class="py-2 px-2">Adresse</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
  <template x-for="row in (importPreview ? importPreview.rows : [])" :key="row.rowNumber">
- <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors duration-150">
  <td class="py-1.5 px-2 text-slate-400" x-text="row.rowNumber"></td>
  <td class="py-1.5 px-2" :class="importCellClass(row, 'fullName')" :title="row.fieldErrors.fullName || ''" x-text="row.fullName"></td>
  <td class="py-1.5 px-2" :class="importCellClass(row, 'birthDate')" :title="row.fieldErrors.birthDate || ''" x-text="row.birthDate"></td>

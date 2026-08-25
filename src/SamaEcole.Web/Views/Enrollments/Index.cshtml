@@ -85,8 +85,8 @@
 <div x-data="enrollmentsView()">
  <!-- Titre -->
  <div>
- <h1 class="text-jgk-title font-bold text-slate-900">Inscriptions</h1>
- <p class="text-jgk-subtitle text-slate-500 mt-1">
+ <h1 class="page-title">Inscriptions</h1>
+ <p class="page-subtitle">
  Inscrivez un nouvel élève ou réinscrivez un élève existant pour l'année scolaire active.
  Les frais dus sont calculés automatiquement à partir du barème de la classe.
  </p>
@@ -123,7 +123,7 @@
 
  <!-- Bandeau année active -->
  <div class="flex items-center gap-2 text-sm text-slate-500">
- <badge variant="success">Année active</badge>
+ <badge variant="success" dot>Année active</badge>
  <span class="font-medium text-slate-900" x-text="activeYear ? activeYear.label : ''"></span>
  </div>
 
@@ -241,7 +241,7 @@
  <div class="mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-56 overflow-y-auto">
  <template x-for="s in filteredStudents()" :key="s.id">
  <button type="button" x-on:click="selectStudent(s)"
- class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors transition-all duration-200 ease-in-out"
+ class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors duration-150"
  :class="form.studentId === s.id ? 'bg-indigo-50' : ''">
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
  <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
@@ -298,7 +298,7 @@
  x-text="formatMoney(line.unitAmount) + ' × ' + line.months + ' mois'"></span>
  </span>
  </span>
- <span class="text-sm font-medium text-slate-900 whitespace-nowrap" x-text="formatMoney(line.lineTotal)"></span>
+ <span class="text-sm font-medium text-slate-900 whitespace-nowrap amount" x-text="formatMoney(line.lineTotal)"></span>
  </label>
 
  @* Mensualité : le tuteur règle rarement l'année entière le jour de l'inscription —
@@ -309,7 +309,7 @@
  <input type="number" :id="'enr-months-' + line.feeCategoryId"
  x-model.number="collectedEntry(line).months" min="1" :max="line.months"
  class="input-field mt-0 w-20 py-1 text-sm">
- <span class="text-xs text-slate-400" x-text="'= ' + formatMoney(collectedAmount(line))"></span>
+ <span class="text-xs text-slate-400 amount" x-text="'= ' + formatMoney(collectedAmount(line))"></span>
  </div>
  </li>
  </template>
@@ -317,7 +317,7 @@
 
  <div class="mt-3 pt-3 border-t border-slate-200 flex items-center justify-between text-slate-500">
  <span class="text-xs uppercase tracking-wide">Total dû (année)</span>
- <span class="text-sm font-semibold" x-text="formatMoney(previewTotal())"></span>
+ <span class="text-sm font-semibold amount" x-text="formatMoney(previewTotal())"></span>
  </div>
 
  <div class="mt-4 rounded-xl bg-primary-50 p-3">
@@ -327,7 +327,7 @@
 
  <div class="mt-3 flex items-center justify-between">
  <span class="text-sm font-semibold text-primary-700 uppercase tracking-wide">Encaissé ce jour</span>
- <span class="text-lg font-bold text-primary" x-text="formatMoney(collectedTotal())"></span>
+ <span class="text-lg font-bold text-primary amount" x-text="formatMoney(collectedTotal())"></span>
  </div>
  <p x-show="collectedTotal() === 0" x-cloak class="mt-1 text-xs text-primary-700">
  Aucun frais coché : le dossier est ouvert sans versement, le reçu s'imprimera à 0 FCFA.
@@ -443,7 +443,7 @@
  <template x-for="line in receipt.lines" :key="line.designation">
  <tr class="border-b border-slate-100">
  <td class="py-1 px-2 text-slate-700" x-text="line.designation + recurringSuffix(line)"></td>
- <td class="py-1 px-2 text-right font-medium text-slate-900" x-text="formatMoney(line.lineTotal)"></td>
+ <td class="py-1 px-2 text-right font-medium text-slate-900 amount" x-text="formatMoney(line.lineTotal)"></td>
  </tr>
  </template>
  <tr x-show="receipt.lines.length === 0" x-cloak class="border-b border-slate-100">
@@ -452,7 +452,7 @@
  </tr>
  <tr class="bg-indigo-50/50 text-indigo-950 font-bold border-t border-indigo-100">
  <td class="py-1 px-2 uppercase text-xs">Total engagé</td>
- <td class="py-1 px-2 text-right text-sm" x-text="formatMoney(receipt.totalDue)"></td>
+ <td class="py-1 px-2 text-right text-sm amount" x-text="formatMoney(receipt.totalDue)"></td>
  </tr>
  </tbody>
  </table>

@@ -9,8 +9,8 @@
 
 <div x-data="payrollView()">
     <div>
-        <h1 class="text-jgk-title font-bold text-slate-900">Paie</h1>
-        <p class="text-jgk-subtitle text-slate-500 mt-1">Contrats du personnel, fiches de paie et déclarations fiscales.</p>
+        <h1 class="page-title">Paie</h1>
+        <p class="page-subtitle">Contrats du personnel, fiches de paie et déclarations fiscales.</p>
     </div>
 
     <!-- Onglets -->
@@ -39,7 +39,7 @@
     <!-- ============================= ONGLET CONTRATS ============================= -->
     <div x-show="tab === 'contrats'" x-cloak class="mt-6">
         <div class="card">
-            <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+            <div class="card-header">
                 <h2 class="text-sm font-semibold text-slate-700">Contrats du personnel</h2>
                 <button type="button" x-on:click="openContractModal()" class="btn-modal-primary">
                     <icon name="plus" class="w-4 h-4" />
@@ -50,14 +50,14 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="table-head">
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Employé</th>
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Qualité</th>
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Type</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Salaire de base</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Taux horaire</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Prime transport</th>
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+                            <th class="py-3 px-4">Employé</th>
+                            <th class="py-3 px-4">Qualité</th>
+                            <th class="py-3 px-4">Type</th>
+                            <th class="py-3 px-4 text-right">Salaire de base</th>
+                            <th class="py-3 px-4 text-right">Taux horaire</th>
+                            <th class="py-3 px-4 text-right">Prime transport</th>
+                            <th class="py-3 px-4">Statut</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -72,12 +72,12 @@
                                 <td class="py-3 px-4 font-medium text-slate-900" x-text="contract.employeeFullName"></td>
                                 <td class="py-3 px-4 text-slate-600" x-text="contract.employeeRole"></td>
                                 <td class="py-3 px-4 text-slate-600" x-text="contractTypeLabel(contract.type)"></td>
-                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.baseSalary)"></td>
-                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.hourlyRate)"></td>
-                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(contract.transportAllowance)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.baseSalary)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.hourlyRate)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.transportAllowance)"></td>
                                 <td class="py-3 px-4">
-                                    <span x-show="!contract.endDate" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700">Actif</span>
-                                    <span x-show="contract.endDate" x-cloak class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600" x-text="'Clôturé le ' + formatDate(contract.endDate)"></span>
+                                    <span x-show="!contract.endDate" class="status-badge-success"><span class="status-dot" aria-hidden="true"></span>Actif</span>
+                                    <span x-show="contract.endDate" x-cloak class="status-badge-neutral"><span class="status-dot" aria-hidden="true"></span><span x-text="'Clôturé le ' + formatDate(contract.endDate)"></span></span>
                                 </td>
                                 <td class="py-3 px-4 text-right">
                                     <div class="flex items-center justify-end gap-1">
@@ -118,7 +118,7 @@
     <!-- ============================= ONGLET FICHES DE PAIE ============================= -->
     <div x-show="tab === 'fiches'" x-cloak class="mt-6">
         <div class="card">
-            <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div class="filter-bar lg:items-end lg:justify-between">
                 <div class="flex flex-wrap items-end gap-3">
                     <div>
                         <label class="form-label-sm">Mois</label>
@@ -147,11 +147,11 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="table-head">
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Employé</th>
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Période</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Brut</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Net à payer</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Bulletin</th>
+                            <th class="py-3 px-4">Employé</th>
+                            <th class="py-3 px-4">Période</th>
+                            <th class="py-3 px-4 text-right">Brut</th>
+                            <th class="py-3 px-4 text-right">Net à payer</th>
+                            <th class="py-3 px-4 text-right">Bulletin</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -165,8 +165,8 @@
                             <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="py-3 px-4 font-medium text-slate-900" x-text="payslip.employeeFullName"></td>
                                 <td class="py-3 px-4 text-slate-600" x-text="monthLabel(payslip.month) + ' ' + payslip.year"></td>
-                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(payslip.grossSalary)"></td>
-                                <td class="py-3 px-4 text-right font-semibold text-slate-900" x-text="formatAmount(payslip.netSalary)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(payslip.grossSalary)"></td>
+                                <td class="py-3 px-4 text-right font-semibold text-slate-900 amount" x-text="formatAmount(payslip.netSalary)"></td>
                                 <td class="py-3 px-4 text-right">
                                     <button type="button" x-on:click="printPayslip(payslip.id)" :disabled="printingPayslipId === payslip.id"
                                             class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60">
@@ -186,7 +186,7 @@
     <!-- ============================= ONGLET DÉCLARATIONS FISCALES ============================= -->
     <div x-show="tab === 'fiscalite'" x-cloak class="mt-6">
         <div class="card">
-            <div class="p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div class="filter-bar lg:items-end lg:justify-between">
                 <div class="flex flex-wrap items-end gap-3">
                     <div>
                         <label class="form-label-sm">Année</label>
@@ -206,12 +206,12 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="table-head">
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Période</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">IPRES</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">CSS</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">VRS</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">BRS</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Total dû à l'État</th>
+                            <th class="py-3 px-4">Période</th>
+                            <th class="py-3 px-4 text-right">IPRES</th>
+                            <th class="py-3 px-4 text-right">CSS</th>
+                            <th class="py-3 px-4 text-right">VRS</th>
+                            <th class="py-3 px-4 text-right">BRS</th>
+                            <th class="py-3 px-4 text-right">Total dû à l'État</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -224,11 +224,11 @@
                         <template x-for="declaration in taxDeclarations" :key="declaration.id">
                             <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="py-3 px-4 font-medium text-slate-900" x-text="monthLabel(declaration.month) + ' ' + declaration.year"></td>
-                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalIpres)"></td>
-                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalCss)"></td>
-                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalVrs)"></td>
-                                <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalBrs)"></td>
-                                <td class="py-3 px-4 text-right font-semibold text-slate-900" x-text="formatAmount(declaration.totalDueToState)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(declaration.totalIpres)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(declaration.totalCss)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(declaration.totalVrs)"></td>
+                                <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(declaration.totalBrs)"></td>
+                                <td class="py-3 px-4 text-right font-semibold text-slate-900 amount" x-text="formatAmount(declaration.totalDueToState)"></td>
                             </tr>
                         </template>
                     </tbody>
@@ -458,9 +458,9 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="table-head">
-                        <th class="py-2 px-3 uppercase tracking-wider text-slate-500 font-semibold text-xs">Date</th>
-                        <th class="py-2 px-3 text-right uppercase tracking-wider text-slate-500 font-semibold text-xs">Heures</th>
-                        <th class="py-2 px-3 uppercase tracking-wider text-slate-500 font-semibold text-xs">Note</th>
+                        <th class="py-2 px-3">Date</th>
+                        <th class="py-2 px-3 text-right">Heures</th>
+                        <th class="py-2 px-3">Note</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">

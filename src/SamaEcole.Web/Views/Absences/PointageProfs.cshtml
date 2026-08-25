@@ -9,8 +9,8 @@
 
 <div x-data="pointageProfsView()" class="space-y-6">
     <div>
-        <h1 class="text-jgk-title font-bold text-slate-900">Pointage Profs</h1>
-        <p class="text-jgk-subtitle text-slate-500 mt-1">Relevé d'heures des enseignants vacataires — base de calcul de leur bulletin de paie.</p>
+        <h1 class="page-title">Pointage Profs</h1>
+        <p class="page-subtitle">Relevé d'heures des enseignants vacataires — base de calcul de leur bulletin de paie.</p>
     </div>
 
     @await Html.PartialAsync("_ErrorBanner")
@@ -61,9 +61,9 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="table-head">
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
-                            <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Heures</th>
-                            <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Note</th>
+                            <th class="py-3 px-4">Date</th>
+                            <th class="py-3 px-4 text-right">Heures</th>
+                            <th class="py-3 px-4">Note</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">

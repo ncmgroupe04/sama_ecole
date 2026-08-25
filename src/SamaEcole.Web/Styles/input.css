@@ -51,8 +51,13 @@
     @apply text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:opacity-50;
   }
 
+  /* Bordure en slate-200/60 et non slate-100 (refonte 2026) : sur le fond stone-50 du corps de
+     page, une bordure slate-100 est pratiquement invisible — les panneaux flottaient sans contour,
+     et seule l'ombre portée les séparait du fond. Le ton 200 à 60 % d'opacité pose un contour lu
+     comme une limite sans jamais devenir un trait. C'est la même valeur que .kpi-card, pour que la
+     rangée de cartes de synthèse et le panneau qu'elle surmonte aient exactement le même contour. */
   .card {
-    @apply rounded-2xl border border-slate-100 bg-white shadow-sm;
+    @apply rounded-2xl border border-slate-200/60 bg-white shadow-sm;
   }
 
   /* ---------------------------------------------------------------- Champs de formulaire
@@ -359,6 +364,254 @@
     .help-panel {
       transition: none;
     }
+  }
+
+  /* ============================================================================
+     REFONTE 2026 — SOCLE VISUEL COMMUN (audit UI/UX global)
+
+     Ces classes NOMMENT des chaînes Tailwind qui étaient jusqu'ici recopiées à la
+     main d'un écran à l'autre, avec à chaque fois une variante : rayon `xl` ici et
+     `2xl` là, bordure `slate-100` ici et `slate-200` là, `font-bold` ici et
+     `font-black` là, pastille d'icône `rounded-full` grise ici et `rounded-xl`
+     colorée là. Une intention = une classe : c'est la seule façon de garder une
+     quarantaine d'écrans en phase quand ils évoluent séparément.
+
+     Elles COMPLÈTENT les composants existants (.card, .btn-*, .input-field,
+     .status-badge-*), elles ne les remplacent pas.
+     ============================================================================ */
+
+  /* ---------------------------------------------------------------- En-tête de page
+     Le triptyque titre + sous-titre était réécrit à l'identique dans 28 vues. */
+  .page-header {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .page-title {
+    @apply text-jgk-title font-bold tracking-tight text-slate-900;
+  }
+
+  .page-subtitle {
+    @apply mt-1 text-jgk-subtitle text-slate-500;
+  }
+
+  /* Titre d'un bloc INTERNE (« Encaissements par mode de paiement »), sous le titre
+     de page. Volontairement discret : c'est un repère de lecture, pas une deuxième
+     entrée de hiérarchie. */
+  .section-title {
+    @apply text-sm font-semibold text-slate-700;
+  }
+
+  /* ---------------------------------------------------------------- Pastilles d'icône
+     Conteneur DOUX (coin arrondi, fond teinté clair) plutôt qu'un cercle gris : une
+     icône grisâtre ne porte aucune information, une icône colorée annonce la nature
+     du bloc au premier coup d'œil. La teinte suit le SENS du bloc, jamais la
+     décoration — voir la convention de couleur sous .status-dot.
+
+     Les variantes de couleur sont écrites EN CLAIR (jamais "bg-" + variable) : le
+     scanner Tailwind lit ce fichier comme du texte brut. */
+  .icon-chip {
+    @apply inline-flex shrink-0 items-center justify-center rounded-xl;
+  }
+
+  .icon-chip-sm {
+    @apply icon-chip h-8 w-8;
+  }
+
+  .icon-chip-md {
+    @apply icon-chip h-10 w-10;
+  }
+
+  .icon-chip-lg {
+    @apply icon-chip h-12 w-12;
+  }
+
+  .icon-chip-indigo {
+    @apply bg-indigo-50 text-indigo-600;
+  }
+
+  .icon-chip-emerald {
+    @apply bg-emerald-50 text-emerald-600;
+  }
+
+  .icon-chip-amber {
+    @apply bg-amber-50 text-amber-600;
+  }
+
+  .icon-chip-rose {
+    @apply bg-rose-50 text-rose-600;
+  }
+
+  .icon-chip-blue {
+    @apply bg-blue-50 text-blue-600;
+  }
+
+  .icon-chip-pink {
+    @apply bg-pink-50 text-pink-600;
+  }
+
+  /* Violet : la troisième teinte de la charte (Bleu Roi / Indigo / Violet). Sert à distinguer une
+     série voisine de l'indigo sans sortir de la palette — la BRS à côté de l'IPRES, en Fiscalité. */
+  .icon-chip-purple {
+    @apply bg-purple-50 text-purple-600;
+  }
+
+  .icon-chip-slate {
+    @apply bg-slate-100 text-slate-500;
+  }
+
+  /* ---------------------------------------------------------------- Puce d'état
+     Point lumineux d'une pastille de statut. Il prend la couleur du TEXTE du badge
+     (bg-current), donc une seule classe suffit pour les cinq variantes — la couleur
+     reste portée par .status-badge-*, jamais dupliquée ici.
+
+     Le halo est un ::after à 25 % d'opacité plutôt qu'un `ring-current/25` : Tailwind
+     ne sait pas appliquer une opacité à `currentColor`, et `drop-shadow(currentColor)`
+     rend un halo trop dur aux petites tailles. Aucune animation : une puce qui
+     clignote sur chaque ligne d'un tableau de cinquante élèves est une nuisance, pas
+     une information.
+
+     Convention de couleur (design system Unikol 2026) :
+       vert émeraude  -> Validé, Payé, Connecté, Actif
+       ambre          -> En attente, Partiel
+       rose / rouge   -> Impayé, Abandon, Erreur
+       indigo         -> En cours, Note saisie */
+  .status-dot {
+    @apply relative inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-current;
+  }
+
+  .status-dot::after {
+    content: "";
+    @apply absolute -inset-[2px] rounded-full bg-current opacity-25;
+  }
+
+  /* ---------------------------------------------------------------- Montants
+     Chiffres à CHASSE FIXE : sans `tabular-nums`, une colonne de montants alignée à
+     droite danse d'une ligne à l'autre (le « 1 » d'Inter est plus étroit que le
+     « 8 »), ce qui rend une colonne financière illisible en diagonale. */
+  .amount {
+    @apply whitespace-nowrap tabular-nums;
+  }
+
+  /* ---------------------------------------------------------------- Jauges
+     Barre de progression / de part relative. Le remplissage porte la couleur
+     SÉMANTIQUE du montant qu'il représente, pas une couleur décorative. */
+  .progress-track {
+    @apply h-1.5 w-full overflow-hidden rounded-full bg-slate-200/70;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+  }
+
+  .progress-fill-primary {
+    @apply progress-fill bg-primary-500;
+  }
+
+  .progress-fill-success {
+    @apply progress-fill bg-emerald-500;
+  }
+
+  .progress-fill-warning {
+    @apply progress-fill bg-amber-500;
+  }
+
+  .progress-fill-danger {
+    @apply progress-fill bg-rose-500;
+  }
+
+  /* ---------------------------------------------------------------- Cartes
+     .card existe déjà (rayon 2xl, fond blanc, ombre douce). Les deux classes
+     ci-dessous lui ajoutent ce qui manquait :
+
+     .card-hover — le SOULÈVEMENT au survol. À ne poser QUE sur une carte réellement
+     cliquable : `cursor-pointer` sur un panneau qui ne réagit pas au clic est un
+     mensonge d'interface (le défaut le plus répandu du tableau de bord avant cet
+     audit — vingt-deux occurrences sur des blocs inertes).
+
+     .card-header — l'en-tête de panneau `p-6 border-b`, recopié dans une vingtaine
+     de vues. */
+  .card-hover {
+    @apply cursor-pointer transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300/70 hover:shadow-md;
+  }
+
+  .card-header {
+    @apply flex flex-col gap-3 border-b border-slate-200/70 p-6 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  /* ---------------------------------------------------------------- Barre de filtres
+     Bandeau de filtres au-dessus d'un tableau. Fond légèrement teinté pour le
+     détacher du corps du tableau sans ajouter une deuxième bordure. */
+  .filter-bar {
+    @apply flex flex-col gap-3 border-b border-slate-200/70 bg-slate-50/50 p-4 sm:flex-row sm:flex-wrap sm:items-end lg:px-6;
+  }
+
+  /* ---------------------------------------------------------------- Cartes KPI
+     Gabarit unique des cartes de synthèse (voir StatCardTagHelper, qui les émet).
+     .kpi-accent-* pose le liseré de gauche qui distingue un indicateur MAJEUR des
+     indicateurs secondaires de la même grille. */
+  /* `h-full` : dans une grille, deux cartes de la même ligne doivent avoir la même hauteur même
+     quand l'une porte une indication secondaire (.kpi-hint) et l'autre non — sans quoi la ligne
+     se met à onduler dès qu'un seul indicateur gagne une précision. */
+  .kpi-card {
+    @apply flex h-full items-center justify-between gap-3 rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm;
+  }
+
+  .kpi-label {
+    @apply text-[11px] font-bold uppercase tracking-wider text-slate-500;
+  }
+
+  .kpi-value {
+    @apply mt-1 text-2xl font-bold tabular-nums;
+  }
+
+  .kpi-hint {
+    @apply mt-1 text-[11px] text-slate-500;
+  }
+
+  .kpi-accent-primary {
+    @apply border-l-4 border-l-primary-500;
+  }
+
+  .kpi-accent-success {
+    @apply border-l-4 border-l-emerald-500;
+  }
+
+  .kpi-accent-warning {
+    @apply border-l-4 border-l-amber-500;
+  }
+
+  .kpi-accent-danger {
+    @apply border-l-4 border-l-rose-500;
+  }
+
+  /* ---------------------------------------------------------------- Onglets internes
+     Groupe de bascule d'un panneau (Synthèse / Décaissements). Trois écritures
+     différentes coexistaient pour ce même contrôle. */
+  .tab-nav {
+    @apply inline-flex gap-1 rounded-xl bg-slate-100 p-1;
+  }
+
+  .tab-btn {
+    @apply rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 transition-all duration-200 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary active:scale-95;
+  }
+
+  .tab-btn-active {
+    @apply bg-white font-semibold text-primary-700 shadow-sm;
+  }
+
+  /* ---------------------------------------------------------------- Tuile de synthèse
+     Ligne « libellé -> valeur » à l'intérieur d'un panneau (Bilan annuel, Bilan
+     mensuel du tableau de bord, ventilations de la Trésorerie). */
+  .stat-tile {
+    @apply flex items-center justify-between gap-3 rounded-xl border border-slate-200/60 bg-white px-3 py-2.5 shadow-sm;
+  }
+
+  .stat-tile-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  .stat-tile-value {
+    @apply text-sm font-bold tabular-nums text-slate-900;
   }
 }
 

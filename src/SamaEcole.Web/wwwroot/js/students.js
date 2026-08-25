@@ -788,10 +788,11 @@ document.addEventListener('alpine:init', () => {
 
         // ----- Fiche élève (JGK-D02) : utilitaires de présentation -----
 
-        /** Montant en FCFA, séparateurs de milliers français, sans décimale (la caisse travaille en entiers). */
+        /** Délègue à window.formatFCFA (wwwroot/js/formatters.js, chargé par _Layout) : source
+         *  unique du format monétaire, alignée sur le FormatMoney des PDF. Ne pas réécrire ici. */
         formatAmount(amount) {
             if (amount === null || amount === undefined) return '—';
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + ' FCFA';
+            return window.formatFCFA(amount);
         },
 
         /**

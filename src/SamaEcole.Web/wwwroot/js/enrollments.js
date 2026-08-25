@@ -411,10 +411,11 @@ document.addEventListener('alpine:init', () => {
                 .filter(Boolean).join('  ·  ');
         },
 
-        /** FCFA : entiers, séparateur de milliers français. Pas de décimales — la monnaie n'en a pas. */
+        /** Délègue à window.formatFCFA (wwwroot/js/formatters.js, chargé par _Layout) : source
+         *  unique du format monétaire, alignée sur le FormatMoney des PDF. Ne pas réécrire ici. */
         formatMoney(amount) {
             if (amount === null || amount === undefined) return '—';
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + ' FCFA';
+            return window.formatFCFA(amount);
         },
 
         /** Numéro officiel du reçu (ticket JGK-E02), ex. « REC-2025-0002 ». */

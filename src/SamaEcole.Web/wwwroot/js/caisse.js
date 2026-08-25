@@ -241,12 +241,24 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        statusBadgeVariant(status) {
+        /**
+         * Classe de pastille d'une échéance.
+         *
+         * Rendait auparavant le NOM d'une variante ('success', 'danger'…) destiné à l'attribut
+         * `variant` du Tag Helper &lt;badge&gt;, via `:variant="statusBadgeVariant(...)"`. Cette
+         * liaison ne pouvait pas fonctionner : `variant` est une propriété C# lue au rendu du
+         * serveur, et `:variant` n'est qu'un attribut HTML de plus posé sur le &lt;span&gt; émis.
+         * Résultat, toute la colonne « Statut » du tableau des échéances s'affichait en gris neutre
+         * — soldé, en retard et partiel avaient exactement la même apparence.
+         *
+         * On rend donc directement les classes du design system, que `:class` sait appliquer.
+         */
+        statusBadgeClass(status) {
             switch (status) {
-                case 'Paid': return 'success';
-                case 'Overdue': return 'danger';
-                case 'Partial': return 'warning';
-                default: return 'neutral';
+                case 'Paid': return 'status-badge-success';
+                case 'Overdue': return 'status-badge-danger';
+                case 'Partial': return 'status-badge-warning';
+                default: return 'status-badge-neutral';
             }
         },
 
@@ -309,10 +321,11 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** FCFA : entiers, séparateur de milliers français. Pas de décimales — la monnaie n'en a pas. */
+        /** Délègue à window.formatFCFA (wwwroot/js/formatters.js, chargé par _Layout) : source
+         *  unique du format monétaire, alignée sur le FormatMoney des PDF. Ne pas réécrire ici. */
         formatMoney(amount) {
             if (amount === null || amount === undefined) return '—';
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + ' FCFA';
+            return window.formatFCFA(amount);
         },
 
         /** Bas de reçu « Fait à [ville], le [date] » (référence de design §1.6) ; sans ville, on abrège. */

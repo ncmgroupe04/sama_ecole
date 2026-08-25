@@ -9,8 +9,8 @@
 
 <div x-data="attendanceView()">
  <div>
- <h1 class="text-jgk-title font-bold text-slate-900">Présences</h1>
- <p class="text-jgk-subtitle text-slate-500 mt-1">Faites l'appel d'une classe pour une matière, une date et un créneau.</p>
+ <h1 class="page-title">Présences</h1>
+ <p class="page-subtitle">Faites l'appel d'une classe pour une matière, une date et un créneau.</p>
  </div>
 
  @await Html.PartialAsync("_ErrorBanner")
@@ -51,16 +51,13 @@
 
  <!-- Grille d'appel -->
  <div class="card mt-6 relative" x-show="rosterLoaded" x-cloak>
- <div class="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+ <div class="card-header">
  <div class="flex items-center flex-wrap gap-2 text-sm">
- <span class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-success-bg text-success">
- Présents : <span class="ml-1 font-bold" x-text="countBy('Present')"></span>
+ <span class="status-badge-success"><span class="status-dot" aria-hidden="true"></span>Présents : <span class="font-bold" x-text="countBy('Present')"></span>
  </span>
- <span class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-warning-bg text-warning">
- Retards : <span class="ml-1 font-bold" x-text="countBy('Late')"></span>
+ <span class="status-badge-warning"><span class="status-dot" aria-hidden="true"></span>Retards : <span class="font-bold" x-text="countBy('Late')"></span>
  </span>
- <span class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-danger-bg text-danger">
- Absents non justifiés : <span class="ml-1 font-bold" x-text="countBy('UnjustifiedAbsence')"></span>
+ <span class="status-badge-danger"><span class="status-dot" aria-hidden="true"></span>Absents non justifiés : <span class="font-bold" x-text="countBy('UnjustifiedAbsence')"></span>
  </span>
  </div>
  <div class="flex items-center gap-3">
@@ -76,21 +73,21 @@
  <div class="overflow-x-auto">
  <table class="w-full text-left border-collapse">
  <thead>
- <tr class="table-head hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out">
- <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
- <th class="py-3 px-4 w-56 uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
- <th class="py-3 px-4 w-40 uppercase tracking-wider text-slate-500 font-semibold">Retard (min)</th>
+ <tr class="table-head">
+ <th class="py-3 px-4">Élève</th>
+ <th class="py-3 px-4 w-56">Statut</th>
+ <th class="py-3 px-4 w-40">Retard (min)</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
- <tr class="hover:bg-slate-50 transition-colors duration-150 transition-all duration-200 ease-in-out" x-show="entries.length === 0">
+ <tr class="hover:bg-slate-50 transition-colors duration-150" x-show="entries.length === 0">
  <td colspan="3">
  <empty-state icon="users" title="Aucun élève dans cette classe."
  hint="Vérifiez que des élèves sont inscrits dans la classe choisie." />
  </td>
  </tr>
  <template x-for="(entry, index) in entries" :key="entry.studentId">
- <tr class="hover:bg-slate-50 transition-colors transition-all duration-200 ease-in-out">
+ <tr class="hover:bg-slate-50 transition-colors duration-150">
  <td class="py-3 px-4">
  <div class="flex items-center gap-3">
  <div class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs" x-text="initials(entry.fullName)"></div>

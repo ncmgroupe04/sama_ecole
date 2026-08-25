@@ -81,8 +81,8 @@
 <div x-data="caisseView()">
  <!-- Titre -->
  <div>
- <h1 class="text-jgk-title font-bold text-slate-900">Caisse</h1>
- <p class="text-jgk-subtitle text-slate-500 mt-1">
+ <h1 class="page-title">Caisse</h1>
+ <p class="page-subtitle">
  Recherchez un élève pour consulter son solde et encaisser un versement sur son inscription.
  </p>
  </div>
@@ -108,7 +108,7 @@
  <div class="mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-96 overflow-y-auto">
  <template x-for="s in students" :key="s.id">
  <button type="button" x-on:click="selectStudent(s)"
- class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors transition-all duration-200 ease-in-out"
+ class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors duration-150"
  :class="selectedStudent && selectedStudent.id === s.id ? 'bg-indigo-50' : ''">
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
  <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
@@ -153,8 +153,8 @@
  <div>
  <div class="flex items-center justify-between">
  <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Solde de l'inscription</h2>
- <badge x-show="balance && balance.status === 'Paid'" x-cloak variant="success">Soldé</badge>
- <badge x-show="balance && balance.status === 'Partial'" x-cloak variant="warning">Solde partiel</badge>
+ <badge x-show="balance && balance.status === 'Paid'" x-cloak variant="success" dot>Soldé</badge>
+ <badge x-show="balance && balance.status === 'Partial'" x-cloak variant="warning" dot>Solde partiel</badge>
  </div>
  <p class="text-sm text-slate-500 mt-1">
  <span x-text="balance ? balance.studentFullName : ''"></span> ·
@@ -197,13 +197,13 @@
          <table class="w-full text-xs text-left border-collapse">
              <thead>
                  <tr class="table-head">
-                     <th class="py-2.5 px-3 uppercase tracking-wider text-slate-500 font-semibold">Désignation</th>
-                     <th class="py-2.5 px-3 uppercase tracking-wider text-slate-500 font-semibold">Échéance</th>
-                     <th class="py-2.5 px-3 text-right uppercase tracking-wider text-slate-500 font-semibold">Montant</th>
-                     <th class="py-2.5 px-3 text-right uppercase tracking-wider text-slate-500 font-semibold">Payé</th>
-                     <th class="py-2.5 px-3 text-right uppercase tracking-wider text-slate-500 font-semibold">Reste</th>
-                     <th class="py-2.5 px-3 text-center uppercase tracking-wider text-slate-500 font-semibold">Statut</th>
-                     <th class="py-2.5 px-3 text-right uppercase tracking-wider text-slate-500 font-semibold">Action</th>
+                     <th class="py-2.5 px-3">Désignation</th>
+                     <th class="py-2.5 px-3">Échéance</th>
+                     <th class="py-2.5 px-3 text-right">Montant</th>
+                     <th class="py-2.5 px-3 text-right">Payé</th>
+                     <th class="py-2.5 px-3 text-right">Reste</th>
+                     <th class="py-2.5 px-3 text-center">Statut</th>
+                     <th class="py-2.5 px-3 text-right">Action</th>
                  </tr>
              </thead>
              <tbody class="divide-y divide-slate-100">
@@ -211,11 +211,14 @@
                      <tr class="hover:bg-slate-50/60 transition-colors">
                          <td class="py-2.5 px-3 font-medium text-slate-800" x-text="inst.feeLineName"></td>
                          <td class="py-2.5 px-3 text-slate-500" x-text="formatDateOnly(inst.dueDate)"></td>
-                         <td class="py-2.5 px-3 text-right font-medium text-slate-900" x-text="formatMoney(inst.amount)"></td>
-                         <td class="py-2.5 px-3 text-right text-slate-600" x-text="formatMoney(inst.amountPaid)"></td>
-                         <td class="py-2.5 px-3 text-right font-bold text-slate-900" x-text="formatMoney(inst.remainingDue)"></td>
+                         <td class="py-2.5 px-3 text-right font-medium text-slate-900 amount" x-text="formatMoney(inst.amount)"></td>
+                         <td class="py-2.5 px-3 text-right text-slate-600 amount" x-text="formatMoney(inst.amountPaid)"></td>
+                         <td class="py-2.5 px-3 text-right font-bold text-slate-900 amount" x-text="formatMoney(inst.remainingDue)"></td>
                          <td class="py-2.5 px-3 text-center">
-                             <badge :variant="statusBadgeVariant(inst.status)" x-text="statusLabel(inst.status)"></badge>
+                             <span class="status-badge" :class="statusBadgeClass(inst.status)">
+                                 <span class="status-dot" aria-hidden="true"></span>
+                                 <span x-text="statusLabel(inst.status)"></span>
+                             </span>
                          </td>
                          <td class="py-2.5 px-3 text-right">
                              <button x-show="inst.remainingDue > 0" type="button" x-on:click="payInstallment(inst)"
@@ -237,11 +240,11 @@
          <table class="w-full text-xs text-left border-collapse">
              <thead>
                  <tr class="table-head">
-                     <th class="py-2 px-3 uppercase tracking-wider text-slate-500 font-semibold">N° Reçu</th>
-                     <th class="py-2 px-3 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
-                     <th class="py-2 px-3 uppercase tracking-wider text-slate-500 font-semibold">Mode</th>
-                     <th class="py-2 px-3 text-right uppercase tracking-wider text-slate-500 font-semibold">Montant encaissé</th>
-                     <th class="py-2 px-3 text-center uppercase tracking-wider text-slate-500 font-semibold">Document</th>
+                     <th class="py-2 px-3">N° Reçu</th>
+                     <th class="py-2 px-3">Date</th>
+                     <th class="py-2 px-3">Mode</th>
+                     <th class="py-2 px-3 text-right">Montant encaissé</th>
+                     <th class="py-2 px-3 text-center">Document</th>
                  </tr>
              </thead>
              <tbody class="divide-y divide-slate-100">
@@ -250,7 +253,7 @@
                          <td class="py-2 px-3 font-mono font-medium text-primary" x-text="pay.receiptNumber"></td>
                          <td class="py-2 px-3 text-slate-600" x-text="formatDate(pay.paidAt)"></td>
                          <td class="py-2 px-3 text-slate-600" x-text="methodLabel(pay.method)"></td>
-                         <td class="py-2 px-3 text-right font-bold text-slate-900" x-text="formatMoney(pay.amount)"></td>
+                         <td class="py-2 px-3 text-right font-bold text-slate-900 amount" x-text="formatMoney(pay.amount)"></td>
                          <td class="py-2 px-3 text-center whitespace-nowrap">
                              <button type="button" x-on:click.stop="previewReceipt(pay.paymentId, pay.receiptNumber)"
                                      title="Aperçu et impression du reçu PDF"
@@ -407,19 +410,19 @@
                             <tbody class="divide-y divide-slate-100">
                                 <tr class="border-b border-slate-100">
                                     <td class="py-2.5 px-3 text-slate-700">Versement reçu aujourd'hui</td>
-                                    <td class="py-2.5 px-3 text-right font-medium text-slate-900" x-text="formatMoney(receipt.amount)"></td>
+                                    <td class="py-2.5 px-3 text-right font-medium text-slate-900 amount" x-text="formatMoney(receipt.amount)"></td>
                                 </tr>
                                 <tr class="border-b border-slate-100">
                                     <td class="py-2.5 px-3 text-slate-700">Montant total dû</td>
-                                    <td class="py-2.5 px-3 text-right text-slate-600" x-text="formatMoney(receipt.totalDue)"></td>
+                                    <td class="py-2.5 px-3 text-right text-slate-600 amount" x-text="formatMoney(receipt.totalDue)"></td>
                                 </tr>
                                 <tr class="border-b border-slate-100">
                                     <td class="py-2.5 px-3 text-slate-700">Déjà réglé antérieurement</td>
-                                    <td class="py-2.5 px-3 text-right text-slate-600" x-text="formatMoney(receipt.alreadyPaid)"></td>
+                                    <td class="py-2.5 px-3 text-right text-slate-600 amount" x-text="formatMoney(receipt.alreadyPaid)"></td>
                                 </tr>
                                 <tr class="bg-indigo-50/50 text-indigo-950 font-bold border-t border-indigo-100">
                                     <td class="py-2.5 px-3 uppercase text-xs">Total encaissé</td>
-                                    <td class="py-2.5 px-3 text-right text-sm" x-text="formatMoney(receipt.amount)"></td>
+                                    <td class="py-2.5 px-3 text-right text-sm amount" x-text="formatMoney(receipt.amount)"></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -463,7 +466,7 @@
  <modal-shell open="showConfirmDialog" size="md" on-close="finishFromDialog()" title="Paiement validé">
  <confirm-dialog-body close-action="finishFromDialog()" close-label="Terminer"
  new-action="showReceiptFromDialog()" new-label="Imprimer le reçu">
- Le versement de <span class="font-medium text-slate-900" x-text="receipt ? formatMoney(receipt.amount) : ''"></span>
+ Le versement de <span class="font-medium text-slate-900 amount" x-text="receipt ? formatMoney(receipt.amount) : ''"></span>
  a bien été encaissé — reçu n° <span class="font-medium text-slate-900" x-text="receipt ? receipt.receiptNumber : ''"></span>.
  </confirm-dialog-body>
  </modal-shell>

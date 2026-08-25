@@ -19,7 +19,7 @@
  @* Sélecteur d'établissement (groupe scolaire) — dépend d'auth.js et api.js. *@
  <script src="~/js/school-switcher.js" asp-append-version="true"></script>
  <script src="~/js/ui-components.js" asp-append-version="true"></script>
- @* Formatage d'affichage partagé (magic Alpine $phone) — script classique, donc exécuté avant
+ @* Formatage d'affichage partagé (magics Alpine $phone et $money) — script classique, donc exécuté avant
  Alpine (différé) : l'écouteur alpine:init est enregistré à temps. *@
  <script src="~/js/formatters.js" asp-append-version="true"></script>
  <script src="~/js/form-draft.js" asp-append-version="true"></script>
@@ -299,7 +299,12 @@
  @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
  y compris sur la page Classes : une indication de position fausse vaut moins que pas
  d'indication du tout. Un vrai fil d'ariane viendra avec l'arborescence des modules. *@
- <h2 class="hidden sm:block text-xs font-bold tracking-tight text-primary-700">@ViewData["Title"]</h2>
+ @* text-xs faisait de l'indication de position le PLUS PETIT texte de la barre — plus petit
+ que le nom de l'utilisateur, que l'horloge et que le badge d'année scolaire, alors que
+ c'est la seule chose qui répond à « où suis-je ? ». Ramené au gabarit du reste de la
+ barre (text-sm), en slate-700 : le bleu marque l'entrée ACTIVE du menu latéral, une
+ deuxième zone bleue dans le bandeau diluait ce repère. *@
+ <h2 class="hidden sm:block text-sm font-semibold tracking-tight text-slate-700">@ViewData["Title"]</h2>
  </div>
 
  <div class="flex items-center gap-4">

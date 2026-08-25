@@ -14,8 +14,8 @@
     <!-- En-tête -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-            <h1 class="text-jgk-title font-bold text-slate-900">Registre Discipline</h1>
-            <p class="text-jgk-subtitle text-slate-500 mt-1">Gérez et consultez l'historique des sanctions disciplinaires des élèves.</p>
+            <h1 class="page-title">Registre Discipline</h1>
+            <p class="page-subtitle">Gérez et consultez l'historique des sanctions disciplinaires des élèves.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
             <button x-show="canManageDiscipline" x-cloak @@click="openCreate()" class="btn-modal-primary">
@@ -31,11 +31,11 @@
             <table class="w-full text-sm text-left border-collapse">
                 <thead>
                     <tr class="table-head">
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Type de Sanction</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
-                        <th class="py-3.5 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Actions</th>
+                        <th class="py-3.5 px-4">Date</th>
+                        <th class="py-3.5 px-4">Élève</th>
+                        <th class="py-3.5 px-4">Type de Sanction</th>
+                        <th class="py-3.5 px-4">Motif</th>
+                        <th class="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -62,9 +62,7 @@
                                 <div class="text-xs text-slate-500" x-text="'Matricule : ' + record.studentMatricule"></div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <span class="status-badge"
-                                      :class="getDisciplineBadge(record.type).css"
-                                      x-text="getDisciplineBadge(record.type).label"></span>
+                                <span class="status-badge" :class="getDisciplineBadge(record.type).css"><span class="status-dot" aria-hidden="true"></span><span x-text="getDisciplineBadge(record.type).label"></span></span>
                             </td>
                             <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="record.reason" :title="record.reason"></td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">

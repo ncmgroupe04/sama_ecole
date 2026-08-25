@@ -154,7 +154,7 @@ document.addEventListener('alpine:init', () => {
 
         formatMoney(amount) {
             if (amount === null || amount === undefined) return '—';
-            return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(amount) + ' FCFA';
+            return window.formatFCFA(amount);
         },
 
         pct(part, total) {

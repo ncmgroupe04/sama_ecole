@@ -9,20 +9,20 @@
 
 <div x-data="taxesView()" class="space-y-6">
     <!-- ===================== En-tête + sélecteur de période ===================== -->
-    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+    <div class="page-header">
         <div>
-            <h1 class="text-jgk-title font-bold text-slate-900">Fiscalité</h1>
-            <p class="text-jgk-subtitle text-slate-500 mt-1">Déclarations mensuelles VRS / IPRES / CSS / BRS et TVA.</p>
+            <h1 class="page-title">Fiscalité</h1>
+            <p class="page-subtitle">Déclarations mensuelles VRS / IPRES / CSS / BRS et TVA.</p>
         </div>
         <div class="flex flex-wrap items-end gap-3">
             <div class="w-44">
-                <label class="block text-[11px] font-bold tracking-wider text-slate-400 uppercase mb-1">Mois</label>
+                <label class="form-label-sm">Mois</label>
                 <select-field model="periodMonth" placeholder="Mois" aria-label="Mois de la période fiscale"
                     on-change="onPeriodChange()" class="!mt-0"
                     options-expr="monthOptions()" />
             </div>
             <div class="w-36">
-                <label class="block text-[11px] font-bold tracking-wider text-slate-400 uppercase mb-1">Année fiscale</label>
+                <label class="form-label-sm">Année fiscale</label>
                 <select-field model="periodYear" placeholder="Année" aria-label="Année fiscale"
                     on-change="onYearChange()" class="!mt-0"
                     options-expr="yearOptions()" />
@@ -35,103 +35,64 @@
     <!-- ===================== Récapitulatif : cartes KPI de la période ===================== -->
     <div>
         <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-slate-700">Récapitulatif</h2>
+            <h2 class="section-title">Récapitulatif</h2>
             <span class="text-xs font-medium" :class="selectedDeclaration ? 'text-slate-500' : 'text-amber-600'"
                   x-text="selectedDeclaration ? periodLabel() : periodLabel() + ' — aucune déclaration générée'"></span>
         </div>
 
+        @* Les huit cartes de synthèse étaient écrites à la main, avec leur propre gabarit : `font-black`
+           là où tout le reste de l'application pose `font-bold`, pastille d'icône `rounded-full` là où
+           le design system 2026 pose un conteneur doux, et un libellé en `text-slate-400` qui tombait
+           sous le seuil de contraste AA. Elles passent au composant partagé — mêmes montants, même
+           ordre, mêmes teintes, mais le même gabarit qu'en Trésorerie et au Tableau de bord. *@
+
         <!-- Ligne 1 : cotisations sociales & retraite -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">IPRES</p>
-                    <p class="text-2xl font-black text-indigo-600 mt-1" x-text="amountOf('totalIpres')"></p>
-                    <p class="text-xs text-slate-500 mt-1">Retraite — part salariale + patronale</p>
-                </div>
-                <div class="w-11 h-11 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 ml-3">
-                    <icon name="shield" class="w-5 h-5 text-indigo-600" />
-                </div>
-            </div>
+            <stat-card label="IPRES" icon="shield" accent="primary">
+                <span x-text="amountOf('totalIpres')"></span>
+                <stat-hint>Retraite — part salariale + patronale</stat-hint>
+            </stat-card>
 
-            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">CSS</p>
-                    <p class="text-2xl font-black text-blue-600 mt-1" x-text="amountOf('totalCss')"></p>
-                    <p class="text-xs text-slate-500 mt-1">Caisse de Sécurité Sociale</p>
-                </div>
-                <div class="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center shrink-0 ml-3">
-                    <icon name="users" class="w-5 h-5 text-blue-600" />
-                </div>
-            </div>
+            <stat-card label="CSS" icon="users" accent="blue">
+                <span x-text="amountOf('totalCss')"></span>
+                <stat-hint>Caisse de Sécurité Sociale</stat-hint>
+            </stat-card>
 
-            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">VRS</p>
-                    <p class="text-2xl font-black text-slate-800 mt-1" x-text="amountOf('totalVrs')"></p>
-                    <p class="text-xs text-slate-500 mt-1">Versement représentatif de l'impôt</p>
-                </div>
-                <div class="w-11 h-11 rounded-full bg-indigo-50/70 flex items-center justify-center shrink-0 ml-3">
-                    <icon name="document" class="w-5 h-5 text-slate-500" />
-                </div>
-            </div>
+            <stat-card label="VRS" icon="document" accent="slate">
+                <span x-text="amountOf('totalVrs')"></span>
+                <stat-hint>Versement représentatif de l'impôt</stat-hint>
+            </stat-card>
 
-            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">BRS</p>
-                    <p class="text-2xl font-black text-purple-600 mt-1" x-text="amountOf('totalBrs')"></p>
-                    <p class="text-xs text-slate-500 mt-1">Retenue à la source sur salaires</p>
-                </div>
-                <div class="w-11 h-11 rounded-full bg-purple-50 flex items-center justify-center shrink-0 ml-3">
-                    <icon name="percent" class="w-5 h-5 text-purple-600" />
-                </div>
-            </div>
+            <stat-card label="BRS" icon="percent" accent="purple">
+                <span x-text="amountOf('totalBrs')"></span>
+                <stat-hint>Retenue à la source sur salaires</stat-hint>
+            </stat-card>
         </div>
 
         <!-- Ligne 2 : TVA & synthèse État -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">TVA collectée</p>
-                    <p class="text-2xl font-black text-amber-600 mt-1" x-text="amountOf('tvaCollected')"></p>
-                    <p class="text-xs text-slate-500 mt-1">Facturée sur la période</p>
-                </div>
-                <div class="w-11 h-11 rounded-full bg-amber-50 flex items-center justify-center shrink-0 ml-3">
-                    <icon name="arrow-up" class="w-5 h-5 text-amber-600" />
-                </div>
-            </div>
+            <stat-card label="TVA collectée" icon="arrow-up" accent="warning">
+                <span x-text="amountOf('tvaCollected')"></span>
+                <stat-hint>Facturée sur la période</stat-hint>
+            </stat-card>
 
-            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">TVA déductible</p>
-                    <p class="text-2xl font-black text-emerald-600 mt-1" x-text="amountOf('tvaDeductible')"></p>
-                    <p class="text-xs text-slate-500 mt-1">Récupérable sur les achats</p>
-                </div>
-                <div class="w-11 h-11 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 ml-3">
-                    <icon name="arrow-down" class="w-5 h-5 text-emerald-600" />
-                </div>
-            </div>
+            <stat-card label="TVA déductible" icon="arrow-down" accent="success">
+                <span x-text="amountOf('tvaDeductible')"></span>
+                <stat-hint>Récupérable sur les achats</stat-hint>
+            </stat-card>
 
-            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">TVA nette</p>
-                    <p class="text-2xl font-black text-indigo-600 mt-1" x-text="amountOf('netTva')"></p>
-                    <p class="text-xs text-slate-500 mt-1">Collectée − déductible</p>
-                </div>
-                <div class="w-11 h-11 rounded-full bg-blue-50 flex items-center justify-center shrink-0 ml-3">
-                    <icon name="payment" class="w-5 h-5 text-blue-600" />
-                </div>
-            </div>
+            <stat-card label="TVA nette" icon="payment" accent="blue">
+                <span x-text="amountOf('netTva')"></span>
+                <stat-hint>Collectée − déductible</stat-hint>
+            </stat-card>
 
-            <div class="bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-                <div class="min-w-0">
-                    <p class="text-[11px] font-bold tracking-wider text-indigo-400 uppercase">Total dû à l'État</p>
-                    <p class="text-3xl font-black text-indigo-700 mt-1" x-text="amountOf('totalDueToState')"></p>
-                    <p class="text-xs text-slate-500 mt-1">VRS + BRS + TVA nette</p>
-                </div>
-                <div class="w-11 h-11 rounded-full bg-indigo-600/10 flex items-center justify-center shrink-0 ml-3">
-                    <icon name="building" class="w-5 h-5 text-indigo-700" />
-                </div>
-            </div>
+            @* Le seul indicateur de TÊTE de l'écran — c'est le montant que l'établissement versera
+               réellement. Il porte donc le liseré d'accent, comme les indicateurs majeurs du tableau
+               de bord, plutôt qu'un fond teinté qui n'existe nulle part ailleurs. *@
+            <stat-card label="Total dû à l'État" icon="building" accent="primary" emphasis>
+                <span x-text="amountOf('totalDueToState')"></span>
+                <stat-hint>VRS + BRS + TVA nette</stat-hint>
+            </stat-card>
         </div>
 
         <template x-if="!isLoading && !selectedDeclaration">
@@ -144,7 +105,7 @@
 
     <!-- ===================== Historique des déclarations ===================== -->
     <div class="card">
-        <div class="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="card-header">
             <div>
                 <p class="text-sm font-semibold text-slate-900">Historique des déclarations</p>
                 <p class="text-xs text-slate-500 mt-0.5">Année fiscale <span class="font-semibold text-slate-700" x-text="periodYear"></span> — filtrée par le sélecteur en haut de page.</p>
@@ -158,14 +119,14 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="table-head">
-                        <th class="py-3 px-4 uppercase tracking-wider text-slate-500 font-semibold">Période</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">IPRES</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">CSS</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">VRS</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">BRS</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">TVA nette</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Total dû à l'État</th>
-                        <th class="py-3 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">État synthétique</th>
+                        <th class="py-3 px-4">Période</th>
+                        <th class="py-3 px-4 text-right">IPRES</th>
+                        <th class="py-3 px-4 text-right">CSS</th>
+                        <th class="py-3 px-4 text-right">VRS</th>
+                        <th class="py-3 px-4 text-right">BRS</th>
+                        <th class="py-3 px-4 text-right">TVA nette</th>
+                        <th class="py-3 px-4 text-right">Total dû à l'État</th>
+                        <th class="py-3 px-4 text-right">État synthétique</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -179,12 +140,12 @@
                         <tr class="hover:bg-slate-50 transition-colors"
                             :class="declaration.month === Number(periodMonth) ? 'bg-indigo-50/40' : ''">
                             <td class="py-3 px-4 font-medium text-slate-900" x-text="monthLabel(declaration.month) + ' ' + declaration.year"></td>
-                            <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalIpres)"></td>
-                            <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalCss)"></td>
-                            <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalVrs)"></td>
-                            <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.totalBrs)"></td>
-                            <td class="py-3 px-4 text-right text-slate-600" x-text="formatAmount(declaration.netTva)"></td>
-                            <td class="py-3 px-4 text-right font-semibold text-slate-900" x-text="formatAmount(declaration.totalDueToState)"></td>
+                            <td class="py-3 px-4 text-right amount text-slate-600" x-text="formatAmount(declaration.totalIpres)"></td>
+                            <td class="py-3 px-4 text-right amount text-slate-600" x-text="formatAmount(declaration.totalCss)"></td>
+                            <td class="py-3 px-4 text-right amount text-slate-600" x-text="formatAmount(declaration.totalVrs)"></td>
+                            <td class="py-3 px-4 text-right amount text-slate-600" x-text="formatAmount(declaration.totalBrs)"></td>
+                            <td class="py-3 px-4 text-right amount text-slate-600" x-text="formatAmount(declaration.netTva)"></td>
+                            <td class="py-3 px-4 text-right amount font-semibold text-slate-900" x-text="formatAmount(declaration.totalDueToState)"></td>
                             <td class="py-3 px-4 text-right">
                                 <button type="button" x-on:click="downloadDeclarationPdf(declaration.id)" :disabled="downloadingPdfId === declaration.id"
                                         class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60">

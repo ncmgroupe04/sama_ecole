@@ -10,8 +10,8 @@
     <!-- En-tête -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-            <h1 class="text-jgk-title font-bold text-slate-900">Billets</h1>
-            <p class="text-jgk-subtitle text-slate-500 mt-1">Retards et sorties anticipées, avec impression du billet A5 correspondant.</p>
+            <h1 class="page-title">Billets</h1>
+            <p class="page-subtitle">Retards et sorties anticipées, avec impression du billet A5 correspondant.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
             <button x-show="tab === 'entree' && canManageBillets" x-cloak @@click="openCreate()" class="btn-modal-primary">
@@ -45,11 +45,11 @@
             <table class="w-full text-sm text-left border-collapse">
                 <thead>
                     <tr class="table-head">
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Retard</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
-                        <th class="py-3.5 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Billet</th>
+                        <th class="py-3.5 px-4">Date</th>
+                        <th class="py-3.5 px-4">Élève</th>
+                        <th class="py-3.5 px-4">Retard</th>
+                        <th class="py-3.5 px-4">Motif</th>
+                        <th class="py-3.5 px-4 text-right">Billet</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -159,12 +159,12 @@
             <table class="w-full text-sm text-left border-collapse">
                 <thead>
                     <tr class="table-head">
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Date</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Élève</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Heure de sortie</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Motif</th>
-                        <th class="py-3.5 px-4 uppercase tracking-wider text-slate-500 font-semibold">Récupéré par</th>
-                        <th class="py-3.5 px-4 text-right uppercase tracking-wider text-slate-500 font-semibold">Billet</th>
+                        <th class="py-3.5 px-4">Date</th>
+                        <th class="py-3.5 px-4">Élève</th>
+                        <th class="py-3.5 px-4">Heure de sortie</th>
+                        <th class="py-3.5 px-4">Motif</th>
+                        <th class="py-3.5 px-4">Récupéré par</th>
+                        <th class="py-3.5 px-4 text-right">Billet</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
