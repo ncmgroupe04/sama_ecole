@@ -39,6 +39,10 @@ document.addEventListener('alpine:init', () => {
         // d'abord ; le reçu ne s'affiche que si l'utilisateur choisit de l'imprimer/consulter.
         showConfirmDialog: false,
         showReceipt: false,
+
+        // Marge restante sur la feuille A5, en mm (null tant que le reçu n'est pas rendu).
+        // Négative = le contenu déborde ; l'impression le rognerait silencieusement.
+        receiptFitMm: null,
         hasDraft: false,
 
         init() {
@@ -202,6 +206,8 @@ document.addEventListener('alpine:init', () => {
         showReceiptFromDialog() {
             this.showConfirmDialog = false;
             this.showReceipt = true;
+            // $nextTick : la feuille n'existe dans le DOM qu'après le rendu du x-show.
+            this.$nextTick(() => this.checkReceiptFit());
         },
 
         /** Fenêtre de confirmation → « Terminer » (ou fermeture) : repart sur une recherche vierge. */
@@ -283,6 +289,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         printReceipt() {
+            // Remesure au dernier moment : une police chargée tardivement change les métriques,
+            // et c'est précisément l'instant où un débordement doit être connu.
+            this.checkReceiptFit();
             window.print();
         },
 
@@ -307,6 +316,82 @@ document.addEventListener('alpine:init', () => {
                 `Reçu de paiement n° ${receiptNumber}`,
                 `Recu-${receiptNumber}.pdf`
             );
+        },
+
+        // ------------------------------------------------- Reçu de caisse A5 (refonte 25/08/2026)
+        //
+        // Le reçu porte désormais la VENTILATION du versement — une ligne par poste imputé — au lieu
+        // de l'unique « Versement reçu ». Le dû annuel, le déjà-réglé et le solde n'y figurent plus :
+        // un reçu n'atteste que de la somme entrée en caisse ce jour-là (AGENTS.md règle #12).
+        // Ils restent affichés dans le cadre de gauche, à l'usage du caissier.
+
+        /**
+         * Vrai quand la ventilation est imprimable. La décision vient du SERVEUR
+         * (PaymentReceiptDto.HasBalancedLines) : si le détail saisi ne totalise pas exactement le
+         * montant encaissé, le document se replie sur sa ligne unique — un tableau dont le détail
+         * contredit le total est un faux. Le repli local reproduit la même règle, jamais une variante.
+         */
+        hasVentilation() {
+            if (!this.receipt) return false;
+            if (typeof this.receipt.hasBalancedLines === 'boolean') {
+                return this.receipt.hasBalancedLines;
+            }
+            const lines = this.receipt.lines || [];
+            if (lines.length === 0) return false;
+            return lines.reduce((sum, l) => sum + l.amount, 0) === this.receipt.amount;
+        },
+
+        /**
+         * Colonne « Période / Note » : le libellé propre à la ligne, à défaut la période du versement
+         * entier, à défaut CHAÎNE VIDE. Jamais un tiret ni une période devinée — un reçu n'invente pas
+         * la période qu'il atteste. Même cascade que PaymentReceiptDto.ResolveLineLabel.
+         */
+        lineLabel(line) {
+            if (line && line.label && line.label.trim()) return line.label;
+            const period = this.receipt ? this.receipt.referencePeriod : null;
+            return period && period.trim() ? period : '';
+        },
+
+        /** Précision du bandeau de section : la période couverte par le versement, si renseignée. */
+        periodHint() {
+            const period = this.receipt ? this.receipt.referencePeriod : null;
+            return period && period.trim() ? `Période de référence : ${period}` : '';
+        },
+
+        /** Ligne de coordonnées de l'en-tête : adresse · téléphone · e-mail, sans les trous. */
+        contactLine() {
+            if (!this.receipt) return '';
+            return [this.receipt.schoolAddress, this.receipt.schoolPhone, this.receipt.schoolEmail]
+                .filter(Boolean).join('  ·  ');
+        },
+
+        /** Ligne « NINEA … · RCCM … » : n'imprime que les mentions réellement saisies. */
+        legalMentions() {
+            if (!this.receipt) return '';
+            return [
+                this.receipt.schoolNinea ? `NINEA : ${this.receipt.schoolNinea}` : null,
+                this.receipt.schoolRegistreCommerce ? `RCCM : ${this.receipt.schoolRegistreCommerce}` : null
+            ].filter(Boolean).join('  ·  ');
+        },
+
+        /**
+         * Écart entre la hauteur du contenu et la zone utile de la feuille (128 mm), en millimètres.
+         * Positif = il reste de la place, négatif = ça déborde. Mesuré sur le rendu RÉEL : c'est la
+         * seule garantie de page unique quel que soit le nombre de postes ventilés. L'impression
+         * rogne le débordement — cet indicateur existe pour qu'il soit vu avant, et non subi.
+         */
+        checkReceiptFit() {
+            const sheet = document.getElementById('receipt-printable');
+            if (!sheet) { this.receiptFitMm = null; return; }
+
+            const style = window.getComputedStyle(sheet);
+            const inner = sheet.clientHeight
+                - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+
+            let used = 0;
+            for (const child of sheet.children) used += child.offsetHeight;
+
+            this.receiptFitMm = (inner - used) / (96 / 25.4);
         },
 
         // ---------------------------------------------------------------- Affichage

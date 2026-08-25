@@ -53,6 +53,34 @@ public record EnrollmentReceiptDto(
 {
     /// <summary>Reste dû sur l'année APRÈS le versement du jour. Jamais négatif : l'encaissement est borné au dû.</summary>
     public decimal RemainingBalance => TotalDue - TotalCollected;
+
+    /// <summary>
+    /// RÈGLE MÉTIER — engagement initial : ce que le tuteur doit régler à la comptabilité le jour de
+    /// l'inscription. Pour chaque ligne, son <see cref="EnrollmentFeeLineDto.UnitAmount"/> : le frais
+    /// ponctuel ENTIER (inscription, tenue) ou UNE SEULE mensualité pour une ligne récurrente.
+    ///
+    /// C'est le cœur de la refonte du 25/08/2026 : l'attestation n'affiche plus jamais
+    /// <see cref="TotalDue"/> (le cumul annuel, « 271 000 »), qui effrayait les tuteurs sans les
+    /// informer. Elle annonce ce qu'il y a à payer maintenant, puis le tarif mensuel qui suivra.
+    ///
+    /// HYPOTHÈSE ASSUMÉE : un mois d'avance. Une école qui en exigerait deux, ou qui ne réclamerait
+    /// que les frais d'inscription à la signature, a besoin d'un réglage d'établissement — rien dans
+    /// le modèle ne porte cette information aujourd'hui.
+    /// </summary>
+    public decimal InitialSettlementTotal => Lines.Sum(line => line.UnitAmount);
+
+    /// <summary>
+    /// Lignes de l'échéancier mensuel : les frais RÉCURRENTS seuls. Un frais ponctuel n'a pas
+    /// d'échéance et le faire figurer dans un échéancier serait un faux.
+    /// </summary>
+    public IReadOnlyList<EnrollmentFeeLineDto> MonthlyLines =>
+        Lines.Where(line => line.IsRecurring).ToList();
+
+    /// <summary>
+    /// Total à prévoir chaque mois — la somme des mensualités UNITAIRES. Jamais multiplié par le
+    /// nombre de mois : c'est précisément la multiplication que la refonte supprime.
+    /// </summary>
+    public decimal MonthlyTotal => Lines.Where(line => line.IsRecurring).Sum(line => line.UnitAmount);
 }
 
 /// <summary>

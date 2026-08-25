@@ -65,6 +65,10 @@ document.addEventListener('alpine:init', () => {
         showReceipt: false,
         hasDraft: false,
 
+        // Marge restante sur la feuille A5, en mm (null tant que le reçu n'est pas rendu).
+        // Négative = le contenu déborde ; l'impression le rognerait silencieusement.
+        receiptFitMm: null,
+
         async init() {
             await this.loadReferenceData();
             if (window.formDraft && window.formDraft.has('enrollment_form')) {
@@ -303,6 +307,8 @@ document.addEventListener('alpine:init', () => {
         showReceiptFromDialog() {
             this.showConfirmDialog = false;
             this.showReceipt = true;
+            // $nextTick : la feuille n'existe dans le DOM qu'après le rendu du x-show.
+            this.$nextTick(() => this.checkReceiptFit());
         },
 
         /**
@@ -350,6 +356,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         printReceipt() {
+            // Remesure au dernier moment : une police chargée tardivement change les métriques,
+            // et c'est précisément l'instant où un débordement doit être connu.
+            this.checkReceiptFit();
             window.print();
         },
 
@@ -391,8 +400,65 @@ document.addEventListener('alpine:init', () => {
             return type === 'ReEnrollment' ? 'Réinscription' : 'Nouvelle inscription';
         },
 
-        recurringSuffix(line) {
-            return line.isRecurring ? ` (× ${line.months} mois)` : '';
+        // ------------------------------------------------- Attestation A5 (refonte 25/08/2026)
+        //
+        // L'attestation n'affiche PLUS le cumul annuel : ni totalDue, ni « × N mois », ni reste à
+        // payer. Elle porte l'engagement initial à régler auprès de la comptabilité, puis les
+        // tarifs mensuels UNITAIRES. Voir docs/design-references/README.md §1.
+        //
+        // Les trois valeurs viennent du serveur (EnrollmentReceiptDto les calcule), pour que
+        // l'écran, l'impression navigateur et le PDF appliquent la MÊME règle métier. Le repli
+        // local n'existe que pour un payload servi par un cache antérieur à la refonte — il
+        // reproduit le calcul du serveur à l'identique, jamais une variante.
+
+        /** Engagement initial : le frais ponctuel entier, ou UNE seule mensualité par ligne récurrente. */
+        settlementTotal() {
+            if (!this.receipt) return 0;
+            if (typeof this.receipt.initialSettlementTotal === 'number') {
+                return this.receipt.initialSettlementTotal;
+            }
+            return (this.receipt.lines || []).reduce((sum, line) => sum + line.unitAmount, 0);
+        },
+
+        /** Échéancier : les seules lignes RÉCURRENTES. Un frais ponctuel n'a pas d'échéance. */
+        monthlyLines() {
+            if (!this.receipt) return [];
+            if (Array.isArray(this.receipt.monthlyLines)) {
+                return this.receipt.monthlyLines;
+            }
+            return (this.receipt.lines || []).filter(line => line.isRecurring);
+        },
+
+        /** Total mensuel : somme des mensualités UNITAIRES, jamais multipliée par le nombre de mois. */
+        monthlyTotal() {
+            if (!this.receipt) return 0;
+            if (typeof this.receipt.monthlyTotal === 'number') {
+                return this.receipt.monthlyTotal;
+            }
+            return this.monthlyLines().reduce((sum, line) => sum + line.unitAmount, 0);
+        },
+
+        /**
+         * Écart entre la hauteur du contenu et la zone utile de la feuille (128 mm), en millimètres.
+         * Positif = il reste de la place, négatif = ça déborde.
+         *
+         * Mesuré sur le rendu RÉEL, pas estimé : c'est la seule façon de garantir la page unique
+         * quelles que soient la longueur des libellés de frais et la police effectivement chargée.
+         * L'impression rogne le débordement (overflow:hidden) — cet indicateur existe pour que le
+         * secrétariat le VOIE avant d'imprimer, plutôt que de découvrir une pièce tronquée.
+         */
+        checkReceiptFit() {
+            const sheet = document.getElementById('receipt-printable');
+            if (!sheet) { this.receiptFitMm = null; return; }
+
+            const style = window.getComputedStyle(sheet);
+            const inner = sheet.clientHeight
+                - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+
+            let used = 0;
+            for (const child of sheet.children) used += child.offsetHeight;
+
+            this.receiptFitMm = (inner - used) / (96 / 25.4);
         },
 
         /** Ligne « NINEA … · RCCM … » de l'en-tête : n'imprime que les mentions réellement saisies. */

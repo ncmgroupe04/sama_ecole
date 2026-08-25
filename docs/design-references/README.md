@@ -8,42 +8,72 @@ Fichiers : `receipt-reference.png`, `bulletin-reference.png`, `dashboard-referen
 
 ## 1. Attestation d'inscription & d'admission — voir ticket JGK-E02
 
-> **Cette section fait foi, PAS `receipt-reference.png`.** La maquette d'origine (A4 portrait, bloc unique, intitulée « Reçu d'inscription ») a été remplacée à la demande du client, en deux temps : d'abord un format **A5 paysage** en deux colonnes, puis une refonte qui sépare clairement ce document (pièce ADMINISTRATIVE attestant une inscription) du reçu de caisse (pièce COMPTABLE attestant un encaissement, §1bis ci-dessous). Le PNG est conservé à titre d'historique — en cas de divergence, c'est le texte ci-dessous qui s'applique.
+> **Cette section fait foi, PAS `receipt-reference.png`.** La maquette d'origine (A4 portrait, bloc unique, intitulée « Reçu d'inscription ») a été remplacée à la demande du client, en trois temps : d'abord un format **A5 paysage** en deux colonnes ; puis une séparation nette entre cette pièce ADMINISTRATIVE et le reçu de caisse, pièce COMPTABLE (§1bis) ; enfin, le **25/08/2026**, la refonte décrite ci-dessous. Le PNG est conservé à titre d'historique — en cas de divergence, c'est le texte ci-dessous qui s'applique.
 
-**Format** : **A5 paysage (210 × 148 mm)**, une seule page, sans débordement — à l'écran comme à l'impression et à l'export PDF (`@page { size: A5 landscape }` côté web, `PageSizes.A5.Landscape()` côté QuestPDF).
+> **Refonte du 25/08/2026 — pourquoi.** L'attestation affichait le **cumul annuel** (« Mensualité (× 9 mois) = 135 000 », total « 271 000 FCFA », « Reste à payer : 211 000 »). Ce chiffre effrayait les tuteurs sans les informer : il ne leur disait ni ce qu'ils devaient payer aujourd'hui, ni ce qu'ils devraient chaque mois. Le cumul annuel **ne doit plus jamais figurer sur une pièce remise au tuteur**. Il continue d'exister en base (`Enrollment.TotalDue`) et dans les écrans Finance. Maquette validée : artifact « Pièces de caisse repensées ».
+
+> **Qui délivre quoi.** L'attestation est délivrée par le **SECRÉTARIAT, qui n'encaisse aucun fonds** : elle atteste d'une inscription et **annonce** ce qu'il y a à régler. Le règlement s'effectue auprès de la **COMPTABILITÉ**, qui délivre seule le reçu de caisse (§1bis). Aucun recouvrement entre les deux pièces : l'une annonce, l'autre constate.
+
+**Format** : **A5 paysage (210 × 148 mm)**, marge de **10 mm** (zone utile 190 × 128 mm), une seule page, sans débordement — à l'écran comme à l'impression et à l'export PDF (`@page { size: A5 landscape; margin: 10mm }` côté web, `PageSizes.A5.Landscape()` + `Margin(10, Unit.Millimetre)` côté QuestPDF). Un test de non-régression vérifie la tenue sur une page avec 8 lignes de frais (`ReceiptPdfGeneratorTests`).
 
 **Disposition :**
 
-1. **En-tête**, séparé du corps par un filet : à gauche le nom de l'école en gras et majuscules, puis une ligne de coordonnées (**adresse · téléphone · e-mail**) et une ligne de mentions légales (**NINEA · RCCM**) ; à droite l'emplacement du logo officiel. Chaque mention absente est simplement omise — jamais de séparateur orphelin ni de valeur inventée.
-2. Titre centré, en gras et italique : **"ATTESTATION D'INSCRIPTION & D'ADMISSION n° [référence]"** (ex. `REC-2025-0002`).
-3. **Bloc déclaration officielle**, centré sous le titre : *"L'administration de [École] atteste par la présente que l'élève [Nom complet] (Matricule : [Matricule]) est régulièrement inscrit(e) au sein de notre établissement pour l'année scolaire [Année scolaire] en classe de [Classe]."*
-4. **Corps sur deux colonnes** :
-   - **Colonne gauche — élève & tuteur** (étiquette / valeur, une ligne par champ) : Nom & Prénom, Matricule, Classe & Cursus, Tuteur, Téléphone tuteur.
-   - **Colonne droite — engagement financier global** : Frais d'inscription annuels engagés, Reste à payer global sur l'année. Ce ne sont que des rappels d'engagement, jamais une ventilation d'encaissement — celle-ci vit exclusivement sur le reçu de caisse (§1bis).
-5. Bas de page, deux colonnes : à gauche "Fait à [ville], le [date]" (italique) au-dessus de l'emplacement du cachet officiel ; à droite "Signature du Directeur" (italique) au-dessus du trait de signature.
+1. **En-tête**, séparé du corps par un filet clair : à gauche le logo (omis s'il n'y en a pas, sans cadre témoin) puis le nom de l'école en gras — **plus en majuscules depuis la refonte** —, une ligne de coordonnées (**adresse · téléphone · e-mail**) et une ligne de mentions légales (**NINEA · RCCM**) ; à droite une pile de **badges** : « INSCRIPTION ENREGISTRÉE » (indigo), « N° [référence] », « ANNÉE [année scolaire] ». Chaque mention absente est simplement omise — jamais de séparateur orphelin ni de valeur inventée.
+2. **Cartouche d'identité** : panneau gris clair, grille de 2 colonnes, étiquette en capitales au-dessus de sa valeur — Élève, Matricule, Classe & niveau, Tuteur (cellule omise si aucun tuteur n'est renseigné).
+3. **Déclaration officielle**, filet vertical à gauche, texte justifié : *« L'administration de l'établissement atteste que l'élève [Nom complet] (matricule [Matricule]) est régulièrement inscrit(e) au sein de notre établissement en classe de [Classe] pour l'année scolaire [Année scolaire]. »*
+4. **Corps sur deux colonnes** — deux blocs de nature volontairement différente :
+   - **Colonne gauche — « RÈGLEMENT À EFFECTUER »**, précisé *« auprès du service de la comptabilité, ce jour »*. Tableau « Poste à régler / Montant » : pour chaque ligne de frais, son **montant UNITAIRE** (`EnrollmentFeeLine.UnitAmount`) — le frais ponctuel entier (inscription, tenue) ou **UNE SEULE mensualité**, marquée « (1 mois) ». Ligne finale **« TOTAL À RÉGLER »**, à l'encre noire.
+   - **Colonne droite — « ÉCHÉANCIER MENSUEL »**, précisé *« à titre indicatif »*. Liste des seuls frais **récurrents**, chacun à son tarif mensuel unitaire (« 15 000 FCFA / mois »), puis un panneau indigo **« TOTAL À PRÉVOIR CHAQUE MOIS »** portant la somme des mensualités unitaires et la mention *« Règlement du 1er au 5 de chaque mois »*. Les frais ponctuels en sont **exclus** : ils ne se répètent pas, les faire figurer dans un échéancier serait un faux.
+5. **Bas de page**, séparé par un filet : « Fait à [ville], le [date] » en italique au-dessus de l'emplacement du cachet officiel, puis deux traits de signature — **« LE SECRÉTARIAT »** et « LE DIRECTEUR ». *(Pas « Le Caissier » : le secrétariat n'encaisse pas.)*
+6. **Note de pied**, la plus petite ligne du document : *« Le secrétariat n'encaisse aucun fonds : tout règlement s'effectue auprès de la comptabilité, seule habilitée à délivrer un reçu de caisse valant validation définitive. »*
 
-**Style** : noir et blanc, sobre, aucune couleur — document strictement administratif/pédagogique, pas un justificatif comptable (pas de mention obligatoire de conservation du reçu, celle-ci reste propre au reçu de caisse).
+**Interdits, non négociables :**
+
+- **Jamais le cumul annuel** : ni `TotalDue`, ni « × N mois », ni un total multiplié. C'est l'objet même de la refonte.
+- **Jamais le « Reste à payer »** annuel. Supprimé, remplacé par le total mensuel.
+- **Jamais de vert nulle part.** Le vert signifie « acquitté » (voir la palette §1ter) et cette pièce n'acquitte rien : le total à régler reste **à l'encre noire**. Seul l'échéancier — prospectif — porte l'indigo.
+- **Jamais de badge d'état de paiement** (« payé », « en attente »). Réimprimée trois mois plus tard, l'attestation afficherait un état faux : le badge ne qualifie que l'acte administratif, vrai à toute date.
+- `CollectedLines` / `TotalCollected` ne sont **plus lus** par ce document : le secrétariat n'encaissant pas, ils valent zéro à l'instant où la pièce est délivrée.
+
+**Règle métier — engagement initial** : le bloc gauche suppose **un mois d'avance**. Une école qui exigerait deux mois, ou seulement les frais d'inscription à la signature, a besoin d'un réglage d'établissement : rien dans le modèle ne porte cette information aujourd'hui. Idem pour « du 1er au 5 de chaque mois », aujourd'hui un texte constant qui devrait rejoindre *Paramètres › Établissement*, comme le NINEA et le RCCM.
 
 **Données à saisir en amont** : les mentions NINEA et RCCM, l'adresse et l'e-mail viennent de *Paramètres › Établissement*.
 
 ## 1bis. Reçu de caisse — voir ticket JGK-F02
 
-**Format** : **A5 paysage (210 × 148 mm)**, une seule page, même en-tête que l'attestation (§1.1).
+**Format** : **A5 paysage (210 × 148 mm)**, marge de **10 mm**, une seule page, même en-tête que l'attestation (§1.1) aux badges près. Test de non-régression sur 8 lignes ventilées (`PaymentReceiptPdfGeneratorTests`).
 
-**Philosophie** : document épuré, axé UNIQUEMENT sur le flux de trésorerie de l'instant t — jamais l'état du dossier de l'élève (dû annuel, reste à payer), qui n'a pas sa place ici.
+**Philosophie** : document épuré, axé UNIQUEMENT sur le flux de trésorerie de l'instant t — jamais l'état du dossier de l'élève (dû annuel, reste à payer), qui n'a pas sa place ici. C'est la **seule pièce qui atteste d'un encaissement**.
 
 **Disposition :**
 
-1. Titre centré, en gras et italique : **"REÇU DE CAISSE n° [référence]"**.
-2. **Informations de transaction** (étiquette / valeur) : Matricule, Nom complet, Classe d'affectation, Année scolaire, Date de règlement, Mode de paiement (Espèces, Chèque, Virement, Mobile Money / Wave / Orange Money).
-3. **Tableau de règlement**, deux colonnes **"Désignation" / "Montant (FCFA)"** : une ligne "Versement reçu" (le montant remis par le tuteur), puis une ligne finale en gras **"TOTAL PAYÉ"**.
-4. **Texte obligatoire sous le tableau, avant la signature** (à intégrer sur tous les reçus de caisse générés) :
+1. **En-tête** identique à §1.1, badges : **« PAYÉ » (vert)**, « REÇU N° [référence] », « [date] ».
+2. **Cartouche d'identité** (même gabarit qu'en §1.2) : Élève, Matricule, Classe & année, Mode de règlement (Espèces, Chèque, Virement, Mobile Money / Wave / Orange Money).
+3. **Bandeau de section « DÉTAIL DU RÈGLEMENT »**, précisé de la période couverte par le versement entier quand elle est renseignée (*« Période de référence : Septembre 2026 »*).
+4. **Tableau de règlement VENTILÉ**, trois colonnes **« Désignation / Service » · « Période / Note » · « Montant réglé »** : une ligne par poste imputé (`Payment.Breakdowns`), puis une ligne finale en gras **« TOTAL VERSÉ »**, seul montant en vert du document.
+   - **Colonne « Période / Note » — cascade de repli, dans cet ordre** : le libellé propre à la ligne (`PaymentBreakdown.Label`, facultatif, ≤ 60 caractères — « Unique », « 2 jeux ») ; à défaut la période du versement entier (`Payment.ReferencePeriod`) ; à défaut **la cellule reste VIDE**. Jamais un tiret, jamais une période devinée : un reçu n'invente pas la période qu'il atteste.
+   - **Garde-fou comptable** : si la ventilation est absente **ou si la somme des lignes ne fait pas exactement le montant encaissé**, le document se replie sur sa forme historique à ligne unique « Versement reçu ». Un tableau dont le détail contredit le total est un faux — mieux vaut moins de détail qu'un document faux.
+5. **Texte obligatoire sous le tableau, avant la signature** (à intégrer sur tous les reçus de caisse générés) :
    > *"Il est demandé aux parents de garder minutieusement leur reçu après le paiement."*
-5. Bas de page, deux colonnes : à gauche "Fait à [ville], le [date]" (italique) au-dessus de l'emplacement du cachet officiel ; à droite "Signature du Caissier / Agent" (italique) au-dessus du trait de signature.
+6. **Bas de page** : « Fait à [ville], le [date] » et cachet à gauche, puis deux traits de signature — **« LE CAISSIER »** et « LE DIRECTEUR ».
+7. **Note de pied** : *« Ce reçu atteste uniquement des sommes encaissées le [date]. Il ne constitue pas un relevé de compte. »*
 
-**Style** : noir et blanc, sobre, tableau à bordures simples, aucune couleur.
+**Règle comptable, non négociable** : le reçu n'atteste que de **la somme réellement entrée en caisse le jour même** — jamais du dû annuel cumulé. `TotalDue`, `AlreadyPaid` et `RemainingBalance` restent portés par le DTO pour un usage interne Finance, mais **ne sont pas imprimés**.
 
-**Règle comptable, non négociable** : le reçu n'atteste que de **la somme réellement entrée en caisse le jour même** — jamais du dû annuel cumulé.
+## 1ter. Palette des deux pièces A5 — voir `ReceiptTheme.cs`
+
+> **Cette section annule le « noir et blanc, aucune couleur » qui figurait aux §1 et §1bis avant le 25/08/2026.** La couleur a été demandée par le client et validée sur maquette. Elle est **sémantique**, jamais décorative — trois familles, jamais mélangées. Source de vérité unique des valeurs : `src/SamaEcole.Infrastructure/Documents/ReceiptTheme.cs`. Ne jamais régler une couleur « à l'œil » dans un document isolé.
+
+| Rôle | Valeurs | Usage |
+|---|---|---|
+| **Neutres** | encre `#111827`, texte doux `#374151`, gris `#6B7280`, gris clair `#9CA3AF` | textes, étiquettes |
+| **Filets & fonds** | filet `#E5E7EB`, filet appuyé `#D1D5DB`, en-tête de tableau `#F3F4F6`, cartouche `#F9FAFB` | tableaux, panneaux |
+| **Acquitté (vert)** | `#1E8E3E` sur `#EAF7EE`, filet `#BFE3CB` | **EXCLUSIVEMENT** ce qui est encaissé : badge « PAYÉ » et « TOTAL VERSÉ » du reçu de caisse. **Jamais sur l'attestation.** |
+| **Prospectif (indigo)** | `#4338CA` / `#6366F1` sur `#EEF2FF`, filet `#C7D2FE` | échéancier mensuel, badge d'état administratif |
+
+**Typographie** : la maquette HTML est composée en **Inter** (token `fontFamily.sans` du projet). Le pipeline PDF n'enregistre **aucune police custom** : les documents QuestPDF utilisent sa police par défaut (**Lato**), une grotesque humaniste de proportions voisines. Passer réellement à Inter suppose d'embarquer le fichier de police et de l'enregistrer au démarrage — ce n'est pas fait.
+
+**Écart assumé maquette → PDF** : les badges ont des **coins droits** en PDF, arrondis en HTML (`CornerRadius` n'existe pas dans QuestPDF 2024.10.3), et les traits de signature sont **continus** en PDF, pointillés en HTML. Aucun autre écart.
 
 ## 2. Bulletin de notes (`bulletin-reference.png`) — voir ticket JGK-G03
 

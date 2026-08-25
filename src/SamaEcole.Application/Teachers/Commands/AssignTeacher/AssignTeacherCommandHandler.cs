@@ -70,14 +70,18 @@ public class AssignTeacherCommandHandler(
             // Message destiné à un Directeur ou à un Secrétariat : ce qui s'est passé, pourquoi c'est
             // refusé, et quoi faire ensuite. Aucun terme technique (voir UniqueConstraintCatalog, qui
             // tient la même promesse pour les refus venus de la base).
-            throw new ValidationException([
-                new ValidationFailure(
-                    "Assignation",
-                    "Cet enseignant assure déjà cette matière dans cette classe pour l'année scolaire "
-                    + "en cours. Une matière ne peut lui être confiée qu'une seule fois par classe : "
-                    + "l'affectation figure déjà dans la liste ci-dessus. Pour la modifier, retirez-la "
-                    + "d'abord, ou choisissez une autre classe ou une autre matière.")
-            ]);
+            //
+            // BusinessRuleException → 409, PAS ValidationException → 422 : ce doublon est un CONFLIT
+            // d'état (la ressource existe déjà), pas une saisie mal formée. C'est le contrat publié
+            // (openapi.yaml, « 409 : Cette attribution (enseignant, classe, matière, année) existe
+            // déjà »), la convention du dépôt pour un doublon (Volume_4_API_Design.md §392) et le code
+            // que rendait déjà l'index unique avant que ce pré-contrôle n'existe. Le pré-contrôle
+            // améliore le MESSAGE, il ne doit pas changer le CODE.
+            throw new BusinessRuleException(
+                "Cet enseignant assure déjà cette matière dans cette classe pour l'année scolaire "
+                + "en cours. Une matière ne peut lui être confiée qu'une seule fois par classe : "
+                + "l'affectation figure déjà dans la liste ci-dessus. Pour la modifier, retirez-la "
+                + "d'abord, ou choisissez une autre classe ou une autre matière.");
         }
 
         var assignment = new TeacherAssignment

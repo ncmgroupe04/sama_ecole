@@ -25,7 +25,10 @@ public class PaymentReceiptPdfGeneratorTests
         string? phone = "+221 77 123 45 67",
         string? city = "Dakar",
         bool isAcceleratedClass = false,
-        string classroomName = "CE1") => new(
+        string classroomName = "CE1",
+        IReadOnlyList<PaymentReceiptLineDto>? lines = null,
+        string? referencePeriod = null,
+        decimal amount = 30_000m) => new(
         ReceiptNumber: "REC-2025-0007",
         SchoolName: "École Primaire Les Baobabs",
         SchoolAddress: "123 Rue de l'École",
@@ -40,12 +43,22 @@ public class PaymentReceiptPdfGeneratorTests
         ClassroomName: classroomName,
         SchoolYearLabel: "2025-2026",
         Method: "MobileMoney",
-        Amount: 30_000m,
+        Amount: amount,
         TotalDue: 160_000m,
-        AlreadyPaid: 30_000m,
-        RemainingBalance: 130_000m,
+        AlreadyPaid: amount,
+        RemainingBalance: 160_000m - amount,
         PaidAt: new DateTimeOffset(2026, 10, 5, 9, 0, 0, TimeSpan.Zero),
+        Lines: lines ?? [],
+        ReferencePeriod: referencePeriod,
         IsAcceleratedClass: isAcceleratedClass);
+
+    /// <summary>Ventilation qui BALANCE : la somme des lignes fait exactement les 30 000 encaissés.</summary>
+    private static IReadOnlyList<PaymentReceiptLineDto> BalancedLines() =>
+    [
+        new("Frais d'inscription", "Unique", 10_000m),
+        new("Mensualité scolarité", null, 15_000m),   // repli sur ReferencePeriod
+        new("Tenue scolaire", "2 jeux", 5_000m)
+    ];
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -83,6 +96,60 @@ public class PaymentReceiptPdfGeneratorTests
 
         ShouldBeAValidPdf(pdf);
         pdf.Length.Should().BeGreaterThan(1000);
+    }
+
+    /// <summary>
+    /// Reçu VENTILÉ (refonte 2026-08) : une ligne par poste imputé, dont une sans libellé propre qui
+    /// doit retomber sur la période du versement. Couverture de non-régression du rendu ; la résolution
+    /// du libellé elle-même est couverte par PaymentReceiptLineLabelTests.
+    /// </summary>
+    [Fact]
+    public void Generate_Renders_A_Ventilated_Receipt()
+    {
+        var pdf = new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>())
+            .Generate(Receipt(lines: BalancedLines(), referencePeriod: "Septembre 2026"), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+        pdf.Length.Should().BeGreaterThan(1000);
+    }
+
+    /// <summary>
+    /// Ventilation qui NE BALANCE PAS : le document doit se replier sur sa ligne unique plutôt que
+    /// d'imprimer un détail dont le total contredit le montant encaissé. Un reçu qui ne balance pas
+    /// est comptablement invalide — mieux vaut moins de détail qu'un faux.
+    /// </summary>
+    [Fact]
+    public void Generate_Is_Robust_To_An_Unbalanced_Breakdown()
+    {
+        IReadOnlyList<PaymentReceiptLineDto> unbalanced = [new("Cantine", null, 1_000m)];
+
+        var pdf = new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>())
+            .Generate(Receipt(lines: unbalanced), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+    }
+
+    /// <summary>
+    /// Depuis la ventilation, le tableau du reçu a une longueur VARIABLE — il lui faut donc la même
+    /// garde que l'attestation (voir ReceiptPdfGeneratorTests) : un versement imputé sur 8 postes doit
+    /// rester sur une seule page A5 paysage. Le nombre de pages se lit dans l'objet racine
+    /// `/Type /Pages /Count N`, aucune bibliothèque d'extraction PDF n'étant référencée ici.
+    /// </summary>
+    [Fact]
+    public void Generate_Stays_On_A_Single_Page_With_Many_Ventilated_Lines()
+    {
+        var many = Enumerable.Range(1, 8)
+            .Select(i => new PaymentReceiptLineDto($"Poste réglé n° {i}", i % 2 == 0 ? null : $"Note {i}", 1_000m * i))
+            .ToList();
+
+        // 1+2+…+8 = 36 milliers : le total doit correspondre, sinon le document se replie sur sa
+        // ligne unique et le test ne prouverait plus rien sur la forme ventilée.
+        var pdf = new PaymentReceiptPdfGenerator(Mock.Of<ILogger<PaymentReceiptPdfGenerator>>())
+            .Generate(Receipt(amount: 36_000m, lines: many, referencePeriod: "Septembre 2026"), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+        Encoding.ASCII.GetString(pdf).Should().Contain("/Count 1",
+            "un versement imputé sur beaucoup de postes doit rester sur une seule page A5 paysage");
     }
 
     [Fact]

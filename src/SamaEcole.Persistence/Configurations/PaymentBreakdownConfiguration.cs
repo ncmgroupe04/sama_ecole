@@ -14,6 +14,10 @@ public class PaymentBreakdownConfiguration : IEntityTypeConfiguration<PaymentBre
 
         builder.Property(b => b.AmountAllocated).IsRequired().HasPrecision(12, 2);
 
+        // 60 caractères : la colonne « Période / Note » du reçu A5 fait 32 % d'une demi-largeur utile,
+        // au-delà le libellé se replierait et doublerait la hauteur de ligne. Facultatif par conception.
+        builder.Property(b => b.Label).HasMaxLength(60);
+
         builder.HasOne(b => b.Payment)
             .WithMany(p => p.Breakdowns)
             .HasForeignKey(b => b.PaymentId)
