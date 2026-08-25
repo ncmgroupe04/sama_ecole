@@ -69,6 +69,7 @@ public class ModalShellTagHelper : TagHelper
         var body = (await output.GetChildContentAsync()).GetContent();
         var subtitle = context.Items.TryGetValue(ModalSubtitleTagHelper.ItemsKey, out var value) ? (string)value! : null;
         var titleSlot = context.Items.TryGetValue(ModalTitleTagHelper.ItemsKey, out var t) ? (string)t! : null;
+        var footer = context.Items.TryGetValue(ModalFooterTagHelper.ItemsKey, out var f) ? (string)f! : null;
         var close = string.IsNullOrWhiteSpace(OnClose) ? $"{Open} = false" : OnClose;
 
         // Un <modal-title> (HTML brut, liaisons Alpine possibles) l'emporte sur l'attribut title encodé.
@@ -91,20 +92,25 @@ public class ModalShellTagHelper : TagHelper
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
                      class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl sm:my-8 sm:h-auto sm:max-h-[90vh] sm:w-full {maxWidth} sm:rounded-xl">
                     {(HideHeader ? "" : $"""
-                    <div class="flex-shrink-0 bg-primary px-4 py-4 sm:px-6">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-lg font-medium text-white">{titleHtml}</h2>
-                            <button type="button" x-on:click="{close}" class="rounded-md bg-primary text-indigo-200 hover:text-white focus:outline-none">
+                    <div class="flex-shrink-0 bg-white border-b border-slate-100 p-6">
+                        <div class="flex items-center justify-between gap-4">
+                            <h2 class="text-2xl font-bold text-slate-900">{titleHtml}</h2>
+                            <button type="button" x-on:click="{close}" class="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200/80 p-2 rounded-xl transition-all shadow-sm focus:outline-none shrink-0">
                                 <span class="sr-only">Fermer</span>
-                                <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><use href="#icon-x"></use></svg>
+                                <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                             </button>
                         </div>
-                        {(subtitle is null ? "" : $"""<div class="mt-1 text-sm text-indigo-200">{subtitle}</div>""")}
+                        {(subtitle is null ? "" : $"""<div class="mt-2 text-sm text-slate-500">{subtitle}</div>""")}
                     </div>
                     """)}
-                    <div class="relative flex-1 overflow-y-auto min-h-0 {(NoPadding ? "" : "px-4 py-6 sm:px-6")}">
+                    <div class="relative flex-1 overflow-y-auto min-h-0 {(NoPadding ? "" : "p-6 space-y-6 bg-slate-50/30")}">
                         {body}
                     </div>
+                    {(footer is null ? "" : $"""
+                    <div class="flex-shrink-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-between items-center gap-4">
+                        {footer}
+                    </div>
+                    """)}
                 </div>
             </div>
             """);
@@ -149,6 +155,22 @@ public class ModalSubtitleTagHelper : TagHelper
 public class ModalTitleTagHelper : TagHelper
 {
     internal const string ItemsKey = "SamaEcole.ModalTitle";
+
+    public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
+    {
+        context.Items[ItemsKey] = (await output.GetChildContentAsync()).GetContent();
+        output.SuppressOutput();
+    }
+}
+
+/// <summary>
+/// Footer de la modale. Extrait de son emplacement et positionné en bas de la modale de manière "sticky",
+/// hors de la zone scrollable.
+/// </summary>
+[HtmlTargetElement("modal-footer", ParentTag = "modal-shell")]
+public class ModalFooterTagHelper : TagHelper
+{
+    internal const string ItemsKey = "SamaEcole.ModalFooter";
 
     public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {

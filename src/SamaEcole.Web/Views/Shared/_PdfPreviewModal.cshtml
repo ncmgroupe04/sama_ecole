@@ -30,13 +30,13 @@
                 <p class="text-sm font-medium text-slate-700">Impossible d'afficher l'aperçu.</p>
                 <p class="text-xs text-slate-500 max-w-md" x-text="pdfErrorMessage"></p>
                 <div class="flex flex-wrap justify-center gap-3 mt-4">
-                    <button type="button" x-show="!pdfDegraded" x-on:click="retryPdfPreview()" class="btn-primary text-xs">
+                    <button type="button" x-show="!pdfDegraded" x-on:click="retryPdfPreview()" class="btn-modal-primary text-xs">
                         <span>Réessayer</span>
                     </button>
-                    <button type="button" x-show="pdfPreviewUrl" x-on:click="openPdfInNewTab()" class="btn-secondary text-xs">
+                    <button type="button" x-show="pdfPreviewUrl" x-on:click="openPdfInNewTab()" class="btn-modal-secondary text-xs">
                         <span>Ouvrir dans un nouvel onglet</span>
                     </button>
-                    <button type="button" x-show="pdfPreviewUrl" x-on:click="downloadPreviewPdf()" class="btn-secondary text-xs">
+                    <button type="button" x-show="pdfPreviewUrl" x-on:click="downloadPreviewPdf()" class="btn-modal-secondary text-xs">
                         <icon name="download" class="w-4 h-4" />
                         <span>Télécharger le fichier</span>
                     </button>
@@ -51,9 +51,9 @@
                     <span x-text="pdfRenderedCount"></span> / <span x-text="pdfPageCount"></span> page(s)
                 </p>
                 <div class="flex items-center gap-1 ml-auto">
-                    <button type="button" x-on:click="zoomPdfOut()" :disabled="!canZoomPdfOut" class="btn-secondary text-xs px-2 py-1 disabled:opacity-40" aria-label="Réduire">−</button>
+                    <button type="button" x-on:click="zoomPdfOut()" :disabled="!canZoomPdfOut" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40" aria-label="Réduire">−</button>
                     <button type="button" x-on:click="zoomPdfReset()" class="text-xs text-slate-500 w-14 text-center hover:text-indigo-600" x-text="pdfZoomLabel"></button>
-                    <button type="button" x-on:click="zoomPdfIn()" :disabled="!canZoomPdfIn" class="btn-secondary text-xs px-2 py-1 disabled:opacity-40" aria-label="Agrandir">+</button>
+                    <button type="button" x-on:click="zoomPdfIn()" :disabled="!canZoomPdfIn" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40" aria-label="Agrandir">+</button>
                 </div>
             </div>
             <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-auto p-3" style="max-height: 600px;">
@@ -62,12 +62,12 @@
         </div>
 
         <div class="flex flex-wrap justify-end gap-2 pt-2 border-t border-slate-100">
-            <button type="button" x-on:click="closePdfPreview()" class="btn-secondary">Fermer</button>
-            <button type="button" x-show="pdfPreviewUrl" x-on:click="downloadPreviewPdf()" class="btn-secondary">
+            <button type="button" x-on:click="closePdfPreview()" class="btn-modal-secondary">Fermer</button>
+            <button type="button" x-show="pdfPreviewUrl" x-on:click="downloadPreviewPdf()" class="btn-modal-secondary">
                 <icon name="download" class="w-4 h-4" />
                 <span>Télécharger</span>
             </button>
-            <button type="button" x-show="pdfPreviewUrl" x-on:click="printPreviewPdf()" class="btn-primary">
+            <button type="button" x-show="pdfPreviewUrl" x-on:click="printPreviewPdf()" class="btn-modal-primary">
                 <icon name="print" class="w-4 h-4" />
                 <span>Imprimer</span>
             </button>

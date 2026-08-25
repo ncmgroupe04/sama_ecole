@@ -14,11 +14,11 @@
             <p class="text-jgk-subtitle text-slate-500 mt-1">Retards et sorties anticipées, avec impression du billet A5 correspondant.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <button x-show="tab === 'entree' && canManageBillets" x-cloak @@click="openCreate()" class="btn-primary">
+            <button x-show="tab === 'entree' && canManageBillets" x-cloak @@click="openCreate()" class="btn-modal-primary">
                 <icon name="plus" class="w-4 h-4" />
                 Enregistrer un retard
             </button>
-            <button x-show="tab === 'sortie' && canManageBillets" x-cloak @@click="openCreateExit()" class="btn-primary">
+            <button x-show="tab === 'sortie' && canManageBillets" x-cloak @@click="openCreateExit()" class="btn-modal-primary">
                 <icon name="plus" class="w-4 h-4" />
                 Enregistrer une sortie
             </button>
@@ -81,7 +81,7 @@
                             <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="item.reason" :title="item.reason"></td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
                                 <button @@click="printBillet(item.id)" :disabled="printingId === item.id"
-                                        class="btn-secondary inline-flex items-center gap-2 disabled:opacity-60">
+                                        class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60">
                                     <icon name="print" class="w-4 h-4" x-show="printingId !== item.id" />
                                     <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingId === item.id" x-cloak />
                                     <span x-text="printingId === item.id ? 'Génération...' : 'Imprimer le billet'"></span>
@@ -136,9 +136,9 @@
                 <p x-show="createErrors.observations" x-text="createErrors.observations" class="field-error"></p>
             </div>
 
-            <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
-                <button type="button" @@click="closeCreate()" class="btn-secondary">Annuler</button>
-                <button type="submit" :disabled="isCreating" class="btn-primary">
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" @@click="closeCreate()" class="btn-modal-secondary">Annuler</button>
+                <button type="submit" :disabled="isCreating" class="btn-modal-primary">
                     <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
                 </button>
             </div>
@@ -197,7 +197,7 @@
                             <td class="px-4 py-4 text-slate-600" x-text="item.pickedUpBy || '—'"></td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
                                 <button @@click="printExitBillet(item.id)" :disabled="printingExitId === item.id"
-                                        class="btn-secondary inline-flex items-center gap-2 disabled:opacity-60">
+                                        class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60">
                                     <icon name="print" class="w-4 h-4" x-show="printingExitId !== item.id" />
                                     <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingExitId === item.id" x-cloak />
                                     <span x-text="printingExitId === item.id ? 'Génération...' : 'Imprimer le billet'"></span>
@@ -251,9 +251,9 @@
                        class="input-field" />
             </div>
 
-            <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
-                <button type="button" @@click="closeCreateExit()" class="btn-secondary">Annuler</button>
-                <button type="submit" :disabled="isCreatingExit" class="btn-primary">
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" @@click="closeCreateExit()" class="btn-modal-secondary">Annuler</button>
+                <button type="submit" :disabled="isCreatingExit" class="btn-modal-primary">
                     <span x-text="isCreatingExit ? 'Enregistrement...' : 'Enregistrer'"></span>
                 </button>
             </div>

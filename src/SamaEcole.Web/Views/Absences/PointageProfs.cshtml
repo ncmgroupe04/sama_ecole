@@ -36,7 +36,7 @@
         </div>
 
         <div class="mt-4 flex justify-end">
-            <button type="button" x-on:click="downloadHourRecordSheet()" :disabled="!selectedContractId || downloadingSheet" class="btn-secondary">
+            <button type="button" x-on:click="downloadHourRecordSheet()" :disabled="!selectedContractId || downloadingSheet" class="btn-modal-secondary">
                 <icon name="download" class="w-4 h-4" x-show="!downloadingSheet" />
                 <icon name="loader" class="w-4 h-4 animate-spin" x-show="downloadingSheet" x-cloak />
                 <span x-text="downloadingSheet ? 'Génération...' : 'Fiche heures (PDF)'"></span>
@@ -102,7 +102,7 @@
                     <input type="text" x-model="hourRecordForm.note" class="input-field mt-1" />
                 </div>
                 <div class="sm:col-span-4 flex justify-end">
-                    <button type="submit" class="btn-primary" :disabled="isSavingHourRecord">
+                    <button type="submit" class="btn-modal-primary" :disabled="isSavingHourRecord">
                         <span x-show="!isSavingHourRecord">Ajouter les heures</span>
                         <span x-show="isSavingHourRecord">Enregistrement...</span>
                     </button>

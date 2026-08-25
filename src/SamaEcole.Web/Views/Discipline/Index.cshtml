@@ -18,7 +18,7 @@
             <p class="text-jgk-subtitle text-slate-500 mt-1">Gérez et consultez l'historique des sanctions disciplinaires des élèves.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <button x-show="canManageDiscipline" x-cloak @@click="openCreate()" class="btn-primary">
+            <button x-show="canManageDiscipline" x-cloak @@click="openCreate()" class="btn-modal-primary">
                 <icon name="plus" class="w-4 h-4" />
                 Ajouter une sanction
             </button>
@@ -117,9 +117,9 @@
                 <p x-show="createErrors.reason" x-text="createErrors.reason" class="field-error"></p>
             </div>
 
-            <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
-                <button type="button" @@click="closeCreate()" class="btn-secondary">Annuler</button>
-                <button type="submit" :disabled="isCreating" class="btn-primary">
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" @@click="closeCreate()" class="btn-modal-secondary">Annuler</button>
+                <button type="submit" :disabled="isCreating" class="btn-modal-primary">
                     <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
                 </button>
             </div>

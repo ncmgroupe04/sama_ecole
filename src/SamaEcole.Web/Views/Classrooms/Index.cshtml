@@ -79,7 +79,7 @@
     </div>
 
     <button x-show="canManage" x-cloak @@click="openCreate()"
-     class="btn-primary group h-10 px-4 ml-auto">
+     class="btn-modal-primary group h-10 px-4 ml-auto">
      <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
      Nouvelle classe
     </button>
@@ -333,11 +333,11 @@
     </div>
    </div>
 
-   <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
-    <button type="button" @@click="closeCreate()" class="btn-secondary">
+   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+    <button type="button" @@click="closeCreate()" class="btn-modal-secondary">
      Annuler
     </button>
-    <button type="submit" :disabled="isSubmitting" class="btn-primary">
+    <button type="submit" :disabled="isSubmitting" class="btn-modal-primary">
      <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -403,9 +403,9 @@
     </div>
    </div>
 
-   <div class="mt-6 flex justify-end gap-3">
-    <button type="button" x-on:click="closeEdit()" class="btn-secondary">Annuler</button>
-    <button type="submit" :disabled="isSavingEdit" class="btn-primary">
+   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+    <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary">Annuler</button>
+    <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary">
      <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -433,9 +433,9 @@
    Impossible si des élèves sont encore rattachés à cette classe : déplacez-les d'abord vers une autre classe.
   </p>
 
-  <div class="mt-6 flex justify-end gap-3">
-   <button type="button" x-on:click="closeDelete()" class="btn-secondary">Annuler</button>
-   <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingClassroom" class="btn-danger">
+  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+   <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary">Annuler</button>
+   <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingClassroom" class="btn-modal-danger">
     <span x-text="isDeletingClassroom ? 'Suppression...' : 'Supprimer la classe'"></span>
    </button>
   </div>

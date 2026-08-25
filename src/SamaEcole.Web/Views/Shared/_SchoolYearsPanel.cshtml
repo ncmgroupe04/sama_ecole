@@ -16,7 +16,7 @@
 
  @* Réservé au Directeur (Volume 7 §15). Masquer le bouton n'est qu'un confort : l'API répond
  403 à qui l'appellerait quand même. *@
- <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-primary">
+ <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-modal-primary">
  <icon name="plus" class="w-5 h-5" />
  Nouvelle année
  </button>
@@ -150,11 +150,11 @@
  La rentrée sénégalaise a lieu en octobre : une année court généralement d'octobre à juillet.
  </p>
 
- <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
- <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">
+ <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary">
  Annuler
  </button>
- <button type="submit" :disabled="isSubmitting" class="btn-primary">
+ <button type="submit" :disabled="isSubmitting" class="btn-modal-primary">
  <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -200,11 +200,11 @@
  <p x-show="editErrors.enddate" x-cloak x-text="editErrors.enddate" class="field-error"></p>
  </div>
 
- <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
- <button type="button" x-on:click="closeEdit()" class="btn-secondary">
+ <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary">
  Annuler
  </button>
- <button type="submit" :disabled="isSavingEdit" class="btn-primary">
+ <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary">
  <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -258,9 +258,9 @@
  x-effect="if (yearToActivate) $nextTick(() => $el.focus())" class="input-field">
  <p x-show="activateErrors.password" x-cloak x-text="activateErrors.password" class="field-error"></p>
 
- <div class="mt-6 flex justify-end gap-3">
- <button type="button" x-on:click="closeActivate()" class="btn-secondary">Annuler</button>
- <button type="submit" :disabled="isActivating" class="btn-primary">
+ <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeActivate()" class="btn-modal-secondary">Annuler</button>
+ <button type="submit" :disabled="isActivating" class="btn-modal-primary">
  <span x-text="isActivating ? 'Activation...' : 'Activer cette année'"></span>
  </button>
  </div>

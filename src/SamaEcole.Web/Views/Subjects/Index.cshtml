@@ -73,7 +73,7 @@
     </div>
 
     <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()"
-     class="btn-primary group h-10 px-4 ml-auto">
+     class="btn-modal-primary group h-10 px-4 ml-auto">
      <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
      Nouvelle matière
     </button>
@@ -297,7 +297,7 @@
         placeholder="Activités" class="input-field" :disabled="!canManageSubject || !headerCarrier">
       </div>
       <button type="button" x-on:click="saveHeaders()" x-show="canManageSubject"
-       :disabled="isSavingHeaders || !headerCarrier" class="btn-secondary h-10">
+       :disabled="isSavingHeaders || !headerCarrier" class="btn-modal-secondary h-10">
        <span x-text="isSavingHeaders ? 'Enregistrement...' : 'Enregistrer les entêtes'"></span>
       </button>
      </div>
@@ -408,7 +408,7 @@
      <p class="text-xs text-slate-400">
       <span x-text="structureLineCount"></span> ligne(s) seront imprimées sur le bulletin de ce niveau.
      </p>
-     <button type="button" x-show="canManageSubject" x-on:click="openCreateGroup()" class="btn-primary h-10 px-4">
+     <button type="button" x-show="canManageSubject" x-on:click="openCreateGroup()" class="btn-modal-primary h-10 px-4">
       <icon name="plus" class="w-5 h-5" />
       Nouveau domaine
      </button>
@@ -487,11 +487,11 @@
     </div>
    </div>
 
-   <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
-    <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">
+   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+    <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary">
      Annuler
     </button>
-    <button type="submit" :disabled="isSubmitting" class="btn-primary">
+    <button type="submit" :disabled="isSubmitting" class="btn-modal-primary">
      <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -582,9 +582,9 @@
     </template>
    </div>
 
-   <div class="mt-6 flex justify-end gap-3">
-    <button type="button" x-on:click="closeEdit()" class="btn-secondary">Annuler</button>
-    <button type="submit" :disabled="isSavingEdit" class="btn-primary">
+   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+    <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary">Annuler</button>
+    <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary">
      <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
     </button>
    </div>
@@ -612,9 +612,9 @@
    Impossible si des notes existent déjà pour cette matière : son coefficient pilote encore le calcul des moyennes et des bulletins déjà émis.
   </p>
 
-  <div class="mt-6 flex justify-end gap-3">
-   <button type="button" x-on:click="closeDelete()" class="btn-secondary">Annuler</button>
-   <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingSubject" class="btn-danger">
+  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+   <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary">Annuler</button>
+   <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingSubject" class="btn-modal-danger">
     <span x-text="isDeletingSubject ? 'Suppression...' : 'Supprimer la matière'"></span>
    </button>
   </div>

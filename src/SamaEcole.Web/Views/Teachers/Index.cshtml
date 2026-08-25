@@ -60,15 +60,15 @@
 
  <div class="flex items-center gap-3">
  <!-- Export PDF (docs/Volume_7_Security.md « Enseignants ») : Super Admin, Directeur, Secrétariat. -->
- <button type="button" x-show="canExportTeachers" x-cloak x-on:click="exportTeachersPdf()" class="btn-secondary">
+ <button type="button" x-show="canExportTeachers" x-cloak x-on:click="exportTeachersPdf()" class="btn-modal-secondary">
  <icon name="document-text" class="w-4 h-4" />
  Exporter en PDF
  </button>
- <button type="button" x-show="canManage" x-cloak x-on:click="openImport()" class="btn-secondary">
+ <button type="button" x-show="canManage" x-cloak x-on:click="openImport()" class="btn-modal-secondary">
  <icon name="upload" class="w-4 h-4" />
  Importer des enseignants
  </button>
- <button type="button" x-show="canManage" x-cloak x-on:click="openCreate()" class="btn-primary">
+ <button type="button" x-show="canManage" x-cloak x-on:click="openCreate()" class="btn-modal-primary">
  <icon name="plus" class="w-4 h-4" />
  Ajouter un enseignant
  </button>
@@ -237,7 +237,7 @@
  <select-field model="assignForm.subjectId" required="true" class="mt-0" placeholder="Choisir…"
  options-expr="subjects.map(s => ({value: s.id, label: s.name + ' (' + s.level + ')'}))" />
  </div>
- <button type="submit" :disabled="assignSubmitting" class="btn-primary whitespace-nowrap">
+ <button type="submit" :disabled="assignSubmitting" class="btn-modal-primary whitespace-nowrap">
  <span x-text="assignSubmitting ? '…' : 'Attribuer'"></span>
  </button>
  </form>
@@ -246,7 +246,7 @@
  <div class="mt-8 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 border-t border-slate-200 pt-4">
  <template x-if="canManage">
  <div class="flex gap-2">
- <button type="button" x-on:click="openEditTeacher()" class="btn-secondary">
+ <button type="button" x-on:click="openEditTeacher()" class="btn-modal-secondary">
  Modifier la fiche
  </button>
  <button type="button" x-on:click="openDeleteTeacher()" class="text-sm font-medium text-danger bg-danger-bg hover:bg-red-100 px-5 py-2.5 rounded-xl transition-colors">
@@ -254,7 +254,7 @@
  </button>
  </div>
  </template>
- <button type="button" x-on:click="closeDetail()" class="btn-secondary sm:ml-auto">Fermer</button>
+ <button type="button" x-on:click="closeDetail()" class="btn-modal-secondary sm:ml-auto">Fermer</button>
  </div>
  </div>
  </template>
@@ -329,9 +329,9 @@
  <p x-show="teacherEditErrors.subjectids" x-text="teacherEditErrors.subjectids" class="field-error"></p>
  </div>
 
- <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
- <button type="button" x-on:click="closeEditTeacher()" class="btn-secondary">Annuler</button>
- <button type="submit" :disabled="isSavingTeacherEdit" class="btn-primary">
+ <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeEditTeacher()" class="btn-modal-secondary">Annuler</button>
+ <button type="submit" :disabled="isSavingTeacherEdit" class="btn-modal-primary">
  <span x-text="isSavingTeacherEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -359,9 +359,9 @@
  Réservé à une fiche créée par pure erreur de saisie : impossible si une attribution classe/matière existe déjà pour cet enseignant.
  </p>
 
- <div class="mt-6 flex justify-end gap-3">
- <button type="button" x-on:click="closeDeleteTeacher()" class="btn-secondary">Annuler</button>
- <button type="button" x-on:click="confirmDeleteTeacher()" :disabled="isDeletingTeacherRecord" class="btn-danger">
+ <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeDeleteTeacher()" class="btn-modal-secondary">Annuler</button>
+ <button type="button" x-on:click="confirmDeleteTeacher()" :disabled="isDeletingTeacherRecord" class="btn-modal-danger">
  <span x-text="isDeletingTeacherRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
  </button>
  </div>
@@ -454,9 +454,9 @@
  <p x-show="createErrors.userid" x-text="createErrors.userid" class="field-error"></p>
  </div>
 
- <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
- <button type="button" x-on:click="isCreateOpen = false" class="btn-secondary">Annuler</button>
- <button type="submit" :disabled="isSubmitting" class="btn-primary">
+ <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary">Annuler</button>
+ <button type="submit" :disabled="isSubmitting" class="btn-modal-primary">
  <span x-text="isSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
  </div>
@@ -552,15 +552,15 @@
  </div>
 
  <div class="mt-6 flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-4">
- <button type="button" @@click="downloadImportTemplate()" class="btn-secondary">
+ <button type="button" @@click="downloadImportTemplate()" class="btn-modal-secondary">
  <icon name="download" class="w-4 h-4" />
  <span>Télécharger le modèle</span>
  </button>
  <div class="flex gap-3">
- <button type="button" @@click="closeImport()" class="btn-secondary">Fermer</button>
+ <button type="button" @@click="closeImport()" class="btn-modal-secondary">Fermer</button>
  <button type="button"
  x-show="importPreview && importPreview.invalidRows === 0 && importPreview.validRows > 0 && !(importResult && importResult.committed)"
- x-cloak @@click="confirmImport()" :disabled="isImporting" class="btn-primary">
+ x-cloak @@click="confirmImport()" :disabled="isImporting" class="btn-modal-primary">
  <span x-text="isImporting ? 'Import en cours…' : ('Confirmer l\'import (' + (importPreview ? importPreview.validRows : 0) + ' enseignants)')"></span>
  </button>
  </div>
@@ -597,7 +597,7 @@
 
             <!-- Actions (Ajouter un créneau) -->
             <div x-show="canManageSchedule" class="shrink-0" x-cloak>
-                <button type="button" x-on:click="openCreateScheduleSlot()" class="btn-primary whitespace-nowrap">
+                <button type="button" x-on:click="openCreateScheduleSlot()" class="btn-modal-primary whitespace-nowrap">
                     <icon name="plus" class="w-4 h-4 mr-1" />
                     Nouveau Créneau
                 </button>
@@ -715,9 +715,9 @@
                     </div>
                 </div>
 
-                <div class="mt-6 flex justify-end gap-3">
-                    <button type="button" x-on:click="closeCreateScheduleSlot()" class="btn-secondary">Annuler</button>
-                    <button type="submit" :disabled="isSubmittingSchedule" class="btn-primary">
+                <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                    <button type="button" x-on:click="closeCreateScheduleSlot()" class="btn-modal-secondary">Annuler</button>
+                    <button type="submit" :disabled="isSubmittingSchedule" class="btn-modal-primary">
                         <span x-text="isSubmittingSchedule ? 'Enregistrement...' : 'Enregistrer'"></span>
                     </button>
                 </div>
@@ -728,9 +728,9 @@
         <modal-shell open="deletingScheduleSlot" on-close="closeDeleteScheduleSlot()" size="md">
             <modal-title>Supprimer ce créneau</modal-title>
             <modal-subtitle>Confirmez-vous la suppression de ce créneau ?</modal-subtitle>
-            <div class="mt-6 flex justify-end gap-3">
-                <button type="button" x-on:click="closeDeleteScheduleSlot()" class="btn-secondary">Annuler</button>
-                <button type="button" x-on:click="confirmDeleteScheduleSlot()" :disabled="isDeletingSchedule" class="btn-danger">
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeDeleteScheduleSlot()" class="btn-modal-secondary">Annuler</button>
+                <button type="button" x-on:click="confirmDeleteScheduleSlot()" :disabled="isDeletingSchedule" class="btn-modal-danger">
                     <span x-text="isDeletingSchedule ? 'Suppression...' : 'Supprimer'"></span>
                 </button>
             </div>

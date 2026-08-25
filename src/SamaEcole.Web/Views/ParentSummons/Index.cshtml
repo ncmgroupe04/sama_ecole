@@ -14,7 +14,7 @@
             <p class="text-jgk-subtitle text-slate-500 mt-1">Convoquez un parent/tuteur pour un motif libre, distinct d'une sanction disciplinaire.</p>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-            <button x-show="canManageParentSummons" x-cloak @@click="openCreate()" class="btn-primary">
+            <button x-show="canManageParentSummons" x-cloak @@click="openCreate()" class="btn-modal-primary">
                 <icon name="plus" class="w-4 h-4" />
                 Nouvelle convocation
             </button>
@@ -59,7 +59,7 @@
                             <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="record.reason" :title="record.reason"></td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
                                 <button type="button" @@click="printNotice(record.id)" :disabled="printingId === record.id"
-                                        class="btn-secondary inline-flex items-center gap-2 disabled:opacity-60">
+                                        class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60">
                                     <icon name="print" class="w-4 h-4" x-show="printingId !== record.id" />
                                     <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingId === record.id" x-cloak />
                                     <span x-text="printingId === record.id ? 'Génération...' : 'Convocation PDF'"></span>
@@ -107,9 +107,9 @@
                 <p x-show="createErrors.reason" x-text="createErrors.reason" class="field-error"></p>
             </div>
 
-            <div class="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
-                <button type="button" @@click="closeCreate()" class="btn-secondary">Annuler</button>
-                <button type="submit" :disabled="isCreating" class="btn-primary">
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" @@click="closeCreate()" class="btn-modal-secondary">Annuler</button>
+                <button type="submit" :disabled="isCreating" class="btn-modal-primary">
                     <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
                 </button>
             </div>

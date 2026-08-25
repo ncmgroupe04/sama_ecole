@@ -52,7 +52,7 @@
                     <label class="form-label-sm">Au</label>
                     <date-field model="to" aria-label="Date de fin" class="mt-0" />
                 </div>
-                <button type="button" x-on:click="applyFilters()" class="btn-primary">
+                <button type="button" x-on:click="applyFilters()" class="btn-modal-primary">
                     <icon name="chart-multiple" class="w-4 h-4" />
                     Générer
                 </button>
@@ -68,7 +68,7 @@
                s'exécute dans la MÊME portée Alpine que `exporting` et `data`. *@
             <div>
                 <button type="button" x-on:click="exportExcel()" :disabled="exporting || !data || !featureAllowed"
-                        class="btn-secondary" :title="featureAllowed ? '' : featureLabel">
+                        class="btn-modal-secondary" :title="featureAllowed ? '' : featureLabel">
                     <icon name="download" class="w-4 h-4" />
                     <span x-text="exporting ? 'Export…' : 'Télécharger le rapport financier .xlsx'"></span>
                 </button>

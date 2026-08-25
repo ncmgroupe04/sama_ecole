@@ -38,6 +38,19 @@
     @apply inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-danger px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 disabled:opacity-50;
   }
 
+  /* Boutons standardisés pour les modales (SaaS 2026) */
+  .btn-modal-primary {
+    @apply bg-slate-900 text-white hover:bg-slate-800 px-5 py-2 rounded-xl font-medium text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50;
+  }
+
+  .btn-modal-secondary {
+    @apply bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:opacity-50;
+  }
+
+  .btn-modal-danger {
+    @apply text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:opacity-50;
+  }
+
   .card {
     @apply rounded-2xl border border-slate-100 bg-white shadow-sm;
   }
