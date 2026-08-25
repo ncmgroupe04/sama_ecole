@@ -40,7 +40,7 @@
 
   /* Boutons standardisés pour les modales (SaaS 2026) */
   .btn-modal-primary {
-    @apply bg-slate-900 text-white hover:bg-slate-800 px-5 py-2 rounded-xl font-medium text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:opacity-50;
+    @apply bg-primary-600 text-white hover:bg-primary-700 px-5 py-2 rounded-xl font-medium text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-modal-secondary {
