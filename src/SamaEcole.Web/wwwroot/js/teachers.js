@@ -534,15 +534,33 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async deleteAssignment(assignmentId) {
-            if (!confirm('Voulez-vous vraiment retirer cette classe/matière ?')) return;
+        deletingAssignmentId: null,
+        isDeletingAssignment: false,
+        deleteAssignmentError: null,
+
+        openDeleteAssignment(assignmentId) {
+            this.deletingAssignmentId = assignmentId;
+            this.deleteAssignmentError = null;
+        },
+
+        closeDeleteAssignment() {
+            this.deletingAssignmentId = null;
+        },
+
+        async confirmDeleteAssignment() {
+            if (!this.deletingAssignmentId) return;
+            this.isDeletingAssignment = true;
+            this.deleteAssignmentError = null;
             try {
-                await window.api.delete(`/teachers/${this.detail.id}/assignments/${assignmentId}`);
+                await window.api.delete(`/teachers/${this.detail.id}/assignments/${this.deletingAssignmentId}`);
                 // Recharge la fiche pour refléter la suppression
                 const id = this.detail.id;
                 this.detail = await window.api.get(`/teachers/${id}`);
+                this.closeDeleteAssignment();
             } catch (err) {
-                alert(err.message || "Erreur lors de la suppression de l'affectation.");
+                this.deleteAssignmentError = err.message || "Erreur lors de la suppression de l'affectation.";
+            } finally {
+                this.isDeletingAssignment = false;
             }
         },
 
