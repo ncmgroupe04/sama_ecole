@@ -3350,10 +3350,15 @@ components:
     EnrollmentReceipt:
       type: object
       description: >-
-        Reçu d'inscription (JGK-E01), imprimé en A5 paysage. Le détail des frais est figé à
-        l'inscription. Deux montants à ne pas confondre : `totalCollected` est ce qui est RÉELLEMENT
-        entré en caisse ce jour-là (seul total imprimé en gras, ventilé par `collectedLines`), tandis
-        que `totalDue` est le dû annuel, rappelé sous le tableau avec le reste à payer.
+        Attestation d'inscription (JGK-E01/E02), imprimée en A5 paysage. Le détail des frais est figé
+        à l'inscription.
+
+        REFONTE DU 25/08/2026 — le document imprimé n'affiche PLUS le cumul annuel : ni `totalDue`,
+        ni `remainingBalance`, ni « × N mois ». Il porte l'engagement initial
+        (`initialSettlementTotal`) puis les tarifs mensuels unitaires (`monthlyLines`,
+        `monthlyTotal`). Ces champs restent tous exposés ici pour la Finance et pour que le front
+        rende les mêmes blocs que le PDF sans réimplémenter la règle.
+        Voir docs/design-references/README.md §1.
       properties:
         enrollmentId: { type: string, format: uuid }
         receiptNumber: { type: string, description: 'Numéro officiel unique du reçu (JGK-E02), ex. « REC-2025-0002 ». Porté aussi par le versement du jour.' }
@@ -3374,7 +3379,7 @@ components:
         type: { type: string, enum: [NewEnrollment, ReEnrollment] }
         status: { type: string, enum: [Pending, Confirmed, Cancelled, DroppedOut, Transferred] }
         enrolledAt: { type: string, format: date-time }
-        totalDue: { type: number, description: 'Dû ANNUEL figé à l''inscription — jamais le montant du reçu.' }
+        totalDue: { type: number, description: 'Dû ANNUEL figé à l''inscription. USAGE INTERNE Finance — n''est plus imprimé sur aucune pièce remise au tuteur (refonte du 25/08/2026).' }
         lines:
           type: array
           description: Détail du dû annuel, figé à l'inscription.
@@ -3399,7 +3404,31 @@ components:
               months: { type: integer, description: 'Mois couverts pour une mensualité ; 1 pour un frais ponctuel.' }
               amount: { type: number }
         totalCollected: { type: number, description: 'Somme réellement encaissée ce jour — « TOTAL ENCAISSÉ » du reçu.' }
-        remainingBalance: { type: number, description: 'totalDue − totalCollected, rappelé sous le tableau.' }
+        remainingBalance: { type: number, description: 'totalDue − totalCollected. USAGE INTERNE Finance — le « Reste à payer » a été RETIRÉ du document imprimé (refonte du 25/08/2026).' }
+        initialSettlementTotal:
+          type: number
+          description: >-
+            Engagement initial à régler auprès de la comptabilité le jour de l'inscription : somme des
+            `lines[].unitAmount`, soit le frais ponctuel entier ou UNE SEULE mensualité par ligne
+            récurrente. Calculé, jamais stocké. Hypothèse : un mois d'avance.
+        monthlyLines:
+          type: array
+          description: >-
+            Échéancier mensuel : les seules lignes récurrentes de `lines`, à leur tarif UNITAIRE. Les
+            frais ponctuels en sont exclus — ils ne se répètent pas.
+          items:
+            type: object
+            properties:
+              designation: { type: string }
+              isRecurring: { type: boolean }
+              unitAmount: { type: number }
+              months: { type: integer }
+              lineTotal: { type: number }
+        monthlyTotal:
+          type: number
+          description: >-
+            Total à prévoir chaque mois — somme des mensualités UNITAIRES, jamais multipliée par le
+            nombre de mois. C'est le chiffre qui remplace le cumul annuel sur le document.
         paymentMethod:
           type: string
           nullable: true
