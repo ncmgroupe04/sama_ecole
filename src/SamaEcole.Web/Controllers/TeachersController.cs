@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Teachers.Commands.AssignTeacher;
+using SamaEcole.Application.Teachers.Commands.UnassignTeacher;
 using SamaEcole.Application.Teachers.Commands.CreateTeacher;
 using SamaEcole.Application.Teachers.Commands.DeleteTeacher;
 using SamaEcole.Application.Teachers.Commands.ImportTeachers;
@@ -168,6 +169,21 @@ public class TeachersController(ISender mediator) : ControllerBase
             cancellationToken);
 
         return CreatedAtAction(nameof(GetById), new { id }, result);
+    }
+
+    /// <summary>
+    /// Supprime une attribution de classe/matière pour un enseignant.
+    /// </summary>
+    [HttpDelete("{id:guid}/assignments/{assignmentId:guid}")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Unassign(
+        Guid id, Guid assignmentId, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new UnassignTeacherCommand(id, assignmentId), cancellationToken);
+        return NoContent();
     }
 
     /// <summary>

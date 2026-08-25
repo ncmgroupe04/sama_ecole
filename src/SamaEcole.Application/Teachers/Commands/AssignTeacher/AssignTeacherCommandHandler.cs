@@ -53,6 +53,21 @@ public class AssignTeacherCommandHandler(
             ]);
         }
 
+        var assignmentExists = await dbContext.TeacherAssignments
+            .AnyAsync(a => a.TeacherId == request.TeacherId 
+                        && a.ClassroomId == request.ClassroomId
+                        && a.SubjectId == request.SubjectId
+                        && a.SchoolYearId == activeYear.Id, cancellationToken);
+                        
+        if (assignmentExists)
+        {
+            throw new ValidationException([
+                new ValidationFailure(
+                    "Assignation", 
+                    "Cet enseignant est déjà affecté à cette classe pour cette matière (année en cours).")
+            ]);
+        }
+
         var assignment = new TeacherAssignment
         {
             SchoolId = schoolId,

@@ -210,11 +210,16 @@
  </div>
  <ul class="space-y-1">
  <template x-for="a in group.items" :key="a.id">
- <li class="text-sm text-slate-600 flex items-center gap-2">
- <icon name="building" class="w-3.5 h-3.5 text-slate-400" />
+ <li class="text-sm text-slate-600 flex items-center justify-between group/assign hover:bg-slate-50 p-1 -ml-1 rounded transition-colors">
+ <div class="flex items-center gap-2">
+ <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
  <span x-text="a.classroomName"></span>
  <span class="text-slate-300">·</span>
  <span x-text="a.subjectName"></span>
+ </div>
+ <button type="button" x-show="canManage" x-cloak @@click.stop="deleteAssignment(a.id)" class="opacity-0 group-hover/assign:opacity-100 text-danger hover:text-red-700 p-1 rounded transition-opacity" title="Retirer cette affectation">
+ <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+ </button>
  </li>
  </template>
  </ul>

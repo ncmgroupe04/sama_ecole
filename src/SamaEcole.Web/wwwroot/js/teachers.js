@@ -534,6 +534,18 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        async deleteAssignment(assignmentId) {
+            if (!confirm('Voulez-vous vraiment retirer cette classe/matière ?')) return;
+            try {
+                await window.api.delete(`/teachers/${this.detail.id}/assignments/${assignmentId}`);
+                // Recharge la fiche pour refléter la suppression
+                const id = this.detail.id;
+                this.detail = await window.api.get(`/teachers/${id}`);
+            } catch (err) {
+                alert(err.message || "Erreur lors de la suppression de l'affectation.");
+            }
+        },
+
         statusLabel(status) {
             const labels = { Active: 'Actif', Suspended: 'Suspendu', Blocked: 'Bloqué' };
             return labels[status] || status;
