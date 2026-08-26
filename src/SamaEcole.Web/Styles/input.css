@@ -369,6 +369,68 @@
     }
   }
 
+  /* Barre latérale réduite (icônes seules), desktop uniquement — bouton dans _Layout.cshtml,
+     état persisté en localStorage sous la clé sidebarCollapsed. .sidebar-collapsed n'est posée
+     sur <aside> qu'à partir de lg (voir la classe conditionnelle côté Razor), donc ces règles ne
+     s'appliquent jamais sur le tiroir mobile même si l'utilisateur avait réduit le menu lors
+     d'une session desktop précédente. */
+  .sidebar-collapsed .sidebar-label {
+    display: none;
+  }
+
+  .sidebar-collapsed .sidebar-link-main,
+  .sidebar-collapsed .sidebar-pole > button {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .sidebar-collapsed .sidebar-user-card {
+    justify-content: center;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* .sidebar-nav porte overflow-y-auto (défilement vertical de la liste) : la règle CSS qui
+     force la valeur calculée d'overflow-x à 'auto' dès qu'un seul axe n'est pas 'visible'
+     s'applique alors aussi à x, et ROGNE tout ce qui déborde horizontalement — y compris le
+     tiroir flottant des sous-menus ci-dessous, qui devient invisible malgré son display:block.
+     En mode réduit, la liste tient très largement dans la hauteur d'écran (six icônes) : le
+     défilement n'est plus nécessaire, et le désactiver ici rend le tiroir visible. */
+  .sidebar-collapsed .sidebar-nav {
+    overflow: visible !important;
+  }
+
+  /* Sous-menus (Gestion Scolaire, Surveillance, Comptabilité) : en mode réduit, l'accordéon au
+     clic (sidebar-nav.js, [data-submenu].is-closed) cède la place à un tiroir flottant au survol
+     — sans dupliquer le balisage des sous-liens. La sélectivité (.sidebar-collapsed .sidebar-pole
+     :hover [data-submenu]) l'emporte sur .is-closed / .is-resetting ci-dessus, quel que soit
+     l'état d'ouverture posé par sidebar-nav.js, qui ne pilote plus rien en mode réduit.
+
+     left: 100% SANS marge : un intervalle entre l'icône et le tiroir, même de quelques pixels,
+     sort le curseur de .sidebar-pole (et de tous ses descendants) le temps de la traversée — :hover
+     retombe alors à faux, [data-submenu] repasse en display:none, et le tiroir devient impossible à
+     atteindre en ligne droite. Le tiroir doit toucher .sidebar-pole pour que la chaîne de survol ne
+     se rompe jamais ; l'ombre portée suffit à le détacher visuellement sans marge réelle. */
+  .sidebar-collapsed [data-submenu] {
+    display: none !important;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    width: 14rem;
+    max-height: none !important;
+    padding: 0.5rem;
+    border-radius: 1rem;
+    background: white;
+    border: 1px solid rgb(241 245 249);
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.15), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+    z-index: 40;
+  }
+
+  .sidebar-collapsed .sidebar-pole:hover [data-submenu] {
+    display: block !important;
+  }
+
   /* ============================================================================
      REFONTE 2026 — SOCLE VISUEL COMMUN (audit UI/UX global)
 

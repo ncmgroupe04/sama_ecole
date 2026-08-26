@@ -41,7 +41,8 @@
  Styles/input.css [data-submenu]/.is-resetting) — indépendant d'Alpine, defer suffit. *@
  <script src="~/js/sidebar-nav.js" asp-append-version="true" defer></script>
 </head>
-<body class="bg-stone-50 text-slate-900 font-sans h-screen flex flex-col overflow-hidden antialiased" x-data="{ sidebarOpen: false }">
+<body class="bg-stone-50 text-slate-900 font-sans h-screen flex flex-col overflow-hidden antialiased"
+      x-data="{ sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true' }">
  @await Html.PartialAsync("_IconSprite")
 
  @* Console Super Admin, bouton « Infiltrer » (PlatformController.ImpersonateSchool) : le Super Admin
@@ -70,15 +71,17 @@
  et un libellé de menu sur deux lignes casse l'alignement de toute la colonne. 18rem laisse
  ~196px, avec la marge nécessaire pour un libellé un peu plus long. La barre est en flux
  (lg:static) : aucun décalage codé en dur ailleurs ne dépend de cette largeur — vérifié. *@
- <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'" class="fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
- 
+ <aside
+ :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'lg:w-20 sidebar-collapsed' : 'lg:w-72']"
+ class="fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-auto lg:rounded-tr-[2rem] lg:rounded-br-[2rem] flex flex-col h-full shadow-sm">
+
  <!-- En-tête Sidebar / Logo -->
  <div class="flex items-center justify-center h-16 border-b border-slate-100 px-6">
  <div class="flex items-center gap-3">
- <div class="w-12 h-12 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center" aria-hidden="true">
+ <div class="w-12 h-12 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center shrink-0" aria-hidden="true">
  <svg class="w-[1.875rem] h-[1.875rem]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" /></svg>
  </div>
- <span class="font-bold text-[1.6875rem] text-slate-900 tracking-tight">Unikol</span>
+ <span class="sidebar-label font-bold text-[1.6875rem] text-slate-900 tracking-tight">Unikol</span>
  </div>
  </div>
 
@@ -114,9 +117,9 @@
  <!-- Navigation -->
  <nav class="sidebar-nav flex-1 px-4 py-4 space-y-2 overflow-y-auto" x-data="sidebarNav()">
 
- <a href="/tableau-de-bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance']) && !isPublicSchool || canView(['SuperAdmin', 'Directeur']) && isPublicSchool" x-cloak class="sidebar-link-main @(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
- <icon name="dashboard" class="w-6 h-6" />
- <span class="text-base font-medium">Tableau de bord</span>
+ <a href="/tableau-de-bord" title="Tableau de bord" x-show="canView(['SuperAdmin', 'Directeur', 'Finance']) && !isPublicSchool || canView(['SuperAdmin', 'Directeur']) && isPublicSchool" x-cloak class="sidebar-link-main @(path.StartsWith("/tableau-de-bord") ? LinkActive : LinkIdle)">
+ <icon name="dashboard" class="w-6 h-6 shrink-0" />
+ <span class="sidebar-label text-base font-medium">Tableau de bord</span>
  </a>
 
  <!-- Pôle : Gestion Scolaire
@@ -127,13 +130,13 @@
  ajouté à cette union pour l'Inventaire (mouvements de stock, prêts de matériel) : il n'a
  accès à aucun autre sous-menu de ce pôle. Si un sous-menu ci-dessous gagne ou perd un rôle,
  cette liste doit être mise à jour en écho. -->
- <div class="space-y-1" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant', 'Surveillant'])" x-cloak>
- <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
+ <div class="sidebar-pole relative space-y-1" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant', 'Surveillant'])" x-cloak>
+ <button type="button" title="Gestion Scolaire" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
- <icon name="book" class="w-6 h-6" />
- <span class="text-base font-medium">Gestion Scolaire</span>
+ <icon name="book" class="w-6 h-6 shrink-0" />
+ <span class="sidebar-label text-base font-medium">Gestion Scolaire</span>
  </div>
- <icon name="chevron-down" class="sidebar-chevron w-4 h-4 transition-transform duration-200 @(gestionScolaireOpen ? "rotate-180" : "")" />
+ <icon name="chevron-down" class="sidebar-chevron sidebar-label w-4 h-4 transition-transform duration-200 @(gestionScolaireOpen ? "rotate-180" : "")" />
  </button>
  <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(gestionScolaireOpen ? "" : "is-closed")">
  <a href="/eleves" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant'])" class="@(path.StartsWith("/eleves") ? LinkActive : LinkIdle)">
@@ -180,13 +183,13 @@
  Convocations, Pointage Profs) — même raisonnement que Gestion Scolaire ci-dessus. Le Super
  Admin n'a accès à aucun de ces sous-menus (console plateforme, pas d'établissement) : le
  pôle lui reste donc masqué, comme au Surveillant pour Gestion Scolaire. -->
- <div class="space-y-1" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Finance', 'Surveillant'])" x-cloak>
- <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(surveillanceOpen ? "true" : "false")">
+ <div class="sidebar-pole relative space-y-1" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Finance', 'Surveillant'])" x-cloak>
+ <button type="button" title="Surveillance" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(surveillanceOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
- <icon name="shield" class="w-6 h-6" />
- <span class="text-base font-medium">Surveillance</span>
+ <icon name="shield" class="w-6 h-6 shrink-0" />
+ <span class="sidebar-label text-base font-medium">Surveillance</span>
  </div>
- <icon name="chevron-down" class="sidebar-chevron w-4 h-4 transition-transform duration-200 @(surveillanceOpen ? "rotate-180" : "")" />
+ <icon name="chevron-down" class="sidebar-chevron sidebar-label w-4 h-4 transition-transform duration-200 @(surveillanceOpen ? "rotate-180" : "")" />
  </button>
  <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(surveillanceOpen ? "" : "is-closed")">
  <a href="/presences" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/presences") ? LinkActive : LinkIdle)">
@@ -217,13 +220,13 @@
  Rapports financiers) : tous réservés à Directeur/Finance côté API (FinanceController), donc
  aucune union supplémentaire à calculer ici — seul x-cloak manquait, ajouté pour éviter le
  flash d'affichage avant l'hydratation d'Alpine (même garde que les autres pôles). -->
- <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" x-cloak class="space-y-1">
- <button type="button" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
+ <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" x-cloak class="sidebar-pole relative space-y-1">
+ <button type="button" title="Comptabilité" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
- <icon name="wallet" class="w-6 h-6" />
- <span class="text-base font-medium">Comptabilité</span>
+ <icon name="wallet" class="w-6 h-6 shrink-0" />
+ <span class="sidebar-label text-base font-medium">Comptabilité</span>
  </div>
- <icon name="chevron-down" class="sidebar-chevron w-4 h-4 transition-transform duration-200 @(comptabiliteOpen ? "rotate-180" : "")" />
+ <icon name="chevron-down" class="sidebar-chevron sidebar-label w-4 h-4 transition-transform duration-200 @(comptabiliteOpen ? "rotate-180" : "")" />
  </button>
  <div data-submenu class="overflow-hidden pl-4 space-y-1 mt-1 @(comptabiliteOpen ? "" : "is-closed")">
  <a href="/caisse" class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
@@ -255,39 +258,47 @@
 
  <!-- Administration (Super Admin / Params) -->
  <div class="pt-2 mt-2 border-t border-slate-100 space-y-1">
- <a href="/parametres" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="sidebar-link-main @(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
- <icon name="settings" class="w-6 h-6" />
- <span class="text-base font-medium">Paramètres</span>
+ <a href="/parametres" title="Paramètres" x-show="canView(['Directeur', 'Secretariat'])" x-cloak class="sidebar-link-main @(path.StartsWith("/parametres") ? LinkActive : LinkIdle)">
+ <icon name="settings" class="w-6 h-6 shrink-0" />
+ <span class="sidebar-label text-base font-medium">Paramètres</span>
  </a>
- <a href="/admin" x-show="canView(['SuperAdmin'])" x-cloak class="sidebar-link-main @(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
- <icon name="layers" class="w-6 h-6" />
- <span class="text-base font-medium">Console Super Admin</span>
+ <a href="/admin" title="Console Super Admin" x-show="canView(['SuperAdmin'])" x-cloak class="sidebar-link-main @(path.StartsWith("/admin") ? LinkActive : LinkIdle)">
+ <icon name="layers" class="w-6 h-6 shrink-0" />
+ <span class="sidebar-label text-base font-medium">Console Super Admin</span>
  </a>
 
  @* Centre d'aide : documentation intégrée, aucune donnée d'établissement — donc aucun x-show de
  rôle, contrairement aux entrées ci-dessus. Celui qui ne sait pas quoi faire est rarement celui
- qui a le plus de droits. *@
- <a href="/aide" class="sidebar-link-main @(path.StartsWith("/aide") ? LinkActive : LinkIdle)">
- <icon name="help-circle" class="w-6 h-6" />
- <span class="text-base font-medium">Aide &amp; Documentation</span>
+ qui a le plus de droits. Seul point d'accès à l'aide désormais (l'ancien raccourci de la barre
+ supérieure faisait doublon avec cette entrée). *@
+ <a href="/aide" title="Aide &amp; Documentation" class="sidebar-link-main @(path.StartsWith("/aide") ? LinkActive : LinkIdle)">
+ <icon name="help-circle" class="w-6 h-6 shrink-0" />
+ <span class="sidebar-label text-base font-medium">Aide &amp; Documentation</span>
  </a>
  </div>
  </nav>
 
  @* Profil réel de la session : l'e-mail est celui saisi à la connexion, le rôle est lu dans le
- JWT. Le nom complet manque tant qu'aucun endpoint ne l'expose (pas de GET /users/me). *@
- <div class="p-6 border-t border-slate-100" x-data="sessionMenu()">
- <div class="flex items-center gap-3">
+ JWT. Le nom complet manque tant qu'aucun endpoint ne l'expose (pas de GET /users/me). La carte
+ entière EST le bouton de déconnexion — la barre supérieure n'en propose plus une deuxième —,
+ avec le gabarit de mise en évidence de l'ancien bouton (fond bleu, blanc au repos, rouge/rose
+ au survol) pour qu'elle reste aussi visible qu'avant son déplacement. *@
+ <div class="p-3 border-t border-slate-100" x-data="sessionMenu()">
+ <button type="button" x-on:click="logout()" aria-label="Se déconnecter"
+ class="sidebar-user-card w-full flex items-center gap-3 px-3 py-2 rounded-[2rem] bg-primary-600 text-white hover:bg-rose-600 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary"
+ :title="'Se déconnecter (' + email + ')'">
  @* Initiale calculée localement : envoyer l'e-mail à un service d'avatars tiers
  (ui-avatars.com, comme précédemment) revient à lui divulguer une donnée personnelle. *@
- <div aria-hidden="true" class="w-10 h-10 shrink-0 rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-sm flex items-center justify-center font-medium uppercase"
+ <div aria-hidden="true" class="w-10 h-10 shrink-0 rounded-full bg-white/20 text-white flex items-center justify-center font-medium uppercase"
  x-text="email ? email[0] : '?'"></div>
 
- <div class="flex-1 min-w-0">
- <p class="text-sm font-medium text-slate-900 truncate" x-text="email" x-bind:title="email"></p>
- <p class="text-xs text-slate-500 truncate" x-text="role"></p>
+ <div class="sidebar-label flex-1 min-w-0 text-left">
+ <p class="text-sm font-medium truncate" x-text="email"></p>
+ <p class="text-xs text-white/80 truncate" x-text="role"></p>
  </div>
- </div>
+
+ <icon name="sign-out" class="sidebar-label w-6 h-6 shrink-0" />
+ </button>
  </div>
  </aside>
 
@@ -297,11 +308,25 @@
  <!-- Barre supérieure -->
  <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
  <div class="flex items-center gap-4">
- <!-- Bouton Menu Mobile -->
+ <!-- Bouton Menu Mobile : ouvre le tiroir superposé de la barre latérale -->
  <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 rounded-xl">
  <icon name="menu" class="w-6 h-6" />
  </button>
- 
+
+ @* Bouton Réduire/Déplier la barre latérale (desktop uniquement — sur mobile elle reste un
+ tiroir superposé, pas un panneau à réduire). État persisté en localStorage : la navigation
+ se fait par rechargement complet de page (MVC classique), donc l'état Alpine du <body> ne
+ survit pas d'une page à l'autre sans cette persistance. *@
+ <button type="button"
+ x-on:click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed)"
+ :title="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
+ :aria-label="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
+ @* focus-visible et non focus : un clic souris ne doit laisser aucun halo, seule la navigation
+ clavier (Tab) en a besoin pour rester accessible. *@
+ class="hidden lg:inline-flex p-2 -ml-2 text-slate-500 hover:text-slate-900 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all duration-200 active:scale-95">
+ <icon name="menu" class="w-6 h-6" />
+ </button>
+
  @* Titre de l'écran courant. L'ancien fil d'ariane annonçait « Élèves › Aperçu » en dur,
  y compris sur la page Classes : une indication de position fausse vaut moins que pas
  d'indication du tout. Un vrai fil d'ariane viendra avec l'arborescence des modules. *@
@@ -358,28 +383,10 @@
  <span x-text="currentTime"></span>
  </div>
 
- @* Badge de CONNECTIVITÉ (Volume 5 §9). Trois états : vert « Connecté », bleu clignotant
- « Vérification… », orange « Hors ligne ». Le compteur éventuel dénombre des BROUILLONS de
- formulaire conservés sur le poste (localStorage), PAS des opérations en attente d'envoi : il
- n'existe aucune file de synchronisation et il n'en existera pas (Volume 0 §0.13, décisions D-01
- et D-09). Le libellé le dit explicitement — « saisies conservées », jamais « en attente de
- synchronisation » — pour qu'un caissier ne quitte jamais son poste en croyant qu'un encaissement
- partira tout seul. Le bouton relance une sonde HEAD vers le serveur : aucun effet de bord, donc
- ouvert à tous les rôles, contrairement à une resynchronisation qui écrirait des données. *@
- <div x-data="connectivityBadge()" x-cloak class="hidden sm:flex items-center shrink-0">
- <span class="inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-l-full text-sm font-medium"
- :class="badgeClass()" :title="title()">
- <span aria-hidden="true" class="w-2 h-2 rounded-full shrink-0" :class="dotClass()"></span>
- <span class="whitespace-nowrap" x-text="label()"></span>
- </span>
- <button type="button" x-on:click="recheck()" :disabled="checking()"
- title="Vérifier la connexion au serveur"
- aria-label="Vérifier la connexion au serveur"
- :class="badgeClass()"
- class="inline-flex items-center px-2 py-1.5 rounded-r-full hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
- <icon name="globe" class="w-4 h-4" />
- </button>
- </div>
+ @* L'ancien badge de connectivité de la barre supérieure a été retiré : il mesurait la même
+ chose que la pastille « Connecté / Hors ligne » de la barre d'état en bas d'écran (§9), et les
+ deux affichaient parfois des messages contradictoires. La barre d'état est l'emplacement
+ spécifié par le Volume 5 §3.3/§9 pour cette information — elle seule la porte désormais. *@
 
  @* Indicateur d'ANNÉE SCOLAIRE ACTIVE (JGK-C01) : rend visible sur chaque écran l'exercice de
  travail courant, dont dépendent inscriptions, frais, notes et finances (résolu serveur via
@@ -420,35 +427,15 @@
  @* Utilisateur connecté : remplace l'ancienne cloche de notifications (module jamais livré).
  Aucun contexte d'authentification Razor côté serveur n'existe ici — l'access token JWT vit
  uniquement dans le navigateur (localStorage, voir auth.js). Le nom complet vient du claim
- `name` du JWT (User.FullName, JwtTokenGenerator), déjà exposé par sessionMenu() ; l'e-mail
- reste affiché au bas de la barre latérale, donc pas dupliqué ici. *@
+ `name` du JWT (User.FullName, JwtTokenGenerator), déjà exposé par sessionMenu(). L'aide et la
+ déconnexion ne sont plus dupliquées ici : « Aide & Documentation » et la carte de profil (avec
+ son bouton Déconnexion) vivent toutes deux dans la barre latérale — un seul endroit pour
+ chacune. *@
  <div x-data="sessionMenu()" class="flex items-center gap-2 px-1" :title="email">
  <div aria-hidden="true" class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center text-xs font-medium uppercase"
  x-text="(name || email) ? (name || email)[0] : '?'"></div>
  <span class="hidden sm:block text-sm font-medium text-slate-700 truncate max-w-[10rem]" x-text="name || email"></span>
  </div>
-
- @* Centre d'aide (/aide). Placé juste avant la déconnexion, au bout de la barre : c'est le
- réflexe attendu quand on ne sait plus quoi faire. Le libellé reste masqué sous `sm` pour
- ne pas encombrer la barre sur mobile — l'icône et le title suffisent alors. *@
- <a href="/aide"
- title="Aide &amp; Documentation — guide d'utilisation d'Unikol"
- aria-label="Ouvrir le centre d'aide"
- class="flex items-center gap-2 px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95 @(path.StartsWith("/aide") ? "text-primary-700 bg-indigo-50" : "text-slate-400 hover:text-primary-700 hover:bg-slate-50")">
- <icon name="help-circle" class="w-6 h-6" />
- <span class="hidden sm:inline text-sm font-medium">Aide</span>
- </a>
-
- @* Déconnexion (Volume 5 §3.1). Révoque les refresh tokens côté serveur et purge le
- cookie : fermer l'onglet ne suffisait pas, la session serait restée ouverte 14 jours. *@
- <button x-data="sessionMenu()"
- x-on:click="logout()"
- title="Se déconnecter"
- aria-label="Se déconnecter"
- class="flex items-center gap-2 px-3 py-2 bg-primary-600 text-white hover:bg-rose-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
- <icon name="sign-out" class="w-6 h-6" />
- <span class="hidden sm:inline text-sm font-medium">Déconnexion</span>
- </button>
  </div>
  </header>
 

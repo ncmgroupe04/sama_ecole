@@ -87,11 +87,13 @@ Bibliothèque unique (Material Symbols ou Fluent UI System Icons) — pas de mé
 
 ### 3.1 Barre supérieure
 
-Logo, nom de l'école active, année scolaire active, utilisateur connecté, notifications, recherche globale, bouton de déconnexion.
+Logo, nom de l'école active, année scolaire active, utilisateur connecté, recherche globale (non livrée). Le badge de connectivité, le raccourci « Aide » et le bouton de déconnexion, prévus ici dans une version antérieure de ce document, ont été retirés de la barre supérieure le 26/08/2026 à la demande du client : ils faisaient doublon avec, respectivement, la pastille de la barre d'état (§9), l'entrée « Aide & Documentation » du menu latéral, et la carte de profil en bas du menu latéral (§3.2) qui porte désormais la déconnexion.
 
 ### 3.2 Menu latéral
 
 Modules affichés selon les permissions de l'utilisateur (jamais tous les modules pour tout le monde) : Tableau de bord, Élèves, Inscriptions, Enseignants, Classes, Matières, Présences, Notes, Bulletins, Finance, Rapports, Paramètres, Administration (Super Admin uniquement).
+
+**Réduction (26/08/2026).** Un bouton dans la barre supérieure (desktop uniquement, état persisté côté navigateur) réduit le menu à ses icônes seules — libellés, chevrons et sous-menus masqués. Les pôles à sous-menus (Gestion Scolaire, Surveillance, Comptabilité) révèlent leurs liens dans un tiroir flottant au survol de l'icône, plutôt que par l'accordéon habituel au clic, le libellé n'ayant plus la place de s'afficher en ligne. La carte de profil en bas du menu (e-mail et rôle sur une ligne, bouton Déconnexion sur la seconde) se réduit à l'avatar seul dans cet état.
 
 > **Règle de sécurité (non négociable, voir AGENTS.md et Volume 7 §9)** : masquer un onglet dans le menu est une commodité d'ergonomie, **jamais une mesure de sécurité**. Chaque route API correspondante doit refuser l'accès indépendamment de l'affichage du menu (`[Authorize(Roles=...)]` côté backend) — un utilisateur qui devinerait ou taperait directement une URL non affichée dans son menu doit recevoir un `403`, pas seulement ne pas voir le lien.
 
