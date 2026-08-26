@@ -80,6 +80,11 @@ public class ApplicationDbContext(
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<ItemAssignment> ItemAssignments => Set<ItemAssignment>();
 
+    // Module Examens officiels (CFEE/BFEM/BAC).
+    public DbSet<ExamSession> ExamSessions => Set<ExamSession>();
+    public DbSet<ExamDossier> ExamDossiers => Set<ExamDossier>();
+    public DbSet<ExamResult> ExamResults => Set<ExamResult>();
+
     // Console Super Admin — entités SANS CLÉ, jamais gérées par les migrations (voir OnModelCreating) :
     // la première est adossée à une vue réelle, la seconde n'existe qu'à travers FromSqlRaw.
     public DbSet<PlatformDashboardStats> PlatformDashboardStats => Set<PlatformDashboardStats>();

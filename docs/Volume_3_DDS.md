@@ -137,11 +137,13 @@ Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas 
 
 ### 4.4 Domaine Pédagogique
 
-`SchoolYears`, `Terms`, `Levels`, `ClassRooms`, `Subjects`, `Teachers`, `TeacherAssignments`, `Students`, `Guardians`, `StudentGuardians`, `Enrollments`, `EnrollmentDocuments`, `WaitingListEntries`, `StudentTransfers`, `Attendances`, `Grades`, `GradeDetails`, `ReportCards`, `ReportCardDetails`.
+`SchoolYears`, `Terms`, `Levels`, `ClassRooms`, `Subjects`, `Teachers`, `TeacherAssignments`, `Students`, `Guardians`, `StudentGuardians`, `Enrollments`, `EnrollmentDocuments`, `WaitingListEntries`, `StudentTransfers`, `Attendances`, `Grades`, `GradeDetails`, `ReportCards`, `ReportCardDetails`, `ScheduleSlots` (créneaux d'emploi du temps, Volume 1 §21), `TeacherAttendances` (pointage des enseignants, Volume 1 §21.3).
 
 ### 4.5 Domaine Finance
 
-`FeeCategories`, `SchoolFees`, `FeeChangeHistory`, `Payments`, `PaymentDetails`, `Receipts`, `ExpenseCategories`, `Expenses`, `ExpenseAttachments`, `FinancialReports`.
+`FeeCategories`, `SchoolFees`, `FeeChangeHistory`, `Payments`, `PaymentDetails`, `Receipts`, `ExpenseCategories`, `Expenses`, `ExpenseAttachments`, `FinancialReports`, `EmployeeContracts`, `EmployeeContractHistories`, `FichePaies`, `TeacherHourRecords` (contrats, paie et vacations, Volume 1 §14 — *ajout au catalogue, gap corrigé ici : ces tables existent en base depuis les migrations `AddEmployeeContractLifecycle`/`AddPayrollAndTax`/`AddDocumentsModuleEntities` mais n'y figuraient pas*).
+
+> **Casse réelle en base, ici corrigée en documentation seulement.** Les tables listées ci-dessus en §4.4/§4.5 respectent la convention PascalCase de §1.4 à l'exception de `schedule_slots`, `employee_contracts`, `employee_contract_histories` et `fiche_paies`, créées en snake_case (mêmes migrations que ci-dessus, plus `AddScheduleAndDisbursements`) — `TeacherAttendances` et `TeacherHourRecords`, elles, sont bien en PascalCase. Ce mélange est un fait acquis du schéma : renommer une table déjà appliquée en production est interdit (AGENTS.md, « Ne jamais faire »). Le nom réel en base fait foi pour toute migration ou requête SQL ; ne pas supposer la casse à partir de §1.4 seul.
 
 ### 4.6 Domaine Inventaire
 
@@ -150,6 +152,10 @@ Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas 
 ### 4.7 Domaine Infrastructure applicative
 
 `AuditLogs`, `Notifications`, `NotificationRecipients`, `BackupHistory` (traçabilité des sauvegardes automatiques côté infrastructure, Volume 9), `ApplicationLogs`.
+
+### 4.8 Domaine Examens officiels
+
+`exam_sessions`, `exam_dossiers`, `exam_results` (spécification détaillée en §5.10).
 
 > Les tables `SyncQueue` et `SyncHistory` de la version 1.0 sont **supprimées** : elles n'ont plus de raison d'être puisqu'il n'existe qu'une seule source de vérité, le serveur (Volume 0 §0.8).
 
@@ -358,6 +364,67 @@ Quatre tables tenant, toutes protégées par la double barrière §2.2 (Global Q
 
 ---
 
+### 5.10 Domaine Examens officiels — `exam_sessions`, `exam_dossiers`, `exam_results`
+
+Trois tables tenant, snake_case (convention des modules les plus récents, §4.5), protégées par la double barrière §2.2. CFEE, BFEM et BAC vivent dans le même modèle : seul `ExamType` distingue une campagne sans série (CFEE) d'une campagne à séries/options (BFEM, BAC).
+
+**`exam_sessions`** — une campagne d'examen de l'école pour une année scolaire donnée.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK `schools.Id`, NOT NULL |
+| `SchoolYearId` | `uuid` | FK `school_years.Id`, NOT NULL, RESTRICT |
+| `ExamType` | `varchar(10)` | CHECK IN (`CFEE`,`BFEM`,`BAC`) |
+| `Series` | `varchar(20)` | NULL — série/option (`S1`,`S2`,`L`,`G`...) ; NULL pour `CFEE`, qui n'a pas de série |
+| `CenterName` | `varchar(150)` | NULL — centre par défaut de la session, surchageable par dossier |
+| `Status` | `varchar(25)` | CHECK IN (`EnPreparation`,`InscriptionsOuvertes`,`Transmis`,`Clos`), DEFAULT `EnPreparation` |
+| `xmin` | `xid` | Verrou optimiste (§3) |
+
+`CREATE UNIQUE INDEX UX_exam_sessions_school_year_type_series ON exam_sessions ("SchoolId", "SchoolYearId", "ExamType", COALESCE("Series", ''))` — un `COALESCE` est nécessaire car `NULL` n'est jamais égal à `NULL` dans une contrainte `UNIQUE` standard ; sans lui, rien n'empêcherait deux sessions `CFEE` de la même année scolaire (`Series` NULL dans les deux cas).
+
+**`exam_dossiers`** — le dossier d'un candidat pour une session. Un élève peut avoir plusieurs dossiers au fil des années (redoublement) ou des sessions, jamais deux pour la même session.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK, NOT NULL |
+| `ExamSessionId` | `uuid` | FK `exam_sessions.Id`, RESTRICT |
+| `StudentId` | `uuid` | FK `students.Id`, RESTRICT |
+| `ClassroomId` | `uuid` | FK `classrooms.Id`, RESTRICT — classe au moment de l'ouverture du dossier, **figée** (règle ci-dessous) |
+| `CandidateNumber` | `varchar(20)` | NULL — numéro de table, généré uniquement à l'attribution (règle ci-dessous) |
+| `ExamCenterName` | `varchar(150)` | NULL — hérite de `exam_sessions.CenterName` si non renseigné |
+| `BirthCertificateNumber` | `varchar(50)` | NULL — numéro d'enregistrement de l'extrait de naissance |
+| `BirthCertificatePresent` | `boolean` | NOT NULL DEFAULT `false` |
+| `CivilStatusConforming` | `boolean` | NULL — `NULL` = non encore contrôlé, distinct de `false` |
+| `CivilStatusNotes` | `varchar(500)` | NULL — détail d'un écart déclaré (ex. orthographe du nom différente sur l'extrait) |
+| `Status` | `varchar(20)` | CHECK IN (`Incomplet`,`Complet`,`Transmis`,`Valide`), DEFAULT `Incomplet` |
+| `TransmittedOn` | `date` | NULL |
+| `xmin` | `xid` | Verrou optimiste |
+
+`UQ_exam_dossiers_session_student` : `UNIQUE ("SchoolId", "ExamSessionId", "StudentId")`. `UX_exam_dossiers_session_candidate_number` : index unique **partiel** `("SchoolId", "ExamSessionId", "CandidateNumber") WHERE "CandidateNumber" IS NOT NULL`.
+
+**`exam_results`** — résultat et mention à la délibération, support des statistiques de taux de réussite.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK, NOT NULL |
+| `ExamDossierId` | `uuid` | FK `exam_dossiers.Id`, RESTRICT, UNIQUE — au plus un résultat par dossier |
+| `IsAdmitted` | `boolean` | NOT NULL |
+| `Mention` | `varchar(20)` | NULL, CHECK IN (`Passable`,`AssezBien`,`Bien`,`TresBien`) — NULL si non admis ou `ExamType = CFEE` (le CFEE n'attribue pas de mention) |
+| `AverageScore` | `numeric(5,2)` | NULL — moyenne transmise par l'IEF/IA, quand communiquée |
+| `DeliberatedOn` | `date` | NOT NULL |
+| `xmin` | `xid` | Verrou optimiste |
+
+**Règles non négociables du domaine :**
+
+1. **`CandidateNumber` n'est écrit que dans la transaction de l'endpoint d'attribution** (`POST /exams/dossiers/{id}/assign-center`), jamais à la création du dossier — même contrat que le matricule élève/enseignant (AGENTS.md règle #3).
+2. **Un dossier `Incomplet` ne peut jamais passer `Transmis`**, ni figurer dans un export ministériel ou une impression par lot de fiches de candidature. C'est l'audit automatique (Volume 4 §22) qui fait foi, pas une case cochée manuellement.
+3. **`ClassroomId` est figé à l'ouverture du dossier.** Un transfert de classe de l'élève en cours d'année ne réécrit jamais un dossier déjà `Transmis` ou `Valide` — l'historique d'examen doit rester celui qui a réellement été transmis à l'IEF/IA.
+
+---
+
 ## 6. Dictionnaire des énumérations
 
 | Énumération | Valeurs |
@@ -396,6 +463,10 @@ Ces valeurs sont partagées entre la base de données (contraintes `CHECK` ou ty
 - `inventory_categories (1) — (N) inventory_items`, `inventory_items (1) — (N) stock_movements`
 - `inventory_items (1) — (N) item_assignments`, chaque fiche pointant vers **un seul** bénéficiaire : `Students`, `Teachers` **ou** `Users` (contrainte `CHECK`, §5.9)
 - `Rooms (1) — (N) inventory_items` (emplacement d'entreposage, facultatif — un lot peut n'avoir qu'un libellé libre)
+- `Teachers (1) — (N) EmployeeContracts` (historique de contrats, jamais supprimé — §4.5), `EmployeeContracts (1) — (N) FichePaies`, `EmployeeContracts (1) — (N) TeacherHourRecords`
+- `Teachers (1) — (N) ScheduleSlots`, `Teachers (1) — (N) TeacherAttendances`
+- `exam_sessions (1) — (N) exam_dossiers`, `exam_dossiers (1) — (0..1) exam_results` (§5.10)
+- `Students (1) — (N) exam_dossiers` (un élève accumule un dossier par session au fil des années)
 
 Un diagramme entité-association complet (ERD) doit être maintenu à jour dans le dépôt de code (ex. via `dbdiagram.io` ou export EF Core), et non uniquement dans ce document texte.
 

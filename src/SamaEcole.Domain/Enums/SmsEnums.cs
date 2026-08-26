@@ -23,7 +23,13 @@ public enum SmsTrigger
     ReportCard,
 
     /// <summary>Envoi ponctuel décidé par un utilisateur, hors automatisme.</summary>
-    Manual
+    Manual,
+
+    /// <summary>
+    /// Dispatch d'une convocation d'examen officiel (centre, numéro de table) — geste explicite du
+    /// Secrétariat/Directeur, DÉLIBÉRÉMENT sans commutateur, même raisonnement que <see cref="Manual"/>.
+    /// </summary>
+    ExamConvocation
 }
 
 /// <summary>

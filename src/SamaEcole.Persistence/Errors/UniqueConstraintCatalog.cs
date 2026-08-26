@@ -180,6 +180,10 @@ internal static class UniqueConstraintCatalog
         ["users"] =
             "Un compte utilise déjà cette adresse e-mail dans votre établissement. Chaque compte a "
             + "sa propre adresse : utilisez-en une autre, ou réactivez le compte existant.",
+
+        ["exam_sessions"] =
+            "Une session existe déjà pour ce type d'examen et cette série sur cette année scolaire. "
+            + "Consultez la liste des sessions : celle que vous essayez de créer s'y trouve déjà.",
     };
 
     /// <summary>
@@ -201,6 +205,14 @@ internal static class UniqueConstraintCatalog
         ("enrollments_SchoolId_ReceiptNumber",
             "Un reçu d'inscription porte déjà ce numéro. Le numéro est attribué automatiquement à "
             + "l'enregistrement : prévenez votre administrateur si ce message revient."),
+
+        ("exam_dossiers_SchoolId_ExamSessionId_StudentId",
+            "Cet élève a déjà un dossier pour cette session d'examen. Consultez la liste des "
+            + "dossiers : il y figure déjà."),
+
+        ("exam_dossiers_SchoolId_ExamSessionId_CandidateNumber",
+            "Ce numéro de table est déjà attribué à un autre candidat de cette session. Laissez le "
+            + "champ vide pour une attribution automatique, ou choisissez-en un autre."),
     ];
 
     /// <summary>

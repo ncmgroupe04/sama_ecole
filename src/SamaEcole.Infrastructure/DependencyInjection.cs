@@ -236,6 +236,12 @@ public static class DependencyInjection
         // dépendance.
         services.AddSingleton<IDebtorAgingExcelGenerator, DebtorAgingExcelGenerator>();
 
+        // Module Examens officiels : relevé d'inscription (.xlsx, ClosedXML) et fiches de candidature /
+        // convocations PDF (QuestPDF, charte OfficialHeaderComponent). Sans état, comme le reste.
+        services.AddSingleton<IExamRegistrationExcelGenerator, ExamRegistrationExcelGenerator>();
+        services.AddSingleton<IExamCandidateFormPdfGenerator, ExamCandidateFormPdfGenerator>();
+        services.AddSingleton<IExamConvocationPdfGenerator, ExamConvocationPdfGenerator>();
+
         // Import d'élèves par fichier CSV/Excel (même bibliothèque ClosedXML, aucune nouvelle dépendance).
         services.AddSingleton<IStudentImportFileParser, StudentImportFileParser>();
         services.AddSingleton<IStudentImportTemplateGenerator, StudentImportTemplateGenerator>();

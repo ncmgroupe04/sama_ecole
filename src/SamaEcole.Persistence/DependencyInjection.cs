@@ -37,6 +37,10 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IMatriculeGenerator, MatriculeGenerator>();
 
+        // Numéro de table, PAR SESSION D'EXAMEN — même contrat de transaction que les matricules
+        // (module Examens officiels, AGENTS.md règle #3).
+        services.AddScoped<IExamCandidateNumberGenerator, ExamCandidateNumberGenerator>();
+
         // Chemin d'authentification (ticket JGK-A04) : passe par les fonctions SECURITY DEFINER,
         // car la table users est sous RLS et le login s'exécute sans tenant.
         services.AddScoped<IAuthStore, AuthStore>();

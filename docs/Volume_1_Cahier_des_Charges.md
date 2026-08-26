@@ -672,4 +672,45 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 ---
 
+## 22. Examens officiels (CFEE/BFEM/BAC)
+
+**Statut : à construire (Module J du backlog).** Concerne les classes d'examen : CM2 (CFEE), 3ème (BFEM), Terminale et ses séries (BAC).
+
+### 22.1 Sessions et dossiers
+
+- Une **session d'examen** regroupe, pour une année scolaire, un type d'examen (CFEE/BFEM/BAC) et, pour BFEM/BAC, une série/option. Le CFEE n'a pas de série.
+- Un **dossier** est ouvert par élève de classe d'examen, rattaché à une session. Un élève n'a qu'un seul dossier par session — un redoublant ouvre un nouveau dossier l'année suivante, l'ancien reste consultable pour l'historique.
+- La classe de l'élève est **figée** sur le dossier au moment de son ouverture : un transfert de classe en cours d'année ne doit jamais réécrire un dossier déjà transmis.
+
+### 22.2 Contrôle d'état civil
+
+- Chaque dossier porte la vérification de l'**extrait de naissance** : présence, numéro d'enregistrement, et conformité du nom, prénom, date et lieu de naissance avec l'état civil de l'élève.
+- Tant que l'extrait n'est pas déclaré présent, le dossier ne peut pas passer à l'état `Complet`.
+- Une non-conformité détectée (ex. orthographe différente entre l'extrait et la fiche élève) se déclare explicitement avec un motif — elle ne bloque pas la saisie mais bloque la transmission tant qu'elle n'est pas résolue.
+
+### 22.3 Audit automatique
+
+- Une vue d'audit relève, pour une session donnée, tous les dossiers `Incomplet` et le détail de ce qui manque : pièce absente, champ non conforme, centre ou numéro de table non attribué.
+- Cet audit est le **seul** filtre qui autorise une transmission ou une impression par lot — pas une case cochée manuellement par le Secrétariat.
+
+### 22.4 Centre d'examen et numéro de table
+
+- Le centre d'examen et le **numéro de table** sont attribués dossier par dossier, ou en lot pour toute une session.
+- Le numéro de table est **généré dans la transaction d'attribution**, jamais à l'ouverture du dossier — même règle que le matricule (§2).
+- Il est unique au sein d'une même session.
+
+### 22.5 Documents et exports
+
+- **Fiche de candidature individuelle** (PDF, prête à signer), imprimable à l'unité ou **par lot** pour une classe ou une session entière. Un lot ne contient que des dossiers `Complet` ou `Transmis`.
+- **Export ministériel** (Excel/CSV) au format attendu par l'IEF/l'Inspection d'Académie, filtrable par session.
+- **Carte de convocation** (centre, numéro de table, date), individuelle ou dispatchée en lot par SMS/WhatsApp (formule Premium, `Feature.SmsNotifications` — §13) : le canal existant est réutilisé, aucun canal de communication nouveau n'est créé pour ce module.
+- Le dispatch de convocations n'est possible qu'une fois le centre et le numéro de table attribués (§22.4).
+
+### 22.6 Résultats et statistiques
+
+- Après délibération, le résultat (admis/non admis), la mention le cas échéant (BFEM/BAC — le CFEE n'attribue pas de mention) et, si transmise, la moyenne obtenue sont saisis sur le dossier.
+- Les statistiques (taux de réussite par série, par classe, comparaison interannuelle) ne portent que sur les dossiers `Transmis` ou `Valide` d'une session close — un dossier encore en préparation ne doit jamais fausser un taux de réussite affiché en cours d'année.
+
+---
+
 **Fin du Volume 1.**

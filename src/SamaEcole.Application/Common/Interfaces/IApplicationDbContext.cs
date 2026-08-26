@@ -163,6 +163,17 @@ public interface IApplicationDbContext
     /// <summary>Fiches de prêt/attribution de matériel aux élèves, enseignants et personnel. Verrou optimiste xmin.</summary>
     DbSet<ItemAssignment> ItemAssignments { get; }
 
+    // ------------------------------------------------------------------ Module Examens officiels
+
+    /// <summary>Campagnes d'examen (CFEE/BFEM/BAC) de l'école, par année scolaire et série.</summary>
+    DbSet<ExamSession> ExamSessions { get; }
+
+    /// <summary>Dossiers de candidature. Un élève n'a qu'un dossier par session (index unique).</summary>
+    DbSet<ExamDossier> ExamDossiers { get; }
+
+    /// <summary>Résultats/mentions à la délibération. Au plus un résultat par dossier.</summary>
+    DbSet<ExamResult> ExamResults { get; }
+
     /// <summary>
     /// Agrégats plateforme (console Super Admin) : entité SANS CLÉ adossée à la vue PostgreSQL
     /// `v_platform_dashboard_stats`, qui contourne la RLS via `security_invoker = false` +

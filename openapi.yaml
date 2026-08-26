@@ -40,6 +40,7 @@ tags:
   - name: Platform
   - name: Notifications
   - name: Inventory
+  - name: Exams
 
 paths:
   /auth/login:
@@ -3000,6 +3001,338 @@ paths:
               schema: { type: string, format: binary }
         '403': { description: Réservé au Directeur et au Secrétariat }
 
+  # Dossiers d'examens officiels (CFEE/BFEM/BAC) — Volume_4_API_Design.md §22 :
+  #   * le numéro de table n'est écrit que par POST .../assign-center, jamais à la création du dossier ;
+  #   * un dossier Incomplet ne peut ni être transmis, ni entrer dans un export ou un lot d'impression ;
+  #   * classroomId est figé à l'ouverture du dossier, non modifiable par PUT.
+  /exams/sessions:
+    get:
+      tags: [Exams]
+      summary: Sessions d'examen de l'école
+      parameters:
+        - name: schoolYearId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: examType
+          in: query
+          schema: { $ref: '#/components/schemas/ExamType' }
+      responses:
+        '200':
+          description: Liste des sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ExamSession' }
+    post:
+      tags: [Exams]
+      summary: Créer une session d'examen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExamSessionCreateRequest' }
+      responses:
+        '201':
+          description: Session créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamSession' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /exams/sessions/{id}:
+    put:
+      tags: [Exams]
+      summary: Corriger le centre par défaut ou le statut d'une session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExamSessionUpdateRequest' }
+      responses:
+        '200':
+          description: Session mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamSession' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Verrou optimiste expiré (rowVersion périmé) }
+
+  /exams/sessions/{id}/dispatch-convocations:
+    post:
+      tags: [Exams]
+      summary: Dispatch en lot des convocations par SMS/WhatsApp
+      description: >-
+        Réutilise le canal de notification existant (Feature.SmsNotifications, Volume 1 §13) —
+        aucun nouveau canal. Refusé tant qu'un dossier du lot n'a pas de centre/numéro de table.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '202':
+          description: Dispatch accepté, traitement asynchrone
+        '409': { description: Un ou plusieurs dossiers du lot sans centre/numéro de table attribués }
+        '403': { description: Formule d'abonnement sans Feature.SmsNotifications }
+
+  /exams/dossiers:
+    get:
+      tags: [Exams]
+      summary: Dossiers de candidature, paginés
+      parameters:
+        - name: examSessionId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: classroomId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ExamDossierStatus' }
+        - name: search
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Page de dossiers
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedExamDossiers' }
+    post:
+      tags: [Exams]
+      summary: Ouvrir un dossier de candidature
+      description: >-
+        classroomId est figé à la création : un transfert de classe ultérieur de l'élève
+        ne modifie jamais un dossier déjà ouvert (Volume 1 §22.1).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExamDossierCreateRequest' }
+      responses:
+        '201':
+          description: Dossier créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamDossierResult' }
+        '409': { description: Un dossier existe déjà pour cet élève sur cette session }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /exams/dossiers/audit:
+    get:
+      tags: [Exams]
+      summary: Dossiers incomplets d'une session, avec le détail de ce qui manque
+      parameters:
+        - name: examSessionId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Liste d'audit
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ExamDossierAuditEntry' }
+
+  /exams/dossiers/candidate-forms/pdf:
+    post:
+      tags: [Exams]
+      summary: Impression par lot des fiches de candidature (PDF)
+      description: >-
+        Le lot ne contient que des dossiers Complet ou Transmis — un dossier Incomplet
+        est silencieusement exclu, jamais imprimé par erreur (Volume 1 §22.5).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExamCandidateFormBatchRequest' }
+      responses:
+        '200':
+          description: PDF multi-page (une fiche par dossier retenu)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  /exams/dossiers/{id}:
+    get:
+      tags: [Exams]
+      summary: Fiche complète d'un dossier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Dossier
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamDossierDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Exams]
+      summary: Corriger l'état civil ou le centre déclaré
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExamDossierUpdateRequest' }
+      responses:
+        '200':
+          description: Dossier mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamDossierResult' }
+        '409': { description: Verrou optimiste expiré (rowVersion périmé) }
+
+  /exams/dossiers/{id}/assign-center:
+    post:
+      tags: [Exams]
+      summary: Attribuer centre d'examen et numéro de table
+      description: >-
+        Le numéro de table est généré dans CETTE transaction, jamais à l'ouverture du
+        dossier — même contrat que le matricule (AGENTS.md règle #3).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignExamCenterRequest' }
+      responses:
+        '200':
+          description: Centre et numéro de table attribués
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamDossierResult' }
+        '409': { description: Verrou optimiste expiré, ou numéro de table déjà pris par un autre dossier de la session }
+
+  /exams/dossiers/{id}/transmit:
+    post:
+      tags: [Exams]
+      summary: Marquer un dossier comme transmis à l'IEF/l'IA
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Dossier transmis
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamDossierResult' }
+        '409':
+          description: Dossier Incomplet — conflit avec l'état actuel, voir GET /exams/dossiers/audit pour le détail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /exams/dossiers/{id}/result:
+    put:
+      tags: [Exams]
+      summary: Saisir le résultat et la mention à la délibération
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExamResultRequest' }
+      responses:
+        '200':
+          description: Résultat enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamResult' }
+
+  /exams/dossiers/{id}/candidate-form/pdf:
+    get:
+      tags: [Exams]
+      summary: Fiche de candidature individuelle (PDF)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PDF de la fiche de candidature (Content-Disposition inline)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /exams/dossiers/{id}/convocation/pdf:
+    get:
+      tags: [Exams]
+      summary: Carte de convocation individuelle (PDF)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PDF de la convocation (Content-Disposition inline)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Centre ou numéro de table non encore attribués }
+
+  /exams/statistics:
+    get:
+      tags: [Exams]
+      summary: Taux de réussite par série/classe, comparaison interannuelle
+      parameters:
+        - name: schoolYearId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Statistiques agrégées
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExamStatistics' }
+
+  /exams/export/ministerial:
+    get:
+      tags: [Exams]
+      summary: Export Excel/CSV conforme au relevé IEF/IA
+      parameters:
+        - name: examSessionId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Fichier d'export (Content-Disposition attachment)
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4975,3 +5308,194 @@ components:
         quantityAvailableAfter: { type: integer }
         rowVersion: { type: integer, format: int64 }
         itemRowVersion: { type: integer, format: int64 }
+
+    ExamType:
+      type: string
+      enum: [CFEE, BFEM, BAC]
+
+    ExamSessionStatus:
+      type: string
+      enum: [EnPreparation, InscriptionsOuvertes, Transmis, Clos]
+
+    ExamDossierStatus:
+      type: string
+      enum: [Incomplet, Complet, Transmis, Valide]
+
+    ExamMention:
+      type: string
+      enum: [Passable, AssezBien, Bien, TresBien]
+      description: Le CFEE n'attribue pas de mention — ce champ reste nul pour ce type d'examen.
+
+    ExamSession:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        schoolYearId: { type: string, format: uuid }
+        examType: { $ref: '#/components/schemas/ExamType' }
+        series: { type: string, nullable: true, description: "NULL pour CFEE, qui n'a pas de série." }
+        centerName: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/ExamSessionStatus' }
+        dossierCount: { type: integer }
+        rowVersion: { type: integer, format: int64 }
+
+    ExamSessionCreateRequest:
+      type: object
+      required: [schoolYearId, examType]
+      properties:
+        schoolYearId: { type: string, format: uuid }
+        examType: { $ref: '#/components/schemas/ExamType' }
+        series: { type: string, nullable: true, maxLength: 20 }
+        centerName: { type: string, nullable: true, maxLength: 150 }
+
+    ExamSessionUpdateRequest:
+      type: object
+      required: [rowVersion]
+      properties:
+        centerName: { type: string, nullable: true, maxLength: 150 }
+        status: { $ref: '#/components/schemas/ExamSessionStatus' }
+        rowVersion: { type: integer, format: int64 }
+
+    ExamDossierCreateRequest:
+      type: object
+      required: [examSessionId, studentId, classroomId]
+      properties:
+        examSessionId: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        classroomId:
+          type: string
+          format: uuid
+          description: Figé à la création — voir la description de POST /exams/dossiers.
+
+    ExamDossierUpdateRequest:
+      type: object
+      required: [rowVersion]
+      properties:
+        examCenterName: { type: string, nullable: true, maxLength: 150 }
+        birthCertificateNumber: { type: string, nullable: true, maxLength: 50 }
+        birthCertificatePresent: { type: boolean }
+        civilStatusConforming:
+          type: boolean
+          nullable: true
+          description: "NULL = non encore contrôlé, distinct de false."
+        civilStatusNotes: { type: string, nullable: true, maxLength: 500 }
+        rowVersion: { type: integer, format: int64 }
+
+    ExamDossierResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        examSessionId: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        classroomId: { type: string, format: uuid }
+        candidateNumber: { type: string, nullable: true }
+        examCenterName: { type: string, nullable: true }
+        birthCertificatePresent: { type: boolean }
+        civilStatusConforming: { type: boolean, nullable: true }
+        status: { $ref: '#/components/schemas/ExamDossierStatus' }
+        rowVersion: { type: integer, format: int64 }
+
+    ExamDossierListItem:
+      allOf:
+        - $ref: '#/components/schemas/ExamDossierResult'
+        - type: object
+          properties:
+            studentFullName: { type: string }
+            classroomName: { type: string }
+
+    PaginatedExamDossiers:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ExamDossierListItem' }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    ExamDossierDetail:
+      allOf:
+        - $ref: '#/components/schemas/ExamDossierListItem'
+        - type: object
+          properties:
+            birthCertificateNumber: { type: string, nullable: true }
+            civilStatusNotes: { type: string, nullable: true }
+            transmittedOn: { type: string, format: date, nullable: true }
+            result:
+              allOf:
+                - $ref: '#/components/schemas/ExamResult'
+              nullable: true
+
+    ExamDossierAuditEntry:
+      type: object
+      properties:
+        dossierId: { type: string, format: uuid }
+        studentFullName: { type: string }
+        classroomName: { type: string }
+        missingItems:
+          type: array
+          items:
+            type: string
+            example: "Extrait de naissance non déclaré présent"
+          description: Pièces/champs manquants ou non conformes qui bloquent le passage à Complet.
+
+    AssignExamCenterRequest:
+      type: object
+      required: [rowVersion]
+      properties:
+        examCenterName: { type: string, nullable: true, maxLength: 150, description: Par défaut, celui de la session. }
+        candidateNumber:
+          type: string
+          nullable: true
+          maxLength: 20
+          description: >-
+            Laisser vide pour une génération automatique séquentielle par le serveur ;
+            renseigner pour reprendre une numérotation déjà communiquée par l'IEF/IA.
+        rowVersion: { type: integer, format: int64 }
+
+    ExamResultRequest:
+      type: object
+      required: [isAdmitted, deliberatedOn]
+      properties:
+        isAdmitted: { type: boolean }
+        mention: { $ref: '#/components/schemas/ExamMention' }
+        averageScore: { type: number, format: double, nullable: true, minimum: 0 }
+        deliberatedOn: { type: string, format: date }
+
+    ExamResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        examDossierId: { type: string, format: uuid }
+        isAdmitted: { type: boolean }
+        mention: { $ref: '#/components/schemas/ExamMention' }
+        averageScore: { type: number, format: double, nullable: true }
+        deliberatedOn: { type: string, format: date }
+
+    ExamCandidateFormBatchRequest:
+      type: object
+      description: Au moins un des deux filtres (examSessionId, classroomId) est requis côté serveur.
+      properties:
+        examSessionId: { type: string, format: uuid, nullable: true }
+        classroomId: { type: string, format: uuid, nullable: true }
+
+    ExamStatistics:
+      type: object
+      properties:
+        schoolYearId: { type: string, format: uuid }
+        bySeries:
+          type: array
+          items:
+            type: object
+            properties:
+              series: { type: string, nullable: true }
+              examType: { $ref: '#/components/schemas/ExamType' }
+              candidateCount: { type: integer }
+              admittedCount: { type: integer }
+              successRate: { type: number, format: double }
+        previousYearComparison:
+          type: array
+          items:
+            type: object
+            properties:
+              schoolYearLabel: { type: string }
+              successRate: { type: number, format: double }

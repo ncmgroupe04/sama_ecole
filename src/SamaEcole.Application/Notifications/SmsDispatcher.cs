@@ -119,7 +119,7 @@ public class SmsDispatcher(
         // des alertes AUTOMATIQUES, qu'une école doit pouvoir couper sans rien décider au cas par
         // cas. Ces deux-ci naissent au contraire d'un geste explicite (« envoyer le bulletin ») :
         // un commutateur qui les annulerait en silence rendrait le bouton menteur.
-        SmsTrigger.ReportCard or SmsTrigger.Manual => true,
+        SmsTrigger.ReportCard or SmsTrigger.Manual or SmsTrigger.ExamConvocation => true,
 
         _ => true
     };

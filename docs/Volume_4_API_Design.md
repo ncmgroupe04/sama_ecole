@@ -574,4 +574,49 @@ Le module est **accessible à toutes les formules d'abonnement** : aucun contrô
 
 ---
 
+## 22. API Examens officiels (CFEE/BFEM/BAC)
+
+Constitution et suivi des dossiers de candidature aux examens officiels (CM2/CFEE, 3ème/BFEM, Terminale/BAC), de l'ouverture du dossier à la transmission à l'IEF/l'Inspection d'Académie et à la saisie des résultats de délibération.
+
+**Rôles :**
+
+| Périmètre | Rôles | Pourquoi |
+|---|---|---|
+| Lecture (dossiers, statistiques) | `Directeur`, `Secretariat` | Un dossier porte des données d'état civil sensibles (extrait de naissance) : pas de lecture ouverte tant qu'un filtre par classe assignée n'est pas implémenté. **Non livré cette itération** : donner à un professeur principal la visibilité sur les dossiers de sa seule classe est une évolution identifiée, pas encore construite — ne pas élargir le rôle `Enseignant` sans ce filtre. |
+| Création/modification de dossier, contrôle d'état civil | `Directeur`, `Secretariat` | Constitution administrative du dossier — même matrice que les Inscriptions |
+| Attribution centre/table, transmission, résultats | `Directeur`, `Secretariat` | Actes qui engagent l'établissement vis-à-vis de l'IEF/l'IA |
+| Export ministériel, impression par lot, dispatch de convocations | `Directeur`, `Secretariat` | Opérations sensibles, journalisées à l'audit (Volume 7 §7) |
+
+Le module est **accessible à toutes les formules d'abonnement** : aucun contrôle `Feature` — seul le dispatch de convocations par SMS/WhatsApp reste derrière `Feature.SmsNotifications` (Premium, Volume 1 §13) ; la génération PDF de la convocation, elle, reste libre.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/exams/sessions` | Sessions d'examen de l'école, filtrable `schoolYearId`, `examType` |
+| `POST` | `/api/v1/exams/sessions` | Créer une session (année, type, série) |
+| `PUT` | `/api/v1/exams/sessions/{id}` | Corriger centre par défaut / statut de la session. Verrou optimiste |
+| `GET` | `/api/v1/exams/dossiers` | Dossiers, filtres `examSessionId`, `classroomId`, `status`, `search` |
+| `GET` | `/api/v1/exams/dossiers/{id}` | Fiche complète du dossier |
+| `POST` | `/api/v1/exams/dossiers` | Ouvrir un dossier pour un élève sur une session. `classroomId` figé à la création |
+| `PUT` | `/api/v1/exams/dossiers/{id}` | Corriger état civil / centre déclaré. Verrou optimiste |
+| `GET` | `/api/v1/exams/dossiers/audit` | Dossiers `Incomplet` d'une session, avec le détail des pièces/champs manquants |
+| `POST` | `/api/v1/exams/dossiers/{id}/assign-center` | Attribuer centre et numéro de table. Numéro généré dans la transaction |
+| `POST` | `/api/v1/exams/dossiers/{id}/transmit` | Marquer `Transmis` — refusé (**422**) si le dossier est `Incomplet` |
+| `PUT` | `/api/v1/exams/dossiers/{id}/result` | Saisir résultat/mention/moyenne à la délibération |
+| `GET` | `/api/v1/exams/statistics` | Taux de réussite par série/classe, filtrable `schoolYearId`, comparaison interannuelle |
+| `GET` | `/api/v1/exams/export/ministerial` | Export Excel/CSV conforme IEF/IA, filtre `examSessionId` obligatoire |
+| `GET` | `/api/v1/exams/dossiers/{id}/candidate-form/pdf` | Fiche de candidature individuelle (PDF) |
+| `POST` | `/api/v1/exams/dossiers/candidate-forms/pdf` | Impression par lot (filtre `examSessionId` ou `classroomId`) |
+| `GET` | `/api/v1/exams/dossiers/{id}/convocation/pdf` | Carte de convocation individuelle (PDF) |
+| `POST` | `/api/v1/exams/sessions/{id}/dispatch-convocations` | Envoi en lot des convocations par SMS/WhatsApp |
+
+**Règles :**
+- **Le numéro de table n'est jamais écrit par `POST /exams/dossiers`.** Il est posé uniquement par `POST /exams/dossiers/{id}/assign-center`, dans la même transaction — exactement le traitement du matricule à l'inscription (règle #3).
+- **Un dossier `Incomplet` ne peut ni être transmis, ni entrer dans un lot d'impression ou un export ministériel.** `POST .../transmit` renvoie **409** (conflit avec l'état actuel du dossier, pas une erreur de saisie) si le dossier n'est pas `Complet` — voir le détail sur `GET /exams/dossiers/audit`.
+- **`classroomId` est figé à l'ouverture du dossier** : `PUT /exams/dossiers/{id}` ne permet jamais de le modifier — un transfert de classe se gère ailleurs (module Élèves) sans toucher un dossier déjà ouvert.
+- **Le dispatch de convocations réutilise le canal SMS/WhatsApp existant** (Volume 1 §13) : aucune nouvelle table de notification, aucun nouveau provider. Refusé (**409**) tant que centre et numéro de table ne sont pas attribués sur un dossier du lot.
+- Lecture périmée d'un dossier ou d'une session → **409** (règle #5), jamais un écrasement silencieux.
+- Toute génération d'export ministériel, impression par lot ou dispatch de convocations est journalisée à l'audit (Module H du backlog).
+
+---
+
 **Fin du Volume 4.**

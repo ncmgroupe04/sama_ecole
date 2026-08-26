@@ -179,6 +179,66 @@ Middleware d'autorisation bloquant tout endpoint hors `/subscriptions/{schoolId}
 
 ---
 
+## Module J — Examens officiels (CFEE/BFEM/BAC)
+
+**JGK-J01** [C] — Sessions et dossiers d'examen
+`GET/POST /exams/sessions`, `GET/POST /exams/dossiers`. Une session par (année scolaire, type d'examen, série), un dossier par élève de classe d'examen (CM2/3ème/Terminale et séries) rattaché à une session.
+*Dépend de* : JGK-C01, JGK-C02, JGK-D01. *Critères* : un élève ne peut avoir qu'un seul dossier par session (`UNIQUE`) ; création possible uniquement depuis une classe cohérente avec le type d'examen (pas de dossier BFEM depuis une classe de CM2).
+
+**JGK-J02** [C] — Contrôle d'état civil et audit automatique
+`PUT /exams/dossiers/{id}` (numéro/présence de l'extrait de naissance, conformité nom/prénom/date/lieu de naissance). `GET /exams/dossiers/audit` relève les dossiers `Incomplet` et le détail des pièces/champs manquants ou non conformes.
+*Dépend de* : JGK-J01. *Critères* : un dossier sans extrait de naissance déclaré présent ne peut jamais passer `Complet` ; l'audit détecte à la fois l'absence de pièce et une incohérence déclarée (ex. conformité marquée `false`).
+
+**JGK-J03** [H] — Attribution centre d'examen &amp; numéro de table
+`POST /exams/dossiers/{id}/assign-center`. Le numéro de table est généré **dans la transaction d'attribution**, jamais à l'ouverture du dossier (même règle que le matricule, AGENTS.md #3).
+*Dépend de* : JGK-J01. *Critères* : numéro de table unique par session (`UNIQUE` partiel) ; un test simule des attributions concurrentes sans doublon ni trou anormal.
+
+**JGK-J04** [H] — Fiches de candidature PDF (unitaire + impression par lot)
+`GET /exams/dossiers/{id}/candidate-form/pdf`, `POST /exams/dossiers/candidate-forms/pdf` (lot, filtrable par session/classe). QuestPDF, prêtes à signer.
+*Dépend de* : JGK-J02. *Critères* : le lot ne contient que des dossiers `Complet` ou `Transmis` (jamais `Incomplet`) sauf drapeau explicite de forçage journalisé.
+
+**JGK-J05** [M] — Dispatch des convocations
+`GET /exams/dossiers/{id}/convocation/pdf`, `POST /exams/sessions/{id}/dispatch-convocations`. Réutilise le canal SMS/WhatsApp existant (`Feature.SmsNotifications`), pas de nouveau canal.
+*Dépend de* : JGK-J03. *Critères* : dispatch impossible tant que centre et numéro de table ne sont pas attribués ; chaque envoi produit une entrée d'audit (Module H).
+
+**JGK-J06** [H] — Export ministériel (Excel/CSV IEF/IA)
+`GET /exams/export/ministerial?examSessionId=...`. Réutilise le mécanisme d'export `.xlsx` déjà en place pour les rapports financiers (JGK-F05).
+*Dépend de* : JGK-J02. *Critères* : colonnes et format conformes au relevé attendu par l'IEF/IA (à valider avec un gabarit réel avant livraison) ; export journalisé à l'audit.
+
+**JGK-J07** [M] — Résultats de délibération &amp; statistiques
+`PUT /exams/dossiers/{id}/result`, `GET /exams/statistics` (taux de réussite par série/classe, comparaison interannuelle).
+*Dépend de* : JGK-J01. *Critères* : les statistiques ne portent que sur les dossiers `Transmis`/`Valide` d'une session clôturée.
+
+**JGK-J08** [F] — Lecture des dossiers filtrée par classe assignée (Enseignant)
+`GET /exams/dossiers` et `GET /exams/dossiers/{id}` ouverts au rôle `Enseignant`, mais restreints aux classes qui lui sont attribuées (`TeacherAssignments`, même filtre que §21.2 pour l'emploi du temps). En attendant ce ticket, la lecture reste réservée à `Directeur`/`Secretariat` (JGK-J01 à J07) — ne pas élargir le rôle sans ce filtre, un dossier porte des données d'état civil sensibles.
+*Dépend de* : JGK-J01. *Critères* : un enseignant authentifié ne voit que les dossiers des classes où il a une affectation active ; taper directement l'URL d'un dossier hors de ses classes renvoie une erreur d'autorisation, pas une absence de lien.
+
+---
+
+## Module K — Extension RH &amp; Paie
+
+**JGK-K01** [H] — Suggestion automatique des heures de vacation
+Agrège `TeacherHourRecord` (rapproché de `ScheduleSlot` pour signaler les écarts) et **pré-remplit** `HoursWorked` dans `GenerateFichePaieCommand` — valeur reste éditable, tout ajustement est historisé. La validation humaine reste seule à clôturer la fiche de paie (arbitrage acté : n'abroge pas la saisie manuelle, voir Volume_1 §14.3 amendé).
+*Dépend de* : module Paie existant (`EmployeeContract`, `FichePaie`, `TeacherHourRecord`, `ScheduleSlot`). *Critères* : générer une fiche sans jamais avoir consulté la suggestion reste possible (non bloquant) ; un test vérifie qu'un écart entre heures pointées et créneaux planifiés est signalé, pas rejeté.
+
+**JGK-K02** [M] — Moyens de paiement RH (Bancaire/Wave/Orange Money)
+Nouveau champ moyen de paiement + coordonnées sur `EmployeeContract`, distinct du `PaymentMethod` finance élève.
+*Dépend de* : `EmployeeContract` existant. *Critères* : coordonnées bancaires/mobile money jamais journalisées en clair dans un log applicatif (Volume 7).
+
+---
+
+## Module L — Résilience réseau (caisse &amp; pointage)
+
+**JGK-L01** [H] — Clé d'idempotence sur encaissement caisse et pointage d'absence
+Clé UUID générée côté client, contrainte unique par `SchoolId + IdempotencyKey`, sur l'encaissement caisse et la saisie d'absence. Reste strictement dans le cadre D-01 (Volume_0 §0.13) : aucune base locale, aucune queue persistée, aucune transaction confirmée sans réponse serveur.
+*Dépend de* : module Caisse (JGK-F02 et suite), module Pointage/Absences existants. *Critères* : la même clé soumise deux fois ne produit jamais deux écritures ; un test simule une coupure entre l'envoi et la réponse suivi d'un retry.
+
+**JGK-L02** [M] — Extension `network-guard.js` (retry, état « en attente d'envoi »)
+Retry automatique avec backoff pendant une micro-coupure ; état UI explicite tant que le serveur n'a pas confirmé. Aucune persistance de la saisie en attente (ni `localStorage`, ni IndexedDB) — perte assumée si l'onglet se ferme avant confirmation.
+*Dépend de* : JGK-L01. *Critères* : vérification manuelle (skill `run`) — coupure réseau pendant une saisie caisse, reprise sans doublon, pas de trace locale de la transaction après fermeture de l'onglet.
+
+---
+
 ## Récapitulatif de dépendances (ordre d'implémentation conseillé)
 
 ```
@@ -192,4 +252,9 @@ Transverse (dès A04) : H01
 A04 → { B01 → I03 } → I04 → I05 → I06 → I07
 I01 → I02
 I01 → I03
+{ C01, C02, D01 } → J01 → { J02 → J04, J03 → J05, J07 }
+J02 → J06
+Paie/Pointage existants (EmployeeContract, FichePaie, TeacherHourRecord, ScheduleSlot) → K01
+EmployeeContract → K02
+{ F02, Pointage/Absences existants } → L01 → L02
 ```
