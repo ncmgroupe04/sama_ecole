@@ -298,10 +298,12 @@
  </div>
  </div>
 
+ <div x-show="sendState === 'retrying' || sendState === 'failed'" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="sendStateLabel()"></div>
+
  <div class="pt-2 flex justify-end border-t border-slate-100">
  <button type="submit" :disabled="!canSubmit()" class="btn-modal-primary mt-4 group">
  <icon x-show="!isSubmitting" name="checkmark-circle" class="w-5 h-5" />
- <span x-text="isSubmitting ? 'Encaissement…' : 'Encaisser le versement'"></span>
+ <span x-text="sendState === 'retrying' ? 'En attente d\'envoi…' : (isSubmitting ? 'Encaissement…' : 'Encaisser le versement')"></span>
  </button>
  </div>
  </form>

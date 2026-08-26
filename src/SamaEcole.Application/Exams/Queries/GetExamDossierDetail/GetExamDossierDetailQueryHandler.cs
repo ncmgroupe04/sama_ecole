@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Exams.Queries.GetExamDossierDetail;
 
-public class GetExamDossierDetailQueryHandler(IApplicationDbContext dbContext)
+public class GetExamDossierDetailQueryHandler(IApplicationDbContext dbContext, ExamDossierScopeAuthorizer scopeAuthorizer)
     : IRequestHandler<GetExamDossierDetailQuery, ExamDossierDetail>
 {
     public async Task<ExamDossierDetail> Handle(GetExamDossierDetailQuery request, CancellationToken cancellationToken)
@@ -13,6 +13,11 @@ public class GetExamDossierDetailQueryHandler(IApplicationDbContext dbContext)
         var dossier = await dbContext.ExamDossiers.AsNoTracking()
             .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Dossier d'examen {request.Id} introuvable.");
+
+        // Portée JGK-J08 : une URL tapée directement sur un dossier hors des classes assignées de
+        // l'Enseignant renvoie un refus explicite (403), jamais un 404 qui laisserait deviner l'état
+        // du dossier par le seul code de statut.
+        await scopeAuthorizer.EnsureCanReadClassroomAsync(dossier.ClassroomId, cancellationToken);
 
         var studentFullName = await dbContext.Students.AsNoTracking()
             .Where(s => s.Id == dossier.StudentId)
@@ -29,7 +34,14 @@ public class GetExamDossierDetailQueryHandler(IApplicationDbContext dbContext)
             .Select(r => new ExamResultDto(r.Id, r.ExamDossierId, r.IsAdmitted, r.Mention, r.AverageScore, r.DeliberatedOn))
             .FirstOrDefaultAsync(cancellationToken);
 
-        var rowVersion = EF.Property<uint>(dossier, "xmin");
+        // EF.Property<T> n'est valide QUE dans une requête LINQ traduite en SQL — appelé directement
+        // sur l'objet déjà matérialisé, il lève toujours une InvalidOperationException. Ce bug était
+        // présent avant JGK-J08 (GET /exams/dossiers/{id} renvoyait 500 sans exception) : le premier
+        // test à exercer réellement ce Handler (ExamDossierScopeTests) l'a mis au jour.
+        var rowVersion = await dbContext.ExamDossiers.AsNoTracking()
+            .Where(d => d.Id == dossier.Id)
+            .Select(d => EF.Property<uint>(d, "xmin"))
+            .FirstAsync(cancellationToken);
 
         return new ExamDossierDetail(
             dossier.Id,

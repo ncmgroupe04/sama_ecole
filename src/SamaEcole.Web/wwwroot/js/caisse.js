@@ -32,6 +32,13 @@ document.addEventListener('alpine:init', () => {
         formErrors: {},
         isSubmitting: false,
 
+        // Résilience réseau (ticket JGK-L03) : clé générée à l'ouverture du formulaire d'encaissement
+        // (voir startNewPayment/init), rejouée À L'IDENTIQUE par submitWithRetry à chaque tentative —
+        // c'est elle qui garantit qu'un retry après coupure ne crée jamais un second paiement (JGK-L01).
+        idempotencyKey: null,
+        // 'sending' | 'retrying' | 'done' | 'failed' — piloté par onStateChange, affiché près du bouton.
+        sendState: null,
+
         paymentResult: null, // résultat brut du POST (paymentId, receiptNumber…)
         receipt: null,       // reçu complet, chargé après coup pour l'affichage/l'impression
 
@@ -46,6 +53,7 @@ document.addEventListener('alpine:init', () => {
         hasDraft: false,
 
         init() {
+            this.idempotencyKey = window.networkGuard.newIdempotencyKey();
             if (window.formDraft && window.formDraft.has('caisse_form')) {
                 this.hasDraft = true;
             }
@@ -171,13 +179,18 @@ document.addEventListener('alpine:init', () => {
             this.formErrors = {};
             this.conflictError = false;
             this.isSubmitting = true;
+            this.sendState = null;
 
             try {
-                this.paymentResult = await window.api.post('/finance/payments', {
+                // submitWithRetry (JGK-L02) rejoue UNIQUEMENT sur coupure réseau, jamais sur une
+                // réponse HTTP — la même idempotencyKey à chaque tentative fait qu'un retry rejoue le
+                // paiement déjà encaissé (JGK-L01) au lieu d'en créer un second.
+                this.paymentResult = await window.api.postWithRetry('/finance/payments', {
                     enrollmentId: this.balance.enrollmentId,
                     amount: Number(this.form.amount),
-                    method: this.form.method
-                });
+                    method: this.form.method,
+                    idempotencyKey: this.idempotencyKey
+                }, { onStateChange: (state) => { this.sendState = state; } });
 
                 // Le résultat du POST est volontairement minimal (règle CQRS) : on relit le reçu complet
                 // pour l'affichage/l'impression, comme /inscriptions le fait pour son propre reçu.
@@ -199,6 +212,15 @@ document.addEventListener('alpine:init', () => {
                 }
             } finally {
                 this.isSubmitting = false;
+            }
+        },
+
+        /** Libellé de l'état d'envoi affiché près du bouton, piloté par submitWithRetry (JGK-L03). */
+        sendStateLabel() {
+            switch (this.sendState) {
+                case 'retrying': return 'Connexion instable — nouvelle tentative en cours, en attente d\'envoi…';
+                case 'failed': return 'Échec après plusieurs tentatives — la saisie est conservée, réessayez.';
+                default: return '';
             }
         },
 
@@ -234,6 +256,10 @@ document.addEventListener('alpine:init', () => {
             this.receipt = null;
             this.showReceipt = false;
             this.showConfirmDialog = false;
+            // Nouvel encaissement = nouvelle clé (JGK-L03) : réutiliser l'ancienne rejouerait le
+            // paiement précédent au lieu d'en enregistrer un nouveau.
+            this.idempotencyKey = window.networkGuard.newIdempotencyKey();
+            this.sendState = null;
         },
 
         formatDateOnly(dateStr) {

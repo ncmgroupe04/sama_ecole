@@ -3,6 +3,7 @@ using FluentValidation;
 using SamaEcole.Application.Attendance;
 using SamaEcole.Application.Common.Behaviors;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Exams;
 using SamaEcole.Application.Features.Schedules;
 using SamaEcole.Application.Notifications;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
@@ -27,6 +28,10 @@ public static class DependencyInjection
         // Contrôle de propriété des créneaux d'emploi du temps : partagé par la création, la
         // modification et la suppression. Scoped — il lit le compte de la requête courante.
         services.AddScoped<ScheduleOwnershipAuthorizer>();
+
+        // Portée de lecture des dossiers d'examen (ticket JGK-J08) : partagée par la liste et la fiche
+        // détaillée. Scoped — elle lit le compte de la requête courante.
+        services.AddScoped<ExamDossierScopeAuthorizer>();
 
         // Agrégation d'assiduité (tickets JGK-R02/R03) : partagée par le rapport paginé et l'export
         // de fichier. Scoped — elle lit sous la RLS de la requête courante.

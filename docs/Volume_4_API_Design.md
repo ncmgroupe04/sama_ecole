@@ -588,7 +588,8 @@ Constitution et suivi des dossiers de candidature aux examens officiels (CM2/CFE
 
 | Périmètre | Rôles | Pourquoi |
 |---|---|---|
-| Lecture (dossiers, statistiques) | `Directeur`, `Secretariat` | Un dossier porte des données d'état civil sensibles (extrait de naissance) : pas de lecture ouverte tant qu'un filtre par classe assignée n'est pas implémenté. **Non livré cette itération** : donner à un professeur principal la visibilité sur les dossiers de sa seule classe est une évolution identifiée, pas encore construite — ne pas élargir le rôle `Enseignant` sans ce filtre. |
+| Lecture des dossiers (liste + fiche) | `Directeur`, `Secretariat`, `Enseignant` | Un dossier porte des données d'état civil sensibles (extrait de naissance) : l'`Enseignant` ne voit que les dossiers des classes où il a une affectation active sur l'année en cours (`TeacherAssignments`) — filtré par `ExamDossierScopeAuthorizer` (ticket JGK-J08, livré). Une URL tapée directement sur un dossier hors de ses classes renvoie 403, jamais 404. |
+| Sessions, statistiques | `Directeur`, `Secretariat` | Hors du filtre par classe (JGK-J08 ne couvre que les dossiers) : une session ou une statistique ne se rattache pas à une seule classe. |
 | Création/modification de dossier, contrôle d'état civil | `Directeur`, `Secretariat` | Constitution administrative du dossier — même matrice que les Inscriptions |
 | Attribution centre/table, transmission, résultats | `Directeur`, `Secretariat` | Actes qui engagent l'établissement vis-à-vis de l'IEF/l'IA |
 | Export ministériel, impression par lot, dispatch de convocations | `Directeur`, `Secretariat` | Opérations sensibles, journalisées à l'audit (Volume 7 §7) |

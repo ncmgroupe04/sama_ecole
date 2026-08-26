@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Exams.Queries.GetExamDossiers;
 
-public class GetExamDossiersQueryHandler(IApplicationDbContext dbContext)
+public class GetExamDossiersQueryHandler(IApplicationDbContext dbContext, ExamDossierScopeAuthorizer scopeAuthorizer)
     : IRequestHandler<GetExamDossiersQuery, PaginatedExamDossiers>
 {
     private const int MaxPageSize = 100;
@@ -14,8 +14,17 @@ public class GetExamDossiersQueryHandler(IApplicationDbContext dbContext)
         var page = Math.Max(1, request.Page);
         var pageSize = Math.Clamp(request.PageSize, 1, MaxPageSize);
 
+        // Portée JGK-J08 : null pour Directeur/Secrétariat (non bornés), liste des classes assignées
+        // pour un Enseignant — jamais appliquée en filtrant après coup, toujours avant la pagination.
+        var readableClassroomIds = await scopeAuthorizer.GetReadableClassroomIdsAsync(cancellationToken);
+
         // Aucun filtre SchoolId ici : le Global Query Filter l'applique déjà (AGENTS.md règle #2).
         var query = dbContext.ExamDossiers.AsNoTracking();
+
+        if (readableClassroomIds is not null)
+        {
+            query = query.Where(d => readableClassroomIds.Contains(d.ClassroomId));
+        }
 
         if (request.ExamSessionId is { } examSessionId)
         {
@@ -24,6 +33,14 @@ public class GetExamDossiersQueryHandler(IApplicationDbContext dbContext)
 
         if (request.ClassroomId is { } classroomId)
         {
+            // Une classe demandée hors de la portée de l'Enseignant est un refus explicite (403), pas
+            // une simple absence de résultat — même règle que GetExamDossierDetailQueryHandler.
+            if (readableClassroomIds is not null && !readableClassroomIds.Contains(classroomId))
+            {
+                throw new UnauthorizedAccessException(
+                    "Vous n'êtes pas assigné à cette classe : vous ne pouvez pas consulter ses dossiers.");
+            }
+
             query = query.Where(d => d.ClassroomId == classroomId);
         }
 

@@ -689,7 +689,7 @@
                         "N'encaissez jamais sans avoir ouvert votre session de caisse : le versement ne serait rattaché à aucune journée comptable.",
                         "Remettez systématiquement le reçu, même pour un versement partiel. C'est l'unique preuve dont dispose la famille.",
                         "Le service Finance ne modifie jamais un montant dû issu d'une inscription : il ne fait qu'y imputer des versements. Toute correction du montant dû relève du Secrétariat ou de la Direction.",
-                        "En cas de perte de connexion, l'application refuse tout enregistrement et vous en avertit : aucune saisie ne part « toute seule » au retour du réseau. Reprenez la validation vous-même.",
+                        "En cas de micro-coupure réseau pendant l'envoi, l'application retente automatiquement l'enregistrement en arrière-plan (bandeau « en attente d'envoi ») tant que l'onglet reste ouvert, sans jamais créer de doublon. Si la coupure persiste au-delà de ces tentatives, rien n'est enregistré et vous en êtes averti : reprenez alors la validation vous-même.",
                         "Un encaissement erroné s'annule et se ressaisit. Ne tentez jamais de le rectifier par un second versement compensatoire."
                     ]
                 },
@@ -837,6 +837,109 @@
                         "N'encaissez jamais sous la session d'un collègue : la responsabilité en serait faussée.",
                         "Conservez les rapports de clôture : ils constituent la pièce justificative de la comptabilité de caisse.",
                         "Clôturez impérativement la caisse avant toute bascule d'année scolaire."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'examens',
+            number: 8,
+            title: 'Examens officiels — CFEE, BFEM, BAC',
+            icon: 'document-text',
+            summary: "Constitution et suivi des dossiers de candidature, de l'ouverture à la transmission à l'IEF/l'IA et à la saisie des résultats.",
+            concept:
+                "Une candidature aux examens officiels (CFEE en fin de CM2, BFEM en fin de troisième, BAC en terminale) " +
+                "traverse un cycle de vie précis : le dossier s'ouvre INCOMPLET, ne devient COMPLET que lorsque l'extrait de " +
+                "naissance est déclaré présent et l'état civil déclaré conforme, ne peut être TRANSMIS à l'Inspection de " +
+                "l'Éducation et de la Formation (IEF) ou à l'Inspection d'Académie (IA) qu'une fois Complet, et ne reçoit un " +
+                "résultat qu'une fois Transmis. Chaque étape verrouille la précédente : on ne transmet jamais un dossier dont " +
+                "il manque une pièce, et on ne délibère jamais un dossier qui n'a pas été transmis. Le numéro de table, comme " +
+                "le matricule d'un élève, n'est attribué qu'au moment précis où le centre d'examen est arrêté — jamais avant, " +
+                "pour qu'aucune suite de numéros ne comporte de trou.",
+            articles: [
+                {
+                    id: 'dossiers-candidature',
+                    title: 'Ouverture des sessions et constitution des dossiers de candidature',
+                    location: 'Gestion Scolaire › Examens officiels',
+                    href: '/examens',
+                    roles: ['Directeur', 'Secrétariat', 'Enseignant'],
+                    definition:
+                        "La SESSION est la campagne d'examen de l'établissement pour une année scolaire et un type d'examen " +
+                        "donnés (CFEE, BFEM ou BAC, ce dernier décliné par série). Le DOSSIER, lui, est ouvert par élève, sur " +
+                        "une session, avec la classe figée à l'ouverture. Un dossier porte l'état civil et le contrôle de " +
+                        "conformité — extrait de naissance présent, état civil conforme — qui déterminent son statut : " +
+                        "Incomplet tant qu'une pièce manque, Complet dès que tout est réuni.",
+                    objectif:
+                        "Constituer, avant la date limite fixée par l'administration, un dossier par candidat, contrôlé pièce " +
+                        "par pièce, de sorte qu'aucune transmission ne soit jamais refusée par l'IEF ou l'IA pour un motif " +
+                        "d'état civil. Pour le secrétariat, l'onglet Audit répond en un instant à la seule question qui " +
+                        "compte avant l'échéance : quels dossiers, et pour quelle pièce précisément, restent à compléter.",
+                    probleme:
+                        "Une liste de candidats tenue sous tableur ne signale aucune pièce manquante avant le dépôt physique " +
+                        "du dossier au guichet de l'IEF, où le refus se découvre trop tard pour être corrigé dans les délais. " +
+                        "L'élève concerné se retrouve alors exclu de la session en cours.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Examens officiels, onglet Sessions, et créez la session : année scolaire, type d'examen (CFEE, BFEM, BAC) et, pour le BAC, la série.",
+                        "Basculez vers l'onglet Dossiers et cliquez sur « Nouveau dossier » : recherchez l'élève par son matricule ou son nom, la classe se préremplit depuis sa classe actuelle.",
+                        "Depuis la fiche du dossier, déclarez la présence de l'extrait de naissance et la conformité de l'état civil au regard des pièces reçues.",
+                        "Le dossier passe automatiquement à Complet dès que ces deux contrôles sont positifs — aucune case à cocher séparément ne fait foi.",
+                        "Avant la date limite, ouvrez l'onglet Audit, sélectionnez la session : la liste des dossiers encore Incomplets s'affiche, avec le détail exact de ce qui manque à chacun.",
+                        "Une fois un dossier Complet, transmettez-le à l'IEF/l'IA depuis l'onglet Dossiers ; un dossier encore Incomplet voit ce bouton refuser l'opération et renvoie vers l'Audit."
+                    ],
+                    impacts: [
+                        "Élèves : la classe d'un dossier est figée à son ouverture ; un transfert de classe ultérieur de l'élève ne la modifie jamais rétroactivement.",
+                        "Fiches de candidature (PDF) : l'impression, individuelle ou par lot, exclut systématiquement tout dossier encore Incomplet.",
+                        "Export ministériel : le fichier remis à l'IEF/l'IA ne porte que les dossiers effectivement transmis.",
+                        "Enseignants : un professeur consulte, en lecture seule, les dossiers des seules classes où il a une affectation active sur l'année en cours — jamais ceux d'une autre classe, un dossier portant des données d'état civil sensibles."
+                    ],
+                    recommandations: [
+                        "Ouvrez la session et les dossiers dès la publication du calendrier officiel : le contrôle des pièces prend du temps, la dernière semaine n'y suffit pas.",
+                        "Consultez l'Audit chaque semaine à l'approche de l'échéance plutôt qu'une seule fois in extremis.",
+                        "Ne déclarez jamais un état civil « conforme » sans avoir confronté le dossier scolaire à la pièce originale présentée par la famille.",
+                        "La classe d'un dossier ne se corrige pas après coup : vérifiez-la au moment même de l'ouverture."
+                    ]
+                },
+                {
+                    id: 'attribution-convocations-resultats',
+                    title: 'Attribution centre/table, convocations et résultats de délibération',
+                    location: 'Gestion Scolaire › Examens officiels',
+                    href: '/examens',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Une fois le dossier Complet, trois opérations distinctes suivent : l'attribution du centre d'examen " +
+                        "et du numéro de table (généré automatiquement, comme un matricule, au moment même de l'attribution) ; " +
+                        "l'édition et l'envoi de la convocation ; et, après la session, la saisie du résultat de délibération " +
+                        "— admission, mention (sauf au CFEE, qui n'en attribue pas) et moyenne.",
+                    objectif:
+                        "Produire, sans ressaisie ni recopie, les documents qui engagent l'établissement vis-à-vis de l'IEF/l'IA " +
+                        "et des familles — fiche de candidature, convocation, relevé ministériel — et consigner un résultat " +
+                        "officiel exploitable pour les statistiques de réussite de l'établissement, comparées d'une année sur " +
+                        "l'autre.",
+                    probleme:
+                        "Un numéro de table attribué à la main, avant que le centre ne soit définitivement arrêté, produit " +
+                        "immanquablement des doublons ou des trous dans la numérotation lorsque l'affectation change en " +
+                        "dernière minute — une anomalie que l'IEF/l'IA ne pardonne pas sur un relevé officiel.",
+                    procedure: [
+                        "Depuis l'onglet Dossiers, sur un dossier Complet ou déjà Transmis, ouvrez « Attribuer centre/table » : indiquez le centre — repris par défaut du centre de la session — et laissez le numéro de candidat VIDE pour une génération automatique.",
+                        "Éditez la fiche de candidature individuelle en PDF, ou lancez une impression par lot filtrée par session ou par classe.",
+                        "Une fois centre et numéro de table attribués sur l'ensemble d'une session, éditez ou envoyez les convocations : l'envoi par SMS/WhatsApp est réservé à la formule Premium, l'impression PDF individuelle reste libre pour toutes les formules.",
+                        "Un centre/numéro de table manquant sur ne serait-ce qu'un dossier du lot bloque l'envoi groupé des convocations : l'application l'indique explicitement plutôt que d'envoyer un lot incomplet.",
+                        "À l'issue de la délibération, saisissez pour chaque dossier transmis le résultat : admis ou non, mention (BFEM/BAC uniquement) et moyenne obtenue.",
+                        "Exportez le relevé ministériel (Excel) de la session pour la transmission finale à l'IEF/l'IA.",
+                        "Consultez l'onglet Statistiques pour le taux de réussite par série/classe et sa comparaison avec l'année scolaire précédente."
+                    ],
+                    impacts: [
+                        "Numérotation : le numéro de table n'existe qu'à compter de l'attribution du centre — jamais avant, et jamais modifiable par une correction manuelle du dossier lui-même.",
+                        "Convocations : le canal SMS/WhatsApp est le même que celui des autres notifications sortantes de l'établissement (relances, avis) — aucun crédit ni canal distinct.",
+                        "Statistiques : seuls les dossiers Transmis ou Validés entrent dans le calcul du taux de réussite ; un dossier encore en préparation ne peut jamais fausser un taux affiché en cours d'année.",
+                        "Audit : toute génération d'export ministériel, impression par lot ou envoi de convocations est journalisée."
+                    ],
+                    recommandations: [
+                        "N'attribuez le centre et le numéro de table qu'une fois la répartition définitivement arrêtée par l'IEF/l'IA : une réattribution ultérieure reste possible mais alourdit inutilement le suivi.",
+                        "Contrôlez un exemplaire de fiche de candidature imprimée avant de lancer l'impression par lot d'une session entière.",
+                        "Vérifiez le solde de crédits SMS avant un envoi groupé de convocations à une session nombreuse.",
+                        "Saisissez les résultats dès la délibération plutôt qu'en différé : c'est la même discipline que pour les notes de classe, et elle évite toute confusion entre deux sessions successives d'un même type d'examen."
                     ]
                 }
             ]

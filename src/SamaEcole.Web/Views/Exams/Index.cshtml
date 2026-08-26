@@ -1,0 +1,743 @@
+@{
+    ViewData["Title"] = "Examens officiels";
+}
+
+@* auth.js, api.js, pdf-preview.js, features.js et formatters.js sont chargés par _Layout : les
+   inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/exams.js" asp-append-version="true"></script>
+}
+
+<div x-data="examsView()">
+
+    <div>
+        <h1 class="page-title">Examens officiels</h1>
+        <p class="page-subtitle">Dossiers de candidature CFEE, BFEM et BAC — de l'ouverture à la transmission et aux résultats.</p>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- Onglets -->
+    <div class="mt-6">
+        <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Onglets Examens officiels">
+            <button type="button" role="tab" x-show="canManage" x-cloak x-on:click="switchTab('sessions')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('sessions')">
+                Sessions
+            </button>
+            <button type="button" role="tab" x-on:click="switchTab('dossiers')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('dossiers')">
+                Dossiers
+            </button>
+            <button type="button" role="tab" x-show="canManage" x-cloak x-on:click="switchTab('audit')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('audit')">
+                Audit
+            </button>
+            <button type="button" role="tab" x-show="canManage" x-cloak x-on:click="switchTab('statistiques')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('statistiques')">
+                Statistiques
+            </button>
+        </nav>
+    </div>
+
+    <!-- ============================= ONGLET SESSIONS ============================= -->
+    <div x-show="tab === 'sessions' && canManage" x-cloak class="mt-6 space-y-6">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <stat-card label="Sessions" icon="book" accent="primary"><span x-text="sessions.length">0</span></stat-card>
+            <stat-card label="Dossiers (toutes sessions)" icon="document-text" accent="blue"><span x-text="totalDossiersAcrossSessions">0</span></stat-card>
+        </div>
+
+        <div class="card">
+            <div class="p-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <select-field model="sessionFilters.schoolYearId" on-change="applySessionFilters()" aria-label="Filtrer par année scolaire"
+                                  class="mt-0 w-56" placeholder="Toutes les années"
+                                  options-expr="[{value:'',label:'Toutes les années'}].concat(schoolYearOptions)" />
+                    <select-field model="sessionFilters.examType" on-change="applySessionFilters()" aria-label="Filtrer par type d'examen"
+                                  class="mt-0 w-40" placeholder="Tous types"
+                                  options-expr="[{value:'',label:'Tous types'}].concat(examTypeOptions)" />
+                    <button type="button" x-on:click="resetSessionFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+                        Réinitialiser
+                    </button>
+                </div>
+                <button type="button" x-on:click="openCreateSession()" class="btn-modal-primary group ml-auto shrink-0 whitespace-nowrap">
+                    <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+                    Nouvelle session
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4">Type</th>
+                            <th class="py-3 px-4">Année scolaire</th>
+                            <th class="py-3 px-4">Centre par défaut</th>
+                            <th class="py-3 px-4">Statut</th>
+                            <th class="py-3 px-4 text-right">Dossiers</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-if="isLoadingSessions">
+                            <template x-for="i in 4" :key="i">
+                                <tr><td colspan="6" class="py-3 px-4"><div class="skeleton h-4 w-full"></div></td></tr>
+                            </template>
+                        </template>
+
+                        <tr x-show="!isLoadingSessions && sessions.length === 0" x-cloak>
+                            <td colspan="6">
+                                <empty-state icon="book" title="Aucune session d'examen ne correspond à ces filtres."
+                                             hint="Créez une session pour commencer à ouvrir des dossiers de candidature." />
+                            </td>
+                        </tr>
+
+                        <template x-for="session in sessions" :key="session.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4">
+                                    <span class="font-medium text-slate-900" x-text="session.examType"></span>
+                                    <span x-show="session.series" x-cloak class="text-slate-500" x-text="' ' + session.series"></span>
+                                </td>
+                                <td class="py-3 px-4 text-slate-600" x-text="schoolYearLabel(session.schoolYearId) || '—'"></td>
+                                <td class="py-3 px-4 text-slate-600" x-text="session.centerName || '—'"></td>
+                                <td class="py-3 px-4">
+                                    <badge :variant="session.status === 'Clos' ? 'neutral' : (session.status === 'Transmis' ? 'primary' : 'success')" dot>
+                                        <span x-text="examSessionStatusLabel(session.status)"></span>
+                                    </badge>
+                                </td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="session.dossierCount"></td>
+                                <td class="py-3 px-4">
+                                    <row-actions>
+                                        <row-action icon="pencil" label="Modifier" on-click="openEditSession(session)" />
+                                        <row-action icon="download" label="Exporter (relevé ministériel)" on-click="exportMinisterial(session)" />
+                                        <row-action icon="envelope" label="Envoyer les convocations" on-click="openDispatchConvocations(session)" />
+                                    </row-actions>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET DOSSIERS ============================= -->
+    <div x-show="tab === 'dossiers'" x-cloak class="mt-6 space-y-6">
+
+        <div class="card">
+            <div class="p-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="relative w-full sm:w-56 flex items-center">
+                        <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <icon name="search" class="w-4 h-4 text-slate-400" />
+                        </span>
+                        <input type="search" x-model="dossierFilters.search" x-on:input.debounce.400ms="applyDossierFilters()"
+                               placeholder="Nom ou matricule de l'élève…" aria-label="Rechercher un dossier"
+                               class="input-field !my-0 pl-9 pr-3 w-full" />
+                    </div>
+                    <select-field model="dossierFilters.examSessionId" on-change="applyDossierFilters()" aria-label="Filtrer par session"
+                                  class="mt-0 w-56" placeholder="Toutes les sessions"
+                                  options-expr="[{value:'',label:'Toutes les sessions'}].concat(sessionOptions)" />
+                    <select-field model="dossierFilters.classroomId" on-change="applyDossierFilters()" aria-label="Filtrer par classe"
+                                  class="mt-0 w-48" placeholder="Toutes les classes"
+                                  options-expr="[{value:'',label:'Toutes les classes'}].concat(classroomOptions)" />
+                    <select-field model="dossierFilters.status" on-change="applyDossierFilters()" aria-label="Filtrer par statut"
+                                  class="mt-0 w-44" placeholder="Tous les statuts" options-expr="dossierStatusFilterOptions" />
+                    <button type="button" x-on:click="resetDossierFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+                        Réinitialiser
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 ml-auto shrink-0">
+                    <button type="button" x-show="canManage" x-cloak x-on:click="openBatchPrint()" class="btn-modal-secondary group whitespace-nowrap">
+                        <icon name="print" class="w-4 h-4" />
+                        Impression par lot
+                    </button>
+                    <button type="button" x-show="canManage" x-cloak x-on:click="openCreateDossier()" class="btn-modal-primary group whitespace-nowrap">
+                        <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+                        Nouveau dossier
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4">Élève</th>
+                            <th class="py-3 px-4">Classe</th>
+                            <th class="py-3 px-4">N° candidat</th>
+                            <th class="py-3 px-4">Centre</th>
+                            <th class="py-3 px-4">État civil</th>
+                            <th class="py-3 px-4">Statut</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-if="isLoadingDossiers">
+                            <template x-for="i in 5" :key="i">
+                                <tr><td colspan="7" class="py-3 px-4"><div class="skeleton h-4 w-full"></div></td></tr>
+                            </template>
+                        </template>
+
+                        <tr x-show="!isLoadingDossiers && dossiers.length === 0" x-cloak>
+                            <td colspan="7">
+                                <empty-state icon="document-text" title="Aucun dossier ne correspond à ces filtres."
+                                             hint="Ouvrez un dossier pour un élève, ou ajustez les filtres ci-dessus." />
+                            </td>
+                        </tr>
+
+                        <template x-for="dossier in dossiers" :key="dossier.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4">
+                                    <button type="button" x-on:click="openDossierDetail(dossier)" class="font-medium text-slate-900 hover:text-indigo-600 text-left transition-colors">
+                                        <span x-text="dossier.studentFullName"></span>
+                                    </button>
+                                </td>
+                                <td class="py-3 px-4 text-slate-600" x-text="dossier.classroomName"></td>
+                                <td class="py-3 px-4 font-mono text-xs text-slate-500" x-text="dossier.candidateNumber || '—'"></td>
+                                <td class="py-3 px-4 text-slate-600" x-text="dossier.examCenterName || '—'"></td>
+                                <td class="py-3 px-4">
+                                    <badge :variant="civilStatusVariant(dossier.civilStatusConforming)">
+                                        <span x-text="civilStatusLabel(dossier.civilStatusConforming)"></span>
+                                    </badge>
+                                    <span x-show="!dossier.birthCertificatePresent" x-cloak class="block text-[11px] text-rose-500 mt-0.5">Extrait manquant</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <badge :variant="dossierStatusVariant(dossier.status)" dot>
+                                        <span x-text="dossierStatusLabel(dossier.status)"></span>
+                                    </badge>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <row-actions>
+                                        <row-action icon="eye" label="Voir la fiche" on-click="openDossierDetail(dossier)" />
+                                        <row-action icon="pencil" label="Modifier" on-click="openEditDossier(dossier)" show="canManage" />
+                                        <row-action icon="target" label="Attribuer centre/table" on-click="openAssignCenter(dossier)" show="canManage" />
+                                        <row-action icon="upload" label="Transmettre" on-click="openTransmitDossier(dossier)" show="canManage" />
+                                        <row-action icon="checkmark-circle" label="Saisir le résultat" on-click="openRecordResult(dossier)"
+                                                    show="canManage && (dossier.status === 'Transmis' || dossier.status === 'Valide')" />
+                                        <row-action icon="print" label="Fiche de candidature (PDF)" on-click="printCandidateForm(dossier)" show="canManage" />
+                                        <row-action icon="document-text" label="Convocation (PDF)" on-click="printConvocation(dossier)" show="canManage" />
+                                    </row-actions>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <pagination page="dossiersPage" page-size="dossiersPageSize" total="dossiersTotalCount" on-change="loadDossiers()" />
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET AUDIT ============================= -->
+    <div x-show="tab === 'audit' && canManage" x-cloak class="mt-6">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-sm font-semibold text-slate-700">Dossiers incomplets d'une session</h2>
+                <select-field model="auditSessionId" on-change="loadAudit()" aria-label="Choisir une session"
+                              class="mt-0 w-64" placeholder="Choisir une session" options-expr="sessionOptions" />
+            </div>
+
+            @await Html.PartialAsync("_ErrorBanner", "auditError")
+
+            <template x-if="!auditSessionId">
+                <empty-state icon="alert-circle" title="Choisissez une session pour lancer l'audit."
+                             hint="L'audit relève les dossiers Incomplet et le détail des pièces ou champs manquants." />
+            </template>
+
+            <template x-if="auditSessionId">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="table-head">
+                                <th class="py-3 px-4">Élève</th>
+                                <th class="py-3 px-4">Classe</th>
+                                <th class="py-3 px-4">Pièces / champs manquants</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-if="isLoadingAudit">
+                                <template x-for="i in 4" :key="i">
+                                    <tr><td colspan="3" class="py-3 px-4"><div class="skeleton h-4 w-full"></div></td></tr>
+                                </template>
+                            </template>
+
+                            <tr x-show="!isLoadingAudit && auditEntries.length === 0" x-cloak>
+                                <td colspan="3">
+                                    <empty-state icon="checkmark-circle" title="Aucun dossier incomplet."
+                                                 hint="Tous les dossiers de cette session sont prêts à être transmis." />
+                                </td>
+                            </tr>
+
+                            <template x-for="entry in auditEntries" :key="entry.dossierId">
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="py-3 px-4 font-medium text-slate-900" x-text="entry.studentFullName"></td>
+                                    <td class="py-3 px-4 text-slate-600" x-text="entry.classroomName"></td>
+                                    <td class="py-3 px-4 text-slate-600" x-text="entry.missingItems.join(', ')"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET STATISTIQUES ============================= -->
+    <div x-show="tab === 'statistiques' && canManage" x-cloak class="mt-6 space-y-6">
+        <div class="card p-4">
+            <div class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label class="form-label-sm">Année scolaire</label>
+                    <select-field model="statsSchoolYearId" on-change="loadStatistics()" aria-label="Filtrer par année scolaire"
+                                  class="mt-0 w-64" placeholder="Toutes les années"
+                                  options-expr="[{value:'',label:'Toutes les années'}].concat(schoolYearOptions)" />
+                </div>
+            </div>
+        </div>
+
+        @await Html.PartialAsync("_ErrorBanner", "statisticsError")
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <template x-if="isLoadingStatistics">
+                <template x-for="i in 3" :key="i">
+                    <div class="card p-5 h-[92px] skeleton"></div>
+                </template>
+            </template>
+            <template x-if="!isLoadingStatistics && statistics">
+                <stat-card label="Candidats" icon="users" accent="primary"><span x-text="statsTotalCandidates">0</span></stat-card>
+            </template>
+            <template x-if="!isLoadingStatistics && statistics">
+                <stat-card label="Admis" icon="checkmark-circle" accent="success"><span x-text="statsTotalAdmitted">0</span></stat-card>
+            </template>
+            <template x-if="!isLoadingStatistics && statistics">
+                <stat-card label="Taux de réussite global" icon="chart-multiple" accent="primary">
+                    <span x-text="formatPercent(statsOverallRate)"></span>
+                </stat-card>
+            </template>
+        </div>
+
+        <div class="card p-6">
+            <h2 class="section-title mb-3">Résultats par type d'examen et série</h2>
+            <template x-if="!isLoadingStatistics && (!statistics || statistics.bySeries.length === 0)">
+                <p class="text-sm text-slate-400">Aucun dossier transmis ou validé pour ce filtre.</p>
+            </template>
+            <div class="space-y-3">
+                <template x-for="item in (statistics ? statistics.bySeries : [])" :key="seriesLabel(item)">
+                    <div>
+                        <div class="flex items-baseline justify-between gap-3 mb-1.5">
+                            <span class="flex items-baseline gap-2 min-w-0">
+                                <span class="text-sm text-slate-600 truncate" x-text="seriesLabel(item)"></span>
+                                <span class="text-xs font-medium text-slate-400 shrink-0">
+                                    <span x-text="item.admittedCount"></span> / <span x-text="item.candidateCount"></span> admis
+                                </span>
+                            </span>
+                            <span class="amount text-sm font-semibold text-slate-900" x-text="formatPercent(item.successRate)"></span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill-primary" :style="'width: ' + item.successRate + '%'"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <div class="card p-6">
+            <h2 class="section-title mb-3">Comparaison interannuelle</h2>
+            <template x-if="!isLoadingStatistics && (!statistics || statistics.previousYearComparison.length === 0)">
+                <p class="text-sm text-slate-400">Pas encore d'historique disponible.</p>
+            </template>
+            <div class="space-y-3">
+                <template x-for="item in (statistics ? statistics.previousYearComparison : [])" :key="item.schoolYearLabel">
+                    <div>
+                        <div class="flex items-baseline justify-between gap-3 mb-1.5">
+                            <span class="text-sm text-slate-600" x-text="item.schoolYearLabel"></span>
+                            <span class="amount text-sm font-semibold text-slate-900" x-text="formatPercent(item.successRate)"></span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill-success" :style="'width: ' + item.successRate + '%'"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALES — Sessions
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell open="isCreateSessionOpen" on-close="closeCreateSession()" title="Nouvelle session d'examen" size="60">
+        <modal-subtitle>Une session par année scolaire, type d'examen et série.</modal-subtitle>
+        <div x-show="createSessionErrors.global" x-cloak class="form-error-banner" x-text="createSessionErrors.global"></div>
+        <form x-on:submit.prevent="submitCreateSession()" novalidate class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Année scolaire</label>
+                    <select-field model="newSession.schoolYearId" required="true" placeholder="Sélectionner une année"
+                                  aria-label="Année scolaire" options-expr="schoolYearOptions" />
+                    <p x-show="createSessionErrors.schoolyearid" x-text="createSessionErrors.schoolyearid" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label form-label-required">Type d'examen</label>
+                    <select-field model="newSession.examType" required="true" on-change="onNewSessionExamTypeChanged()"
+                                  aria-label="Type d'examen" options-expr="examTypeOptions" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Série</label>
+                    <input type="text" x-model="newSession.series" :disabled="newSession.examType === 'CFEE'" maxlength="20"
+                           placeholder="ex : L, S, G…" class="input-field disabled:bg-slate-50 disabled:text-slate-400"
+                           :class="createSessionErrors.series && 'input-field-error'">
+                    <p class="text-xs text-slate-400 mt-1" x-show="newSession.examType === 'CFEE'" x-cloak>Le CFEE n'a pas de série.</p>
+                    <p x-show="createSessionErrors.series" x-text="createSessionErrors.series" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label">Centre par défaut</label>
+                    <input type="text" x-model="newSession.centerName" maxlength="150" placeholder="Facultatif" class="input-field">
+                </div>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeCreateSession()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingSession" class="btn-modal-primary group">
+                    <span x-text="isSavingSession ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="editingSession" on-close="closeEditSession()" title="Modifier la session" size="60">
+        <modal-subtitle><span x-text="editingSession ? sessionLabel(editingSession) : ''"></span></modal-subtitle>
+        <div x-show="editSessionErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editSessionErrors.global"></div>
+        <form x-on:submit.prevent="submitEditSession()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label">Centre par défaut</label>
+                <input type="text" x-model="editingSession.centerName" maxlength="150" class="input-field"
+                       :class="editSessionErrors.centername && 'input-field-error'">
+                <p x-show="editSessionErrors.centername" x-cloak x-text="editSessionErrors.centername" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label form-label-required">Statut</label>
+                <select-field model="editingSession.status" required="true" aria-label="Statut" options-expr="sessionStatusOptions" />
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeEditSession()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingEditSession" class="btn-modal-primary group">
+                    <span x-text="isSavingEditSession ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="dispatchingSession" on-close="closeDispatchConvocations()" title="Envoyer les convocations" size="md">
+        <modal-subtitle><span x-text="dispatchingSession ? dispatchingSession.label : ''"></span></modal-subtitle>
+        <div x-show="dispatchError" x-cloak class="form-error-banner" x-text="dispatchError"></div>
+
+        <template x-if="dispatchResult">
+            <div class="rounded-xl border-l-4 border-success bg-success-bg p-4 text-sm text-success">
+                <p><span x-text="dispatchResult.queuedCount"></span> convocation(s) mise(s) en file d'envoi.</p>
+                <p x-show="dispatchResult.skippedCount > 0" x-cloak class="mt-1">
+                    <span x-text="dispatchResult.skippedCount"></span> dossier(s) ignoré(s)<span x-show="dispatchResult.firstSkipReason" x-cloak>&nbsp;: <span x-text="dispatchResult.firstSkipReason"></span></span>.
+                </p>
+            </div>
+        </template>
+
+        <template x-if="!dispatchResult">
+            @* Hors formule Premium : on explique et on incite, on ne masque pas (même patron que _SmsSettingsPanel). *@
+            <div x-data="featureGate('SmsNotifications')" x-init="init()">
+                <div x-show="!allowed" x-cloak class="rounded-xl border-l-4 border-amber-400 bg-amber-50 p-4">
+                    <p class="text-sm font-medium text-amber-900">Fonctionnalité réservée à la formule Premium</p>
+                    <p class="mt-1 text-sm text-amber-800" x-text="label"></p>
+                </div>
+                <div x-show="allowed" x-cloak class="space-y-4">
+                    <p class="text-sm text-slate-500">
+                        Envoie une convocation par SMS à chaque candidat de cette session dont le centre et le numéro de
+                        table sont déjà attribués. Refusé tant qu'un dossier du lot n'a pas ces informations.
+                    </p>
+                    <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                        <button type="button" x-on:click="closeDispatchConvocations()" class="btn-modal-secondary group">Annuler</button>
+                        <button type="button" x-on:click="confirmDispatchConvocations()" :disabled="isDispatching" class="btn-modal-primary group">
+                            <span x-text="isDispatching ? 'Envoi...' : 'Envoyer les convocations'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <div x-show="dispatchResult" x-cloak class="flex justify-end mt-6">
+            <button type="button" x-on:click="closeDispatchConvocations()" class="btn-modal-secondary group">Fermer</button>
+        </div>
+    </modal-shell>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALES — Dossiers
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell open="isCreateDossierOpen" on-close="closeCreateDossier()" title="Nouveau dossier de candidature" size="60">
+        <modal-subtitle>Un dossier par élève et par session — la classe se préremplit depuis la classe actuelle de l'élève.</modal-subtitle>
+        <div x-show="createDossierErrors.global" x-cloak class="form-error-banner" x-text="createDossierErrors.global"></div>
+        <form x-on:submit.prevent="submitCreateDossier()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Session d'examen</label>
+                <select-field model="newDossier.examSessionId" required="true" placeholder="Sélectionner une session"
+                              aria-label="Session d'examen" options-expr="sessionOptions" />
+                <p x-show="createDossierErrors.examsessionid" x-text="createDossierErrors.examsessionid" class="field-error"></p>
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Élève</label>
+                <template x-if="!newDossier.studentId">
+                    <div class="relative">
+                        <input type="text" x-model="dossierStudentSearch" x-on:input.debounce.300ms="searchDossierStudents()"
+                               placeholder="Rechercher par nom ou matricule…" class="input-field"
+                               :class="createDossierErrors.studentid && 'input-field-error'">
+                        <div x-show="dossierStudentResults.length > 0" x-cloak
+                             class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto rounded-lg bg-white shadow-lg ring-1 ring-gray-100">
+                            <template x-for="student in dossierStudentResults" :key="student.id">
+                                <button type="button" x-on:click="selectDossierStudent(student)"
+                                        class="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                                    <span class="font-medium text-slate-900" x-text="student.fullName"></span>
+                                    <span class="text-slate-400 ml-1" x-text="'(' + student.matricule + ' — ' + student.classroomName + ')'"></span>
+                                </button>
+                            </template>
+                        </div>
+                        <p x-show="isSearchingDossierStudents" x-cloak class="text-xs text-slate-400 mt-1">Recherche…</p>
+                        <p x-show="dossierStudentSearchError" x-cloak class="field-error" x-text="dossierStudentSearchError"></p>
+                    </div>
+                </template>
+                <template x-if="newDossier.studentId">
+                    <div class="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
+                        <span class="text-sm font-medium text-slate-900" x-text="newDossier.studentLabel"></span>
+                        <button type="button" x-on:click="clearDossierStudent()" class="text-xs font-medium text-slate-500 hover:text-rose-600">Changer</button>
+                    </div>
+                </template>
+                <p x-show="createDossierErrors.studentid" x-text="createDossierErrors.studentid" class="field-error"></p>
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Classe</label>
+                <select-field model="newDossier.classroomId" required="true" placeholder="Sélectionner une classe"
+                              aria-label="Classe" options-expr="classroomOptions" />
+                <p x-show="createDossierErrors.classroomid" x-text="createDossierErrors.classroomid" class="field-error"></p>
+            </div>
+
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeCreateDossier()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingDossier || !newDossier.studentId" class="btn-modal-primary group">
+                    <span x-text="isSavingDossier ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* Fiche détaillée — lecture seule, ouverte aussi à l'Enseignant (borné à ses classes côté serveur). *@
+    <modal-shell open="detailDossier" on-close="closeDossierDetail()" size="lg">
+        <modal-title><span x-text="detailDossier ? detailDossier.studentFullName : ''"></span></modal-title>
+        <modal-subtitle><span x-text="detailDossier ? detailDossier.classroomName : ''"></span></modal-subtitle>
+
+        <div x-show="detailError" x-cloak class="form-error-banner" x-text="detailError"></div>
+
+        <template x-if="isLoadingDetail">
+            <div class="space-y-3">
+                <div class="skeleton h-20 w-full rounded-xl"></div>
+                <div class="skeleton h-32 w-full rounded-xl"></div>
+            </div>
+        </template>
+
+        <template x-if="!isLoadingDetail && detailDossier && detailDossier.status !== undefined">
+            <div class="space-y-6">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <stat-card size="compact" label="Statut" icon="document-text">
+                        <badge :variant="dossierStatusVariant(detailDossier.status)"><span x-text="dossierStatusLabel(detailDossier.status)"></span></badge>
+                    </stat-card>
+                    <stat-card size="compact" label="N° candidat" icon="target"><span x-text="detailDossier.candidateNumber || '—'"></span></stat-card>
+                    <stat-card size="compact" label="Centre" icon="building"><span x-text="detailDossier.examCenterName || '—'"></span></stat-card>
+                    <stat-card size="compact" label="État civil" icon="alert-circle">
+                        <badge :variant="civilStatusVariant(detailDossier.civilStatusConforming)"><span x-text="civilStatusLabel(detailDossier.civilStatusConforming)"></span></badge>
+                    </stat-card>
+                </div>
+
+                <div class="text-sm space-y-1">
+                    <p class="text-slate-600"><span class="font-medium text-slate-700">Extrait de naissance : </span><span x-text="detailDossier.birthCertificatePresent ? 'Présent' : 'Manquant'"></span>
+                        <span x-show="detailDossier.birthCertificateNumber" x-cloak> — n° <span x-text="detailDossier.birthCertificateNumber"></span></span>
+                    </p>
+                    <p class="text-slate-600" x-show="detailDossier.civilStatusNotes" x-cloak><span class="font-medium text-slate-700">Notes : </span><span x-text="detailDossier.civilStatusNotes"></span></p>
+                    <p class="text-slate-600" x-show="detailDossier.transmittedOn" x-cloak><span class="font-medium text-slate-700">Transmis le : </span><span x-text="formatDate(detailDossier.transmittedOn)"></span></p>
+                </div>
+
+                <div x-show="detailDossier.result" x-cloak>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Résultat de délibération</p>
+                    <div class="rounded-xl border border-slate-100 p-4 text-sm space-y-1">
+                        <p><span class="font-medium text-slate-700">Décision : </span><span x-text="detailDossier.result && detailDossier.result.isAdmitted ? 'Admis(e)' : 'Non admis(e)'"></span></p>
+                        <p x-show="detailDossier.result && detailDossier.result.mention" x-cloak><span class="font-medium text-slate-700">Mention : </span><span x-text="detailDossier.result ? mentionLabel(detailDossier.result.mention) : ''"></span></p>
+                        <p x-show="detailDossier.result && detailDossier.result.averageScore !== null" x-cloak><span class="font-medium text-slate-700">Moyenne : </span><span x-text="detailDossier.result ? detailDossier.result.averageScore : ''"></span></p>
+                        <p><span class="font-medium text-slate-700">Délibéré le : </span><span x-text="detailDossier.result ? formatDate(detailDossier.result.deliberatedOn) : ''"></span></p>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </modal-shell>
+
+    <modal-shell open="editingDossier" on-close="closeEditDossier()" title="Modifier le dossier" size="60">
+        <modal-subtitle>État civil et centre déclaré — la classe reste figée depuis l'ouverture du dossier.</modal-subtitle>
+        <div x-show="editDossierErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editDossierErrors.global"></div>
+        <form x-on:submit.prevent="submitEditDossier()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label">Centre d'examen déclaré</label>
+                <input type="text" x-model="editingDossier.examCenterName" maxlength="150" placeholder="Facultatif" class="input-field"
+                       :class="editDossierErrors.examcentername && 'input-field-error'">
+            </div>
+            <div>
+                <label class="form-label">Numéro de l'extrait de naissance</label>
+                <input type="text" x-model="editingDossier.birthCertificateNumber" maxlength="50" class="input-field"
+                       :class="editDossierErrors.birthcertificatenumber && 'input-field-error'">
+            </div>
+            <div class="flex items-start gap-2">
+                <input id="edit-dossier-certificate-present" type="checkbox" x-model="editingDossier.birthCertificatePresent" class="checkbox-field mt-1">
+                <label for="edit-dossier-certificate-present" class="text-sm text-slate-700">
+                    Extrait de naissance présent au dossier
+                    <span class="block text-xs text-slate-400">Un dossier sans extrait présent ne peut jamais passer Complet.</span>
+                </label>
+            </div>
+            <div>
+                <label class="form-label">Conformité de l'état civil</label>
+                <select-field model="editingDossier.civilStatusConforming" aria-label="Conformité de l'état civil" options-expr="civilStatusOptions" />
+            </div>
+            <div>
+                <label class="form-label">Notes</label>
+                <textarea x-model="editingDossier.civilStatusNotes" rows="2" maxlength="500" class="input-field"></textarea>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeEditDossier()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingEditDossier" class="btn-modal-primary group">
+                    <span x-text="isSavingEditDossier ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="assigningDossier" on-close="closeAssignCenter()" title="Attribuer centre et numéro de table" size="60">
+        <modal-subtitle>Laissez le numéro vide pour une génération automatique — c'est le cas normal.</modal-subtitle>
+        <div x-show="assignCenterErrors.global" x-cloak class="form-error-banner" x-text="assignCenterErrors.global"></div>
+        <form x-on:submit.prevent="submitAssignCenter()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label">Centre d'examen</label>
+                <input type="text" x-model="assigningDossier.examCenterName" maxlength="150"
+                       placeholder="Vide = hérite du centre par défaut de la session" class="input-field"
+                       :class="assignCenterErrors.examcentername && 'input-field-error'">
+            </div>
+            <div>
+                <label class="form-label">Numéro de candidat</label>
+                <input type="text" x-model="assigningDossier.candidateNumber" maxlength="30"
+                       placeholder="Vide = génération automatique" class="input-field"
+                       :class="assignCenterErrors.candidatenumber && 'input-field-error'">
+                <p x-show="assigningDossier && assigningDossier.currentCandidateNumber" x-cloak class="text-xs text-slate-400 mt-1">
+                    Numéro actuel : <span x-text="assigningDossier ? assigningDossier.currentCandidateNumber : ''"></span>
+                </p>
+                <p class="text-xs text-slate-400 mt-1">
+                    À ne renseigner que pour reprendre une numérotation déjà communiquée par l'IEF/l'IA.
+                </p>
+                <p x-show="assignCenterErrors.candidatenumber" x-text="assignCenterErrors.candidatenumber" class="field-error"></p>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeAssignCenter()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingAssignCenter" class="btn-modal-primary group">
+                    <span x-text="isSavingAssignCenter ? 'Enregistrement...' : 'Attribuer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="transmittingDossier" on-close="closeTransmitDossier()" size="md">
+        <modal-title>Transmettre le dossier</modal-title>
+        <modal-subtitle><span x-text="transmittingDossier ? transmittingDossier.studentFullName : ''"></span></modal-subtitle>
+        <div x-show="transmitError" x-cloak class="form-error-banner" x-text="transmitError"></div>
+        <p class="text-sm text-slate-500">Marque le dossier comme transmis à l'IEF/l'IA. Cette action ne peut pas être annulée depuis cet écran.</p>
+        <p x-show="transmittingDossier && transmittingDossier.status === 'Incomplet'" x-cloak class="mt-3 rounded-xl border-l-4 border-amber-400 bg-amber-50 p-3 text-sm text-amber-800">
+            Ce dossier est encore Incomplet : la transmission sera refusée tant que l'audit n'est pas résolu (onglet Audit).
+        </p>
+        <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <button type="button" x-on:click="closeTransmitDossier()" class="btn-modal-secondary group">Annuler</button>
+            <button type="button" x-on:click="confirmTransmitDossier()"
+                    :disabled="isTransmitting || (transmittingDossier && transmittingDossier.status === 'Incomplet')"
+                    class="btn-modal-primary group">
+                <span x-text="isTransmitting ? 'Transmission...' : 'Transmettre'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    <modal-shell open="recordingDossier" on-close="closeRecordResult()" title="Saisir le résultat de délibération" size="60">
+        <modal-subtitle><span x-text="recordingDossier ? recordingDossier.studentFullName : ''"></span></modal-subtitle>
+        <div x-show="resultErrors.global" x-cloak class="form-error-banner" x-text="resultErrors.global"></div>
+        <form x-on:submit.prevent="submitRecordResult()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Décision</label>
+                <div class="flex items-center gap-4 mt-1">
+                    <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                        <input type="radio" x-model="resultForm.isAdmitted" value="true" class="radio-field">
+                        Admis(e)
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                        <input type="radio" x-model="resultForm.isAdmitted" value="false" class="radio-field">
+                        Non admis(e)
+                    </label>
+                </div>
+            </div>
+            <div x-show="recordResultShowsMention" x-cloak>
+                <label class="form-label">Mention</label>
+                <select-field model="resultForm.mention" placeholder="Aucune" aria-label="Mention" options-expr="mentionOptions" />
+                <p x-show="resultErrors.mention" x-text="resultErrors.mention" class="field-error"></p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Moyenne</label>
+                    <input type="number" step="0.01" x-model="resultForm.averageScore" min="0" placeholder="Facultatif" class="input-field"
+                           :class="resultErrors.averagescore && 'input-field-error'">
+                    <p x-show="resultErrors.averagescore" x-text="resultErrors.averagescore" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label form-label-required">Délibéré le</label>
+                    <date-field model="resultForm.deliberatedOn" required="true" aria-label="Date de délibération" />
+                    <p x-show="resultErrors.deliberatedon" x-text="resultErrors.deliberatedon" class="field-error"></p>
+                </div>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeRecordResult()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingResult" class="btn-modal-primary group">
+                    <span x-text="isSavingResult ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="isBatchPrintOpen" on-close="closeBatchPrint()" title="Impression par lot" size="60">
+        <modal-subtitle>Ne retient que les dossiers Complet, Transmis ou Validé — au moins un des deux filtres est requis.</modal-subtitle>
+        <div x-show="batchPrintError" x-cloak class="form-error-banner" x-text="batchPrintError"></div>
+        <form x-on:submit.prevent="submitBatchPrint()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label">Session d'examen</label>
+                <select-field model="batchPrintForm.examSessionId" placeholder="Toutes les sessions"
+                              aria-label="Session d'examen" options-expr="sessionOptions" />
+            </div>
+            <div>
+                <label class="form-label">Classe</label>
+                <select-field model="batchPrintForm.classroomId" placeholder="Toutes les classes"
+                              aria-label="Classe" options-expr="classroomOptions" />
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeBatchPrint()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isBatchPrinting" class="btn-modal-primary group">
+                    <icon name="print" class="w-4 h-4" />
+                    <span x-text="isBatchPrinting ? 'Génération...' : 'Imprimer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @await Html.PartialAsync("_PdfPreviewModal")
+</div>

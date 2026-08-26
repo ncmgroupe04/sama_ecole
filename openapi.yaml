@@ -3116,6 +3116,10 @@ paths:
     get:
       tags: [Exams]
       summary: Dossiers de candidature, paginés
+      description: >-
+        Ouvert au Directeur, au Secrétariat, et — depuis JGK-J08 — à l'Enseignant, dont la liste est
+        alors restreinte aux dossiers des classes où il a une affectation active (TeacherAssignments,
+        année scolaire active). Un classroomId explicite hors de cette portée est refusé (403).
       parameters:
         - name: examSessionId
           in: query
@@ -3137,6 +3141,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaginatedExamDossiers' }
+        '403': { description: "Enseignant demandant un classroomId hors de ses classes assignées (JGK-J08)" }
     post:
       tags: [Exams]
       summary: Ouvrir un dossier de candidature
@@ -3198,6 +3203,11 @@ paths:
     get:
       tags: [Exams]
       summary: Fiche complète d'un dossier
+      description: >-
+        Ouvert au Directeur, au Secrétariat, et — depuis JGK-J08 — à l'Enseignant pour un dossier
+        d'une classe où il a une affectation active. Une URL tapée directement sur un dossier hors de
+        cette portée renvoie 403, jamais 404 : un dossier porte des données d'état civil sensibles,
+        pas un simple silence sur son existence.
       parameters:
         - name: id
           in: path
@@ -3209,6 +3219,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExamDossierDetail' }
+        '403': { description: "Enseignant sans affectation active sur la classe du dossier (JGK-J08)" }
         '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Exams]

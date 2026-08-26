@@ -63,10 +63,12 @@
  <div class="flex items-center gap-3">
  <span x-show="alreadySubmitted" x-cloak class="text-xs font-medium text-warning">Appel déjà enregistré pour ce créneau.</span>
  <button type="button" x-on:click="submit()" :disabled="submitting || alreadySubmitted || entries.length === 0" class="btn-modal-primary group">
- <span x-text="submitting ? 'Enregistrement…' : 'Enregistrer l\'appel'"></span>
+ <span x-text="sendState === 'retrying' ? 'En attente d\'envoi…' : (submitting ? 'Enregistrement…' : 'Enregistrer l\'appel')"></span>
  </button>
  </div>
  </div>
+
+ <div x-show="sendState === 'retrying' || sendState === 'failed'" x-cloak class="mx-4 mt-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="sendStateLabel()"></div>
 
  <div x-show="submitError" x-cloak class="mx-4 mt-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="submitError"></div>
 

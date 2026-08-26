@@ -5,7 +5,7 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 26/08/2026** (module Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
+**Dernière mise à jour : 26/08/2026** (écran `/examens` livré — backend Module J déjà complet ; module Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
 
 ---
 
@@ -55,6 +55,7 @@ Livrés, câblés à l'IHM, et couverts par la suite de tests :
 | **Documents** | Module Documents | Génération et archivage documentaire |
 | **Rapports financiers** | `/rapports/financiers` | `GetRevenueConsolidationQuery` + export `.xlsx` |
 | **Inventaire** | `/inventaire` | API `/api/v1/inventory` — catalogue, journal de stock, prêts, 2 PDF |
+| **Examens officiels** | `/examens` | API `/api/v1/exams` — sessions, dossiers CFEE/BFEM/BAC, audit, attribution centre/table, transmission, résultats, statistiques, export ministériel, convocations |
 
 Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bulletins, Frais,
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
@@ -86,6 +87,14 @@ dans cet environnement — à valider en local avant mise en production.
    numéro d'immatriculation posé sur le bien par la mairie ou l'État.
 
 Export `.xlsx` de l'inventaire : **écarté pour ce lot** (PDF seul), à arbitrer si le besoin remonte.
+
+### Examens officiels (26/08/2026) — écran livré, backend déjà complet
+
+Écran `/examens` (`Views/Exams/Index.cshtml` + `wwwroot/js/exams.js`) : 4 onglets (Sessions, Dossiers,
+Audit, Statistiques). Le backend (routes, migration RLS, PDF, export) couvrait déjà l'intégralité du
+backlog Module J (JGK-J01 à J08) ; seul l'écran manquait. Un `Enseignant` charge l'onglet Dossiers en
+lecture seule (liste + fiche détaillée), borné par le serveur à ses classes assignées (JGK-J08) —
+tous les autres onglets et toutes les actions d'écriture restent Directeur/Secrétariat.
 
 ### Classes passerelles / accélérées (04/08/2026) — option désactivée par défaut
 

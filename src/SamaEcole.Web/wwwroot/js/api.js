@@ -257,5 +257,57 @@ window.api = {
     patch(endpoint, body) { return this.request(endpoint, 'PATCH', body); },
     delete(endpoint) { return this.request(endpoint, 'DELETE'); },
     /** Upload multipart (FormData) — même robustesse (renouvellement de jeton, 401, erreurs) que post(). */
-    upload(endpoint, formData) { return this.request(endpoint, 'POST', formData); }
+    upload(endpoint, formData) { return this.request(endpoint, 'POST', formData); },
+
+    /**
+     * Écriture résiliente (ticket JGK-L03) : câble `window.networkGuard.submitWithRetry` (JGK-L02)
+     * sur une méthode d'écriture, au lieu du simple `send()` non rejoué de `request()`. Réservé aux
+     * écrans qui en ont explicitement besoin (Caisse, Pointage) — les autres écritures du produit
+     * gardent volontairement le comportement « échec immédiat + brouillon local » de `post()`
+     * (voir le commentaire de `isRetryable` ci-dessus).
+     *
+     * `config.onStateChange` est transmis tel quel à `submitWithRetry` : 'sending' | 'retrying' |
+     * 'done' | 'failed'. Contrairement à `request()`, AUCUNE reprise sur 401 n'est tentée ICI — un
+     * jeton expiré pendant une coupure réseau est un cas assez rare pour ne pas complexifier la seule
+     * fonction dont la propriété recherchée est justement la simplicité de son chemin d'erreur.
+     */
+    async requestWithRetry(endpoint, method, body, config = {}) {
+        if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+            await this.refreshOrRedirect();
+        }
+
+        const headers = { 'Content-Type': 'application/json' };
+        const token = window.auth.accessToken;
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const options = {
+            method,
+            headers,
+            credentials: 'same-origin',
+            body: body ? JSON.stringify(body) : undefined
+        };
+
+        let response;
+        try {
+            response = await window.networkGuard.submitWithRetry(`${this.baseUrl}${endpoint}`, options, config);
+        } catch {
+            // maxAttempts atteint sans qu'aucune tentative n'ait joint le serveur : même message et
+            // même code que send() pour rester interprétable par toMessage()/toFieldErrors().
+            const error = new Error("📡 Connexion au serveur interrompue après plusieurs tentatives. Rien n'a été enregistré tant que la connexion n'est pas rétablie.");
+            error.code = 'NETWORK_OFFLINE';
+            error.status = 0;
+            throw error;
+        }
+
+        if (response.status === 401) {
+            window.auth.redirectToLogin();
+            throw await this.toError(response);
+        }
+
+        if (!response.ok) throw await this.toError(response);
+        if (response.status === 204) return null;
+        return await response.json();
+    },
+
+    postWithRetry(endpoint, body, config) { return this.requestWithRetry(endpoint, 'POST', body, config); }
 };

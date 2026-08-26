@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Exams;
 using SamaEcole.Application.Exams.Commands.CreateExamDossier;
 using SamaEcole.Application.Exams.Queries.GetExamDossiers;
 using SamaEcole.Domain.Entities;
@@ -130,7 +131,9 @@ public class ExamIsolationTests : IAsyncLifetime
     public async Task Dossiers_List_Never_Leaks_Another_Schools_Dossier()
     {
         await using var ctx = _db.NewAppContext(EcoleA);
-        var handler = new GetExamDossiersQueryHandler(ctx);
+        // Directeur : non borné par ExamDossierScopeAuthorizer (JGK-J08) — ce test vérifie l'isolation
+        // inter-écoles, pas la portée par classe assignée (voir ExamDossierScopeTests pour celle-ci).
+        var handler = new GetExamDossiersQueryHandler(ctx, new ExamDossierScopeAuthorizer(ctx, new DirecteurUser()));
 
         var result = await handler.Handle(new GetExamDossiersQuery(), CancellationToken.None);
 
@@ -216,4 +219,11 @@ public class ExamIsolationTests : IAsyncLifetime
 file sealed class FixedTenantProvider(Guid schoolId) : SamaEcole.Application.Common.Interfaces.ITenantProvider
 {
     public Guid? CurrentSchoolId => schoolId;
+}
+
+file sealed class DirecteurUser : SamaEcole.Application.Common.Interfaces.ICurrentUserService
+{
+    public Guid? UserId => Guid.NewGuid();
+    public Role? Role => Domain.Enums.Role.Directeur;
+    public string? IpAddress => "127.0.0.1";
 }

@@ -27,14 +27,15 @@ namespace SamaEcole.Web.Controllers;
 /// Module Examens officiels (CFEE/BFEM/BAC) — /exams. Contrôleur mince : aucune logique métier ici
 /// (AGENTS.md règle #8). L'école n'est jamais un paramètre de requête : elle vient du JWT (règle #10).
 ///
-/// Matrice de droits (docs/Volume_4_API_Design.md §22) : `Directeur` et `Secretariat` uniquement,
-/// LECTURE COMPRISE — un dossier porte des données d'état civil sensibles (extrait de naissance).
-/// L'ouverture au rôle `Enseignant`, restreinte à ses classes assignées, est un ticket séparé
-/// (JGK-J08, non livré) : ne pas élargir cette matrice sans le filtre par classe qui va avec.
+/// Matrice de droits (docs/Volume_4_API_Design.md §22) : `Directeur` et `Secretariat` sur tout le
+/// module. La LECTURE (liste des dossiers, fiche détaillée) est en plus ouverte à `Enseignant`,
+/// restreinte à ses classes assignées sur l'année active (ticket JGK-J08, filtre porté par
+/// <see cref="Application.Exams.ExamDossierScopeAuthorizer"/>) — un dossier porte des données d'état
+/// civil sensibles, donc jamais de lecture ouverte sans ce filtre.
 ///
-/// Couvre l'intégralité du backlog Module J (JGK-J01 à J07) : sessions, dossiers, contrôle d'état
+/// Couvre l'intégralité du backlog Module J (JGK-J01 à J08) : sessions, dossiers, contrôle d'état
 /// civil, audit, attribution centre/table, transmission, résultats, statistiques, fiches de
-/// candidature (unitaire/lot), convocations et export ministériel.
+/// candidature (unitaire/lot), convocations, export ministériel et lecture bornée de l'Enseignant.
 /// </summary>
 [ApiController]
 [Route("api/v1/exams")]
@@ -42,6 +43,9 @@ namespace SamaEcole.Web.Controllers;
 public class ExamsController(ISender mediator) : ControllerBase
 {
     private const string Roles = "Directeur,Secretariat";
+
+    /// <summary>Lecture seule (liste + fiche détaillée) : bornée à ses classes assignées côté handler (JGK-J08).</summary>
+    private const string ReadRoles = "Directeur,Secretariat,Enseignant";
 
     // ------------------------------------------------------------------ Sessions
 
@@ -85,8 +89,11 @@ public class ExamsController(ISender mediator) : ControllerBase
 
     // ------------------------------------------------------------------ Dossiers
 
+    /// <summary>Un Enseignant ne voit que les dossiers de ses classes assignées (JGK-J08, filtre côté handler).</summary>
     [HttpGet("dossiers")]
+    [Authorize(Roles = ReadRoles)]
     [ProducesResponseType<PaginatedExamDossiers>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListDossiers(
         [FromQuery] GetExamDossiersQuery query, CancellationToken cancellationToken)
         => Ok(await mediator.Send(query, cancellationToken));
@@ -97,8 +104,11 @@ public class ExamsController(ISender mediator) : ControllerBase
         [FromQuery] Guid examSessionId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetExamDossierAuditQuery(examSessionId), cancellationToken));
 
+    /// <summary>Refusé (403) si le dossier n'appartient pas à une classe assignée à l'Enseignant appelant (JGK-J08).</summary>
     [HttpGet("dossiers/{id:guid}")]
+    [Authorize(Roles = ReadRoles)]
     [ProducesResponseType<ExamDossierDetail>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDossier(Guid id, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetExamDossierDetailQuery(id), cancellationToken));

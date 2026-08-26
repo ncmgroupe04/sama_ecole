@@ -210,8 +210,9 @@ Middleware d'autorisation bloquant tout endpoint hors `/subscriptions/{schoolId}
 *Dépend de* : JGK-J01. *Critères* : les statistiques ne portent que sur les dossiers `Transmis`/`Valide` d'une session clôturée.
 
 **JGK-J08** [F] — Lecture des dossiers filtrée par classe assignée (Enseignant)
-`GET /exams/dossiers` et `GET /exams/dossiers/{id}` ouverts au rôle `Enseignant`, mais restreints aux classes qui lui sont attribuées (`TeacherAssignments`, même filtre que §21.2 pour l'emploi du temps). En attendant ce ticket, la lecture reste réservée à `Directeur`/`Secretariat` (JGK-J01 à J07) — ne pas élargir le rôle sans ce filtre, un dossier porte des données d'état civil sensibles.
-*Dépend de* : JGK-J01. *Critères* : un enseignant authentifié ne voit que les dossiers des classes où il a une affectation active ; taper directement l'URL d'un dossier hors de ses classes renvoie une erreur d'autorisation, pas une absence de lien.
+**Statut : livré (26/08/2026).** `GET /exams/dossiers` et `GET /exams/dossiers/{id}` ouverts au rôle `Enseignant`, restreints aux classes qui lui sont attribuées sur l'année ACTIVE (`TeacherAssignments`, `ExamDossierScopeAuthorizer` — même mécanique que `AttendanceScopeAuthorizer` pour l'appel). Un `classroomId` explicite hors de la portée de l'Enseignant sur la liste, ou une URL de dossier tapée directement hors de ses classes, renvoient tous deux 403 — jamais une absence silencieuse de résultat pour la fiche détaillée.
+*Dépend de* : JGK-J01. *Critères vérifiés* : `ExamDossierScopeTests.cs` — un enseignant authentifié ne voit que les dossiers des classes où il a une affectation active ; taper directement l'URL d'un dossier hors de ses classes renvoie une erreur d'autorisation, pas une absence de lien.
+*Effet de bord corrigé* : `GetExamDossierDetailQueryHandler` appelait `EF.Property<uint>(dossier, "xmin")` hors d'une requête LINQ — invalide en dehors d'une traduction SQL, donc `GET /exams/dossiers/{id}` renvoyait 500 sur TOUT appel, y compris Directeur/Secrétariat, depuis la livraison de J02. Aucun test n'exerçait ce Handler avant `ExamDossierScopeTests.cs` ; corrigé en réutilisant le motif de `AssignExamCenterCommandHandler` (relecture du `xmin` par une requête `Select` dédiée).
 
 ---
 
@@ -239,7 +240,7 @@ Nouveau champ moyen de paiement + coordonnées sur `EmployeeContract`, distinct 
 *Dépend de* : JGK-L01. *Critères* : la fonction ne retente jamais une réponse HTTP reçue (succès ou erreur métier), seulement l'absence de réponse.
 
 **JGK-L03** [M] — Câblage de `submitWithRetry` sur les écrans Caisse et Pointage
-Non livré. Le formulaire d'encaissement (`/caisse`) doit générer une `idempotencyKey` à l'ouverture (`newIdempotencyKey()`), l'inclure dans le body de `POST /finance/payments`, et afficher l'état « en attente d'envoi » sur `onStateChange`. Le formulaire d'appel (`/pointage` ou équivalent) doit appeler `submitWithRetry` sur `POST /attendance` et traiter un **409 reçu pendant un retry** (pas au premier essai) comme un succès silencieux — la feuille a déjà été enregistrée par la tentative précédente dont la réponse s'est perdue.
+**Statut : livré (26/08/2026).** `window.api.postWithRetry` (nouveau, `wwwroot/js/api.js`) câble `submitWithRetry` derrière la même normalisation d'erreurs que `post()`. Le formulaire d'encaissement (`/caisse`) génère une `idempotencyKey` à l'ouverture (`newIdempotencyKey()`, régénérée à chaque nouvel encaissement dans `startNewPayment()`), l'inclut dans le body de `POST /finance/payments`, et affiche l'état « en attente d'envoi » sur `onStateChange`. Le formulaire d'appel (`/attendance`, écran Présences) appelle `postWithRetry` sur `POST /attendance` et traite un **409 reçu pendant un retry** (`lastAttempt > 1`, pas au premier essai) comme un succès silencieux — la feuille a déjà été enregistrée par la tentative précédente dont la réponse s'est perdue.
 *Dépend de* : JGK-L01, JGK-L02. *Critères* : vérification manuelle (skill `run`) — coupure réseau pendant une saisie caisse ou un appel, reprise sans doublon ni message d'erreur trompeur, pas de trace locale de la transaction après fermeture de l'onglet.
 
 ---

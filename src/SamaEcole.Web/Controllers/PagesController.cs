@@ -98,6 +98,12 @@ public class PagesController : Controller
     [HttpGet("/rapports/assiduite")]
     public IActionResult AttendanceReport() => View("~/Views/Reports/Attendance.cshtml");
 
+    // Module Examens officiels (CFEE/BFEM/BAC) — ExamsController garde l'accès (Directeur/Secrétariat
+    // sur tout le module ; lecture des dossiers ouverte en plus à l'Enseignant, borné à ses classes
+    // assignées, ticket JGK-J08) et la RLS isole.
+    [HttpGet("/examens")]
+    public IActionResult Exams() => View("~/Views/Exams/Index.cshtml");
+
     // JGK-F05 : consolidation des revenus + export comptable .xlsx. Même gabarit anonyme que
     // ci-dessus — l'accès réel est gardé par FinancialReportsController, qui cumule
     // [Authorize(Directeur, Finance)] ET [RequireFeature(AdvancedFinancialReports)].

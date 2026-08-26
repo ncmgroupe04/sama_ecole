@@ -109,7 +109,7 @@
  // État initial (ouvert/replié) des sous-menus, calculé côté serveur à partir de l'URL
  // courante. L'ouverture/fermeture au clic est ensuite gérée par wwwroot/js/sidebar-nav.js
  // (voir Styles/input.css pour les classes [data-submenu] / .is-closed).
- bool gestionScolaireOpen = path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/inventaire") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/rapports/assiduite");
+ bool gestionScolaireOpen = path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/inventaire") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/examens") || path.StartsWith("/rapports/assiduite");
  bool surveillanceOpen = path.StartsWith("/presences") || path.StartsWith("/billets") || path.StartsWith("/discipline") || path.StartsWith("/convocations") || path.StartsWith("/pointage");
  bool comptabiliteOpen = path.StartsWith("/frais") || path.StartsWith("/caisse") || path.StartsWith("/paie") || path.StartsWith("/fiscalite") || path.StartsWith("/tresorerie") || path.StartsWith("/rapports/financiers");
  }
@@ -125,11 +125,11 @@
  <!-- Pôle : Gestion Scolaire
  x-show du bloc parent (texte + icône) = UNION des rôles de tous les sous-menus ci-dessous
  (Élèves, Inscriptions, Classes, Infrastructures, Inventaire, Matières, Enseignants, Notes,
- Rapports) : sans cette union, un rôle qui n'a accès à AUCUN sous-menu voyait quand même
- l'en-tête et l'accordéon vides — un pôle de menu sans destination. Le Surveillant a été
- ajouté à cette union pour l'Inventaire (mouvements de stock, prêts de matériel) : il n'a
- accès à aucun autre sous-menu de ce pôle. Si un sous-menu ci-dessous gagne ou perd un rôle,
- cette liste doit être mise à jour en écho. -->
+ Examens officiels, Rapports) : sans cette union, un rôle qui n'a accès à AUCUN sous-menu
+ voyait quand même l'en-tête et l'accordéon vides — un pôle de menu sans destination. Le
+ Surveillant a été ajouté à cette union pour l'Inventaire (mouvements de stock, prêts de
+ matériel) : il n'a accès à aucun autre sous-menu de ce pôle. Si un sous-menu ci-dessous
+ gagne ou perd un rôle, cette liste doit être mise à jour en écho. -->
  <div class="sidebar-pole relative space-y-1" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant', 'Surveillant'])" x-cloak>
  <button type="button" title="Gestion Scolaire" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
@@ -170,6 +170,10 @@
  <a href="/notes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
  <icon name="document" class="w-5 h-5" />
  <span class="text-sm font-medium">Notes et bulletins</span>
+ </a>
+ <a href="/examens" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/examens") ? LinkActive : LinkIdle)">
+ <icon name="document-text" class="w-5 h-5" />
+ <span class="text-sm font-medium">Examens officiels</span>
  </a>
  <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" class="@(path.StartsWith("/rapports/assiduite") ? LinkActive : LinkIdle)">
  <icon name="chart-multiple" class="w-5 h-5" />
