@@ -496,8 +496,8 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 ### 14.3 Suivi des heures des vacataires
 
-- Les heures effectuées par un vacataire sont déclarées au fil de l'eau et consolidées dans une **fiche de suivi** imprimable (PDF), destinée à être signée.
-- Cette fiche est volontairement **découplée du calcul automatique de la paie** : elle sert de pièce justificative vérifiable, et le montant dû reste saisi puis validé par un humain. C'est un choix de contrôle, pas une limitation technique.
+- Les heures effectuées par un vacataire sont déclarées au fil de l'eau et consolidées dans une **fiche de suivi** imprimable (PDF), destinée à être signée. C'est cette fiche, signée après coup, qui reste la pièce justificative qui fait foi.
+- **Suggestion automatique, amendée le 26/08/2026 (ticket JGK-K01).** Le nombre d'heures à saisir en §14.2 est désormais **pré-rempli par suggestion**, calculée depuis ce même registre et rapproché de l'emploi du temps planifié (§21) : un écart entre heures déclarées et heures planifiées un jour donné est signalé à titre indicatif, sans jamais bloquer la génération. La suggestion reste intégralement modifiable et **la Direction seule valide** le nombre d'heures retenu avant de générer la fiche de paie — la génération automatique intégrale, elle, n'est volontairement pas construite : c'est un choix de contrôle assumé, pas une limitation technique.
 
 ### 14.4 Attestation de travail
 

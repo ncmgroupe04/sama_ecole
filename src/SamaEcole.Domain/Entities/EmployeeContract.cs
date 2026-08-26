@@ -16,6 +16,16 @@ public class EmployeeContract : AuditableEntity, ITenantEntity
     public decimal HourlyRate { get; set; }
     public decimal TransportAllowance { get; set; }
 
+    /// <summary>Moyen de règlement du salaire (ticket JGK-K02). Cash par défaut — c'est l'existant avant ce ticket.</summary>
+    public PayoutMethod PayoutMethod { get; set; } = PayoutMethod.Cash;
+
+    /// <summary>
+    /// RIB/IBAN pour un virement bancaire, numéro de téléphone pour Wave/Orange Money — la forme
+    /// dépend de <see cref="PayoutMethod"/>, non validée ici (texte libre). Jamais journalisée en
+    /// clair dans un log applicatif (Volume 7).
+    /// </summary>
+    public string? PayoutAccountReference { get; set; }
+
     /// <summary>
     /// Date de clôture du contrat (Volume 1 §14.1 : « un contrat n'est jamais supprimé physiquement…
     /// il est clôturé à une date, et reste consultable pour l'historique de paie et les attestations »).

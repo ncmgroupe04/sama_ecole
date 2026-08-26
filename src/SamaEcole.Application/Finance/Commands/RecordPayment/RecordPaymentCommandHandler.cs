@@ -42,6 +42,34 @@ public class RecordPaymentCommandHandler(
 
         var result = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
+            // Idempotence côté client (ticket JGK-L01) : un retry après coupure réseau, MÊME clé,
+            // rejoue le résultat déjà produit plutôt que de recréer un paiement ou d'échouer en 409 —
+            // le caissier qui n'a jamais vu la confirmation du premier essai doit quand même récupérer
+            // son numéro de reçu, pas juste un message d'erreur. Vérifié avant tout le reste : même une
+            // session de caisse depuis fermée ne doit pas empêcher de rejouer un paiement déjà réussi.
+            if (request.IdempotencyKey is { } idempotencyKey)
+            {
+                var existing = await dbContext.Payments.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.SchoolId == schoolId && p.IdempotencyKey == idempotencyKey, ct);
+
+                if (existing is not null)
+                {
+                    var currentTotalDue = await dbContext.Enrollments.AsNoTracking()
+                        .Where(e => e.Id == existing.EnrollmentId)
+                        .Select(e => e.TotalDue)
+                        .FirstAsync(ct);
+
+                    return new RecordPaymentResult(
+                        existing.Id,
+                        existing.ReceiptNumber,
+                        existing.Amount,
+                        currentTotalDue,
+                        currentTotalDue - existing.BalanceAfter,
+                        existing.BalanceAfter,
+                        existing.Status.ToString());
+                }
+            }
+
             var activeSession = await dbContext.CashierSessions
                 .FirstOrDefaultAsync(s => s.CashierId == actorId && s.Status == CashierSessionStatus.Open, ct);
 
@@ -105,6 +133,7 @@ public class RecordPaymentCommandHandler(
                 Status = status,
                 BalanceAfter = enrollment.TotalDue - newAmountPaid,
                 ReceiptNumber = receiptNumber,
+                IdempotencyKey = request.IdempotencyKey,
                 ReceivedByUserId = actorId,
                 PaidAt = timeProvider.GetUtcNow()
             };

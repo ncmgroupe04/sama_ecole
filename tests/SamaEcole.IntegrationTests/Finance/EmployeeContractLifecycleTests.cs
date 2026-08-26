@@ -127,6 +127,35 @@ public class EmployeeContractLifecycleTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Updating_Only_PayoutMethod_Should_Not_Create_A_History_Entry()
+    {
+        // Ticket JGK-K02 : EmployeeContractHistory historise les MONTANTS (AGENTS.md règle #4), pas
+        // les coordonnées de règlement. Un changement de PayoutMethod seul ne doit jamais produire
+        // une ligne Previous==New qui affirmerait un changement de rémunération inexistant.
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var rowVersion = await ReadRowVersionAsync(ctx);
+
+        var handler = new UpdateEmployeeContractCommandHandler(
+            ctx, new FixedTenantProvider(EcoleA), new FixedCurrentUser(_actorId), TimeProvider.System);
+
+        var result = await handler.Handle(
+            new UpdateEmployeeContractCommand(
+                ContratA, 250_000m, 0m, 15_000m, "Passage au virement bancaire.", rowVersion,
+                PayoutMethod.BankTransfer, "SN08 SN01 0152 0000 0000 1234 5678"),
+            CancellationToken.None);
+
+        result.PayoutMethod.Should().Be(PayoutMethod.BankTransfer);
+
+        await using var check = _db.NewAppContext(EcoleA);
+        var contract = await check.EmployeeContracts.AsNoTracking().SingleAsync(c => c.Id == ContratA);
+        contract.PayoutMethod.Should().Be(PayoutMethod.BankTransfer);
+        contract.PayoutAccountReference.Should().Be("SN08 SN01 0152 0000 0000 1234 5678");
+
+        (await check.EmployeeContractHistories.AsNoTracking().AnyAsync(h => h.EmployeeContractId == ContratA))
+            .Should().BeFalse("aucun montant n'a changé, l'historique ne doit pas s'en trouver rempli");
+    }
+
+    [Fact]
     public async Task Updating_A_Contract_From_Another_School_Should_Be_Not_Found()
     {
         await using var ctx = _db.NewAppContext(EcoleB);

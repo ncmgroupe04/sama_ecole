@@ -17,6 +17,14 @@ public class EmployeeContractConfiguration : IEntityTypeConfiguration<EmployeeCo
 
         builder.Property(e => e.Type).HasConversion<string>().HasMaxLength(20);
 
+        builder.Property(e => e.PayoutMethod)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(SamaEcole.Domain.Enums.PayoutMethod.Cash);
+
+        builder.Property(e => e.PayoutAccountReference).HasMaxLength(50);
+
         builder.HasIndex(e => e.SchoolId);
 
         // Filtre étendu à "EndDate IS NULL" (Volume 1 §14.1) : un contrat CLÔTURÉ ne doit plus bloquer

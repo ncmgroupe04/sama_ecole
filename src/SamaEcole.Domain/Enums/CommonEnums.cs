@@ -298,6 +298,20 @@ public enum ContractType
 }
 
 /// <summary>
+/// Moyen de règlement du salaire d'un membre du personnel (ticket JGK-K02). Distinct de
+/// <see cref="PaymentMethod"/> — celui-ci décrit un encaissement élève, jamais un versement RH ;
+/// les deux domaines ne doivent jamais partager une énumération, même si Wave/Orange Money s'y
+/// retrouvent conceptuellement des deux côtés.
+/// </summary>
+public enum PayoutMethod
+{
+    Cash,
+    BankTransfer,
+    Wave,
+    OrangeMoney
+}
+
+/// <summary>
 /// Nature d'un changement journalisé dans <see cref="Entities.EmployeeContractHistory"/> (Volume 1
 /// §14.1). <c>Amended</c> : changement de rémunération sur un contrat resté actif (salaire de base,
 /// taux horaire, prime de transport). <c>Closed</c> : clôture définitive — les montants ne changent

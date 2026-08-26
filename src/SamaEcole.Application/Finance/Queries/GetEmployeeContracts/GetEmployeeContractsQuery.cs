@@ -16,6 +16,8 @@ public record EmployeeContractDto(
     decimal BaseSalary,
     decimal HourlyRate,
     decimal TransportAllowance,
+    string PayoutMethod,
+    string? PayoutAccountReference,
     DateOnly? EndDate,
     uint RowVersion);
 
@@ -38,6 +40,8 @@ public class GetEmployeeContractsQueryHandler(IApplicationDbContext dbContext)
                 c.BaseSalary,
                 c.HourlyRate,
                 c.TransportAllowance,
+                c.PayoutMethod.ToString(),
+                c.PayoutAccountReference,
                 c.EndDate,
                 EF.Property<uint>(c, "xmin")))
             .ToListAsync(cancellationToken);

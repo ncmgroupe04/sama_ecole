@@ -229,13 +229,18 @@ Nouveau champ moyen de paiement + coordonnées sur `EmployeeContract`, distinct 
 
 ## Module L — Résilience réseau (caisse &amp; pointage)
 
-**JGK-L01** [H] — Clé d'idempotence sur encaissement caisse et pointage d'absence
-Clé UUID générée côté client, contrainte unique par `SchoolId + IdempotencyKey`, sur l'encaissement caisse et la saisie d'absence. Reste strictement dans le cadre D-01 (Volume_0 §0.13) : aucune base locale, aucune queue persistée, aucune transaction confirmée sans réponse serveur.
-*Dépend de* : module Caisse (JGK-F02 et suite), module Pointage/Absences existants. *Critères* : la même clé soumise deux fois ne produit jamais deux écritures ; un test simule une coupure entre l'envoi et la réponse suivi d'un retry.
+**JGK-L01** [H] — Clé d'idempotence sur encaissement caisse
+**Statut : livré (26/08/2026).** Clé UUID générée côté client (`Payment.IdempotencyKey`, migration `AddPaymentIdempotencyKey`), index unique partiel `(SchoolId, IdempotencyKey) WHERE IdempotencyKey IS NOT NULL`. Un retry avec la MÊME clé rejoue le résultat déjà produit (même `PaymentId`/`ReceiptNumber`) au lieu de créer un second paiement — vérifié avant toute autre logique du Handler, y compris si la session de caisse a été fermée entre-temps. Reste strictement dans le cadre D-01 (Volume_0 §0.13) : aucune base locale, aucune queue persistée, aucune transaction confirmée sans réponse serveur.
+**Le pointage d'absences n'a pas eu besoin d'une clé dédiée** : `SubmitAttendanceSheetCommand` porte déjà une contrainte d'unicité naturelle (classe, matière, date, créneau) qui refuse en 409 un second appel identique — c'est déjà une forme d'idempotence fonctionnelle. Un retry y est donc sûr par construction ; c'est au FRONTEND (JGK-L02) d'interpréter un 409 pendant un retry comme une confirmation, pas comme une erreur à afficher.
+*Dépend de* : module Caisse (JGK-F02). *Critères vérifiés* : `PaymentIdempotencyTests.cs` — même clé soumise deux fois = un seul paiement et un seul débit du solde ; clés différentes = deux paiements réels ; clé absente = fonctionne comme avant ce ticket.
 
 **JGK-L02** [M] — Extension `network-guard.js` (retry, état « en attente d'envoi »)
-Retry automatique avec backoff pendant une micro-coupure ; état UI explicite tant que le serveur n'a pas confirmé. Aucune persistance de la saisie en attente (ni `localStorage`, ni IndexedDB) — perte assumée si l'onglet se ferme avant confirmation.
-*Dépend de* : JGK-L01. *Critères* : vérification manuelle (skill `run`) — coupure réseau pendant une saisie caisse, reprise sans doublon, pas de trace locale de la transaction après fermeture de l'onglet.
+**Statut : livré (26/08/2026), câblage écran restant — voir JGK-L03.** `window.networkGuard.submitWithRetry(url, options, config)` : retry avec backoff exponentiel (1s → 15s, 5 tentatives) tant que l'onglet reste ouvert, sur une erreur RÉSEAU uniquement (jamais sur une réponse HTTP, même une erreur métier). Callback `onStateChange('sending'|'retrying'|'done'|'failed', attempt)` pour piloter l'état UI. `newIdempotencyKey()` génère l'UUID à inclure par l'appelant dans son body AVANT le premier essai. Aucune persistance de la saisie en attente (ni `localStorage`, ni IndexedDB) — perte assumée si l'onglet se ferme avant confirmation.
+*Dépend de* : JGK-L01. *Critères* : la fonction ne retente jamais une réponse HTTP reçue (succès ou erreur métier), seulement l'absence de réponse.
+
+**JGK-L03** [M] — Câblage de `submitWithRetry` sur les écrans Caisse et Pointage
+Non livré. Le formulaire d'encaissement (`/caisse`) doit générer une `idempotencyKey` à l'ouverture (`newIdempotencyKey()`), l'inclure dans le body de `POST /finance/payments`, et afficher l'état « en attente d'envoi » sur `onStateChange`. Le formulaire d'appel (`/pointage` ou équivalent) doit appeler `submitWithRetry` sur `POST /attendance` et traiter un **409 reçu pendant un retry** (pas au premier essai) comme un succès silencieux — la feuille a déjà été enregistrée par la tentative précédente dont la réponse s'est perdue.
+*Dépend de* : JGK-L01, JGK-L02. *Critères* : vérification manuelle (skill `run`) — coupure réseau pendant une saisie caisse ou un appel, reprise sans doublon ni message d'erreur trompeur, pas de trace locale de la transaction après fermeture de l'onglet.
 
 ---
 
@@ -256,5 +261,6 @@ I01 → I03
 J02 → J06
 Paie/Pointage existants (EmployeeContract, FichePaie, TeacherHourRecord, ScheduleSlot) → K01
 EmployeeContract → K02
-{ F02, Pointage/Absences existants } → L01 → L02
+F02 → L01
+{ L01, L02 } → L03
 ```

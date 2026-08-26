@@ -51,6 +51,14 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             .IsUnique()
             .HasDatabaseName("UX_payments_receipt_number");
 
+        // Idempotence côté client (ticket JGK-L01) : index unique PARTIEL, comme InventoryItem.Code —
+        // la clé est absente sur tout paiement antérieur à ce ticket, et plusieurs paiements sans clé
+        // doivent pouvoir coexister.
+        builder.HasIndex(p => new { p.SchoolId, p.IdempotencyKey })
+            .IsUnique()
+            .HasFilter("\"IdempotencyKey\" IS NOT NULL")
+            .HasDatabaseName("UX_payments_idempotency_key");
+
         // Lister les versements d'une inscription (relevé de compte, futur écran caisse).
         builder.HasIndex(p => new { p.SchoolId, p.EnrollmentId })
             .HasDatabaseName("IX_payments_SchoolId_EnrollmentId");

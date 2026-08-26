@@ -20,7 +20,9 @@ public record CreateEmployeeContractCommand(
     ContractType Type,
     decimal BaseSalary,
     decimal HourlyRate,
-    decimal TransportAllowance) : IRequest<Guid>;
+    decimal TransportAllowance,
+    PayoutMethod PayoutMethod = PayoutMethod.Cash,
+    string? PayoutAccountReference = null) : IRequest<Guid>;
 
 public class CreateEmployeeContractCommandValidator : AbstractValidator<CreateEmployeeContractCommand>
 {
@@ -34,6 +36,8 @@ public class CreateEmployeeContractCommandValidator : AbstractValidator<CreateEm
         RuleFor(v => v.BaseSalary).GreaterThanOrEqualTo(0);
         RuleFor(v => v.HourlyRate).GreaterThanOrEqualTo(0);
         RuleFor(v => v.TransportAllowance).GreaterThanOrEqualTo(0);
+        RuleFor(v => v.PayoutMethod).IsInEnum();
+        RuleFor(v => v.PayoutAccountReference).MaximumLength(50);
 
         // Cohérence avec PayrollCalculator : un salaire se calcule sur HourlyRate s'il est renseigné,
         // sinon sur BaseSalary — un contrat Permanent sans BaseSalary ou Vacataire sans HourlyRate
@@ -81,7 +85,9 @@ public class CreateEmployeeContractCommandHandler(IApplicationDbContext context,
             Type = request.Type,
             BaseSalary = request.BaseSalary,
             HourlyRate = request.HourlyRate,
-            TransportAllowance = request.TransportAllowance
+            TransportAllowance = request.TransportAllowance,
+            PayoutMethod = request.PayoutMethod,
+            PayoutAccountReference = string.IsNullOrWhiteSpace(request.PayoutAccountReference) ? null : request.PayoutAccountReference.Trim()
         };
 
         context.EmployeeContracts.Add(contract);

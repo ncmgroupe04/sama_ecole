@@ -65,6 +65,13 @@ public class Payment : AuditableEntity, ITenantEntity
     /// </summary>
     public string ReceiptNumber { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Clé générée côté client (ticket JGK-L01, résilience réseau) : un retry après coupure sur LE
+    /// MÊME encaissement ne crée jamais un second paiement — RecordPaymentCommandHandler rejoue le
+    /// résultat déjà produit. Nullable : les paiements antérieurs à ce ticket n'en portent pas.
+    /// </summary>
+    public Guid? IdempotencyKey { get; set; }
+
     /// <summary>Utilisateur (module Finance/Directeur) qui a encaissé — issu du JWT, jamais du client.</summary>
     public Guid ReceivedByUserId { get; set; }
 

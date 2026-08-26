@@ -145,6 +145,8 @@ Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas 
 
 > **Casse réelle en base, ici corrigée en documentation seulement.** Les tables listées ci-dessus en §4.4/§4.5 respectent la convention PascalCase de §1.4 à l'exception de `schedule_slots`, `employee_contracts`, `employee_contract_histories` et `fiche_paies`, créées en snake_case (mêmes migrations que ci-dessus, plus `AddScheduleAndDisbursements`) — `TeacherAttendances` et `TeacherHourRecords`, elles, sont bien en PascalCase. Ce mélange est un fait acquis du schéma : renommer une table déjà appliquée en production est interdit (AGENTS.md, « Ne jamais faire »). Le nom réel en base fait foi pour toute migration ou requête SQL ; ne pas supposer la casse à partir de §1.4 seul.
 
+`employee_contracts` porte, depuis la migration `AddEmployeeContractPayoutMethod` (ticket JGK-K02), deux colonnes supplémentaires : `PayoutMethod` (`varchar(20)`, CHECK IN `Cash`/`BankTransfer`/`Wave`/`OrangeMoney`, NOT NULL, DEFAULT `Cash`) et `PayoutAccountReference` (`varchar(50)`, NULL — RIB/IBAN ou numéro mobile money, texte libre). Distinct de la colonne `PaymentMethod` du domaine Finance élèves (§5.5) : deux domaines qui ne partagent jamais une énumération, même si Wave/Orange Money s'y retrouvent conceptuellement des deux côtés.
+
 ### 4.6 Domaine Inventaire
 
 `inventory_categories`, `inventory_items`, `stock_movements`, `item_assignments` (spécification détaillée en §5.9).

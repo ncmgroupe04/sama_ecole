@@ -310,7 +310,8 @@ Gestion des contrats du personnel (enseignants titulaires, vacataires, personnel
 | Méthode | Route | Description |
 |---|---|---|
 | `GET` | `/api/v1/finance/employee-contracts` | Liste des contrats du personnel |
-| `POST` | `/api/v1/finance/employee-contracts` | Créer un contrat (type, salaire de base ou taux horaire) |
+| `POST` | `/api/v1/finance/employee-contracts` | Créer un contrat (type, salaire de base ou taux horaire, moyen de paiement) |
+| `PATCH` | `/api/v1/finance/employee-contracts/{id}` | Réviser un contrat actif (salaire, taux, prime, moyen de paiement) |
 | `GET` | `/api/v1/finance/payroll` | Liste des fiches de paie (filtrable par période) |
 | `POST` | `/api/v1/finance/payroll` | Générer la fiche de paie d'un employé pour un mois donné |
 | `GET` | `/api/v1/finance/payroll/{id}/pdf` | Bulletin de salaire (PDF A4) |
@@ -318,12 +319,15 @@ Gestion des contrats du personnel (enseignants titulaires, vacataires, personnel
 | `GET` | `/api/v1/finance/employee-contracts/{contractId}/hour-records` | Relevé des heures déclarées |
 | `GET` | `/api/v1/finance/employee-contracts/{contractId}/hour-records/sheet` | Fiche de suivi des heures (données) |
 | `GET` | `/api/v1/finance/employee-contracts/{contractId}/hour-records/sheet/pdf` | Fiche de suivi des heures (PDF) |
+| `GET` | `/api/v1/finance/employee-contracts/{contractId}/suggested-hours` | **Suggestion d'heures pour la paie** (ticket JGK-K01), rapprochée de l'emploi du temps |
 | `GET` | `/api/v1/finance/employee-contracts/{contractId}/work-certificate` | Attestation de travail (données) |
 | `GET` | `/api/v1/finance/employee-contracts/{contractId}/work-certificate/pdf` | Attestation de travail (PDF) |
 
 **Règles :**
 - Le calcul de la paie — brut (salaire de base, ou heures × taux horaire), retenues salariales (IPRES plafonnée, BRS), charges patronales (IPRES employeur, CSS plafonnée, CFCE), net à payer — est porté par `PayrollCalculator` dans la couche Application, jamais par le contrôleur ni par l'entité (règle #8 d'`AGENTS.md`).
 - Les heures déclarées via `hour-records` constituent une **fiche de suivi vérifiable**, volontairement non branchée sur le calcul automatique de la paie : le montant dû à un vacataire reste saisi et validé par un humain.
+- **`suggested-hours` est purement consultatif** (Volume 1 §14.3 amendé) : il agrège `hour-records` du mois et signale un écart avec l'emploi du temps planifié, mais n'écrit rien et ne modifie en rien le contrat de `POST /finance/payroll` — la Direction pré-remplit `hoursWorked` avec la valeur suggérée côté client, l'ajuste si besoin, puis soumet la commande existante inchangée.
+- **`payoutMethod`** (`Cash`/`BankTransfer`/`Wave`/`OrangeMoney`) et **`payoutAccountReference`** (RIB/IBAN ou numéro mobile money, texte libre) sont distincts du `PaymentMethod` du module Finance élèves (§7) — deux domaines qui ne partagent jamais une énumération. Coordonnées jamais journalisées en clair (Volume 7).
 - Un contrat n'est jamais supprimé physiquement (règle #6) : il est clôturé.
 
 ---
@@ -347,6 +351,8 @@ Ouverture/fermeture de la caisse de guichet, journal des encaissements de la jou
 - Une session déjà close ne peut pas être re-clôturée : la seconde tentative est rejetée en `400`. Tout redressement passe par une écriture nouvelle, jamais par une modification rétroactive (règle #4).
 - Les paiements annulés sont **exclus** du total, sans être effacés.
 - Le rapport de clôture est reproductible à l'identique après coup : il se recalcule à partir des paiements de la session, il n'est pas figé dans un blob.
+
+- **`POST /finance/payments` (l'encaissement lui-même) accepte un `idempotencyKey` optionnel** (ticket JGK-L01, résilience réseau — Volume 0 §0.8) : généré côté client à l'ouverture du formulaire, jamais régénéré à chaque tentative. Un retry après coupure réseau avec la MÊME clé ne crée jamais un second paiement — le serveur rejoue le résultat déjà produit (même `paymentId`/`receiptNumber`), y compris si la session de caisse a été close entre-temps.
 
 > **Limite connue — pas de rapprochement de caisse.** La clôture n'enregistre pas le **montant physiquement compté** par le caissier, et ne calcule donc **aucun écart** (`compté − théorique`). Le solde produit est purement théorique. Le contrôle qui donne sa valeur à une caisse — confronter l'espèce comptée au calcul — reste à construire ; il suppose un champ « montant compté » dans la commande de clôture et sa persistance sur la session. À arbitrer avant d'annoncer un module Caisse complet.
 

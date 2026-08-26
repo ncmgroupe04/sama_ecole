@@ -41,6 +41,7 @@ using SamaEcole.Application.Finance.Commands.CreateTeacherHourRecord;
 using SamaEcole.Application.Finance.Queries.GetTeacherHourRecords;
 using SamaEcole.Application.Finance.Queries.GetHourRecordSheet;
 using SamaEcole.Application.Finance.Queries.GetHourRecordSheetPdf;
+using SamaEcole.Application.Finance.Queries.GetSuggestedPayrollHours;
 using SamaEcole.Application.Finance.Commands.CreateFeeInstallmentPlan;
 using SamaEcole.Application.Finance.Commands.ApplyFeeInstallmentPlanToClassroom;
 using SamaEcole.Application.Finance.Commands.SendDebtorReminderBatch;
@@ -381,7 +382,13 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     }
 
     public record UpdateEmployeeContractRequest(
-        decimal BaseSalary, decimal HourlyRate, decimal TransportAllowance, string Reason, uint RowVersion);
+        decimal BaseSalary,
+        decimal HourlyRate,
+        decimal TransportAllowance,
+        string Reason,
+        uint RowVersion,
+        PayoutMethod PayoutMethod = PayoutMethod.Cash,
+        string? PayoutAccountReference = null);
 
     /// <summary>Augmentation de salaire ou révision du taux horaire (Volume 1 §14.1) — la seule voie de modification d'un contrat ACTIF.</summary>
     [HttpPatch("employee-contracts/{id:guid}")]
@@ -396,7 +403,8 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     {
         var result = await mediator.Send(
             new UpdateEmployeeContractCommand(
-                id, request.BaseSalary, request.HourlyRate, request.TransportAllowance, request.Reason, request.RowVersion),
+                id, request.BaseSalary, request.HourlyRate, request.TransportAllowance, request.Reason, request.RowVersion,
+                request.PayoutMethod, request.PayoutAccountReference),
             cancellationToken);
 
         return Ok(result);
@@ -667,6 +675,19 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetHourRecordSheet(Guid contractId, [FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetHourRecordSheetQuery(contractId, month, year), cancellationToken));
+
+    /// <summary>
+    /// Suggestion d'heures pour la paie du vacataire (ticket JGK-K01) — consultative, n'écrit rien.
+    /// La Direction pré-remplit HoursWorked avec cette valeur côté client puis soumet
+    /// POST /finance/payroll (GenerateFichePaieCommand) sans aucun changement de contrat sur celle-ci.
+    /// </summary>
+    [HttpGet("employee-contracts/{contractId:guid}/suggested-hours")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<SuggestedPayrollHoursDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSuggestedPayrollHours(
+        Guid contractId, [FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetSuggestedPayrollHoursQuery(contractId, month, year), cancellationToken));
 
     [HttpGet("employee-contracts/{contractId:guid}/hour-records/sheet/pdf")]
     [Authorize(Roles = "Directeur,Finance")]

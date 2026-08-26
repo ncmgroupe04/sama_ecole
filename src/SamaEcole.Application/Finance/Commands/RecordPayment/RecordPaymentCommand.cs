@@ -26,7 +26,13 @@ public record RecordPaymentCommand(
     /// scolarité (Category par défaut) est typiquement exonérée. Déclaré explicitement par la Finance,
     /// jamais déduit automatiquement d'une catégorie.
     /// </summary>
-    decimal? VatRate = null)
+    decimal? VatRate = null,
+
+    /// <summary>
+    /// Généré côté client à l'ouverture du formulaire de caisse (ticket JGK-L01). Un retry après
+    /// coupure réseau avec la MÊME clé ne crée jamais un second paiement — voir le Handler.
+    /// </summary>
+    Guid? IdempotencyKey = null)
     : IRequest<RecordPaymentResult>, IAuditableRequest;
 
 /// <summary>

@@ -112,6 +112,60 @@ window.networkGuard = {
         }
     },
 
+    /**
+     * Soumission résiliente d'une écriture métier (ticket JGK-L02) : retry avec backoff exponentiel
+     * tant que l'onglet reste ouvert, PENDANT une coupure réseau courte. Reste strictement dans le
+     * cadre D-01/D-09 (voir l'en-tête de ce fichier) : aucune persistance de la tentative — si l'onglet
+     * se ferme avant confirmation, la saisie est perdue par conception. C'est cette frontière, pas une
+     * limite technique, qui garde ce mécanisme dans « résilience réseau » et hors d'« offline-first ».
+     *
+     * Ne retente JAMAIS une erreur MÉTIER (4xx/5xx) : dès que le serveur répond, quelle que soit la
+     * réponse, l'appelant la reçoit immédiatement. Seule une erreur RÉSEAU (fetch qui ne reçoit aucune
+     * réponse — coupure, DNS, timeout) déclenche une nouvelle tentative.
+     *
+     * @param {string} url
+     * @param {RequestInit} [options] - options fetch (method, headers, body...), rejouées À
+     *   L'IDENTIQUE à chaque tentative. Si l'endpoint appelé attend une clé d'idempotence (ex.
+     *   POST /finance/payments, ticket JGK-L01), c'est à l'APPELANT de l'inclure dans `options.body`
+     *   AVANT le premier essai (voir `newIdempotencyKey()`) — cette fonction ne connaît pas la forme
+     *   du corps de chaque endpoint, elle se contente de renvoyer le même corps à chaque tentative.
+     * @param {object} [config]
+     * @param {number} [config.maxAttempts=5]
+     * @param {(state: 'sending'|'retrying'|'done'|'failed', attempt: number) => void} [config.onStateChange]
+     *   'sending' : première tentative. 'retrying' : nouvelle tentative après une coupure — l'appelant
+     *   y affiche l'état « en attente d'envoi ». 'done' : une réponse HTTP est arrivée (succès ou
+     *   erreur métier). 'failed' : maxAttempts atteint sans qu'aucune tentative n'ait joint le serveur.
+     * @returns {Promise<Response>}
+     */
+    async submitWithRetry(url, options = {}, config = {}) {
+        const maxAttempts = config.maxAttempts ?? 5;
+
+        for (let attempt = 1; ; attempt++) {
+            config.onStateChange?.(attempt === 1 ? 'sending' : 'retrying', attempt);
+
+            try {
+                const response = await fetch(url, options);
+                config.onStateChange?.('done', attempt);
+                return response;
+            } catch (networkError) {
+                if (attempt >= maxAttempts) {
+                    config.onStateChange?.('failed', attempt);
+                    throw networkError;
+                }
+
+                // Backoff exponentiel plafonné : 1s, 2s, 4s, 8s, puis 15s — assez patient pour une
+                // micro-coupure mobile sénégalaise typique, sans faire attendre l'utilisateur des minutes.
+                const delayMs = Math.min(1000 * 2 ** (attempt - 1), 15000);
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+        }
+    },
+
+    /** UUID v4 côté client pour `submitWithRetry` — à générer UNE FOIS par formulaire, pas par tentative. */
+    newIdempotencyKey() {
+        return crypto.randomUUID();
+    },
+
     registerServiceWorker() {
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
             window.addEventListener('load', () => {

@@ -26,10 +26,18 @@ public record UpdateEmployeeContractCommand(
     decimal HourlyRate,
     decimal TransportAllowance,
     string Reason,
-    uint RowVersion) : IRequest<UpdateEmployeeContractResult>, IAuditableRequest;
+    uint RowVersion,
+    PayoutMethod PayoutMethod = PayoutMethod.Cash,
+    string? PayoutAccountReference = null) : IRequest<UpdateEmployeeContractResult>, IAuditableRequest;
 
 public record UpdateEmployeeContractResult(
-    Guid ContractId, decimal BaseSalary, decimal HourlyRate, decimal TransportAllowance, uint RowVersion);
+    Guid ContractId,
+    decimal BaseSalary,
+    decimal HourlyRate,
+    decimal TransportAllowance,
+    PayoutMethod PayoutMethod,
+    string? PayoutAccountReference,
+    uint RowVersion);
 
 public class UpdateEmployeeContractCommandHandler(
     IApplicationDbContext dbContext,
@@ -76,14 +84,21 @@ public class UpdateEmployeeContractCommandHandler(
             ]);
         }
 
+        var normalizedReference = string.IsNullOrWhiteSpace(request.PayoutAccountReference)
+            ? null
+            : request.PayoutAccountReference.Trim();
+
         // Rien ne change : ne pas écrire, sans quoi l'historique se remplirait d'entrées vides et le
         // verrou optimiste n'aurait rien à arbitrer.
         if (contract.BaseSalary == request.BaseSalary
             && contract.HourlyRate == request.HourlyRate
-            && contract.TransportAllowance == request.TransportAllowance)
+            && contract.TransportAllowance == request.TransportAllowance
+            && contract.PayoutMethod == request.PayoutMethod
+            && contract.PayoutAccountReference == normalizedReference)
         {
             return new UpdateEmployeeContractResult(
-                contract.Id, contract.BaseSalary, contract.HourlyRate, contract.TransportAllowance, request.RowVersion);
+                contract.Id, contract.BaseSalary, contract.HourlyRate, contract.TransportAllowance,
+                contract.PayoutMethod, contract.PayoutAccountReference, request.RowVersion);
         }
 
         // Cœur du verrou optimiste : la version LUE PAR LE CLIENT devient la valeur d'origine attendue
@@ -91,30 +106,38 @@ public class UpdateEmployeeContractCommandHandler(
         // SaveChangesAsync lève une ConcurrencyConflictException -> 409.
         dbContext.SetOriginalConcurrencyToken(contract, request.RowVersion);
 
-        var previousBaseSalary = contract.BaseSalary;
-        var previousHourlyRate = contract.HourlyRate;
-        var previousTransportAllowance = contract.TransportAllowance;
+        // L'entrée EmployeeContractHistory ne trace QUE les montants (AGENTS.md règle #4) : un
+        // changement de PayoutMethod seul ne doit jamais produire une ligne Previous==New qui
+        // affirmerait un changement de rémunération qui n'a pas eu lieu.
+        var amountsChanged = contract.BaseSalary != request.BaseSalary
+            || contract.HourlyRate != request.HourlyRate
+            || contract.TransportAllowance != request.TransportAllowance;
+
+        if (amountsChanged)
+        {
+            dbContext.EmployeeContractHistories.Add(new EmployeeContractHistory
+            {
+                SchoolId = schoolId,
+                EmployeeContractId = contract.Id,
+                ChangeType = EmployeeContractChangeType.Amended,
+                PreviousBaseSalary = contract.BaseSalary,
+                PreviousHourlyRate = contract.HourlyRate,
+                PreviousTransportAllowance = contract.TransportAllowance,
+                NewBaseSalary = request.BaseSalary,
+                NewHourlyRate = request.HourlyRate,
+                NewTransportAllowance = request.TransportAllowance,
+                EndDate = null,
+                Reason = request.Reason,
+                ChangedByUserId = actorId,
+                ChangedAt = timeProvider.GetUtcNow()
+            });
+        }
 
         contract.BaseSalary = request.BaseSalary;
         contract.HourlyRate = request.HourlyRate;
         contract.TransportAllowance = request.TransportAllowance;
-
-        dbContext.EmployeeContractHistories.Add(new EmployeeContractHistory
-        {
-            SchoolId = schoolId,
-            EmployeeContractId = contract.Id,
-            ChangeType = EmployeeContractChangeType.Amended,
-            PreviousBaseSalary = previousBaseSalary,
-            PreviousHourlyRate = previousHourlyRate,
-            PreviousTransportAllowance = previousTransportAllowance,
-            NewBaseSalary = request.BaseSalary,
-            NewHourlyRate = request.HourlyRate,
-            NewTransportAllowance = request.TransportAllowance,
-            EndDate = null,
-            Reason = request.Reason,
-            ChangedByUserId = actorId,
-            ChangedAt = timeProvider.GetUtcNow()
-        });
+        contract.PayoutMethod = request.PayoutMethod;
+        contract.PayoutAccountReference = normalizedReference;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -127,6 +150,7 @@ public class UpdateEmployeeContractCommandHandler(
             .FirstAsync(cancellationToken);
 
         return new UpdateEmployeeContractResult(
-            contract.Id, contract.BaseSalary, contract.HourlyRate, contract.TransportAllowance, newRowVersion);
+            contract.Id, contract.BaseSalary, contract.HourlyRate, contract.TransportAllowance,
+            contract.PayoutMethod, contract.PayoutAccountReference, newRowVersion);
     }
 }

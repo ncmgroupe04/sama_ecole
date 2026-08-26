@@ -2061,6 +2061,37 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /finance/employee-contracts/{contractId}/suggested-hours:
+    get:
+      tags: [Finance]
+      summary: Suggestion d'heures pour la paie du vacataire (ticket JGK-K01)
+      description: >-
+        Agrège hour-records du mois et le rapproche de l'emploi du temps planifié (ScheduleSlot).
+        PUREMENT CONSULTATIF — n'écrit rien, ne modifie en rien POST /finance/payroll : la Direction
+        pré-remplit hoursWorked avec suggestedHours côté client, l'ajuste si besoin, puis soumet la
+        commande existante inchangée (Volume 1 §14.3 amendé).
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: month
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 12 }
+        - name: year
+          in: query
+          required: true
+          schema: { type: integer, minimum: 2000 }
+      responses:
+        '200':
+          description: Suggestion et écarts éventuels
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SuggestedPayrollHours' }
+        '403': { description: Réservé au Directeur et à la Finance }
+        '404': { description: Contrat introuvable dans cet établissement }
+
   /finance/employee-contracts/{id}/close:
     post:
       tags: [Finance]
@@ -4430,6 +4461,14 @@ components:
         enrollmentId: { type: string, format: uuid }
         amount: { type: number, description: "FCFA, strictement positif, jamais supérieur au solde restant." }
         method: { type: string, enum: [Cash, Cheque, Transfer, MobileMoney] }
+        idempotencyKey:
+          type: string
+          format: uuid
+          nullable: true
+          description: >-
+            Généré côté client à l'ouverture du formulaire de caisse (ticket JGK-L01), jamais régénéré
+            à chaque tentative. Un retry après coupure réseau avec la MÊME clé rejoue le résultat déjà
+            produit (même paymentId/receiptNumber) au lieu de créer un second encaissement.
 
     PaymentResult:
       type: object
@@ -4804,6 +4843,13 @@ components:
           type: boolean
           description: Faux pour FreeTrialMonths/FullDiscount — le paiement peut être sauté entièrement.
 
+    PayoutMethod:
+      type: string
+      enum: [Cash, BankTransfer, Wave, OrangeMoney]
+      description: >-
+        Moyen de règlement du salaire (ticket JGK-K02) — distinct du PaymentMethod du module Finance
+        élèves, un domaine différent qui ne doit jamais partager cette énumération.
+
     EmployeeContract:
       type: object
       description: Ligne de GET /finance/employee-contracts (Volume 1 §14.1).
@@ -4817,6 +4863,11 @@ components:
         baseSalary: { type: number }
         hourlyRate: { type: number }
         transportAllowance: { type: number }
+        payoutMethod: { $ref: '#/components/schemas/PayoutMethod' }
+        payoutAccountReference:
+          type: string
+          nullable: true
+          description: RIB/IBAN pour BankTransfer, numéro de téléphone pour Wave/OrangeMoney. Jamais journalisé en clair (Volume 7).
         endDate:
           type: string
           format: date
@@ -4838,6 +4889,8 @@ components:
         baseSalary: { type: number, minimum: 0, description: "Obligatoire (> 0) si type=Permanent." }
         hourlyRate: { type: number, minimum: 0, description: "Obligatoire (> 0) si type=Vacataire." }
         transportAllowance: { type: number, minimum: 0 }
+        payoutMethod: { allOf: [{ $ref: '#/components/schemas/PayoutMethod' }], default: Cash }
+        payoutAccountReference: { type: string, nullable: true, maxLength: 50 }
 
     UpdateEmployeeContractRequest:
       type: object
@@ -4846,6 +4899,8 @@ components:
         baseSalary: { type: number, minimum: 0 }
         hourlyRate: { type: number, minimum: 0 }
         transportAllowance: { type: number, minimum: 0 }
+        payoutMethod: { allOf: [{ $ref: '#/components/schemas/PayoutMethod' }], default: Cash }
+        payoutAccountReference: { type: string, nullable: true, maxLength: 50 }
         reason: { type: string, minLength: 5, maxLength: 500 }
         rowVersion:
           type: integer
@@ -4859,6 +4914,8 @@ components:
         baseSalary: { type: number }
         hourlyRate: { type: number }
         transportAllowance: { type: number }
+        payoutMethod: { $ref: '#/components/schemas/PayoutMethod' }
+        payoutAccountReference: { type: string, nullable: true }
         rowVersion:
           type: integer
           format: int64
@@ -5499,3 +5556,21 @@ components:
             properties:
               schoolYearLabel: { type: string }
               successRate: { type: number, format: double }
+
+    SuggestedPayrollHours:
+      type: object
+      description: Réponse de GET /finance/employee-contracts/{contractId}/suggested-hours — purement consultative.
+      properties:
+        employeeContractId: { type: string, format: uuid }
+        suggestedHours: { type: number, description: Somme des hour-records du mois. }
+        discrepancies:
+          type: array
+          items: { $ref: '#/components/schemas/PayrollHoursDiscrepancy' }
+
+    PayrollHoursDiscrepancy:
+      type: object
+      description: Écart, pour un jour donné, entre heures déclarées et heures planifiées (ScheduleSlot du même jour de semaine).
+      properties:
+        date: { type: string, format: date }
+        declaredHours: { type: number }
+        scheduledHours: { type: number }
