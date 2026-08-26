@@ -1,0 +1,890 @@
+@{
+    ViewData["Title"] = "Inventaire";
+}
+
+@* auth.js, api.js, pdf-preview.js et formatters.js sont chargés par _Layout : les inclure ici les
+   exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/inventory.js" asp-append-version="true"></script>
+}
+
+<div x-data="inventoryView()">
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="page-title">Inventaire</h1>
+            <p class="page-subtitle">Patrimoine, journal de stock et prêts de matériel.</p>
+        </div>
+        <button type="button" x-show="canManageCatalog" x-cloak x-on:click="printInventoryReport()" class="btn-modal-secondary group">
+            <icon name="print" class="w-4 h-4" />
+            Fiche d'inventaire (PDF)
+        </button>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- Onglets -->
+    <div class="mt-6">
+        <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Onglets Inventaire">
+            <button type="button" role="tab" x-on:click="switchTab('catalogue')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('catalogue')">
+                Catalogue
+            </button>
+            <button type="button" role="tab" x-on:click="switchTab('categories')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('categories')">
+                Catégories
+            </button>
+            <button type="button" role="tab" x-on:click="switchTab('mouvements')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('mouvements')">
+                Mouvements de stock
+            </button>
+            <button type="button" role="tab" x-on:click="switchTab('prets')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('prets')">
+                Prêts &amp; Décharges
+            </button>
+        </nav>
+    </div>
+
+    <!-- ============================= ONGLET CATALOGUE ============================= -->
+    <div x-show="tab === 'catalogue'" x-cloak class="mt-6 space-y-6">
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <stat-card label="Catégories" icon="layers" accent="primary"><span x-text="categories.length">0</span></stat-card>
+            <stat-card label="Biens (lots)" icon="archive" accent="blue"><span x-text="totalItemsCount">0</span></stat-card>
+            <stat-card label="Unités au total" icon="database" accent="purple"><span x-text="totalUnitsCount">0</span></stat-card>
+        </div>
+
+        <div class="card">
+            <div class="p-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="relative w-full sm:w-56 flex items-center">
+                        <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <icon name="search" class="w-4 h-4 text-slate-400" />
+                        </span>
+                        <input type="search" x-model="itemFilters.search" x-on:input.debounce.400ms="applyItemFilters()"
+                               placeholder="Rechercher un bien ou un code…" aria-label="Rechercher un bien"
+                               class="input-field !my-0 pl-9 pr-3 w-full" />
+                    </div>
+                    <select-field model="itemFilters.categoryId" on-change="applyItemFilters()" aria-label="Filtrer par catégorie"
+                                  class="mt-0 w-48" placeholder="Toutes catégories"
+                                  options-expr="[{value:'',label:'Toutes catégories'}].concat(categoryOptions)" />
+                    <select-field model="itemFilters.roomId" on-change="applyItemFilters()" aria-label="Filtrer par emplacement"
+                                  class="mt-0 w-48" placeholder="Tous emplacements"
+                                  options-expr="[{value:'',label:'Tous emplacements'}].concat(roomOptions)" />
+                    <select-field model="itemFilters.condition" on-change="applyItemFilters()" aria-label="Filtrer par état"
+                                  class="mt-0 w-40" placeholder="Tous états" options-expr="conditionFilterOptions" />
+                    <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer whitespace-nowrap">
+                        <input type="checkbox" x-model="itemFilters.outOfStockOnly" x-on:change="applyItemFilters()" class="checkbox-field">
+                        En rupture uniquement
+                    </label>
+                    <button type="button" x-on:click="resetItemFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+                        Réinitialiser
+                    </button>
+                </div>
+                <button type="button" x-show="canManageCatalog" x-cloak x-on:click="openCreateItem()" class="btn-modal-primary group ml-auto">
+                    <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+                    Nouveau bien
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4">Désignation</th>
+                            <th class="py-3 px-4">Catégorie</th>
+                            <th class="py-3 px-4">Emplacement</th>
+                            <th class="py-3 px-4 text-right">Total</th>
+                            <th class="py-3 px-4 text-right">Disponible</th>
+                            <th class="py-3 px-4 text-right">Prêtés</th>
+                            <th class="py-3 px-4">État</th>
+                            <th class="py-3 px-4 text-right">Prix indicatif</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-if="isLoadingItems">
+                            <template x-for="i in 5" :key="i">
+                                <tr><td colspan="9" class="py-3 px-4"><div class="skeleton h-4 w-full"></div></td></tr>
+                            </template>
+                        </template>
+
+                        <tr x-show="!isLoadingItems && items.length === 0" x-cloak>
+                            <td colspan="9">
+                                <empty-state icon="archive" title="Aucun bien ne correspond à ces filtres."
+                                             hint="Créez un bien ou ajustez les filtres ci-dessus." />
+                            </td>
+                        </tr>
+
+                        <template x-for="item in items" :key="item.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4">
+                                    <button type="button" x-on:click="openItemDetail(item)" class="font-medium text-slate-900 hover:text-indigo-600 text-left transition-colors">
+                                        <span x-text="item.name"></span>
+                                    </button>
+                                    <p x-show="item.code" x-cloak class="text-xs text-slate-400 font-mono" x-text="item.code"></p>
+                                </td>
+                                <td class="py-3 px-4 text-slate-600" x-text="item.categoryName"></td>
+                                <td class="py-3 px-4 text-slate-600" x-text="item.roomName || item.locationLabel || '—'"></td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="item.quantityTotal"></td>
+                                <td class="py-3 px-4 text-right amount" :class="item.quantityAvailable === 0 ? 'text-rose-600 font-semibold' : 'text-slate-600'" x-text="item.quantityAvailable"></td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="item.onLoanQuantity"></td>
+                                <td class="py-3 px-4">
+                                    <badge :variant="item.condition === 'HorsService' ? 'danger' : (item.condition === 'AReparer' ? 'warning' : 'neutral')">
+                                        <span x-text="conditionLabel(item.condition)"></span>
+                                    </badge>
+                                    <span x-show="item.isConsumable" x-cloak class="ml-1 text-[11px] text-slate-400">(consommable)</span>
+                                </td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="formatAmount(item.unitPrice)"></td>
+                                <td class="py-3 px-4">
+                                    <row-actions>
+                                        <row-action icon="eye" label="Voir la fiche" on-click="openItemDetail(item)" />
+                                        <row-action icon="database" label="Enregistrer un mouvement" on-click="openMovementModal(item)" show="canManageStock" />
+                                        <row-action icon="link" label="Prêter" on-click="openAssignmentModal(item)" show="canManageStock && !item.isConsumable" />
+                                        <row-action icon="pencil" label="Modifier" on-click="openEditItem(item)" show="canManageCatalog" />
+                                        <row-action icon="trash-2" label="Archiver" on-click="openDeleteItem(item)" show="canManageCatalog" variant="danger" />
+                                    </row-actions>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <pagination page="itemsPage" page-size="itemsPageSize" total="itemsTotalCount" on-change="loadItems()" />
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET CATÉGORIES ============================= -->
+    <div x-show="tab === 'categories'" x-cloak class="mt-6">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-sm font-semibold text-slate-700">Catégories de biens</h2>
+                <button type="button" x-show="canManageCatalog" x-cloak x-on:click="openCreateCategory()" class="btn-modal-primary group">
+                    <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+                    Nouvelle catégorie
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4">Nom</th>
+                            <th class="py-3 px-4">Description</th>
+                            <th class="py-3 px-4 text-right">Biens</th>
+                            <th class="py-3 px-4 text-right">Unités</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr x-show="categories.length === 0" x-cloak>
+                            <td colspan="5">
+                                <empty-state icon="layers" title="Aucune catégorie n'est configurée."
+                                             hint="Créez une première catégorie pour commencer à cataloguer vos biens." />
+                            </td>
+                        </tr>
+                        <template x-for="category in categories" :key="category.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 font-medium text-slate-900" x-text="category.name"></td>
+                                <td class="py-3 px-4 text-slate-500" x-text="category.description || '—'"></td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="category.itemCount"></td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="category.totalQuantity"></td>
+                                <td class="py-3 px-4">
+                                    <row-actions show="canManageCatalog">
+                                        <row-action icon="pencil" label="Modifier" on-click="openEditCategory(category)" />
+                                        <row-action icon="trash-2" label="Archiver" on-click="openDeleteCategory(category)" variant="danger" />
+                                    </row-actions>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET MOUVEMENTS ============================= -->
+    <div x-show="tab === 'mouvements'" x-cloak class="mt-6">
+        <div class="card">
+            <div class="p-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-end gap-3">
+                    <select-field model="movementFilters.itemId" on-change="applyMovementFilters()" aria-label="Filtrer par bien"
+                                  class="mt-0 w-56" placeholder="Tous les biens"
+                                  options-expr="[{value:'',label:'Tous les biens'}].concat(pickerItems.map(i => ({value: i.id, label: i.name})))" />
+                    <select-field model="movementFilters.type" on-change="applyMovementFilters()" aria-label="Filtrer par type"
+                                  class="mt-0 w-48" placeholder="Tous les types" options-expr="movementTypeFilterOptions" />
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Du</label>
+                        <date-field model="movementFilters.from" aria-label="Du" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Au</label>
+                        <date-field model="movementFilters.to" aria-label="Au" />
+                    </div>
+                    <button type="button" x-on:click="applyMovementFilters()" class="btn-modal-secondary text-sm">Filtrer</button>
+                    <button type="button" x-on:click="resetMovementFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+                        Réinitialiser
+                    </button>
+                </div>
+                <button type="button" x-show="canManageStock" x-cloak x-on:click="openMovementModal()" class="btn-modal-primary group ml-auto">
+                    <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+                    Nouveau mouvement
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4">Date</th>
+                            <th class="py-3 px-4">Bien</th>
+                            <th class="py-3 px-4">Type</th>
+                            <th class="py-3 px-4 text-right">Quantité</th>
+                            <th class="py-3 px-4">Motif</th>
+                            <th class="py-3 px-4">Contrepartie</th>
+                            <th class="py-3 px-4 text-right">Total après</th>
+                            <th class="py-3 px-4 text-right">Disponible après</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-if="isLoadingMovements">
+                            <template x-for="i in 5" :key="i">
+                                <tr><td colspan="8" class="py-3 px-4"><div class="skeleton h-4 w-full"></div></td></tr>
+                            </template>
+                        </template>
+
+                        <tr x-show="!isLoadingMovements && movements.length === 0" x-cloak>
+                            <td colspan="8">
+                                <empty-state icon="database" title="Aucun mouvement ne correspond à ces filtres." />
+                            </td>
+                        </tr>
+
+                        <template x-for="m in movements" :key="m.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 text-slate-600 whitespace-nowrap" x-text="formatDate(m.movementDate)"></td>
+                                <td class="py-3 px-4">
+                                    <span class="font-medium text-slate-900" x-text="m.itemName"></span>
+                                    <p x-show="m.itemCode" x-cloak class="text-xs text-slate-400 font-mono" x-text="m.itemCode"></p>
+                                </td>
+                                <td class="py-3 px-4"><badge variant="neutral" x-text="movementTypeLabel(m.type)"></badge></td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="m.quantity"></td>
+                                <td class="py-3 px-4 text-slate-600" x-text="m.reason"></td>
+                                <td class="py-3 px-4 text-slate-500" x-text="m.counterpartyLabel || '—'"></td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="m.quantityTotalAfter"></td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="m.quantityAvailableAfter"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <pagination page="movementsPage" page-size="movementsPageSize" total="movementsTotalCount" on-change="loadMovements()" />
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET PRÊTS & DÉCHARGES ============================= -->
+    <div x-show="tab === 'prets'" x-cloak class="mt-6">
+        <div class="card">
+            <div class="p-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <select-field model="assignmentFilters.status" on-change="applyAssignmentFilters()" aria-label="Filtrer par statut"
+                                  class="mt-0 w-52" placeholder="Tous les statuts" options-expr="assignmentStatusFilterOptions" />
+                    <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer whitespace-nowrap">
+                        <input type="checkbox" x-model="assignmentFilters.overdueOnly" x-on:change="applyAssignmentFilters()" class="checkbox-field">
+                        En retard uniquement
+                    </label>
+                    <button type="button" x-on:click="resetAssignmentFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+                        Réinitialiser
+                    </button>
+                </div>
+                <button type="button" x-show="canManageStock" x-cloak x-on:click="openAssignmentModal()" class="btn-modal-primary group ml-auto">
+                    <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+                    Nouveau prêt
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-3 px-4">Référence</th>
+                            <th class="py-3 px-4">Bien</th>
+                            <th class="py-3 px-4">Bénéficiaire</th>
+                            <th class="py-3 px-4 text-right">Quantité</th>
+                            <th class="py-3 px-4">Remise</th>
+                            <th class="py-3 px-4">Retour prévu</th>
+                            <th class="py-3 px-4">Statut</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-if="isLoadingAssignments">
+                            <template x-for="i in 5" :key="i">
+                                <tr><td colspan="8" class="py-3 px-4"><div class="skeleton h-4 w-full"></div></td></tr>
+                            </template>
+                        </template>
+
+                        <tr x-show="!isLoadingAssignments && assignments.length === 0" x-cloak>
+                            <td colspan="8">
+                                <empty-state icon="link" title="Aucun prêt ne correspond à ces filtres."
+                                             hint="Enregistrez un prêt pour suivre le matériel confié à un élève, un enseignant ou un agent." />
+                            </td>
+                        </tr>
+
+                        <template x-for="a in assignments" :key="a.id">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4 font-mono text-xs text-slate-500" x-text="a.reference"></td>
+                                <td class="py-3 px-4">
+                                    <span class="font-medium text-slate-900" x-text="a.itemName"></span>
+                                    <p x-show="a.itemCode" x-cloak class="text-xs text-slate-400 font-mono" x-text="a.itemCode"></p>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="text-slate-700" x-text="a.beneficiaryLabel"></span>
+                                    <p class="text-xs text-slate-400" x-text="beneficiaryTypeLabel(a.beneficiaryType)"></p>
+                                </td>
+                                <td class="py-3 px-4 text-right amount text-slate-600" x-text="`${a.returnedQuantity}/${a.quantity}`"></td>
+                                <td class="py-3 px-4 text-slate-600 whitespace-nowrap" x-text="formatDate(a.assignedOn)"></td>
+                                <td class="py-3 px-4 whitespace-nowrap" :class="a.isOverdue ? 'text-rose-600 font-semibold' : 'text-slate-600'"
+                                    x-text="a.dueOn ? formatDate(a.dueOn) : 'Non fixé'"></td>
+                                <td class="py-3 px-4">
+                                    <badge :variant="a.isOverdue ? 'danger' : (a.status === 'Restitue' ? 'success' : (a.status === 'Perdu' ? 'danger' : 'warning'))">
+                                        <span x-text="a.isOverdue ? 'En retard' : assignmentStatusLabel(a.status)"></span>
+                                    </badge>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <row-actions>
+                                        <row-action icon="print" label="Imprimer la décharge" on-click="printDischargeNote(a)" />
+                                        <row-action icon="checkmark-circle" label="Enregistrer une restitution" on-click="openReturnAssignment(a)"
+                                                    show="canManageStock && (a.status === 'EnCours' || a.status === 'PartiellementRestitue')" />
+                                        <row-action icon="block" label="Annuler la fiche" on-click="openCancelAssignment(a)"
+                                                    show="canManageStock && a.status === 'EnCours'" variant="danger" />
+                                    </row-actions>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <pagination page="assignmentsPage" page-size="assignmentsPageSize" total="assignmentsTotalCount" on-change="loadAssignments()" />
+        </div>
+    </div>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALES — Catalogue (biens)
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell open="isCreateItemOpen" on-close="closeCreateItem()" title="Nouveau bien" size="lg">
+        <modal-subtitle>Un bien est un LOT : une quantité de matériel identique (ex. 40 manuels, 1 vidéoprojecteur).</modal-subtitle>
+        <div x-show="createItemErrors.global" x-cloak class="form-error-banner" x-text="createItemErrors.global"></div>
+        <form x-on:submit.prevent="submitCreateItem()" novalidate class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Désignation</label>
+                    <input type="text" x-model="newItem.name" required maxlength="150" placeholder="ex : Manuel de mathématiques CM2"
+                           class="input-field" :class="createItemErrors.name && 'input-field-error'">
+                    <p x-show="createItemErrors.name" x-text="createItemErrors.name" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label">Code d'inventaire</label>
+                    <input type="text" x-model="newItem.code" maxlength="50" placeholder="Facultatif — code-barres, immatriculation…"
+                           class="input-field" :class="createItemErrors.code && 'input-field-error'">
+                    <p x-show="createItemErrors.code" x-text="createItemErrors.code" class="field-error"></p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Catégorie</label>
+                    <select-field model="newItem.categoryId" required="true" placeholder="Sélectionner une catégorie"
+                                  aria-label="Catégorie" options-expr="categoryOptions" />
+                    <p x-show="createItemErrors.categoryid" x-text="createItemErrors.categoryid" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label form-label-required">État</label>
+                    <select-field model="newItem.condition" required="true" aria-label="État" options-expr="conditionOptions" />
+                </div>
+            </div>
+            <div>
+                <label class="form-label">Quantité initiale</label>
+                <input type="number" x-model="newItem.initialQuantity" min="0" class="input-field"
+                       :class="createItemErrors.initialquantity && 'input-field-error'">
+                <p class="text-xs text-slate-400 mt-1">Devient un mouvement d'entrée dans le journal. Zéro si le bien est attendu mais pas encore livré.</p>
+                <p x-show="createItemErrors.initialquantity" x-text="createItemErrors.initialquantity" class="field-error"></p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Salle d'entreposage</label>
+                    <select-field model="newItem.roomId" placeholder="Aucune (emplacement libre ci-dessous)" aria-label="Salle" options-expr="roomOptions" />
+                    <p x-show="createItemErrors.roomid" x-text="createItemErrors.roomid" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label">Emplacement (texte libre)</label>
+                    <input type="text" x-model="newItem.locationLabel" maxlength="100" placeholder="ex : Réserve A" class="input-field">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Prix unitaire indicatif (FCFA)</label>
+                    <input type="number" x-model="newItem.unitPrice" min="0" placeholder="Facultatif" class="input-field"
+                           :class="createItemErrors.unitprice && 'input-field-error'">
+                    <p class="text-xs text-slate-400 mt-1">Sans portée comptable — sert uniquement à valoriser la fiche d'inventaire.</p>
+                </div>
+                <div class="flex items-start gap-2 sm:mt-6">
+                    <input id="new-item-consumable" type="checkbox" x-model="newItem.isConsumable" class="checkbox-field mt-1">
+                    <label for="new-item-consumable" class="text-sm text-slate-700">
+                        Consommable
+                        <span class="block text-xs text-slate-400">Se distribue et ne revient jamais (craie, ramettes…) — ne peut pas être prêté.</span>
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="form-label">Notes</label>
+                <textarea x-model="newItem.notes" rows="2" maxlength="500" class="input-field"></textarea>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeCreateItem()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingItem" class="btn-modal-primary group">
+                    <span x-text="isSavingItem ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="editingItem" on-close="closeEditItem()" title="Modifier le bien" size="lg">
+        <modal-subtitle><span x-text="editingItem ? editingItem.name : ''"></span></modal-subtitle>
+        <div x-show="editItemErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editItemErrors.global"></div>
+        <form x-on:submit.prevent="submitEditItem()" novalidate class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Désignation</label>
+                    <input type="text" x-model="editingItem.name" required maxlength="150" class="input-field"
+                           :class="editItemErrors.name && 'input-field-error'">
+                    <p x-show="editItemErrors.name" x-cloak x-text="editItemErrors.name" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label">Code d'inventaire</label>
+                    <input type="text" x-model="editingItem.code" maxlength="50" class="input-field"
+                           :class="editItemErrors.code && 'input-field-error'">
+                    <p x-show="editItemErrors.code" x-cloak x-text="editItemErrors.code" class="field-error"></p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Catégorie</label>
+                    <select-field model="editingItem.categoryId" required="true" aria-label="Catégorie" options-expr="categoryOptions" />
+                    <p x-show="editItemErrors.categoryid" x-cloak x-text="editItemErrors.categoryid" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label form-label-required">État</label>
+                    <select-field model="editingItem.condition" required="true" aria-label="État" options-expr="conditionOptions" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Salle d'entreposage</label>
+                    <select-field model="editingItem.roomId" placeholder="Aucune (emplacement libre ci-dessous)" aria-label="Salle" options-expr="roomOptions" />
+                    <p x-show="editItemErrors.roomid" x-cloak x-text="editItemErrors.roomid" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label">Emplacement (texte libre)</label>
+                    <input type="text" x-model="editingItem.locationLabel" maxlength="100" class="input-field">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Prix unitaire indicatif (FCFA)</label>
+                    <input type="number" x-model="editingItem.unitPrice" min="0" class="input-field"
+                           :class="editItemErrors.unitprice && 'input-field-error'">
+                </div>
+                <div class="flex items-start gap-2 sm:mt-6">
+                    <input id="edit-item-consumable" type="checkbox" x-model="editingItem.isConsumable" class="checkbox-field mt-1">
+                    <label for="edit-item-consumable" class="text-sm text-slate-700">
+                        Consommable
+                        <span class="block text-xs text-slate-400">Refusé (409) tant que des prêts de ce bien sont encore en cours.</span>
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="form-label">Notes</label>
+                <textarea x-model="editingItem.notes" rows="2" maxlength="500" class="input-field"></textarea>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeEditItem()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingEditItem" class="btn-modal-primary group">
+                    <span x-text="isSavingEditItem ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="deletingItem" on-close="closeDeleteItem()" size="md">
+        <modal-title>Archiver le bien</modal-title>
+        <modal-subtitle>
+            <span class="font-semibold text-slate-900" x-text="deletingItem ? deletingItem.name : ''"></span>
+            sera archivé et n'apparaîtra plus dans le catalogue.
+        </modal-subtitle>
+        <div x-show="deleteItemError" x-cloak class="form-error-banner" x-text="deleteItemError"></div>
+        <p class="text-sm text-slate-500">Impossible si des prêts de ce bien sont encore en cours : clôturez-les d'abord.</p>
+        <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <button type="button" x-on:click="closeDeleteItem()" class="btn-modal-secondary group">Annuler</button>
+            <button type="button" x-on:click="confirmDeleteItem()" :disabled="isDeletingItem" class="btn-modal-danger">
+                <span x-text="isDeletingItem ? 'Suppression...' : 'Archiver le bien'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    @* Fiche détaillée d'un bien — lecture seule : historique récent + prêts en cours. *@
+    <modal-shell open="detailItem" on-close="closeItemDetail()" size="xl">
+        <modal-title><span x-text="detailItem ? detailItem.name : ''"></span></modal-title>
+        <modal-subtitle>
+            <span x-show="detailItem && detailItem.code" x-cloak>Code : <span x-text="detailItem ? detailItem.code : ''"></span> · </span>
+            <span x-text="detailItem ? detailItem.categoryName : ''"></span>
+        </modal-subtitle>
+
+        <div x-show="detailError" x-cloak class="form-error-banner" x-text="detailError"></div>
+
+        <template x-if="isLoadingDetail">
+            <div class="space-y-3">
+                <div class="skeleton h-20 w-full rounded-xl"></div>
+                <div class="skeleton h-32 w-full rounded-xl"></div>
+            </div>
+        </template>
+
+        <template x-if="!isLoadingDetail && detailItem && detailItem.quantityTotal !== undefined">
+            <div class="space-y-6">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <stat-card size="compact" label="Total" icon="archive"><span x-text="detailItem.quantityTotal"></span></stat-card>
+                    <stat-card size="compact" label="Disponible" icon="database" accent="success"><span x-text="detailItem.quantityAvailable"></span></stat-card>
+                    <stat-card size="compact" label="Prêtés" icon="link" accent="warning"><span x-text="detailItem.onLoanQuantity"></span></stat-card>
+                    <stat-card size="compact" label="État" icon="alert-circle"><span x-text="conditionLabel(detailItem.condition)"></span></stat-card>
+                </div>
+
+                <div class="text-sm space-y-1">
+                    <p class="text-slate-600"><span class="font-medium text-slate-700">Emplacement : </span><span x-text="detailItem.roomName || detailItem.locationLabel || 'Non précisé'"></span></p>
+                    <p class="text-slate-600" x-show="detailItem.unitPrice" x-cloak><span class="font-medium text-slate-700">Prix indicatif : </span><span x-text="formatAmount(detailItem.unitPrice)"></span></p>
+                    <p class="text-slate-600" x-show="detailItem.notes" x-cloak><span class="font-medium text-slate-700">Notes : </span><span x-text="detailItem.notes"></span></p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Derniers mouvements</p>
+                    <div class="overflow-x-auto rounded-xl border border-slate-100">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="table-head">
+                                    <th class="py-2 px-3">Date</th>
+                                    <th class="py-2 px-3">Type</th>
+                                    <th class="py-2 px-3 text-right">Quantité</th>
+                                    <th class="py-2 px-3">Motif</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr x-show="detailItem.recentMovements.length === 0" x-cloak>
+                                    <td colspan="4" class="py-4 px-3 text-center text-slate-400 text-sm">Aucun mouvement enregistré.</td>
+                                </tr>
+                                <template x-for="m in detailItem.recentMovements" :key="m.id">
+                                    <tr>
+                                        <td class="py-2 px-3 text-slate-600 whitespace-nowrap" x-text="formatDate(m.movementDate)"></td>
+                                        <td class="py-2 px-3"><badge variant="neutral" x-text="movementTypeLabel(m.type)"></badge></td>
+                                        <td class="py-2 px-3 text-right amount" x-text="m.quantity"></td>
+                                        <td class="py-2 px-3 text-slate-600" x-text="m.reason"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Prêts en cours</p>
+                    <div class="overflow-x-auto rounded-xl border border-slate-100">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="table-head">
+                                    <th class="py-2 px-3">Référence</th>
+                                    <th class="py-2 px-3">Bénéficiaire</th>
+                                    <th class="py-2 px-3 text-right">Quantité</th>
+                                    <th class="py-2 px-3">Retour prévu</th>
+                                    <th class="py-2 px-3">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr x-show="detailItem.openAssignments.length === 0" x-cloak>
+                                    <td colspan="5" class="py-4 px-3 text-center text-slate-400 text-sm">Aucun prêt en cours.</td>
+                                </tr>
+                                <template x-for="a in detailItem.openAssignments" :key="a.id">
+                                    <tr>
+                                        <td class="py-2 px-3 font-mono text-xs text-slate-500" x-text="a.reference"></td>
+                                        <td class="py-2 px-3 text-slate-700" x-text="a.beneficiaryLabel"></td>
+                                        <td class="py-2 px-3 text-right amount" x-text="`${a.quantity - a.returnedQuantity}/${a.quantity}`"></td>
+                                        <td class="py-2 px-3" :class="a.isOverdue ? 'text-rose-600 font-semibold' : 'text-slate-600'"
+                                            x-text="a.dueOn ? formatDate(a.dueOn) : 'Non fixé'"></td>
+                                        <td class="py-2 px-3"><badge :variant="a.isOverdue ? 'danger' : 'warning'"><span x-text="a.isOverdue ? 'En retard' : assignmentStatusLabel(a.status)"></span></badge></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </modal-shell>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALES — Catégories
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell open="isCreateCategoryOpen" on-close="closeCreateCategory()" title="Nouvelle catégorie">
+        <modal-subtitle>Une famille de biens propre à votre établissement (ex : Manuels scolaires, Informatique, Tenues).</modal-subtitle>
+        <div x-show="createCategoryErrors.global" x-cloak class="form-error-banner" x-text="createCategoryErrors.global"></div>
+        <form x-on:submit.prevent="submitCreateCategory()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Nom de la catégorie</label>
+                <input type="text" x-model="newCategory.name" required maxlength="100" placeholder="ex : Manuels scolaires"
+                       class="input-field" :class="createCategoryErrors.name && 'input-field-error'">
+                <p x-show="createCategoryErrors.name" x-text="createCategoryErrors.name" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label">Description</label>
+                <textarea x-model="newCategory.description" rows="3" maxlength="300" class="input-field"></textarea>
+                <p x-show="createCategoryErrors.description" x-text="createCategoryErrors.description" class="field-error"></p>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeCreateCategory()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingCategory" class="btn-modal-primary group">
+                    <span x-text="isSavingCategory ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="editingCategory" on-close="closeEditCategory()" title="Modifier la catégorie">
+        <modal-subtitle><span x-text="editingCategory ? editingCategory.name : ''"></span></modal-subtitle>
+        <div x-show="editCategoryErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editCategoryErrors.global"></div>
+        <form x-on:submit.prevent="submitEditCategory()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Nom de la catégorie</label>
+                <input type="text" x-model="editingCategory.name" required maxlength="100" class="input-field"
+                       :class="editCategoryErrors.name && 'input-field-error'">
+                <p x-show="editCategoryErrors.name" x-cloak x-text="editCategoryErrors.name" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label">Description</label>
+                <textarea x-model="editingCategory.description" rows="3" class="input-field"></textarea>
+                <p x-show="editCategoryErrors.description" x-cloak x-text="editCategoryErrors.description" class="field-error"></p>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeEditCategory()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingEditCategory" class="btn-modal-primary group">
+                    <span x-text="isSavingEditCategory ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <modal-shell open="deletingCategory" on-close="closeDeleteCategory()" size="md">
+        <modal-title>Archiver la catégorie</modal-title>
+        <modal-subtitle>
+            <span class="font-semibold text-slate-900" x-text="deletingCategory ? deletingCategory.name : ''"></span>
+            sera archivée et n'apparaîtra plus dans les sélecteurs.
+        </modal-subtitle>
+        <div x-show="deleteCategoryError" x-cloak class="form-error-banner" x-text="deleteCategoryError"></div>
+        <p class="text-sm text-slate-500">Impossible si des biens sont encore rattachés à cette catégorie.</p>
+        <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <button type="button" x-on:click="closeDeleteCategory()" class="btn-modal-secondary group">Annuler</button>
+            <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-modal-danger">
+                <span x-text="isDeletingCategory ? 'Suppression...' : 'Archiver la catégorie'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALE — Nouveau mouvement de stock
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell open="isMovementModalOpen" on-close="closeMovementModal()" title="Nouveau mouvement de stock" size="lg">
+        <modal-subtitle>Entrée, sortie, ajustement d'inventaire ou mise au rebut — journalisé, jamais modifiable après coup.</modal-subtitle>
+        <div x-show="movementErrors.global" x-cloak class="form-error-banner" x-text="movementErrors.global"></div>
+        <form x-on:submit.prevent="submitMovement()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Bien</label>
+                <select-field model="movementForm.itemId" required="true" on-change="onMovementItemSelected()"
+                              placeholder="Sélectionner un bien" aria-label="Bien"
+                              options-expr="pickerItems.map(i => ({value: i.id, label: i.name + (i.code ? ' (' + i.code + ')' : '')}))" />
+                <p x-show="selectedMovementItem" x-cloak class="text-xs text-slate-400 mt-1">
+                    Disponible actuellement : <span x-text="selectedMovementItem ? selectedMovementItem.quantityAvailable : 0"></span>
+                    / <span x-text="selectedMovementItem ? selectedMovementItem.quantityTotal : 0"></span>
+                </p>
+                <p x-show="movementErrors.itemid" x-text="movementErrors.itemid" class="field-error"></p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Type de mouvement</label>
+                    <select-field model="movementForm.type" required="true" aria-label="Type de mouvement" options-expr="movementRequestTypeOptions" />
+                </div>
+                <div>
+                    <label class="form-label form-label-required" x-text="movementForm.type === 'Ajustement' ? 'Effectif compté' : 'Quantité'"></label>
+                    <input type="number" x-model="movementForm.quantity" min="0" class="input-field" :class="movementErrors.quantity && 'input-field-error'">
+                    <p x-show="movementErrors.quantity" x-text="movementErrors.quantity" class="field-error"></p>
+                </div>
+            </div>
+            <div>
+                <label class="form-label">Date du mouvement</label>
+                <date-field model="movementForm.movementDate" aria-label="Date du mouvement" />
+                <p class="text-xs text-slate-400 mt-1">Par défaut : aujourd'hui.</p>
+                <p x-show="movementErrors.movementdate" x-text="movementErrors.movementdate" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label form-label-required">Motif</label>
+                <textarea x-model="movementForm.reason" required rows="2" maxlength="200" placeholder="ex : Dotation mairie 2026, casse salle 102…"
+                          class="input-field" :class="movementErrors.reason && 'input-field-error'"></textarea>
+                <p class="text-xs text-slate-400 mt-1">C'est ce motif qui rend le journal opposable lors d'un contrôle.</p>
+                <p x-show="movementErrors.reason" x-text="movementErrors.reason" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label">Fournisseur / destinataire</label>
+                <input type="text" x-model="movementForm.counterpartyLabel" maxlength="150" placeholder="Facultatif" class="input-field">
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeMovementModal()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingMovement" class="btn-modal-primary group">
+                    <span x-text="isSavingMovement ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALE — Nouveau prêt
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell open="isAssignmentModalOpen" on-close="closeAssignmentModal()" title="Nouveau prêt de matériel" size="lg">
+        <modal-subtitle>Produit la fiche de décharge à faire signer par le bénéficiaire.</modal-subtitle>
+        <div x-show="assignmentErrors.global" x-cloak class="form-error-banner" x-text="assignmentErrors.global"></div>
+        <form x-on:submit.prevent="submitAssignment()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Bien</label>
+                <select-field model="assignmentForm.itemId" required="true" on-change="onAssignmentItemSelected()"
+                              placeholder="Sélectionner un bien" aria-label="Bien"
+                              options-expr="loanablePickerItems.map(i => ({value: i.id, label: i.name + (i.code ? ' (' + i.code + ')' : '') + ' — ' + i.quantityAvailable + ' disponible(s)'}))" />
+                <p x-show="assignmentErrors.itemid" x-text="assignmentErrors.itemid" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label form-label-required">Quantité</label>
+                <input type="number" x-model="assignmentForm.quantity" min="1" class="input-field" :class="assignmentErrors.quantity && 'input-field-error'">
+                <p class="text-xs text-slate-400 mt-1">Douze manuels remis à un même élève tiennent en UNE fiche.</p>
+                <p x-show="assignmentErrors.quantity" x-text="assignmentErrors.quantity" class="field-error"></p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Type de bénéficiaire</label>
+                    <select-field model="assignmentForm.beneficiaryType" required="true" on-change="onBeneficiaryTypeChanged()"
+                                  aria-label="Type de bénéficiaire" options-expr="beneficiaryTypeOptions" />
+                </div>
+                <div>
+                    <label class="form-label form-label-required">Bénéficiaire</label>
+                    <select-field model="assignmentForm.beneficiaryId" required="true" placeholder="Sélectionner"
+                                  aria-label="Bénéficiaire" options-expr="beneficiaryOptionsForType" />
+                    <p x-show="assignmentErrors.beneficiaryid" x-text="assignmentErrors.beneficiaryid" class="field-error"></p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Date de remise</label>
+                    <date-field model="assignmentForm.assignedOn" aria-label="Date de remise" />
+                    <p class="text-xs text-slate-400 mt-1">Par défaut : aujourd'hui.</p>
+                    <p x-show="assignmentErrors.assignedon" x-text="assignmentErrors.assignedon" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label">Retour prévu</label>
+                    <date-field model="assignmentForm.dueOn" aria-label="Retour prévu" />
+                    <p x-show="assignmentErrors.dueon" x-text="assignmentErrors.dueon" class="field-error"></p>
+                </div>
+            </div>
+            <div>
+                <label class="form-label">Notes</label>
+                <textarea x-model="assignmentForm.notes" rows="2" maxlength="500" class="input-field"></textarea>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeAssignmentModal()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingAssignment" class="btn-modal-primary group">
+                    <span x-text="isSavingAssignment ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALE — Restitution
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell open="returningAssignment" on-close="closeReturnAssignment()" title="Enregistrer une restitution" size="md">
+        <modal-subtitle>
+            <span x-text="returningAssignment ? returningAssignment.reference + ' — ' + returningAssignment.itemName : ''"></span>
+        </modal-subtitle>
+        <div x-show="returnErrors.global" x-cloak class="form-error-banner" x-text="returnErrors.global"></div>
+        <form x-on:submit.prevent="submitReturn()" novalidate class="space-y-4">
+            <p class="text-sm text-slate-500">
+                Reste à restituer : <span class="font-semibold text-slate-900" x-text="returningAssignment ? returningAssignment.outstanding : 0"></span> unité(s).
+            </p>
+            <div>
+                <label class="form-label form-label-required">Quantité restituée aujourd'hui</label>
+                <input type="number" x-model="returnForm.returnedQuantity" min="0" class="input-field" :class="returnErrors.returnedquantity && 'input-field-error'">
+                <p x-show="returnErrors.returnedquantity" x-text="returnErrors.returnedquantity" class="field-error"></p>
+            </div>
+            <div>
+                <label class="form-label form-label-required">État constaté au retour</label>
+                <select-field model="returnForm.returnCondition" required="true" aria-label="État au retour" options-expr="conditionOptions" />
+                <p class="text-xs text-slate-400 mt-1" x-show="returnForm.returnCondition === 'HorsService'" x-cloak>
+                    La part rendue sera réformée (mise au rebut) plutôt que remise en circulation.
+                </p>
+            </div>
+            <div>
+                <label class="form-label">Date de retour</label>
+                <date-field model="returnForm.returnedOn" aria-label="Date de retour" />
+                <p class="text-xs text-slate-400 mt-1">Par défaut : aujourd'hui.</p>
+                <p x-show="returnErrors.returnedon" x-text="returnErrors.returnedon" class="field-error"></p>
+            </div>
+            <div class="flex items-start gap-2" x-show="returningAssignment && returnForm.returnedQuantity < returningAssignment.outstanding" x-cloak>
+                <input id="declare-lost" type="checkbox" x-model="returnForm.declareRemainderLost" class="checkbox-field mt-1">
+                <label for="declare-lost" class="text-sm text-slate-700">
+                    Déclarer le reste perdu
+                    <span class="block text-xs text-slate-400">La part non rendue sort définitivement du patrimoine et la fiche est clôturée.</span>
+                </label>
+            </div>
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeReturnAssignment()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingReturn" class="btn-modal-primary group">
+                    <span x-text="isSavingReturn ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALE — Annulation d'une fiche de prêt
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell open="cancellingAssignment" on-close="closeCancelAssignment()" size="md">
+        <modal-title>Annuler la fiche de prêt</modal-title>
+        <modal-subtitle>
+            <span class="font-semibold text-slate-900" x-text="cancellingAssignment ? cancellingAssignment.reference : ''"></span>
+            — rend les unités au disponible.
+        </modal-subtitle>
+        <div x-show="cancelAssignmentError" x-cloak class="form-error-banner" x-text="cancelAssignmentError"></div>
+        <p class="text-sm text-slate-500">
+            À réserver à une fiche saisie par erreur. Dès qu'une restitution a été enregistrée, la fiche se clôture au lieu de s'annuler.
+        </p>
+        <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <button type="button" x-on:click="closeCancelAssignment()" class="btn-modal-secondary group">Retour</button>
+            <button type="button" x-on:click="confirmCancelAssignment()" :disabled="isCancellingAssignment" class="btn-modal-danger">
+                <span x-text="isCancellingAssignment ? 'Annulation...' : 'Annuler la fiche'"></span>
+            </button>
+        </div>
+    </modal-shell>
+
+    @await Html.PartialAsync("_PdfPreviewModal")
+</div>

@@ -39,6 +39,7 @@ tags:
   - name: Audit
   - name: Platform
   - name: Notifications
+  - name: Inventory
 
 paths:
   /auth/login:
@@ -2565,6 +2566,440 @@ paths:
               schema: { $ref: '#/components/schemas/SmsDeliveryReceiptResult' }
         '401': { description: Signature absente ou invalide }
 
+  # ---------------------------------------------------------------- Module Inventaire
+  # Patrimoine, journal de stock et prêts de matériel. Voir docs/Volume_4_API_Design.md §21.
+  #
+  # Deux invariants portés par TOUS les endpoints ci-dessous :
+  #   * aucune quantité ne se modifie hors d'un mouvement journalisé — PUT /inventory/items ne les
+  #     expose même pas ;
+  #   * le journal (/inventory/movements) est append-only : ni PUT, ni DELETE, par construction.
+
+  /inventory/categories:
+    get:
+      tags: [Inventory]
+      summary: Lister les familles de biens de l'établissement
+      description: >-
+        Ouvert à tout utilisateur authentifié. L'établissement est déduit du JWT : il n'est jamais un
+        paramètre. Pas de pagination — une école n'a pas assez de familles de biens pour la justifier.
+      responses:
+        '200':
+          description: Liste des catégories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/InventoryCategory' }
+    post:
+      tags: [Inventory]
+      summary: Créer une famille de biens (nomenclature libre, sans liste figée)
+      description: 'Réservé au Directeur et au Secrétariat.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InventoryCategoryCreateRequest' }
+      responses:
+        '201':
+          description: Catégorie créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InventoryCategory' }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '409': { description: Une catégorie de ce nom existe déjà dans cet établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /inventory/categories/{id}:
+    put:
+      tags: [Inventory]
+      summary: Corriger le libellé ou la description d'une catégorie
+      description: 'Réservé au Directeur et au Secrétariat. Verrou optimiste (rowVersion).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InventoryCategoryUpdateRequest' }
+      responses:
+        '200':
+          description: Catégorie mise à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InventoryCategory' }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Jeton de concurrence périmé, ou libellé déjà pris' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Inventory]
+      summary: Archiver (soft delete) une catégorie créée par erreur
+      description: >-
+        Réservé au Directeur et au Secrétariat. Refusée en 409 si des biens y sont encore rattachés
+        (AGENTS.md règle #6 : jamais de suppression physique).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Catégorie archivée }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Jeton de concurrence périmé, ou des biens sont rattachés à cette catégorie' }
+
+  /inventory/items:
+    get:
+      tags: [Inventory]
+      summary: Lister le patrimoine (lots de biens), filtrable et paginé
+      description: >-
+        Ouvert à tout utilisateur authentifié. Un « bien » est un LOT : le suivi à l'unité se fait avec
+        un lot de quantité 1 (un PC avec son numéro de série), le suivi en masse avec un lot de
+        quantité 200 (des tables-bancs). `onLoanQuantity` est calculé (total − disponible).
+      parameters:
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: roomId
+          in: query
+          description: Salle d'entreposage (module Infrastructures)
+          schema: { type: string, format: uuid }
+        - name: condition
+          in: query
+          schema: { $ref: '#/components/schemas/ItemCondition' }
+        - name: search
+          in: query
+          description: Recherche insensible à la casse sur la désignation ET le code d'inventaire
+          schema: { type: string }
+        - name: outOfStockOnly
+          in: query
+          description: >-
+            Ne garder que les lots dont il ne reste RIEN de disponible. Nommé sans ambiguïté : le
+            modèle ne porte aucun seuil de réapprovisionnement, un filtre « stock bas » laisserait
+            croire le contraire.
+          schema: { type: boolean, default: false }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Page de biens
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedInventoryItems' }
+    post:
+      tags: [Inventory]
+      summary: Créer un lot de biens
+      description: >-
+        Réservé au Directeur et au Secrétariat. `initialQuantity` est la SEULE occasion de fixer une
+        quantité directement, et elle ne contourne pas le journal : le serveur la traduit en un
+        mouvement d'entrée dans la même transaction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InventoryItemCreateRequest' }
+      responses:
+        '201':
+          description: Bien créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InventoryItemResult' }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '409': { description: Ce code d'inventaire est déjà utilisé dans cet établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /inventory/items/{id}:
+    get:
+      tags: [Inventory]
+      summary: Fiche d'un bien, ses 20 derniers mouvements et ses prêts en cours
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Fiche détaillée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InventoryItemDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Inventory]
+      summary: Corriger la fiche d'un bien (jamais ses quantités)
+      description: >-
+        Réservé au Directeur et au Secrétariat. Verrou optimiste (rowVersion). Aucune quantité n'est
+        modifiable ici : elles ne varient que par un mouvement journalisé ou par une fiche de prêt.
+        Basculer un bien en consommable est refusé en 409 tant que des prêts sont en cours.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InventoryItemUpdateRequest' }
+      responses:
+        '200':
+          description: Bien mis à jour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InventoryItemResult' }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Jeton périmé, code déjà pris, ou prêts en cours sur un bien passé en consommable' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Inventory]
+      summary: Archiver (soft delete) un bien
+      description: >-
+        Réservé au Directeur et au Secrétariat. Refusé en 409 si des prêts sont encore en cours : la
+        décharge signée par le bénéficiaire n'aurait plus de bien en face. Le journal de stock du lot,
+        lui, n'est jamais effacé.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Bien archivé }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Jeton de concurrence périmé, ou des prêts de ce bien sont en cours' }
+
+  /inventory/movements:
+    get:
+      tags: [Inventory]
+      summary: Journal de stock de l'établissement, filtrable et paginé
+      description: >-
+        Ouvert à tout utilisateur authentifié. Journal APPEND-ONLY : il n'existe volontairement ni PUT
+        ni DELETE sur un mouvement. Le rôle applicatif PostgreSQL n'a d'ailleurs que SELECT et INSERT
+        sur cette table — la base refuse physiquement la rature.
+      parameters:
+        - name: itemId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/StockMovementType' }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Page du journal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedStockMovements' }
+    post:
+      tags: [Inventory]
+      summary: Enregistrer une entrée, une sortie, un ajustement ou une mise au rebut
+      description: >-
+        Réservé au Directeur, au Secrétariat et au Surveillant. `rowVersion` est le jeton du BIEN, pas
+        du mouvement : c'est lui dont les compteurs changent. Une sortie supérieure au disponible est
+        refusée en 422 ; une lecture périmée du bien en 409 (AGENTS.md règle #5).
+
+
+        Les mouvements d'attribution et de restitution ne sont PAS saisissables ici : ils sont produits
+        exclusivement par les endpoints de prêt, pour qu'aucun appel direct ne puisse faire varier le
+        disponible sans la fiche de décharge qui l'explique.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StockMovementCreateRequest' }
+      responses:
+        '201':
+          description: Mouvement enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StockMovementResult' }
+        '403': { description: Réservé au Directeur, au Secrétariat et au Surveillant }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Jeton de concurrence du bien périmé }
+        '422': { description: 'Quantité insuffisante, date future, ou ajustement sans écart' }
+
+  /inventory/assignments:
+    get:
+      tags: [Inventory]
+      summary: Lister les prêts et attributions de matériel
+      description: >-
+        Ouvert à tout utilisateur authentifié — c'est l'écran « qui détient quoi ». `overdueOnly`
+        répond à la seule question urgente en fin d'année : quels manuels ne sont pas revenus.
+      parameters:
+        - name: itemId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/AssignmentStatus' }
+        - name: studentId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: teacherId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: overdueOnly
+          in: query
+          description: Prêts encore ouverts dont la date de retour prévue est dépassée
+          schema: { type: boolean, default: false }
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Page de fiches de prêt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedItemAssignments' }
+    post:
+      tags: [Inventory]
+      summary: Prêter ou attribuer des unités d'un bien à un élève, un enseignant ou un agent
+      description: >-
+        Réservé au Directeur, au Secrétariat et au Surveillant. Crée la fiche de décharge ET le
+        mouvement d'attribution dans la même transaction. Un consommable est refusé en 422 : il se
+        distribue par une sortie de stock, il ne se prête pas. `rowVersion` est le jeton du BIEN.
+
+
+        L'API expose UN couple (beneficiaryType, beneficiaryId) là où la base porte trois clés
+        étrangères distinctes : le client n'a pas à savoir dans quelle table vit son bénéficiaire.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ItemAssignmentCreateRequest' }
+      responses:
+        '201':
+          description: Fiche de prêt créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ItemAssignmentResult' }
+        '403': { description: Réservé au Directeur, au Secrétariat et au Surveillant }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Jeton de concurrence du bien périmé }
+        '422': { description: 'Quantité insuffisante, bénéficiaire inconnu, consommable, ou dates incohérentes' }
+
+  /inventory/assignments/{id}/return:
+    post:
+      tags: [Inventory]
+      summary: Enregistrer une restitution, totale ou partielle
+      description: >-
+        Réservé au Directeur, au Secrétariat et au Surveillant. Appelable plusieurs fois sur la même
+        fiche tant qu'elle n'est pas clôturée : `returnedQuantity` est ce qui est rendu CE JOUR-LÀ, le
+        serveur cumule.
+
+
+        Un retour en `HorsService` réforme la part rendue au lieu de la remettre en circulation (deux
+        lignes au journal : la restitution, puis la mise au rebut). `declareRemainderLost` sort du
+        patrimoine ce qui n'est pas revenu et clôture la fiche.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ItemReturnRequest' }
+      responses:
+        '200':
+          description: Restitution enregistrée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ItemReturnResult' }
+        '403': { description: Réservé au Directeur, au Secrétariat et au Surveillant }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Fiche déjà clôturée, ou jeton de concurrence périmé' }
+        '422': { description: 'Plus d''unités rendues qu''il n''en restait, ou dates incohérentes' }
+
+  /inventory/assignments/{id}:
+    delete:
+      tags: [Inventory]
+      summary: Annuler une fiche de prêt saisie par erreur
+      description: >-
+        Réservé au Directeur, au Secrétariat et au Surveillant. Rend au disponible les unités que la
+        fiche avait retirées, par un mouvement de contre-passation dont le motif dit « annulation » —
+        et non un faux retour, qui laisserait croire à la lecture du journal qu'un bien est passé entre
+        les mains d'un élève. Refusée en 409 dès qu'une restitution a été enregistrée.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '204': { description: Fiche annulée }
+        '403': { description: Réservé au Directeur, au Secrétariat et au Surveillant }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'Jeton périmé, ou fiche déjà restituée/perdue' }
+
+  /inventory/assignments/{id}/pdf:
+    get:
+      tags: [Inventory]
+      summary: Fiche de décharge / prêt de matériel (PDF A5 paysage)
+      description: >-
+        Le papier que le bénéficiaire signe en recevant des manuels ou du matériel, ou sa
+        réimpression. Ouvert à tout utilisateur authentifié. Même charte que le reçu de caisse et
+        l'attestation d'inscription (deux volets par feuille A4), avec QR code de vérification.
+        Le nom du bénéficiaire est figé à l'affectation : une décharge réimprimée est identique à
+        celle qui a été signée.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PDF de la décharge (Content-Disposition inline)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /inventory/reports/global/pdf:
+    get:
+      tags: [Inventory]
+      summary: Fiche d'inventaire global de l'établissement (PDF A4 paysage)
+      description: >-
+        Réservé au Directeur et au Secrétariat. Le document qu'une école présente à la mairie ou à
+        l'IEF : les lots groupés par catégorie, avec sous-totaux, disponibles, prêtés et valorisation.
+        La colonne de valorisation ne s'imprime que si au moins un prix indicatif a été saisi — sinon
+        elle annoncerait un patrimoine à 0 FCFA, ce qui serait faux. Opération journalisée à l'audit.
+      parameters:
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: roomId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PDF de la fiche d'inventaire (Content-Disposition inline)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4162,3 +4597,381 @@ components:
       properties:
         appliedCount: { type: integer }
         ignoredCount: { type: integer }
+
+    # ---------------------------------------------------------------- Module Inventaire
+
+    ItemCondition:
+      type: string
+      description: >-
+        État DOMINANT d'un lot, pas une répartition : une école qui veut distinguer « 120 tables-bancs
+        en bon état » de « 50 à réparer » crée deux lots et transfère les quantités par un ajustement.
+      enum: [Neuf, Bon, AReparer, HorsService]
+
+    StockMovementType:
+      type: string
+      description: >-
+        Nature d'une ligne du journal, telle qu'elle est ÉCRITE. Plus large que ce qu'un utilisateur
+        peut saisir (voir StockMovementCreateRequest.type) : les mouvements de prêt sont produits
+        exclusivement par les endpoints d'affectation. La quantité d'un mouvement est TOUJOURS
+        strictement positive — le sens vient du type, jamais du signe.
+
+
+        Effet sur le couple (total, disponible) : `Entree`/`AjustementPositif` +q/+q ;
+        `Sortie`/`AjustementNegatif`/`MiseAuRebut` −q/−q ; `Attribution` 0/−q (le bien prêté reste au
+        patrimoine) ; `Restitution` 0/+q ; `PerteSurPret` −q/0 (ces unités étaient déjà hors du
+        disponible depuis l'attribution).
+      enum:
+        - Entree
+        - Sortie
+        - AjustementPositif
+        - AjustementNegatif
+        - Attribution
+        - Restitution
+        - MiseAuRebut
+        - PerteSurPret
+
+    AssignmentBeneficiaryType:
+      type: string
+      enum: [Eleve, Enseignant, Personnel]
+
+    AssignmentStatus:
+      type: string
+      enum: [EnCours, Restitue, PartiellementRestitue, Perdu]
+
+    InventoryCategory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 100 }
+        description: { type: string, nullable: true, maxLength: 300 }
+        itemCount: { type: integer }
+        totalQuantity: { type: integer }
+        rowVersion: { type: integer, format: int64, description: Jeton xmin pour la modification/suppression. }
+
+    InventoryCategoryCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 100, example: Manuels scolaires }
+        description: { type: string, nullable: true, maxLength: 300 }
+
+    InventoryCategoryUpdateRequest:
+      type: object
+      required: [name, rowVersion]
+      properties:
+        name: { type: string, maxLength: 100 }
+        description: { type: string, nullable: true, maxLength: 300 }
+        rowVersion: { type: integer, format: int64 }
+
+    InventoryItemCreateRequest:
+      type: object
+      required: [name, categoryId]
+      properties:
+        name: { type: string, maxLength: 150, example: Manuel de mathématiques CM2 }
+        code:
+          type: string
+          nullable: true
+          maxLength: 50
+          description: >-
+            Code d'inventaire ou code-barres, en saisie LIBRE et facultative : les écoles publiques
+            réutilisent le numéro d'immatriculation posé sur le bien par la mairie ou l'État, qu'aucune
+            numérotation générée par la plateforme ne doit écraser. Unique par école s'il est renseigné.
+        categoryId: { type: string, format: uuid }
+        initialQuantity:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Traduite par le serveur en un mouvement d'entrée. Zéro est licite (bien attendu, pas encore livré).
+        condition: { $ref: '#/components/schemas/ItemCondition' }
+        roomId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Salle d'entreposage (module Infrastructures), quand l'école a saisi ses bâtiments.
+        locationLabel:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Emplacement en texte libre, pour un local qui n'est pas une salle (« Réserve A »).
+        unitPrice:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+          description: Prix unitaire INDICATIF en FCFA, sans portée comptable ni amortissement.
+        isConsumable:
+          type: boolean
+          default: false
+          description: Un consommable se distribue et ne revient jamais — il ne peut pas faire l'objet d'un prêt.
+        notes: { type: string, nullable: true, maxLength: 500 }
+
+    InventoryItemUpdateRequest:
+      type: object
+      required: [name, categoryId, rowVersion]
+      description: Aucune quantité ici — voir la description de PUT /inventory/items/{id}.
+      properties:
+        name: { type: string, maxLength: 150 }
+        code: { type: string, nullable: true, maxLength: 50 }
+        categoryId: { type: string, format: uuid }
+        condition: { $ref: '#/components/schemas/ItemCondition' }
+        roomId: { type: string, format: uuid, nullable: true }
+        locationLabel: { type: string, nullable: true, maxLength: 100 }
+        unitPrice: { type: number, format: double, nullable: true, minimum: 0 }
+        isConsumable: { type: boolean }
+        notes: { type: string, nullable: true, maxLength: 500 }
+        rowVersion: { type: integer, format: int64 }
+
+    InventoryItemResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        code: { type: string, nullable: true }
+        categoryId: { type: string, format: uuid }
+        quantityTotal: { type: integer }
+        quantityAvailable: { type: integer }
+        condition: { $ref: '#/components/schemas/ItemCondition' }
+        roomId: { type: string, format: uuid, nullable: true }
+        locationLabel: { type: string, nullable: true }
+        unitPrice: { type: number, format: double, nullable: true }
+        isConsumable: { type: boolean }
+        rowVersion: { type: integer, format: int64 }
+
+    InventoryItemListItem:
+      allOf:
+        - $ref: '#/components/schemas/InventoryItemResult'
+        - type: object
+          properties:
+            categoryName: { type: string }
+            roomName: { type: string, nullable: true }
+            onLoanQuantity: { type: integer, description: 'Calculé : total − disponible.' }
+
+    PaginatedInventoryItems:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/InventoryItemListItem' }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    InventoryItemDetail:
+      allOf:
+        - $ref: '#/components/schemas/InventoryItemListItem'
+        - type: object
+          properties:
+            notes: { type: string, nullable: true }
+            recentMovements:
+              type: array
+              description: Les 20 derniers mouvements, du plus récent au plus ancien.
+              items: { $ref: '#/components/schemas/InventoryItemMovement' }
+            openAssignments:
+              type: array
+              items: { $ref: '#/components/schemas/InventoryItemOpenAssignment' }
+
+    InventoryItemMovement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/StockMovementType' }
+        quantity: { type: integer }
+        movementDate: { type: string, format: date }
+        reason: { type: string }
+        counterpartyLabel: { type: string, nullable: true }
+        quantityTotalAfter: { type: integer }
+        quantityAvailableAfter: { type: integer }
+
+    InventoryItemOpenAssignment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        reference: { type: string, example: DEC-2026-A3F1C0 }
+        beneficiaryType: { $ref: '#/components/schemas/AssignmentBeneficiaryType' }
+        beneficiaryLabel: { type: string }
+        quantity: { type: integer }
+        returnedQuantity: { type: integer }
+        assignedOn: { type: string, format: date }
+        dueOn: { type: string, format: date, nullable: true }
+        isOverdue: { type: boolean }
+        status: { $ref: '#/components/schemas/AssignmentStatus' }
+        rowVersion: { type: integer, format: int64 }
+
+    StockMovementCreateRequest:
+      type: object
+      required: [itemId, type, quantity, reason, rowVersion]
+      properties:
+        itemId: { type: string, format: uuid }
+        type:
+          type: string
+          description: >-
+            Volontairement plus étroit que StockMovementType : `Attribution` et `Restitution` ne sont
+            pas saisissables ici.
+          enum: [Entree, Sortie, Ajustement, MiseAuRebut]
+        quantity:
+          type: integer
+          description: >-
+            Nombre d'unités du mouvement — ou, pour un `Ajustement`, l'effectif COMPTÉ lors de
+            l'inventaire physique (le serveur en déduit le sens et l'ampleur de la correction). Zéro
+            n'est accepté que pour un ajustement.
+        movementDate:
+          type: string
+          format: date
+          nullable: true
+          description: Par défaut aujourd'hui. Jamais dans le futur.
+        reason:
+          type: string
+          maxLength: 200
+          description: >-
+            Obligatoire : c'est le motif qui rend le journal opposable lors d'un contrôle
+            (« dotation mairie 2026 », « casse salle 102 »).
+        counterpartyLabel:
+          type: string
+          nullable: true
+          maxLength: 150
+          description: Fournisseur en entrée, destinataire en sortie. Texte libre.
+        rowVersion:
+          type: integer
+          format: int64
+          description: Jeton xmin du BIEN, pas du mouvement.
+
+    StockMovementResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/StockMovementType' }
+        quantity: { type: integer }
+        movementDate: { type: string, format: date }
+        quantityTotalAfter: { type: integer }
+        quantityAvailableAfter: { type: integer }
+        itemRowVersion:
+          type: integer
+          format: int64
+          description: >-
+            NOUVEAU jeton du bien : l'écran enchaîne souvent plusieurs mouvements sur le même bien,
+            et sans lui le second partirait en 409 sur un jeton périmé.
+
+    StockMovementListItem:
+      allOf:
+        - $ref: '#/components/schemas/StockMovementResult'
+        - type: object
+          properties:
+            itemName: { type: string }
+            itemCode: { type: string, nullable: true }
+            reason: { type: string }
+            counterpartyLabel: { type: string, nullable: true }
+            assignmentId:
+              type: string
+              format: uuid
+              nullable: true
+              description: Renseigné pour les mouvements liés à une fiche de prêt.
+
+    PaginatedStockMovements:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/StockMovementListItem' }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    ItemAssignmentCreateRequest:
+      type: object
+      required: [itemId, beneficiaryType, beneficiaryId, rowVersion]
+      properties:
+        itemId: { type: string, format: uuid }
+        quantity:
+          type: integer
+          minimum: 1
+          default: 1
+          description: Douze manuels remis à un même élève tiennent en UNE fiche, pas douze.
+        beneficiaryType: { $ref: '#/components/schemas/AssignmentBeneficiaryType' }
+        beneficiaryId:
+          type: string
+          format: uuid
+          description: Identifiant de l'élève, de l'enseignant ou de l'utilisateur, selon `beneficiaryType`.
+        assignedOn: { type: string, format: date, nullable: true, description: Par défaut aujourd'hui. Jamais dans le futur. }
+        dueOn: { type: string, format: date, nullable: true, description: Retour attendu — typiquement la fin de l'année scolaire. }
+        notes: { type: string, nullable: true, maxLength: 500 }
+        rowVersion: { type: integer, format: int64, description: Jeton xmin du BIEN. }
+
+    ItemAssignmentResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        reference:
+          type: string
+          example: DEC-2026-A3F1C0
+          description: >-
+            Numéro de la décharge, DÉRIVÉ de l'identifiant de la fiche et non tiré d'un compteur :
+            une décharge n'a aucune exigence de numérotation continue, et le numéro doit rester
+            identique à chaque réimpression.
+        itemId: { type: string, format: uuid }
+        itemName: { type: string }
+        quantity: { type: integer }
+        beneficiaryType: { $ref: '#/components/schemas/AssignmentBeneficiaryType' }
+        beneficiaryId: { type: string, format: uuid }
+        beneficiaryLabel:
+          type: string
+          description: Nom FIGÉ au moment de l'affectation, pour qu'une réimpression soit identique au papier signé.
+        assignedOn: { type: string, format: date }
+        dueOn: { type: string, format: date, nullable: true }
+        status: { $ref: '#/components/schemas/AssignmentStatus' }
+        rowVersion: { type: integer, format: int64 }
+        itemRowVersion: { type: integer, format: int64 }
+
+    ItemAssignmentListItem:
+      allOf:
+        - $ref: '#/components/schemas/ItemAssignmentResult'
+        - type: object
+          properties:
+            itemCode: { type: string, nullable: true }
+            returnedQuantity: { type: integer }
+            returnedOn: { type: string, format: date, nullable: true }
+            returnCondition: { $ref: '#/components/schemas/ItemCondition' }
+            isOverdue: { type: boolean }
+
+    PaginatedItemAssignments:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ItemAssignmentListItem' }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    ItemReturnRequest:
+      type: object
+      required: [returnedQuantity, rowVersion]
+      properties:
+        returnedQuantity:
+          type: integer
+          minimum: 0
+          description: >-
+            Unités rendues CE JOUR-LÀ, pas le cumul. Zéro n'est licite qu'avec
+            `declareRemainderLost` — sinon il n'y aurait rien à enregistrer.
+        returnCondition: { $ref: '#/components/schemas/ItemCondition' }
+        returnedOn: { type: string, format: date, nullable: true, description: Par défaut aujourd'hui. }
+        declareRemainderLost:
+          type: boolean
+          default: false
+          description: >-
+            Déclare PERDU tout ce qui n'est pas rendu : la part manquante sort du patrimoine
+            (mouvement `PerteSurPret`) et la fiche est clôturée. Sans ce drapeau, une restitution
+            partielle laisse la fiche ouverte, en attente du reste.
+        rowVersion: { type: integer, format: int64, description: Jeton xmin de la FICHE. }
+
+    ItemReturnResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/AssignmentStatus' }
+        returnedQuantity: { type: integer, description: Cumul des restitutions successives. }
+        outstandingQuantity: { type: integer, description: Reste à rendre — zéro dès que la fiche est clôturée. }
+        returnedOn: { type: string, format: date }
+        quantityAvailableAfter: { type: integer }
+        rowVersion: { type: integer, format: int64 }
+        itemRowVersion: { type: integer, format: int64 }

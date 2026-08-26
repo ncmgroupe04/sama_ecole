@@ -74,6 +74,12 @@ public class ApplicationDbContext(
     public DbSet<DebtorReminderBatch> DebtorReminderBatches => Set<DebtorReminderBatch>();
     public DbSet<DebtorReminderBatchItem> DebtorReminderBatchItems => Set<DebtorReminderBatchItem>();
 
+    // Module Inventaire (patrimoine, stock, prêts de matériel).
+    public DbSet<InventoryCategory> InventoryCategories => Set<InventoryCategory>();
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+    public DbSet<ItemAssignment> ItemAssignments => Set<ItemAssignment>();
+
     // Console Super Admin — entités SANS CLÉ, jamais gérées par les migrations (voir OnModelCreating) :
     // la première est adossée à une vue réelle, la seconde n'existe qu'à travers FromSqlRaw.
     public DbSet<PlatformDashboardStats> PlatformDashboardStats => Set<PlatformDashboardStats>();

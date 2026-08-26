@@ -4,10 +4,11 @@ using QuestPDF.Infrastructure;
 namespace SamaEcole.Infrastructure.Documents;
 
 /// <summary>
-/// Palette et blocs communs des deux pièces A5 remises au tuteur — le reçu de caisse
-/// (<see cref="PaymentReceiptDocument"/>) et l'attestation d'inscription
-/// (<see cref="EnrollmentReceiptDocument"/>). Refonte validée le 25/08/2026 : les documents ne sont
-/// plus en noir et blanc strict, ils portent une couleur SÉMANTIQUE et rien d'autre
+/// Palette et blocs communs des pièces A5 remises en main propre — le reçu de caisse
+/// (<see cref="PaymentReceiptDocument"/>), l'attestation d'inscription
+/// (<see cref="EnrollmentReceiptDocument"/>) et la décharge de matériel
+/// (<see cref="DischargeNoteDocument"/>, module Inventaire). Refonte validée le 25/08/2026 : les
+/// documents ne sont plus en noir et blanc strict, ils portent une couleur SÉMANTIQUE et rien d'autre
 /// (docs/design-references/README.md §1 et §1bis, mis à jour en conséquence).
 ///
 /// Trois familles, jamais mélangées :

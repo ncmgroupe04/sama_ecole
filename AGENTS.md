@@ -79,6 +79,14 @@ La solution `.NET` (`SamaEcole.sln`, 5 projets `src/`, 3 projets `tests/`, 1 pro
   Pointage enseignants, et Rapports financiers (écran `/rapports/financiers` + export `.xlsx`).
   Spécification fonctionnelle : `docs/Volume_1_Cahier_des_Charges.md` §14 à §21. Routes :
   `docs/Volume_4_API_Design.md` §12 à §19.
+- **Inventaire — API et écran livrés le 26/08/2026.** Patrimoine, journal de stock et prêts de
+  matériel (`/api/v1/inventory`, `docs/Volume_4_API_Design.md` §21, tables en `docs/Volume_3_DDS.md`
+  §5.9 ; écran `/inventaire`, `Views/Inventory/Index.cshtml` + `wwwroot/js/inventory.js`). Deux
+  invariants du module : `QuantityAvailable` n'est jamais écrit par un endpoint — il ne varie que
+  dans la transaction d'un mouvement, via `StockLedger`, sous verrou `xmin` ; et `stock_movements`
+  est **append-only** — le rôle applicatif n'y a que `SELECT, INSERT`, une erreur se corrige par un
+  mouvement inverse. Ne pas ajouter d'endpoint ni d'écran qui contourne l'un ou l'autre. Arbitrages
+  actés (lot vs unité, état dominant, module gratuit, code libre) : `ACTIVE_CONTEXT.md` §2.
 
 ## Où trouver quoi (ne pas tout lire à chaque tâche — ouvrir le volume pertinent)
 

@@ -146,6 +146,23 @@ public interface IApplicationDbContext
     /// <summary>Débiteurs candidats d'un DebtorReminderBatch, avec leur ancienneté de retard au moment de la génération.</summary>
     DbSet<DebtorReminderBatchItem> DebtorReminderBatchItems { get; }
 
+    // ------------------------------------------------------------------ Module Inventaire
+
+    /// <summary>Familles de biens (Mobilier, Manuels scolaires, Informatique…), propres à chaque école.</summary>
+    DbSet<InventoryCategory> InventoryCategories { get; }
+
+    /// <summary>
+    /// Lots de biens du patrimoine. <c>QuantityAvailable</c> est un compteur DÉRIVÉ : il ne se met à
+    /// jour que dans la transaction d'un <see cref="StockMovements">mouvement</see>, sous verrou xmin.
+    /// </summary>
+    DbSet<InventoryItem> InventoryItems { get; }
+
+    /// <summary>Journal APPEND-ONLY des mouvements de stock : on y AJOUTE, jamais plus (comme FeeChangeHistory).</summary>
+    DbSet<StockMovement> StockMovements { get; }
+
+    /// <summary>Fiches de prêt/attribution de matériel aux élèves, enseignants et personnel. Verrou optimiste xmin.</summary>
+    DbSet<ItemAssignment> ItemAssignments { get; }
+
     /// <summary>
     /// Agrégats plateforme (console Super Admin) : entité SANS CLÉ adossée à la vue PostgreSQL
     /// `v_platform_dashboard_stats`, qui contourne la RLS via `security_invoker = false` +

@@ -278,6 +278,24 @@ Les matières (`/api/v1/subjects`, `SubjectsController`) ne suivent PAS ce même
 | Consulter / Exporter | ✔ | ✔ (périmètre de son école) |
 | Modifier / Supprimer | ✖ | ✖ |
 
+**Inventaire (patrimoine, stock, prêts de matériel)** — module accessible à **toutes les formules** d'abonnement : aucun contrôle `Feature`.
+
+| Action | Directeur | Secrétariat | Surveillant | Enseignant | Finance |
+|---|---|---|---|---|---|
+| Consulter le catalogue, le journal de stock et les prêts | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Créer / corriger / archiver une catégorie ou un bien | ✔ | ✔ | ✖ | ✖ | ✖ |
+| Enregistrer un mouvement (entrée, sortie, ajustement, mise au rebut) | ✔ | ✔ | ✔ | ✖ | ✖ |
+| Prêter, restituer, annuler une fiche de prêt | ✔ | ✔ | ✔ | ✖ | ✖ |
+| Imprimer une fiche de décharge | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Fiche d'inventaire global (PDF) | ✔ | ✔ | ✖ | ✖ | ✖ |
+| Modifier / supprimer une ligne du journal de stock | ✖ | ✖ | ✖ | ✖ | ✖ |
+
+Trois choix appellent une justification :
+
+- **La lecture est ouverte à tous les rôles authentifiés**, y compris l'Enseignant : il doit pouvoir vérifier ce qui lui a été confié et ce que sa classe détient sans passer par le secrétariat. Aucune donnée sensible ne transite par ce module — un lot de tables-bancs n'est ni une note ni un montant.
+- **Le Surveillant peut mouvementer le stock et prêter, mais pas toucher au catalogue.** C'est lui qui distribue les manuels à la rentrée et les récupère en juin ; lui refuser ce droit obligerait le secrétariat à saisir des remises qu'il n'a pas faites. Créer ou archiver un bien, en revanche, reste de l'administration du patrimoine.
+- **La dernière ligne ne comporte aucun ✔, pour personne — Super Admin compris.** Le journal de stock est append-only : aucun endpoint n'expose de modification, et le rôle PostgreSQL applicatif ne dispose que de `SELECT, INSERT` sur `stock_movements` (Volume 3 §5.9). Ce n'est donc pas une permission qui manque à la matrice, c'est une capacité qui n'existe pas. Une correction s'écrit par un mouvement inverse — c'est ce qui rend l'inventaire opposable devant l'IEF ou la mairie.
+
 ## 16. Permissions spéciales et double confirmation
 
 Certaines opérations exigent une nouvelle saisie du mot de passe : restauration d'une sauvegarde, publication des bulletins, clôture de l'année scolaire, suppression logique de données sensibles, changement de l'année scolaire active.

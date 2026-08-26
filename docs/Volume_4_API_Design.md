@@ -32,8 +32,9 @@
 18. API Documents administratifs
 19. API Emploi du temps & Pointage enseignants
 20. API Notifications sortantes (SMS / WhatsApp)
+21. API Inventaire (patrimoine, stock, prêts de matériel)
 
-> **Chapitres 12 à 20 — modules livrés.** Contrairement aux chapitres 1 à 11, rédigés avant construction, ces chapitres ont été écrits **après** la mise en production pour rattraper l'écart entre le code et la documentation. Les routes qui y figurent sont celles réellement exposées par les contrôleurs de `src/SamaEcole.Web/Controllers/` ; en cas de divergence future, le code fait foi et ce volume doit être corrigé.
+> **Chapitres 12 à 21 — modules livrés.** Contrairement aux chapitres 1 à 11, rédigés avant construction, ces chapitres ont été écrits **après** la mise en production pour rattraper l'écart entre le code et la documentation. Les routes qui y figurent sont celles réellement exposées par les contrôleurs de `src/SamaEcole.Web/Controllers/` ; en cas de divergence future, le code fait foi et ce volume doit être corrigé.
 
 ---
 
@@ -519,6 +520,57 @@ Cycle de vie : `Pending` → `Sent` (accepté par l'agrégateur) → `Delivered`
 - `POST /sms/dues-reminders` **ne renvoie pas d'erreur** si certains SMS ne partent pas : il retourne `{ queuedCount, skippedCount, firstSkipReason }`. `queuedCount` compte les messages **acceptés en file**, jamais les messages remis — la remise est asynchrone et inconnue au retour de la requête.
 - La relance ne vise que les inscriptions `Confirmed` présentant un reliquat.
 - Le webhook DLR est **fermé par défaut** : sans `Sms__WebhookSecret`, toute signature est rejetée (401). Un accusé sans correspondance (rejeu, message inconnu) renvoie `200` — un statut d'échec ferait réémettre l'agrégateur en boucle.
+
+---
+
+## 21. API Inventaire (patrimoine, stock, prêts de matériel)
+
+Suivi du patrimoine de l'établissement, commun aux écoles **publiques** (tables-bancs, manuels d'État, matériel pédagogique, consommables) et **privées** (parc informatique, tenues en stock, matériel de laboratoire et de sport, fournitures administratives), et traçabilité des biens confiés aux élèves et au personnel.
+
+**Rôles :**
+
+| Périmètre | Rôles | Pourquoi |
+|---|---|---|
+| Lecture (catalogue, journal, prêts) | Tout utilisateur authentifié | Un enseignant doit pouvoir vérifier ce qui lui a été confié sans passer par le secrétariat |
+| Catalogue (créer/corriger/archiver une catégorie ou un bien) | `Directeur`, `Secretariat` | Administration du patrimoine — même matrice que Classes et Infrastructures |
+| Mouvements et prêts | `Directeur`, `Secretariat`, `Surveillant` | C'est le surveillant qui distribue les manuels à la rentrée et les récupère en juin |
+| Fiche d'inventaire global (PDF) | `Directeur`, `Secretariat` | Export du patrimoine complet — opération sensible, journalisée à l'audit (Volume 7 §7) |
+
+Le module est **accessible à toutes les formules d'abonnement** : aucun contrôle `Feature`.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/inventory/categories` | Familles de biens de l'école, avec nombre de biens et effectif cumulé |
+| `POST` | `/api/v1/inventory/categories` | Créer une famille (nomenclature libre, jamais figée) |
+| `PUT` | `/api/v1/inventory/categories/{id}` | Corriger le libellé/la description. Verrou optimiste |
+| `DELETE` | `/api/v1/inventory/categories/{id}` | Archiver. **409** si des biens y sont rattachés |
+| `GET` | `/api/v1/inventory/items` | Catalogue paginé, filtres `categoryId`, `roomId`, `condition`, `search`, `outOfStockOnly` |
+| `GET` | `/api/v1/inventory/items/{id}` | Fiche + 20 derniers mouvements + prêts en cours |
+| `POST` | `/api/v1/inventory/items` | Créer un lot. `initialQuantity` devient un mouvement d'entrée |
+| `PUT` | `/api/v1/inventory/items/{id}` | Corriger la fiche — **jamais** les quantités |
+| `DELETE` | `/api/v1/inventory/items/{id}` | Archiver. **409** si des prêts sont en cours |
+| `GET` | `/api/v1/inventory/movements` | Journal de stock, filtres `itemId`, `type`, `from`, `to` |
+| `POST` | `/api/v1/inventory/movements` | Entrée, sortie, ajustement d'inventaire, mise au rebut |
+| `GET` | `/api/v1/inventory/assignments` | Fiches de prêt, filtres `status`, `studentId`, `teacherId`, `overdueOnly` |
+| `POST` | `/api/v1/inventory/assignments` | Prêter/attribuer des unités et produire la décharge |
+| `POST` | `/api/v1/inventory/assignments/{id}/return` | Restitution, totale ou partielle |
+| `DELETE` | `/api/v1/inventory/assignments/{id}` | Annuler une fiche saisie par erreur (contre-passation) |
+| `GET` | `/api/v1/inventory/assignments/{id}/pdf` | **Fiche de décharge** — A5 paysage, QR de vérification |
+| `GET` | `/api/v1/inventory/reports/global/pdf` | **Fiche d'inventaire global** — A4 paysage, filtrable par catégorie/salle |
+
+**Un bien est un LOT, pas une unité.** Le suivi à l'unité se fait avec un lot de quantité 1 (un PC et son numéro de série), le suivi en masse avec un lot de quantité 200 (des tables-bancs). C'est ce choix qui permet aux deux cas d'usage — patrimoine d'État et parc informatique privé — de vivre dans le même modèle : un code-barres et un état par ligne n'auraient aucun sens sur 200 tables-bancs. Corollaire assumé : `condition` est l'état **dominant** du lot ; une école qui veut distinguer « 120 en bon état » de « 50 à réparer » crée deux lots et transfère par un ajustement.
+
+**Règles :**
+- **`quantityAvailable` n'est jamais écrit par un endpoint.** Il est maintenu uniquement dans la transaction d'un mouvement journalisé, sur l'entité chargée sous verrou `xmin` — exactement le traitement d'`Enrollment.AmountPaid` par la caisse. `PUT /inventory/items/{id}` n'expose même pas les quantités. Une contrainte `CHECK` (`0 ≤ disponible ≤ total`) est le dernier rempart en base.
+- **Le journal est append-only**, comme `fee_change_history` : ni `PUT` ni `DELETE` sur un mouvement, et le rôle applicatif PostgreSQL n'a que `SELECT, INSERT` sur `stock_movements`. Une saisie erronée se corrige par un mouvement inverse — c'est ce qui rend l'inventaire opposable lors d'un contrôle de l'IEF ou de la mairie.
+- **Le sens d'un mouvement vient de son type, jamais du signe** de la quantité, toujours strictement positive (`CHECK`). Chaque type correspond à une arithmétique sans ambiguïté sur le couple (total, disponible) : `Attribution` ne touche que le disponible — un bien prêté reste au patrimoine ; `PerteSurPret` ne touche que le total — ces unités étaient déjà sorties du disponible.
+- **Attribution et Restitution ne sont pas saisissables** via `POST /inventory/movements` : elles sont produites exclusivement par les endpoints de prêt, pour qu'aucun appel direct ne fasse varier le disponible sans la fiche de décharge qui l'explique.
+- **Ajustement** : le client envoie l'effectif **compté** lors de l'inventaire physique, pas un écart ; le serveur en déduit le sens et l'ampleur de la correction. Un comptage identique à la fiche est refusé en **422** — il n'y a pas de mouvement à écrire.
+- Quantité insuffisante → **422** avec un message métier ; lecture périmée du bien ou de la fiche → **409** (règle #5), jamais un écrasement silencieux.
+- Un **consommable** ne se prête pas (422) : il se distribue par une sortie de stock.
+- Le **nom du bénéficiaire est figé** sur la fiche de prêt, comme `EnrollmentFeeLine` fige le barème : une décharge réimprimée trois ans plus tard doit être identique à celle qui a été signée.
+- L'**emplacement** d'un lot peut être une `Room` du module Infrastructures (vérifiable) ou un libellé libre (« Réserve A »). Quand les deux sont renseignés, la salle prime à l'impression.
+- Le **prix unitaire est indicatif** : aucune portée comptable, aucun amortissement, aucune écriture financière (règle #4). La valorisation ne s'imprime que si au moins un prix a été saisi.
 
 ---
 

@@ -40,6 +40,12 @@ public class PagesController : Controller
     [HttpGet("/infrastructures")]
     public IActionResult Buildings() => View("~/Views/Buildings/Index.cshtml");
 
+    // Module Inventaire : patrimoine, journal de stock, prêts de matériel. InventoryController garde
+    // l'accès (lecture ouverte à tout rôle authentifié ; catalogue réservé Directeur/Secrétariat ;
+    // mouvements et prêts ouverts en plus au Surveillant) et la RLS isole.
+    [HttpGet("/inventaire")]
+    public IActionResult Inventory() => View("~/Views/Inventory/Index.cshtml");
+
     // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
     // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
     // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.

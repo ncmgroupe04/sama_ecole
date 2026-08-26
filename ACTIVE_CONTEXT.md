@@ -5,7 +5,7 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 27/07/2026** (sprint de finalisation, audit de conformité P0/P1).
+**Dernière mise à jour : 26/08/2026** (module Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
 
 ---
 
@@ -54,10 +54,38 @@ Livrés, câblés à l'IHM, et couverts par la suite de tests :
 | **Infrastructures** | `/infrastructures` | Bâtiments & salles |
 | **Documents** | Module Documents | Génération et archivage documentaire |
 | **Rapports financiers** | `/rapports/financiers` | `GetRevenueConsolidationQuery` + export `.xlsx` |
+| **Inventaire** | `/inventaire` | API `/api/v1/inventory` — catalogue, journal de stock, prêts, 2 PDF |
 
 Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bulletins, Frais,
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
 les sprints précédents.
+
+### Inventaire (26/08/2026) — API et écran livrés
+
+Suivi du patrimoine, commun aux écoles publiques (tables-bancs, manuels d'État, consommables) et
+privées (parc informatique, tenues, matériel de laboratoire). Quatre tables tenant
+(`inventory_categories`, `inventory_items`, `stock_movements`, `item_assignments`), migration
+`AddInventoryModule`, 17 endpoints sous `/api/v1/inventory`, deux documents QuestPDF.
+
+**Ce qui est livré :** entités, migration + policies RLS, handlers CQRS, contrôleur, fiche
+d'inventaire global (A4 paysage) et fiche de décharge (A5 paysage), tests unitaires et d'intégration,
+`openapi.yaml`, Volume 3 §5.9, Volume 4 §21, Volume 7 §15, et l'écran `/inventaire` (Razor + Tailwind +
+Alpine, `Views/Inventory/Index.cshtml` + `wwwroot/js/inventory.js`) : 4 onglets (Catalogue, Catégories,
+Mouvements de stock, Prêts & Décharges), navigation ajoutée sous « Gestion Scolaire ». Compilation
+Razor vérifiée (0 erreur) ; non cliqué dans un navigateur réel faute de base PostgreSQL disponible
+dans cet environnement — à valider en local avant mise en production.
+
+**Quatre arbitrages actés, à ne pas rouvrir sans raison :**
+
+1. **Un bien est un LOT, pas une unité.** Suivi à l'unité = lot de quantité 1. Une table
+   `inventory_item_units` reste la porte de sortie si un état par unité devient nécessaire ; elle
+   n'est pas construite.
+2. **`Condition` est l'état dominant du lot.** Le détail par état s'obtient en scindant en deux lots.
+3. **Module gratuit** — aucun membre ajouté à `Feature`, accessible à toutes les formules.
+4. **`Code` en saisie libre et facultative**, jamais généré : les écoles publiques réutilisent le
+   numéro d'immatriculation posé sur le bien par la mairie ou l'État.
+
+Export `.xlsx` de l'inventaire : **écarté pour ce lot** (PDF seul), à arbitrer si le besoin remonte.
 
 ### Classes passerelles / accélérées (04/08/2026) — option désactivée par défaut
 

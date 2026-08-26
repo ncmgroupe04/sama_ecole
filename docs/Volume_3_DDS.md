@@ -143,7 +143,11 @@ Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas 
 
 `FeeCategories`, `SchoolFees`, `FeeChangeHistory`, `Payments`, `PaymentDetails`, `Receipts`, `ExpenseCategories`, `Expenses`, `ExpenseAttachments`, `FinancialReports`.
 
-### 4.6 Domaine Infrastructure applicative
+### 4.6 Domaine Inventaire
+
+`inventory_categories`, `inventory_items`, `stock_movements`, `item_assignments` (spécification détaillée en §5.9).
+
+### 4.7 Domaine Infrastructure applicative
 
 `AuditLogs`, `Notifications`, `NotificationRecipients`, `BackupHistory` (traçabilité des sauvegardes automatiques côté infrastructure, Volume 9), `ApplicationLogs`.
 
@@ -274,6 +278,84 @@ Voir Volume 1 §11.5. Aucune ligne de cette table ne devient jamais une ligne de
 
 **Règle non négociable** : `Status` ne passe à `CONFIRMED` que via le traitement d'un webhook dont la signature a été vérifiée (Volume 7 §Paiements). Aucune route ne permet à un client de positionner ce statut directement.
 
+### 5.9 Domaine Inventaire — `inventory_categories`, `inventory_items`, `stock_movements`, `item_assignments`
+
+Quatre tables tenant, toutes protégées par la double barrière §2.2 (Global Query Filter EF Core **et** policy RLS posée par la migration `AddInventoryModule`).
+
+**`inventory_categories`** — famille de biens, nomenclature libre propre à chaque école.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK `schools.Id`, NOT NULL, ON DELETE RESTRICT |
+| `Name` | `varchar(100)` | NOT NULL, UNIQUE (`SchoolId`, `Name`, `IsDeleted`) |
+| `Description` | `varchar(300)` | NULL |
+| `xmin` | `xid` | Verrou optimiste (§3) |
+
+**`inventory_items`** — un **lot** de biens identiques, pas une unité physique. Le suivi à l'unité se fait avec un lot de quantité 1.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK, NOT NULL |
+| `Name` | `varchar(150)` | NOT NULL |
+| `Code` | `varchar(50)` | NULL. Index unique **partiel** `WHERE "Code" IS NOT NULL AND NOT "IsDeleted"` — saisie libre, souvent le numéro d'immatriculation posé par la mairie/l'État |
+| `CategoryId` | `uuid` | FK `inventory_categories.Id`, RESTRICT |
+| `QuantityTotal` | `integer` | NOT NULL |
+| `QuantityAvailable` | `integer` | NOT NULL — **compteur dérivé**, voir la règle ci-dessous |
+| `Condition` | `varchar(20)` | CHECK IN (`Neuf`,`Bon`,`AReparer`,`HorsService`), DEFAULT `Bon` |
+| `RoomId` | `uuid` | NULL, FK `rooms.Id`, RESTRICT — réutilise le module Infrastructures |
+| `LocationLabel` | `varchar(100)` | NULL — local qui n'est pas une salle (« Réserve A ») |
+| `UnitPrice` | `numeric(12,2)` | NULL — **indicatif**, aucune portée comptable (règle #4) |
+| `IsConsumable` | `boolean` | NOT NULL DEFAULT `false` — un consommable ne se prête jamais |
+| `Notes` | `varchar(500)` | NULL |
+| `xmin` | `xid` | Verrou optimiste |
+
+`CHECK CK_inventory_items_quantities` : `QuantityTotal >= 0 AND QuantityAvailable >= 0 AND QuantityAvailable <= QuantityTotal`.
+
+**`stock_movements`** — journal **append-only** du stock, au même régime que `FeeChangeHistory` : la migration n'accorde que `SELECT, INSERT` au rôle `sama_ecole_app`. Pas de `xmin` — une ligne jamais modifiée n'a rien à verrouiller.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK, NOT NULL |
+| `ItemId` | `uuid` | FK `inventory_items.Id`, RESTRICT |
+| `Type` | `varchar(20)` | CHECK IN (`Entree`,`Sortie`,`AjustementPositif`,`AjustementNegatif`,`Attribution`,`Restitution`,`MiseAuRebut`,`PerteSurPret`) |
+| `Quantity` | `integer` | CHECK (`Quantity` > 0) — le sens vient du `Type`, jamais du signe |
+| `MovementDate` | `date` | NOT NULL |
+| `Reason` | `varchar(200)` | NOT NULL — c'est le motif qui rend le journal opposable lors d'un contrôle |
+| `CounterpartyLabel` | `varchar(150)` | NULL — fournisseur en entrée, destinataire en sortie |
+| `AssignmentId` | `uuid` | NULL, **sans FK** — lien informatif vers la décharge, indexé ; une FK imposerait un ordre d'insertion strict dans la transaction qui crée les deux |
+| `QuantityTotalAfter` | `integer` | NOT NULL — instantané |
+| `QuantityAvailableAfter` | `integer` | NOT NULL — instantané |
+
+**`item_assignments`** — fiche de prêt/attribution, support de la décharge signée.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK, NOT NULL |
+| `ItemId` | `uuid` | FK `inventory_items.Id`, RESTRICT |
+| `Quantity` | `integer` | CHECK (`Quantity` > 0) |
+| `BeneficiaryType` | `varchar(20)` | CHECK IN (`Eleve`,`Enseignant`,`Personnel`) |
+| `StudentId` / `TeacherId` / `UserId` | `uuid` | NULL, FK réelles vers `students`/`teachers`/`users`, RESTRICT |
+| `BeneficiaryLabel` | `varchar(150)` | NOT NULL — nom **figé** à l'affectation |
+| `AssignedOn` | `date` | NOT NULL |
+| `DueOn`, `ReturnedOn` | `date` | NULL |
+| `ReturnedQuantity` | `integer` | NULL — cumul des restitutions successives |
+| `ReturnCondition` | `varchar(20)` | NULL, même domaine que `Condition` |
+| `Status` | `varchar(25)` | CHECK IN (`EnCours`,`Restitue`,`PartiellementRestitue`,`Perdu`), DEFAULT `EnCours` |
+| `Notes` | `varchar(500)` | NULL |
+| `xmin` | `xid` | Verrou optimiste |
+
+`CHECK CK_item_assignments_beneficiary` : exactement **une** des trois clés de bénéficiaire est renseignée, et elle correspond au `BeneficiaryType` déclaré. Trois FK nullables plutôt qu'un identifiant polymorphe générique : l'intégrité référentielle reste réelle et la RLS couvre le bénéficiaire comme le bien.
+
+**Règles non négociables du domaine :**
+
+1. **`QuantityAvailable` n'est jamais écrit par un endpoint.** Il ne varie que dans la transaction d'un `stock_movements`, sur l'entité chargée sous verrou `xmin` — même traitement qu'`Enrollments.AmountPaid` face à la caisse. Le point de passage unique côté code est `StockLedger` (`SamaEcole.Application/Inventory/Common`).
+2. **Le journal ne se rature pas.** Une erreur se corrige par un mouvement inverse. Le `GRANT` restreint est le mécanisme réel ; la discipline de code n'en est que le reflet.
+3. **`Condition` est l'état dominant d'un LOT**, pas une répartition. Le détail par état s'obtient en scindant en deux lots et en transférant par un ajustement.
+
 ---
 
 ## 6. Dictionnaire des énumérations
@@ -311,6 +393,9 @@ Ces valeurs sont partagées entre la base de données (contraintes `CHECK` ou ty
 - `Teachers (N) — (N) ClassRooms` via `TeacherAssignments`
 - `Subscriptions (1) — (N) SubscriptionPayments`
 - `SchoolRegistrationRequests (1) — (0..1) Schools` (via `CreatedSchoolId`, uniquement après approbation)
+- `inventory_categories (1) — (N) inventory_items`, `inventory_items (1) — (N) stock_movements`
+- `inventory_items (1) — (N) item_assignments`, chaque fiche pointant vers **un seul** bénéficiaire : `Students`, `Teachers` **ou** `Users` (contrainte `CHECK`, §5.9)
+- `Rooms (1) — (N) inventory_items` (emplacement d'entreposage, facultatif — un lot peut n'avoir qu'un libellé libre)
 
 Un diagramme entité-association complet (ERD) doit être maintenu à jour dans le dépôt de code (ex. via `dbdiagram.io` ou export EF Core), et non uniquement dans ce document texte.
 

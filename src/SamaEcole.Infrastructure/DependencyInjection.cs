@@ -218,6 +218,11 @@ public static class DependencyInjection
         services.AddSingleton<IStudentsExportPdfGenerator, StudentsExportPdfGenerator>();
         services.AddSingleton<ITeachersExportPdfGenerator, TeachersExportPdfGenerator>();
 
+        // Module Inventaire : fiche d'inventaire global (A4 paysage) et fiche de décharge de matériel
+        // (A5 paysage, charte ReceiptTheme). Sans état, comme tous les générateurs ci-dessus.
+        services.AddSingleton<IInventoryReportPdfGenerator, InventoryReportPdfGenerator>();
+        services.AddSingleton<IDischargeNotePdfGenerator, DischargeNotePdfGenerator>();
+
         // Import/export de la feuille de notes au format Excel large (ClosedXML, Volume_2_SDS.md
         // « bibliothèques »). Sans état : un singleton suffit, comme les générateurs de documents ci-dessus.
         services.AddSingleton<IGradeSheetImportParser, GradeSheetImportParser>();
