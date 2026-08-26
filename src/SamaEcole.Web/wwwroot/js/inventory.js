@@ -194,10 +194,35 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /**
+         * Récupère la TOTALITÉ d'une liste paginée, une page de `pageSize` à la fois. Toute route
+         * paginée du projet refuse un `pageSize` supérieur à 100 (GetStudentsQueryValidator et ses
+         * pairs — « sans ce plafond, le client dicte la taille de la réponse ») : demander une seule
+         * page surdimensionnée (1000, par exemple) ne renvoie donc pas une grande page, elle est
+         * refusée en 422. Les sélecteurs de ce module ont besoin de la liste ENTIÈRE (un élève ou un
+         * bien absent du menu déroulant serait tout simplement injoignable) — d'où la boucle, plutôt
+         * qu'un plafond silencieux sur la première page.
+         */
+        async fetchAllPages(endpoint) {
+            const pageSize = 100;
+            let page = 1;
+            let items = [];
+            let totalCount = Infinity;
+
+            while (items.length < totalCount) {
+                const separator = endpoint.includes('?') ? '&' : '?';
+                const data = await window.api.get(`${endpoint}${separator}page=${page}&pageSize=${pageSize}`);
+                items = items.concat((data && data.items) || []);
+                totalCount = (data && data.totalCount) || 0;
+                page += 1;
+            }
+
+            return items;
+        },
+
         async loadPickerItems() {
             try {
-                const data = await window.api.get('/inventory/items?page=1&pageSize=200');
-                this.pickerItems = (data && data.items) || [];
+                this.pickerItems = await this.fetchAllPages('/inventory/items');
             } catch (err) {
                 toast.error(window.api.toMessage(err, 'Erreur lors du chargement des biens.'));
             }
@@ -208,12 +233,12 @@ document.addEventListener('alpine:init', () => {
             if (this.beneficiariesLoaded) return;
             try {
                 const [students, teachers, users] = await Promise.all([
-                    window.api.get('/students?page=1&pageSize=1000'),
-                    window.api.get('/teachers?page=1&pageSize=1000'),
+                    this.fetchAllPages('/students'),
+                    this.fetchAllPages('/teachers'),
                     window.api.get('/users')
                 ]);
-                this.students = (students && students.items) || [];
-                this.teachers = (teachers && teachers.items) || [];
+                this.students = students;
+                this.teachers = teachers;
                 this.users = users || [];
                 this.beneficiariesLoaded = true;
             } catch (err) {

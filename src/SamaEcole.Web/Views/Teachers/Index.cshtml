@@ -288,7 +288,7 @@
  </modal-shell>
 
  <!-- Modification de la fiche enseignant : matricule et compte de connexion non modifiables ici. -->
- <modal-shell open="editingTeacher" on-close="closeEditTeacher()" title="Modifier la fiche">
+ <modal-shell size="60" open="editingTeacher" on-close="closeEditTeacher()" title="Modifier la fiche">
  <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
 
  <div x-show="teacherEditErrors.global" x-cloak class="form-error-banner" x-text="teacherEditErrors.global"></div>
@@ -419,7 +419,7 @@
  </modal-shell>
 
  <!-- Création d'une fiche enseignant (JGK-D03) -->
- <modal-shell open="isCreateOpen" title="Ajouter un enseignant">
+ <modal-shell size="60" open="isCreateOpen" title="Ajouter un enseignant">
  <modal-subtitle>Le matricule sera généré automatiquement à l'enregistrement.</modal-subtitle>
 
  <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>

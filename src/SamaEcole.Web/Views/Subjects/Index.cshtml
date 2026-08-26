@@ -424,7 +424,7 @@
     ═══════════════════════════════════════════════════════════════════════════ *@
 
  @* Création d'une matière *@
- <modal-shell open="isCreateOpen" title="Nouvelle matière">
+ <modal-shell size="60" open="isCreateOpen" title="Nouvelle matière">
   <modal-subtitle>Rattachez la matière à un niveau et fixez son coefficient.</modal-subtitle>
 
   <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
@@ -507,7 +507,7 @@
  </modal-shell>
 
  @* Modification d'une matière *@
- <modal-shell open="editing" on-close="closeEdit()" title="Modifier la matière">
+ <modal-shell size="60" open="editing" on-close="closeEdit()" title="Modifier la matière">
   <modal-subtitle><span x-text="editing ? editing.name : ''"></span></modal-subtitle>
 
   <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>

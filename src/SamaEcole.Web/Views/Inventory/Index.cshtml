@@ -85,7 +85,7 @@
                         Réinitialiser
                     </button>
                 </div>
-                <button type="button" x-show="canManageCatalog" x-cloak x-on:click="openCreateItem()" class="btn-modal-primary group ml-auto">
+                <button type="button" x-show="canManageCatalog" x-cloak x-on:click="openCreateItem()" class="btn-modal-primary group ml-auto shrink-0 whitespace-nowrap">
                     <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                     Nouveau bien
                 </button>
@@ -164,7 +164,7 @@
         <div class="card">
             <div class="card-header">
                 <h2 class="text-sm font-semibold text-slate-700">Catégories de biens</h2>
-                <button type="button" x-show="canManageCatalog" x-cloak x-on:click="openCreateCategory()" class="btn-modal-primary group">
+                <button type="button" x-show="canManageCatalog" x-cloak x-on:click="openCreateCategory()" class="btn-modal-primary group shrink-0 whitespace-nowrap">
                     <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                     Nouvelle catégorie
                 </button>
@@ -230,7 +230,7 @@
                         Réinitialiser
                     </button>
                 </div>
-                <button type="button" x-show="canManageStock" x-cloak x-on:click="openMovementModal()" class="btn-modal-primary group ml-auto">
+                <button type="button" x-show="canManageStock" x-cloak x-on:click="openMovementModal()" class="btn-modal-primary group ml-auto shrink-0 whitespace-nowrap">
                     <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                     Nouveau mouvement
                 </button>
@@ -301,7 +301,7 @@
                         Réinitialiser
                     </button>
                 </div>
-                <button type="button" x-show="canManageStock" x-cloak x-on:click="openAssignmentModal()" class="btn-modal-primary group ml-auto">
+                <button type="button" x-show="canManageStock" x-cloak x-on:click="openAssignmentModal()" class="btn-modal-primary group ml-auto shrink-0 whitespace-nowrap">
                     <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
                     Nouveau prêt
                 </button>
@@ -378,7 +378,7 @@
        MODALES — Catalogue (biens)
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isCreateItemOpen" on-close="closeCreateItem()" title="Nouveau bien" size="lg">
+    <modal-shell open="isCreateItemOpen" on-close="closeCreateItem()" title="Nouveau bien" size="60">
         <modal-subtitle>Un bien est un LOT : une quantité de matériel identique (ex. 40 manuels, 1 vidéoprojecteur).</modal-subtitle>
         <div x-show="createItemErrors.global" x-cloak class="form-error-banner" x-text="createItemErrors.global"></div>
         <form x-on:submit.prevent="submitCreateItem()" novalidate class="space-y-4">
@@ -538,7 +538,7 @@
     </modal-shell>
 
     @* Fiche détaillée d'un bien — lecture seule : historique récent + prêts en cours. *@
-    <modal-shell open="detailItem" on-close="closeItemDetail()" size="xl">
+    <modal-shell open="detailItem" on-close="closeItemDetail()" size="wide">
         <modal-title><span x-text="detailItem ? detailItem.name : ''"></span></modal-title>
         <modal-subtitle>
             <span x-show="detailItem && detailItem.code" x-cloak>Code : <span x-text="detailItem ? detailItem.code : ''"></span> · </span>
@@ -637,7 +637,7 @@
        MODALES — Catégories
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isCreateCategoryOpen" on-close="closeCreateCategory()" title="Nouvelle catégorie">
+    <modal-shell open="isCreateCategoryOpen" on-close="closeCreateCategory()" title="Nouvelle catégorie" size="60">
         <modal-subtitle>Une famille de biens propre à votre établissement (ex : Manuels scolaires, Informatique, Tenues).</modal-subtitle>
         <div x-show="createCategoryErrors.global" x-cloak class="form-error-banner" x-text="createCategoryErrors.global"></div>
         <form x-on:submit.prevent="submitCreateCategory()" novalidate class="space-y-4">
@@ -661,7 +661,7 @@
         </form>
     </modal-shell>
 
-    <modal-shell open="editingCategory" on-close="closeEditCategory()" title="Modifier la catégorie">
+    <modal-shell size="60" open="editingCategory" on-close="closeEditCategory()" title="Modifier la catégorie">
         <modal-subtitle><span x-text="editingCategory ? editingCategory.name : ''"></span></modal-subtitle>
         <div x-show="editCategoryErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editCategoryErrors.global"></div>
         <form x-on:submit.prevent="submitEditCategory()" novalidate class="space-y-4">
@@ -705,7 +705,7 @@
        MODALE — Nouveau mouvement de stock
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isMovementModalOpen" on-close="closeMovementModal()" title="Nouveau mouvement de stock" size="lg">
+    <modal-shell open="isMovementModalOpen" on-close="closeMovementModal()" title="Nouveau mouvement de stock" size="60">
         <modal-subtitle>Entrée, sortie, ajustement d'inventaire ou mise au rebut — journalisé, jamais modifiable après coup.</modal-subtitle>
         <div x-show="movementErrors.global" x-cloak class="form-error-banner" x-text="movementErrors.global"></div>
         <form x-on:submit.prevent="submitMovement()" novalidate class="space-y-4">
@@ -761,23 +761,25 @@
        MODALE — Nouveau prêt
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isAssignmentModalOpen" on-close="closeAssignmentModal()" title="Nouveau prêt de matériel" size="lg">
+    <modal-shell open="isAssignmentModalOpen" on-close="closeAssignmentModal()" title="Nouveau prêt de matériel" size="60">
         <modal-subtitle>Produit la fiche de décharge à faire signer par le bénéficiaire.</modal-subtitle>
         <div x-show="assignmentErrors.global" x-cloak class="form-error-banner" x-text="assignmentErrors.global"></div>
         <form x-on:submit.prevent="submitAssignment()" novalidate class="space-y-4">
-            <div>
-                <label class="form-label form-label-required">Bien</label>
-                <select-field model="assignmentForm.itemId" required="true" on-change="onAssignmentItemSelected()"
-                              placeholder="Sélectionner un bien" aria-label="Bien"
-                              options-expr="loanablePickerItems.map(i => ({value: i.id, label: i.name + (i.code ? ' (' + i.code + ')' : '') + ' — ' + i.quantityAvailable + ' disponible(s)'}))" />
-                <p x-show="assignmentErrors.itemid" x-text="assignmentErrors.itemid" class="field-error"></p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="form-label form-label-required">Bien</label>
+                    <select-field model="assignmentForm.itemId" required="true" on-change="onAssignmentItemSelected()"
+                                  placeholder="Sélectionner un bien" aria-label="Bien"
+                                  options-expr="loanablePickerItems.map(i => ({value: i.id, label: i.name + (i.code ? ' (' + i.code + ')' : '') + ' — ' + i.quantityAvailable + ' disponible(s)'}))" />
+                    <p x-show="assignmentErrors.itemid" x-text="assignmentErrors.itemid" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label form-label-required">Quantité</label>
+                    <input type="number" x-model="assignmentForm.quantity" min="1" class="input-field" :class="assignmentErrors.quantity && 'input-field-error'">
+                    <p x-show="assignmentErrors.quantity" x-text="assignmentErrors.quantity" class="field-error"></p>
+                </div>
             </div>
-            <div>
-                <label class="form-label form-label-required">Quantité</label>
-                <input type="number" x-model="assignmentForm.quantity" min="1" class="input-field" :class="assignmentErrors.quantity && 'input-field-error'">
-                <p class="text-xs text-slate-400 mt-1">Douze manuels remis à un même élève tiennent en UNE fiche.</p>
-                <p x-show="assignmentErrors.quantity" x-text="assignmentErrors.quantity" class="field-error"></p>
-            </div>
+            <p class="text-xs text-slate-400 -mt-2">Douze manuels remis à un même élève tiennent en UNE fiche.</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="form-label form-label-required">Type de bénéficiaire</label>

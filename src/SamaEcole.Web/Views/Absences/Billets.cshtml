@@ -95,7 +95,7 @@
     </div>
 
     <!-- Modale de création : Nouveau retard -->
-    <modal-shell open="isCreateOpen" on-close="closeCreate()" title="Nouveau retard">
+    <modal-shell size="60" open="isCreateOpen" on-close="closeCreate()" title="Nouveau retard">
         <modal-subtitle>Enregistrer l'arrivée tardive d'un élève.</modal-subtitle>
 
         <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
@@ -211,7 +211,7 @@
     </div>
 
     <!-- Modale de création : Nouvelle sortie anticipée -->
-    <modal-shell open="isCreateExitOpen" on-close="closeCreateExit()" title="Nouvelle sortie anticipée">
+    <modal-shell size="60" open="isCreateExitOpen" on-close="closeCreateExit()" title="Nouvelle sortie anticipée">
         <modal-subtitle>Enregistrer la sortie anticipée d'un élève.</modal-subtitle>
 
         <div x-show="createExitErrors.global" x-cloak class="form-error-banner" x-text="createExitErrors.global"></div>

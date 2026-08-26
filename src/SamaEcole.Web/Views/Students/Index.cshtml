@@ -650,7 +650,7 @@
 
  <!-- Distinction du conseil (Blâme… Félicitations) et observations, imprimées sur le bulletin
  (ReportCardDocument). Réservée au Directeur/Enseignant côté serveur, comme le bouton Bulletin. -->
- <modal-shell open="editingReportCardRemark" on-close="closeReportCardRemark()" title="Observations du conseil">
+ <modal-shell size="60" open="editingReportCardRemark" on-close="closeReportCardRemark()" title="Observations du conseil">
  <modal-subtitle>Distinction et observations du conseil des professeurs pour ce trimestre — imprimées sur le bulletin.</modal-subtitle>
 
  <div x-show="reportCardRemarkErrors.global" x-cloak class="form-error-banner" x-text="reportCardRemarkErrors.global"></div>
@@ -692,7 +692,7 @@
  </modal-shell>
 
  <!-- Modification de la fiche élève : le matricule n'est jamais modifiable (AGENTS.md règle #3). -->
- <modal-shell open="editingStudent" on-close="closeEditStudent()" title="Modifier la fiche">
+ <modal-shell size="60" open="editingStudent" on-close="closeEditStudent()" title="Modifier la fiche">
  <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
 
  <div x-show="studentEditErrors.global" x-cloak class="form-error-banner" x-text="studentEditErrors.global"></div>
@@ -862,7 +862,7 @@
  </modal-shell>
 
  <!-- Création d'élève (JGK-D01) -->
- <modal-shell open="isCreateOpen" title="Ajouter un élève">
+ <modal-shell size="60" open="isCreateOpen" title="Ajouter un élève">
  <modal-subtitle>Le matricule sera généré automatiquement à l'enregistrement.</modal-subtitle>
 
  <!-- Erreur globale -->
@@ -1067,7 +1067,7 @@
  @await Html.PartialAsync("_PdfPreviewModal")
 
  <!-- Modale : Nouvel engagement financier (échéancier) -->
- <modal-shell open="isCommitmentModalOpen" on-close="isCommitmentModalOpen = false" title="Nouvel engagement financier">
+ <modal-shell size="60" open="isCommitmentModalOpen" on-close="isCommitmentModalOpen = false" title="Nouvel engagement financier">
  <modal-subtitle>Trace écrite d'un échéancier de paiement — ne modifie jamais le montant dû de l'inscription.</modal-subtitle>
 
  <div x-show="commitmentErrors.global" x-cloak class="form-error-banner" x-text="commitmentErrors.global"></div>

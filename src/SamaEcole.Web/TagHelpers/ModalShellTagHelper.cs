@@ -39,8 +39,10 @@ public class ModalShellTagHelper : TagHelper
     public string Title { get; set; } = string.Empty;
 
     /// <summary>
-    /// Largeur maximale sur écran ≥ sm : md | lg | xl | 2xl | 3xl (défaut). Les formulaires courts
-    /// (montant, confirmation) respirent mieux en md/lg ; le défaut 3xl préserve les usages existants.
+    /// Largeur maximale sur écran ≥ sm : md | lg | xl | 2xl | 60 | wide | 3xl (défaut). Les formulaires
+    /// courts (montant, confirmation) respirent mieux en md/lg ; le défaut 3xl préserve les usages
+    /// existants. <c>60</c> et <c>wide</c> sont des pourcentages de la largeur d'écran (60 % / 85 %),
+    /// pour un formulaire à plusieurs colonnes qui reste à l'étroit dans les gabarits fixes.
     /// </summary>
     public string Size { get; set; } = "3xl";
 
@@ -123,6 +125,7 @@ public class ModalShellTagHelper : TagHelper
         "lg" => "sm:max-w-lg",
         "xl" => "sm:max-w-xl",
         "2xl" => "sm:max-w-2xl",
+        "60" => "sm:w-[60%] sm:max-w-4xl",
         "wide" => "sm:w-[85%] sm:max-w-6xl",
         _ => "sm:max-w-3xl"
     };
