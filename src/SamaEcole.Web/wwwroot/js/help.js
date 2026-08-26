@@ -943,6 +943,243 @@
                     ]
                 }
             ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'rh-paie',
+            number: 9,
+            title: 'Ressources Humaines & Paie',
+            icon: 'payment',
+            summary: "Contrats du personnel, pointage des heures des vacataires, fiches de paie et déclarations fiscales mensuelles.",
+            concept:
+                "Le personnel de l'établissement — enseignants et agents administratifs — relève de deux régimes de " +
+                "rémunération distincts. Le PERMANENT perçoit un salaire de base fixe, mensuel, indépendant du nombre " +
+                "d'heures effectuées. Le VACATAIRE est rémunéré au TAUX HORAIRE, ce qui suppose un pointage préalable des " +
+                "heures effectivement assurées : sans heures pointées, aucune fiche de paie cohérente ne peut être générée " +
+                "pour lui. La fiche de paie, une fois éditée, alimente à son tour la déclaration fiscale mensuelle — la " +
+                "consolidation des charges sociales dues à l'État (IPRES, CSS, VRS, BRS) sur l'ensemble du personnel.",
+            articles: [
+                {
+                    id: 'contrats-personnel',
+                    title: 'Contrats du personnel — Permanent et Vacataire',
+                    location: 'Comptabilité › Paie',
+                    href: '/paie',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Le contrat rattache un employé — enseignant ou compte utilisateur non-enseignant — à un régime de " +
+                        "rémunération : Permanent (salaire de base fixe) ou Vacataire (taux horaire). Une prime de transport " +
+                        "facultative peut s'ajouter à l'un comme à l'autre. Le contrat est ACTIF jusqu'à sa clôture, qui " +
+                        "n'efface jamais rien : un contrat clôturé demeure consultable, mais ne peut plus produire de " +
+                        "nouvelle fiche de paie.",
+                    objectif:
+                        "Fixer, pour chaque membre du personnel, le régime et le montant qui serviront de base à chaque fiche " +
+                        "de paie, sans avoir à les ressaisir chaque mois. Pour la direction, c'est l'unique référence " +
+                        "salariale de l'établissement, opposable en cas de litige et alignée sur ce qui figure réellement " +
+                        "sur chaque bulletin remis.",
+                    probleme:
+                        "Un salaire négocié verbalement et jamais consigné se traduit, en fin de mois, par une fiche de " +
+                        "paie approximative ou par un désaccord entre l'employé et l'établissement sur le montant convenu.",
+                    procedure: [
+                        "Ouvrez Comptabilité › Paie, onglet Contrats, puis « Nouveau contrat ».",
+                        "Choisissez le type d'employé : un enseignant déjà fiché, ou un utilisateur non-enseignant (personnel administratif).",
+                        "Sélectionnez le régime — Permanent ou Vacataire — puis renseignez le salaire de base ou le taux horaire selon le cas, et la prime de transport le cas échéant.",
+                        "Enregistrez : le contrat devient immédiatement sélectionnable pour la génération d'une fiche de paie.",
+                        "RÉVISION : depuis la ligne du contrat, modifiez le salaire, le taux horaire ou la prime, en indiquant obligatoirement le motif — une augmentation annuelle, par exemple.",
+                        "CLÔTURE : en cas de départ, clôturez le contrat en précisant la date et le motif. Le contrat n'est jamais supprimé, seulement fermé à toute nouvelle fiche.",
+                        "ATTESTATION DE TRAVAIL : téléchargez à tout moment le PDF de l'attestation, depuis la ligne du contrat concerné."
+                    ],
+                    impacts: [
+                        "Fiches de paie : seul un contrat ACTIF (non clôturé) peut servir de base à une nouvelle fiche.",
+                        "Heures des vacataires : le régime Vacataire conditionne l'accès au pointage des heures.",
+                        "Déclarations fiscales : les charges sociales consolidées procèdent des fiches de paie, elles-mêmes adossées aux contrats.",
+                        "Historique : toute révision de salaire ou de taux horaire est conservée avec son auteur, sa date et son motif."
+                    ],
+                    recommandations: [
+                        "Enregistrez le contrat dès l'embauche, avant toute première fiche de paie : une fiche ne peut jamais précéder son contrat.",
+                        "Motivez systématiquement une révision salariale : le motif est ce qui rend l'historique compréhensible des mois plus tard.",
+                        "Clôturez sans délai le contrat d'un employé qui quitte l'établissement, pour prévenir toute fiche de paie émise par erreur.",
+                        "Ne confondez jamais Permanent et Vacataire à la création : le régime choisi détermine les champs attendus lors de la génération de la fiche."
+                    ]
+                },
+                {
+                    id: 'heures-vacataires-fiches-paie',
+                    title: 'Pointage des heures et génération des fiches de paie',
+                    location: 'Comptabilité › Paie › Pointage Profs',
+                    href: '/pointage-profs',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Pour un contrat Vacataire, chaque heure effectuée se pointe individuellement — date, nombre " +
+                        "d'heures, note facultative — AVANT de pouvoir être reprise dans une fiche de paie. La FICHE DE " +
+                        "PAIE, elle, se génère par contrat, par mois et par année ; elle calcule le salaire brut et le net à " +
+                        "payer, puis se restitue en bulletin PDF, à l'identique quel que soit le régime du contrat.",
+                    objectif:
+                        "Garantir que le montant versé à un vacataire correspond exactement aux heures qu'il a réellement " +
+                        "assurées, consignées au fil de l'eau plutôt que reconstituées de mémoire en fin de mois. Pour la " +
+                        "Finance, c'est l'assurance de ne jamais rémunérer une heure non prouvée, et pour le vacataire, la " +
+                        "garantie qu'aucune heure effectuée ne soit oubliée.",
+                    probleme:
+                        "Sans pointage horodaté, le nombre d'heures d'un vacataire se négocie de mémoire en fin de mois, " +
+                        "au désavantage de l'un ou de l'autre selon les cas, et sans aucune pièce pour trancher un " +
+                        "désaccord.",
+                    procedure: [
+                        "Ouvrez Comptabilité › Paie › Pointage Profs, ou la fiche « heures » accessible directement depuis un contrat Vacataire dans l'onglet Contrats.",
+                        "Sélectionnez le contrat concerné, puis ajoutez chaque heure : date, nombre d'heures (les demi-heures sont admises) et une note facultative.",
+                        "Consultez, filtré par mois et par année, le récapitulatif des heures déjà pointées pour ce contrat.",
+                        "Téléchargez la fiche d'heures au format PDF si une pièce signée est requise.",
+                        "Ouvrez ensuite l'onglet Fiches de paie et cliquez sur « Générer une fiche » : choisissez le contrat, le mois et l'année.",
+                        "Pour un contrat Vacataire, reportez le total d'heures pointées sur le mois dans le champ « Heures travaillées » ; pour un Permanent, ce champ reste sans objet.",
+                        "Validez : la fiche calcule le brut et le net, puis devient immédiatement imprimable en bulletin PDF."
+                    ],
+                    impacts: [
+                        "Salaire du vacataire : le brut de sa fiche se calcule directement du produit des heures saisies par le taux horaire de son contrat.",
+                        "Déclarations fiscales : chaque fiche générée entre dans l'agrégat des charges sociales du mois correspondant.",
+                        "Historique : les heures pointées restent consultables mois par mois, indépendamment des fiches déjà générées.",
+                        "Bulletin PDF : le document remis à l'employé restitue exactement les montants calculés, sans reprise manuelle."
+                    ],
+                    recommandations: [
+                        "Pointez les heures au fil de l'eau, jour après jour, plutôt qu'en une seule saisie de fin de mois sujette à l'oubli.",
+                        "Contrôlez le total des heures pointées AVANT de générer la fiche de paie : une fiche déjà éditée et remise ne se corrige pas en silence.",
+                        "Faites viser la fiche d'heures par le vacataire lorsque l'usage de l'établissement le prévoit.",
+                        "Une fiche de paie erronée ne se réédite pas à la légère : vérifiez le mois, l'année et le contrat sélectionnés avant de valider."
+                    ]
+                },
+                {
+                    id: 'declarations-fiscales',
+                    title: 'Déclarations fiscales mensuelles — IPRES, CSS, VRS, BRS',
+                    location: 'Comptabilité › Paie',
+                    href: '/paie',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "La déclaration fiscale consolide, pour un mois donné, les charges sociales et fiscales dues à " +
+                        "l'État sur l'ensemble des fiches de paie déjà générées : cotisations de retraite (IPRES), de " +
+                        "sécurité sociale (CSS), et les prélèvements VRS et BRS. Elle en totalise le montant global dû à " +
+                        "l'État pour ce mois.",
+                    objectif:
+                        "Éviter à l'établissement de reconstituer, fiche par fiche, ce qu'il doit verser à l'État chaque mois, " +
+                        "et lui fournir un document unique, daté et vérifiable, à remettre en appui de sa déclaration " +
+                        "administrative. Pour la direction, c'est la garantie qu'aucune charge sociale n'est omise ni " +
+                        "comptée deux fois.",
+                    probleme:
+                        "Recalculer chaque mois, à la main, les charges sociales dues sur l'ensemble du personnel expose à " +
+                        "l'oubli d'un contrat, à une erreur d'addition, et in fine à un retard ou à une insuffisance de " +
+                        "déclaration devant l'administration fiscale.",
+                    procedure: [
+                        "Assurez-vous d'abord que TOUTES les fiches de paie du mois concerné sont générées : la déclaration n'agrège que ce qui existe déjà.",
+                        "Ouvrez Comptabilité › Paie, onglet Déclarations fiscales.",
+                        "Cliquez sur « Générer une déclaration », renseignez le mois et l'année, puis validez.",
+                        "Consultez le détail par poste — IPRES, CSS, VRS, BRS — et le total dû à l'État qui en résulte.",
+                        "Conservez ou transmettez ce récapitulatif pour la déclaration administrative effective auprès des organismes concernés."
+                    ],
+                    impacts: [
+                        "Fiches de paie : une fiche générée APRÈS la déclaration du mois n'y figure pas — régénérez la déclaration si une fiche a été ajoutée en retard.",
+                        "Contrats : un contrat clôturé en cours de mois continue de peser sur la déclaration via les fiches déjà émises pour lui.",
+                        "Rapports financiers : les charges sociales consolidées éclairent la charge salariale totale de l'établissement."
+                    ],
+                    recommandations: [
+                        "Générez la déclaration en tout dernier, une fois certain qu'aucune fiche de paie du mois ne reste à éditer.",
+                        "Conservez une déclaration par mois, même après transmission à l'administration : c'est la pièce justificative de ce qui a été réellement versé.",
+                        "En cas de fiche de paie ajoutée après coup, régénérez la déclaration plutôt que de corriger le total à la main."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'resilience-reseau',
+            number: 10,
+            title: 'Résilience réseau — travailler sur une connexion instable',
+            icon: 'globe',
+            summary: "Ce que l'application fait, et ne fait pas, quand la connexion se coupe pendant une saisie — badge de connectivité, brouillons et reprise automatique.",
+            concept:
+                "Unikol est une application 100 % en ligne : aucune donnée n'est jamais enregistrée localement à titre " +
+                "définitif, il n'existe ni mode hors ligne ni file d'attente de synchronisation entre plusieurs postes. Ce " +
+                "choix délibéré (Volume 0 §0.13) élimine toute une classe de conflits — deux postes qui auraient chacun " +
+                "enregistré la même opération pendant une coupure. Ce que l'application offre à la place, c'est une " +
+                "RÉSILIENCE COURTE : elle détecte la coupure, en informe l'utilisateur sans l'alarmer inutilement, " +
+                "conserve sa saisie EN MÉMOIRE LOCALE le temps qu'il la termine, et, sur deux écrans précis, retente " +
+                "elle-même l'enregistrement en arrière-plan tant que l'onglet reste ouvert.",
+            articles: [
+                {
+                    id: 'etat-connexion-brouillons',
+                    title: 'Bandeau de connexion, badge de connectivité et brouillons de formulaire',
+                    location: 'Barre supérieure — présente sur toutes les pages',
+                    href: '/tableau-de-bord',
+                    roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
+                    definition:
+                        "Trois indicateurs se distinguent, et non un simple point vert/rouge : CONNECTÉ (le serveur a " +
+                        "répondu), VÉRIFICATION EN COURS (état transitoire, quelques centaines de millisecondes), et HORS " +
+                        "LIGNE (coupure confirmée). Un BROUILLON, lui, est la saisie d'un formulaire en cours — pas encore " +
+                        "envoyée — conservée sur CE poste, dans le navigateur, jamais sur le serveur.",
+                    objectif:
+                        "Dire honnêtement à l'utilisateur ce qui est enregistré et ce qui ne l'est pas encore, sans jamais " +
+                        "lui laisser croire qu'une saisie est sauvegardée alors qu'elle ne vit que dans son navigateur. Pour " +
+                        "un poste sur une connexion mobile instable, c'est la différence entre une coupure gérée sereinement " +
+                        "et une ressaisie complète par méfiance.",
+                    probleme:
+                        "Une coupure réseau silencieuse, sans indicateur ni message, laisse l'utilisateur découvrir bien " +
+                        "plus tard — parfois après avoir fermé l'onglet — qu'une saisie entière n'a jamais atteint le " +
+                        "serveur.",
+                    procedure: [
+                        "Observez le badge de la barre supérieure : « Connecté », « Vérification… » ou « Hors ligne — n saisie(s) conservée(s) ».",
+                        "En cas de coupure confirmée, un bandeau plein cadre apparaît ; il disparaît dès que la connexion est vérifiée comme rétablie, avec une confirmation brève.",
+                        "Cliquez sur le badge pour forcer une nouvelle vérification plutôt que d'attendre le retour automatique de la connexion.",
+                        "Pendant une coupure, certains formulaires (caisse, entre autres) conservent votre saisie en mémoire locale : à la reconnexion, un bandeau propose de la restaurer.",
+                        "Un brouillon disparaît de lui-même après 24 heures, ou dès que la saisie correspondante est effectivement validée.",
+                        "Ne comptez jamais sur un brouillon au-delà de la session en cours : fermer l'onglet avant validation reste une perte de saisie assumée."
+                    ],
+                    impacts: [
+                        "Aucune donnée métier : un brouillon ne modifie jamais rien côté serveur ; il ne fait que restaurer les CHAMPS d'un formulaire.",
+                        "Multi-établissement : les brouillons d'un compte rattaché à plusieurs écoles sont cloisonnés par établissement, un brouillon de l'école A ne réapparaît jamais dans l'école B.",
+                        "Compteur du badge : il reflète exactement le nombre de brouillons non expirés conservés sur ce poste, pas une file d'écritures en attente d'envoi."
+                    ],
+                    recommandations: [
+                        "Ne considérez jamais un brouillon comme un enregistrement : tant que le bandeau de confirmation n'est pas apparu, rien n'est acquis côté serveur.",
+                        "Sur une connexion notoirement instable, terminez une saisie en une seule session plutôt que de compter sur le brouillon d'un jour à l'autre.",
+                        "Le badge « Vérification… » n'est pas une alerte : c'est un état normal de quelques centaines de millisecondes à chaque sonde."
+                    ]
+                },
+                {
+                    id: 'reprise-automatique-caisse-appel',
+                    title: 'Reprise automatique après coupure — Caisse et Appel en classe',
+                    location: 'Comptabilité › Caisse et Gestion Scolaire › Appel en classe',
+                    href: '/caisse',
+                    roles: ['Directeur', 'Finance', 'Secrétariat', 'Enseignant', 'Surveillant'],
+                    definition:
+                        "Sur deux écrans précis — l'encaissement en caisse et l'appel en classe —, une coupure réseau " +
+                        "survenant PENDANT l'envoi ne se traduit plus par un échec immédiat : l'application retente elle-même " +
+                        "l'enregistrement, avec un délai croissant, tant que l'onglet reste ouvert, et affiche « en attente " +
+                        "d'envoi » le temps de la reprise. La sécurité tient à un principe strict : l'application ne " +
+                        "RETENTE JAMAIS une réponse déjà reçue du serveur, succès ou erreur métier — seule l'ABSENCE de " +
+                        "réponse (coupure, DNS, délai dépassé) déclenche une nouvelle tentative.",
+                    objectif:
+                        "Épargner à la caissière ou à l'enseignant une ressaisie manuelle pour la coupure la plus fréquente " +
+                        "en contexte sénégalais — le micro-basculement d'antenne de quelques secondes —, sans jamais courir " +
+                        "le risque d'un double encaissement ou d'un doublon de feuille d'appel.",
+                    probleme:
+                        "Sans mécanisme de reprise, une coupure de trois secondes pendant la validation d'un encaissement " +
+                        "obligeait à tout ressaisir, avec le risque réel qu'un second essai, si le premier avait en fait " +
+                        "abouti côté serveur, produise un double paiement ou une double feuille de présence.",
+                    procedure: [
+                        "Validez l'encaissement ou l'appel normalement : rien ne change tant que le réseau répond.",
+                        "Si une coupure survient PENDANT l'envoi, le bouton affiche « En attente d'envoi… » et un bandeau ambré confirme qu'une nouvelle tentative est en cours.",
+                        "Ne cliquez pas une seconde fois et ne rechargez pas la page : l'application rejoue la même opération, avec la même clé, jusqu'à cinq tentatives sur environ trente secondes.",
+                        "Dès que le réseau répond, l'opération se conclut normalement — pour la caisse, le reçu s'affiche ; pour l'appel, la fiche est marquée enregistrée.",
+                        "Si toutes les tentatives échouent (coupure prolongée), l'application vous en informe explicitement : rien n'a été enregistré, et la reprise redevient manuelle.",
+                        "Pour l'appel en classe spécifiquement, si la feuille apparaît déjà enregistrée après une coupure, c'est que la première tentative a bien abouti — sa réponse s'était simplement perdue en route ; ce n'est jamais traité comme une erreur à l'écran."
+                    ],
+                    impacts: [
+                        "Caisse : un retry rejoue le résultat déjà produit par la tentative précédente (même reçu, même numéro) au lieu de créer un second paiement.",
+                        "Appel en classe : la contrainte d'unicité de la feuille (classe, matière, date, créneau) rend un doublon structurellement impossible, retry ou non.",
+                        "Aucune persistance au-delà de l'onglet : si l'onglet se ferme avant confirmation, la tentative en cours est perdue — c'est une limite assumée, pas un incident.",
+                        "Une réponse métier (montant refusé, solde insuffisant, appel déjà saisi par un collègue) n'est JAMAIS rejouée : elle remonte immédiatement, comme sans coupure."
+                    ],
+                    recommandations: [
+                        "Laissez l'onglet ouvert et patientez pendant un « en attente d'envoi » plutôt que de recharger la page ou de retenter la saisie vous-même.",
+                        "Un échec après plusieurs tentatives (coupure prolongée) signifie que rien n'est enregistré : reprenez alors la saisie normalement, ce n'est plus automatique.",
+                        "Ce mécanisme ne couvre aujourd'hui que la caisse et l'appel en classe : les autres écrans continuent d'exiger une reprise manuelle en cas de coupure pendant l'envoi."
+                    ]
+                }
+            ]
         }
     ];
 
