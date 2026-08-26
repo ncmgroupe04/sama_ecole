@@ -54,6 +54,11 @@ document.addEventListener('alpine:init', () => {
         printingPayslipId: null,
         downloadingCertificateId: null,
 
+        // Suggestion d'heures (ticket JGK-K01) — voir loadSuggestedHours ci-dessous.
+        suggestedHours: null,
+        isLoadingSuggestion: false,
+        suggestionError: null,
+
         // ---------------------------------------------------------------- Fiche heures Vacataire
         isHourRecordsModalOpen: false,
         hourRecordsContract: null,
@@ -116,10 +121,24 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        // Moyens de paiement RH (ticket JGK-K02) — distincts du PaymentMethod du module Finance élèves.
+        payoutMethodOptions: [
+            { value: 'Cash', label: 'Espèces' },
+            { value: 'BankTransfer', label: 'Virement bancaire' },
+            { value: 'Wave', label: 'Wave' },
+            { value: 'OrangeMoney', label: 'Orange Money' }
+        ],
+
+        payoutMethodLabel(method) {
+            const found = this.payoutMethodOptions.find((o) => o.value === method);
+            return found ? found.label : (method || 'Espèces');
+        },
+
         openContractModal() {
             this.contractForm = {
                 employeeKind: 'teacher', teacherId: '', userId: '',
-                type: 'Permanent', baseSalary: '', hourlyRate: '', transportAllowance: ''
+                type: 'Permanent', baseSalary: '', hourlyRate: '', transportAllowance: '',
+                payoutMethod: 'Cash', payoutAccountReference: ''
             };
             this.isContractModalOpen = true;
         },
@@ -139,7 +158,9 @@ document.addEventListener('alpine:init', () => {
                     type: this.contractForm.type,
                     baseSalary: Number(this.contractForm.baseSalary) || 0,
                     hourlyRate: Number(this.contractForm.hourlyRate) || 0,
-                    transportAllowance: Number(this.contractForm.transportAllowance) || 0
+                    transportAllowance: Number(this.contractForm.transportAllowance) || 0,
+                    payoutMethod: this.contractForm.payoutMethod,
+                    payoutAccountReference: this.contractForm.payoutAccountReference || null
                 });
                 toast.success('Contrat enregistré.');
                 this.isContractModalOpen = false;
@@ -159,6 +180,8 @@ document.addEventListener('alpine:init', () => {
                 baseSalary: contract.baseSalary,
                 hourlyRate: contract.hourlyRate,
                 transportAllowance: contract.transportAllowance,
+                payoutMethod: contract.payoutMethod || 'Cash',
+                payoutAccountReference: contract.payoutAccountReference || '',
                 reason: '',
                 rowVersion: contract.rowVersion
             };
@@ -177,6 +200,8 @@ document.addEventListener('alpine:init', () => {
                     baseSalary: Number(this.editContractForm.baseSalary) || 0,
                     hourlyRate: Number(this.editContractForm.hourlyRate) || 0,
                     transportAllowance: Number(this.editContractForm.transportAllowance) || 0,
+                    payoutMethod: this.editContractForm.payoutMethod,
+                    payoutAccountReference: this.editContractForm.payoutAccountReference || null,
                     reason: this.editContractForm.reason.trim(),
                     rowVersion: this.editContractForm.rowVersion
                 });
@@ -251,7 +276,53 @@ document.addEventListener('alpine:init', () => {
                 employeeContractId: '', month: new Date().getMonth() + 1, year: new Date().getFullYear(),
                 hoursWorked: 0, transportAllowance: 0
             };
+            this.suggestedHours = null;
+            this.suggestionError = null;
             this.isPayslipModalOpen = true;
+        },
+
+        /** Contrat sélectionné dans le formulaire de génération, pour connaître son type (Vacataire ou non). */
+        get payslipSelectedContract() {
+            return this.contracts.find((c) => c.id === this.payslipForm.employeeContractId) || null;
+        },
+
+        get payslipContractIsVacataire() {
+            return this.payslipSelectedContract && this.payslipSelectedContract.type === 'Vacataire';
+        },
+
+        /**
+         * Suggestion d'heures pour la paie du vacataire (ticket JGK-K01) — PUREMENT CONSULTATIVE :
+         * agrège les heures pointées (TeacherHourRecord) du mois choisi et les rapproche de l'emploi
+         * du temps planifié. Ne pré-remplit rien tant que la Direction n'a pas explicitement cliqué
+         * « Utiliser cette suggestion » — un écart signalé ici n'empêche jamais la génération de la fiche.
+         */
+        async loadSuggestedHours() {
+            if (!this.payslipForm.employeeContractId || !this.payslipContractIsVacataire) return;
+
+            this.isLoadingSuggestion = true;
+            this.suggestionError = null;
+            this.suggestedHours = null;
+            try {
+                const params = new URLSearchParams({ month: this.payslipForm.month, year: this.payslipForm.year });
+                this.suggestedHours = await api.get(
+                    `/finance/employee-contracts/${this.payslipForm.employeeContractId}/suggested-hours?${params.toString()}`);
+            } catch (err) {
+                this.suggestionError = window.api.toMessage(err, 'Erreur lors du calcul de la suggestion.');
+            } finally {
+                this.isLoadingSuggestion = false;
+            }
+        },
+
+        /** Reprend la suggestion dans le champ « Heures travaillées » — la Direction reste seule à valider. */
+        applySuggestedHours() {
+            if (!this.suggestedHours) return;
+            this.payslipForm.hoursWorked = this.suggestedHours.suggestedHours;
+        },
+
+        /** Une suggestion affichée pour un autre contrat n'a plus de sens dès que la sélection change. */
+        onPayslipContractChanged() {
+            this.suggestedHours = null;
+            this.suggestionError = null;
         },
 
         async submitPayslip() {

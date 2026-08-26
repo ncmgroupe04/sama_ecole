@@ -968,23 +968,27 @@
                     definition:
                         "Le contrat rattache un employé — enseignant ou compte utilisateur non-enseignant — à un régime de " +
                         "rémunération : Permanent (salaire de base fixe) ou Vacataire (taux horaire). Une prime de transport " +
-                        "facultative peut s'ajouter à l'un comme à l'autre. Le contrat est ACTIF jusqu'à sa clôture, qui " +
+                        "facultative peut s'ajouter à l'un comme à l'autre, ainsi qu'un MOYEN DE PAIEMENT — espèces, virement " +
+                        "bancaire, Wave ou Orange Money — et sa référence (numéro de compte ou de mobile money), distincts du " +
+                        "moyen de paiement utilisé côté élèves en caisse. Le contrat est ACTIF jusqu'à sa clôture, qui " +
                         "n'efface jamais rien : un contrat clôturé demeure consultable, mais ne peut plus produire de " +
                         "nouvelle fiche de paie.",
                     objectif:
-                        "Fixer, pour chaque membre du personnel, le régime et le montant qui serviront de base à chaque fiche " +
-                        "de paie, sans avoir à les ressaisir chaque mois. Pour la direction, c'est l'unique référence " +
-                        "salariale de l'établissement, opposable en cas de litige et alignée sur ce qui figure réellement " +
-                        "sur chaque bulletin remis.",
+                        "Fixer, pour chaque membre du personnel, le régime, le montant et le canal de versement qui serviront " +
+                        "de base à chaque fiche de paie, sans avoir à les ressaisir chaque mois. Pour la direction, c'est " +
+                        "l'unique référence salariale de l'établissement, opposable en cas de litige et alignée sur ce qui " +
+                        "figure réellement sur chaque bulletin remis.",
                     probleme:
                         "Un salaire négocié verbalement et jamais consigné se traduit, en fin de mois, par une fiche de " +
-                        "paie approximative ou par un désaccord entre l'employé et l'établissement sur le montant convenu.",
+                        "paie approximative ou par un désaccord entre l'employé et l'établissement sur le montant convenu — " +
+                        "et un moyen de paiement non consigné oblige à le redemander à chaque virement.",
                     procedure: [
                         "Ouvrez Comptabilité › Paie, onglet Contrats, puis « Nouveau contrat ».",
                         "Choisissez le type d'employé : un enseignant déjà fiché, ou un utilisateur non-enseignant (personnel administratif).",
                         "Sélectionnez le régime — Permanent ou Vacataire — puis renseignez le salaire de base ou le taux horaire selon le cas, et la prime de transport le cas échéant.",
+                        "Renseignez le moyen de paiement de l'employé — espèces par défaut, ou virement bancaire, Wave, Orange Money avec la référence du compte correspondant.",
                         "Enregistrez : le contrat devient immédiatement sélectionnable pour la génération d'une fiche de paie.",
-                        "RÉVISION : depuis la ligne du contrat, modifiez le salaire, le taux horaire ou la prime, en indiquant obligatoirement le motif — une augmentation annuelle, par exemple.",
+                        "RÉVISION : depuis la ligne du contrat, modifiez le salaire, le taux horaire, la prime ou le moyen de paiement, en indiquant obligatoirement le motif — une augmentation annuelle ou un changement de compte, par exemple.",
                         "CLÔTURE : en cas de départ, clôturez le contrat en précisant la date et le motif. Le contrat n'est jamais supprimé, seulement fermé à toute nouvelle fiche.",
                         "ATTESTATION DE TRAVAIL : téléchargez à tout moment le PDF de l'attestation, depuis la ligne du contrat concerné."
                     ],
@@ -992,13 +996,14 @@
                         "Fiches de paie : seul un contrat ACTIF (non clôturé) peut servir de base à une nouvelle fiche.",
                         "Heures des vacataires : le régime Vacataire conditionne l'accès au pointage des heures.",
                         "Déclarations fiscales : les charges sociales consolidées procèdent des fiches de paie, elles-mêmes adossées aux contrats.",
-                        "Historique : toute révision de salaire ou de taux horaire est conservée avec son auteur, sa date et son motif."
+                        "Historique : toute révision de salaire, de taux horaire ou de moyen de paiement est conservée avec son auteur, sa date et son motif — un changement de moyen de paiement seul n'est jamais confondu avec un changement de rémunération."
                     ],
                     recommandations: [
                         "Enregistrez le contrat dès l'embauche, avant toute première fiche de paie : une fiche ne peut jamais précéder son contrat.",
                         "Motivez systématiquement une révision salariale : le motif est ce qui rend l'historique compréhensible des mois plus tard.",
                         "Clôturez sans délai le contrat d'un employé qui quitte l'établissement, pour prévenir toute fiche de paie émise par erreur.",
-                        "Ne confondez jamais Permanent et Vacataire à la création : le régime choisi détermine les champs attendus lors de la génération de la fiche."
+                        "Ne confondez jamais Permanent et Vacataire à la création : le régime choisi détermine les champs attendus lors de la génération de la fiche.",
+                        "Vérifiez le numéro de compte ou de mobile money AVANT le premier versement : une référence erronée retarde le paiement de l'employé, pas seulement celui de la famille en caisse."
                     ]
                 },
                 {
@@ -1027,16 +1032,21 @@
                         "Consultez, filtré par mois et par année, le récapitulatif des heures déjà pointées pour ce contrat.",
                         "Téléchargez la fiche d'heures au format PDF si une pièce signée est requise.",
                         "Ouvrez ensuite l'onglet Fiches de paie et cliquez sur « Générer une fiche » : choisissez le contrat, le mois et l'année.",
-                        "Pour un contrat Vacataire, reportez le total d'heures pointées sur le mois dans le champ « Heures travaillées » ; pour un Permanent, ce champ reste sans objet.",
+                        "Pour un contrat Vacataire, cliquez sur « Suggérer les heures depuis le pointage » : l'application propose le total déjà pointé pour ce mois, et signale — pour information seulement — les jours où l'heure pointée diffère du créneau planifié à l'emploi du temps.",
+                        "Un clic sur « Utiliser cette suggestion » reporte ce total dans le champ « Heures travaillées » ; la suggestion reste modifiable, et rien n'empêche de générer la fiche sans jamais l'avoir consultée.",
+                        "Pour un contrat Permanent, le champ « Heures travaillées » reste sans objet — aucune suggestion ne s'y propose.",
                         "Validez : la fiche calcule le brut et le net, puis devient immédiatement imprimable en bulletin PDF."
                     ],
                     impacts: [
-                        "Salaire du vacataire : le brut de sa fiche se calcule directement du produit des heures saisies par le taux horaire de son contrat.",
+                        "Salaire du vacataire : le brut de sa fiche se calcule directement du produit des heures saisies par le taux horaire de son contrat — la suggestion n'écrit jamais ce champ toute seule, seul un clic explicite la reprend.",
+                        "Emploi du temps : le rapprochement s'appuie sur les créneaux planifiés de l'enseignant ; un contrat lié à un utilisateur non-enseignant n'a pas d'emploi du temps de classe et ne reçoit que le total agrégé, sans rapprochement.",
                         "Déclarations fiscales : chaque fiche générée entre dans l'agrégat des charges sociales du mois correspondant.",
                         "Historique : les heures pointées restent consultables mois par mois, indépendamment des fiches déjà générées.",
                         "Bulletin PDF : le document remis à l'employé restitue exactement les montants calculés, sans reprise manuelle."
                     ],
                     recommandations: [
+                        "Consultez la suggestion avant de saisir les heures à la main : elle repose sur le même pointage que la fiche d'heures PDF, donc sur les mêmes chiffres qu'un contrôle croisé retrouverait.",
+                        "Un écart signalé entre heures pointées et emploi du temps n'est ni une erreur ni un blocage : vérifiez-le si le nombre paraît surprenant, mais la génération de la fiche reste possible sans y répondre.",
                         "Pointez les heures au fil de l'eau, jour après jour, plutôt qu'en une seule saisie de fin de mois sujette à l'oubli.",
                         "Contrôlez le total des heures pointées AVANT de générer la fiche de paie : une fiche déjà éditée et remise ne se corrige pas en silence.",
                         "Faites viser la fiche d'heures par le vacataire lorsque l'usage de l'établissement le prévoit.",

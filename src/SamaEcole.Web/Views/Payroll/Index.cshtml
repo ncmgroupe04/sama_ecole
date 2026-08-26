@@ -56,13 +56,14 @@
                             <th class="py-3 px-4 text-right">Salaire de base</th>
                             <th class="py-3 px-4 text-right">Taux horaire</th>
                             <th class="py-3 px-4 text-right">Prime transport</th>
+                            <th class="py-3 px-4">Moyen de paiement</th>
                             <th class="py-3 px-4">Statut</th>
                             <th class="py-3 px-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         <tr x-show="!isLoading && contracts.length === 0" x-cloak>
-                            <td colspan="7">
+                            <td colspan="8">
                                 <empty-state icon="document" title="Aucun contrat enregistré."
                                     hint="Ajoutez un contrat pour pouvoir générer une fiche de paie." />
                             </td>
@@ -75,6 +76,10 @@
                                 <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.baseSalary)"></td>
                                 <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.hourlyRate)"></td>
                                 <td class="py-3 px-4 text-right text-slate-600 amount" x-text="formatAmount(contract.transportAllowance)"></td>
+                                <td class="py-3 px-4">
+                                    <span class="text-slate-600" x-text="payoutMethodLabel(contract.payoutMethod)"></span>
+                                    <p x-show="contract.payoutAccountReference" x-cloak class="text-xs text-slate-400 font-mono" x-text="contract.payoutAccountReference"></p>
+                                </td>
                                 <td class="py-3 px-4">
                                     <span x-show="!contract.endDate" class="status-badge-success"><span class="status-dot" aria-hidden="true"></span>Actif</span>
                                     <span x-show="contract.endDate" x-cloak class="status-badge-neutral"><span class="status-dot" aria-hidden="true"></span><span x-text="'Clôturé le ' + formatDate(contract.endDate)"></span></span>
@@ -287,6 +292,17 @@
                 </div>
             </div>
 
+            <div class="form-grid">
+                <div>
+                    <label class="form-label">Moyen de paiement</label>
+                    <select-field model="contractForm.payoutMethod" options-expr="payoutMethodOptions" />
+                </div>
+                <div x-show="contractForm.payoutMethod !== 'Cash'" x-cloak>
+                    <label class="form-label">Référence du compte</label>
+                    <input type="text" maxlength="50" x-model="contractForm.payoutAccountReference" placeholder="ex : numéro de compte, numéro Wave/Orange Money" class="input-field mt-1" />
+                </div>
+            </div>
+
             <div class="flex items-center justify-end gap-3 pt-2">
                 <button type="button" x-on:click="isContractModalOpen = false" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" class="btn-modal-primary group" :disabled="isSavingContract">
@@ -312,6 +328,17 @@
                 <div>
                     <label class="form-label">Prime de transport (FCFA)</label>
                     <input type="number" min="0" x-model="editContractForm.transportAllowance" class="input-field mt-1" />
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div>
+                    <label class="form-label">Moyen de paiement</label>
+                    <select-field model="editContractForm.payoutMethod" options-expr="payoutMethodOptions" />
+                </div>
+                <div x-show="editContractForm.payoutMethod !== 'Cash'" x-cloak>
+                    <label class="form-label">Référence du compte</label>
+                    <input type="text" maxlength="50" x-model="editContractForm.payoutAccountReference" placeholder="ex : numéro de compte, numéro Wave/Orange Money" class="input-field mt-1" />
                 </div>
             </div>
 
@@ -364,14 +391,14 @@
         <form x-on:submit.prevent="submitPayslip()" novalidate class="space-y-5">
             <div>
                 <label class="form-label">Contrat <span class="text-red-500">*</span></label>
-                <select-field model="payslipForm.employeeContractId" placeholder="Sélectionnez un contrat..."
+                <select-field model="payslipForm.employeeContractId" placeholder="Sélectionnez un contrat..." on-change="onPayslipContractChanged()"
                     options-expr="contracts.filter(c => !c.endDate).map(c => ({value: c.id, label: c.employeeFullName + ' — ' + contractTypeLabel(c.type)}))" />
             </div>
 
             <div class="form-grid">
                 <div>
                     <label class="form-label">Mois</label>
-                    <select x-model="payslipForm.month" class="input-field mt-1 font-semibold">
+                    <select x-model="payslipForm.month" x-on:change="onPayslipContractChanged()" class="input-field mt-1 font-semibold">
                         <template x-for="m in 12" :key="m">
                             <option :value="m" x-text="monthLabel(m)" class="font-semibold"></option>
                         </template>
@@ -379,13 +406,42 @@
                 </div>
                 <div>
                     <label class="form-label">Année</label>
-                    <input type="number" x-model="payslipForm.year" class="input-field mt-1" />
+                    <input type="number" x-model="payslipForm.year" x-on:change="onPayslipContractChanged()" class="input-field mt-1" />
                 </div>
             </div>
 
             <div>
                 <label class="form-label">Heures travaillées (contrat Vacataire)</label>
                 <input type="number" min="0" x-model="payslipForm.hoursWorked" class="input-field mt-1" />
+
+                <!-- Suggestion d'heures (ticket JGK-K01) — purement consultative, n'écrit jamais le champ toute seule. -->
+                <div x-show="payslipContractIsVacataire" x-cloak class="mt-2">
+                    <button type="button" x-on:click="loadSuggestedHours()" :disabled="isLoadingSuggestion" class="btn-modal-secondary text-xs py-1.5 px-3">
+                        <span x-show="!isLoadingSuggestion">Suggérer les heures depuis le pointage</span>
+                        <span x-show="isLoadingSuggestion">Calcul en cours…</span>
+                    </button>
+
+                    <p x-show="suggestionError" x-cloak class="field-error mt-1" x-text="suggestionError"></p>
+
+                    <div x-show="suggestedHours" x-cloak class="mt-2 rounded-xl border-l-4 border-primary bg-primary-50 p-3 text-sm">
+                        <p class="text-slate-700">
+                            Heures pointées ce mois-ci : <span class="font-semibold" x-text="suggestedHours ? suggestedHours.suggestedHours : 0"></span> h.
+                        </p>
+                        <button type="button" x-on:click="applySuggestedHours()" class="mt-1 text-xs font-medium text-primary hover:underline">
+                            Utiliser cette suggestion
+                        </button>
+                        <div x-show="suggestedHours && suggestedHours.discrepancies.length > 0" x-cloak class="mt-2 pt-2 border-t border-primary-100">
+                            <p class="text-xs font-medium text-slate-600">Écarts avec l'emploi du temps planifié (informatif) :</p>
+                            <ul class="mt-1 space-y-0.5">
+                                <template x-for="d in (suggestedHours ? suggestedHours.discrepancies : [])" :key="d.date">
+                                    <li class="text-xs text-slate-500">
+                                        <span x-text="formatDate(d.date)"></span> — pointé <span x-text="d.declaredHours"></span> h, planifié <span x-text="d.scheduledHours"></span> h
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div>
                 <label class="form-label">Prime de transport (FCFA)</label>
