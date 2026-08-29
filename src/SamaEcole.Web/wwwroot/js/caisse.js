@@ -52,8 +52,95 @@ document.addEventListener('alpine:init', () => {
         receiptFitMm: null,
         hasDraft: false,
 
+        // ---------------------------------------------------------------- Session de caisse (Volume 1 §15.1)
+        //
+        // RecordPaymentCommandHandler refuse tout encaissement (422) hors d'une session de caisse
+        // ouverte pour l'utilisateur courant — c'était déjà vrai côté serveur, mais rien ne l'exposait
+        // à l'écran avant ce câblage (27/08/2026) : la recherche d'élève et le formulaire restent
+        // masqués tant qu'aucune session n'est ouverte (voir x-show de la grille dans la vue).
+        currentSession: null, // { sessionId, openingBalance, openedAt, totalCollected, paymentsCount }
+        isLoadingSession: false,
+
+        openSessionForm: { openingBalance: 0 },
+        isOpeningSession: false,
+        openSessionError: null,
+
+        isCloseSessionModalOpen: false,
+        isClosingSession: false,
+        closeSessionError: null,
+        closeSessionResult: null, // { sessionId, openingBalance, totalCollected, expectedClosingBalance }
+
+        async loadCurrentSession() {
+            this.isLoadingSession = true;
+            try {
+                this.currentSession = await window.api.get('/finance/sessions/current');
+            } catch {
+                // 403 possible si le rôle n'a pas accès (canRecordPayment filtre déjà l'appelant réel) ;
+                // dans tous les cas, l'absence de session se traite comme "pas encore ouverte".
+                this.currentSession = null;
+            } finally {
+                this.isLoadingSession = false;
+            }
+        },
+
+        async submitOpenSession() {
+            this.isOpeningSession = true;
+            this.openSessionError = null;
+            try {
+                await window.api.post('/finance/sessions/open', {
+                    openingBalance: Number(this.openSessionForm.openingBalance) || 0
+                });
+                this.openSessionForm = { openingBalance: 0 };
+                await this.loadCurrentSession();
+            } catch (err) {
+                this.openSessionError = window.api.toMessage(err, "Erreur lors de l'ouverture de la session de caisse.");
+            } finally {
+                this.isOpeningSession = false;
+            }
+        },
+
+        openCloseSessionModal() {
+            this.closeSessionError = null;
+            this.closeSessionResult = null;
+            this.isCloseSessionModalOpen = true;
+        },
+
+        closeCloseSessionModal() {
+            this.isCloseSessionModalOpen = false;
+        },
+
+        /** Rapport de clôture (Volume 1 §15.2) : fige le solde théorique, jamais re-clôturable ensuite. */
+        async confirmCloseSession() {
+            if (!this.currentSession) return;
+            this.isClosingSession = true;
+            this.closeSessionError = null;
+            try {
+                this.closeSessionResult = await window.api.post(
+                    `/finance/sessions/${this.currentSession.sessionId}/close`, null);
+                await this.loadCurrentSession(); // redevient null : la journée suivante en ouvrira une autre.
+            } catch (err) {
+                this.closeSessionError = window.api.toMessage(err, 'Erreur lors de la clôture de la session.');
+            } finally {
+                this.isClosingSession = false;
+            }
+        },
+
+        async downloadClosingReport() {
+            if (!this.closeSessionResult) return;
+            await this.openPdfPreview(
+                `/api/v1/finance/sessions/${this.closeSessionResult.sessionId}/closing-report`,
+                'Rapport de clôture de caisse',
+                `Rapport-Cloture-${this.closeSessionResult.sessionId}.pdf`);
+        },
+
+        formatTime(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        },
+
         init() {
             this.idempotencyKey = window.networkGuard.newIdempotencyKey();
+            if (this.canRecordPayment) this.loadCurrentSession();
             if (window.formDraft && window.formDraft.has('caisse_form')) {
                 this.hasDraft = true;
             }

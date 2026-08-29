@@ -85,8 +85,42 @@
 
  <div x-show="canRecordPayment" x-cloak>
 
+ <!-- ============================= SESSION DE CAISSE (Volume 1 §15.1) =============================
+      Aucun encaissement n'est possible côté serveur hors d'une session ouverte (RecordPaymentCommandHandler,
+      422 sinon) : la recherche d'élève et le formulaire restent masqués tant qu'elle ne l'est pas. -->
+ <div class="mt-6">
+     <div x-show="!isLoadingSession && !currentSession" x-cloak class="card p-6 border-l-4 border-warning">
+         <h2 class="text-sm font-semibold text-slate-900">Aucune session de caisse ouverte</h2>
+         <p class="text-sm text-slate-500 mt-1">Déclarez le fonds de caisse initial pour commencer les encaissements d'aujourd'hui.</p>
+         <form x-on:submit.prevent="submitOpenSession()" novalidate class="mt-4 flex flex-wrap items-end gap-3">
+             <div>
+                 <label for="open-session-balance" class="form-label">Fonds de caisse initial (FCFA)</label>
+                 <input id="open-session-balance" type="number" min="0" x-model="openSessionForm.openingBalance" class="input-field mt-1 w-48">
+             </div>
+             <button type="submit" :disabled="isOpeningSession" class="btn-modal-primary group">
+                 <span x-show="!isOpeningSession">Ouvrir la session de caisse</span>
+                 <span x-show="isOpeningSession">Ouverture…</span>
+             </button>
+         </form>
+         <p x-show="openSessionError" x-cloak class="field-error mt-2" x-text="openSessionError"></p>
+     </div>
+
+     <div x-show="currentSession" x-cloak class="card p-4 border-l-4 border-success flex flex-wrap items-center justify-between gap-3">
+         <p class="text-sm text-slate-700">
+             <span class="font-semibold text-success">Session de caisse ouverte</span>
+             depuis <span x-text="currentSession ? formatTime(currentSession.openedAt) : ''"></span>
+             · Fonds initial : <span x-text="formatMoney(currentSession ? currentSession.openingBalance : 0)"></span>
+             · Encaissé aujourd'hui : <span class="font-semibold" x-text="formatMoney(currentSession ? currentSession.totalCollected : 0)"></span>
+             (<span x-text="currentSession ? currentSession.paymentsCount : 0"></span> versement<span x-show="currentSession && currentSession.paymentsCount > 1">s</span>)
+         </p>
+         <button type="button" x-on:click="openCloseSessionModal()" class="btn-modal-secondary group shrink-0">
+             Clôturer la caisse
+         </button>
+     </div>
+ </div>
+
  <!-- ============================= RECHERCHE + SOLDE + FORMULAIRE ============================= -->
- <div x-show="!showReceipt" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+ <div x-show="!showReceipt && currentSession" x-cloak class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
  <!-- Colonne recherche élève -->
  <div class="lg:col-span-1 card p-6">
@@ -471,6 +505,45 @@
 
         </div>
 
+ </div>
+
+ @* Clôture de la session de caisse (Volume 1 §15.2) : confirmation, puis récapitulatif du rapport
+ avec accès direct au PDF — le solde théorique est figé, une session close ne se rouvre jamais. *@
+ <div class="no-print">
+ <modal-shell open="isCloseSessionModalOpen" on-close="closeCloseSessionModal()" title="Clôturer la session de caisse" size="md">
+     <template x-if="!closeSessionResult">
+         <div class="space-y-4">
+             <p class="text-sm text-slate-600">
+                 Fonds initial : <span class="font-medium text-slate-900" x-text="formatMoney(currentSession ? currentSession.openingBalance : 0)"></span><br>
+                 Encaissé sur la session : <span class="font-medium text-slate-900" x-text="formatMoney(currentSession ? currentSession.totalCollected : 0)"></span><br>
+                 Solde de fermeture théorique : <span class="font-semibold text-slate-900" x-text="formatMoney(currentSession ? (currentSession.openingBalance + currentSession.totalCollected) : 0)"></span>
+             </p>
+             <p class="text-xs text-slate-400">Comptez le numéraire en caisse avant de confirmer : une session clôturée ne peut plus être rouverte ni re-clôturée.</p>
+             <div x-show="closeSessionError" x-cloak class="form-error-banner" x-text="closeSessionError"></div>
+             <div class="flex items-center justify-end gap-3 pt-2">
+                 <button type="button" x-on:click="closeCloseSessionModal()" class="btn-modal-secondary group">Annuler</button>
+                 <button type="button" x-on:click="confirmCloseSession()" :disabled="isClosingSession" class="btn-modal-primary group">
+                     <span x-show="!isClosingSession">Clôturer</span>
+                     <span x-show="isClosingSession">Clôture…</span>
+                 </button>
+             </div>
+         </div>
+     </template>
+     <template x-if="closeSessionResult">
+         <div class="space-y-4">
+             <p class="text-sm text-success font-medium">Session clôturée.</p>
+             <p class="text-sm text-slate-600">
+                 Solde de fermeture théorique : <span class="font-semibold text-slate-900" x-text="closeSessionResult ? formatMoney(closeSessionResult.expectedClosingBalance) : ''"></span>
+             </p>
+             <div class="flex items-center justify-end gap-3 pt-2">
+                 <button type="button" x-on:click="closeCloseSessionModal()" class="btn-modal-secondary group">Fermer</button>
+                 <button type="button" x-on:click="downloadClosingReport()" class="btn-modal-primary group">
+                     Rapport de clôture (PDF)
+                 </button>
+             </div>
+         </div>
+     </template>
+ </modal-shell>
  </div>
 
  @* Fenêtre de confirmation affichée juste après l'encaissement (avant le reçu) — même parcours que

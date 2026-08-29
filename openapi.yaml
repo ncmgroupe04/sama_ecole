@@ -1930,7 +1930,82 @@ paths:
         '403': { description: Rôle non autorisé (écriture réservée à Directeur + Finance) }
         '404': { description: Inscription introuvable dans cet établissement }
         '409': { description: Encaissement concurrent — recharger le solde et réessayer }
-        '422': { description: Montant invalide, solde dépassé, ou inscription déjà soldée/annulée }
+        '422': { description: "Montant invalide, solde dépassé, inscription déjà soldée/annulée, ou aucune session de caisse ouverte pour l'utilisateur courant (voir /finance/sessions/open)" }
+
+  /finance/sessions/current:
+    get:
+      tags: [Finance]
+      summary: Session de caisse ouverte de l'utilisateur courant (Directeur + Finance)
+      description: >-
+        Renvoie null si l'utilisateur courant n'a aucune session ouverte. C'est ce que l'écran /caisse
+        interroge avant toute tentative d'encaissement — POST /finance/payments refuse (422) tout
+        versement hors d'une session ouverte (Volume 1 §15.1).
+      responses:
+        '200':
+          description: Session ouverte, ou corps vide
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CurrentCashierSession' }
+        '403': { description: Rôle non autorisé (réservé à Directeur + Finance) }
+
+  /finance/sessions/open:
+    post:
+      tags: [Finance]
+      summary: Ouvrir une session de caisse (Directeur + Finance) — Volume 1 §15.1
+      description: >-
+        Un utilisateur ne peut avoir qu'une seule session ouverte à la fois (422 sinon). Le fonds de
+        caisse initial déclaré ici sert de base au solde de fermeture théorique calculé à la clôture.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [openingBalance]
+              properties:
+                openingBalance: { type: number, format: decimal, minimum: 0 }
+      responses:
+        '200':
+          description: Identifiant de la session ouverte
+          content:
+            application/json:
+              schema: { type: string, format: uuid }
+        '403': { description: Rôle non autorisé }
+        '422': { description: Cet utilisateur a déjà une session de caisse ouverte }
+
+  /finance/sessions/{id}/close:
+    post:
+      tags: [Finance]
+      summary: Clôturer une session de caisse (Directeur + Finance) — Volume 1 §15.2
+      description: >-
+        Fige le solde de fermeture théorique (fonds initial + encaissements non annulés de la session).
+        Une session close ne peut jamais être re-clôturée ni rouverte.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Récapitulatif de clôture
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CashierSessionClosingResult' }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Session introuvable dans cet établissement }
+        '422': { description: Cette session est déjà fermée ou vérifiée }
+
+  /finance/sessions/{id}/closing-report:
+    get:
+      tags: [Finance]
+      summary: Rapport de clôture de caisse en PDF (Directeur + Finance) — Volume 1 §15.2
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Rapport PDF (fonds initial, total encaissé, ventilation par mode et catégorie, détail des transactions)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Session introuvable dans cet établissement }
 
   /finance/payments/{id}/receipt:
     get:
@@ -4492,6 +4567,25 @@ components:
         amountPaid: { type: number, description: "Cumul encaissé après ce versement." }
         remainingBalance: { type: number }
         status: { type: string, enum: [Paid, Partial] }
+
+    CurrentCashierSession:
+      type: object
+      nullable: true
+      description: Session de caisse ouverte de l'utilisateur courant, ou null s'il n'en a aucune.
+      properties:
+        sessionId: { type: string, format: uuid }
+        openingBalance: { type: number, description: "Fonds de caisse déclaré à l'ouverture." }
+        openedAt: { type: string, format: date-time }
+        totalCollected: { type: number, description: "Somme des encaissements non annulés de la session, en temps réel." }
+        paymentsCount: { type: integer }
+
+    CashierSessionClosingResult:
+      type: object
+      properties:
+        sessionId: { type: string, format: uuid }
+        openingBalance: { type: number }
+        totalCollected: { type: number }
+        expectedClosingBalance: { type: number, description: "Solde théorique = openingBalance + totalCollected." }
 
     PaymentReceipt:
       type: object

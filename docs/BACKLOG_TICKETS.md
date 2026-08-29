@@ -109,8 +109,10 @@ Montant standard + application en masse + exceptions par classe, historique des 
 *Dépend de* : JGK-C02.
 
 **JGK-F02** [C] — Enregistrement des paiements
-`POST /finance/payments` avec verrouillage optimiste (`row_version`), génération de reçu.
+`POST /finance/payments` avec verrouillage optimiste (`row_version`), génération de reçu. Refuse (422) tout encaissement hors d'une session de caisse ouverte pour l'utilisateur courant (Volume 1 §15.1).
 *Critères* : deux paiements concurrents sur le même solde ne produisent jamais un état incohérent — test de concurrence obligatoire.
+**Effet de bord corrigé (27/08/2026)** : l'écran `/caisse` n'exposait AUCUN moyen d'ouvrir ou de clôturer une session de caisse — `POST /finance/sessions/open` et `POST /finance/sessions/{id}/close` existaient côté API sans jamais être appelés par aucun fichier JS du dépôt, alors que la contrainte ci-dessus est inconditionnelle. Conséquence réelle : aucun encaissement n'a jamais pu aboutir en production. Corrigé par l'ajout de `GET /finance/sessions/current` (`GetCurrentCashierSessionQueryTests.cs`, 4/4) et son câblage complet sur `/caisse` — bandeau d'ouverture (fonds initial), statut en direct (total encaissé, nombre de versements), et modale de clôture avec accès au rapport PDF. Vérifié en conditions réelles (navigateur + PostgreSQL) : ouverture → encaissement (avec coupure réseau simulée, JGK-L03) → clôture → téléchargement du rapport, de bout en bout.
+**Second bug corrigé au passage** : `DailyClosingReportPdfGenerator` ne posait pas `QuestPDF.Settings.License = LicenseType.Community` dans son constructeur statique, contrairement aux 25 autres générateurs du projet — le rapport de clôture renvoyait donc systématiquement une erreur 500, jamais un PDF, depuis sa livraison. Mis au jour en cliquant réellement le bouton depuis l'écran, jamais par un test (aucun test n'appelait ce générateur jusqu'ici).
 
 **JGK-F03** [H] — Dépenses
 `GET/POST /finance/expenses`.
@@ -219,12 +221,12 @@ Middleware d'autorisation bloquant tout endpoint hors `/subscriptions/{schoolId}
 ## Module K — Extension RH &amp; Paie
 
 **JGK-K01** [H] — Suggestion automatique des heures de vacation
-Agrège `TeacherHourRecord` (rapproché de `ScheduleSlot` pour signaler les écarts) et **pré-remplit** `HoursWorked` dans `GenerateFichePaieCommand` — valeur reste éditable, tout ajustement est historisé. La validation humaine reste seule à clôturer la fiche de paie (arbitrage acté : n'abroge pas la saisie manuelle, voir Volume_1 §14.3 amendé).
-*Dépend de* : module Paie existant (`EmployeeContract`, `FichePaie`, `TeacherHourRecord`, `ScheduleSlot`). *Critères* : générer une fiche sans jamais avoir consulté la suggestion reste possible (non bloquant) ; un test vérifie qu'un écart entre heures pointées et créneaux planifiés est signalé, pas rejeté.
+**Statut : livré (26/08/2026), câblage écran terminé le 27/08/2026.** Agrège `TeacherHourRecord` (rapproché de `ScheduleSlot` pour signaler les écarts) via `GET /finance/employee-contracts/{id}/suggested-hours` — consultatif, n'écrit rien. L'écran `/paie` propose un bouton « Suggérer les heures depuis le pointage » dans la modale de génération de fiche (visible seulement pour un contrat Vacataire) : il affiche le total suggéré et les écarts, et ne **pré-remplit** `HoursWorked` que sur un clic explicite « Utiliser cette suggestion » — la valeur reste éditable, la validation humaine reste seule à clôturer la fiche de paie (arbitrage acté, Volume_1 §14.3 amendé). L'API a existé plusieurs jours sans consommateur avant ce câblage : à surveiller pour tout futur ticket « API only ».
+*Dépend de* : module Paie existant (`EmployeeContract`, `FichePaie`, `TeacherHourRecord`, `ScheduleSlot`). *Critères vérifiés* : `GetSuggestedPayrollHoursQueryHandlerTests.cs` — un écart entre heures pointées et créneaux planifiés est signalé, pas rejeté ; générer une fiche sans jamais avoir consulté la suggestion reste possible (non bloquant, `payroll.js`).
 
 **JGK-K02** [M] — Moyens de paiement RH (Bancaire/Wave/Orange Money)
-Nouveau champ moyen de paiement + coordonnées sur `EmployeeContract`, distinct du `PaymentMethod` finance élève.
-*Dépend de* : `EmployeeContract` existant. *Critères* : coordonnées bancaires/mobile money jamais journalisées en clair dans un log applicatif (Volume 7).
+**Statut : livré (26/08/2026), câblage écran terminé le 27/08/2026.** Champ moyen de paiement + référence de compte sur `EmployeeContract`, distinct du `PaymentMethod` finance élève. Les modales Nouveau contrat et Modifier le contrat de l'écran `/paie` exposent désormais ce champ (Espèces par défaut), affiché en colonne du tableau des contrats.
+*Dépend de* : `EmployeeContract` existant. *Critères vérifiés* : coordonnées bancaires/mobile money jamais journalisées en clair dans un log applicatif (aucun appel de log ne référence `PayoutAccountReference`, Volume 7).
 
 ---
 
@@ -241,7 +243,7 @@ Nouveau champ moyen de paiement + coordonnées sur `EmployeeContract`, distinct 
 
 **JGK-L03** [M] — Câblage de `submitWithRetry` sur les écrans Caisse et Pointage
 **Statut : livré (26/08/2026).** `window.api.postWithRetry` (nouveau, `wwwroot/js/api.js`) câble `submitWithRetry` derrière la même normalisation d'erreurs que `post()`. Le formulaire d'encaissement (`/caisse`) génère une `idempotencyKey` à l'ouverture (`newIdempotencyKey()`, régénérée à chaque nouvel encaissement dans `startNewPayment()`), l'inclut dans le body de `POST /finance/payments`, et affiche l'état « en attente d'envoi » sur `onStateChange`. Le formulaire d'appel (`/attendance`, écran Présences) appelle `postWithRetry` sur `POST /attendance` et traite un **409 reçu pendant un retry** (`lastAttempt > 1`, pas au premier essai) comme un succès silencieux — la feuille a déjà été enregistrée par la tentative précédente dont la réponse s'est perdue.
-*Dépend de* : JGK-L01, JGK-L02. *Critères* : vérification manuelle (skill `run`) — coupure réseau pendant une saisie caisse ou un appel, reprise sans doublon ni message d'erreur trompeur, pas de trace locale de la transaction après fermeture de l'onglet.
+*Dépend de* : JGK-L01, JGK-L02. *Critères vérifiés (27/08/2026, skill `run`, navigateur réel + PostgreSQL)* : coupure réseau simulée sur le premier essai de `POST /finance/payments` (session de caisse ouverte au préalable, voir JGK-F02) — un seul appel aboutit derrière, le reçu s'affiche normalement, un seul paiement en base. Cette vérification a d'abord été bloquée par l'absence de session de caisse côté écran (corrigé, voir JGK-F02) puis par un bug du générateur PDF de clôture (corrigé, voir JGK-F02) : sans le câblage complet de bout en bout, cette case n'aurait jamais pu être cochée honnêtement.
 
 ---
 

@@ -230,6 +230,16 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
 
 public class DailyClosingReportPdfGenerator : IDailyClosingReportPdfGenerator
 {
+    // Manquait ici alors que les 25 autres générateurs QuestPDF du projet le posent tous dans leur
+    // constructeur statique : sans lui, QuestPDF.Drawing.DocumentGenerator.ValidateLicense() lève à
+    // CHAQUE appel, jamais seulement au premier — ce générateur n'a donc jamais produit un PDF, même en
+    // développement. Bug pré-existant, mis au jour en cliquant réellement le rapport de clôture depuis
+    // /caisse (27/08/2026) après le câblage de l'écran session de caisse.
+    static DailyClosingReportPdfGenerator()
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+    }
+
     public byte[] Generate(DailyClosingReportDto report, byte[]? schoolLogo)
     {
         var document = new DailyClosingReportDocument(report, schoolLogo);

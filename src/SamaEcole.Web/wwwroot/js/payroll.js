@@ -105,7 +105,12 @@ document.addEventListener('alpine:init', () => {
 
         async loadTeachers() {
             try {
-                const data = await api.get('/teachers?page=1&pageSize=1000');
+                // pageSize plafonné à 100 côté serveur (GetTeachersQueryValidator.MaxPageSize) : au-delà,
+                // la requête est rejetée en 422 et le sélecteur reste vide sans qu'aucune erreur ne
+                // s'affiche à l'écran (bug réel constaté le 27/08/2026 — pageSize=1000 échouait toujours).
+                // 100 reste une limite pour un établissement à très gros effectif enseignant ; passer par
+                // une recherche serveur comme students.js le fait serait la vraie solution si ça arrive.
+                const data = await api.get('/teachers?page=1&pageSize=100');
                 this.teachers = data.items || [];
             } catch (err) {
                 console.error('Erreur chargement enseignants:', err);

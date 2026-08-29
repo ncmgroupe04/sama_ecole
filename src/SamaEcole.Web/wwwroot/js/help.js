@@ -804,28 +804,28 @@
                     roles: ['Directeur', 'Finance'],
                     definition:
                         "Rituel comptable de fin de journée : la session de caisse ouverte le matin avec un fonds initial " +
-                        "est clôturée le soir en déclarant le solde constaté. L'application édite alors le rapport de " +
-                        "clôture, qui rapproche le total théorique des encaissements du numéraire réellement compté.",
+                        "est clôturée le soir. L'application calcule alors automatiquement le solde de fermeture " +
+                        "théorique (fonds initial + total des encaissements de la session) et édite le rapport de " +
+                        "clôture qui le détaille.",
                     objectif:
-                        "Arrêter chaque journée sur un chiffre incontestable, détecter immédiatement tout écart de caisse, et " +
-                        "fixer la responsabilité de chaque caissier sur sa propre session. Pour la direction, c'est la protection " +
-                        "la plus élémentaire contre les fuites de caisse ; pour le caissier lui-même, c'est la garantie qu'un " +
-                        "manquant survenu ailleurs ou un autre jour ne pourra jamais lui être imputé.",
+                        "Arrêter chaque journée sur un chiffre incontestable et fixer la responsabilité de chaque caissier " +
+                        "sur sa propre session. Pour la direction, c'est la protection la plus élémentaire contre les " +
+                        "fuites de caisse ; pour le caissier lui-même, c'est la garantie qu'un manquant survenu ailleurs " +
+                        "ou un autre jour ne pourra jamais lui être imputé.",
                     probleme:
                         "Une caisse jamais arrêtée formellement rend tout écart indétectable : lorsqu'un manquant apparaît " +
                         "en fin de mois, il devient impossible d'en déterminer le jour, l'opération ou l'agent. Le soupçon " +
                         "se répand alors sur l'ensemble du service.",
                     procedure: [
-                        "À l'ouverture du guichet, ouvrez votre session de caisse en déclarant le fonds de caisse initial.",
-                        "Effectuez la journée d'encaissement : chaque versement est rattaché à cette session nominative.",
-                        "En fin de journée, comptez physiquement le numéraire en caisse.",
-                        "Ouvrez la clôture, déclarez le solde constaté, et confrontez-le au total théorique calculé par l'application.",
-                        "Justifiez tout écart avant de valider : un écart accepté sans explication est un écart perdu.",
-                        "Validez la clôture, puis éditez le rapport de clôture journalière au format PDF.",
+                        "À l'ouverture du guichet, ouvrez votre session de caisse en déclarant le fonds de caisse initial — un bandeau l'impose avant tout encaissement.",
+                        "Effectuez la journée d'encaissement : chaque versement est rattaché à cette session nominative, visible en temps réel dans le bandeau (total encaissé, nombre de versements).",
+                        "En fin de journée, comptez physiquement le numéraire en caisse et comparez-le vous-même au total affiché avant de valider — l'application calcule le solde théorique, elle ne compare pas encore à un comptage saisi.",
+                        "Cliquez sur « Clôturer la caisse », vérifiez le récapitulatif (fonds initial, encaissé, solde théorique), puis confirmez : une session clôturée ne se rouvre plus.",
+                        "Téléchargez immédiatement le rapport de clôture au format PDF depuis la fenêtre de confirmation.",
                         "Faites contresigner le rapport par la direction selon l'usage de l'établissement, et classez-le."
                     ],
                     impacts: [
-                        "Encaissements : aucun versement ne peut être enregistré hors d'une session de caisse ouverte.",
+                        "Encaissements : aucun versement ne peut être enregistré hors d'une session de caisse ouverte — la recherche d'élève et le formulaire restent masqués tant qu'elle ne l'est pas.",
                         "Trésorerie : les recettes de la journée clôturée alimentent la position de trésorerie de l'établissement.",
                         "Rapports financiers : la consolidation des recettes repose sur les sessions clôturées.",
                         "Audit : l'ouverture et la clôture sont tracées avec leur auteur et leur horodatage.",
@@ -833,7 +833,7 @@
                     ],
                     recommandations: [
                         "Clôturez chaque jour, sans exception : une session laissée ouverte plusieurs jours ruine l'intérêt du dispositif.",
-                        "Comptez le numéraire AVANT de consulter le total théorique, afin de ne pas s'aligner inconsciemment sur le chiffre attendu.",
+                        "Comptez le numéraire AVANT de regarder le total affiché à l'écran, afin de ne pas s'aligner inconsciemment sur le chiffre attendu — la comparaison reste aujourd'hui un contrôle manuel, l'application n'y confronte pas encore un comptage saisi.",
                         "N'encaissez jamais sous la session d'un collègue : la responsabilité en serait faussée.",
                         "Conservez les rapports de clôture : ils constituent la pièce justificative de la comptabilité de caisse.",
                         "Clôturez impérativement la caisse avant toute bascule d'année scolaire."

@@ -5,7 +5,7 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 26/08/2026** (écran `/examens` livré — backend Module J déjà complet ; module Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
+**Dernière mise à jour : 27/08/2026** (câblage de la session de caisse sur `/caisse` — JGK-F02 était inutilisable en production faute d'écran d'ouverture/clôture, voir §5 ; écran `/examens` livré le 26/08/2026 — backend Module J déjà complet ; module Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
 
 ---
 
@@ -217,3 +217,34 @@ désormais par une file. Spécification : `docs/Volume_4_API_Design.md` §20.
 - **Fournisseur WhatsApp réel** (`HttpWhatsAppSender`, API Cloud de Meta) en remplacement du repli
   qui se contentait de journaliser en production. Configuration absente ⇒ pas d'échec au démarrage,
   mais un avertissement explicite — `SmsServiceGuard`, jusqu'ici jamais appelé, l'est désormais.
+
+---
+
+## 5. Session de caisse câblée à l'écran (27/08/2026) — `/caisse` était inutilisable
+
+`RecordPaymentCommandHandler` refuse (422) tout encaissement hors d'une session de caisse ouverte pour
+l'utilisateur courant depuis toujours (Volume 1 §15.1) — mais **aucun fichier JS du dépôt n'appelait
+jamais** `POST /finance/sessions/open` ni `POST /finance/sessions/{id}/close`, pourtant présents côté
+API. Conséquence concrète : personne n'a jamais pu enregistrer un encaissement via l'écran `/caisse`,
+pour aucun établissement, depuis la livraison de JGK-F02. Trouvé en poussant la vérification manuelle
+de JGK-L03 (résilience réseau) jusqu'à un vrai paiement plutôt que de s'arrêter à l'affichage de l'écran.
+
+- **Nouvelle requête** `GET /finance/sessions/current` (`GetCurrentCashierSessionQuery`) : la session
+  ouverte de l'utilisateur courant (fonds initial, total encaissé, nombre de versements, exclut les
+  paiements annulés — même agrégat que la clôture), ou `null` s'il n'en a aucune. C'est ce que l'écran
+  interroge à l'ouverture pour savoir s'il doit bloquer l'encaissement ou afficher le statut.
+- **Écran `/caisse`** : bandeau d'ouverture (déclaration du fonds initial) tant qu'aucune session n'est
+  ouverte — la recherche d'élève et le formulaire d'encaissement restent masqués jusque-là ; bandeau de
+  statut en direct une fois ouverte ; modale de clôture avec récapitulatif (fonds initial, encaissé,
+  solde théorique) puis accès direct au rapport PDF.
+- **Second bug corrigé au passage** : `DailyClosingReportPdfGenerator` ne posait pas
+  `QuestPDF.Settings.License = LicenseType.Community` dans son constructeur statique, contrairement aux
+  25 autres générateurs du projet — le rapport de clôture renvoyait donc systématiquement une erreur
+  500 depuis sa livraison, jamais couvert par un test.
+- **Limite assumée, pas corrigée** : la clôture ne demande pas encore au caissier de saisir le
+  numéraire réellement compté pour le confronter au solde théorique (`CloseCashierSessionCommand` ne
+  porte pas ce champ) — la comparaison reste aujourd'hui un contrôle manuel hors application. Le Centre
+  d'Aide a été corrigé pour ne plus décrire cette confrontation comme existante.
+- **Vérifié de bout en bout** en conditions réelles (navigateur + PostgreSQL, skill `run`) : ouverture
+  → encaissement avec coupure réseau simulée (JGK-L03) → clôture → téléchargement du rapport PDF.
+  4 nouveaux tests d'intégration (`GetCurrentCashierSessionQueryTests.cs`).

@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SamaEcole.Application.Finance.Commands.OpenCashierSession;
 using SamaEcole.Application.Finance.Commands.CloseCashierSession;
+using SamaEcole.Application.Finance.Queries.GetCurrentCashierSession;
 using SamaEcole.Application.Finance.Queries.GetDailyClosingReportPdf;
 using SamaEcole.Application.Finance.Commands.CreateEmployeeContract;
 using SamaEcole.Application.Finance.Commands.UpdateEmployeeContract;
@@ -329,6 +330,17 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     }
 
     // ------------------------------------------------------------------ Caisse Sessions
+
+    /// <summary>
+    /// La session ouverte de l'utilisateur courant, ou 200 avec un corps vide s'il n'en a aucune —
+    /// c'est ce que /caisse interroge à l'ouverture pour savoir s'il faut proposer d'ouvrir une session
+    /// ou afficher le statut de celle déjà ouverte (ticket JGK — câblage écran, 27/08/2026).
+    /// </summary>
+    [HttpGet("sessions/current")]
+    [Authorize(Roles = "Directeur,Finance")]
+    [ProducesResponseType<CurrentCashierSessionDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCurrentSession(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetCurrentCashierSessionQuery(), cancellationToken));
 
     [HttpPost("sessions/open")]
     [Authorize(Roles = "Directeur,Finance")]
