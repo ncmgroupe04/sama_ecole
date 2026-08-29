@@ -40,3 +40,10 @@ TestResults/
 # Binaires, PDB et archives : ~138 Mo régénérables à chaque build, que `git add .` embarquait
 # jusqu'ici dans l'historique de façon irréversible.
 dist/
+
+# --- Nettoyage du dépôt Git imbriqué historique de src/SamaEcole.Web (29/08/2026) ---
+# src/SamaEcole.Web possédait son propre .git (branche divergente abandonnée le 04/08).
+# Archive complète : _old-web-repo.bundle. L'ancien .git est neutralisé sous
+# _git_DISABLED_safe_to_delete/ — supprimable manuellement une fois l'archive validée.
+_old-web-repo.bundle
+_git_DISABLED_safe_to_delete/
