@@ -507,33 +507,53 @@
 
  </div>
 
- @* Clôture de la session de caisse (Volume 1 §15.2) : confirmation, puis récapitulatif du rapport
- avec accès direct au PDF — le solde théorique est figé, une session close ne se rouvre jamais. *@
+ @* Clôture de la session de caisse (Volume 1 §15.2) : comptage physique obligatoire (ticket JGK-F09),
+ puis récapitulatif avec accès direct au rapport — le solde théorique est figé, une session close ne
+ se rouvre jamais. *@
  <div class="no-print">
  <modal-shell open="isCloseSessionModalOpen" on-close="closeCloseSessionModal()" title="Clôturer la session de caisse" size="md">
      <template x-if="!closeSessionResult">
-         <div class="space-y-4">
+         <form x-on:submit.prevent="confirmCloseSession()" novalidate class="space-y-4">
              <p class="text-sm text-slate-600">
                  Fonds initial : <span class="font-medium text-slate-900" x-text="formatMoney(currentSession ? currentSession.openingBalance : 0)"></span><br>
-                 Encaissé sur la session : <span class="font-medium text-slate-900" x-text="formatMoney(currentSession ? currentSession.totalCollected : 0)"></span><br>
+                 Encaissé sur la session (toutes méthodes) : <span class="font-medium text-slate-900" x-text="formatMoney(currentSession ? currentSession.totalCollected : 0)"></span><br>
                  Solde de fermeture théorique : <span class="font-semibold text-slate-900" x-text="formatMoney(currentSession ? (currentSession.openingBalance + currentSession.totalCollected) : 0)"></span>
              </p>
-             <p class="text-xs text-slate-400">Comptez le numéraire en caisse avant de confirmer : une session clôturée ne peut plus être rouverte ni re-clôturée.</p>
+
+             <div>
+                 <label for="close-session-actual-cash" class="form-label form-label-required">Espèces réellement comptées dans le tiroir-caisse (FCFA)</label>
+                 <input id="close-session-actual-cash" type="number" min="0" required x-model="closeSessionForm.actualCashAmount" class="input-field mt-1">
+                 <p class="text-xs text-slate-400 mt-1">Comptez le numéraire AVANT de saisir ce montant — les espèces attendues ne comprennent que le fonds initial et les versements en espèces, jamais les virements, chèques ou mobile money.</p>
+             </div>
+
+             <div x-show="closeSessionNeedsReason" x-cloak>
+                 <label for="close-session-reason" class="form-label form-label-required">Motif de l'écart constaté</label>
+                 <textarea id="close-session-reason" x-model="closeSessionForm.discrepancyReason" rows="2" placeholder="ex : fonds de caisse mal compté à l'ouverture, appoint rendu en trop…" class="input-field mt-1"></textarea>
+             </div>
+
+             <p class="text-xs text-slate-400">Une session clôturée ne peut plus être rouverte ni re-clôturée.</p>
              <div x-show="closeSessionError" x-cloak class="form-error-banner" x-text="closeSessionError"></div>
              <div class="flex items-center justify-end gap-3 pt-2">
                  <button type="button" x-on:click="closeCloseSessionModal()" class="btn-modal-secondary group">Annuler</button>
-                 <button type="button" x-on:click="confirmCloseSession()" :disabled="isClosingSession" class="btn-modal-primary group">
+                 <button type="submit" :disabled="isClosingSession" class="btn-modal-primary group">
                      <span x-show="!isClosingSession">Clôturer</span>
                      <span x-show="isClosingSession">Clôture…</span>
                  </button>
              </div>
-         </div>
+         </form>
      </template>
      <template x-if="closeSessionResult">
          <div class="space-y-4">
              <p class="text-sm text-success font-medium">Session clôturée.</p>
-             <p class="text-sm text-slate-600">
-                 Solde de fermeture théorique : <span class="font-semibold text-slate-900" x-text="closeSessionResult ? formatMoney(closeSessionResult.expectedClosingBalance) : ''"></span>
+             <p class="text-sm text-slate-600 space-y-0.5">
+                 <span class="block">Espèces attendues : <span class="font-medium text-slate-900" x-text="closeSessionResult ? formatMoney(closeSessionResult.expectedCashAmount) : ''"></span></span>
+                 <span class="block">Espèces comptées : <span class="font-medium text-slate-900" x-text="closeSessionResult ? formatMoney(closeSessionResult.actualCashAmount) : ''"></span></span>
+                 <span class="block">
+                     Écart :
+                     <span class="font-semibold" :class="closeSessionResult && closeSessionResult.discrepancyAmount !== 0 ? 'text-danger' : 'text-success'"
+                           x-text="closeSessionResult ? formatMoney(closeSessionResult.discrepancyAmount) : ''"></span>
+                 </span>
+                 <span x-show="closeSessionResult && closeSessionResult.discrepancyReason" x-cloak class="block text-slate-500">Motif : <span x-text="closeSessionResult ? closeSessionResult.discrepancyReason : ''"></span></span>
              </p>
              <div class="flex items-center justify-end gap-3 pt-2">
                  <button type="button" x-on:click="closeCloseSessionModal()" class="btn-modal-secondary group">Fermer</button>

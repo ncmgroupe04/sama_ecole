@@ -804,38 +804,46 @@
                     roles: ['Directeur', 'Finance'],
                     definition:
                         "Rituel comptable de fin de journée : la session de caisse ouverte le matin avec un fonds initial " +
-                        "est clôturée le soir. L'application calcule alors automatiquement le solde de fermeture " +
-                        "théorique (fonds initial + total des encaissements de la session) et édite le rapport de " +
-                        "clôture qui le détaille.",
+                        "est clôturée le soir en déclarant les ESPÈCES RÉELLEMENT COMPTÉES dans le tiroir-caisse — cette " +
+                        "saisie est obligatoire. L'application compare ce comptage aux espèces attendues (fonds initial + " +
+                        "encaissements en espèces de la session, JAMAIS les virements, chèques ou mobile money, qui ne " +
+                        "transitent jamais par le tiroir) et exige un motif dès que le compte n'y est pas — trop-perçu " +
+                        "comme manquant.",
                     objectif:
-                        "Arrêter chaque journée sur un chiffre incontestable et fixer la responsabilité de chaque caissier " +
-                        "sur sa propre session. Pour la direction, c'est la protection la plus élémentaire contre les " +
-                        "fuites de caisse ; pour le caissier lui-même, c'est la garantie qu'un manquant survenu ailleurs " +
-                        "ou un autre jour ne pourra jamais lui être imputé.",
+                        "Arrêter chaque journée sur un chiffre incontestable, détecter tout manquant ou surplus le jour " +
+                        "même plutôt qu'en fin de mois, et fixer la responsabilité de chaque caissier sur sa propre " +
+                        "session. Pour la direction, c'est la protection la plus élémentaire contre les fuites de caisse ; " +
+                        "pour le caissier lui-même, c'est la garantie qu'un manquant survenu ailleurs ou un autre jour ne " +
+                        "pourra jamais lui être imputé, et que son explication reste attachée à sa propre clôture.",
                     probleme:
-                        "Une caisse jamais arrêtée formellement rend tout écart indétectable : lorsqu'un manquant apparaît " +
-                        "en fin de mois, il devient impossible d'en déterminer le jour, l'opération ou l'agent. Le soupçon " +
-                        "se répand alors sur l'ensemble du service.",
+                        "Une caisse jamais comptée formellement à la clôture rend tout écart indétectable : lorsqu'un " +
+                        "manquant apparaît en fin de mois, il devient impossible d'en déterminer le jour, l'opération ou " +
+                        "l'agent responsable. Le soupçon se répand alors sur l'ensemble du service, faute d'avoir isolé " +
+                        "l'écart à la journée où il s'est produit.",
                     procedure: [
                         "À l'ouverture du guichet, ouvrez votre session de caisse en déclarant le fonds de caisse initial — un bandeau l'impose avant tout encaissement.",
                         "Effectuez la journée d'encaissement : chaque versement est rattaché à cette session nominative, visible en temps réel dans le bandeau (total encaissé, nombre de versements).",
-                        "En fin de journée, comptez physiquement le numéraire en caisse et comparez-le vous-même au total affiché avant de valider — l'application calcule le solde théorique, elle ne compare pas encore à un comptage saisi.",
-                        "Cliquez sur « Clôturer la caisse », vérifiez le récapitulatif (fonds initial, encaissé, solde théorique), puis confirmez : une session clôturée ne se rouvre plus.",
-                        "Téléchargez immédiatement le rapport de clôture au format PDF depuis la fenêtre de confirmation.",
+                        "En fin de journée, comptez physiquement le numéraire du tiroir-caisse AVANT d'ouvrir la clôture — ne regardez le chiffre attendu qu'après avoir compté, pour ne pas vous y aligner inconsciemment.",
+                        "Cliquez sur « Clôturer la caisse » et saisissez le montant compté dans le champ dédié : ce champ est obligatoire, la clôture ne se valide pas sans lui.",
+                        "Si le montant saisi ne correspond pas aux espèces attendues, un champ « Motif de l'écart » apparaît : il est obligatoire, qu'il s'agisse d'un manquant ou d'un surplus — décrivez la cause probable (rendu de monnaie, fonds d'ouverture mal compté…).",
+                        "Confirmez : une session clôturée ne se rouvre plus, et ne se re-clôture jamais.",
+                        "Téléchargez immédiatement le rapport de clôture au format PDF depuis la fenêtre de confirmation — il détaille désormais le solde théorique, le montant compté, l'écart et le motif.",
                         "Faites contresigner le rapport par la direction selon l'usage de l'établissement, et classez-le."
                     ],
                     impacts: [
                         "Encaissements : aucun versement ne peut être enregistré hors d'une session de caisse ouverte — la recherche d'élève et le formulaire restent masqués tant qu'elle ne l'est pas.",
+                        "Espèces attendues : seuls les versements en ESPÈCES entrent dans ce calcul — un virement, un chèque ou un mobile money encaissé pendant la session ne modifie jamais le montant que le tiroir-caisse doit contenir.",
                         "Trésorerie : les recettes de la journée clôturée alimentent la position de trésorerie de l'établissement.",
                         "Rapports financiers : la consolidation des recettes repose sur les sessions clôturées.",
-                        "Audit : l'ouverture et la clôture sont tracées avec leur auteur et leur horodatage.",
-                        "Responsabilité : chaque session est nominative, ce qui circonscrit tout écart à un agent et à une journée."
+                        "Audit : l'ouverture et la clôture sont tracées avec leur auteur, leur horodatage, le montant compté et le motif d'écart éventuel.",
+                        "Responsabilité : chaque session est nominative et porte son propre écart, ce qui circonscrit tout manquant à un agent et à une journée précis."
                     ],
                     recommandations: [
                         "Clôturez chaque jour, sans exception : une session laissée ouverte plusieurs jours ruine l'intérêt du dispositif.",
-                        "Comptez le numéraire AVANT de regarder le total affiché à l'écran, afin de ne pas s'aligner inconsciemment sur le chiffre attendu — la comparaison reste aujourd'hui un contrôle manuel, l'application n'y confronte pas encore un comptage saisi.",
-                        "N'encaissez jamais sous la session d'un collègue : la responsabilité en serait faussée.",
-                        "Conservez les rapports de clôture : ils constituent la pièce justificative de la comptabilité de caisse.",
+                        "Comptez le numéraire AVANT de saisir le montant compté et avant de regarder le total affiché à l'écran, afin de ne pas s'aligner inconsciemment sur le chiffre attendu.",
+                        "Rédigez un motif d'écart factuel et vérifiable (« deux pièces de 500 rendues en trop à 14h ») plutôt qu'une formule vague : c'est ce motif, et lui seul, qu'un contrôle ultérieur pourra confronter aux faits.",
+                        "N'encaissez jamais sous la session d'un collègue : la responsabilité — et l'écart constaté — en seraient faussés.",
+                        "Conservez les rapports de clôture : ils constituent la pièce justificative de la comptabilité de caisse, écart compris.",
                         "Clôturez impérativement la caisse avant toute bascule d'année scolaire."
                     ]
                 }

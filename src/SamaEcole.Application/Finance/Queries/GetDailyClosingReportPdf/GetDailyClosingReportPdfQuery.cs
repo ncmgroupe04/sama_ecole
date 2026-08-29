@@ -100,7 +100,10 @@ public class GetDailyClosingReportPdfQueryHandler(
             TotalCashInRegister: session.OpeningBalance + methodBreakdowns.FirstOrDefault(m => m.Method == PaymentMethod.Cash)?.Amount ?? 0,
             MethodBreakdowns: methodBreakdowns,
             CategoryBreakdowns: categoryBreakdowns,
-            Transactions: transactions
+            Transactions: transactions,
+            ActualCashAmount: session.ActualCashAmount,
+            DiscrepancyAmount: session.DiscrepancyAmount,
+            DiscrepancyReason: session.DiscrepancyReason
         );
 
         var logo = await logoProvider.TryFetchAsync(school.LogoUrl, cancellationToken);

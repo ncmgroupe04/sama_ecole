@@ -68,7 +68,16 @@ document.addEventListener('alpine:init', () => {
         isCloseSessionModalOpen: false,
         isClosingSession: false,
         closeSessionError: null,
-        closeSessionResult: null, // { sessionId, openingBalance, totalCollected, expectedClosingBalance }
+        // { sessionId, openingBalance, totalCollected, expectedClosingBalance, expectedCashAmount,
+        //   actualCashAmount, discrepancyAmount, discrepancyReason }
+        closeSessionResult: null,
+
+        // Comptage physique obligatoire (ticket JGK-F09).
+        closeSessionForm: { actualCashAmount: '', discrepancyReason: '' },
+        // Révélé après un premier essai en 422 : la caisse ne tombe pas juste, un motif est requis.
+        // Jamais affiché par anticipation — seul le serveur connaît les espèces attendues (fonds
+        // initial + encaissements EN ESPÈCES uniquement), impossible à recalculer fiablement ici.
+        closeSessionNeedsReason: false,
 
         async loadCurrentSession() {
             this.isLoadingSession = true;
@@ -102,6 +111,8 @@ document.addEventListener('alpine:init', () => {
         openCloseSessionModal() {
             this.closeSessionError = null;
             this.closeSessionResult = null;
+            this.closeSessionNeedsReason = false;
+            this.closeSessionForm = { actualCashAmount: '', discrepancyReason: '' };
             this.isCloseSessionModalOpen = true;
         },
 
@@ -109,16 +120,31 @@ document.addEventListener('alpine:init', () => {
             this.isCloseSessionModalOpen = false;
         },
 
-        /** Rapport de clôture (Volume 1 §15.2) : fige le solde théorique, jamais re-clôturable ensuite. */
+        /**
+         * Comptage physique obligatoire (ticket JGK-F09) : Volume 1 §15.2 fige le solde théorique,
+         * jamais re-clôturable ensuite. Un premier essai sans motif suffit tant que la caisse tombe
+         * juste ; un écart renvoie 422 (DiscrepancyReason) et révèle le champ motif — jamais de
+         * soumission automatique avec un motif deviné à la place du caissier.
+         */
         async confirmCloseSession() {
             if (!this.currentSession) return;
+            if (this.closeSessionForm.actualCashAmount === '' || this.closeSessionForm.actualCashAmount === null) {
+                this.closeSessionError = 'Indiquez le montant réellement compté en caisse.';
+                return;
+            }
             this.isClosingSession = true;
             this.closeSessionError = null;
             try {
                 this.closeSessionResult = await window.api.post(
-                    `/finance/sessions/${this.currentSession.sessionId}/close`, null);
+                    `/finance/sessions/${this.currentSession.sessionId}/close`, {
+                        actualCashAmount: Number(this.closeSessionForm.actualCashAmount) || 0,
+                        discrepancyReason: this.closeSessionForm.discrepancyReason || null
+                    });
                 await this.loadCurrentSession(); // redevient null : la journée suivante en ouvrira une autre.
             } catch (err) {
+                if (err.status === 422 && err.details && err.details.DiscrepancyReason) {
+                    this.closeSessionNeedsReason = true;
+                }
                 this.closeSessionError = window.api.toMessage(err, 'Erreur lors de la clôture de la session.');
             } finally {
                 this.isClosingSession = false;

@@ -29,6 +29,11 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
 
                 column.Item().PaddingTop(15).Element(ComposeSummaryCards);
 
+                if (report.ActualCashAmount.HasValue)
+                {
+                    column.Item().PaddingTop(15).Element(ComposeCashControl);
+                }
+
                 column.Item().PaddingTop(15).Row(row =>
                 {
                     row.RelativeItem().PaddingRight(10).Element(ComposeMethodBreakdown);
@@ -101,6 +106,50 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
                 col.Item().Text("Total Espèces en Caisse").FontSize(8).FontColor(Colors.Grey.Darken1);
                 col.Item().Text($"{FormatMoney(report.TotalCashInRegister)} FCFA").Bold().FontSize(12).FontColor(Colors.Orange.Darken2);
             });
+        });
+    }
+
+    /// <summary>
+    /// Ticket JGK-F09 — comptage physique. Comparé aux ESPÈCES attendues (report.TotalCashInRegister),
+    /// jamais au total encaissé toutes méthodes : un virement ou un mobile money ne passe jamais par le
+    /// tiroir-caisse, il ne peut donc jamais entrer dans un écart de numéraire.
+    /// </summary>
+    private void ComposeCashControl(IContainer container)
+    {
+        var discrepancy = report.DiscrepancyAmount ?? 0;
+        var discrepancyColor = discrepancy == 0 ? Colors.Green.Darken2 : Colors.Red.Darken2;
+
+        container.Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(col =>
+        {
+            col.Item().Text("Contrôle de caisse — comptage physique").Bold().FontSize(10);
+
+            col.Item().PaddingTop(8).Row(row =>
+            {
+                row.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("Espèces attendues").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    c.Item().Text($"{FormatMoney(report.TotalCashInRegister)} FCFA").Bold().FontSize(11);
+                });
+                row.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("Espèces comptées").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    c.Item().Text($"{FormatMoney(report.ActualCashAmount ?? 0)} FCFA").Bold().FontSize(11);
+                });
+                row.RelativeItem().Column(c =>
+                {
+                    c.Item().Text("Écart").FontSize(8).FontColor(Colors.Grey.Darken1);
+                    c.Item().Text($"{(discrepancy > 0 ? "+" : "")}{FormatMoney(discrepancy)} FCFA").Bold().FontSize(11).FontColor(discrepancyColor);
+                });
+            });
+
+            if (discrepancy != 0)
+            {
+                col.Item().PaddingTop(8).Text(text =>
+                {
+                    text.Span("Motif de l'écart : ").Bold().FontSize(8);
+                    text.Span(string.IsNullOrWhiteSpace(report.DiscrepancyReason) ? "—" : report.DiscrepancyReason).FontSize(8);
+                });
+            }
         });
     }
 

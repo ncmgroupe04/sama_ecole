@@ -351,12 +351,20 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         return Ok(sessionId);
     }
 
+    public record CloseCashierSessionRequest(decimal ActualCashAmount, string? DiscrepancyReason = null);
+
+    /// <summary>Le comptage physique (JGK-F09) est obligatoire ; le motif d'écart ne l'est que si un écart est réellement constaté (422 sinon).</summary>
     [HttpPost("sessions/{id}/close")]
     [Authorize(Roles = "Directeur,Finance")]
     [ProducesResponseType<CloseCashierSessionResult>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> CloseSession(Guid id, CancellationToken cancellationToken)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CloseSession(
+        Guid id, [FromBody] CloseCashierSessionRequest request, CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new CloseCashierSessionCommand(id), cancellationToken);
+        var result = await mediator.Send(
+            new CloseCashierSessionCommand(id, request.ActualCashAmount, request.DiscrepancyReason),
+            cancellationToken);
         return Ok(result);
     }
 

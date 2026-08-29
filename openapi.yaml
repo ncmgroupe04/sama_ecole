@@ -1976,12 +1976,26 @@ paths:
   /finance/sessions/{id}/close:
     post:
       tags: [Finance]
-      summary: Clôturer une session de caisse (Directeur + Finance) — Volume 1 §15.2
+      summary: Clôturer une session de caisse (Directeur + Finance) — Volume 1 §15.2, JGK-F09
       description: >-
-        Fige le solde de fermeture théorique (fonds initial + encaissements non annulés de la session).
-        Une session close ne peut jamais être re-clôturée ni rouverte.
+        Fige le solde de fermeture théorique (fonds initial + encaissements non annulés de la session,
+        toutes méthodes) ET compare actualCashAmount aux ESPÈCES attendues (fonds initial + encaissements
+        EN ESPÈCES uniquement — un virement, un chèque ou un mobile money ne transite jamais par le
+        tiroir-caisse). Un écart non nul (manquant ou surplus) exige discrepancyReason, sinon 422 : la
+        session reste ouverte tant qu'il n'est pas fourni. Une session close ne peut jamais être
+        re-clôturée ni rouverte.
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actualCashAmount]
+              properties:
+                actualCashAmount: { type: number, format: decimal, minimum: 0, description: "Espèces réellement comptées dans le tiroir-caisse." }
+                discrepancyReason: { type: string, maxLength: 500, nullable: true, description: "Requis (422 sinon) dès que actualCashAmount diffère des espèces attendues." }
       responses:
         '200':
           description: Récapitulatif de clôture
@@ -1990,7 +2004,7 @@ paths:
               schema: { $ref: '#/components/schemas/CashierSessionClosingResult' }
         '403': { description: Rôle non autorisé }
         '404': { description: Session introuvable dans cet établissement }
-        '422': { description: Cette session est déjà fermée ou vérifiée }
+        '422': { description: "Cette session est déjà fermée ou vérifiée, ou un écart de caisse a été constaté sans discrepancyReason" }
 
   /finance/sessions/{id}/closing-report:
     get:
@@ -4584,8 +4598,12 @@ components:
       properties:
         sessionId: { type: string, format: uuid }
         openingBalance: { type: number }
-        totalCollected: { type: number }
-        expectedClosingBalance: { type: number, description: "Solde théorique = openingBalance + totalCollected." }
+        totalCollected: { type: number, description: "Toutes méthodes de paiement confondues." }
+        expectedClosingBalance: { type: number, description: "Solde théorique = openingBalance + totalCollected (toutes méthodes)." }
+        expectedCashAmount: { type: number, description: "Espèces attendues dans le tiroir-caisse = openingBalance + encaissements EN ESPÈCES uniquement (JGK-F09)." }
+        actualCashAmount: { type: number, description: "Espèces réellement comptées, telles que déclarées à la clôture." }
+        discrepancyAmount: { type: number, description: "actualCashAmount − expectedCashAmount. Zéro si la caisse tombe juste." }
+        discrepancyReason: { type: string, nullable: true }
 
     PaymentReceipt:
       type: object

@@ -5,7 +5,7 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 27/08/2026** (câblage de la session de caisse sur `/caisse` — JGK-F02 était inutilisable en production faute d'écran d'ouverture/clôture, voir §5 ; écran `/examens` livré le 26/08/2026 — backend Module J déjà complet ; module Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
+**Dernière mise à jour : 29/08/2026** (JGK-F09 — contrôle du comptage physique et écarts de caisse à la clôture, voir §5 ; câblage de la session de caisse sur `/caisse` le 27/08/2026 — JGK-F02 était inutilisable en production faute d'écran d'ouverture/clôture ; écran `/examens` livré le 26/08/2026 — backend Module J déjà complet ; module Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
 
 ---
 
@@ -241,10 +241,21 @@ de JGK-L03 (résilience réseau) jusqu'à un vrai paiement plutôt que de s'arr�
   `QuestPDF.Settings.License = LicenseType.Community` dans son constructeur statique, contrairement aux
   25 autres générateurs du projet — le rapport de clôture renvoyait donc systématiquement une erreur
   500 depuis sa livraison, jamais couvert par un test.
-- **Limite assumée, pas corrigée** : la clôture ne demande pas encore au caissier de saisir le
-  numéraire réellement compté pour le confronter au solde théorique (`CloseCashierSessionCommand` ne
-  porte pas ce champ) — la comparaison reste aujourd'hui un contrôle manuel hors application. Le Centre
-  d'Aide a été corrigé pour ne plus décrire cette confrontation comme existante.
 - **Vérifié de bout en bout** en conditions réelles (navigateur + PostgreSQL, skill `run`) : ouverture
   → encaissement avec coupure réseau simulée (JGK-L03) → clôture → téléchargement du rapport PDF.
   4 nouveaux tests d'intégration (`GetCurrentCashierSessionQueryTests.cs`).
+
+### Contrôle du comptage physique et écarts de caisse (29/08/2026) — JGK-F09
+
+La limite notée ci-dessus le 27/08/2026 (« la clôture ne confronte pas encore le numéraire compté au
+solde théorique ») est comblée : `ActualCashAmount` est désormais un paramètre REQUIS de
+`CloseCashierSessionCommand`, jamais une valeur facultative. L'écart se compare aux ESPÈCES attendues
+(fonds initial + encaissements EN ESPÈCES uniquement, migration `AddCashierSessionDiscrepancy`), jamais
+au total toutes méthodes — un virement ou un mobile money ne transite jamais par le tiroir-caisse
+physique. Un écart non nul (manquant ou surplus) exige un motif avant de clôturer (422 sinon, la session
+reste `Open`). Le rapport PDF affiche désormais espèces attendues/comptées/écart/motif. Écran `/caisse` :
+comptage obligatoire dans la modale de clôture, motif révélé seulement après un premier refus serveur —
+jamais anticipé côté client, qui ne connaît pas les espèces attendues. Vérifié en conditions réelles
+(navigateur + PostgreSQL) : montant incorrect → 422 → motif → clôture → rapport à jour. Tests :
+`CloseCashierSessionCommandValidatorTests.cs` (5/5), `CashierSessionClosingTests.cs` (6/6, dont la preuve
+qu'un paiement non-espèces n'entre jamais dans l'écart).

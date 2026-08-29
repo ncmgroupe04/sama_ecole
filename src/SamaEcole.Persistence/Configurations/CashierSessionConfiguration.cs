@@ -17,6 +17,10 @@ public class CashierSessionConfiguration : IEntityTypeConfiguration<CashierSessi
         builder.Property(s => s.OpenedAt).IsRequired();
         builder.Property(s => s.OpeningBalance).IsRequired().HasPrecision(12, 2);
         builder.Property(s => s.ClosingBalance).HasPrecision(12, 2);
+        builder.Property(s => s.ExpectedCashAmount).HasPrecision(12, 2);
+        builder.Property(s => s.ActualCashAmount).HasPrecision(12, 2);
+        builder.Property(s => s.DiscrepancyAmount).HasPrecision(12, 2);
+        builder.Property(s => s.DiscrepancyReason).HasMaxLength(500);
         builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
 
         // One cashier can only have one open session at a time
