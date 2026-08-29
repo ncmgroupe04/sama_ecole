@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Common;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 using SamaEcole.Domain.Enums;
 using QuestPDF.Fluent;
@@ -10,14 +11,15 @@ namespace SamaEcole.Infrastructure.Documents;
 /// <summary>
 /// Bulletin de notes en PDF, format A5 portrait (ticket JGK-G03). Reproduit
 /// docs/design-references/bulletin-reference.png (AGENTS.md règle #12) : en-tête administratif
-/// IA/IEF/&lt;cycle&gt;, titre entre doubles filets, bloc d'identité encadré, tableau des disciplines avec
-/// appréciations, lignes TOTAL/Moyenne avec assiduité, rangée des distinctions, puis Décision du
-/// Conseil + Observations (gauche) et récapitulatif des moyennes + signature du Chef d'établissement
-/// avec emplacement de cachet (droite).
+/// IA/IEF/&lt;cycle&gt;, titre entre doubles filets, bloc d'identité en texte brut (sans encadré, comme la
+/// référence), tableau des disciplines à neuf colonnes et à largeurs fixes pour les chiffres, lignes
+/// TOTAL/Moyenne avec assiduité, rangée des distinctions, puis Décision du Conseil + Observations
+/// (gauche) et récapitulatif des moyennes + signature du Chef d'établissement avec emplacement de
+/// cachet (droite).
 ///
 /// Une case de la référence reste volontairement VIDE — visuellement présente, jamais remplie d'une
-/// donnée inventée — car rien dans le système ne l'alimente : T.H. La case « Classe redoublée » est,
-/// elle, cochée [X]/[ ] d'après <see cref="ReportCardDto.IsRepeating"/> (feature F, Enrollment.IsRepeating).
+/// donnée inventée — car rien dans le système ne l'alimente : T.H. Le champ « Classe redoublée » porte,
+/// lui, « Oui »/« Non » d'après <see cref="ReportCardDto.IsRepeating"/> (feature F, Enrollment.IsRepeating).
 /// L'assiduité (Absences/Retards) s'imprime « - » tant qu'aucun appel n'a été fait sur la période (voir
 /// ReportCardDto), jamais un zéro trompeur. La distinction du conseil (Blâme… Félicitations), la
 /// Décision du Conseil (Admis/Redouble/Exclusion) et les Observations, elles, SONT modélisées
@@ -35,6 +37,42 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
 {
     /// <summary>Filet noir standard de la référence (tableaux, encadrés).</summary>
     private const float RuleThickness = 0.75f;
+
+    /// <summary>
+    /// Corps du tableau des disciplines — en-têtes compris. Un demi-point au-dessus du corps courant du
+    /// document (7,5 pt) : c'est le tableau que le tuteur lit en premier, et les colonnes de chiffres,
+    /// désormais à largeur fixe, ont la place de le porter sans qu'aucune valeur ne se replie.
+    /// </summary>
+    private const float TableFontSize = 8f;
+
+    /// <summary>
+    /// Rembourrage horizontal d'une cellule de tableau. Serré à dessein : chaque point pris ici est un
+    /// point rendu au CONTENU des colonnes étroites (Coef, T.H, Rang), les premières à faire déborder.
+    /// </summary>
+    private const float CellPadding = 2f;
+
+    /// <summary>
+    /// Largeurs FIXES (en points PDF) des sept colonnes de chiffres du tableau des disciplines. Le
+    /// contenu de ces colonnes a un gabarit connu d'avance — une note, un coefficient, un rang — alors
+    /// que « Disciplines » et « Appréciations » portent du texte de longueur imprévisible : figer les
+    /// premières, c'est donner tout le reste de la page aux secondes.
+    ///
+    /// Repère de dimensionnement : A5 portrait à marges de 7 mm = ~380 pt utiles. Ces sept colonnes en
+    /// consomment 205, les deux colonnes de texte se partagent les ~175 restants (25 / 20).
+    /// Calibrées à 8 pt (<see cref="TableFontSize"/>) sur la valeur la plus large que chacune peut
+    /// recevoir, en-tête inclus — ne pas réduire sans revérifier le rendu.
+    /// </summary>
+    private static class NumericColumnWidths
+    {
+        /// <summary>Devoir, Composition — « 9,56 » sous un en-tête « Devoir ».</summary>
+        public const float Note = 30f;
+
+        /// <summary>Moy/20 et Moy x — les deux seules à recevoir une valeur à 3 chiffres et 3 décimales (« 57,375 »).</summary>
+        public const float Average = 35f;
+
+        /// <summary>Coef, T.H, Rang — un ou deux caractères, l'en-tête fait la largeur.</summary>
+        public const float Small = 25f;
+    }
 
     /// <summary>
     /// Cycle à notation simplifiée (Maternelle, Primaire), lu sur <see cref="ReportCardDto.Cycle"/> — la
@@ -188,19 +226,32 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             .Text(reportCard.AcceleratedPathLabel).Italic().Bold().FontSize(8f);
 
     /// <summary>
-    /// Bloc d'identité encadré, trois lignes fixes : Prénoms/Nom (gras, corps plus grand), naissance et
-    /// classe, matricule et effectif. « Classe Redoublée » est cochée [X]/[ ] selon IsRepeating (feature F).
+    /// Bloc d'identité, trois lignes EN TEXTE BRUT — sans encadré ni filet. La référence visuelle
+    /// (docs/design-references/bulletin-reference.png, AGENTS.md règle #12) ne trace aucune bordure
+    /// autour de ces trois lignes : un cadre de plus, juste sous le titre entre doubles filets et juste
+    /// au-dessus du tableau bordé, empilait trois encadrements consécutifs et écrasait le titre.
+    ///
+    /// LIBELLÉS EN GRAS, valeurs en normal — même contraste que l'en-tête administratif ci-dessus, qui
+    /// fait ressortir la structure du bloc sans la cerner d'un trait. Trois valeurs échappent à la règle
+    /// et restent en gras, corps plus grand : Prénoms, Nom et Classe, mises en évidence sur la référence
+    /// parce qu'elles identifient l'élève — c'est ce que le lecteur cherche en premier sur un bulletin.
+    ///
+    /// LES TROIS LIGNES PARTAGENT LES MÊMES COLONNES : c'est ce partage — pas un ajustement de largeurs
+    /// au jugé — qui aligne « Nom », « Classe » et « Classe Redoublée » sur la même verticale, comme sur
+    /// la référence. « Prénoms » fusionne les deux premières colonnes (ColumnSpan) pour lui laisser sa
+    /// place habituelle, plus large.
+    ///
+    /// « Classe Redoublée » porte sa valeur en toutes lettres — « Oui » / « Non » d'après
+    /// <see cref="ReportCardDto.IsRepeating"/> (feature F, Enrollment.IsRepeating) — et non plus une
+    /// coche « [X] » / « [ ] » : dans une ligne désormais dépourvue de filets, une case vide ne se
+    /// distinguait plus d'une case simplement pas encore remplie.
     /// </summary>
     private void ComposeIdentity(IContainer container)
     {
         var (prenoms, nom) = SplitFullName(reportCard.StudentFullName);
 
-        container.Border(RuleThickness).BorderColor(Colors.Black).Padding(4).Table(table =>
+        container.Table(table =>
         {
-            // LES TROIS LIGNES PARTAGENT CES MÊMES COLONNES : c'est ce partage — pas un ajustement de
-            // largeurs au jugé — qui aligne "Nom" avec "Classe" et "Classe Redoublée" sur la même
-            // verticale. "Prénoms" fusionne les deux premières colonnes (ColumnSpan) pour lui laisser
-            // sa place habituelle, plus large.
             table.ColumnsDefinition(columns =>
             {
                 columns.RelativeColumn(2f);
@@ -208,35 +259,47 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 columns.RelativeColumn(1.4f);
             });
 
-            table.Cell().ColumnSpan(2).Element(Cell).Text(t =>
-            {
-                t.Span("Prénoms : ").FontSize(8.5f);
-                t.Span(prenoms).Bold().FontSize(9.5f);
-            });
-            table.Cell().Element(Cell).Text(t =>
-            {
-                t.Span("Nom : ").FontSize(8.5f);
-                t.Span(nom).Bold().FontSize(9.5f);
-            });
+            table.Cell().ColumnSpan(2).Element(Cell).Element(c => Field(c, "Prénoms", prenoms, emphasis: true));
+            table.Cell().Element(Cell).Element(c => Field(c, "Nom", nom, emphasis: true));
 
-            table.Cell().Element(Cell).Text($"Né(e) le : {FormatDate(reportCard.BirthDate)}");
-            table.Cell().Element(Cell).Text($"à : {reportCard.BirthPlace}");
-            table.Cell().Element(Cell).Text(t =>
-            {
-                t.Span("Classe : ");
-                t.Span(reportCard.ClassroomName).Bold();
-            });
+            table.Cell().Element(Cell).Element(c => Field(c, "Né(e) le", FormatDate(reportCard.BirthDate)));
+            table.Cell().Element(Cell).Element(c => Field(c, "à", reportCard.BirthPlace ?? ""));
+            table.Cell().Element(Cell).Element(c => Field(c, "Classe", reportCard.ClassroomName, emphasis: true));
 
-            table.Cell().Element(Cell).Text($"Matricule : {NoBreakText.NoBreak(reportCard.Matricule)}");
-            table.Cell().Element(Cell).Text($"Nbre d'élèves : {reportCard.ClassSize}");
-            // Classe redoublée (feature F) : cochée [X] si l'inscription porte IsRepeating, [ ] sinon —
-            // même convention de coche que la rangée des distinctions du conseil.
-            table.Cell().Element(Cell).Text($"Classe Redoublée : [{(reportCard.IsRepeating ? "X" : " ")}]");
+            table.Cell().Element(Cell).Element(c => Field(c, "Matricule", NoBreakText.NoBreak(reportCard.Matricule)));
+            table.Cell().Element(Cell).Element(c => Field(c, "Nbre d'élèves", reportCard.ClassSize.ToString(CultureInfo.InvariantCulture)));
+            table.Cell().Element(Cell).Element(c => Field(c, "Classe Redoublée", reportCard.IsRepeating ? "Oui" : "Non"));
         });
 
         static IContainer Cell(IContainer c) => c.PaddingVertical(1.5f);
+
+        // Libellé gras + valeur normale, une seule définition pour les huit champs : sans elle, la mise
+        // en forme dériverait d'une ligne à l'autre dès le premier champ ajouté.
+        static void Field(IContainer container, string label, string value, bool emphasis = false) =>
+            container.Text(text =>
+            {
+                text.Span($"{label} : ").Bold().FontSize(8.5f);
+
+                var span = text.Span(value).FontSize(emphasis ? 9.5f : 8.5f);
+                if (emphasis)
+                {
+                    span.Bold();
+                }
+            });
     }
 
+    /// <summary>
+    /// Tableau des disciplines du SECONDAIRE, les neuf colonnes de la référence visuelle
+    /// (docs/design-references/bulletin-reference.png, AGENTS.md règle #12) :
+    /// Disciplines | Devoir | Comp | Moy/20 | Coef | Moy x | T.H | Rang | Appréciations.
+    ///
+    /// LARGEURS : les sept colonnes de chiffres sont CONSTANTES (<see cref="NumericColumnWidths"/>),
+    /// seules « Disciplines » et « Appréciations » se partagent le reste en relatif. Une note, un
+    /// coefficient, un rang ont un gabarit fixe : leur donner une largeur relative les faisait respirer
+    /// inutilement sur un bulletin à 3 matières et étranglait les deux colonnes de TEXTE — les seules
+    /// dont le contenu varie vraiment — sur un bulletin à 12. Le reste (~175 pt sur les ~380 pt utiles
+    /// d'une A5 portrait à marges de 7 mm) va aux libellés dans un rapport 25/20, comme sur la référence.
+    /// </summary>
     private void ComposeGradesTable(IContainer container)
     {
         // Barème d'espacement des lignes : moins il y a de matières, plus chaque ligne s'étire, pour
@@ -245,32 +308,32 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
         // fixes d'avant ce changement — le plafond bas est donc déjà éprouvé pour ne jamais déborder.
         var rowPadding = Math.Clamp(24f / Math.Max(reportCard.Subjects.Count, 1), 2f, 8f);
 
-        container.Table(table =>
+        container.DefaultTextStyle(text => text.FontSize(TableFontSize)).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(2.9f);  // Disciplines
-                columns.RelativeColumn(0.9f);  // Devoir
-                columns.RelativeColumn(0.9f);  // Composition
-                columns.RelativeColumn(1.05f); // Moyenne
-                columns.RelativeColumn(0.7f);  // Coefficient
-                columns.RelativeColumn(1.05f); // Moyenne x Coef
-                columns.RelativeColumn(0.6f);  // T.H
-                columns.RelativeColumn(0.9f);  // Rang
-                columns.RelativeColumn(1.85f); // Appréciations
+                columns.RelativeColumn(25f);                        // Disciplines — ~25 % de la largeur utile
+                columns.ConstantColumn(NumericColumnWidths.Note);   // Devoir
+                columns.ConstantColumn(NumericColumnWidths.Note);   // Composition
+                columns.ConstantColumn(NumericColumnWidths.Average); // Moyenne — « 9,56 » et son en-tête « Moy/20 »
+                columns.ConstantColumn(NumericColumnWidths.Small);  // Coefficient
+                columns.ConstantColumn(NumericColumnWidths.Average); // Moyenne x Coef — « 57,375 », la valeur la plus large
+                columns.ConstantColumn(NumericColumnWidths.Small);  // T.H
+                columns.ConstantColumn(NumericColumnWidths.Small);  // Rang
+                columns.RelativeColumn(20f);                        // Appréciations — ~20 % de la largeur utile
             });
 
             table.Header(header =>
             {
-                header.Cell().Element(HeaderCell).Text("DISCIPLINES").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Devoir").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Comp").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text($"Moy/{reportCard.GradingScale}").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Coef").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Moy x").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("T.H").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Rang").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).Text("Appréciations").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).Text("DISCIPLINES").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Devoir").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Comp").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text($"Moy/{reportCard.GradingScale}").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Coef").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Moy x").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("T.H").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Rang").Bold();
+                header.Cell().Element(HeaderCell).Text("Appréciations").Bold();
             });
 
             foreach (var subject in reportCard.Subjects)
@@ -291,7 +354,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             table.Cell().ColumnSpan(3).Element(TotalCell).Text("");
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatGrade(reportCard.TotalCoefficients)).Bold();
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatGrade(reportCard.TotalPoints)).Bold();
-            table.Cell().ColumnSpan(2).Element(TotalCell).Text("Absences");
+            table.Cell().ColumnSpan(2).Element(TotalCell).AlignCenter().Text("Absences");
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Absences));
 
             // Ligne Moyenne de la référence : moyenne générale, rang, retards, absences totales — dans
@@ -302,18 +365,22 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             table.Cell().ColumnSpan(2).Element(TotalCell).AlignCenter().Text("Retards");
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Retards));
 
-            // Corps réduit : « Abs. Tot » doit tenir sur UNE ligne dans sa colonne étroite, sans faire
-            // gonfler la hauteur de la rangée Moyenne.
-            table.Cell().Element(TotalCell).AlignCenter().Text("Abs. Tot").FontSize(6.5f);
+            // « Abs. Tot » tombe dans la colonne Rang, la plus étroite du tableau : corps réduit ET
+            // rembourrage horizontal nul, sans quoi le libellé se coupe en deux lignes et fait gonfler
+            // toute la rangée. Sa VALEUR, elle, dispose de la colonne Appréciations, la plus large.
+            table.Cell().Element(TightTotalCell).AlignCenter().Text("Abs. Tot").FontSize(6f);
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.TotalAbsences));
         });
 
         static IContainer HeaderCell(IContainer c) =>
-            c.Border(RuleThickness).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(3);
+            c.Border(RuleThickness).BorderColor(Colors.Black).Background(Colors.Grey.Lighten3).PaddingVertical(3).PaddingHorizontal(CellPadding);
         IContainer BodyCell(IContainer c) =>
-            c.Border(0.5f).BorderColor(Colors.Black).PaddingVertical(rowPadding).PaddingHorizontal(3);
+            c.Border(0.5f).BorderColor(Colors.Black).PaddingVertical(rowPadding).PaddingHorizontal(CellPadding);
         static IContainer TotalCell(IContainer c) =>
-            c.Border(RuleThickness).BorderColor(Colors.Black).PaddingVertical(2.5f).PaddingHorizontal(3);
+            c.Border(RuleThickness).BorderColor(Colors.Black).PaddingVertical(2.5f).PaddingHorizontal(CellPadding);
+        // Même cellule, sans le moindre rembourrage horizontal — réservée au seul libellé « Abs. Tot ».
+        static IContainer TightTotalCell(IContainer c) =>
+            c.Border(RuleThickness).BorderColor(Colors.Black).PaddingVertical(2.5f);
     }
 
     /// <summary>
@@ -689,18 +756,14 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     /// affiché comme nom de famille, le reste comme prénoms — l'usage sénégalais (« Mame Diarra Bousso
     /// FAYE »). Un nom en un seul mot s'affiche côté Prénoms, la case Nom reste vide. Simple heuristique
     /// d'AFFICHAGE : rien n'est modifié en base. <c>internal</c> pour ReportCardDocumentTests.
+    ///
+    /// La règle elle-même a été REMONTÉE dans <see cref="StudentNameSplitter"/> (Application) le jour où
+    /// l'export Planète a eu besoin du même découpage : le nom imprimé sur le bulletin remis au tuteur
+    /// et celui transmis au ministère doivent être découpés de façon identique. Cette méthode n'est plus
+    /// qu'un alias — le comportement, et les tests qui l'exercent, sont inchangés.
     /// </summary>
-    internal static (string Prenoms, string Nom) SplitFullName(string fullName)
-    {
-        var tokens = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        return tokens.Length switch
-        {
-            0 => ("", ""),
-            1 => (tokens[0], ""),
-            _ => (string.Join(' ', tokens[..^1]), tokens[^1])
-        };
-    }
+    internal static (string Prenoms, string Nom) SplitFullName(string fullName) =>
+        StudentNameSplitter.Split(fullName);
 
     /// <summary>« - » quand la note n'a pas encore été saisie (Devoir ou Composition manquant) — jamais un zéro trompeur.</summary>
     internal static string FormatOptionalGrade(decimal? value) => value is { } v ? FormatGrade(v) : "-";
