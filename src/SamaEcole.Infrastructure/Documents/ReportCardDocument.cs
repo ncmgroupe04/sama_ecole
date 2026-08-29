@@ -52,6 +52,71 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     private const float CellPadding = 2f;
 
     /// <summary>
+    /// Nombre de lignes que le tableau doit porter sur UNE page A5 sans jamais déborder — 18 lignes de
+    /// grille réelle (le modèle du primaire : 6 domaines, de « P. Alphabétique » à « Anglais »), plus
+    /// <see cref="ReserveRows"/> lignes de réserve pour l'école qui en ajoute une ou deux.
+    ///
+    /// Cette réserve n'est PAS imprimée : aucun des trois tableaux ne dessine de ligne vide de
+    /// remplissage — ils itèrent sur les lignes réellement configurées. La réserve est un engagement de
+    /// PLACE, pas un gabarit fixe : une grille à 5 lignes s'imprime en 5 lignes, étirées pour occuper la
+    /// page ; une grille à 20 tient encore, resserrée. C'est <see cref="RowMetricsFor"/> qui fait varier
+    /// l'interligne et le corps entre ces deux extrêmes.
+    /// </summary>
+    private const int NominalRowCapacity = 18;
+
+    /// <summary>Lignes tenues en réserve au-delà de <see cref="NominalRowCapacity"/> — voir cette dernière.</summary>
+    private const int ReserveRows = 2;
+
+    /// <summary>Capacité garantie du tableau, réserve comprise : 20 lignes sur une seule page A5.</summary>
+    private const int MaxRowCapacity = NominalRowCapacity + ReserveRows;
+
+    /// <summary>
+    /// En deçà de ce nombre de lignes, le tableau garde son corps plein et se contente d'étirer
+    /// l'interligne : c'est le cas de l'immense majorité des bulletins (7 disciplines au secondaire,
+    /// 12 au maximum du ticket JGK-G03), dont le rendu ne doit pas bouger d'un point.
+    /// </summary>
+    private const int ComfortRows = 12;
+
+    /// <summary>
+    /// Interligne et corps du tableau, en fonction du nombre de lignes à imprimer — SOURCE UNIQUE pour
+    /// les trois variantes (secondaire, primaire, grille APC), qui portaient jusqu'ici trois barèmes
+    /// divergents calibrés séparément. Trois barèmes, c'était trois capacités différentes et deux
+    /// d'entre elles inconnues : celle du secondaire s'arrêtait à 20 lignes, sans marge.
+    ///
+    /// Deux régimes, dans cet ordre :
+    ///   • jusqu'à <see cref="ComfortRows"/> lignes, seul l'INTERLIGNE varie (de 8 pt pour 3 lignes à
+    ///     2 pt pour 12) — le corps reste plein, et une classe à peu de matières ne laisse pas un grand
+    ///     vide sous un tableau minuscule ;
+    ///   • au-delà, l'interligne est déjà au plancher : c'est le CORPS qui cède, linéairement, jusqu'à
+    ///     85 % de sa taille à <see cref="MaxRowCapacity"/> lignes. Une grille de 20 lignes reste lisible
+    ///     à l'impression là où elle passait sur une seconde page.
+    ///
+    /// Au-delà de la capacité garantie, les deux valeurs restent au plancher : le bulletin fait alors au
+    /// mieux — quitte à une seconde page — plutôt que de rétrécir le texte jusqu'à l'illisible.
+    /// </summary>
+    private static (float FontSize, float Padding) RowMetricsFor(int lineCount)
+    {
+        var rows = Math.Max(lineCount, 1);
+
+        if (rows <= ComfortRows)
+        {
+            return (TableFontSize, Math.Clamp(24f / rows, 2f, 8f));
+        }
+
+        // Progression de 0 (ComfortRows lignes) à 1 (capacité maximale), bornée au-delà.
+        var density = Math.Min((rows - ComfortRows) / (float)(MaxRowCapacity - ComfortRows), 1f);
+
+        return (TableFontSize - density * (TableFontSize - MinTableFontSize),
+                DensePadding + (1f - density) * (2f - DensePadding));
+    }
+
+    /// <summary>Corps plancher du tableau, atteint à <see cref="MaxRowCapacity"/> lignes — 85 % du corps plein.</summary>
+    private const float MinTableFontSize = TableFontSize * 0.85f;
+
+    /// <summary>Interligne plancher, atteint à <see cref="MaxRowCapacity"/> lignes.</summary>
+    private const float DensePadding = 1f;
+
+    /// <summary>
     /// Largeurs FIXES (en points PDF) des sept colonnes de chiffres du tableau des disciplines. Le
     /// contenu de ces colonnes a un gabarit connu d'avance — une note, un coefficient, un rang — alors
     /// que « Disciplines » et « Appréciations » portent du texte de longueur imprévisible : figer les
@@ -302,13 +367,12 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     /// </summary>
     private void ComposeGradesTable(IContainer container)
     {
-        // Barème d'espacement des lignes : moins il y a de matières, plus chaque ligne s'étire, pour
-        // qu'une classe à 2-3 matières ne laisse pas un grand vide sous un tableau minuscule. Repère :
-        // 12 matières (le cas testé par JGK-G03, "tient sur une page") retombe exactement sur les 2 pt
-        // fixes d'avant ce changement — le plafond bas est donc déjà éprouvé pour ne jamais déborder.
-        var rowPadding = Math.Clamp(24f / Math.Max(reportCard.Subjects.Count, 1), 2f, 8f);
+        // Interligne ET corps, calculés d'un seul barème partagé par les trois tableaux : le bulletin
+        // porte jusqu'à MaxRowCapacity disciplines sur une page A5 (voir RowMetricsFor). Jusqu'à 12
+        // matières — le cas de JGK-G03 et de la quasi-totalité des bulletins — le rendu est inchangé.
+        var (fontSize, rowPadding) = RowMetricsFor(reportCard.Subjects.Count);
 
-        container.DefaultTextStyle(text => text.FontSize(TableFontSize)).Table(table =>
+        container.DefaultTextStyle(text => text.FontSize(fontSize)).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
@@ -368,7 +432,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             // « Abs. Tot » tombe dans la colonne Rang, la plus étroite du tableau : corps réduit ET
             // rembourrage horizontal nul, sans quoi le libellé se coupe en deux lignes et fait gonfler
             // toute la rangée. Sa VALEUR, elle, dispose de la colonne Appréciations, la plus large.
-            table.Cell().Element(TightTotalCell).AlignCenter().Text("Abs. Tot").FontSize(6f);
+            table.Cell().Element(TightTotalCell).AlignCenter().Text("Abs. Tot").FontSize(Math.Min(6f, fontSize));
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.TotalAbsences));
         });
 
@@ -393,10 +457,11 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     /// </summary>
     private void ComposeGradesTablePrimaire(IContainer container)
     {
-        // Même barème d'espacement des lignes que le secondaire (voir ComposeGradesTable).
-        var rowPadding = Math.Clamp(24f / Math.Max(reportCard.Subjects.Count, 1), 2f, 8f);
+        // Même barème d'interligne et de corps que le secondaire — une seule source de vérité pour
+        // « combien de lignes tiennent sur une page » (voir RowMetricsFor).
+        var (fontSize, rowPadding) = RowMetricsFor(reportCard.Subjects.Count);
 
-        container.Table(table =>
+        container.DefaultTextStyle(text => text.FontSize(fontSize)).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
@@ -410,12 +475,12 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
 
             table.Header(header =>
             {
-                header.Cell().Element(HeaderCell).Text("DISCIPLINES").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Devoir").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Comp").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text($"Moy/{reportCard.GradingScale}").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("T.H").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Rang").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).Text("DISCIPLINES").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Devoir").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Comp").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text($"Moy/{reportCard.GradingScale}").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("T.H").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Rang").Bold();
             });
 
             foreach (var subject in reportCard.Subjects)
@@ -438,7 +503,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Absences));
             table.Cell().Element(TotalCell).AlignCenter().Text("Retards");
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.Retards));
-            table.Cell().Element(TotalCell).AlignCenter().Text("Abs. Tot").FontSize(6.5f);
+            table.Cell().Element(TotalCell).AlignCenter().Text("Abs. Tot").FontSize(Math.Min(6.5f, fontSize));
             table.Cell().Element(TotalCell).AlignCenter().Text(FormatOptionalCount(reportCard.TotalAbsences));
         });
 
@@ -471,13 +536,13 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     {
         var structure = reportCard.EvaluationStructure!;
 
-        // Même principe que les deux autres tableaux : l'interligne se resserre à mesure que les lignes
-        // se multiplient, pour qu'une grille à 16 activités (le modèle CI-CP) tienne sur la page A5 sans
-        // qu'une grille à 5 lignes n'y flotte. Bornes plus basses qu'ailleurs : ces grilles sont, par
-        // construction, les plus longues du produit.
-        var rowPadding = Math.Clamp(20f / Math.Max(structure.LineCount, 1), 1.1f, 5f);
+        // Même barème que les deux autres tableaux — mais compté en LIGNES DE GRILLE (une par activité),
+        // pas en matières : c'est ce que le lecteur voit, et c'est ce qui remplit la page. Une grille de
+        // 18 activités (le modèle du primaire : Lang & Com., Maths, DDM, EDD, EPSA, Langues étrangères)
+        // tient donc sur une page, réserve comprise, sans qu'une grille de 5 lignes n'y flotte.
+        var (fontSize, rowPadding) = RowMetricsFor(structure.LineCount);
 
-        container.Table(table =>
+        container.DefaultTextStyle(text => text.FontSize(fontSize)).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
@@ -490,11 +555,11 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
 
             table.Header(header =>
             {
-                header.Cell().Element(HeaderCell).Text(structure.Column1Header).Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).Text(structure.Column2Header).Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Notes").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).AlignCenter().Text("Sur").Bold().FontSize(7);
-                header.Cell().Element(HeaderCell).Text("Appréciations").Bold().FontSize(7);
+                header.Cell().Element(HeaderCell).Text(structure.Column1Header).Bold();
+                header.Cell().Element(HeaderCell).Text(structure.Column2Header).Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Notes").Bold();
+                header.Cell().Element(HeaderCell).AlignCenter().Text("Sur").Bold();
+                header.Cell().Element(HeaderCell).Text("Appréciations").Bold();
             });
 
             foreach (var group in structure.Groups)
