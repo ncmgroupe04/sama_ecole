@@ -5,7 +5,12 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 29/08/2026** (JGK-F09 — contrôle du comptage physique et écarts de caisse à la clôture, voir §5 ; câblage de la session de caisse sur `/caisse` le 27/08/2026 — JGK-F02 était inutilisable en production faute d'écran d'ouverture/clôture ; écran `/examens` livré le 26/08/2026 — backend Module J déjà complet ; module Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
+**Dernière mise à jour : 30/08/2026** (Module M « Intégration étatique / Passerelle SIMEN » —
+**back-end, persistance, migration RLS et documentation livrés**, écrans à faire, voir §2 ; JGK-F09 —
+contrôle du comptage physique et écarts de caisse à la clôture le 29/08/2026, voir §5 ; câblage de la
+session de caisse sur `/caisse` le 27/08/2026 — JGK-F02 était inutilisable en production faute d'écran
+d'ouverture/clôture ; écran `/examens` livré le 26/08/2026 — backend Module J déjà complet ; module
+Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
 
 ---
 
@@ -56,6 +61,7 @@ Livrés, câblés à l'IHM, et couverts par la suite de tests :
 | **Rapports financiers** | `/rapports/financiers` | `GetRevenueConsolidationQuery` + export `.xlsx` |
 | **Inventaire** | `/inventaire` | API `/api/v1/inventory` — catalogue, journal de stock, prêts, 2 PDF |
 | **Examens officiels** | `/examens` | API `/api/v1/exams` — sessions, dossiers CFEE/BFEM/BAC, audit, attribution centre/table, transmission, résultats, statistiques, export ministériel, convocations |
+| **Intégration étatique** | *(écrans à faire)* | API `/api/v1/state-integration` — IEN, export Planète (CSV/JSON), rapport STATEDUC (PDF + Excel), certificat de mutation avec QR, livret de compétences, vérification publique du certificat |
 
 Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bulletins, Frais,
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
@@ -87,6 +93,45 @@ dans cet environnement — à valider en local avant mise en production.
    numéro d'immatriculation posé sur le bien par la mairie ou l'État.
 
 Export `.xlsx` de l'inventaire : **écarté pour ce lot** (PDF seul), à arbitrer si le besoin remonte.
+
+### Intégration étatique / Passerelle SIMEN (30/08/2026) — back-end livré, écrans à faire
+
+Module M (`docs/Volume_1_Cahier_des_Charges.md` §23, `docs/Volume_3_DDS.md` §5.11,
+`docs/Volume_4_API_Design.md` §23, tickets `JGK-M01`..`M07`). Le socle producteur des **pièces et
+fichiers réglementaires** dus au ministère de l'Éducation. Migration `AddStateIntegrationModule`
+(colonnes sur `students`/`schools`/`teachers`/`exam_dossiers` + table `student_mutation_certificates`
++ policy RLS + fonction `SECURITY DEFINER verify_mutation_certificate`).
+
+**Cadre non négociable, rappelé dans l'aide en ligne et le contrôleur :** le SIMEN n'expose **aucune
+API publique** à ce jour. Le module produit des fichiers que l'école transmet par la voie habituelle.
+`ISimenBridgeService` est un contrat seul ; l'implémentation livrée (`UnavailableSimenBridgeService`)
+refuse explicitement chaque appel — aucune réussite simulée, jamais d'état « Transmis » posé par une
+route client (règle #11).
+
+**Ce qui est livré :** entités, migration + RLS, handlers CQRS, `StateIntegrationController`
+(9 routes), `PlaneteExportSerializer` (CSV/JSON, une seule définition de colonnes), documents QuestPDF
+(`StateducReportDocument` A4 paysage, `StudentMutationCertificateDocument` avec QR,
+`SkillsBookletDocument` multi-pages), `StateducReportExcelGenerator`, `openapi.yaml`, Volumes 1/3/4,
+Centre d'aide §11. `dotnet build` **0 erreur** ; `SimenComplianceTests` **26/26** ; `RlsCoverageTests`
+**vert** (la nouvelle table tenant est couverte automatiquement) ; suite unitaire **1004/1004**.
+
+**Ce qui reste :** les écrans (`/integration-etatique`, gestion du champ IEN sur la fiche élève, page
+publique HTML de vérification du QR), la commande de révocation d'un certificat, et des tests
+d'intégration dédiés (refus 409 code établissement absent, concurrence sur la séquence IEN, agrégats
+STATEDUC).
+
+**Trois arbitrages actés, validés par le client :**
+
+1. **`Teacher.Gender` ajouté (nullable).** Le formulaire STATEDUC ventile tout le personnel en
+   Hommes/Femmes ; les fiches enseignant existantes ne portent pas le genre. Une **troisième colonne
+   « genre non saisi »** (absente du formulaire officiel) est ajoutée plutôt que d'imputer d'office à
+   l'une des deux colonnes (faux et indétectable) ou de déduire le genre du prénom (faux en silence).
+2. **Coordonnées GPS en deux `numeric(9,6)`** (latitude, longitude), jamais une chaîne « lat,lon ».
+   `School.GpsCoordinates` est une propriété **calculée, non mappée** (`builder.Ignore`).
+3. **IEN provisoire de secours préfixé `P`.** `NationalIenGenerator` produit des numéros
+   `P` + code établissement + millésime + séquence + clé Luhn, marqués `Student.IsIenProvisional` et
+   signalés partout. Le format national réel n'est **pas** imité — deux numéros indiscernables
+   seraient le pire résultat. L'arrivée d'un IEN officiel écrase le provisoire ; l'inverse est refusé.
 
 ### Examens officiels (26/08/2026) — écran livré, backend déjà complet
 
