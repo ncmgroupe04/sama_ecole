@@ -1,4 +1,5 @@
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -32,6 +33,29 @@ public class TeacherConfiguration : IEntityTypeConfiguration<Teacher>
         builder.Property(t => t.PhotoUrl).HasMaxLength(500);
         builder.Property(t => t.PhotoData);
         builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
+
+        // Qualifications & statut administratif (rapport STATEDUC, ticket JGK-M04). Enums stockés en
+        // TEXTE comme partout ailleurs dans le projet : un entier rendrait la table illisible en SQL
+        // direct, et toute réorganisation de l'enum réécrirait silencieusement le sens des lignes.
+        //
+        // Les valeurs par défaut sont TOUTES « NonRenseigne » : les fiches existantes ne portent
+        // aucune de ces informations, et les défausser en « Aucun » ferait apparaître, dès le premier
+        // rapport, un établissement à 0 % d'enseignants qualifiés.
+        builder.Property(t => t.Gender).HasMaxLength(1);
+
+        builder.Property(t => t.AcademicQualification)
+            .HasConversion<string>().HasMaxLength(20).IsRequired()
+            .HasDefaultValue(AcademicQualification.NonRenseigne);
+
+        builder.Property(t => t.ProfessionalQualification)
+            .HasConversion<string>().HasMaxLength(20).IsRequired()
+            .HasDefaultValue(ProfessionalQualification.NonRenseigne);
+
+        builder.Property(t => t.CivilServiceStatus)
+            .HasConversion<string>().HasMaxLength(20).IsRequired()
+            .HasDefaultValue(TeacherCivilServiceStatus.NonRenseigne);
+
+        builder.Property(t => t.CivilServiceMatricule).HasMaxLength(30);
 
         // Un matricule est unique par école, pas globalement (même règle que Student).
         builder.HasIndex(t => new { t.SchoolId, t.Matricule }).IsUnique();

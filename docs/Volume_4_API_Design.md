@@ -626,4 +626,69 @@ Le module est **accessible à toutes les formules d'abonnement** : aucun contrô
 
 ---
 
+## 23. API Intégration étatique (SIMEN / Planète / STATEDUC)
+
+Base : `/api/v1/state-integration`. Spécification fonctionnelle : Volume 1 §23. Tickets : Module M.
+
+**Matrice de droits.** `Directeur` sur tout le module. `Secretariat` en plus sur la saisie d'IEN et les
+certificats de mutation — c'est lui qui ressaisit les listes d'IEN reçues de l'IEF et qui délivre les
+pièces au guichet. Le **rapport STATEDUC et l'export Planète restent au seul Directeur** : ce sont des
+déclarations engageant l'établissement devant le ministère, et l'export sort l'état civil de *tous* les
+élèves en un fichier.
+
+| Méthode | Route | Rôles | Effet |
+|---|---|---|---|
+| `GET` | `/planete/export?schoolYearId=&format=&classroomId=` | Directeur | Fichier `.csv`/`.json` — matrice Planète |
+| `GET` | `/simen/status` | Directeur | État du relais API (aucune donnée d'école) |
+| `GET` | `/stateduc?schoolYearId=&observationDate=` | Directeur | Rapport agrégé (JSON) |
+| `GET` | `/stateduc/pdf?schoolYearId=&observationDate=` | Directeur | Formulaire officiel A4 paysage |
+| `GET` | `/stateduc/excel?schoolYearId=&observationDate=` | Directeur | Classeur `.xlsx` |
+| `PUT` | `/students/{studentId}/ien` | Directeur, Secrétariat | Enregistre l'IEN officiel, ou génère un provisoire |
+| `POST` | `/students/{studentId}/mutation-certificate` | Directeur, Secrétariat | Délivre le certificat, renvoie le PDF |
+
+### 23.1 Points d'attention du contrat
+
+**`GET /planete/export` renvoie un FICHIER, y compris au format `json`.** C'est un livrable destiné à
+être déposé ou envoyé, pas une réponse d'API à consommer : un navigateur qui l'afficherait à l'écran
+obligerait l'utilisateur à faire un copier-coller pour le récupérer. `Content-Disposition: attachment`
+dans les deux formats.
+
+**`409 Conflict` si le code établissement national n'est pas renseigné.** L'export refuse plutôt que de
+produire un fichier au code vide, que le ministère rejetterait silencieusement plusieurs jours plus
+tard. Le message nomme l'écran où corriger (*Paramètres → Établissement*).
+
+**`PUT /students/{id}/ien` — deux modes dans une seule route.** Corps `{"ienNumber": "..."}` = saisie
+d'un numéro officiel. Corps `{"ienNumber": null}` ou champ absent = **demande de génération
+provisoire**. Une chaîne **vide** est refusée en `422` : « champ laissé vide » ne doit jamais déclencher
+une génération que l'utilisateur n'a pas demandée. La réponse porte `isProvisional` — l'écran doit
+l'afficher immédiatement, sans relire la fiche.
+
+`409` si l'IEN soumis est déjà porté par un autre élève de l'école (le message nomme lequel), ou si un
+provisoire tenterait d'écraser un IEN officiel déjà enregistré. `422` si la forme est invalide.
+
+> **Le contrôle de forme n'est pas une vérification d'authenticité.** Aucun appel au SIMEN n'est
+> possible à ce jour ; le message d'erreur de l'API le dit explicitement pour que l'interface ne
+> laisse pas croire à une validation auprès du ministère.
+
+**`POST .../mutation-certificate` est un POST bien qu'il renvoie un PDF** : il écrit (numéro officiel
+séquentiel, ligne en base, code de vérification), et deux appels produisent deux certificats distincts.
+Le ranger en `GET` laisserait croire qu'on peut le rejouer sans conséquence. Deux en-têtes de réponse
+accompagnent le corps binaire :
+
+- `X-Certificate-Number` — le numéro délivré ;
+- `X-Financially-Clear` — `true`/`false`, pour que l'écran alerte l'agent. **Un `false` ne bloque
+  jamais la délivrance** (Volume 1 §23.5).
+
+**Aucune route de ce module ne marque un lot « Transmis ».** Cet état ne pourra venir que d'un webhook
+signé HMAC du SIMEN, vérifié avant toute écriture — par symétrie avec les paiements d'abonnement
+(règle #11). Tant que le relais n'existe pas, `GET /simen/status` renvoie `isConfigured: false` et
+l'interface n'affiche pas l'action de transmission.
+
+**Audit (JGK-H01).** `GET /planete/export`, `GET /stateduc*`, `PUT .../ien` et
+`POST .../mutation-certificate` sont tous journalisés. L'export et le rapport sont des *lectures*, mais
+des lectures massives de données personnelles : savoir qui a extrait le fichier, et quand, est le seul
+recours en cas de fuite.
+
+---
+
 **Fin du Volume 4.**

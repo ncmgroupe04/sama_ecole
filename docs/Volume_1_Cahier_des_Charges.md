@@ -713,4 +713,188 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 ---
 
+## 23. Intégration étatique (SIMEN / Planète / STATEDUC)
+
+> **Ce que ce module est, et ce qu'il n'est pas.** Il produit les **pièces et fichiers réglementaires**
+> que l'établissement doit à l'administration sénégalaise, dans les formats qu'elle attend. Il ne
+> dialogue avec **aucun système du ministère** : à la date de rédaction, **aucune API publique du SIMEN
+> n'existe**. Le module prépare des fichiers que l'école transmet par la voie habituelle (dépôt,
+> courriel, remise à l'IEF). Le relais API est **spécifié** (§23.2) pour que le jour où il ouvrira, le
+> câblage n'oblige pas à réécrire les exports — il n'est pas *implémenté*, et rien dans l'interface ne
+> laisse croire le contraire.
+
+### 23.1 Identifiant National de l'Élève (IEN)
+
+L'IEN suit l'élève d'un établissement à l'autre sur tout son parcours. C'est la **clé de rapprochement
+de tous les échanges** avec le ministère : sans lui, un élève transféré est un nouvel élève pour
+l'administration, et son parcours antérieur est perdu.
+
+- L'IEN est **attribué par l'administration centrale**, jamais par l'école ni par la plateforme.
+- Le champ est **facultatif** sur la fiche élève (`Students.IenNumber`). Le rendre obligatoire
+  bloquerait l'inscription d'un élève dont le numéro n'est pas encore délivré — ce que le terrain ne
+  peut pas se permettre à la rentrée.
+- Il est **distinct du matricule**, qui est interne à l'établissement : deux écoles peuvent porter le
+  même matricule pour deux élèves différents, jamais le même IEN.
+- Unicité garantie **par établissement** (index unique partiel). L'unicité *nationale* ne peut pas
+  être vérifiée sans le SIMEN, et la promettre serait un mensonge technique.
+
+**IEN provisoire de secours.** Une école qui n'a reçu aucun numéro peut en faire générer un
+algorithmiquement (`P` + code établissement + millésime + séquence + clé de contrôle Luhn).
+
+> **Un IEN provisoire n'a aucune valeur officielle.** Il est marqué comme tel
+> (`Students.IsIenProvisional`), signalé ligne par ligne dans l'export Planète, imprimé avec la mention
+> « (provisoire) » sur le certificat de mutation, et compté séparément au STATEDUC. Le préfixe `P` le
+> rend reconnaissable **à l'œil, sur papier**, par un agent qui n'a accès à aucune base. L'arrivée du
+> numéro officiel l'**écrase** sans le conserver : garder deux identifiants pour un même élève, c'est
+> garantir qu'un traitement finira par utiliser le mauvais. **L'inverse est interdit** — aucun numéro
+> provisoire ne remplace un IEN officiel déjà enregistré.
+
+### 23.2 Export « Planète Ready » et relais SIMEN
+
+Matrice élèves au format d'échange du ministère, exportable en **CSV** (point-virgule, BOM UTF-8) ou
+en **JSON**, pour une année scolaire, éventuellement restreinte à une classe.
+
+**Périmètre : l'inscription, pas l'élève.** L'export part des inscriptions non annulées de l'exercice.
+Un élève parti en janvier a bien été scolarisé cette année-là et figure au fichier ; un élève créé pour
+l'année suivante n'y a pas sa place. Partir des « élèves actuellement en base » ferait les deux erreurs
+à la fois. La classe retenue est celle de **l'inscription**, figée — pas la classe courante de l'élève.
+
+**Règles de remplissage, non négociables :**
+
+- **Aucune valeur inventée.** Un champ non saisi part vide. Remplir un IEN manquant par le matricule
+  interne, ou un lieu de naissance absent par la ville de l'école, produirait un fichier *plausible et
+  faux* — le pire des deux.
+- **Aucune donnée financière.** Le ministère reçoit un état civil scolaire, pas la situation de
+  paiement d'une famille : la faire sortir de l'établissement ne relève d'aucune obligation légale.
+- Le **code établissement national** est obligatoire : sans lui l'export **refuse de s'exécuter**,
+  avec un message qui dit quoi corriger et où. Un lot transmis sans ce code est rejeté par le
+  ministère, silencieusement et plusieurs jours plus tard — l'école croirait avoir transmis.
+- Le fichier annonce ses **compteurs de qualité** (lignes provisoires, lignes sans IEN) **avant**
+  téléchargement : une école doit pouvoir renoncer en sachant qu'elle s'apprête à transmettre
+  214 identifiants fabriqués.
+
+**Relais API (spécifié, non implémenté).** `ISimenBridgeService` porte deux opérations : transmettre un
+lot, et rechercher les IEN officiels d'élèves déjà déclarés. L'implémentation livrée **refuse chaque
+appel explicitement** et l'écran n'affiche pas l'action tant qu'aucun point d'accès n'est configuré.
+Le jour de l'implémentation réelle : secret en configuration (jamais en base), **webhook entrant signé
+HMAC vérifié avant toute écriture** (règle #11 — aucune route ouverte au client ne marque un lot
+« Transmis »), et appel journalisé à l'audit.
+
+> **Pourquoi une recherche d'IEN officiels ne s'applique jamais automatiquement.** Faute
+> d'identifiant commun préexistant, le rapprochement se fait sur (nom, date de naissance, lieu de
+> naissance). C'est fragile — les homonymes sont fréquents. Le résultat doit être **validé par un
+> humain** avant d'écrire sur une fiche élève.
+
+### 23.3 Rapport annuel STATEDUC
+
+État statistique transmis en fin d'année. Quatre tableaux réglementaires : effectifs par niveau,
+pyramide des âges, qualifications du personnel enseignant, statuts administratifs — plus une synthèse
+et un état des infrastructures. Disponible en **PDF A4 paysage** (formulaire à signer et déposer) et en
+**classeur `.xlsx`** (consolidation à l'IEF). Les deux sortent du **même calcul** : un second calcul
+« pour l'Excel » finirait par diverger du PDF déposé.
+
+**Trois principes gouvernent l'agrégation :**
+
+1. **On compte des inscriptions, pas des élèves en base** (même raison qu'en §23.2).
+2. **L'âge est calculé à la date d'observation**, jamais « aujourd'hui ». Sans cela, deux tirages du
+   même rapport à six mois d'écart donneraient deux pyramides différentes pour la même année, et
+   l'école serait incapable d'expliquer l'écart à l'IEF.
+3. **Aucune case n'est devinée.** Un enseignant sans diplôme saisi va dans « non renseigné » ; une date
+   de naissance aberrante va dans « âge non déterminé » ; un enseignant sans genre saisi va dans une
+   **troisième colonne**, absente du formulaire officiel qui n'en prévoit que deux.
+
+> **Pourquoi cette troisième colonne existe.** Le formulaire ventile tout le personnel en
+> Hommes/Femmes. Les fiches enseignant antérieures à ce module ne portent pas le genre. Les imputer à
+> l'une des deux colonnes serait faux et *indétectable* ; les déduire du prénom serait faux pour une
+> part importante des prénoms sénégalais et faux *en silence*. Une colonne visible est la seule issue
+> honnête — et le document imprime un **encadré « Données incomplètes »** qui la nomme, pour que le
+> Directeur ne signe pas un formulaire sans voir qu'il est incomplet.
+
+**Qualification.** Est « qualifié » au sens du ministère un enseignant porteur d'un **diplôme
+professionnel** (CEAP, CAP, CAEM, CAES). Un titulaire d'un Master sans titre pédagogique n'est pas
+qualifié : c'est la définition officielle, pas la nôtre, et l'inverser flatterait l'école au prix d'un
+faux. Le taux de qualification est publié **à côté** du nombre d'enseignants dont la qualification
+n'est pas saisie — sans quoi un taux de 40 % ne dirait pas s'il décrit l'école ou l'état de sa saisie.
+
+**Nouveaux champs sur la fiche enseignant** : diplôme académique, diplôme professionnel, statut
+administratif, matricule de solde (personnels de l'État uniquement), date de première prise de service
+(ancienneté dans le métier, pas dans l'établissement), genre.
+
+### 23.4 Examens — carte scolaire et état civil
+
+Trois champs s'ajoutent au dossier d'examen (§22) :
+
+- **Code du centre d'examen** (`ExamCenterCode`), distinct du *nom* du centre : c'est le code — jamais
+  le nom — que le ministère utilise pour rapprocher les candidats. Deux centres peuvent porter des noms
+  voisins (« Lycée de Mbour », « Lycée de Mbour 2 ») et un nom mal orthographié fait rejeter tout le lot.
+- **Numéro de table** (`TableNumber`), la place physique en salle, communiquée par le centre. À ne pas
+  confondre avec le **numéro de candidat**, qui est le numéro d'inscription : un candidat garde son
+  numéro d'inscription et peut changer de table entre deux épreuves.
+- **État du document d'état civil** (`CivilRegistryDocumentStatus`) : non fourni / fourni / conforme /
+  non conforme / **en régularisation**. Ce dernier état est la raison d'être du champ : le couple
+  booléen existant ne savait pas exprimer la situation la plus fréquente au Sénégal — « fourni, non
+  conforme, jugement supplétif en cours ». Un dossier en régularisation était indiscernable d'un
+  dossier définitivement non conforme, et l'IEF refusait les deux. Les deux anciens champs sont
+  **conservés** : ils sont lus par l'audit de dossier existant.
+
+**Champs réglementaires sur l'établissement** : code établissement national (SIMEN), numéro
+d'autorisation ministérielle, code de circonscription scolaire, **coordonnées GPS**.
+
+> Les coordonnées GPS sont stockées en **deux colonnes décimales** (latitude, longitude), pas dans une
+> chaîne « lat,lon ». Une coordonnée en texte ne peut être ni validée, ni bornée, ni utilisée dans une
+> requête géographique — et les fichiers de carte scolaire réels arrivent tantôt en
+> « 14.6928, -17.4467 », tantôt en « 14°41'34"N ». La chaîne d'affichage est **calculée**, jamais
+> stockée, pour qu'aucune dérive ne soit possible entre elle et le couple qui fait foi.
+
+### 23.5 Certificat de mutation
+
+Pièce délivrée à l'élève qui quitte l'établissement, exigée par l'école d'accueil avant toute
+réinscription. **PDF A4 portrait, une page, avec QR code de vérification.**
+
+**Pourquoi il est persisté** (contrairement à l'attestation d'inscription, générée à la volée) : un QR
+qui n'est adossé à rien n'est qu'un ornement. Il faut une ligne en base pour qu'un scan obtienne une
+réponse, et pour répondre à « ce certificat a-t-il été révoqué ? ».
+
+- Numéro officiel séquentiel par établissement (`MUT-2026-0007`), généré **dans la transaction** de
+  délivrance (règle #3).
+- Le QR encode une **URL de vérification**, jamais l'état civil : un QR photographié sur un bureau est
+  lisible par n'importe qui. Le point de vérification répond « valide / révoqué / inconnu », jamais par
+  les données de l'élève. Le code est **32 caractères d'aléa cryptographique**, pas l'identifiant de la
+  ligne — sans quoi la table serait énumérable.
+- **Append-only de fait** : un certificat délivré n'est jamais modifié. Une erreur se corrige par
+  **révocation** puis nouvelle délivrance. Réécrire une pièce déjà remise au tuteur produirait deux
+  documents contradictoires portant le même numéro, dont la version papier ferait foi contre l'école.
+- La classe quittée est **figée** à la délivrance, comme sur un dossier d'examen.
+
+**Situation financière : une mention, jamais un montant.** Le certificat indique si l'élève était à
+jour au jour de la délivrance — un instantané figé, pas un calcul refait à la lecture.
+
+> **Un solde impayé n'empêche jamais la délivrance.** Refuser un certificat de mutation à un élève
+> débiteur revient à le retenir de force dans l'établissement, ce que la réglementation interdit. Et
+> le certificat n'affiche **aucun chiffre** : un « reste dû : 45 000 FCFA » deviendrait un instrument
+> de pression sur une famille qui déménage, sur un papier qui circule entre des mains qui n'ont pas à
+> connaître ses finances.
+
+### 23.6 Livret de compétences
+
+Document APC qui **retrace un parcours** là où le bulletin note une période : pour chaque compétence de
+la grille du niveau, le niveau d'acquisition atteint, période par période. C'est la pièce que réclame
+l'école d'accueil lors d'une mutation, aux côtés du certificat.
+
+- **A4 portrait, plusieurs pages admises** — contrairement au bulletin. Une grille APC complète
+  (40 à 60 compétences) ne tient pas sur une page, et la comprimer la rendrait illisible pour la
+  famille, sa première destinataire.
+- Le nombre de colonnes de périodes est **variable** (2 semestres ou 3 trimestres selon l'école), lu
+  sur la configuration — rien n'est codé en dur.
+- La grille vient de la **même configuration d'école** que le bulletin APC (`EvaluationStructure`),
+  jamais d'une seconde définition des compétences qui divergerait au premier changement.
+- Échelle : **NA** (non acquis) / **ECA** (en cours d'acquisition) / **A** (acquis) / **E** (expert),
+  dérivée du pourcentage de réussite. Une **légende est obligatoire** : « ECA » ne veut rien dire pour
+  un parent.
+
+> **Une case vide signifie « non évaluée », et rien d'autre.** Imprimer « NA » à la place porterait un
+> jugement d'échec que personne n'a formulé — sur le document qui suit l'élève d'école en école.
+
+---
+
 **Fin du Volume 1.**

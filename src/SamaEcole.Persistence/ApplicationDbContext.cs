@@ -84,11 +84,13 @@ public class ApplicationDbContext(
     public DbSet<ExamSession> ExamSessions => Set<ExamSession>();
     public DbSet<ExamDossier> ExamDossiers => Set<ExamDossier>();
     public DbSet<ExamResult> ExamResults => Set<ExamResult>();
+    public DbSet<StudentMutationCertificate> StudentMutationCertificates => Set<StudentMutationCertificate>();
 
     // Console Super Admin — entités SANS CLÉ, jamais gérées par les migrations (voir OnModelCreating) :
     // la première est adossée à une vue réelle, la seconde n'existe qu'à travers FromSqlRaw.
     public DbSet<PlatformDashboardStats> PlatformDashboardStats => Set<PlatformDashboardStats>();
     public DbSet<GlobalAuditLogEntry> GlobalAuditLogEntries => Set<GlobalAuditLogEntry>();
+    public DbSet<MutationCertificateVerification> MutationCertificateVerifications => Set<MutationCertificateVerification>();
     public DbSet<PlatformSubscriptionRow> PlatformSubscriptions => Set<PlatformSubscriptionRow>();
 
     /// <summary>Annuaire public (B2C) — vue en lecture seule, voir <see cref="PublicSchoolListing"/>.</summary>
@@ -124,6 +126,15 @@ public class ApplicationDbContext(
         });
 
         modelBuilder.Entity<GlobalAuditLogEntry>(e =>
+        {
+            e.HasNoKey();
+            e.ToView(null);
+        });
+
+        // Vérification publique d'un certificat de mutation : même mécanisme que GlobalAuditLogEntry —
+        // entité SANS CLÉ, sans table/vue propre, interrogée uniquement via FromSqlRaw sur la fonction
+        // SECURITY DEFINER `verify_mutation_certificate` (migration AddStateIntegrationModule).
+        modelBuilder.Entity<MutationCertificateVerification>(e =>
         {
             e.HasNoKey();
             e.ToView(null);
@@ -244,6 +255,18 @@ public class ApplicationDbContext(
             .FromSqlRaw("SELECT * FROM public.get_global_audit_logs({0}, {1})", limit, offset)
             .IgnoreQueryFilters()
             .ToListAsync(cancellationToken);
+
+    /// <summary>
+    /// Vérification publique d'un certificat de mutation (Volume 1 §23.5) — la fonction SECURITY
+    /// DEFINER `verify_mutation_certificate` s'exécute hors RLS pour répondre à un appel anonyme, au
+    /// périmètre minimal (aucune donnée d'élève). Zéro ligne = code inconnu, renvoyé comme `null`.
+    /// </summary>
+    public async Task<MutationCertificateVerification?> VerifyMutationCertificateAsync(
+        string verificationCode, CancellationToken cancellationToken)
+        => await MutationCertificateVerifications
+            .FromSqlRaw("SELECT * FROM public.verify_mutation_certificate({0})", verificationCode)
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(cancellationToken);
 
     /// <inheritdoc cref="IApplicationDbContext.ToListOrEmptyOnMissingTableAsync{T}" />
     public async Task<IReadOnlyList<T>> ToListOrEmptyOnMissingTableAsync<T>(

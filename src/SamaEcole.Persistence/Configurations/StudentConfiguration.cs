@@ -39,9 +39,27 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         builder.Property(s => s.GuardianEmail).HasMaxLength(255);
         builder.Property(s => s.Address).HasMaxLength(300);
 
+        // IEN (module Intégration étatique, ticket JGK-M01). 24 caractères : notre format provisoire
+        // en fait 15, mais le format national réel n'est pas connu — la marge évite d'avoir à migrer
+        // la colonne le jour où un IEN officiel plus long arrivera.
+        builder.Property(s => s.IenNumber).HasMaxLength(24);
+        builder.Property(s => s.IsIenProvisional).IsRequired().HasDefaultValue(false);
+
         // Un matricule est unique par école, pas globalement.
         builder.HasIndex(s => new { s.SchoolId, s.Matricule }).IsUnique();
         builder.HasIndex(s => s.SchoolId);
+
+        // Index unique PARTIEL sur l'IEN, même dispositif qu'ExamDossier.CandidateNumber : l'immense
+        // majorité des élèves n'a pas encore d'IEN, et un index unique ordinaire sur une colonne
+        // massivement nulle est à la fois inutile et coûteux.
+        //
+        // Unicité bornée à L'ÉCOLE, alors qu'un IEN est national : nous ne pouvons pas vérifier
+        // l'unicité nationale sans le SIMEN, et la promettre par un index global échouerait
+        // légitimement le jour où deux écoles de la plateforme scolariseraient successivement le même
+        // élève — ce qui est le comportement NORMAL d'un identifiant qui suit l'élève.
+        builder.HasIndex(s => new { s.SchoolId, s.IenNumber })
+            .IsUnique()
+            .HasFilter("\"IenNumber\" IS NOT NULL");
 
         // FK vers schools (docs/Volume_3_DDS.md §3) — pas de navigation dans l'entité, la relation
         // reste au niveau du schéma. Restrict : on ne supprime jamais physiquement une école (règle #6).

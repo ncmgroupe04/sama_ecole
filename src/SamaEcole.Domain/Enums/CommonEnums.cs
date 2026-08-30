@@ -277,7 +277,21 @@ public enum MatriculeKind
     /// séquentiel par (école, type, année) des matricules : même garantie de numérotation officielle
     /// unique et sans trou, incrémentée dans la transaction d'inscription.
     /// </summary>
-    Receipt
+    Receipt,
+
+    /// <summary>
+    /// Numéro de certificat de mutation (ticket JGK-M06, ex. « MUT-2026-0007 »). Même compteur, même
+    /// garantie : une pièce officielle remise à une famille et opposable à l'école d'accueil ne peut
+    /// ni porter un numéro en double, ni laisser un trou inexpliqué dans la série.
+    /// </summary>
+    MutationCertificate,
+
+    /// <summary>
+    /// Séquence de l'IEN PROVISOIRE (ticket JGK-M01). Passe par le même compteur pour hériter de sa
+    /// sérialisation sous concurrence — deux inscriptions simultanées ne peuvent pas recevoir le même
+    /// numéro. Voir <c>IIenGeneratorService</c> et sa mise en garde : ce n'est pas un IEN officiel.
+    /// </summary>
+    ProvisionalIen
 }
 
 /// <summary>

@@ -29,6 +29,26 @@ public class SchoolConfiguration : IEntityTypeConfiguration<School>
         builder.Property(s => s.InspectionEducationFormation).HasMaxLength(150);
         builder.Property(s => s.NomLycee).HasMaxLength(150);
 
+        // Identification réglementaire SIMEN (module Intégration étatique, ticket JGK-M05).
+        builder.Property(s => s.NationalSchoolCode).HasMaxLength(30);
+        builder.Property(s => s.MinistryAuthorizationNumber).HasMaxLength(80);
+        builder.Property(s => s.SchoolDistrictCode).HasMaxLength(30);
+
+        // Coordonnées GPS en decimal(9,6) : six décimales ≈ 11 cm au sol, largement au-delà de ce que
+        // demande une carte scolaire, et une précision fixe évite les dérives d'arrondi d'un double.
+        // La propriété calculée School.GpsCoordinates n'est PAS mappée — elle se dérive de ces deux
+        // colonnes à chaque lecture, et la stocker permettrait qu'elle les contredise un jour.
+        builder.Property(s => s.GpsLatitude).HasPrecision(9, 6);
+        builder.Property(s => s.GpsLongitude).HasPrecision(9, 6);
+        builder.Ignore(s => s.GpsCoordinates);
+
+        // Le code établissement national est unique sur TOUTE la plateforme : deux écoles ne peuvent
+        // pas déclarer le même code au ministère. Partiel, car il reste nul tant que le Directeur ne
+        // l'a pas saisi — ce qui est le cas de toutes les écoles existantes.
+        builder.HasIndex(s => s.NationalSchoolCode)
+            .IsUnique()
+            .HasFilter("\"NationalSchoolCode\" IS NOT NULL");
+
         // Annuaire public. Ville/région sont des libellés courts (critères de recherche) ; la
         // présentation est bornée à 2000 caractères — assez pour un paragraphe de vitrine, trop peu
         // pour qu'un champ public devienne un vecteur de stockage arbitraire.

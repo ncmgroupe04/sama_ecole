@@ -251,6 +251,110 @@ Middleware d'autorisation bloquant tout endpoint hors `/subscriptions/{schoolId}
 
 ---
 
+## Module M — Intégration étatique (SIMEN / Planète / STATEDUC)
+
+> **Statut d'ensemble : BACK-END LIVRÉ (30/08/2026).** Abstractions, schéma, migration
+> `AddStateIntegrationModule` (colonnes + table `student_mutation_certificates` + policy RLS + fonction
+> SECURITY DEFINER `verify_mutation_certificate`), handlers, documents QuestPDF, sérialiseur Planète,
+> contrôleur (`/api/v1/state-integration`, 9 routes dont la vérification publique du QR). `dotnet build`
+> **vert (0 erreur)**, `SimenComplianceTests` **26/26**, `RlsCoverageTests` **vert** (la nouvelle table
+> tenant est bien couverte), suite unitaire **1004/1004**.
+>
+> **Reste à faire, transversal :** écrans (`/integration-etatique`, actions sur la fiche élève),
+> commande de révocation d'un certificat, et la page publique HTML de vérification (l'API JSON existe).
+>
+> **Cadre non négociable du module** : aucune API publique du SIMEN n'existe. Le module produit des
+> FICHIERS que l'école transmet par la voie habituelle. Rien dans l'interface ne doit laisser croire à
+> un dialogue avec le ministère. → Volume 1 §23.
+
+**JGK-M01** [H] — IEN : champ, index et générateur de secours
+Champ `Students.IenNumber` (nullable, `varchar(24)`) + `IsIenProvisional`, index unique **partiel**
+`(SchoolId, IenNumber) WHERE IenNumber IS NOT NULL`. `IIenGeneratorService` / `NationalIenGenerator`
+(Persistence) : format provisoire `P` + code établissement (6) + millésime (2) + séquence (5) + clé
+Luhn, séquence partagée avec `MatriculeGenerator` (même sérialisation sous concurrence, même
+annulation sur rollback). `AssignStudentIenCommand` : saisie d'un officiel, ou génération d'un
+provisoire.
+*Dépend de* : `Students`, `MatriculeGenerator`. *Critères* : un IEN officiel écrase un provisoire ; un
+provisoire ne remplace **jamais** un officiel (409) ; deux élèves de la même école ne peuvent porter le
+même IEN (409 nommant le porteur actuel) ; l'absence de `NationalSchoolCode` fait échouer la
+génération avec un message actionnable, jamais un numéro à code inventé.
+*Livré (30/08/2026)* : migration `AddStateIntegrationModule`, `IenNumberFormat` (forme + clé Luhn, dans Application), `NationalIenGenerator` (séquence). Tests : `SimenComplianceTests` (forme, clé, provisoire vs officiel). *Reste* : test de concurrence sur la séquence (intégration, non écrit).
+
+**JGK-M02** [H] — Export « Planète Ready » (CSV / JSON)
+`GetPlaneteExportQuery` + `PlaneteExportSerializer` (une seule définition de colonnes pour les deux
+formats). CSV point-virgule + BOM UTF-8 (Excel fr), dates ISO 8601.
+*Dépend de* : JGK-M01, JGK-M05 (code établissement). *Critères* : le périmètre est l'**inscription non
+annulée** de l'exercice et la classe **de l'inscription** (figée), pas l'état courant de l'élève ;
+aucune valeur inventée (cellule vide, jamais « - ») ; aucune donnée financière ; refus explicite si le
+code établissement manque ; le CSV et le JSON du même export portent les mêmes colonnes dans le même
+ordre.
+*Livré (30/08/2026)* : `GetPlaneteExportQuery`/Handler/Validator, `PlaneteExportSerializer`. Tests `SimenComplianceTests` : parité colonnes CSV/JSON, cellule vide (jamais « - »/« null »), échappement RFC 4180, BOM UTF-8, compteurs de qualité. *Reste* : test d'intégration du refus 409 (code établissement absent).
+
+**JGK-M03** [M] — Relais API SIMEN (contrat seul)
+`ISimenBridgeService` (transmission de lot, recherche d'IEN officiels) +
+`UnavailableSimenBridgeService`, qui **refuse chaque appel explicitement**. `GET /simen/status` pour
+que l'écran n'affiche pas une action vouée à l'échec.
+*Dépend de* : JGK-M02. *Critères* : aucune réussite simulée — un succès factice ferait croire à l'école
+que sa déclaration est faite ; `LookupOfficialIensAsync` renvoie une liste **vide** et non N résultats
+à IEN nul (« je n'ai pas cherché » ≠ « je n'ai rien trouvé »).
+*Le jour de l'implémentation réelle* : secret en configuration, **webhook entrant signé HMAC vérifié
+avant écriture** (règle #11 — aucune route client ne marque « Transmis »), appel journalisé, et
+résultat de recherche **validé par un humain** avant écriture sur une fiche (rapprochement par
+nom/date/lieu de naissance : les homonymes sont fréquents).
+
+**JGK-M04** [H] — Rapport annuel STATEDUC (PDF A4 paysage + Excel)
+`GetStateducReportQuery` (effectifs par niveau, pyramide des âges, ratios F/G, qualifications et
+statuts enseignants, infrastructures), `StateducReportDocument` + `StateducReportExcelGenerator`.
+Champs `Teacher` ajoutés : `Gender` (nullable), `AcademicQualification`, `ProfessionalQualification`,
+`CivilServiceStatus`, `CivilServiceMatricule`, `FirstAppointmentDate`.
+*Dépend de* : `Enrollments`, `Teachers`, `Buildings`/`Rooms`. *Critères* : l'âge est calculé à la
+**date d'observation**, jamais « aujourd'hui » ; JSON, PDF et Excel sortent du **même** Handler ; les
+lacunes de saisie sont comptées à part (colonne « genre non saisi », ligne « non renseigné », tranche
+« âge non déterminé ») et **nommées dans un encadré** du PDF ; les ratios sont `null` — jamais `0` —
+quand le dénominateur est nul ; les enseignants archivés sont exclus.
+*Arbitrage acté* : la troisième colonne « genre non saisi » n'existe pas sur le formulaire officiel.
+Elle est ajoutée parce que les deux seules alternatives étaient fausses — imputer d'office à l'une des
+deux colonnes (faux et indétectable), ou déduire le genre du prénom (faux pour une part importante des
+prénoms sénégalais, et faux en silence).
+*Livré (30/08/2026)* : `GetStateducReportQuery`/Handler, `StateducReportDocument` (A4 paysage), `StateducReportExcelGenerator`, colonnes `Teacher`, migration. *Reste* : tests d'agrégation (pyramide à date fixe, ratios à effectif nul) — non écrits.
+
+**JGK-M05** [M] — Champs réglementaires (établissement & examens)
+`School` : `NationalSchoolCode` (unique global, partiel), `MinistryAuthorizationNumber`,
+`SchoolDistrictCode`, `GpsLatitude`/`GpsLongitude` (`numeric(9,6)`) + `GpsCoordinates` **calculé, non
+mappé**. `ExamDossier` : `ExamCenterCode`, `TableNumber`, `CivilRegistryDocumentStatus`.
+*Dépend de* : module Examens (JGK-J01). *Critères* : `CivilRegistryDocumentStatus` **complète** sans
+remplacer `BirthCertificatePresent`/`CivilStatusConforming`, encore lus par
+`GetExamDossierAuditQuery` ; `TableNumber` (place en salle) reste distinct de `CandidateNumber`
+(numéro d'inscription) ; les coordonnées GPS ne sont jamais stockées en chaîne.
+*Livré (30/08/2026)* : colonnes `School`/`ExamDossier`, `GpsCoordinates` calculé non mappé (`builder.Ignore`), migration, index unique partiel global sur `NationalSchoolCode`. Tests `SimenComplianceTests` : rendu GPS culture invariante, null si une moitié manque. *Reste* : écrans de saisie.
+
+**JGK-M06** [H] — Certificat de mutation avec QR de vérification
+Table tenant `student_mutation_certificates` + `GenerateStudentMutationCertificateCommand` +
+`StudentMutationCertificateDocument` (A4 portrait, une page). Numéro `MUT-{YEAR}-{SEQ:4}` généré dans
+la transaction (règle #3, `MatriculeKind.MutationCertificate`).
+*Dépend de* : JGK-M01, `IQrCodeService`. *Critères* : le QR encode une **URL de vérification**, jamais
+l'état civil ; le code est **32 hex d'aléa cryptographique**, jamais l'`Id` (table non énumérable) ;
+son index unique est **global et sans `SchoolId`** — le scan vient d'un tiers hors plateforme ; la
+classe quittée est **figée** ; un solde impayé **n'empêche pas** la délivrance et le certificat
+n'affiche **aucun montant** ; une erreur se corrige par révocation, jamais par réécriture.
+*Livré (30/08/2026)* : entité + `GenerateStudentMutationCertificateCommand`/Handler/Validator,
+`StudentMutationCertificateDocument` (QR via `IQrCodeService`), migration (table + policy RLS +
+fonction SECURITY DEFINER `verify_mutation_certificate`), route publique
+`GET /api/v1/state-integration/certificates/verify/{token}` (anonyme, rate-limité, réponse sans
+donnée d'élève, `unknown` en 200), `VerifyMutationCertificateQuery`/Handler. `RlsCoverageTests` vert.
+*Reste* : commande de révocation, page HTML publique de vérification, écran de délivrance.
+
+**JGK-M07** [M] — Livret de compétences (PDF multi-pages)
+`SkillsBookletModel` + `SkillsBookletDocument` (A4 portrait, **plusieurs pages admises**), échelle
+NA/ECA/A/E dérivée du pourcentage de réussite (`SkillAcquisition`, seuils 40/60/85 — source unique).
+*Dépend de* : `EvaluationStructure` (grille APC du bulletin). *Critères* : le nombre de colonnes de
+périodes est **lu sur la configuration**, jamais codé en dur ; une case vide signifie « non évaluée »
+et **jamais** « non acquis » ; la légende des abréviations est obligatoire (le livret est d'abord
+destiné à la famille).
+*Livré (30/08/2026)* : `GetSkillsBookletPdfQuery`/Handler (fusionne les grilles APC trimestre par trimestre via `EvaluationStructureBuilder`), `SkillsBookletDocument` (A4 portrait multi-pages), route `GET /api/v1/state-integration/students/{id}/skills-booklet`, `SkillAcquisition` (seuils 40/60/85). Tests `SimenComplianceTests` : seuils, null si pas de note / barème nul. *Reste* : écran.
+
+---
+
 ## Récapitulatif de dépendances (ordre d'implémentation conseillé)
 
 ```
@@ -270,4 +374,7 @@ Paie/Pointage existants (EmployeeContract, FichePaie, TeacherHourRecord, Schedul
 EmployeeContract → K02
 F02 → L01
 { L01, L02 } → L03
+D01 → M05 → M01 → { M02 → M03, M06 }
+{ C01, D03, Infrastructures } → M04
+Grille APC (EvaluationStructure) → M07
 ```

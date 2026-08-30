@@ -175,6 +175,13 @@ public interface IApplicationDbContext
     DbSet<ExamResult> ExamResults { get; }
 
     /// <summary>
+    /// Certificats de mutation délivrés (module Intégration étatique, ticket JGK-M06). Table tenant.
+    /// Une ligne par pièce remise : c'est elle qui rend le QR code vérifiable et la révocation
+    /// possible — voir <see cref="StudentMutationCertificate"/>.
+    /// </summary>
+    DbSet<StudentMutationCertificate> StudentMutationCertificates { get; }
+
+    /// <summary>
     /// Agrégats plateforme (console Super Admin) : entité SANS CLÉ adossée à la vue PostgreSQL
     /// `v_platform_dashboard_stats`, qui contourne la RLS via `security_invoker = false` +
     /// OWNER sama_ecole (AGENTS.md règle #2, docs/Volume_7_Security.md §8).
@@ -196,6 +203,18 @@ public interface IApplicationDbContext
     /// </summary>
     Task<IReadOnlyList<GlobalAuditLogEntry>> GetGlobalAuditLogsAsync(
         int limit, int offset, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Vérification PUBLIQUE d'un certificat de mutation scanné depuis son QR (Volume 1 §23.5) —
+    /// appelle la fonction SECURITY DEFINER `verify_mutation_certificate` (migration
+    /// AddStateIntegrationModule) via FromSqlRaw, même encapsulation que
+    /// <see cref="GetGlobalAuditLogsAsync"/>.
+    ///
+    /// Renvoie <c>null</c> quand aucun certificat ne porte ce code : l'appelant traduit ça en
+    /// « inconnu », jamais en erreur. Le résultat ne contient AUCUNE donnée de l'élève.
+    /// </summary>
+    Task<MutationCertificateVerification?> VerifyMutationCertificateAsync(
+        string verificationCode, CancellationToken cancellationToken);
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 

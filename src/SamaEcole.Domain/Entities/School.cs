@@ -55,6 +55,60 @@ public class School : AuditableEntity
     /// </summary>
     public string? NomLycee { get; set; }
 
+    // ------------------------------------------------------- Identification réglementaire (SIMEN)
+
+    /// <summary>
+    /// Code établissement NATIONAL attribué par le SIMEN — la clé sous laquelle le ministère connaît
+    /// l'école dans Planète et STATEDUC. C'est ce code, jamais l'identifiant technique <c>Id</c>, qui
+    /// figure en tête de tout fichier transmis à l'IEF ou à l'IA (Volume 1 §23.1).
+    ///
+    /// Null tant que le Directeur ne l'a pas saisi : l'export d'intégration étatique REFUSE alors de
+    /// s'exécuter (erreur explicite, jamais un fichier au code vide qui serait rejeté en silence à
+    /// l'autre bout). C'est aussi le préfixe de l'IEN provisoire — voir <c>NationalIenGenerator</c>.
+    /// </summary>
+    public string? NationalSchoolCode { get; set; }
+
+    /// <summary>
+    /// Numéro de l'arrêté ministériel d'ouverture / d'autorisation d'exercer. Mention légale exigée sur
+    /// les pièces officielles des établissements privés et reportée sur le formulaire STATEDUC. Null
+    /// s'imprime en ligne omise, jamais un numéro inventé — même convention que <see cref="Ninea"/>.
+    /// </summary>
+    public string? MinistryAuthorizationNumber { get; set; }
+
+    /// <summary>
+    /// Code de la circonscription scolaire (carte scolaire) dont dépend l'établissement. Sert à
+    /// l'agrégation territoriale du ministère : deux écoles d'une même IEF peuvent relever de deux
+    /// districts distincts, ce que <see cref="InspectionEducationFormation"/> ne sait pas exprimer.
+    /// </summary>
+    public string? SchoolDistrictCode { get; set; }
+
+    /// <summary>
+    /// Latitude WGS84 de l'établissement (carte scolaire). En <c>decimal</c>, PAS dans une chaîne
+    /// « lat,lon » unique : une coordonnée stockée en texte ne peut être ni validée à la saisie, ni
+    /// bornée, ni utilisée dans une requête géographique — et les fichiers de carte scolaire réels
+    /// arrivent tantôt en « 14.6928, -17.4467 », tantôt en « 14°41'34"N ». Deux colonnes numériques
+    /// tranchent la question à l'entrée plutôt qu'à chaque lecture.
+    ///
+    /// Les DEUX coordonnées sont renseignées ensemble ou pas du tout — une latitude sans longitude ne
+    /// localise rien. <see cref="GpsCoordinates"/> ne rend la chaîne d'affichage que dans ce cas.
+    /// </summary>
+    public decimal? GpsLatitude { get; set; }
+
+    /// <summary>Longitude WGS84 — voir <see cref="GpsLatitude"/>, dont elle est indissociable.</summary>
+    public decimal? GpsLongitude { get; set; }
+
+    /// <summary>
+    /// Coordonnées GPS au format attendu par les fichiers de carte scolaire (« 14.692800, -17.446700 »),
+    /// calculées — jamais stockées, pour qu'aucune dérive ne soit possible entre la chaîne et le couple
+    /// de décimaux qui fait foi. Null si l'une des deux coordonnées manque.
+    ///
+    /// Culture INVARIANTE, imposée : en « fr-FR », le séparateur décimal serait la virgule et
+    /// « 14,6928, -17,4467 » deviendrait illisible pour l'importeur du ministère comme pour un CSV.
+    /// </summary>
+    public string? GpsCoordinates => GpsLatitude is { } lat && GpsLongitude is { } lon
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{lat:F6}, {lon:F6}")
+        : null;
+
     // ------------------------------------------------------------------ Annuaire public (B2C)
 
     /// <summary>

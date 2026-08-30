@@ -1198,6 +1198,189 @@
                     ]
                 }
             ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'integration-etatique',
+            number: 11,
+            title: 'Intégration étatique — IEN, Planète, STATEDUC et mutations',
+            icon: 'document',
+            summary: "Les pièces et fichiers réglementaires dus au ministère : identifiant national de l'élève, export Planète, rapport annuel STATEDUC, certificat de mutation et livret de compétences.",
+            concept:
+                "Ce module produit les FICHIERS ET PIÈCES que l'établissement doit à l'administration, dans les formats " +
+                "qu'elle attend. Il ne dialogue avec AUCUN système du ministère : à ce jour, aucune interface " +
+                "informatique publique du SIMEN n'est ouverte. Unikol prépare donc des documents que vous transmettez " +
+                "par la voie habituelle — dépôt, courriel, remise à l'IEF. Cette limite est affichée dans " +
+                "l'application, et non masquée derrière un bouton qui échouerait : le jour où le ministère ouvrira " +
+                "une interface, l'action de transmission apparaîtra d'elle-même. Le fil conducteur de tout le module " +
+                "est l'IEN, l'identifiant qui suit l'élève d'un établissement à l'autre et par lequel l'administration " +
+                "rattache un parcours à une personne.",
+            articles: [
+                {
+                    id: 'ien-eleve',
+                    title: "Identifiant National de l'Élève (IEN)",
+                    location: 'Élèves › Fiche élève › Identifiant national',
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "L'IEN est le numéro attribué par l'administration centrale qui suit un élève sur tout son " +
+                        "parcours scolaire, d'un établissement à l'autre. Il est DISTINCT du matricule, lequel est " +
+                        "interne à votre établissement : deux écoles peuvent porter le même matricule pour deux élèves " +
+                        "différents, jamais le même IEN. Le champ est facultatif dans Unikol — un élève fraîchement " +
+                        "inscrit n'en a légitimement aucun tant que le ministère ne l'a pas délivré.",
+                    objectif:
+                        "Permettre à l'administration de rattacher un élève à son parcours antérieur lors d'un transfert, " +
+                        "et à Unikol de produire des fichiers Planète et un rapport STATEDUC exploitables. C'est la clé " +
+                        "de rapprochement de tous les échanges avec le ministère.",
+                    probleme:
+                        "Sans IEN, un élève transféré est un nouvel élève pour l'administration : sa scolarité antérieure " +
+                        "est perdue, et l'établissement d'accueil ne peut ni vérifier son niveau réel, ni justifier son " +
+                        "affectation. À l'échelle d'un fichier transmis, des lignes sans identifiant sont écartées du " +
+                        "traitement national sans que l'école en soit avertie.",
+                    procedure: [
+                        "Ouvrez la fiche de l'élève, puis le champ « Identifiant national (IEN) ».",
+                        "Saisissez le numéro OFFICIEL tel qu'il figure sur la liste transmise par l'IEF, puis enregistrez. C'est le mode normal, et le seul qui produise un identifiant opposable.",
+                        "Si votre établissement n'a reçu aucun numéro, vous pouvez demander la génération d'un IEN PROVISOIRE : laissez le champ vide et utilisez l'action « Générer un numéro provisoire ».",
+                        "Un numéro provisoire commence toujours par la lettre P et s'affiche partout avec la mention « provisoire ». Il permet de ne pas bloquer vos traitements internes en attendant le vrai numéro.",
+                        "Dès réception du numéro officiel, saisissez-le : il remplace le provisoire, qui disparaît définitivement.",
+                        "La génération d'un provisoire exige que le code établissement national soit renseigné dans Paramètres › Établissement : sans lui, le numéro fabriqué ne rattacherait l'élève à aucune école."
+                    ],
+                    impacts: [
+                        "Export Planète : les lignes portant un IEN provisoire sont signalées comme telles dans le fichier, et le nombre d'identifiants fabriqués vous est annoncé AVANT le téléchargement.",
+                        "Rapport STATEDUC : les élèves sans IEN sont comptés dans une ligne distincte, jamais fondus dans les effectifs déclarés.",
+                        "Certificat de mutation : l'IEN y est imprimé, avec la mention « provisoire » le cas échéant — l'école d'accueil doit savoir ce qu'elle recopie.",
+                        "Unicité : deux élèves de votre établissement ne peuvent pas porter le même IEN. Unikol refuse la saisie en nommant l'élève qui le détient déjà."
+                    ],
+                    recommandations: [
+                        "Un IEN provisoire n'a AUCUNE valeur officielle : ne le communiquez jamais à un tiers comme s'il s'agissait d'un numéro délivré par le ministère.",
+                        "Unikol contrôle la FORME du numéro saisi (longueur, caractères, clé de contrôle), ce qui attrape les fautes de frappe. Il ne peut pas vérifier son authenticité auprès du SIMEN : ce contrôle n'est pas une validation.",
+                        "Un numéro provisoire ne peut jamais remplacer un IEN officiel déjà enregistré : cette perte serait irréversible, l'application la refuse.",
+                        "Saisissez les IEN au fil de leur réception plutôt qu'en une seule campagne : c'est la condition pour que vos exports soient exploitables toute l'année."
+                    ]
+                },
+                {
+                    id: 'export-planete',
+                    title: 'Export « Planète Ready » des élèves',
+                    location: 'Intégration étatique › Export Planète',
+                    href: '/integration-etatique',
+                    roles: ['Directeur'],
+                    definition:
+                        "Un fichier récapitulant l'état civil scolaire de tous les élèves d'une année, au format " +
+                        "d'échange attendu par le ministère. Disponible en CSV (ouvrable dans Excel) et en JSON. Il " +
+                        "peut être restreint à une seule classe pour contrôle avant transmission globale.",
+                    objectif:
+                        "Vous éviter la ressaisie manuelle de plusieurs centaines d'élèves dans un tableur, et garantir " +
+                        "que le fichier transmis porte exactement les colonnes attendues, dans l'ordre attendu.",
+                    probleme:
+                        "Un fichier constitué à la main diverge du format officiel à la première colonne oubliée ou " +
+                        "renommée, et l'ensemble du lot est rejeté — plusieurs jours plus tard, sans explication " +
+                        "détaillée. La correction impose alors de recommencer le fichier entier en pleine période de " +
+                        "remontée.",
+                    procedure: [
+                        "Vérifiez d'abord que le code établissement national est renseigné dans Paramètres › Établissement : sans lui, l'export refuse de s'exécuter.",
+                        "Ouvrez Intégration étatique › Export Planète et choisissez l'année scolaire concernée.",
+                        "Choisissez le format : CSV pour un contrôle dans Excel, JSON si le portail du ministère le demande.",
+                        "Lisez les compteurs affichés avant de télécharger : nombre d'élèves, nombre d'identifiants provisoires, nombre d'élèves sans IEN.",
+                        "Si le nombre de provisoires ou de lignes sans IEN vous paraît élevé, renoncez au téléchargement et complétez d'abord les identifiants.",
+                        "Téléchargez, ouvrez le fichier pour un dernier contrôle visuel, puis transmettez-le par la voie habituelle (dépôt, courriel, remise à l'IEF)."
+                    ],
+                    impacts: [
+                        "Le fichier recense les élèves ayant une INSCRIPTION non annulée sur l'année demandée : un élève parti en janvier y figure, un élève préinscrit pour l'année suivante n'y figure pas.",
+                        "La classe indiquée est celle de l'inscription, figée : un élève transféré en cours d'année apparaît dans la classe où il était inscrit.",
+                        "Aucune donnée financière ne sort de l'établissement : le ministère reçoit un état civil scolaire, pas la situation de paiement des familles.",
+                        "L'export est journalisé : la date et l'auteur de chaque extraction sont conservés."
+                    ],
+                    recommandations: [
+                        "Les cases vides du fichier sont VOULUES : Unikol n'invente jamais une donnée manquante. Ne les complétez pas au hasard avant transmission — une donnée plausible et fausse est pire qu'une absence.",
+                        "Ouvrez le CSV dans Excel sans le réenregistrer : une réécriture par le tableur peut modifier le format des dates et rendre le fichier inexploitable.",
+                        "Faites un export limité à une classe pour valider le contenu avant de générer le fichier de tout l'établissement.",
+                        "Cet export sort l'état civil de tous vos élèves : ne le transmettez qu'au destinataire officiel, et ne le laissez pas circuler par messagerie personnelle."
+                    ]
+                },
+                {
+                    id: 'rapport-stateduc',
+                    title: 'Rapport annuel STATEDUC',
+                    location: 'Intégration étatique › Rapport STATEDUC',
+                    href: '/integration-etatique',
+                    roles: ['Directeur'],
+                    definition:
+                        "L'état statistique annuel de l'établissement : effectifs par niveau, pyramide des âges, ratios " +
+                        "filles/garçons, qualifications et statuts du personnel enseignant, infrastructures. Éditable en " +
+                        "PDF (le formulaire à signer et déposer) et en classeur Excel (pour la consolidation à l'IEF).",
+                    objectif:
+                        "Produire en quelques secondes, à partir de vos données réelles, un état qui demande " +
+                        "habituellement plusieurs jours de comptage manuel — et le produire de façon reproductible, " +
+                        "année après année.",
+                    probleme:
+                        "Un comptage manuel est faux dès qu'un élève arrive ou part pendant sa réalisation, et personne " +
+                        "ne peut le vérifier après coup. Les effectifs déclarés finissent par ne plus correspondre ni " +
+                        "aux registres de l'école, ni à ceux du ministère, et l'écart n'est jamais explicable.",
+                    procedure: [
+                        "Ouvrez Intégration étatique › Rapport STATEDUC et choisissez l'année scolaire.",
+                        "Renseignez la DATE D'OBSERVATION : c'est la date à laquelle les effectifs sont arrêtés et les âges calculés. Laissez la date du jour pour un état courant.",
+                        "Consultez le rapport à l'écran et lisez en premier l'encadré « Données incomplètes », s'il apparaît.",
+                        "Complétez les informations manquantes signalées (IEN, diplômes et genre des enseignants) puis régénérez le rapport.",
+                        "Téléchargez le PDF, faites-le signer et revêtir du cachet, puis déposez-le auprès de l'IEF.",
+                        "Téléchargez le classeur Excel si l'agent chargé de la consolidation vous le demande : il contient les mêmes chiffres, sous forme exploitable en formules."
+                    ],
+                    impacts: [
+                        "Les effectifs comptés sont ceux des INSCRIPTIONS non annulées de l'exercice, et non les élèves présents en base au moment de l'édition.",
+                        "Les âges sont calculés à la date d'observation : rééditer le rapport six mois plus tard avec la même date d'observation redonne exactement la même pyramide.",
+                        "Est « qualifié » un enseignant porteur d'un diplôme PROFESSIONNEL (CEAP, CAP, CAEM, CAES). Un titulaire d'un Master sans titre pédagogique n'est pas compté comme qualifié : c'est la définition officielle du ministère.",
+                        "Les enseignants archivés sont exclus : le formulaire décrit le personnel en poste, pas l'historique des passages.",
+                        "Le PDF, l'Excel et l'écran sortent du même calcul : ils ne peuvent pas se contredire."
+                    ],
+                    recommandations: [
+                        "Ne signez jamais un rapport sans avoir lu l'encadré « Données incomplètes » : il vous dit exactement ce qui manque, et c'est vous qui répondez du formulaire déposé.",
+                        "Un taux de qualification faible peut décrire votre établissement OU l'état de votre saisie : le nombre d'enseignants sans diplôme renseigné est affiché juste à côté pour trancher.",
+                        "Complétez le genre des enseignants avant l'édition : le formulaire officiel ventile tout le personnel en hommes/femmes, et Unikol refuse de deviner.",
+                        "Notez la date d'observation retenue : c'est elle, et non la date d'impression, qui explique un écart entre deux exemplaires du même rapport.",
+                        "Une tranche « âge non déterminé » signale des dates de naissance aberrantes, souvent issues d'un import : corrigez-les, ne les ignorez pas."
+                    ]
+                },
+                {
+                    id: 'certificat-mutation',
+                    title: 'Certificat de mutation et livret de compétences',
+                    location: 'Élèves › Fiche élève › Délivrer un certificat de mutation',
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Le CERTIFICAT DE MUTATION est la pièce officielle remise à l'élève qui quitte l'établissement, " +
+                        "exigée par l'école d'accueil avant toute réinscription. Il porte un numéro officiel et un QR " +
+                        "code de vérification. Le LIVRET DE COMPÉTENCES l'accompagne : il retrace le parcours de l'élève " +
+                        "compétence par compétence, période par période, là où le bulletin ne note qu'une période.",
+                    objectif:
+                        "Permettre à l'école d'accueil de vérifier, en scannant le QR, que le certificat présenté est " +
+                        "authentique et n'a pas été révoqué — et lui transmettre un état pédagogique exploitable dès " +
+                        "l'arrivée de l'élève.",
+                    probleme:
+                        "Un certificat rédigé à la main ou dans un traitement de texte est infalsifiable par personne et " +
+                        "vérifiable par personne. L'école d'accueil ne peut ni confirmer son origine, ni savoir qu'il a " +
+                        "été annulé depuis. Sans livret, elle affecte l'élève sur la seule foi de son âge.",
+                    procedure: [
+                        "Ouvrez la fiche de l'élève, puis « Délivrer un certificat de mutation ».",
+                        "Choisissez l'année scolaire concernée et le motif de la mutation. Si vous choisissez « Autre », la précision devient obligatoire.",
+                        "Renseignez l'établissement et la localité de destination s'ils sont connus. Ces champs peuvent rester vides : le certificat reste valable sans destination nommée.",
+                        "Validez. Le certificat est délivré, numéroté, enregistré, et le PDF s'ouvre immédiatement.",
+                        "Imprimez-le, faites-le signer et cacheter, puis remettez-le au tuteur avec le livret de compétences.",
+                        "En cas d'erreur, ne modifiez rien : RÉVOQUEZ le certificat et délivrez-en un nouveau."
+                    ],
+                    impacts: [
+                        "Chaque délivrance consomme un numéro officiel de la série de l'établissement : deux clics produisent deux certificats distincts, jamais le même deux fois.",
+                        "Le QR code renvoie vers une page de vérification qui répond « valide », « révoqué » ou « inconnu ». Il ne contient AUCUNE donnée de l'élève : un QR photographié sur un bureau est lisible par n'importe qui.",
+                        "La classe indiquée est figée à la délivrance : un changement de classe ultérieur ne réécrit jamais un certificat déjà remis.",
+                        "Le certificat mentionne si l'élève était à jour de ses frais AU JOUR de la délivrance — une phrase, jamais un montant.",
+                        "Un certificat délivré n'est jamais modifiable : c'est ce qui garantit qu'il n'existe pas deux versions contradictoires du même numéro."
+                    ],
+                    recommandations: [
+                        "Un solde impayé N'EMPÊCHE PAS la délivrance, et c'est volontaire : refuser un certificat de mutation à un élève débiteur revient à le retenir de force dans l'établissement, ce que la réglementation interdit. Poursuivez le recouvrement par les voies ordinaires.",
+                        "Remettez toujours le livret de compétences avec le certificat : c'est ce que l'école d'accueil utilisera pour affecter l'élève au bon niveau.",
+                        "Sur le livret, une case VIDE signifie « compétence non évaluée sur cette période » — jamais « non acquis ». Ne la complétez pas à la main avant remise.",
+                        "Vérifiez que l'IEN figure bien sur le certificat avant de le remettre : c'est par lui que l'école d'accueil rattachera le dossier national de l'élève.",
+                        "Conservez une copie du certificat remis : la version papier signée fait foi, et c'est elle que présentera la famille."
+                    ]
+                }
+            ]
         }
     ];
 

@@ -1133,6 +1133,13 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("CivilRegistryDocumentStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("NonFourni");
+
                     b.Property<bool?>("CivilStatusConforming")
                         .HasColumnType("boolean");
 
@@ -1154,6 +1161,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
+
+                    b.Property<string>("ExamCenterCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("ExamCenterName")
                         .HasMaxLength(150)
@@ -1177,6 +1188,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TableNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateOnly?>("TransmittedOn")
                         .HasColumnType("date");
@@ -2964,6 +2979,14 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<decimal?>("GpsLatitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)");
+
+                    b.Property<decimal?>("GpsLongitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)");
+
                     b.Property<string>("InspectionAcademie")
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
@@ -2981,10 +3004,18 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("LogoUrl")
                         .HasColumnType("text");
 
+                    b.Property<string>("MinistryAuthorizationNumber")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NationalSchoolCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.Property<string>("Ninea")
                         .HasMaxLength(50)
@@ -3010,6 +3041,10 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("SchoolDistrictCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -3022,6 +3057,10 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("NationalSchoolCode")
+                        .IsUnique()
+                        .HasFilter("\"NationalSchoolCode\" IS NOT NULL");
 
                     b.HasIndex("City", "Region")
                         .HasDatabaseName("IX_schools_public_directory")
@@ -3526,8 +3565,17 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("GuardianPhone")
                         .HasColumnType("text");
 
+                    b.Property<string>("IenNumber")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsIenProvisional")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Matricule")
                         .IsRequired()
@@ -3561,6 +3609,10 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasIndex("SchoolId");
 
                     b.HasIndex("SchoolId", "ClassroomId");
+
+                    b.HasIndex("SchoolId", "IenNumber")
+                        .IsUnique()
+                        .HasFilter("\"IenNumber\" IS NOT NULL");
 
                     b.HasIndex("SchoolId", "Matricule")
                         .IsUnique();
@@ -3624,6 +3676,112 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasIndex("SchoolId", "StudentId");
 
                     b.ToTable("student_attendances", (string)null);
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.StudentMutationCertificate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CertificateNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ClassroomNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DestinationCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("DestinationSchoolName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly>("IssuedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Autre");
+
+                    b.Property<string>("ReasonDetails")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("RevocationReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VerificationCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("WasFinanciallyClear")
+                        .HasColumnType("boolean");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolYearId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("VerificationCode")
+                        .IsUnique();
+
+                    b.HasIndex("SchoolId", "CertificateNumber")
+                        .IsUnique();
+
+                    b.HasIndex("SchoolId", "StudentId");
+
+                    b.ToTable("student_mutation_certificates", (string)null);
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.Subject", b =>
@@ -3942,6 +4100,13 @@ namespace SamaEcole.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AcademicQualification")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("NonRenseigne");
+
                     b.Property<string>("Address")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
@@ -3952,6 +4117,17 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("BirthPlace")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CivilServiceMatricule")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("CivilServiceStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("NonRenseigne");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -3970,10 +4146,17 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<DateOnly?>("FirstAppointmentDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(1)
+                        .HasColumnType("character varying(1)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -3992,6 +4175,13 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("PhotoUrl")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ProfessionalQualification")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("NonRenseigne");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
@@ -5238,6 +5428,31 @@ namespace SamaEcole.Persistence.Migrations
                         .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.StudentMutationCertificate", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.SchoolYear", "SchoolYear")
+                        .WithMany()
+                        .HasForeignKey("SchoolYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SchoolYear");
+
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.Subject", b =>

@@ -16,4 +16,11 @@ public interface IMatriculeGenerator
     /// les matricules : appelé DANS la transaction d'inscription, gapless et unique par établissement.
     /// </summary>
     Task<string> GenerateNextReceiptNumberAsync(Guid schoolId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Prochain numéro de certificat de mutation (ticket JGK-M06, ex. « MUT-2026-0007 »). Gabarit FIXE
+    /// comme celui du reçu, et pour la même raison : la forme d'une pièce officielle opposable ne se
+    /// règle pas dans un écran de paramètres.
+    /// </summary>
+    Task<string> GenerateNextMutationCertificateNumberAsync(Guid schoolId, CancellationToken cancellationToken);
 }

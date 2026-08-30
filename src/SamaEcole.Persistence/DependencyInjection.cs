@@ -35,7 +35,19 @@ public static class DependencyInjection
         // Numérotation par école, incrémentée dans la transaction d'enregistrement (ticket JGK-D01,
         // AGENTS.md règle #3). TimeProvider est injecté pour rendre l'année du matricule testable.
         services.TryAddSingleton(TimeProvider.System);
-        services.AddScoped<IMatriculeGenerator, MatriculeGenerator>();
+
+        // Le type CONCRET est enregistré, puis exposé derrière son interface : NationalIenGenerator a
+        // besoin de la séquence interne du générateur (NextProvisionalIenSequenceAsync), qui ne fait
+        // pas partie du contrat public IMatriculeGenerator. Deux enregistrements distincts auraient
+        // donné deux instances par scope — donc deux compteurs qui s'ignorent dans une même
+        // transaction, exactement ce que la sérialisation PostgreSQL est censée empêcher.
+        services.AddScoped<MatriculeGenerator>();
+        services.AddScoped<IMatriculeGenerator>(sp => sp.GetRequiredService<MatriculeGenerator>());
+
+        // IEN provisoire de secours (module Intégration étatique, ticket JGK-M01). Même contrat de
+        // transaction que les matricules — voir la mise en garde d'IIenGeneratorService : ce que ce
+        // service produit n'est PAS un identifiant national officiel.
+        services.AddScoped<IIenGeneratorService, NationalIenGenerator>();
 
         // Numéro de table, PAR SESSION D'EXAMEN — même contrat de transaction que les matricules
         // (module Examens officiels, AGENTS.md règle #3).

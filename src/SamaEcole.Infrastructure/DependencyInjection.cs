@@ -3,6 +3,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Finance.Common;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Notifications;
+using SamaEcole.Application.StateIntegration;
 using SamaEcole.Application.Subscriptions;
 using SamaEcole.Infrastructure.Caching;
 using SamaEcole.Infrastructure.Documents;
@@ -241,6 +242,28 @@ public static class DependencyInjection
         services.AddSingleton<IExamRegistrationExcelGenerator, ExamRegistrationExcelGenerator>();
         services.AddSingleton<IExamCandidateFormPdfGenerator, ExamCandidateFormPdfGenerator>();
         services.AddSingleton<IExamConvocationPdfGenerator, ExamConvocationPdfGenerator>();
+
+        // ---------------------------------------------- Module Intégration étatique (SIMEN, §23)
+        //
+        // Réglages liés depuis la section « StateIntegration » d'appsettings. Aucun secret n'y
+        // transite : la clé d'API du SIMEN, le jour où elle existera, suivra le chemin protégé des
+        // identifiants de l'agrégateur de paiement.
+        var stateIntegrationSettings = configuration
+            .GetSection("StateIntegration")
+            .Get<StateIntegrationSettings>() ?? new StateIntegrationSettings();
+        services.AddSingleton(stateIntegrationSettings);
+
+        // Générateurs sans état, comme tous les autres documents du projet.
+        services.AddSingleton<IPlaneteExportSerializer, PlaneteExportSerializer>();
+        services.AddSingleton<IStateducReportPdfGenerator, StateducReportPdfGenerator>();
+        services.AddSingleton<IStateducReportExcelGenerator, StateducReportExcelGenerator>();
+        services.AddSingleton<IStudentMutationCertificatePdfGenerator, StudentMutationCertificatePdfGenerator>();
+        services.AddSingleton<ISkillsBookletPdfGenerator, SkillsBookletPdfGenerator>();
+
+        // Relais SIMEN : l'implémentation livrée REFUSE chaque appel, explicitement — aucune API
+        // publique n'existe à ce jour. Elle sera remplacée par HttpSimenBridgeService le jour où le
+        // ministère en ouvrira une. Voir UnavailableSimenBridgeService pour le raisonnement.
+        services.AddSingleton<ISimenBridgeService, SamaEcole.Infrastructure.Services.UnavailableSimenBridgeService>();
 
         // Import d'élèves par fichier CSV/Excel (même bibliothèque ClosedXML, aucune nouvelle dépendance).
         services.AddSingleton<IStudentImportFileParser, StudentImportFileParser>();

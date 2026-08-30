@@ -31,6 +31,9 @@ public class MatriculeGenerator(ApplicationDbContext dbContext, TimeProvider tim
     /// </summary>
     private const string ReceiptNumberFormat = "REC-{YEAR}-{SEQ:4}";
 
+    /// <summary>Gabarit FIXE des certificats de mutation (ticket JGK-M06) — même raison que le reçu.</summary>
+    private const string MutationCertificateNumberFormat = "MUT-{YEAR}-{SEQ:4}";
+
     public Task<string> GenerateNextStudentMatriculeAsync(Guid schoolId, CancellationToken cancellationToken) =>
         GenerateAsync(schoolId, MatriculeKind.Student, cancellationToken);
 
@@ -46,6 +49,25 @@ public class MatriculeGenerator(ApplicationDbContext dbContext, TimeProvider tim
 
         return MatriculeFormat.Render(ReceiptNumberFormat, year, next);
     }
+
+    public async Task<string> GenerateNextMutationCertificateNumberAsync(
+        Guid schoolId, CancellationToken cancellationToken)
+    {
+        var year = AcademicYear.ForDate(timeProvider.GetUtcNow());
+        var next = await NextValueAsync(schoolId, MatriculeKind.MutationCertificate, year, cancellationToken);
+
+        return MatriculeFormat.Render(MutationCertificateNumberFormat, year, next);
+    }
+
+    /// <summary>
+    /// Prochaine valeur du compteur d'IEN provisoires de l'école — exposée à
+    /// <see cref="NationalIenGenerator"/>, qui compose le numéro final avec le code établissement.
+    /// La séquence vit ici, et non dans le générateur d'IEN, pour hériter telle quelle de la
+    /// sérialisation sous concurrence et de l'annulation sur rollback décrites en tête de classe.
+    /// </summary>
+    internal Task<int> NextProvisionalIenSequenceAsync(
+        Guid schoolId, int year, CancellationToken cancellationToken) =>
+        NextValueAsync(schoolId, MatriculeKind.ProvisionalIen, year, cancellationToken);
 
     private async Task<string> GenerateAsync(
         Guid schoolId,

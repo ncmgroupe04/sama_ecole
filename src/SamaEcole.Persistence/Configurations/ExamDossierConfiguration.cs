@@ -33,6 +33,18 @@ public class ExamDossierConfiguration : IEntityTypeConfiguration<ExamDossier>
             .IsRequired()
             .HasDefaultValue(ExamDossierStatus.Incomplet);
 
+        // Carte scolaire & état civil (module Intégration étatique, ticket JGK-M05).
+        builder.Property(d => d.ExamCenterCode).HasMaxLength(30);
+        builder.Property(d => d.TableNumber).HasMaxLength(20);
+
+        // NonFourni par défaut : un dossier qui vient d'être ouvert n'a rien reçu. Ce défaut est
+        // cohérent avec BirthCertificatePresent = false, que ce champ complète sans le remplacer.
+        builder.Property(d => d.CivilRegistryDocumentStatus)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(CivilRegistryDocumentStatus.NonFourni);
+
         // Un élève n'a qu'un dossier par session (Volume 1 §22.1).
         builder.HasIndex(d => new { d.SchoolId, d.ExamSessionId, d.StudentId }).IsUnique();
 

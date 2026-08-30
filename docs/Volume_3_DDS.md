@@ -482,4 +482,106 @@ Toutes les évolutions de schéma passent exclusivement par les **migrations Ent
 - réversible (migration `Down()` systématiquement écrite et testée) ;
 - accompagnée d'une sauvegarde automatique déclenchée avant application (Volume 9, Chapitre « Sauvegardes »).
 
+### 5.11 Domaine Intégration étatique — `student_mutation_certificates` + colonnes réglementaires
+
+Spécification fonctionnelle : Volume 1 §23. Une seule table nouvelle ; l'essentiel du module tient en **colonnes ajoutées** à des tables existantes.
+
+#### Colonnes ajoutées
+
+**`students`**
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `IenNumber` | `varchar(24)` | NULL — Identifiant National de l'Élève |
+| `IsIenProvisional` | `boolean` | NOT NULL, DEFAULT `false` |
+
+`CREATE UNIQUE INDEX UX_students_school_ien ON students ("SchoolId", "IenNumber") WHERE "IenNumber" IS NOT NULL`
+
+> **Pourquoi un index PARTIEL, et pourquoi borné à l'école.** Partiel : l'immense majorité des élèves n'a pas encore d'IEN, et un index unique ordinaire sur une colonne massivement nulle est à la fois inutile et coûteux. Borné à l'école, alors qu'un IEN est *national* : nous ne pouvons pas vérifier l'unicité nationale sans le SIMEN, et un index global échouerait légitimement le jour où deux écoles de la plateforme scolariseraient successivement le même élève — ce qui est le comportement **normal** d'un identifiant qui suit l'élève.
+>
+> `varchar(24)` alors que notre format provisoire en fait 15 : le format national réel n'est pas connu, la marge évite une migration de colonne le jour où un IEN officiel plus long arrivera.
+
+**`teachers`** — pour le rapport STATEDUC (§23.3)
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Gender` | `varchar(1)` | NULL — « M »/« F » |
+| `AcademicQualification` | `varchar(20)` | NOT NULL, DEFAULT `NonRenseigne` |
+| `ProfessionalQualification` | `varchar(20)` | NOT NULL, DEFAULT `NonRenseigne` |
+| `CivilServiceStatus` | `varchar(20)` | NOT NULL, DEFAULT `NonRenseigne` |
+| `CivilServiceMatricule` | `varchar(30)` | NULL — personnels de l'État uniquement |
+| `FirstAppointmentDate` | `date` | NULL — ancienneté dans le métier, pas dans l'établissement |
+
+> `Gender` est **nullable** ici alors qu'il est obligatoire sur `students` : des milliers de fiches enseignant existent déjà sans ce champ, et le rendre obligatoire empêcherait de les rouvrir pour les modifier. Les défauts sont **tous** `NonRenseigne` et jamais `Aucun` : défausser les fiches existantes en « sans diplôme » ferait apparaître, dès le premier rapport, un établissement à 0 % d'enseignants qualifiés.
+
+**`schools`**
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `NationalSchoolCode` | `varchar(30)` | NULL — code SIMEN |
+| `MinistryAuthorizationNumber` | `varchar(80)` | NULL — arrêté d'ouverture |
+| `SchoolDistrictCode` | `varchar(30)` | NULL — circonscription (carte scolaire) |
+| `GpsLatitude` | `numeric(9,6)` | NULL |
+| `GpsLongitude` | `numeric(9,6)` | NULL |
+
+`CREATE UNIQUE INDEX UX_schools_national_code ON schools ("NationalSchoolCode") WHERE "NationalSchoolCode" IS NOT NULL` — unique sur **toute la plateforme** (à la différence de l'IEN) : deux écoles ne peuvent pas déclarer le même code au ministère.
+
+> Six décimales ≈ 11 cm au sol. **Deux colonnes numériques, pas une chaîne** « lat,lon » : une coordonnée en texte ne peut être ni validée à la saisie, ni bornée, ni utilisée dans une requête géographique. La chaîne d'affichage `GpsCoordinates` est **calculée en mémoire et non mappée** (`builder.Ignore`) — la stocker permettrait qu'elle contredise un jour le couple qui fait foi.
+
+**`exam_dossiers`**
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `ExamCenterCode` | `varchar(30)` | NULL — code officiel du centre, distinct du nom |
+| `TableNumber` | `varchar(20)` | NULL — place physique en salle |
+| `CivilRegistryDocumentStatus` | `varchar(20)` | NOT NULL, DEFAULT `NonFourni` |
+
+> `CivilRegistryDocumentStatus` **complète** `BirthCertificatePresent` et `CivilStatusConforming` sans les remplacer : les deux anciens champs restent écrits par les Handlers existants et lus par `GetExamDossierAuditQuery`. Les réécrire aurait cassé l'audit de dossier. Ce que le couple booléen ne savait pas exprimer — et qui est le cas le plus fréquent au Sénégal — est l'état `EnRegularisation`.
+
+#### `student_mutation_certificates`
+
+Table **tenant**, snake_case, protégée par la double barrière §2.2 (Global Query Filter EF Core + policy RLS posée par la migration `AddStateIntegrationModule`).
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | FK `schools.Id`, NOT NULL, RESTRICT |
+| `StudentId` | `uuid` | FK `students.Id`, RESTRICT |
+| `SchoolYearId` | `uuid` | FK `school_years.Id`, RESTRICT |
+| `CertificateNumber` | `varchar(30)` | NOT NULL — `MUT-2026-0007` |
+| `VerificationCode` | `varchar(32)` | NOT NULL — 32 hex d'aléa cryptographique |
+| `DestinationSchoolName` | `varchar(150)` | NULL — texte libre (école hors plateforme) |
+| `DestinationCity` | `varchar(100)` | NULL |
+| `Reason` | `varchar(30)` | NOT NULL, DEFAULT `Autre` |
+| `ReasonDetails` | `varchar(300)` | NULL — obligatoire côté validateur si `Reason = Autre` |
+| `ClassroomNameSnapshot` | `varchar(100)` | NOT NULL — classe quittée, **figée** |
+| `IssuedOn` | `date` | NOT NULL |
+| `WasFinanciallyClear` | `boolean` | NOT NULL — instantané, jamais recalculé |
+| `RevokedAt` | `timestamptz` | NULL |
+| `RevocationReason` | `varchar(300)` | NULL |
+| `xmin` | `xid` | Verrou optimiste (§3) |
+
+**Index :**
+
+- `UX_student_mutation_certificates_school_number` sur `("SchoolId", "CertificateNumber")` — unique **par école**, comme le matricule et le numéro de reçu : deux établissements peuvent légitimement émettre chacun leur `MUT-2026-0001`.
+- `UX_student_mutation_certificates_verification` sur `("VerificationCode")` — unique **globalement et sans `SchoolId`**.
+
+> **Pourquoi le code de vérification n'est pas borné au tenant.** Le point de vérification publique reçoit un code nu, sans jeton et sans école : c'est un tiers extérieur à la plateforme qui scanne le QR. Un index borné à l'école serait inutilisable par ce chemin, et deux écoles pourraient tirer le même code.
+>
+> **Pourquoi le code est de l'aléa et non l'`Id`.** Exposer un identifiant séquentiel ou dérivé du numéro de certificat rendrait la table énumérable : un tiers sonderait le point de vérification jusqu'à découvrir quels élèves ont quitté l'établissement. Le point de vérification répond « valide / révoqué / inconnu », **jamais** par les données de l'élève.
+
+**Règles de la table :**
+
+- **Append-only de fait.** Un certificat délivré n'est jamais modifié ; une erreur se corrige par révocation (`RevokedAt`) puis nouvelle délivrance. Réécrire une pièce déjà remise produirait deux documents contradictoires portant le même numéro, dont la version papier ferait foi contre l'école.
+- `CertificateNumber` est généré **dans la transaction** de délivrance (règle #3), par le compteur `matricule_sequences` (`Kind = MutationCertificate`) — même garantie d'unicité et d'absence de trou que les matricules.
+- `RESTRICT` sur les trois FK : un certificat survit à l'archivage de l'élève, puisqu'il a été remis à un tiers et doit rester vérifiable.
+
+#### Migration
+
+`AddStateIntegrationModule` doit, en plus des colonnes et de la table :
+
+1. ajouter `student_mutation_certificates` à `TenantTables` et poser sa **policy RLS** — sans quoi la table n'est protégée que par le filtre EF Core (règle #2, `RlsCoverageTests` échoue) ;
+2. accorder `SELECT, INSERT, UPDATE` au rôle `sama_ecole_app` (pas de `DELETE` — règle #6) ;
+3. créer les deux index uniques **partiels** ci-dessus, que le scaffolding EF n'écrit pas seul.
+
 **Fin du Volume 3.**

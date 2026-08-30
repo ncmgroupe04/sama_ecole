@@ -12,6 +12,45 @@ public class Student : AuditableEntity, ITenantEntity
     public Guid SchoolId { get; set; }
 
     public required string Matricule { get; set; }
+
+    /// <summary>
+    /// Identifiant National de l'Élève (IEN) — le numéro qui suit l'élève d'un établissement à l'autre
+    /// sur tout son parcours, et la clé de rapprochement de TOUS les échanges avec le ministère
+    /// (Planète, STATEDUC, dossiers d'examen). Voir Volume 1 §23.1.
+    ///
+    /// NULLABLE, et ce n'est pas une commodité : l'IEN est attribué par l'administration centrale, pas
+    /// par l'école. Un élève fraîchement inscrit n'en a légitimement aucun tant que le SIMEN ne l'a pas
+    /// délivré. Le rendre obligatoire bloquerait l'inscription — exactement ce que le terrain ne peut
+    /// pas se permettre à la rentrée. L'export Planète imprime alors une cellule vide, jamais un numéro
+    /// inventé, et le rapport STATEDUC compte ces élèves dans une ligne « sans IEN » explicite.
+    ///
+    /// Distinct de <see cref="Matricule"/>, qui est INTERNE à l'établissement et n'a aucune valeur hors
+    /// de lui : deux écoles peuvent porter le même matricule pour deux élèves différents, jamais le
+    /// même IEN.
+    ///
+    /// Unicité : index UNIQUE PARTIEL <c>(SchoolId, IenNumber) WHERE "IenNumber" IS NOT NULL</c> — le
+    /// partiel est indispensable, sans quoi deux élèves sans IEN (deux NULL) seraient... acceptés par
+    /// un index UNIQUE standard mais refusés dès qu'on y ajoute un jour une contrainte plus stricte.
+    /// L'unicité est bornée à l'école faute de pouvoir vérifier l'unicité nationale sans le SIMEN.
+    ///
+    /// Ce champ n'est JAMAIS écrit par <c>CreateStudentCommand</c> : il se renseigne par
+    /// <c>AssignStudentIenCommand</c> (saisie d'un IEN officiel reçu) ou par génération algorithmique
+    /// de secours (<c>IIenGeneratorService</c>) — voir la mise en garde de cette interface.
+    /// </summary>
+    public string? IenNumber { get; set; }
+
+    /// <summary>
+    /// Vrai quand <see cref="IenNumber"/> a été produit par l'algorithme de SECOURS
+    /// (<c>NationalIenGenerator</c>) et non reçu du ministère. Un IEN provisoire n'a AUCUNE valeur
+    /// officielle : il sert à ne pas bloquer les traitements internes en attendant le vrai numéro.
+    ///
+    /// C'est ce drapeau qui permet à l'export Planète de marquer la ligne comme provisoire plutôt que
+    /// de la présenter à l'IEF comme un identifiant national valide — présenter un numéro fabriqué
+    /// comme officiel serait un faux. Il est remis à <c>false</c> le jour où l'IEN officiel écrase le
+    /// provisoire (<c>AssignStudentIenCommand</c>).
+    /// </summary>
+    public bool IsIenProvisional { get; set; }
+
     public required string FullName { get; set; }
     public DateOnly BirthDate { get; set; }
 

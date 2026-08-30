@@ -41,8 +41,318 @@ tags:
   - name: Notifications
   - name: Inventory
   - name: Exams
+  - name: StateIntegration
 
 paths:
+  /state-integration/planete/export:
+    get:
+      tags: [StateIntegration]
+      summary: Export « Planète Ready » des élèves (CSV ou JSON)
+      description: >
+        Matrice élèves au format d'échange du SIMEN, pour une année scolaire (Volume 1 §23.2).
+        Renvoie un FICHIER en pièce jointe dans les deux formats — y compris `json` : c'est un
+        livrable à déposer sur le portail du ministère, pas une réponse d'API à consommer.
+        Le périmètre est l'INSCRIPTION non annulée de l'exercice, pas l'élève « actuellement en base ».
+        Réservé au Directeur : l'export sort l'état civil de tous les élèves en un fichier. Journalisé.
+      parameters:
+        - name: schoolYearId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: format
+          in: query
+          schema: { type: string, enum: [Csv, Json], default: Csv }
+        - name: classroomId
+          in: query
+          description: Restreint l'export à une classe (contrôle avant transmission globale). Omis = tout l'établissement.
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Fichier d'export (Content-Disposition&#58; attachment).
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+            application/json:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: >
+            Le code établissement national (SIMEN) n'est pas renseigné. L'export refuse plutôt que de
+            produire un fichier au code vide, que le ministère rejetterait silencieusement des jours
+            plus tard. Le message nomme l'écran où corriger.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /state-integration/simen/status:
+    get:
+      tags: [StateIntegration]
+      summary: État du relais API du ministère
+      description: >
+        Consommé par l'écran AVANT d'afficher l'action « Transmettre au SIMEN ». Aucune donnée
+        d'établissement ne transite ici. À ce jour `isConfigured` vaut toujours `false` — aucune API
+        publique du SIMEN n'est ouverte.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isConfigured: { type: boolean }
+                  message: { type: string }
+
+  /state-integration/stateduc:
+    get:
+      tags: [StateIntegration]
+      summary: Rapport annuel STATEDUC (agrégats JSON)
+      description: >
+        Effectifs par niveau, pyramide des âges, qualifications et statuts du personnel (Volume 1 §23.3).
+        Les trois représentations (JSON, PDF, Excel) sortent du MÊME calcul.
+      parameters:
+        - name: schoolYearId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: observationDate
+          in: query
+          description: >
+            Date d'arrêté des effectifs et de calcul des âges. Omise = aujourd'hui. Explicite pour
+            qu'une école qui réédite son rapport en décembre retrouve les chiffres déclarés en juin.
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StateducReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /state-integration/stateduc/pdf:
+    get:
+      tags: [StateIntegration]
+      summary: Rapport STATEDUC — formulaire officiel (PDF A4 paysage)
+      parameters:
+        - name: schoolYearId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: observationDate
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: PDF prêt à signer et déposer.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /state-integration/stateduc/excel:
+    get:
+      tags: [StateIntegration]
+      summary: Rapport STATEDUC — classeur .xlsx (consolidation IEF)
+      parameters:
+        - name: schoolYearId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: observationDate
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Classeur (une feuille par tableau réglementaire). Les effectifs sont des NOMBRES, jamais du texte mis en forme.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /state-integration/students/{studentId}/ien:
+    put:
+      tags: [StateIntegration]
+      summary: Enregistre l'IEN d'un élève, ou génère un numéro provisoire
+      description: >
+        DEUX MODES. `ienNumber` renseigné = saisie du numéro OFFICIEL reçu du SIMEN (le mode normal).
+        `ienNumber` null ou absent = demande de génération d'un numéro PROVISOIRE de secours, sans
+        valeur officielle (Volume 1 §23.1). Une chaîne VIDE est refusée en 422 : « champ laissé vide »
+        ne doit jamais déclencher une génération non demandée.
+
+
+        Un IEN officiel écrase un provisoire. L'INVERSE EST REFUSÉ (409) — aucun numéro fabriqué ne
+        remplace un IEN délivré par le ministère.
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ienNumber:
+                  type: string
+                  nullable: true
+                  maxLength: 24
+                  description: Numéro officiel. Null ou absent = générer un provisoire.
+      responses:
+        '200':
+          description: OK. `isProvisional` doit être affiché immédiatement par l'écran.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  studentId: { type: string, format: uuid }
+                  ienNumber: { type: string }
+                  isProvisional: { type: boolean }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: IEN déjà porté par un autre élève de l'école, ou tentative d'écraser un IEN officiel par un provisoire.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: >
+            Forme d'IEN invalide. ATTENTION — le contrôle porte sur la FORME uniquement : aucune
+            vérification d'authenticité auprès du SIMEN n'est possible à ce jour.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /state-integration/students/{studentId}/mutation-certificate:
+    post:
+      tags: [StateIntegration]
+      summary: Délivre le certificat de mutation (PDF avec QR de vérification)
+      description: >
+        POST bien qu'il renvoie un PDF&#58; il ÉCRIT (numéro officiel séquentiel, ligne en base, code de
+        vérification), et deux appels produisent deux certificats distincts (Volume 1 §23.5).
+
+
+        Un solde impayé N'EMPÊCHE JAMAIS la délivrance — refuser un certificat à un élève débiteur
+        reviendrait à le retenir de force dans l'établissement. Le PDF porte une MENTION de situation
+        financière, jamais un montant.
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schoolYearId, reason]
+              properties:
+                schoolYearId: { type: string, format: uuid }
+                reason:
+                  type: string
+                  enum: [Demenagement, ChangementEtablissement, RaisonFamiliale, RaisonMedicale, Autre]
+                reasonDetails:
+                  type: string
+                  maxLength: 300
+                  description: Obligatoire lorsque `reason = Autre`.
+                destinationSchoolName: { type: string, maxLength: 150, nullable: true }
+                destinationCity: { type: string, maxLength: 100, nullable: true }
+      responses:
+        '200':
+          description: Le certificat en PDF.
+          headers:
+            X-Certificate-Number:
+              description: Numéro officiel délivré (ex. MUT-2026-0007).
+              schema: { type: string }
+            X-Financially-Clear:
+              description: L'élève était-il à jour au jour de la délivrance. Ne bloque jamais.
+              schema: { type: string, enum: ['true', 'false'] }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Élève, année scolaire, ou inscription active sur cette année, introuvable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /state-integration/certificates/verify/{token}:
+    get:
+      tags: [StateIntegration]
+      summary: Vérification PUBLIQUE d'un certificat de mutation (scan du QR)
+      description: >
+        ANONYME (`security: []`) — c'est l'école d'accueil, extérieure à la plateforme, qui scanne le
+        QR imprimé sur le certificat (Volume 1 §23.5).
+
+
+        La réponse ne porte AUCUNE donnée de l'élève : seulement de quoi rapprocher le PAPIER présenté
+        (statut, numéro, date, établissement émetteur). Un `token` inconnu répond `unknown` avec un
+        HTTP 200 — jamais un 404 : distinguer les deux permettrait de sonder les numéros voisins.
+
+
+        Rate-limité par IP (même politique que l'annuaire public).
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Le code de vérification encodé dans le QR (32 caractères hexadécimaux d'aléa).
+          schema: { type: string }
+      responses:
+        '200':
+          description: >
+            Résultat de la vérification. `status` vaut `valid`, `revoked` ou `unknown`. Pour `unknown`,
+            tous les autres champs sont nuls.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [valid, revoked, unknown] }
+                  certificateNumber: { type: string, nullable: true }
+                  issuedOn: { type: string, format: date, nullable: true }
+                  issuingSchoolName: { type: string, nullable: true }
+                  revokedAt: { type: string, format: date-time, nullable: true }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /state-integration/students/{studentId}/skills-booklet:
+    get:
+      tags: [StateIntegration]
+      summary: Livret de compétences de l'élève (PDF APC, multi-pages)
+      description: >
+        Document APC pluri-trimestres remis avec le certificat lors d'une mutation (Volume 1 §23.6).
+        La grille vient de la même configuration d'école que le bulletin APC. Une case vide signifie
+        « compétence non évaluée sur cette période », jamais « non acquis ».
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: schoolYearId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Le livret en PDF (peut compter plusieurs pages).
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >
+            Le niveau de la classe n'a pas de grille de compétences configurée : le livret ne
+            s'applique qu'à l'approche par compétences. Utilisez le bulletin de notes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /auth/login:
     post:
       tags: [Auth]
@@ -3492,6 +3802,13 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: >
+        Rôle insuffisant pour cette opération. Distinct de 401 (non authentifié) : le jeton est
+        valide, mais le rôle qu'il porte n'ouvre pas cette route.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
     ValidationError:
       description: Erreur de validation
       content:
@@ -5697,3 +6014,122 @@ components:
         date: { type: string, format: date }
         declaredHours: { type: number }
         scheduledHours: { type: number }
+
+    StateducReport:
+      type: object
+      description: >
+        Rapport annuel STATEDUC (Volume 1 §23.3). Tous les agrégats sont des COMPTAGES, jamais des
+        estimations. Les champs `...WithoutIen`, `unreportedQualificationTeachers` et
+        `teachersWithoutGender` mesurent l'état de la SAISIE, pas l'établissement : ils sont publiés
+        séparément pour que le lecteur puisse distinguer une école réellement peu qualifiée d'une
+        école dont le dossier est incomplet.
+      properties:
+        schoolName: { type: string }
+        nationalSchoolCode: { type: string, nullable: true }
+        ministryAuthorizationNumber: { type: string, nullable: true }
+        schoolDistrictCode: { type: string, nullable: true }
+        inspectionAcademie: { type: string, nullable: true }
+        inspectionEducationFormation: { type: string, nullable: true }
+        gpsCoordinates:
+          type: string
+          nullable: true
+          description: Calculé (« 14.692800, -17.446700 »), jamais stocké. Null si l'une des deux coordonnées manque.
+        schoolYearLabel: { type: string }
+        observationDate:
+          type: string
+          format: date
+          description: Date d'arrêté des effectifs ET de calcul des âges. Deux tirages à la même date d'observation donnent la même pyramide.
+        generatedAt: { type: string, format: date-time }
+        totalStudents: { type: integer }
+        totalGirls: { type: integer }
+        totalBoys: { type: integer }
+        totalRepeaters: { type: integer }
+        girlsRatio:
+          type: number
+          nullable: true
+          description: Pourcentage 0–100. NULL — et non zéro — quand l'effectif est nul.
+        boysRatio: { type: number, nullable: true }
+        totalTeachers: { type: integer }
+        qualifiedTeachers:
+          type: integer
+          description: Porteurs d'un diplôme PROFESSIONNEL (CEAP/CAP/CAEM/CAES). Un Master sans titre pédagogique n'est pas qualifié.
+        unreportedQualificationTeachers: { type: integer }
+        teachersWithoutGender: { type: integer }
+        studentsWithoutIen: { type: integer }
+        studentsPerTeacher: { type: number, nullable: true }
+        studentsPerClassroom: { type: number, nullable: true }
+        classroomCount: { type: integer }
+        physicalRoomCount: { type: integer }
+        buildingCount: { type: integer }
+        enrollmentsByLevel:
+          type: array
+          items: { $ref: '#/components/schemas/StateducLevelEnrollmentRow' }
+        agePyramid:
+          type: array
+          items: { $ref: '#/components/schemas/StateducAgeBracketRow' }
+        teacherQualifications:
+          type: array
+          items: { $ref: '#/components/schemas/StateducTeacherQualificationRow' }
+        teacherStatuses:
+          type: array
+          items: { $ref: '#/components/schemas/StateducTeacherStatusRow' }
+
+    StateducLevelEnrollmentRow:
+      type: object
+      description: Un NIVEAU réglementaire (CI, CP, 6e…), la maille d'agrégation du ministère — jamais une classe nommée.
+      properties:
+        level: { type: string }
+        cycle: { type: string }
+        boys: { type: integer }
+        girls: { type: integer }
+        total: { type: integer }
+        girlsRatio: { type: number, nullable: true }
+        repeaters: { type: integer }
+        withoutIen: { type: integer }
+        classroomCount:
+          type: integer
+          description: Divisions RÉELLEMENT peuplées, comptées depuis les inscriptions — une classe ouverte sans inscrit ne compte pas.
+        averageClassSize: { type: number, nullable: true }
+
+    StateducAgeBracketRow:
+      type: object
+      description: >
+        Une tranche d'âge. `age = null` recueille les élèves à date de naissance invraisemblable
+        (postérieure à l'observation, ou plus de 30 ans) : les ranger dans une vraie tranche
+        déplacerait un effectif réel vers une case fausse.
+      properties:
+        age: { type: integer, nullable: true }
+        label: { type: string, example: "12 ans" }
+        boys: { type: integer }
+        girls: { type: integer }
+        total: { type: integer }
+
+    StateducTeacherQualificationRow:
+      type: object
+      description: >
+        Croisement diplôme académique × diplôme professionnel, exigé par le formulaire.
+        `genderNotReported` est une TROISIÈME colonne, absente du formulaire officiel : les fiches
+        sans genre saisi y sont comptées à part plutôt qu'imputées à l'une des deux colonnes
+        réglementaires, ce qui serait faux et indétectable.
+      properties:
+        academicQualification:
+          type: string
+          enum: [NonRenseigne, Aucun, BFEM, BAC, Licence, Master, Doctorat]
+        professionalQualification:
+          type: string
+          enum: [NonRenseigne, Aucun, CEAP, CAP, CAEM, CAES]
+        men: { type: integer }
+        women: { type: integer }
+        genderNotReported: { type: integer }
+        count: { type: integer }
+
+    StateducTeacherStatusRow:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [NonRenseigne, Fonctionnaire, Contractuel, Vacataire, Volontaire, Benevole]
+        men: { type: integer }
+        women: { type: integer }
+        genderNotReported: { type: integer }
+        count: { type: integer }
