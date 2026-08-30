@@ -2,6 +2,7 @@ using SamaEcole.Application.Reports.Queries.GetAttendanceExport;
 using SamaEcole.Application.Reports.Queries.GetAttendanceReport;
 using SamaEcole.Application.Reports.Queries.GetDirectorDashboard;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -59,9 +60,10 @@ public class ReportsController(ISender mediator) : ControllerBase
 
         // Le PDF est servi `inline` : il s'ouvre dans la modale d'aperçu partagée (_PdfPreviewModal),
         // d'où l'utilisateur imprime ou télécharge. Le CSV, qui ne se prévisualise pas, reste en
-        // `attachment`. Les deux gardent un `filename` (repris par le front pour nommer le fichier).
-        var disposition = result.ContentType == "application/pdf" ? "inline" : "attachment";
-        Response.Headers["Content-Disposition"] = $"{disposition}; filename=\"{result.FileName}\"";
-        return File(new MemoryStream(result.Content), result.ContentType);
+        // téléchargement `attachment` (overload à trois arguments).
+        if (result.ContentType == "application/pdf")
+            return this.InlinePdf(result.Content, result.FileName);
+
+        return File(new MemoryStream(result.Content), result.ContentType, result.FileName);
     }
 }
