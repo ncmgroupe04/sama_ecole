@@ -19,6 +19,9 @@
  @* Sélecteur d'établissement (groupe scolaire) — dépend d'auth.js et api.js. *@
  <script src="~/js/school-switcher.js" asp-append-version="true"></script>
  <script src="~/js/ui-components.js" asp-append-version="true"></script>
+ @* Assistant de Premier Paramétrage (bouton de la barre supérieure) — dépend d'auth.js et api.js,
+ enregistre un écouteur alpine:init, donc script classique chargé avant Alpine (différé). *@
+ <script src="~/js/setup-assistant.js" asp-append-version="true"></script>
  @* Formatage d'affichage partagé (magics Alpine $phone et $money) — script classique, donc exécuté avant
  Alpine (différé) : l'écouteur alpine:init est enregistré à temps. *@
  <script src="~/js/formatters.js" asp-append-version="true"></script>
@@ -431,6 +434,119 @@
  placeholder="Rechercher…"
  class="w-64 pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-400 placeholder:text-slate-300 cursor-not-allowed" />
  </div> *@
+
+ @* ─────────────────────────────────────────────────────────────────────────────────────────
+ Assistant de Premier Paramétrage (wwwroot/js/setup-assistant.js).
+
+ DISTINCT du Centre d'aide (« Aide & Documentation », barre latérale → /aide) : celui-ci n'est
+ pas une documentation mais un PARCOURS d'amorçage séquentiel — année scolaire, pédagogie, frais,
+ enseignants, première inscription, SIMEN — dont chaque étape affiche son état RÉEL lu depuis
+ l'API, plus un pourcentage d'avancement. Réservé aux rôles qui paramètrent l'établissement
+ (Directeur, Secrétariat) ; s'ouvre de lui-même une seule fois, au tout premier accès.
+ ───────────────────────────────────────────────────────────────────────────────────────────── *@
+ <div x-data="setupAssistant()" x-show="eligible" x-cloak class="relative">
+ <button type="button" x-on:click="toggle()"
+ :title="allDone ? 'Assistant de démarrage — paramétrage terminé' : 'Assistant de démarrage — paramétrage de l\'établissement (' + percent + '%)'"
+ :class="allDone ? 'bg-success-bg text-success hover:bg-success/10' : 'bg-primary-50 text-primary-700 hover:bg-primary-100'"
+ class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary">
+ <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4 shrink-0"><use href="#icon-sparkle"></use></svg>
+ <span class="hidden sm:block">Démarrage</span>
+ <span x-show="loaded && !allDone" x-cloak x-text="percent + '%'"
+ class="inline-flex items-center justify-center px-1.5 h-5 rounded-full bg-white/70 text-[11px] font-semibold tabular-nums"></span>
+ <svg x-show="allDone" x-cloak viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4 shrink-0"><use href="#icon-checkmark-circle"></use></svg>
+ </button>
+ @* Pastille d'attention tant que le paramétrage n'est pas terminé et la modale fermée. *@
+ <span x-show="loaded && !allDone && !open" x-cloak aria-hidden="true"
+ class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-warning ring-2 ring-white"></span>
+
+ <modal-shell open="open" on-close="close()" size="2xl">
+ <modal-title>
+ <span class="inline-flex items-center gap-2">
+ <span aria-hidden="true" class="inline-flex w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-400 text-white items-center justify-center">
+ <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><use href="#icon-sparkle"></use></svg>
+ </span>
+ Assistant de démarrage
+ </span>
+ </modal-title>
+ <modal-subtitle>
+ <div class="flex items-center gap-3">
+ <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+ <div class="h-full rounded-full bg-primary-600 transition-all duration-500" :style="'width:' + percent + '%'"></div>
+ </div>
+ <span class="text-sm font-semibold text-slate-700 tabular-nums shrink-0" x-text="percent + '%'"></span>
+ </div>
+ <p class="mt-1.5 text-xs text-slate-500">
+ <span x-text="doneCount"></span> / <span x-text="applicableSteps.length"></span> étapes ·
+ <span x-show="!allDone">suivez l'ordre pour un démarrage sans accroc</span>
+ <span x-show="allDone" class="font-medium text-success">votre établissement est prêt 🎉</span>
+ </p>
+ </modal-subtitle>
+
+ @* Analyse en cours (premier chargement). *@
+ <div x-show="!loaded" class="py-12 text-center text-sm text-slate-400">Analyse de votre paramétrage…</div>
+
+ <ol x-show="loaded" x-cloak class="space-y-2">
+ <template x-for="(step, index) in steps" :key="step.key">
+ <li class="rounded-xl border transition-colors"
+ :class="index === expanded ? 'border-primary-200 bg-primary-50/40' : 'border-slate-200 bg-white'">
+ <button type="button" x-on:click="toggleStep(index)"
+ :class="isLocked(index) ? 'cursor-not-allowed' : ''"
+ class="w-full flex items-center gap-3 p-3 text-left">
+ <span class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+ :class="{
+ 'bg-success-bg text-success': step.state === 'done',
+ 'bg-warning-bg text-warning': step.state === 'todo' && isUnlocked(index),
+ 'bg-slate-100 text-slate-400': step.state === 'na' || isLocked(index)
+ }">
+ <svg x-show="step.state === 'done'" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><use href="#icon-checkmark-circle"></use></svg>
+ <svg x-show="step.state === 'todo' && isUnlocked(index)" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><use href="#icon-clock"></use></svg>
+ <svg x-show="isLocked(index)" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><use href="#icon-lock-closed"></use></svg>
+ <svg x-show="step.state === 'na'" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><use href="#icon-block"></use></svg>
+ </span>
+
+ <span class="flex-1 min-w-0">
+ <span class="block text-xs font-medium text-slate-400">Étape <span x-text="index + 1"></span> / <span x-text="steps.length"></span></span>
+ <span class="flex items-center gap-2">
+ <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4 shrink-0 text-slate-400"><use :href="'#icon-' + step.icon"></use></svg>
+ <span class="text-sm font-semibold text-slate-800 truncate" x-text="step.title"></span>
+ </span>
+ </span>
+
+ <span class="shrink-0" :class="badgeFor(step, index).cls" x-text="badgeFor(step, index).label"></span>
+ <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+ class="w-4 h-4 shrink-0 text-slate-400 transition-transform duration-200"
+ :class="index === expanded ? 'rotate-180' : ''"><use href="#icon-chevron-down"></use></svg>
+ </button>
+
+ <div x-show="index === expanded" x-cloak x-transition.opacity>
+ <div class="px-3 pb-3 pl-14 space-y-3">
+ <p class="text-sm leading-relaxed text-slate-600" x-text="step.why"></p>
+ <p x-show="step.state === 'na'" class="text-xs text-slate-400" x-text="step.naReason"></p>
+ <div x-show="step.state !== 'na'" class="flex flex-wrap gap-2">
+ <template x-for="action in step.actions" :key="action.url">
+ <button type="button" x-on:click="go(action.url)" :disabled="isLocked(index)"
+ :class="step.state === 'done' ? 'btn-modal-secondary' : 'btn-modal-primary'">
+ <span x-text="(step.state === 'done' ? 'Revoir · ' : '') + action.label"></span>
+ <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><use href="#icon-chevron-right"></use></svg>
+ </button>
+ </template>
+ </div>
+ <p x-show="isLocked(index)" class="text-xs text-slate-400">Terminez d'abord les étapes précédentes.</p>
+ </div>
+ </div>
+ </li>
+ </template>
+ </ol>
+
+ <modal-footer>
+ <button type="button" x-on:click="refresh()" :disabled="checking" class="btn-modal-secondary">
+ <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4" :class="checking ? 'animate-spin' : ''"><use href="#icon-clock"></use></svg>
+ <span x-text="checking ? 'Vérification…' : 'Revérifier'"></span>
+ </button>
+ <button type="button" x-on:click="close()" class="btn-modal-primary">Fermer</button>
+ </modal-footer>
+ </modal-shell>
+ </div>
 
  @* Utilisateur connecté : remplace l'ancienne cloche de notifications (module jamais livré).
  Aucun contexte d'authentification Razor côté serveur n'existe ici — l'access token JWT vit
