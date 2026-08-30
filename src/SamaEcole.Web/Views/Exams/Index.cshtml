@@ -536,34 +536,36 @@
     </modal-shell>
 
     @* Fiche détaillée — lecture seule, ouverte aussi à l'Enseignant (borné à ses classes côté serveur). *@
-    <modal-shell open="detailDossier" on-close="closeDossierDetail()" size="lg">
+    <modal-shell open="detailDossier" on-close="closeDossierDetail()" size="2xl">
         <modal-title><span x-text="detailDossier ? detailDossier.studentFullName : ''"></span></modal-title>
         <modal-subtitle><span x-text="detailDossier ? detailDossier.classroomName : ''"></span></modal-subtitle>
 
         <div x-show="detailError" x-cloak class="form-error-banner" x-text="detailError"></div>
 
         <template x-if="isLoadingDetail">
-            <div class="space-y-3">
+            <div class="space-y-3" style="min-height:360px">
                 <div class="skeleton h-20 w-full rounded-xl"></div>
                 <div class="skeleton h-32 w-full rounded-xl"></div>
             </div>
         </template>
 
         <template x-if="!isLoadingDetail && detailDossier && detailDossier.status !== undefined">
-            <div class="space-y-6">
+            <div class="flex flex-col gap-6" style="min-height:360px">
+                @* Grille 4 colonnes / 2 rangées : chaque information clé du dossier a sa carte, aérée,
+                   plutôt qu'un bloc de texte condensé (2×2 sur mobile, 4×1 dès sm). *@
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <stat-card size="compact" label="Statut" icon="document-text">
-                        <badge :variant="dossierStatusVariant(detailDossier.status)"><span x-text="dossierStatusLabel(detailDossier.status)"></span></badge>
+                    <stat-card size="compact" label="Statut dossier" icon="document-text">
+                        <badge :variant="dossierStatusVariant(detailDossier.status)" dot><span x-text="dossierStatusLabel(detailDossier.status)"></span></badge>
                     </stat-card>
                     <stat-card size="compact" label="N° candidat" icon="target"><span x-text="detailDossier.candidateNumber || '—'"></span></stat-card>
-                    <stat-card size="compact" label="Centre" icon="building"><span x-text="detailDossier.examCenterName || '—'"></span></stat-card>
+                    <stat-card size="compact" label="Centre d'examen" icon="building"><span x-text="detailDossier.examCenterName || '—'"></span></stat-card>
                     <stat-card size="compact" label="État civil" icon="alert-circle">
-                        <badge :variant="civilStatusVariant(detailDossier.civilStatusConforming)"><span x-text="civilStatusLabel(detailDossier.civilStatusConforming)"></span></badge>
+                        <badge :variant="civilStatusVariant(detailDossier.civilStatusConforming)" dot><span x-text="civilStatusLabel(detailDossier.civilStatusConforming)"></span></badge>
                     </stat-card>
                 </div>
 
-                <div class="text-sm space-y-1">
-                    <p class="text-slate-600"><span class="font-medium text-slate-700">Extrait de naissance : </span><span x-text="detailDossier.birthCertificatePresent ? 'Présent' : 'Manquant'"></span>
+                <div class="text-sm space-y-1" x-show="detailDossier.birthCertificatePresent || detailDossier.civilStatusNotes || detailDossier.transmittedOn" x-cloak>
+                    <p class="text-slate-600" x-show="detailDossier.birthCertificatePresent" x-cloak><span class="font-medium text-slate-700">Extrait de naissance : </span>Présent
                         <span x-show="detailDossier.birthCertificateNumber" x-cloak> — n° <span x-text="detailDossier.birthCertificateNumber"></span></span>
                     </p>
                     <p class="text-slate-600" x-show="detailDossier.civilStatusNotes" x-cloak><span class="font-medium text-slate-700">Notes : </span><span x-text="detailDossier.civilStatusNotes"></span></p>
@@ -578,6 +580,17 @@
                         <p x-show="detailDossier.result && detailDossier.result.averageScore !== null" x-cloak><span class="font-medium text-slate-700">Moyenne : </span><span x-text="detailDossier.result ? detailDossier.result.averageScore : ''"></span></p>
                         <p><span class="font-medium text-slate-700">Délibéré le : </span><span x-text="detailDossier.result ? formatDate(detailDossier.result.deliberatedOn) : ''"></span></p>
                     </div>
+                </div>
+
+                @* Pièces manquantes isolées dans un encadré d'alerte, en bas de la modale (mt-auto :
+                   collé au pied même quand le reste du contenu est court). *@
+                <div x-show="!detailDossier.birthCertificatePresent || detailDossier.civilStatusConforming === false" x-cloak
+                     class="mt-auto rounded-xl border-l-4 border-danger bg-danger-bg p-4 text-sm text-danger">
+                    <p class="font-semibold">Pièces / contrôles manquants</p>
+                    <ul class="mt-1 list-disc list-inside space-y-0.5">
+                        <li x-show="!detailDossier.birthCertificatePresent" x-cloak>Extrait de naissance : manquant</li>
+                        <li x-show="detailDossier.civilStatusConforming === false" x-cloak>État civil : non conforme</li>
+                    </ul>
                 </div>
             </div>
         </template>

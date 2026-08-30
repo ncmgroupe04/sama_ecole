@@ -704,6 +704,21 @@ document.addEventListener('alpine:init', () => {
             } catch (err) {
                 this.createErrors = window.api.toFieldErrors(
                     err, "Une erreur est survenue lors de la création.");
+
+                // toFieldErrors ne pose PAS de clé `global` quand il a réussi à ventiler les erreurs
+                // par champ (400/422 FluentValidation). Or les champs obligatoires du bas du
+                // formulaire (Classe surtout, mais aussi genre/photo) sont sous la ligne de
+                // flottaison de la modale : sans résumé en tête ET sans défilement, le clic sur
+                // « Enregistrer » ne produisait aucun retour visible. On garantit donc toujours un
+                // message en tête, et on ramène la modale sur la bannière.
+                if (!this.createErrors.global) {
+                    this.createErrors.global = Object.keys(this.createErrors).length > 0
+                        ? 'Certains champs doivent être corrigés — voir les indications en rouge ci-dessous.'
+                        : "Une erreur est survenue lors de la création.";
+                }
+                this.$nextTick(() => {
+                    this.$refs.createStudentError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
             } finally {
                 this.isSubmitting = false;
             }

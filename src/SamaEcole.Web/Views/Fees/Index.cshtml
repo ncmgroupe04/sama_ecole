@@ -197,7 +197,7 @@
  </modal-shell>
 
  <!-- Modale : appliquer un montant standard -->
- <modal-shell open="isApplyOpen" size="md">
+ <modal-shell open="isApplyOpen" size="xl">
  <modal-title>Montant standard — <span class="text-indigo-100" x-text="selectedCategory ? selectedCategory.name : ''"></span></modal-title>
  @* Le décompte suit le périmètre choisi : il doit dire ce qui va RÉELLEMENT être écrit, pas le
  total de l'école — c'est le seul garde-fou avant un geste qui touche plusieurs classes. *@
@@ -208,13 +208,8 @@
  <span x-show="applyForm.level" x-cloak>— niveau <span class="font-semibold" x-text="applyForm.level"></span></span><span x-show="!applyForm.level">, toute l'école</span>.
  </modal-subtitle>
 
- <!-- Compte-rendu après application -->
- <div x-show="applyReport" x-cloak class="mb-4 rounded-xl border-l-4 border-success bg-success-bg p-3 text-sm text-success">
- <span x-text="applyReport ? applyReport.created : 0"></span> créée(s),
- <span x-text="applyReport ? applyReport.updated : 0"></span> réalignée(s),
- <span x-text="applyReport ? applyReport.skipped : 0"></span> inchangée(s).
- </div>
-
+ @* Plus de compte-rendu vert affiché DANS la modale : au clic sur « Appliquer », la modale se
+ ferme immédiatement et un Toast résume l'action (voir submitApplyStandard dans fees.js). *@
  <div x-show="applyErrors.global" x-cloak class="form-error-banner" x-text="applyErrors.global"></div>
 
  <form x-on:submit.prevent="submitApplyStandard()" novalidate class="space-y-4">
@@ -240,7 +235,7 @@
  </label>
  </div>
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
- <button type="button" x-on:click="isApplyOpen = false" class="btn-modal-secondary group">Fermer</button>
+ <button type="button" x-on:click="isApplyOpen = false" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isApplying" class="btn-modal-primary group">
  <span x-text="isApplying ? 'Application...' : 'Appliquer'"></span>
  </button>

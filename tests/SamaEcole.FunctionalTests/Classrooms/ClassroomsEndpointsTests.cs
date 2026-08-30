@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using SamaEcole.FunctionalTests.Common;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace SamaEcole.FunctionalTests.Classrooms;
@@ -468,4 +469,74 @@ public class ClassroomsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         (await _factory.GetClassroomAsync(created.Id))!.IsDeleted
             .Should().BeFalse("le conflit ne doit jamais entraîner une suppression silencieuse");
     }
+
+    /// <summary>
+    /// Faux positif remonté du terrain : une classe dont le SEUL élève a été archivé (soft delete)
+    /// refusait quand même d'être supprimée. Le Global Query Filter (SchoolId + !IsDeleted) doit
+    /// rendre la fiche archivée invisible au contrôle de DeleteClassroomCommandHandler.
+    /// </summary>
+    [Fact]
+    public async Task Deleting_A_Classroom_Whose_Only_Student_Has_Been_Archived_Should_Succeed()
+    {
+        var directeur = await AccessTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 Élève Archivé");
+
+        var creation = await SendAsync(HttpMethod.Post, "/api/v1/students", directeur, new
+        {
+            fullName = "Moussa Archivé",
+            birthDate = "2014-05-05",
+            birthPlace = "Dakar",
+            gender = "M",
+            classroomId = classroom.Id
+        });
+        creation.StatusCode.Should().Be(HttpStatusCode.Created);
+        var student = (await creation.Content.ReadFromJsonAsync<StudentCreated>())!;
+
+        // Archivage direct en base (contourne les règles métier de DeleteStudentCommand, sans objet ici).
+        await _factory.SeedAsOwnerAsync(async db =>
+        {
+            var archived = await db.Students.IgnoreQueryFilters().SingleAsync(s => s.Id == student.Id);
+            archived.SoftDelete("test");
+        });
+
+        var fresh = await FetchClassroomAsync(directeur, classroom.Id);
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/classrooms/{classroom.Id}?rowVersion={fresh.RowVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await _factory.GetClassroomAsync(classroom.Id))!.IsDeleted.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Un élève ENCORE ACTIF bloque bien la suppression (409), et le message dénombre les fiches
+    /// rattachées pour orienter l'utilisateur vers l'action à mener.
+    /// </summary>
+    [Fact]
+    public async Task Deleting_A_Classroom_With_An_Active_Student_Should_Return_409_And_Count_Them()
+    {
+        var directeur = await AccessTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 Encore Peuplée");
+
+        var creation = await SendAsync(HttpMethod.Post, "/api/v1/students", directeur, new
+        {
+            fullName = "Aïcha Active",
+            birthDate = "2014-05-05",
+            birthPlace = "Dakar",
+            gender = "F",
+            classroomId = classroom.Id
+        });
+        creation.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var fresh = await FetchClassroomAsync(directeur, classroom.Id);
+        var response = await SendAsync(
+            HttpMethod.Delete, $"/api/v1/classrooms/{classroom.Id}?rowVersion={fresh.RowVersion}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var error = (await response.Content.ReadFromJsonAsync<ApiError>())!;
+        error.Code.Should().Be("BUSINESS_RULE_VIOLATION");
+        error.Message.Should().Contain("1 élève y est encore rattaché");
+        (await _factory.GetClassroomAsync(classroom.Id))!.IsDeleted.Should().BeFalse();
+    }
+
+    private record ApiError(string Code, string Message);
 }

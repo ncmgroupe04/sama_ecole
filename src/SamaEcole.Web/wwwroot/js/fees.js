@@ -91,7 +91,6 @@ document.addEventListener('alpine:init', () => {
         isApplying: false,
         applyForm: { amount: null, level: '', overwriteExisting: false },
         applyErrors: {},
-        applyReport: null,
 
         // Édition d'une exception (modale)
         editing: null, // { classFeeId, classroomName, amount, rowVersion }
@@ -275,7 +274,6 @@ document.addEventListener('alpine:init', () => {
             // consulter le Collège, c'est presque toujours le Collège qu'on veut tarifer.
             this.applyForm = { amount: null, level: this.levelFilter, overwriteExisting: false };
             this.applyErrors = {};
-            this.applyReport = null;
             this.isApplyOpen = true;
         },
 
@@ -290,7 +288,7 @@ document.addEventListener('alpine:init', () => {
             this.isApplying = true;
             this.applyErrors = {};
             try {
-                this.applyReport = await window.api.post('/finance/fees/apply-standard', {
+                const report = await window.api.post('/finance/fees/apply-standard', {
                     feeCategoryId: this.selectedCategoryId,
                     amount: this.applyForm.amount,
                     // Chaîne vide = « toutes les classes » : on envoie null, le contrat d'API ne
@@ -298,13 +296,26 @@ document.addEventListener('alpine:init', () => {
                     level: this.applyForm.level || null,
                     overwriteExisting: this.applyForm.overwriteExisting
                 });
+                // Succès : on FERME la modale tout de suite et on résume l'action dans un Toast,
+                // plutôt qu'un encadré vert qui obligeait l'utilisateur à fermer lui-même.
+                this.isApplyOpen = false;
                 await this.reloadFees();
-                // La modale reste ouverte pour AFFICHER le compte-rendu ; l'utilisateur la ferme.
+                toast.success(this.applyReportMessage(report));
             } catch (err) {
                 this.applyErrors = window.api.toFieldErrors(err, "Erreur lors de l'application du montant.");
             } finally {
                 this.isApplying = false;
             }
+        },
+
+        /** Résumé lisible du compte-rendu d'application ({created, updated, skipped}) pour le Toast. */
+        applyReportMessage(report) {
+            const applied = (report.created || 0) + (report.updated || 0);
+            const parts = [`${applied} montant${applied > 1 ? 's' : ''} appliqué${applied > 1 ? 's' : ''}`];
+            if (report.skipped > 0) {
+                parts.push(`${report.skipped} inchangé${report.skipped > 1 ? 's' : ''}`);
+            }
+            return `Frais mis à jour : ${parts.join(', ')}.`;
         },
 
         // ----------------------------------------------- Exception par classe (Option 2)
