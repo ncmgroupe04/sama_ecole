@@ -18,6 +18,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- xUnit lit ce fichier À CÔTÉ de l'assembly compilé, jamais depuis le dossier source : sans
+         CopyToOutputDirectory, le plafond de parallélisme ci-dessous serait silencieusement ignoré. -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\SamaEcole.Persistence\SamaEcole.Persistence.csproj" />
     <ProjectReference Include="..\..\src\SamaEcole.Application\SamaEcole.Application.csproj" />
     <!-- GradeSheetImportTests exerce le vrai GradeSheetImportParser (ClosedXML), pas un double : le
