@@ -4687,6 +4687,10 @@ components:
         gender requis) et son matricule généré. ReEnrollment : `studentId` d'un élève existant.
         Ni `schoolYearId` ni `totalDue` : l'année ACTIVE est résolue serveur, et le montant est
         CALCULÉ à partir du barème de la classe — jamais fourni par le client (règles #4 et #10).
+
+        L'inscription FIGE LA DETTE et n'encaisse rien : aucun versement, aucun mode de règlement ne
+        se transmet ici (le secrétariat n'encaisse pas). Tout règlement, y compris le premier, se
+        fait à la Caisse via POST /finance/payments.
       required: [type, classroomId]
       properties:
         type: { type: string, enum: [NewEnrollment, ReEnrollment] }
@@ -4700,32 +4704,6 @@ components:
         gender: { type: string, enum: [M, F], description: NewEnrollment uniquement }
         guardianName: { type: string }
         guardianPhone: { type: string }
-        collectedFees:
-          type: array
-          description: >-
-            Frais RÉELLEMENT réglés au guichet le jour de l'inscription. Absent ou vide : dossier
-            ouvert sans versement — aucun paiement n'est créé et le reçu s'imprime à 0. Le client
-            désigne QUOI est réglé, jamais COMBIEN : les montants sont repris du barème que le serveur
-            vient de figer (règle #4). Une catégorie ne peut apparaître qu'une fois. Un versement est
-            matérialisé par un Payment portant le MÊME numéro de reçu que l'inscription.
-          items:
-            type: object
-            required: [feeCategoryId]
-            properties:
-              feeCategoryId: { type: string, format: uuid }
-              months:
-                type: integer
-                default: 1
-                minimum: 1
-                maximum: 24
-                description: >-
-                  Mois réglés d'avance sur une mensualité (borné serveur au nombre de mois facturés).
-                  Ignoré sur un frais ponctuel : il se règle en entier ou pas du tout.
-        paymentMethod:
-          type: string
-          enum: [Cash, Cheque, Transfer, MobileMoney]
-          default: Cash
-          description: Mode de règlement du versement du jour ; ignoré si `collectedFees` est vide.
 
     EnrollmentReceipt:
       type: object
@@ -4741,7 +4719,7 @@ components:
         Voir docs/design-references/README.md §1.
       properties:
         enrollmentId: { type: string, format: uuid }
-        receiptNumber: { type: string, description: 'Numéro officiel unique du reçu (JGK-E02), ex. « REC-2025-0002 ». Porté aussi par le versement du jour.' }
+        receiptNumber: { type: string, description: 'Numéro officiel unique du reçu d''inscription (JGK-E02), ex. « REC-2025-0002 ».' }
         schoolName: { type: string }
         schoolAddress: { type: string, nullable: true }
         schoolPhone: { type: string, nullable: true }
@@ -4774,8 +4752,10 @@ components:
         collectedLines:
           type: array
           description: >-
-            Ventilation de l'encaissement du jour — une ligne par frais réellement réglé au guichet.
-            Vide si le dossier a été ouvert sans versement.
+            TOUJOURS VIDE pour une inscription : le secrétariat n'encaisse rien (règle #4). Champ
+            conservé pour la stabilité de forme et la relecture d'un reçu historique dont un versement
+            portait le même numéro. Le vrai constat d'encaissement est le reçu de caisse
+            (`/finance/payments/{id}/receipt`).
           items:
             type: object
             properties:
@@ -4783,8 +4763,8 @@ components:
               isRecurring: { type: boolean }
               months: { type: integer, description: 'Mois couverts pour une mensualité ; 1 pour un frais ponctuel.' }
               amount: { type: number }
-        totalCollected: { type: number, description: 'Somme réellement encaissée ce jour — « TOTAL ENCAISSÉ » du reçu.' }
-        remainingBalance: { type: number, description: 'totalDue − totalCollected. USAGE INTERNE Finance — le « Reste à payer » a été RETIRÉ du document imprimé (refonte du 25/08/2026).' }
+        totalCollected: { type: number, description: 'TOUJOURS 0 pour une inscription — le règlement se fait à la Caisse. Conservé pour la stabilité de forme / la relecture historique.' }
+        remainingBalance: { type: number, description: 'totalDue − totalCollected (donc = totalDue à l''inscription). USAGE INTERNE Finance — jamais imprimé (refonte du 25/08/2026).' }
         initialSettlementTotal:
           type: number
           description: >-
@@ -4813,7 +4793,7 @@ components:
           type: string
           nullable: true
           enum: [Cash, Cheque, Transfer, MobileMoney]
-          description: 'Mode de règlement du versement du jour ; null quand rien n''a été encaissé.'
+          description: 'TOUJOURS null pour une inscription (aucun encaissement). Renseigné seulement à la relecture d''un reçu historique.'
 
     ChangeEnrollmentStatusRequest:
       type: object

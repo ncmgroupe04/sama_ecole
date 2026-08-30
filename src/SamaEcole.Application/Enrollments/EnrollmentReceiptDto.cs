@@ -4,13 +4,16 @@ namespace SamaEcole.Application.Enrollments;
 /// Charge utile du reçu d'inscription (ticket JGK-E01), renvoyée aussi bien à la création qu'à la
 /// relecture GET /enrollments/{id}/receipt. Elle porte tout ce que la référence de design impose
 /// (docs/design-references/README.md §1) : en-tête établissement (coordonnées + mentions légales
-/// NINEA/RCCM), identité de l'élève et de son tuteur, ventilation de l'encaissement et total.
+/// NINEA/RCCM), identité de l'élève et de son tuteur, le dû annuel figé et l'échéancier prospectif.
 ///
-/// Deux montants distincts, à ne jamais confondre :
-///   * <paramref name="TotalCollected"/> — ce qui est RÉELLEMENT entré en caisse ce jour-là. C'est le
-///     seul total imprimé en gras sur le reçu : une pièce comptable n'atteste que de l'encaissement.
-///   * <paramref name="TotalDue"/> — le dû ANNUEL figé à l'inscription, rappelé en pied de tableau
-///     avec le reste à payer pour que le tuteur sache où il en est.
+/// L'inscription N'ENCAISSE RIEN (le secrétariat n'enregistre aucun versement, AGENTS.md règle #4) :
+///   * <paramref name="TotalDue"/> — le dû ANNUEL figé à l'inscription. USAGE INTERNE Finance : il
+///     n'est plus imprimé sur aucune pièce remise au tuteur (refonte du 25/08/2026).
+///   * <paramref name="TotalCollected"/> / <paramref name="CollectedLines"/> /
+///     <paramref name="PaymentMethod"/> — TOUJOURS 0 / vide / null pour une inscription. Ces champs ne
+///     sont peuplés que par la relecture d'un reçu historique dont un versement portait le même numéro
+///     (GetEnrollmentReceiptQuery) ; ils restent au DTO pour la stabilité de forme côté Finance et
+///     côté front. Tout règlement se fait à la Caisse (RecordPaymentCommand), qui a son propre reçu.
 ///
 /// La mention obligatoire (AGENTS.md règle #12) n'est pas transportée ici : c'est un texte constant,
 /// figé côté vue/PDF pour qu'aucun appelant ne puisse l'altérer ou l'omettre.

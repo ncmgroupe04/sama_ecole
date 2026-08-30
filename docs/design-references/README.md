@@ -14,6 +14,8 @@ Fichiers : `receipt-reference.png`, `bulletin-reference.png`, `dashboard-referen
 
 > **Qui délivre quoi.** L'attestation est délivrée par le **SECRÉTARIAT, qui n'encaisse aucun fonds** : elle atteste d'une inscription et **annonce** ce qu'il y a à régler. Le règlement s'effectue auprès de la **COMPTABILITÉ**, qui délivre seule le reçu de caisse (§1bis). Aucun recouvrement entre les deux pièces : l'une annonce, l'autre constate.
 
+> **Séparation appliquée au formulaire (30/08/2026).** L'écran `/inscriptions` n'expose plus AUCUNE sélection d'encaissement : plus de cases « ce frais est réglé », plus de mode de règlement, plus de « Encaissé ce jour ». Le panneau, renommé « Frais », est un **aide-calcul sans impact base** (barème lu de la Comptabilité + un simulateur de mensualités purement indicatif). `POST /api/v1/enrollments` n'accepte plus `collectedFees` / `paymentMethod` ; l'inscription fige le dû annuel et ne crée **jamais** de `Payment`. Tout règlement, y compris le premier versement, passe par la Caisse (`POST /finance/payments`). `CollectedLines` / `TotalCollected` / `PaymentMethod` restent au DTO du reçu mais valent toujours vide / 0 / null pour une inscription.
+
 **Format** : **A5 paysage (210 × 148 mm)**, marge de **10 mm** (zone utile 190 × 128 mm), une seule page, sans débordement — à l'écran comme à l'impression et à l'export PDF (`@page { size: A5 landscape; margin: 10mm }` côté web, `PageSizes.A5.Landscape()` + `Margin(10, Unit.Millimetre)` côté QuestPDF). Un test de non-régression vérifie la tenue sur une page avec 8 lignes de frais (`ReceiptPdfGeneratorTests`).
 
 **Disposition :**
