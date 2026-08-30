@@ -22,6 +22,14 @@ public class UpdateExamDossierCommandHandler(IApplicationDbContext dbContext)
         dossier.CivilStatusConforming = request.CivilStatusConforming;
         dossier.CivilStatusNotes = string.IsNullOrWhiteSpace(request.CivilStatusNotes) ? null : request.CivilStatusNotes.Trim();
 
+        // null = champ absent de la requête : on préserve la valeur en base plutôt que de la
+        // ramener au défaut NonFourni. Le couple booléen ci-dessus reste la source du statut
+        // Incomplet/Complet ; ce champ ne fait que le COMPLÉTER pour l'IEF (cas EnRegularisation).
+        if (request.CivilRegistryDocumentStatus is { } civilRegistryStatus)
+        {
+            dossier.CivilRegistryDocumentStatus = civilRegistryStatus;
+        }
+
         // Le passage Incomplet <-> Complet se recalcule à chaque correction (Volume 1 §22.2). Une fois
         // Transmis ou Valide, une correction ultérieure (ex. faute de frappe repérée après coup) ne
         // fait pas régresser le dossier dans le cycle : seuls TransmitExamDossier et RecordExamResult

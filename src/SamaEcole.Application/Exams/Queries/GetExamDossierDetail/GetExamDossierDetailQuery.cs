@@ -27,4 +27,9 @@ public record ExamDossierDetail(
     string? BirthCertificateNumber,
     string? CivilStatusNotes,
     DateOnly? TransmittedOn,
-    ExamResultDto? Result);
+    ExamResultDto? Result,
+    // Carte scolaire et état civil (Volume 1 §23.4) : code officiel du centre (distinct du nom),
+    // numéro de table (distinct du numéro de candidat), état détaillé de la pièce d'état civil.
+    string? ExamCenterCode,
+    string? TableNumber,
+    string CivilRegistryDocumentStatus);

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using SamaEcole.Application.Exams.Commands.UpdateExamDossier;
+using SamaEcole.Domain.Enums;
 using Xunit;
 
 namespace SamaEcole.UnitTests.Exams;
@@ -39,5 +40,27 @@ public class UpdateExamDossierCommandValidatorTests
     public void Html_In_CivilStatusNotes_Should_Fail()
     {
         _validator.Validate(Valid() with { CivilStatusNotes = "<img src=x onerror=alert(1)>" }).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Null_CivilRegistryDocumentStatus_Should_Pass()
+    {
+        // null = champ omis : la valeur en base est préservée, ce n'est pas une erreur.
+        _validator.Validate(Valid() with { CivilRegistryDocumentStatus = null }).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void EnRegularisation_Should_Pass()
+    {
+        // L'état qui donne sa raison d'être au champ : « fourni, non conforme, jugement supplétif en cours ».
+        _validator.Validate(Valid() with { CivilRegistryDocumentStatus = CivilRegistryDocumentStatus.EnRegularisation })
+            .IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Out_Of_Range_CivilRegistryDocumentStatus_Should_Fail()
+    {
+        _validator.Validate(Valid() with { CivilRegistryDocumentStatus = (CivilRegistryDocumentStatus)99 })
+            .IsValid.Should().BeFalse();
     }
 }

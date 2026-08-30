@@ -5987,6 +5987,15 @@ components:
       enum: [Passable, AssezBien, Bien, TresBien]
       description: Le CFEE n'attribue pas de mention — ce champ reste nul pour ce type d'examen.
 
+    CivilRegistryDocumentStatus:
+      type: string
+      enum: [NonFourni, Fourni, Conforme, NonConforme, EnRegularisation]
+      description: >-
+        État détaillé de la pièce d'état civil au dossier (Volume 1 §23.4). COMPLÈTE le couple
+        birthCertificatePresent / civilStatusConforming sans le remplacer. EnRegularisation
+        (« fourni, non conforme, jugement supplétif en cours ») est le cas le plus fréquent au
+        Sénégal et la raison d'être du champ. NonFourni par défaut.
+
     ExamSession:
       type: object
       properties:
@@ -6039,6 +6048,13 @@ components:
           nullable: true
           description: "NULL = non encore contrôlé, distinct de false."
         civilStatusNotes: { type: string, nullable: true, maxLength: 500 }
+        civilRegistryDocumentStatus:
+          allOf:
+            - $ref: '#/components/schemas/CivilRegistryDocumentStatus'
+          nullable: true
+          description: >-
+            Champ omis (null) = la valeur en base est préservée. Seul point d'écriture de
+            l'état EnRegularisation.
         rowVersion: { type: integer, format: int64 }
 
     ExamDossierResult:
@@ -6062,6 +6078,16 @@ components:
           properties:
             studentFullName: { type: string }
             classroomName: { type: string }
+            examCenterCode:
+              type: string
+              nullable: true
+              description: Code officiel du centre communiqué par l'IA, distinct de examCenterName (Volume 1 §23.4).
+            tableNumber:
+              type: string
+              nullable: true
+              description: Numéro de table (place en salle), distinct de candidateNumber (Volume 1 §23.4).
+            civilRegistryDocumentStatus:
+              $ref: '#/components/schemas/CivilRegistryDocumentStatus'
 
     PaginatedExamDossiers:
       type: object
@@ -6104,6 +6130,19 @@ components:
       required: [rowVersion]
       properties:
         examCenterName: { type: string, nullable: true, maxLength: 150, description: Par défaut, celui de la session. }
+        examCenterCode:
+          type: string
+          nullable: true
+          maxLength: 30
+          description: >-
+            Code officiel du centre attribué par l'IA (Volume 1 §23.4), distinct du nom. Vide =
+            inchangé : jamais effacé par un envoi à blanc (complétion progressive).
+        tableNumber:
+          type: string
+          nullable: true
+          maxLength: 20
+          description: >-
+            Numéro de table (place physique en salle), distinct du numéro de candidat. Vide = inchangé.
         candidateNumber:
           type: string
           nullable: true

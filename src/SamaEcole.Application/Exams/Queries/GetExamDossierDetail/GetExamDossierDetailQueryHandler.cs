@@ -59,6 +59,9 @@ public class GetExamDossierDetailQueryHandler(IApplicationDbContext dbContext, E
             dossier.BirthCertificateNumber,
             dossier.CivilStatusNotes,
             dossier.TransmittedOn,
-            result);
+            result,
+            dossier.ExamCenterCode,
+            dossier.TableNumber,
+            dossier.CivilRegistryDocumentStatus.ToString());
     }
 }

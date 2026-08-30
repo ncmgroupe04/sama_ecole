@@ -39,4 +39,24 @@ public class AssignExamCenterCommandValidatorTests
     {
         _validator.Validate(Valid() with { CandidateNumber = "<script>1</script>" }).IsValid.Should().BeFalse();
     }
+
+    [Fact]
+    public void ExamCenterCode_And_TableNumber_Are_Optional()
+    {
+        // Complétion progressive : la première affectation ne connaît souvent que le nom du centre.
+        _validator.Validate(Valid() with { ExamCenterCode = null, TableNumber = null }).IsValid.Should().BeTrue();
+        _validator.Validate(Valid() with { ExamCenterCode = "12347", TableNumber = "B-042" }).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ExamCenterCode_Over_30_Chars_Should_Fail()
+    {
+        _validator.Validate(Valid() with { ExamCenterCode = new string('1', 31) }).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Html_In_TableNumber_Should_Fail()
+    {
+        _validator.Validate(Valid() with { TableNumber = "<b>3</b>" }).IsValid.Should().BeFalse();
+    }
 }

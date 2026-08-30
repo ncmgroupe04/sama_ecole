@@ -39,6 +39,19 @@ public class AssignExamCenterCommandHandler(
                 ? await candidateNumberGenerator.GenerateNextAsync(dossier.ExamSessionId, ct)
                 : request.CandidateNumber.Trim();
 
+            // Code du centre et numéro de table : jamais générés (ils appartiennent à l'IA / au centre)
+            // et jamais effacés par un envoi à blanc — la complétion est progressive, la première
+            // affectation ne connaît souvent que le nom du centre.
+            if (!string.IsNullOrWhiteSpace(request.ExamCenterCode))
+            {
+                dossier.ExamCenterCode = request.ExamCenterCode.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.TableNumber))
+            {
+                dossier.TableNumber = request.TableNumber.Trim();
+            }
+
             // Numéro déjà pris par un autre dossier de la session (saisie manuelle en collision) :
             // SaveChangesAsync le traduit en DuplicateRecordException -> 409 (AGENTS.md règle #5).
             await dbContext.SaveChangesAsync(ct);

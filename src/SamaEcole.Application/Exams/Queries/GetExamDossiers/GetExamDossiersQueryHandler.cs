@@ -81,7 +81,10 @@ public class GetExamDossiersQueryHandler(IApplicationDbContext dbContext, ExamDo
                     d.BirthCertificatePresent,
                     d.CivilStatusConforming,
                     d.Status.ToString(),
-                    EF.Property<uint>(d, "xmin"))),
+                    EF.Property<uint>(d, "xmin"),
+                    d.ExamCenterCode,
+                    d.TableNumber,
+                    d.CivilRegistryDocumentStatus.ToString())),
             cancellationToken);
 
         return new PaginatedExamDossiers(items, totalCount, page, pageSize);

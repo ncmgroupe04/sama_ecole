@@ -132,7 +132,9 @@ public class ExamsController(ISender mediator) : ControllerBase
         bool BirthCertificatePresent,
         bool? CivilStatusConforming,
         string? CivilStatusNotes,
-        uint RowVersion);
+        uint RowVersion,
+        // Volume 1 §23.4 — null = champ omis, la valeur en base est préservée (voir la Command).
+        Domain.Enums.CivilRegistryDocumentStatus? CivilRegistryDocumentStatus = null);
 
     [HttpPut("dossiers/{id:guid}")]
     [ProducesResponseType<ExamDossierResult>(StatusCodes.Status200OK)]
@@ -150,11 +152,19 @@ public class ExamsController(ISender mediator) : ControllerBase
                 BirthCertificatePresent = request.BirthCertificatePresent,
                 CivilStatusConforming = request.CivilStatusConforming,
                 CivilStatusNotes = request.CivilStatusNotes,
+                CivilRegistryDocumentStatus = request.CivilRegistryDocumentStatus,
                 RowVersion = request.RowVersion
             },
             cancellationToken));
 
-    public record AssignExamCenterRequest(string? ExamCenterName, string? CandidateNumber, uint RowVersion);
+    public record AssignExamCenterRequest(
+        string? ExamCenterName,
+        string? CandidateNumber,
+        uint RowVersion,
+        // Volume 1 §23.4 — code officiel du centre (distinct du nom) et numéro de table
+        // (distinct du numéro de candidat). Vide = inchangé (complétion progressive).
+        string? ExamCenterCode = null,
+        string? TableNumber = null);
 
     /// <summary>Le numéro de table est généré DANS la transaction de ce Handler — jamais à la création du dossier.</summary>
     [HttpPost("dossiers/{id:guid}/assign-center")]
@@ -169,6 +179,8 @@ public class ExamsController(ISender mediator) : ControllerBase
             {
                 Id = id,
                 ExamCenterName = request.ExamCenterName,
+                ExamCenterCode = request.ExamCenterCode,
+                TableNumber = request.TableNumber,
                 CandidateNumber = request.CandidateNumber,
                 RowVersion = request.RowVersion
             },

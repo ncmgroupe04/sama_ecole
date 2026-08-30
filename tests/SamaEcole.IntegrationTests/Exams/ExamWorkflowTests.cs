@@ -225,6 +225,115 @@ public class ExamWorkflowTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AssignCenter_Persists_ExamCenterCode_And_TableNumber_And_Never_Wipes_Them_On_A_Blank_Reassign()
+    {
+        var dossierId = await CreateDossierAsync();
+
+        await using (var ctx = Ctx())
+        {
+            var handler = new AssignExamCenterCommandHandler(ctx, new ExamCandidateNumberGenerator(ctx, TimeProvider.System));
+            var rowVersion = await RowVersionAsync(ctx, dossierId);
+
+            await handler.Handle(
+                new AssignExamCenterCommand
+                {
+                    Id = dossierId,
+                    ExamCenterName = "CEM Grand Dakar",
+                    ExamCenterCode = " 012347 ",
+                    TableNumber = " B-042 ",
+                    RowVersion = rowVersion
+                },
+                CancellationToken.None);
+        }
+
+        await using (var ctx = Ctx())
+        {
+            var dossier = await ctx.ExamDossiers.FindAsync(dossierId);
+            dossier!.ExamCenterCode.Should().Be("012347", "le code du centre est enregistré, découpé des espaces de bord");
+            dossier.TableNumber.Should().Be("B-042");
+        }
+
+        // Deuxième affectation SANS code ni table (ex. on ne corrige que le numéro de candidat) :
+        // les valeurs déjà communiquées par l'IA ne doivent pas être effacées en silence.
+        await using (var ctx = Ctx())
+        {
+            var handler = new AssignExamCenterCommandHandler(ctx, new ExamCandidateNumberGenerator(ctx, TimeProvider.System));
+            var rowVersion = await RowVersionAsync(ctx, dossierId);
+
+            await handler.Handle(
+                new AssignExamCenterCommand { Id = dossierId, CandidateNumber = "042", RowVersion = rowVersion },
+                CancellationToken.None);
+        }
+
+        await using (var ctx = Ctx())
+        {
+            var dossier = await ctx.ExamDossiers.FindAsync(dossierId);
+            dossier!.ExamCenterCode.Should().Be("012347");
+            dossier.TableNumber.Should().Be("B-042");
+            dossier.CandidateNumber.Should().Be("042");
+        }
+    }
+
+    [Fact]
+    public async Task Update_Reaches_EnRegularisation_Keeps_Dossier_Incomplet_And_Preserves_It_On_A_Later_Update()
+    {
+        var dossierId = await CreateDossierAsync();
+
+        // 1. On atteint EnRegularisation — état auparavant inatteignable faute de tout point d'écriture.
+        await using (var ctx = Ctx())
+        {
+            var handler = new UpdateExamDossierCommandHandler(ctx);
+            var rowVersion = await RowVersionAsync(ctx, dossierId);
+
+            var result = await handler.Handle(
+                new UpdateExamDossierCommand
+                {
+                    Id = dossierId,
+                    BirthCertificatePresent = true,
+                    CivilStatusConforming = false, // fourni mais pas conforme
+                    CivilRegistryDocumentStatus = CivilRegistryDocumentStatus.EnRegularisation,
+                    RowVersion = rowVersion
+                },
+                CancellationToken.None);
+
+            // Le couple booléen reste la source du statut : non conforme => le dossier n'est pas Complet.
+            result.Status.Should().Be(nameof(ExamDossierStatus.Incomplet));
+        }
+
+        await using (var ctx = Ctx())
+        {
+            var dossier = await ctx.ExamDossiers.FindAsync(dossierId);
+            dossier!.CivilRegistryDocumentStatus.Should().Be(CivilRegistryDocumentStatus.EnRegularisation);
+        }
+
+        // 2. Une correction ultérieure qui N'ENVOIE PAS le champ (null) ne doit pas le ramener à NonFourni.
+        await using (var ctx = Ctx())
+        {
+            var handler = new UpdateExamDossierCommandHandler(ctx);
+            var rowVersion = await RowVersionAsync(ctx, dossierId);
+
+            await handler.Handle(
+                new UpdateExamDossierCommand
+                {
+                    Id = dossierId,
+                    BirthCertificatePresent = true,
+                    CivilStatusConforming = false,
+                    CivilStatusNotes = "Jugement supplétif déposé au tribunal de Mbour",
+                    CivilRegistryDocumentStatus = null,
+                    RowVersion = rowVersion
+                },
+                CancellationToken.None);
+        }
+
+        await using (var ctx = Ctx())
+        {
+            var dossier = await ctx.ExamDossiers.FindAsync(dossierId);
+            dossier!.CivilRegistryDocumentStatus.Should().Be(CivilRegistryDocumentStatus.EnRegularisation);
+            dossier.CivilStatusNotes.Should().Be("Jugement supplétif déposé au tribunal de Mbour");
+        }
+    }
+
+    [Fact]
     public async Task Two_Cfee_Sessions_Without_Series_Are_Rejected_As_Duplicates()
     {
         // Cas précis qui a motivé le COALESCE de l'index unique (Volume 3 DDS §5.10) : Series est NULL

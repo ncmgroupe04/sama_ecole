@@ -35,4 +35,8 @@ public record ExamDossierListItem(
     bool BirthCertificatePresent,
     bool? CivilStatusConforming,
     string Status,
-    uint RowVersion);
+    uint RowVersion,
+    // Carte scolaire et état civil (Volume 1 §23.4), en phase avec ExamDossierDetail.
+    string? ExamCenterCode,
+    string? TableNumber,
+    string CivilRegistryDocumentStatus);

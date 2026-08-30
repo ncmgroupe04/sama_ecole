@@ -11,5 +11,8 @@ public class UpdateExamDossierCommandValidator : AbstractValidator<UpdateExamDos
         RuleFor(x => x.ExamCenterName).MaximumLength(150).NoHtml();
         RuleFor(x => x.BirthCertificateNumber).MaximumLength(50).NoHtml();
         RuleFor(x => x.CivilStatusNotes).MaximumLength(500).NoHtml();
+        RuleFor(x => x.CivilRegistryDocumentStatus!.Value)
+            .IsInEnum()
+            .When(x => x.CivilRegistryDocumentStatus.HasValue);
     }
 }
