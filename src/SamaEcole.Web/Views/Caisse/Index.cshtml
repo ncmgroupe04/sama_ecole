@@ -54,6 +54,10 @@
             position: absolute !important; left: 0 !important; top: 0 !important;
             /* La marge est portée par @@page : la feuille imprimée est la zone utile seule. */
             width: 190mm !important;
+            /* Les trois bornes à 128 mm : sans `min-height`, la classe utilitaire `min-h-[148mm]`
+               de la feuille l'emporte en impression et le bloc de signatures (poussé en bas par
+               `justify-between`) déborde de ~20 mm sur une 2e page. */
+            min-height: 128mm !important;
             height: 128mm !important;
             max-height: 128mm !important;
             margin: 0 !important; padding: 0 !important;
