@@ -391,19 +391,18 @@
  Aucun badge d'ÉTAT DE PAIEMENT ici, volontairement : réimprimée trois mois plus tard,
  l'attestation en afficherait un faux. Le badge ne qualifie que l'acte administratif,
  vrai à toute date. *@
- @* pt-1.5 : l'en-tête ne colle plus au bord haut de la feuille (aération demandée). Le N° de
-    reçu passe sur la ligne du nom de l'école ; la colonne de droite n'a donc plus que deux
-    badges — l'en-tête gagne une ligne et tout le corps remonte d'autant. *@
- <div class="receipt-header flex items-start gap-4 border-b border-slate-200 pb-2.5 pt-1.5">
+ @* pt-1.5 : l'en-tête ne colle plus au bord haut de la feuille (aération demandée).
+    `relative` : ancre le badge N° de reçu centré ci-dessous. *@
+ <div class="receipt-header relative flex items-start gap-4 border-b border-slate-200 pb-2.5 pt-1.5">
  <img x-show="receipt.schoolLogoUrl" x-cloak :src="receipt.schoolLogoUrl" class="h-10 w-10 shrink-0 object-contain" alt="" />
- <div class="min-w-0 flex-1">
- <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+ <div class="min-w-0 flex-1 pr-24">
  <h2 class="text-lg font-bold text-slate-900 tracking-tight" x-text="receipt.schoolName"></h2>
- <span class="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
- </div>
  <p class="text-[10px] text-slate-500 mt-0.5" x-text="contactLine()"></p>
  <p x-show="legalMentions()" x-cloak class="text-[10px] text-slate-500" x-text="legalMentions()"></p>
  </div>
+ @* N° de reçu : centré dans l'en-tête (horizontal + vertical). En absolu pour un centrage VRAI
+    sur la feuille, indépendant de la largeur des colonnes gauche/droite. *@
+ <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-center text-[10.5px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
  <div class="shrink-0 flex flex-col items-end gap-1">
  <span class="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-indigo-700 whitespace-nowrap">Inscription enregistrée</span>
  <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Année&nbsp;<span x-text="receipt.schoolYearLabel"></span></span>
