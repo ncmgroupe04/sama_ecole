@@ -105,10 +105,10 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
         var report = await mediator.Send(
             new GetStateducReportQuery(schoolYearId, observationDate), cancellationToken);
 
-        return File(
-            pdfGenerator.Generate(report),
-            "application/pdf",
-            BuildStateducFileName(report, "pdf"));
+        // `inline` : le formulaire s'ouvre dans la modale d'aperçu partagée (_PdfPreviewModal) — le
+        // Directeur le relit avant d'imprimer ou de télécharger, jamais un téléchargement forcé.
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{BuildStateducFileName(report, "pdf")}\"";
+        return File(pdfGenerator.Generate(report), "application/pdf");
     }
 
     /// <summary>GET /stateduc/excel — le même rapport en classeur .xlsx, pour consolidation à l'IEF.</summary>
@@ -177,7 +177,10 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
         Response.Headers["X-Certificate-Number"] = result.CertificateNumber;
         Response.Headers["X-Financially-Clear"] = result.WasFinanciallyClear ? "true" : "false";
 
-        return File(result.Content, "application/pdf", result.FileName);
+        // `inline` : le certificat s'ouvre dans la modale d'aperçu (impression / téléchargement au
+        // choix), au lieu d'un download forcé dès la délivrance.
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+        return File(result.Content, "application/pdf");
     }
 
     /// <summary>
@@ -250,7 +253,9 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
         var result = await mediator.Send(
             new GetSkillsBookletPdfQuery(studentId, schoolYearId), cancellationToken);
 
-        return File(result.Content, "application/pdf", result.FileName);
+        // `inline` : le livret s'ouvre dans la modale d'aperçu partagée avant impression/téléchargement.
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+        return File(result.Content, "application/pdf");
     }
 
     private static string BuildStateducFileName(StateducReportDto report, string extension)

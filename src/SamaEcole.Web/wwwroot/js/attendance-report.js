@@ -5,6 +5,11 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('attendanceReportView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : l'export PDF s'ouvre dans la modale
+        // _PdfPreviewModal (impression / téléchargement au choix). L'export CSV, qui ne se
+        // prévisualise pas, reste en téléchargement direct.
+        ...window.pdfPreview.state(),
+
         classrooms: [],
         data: null,
         totalCount: 0,
@@ -91,12 +96,22 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Export PDF/CSV (JGK-R03). Comme le téléchargement de reçu (caisse.js/dashboard.js) : l'API
-         * exige le jeton, on récupère donc le fichier en blob avec l'en-tête Authorization plutôt qu'un
-         * simple lien. Conserve les filtres de période et de classe actifs à l'écran.
+         * Export PDF/CSV (JGK-R03). Le PDF s'ouvre dans la modale d'aperçu partagée (pdf-preview.js) —
+         * l'utilisateur imprime ou télécharge depuis l'en-tête. Le CSV, non prévisualisable, se
+         * récupère en blob authentifié (l'API exige le jeton en en-tête). Les filtres de période et de
+         * classe actifs à l'écran sont conservés.
          */
         async exportReport(format) {
             if (!this.startDate || !this.endDate || this.exporting) return;
+
+            const params = new URLSearchParams({ startDate: this.startDate, endDate: this.endDate, format });
+            if (this.classId) params.set('classId', this.classId);
+            const url = `/api/v1/reports/attendance/export?${params.toString()}`;
+
+            if (format === 'pdf') {
+                await this.openPdfPreview(url, "Rapport d'assiduité", `assiduite_${this.startDate}_${this.endDate}.pdf`);
+                return;
+            }
 
             this.exporting = true;
             this.error = null;
@@ -105,10 +120,7 @@ document.addEventListener('alpine:init', () => {
                     await window.api.refreshOrRedirect();
                 }
 
-                const params = new URLSearchParams({ startDate: this.startDate, endDate: this.endDate, format });
-                if (this.classId) params.set('classId', this.classId);
-
-                const response = await fetch(`/api/v1/reports/attendance/export?${params.toString()}`, {
+                const response = await fetch(url, {
                     headers: { Authorization: `Bearer ${window.auth.accessToken}` },
                     credentials: 'same-origin'
                 });
@@ -118,14 +130,14 @@ document.addEventListener('alpine:init', () => {
                 }
 
                 const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
+                const objectUrl = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.href = url;
+                link.href = objectUrl;
                 link.download = this.exportFileName(response, format);
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
-                URL.revokeObjectURL(url);
+                URL.revokeObjectURL(objectUrl);
             } catch (err) {
                 this.error = window.api.toMessage(err, "Erreur lors de l'export du rapport.");
             } finally {

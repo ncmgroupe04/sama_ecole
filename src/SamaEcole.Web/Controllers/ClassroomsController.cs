@@ -102,6 +102,10 @@ public class ClassroomsController(ISender mediator) : ControllerBase
             .ContinueWith(t => t.Result?.FirstOrDefault(y => y.IsActive)?.Id ?? Guid.Empty);
         
         var pdfBytes = await mediator.Send(new GetSchoolCardsPdfQuery(id, targetYearId), cancellationToken);
-        return File(pdfBytes, "application/pdf", $"Cartes_Scolaires_{id}.pdf");
+
+        // `inline` (et non `attachment`) + type MIME explicite : le PDF s'ouvre dans la modale
+        // d'aperçu partagée (_PdfPreviewModal) avant tout téléchargement — jamais un download forcé.
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"Cartes_Scolaires_{id}.pdf\"";
+        return File(pdfBytes, "application/pdf");
     }
 }

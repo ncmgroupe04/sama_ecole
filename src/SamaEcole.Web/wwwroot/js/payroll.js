@@ -8,6 +8,11 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('payrollView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : bulletin de paie, attestation de travail et
+        // fiche d'heures s'ouvrent dans la modale _PdfPreviewModal (impression / téléchargement au
+        // choix), jamais un download forcé.
+        ...window.pdfPreview.state(),
+
         tab: 'contrats',
         isLoading: false,
         error: null,
@@ -355,7 +360,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Bulletin PDF : le jeton ne voyage pas en navigation classique — fetch brut + blob (même mécanique que Billets/Caisse). */
+        /** Bulletin PDF ouvert dans la modale d'aperçu partagée (pdf-preview.js) : impression / téléchargement au choix. */
         async printPayslip(fichePaieId) {
             if (!fichePaieId || fichePaieId === 'undefined') {
                 console.error('Identifiant de fiche de paie invalide ou indéfini', fichePaieId);
@@ -363,30 +368,17 @@ document.addEventListener('alpine:init', () => {
             }
             this.printingPayslipId = fichePaieId;
             try {
-                const response = await fetch(`/api/v1/finance/payroll/${fichePaieId}/pdf`, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
-                });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Bulletin-${fichePaieId}.pdf`;
-                    link.click();
-                }
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (err) {
-                toast.error(window.api.toMessage(err, 'Erreur lors de la génération du bulletin.'));
+                await this.openPdfPreview(
+                    `/api/v1/finance/payroll/${fichePaieId}/pdf`,
+                    'Bulletin de paie',
+                    `Bulletin-${fichePaieId}.pdf`
+                );
             } finally {
                 this.printingPayslipId = null;
             }
         },
 
-        /** Attestation de travail PDF — même mécanique que printPayslip (fetch brut + blob, nouvel onglet). */
+        /** Attestation de travail PDF — ouverte dans la modale d'aperçu partagée (même mécanique que printPayslip). */
         async downloadWorkCertificate(contract) {
             if (!contract || !contract.id || contract.id === 'undefined') {
                 console.error('Identifiant de contrat invalide ou indéfini', contract && contract.id);
@@ -394,24 +386,11 @@ document.addEventListener('alpine:init', () => {
             }
             this.downloadingCertificateId = contract.id;
             try {
-                const response = await fetch(`/api/v1/finance/employee-contracts/${contract.id}/work-certificate/pdf`, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
-                });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Attestation-Travail-${contract.employeeFullName}.pdf`;
-                    link.click();
-                }
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (err) {
-                toast.error(window.api.toMessage(err, "Erreur lors de la génération de l'attestation."));
+                await this.openPdfPreview(
+                    `/api/v1/finance/employee-contracts/${contract.id}/work-certificate/pdf`,
+                    'Attestation de travail',
+                    `Attestation-Travail-${contract.employeeFullName}.pdf`
+                );
             } finally {
                 this.downloadingCertificateId = null;
             }
@@ -460,30 +439,17 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Fiche heures PDF du mois/année sélectionné — même mécanique que printPayslip. */
+        /** Fiche heures PDF du mois/année sélectionné — ouverte dans la modale d'aperçu partagée. */
         async previewHourRecordSheet() {
             if (!this.hourRecordsContract) return;
             this.downloadingHourRecordSheet = true;
             try {
                 const params = new URLSearchParams({ month: this.hourRecordsFilter.month, year: this.hourRecordsFilter.year });
-                const response = await fetch(
+                await this.openPdfPreview(
                     `/api/v1/finance/employee-contracts/${this.hourRecordsContract.id}/hour-records/sheet/pdf?${params.toString()}`,
-                    { headers: { Authorization: `Bearer ${window.auth.accessToken}` } });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Fiche-Heures-${this.hourRecordsContract.employeeFullName}.pdf`;
-                    link.click();
-                }
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (err) {
-                toast.error(window.api.toMessage(err, 'Erreur lors de la génération de la fiche.'));
+                    "Fiche d'heures — Vacataire",
+                    `Fiche-Heures-${this.hourRecordsContract.employeeFullName}.pdf`
+                );
             } finally {
                 this.downloadingHourRecordSheet = false;
             }

@@ -57,8 +57,11 @@ public class ReportsController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(query, cancellationToken);
 
-        // FileStreamResult : le contenu est déjà en mémoire, on l'enveloppe dans un flux pour un
-        // téléchargement nommé avec le bon type MIME (application/pdf ou text/csv).
-        return File(new MemoryStream(result.Content), result.ContentType, result.FileName);
+        // Le PDF est servi `inline` : il s'ouvre dans la modale d'aperçu partagée (_PdfPreviewModal),
+        // d'où l'utilisateur imprime ou télécharge. Le CSV, qui ne se prévisualise pas, reste en
+        // `attachment`. Les deux gardent un `filename` (repris par le front pour nommer le fichier).
+        var disposition = result.ContentType == "application/pdf" ? "inline" : "attachment";
+        Response.Headers["Content-Disposition"] = $"{disposition}; filename=\"{result.FileName}\"";
+        return File(new MemoryStream(result.Content), result.ContentType);
     }
 }

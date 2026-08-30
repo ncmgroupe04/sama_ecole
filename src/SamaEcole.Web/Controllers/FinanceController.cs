@@ -374,7 +374,11 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     public async Task<IActionResult> GetClosingReportPdf(Guid id, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetDailyClosingReportPdfQuery(id), cancellationToken);
-        return File(result.Content, "application/pdf", result.FileName);
+
+        // `inline` : le rapport de clôture s'ouvre dans la modale d'aperçu (impression/téléchargement
+        // au choix depuis l'en-tête), au lieu d'atterrir directement dans les téléchargements.
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+        return File(result.Content, "application/pdf");
     }
 
     // ------------------------------------------------------------------ Module Comptabilité & Fiscalité (JGK)

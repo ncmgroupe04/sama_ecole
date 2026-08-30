@@ -232,6 +232,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> GetCandidateFormPdf(Guid id, CancellationToken cancellationToken)
     {
         var pdf = await mediator.Send(new GetExamCandidateFormPdfQuery(id), cancellationToken);
+        Response.Headers["Content-Disposition"] = "inline; filename=\"Fiche-Candidature.pdf\"";
         return File(pdf, "application/pdf");
     }
 
@@ -243,6 +244,7 @@ public class ExamsController(ISender mediator) : ControllerBase
         [FromBody] GetExamCandidateFormsBatchPdfQuery query, CancellationToken cancellationToken)
     {
         var pdf = await mediator.Send(query, cancellationToken);
+        Response.Headers["Content-Disposition"] = "inline; filename=\"Fiches-Candidature.pdf\"";
         return File(pdf, "application/pdf");
     }
 
@@ -254,6 +256,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> GetConvocationPdf(Guid id, CancellationToken cancellationToken)
     {
         var pdf = await mediator.Send(new GetExamConvocationPdfQuery(id), cancellationToken);
+        Response.Headers["Content-Disposition"] = "inline; filename=\"Convocation.pdf\"";
         return File(pdf, "application/pdf");
     }
 
