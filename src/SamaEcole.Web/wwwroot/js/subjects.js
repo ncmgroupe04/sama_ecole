@@ -117,6 +117,22 @@ document.addEventListener('alpine:init', () => {
         headerDraft: { column1Header: '', column2Header: '' },
         isSavingHeaders: false,
 
+        // ── Drag & drop de la structure d'évaluation (poignée GripVertical, remplace les flèches ↑/↓) ──
+        // Périmètre du glissement en cours : 'groups' pour la liste des domaines, ou l'id du domaine
+        // pour la liste de ses activités. On refuse de déposer une activité dans la liste des
+        // domaines (ou l'inverse) : la fratrie de départ et celle d'arrivée doivent coïncider.
+        dragScope: null,
+        dragIndex: null,
+        dragOverIndex: null,
+
+        // ── Sections rétractables (Collapsible) ──
+        // Vue « Matières » : catégories repliées (clé = nom de catégorie) + bloc « Autres matières ».
+        // Vue « Structure » : domaines repliés (clé = id du domaine). Objets simples pour rester
+        // réactifs sous Alpine ; l'état de dépli n'est pas persisté (confort de session).
+        collapsedCategories: {},
+        otherCollapsed: false,
+        collapsedNodes: {},
+
         // Confirmation « Matière ajoutée » affichée après un enregistrement réussi.
         showAddedDialog: false,
         addedSubjectName: '',
@@ -306,20 +322,22 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Réordonne une fratrie (les domaines d'un niveau, ou les activités d'un domaine) d'un cran.
+         * Réordonne une fratrie (les domaines d'un niveau, ou les activités d'un domaine) en
+         * déplaçant l'élément `fromIndex` à la position `toIndex`.
          *
          * Les rangs sont RENUMÉROTÉS de 1 à n après le déplacement, plutôt qu'échangés deux à deux :
          * une grille dont toutes les lignes sont encore à 0 (le cas de toute matière antérieure à cette
          * option) n'a aucun rang à échanger, et un simple échange n'y produirait aucun mouvement visible.
          * Seules les lignes dont le rang change réellement sont enregistrées.
          */
-        async moveSubject(siblings, index, direction) {
-            const target = index + direction;
-            if (this.isReordering || target < 0 || target >= siblings.length) return;
+        async applyReorder(siblings, fromIndex, toIndex) {
+            if (this.isReordering || fromIndex === toIndex
+                || fromIndex < 0 || toIndex < 0
+                || fromIndex >= siblings.length || toIndex >= siblings.length) return;
 
             const ordered = siblings.slice();
-            const [moved] = ordered.splice(index, 1);
-            ordered.splice(target, 0, moved);
+            const [moved] = ordered.splice(fromIndex, 1);
+            ordered.splice(toIndex, 0, moved);
 
             this.isReordering = true;
             this.structureError = null;
@@ -334,7 +352,60 @@ document.addEventListener('alpine:init', () => {
                 await this.loadSubjects();
             } finally {
                 this.isReordering = false;
+                this.endStructureDrag();
             }
+        },
+
+        // ─── Glisser-déposer à la souris (poignée GripVertical) ───
+
+        /** Amorce le glissement d'un domaine ('groups') ou d'une activité (id du domaine parent). */
+        startStructureDrag(scope, index, event) {
+            if (!this.canManageSubject || this.isReordering) return;
+            this.dragScope = scope;
+            this.dragIndex = index;
+            this.dragOverIndex = index;
+            if (event && event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                // Firefox n'amorce un glissement natif que si des données sont posées.
+                try { event.dataTransfer.setData('text/plain', String(index)); } catch (_) { /* noop */ }
+            }
+        },
+
+        /** Autorise le dépôt UNIQUEMENT dans la fratrie d'origine, et mémorise la cible survolée. */
+        onStructureDragOver(scope, index, event) {
+            if (this.dragScope === null || this.dragScope !== scope) return;
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+            this.dragOverIndex = index;
+        },
+
+        /** Dépose l'élément glissé à la position `index` de `siblings`, puis renumérote et enregistre. */
+        async dropStructure(scope, index, siblings) {
+            if (this.dragScope !== scope || this.dragIndex === null) { this.endStructureDrag(); return; }
+            const from = this.dragIndex;
+            this.endStructureDrag();
+            await this.applyReorder(siblings, from, index);
+        },
+
+        endStructureDrag() {
+            this.dragScope = null;
+            this.dragIndex = null;
+            this.dragOverIndex = null;
+        },
+
+        // ─── Sections rétractables ───
+
+        toggleCategory(key) {
+            this.collapsedCategories[key] = !this.collapsedCategories[key];
+        },
+        isCategoryCollapsed(key) {
+            return !!this.collapsedCategories[key];
+        },
+        toggleNode(id) {
+            this.collapsedNodes[id] = !this.collapsedNodes[id];
+        },
+        isNodeCollapsed(id) {
+            return !!this.collapsedNodes[id];
         },
 
         /** Enregistre les entêtes de colonnes du bulletin sur le premier domaine du niveau. */

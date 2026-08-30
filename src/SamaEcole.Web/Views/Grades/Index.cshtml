@@ -45,10 +45,10 @@
  <!-- Bulletins de toute la classe (JGK-G03) : classe + trimestre suffisent, indépendant de la
  matière sélectionnée pour la saisie — ouvert au Directeur, à l'Enseignant et au Secrétariat. -->
  <div x-show="canDownloadReportCard && hasClassAndTerm" x-cloak class="flex gap-2">
- <button type="button" x-on:click="downloadClassBulletinsMergedPdf()" :disabled="downloadingClassBulletins"
- class="btn-modal-secondary whitespace-nowrap text-sm group" title="Un seul PDF, une page par élève — pour l'impression en lot">
- <icon name="download" class="w-4 h-4" />
- <span x-text="downloadingClassBulletins ? 'Génération…' : 'Bulletins (PDF)'"></span>
+ <button type="button" x-on:click="previewClassBulletinsMergedPdf()" :disabled="downloadingClassBulletins"
+ class="btn-modal-secondary whitespace-nowrap text-sm group" title="Aperçu avant impression ou téléchargement — un seul PDF, une page par élève">
+ <icon name="eye" class="w-4 h-4" />
+ <span x-text="downloadingClassBulletins ? 'Génération…' : 'Aperçu bulletins'"></span>
  </button>
  <button type="button" x-on:click="downloadClassBulletinsZip()" :disabled="downloadingClassBulletins"
  class="btn-modal-secondary whitespace-nowrap text-sm group" title="Une archive ZIP, un fichier par élève — pour l'envoi ou la sauvegarde">
@@ -244,4 +244,6 @@
  </button>
  </div>
  </modal-shell>
+
+ @await Html.PartialAsync("_PdfPreviewModal")
 </div>

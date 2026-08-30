@@ -2,17 +2,27 @@
    Le composant Alpine hôte doit étaler `...window.pdfPreview.state()` dans son Alpine.data(). *@
 <modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
     <div class="space-y-4">
-        <!-- Bandeau d'astuce et ouverture rapide -->
-        <div x-show="pdfPreviewUrl" x-cloak class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-900 text-xs">
-            <div class="flex items-center gap-2 font-medium">
-                <icon name="document" class="w-4 h-4 text-indigo-600 shrink-0" />
-                <span>Astuce : si l'aperçu ne s'affiche pas correctement, ouvrez le document dans un nouvel onglet ou téléchargez-le.</span>
-            </div>
-            <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                <button type="button" x-on:click="openPdfInNewTab()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-2xs transition-colors flex items-center gap-1.5">
-                    <span>Ouvrir dans un nouvel onglet</span>
-                </button>
-            </div>
+        <!-- Barre d'actions de l'en-tête : impression, téléchargement et ouverture dans un onglet,
+             accessibles en permanence (elle reste collée en haut pendant le défilement de l'aperçu). -->
+        <div x-show="pdfPreviewUrl" x-cloak
+             class="sticky top-0 z-10 -mt-6 -mx-6 px-6 py-3 bg-white/95 backdrop-blur border-b border-slate-100 flex flex-wrap items-center justify-end gap-2">
+            <button type="button" x-on:click="openPdfInNewTab()" class="btn-modal-secondary text-xs group">
+                <span>Ouvrir dans un nouvel onglet</span>
+            </button>
+            <button type="button" x-on:click="downloadPreviewPdf()" class="btn-modal-secondary text-xs group">
+                <icon name="download" class="w-4 h-4" />
+                <span>Télécharger</span>
+            </button>
+            <button type="button" x-on:click="printPreviewPdf()" class="btn-modal-primary text-xs group">
+                <icon name="print" class="w-4 h-4" />
+                <span>Imprimer</span>
+            </button>
+        </div>
+
+        <!-- Bandeau d'astuce -->
+        <div x-show="pdfPreviewUrl" x-cloak class="flex items-center gap-2 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-900 text-xs font-medium">
+            <icon name="document" class="w-4 h-4 text-indigo-600 shrink-0" />
+            <span>Astuce : si l'aperçu ne s'affiche pas correctement, ouvrez le document dans un nouvel onglet ou téléchargez-le depuis les boutons ci-dessus.</span>
         </div>
 
         <!-- Chargement : récupération du document, ou moteur d'aperçu (PDF.js) encore en cours de chargement. -->
@@ -61,16 +71,8 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap justify-end gap-2 pt-2 border-t border-slate-100">
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <button type="button" x-on:click="closePdfPreview()" class="btn-modal-secondary group">Fermer</button>
-            <button type="button" x-show="pdfPreviewUrl" x-on:click="downloadPreviewPdf()" class="btn-modal-secondary group">
-                <icon name="download" class="w-4 h-4" />
-                <span>Télécharger</span>
-            </button>
-            <button type="button" x-show="pdfPreviewUrl" x-on:click="printPreviewPdf()" class="btn-modal-primary group">
-                <icon name="print" class="w-4 h-4" />
-                <span>Imprimer</span>
-            </button>
         </div>
     </div>
 </modal-shell>

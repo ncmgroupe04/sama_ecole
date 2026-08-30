@@ -10,6 +10,26 @@ window.closeAllModals = function() {
 };
 
 /**
+ * Placement intelligent (auto-flip) d'un menu flottant. Ouvre vers le BAS par défaut ; bascule vers
+ * le HAUT uniquement quand la place manque réellement dessous ET qu'il y en a davantage dessus.
+ * Partagé par selectField() (listes déroulantes — filtres Mois/Années, onglets…) et dateField()
+ * (calendrier) : un menu ouvert près du pli n'est plus tronqué ni caché sous la fenêtre.
+ *
+ * @param {Element} anchorEl Élément racine du composant (le déclencheur mesuré).
+ * @param {number} estimatedMenuHeight Hauteur approximative du menu, en pixels.
+ * @returns {'top'|'bottom'}
+ */
+window.computeFlipPlacement = function (anchorEl, estimatedMenuHeight) {
+    if (!anchorEl || typeof anchorEl.getBoundingClientRect !== 'function') return 'bottom';
+    const rect = anchorEl.getBoundingClientRect();
+    const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+    const spaceBelow = viewportH - rect.bottom;
+    const spaceAbove = rect.top;
+    const needed = estimatedMenuHeight || 288;
+    return (spaceBelow < needed && spaceAbove > spaceBelow) ? 'top' : 'bottom';
+};
+
+/**
  * Notifications éphémères (succès/erreur), référencées comme `toast.success(...)`/`toast.error(...)`
  * depuis discipline.js/billets.js/payroll.js — jusqu'ici jamais défini nulle part : chaque appel
  * levait une ReferenceError silencieuse, interrompant le script AVANT la fermeture du slide-over ou
@@ -64,6 +84,8 @@ document.addEventListener('alpine:init', () => {
      */
     Alpine.data('dateField', (initialIso) => ({
         open: false,
+        // Placement vertical du popover, recalculé à chaque ouverture (auto-flip haut/bas).
+        placement: 'bottom',
         viewYear: null,
         viewMonth: null,
         weekdayLabels: ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'],
@@ -91,8 +113,14 @@ document.addEventListener('alpine:init', () => {
         toggle(currentIso) {
             if (!this.open) {
                 this.setView(currentIso);
+                this.placement = window.computeFlipPlacement(this.$root, 380);
             }
             this.open = !this.open;
+        },
+
+        /** Classes de position du popover selon le placement calculé (auto-flip). */
+        get menuPlacementClass() {
+            return this.placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2';
         },
 
         get days() {
@@ -183,6 +211,9 @@ document.addEventListener('alpine:init', () => {
         open: false,
         search: '',
         options: [],
+        // Placement vertical du menu, recalculé à chaque ouverture (auto-flip haut/bas selon la
+        // place disponible dans le viewport).
+        placement: 'bottom',
 
         get filteredOptions() {
             const query = this.search.trim().toLowerCase();
@@ -190,9 +221,15 @@ document.addEventListener('alpine:init', () => {
             return this.options.filter((option) => option.label.toLowerCase().includes(query));
         },
 
+        /** Classes de position du menu selon le placement calculé (auto-flip). */
+        get menuPlacementClass() {
+            return this.placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2';
+        },
+
         toggle() {
             this.open = !this.open;
             if (this.open) {
+                this.placement = window.computeFlipPlacement(this.$root, 300);
                 this.search = '';
                 this.$nextTick(() => this.$refs.search?.focus());
             }

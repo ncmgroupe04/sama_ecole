@@ -30,6 +30,10 @@ const SIMPLIFIED_GRADING_CYCLES = ['Primaire', 'Maternelle'];
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('gradesView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : previewClassBulletinsMergedPdf() appelle
+        // openPdfPreview ; la vue monte la partial _PdfPreviewModal.
+        ...window.pdfPreview.state(),
+
         canEnterGrades: window.auth.role === 'Enseignant' || window.auth.role === 'Directeur',
         canCorrectGrades: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
@@ -253,7 +257,7 @@ document.addEventListener('alpine:init', () => {
 
         // ------------------------------------------------------------ Bulletins de classe (JGK-G03)
 
-        /** Fetch bas niveau partagé par le ZIP et le PDF fusionné : même mécanique que downloadReportCard (students.js). */
+        /** Fetch bas niveau des bulletins de classe (blob authentifié) — utilisé par le téléchargement ZIP. */
         async fetchClassBulletins(endpoint) {
             if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                 await window.api.refreshOrRedirect();
@@ -310,6 +314,30 @@ document.addEventListener('alpine:init', () => {
                 this.triggerDownload(blob, `Bulletins_${this.classNameFor(this.selectedClassroomId)}.pdf`);
             } catch (err) {
                 this.classBulletinsError = (err && err.message) || 'Téléchargement des bulletins impossible.';
+            } finally {
+                this.downloadingClassBulletins = false;
+            }
+        },
+
+        /**
+         * Aperçu des bulletins fusionnés (une page A5 par élève) dans la modale partagée : le
+         * Directeur/Enseignant/Secrétariat les vérifie AVANT impression ou téléchargement, tout
+         * depuis l'en-tête de la modale. Le ZIP et le PV restent en téléchargement direct (un ZIP
+         * ne se prévisualise pas, et le PV est un document unique déjà court).
+         */
+        async previewClassBulletinsMergedPdf() {
+            if (!this.hasClassAndTerm) return;
+            this.classBulletinsError = null;
+            this.downloadingClassBulletins = true;
+            try {
+                const className = this.classNameFor(this.selectedClassroomId);
+                await this.openPdfPreview(
+                    `/api/v1/report-cards/class-bulletins/merged-pdf?classroomId=${this.selectedClassroomId}&termId=${this.selectedTermId}`,
+                    `Bulletins — ${className}`,
+                    `Bulletins_${className}.pdf`
+                );
+            } catch (err) {
+                this.classBulletinsError = (err && err.message) || 'Aperçu des bulletins impossible.';
             } finally {
                 this.downloadingClassBulletins = false;
             }

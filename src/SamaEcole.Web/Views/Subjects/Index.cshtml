@@ -124,30 +124,37 @@
     défaut (Volume 5 §2.4) ; md:/xl: n'existent pas dans ce projet.
     ═══════════════════════════════════════════════════════════════════════════ *@
  <div x-show="viewMode === 'categories' && !isLoading && visibleSubjects.length > 0" x-cloak
-  class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6 items-stretch relative z-0">
+  class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6 items-start relative z-0">
   <template x-for="group in categoryGroups" :key="group.category">
-   <div class="bg-white rounded-2xl border border-slate-200/80 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg h-full flex flex-col overflow-hidden">
+   <div class="bg-white rounded-2xl border border-slate-200/80 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg flex flex-col overflow-hidden">
 
-    @* En-tête de catégorie *@
-    <div class="px-6 pt-5 pb-4 border-b border-slate-100 bg-gradient-to-r from-primary-50/40 to-transparent">
-     <div class="flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-       <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-100 text-primary-600">
+    @* En-tête de catégorie — cliquable : replie/déplie la liste (Collapsible) pour supprimer le
+       défilement infini quand beaucoup de catégories sont ouvertes en même temps. *@
+    <button type="button" x-on:click="toggleCategory(group.category)"
+     :aria-expanded="(!isCategoryCollapsed(group.category)).toString()"
+     class="w-full text-left px-6 pt-5 pb-4 border-b border-slate-100 bg-gradient-to-r from-primary-50/40 to-transparent hover:from-primary-50/80 transition-colors">
+     <span class="flex items-center justify-between gap-2">
+      <span class="flex items-center gap-2 min-w-0">
+       <icon name="chevron-down" class="w-4 h-4 text-primary-400 shrink-0 transition-transform duration-200"
+        x-bind:class="isCategoryCollapsed(group.category) ? '-rotate-90' : ''" />
+       <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-100 text-primary-600 shrink-0">
         <icon name="book" class="w-3.5 h-3.5" />
        </span>
-       <span class="text-sm font-bold text-primary-700 uppercase tracking-wide" x-text="group.category"></span>
-      </div>
+       <span class="text-sm font-bold text-primary-700 uppercase tracking-wide truncate" x-text="group.category"></span>
+      </span>
       <span x-show="group.subjects.length > 0" x-cloak
-       class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-50 text-xs font-semibold text-primary-700">
+       class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-50 text-xs font-semibold text-primary-700 shrink-0">
        Σ <span x-text="formatCoefficient(group.totalCoefficient)"></span>
       </span>
-     </div>
+     </span>
      <span class="text-xs text-slate-400 mt-1 block"
       x-text="group.subjects.length + (group.subjects.length > 1 ? ' matières' : ' matière')"></span>
-    </div>
+    </button>
 
     @* Liste des matières avec jauge de coefficient *@
-    <div class="divide-y divide-slate-50 flex-1 px-2">
+    <div x-show="!isCategoryCollapsed(group.category)"
+     x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+     class="divide-y divide-slate-50 flex-1 px-2">
      <template x-for="(subject, index) in group.subjects" :key="subject.id || index">
       <div class="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50/80 transition-all duration-200">
        @* Infos de la matière *@
@@ -200,14 +207,21 @@
     ═══════════════════════════════════════════════════════════════════════════ *@
  <div x-show="viewMode === 'categories' && !isLoading && otherSubjects.length > 0" x-cloak class="mt-6">
   <div class="bg-white rounded-2xl border border-slate-200/80 transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg overflow-hidden">
-   <div class="flex items-center justify-between gap-3 px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100">
-    <div class="flex items-baseline gap-2.5 min-w-0">
+   <button type="button" x-on:click="otherCollapsed = !otherCollapsed"
+    :aria-expanded="(!otherCollapsed).toString()"
+    class="w-full text-left flex items-center justify-between gap-3 px-6 py-4 bg-gradient-to-r from-slate-50 to-transparent border-b border-slate-100 hover:from-slate-100 transition-colors">
+    <span class="flex items-baseline gap-2.5 min-w-0">
+     <icon name="chevron-down" class="w-4 h-4 text-slate-400 shrink-0 self-center transition-transform duration-200"
+      x-bind:class="otherCollapsed ? '-rotate-90' : ''" />
      <span class="text-sm font-bold text-slate-600 uppercase tracking-wide">Autres matières</span>
-     <span class="text-xs text-slate-400">— nom sans catégorie reconnue</span>
-    </div>
-   </div>
+     <span class="text-xs text-slate-400 truncate">— nom sans catégorie reconnue</span>
+    </span>
+    <span class="text-xs font-semibold text-slate-400 shrink-0" x-text="otherSubjects.length"></span>
+   </button>
 
-   <div class="divide-y divide-slate-50 px-2">
+   <div x-show="!otherCollapsed"
+    x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+    class="divide-y divide-slate-50 px-2">
     <template x-for="(subject, index) in otherSubjects" :key="subject.id || index">
      <div class="group flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50/80 transition-all duration-200">
       <div class="flex-1 min-w-0">
@@ -303,26 +317,36 @@
      </div>
     </div>
 
-    @* ── Les domaines et leurs activités ── *@
+    @* ── Les domaines et leurs activités ──
+       Réordonnancement à la SOURIS : on saisit la poignée GripVertical et on glisse la ligne à sa
+       place (plus de flèches ↑/↓). Le dépôt n'est accepté que dans la même fratrie — un domaine sur
+       la liste des domaines, une activité sur les activités de SON domaine.
+       Chaque domaine est repliable (Collapsible) : ses activités restent imbriquées dessous. *@
     <template x-for="(group, groupIndex) in structureGroups" :key="group.root.id">
-     <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden">
+     <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden transition-shadow"
+      x-on:dragover="onStructureDragOver('groups', groupIndex, $event)"
+      x-on:drop.prevent="dropStructure('groups', groupIndex, structureGroups.map(g => g.root))"
+      :class="dragScope === 'groups' && dragOverIndex === groupIndex && dragIndex !== groupIndex ? 'ring-2 ring-primary-400' : ''">
 
       @* Entête du domaine *@
-      <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-primary-50/40 to-transparent">
-       <div class="flex flex-col gap-0.5 shrink-0" x-show="canManageSubject">
-        <button type="button" title="Monter le domaine" aria-label="Monter le domaine"
-         x-on:click="moveSubject(structureGroups.map(g => g.root), groupIndex, -1)"
-         :disabled="groupIndex === 0 || isReordering"
-         class="p-0.5 rounded text-slate-400 hover:text-primary-600 disabled:opacity-30">
-         <icon name="arrow-up" class="w-4 h-4" />
-        </button>
-        <button type="button" title="Descendre le domaine" aria-label="Descendre le domaine"
-         x-on:click="moveSubject(structureGroups.map(g => g.root), groupIndex, 1)"
-         :disabled="groupIndex === structureGroups.length - 1 || isReordering"
-         class="p-0.5 rounded text-slate-400 hover:text-primary-600 disabled:opacity-30">
-         <icon name="arrow-down" class="w-4 h-4" />
-        </button>
-       </div>
+      <div class="flex items-center gap-2 px-4 sm:px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-primary-50/40 to-transparent"
+       :class="dragScope === 'groups' && dragIndex === groupIndex ? 'opacity-50' : ''">
+       <button type="button" x-show="canManageSubject" x-cloak draggable="true"
+        x-on:dragstart="startStructureDrag('groups', groupIndex, $event)"
+        x-on:dragend="endStructureDrag()"
+        :class="isReordering ? 'opacity-30 pointer-events-none' : ''"
+        title="Glisser pour réordonner le domaine" aria-label="Glisser pour réordonner le domaine"
+        class="shrink-0 -ml-1 p-1 rounded text-slate-300 hover:text-primary-600 hover:bg-primary-50 cursor-grab active:cursor-grabbing transition-colors">
+        <icon name="grip-vertical" class="w-4 h-4" />
+       </button>
+
+       <button type="button" x-on:click="toggleNode(group.root.id)"
+        :aria-expanded="(!isNodeCollapsed(group.root.id)).toString()"
+        x-show="group.children.length > 0"
+        class="shrink-0 p-1 rounded text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
+        <icon name="chevron-down" class="w-4 h-4 transition-transform duration-200"
+         x-bind:class="isNodeCollapsed(group.root.id) ? '-rotate-90' : ''" />
+       </button>
 
        <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
@@ -358,24 +382,27 @@
        </template>
       </div>
 
-      @* Activités du domaine *@
-      <div class="divide-y divide-slate-50 px-2">
+      @* Activités du domaine — IMBRIQUÉES sous leur matière d'origine : décalées vers la droite et
+         raccordées par un filet vertical. Repliables avec le domaine (x-show ci-dessus). *@
+      <div x-show="group.children.length === 0 || !isNodeCollapsed(group.root.id)"
+       x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+       class="divide-y divide-slate-50 pr-2 pl-4 sm:pl-8 ml-4 sm:ml-6 border-l-2 border-primary-100">
        <template x-for="(child, childIndex) in group.children" :key="child.id">
-        <div class="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-slate-50/80 transition-colors">
-         <div class="flex flex-col gap-0.5 shrink-0" x-show="canManageSubject">
-          <button type="button" title="Monter l'activité" aria-label="Monter l'activité"
-           x-on:click="moveSubject(group.children, childIndex, -1)"
-           :disabled="childIndex === 0 || isReordering"
-           class="p-0.5 rounded text-slate-400 hover:text-primary-600 disabled:opacity-30">
-           <icon name="arrow-up" class="w-3.5 h-3.5" />
-          </button>
-          <button type="button" title="Descendre l'activité" aria-label="Descendre l'activité"
-           x-on:click="moveSubject(group.children, childIndex, 1)"
-           :disabled="childIndex === group.children.length - 1 || isReordering"
-           class="p-0.5 rounded text-slate-400 hover:text-primary-600 disabled:opacity-30">
-           <icon name="arrow-down" class="w-3.5 h-3.5" />
-          </button>
-         </div>
+        <div class="flex items-center gap-2 px-2 py-2.5 rounded-xl hover:bg-slate-50/80 transition-colors"
+         x-on:dragover="onStructureDragOver(group.root.id, childIndex, $event)"
+         x-on:drop.prevent="dropStructure(group.root.id, childIndex, group.children)"
+         :class="{
+          'ring-2 ring-inset ring-primary-400': dragScope === group.root.id && dragOverIndex === childIndex && dragIndex !== childIndex,
+          'opacity-50': dragScope === group.root.id && dragIndex === childIndex
+         }">
+         <button type="button" x-show="canManageSubject" x-cloak draggable="true"
+          x-on:dragstart="startStructureDrag(group.root.id, childIndex, $event)"
+          x-on:dragend="endStructureDrag()"
+          :class="isReordering ? 'opacity-30 pointer-events-none' : ''"
+          title="Glisser pour réordonner l'activité" aria-label="Glisser pour réordonner l'activité"
+          class="shrink-0 p-0.5 rounded text-slate-300 hover:text-primary-600 hover:bg-primary-50 cursor-grab active:cursor-grabbing transition-colors">
+          <icon name="grip-vertical" class="w-3.5 h-3.5" />
+         </button>
 
          <span aria-hidden="true" class="w-1.5 h-1.5 rounded-full bg-primary-400 shrink-0"></span>
          <span class="flex-1 min-w-0 text-sm text-slate-700 break-words" x-text="child.name"></span>
@@ -397,7 +424,7 @@
         </div>
        </template>
 
-       <p x-show="group.children.length === 0" x-cloak class="py-4 px-4 text-xs text-slate-400">
+       <p x-show="group.children.length === 0" x-cloak class="py-4 px-2 text-xs text-slate-400">
         Aucune activité — ajoutez « Ressources » et « Compétences », ou laissez la matière telle quelle.
        </p>
       </div>

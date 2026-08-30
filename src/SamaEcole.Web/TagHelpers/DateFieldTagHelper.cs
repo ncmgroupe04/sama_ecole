@@ -99,7 +99,8 @@ public class DateFieldTagHelper : TagHelper
 
                 <div x-show="open" x-cloak x-on:click.outside="open = false" x-on:keydown.escape="open = false"
                      x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                     class="absolute z-30 mt-2 w-[300px] rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100">
+                     :class="menuPlacementClass"
+                     class="absolute z-30 w-[300px] rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100">
                     <div class="flex items-center justify-between gap-1 pb-3 mb-2 border-b border-gray-100">
                         <button type="button" x-on:click="prevMonth()" aria-label="Mois précédent"
                                 class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors shrink-0">

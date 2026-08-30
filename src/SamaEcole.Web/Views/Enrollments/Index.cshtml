@@ -335,10 +335,12 @@
  <!-- ============================= REÇU ============================= -->
  <div x-show="showReceipt" x-cloak class="mt-6">
 
- <!-- Barre d'actions (non imprimée) -->
- <div class="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
- <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
- <span class="flex items-center gap-2 text-success">
+ <!-- Barre d'actions (non imprimée) : statut à gauche, actions alignées sur UNE seule ligne
+      horizontale à droite (flex-row / items-center) — défilement horizontal en dernier recours
+      sur écran très étroit plutôt que retour à la ligne. -->
+ <div class="no-print flex flex-row items-center justify-between gap-4 mb-4">
+ <div class="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+ <span class="flex items-center gap-2 text-success shrink-0">
  <icon name="checkmark-circle" class="w-6 h-6" />
  <span class="text-sm font-medium">Inscription enregistrée.</span>
  </span>
@@ -352,22 +354,22 @@
  class="rounded-full border border-warning bg-warning-bg px-2.5 py-0.5 text-xs font-medium text-warning"
  x-text="'Débordement : ' + Math.abs(receiptFitMm).toFixed(1) + ' mm — le bas sera rogné à l\'impression'"></span>
  </div>
- <div class="flex flex-wrap items-center gap-2">
- <button type="button" x-on:click="closeReceipt()" class="btn-modal-secondary group">
- Retour (Fermer)
+ <div class="flex flex-row flex-nowrap items-center justify-end gap-2 overflow-x-auto">
+ <button type="button" x-on:click="closeReceipt()" class="btn-modal-secondary group shrink-0">
+ Retour
  </button>
- <button type="button" x-on:click="startNewEnrollment()" class="btn-modal-secondary group">
+ <button type="button" x-on:click="startNewEnrollment()" class="btn-modal-secondary group shrink-0">
  Nouvelle inscription
  </button>
- <button type="button" x-on:click="downloadPdf()" class="btn-modal-secondary group">
+ <button type="button" x-on:click="downloadPdf()" class="btn-modal-secondary group shrink-0">
  <icon name="document-text" class="w-5 h-5 text-indigo-600" />
- Aperçu Attestation (PDF)
+ Attestation
  </button>
- <button type="button" x-on:click="downloadCertificatePdf()" class="btn-modal-secondary group">
+ <button type="button" x-on:click="downloadCertificatePdf()" class="btn-modal-secondary group shrink-0">
  <icon name="document-text" class="w-5 h-5 text-primary" />
- Certificat de Scolarité (PDF)
+ Certificat
  </button>
- <button type="button" x-on:click="printReceipt()" class="btn-modal-primary group">
+ <button type="button" x-on:click="printReceipt()" class="btn-modal-primary group shrink-0">
  <icon name="print" class="w-5 h-5" />
  Imprimer
  </button>

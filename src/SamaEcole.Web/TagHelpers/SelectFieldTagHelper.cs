@@ -126,7 +126,8 @@ public class SelectFieldTagHelper : TagHelper
 
                 <div x-show="open" x-cloak x-on:click.outside="close()" x-on:keydown.escape="close()"
                      x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                     class="absolute z-30 mt-2 w-full rounded-lg bg-white p-2 shadow-lg ring-1 ring-gray-100">
+                     :class="menuPlacementClass"
+                     class="absolute z-30 w-full rounded-lg bg-white p-2 shadow-lg ring-1 ring-gray-100">
                     <div class="relative mb-2">
                         <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3">
                             {{Svg("search", "w-4 h-4 text-gray-300")}}

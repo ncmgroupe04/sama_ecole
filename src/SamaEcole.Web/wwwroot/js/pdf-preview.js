@@ -90,7 +90,7 @@
      * Récupère le document et vérifie qu'il s'agit bien d'un PDF exploitable AVANT de le confier au
      * moteur de rendu — chaque vérification correspond à une panne réellement observée en production.
      */
-    async function fetchPdfBlob(url) {
+    async function fetchPdfBlob(url, requestInit) {
         if (!url || url.includes('undefined') || url.includes('null')) {
             throw new Error(`L'identifiant du document est invalide — l'aperçu ne peut pas être demandé (${url}).`);
         }
@@ -100,10 +100,18 @@
             await window.api.refreshOrRedirect();
         }
 
+        // requestInit permet un aperçu servi par une route POST à corps JSON (ex. bulletin de notes,
+        // POST /report-cards/generate) : method/body/headers viennent de l'appelant, l'en-tête
+        // Authorization reste géré ici.
         let response;
         try {
             response = await fetch(url, {
-                headers: { Authorization: `Bearer ${window.auth?.accessToken}` },
+                method: (requestInit && requestInit.method) || 'GET',
+                headers: {
+                    Authorization: `Bearer ${window.auth?.accessToken}`,
+                    ...(requestInit && requestInit.headers)
+                },
+                body: requestInit && requestInit.body,
                 credentials: 'same-origin'
             });
         } catch {
@@ -220,8 +228,8 @@
                  * l'utilisateur doit pouvoir lire la cause et cliquer « Réessayer » plutôt que de
                  * subir un clic sans effet.
                  */
-                async openPdfPreview(url, title, downloadName) {
-                    lastRequest = { url, title, downloadName };
+                async openPdfPreview(url, title, downloadName, requestInit) {
+                    lastRequest = { url, title, downloadName, requestInit };
 
                     // Un aperçu PDF est presque toujours ouvert DEPUIS une autre modale (fiche élève,
                     // reçu, tableau des paiements) : sans cette fermeture, les deux `modal-shell`
@@ -244,7 +252,7 @@
                     this.$refs.pdfPages && (this.$refs.pdfPages.innerHTML = '');
 
                     try {
-                        blob = await fetchPdfBlob(url);
+                        blob = await fetchPdfBlob(url, requestInit);
                         this.pdfPreviewUrl = URL.createObjectURL(blob);
                     } catch (err) {
                         console.error('[pdf-preview] récupération du document :', err);
@@ -292,14 +300,14 @@
                 },
 
                 /** Alias historique — conservé pour ne pas toucher aux appelants existants. */
-                async openPdfModalWithBlob(url, title, downloadName) {
-                    await this.openPdfPreview(url, title, downloadName);
+                async openPdfModalWithBlob(url, title, downloadName, requestInit) {
+                    await this.openPdfPreview(url, title, downloadName, requestInit);
                 },
 
                 /** Rejoue la dernière demande (bouton « Réessayer »). */
                 async retryPdfPreview() {
                     if (!lastRequest) return;
-                    await this.openPdfPreview(lastRequest.url, lastRequest.title, lastRequest.downloadName);
+                    await this.openPdfPreview(lastRequest.url, lastRequest.title, lastRequest.downloadName, lastRequest.requestInit);
                 },
 
                 // ------------------------------------------------------------------------ rendu
