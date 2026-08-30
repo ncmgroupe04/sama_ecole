@@ -71,6 +71,25 @@ document.addEventListener('alpine:init', () => {
         { value: 'false', label: 'Non conforme' }
     ];
 
+    // État DÉTAILLÉ de la pièce d'état civil (Volume 1 §23.4, Module M). Complète — sans le remplacer —
+    // le tri-état de conformité ci-dessus. « En régularisation » (fourni, non conforme, jugement
+    // supplétif en cours) est le cas le plus fréquent au Sénégal et la raison d'être du champ.
+    const CIVIL_REGISTRY_STATUS_LABELS = {
+        NonFourni: 'Non fourni',
+        Fourni: 'Fourni',
+        Conforme: 'Conforme',
+        NonConforme: 'Non conforme',
+        EnRegularisation: 'En régularisation'
+    };
+
+    const CIVIL_REGISTRY_STATUS_OPTIONS = [
+        { value: 'NonFourni', label: 'Non fourni' },
+        { value: 'Fourni', label: 'Fourni' },
+        { value: 'Conforme', label: 'Conforme' },
+        { value: 'NonConforme', label: 'Non conforme' },
+        { value: 'EnRegularisation', label: 'En régularisation (jugement supplétif en cours)' }
+    ];
+
     Alpine.data('examsView', () => ({
         ...window.pdfPreview.state(),
 
@@ -110,6 +129,17 @@ document.addEventListener('alpine:init', () => {
             if (value === true) return 'success';
             if (value === false) return 'danger';
             return 'neutral';
+        },
+
+        civilRegistryStatusOptions: CIVIL_REGISTRY_STATUS_OPTIONS,
+        civilRegistryStatusLabel(value) { return CIVIL_REGISTRY_STATUS_LABELS[value] || value || '—'; },
+        civilRegistryStatusVariant(value) {
+            switch (value) {
+                case 'Conforme': return 'success';
+                case 'NonConforme': return 'danger';
+                case 'EnRegularisation': return 'warning';
+                default: return 'neutral'; // NonFourni, Fourni
+            }
         },
 
         // ---------------------------------------------------------------- Données de référence
@@ -548,6 +578,7 @@ document.addEventListener('alpine:init', () => {
                     birthCertificatePresent: detail.birthCertificatePresent,
                     civilStatusConforming: detail.civilStatusConforming === null || detail.civilStatusConforming === undefined
                         ? '' : String(detail.civilStatusConforming),
+                    civilRegistryDocumentStatus: detail.civilRegistryDocumentStatus || 'NonFourni',
                     civilStatusNotes: detail.civilStatusNotes || '',
                     rowVersion: detail.rowVersion
                 };
@@ -570,6 +601,7 @@ document.addEventListener('alpine:init', () => {
                     birthCertificateNumber: this.editingDossier.birthCertificateNumber || null,
                     birthCertificatePresent: this.editingDossier.birthCertificatePresent,
                     civilStatusConforming: this.toNullableTriStateBool(this.editingDossier.civilStatusConforming),
+                    civilRegistryDocumentStatus: this.editingDossier.civilRegistryDocumentStatus || null,
                     civilStatusNotes: this.editingDossier.civilStatusNotes || null,
                     rowVersion: this.editingDossier.rowVersion
                 });
@@ -601,7 +633,12 @@ document.addEventListener('alpine:init', () => {
         openAssignCenter(dossier) {
             this.assigningDossier = {
                 id: dossier.id, currentCandidateNumber: dossier.candidateNumber || '',
-                examCenterName: dossier.examCenterName || '', candidateNumber: '', rowVersion: dossier.rowVersion
+                examCenterName: dossier.examCenterName || '',
+                // Code du centre et numéro de table (Volume 1 §23.4) : préremplis pour permettre la
+                // complétion progressive — un envoi à blanc ne les efface pas côté serveur.
+                examCenterCode: dossier.examCenterCode || '',
+                tableNumber: dossier.tableNumber || '',
+                candidateNumber: '', rowVersion: dossier.rowVersion
             };
             this.assignCenterErrors = {};
         },
@@ -615,6 +652,8 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.api.post(`/exams/dossiers/${this.assigningDossier.id}/assign-center`, {
                     examCenterName: this.assigningDossier.examCenterName || null,
+                    examCenterCode: this.assigningDossier.examCenterCode || null,
+                    tableNumber: this.assigningDossier.tableNumber || null,
                     candidateNumber: this.assigningDossier.candidateNumber || null,
                     rowVersion: this.assigningDossier.rowVersion
                 });

@@ -564,10 +564,19 @@
                     </stat-card>
                 </div>
 
-                <div class="text-sm space-y-1" x-show="detailDossier.birthCertificatePresent || detailDossier.civilStatusNotes || detailDossier.transmittedOn" x-cloak>
+                <div class="text-sm space-y-1"
+                     x-show="detailDossier.birthCertificatePresent || detailDossier.civilStatusNotes || detailDossier.transmittedOn
+                             || detailDossier.examCenterCode || detailDossier.tableNumber
+                             || (detailDossier.civilRegistryDocumentStatus && detailDossier.civilRegistryDocumentStatus !== 'NonFourni')" x-cloak>
                     <p class="text-slate-600" x-show="detailDossier.birthCertificatePresent" x-cloak><span class="font-medium text-slate-700">Extrait de naissance : </span>Présent
                         <span x-show="detailDossier.birthCertificateNumber" x-cloak> — n° <span x-text="detailDossier.birthCertificateNumber"></span></span>
                     </p>
+                    <p class="text-slate-600" x-show="detailDossier.civilRegistryDocumentStatus && detailDossier.civilRegistryDocumentStatus !== 'NonFourni'" x-cloak>
+                        <span class="font-medium text-slate-700">Pièce d'état civil : </span>
+                        <badge :variant="civilRegistryStatusVariant(detailDossier.civilRegistryDocumentStatus)"><span x-text="civilRegistryStatusLabel(detailDossier.civilRegistryDocumentStatus)"></span></badge>
+                    </p>
+                    <p class="text-slate-600" x-show="detailDossier.examCenterCode" x-cloak><span class="font-medium text-slate-700">Code du centre : </span><span x-text="detailDossier.examCenterCode"></span></p>
+                    <p class="text-slate-600" x-show="detailDossier.tableNumber" x-cloak><span class="font-medium text-slate-700">Numéro de table : </span><span x-text="detailDossier.tableNumber"></span></p>
                     <p class="text-slate-600" x-show="detailDossier.civilStatusNotes" x-cloak><span class="font-medium text-slate-700">Notes : </span><span x-text="detailDossier.civilStatusNotes"></span></p>
                     <p class="text-slate-600" x-show="detailDossier.transmittedOn" x-cloak><span class="font-medium text-slate-700">Transmis le : </span><span x-text="formatDate(detailDossier.transmittedOn)"></span></p>
                 </div>
@@ -584,12 +593,13 @@
 
                 @* Pièces manquantes isolées dans un encadré d'alerte, en bas de la modale (mt-auto :
                    collé au pied même quand le reste du contenu est court). *@
-                <div x-show="!detailDossier.birthCertificatePresent || detailDossier.civilStatusConforming === false" x-cloak
+                <div x-show="!detailDossier.birthCertificatePresent || detailDossier.civilStatusConforming === false || detailDossier.civilRegistryDocumentStatus === 'EnRegularisation'" x-cloak
                      class="mt-auto rounded-xl border-l-4 border-danger bg-danger-bg p-4 text-sm text-danger">
                     <p class="font-semibold">Pièces / contrôles manquants</p>
                     <ul class="mt-1 list-disc list-inside space-y-0.5">
                         <li x-show="!detailDossier.birthCertificatePresent" x-cloak>Extrait de naissance : manquant</li>
                         <li x-show="detailDossier.civilStatusConforming === false" x-cloak>État civil : non conforme</li>
+                        <li x-show="detailDossier.civilRegistryDocumentStatus === 'EnRegularisation'" x-cloak>État civil : régularisation en cours (jugement supplétif)</li>
                     </ul>
                 </div>
             </div>
@@ -622,6 +632,15 @@
                 <select-field model="editingDossier.civilStatusConforming" aria-label="Conformité de l'état civil" options-expr="civilStatusOptions" />
             </div>
             <div>
+                <label class="form-label">Pièce d'état civil — statut détaillé</label>
+                <select-field model="editingDossier.civilRegistryDocumentStatus" aria-label="Statut détaillé de la pièce d'état civil"
+                              options-expr="civilRegistryStatusOptions" />
+                <p class="mt-1 text-xs text-slate-400">
+                    « En régularisation » = extrait fourni, non conforme, jugement supplétif en cours au tribunal.
+                    Complète la conformité ci-dessus pour l'IEF, sans la remplacer.
+                </p>
+            </div>
+            <div>
                 <label class="form-label">Notes</label>
                 <textarea x-model="editingDossier.civilStatusNotes" rows="2" maxlength="500" class="input-field"></textarea>
             </div>
@@ -644,6 +663,27 @@
                        placeholder="Vide = hérite du centre par défaut de la session" class="input-field"
                        :class="assignCenterErrors.examcentername && 'input-field-error'">
             </div>
+
+            @* Carte scolaire (Volume 1 §23.4) : le CODE du centre (distinct du nom, c'est lui que le
+               ministère utilise) et le NUMÉRO DE TABLE (place en salle, distinct du n° de candidat).
+               Souvent inconnus à la première affectation : laissés vides, ils ne sont pas effacés. *@
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Code du centre</label>
+                    <input type="text" x-model="assigningDossier.examCenterCode" maxlength="30"
+                           placeholder="Code officiel communiqué par l'IA" class="input-field"
+                           :class="assignCenterErrors.examcentercode && 'input-field-error'">
+                    <p x-show="assignCenterErrors.examcentercode" x-cloak x-text="assignCenterErrors.examcentercode" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label">Numéro de table</label>
+                    <input type="text" x-model="assigningDossier.tableNumber" maxlength="20"
+                           placeholder="Place en salle" class="input-field"
+                           :class="assignCenterErrors.tablenumber && 'input-field-error'">
+                    <p x-show="assignCenterErrors.tablenumber" x-cloak x-text="assignCenterErrors.tablenumber" class="field-error"></p>
+                </div>
+            </div>
+
             <div>
                 <label class="form-label">Numéro de candidat</label>
                 <input type="text" x-model="assigningDossier.candidateNumber" maxlength="30"
