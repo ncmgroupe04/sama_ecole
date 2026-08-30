@@ -796,6 +796,74 @@
                         "Exportez et archivez le rapport financier à chaque fin de trimestre : c'est la photographie de l'exercice à cette date."
                     ]
                 },
+
+                {
+                    id: 'rapport-assiduite-detaille',
+                    title: "Rapport d'assiduité détaillé",
+                    location: 'Gestion Scolaire › Rapports',
+                    href: '/rapports/assiduite',
+                    roles: ['Directeur', 'Secrétariat', 'SuperAdmin'],
+                    definition:
+                        "Consolidation, sur une période choisie, de tous les appels soumis par les " +
+                        "enseignants : taux de présence par classe, liste des élèves les plus absents, " +
+                        "et détail exportable par élève.",
+                    objectif:
+                        "Détecter un décrochage naissant AVANT qu'il ne devienne irréversible, en rendant " +
+                        "visible, classe par classe, ce qui reste invisible dans un cahier d'appel " +
+                        "consulté séance après séance.",
+                    probleme:
+                        "Un absentéisme qui s'installe progressivement — un jour par-ci, un retard par-là " +
+                        "— échappe à l'observation au fil de l'eau ; il ne se voit qu'une fois consolidé " +
+                        "sur plusieurs semaines, et c'est précisément ce que fait ce rapport.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Rapports et choisissez la période à analyser.",
+                        "Sélectionnez, si besoin, une classe précise pour affiner la lecture.",
+                        "Consultez le taux de présence par classe et la liste des élèves les plus concernés par l'absentéisme.",
+                        "Exportez le détail pour le transmettre au conseil de classe ou l'annexer à un dossier de convocation."
+                    ],
+                    impacts: [
+                        "Appel en classe : ce rapport ne fait que consolider les appels déjà soumis — un créneau non appelé n'y figure pas.",
+                        "Convocations : un élève identifié ici comme fortement absentéiste est un candidat naturel à une convocation de parent."
+                    ],
+                    recommandations: [
+                        "Consultez ce rapport à échéance régulière — chaque fin de mois, par exemple — plutôt qu'au moment du conseil de classe uniquement, où il est déjà tard pour agir.",
+                        "Un taux de présence anormalement bas sur UNE seule classe trahit parfois un problème d'appel non fait, plus qu'un absentéisme réel — vérifiez avant d'alerter."
+                    ]
+                },
+                {
+                    id: 'rapport-financiers-export',
+                    title: 'Rapports financiers et export comptable',
+                    location: 'Comptabilité › Rapports financiers',
+                    href: '/rapports/financiers',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Consolidation avancée des recettes de l'établissement — ventilée par cycle, par " +
+                        "classe et par mode de paiement — doublée d'un état de l'ancienneté des créances " +
+                        "(débiteurs par tranche de retard). Réservé aux formules Standard et Premium.",
+                    objectif:
+                        "Fournir au comptable de l'établissement et au conseil d'administration un état " +
+                        "des recettes détaillé et exportable, sans reconstitution manuelle à partir des " +
+                        "reçus de caisse.",
+                    probleme:
+                        "Sans consolidation avancée, produire un état des recettes présentable à un conseil " +
+                        "d'administration suppose de ressaisir, dans un tableur externe, des données déjà " +
+                        "présentes dans l'application — une double saisie, source d'écarts.",
+                    procedure: [
+                        "Ouvrez Comptabilité › Rapports financiers.",
+                        "Choisissez la période à consolider.",
+                        "Consultez la ventilation des recettes par cycle, par classe et par mode de paiement, ainsi que l'état de l'ancienneté des créances.",
+                        "Exportez l'état au format .xlsx : le fichier téléchargé porte EXACTEMENT les mêmes chiffres que l'écran, sur les mêmes bornes de période."
+                    ],
+                    impacts: [
+                        "Caisse : chaque encaissement validé au guichet alimente cette consolidation.",
+                        "Recouvrement : l'état de l'ancienneté des créances recoupe directement la liste des débiteurs du module Comptabilité.",
+                        "Trésorerie : le tableau de bord Trésorerie donne une lecture rapide des mêmes flux ; ce rapport en donne le détail exportable et ventilé."
+                    ],
+                    recommandations: [
+                        "Exportez et archivez ce rapport à chaque fin de trimestre : c'est la photographie de l'exercice à cette date, utile en cas de question a posteriori.",
+                        "Ce module dépend de la formule d'abonnement de l'établissement (Standard ou Premium) : un compte qui n'y accède pas n'a rien à corriger, c'est une question d'abonnement, pas de droit."
+                    ]
+                },
                 {
                     id: 'cloture-caisse',
                     title: 'Clôture de caisse et journée du secrétariat',
@@ -1065,13 +1133,16 @@
                     id: 'declarations-fiscales',
                     title: 'Déclarations fiscales mensuelles — IPRES, CSS, VRS, BRS',
                     location: 'Comptabilité › Paie',
-                    href: '/paie',
+                    href: '/fiscalite',
                     roles: ['Directeur', 'Finance'],
                     definition:
                         "La déclaration fiscale consolide, pour un mois donné, les charges sociales et fiscales dues à " +
                         "l'État sur l'ensemble des fiches de paie déjà générées : cotisations de retraite (IPRES), de " +
-                        "sécurité sociale (CSS), et les prélèvements VRS et BRS. Elle en totalise le montant global dû à " +
-                        "l'État pour ce mois.",
+                        "sécurité sociale (CSS), et les prélèvements VRS et BRS. Le même document y ajoute la TVA de la " +
+                        "période — collectée, déductible et nette — de sorte que la déclaration totalise en une seule " +
+                        "fois tout ce que l'établissement doit verser à l'État ce mois-là. L'écran dédié Fiscalité " +
+                        "(/fiscalite) l'affiche en cartes ; le même document reste consultable depuis l'onglet " +
+                        "Déclarations fiscales de Comptabilité › Paie.",
                     objectif:
                         "Éviter à l'établissement de reconstituer, fiche par fiche, ce qu'il doit verser à l'État chaque mois, " +
                         "et lui fournir un document unique, daté et vérifiable, à remettre en appui de sa déclaration " +
@@ -1083,7 +1154,7 @@
                         "déclaration devant l'administration fiscale.",
                     procedure: [
                         "Assurez-vous d'abord que TOUTES les fiches de paie du mois concerné sont générées : la déclaration n'agrège que ce qui existe déjà.",
-                        "Ouvrez Comptabilité › Paie, onglet Déclarations fiscales.",
+                        "Ouvrez Comptabilité › Fiscalité — ou, de façon équivalente, Comptabilité › Paie, onglet Déclarations fiscales.",
                         "Cliquez sur « Générer une déclaration », renseignez le mois et l'année, puis validez.",
                         "Consultez le détail par poste — IPRES, CSS, VRS, BRS — et le total dû à l'État qui en résulte.",
                         "Conservez ou transmettez ce récapitulatif pour la déclaration administrative effective auprès des organismes concernés."
@@ -1091,7 +1162,8 @@
                     impacts: [
                         "Fiches de paie : une fiche générée APRÈS la déclaration du mois n'y figure pas — régénérez la déclaration si une fiche a été ajoutée en retard.",
                         "Contrats : un contrat clôturé en cours de mois continue de peser sur la déclaration via les fiches déjà émises pour lui.",
-                        "Rapports financiers : les charges sociales consolidées éclairent la charge salariale totale de l'établissement."
+                        "Rapports financiers : les charges sociales consolidées éclairent la charge salariale totale de l'établissement.",
+                        "TVA : la déclaration reprend la TVA collectée et déductible de la période, déjà connue de la comptabilité de l'établissement — elle ne la recalcule pas."
                     ],
                     recommandations: [
                         "Générez la déclaration en tout dernier, une fois certain qu'aucune fiche de paie du mois ne reste à éditer.",
@@ -1381,7 +1453,407 @@
                     ]
                 }
             ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'inventaire',
+            number: 12,
+            title: 'Inventaire — Patrimoine, stock et prêts de matériel',
+            icon: 'archive',
+            summary: "Le registre des biens de l'établissement, son journal de mouvements et le suivi de ce qui est prêté.",
+            concept:
+                "Trois notions se succèdent et ne se recouvrent jamais. La CATÉGORIE et le BIEN décrivent " +
+                "le patrimoine — ce que l'établissement possède, par lot plutôt que par unité individuelle. " +
+                "Le MOUVEMENT DE STOCK est l'écriture qui fait varier une quantité : réception, sortie " +
+                "définitive, ajustement d'inventaire. Le PRÊT est un mouvement d'un genre différent — la " +
+                "quantité disponible baisse, mais le bien reste au patrimoine, car il doit revenir. Deux " +
+                "invariants tiennent tout le module : la quantité disponible d'un bien ne s'écrit JAMAIS " +
+                "directement, elle ne varie que dans la transaction d'un mouvement ; et le journal de stock " +
+                "est APPEND-ONLY — une erreur de saisie se corrige par un mouvement inverse, jamais par une " +
+                "modification ou une suppression de la ligne fautive.",
+            articles: [
+                {
+                    id: 'patrimoine-categories',
+                    title: 'Catégories et fiches de biens',
+                    location: 'Inventaire › Catalogue',
+                    href: '/inventaire',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Le catalogue organise le patrimoine de l'établissement en catégories — mobilier, " +
+                        "matériel pédagogique, informatique, manuels scolaires — et en biens, chacun décrit " +
+                        "par un état dominant (Neuf, Bon, À réparer, Hors service) et une quantité totale. Un " +
+                        "bien est un LOT, pas une unité individuelle numérotée : une école qui veut " +
+                        "distinguer 120 tables-bancs en bon état de 50 à réparer crée deux lots distincts.",
+                    objectif:
+                        "Disposer d'un inventaire fiable du patrimoine, opposable à un contrôle de l'IEF ou " +
+                        "à un inventaire de fin d'année, sans dépendre d'un cahier tenu à la main dans un " +
+                        "bureau. Pour la direction, c'est la base sur laquelle s'appuie tout arbitrage de " +
+                        "renouvellement ou de réparation.",
+                    probleme:
+                        "Sans catalogue centralisé, le patrimoine d'une école se reconstitue de mémoire à " +
+                        "chaque inventaire, les dotations reçues de l'État ou de la mairie ne sont tracées " +
+                        "nulle part, et un vol ou une perte de matériel passe inaperçu faute de référence à " +
+                        "laquelle le comparer.",
+                    procedure: [
+                        "Ouvrez Inventaire, puis créez d'abord les catégories dont l'établissement a besoin.",
+                        "Pour chaque catégorie, ajoutez les biens qu'elle regroupe : nom, état dominant et quantité totale de départ.",
+                        "Renseignez un état SINCÈRE — l'état réel du lot, pas l'état théorique du bien à l'achat.",
+                        "La quantité totale saisie ici est le POINT DE DÉPART du journal de stock : toute variation ultérieure passe exclusivement par un mouvement, jamais par une correction directe de cette fiche.",
+                        "Un bien devenu obsolète ou intégralement sorti est archivé, jamais supprimé : l'historique de ses mouvements reste consultable."
+                    ],
+                    impacts: [
+                        "Mouvements de stock : chaque bien créé ici devient une cible de mouvement — réception, sortie, ajustement.",
+                        "Prêts et attributions : seuls les biens du catalogue peuvent être prêtés à un bénéficiaire.",
+                        "Rapport d'inventaire : la synthèse PDF de fin d'année part de ce catalogue, catégorie par catégorie."
+                    ],
+                    recommandations: [
+                        "Créez les catégories avant les biens : un bien orphelin, sans catégorie, complique la lecture du rapport d'inventaire.",
+                        "Ne créez pas un lot par salle si l'établissement ne compte pas en assurer le suivi séparément — la granularité choisie ici engage le fonctionnement du module pour toute son existence.",
+                        "Un bien manifestement irréparable se marque « Hors service » plutôt que de rester « À réparer » indéfiniment : c'est cette distinction qui rend le rapport d'inventaire utile à la décision.",
+                        "Archivez plutôt que de supprimer : aucune donnée de gestion n'est physiquement effacée dans l'application."
+                    ]
+                },
+                {
+                    id: 'mouvements-stock',
+                    title: 'Journal de stock — entrées, sorties, ajustements',
+                    location: 'Inventaire › Mouvements',
+                    href: '/inventaire',
+                    roles: ['Directeur', 'Secrétariat', 'Surveillant'],
+                    definition:
+                        "Le journal de stock enregistre chaque variation de quantité d'un bien : ENTRÉE " +
+                        "(dotation, achat, don), SORTIE définitive (consommable distribué, transfert vers " +
+                        "un autre établissement), et AJUSTEMENT positif ou négatif (recomptage après " +
+                        "inventaire physique). Chaque ligne porte une quantité TOUJOURS positive — le sens " +
+                        "de la variation tient au type de mouvement, jamais au signe du nombre.",
+                    objectif:
+                        "Rendre la quantité disponible d'un bien à tout instant EXACTE et JUSTIFIABLE : " +
+                        "chaque variation porte une date, un auteur et un motif, de sorte qu'un contrôle " +
+                        "puisse remonter du chiffre affiché jusqu'à l'écriture qui l'explique.",
+                    probleme:
+                        "Une quantité modifiée directement sur la fiche d'un bien — « on avait 40 tables, " +
+                        "on en a compté 35, on corrige à 35 » — efface la trace de ce qui s'est réellement " +
+                        "passé : perte, vol, casse ou simple erreur de comptage initial se confondent en un " +
+                        "seul chiffre sans histoire, invérifiable un an plus tard.",
+                    procedure: [
+                        "Ouvrez Inventaire, onglet Mouvements, et sélectionnez le bien concerné.",
+                        "Choisissez le type de mouvement : Entrée, Sortie, Ajustement positif ou Ajustement négatif.",
+                        "Saisissez la quantité concernée — toujours un nombre positif, quel que soit le sens du mouvement — et un motif explicite.",
+                        "Validez. La quantité disponible du bien est mise à jour dans la même transaction que l'écriture du mouvement : aucun écart n'est possible entre le journal et le solde affiché.",
+                        "Une erreur de saisie NE SE CORRIGE PAS en modifiant la ligne : enregistrez un mouvement inverse qui compense l'écriture fautive, avec un motif qui le dit explicitement."
+                    ],
+                    impacts: [
+                        "Catalogue : la quantité disponible affichée sur la fiche d'un bien est un SOLDE calculé depuis ce journal, jamais une valeur saisie directement.",
+                        "Prêts : un prêt et son retour produisent chacun une écriture de ce même journal, avec un type dédié — le prêt ne baisse que la quantité disponible, jamais le total, car le bien reste au patrimoine.",
+                        "Rapport d'inventaire : la synthèse de fin d'année recoupe le total, le disponible et l'historique des mouvements de la période."
+                    ],
+                    recommandations: [
+                        "Motivez systématiquement un ajustement : un « Ajustement négatif » sans motif est aussi peu exploitable qu'une case vide.",
+                        "Ne cumulez pas plusieurs corrections dans un seul mouvement : une ligne, une cause.",
+                        "Faites un inventaire physique au moins une fois par an et enregistrez l'écart constaté par un ajustement — c'est ce recoupement régulier qui donne sa valeur au journal.",
+                        "Le rôle applicatif de la base de données n'a que lecture et écriture SEULE sur ce journal (append-only) : ne cherchez jamais à faire corriger une ligne en base par un tiers technique, la voie normale est le mouvement inverse."
+                    ]
+                },
+                {
+                    id: 'prets-attributions',
+                    title: 'Prêts et attributions de matériel',
+                    location: 'Inventaire › Prêts',
+                    href: '/inventaire',
+                    roles: ['Directeur', 'Secrétariat', 'Surveillant'],
+                    definition:
+                        "L'attribution est le prêt d'un bien à un bénéficiaire — un enseignant, une classe, " +
+                        "un membre du personnel — pour une durée déterminée ou indéterminée. Contrairement " +
+                        "à une sortie définitive, un prêt ne retire jamais le bien du patrimoine : seule sa " +
+                        "quantité DISPONIBLE diminue, jusqu'au retour qui la restaure.",
+                    objectif:
+                        "Savoir à tout instant qui détient quoi, sans dépendre d'un carnet de décharges " +
+                        "manuscrites égaré au fond d'un tiroir, et produire une pièce écrite opposable en " +
+                        "cas de litige sur la restitution d'un matériel.",
+                    probleme:
+                        "Le matériel prêté de la main à la main — un vidéoprojecteur pour une classe, un " +
+                        "jeu de manuels pour l'année — se perd de vue dès que la personne qui l'a confié " +
+                        "change de poste ou oublie l'accord verbal. L'établissement découvre alors, des " +
+                        "mois plus tard, un matériel introuvable et personne pour en répondre.",
+                    procedure: [
+                        "Ouvrez Inventaire, onglet Prêts, et créez une nouvelle attribution.",
+                        "Sélectionnez le bien et la quantité prêtée, puis désignez le bénéficiaire.",
+                        "Validez. Une FICHE DE DÉCHARGE est générée au format PDF : faites-la signer par le bénéficiaire avant remise du matériel.",
+                        "Au retour du matériel, ouvrez l'attribution et enregistrez le retour — total ou partiel.",
+                        "La quantité disponible du bien est restaurée dans la même transaction que l'enregistrement du retour."
+                    ],
+                    impacts: [
+                        "Journal de stock : le prêt et son retour produisent chacun une écriture datée et attribuée, consultable dans l'historique du bien.",
+                        "Catalogue : un bien intégralement prêté affiche une quantité disponible à zéro, sans que sa quantité totale n'en soit affectée — il reste au patrimoine.",
+                        "Rapport d'inventaire : les attributions en cours à la date du rapport y figurent, pour distinguer ce qui est disponible de ce qui est simplement prêté."
+                    ],
+                    recommandations: [
+                        "Faites toujours signer la fiche de décharge avant de remettre le matériel : c'est la seule pièce qui protégera l'établissement en cas de contestation.",
+                        "Enregistrez le retour LE JOUR MÊME où le matériel revient : un retour non saisi laisse un bien faussement indisponible pendant des semaines.",
+                        "Un prêt qui n'est jamais retourné n'est pas une perte silencieuse : requalifiez-le en sortie définitive par un mouvement de stock, motivé, plutôt que de le laisser ouvert indéfiniment.",
+                        "Pour un matériel de valeur (informatique, vidéoprojecteurs), préférez des attributions individuelles nommées à une attribution collective à « la classe de… », plus difficile à faire répondre en cas de litige."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'surveillance',
+            number: 13,
+            title: 'Vie scolaire — Appel, billets, discipline et convocations',
+            icon: 'eye',
+            summary: "La surveillance générale au quotidien : qui est présent, qui entre ou sort en dehors des horaires, et le suivi disciplinaire.",
+            concept:
+                "Quatre registres distincts couvrent la journée d'un élève, et il ne faut jamais les " +
+                "confondre entre eux. L'APPEL constate qui est présent, absent ou en retard, classe par " +
+                "classe et créneau par créneau — c'est un CONSTAT, renouvelé à chaque séance. Le BILLET " +
+                "documente un mouvement individuel en dehors du rythme normal — une entrée tardive, une " +
+                "sortie anticipée — et en trace la raison et, pour une sortie, la personne venue chercher " +
+                "l'élève. Le REGISTRE DE DISCIPLINE sanctionne un FAIT déjà constaté — avertissement, " +
+                "blâme, retenue, exclusion — et produit un procès-verbal. La CONVOCATION, enfin, n'est " +
+                "pas une sanction mais un ENTRETIEN programmé avec un parent ou un tuteur, pour un motif " +
+                "libre — discipline, assiduité, résultats — distinct d'un fait disciplinaire déjà acté.",
+            articles: [
+                {
+                    id: 'appel-classe',
+                    title: 'Appel en classe et feuille de présence',
+                    location: 'Surveillance › Appel en classe',
+                    href: '/presences',
+                    roles: ['Enseignant', 'Directeur', 'Secrétariat'],
+                    definition:
+                        "L'appel constate, pour une classe, une matière et un créneau donnés, le statut de " +
+                        "chaque élève inscrit : Présent, Absence justifiée, Absence injustifiée, ou Retard " +
+                        "— ce dernier accompagné du nombre de minutes. Un enseignant ne voit et ne renseigne " +
+                        "que les classes et matières pour lesquelles il est affecté.",
+                    objectif:
+                        "Constituer, séance après séance, l'historique d'assiduité qui fonde le rapport " +
+                        "d'assiduité de la direction et, le cas échéant, l'alerte auprès de la famille d'un " +
+                        "élève en décrochage.",
+                    probleme:
+                        "Un appel tenu sur un cahier de classe ne remonte jamais à la direction en temps " +
+                        "réel : un absentéisme chronique se découvre en fin de trimestre, une fois le mal " +
+                        "fait, au lieu d'être détecté dès les premières semaines où une intervention " +
+                        "aurait encore un effet.",
+                    procedure: [
+                        "Ouvrez Surveillance › Appel en classe et sélectionnez la classe, la matière et le créneau.",
+                        "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent.",
+                        "Modifiez le statut de chaque élève concerné : Absence justifiée, Absence injustifiée, ou Retard — en précisant alors le nombre de minutes.",
+                        "Validez l'appel. La fiche est enregistrée avec son auteur et son horodatage.",
+                        "Un appel déjà soumis reste consultable par la Direction et le Secrétariat, mais ne se ressaisit pas au même créneau : une correction passe par le rapport d'assiduité, non par un second appel."
+                    ],
+                    impacts: [
+                        "Billets : un retard constaté à l'appel peut donner lieu à un billet d'entrée, produit séparément par la Surveillance.",
+                        "Rapport d'assiduité : chaque appel soumis alimente directement le rapport détaillé par classe et par élève.",
+                        "Convocations : un absentéisme répété visible sur plusieurs appels motive fréquemment une convocation de parent."
+                    ],
+                    recommandations: [
+                        "Faites l'appel à chaque séance, sans exception : un rapport d'assiduité troué de créneaux non appelés ne dit rien de fiable sur l'élève qu'il est censé décrire.",
+                        "Ne marquez « Absence justifiée » qu'en présence d'un motif réellement établi ; à défaut, « Absence injustifiée » et la régularisation vient ensuite, jamais l'inverse.",
+                        "Un retard systématique du même élève à la même heure trahit souvent une contrainte de transport plutôt qu'une négligence — vérifiez avant de sanctionner."
+                    ]
+                },
+                {
+                    id: 'billets-entree-sortie',
+                    title: "Billets d'entrée tardive et de sortie anticipée",
+                    location: 'Surveillance › Billets d’entrée',
+                    href: '/billets',
+                    roles: ['Directeur', 'Surveillant'],
+                    definition:
+                        "Le billet documente un mouvement individuel d'élève en dehors des horaires " +
+                        "normaux. Une ENTRÉE TARDIVE motive le retard et l'autorise ; une SORTIE ANTICIPÉE " +
+                        "précise, en plus, qui est venu chercher l'élève — exigence de sécurité courante " +
+                        "des établissements sénégalais — sauf autorisation écrite permettant une sortie " +
+                        "seul. Chaque billet est imprimable au format A5.",
+                    objectif:
+                        "Donner au surveillant un motif tracé pour autoriser une entrée ou une sortie hors " +
+                        "du rythme normal, et à la direction la preuve, en cas de question ultérieure, que " +
+                        "le mouvement a été constaté et par qui.",
+                    probleme:
+                        "Un élève laissé entrer ou sortir sur la seule parole, sans trace écrite, met " +
+                        "l'établissement en défaut de vigilance le jour où un parent conteste avoir " +
+                        "autorisé le départ de son enfant, ou s'inquiète de ne pas savoir à quelle heure " +
+                        "il est arrivé.",
+                    procedure: [
+                        "Ouvrez Surveillance › Billets d'entrée.",
+                        "ENTRÉE TARDIVE : sélectionnez l'élève, renseignez le motif du retard, puis validez.",
+                        "SORTIE ANTICIPÉE : sélectionnez l'élève, le motif, et la personne venue le chercher — ou l'autorisation écrite couvrant une sortie seul.",
+                        "Imprimez le billet A5 généré et remettez-le à l'élève ou à la personne qui l'accompagne, selon l'usage de l'établissement.",
+                        "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur."
+                    ],
+                    impacts: [
+                        "Appel en classe : un élève entré tardivement doit être recompté Présent, non Absent, sur le créneau qu'il a rejoint.",
+                        "Registre de discipline : des retards ou sorties répétés et injustifiés peuvent motiver un examen disciplinaire.",
+                        "Convocations : un billet à motif inhabituel ou répété est souvent le premier signal qui déclenche une convocation de parent."
+                    ],
+                    recommandations: [
+                        "N'autorisez une sortie anticipée qu'après avoir vérifié l'identité de la personne venue chercher l'élève, en l'absence d'autorisation écrite explicite.",
+                        "Ne laissez jamais un élève sortir seul sans autorisation écrite préalable au dossier, même pour un motif qui paraît anodin.",
+                        "Conservez le double du billet imprimé si l'établissement pratique la remise en main propre : c'est la pièce qui prouve, a posteriori, que le mouvement a été encadré."
+                    ]
+                },
+                {
+                    id: 'registre-discipline',
+                    title: 'Registre de discipline et procès-verbal',
+                    location: 'Surveillance › Registre Discipline',
+                    href: '/discipline',
+                    roles: ['Directeur', 'Surveillant'],
+                    definition:
+                        "Le registre de discipline consigne les sanctions prononcées contre un élève — " +
+                        "Avertissement, Blâme, Retenue, Exclusion — pour un fait déjà constaté. Chaque " +
+                        "entrée est datée, motivée, et donne lieu à un PROCÈS-VERBAL imprimable au format " +
+                        "PDF.",
+                    objectif:
+                        "Constituer un dossier disciplinaire cohérent et daté, opposable devant un conseil " +
+                        "de discipline ou une contestation de la famille, et permettre à la direction de " +
+                        "distinguer un incident isolé d'une récidive.",
+                    probleme:
+                        "Une sanction décidée oralement, sans trace écrite datée, ne résiste à aucune " +
+                        "contestation : impossible de prouver qu'un élève a déjà été averti pour un fait " +
+                        "similaire, et le conseil de discipline se retrouve à statuer sans dossier.",
+                    procedure: [
+                        "Ouvrez Surveillance › Registre Discipline et créez une nouvelle entrée.",
+                        "Sélectionnez l'élève, décrivez le fait constaté, et choisissez la sanction : Avertissement, Blâme, Retenue ou Exclusion.",
+                        "Validez. Le procès-verbal est généré au format PDF, prêt à être imprimé et signé selon l'usage de l'établissement.",
+                        "Consultez l'historique disciplinaire complet de l'élève avant de statuer sur un nouveau fait, pour apprécier une éventuelle récidive."
+                    ],
+                    impacts: [
+                        "Bulletin de notes : les distinctions du conseil de classe (§ Notes & Bulletins) sont une décision PÉDAGOGIQUE distincte de ce registre — les deux ne s'alimentent pas automatiquement l'une l'autre.",
+                        "Convocations : une sanction grave — retenue, exclusion — motive fréquemment une convocation de parent en complément du procès-verbal.",
+                        "Dossier de l'élève : l'historique disciplinaire complet reste consultable depuis la fiche de l'élève."
+                    ],
+                    recommandations: [
+                        "Décrivez le fait avec précision et sans jugement de valeur : c'est ce texte, et lui seul, qui devra convaincre un conseil de discipline ou une famille en désaccord.",
+                        "Proportionnez la sanction à la gravité réelle du fait et à l'historique de l'élève — un registre qui ne distingue jamais premier incident et récidive perd sa valeur d'arbitrage.",
+                        "Une exclusion se double toujours d'une convocation de parent : ne laissez jamais une sanction de cette gravité reposer sur le seul procès-verbal."
+                    ]
+                },
+                {
+                    id: 'convocations-parent',
+                    title: 'Convocations de parent ou de tuteur',
+                    location: 'Surveillance › Convocations parent',
+                    href: '/convocations',
+                    roles: ['Directeur', 'Surveillant'],
+                    definition:
+                        "La convocation programme un entretien avec le parent ou le tuteur d'un élève, " +
+                        "pour un motif LIBRE — discipline, assiduité, résultats, tout autre sujet — et " +
+                        "n'est donc pas restreinte aux seuls faits disciplinaires. C'est un entretien " +
+                        "programmé, distinct d'une sanction déjà prononcée. Un avis de convocation est " +
+                        "imprimable au format PDF pour remise à la famille.",
+                    objectif:
+                        "Formaliser la prise de contact avec la famille sur un sujet qui le justifie, et en " +
+                        "garder une trace datée — utile aussi bien pour suivre un élève en difficulté que " +
+                        "pour documenter les démarches entreprises avant une décision plus lourde.",
+                    probleme:
+                        "Un appel téléphonique informel au parent, non tracé, ne laisse aucune preuve que " +
+                        "l'établissement a effectivement cherché à alerter la famille avant d'aggraver une " +
+                        "situation — un manque qui se révèle a posteriori, lors d'une contestation ou d'un " +
+                        "conseil de discipline.",
+                    procedure: [
+                        "Ouvrez Surveillance › Convocations parent et créez une nouvelle convocation.",
+                        "Sélectionnez l'élève, précisez le motif de l'entretien et la date proposée.",
+                        "Validez. L'avis de convocation est généré au format PDF, à remettre à la famille par le canal habituel de l'établissement.",
+                        "À l'issue de l'entretien, consignez le résultat ou la décision prise, si l'usage de l'établissement le prévoit."
+                    ],
+                    impacts: [
+                        "Registre de discipline : une convocation née d'une sanction grave reste liée, dans le dossier de l'élève, au fait qui l'a motivée, même si les deux registres ne se confondent pas.",
+                        "Appel en classe : un absentéisme répété visible dans l'historique de présence est un motif fréquent de convocation.",
+                        "Dossier de l'élève : l'historique des convocations reste consultable, daté et motivé."
+                    ],
+                    recommandations: [
+                        "N'attendez pas qu'une situation s'aggrave pour convoquer : une convocation précoce, sur un motif d'assiduité par exemple, prévient souvent une sanction disciplinaire ultérieure.",
+                        "Formulez le motif clairement sur l'avis remis à la famille : un parent convoqué sans savoir pourquoi arrive à l'entretien sur la défensive.",
+                        "Conservez systématiquement une trace de la tenue effective de l'entretien, même informelle — c'est ce qui distingue une démarche accomplie d'une convocation restée lettre morte."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'tresorerie',
+            number: 14,
+            title: 'Trésorerie — Décaissements et vision consolidée',
+            icon: 'payment',
+            summary: "Ce que l'établissement dépense, et la vue d'ensemble qui rapproche encaissements et décaissements sur une période.",
+            concept:
+                "La Caisse enregistre ce que les familles VERSENT à l'établissement ; la Trésorerie " +
+                "enregistre ce que l'établissement lui-même DÉPENSE — salaires, maintenance, " +
+                "fournitures, charges fixes, loyer, eau et électricité, télécoms, carburant, " +
+                "assurances et honoraires. Le tableau de bord Trésorerie ne crée aucun nouveau " +
+                "registre de mouvements : il AGRÈGE, sur une période choisie, les encaissements déjà " +
+                "connus de la Caisse et les décaissements enregistrés ici, pour donner à la direction " +
+                "une vision consolidée des entrées et des sorties.",
+            articles: [
+                {
+                    id: 'decaissements',
+                    title: 'Enregistrement des décaissements',
+                    location: 'Comptabilité › Trésorerie',
+                    href: '/tresorerie',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Un décaissement est une dépense de l'établissement, classée par catégorie — " +
+                        "Salaires, Maintenance, Fournitures, Charges fixes, Loyer et charges, Eau et " +
+                        "électricité, Télécoms et Internet, Carburant, Assurances et honoraires, ou " +
+                        "Divers — datée et rattachée à un montant.",
+                    objectif:
+                        "Donner à la direction une image complète des sorties d'argent de l'établissement, " +
+                        "ventilées par nature de dépense, sans dépendre d'une compilation manuelle de " +
+                        "factures et de reçus dispersés.",
+                    probleme:
+                        "Sans registre centralisé des dépenses, l'établissement ne sait répondre à la " +
+                        "question « combien avons-nous dépensé en maintenance ce trimestre ? » qu'en " +
+                        "reconstituant, facture par facture, ce qui aurait dû être visible d'un coup " +
+                        "d'œil.",
+                    procedure: [
+                        "Ouvrez Comptabilité › Trésorerie et enregistrez un nouveau décaissement.",
+                        "Choisissez la catégorie de dépense la plus proche de la nature réelle de la sortie.",
+                        "Renseignez le montant et la date effective de la dépense.",
+                        "Validez. Le décaissement rejoint immédiatement l'agrégation affichée sur le tableau de bord Trésorerie."
+                    ],
+                    impacts: [
+                        "Tableau de bord Trésorerie : chaque décaissement enregistré ici modifie instantanément la vue consolidée de la période.",
+                        "Rapports financiers : la charge salariale et les charges fixes consolidées éclairent la lecture globale de la santé financière de l'établissement."
+                    ],
+                    recommandations: [
+                        "Choisissez la catégorie la plus proche plutôt que « Divers » par facilité : une trésorerie où tout finit en « Divers » ne renseigne plus sur rien.",
+                        "Enregistrez la dépense à sa date réelle, et non à la date de sa saisie dans l'application : c'est cette date qui situe la dépense dans la bonne période lors d'une consultation ultérieure.",
+                        "Conservez la pièce justificative papier de chaque décaissement significatif : l'application trace le montant et la catégorie, pas la facture elle-même."
+                    ]
+                },
+                {
+                    id: 'tableau-bord-tresorerie',
+                    title: 'Tableau de bord Trésorerie',
+                    location: 'Comptabilité › Trésorerie',
+                    href: '/tresorerie',
+                    roles: ['Directeur', 'Finance'],
+                    definition:
+                        "Vue consolidée, sur une période choisie, des encaissements déjà connus du module " +
+                        "Caisse et des décaissements enregistrés dans ce module — sans créer ni dupliquer " +
+                        "aucun mouvement : c'est une AGRÉGATION en lecture, pas un registre de plus.",
+                    objectif:
+                        "Répondre en un coup d'œil à la question centrale de toute direction : sur cette " +
+                        "période, qu'est-il entré, qu'est-il sorti, et quel est le solde qui en résulte — " +
+                        "sans avoir à consulter séparément la Caisse et un tableur de dépenses.",
+                    probleme:
+                        "Sans vue consolidée, la santé financière courante de l'établissement se juge au " +
+                        "montant en caisse à l'instant présent — une photographie trompeuse qui ne dit rien " +
+                        "de la tendance, ni de ce qui a réellement été dépensé sur la période.",
+                    procedure: [
+                        "Ouvrez Comptabilité › Trésorerie.",
+                        "Choisissez la période à consulter — par défaut, du premier jour du mois courant à aujourd'hui.",
+                        "Lisez le total des encaissements et celui des décaissements sur cette période, ainsi que le solde qui en résulte.",
+                        "Changez la période pour comparer un mois à un autre, ou pour couvrir un trimestre entier."
+                    ],
+                    impacts: [
+                        "Caisse : tout encaissement validé au guichet apparaît immédiatement dans l'agrégation, sans ressaisie.",
+                        "Décaissements : toute dépense enregistrée dans ce même module y apparaît de façon symétrique.",
+                        "Rapports financiers : le tableau de bord Trésorerie donne une lecture rapide, les rapports financiers avancés en donnent le détail exportable."
+                    ],
+                    recommandations: [
+                        "Consultez le tableau de bord à intervalle régulier plutôt qu'au gré des inquiétudes : une tendance se voit sur plusieurs relevés, jamais sur un seul.",
+                        "Un solde négatif sur une courte période n'est pas nécessairement alarmant — une grosse dépense ponctuelle (maintenance lourde, par exemple) peut l'expliquer ; vérifiez la nature des décaissements avant de conclure."
+                    ]
+                }
+            ]
         }
+
     ];
 
     // Les six rubriques du squelette pédagogique, dans l'ordre d'affichage. La clé correspond au champ
