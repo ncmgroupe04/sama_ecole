@@ -439,13 +439,14 @@
  <icon name="pencil" class="w-4 h-4" />
  <span>Observations</span>
  </button>
- <!-- Directeur, Enseignant et Secrétariat (téléchargement seulement). -->
+ <!-- Directeur, Enseignant et Secrétariat. Aperçu préalable : impression et téléchargement
+      depuis l'en-tête de la modale, plus de téléchargement direct « à l'aveugle ». -->
  <button type="button" x-show="canDownloadReportCard" x-cloak
- x-on:click="downloadReportCard(term)"
+ x-on:click="previewReportCard(term)"
  :disabled="downloadingTermId === term.termId"
  class="btn-modal-secondary text-xs whitespace-nowrap group">
- <icon name="download" class="w-4 h-4" />
- <span x-text="downloadingTermId === term.termId ? 'Génération…' : 'Bulletin'"></span>
+ <icon name="eye" class="w-4 h-4" />
+ <span x-text="downloadingTermId === term.termId ? 'Génération…' : 'Aperçu bulletin'"></span>
  </button>
 
  <!-- Envoi WhatsApp -->
@@ -716,7 +717,7 @@
  </modal-shell>
 
  <!-- Modification de la fiche élève : le matricule n'est jamais modifiable (AGENTS.md règle #3). -->
- <modal-shell size="60" open="editingStudent" on-close="closeEditStudent()" title="Modifier la fiche">
+ <modal-shell size="60" open="isEditingStudentOpen" on-close="closeEditStudent()" title="Modifier la fiche">
  <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
 
  <div x-show="studentEditErrors.global" x-cloak class="form-error-banner" x-text="studentEditErrors.global"></div>
@@ -858,10 +859,10 @@
  </modal-shell>
 
  <!-- Déclarer un abandon ou un transfert en cours d'année -->
- <modal-shell open="changingEnrollmentStatus" on-close="closeChangeEnrollmentStatus()" size="md">
+ <modal-shell open="isChangingEnrollmentStatusOpen" on-close="closeChangeEnrollmentStatus()" size="md">
  <modal-title>Abandon ou transfert</modal-title>
  <modal-subtitle>
- Année <span class="font-semibold text-slate-900" x-text="changingEnrollmentStatus ? changingEnrollmentStatus.schoolYearLabel : ''"></span>
+ Année <span class="font-semibold text-slate-900" x-text="changingEnrollmentStatus.schoolYearLabel"></span>
  </modal-subtitle>
 
  <div x-show="changeEnrollmentStatusError" x-cloak class="form-error-banner" x-text="changeEnrollmentStatusError"></div>

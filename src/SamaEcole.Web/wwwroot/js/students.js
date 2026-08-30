@@ -1,3 +1,21 @@
+/**
+ * Forme vide stable de `editingStudent` / `changingEnrollmentStatus` (bug JGK-UI02-BIS, voir le
+ * commentaire sur ces deux propriétés plus bas) : une fonction plutôt qu'une constante partagée,
+ * pour que closeEditStudent()/closeChangeEnrollmentStatus() reçoivent un objet FRAIS à chaque
+ * fermeture — jamais la même référence mutée par la modale précédente.
+ */
+function emptyEditingStudent() {
+    return {
+        fullName: '', birthDate: '', birthPlace: '', gender: '', classroomId: '',
+        photoUrl: '', photoDisplayUrl: '', guardianName: '', guardianPhone: '', guardianEmail: '',
+        address: '', rowVersion: null
+    };
+}
+
+function emptyChangingEnrollmentStatus() {
+    return { enrollmentId: null, schoolYearLabel: '', rowVersion: null, newStatus: 'DroppedOut' };
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('studentsView', () => ({
         students: [],
@@ -119,7 +137,16 @@ document.addEventListener('alpine:init', () => {
         // Édition de la fiche (modale). Sourcée depuis studentDetail.identity (fraîchement chargée,
         // RowVersion inclus) plutôt que la ligne de liste `detailStudent`, qui peut être périmée et ne
         // porte pas le jeton de concurrence — le bouton n'est donc proposé qu'une fois studentDetail chargé.
-        editingStudent: null, // { fullName, birthDate, birthPlace, gender, classroomId, photoUrl, photoDisplayUrl, guardianName, guardianPhone, guardianEmail, address, rowVersion }
+        //
+        // JAMAIS null (bug JGK-UI02-BIS) : modal-shell affiche/masque au x-show (CSS display), pas au
+        // x-if — le corps du formulaire reste donc DANS LE DOM, et Alpine continue d'évaluer chaque
+        // x-model="editingStudent.xxx" en arrière-plan même modale fermée. Avec editingStudent = null,
+        // chacun de ces bindings levait « Cannot read properties of null » à chaque tick réactif — pour
+        // TOUT rôle affichant l'écran, bien avant l'ouverture de la modale, pas seulement en lecture
+        // seule. isEditingStudentOpen porte désormais l'état ouvert/fermé (voir modal-shell open="…" sur
+        // Views/Students/Index.cshtml) ; editingStudent garde une forme vide stable entre deux éditions.
+        editingStudent: emptyEditingStudent(),
+        isEditingStudentOpen: false,
         isSavingStudentEdit: false,
         studentEditErrors: {},
         showStudentEditedDialog: false,
@@ -140,7 +167,10 @@ document.addEventListener('alpine:init', () => {
         cancelEnrollmentError: null,
 
         // Cycle de vie d'une inscription : abandon / transfert en cours d'année
-        changingEnrollmentStatus: null, // { enrollmentId, schoolYearLabel, rowVersion, newStatus }
+        // JAMAIS null — même raison que editingStudent ci-dessus (modal-shell est un x-show, pas un
+        // x-if) : select-field model="changingEnrollmentStatus.newStatus" throw sinon en arrière-plan.
+        changingEnrollmentStatus: emptyChangingEnrollmentStatus(),
+        isChangingEnrollmentStatusOpen: false,
         isChangingEnrollmentStatus: false,
         changeEnrollmentStatusError: null,
 
@@ -332,40 +362,30 @@ document.addEventListener('alpine:init', () => {
 
         // ------------------------------------------------------------ Bulletin PDF (JGK-G03)
 
-        /** Télécharge le bulletin PDF d'un trimestre, même mécanique que le reçu de paiement (caisse.js). */
-        async downloadReportCard(term) {
+        /**
+         * Ouvre l'APERÇU du bulletin PDF d'un trimestre dans la modale partagée (impression et
+         * téléchargement depuis son en-tête) — plus de téléchargement direct « à l'aveugle ».
+         * Le bulletin est produit par POST /report-cards/generate (corps { studentId, termId }) :
+         * le moteur d'aperçu partagé sait désormais servir une route POST à corps JSON.
+         */
+        async previewReportCard(term) {
             if (!this.detailStudent) return;
             this.reportCardError = null;
             this.downloadingTermId = term.termId;
             try {
-                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                    await window.api.refreshOrRedirect();
-                }
-
-                const response = await fetch('/api/v1/report-cards/generate', {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${window.auth.accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ studentId: this.detailStudent.id, termId: term.termId })
-                });
-
-                if (!response.ok) throw new Error('Téléchargement du bulletin impossible.');
-
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
                 const matricule = this.studentDetail?.identity?.matricule || this.detailStudent.matricule;
-                link.download = `Bulletin-${matricule}-${term.termLabel.replace(/\s+/g, '-')}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                URL.revokeObjectURL(url);
+                await this.openPdfPreview(
+                    '/api/v1/report-cards/generate',
+                    `Bulletin — ${term.termLabel}`,
+                    `Bulletin-${matricule}-${term.termLabel.replace(/\s+/g, '-')}.pdf`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ studentId: this.detailStudent.id, termId: term.termId })
+                    }
+                );
             } catch (err) {
-                this.reportCardError = window.api.toMessage(err, 'Téléchargement du bulletin impossible.');
+                this.reportCardError = window.api.toMessage(err, 'Aperçu du bulletin impossible.');
             } finally {
                 this.downloadingTermId = null;
             }
@@ -469,12 +489,14 @@ document.addEventListener('alpine:init', () => {
                 address: identity.address || '',
                 rowVersion: identity.rowVersion
             };
+            this.isEditingStudentOpen = true;
             this.studentEditErrors = {};
             this.photoUploadError = null;
         },
 
         closeEditStudent() {
-            this.editingStudent = null;
+            this.isEditingStudentOpen = false;
+            this.editingStudent = emptyEditingStudent();
             this.studentEditErrors = {};
             this.photoUploadError = null;
         },
@@ -486,7 +508,7 @@ document.addEventListener('alpine:init', () => {
          * silencieusement à la moindre modification de nom/classe qui omettrait de la retransmettre.
          */
         async uploadStudentPhoto(photoBase64) {
-            if (!this.editingStudent || !this.detailStudent) return;
+            if (!this.isEditingStudentOpen || !this.detailStudent) return;
 
             this.photoUploadError = null;
             try {
@@ -509,7 +531,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async submitEditStudent() {
-            if (!this.editingStudent || !this.detailStudent) return;
+            if (!this.isEditingStudentOpen || !this.detailStudent) return;
 
             this.isSavingStudentEdit = true;
             this.studentEditErrors = {};
@@ -629,16 +651,18 @@ document.addEventListener('alpine:init', () => {
                 rowVersion: entry.rowVersion,
                 newStatus: 'DroppedOut'
             };
+            this.isChangingEnrollmentStatusOpen = true;
             this.changeEnrollmentStatusError = null;
         },
 
         closeChangeEnrollmentStatus() {
-            this.changingEnrollmentStatus = null;
+            this.isChangingEnrollmentStatusOpen = false;
+            this.changingEnrollmentStatus = emptyChangingEnrollmentStatus();
             this.changeEnrollmentStatusError = null;
         },
 
         async submitChangeEnrollmentStatus() {
-            if (!this.changingEnrollmentStatus) return;
+            if (!this.isChangingEnrollmentStatusOpen) return;
 
             this.isChangingEnrollmentStatus = true;
             this.changeEnrollmentStatusError = null;
@@ -769,7 +793,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Bouton « Télécharger le modèle » : même mécanique fetch+blob que downloadReportCard/downloadPdf. */
+        /** Bouton « Télécharger le modèle » : même mécanique fetch + blob que les autres téléchargements Excel. */
         async downloadImportTemplate() {
             try {
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {

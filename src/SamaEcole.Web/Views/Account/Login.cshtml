@@ -3,9 +3,12 @@
  Layout = "_AuthLayout";
 }
 
-@* Inutile de réafficher cet écran à quelqu'un qui a déjà une session ouverte. Exécuté avant le
- rendu du corps : pas de clignotement du formulaire avant la redirection. *@
-<script>window.auth.redirectIfAuthenticated();</script>
+@* Inutile de réafficher cet écran à quelqu'un qui a déjà une session ouverte. Fichier EXTERNE et
+ non inline (JGK-UI02-BIS) : la CSP n'autorise pas script-src 'unsafe-inline' — voir
+ redirect-if-authenticated.js, même raisonnement que require-session.js. Exécuté avant le rendu
+ du corps (script classique, sans defer, placé ici) : pas de clignotement du formulaire avant la
+ redirection, exactement comme le faisait l'inline qu'il remplace. *@
+<script src="~/js/redirect-if-authenticated.js" asp-append-version="true"></script>
 
 <div class="min-h-screen lg:grid lg:grid-cols-2">
 
