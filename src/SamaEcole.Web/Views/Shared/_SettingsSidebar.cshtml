@@ -1,0 +1,154 @@
+@* ============================================================================================
+   Sidebar secondaire de Paramètres — ticket JGK-UI02 (navigation Hub & Spoke).
+
+   Remplace les 7 anciens onglets horizontaux par une navigation verticale groupée en QUATRE
+   piliers métiers (Identité & Conformité, Pédagogie, Finance & Caisse, Sécurité & Administration),
+   chacun contenant ses "spokes" (sections). Un clic sur un spoke appelle goToTab('id') — qui se
+   contente d'écrire dans `tab` (aucun rechargement, aucun nouvel appel API : les données du panneau
+   ciblé sont déjà chargées, voir settings.js) — jamais un href de navigation.
+
+   AFFICHAGE CONDITIONNEL (RBAC) : chaque pilier/spoke porte le MÊME x-show que son ancien onglet
+   portait déjà (rien de nouveau inventé ici, seulement réorganisé) :
+     - Profil, Intégration étatique, Formats & signatures, Années scolaires, Mensualités & caisse,
+       Paramètres système : visibles de TOUT rôle qui atteint /parametres (champs en lecture seule
+       hors Directeur — inchangé, voir Index.cshtml) ;
+     - Notation & mentions : canViewMentions (Directeur, Secrétariat, Enseignant) ;
+     - Utilisateurs, Journal d'audit, Facturation, Notifications SMS, Zone de danger : isDirecteur
+       SEUL — ces API sont [Authorize(Roles = Directeur)], voir les commentaires déjà présents sur
+       chaque panneau dans Index.cshtml.
+   Un pilier ENTIER se masque automatiquement quand AUCUN de ses spokes n'est visible pour le rôle
+   courant (x-show sur le <section> du pilier, ET-logique de ses spokes) : un Enseignant, par
+   exemple, qui n'a droit qu'à "Notation & mentions", ne voit ni le pilier Finance & Caisse, ni le
+   pilier Sécurité & Administration — seulement Pédagogie, plus les spokes d'Identité qui restent en
+   lecture seule pour tous (comportement IDENTIQUE à l'ancien écran, simplement regroupé).
+
+   RESPONSIVE : le sidebar est un TIROIR sur mobile/tablette (< lg), même mécanique que la barre
+   latérale principale (_Layout.cshtml : overlay + translate-x) mais un état PROPRE à cet écran
+   (settingsSidebarOpen), pour ne jamais interférer avec le tiroir de la navigation principale. Le
+   bouton hamburger qui l'ouvre vit dans Index.cshtml, juste au-dessus de ce composant.
+============================================================================================ *@
+
+<!-- Overlay mobile : ferme le tiroir au clic en dehors, comme la barre latérale principale. -->
+<div x-show="settingsSidebarOpen" x-cloak
+     class="fixed inset-0 z-20 bg-slate-900 bg-opacity-50 transition-opacity lg:hidden"
+     x-on:click="settingsSidebarOpen = false"></div>
+
+<aside
+    :class="settingsSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    class="fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 overflow-y-auto transition-transform duration-300 lg:translate-x-0 lg:static lg:inset-auto lg:z-auto lg:w-64 lg:shrink-0 lg:border lg:rounded-2xl lg:shadow-sm">
+
+    <!-- En-tête du tiroir, mobile uniquement : titre + fermeture (le pendant desktop n'a pas besoin
+         de ce bouton, le tiroir n'existe pas en dehors de < lg). -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 lg:hidden">
+        <span class="text-sm font-semibold text-slate-900">Paramètres</span>
+        <button type="button" x-on:click="settingsSidebarOpen = false" aria-label="Fermer le menu"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50">
+            <icon name="x" class="w-5 h-5" />
+        </button>
+    </div>
+
+    <nav class="p-3 space-y-5" aria-label="Sections des paramètres">
+
+        <!-- ============================= PILIER : IDENTITÉ & CONFORMITÉ ============================= -->
+        <div>
+            <div class="flex items-center gap-2 px-3 mb-1.5">
+                <icon name="building" class="w-4 h-4 text-slate-400" />
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Identité &amp; Conformité</span>
+            </div>
+            <div class="space-y-0.5">
+                <button type="button" x-on:click="goToTab('profil')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('profil')">
+                    Profil de l'établissement
+                </button>
+                <button type="button" x-on:click="goToTab('integration-etatique')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('integration-etatique')">
+                    Intégration étatique (SIMEN)
+                </button>
+                <button type="button" x-on:click="goToTab('formats-signatures')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('formats-signatures')">
+                    Formats &amp; signatures officielles
+                </button>
+                <button type="button" x-on:click="goToTab('annees-scolaires')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('annees-scolaires')">
+                    Années scolaires
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================= PILIER : PÉDAGOGIE ============================= -->
+        @* canViewMentions (Directeur, Secrétariat, Enseignant) — le pilier entier disparaît pour les
+           autres rôles (Finance, Surveillant…), exactement comme l'onglet Configuration leur masquait
+           déjà le bloc Mentions (voir Index.cshtml, canViewMentions). *@
+        <div x-show="canViewMentions" x-cloak>
+            <div class="flex items-center gap-2 px-3 mb-1.5">
+                <icon name="book" class="w-4 h-4 text-slate-400" />
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pédagogie</span>
+            </div>
+            <div class="space-y-0.5">
+                <button type="button" x-on:click="goToTab('pedagogie')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('pedagogie')">
+                    Notation &amp; mentions
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================= PILIER : FINANCE & CAISSE ============================= -->
+        @* Aucun rôle n'est aujourd'hui exclu de la LECTURE de ce pilier (mêmes champs en lecture
+           seule pour tous hors Directeur qu'auparavant, voir Index.cshtml) — la Finance en particulier
+           le voit, elle qui n'avait jusqu'ici même pas de lien vers /parametres dans le menu principal
+           (voir la remarque de fin de réponse). *@
+        <div>
+            <div class="flex items-center gap-2 px-3 mb-1.5">
+                <icon name="wallet" class="w-4 h-4 text-slate-400" />
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Finance &amp; Caisse</span>
+            </div>
+            <div class="space-y-0.5">
+                <button type="button" x-on:click="goToTab('finance')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('finance')">
+                    Mensualités &amp; autorisations de caisse
+                </button>
+                <button type="button" x-show="isDirecteur" x-cloak x-on:click="goToTab('facturation')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('facturation')">
+                    Facturation &amp; historique
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================= PILIER : SÉCURITÉ & ADMINISTRATION ============================= -->
+        <div>
+            <div class="flex items-center gap-2 px-3 mb-1.5">
+                <icon name="shield" class="w-4 h-4 text-slate-400" />
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Sécurité &amp; Administration</span>
+            </div>
+            <div class="space-y-0.5">
+                <button type="button" x-on:click="goToTab('securite')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('securite')">
+                    Paramètres système
+                </button>
+                @* Réservé au Directeur : l'API de gestion des utilisateurs est [Authorize(Roles =
+                   Directeur)] (voir UsersController) — comme sur l'ancien onglet. *@
+                <button type="button" x-show="isDirecteur" x-cloak x-on:click="goToTab('utilisateurs')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('utilisateurs')">
+                    Utilisateurs &amp; rôles
+                </button>
+                @* Réservé au Directeur : GET /audit-logs est [Authorize(Roles = Directeur)]. *@
+                <button type="button" x-show="isDirecteur" x-cloak x-on:click="goToTab('journal-audit')"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('journal-audit')">
+                    Journal d'audit
+                </button>
+                @* Notifications SMS — offre Premium. Le spoke reste VISIBLE hors formule, avec un
+                   badge : une fonctionnalité qu'on cache ne se vend pas. C'est SmsController
+                   ([RequireFeature]) qui refuse réellement l'accès, jamais ce x-show. *@
+                <button type="button" x-show="isDirecteur" x-cloak x-on:click="goToTab('sms')"
+                        class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-sm transition-colors" :class="spokeClass('sms')">
+                    <span>Notifications SMS</span>
+                    <span x-data="featureGate('SmsNotifications')" x-show="!allowed" x-cloak
+                          class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 shrink-0">
+                        Premium
+                    </span>
+                </button>
+            </div>
+        </div>
+
+    </nav>
+</aside>

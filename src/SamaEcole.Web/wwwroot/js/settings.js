@@ -1,9 +1,23 @@
 /**
- * Écran Paramètres — regroupe TOUT ce que le Directeur configure pour son établissement :
- *   1. Établissement : identité (nom, adresse, téléphone, logo) — API /schools/current.
- *   2. Configuration : format de date, déconnexion auto, mensualités/an, formats de matricule
- *      — API /schools/current/settings — et les mentions du bulletin — API /grades/mentions.
- *   3. Années scolaires : géré par schoolYearsView() (js/school-years.js), monté dans l'onglet.
+ * Écran Paramètres — regroupe TOUT ce que le Directeur configure pour son établissement.
+ *
+ * Ticket JGK-UI02 : navigation Hub & Spoke (sidebar verticale par pilier métier), en remplacement
+ * des 7 onglets horizontaux d'origine — même état, mêmes appels API, seule la PRÉSENTATION change.
+ * `tab` reste la seule source de vérité de "quel panneau est affiché" ; le sidebar (Views/Settings/
+ * _SettingsSidebar.cshtml) ne fait qu'écrire dedans via goToTab(). Deux appels API historiques
+ * portent toujours l'essentiel des champs, désormais RÉPARTIS entre plusieurs spokes/piliers :
+ *   1. /schools/current (saveProfile) : identité, mentions légales, en-tête académique du
+ *      bulletin, intégration étatique (SIMEN/GPS) — spokes "profil" et "integration-etatique",
+ *      pilier Identité & Conformité.
+ *   2. /schools/current/settings (saveConfig) : format de date, déconnexion auto, mensualités/an,
+ *      formats de matricule, signatures/cachet, type d'établissement, délégations — désormais
+ *      réparti entre les spokes "formats-signatures" (Identité), "pedagogie" (délégation
+ *      notation), "finance" (mensualités, délégations de caisse) et "securite" (date, déconnexion,
+ *      type d'établissement). Un SEUL objet `config` réactif : peu importe quel spoke est visible
+ *      au moment du clic sur "Enregistrer", c'est TOUJOURS l'état complet qui part au serveur —
+ *      voir saveConfig() plus bas, inchangée.
+ *   Les mentions du bulletin (spoke "pedagogie") restent sur /grades/mentions, ressource à part.
+ *   Années scolaires : géré par schoolYearsView() (js/school-years.js), monté dans son spoke.
  *
  * L'écriture est réservée au Directeur (l'API répond 403 aux autres). Les autres rôles VOIENT les
  * valeurs — le format de date pilote tous les écrans — mais les champs sont en lecture seule et les
@@ -33,8 +47,17 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('settingsView', () => ({
-        // Onglet actif. La redirection depuis l'ancienne route /annees-scolaires arrive avec ?tab=…
-        tab: 'etablissement',
+        // Onglet actif (ticket JGK-UI02 — navigation Hub & Spoke, sidebar verticale par pilier
+        // métier au lieu des 7 onglets horizontaux d'origine). 'profil' remplace l'ancien
+        // 'etablissement' par défaut ; la table VALID_TABS ci-dessous fait le pont avec les deux
+        // seuls identifiants encore utilisés par des liens externes (voir plus bas).
+        tab: 'profil',
+
+        // Sidebar secondaire (interne à Paramètres) repliée en tiroir sur mobile/tablette — même
+        // mécanique que la barre latérale principale (_Layout.cshtml, sidebarOpen) : overlay +
+        // translate-x, mais un ÉTAT SÉPARÉ, propre à ce composant, pour ne jamais interférer avec
+        // le tiroir de la navigation principale.
+        settingsSidebarOpen: false,
 
         isDirecteur: window.auth.role === 'Directeur',
         isSecretariat: window.auth.role === 'Secretariat',
@@ -147,10 +170,25 @@ document.addEventListener('alpine:init', () => {
         },
 
         init() {
+            // Table des identifiants d'onglet valides (JGK-UI02) : chaque spoke du nouveau sidebar,
+            // PLUS les deux anciens identifiants ('etablissement', 'configuration') encore portés
+            // par un lien externe éventuel ou une habitude d'utilisateur — ils redirigent vers le
+            // premier spoke du pilier qui a hérité de leur contenu, jamais une page morte.
+            const legacyRedirect = { etablissement: 'profil', configuration: 'pedagogie' };
+            const validTabs = [
+                'profil', 'integration-etatique', 'formats-signatures', 'annees-scolaires',
+                'pedagogie',
+                'finance', 'facturation',
+                'securite', 'utilisateurs', 'journal-audit', 'sms'
+            ];
+
             const requested = new URLSearchParams(window.location.search).get('tab');
-            if (['etablissement', 'configuration', 'annees-scolaires', 'utilisateurs', 'journal-audit', 'facturation'].includes(requested)) {
+            if (validTabs.includes(requested)) {
                 this.tab = requested;
+            } else if (requested in legacyRedirect) {
+                this.tab = legacyRedirect[requested];
             }
+
             this.load();
         },
 
@@ -663,14 +701,31 @@ document.addEventListener('alpine:init', () => {
             return Number(value).toLocaleString('fr-FR');
         },
 
-        // ---------------------------------------------------------------- Affichage
+        // ---------------------------------------------------------------- Affichage (sidebar JGK-UI02)
 
-        // Segmented control (Views/Settings/Index.cshtml) : pastille blanche + texte primaire pour
-        // l'onglet actif, fond transparent + texte discret (éclairci au survol) pour les autres.
-        tabClass(name) {
+        /**
+         * Bascule vers le spoke demandé : ferme le tiroir mobile (sans quoi il resterait ouvert
+         * par-dessus le contenu qu'on vient de choisir) et synchronise l'URL via replaceState — un
+         * lien copié/rechargé rouvre le même spoke, sans naviguer ni recharger les données
+         * (même esprit que les "sous-routes" du ticket, sans le coût d'un vrai changement de page :
+         * l'état déjà chargé — profil, config, mentions… — reste intact).
+         */
+        goToTab(name) {
+            this.tab = name;
+            this.settingsSidebarOpen = false;
+
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', name);
+            window.history.replaceState({}, '', url);
+        },
+
+        /** Lien actif du sidebar vertical : fond indigo clair + texte foncé, même langage que le
+         * menu principal (_Layout.cshtml, LinkActive/LinkIdle) pour que les deux sidebars se lisent
+         * comme un seul système, jamais deux composants d'apparence différente. */
+        spokeClass(name) {
             return this.tab === name
-                ? 'bg-white text-indigo-600 font-semibold shadow-sm'
-                : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50';
+                ? 'bg-indigo-50 text-primary-700 font-semibold'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-primary-700 font-medium';
         }
     }));
 });
