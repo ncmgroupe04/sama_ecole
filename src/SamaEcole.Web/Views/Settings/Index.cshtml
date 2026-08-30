@@ -256,6 +256,64 @@
  </div>
  </div>
  </div>
+
+ @* Intégration étatique (SIMEN) — module Intégration étatique (JGK-M05). Le code établissement
+ national conditionne l'export Planète et la génération d'IEN provisoire : tant qu'il est vide,
+ ces fonctions renvoient une erreur explicite. *@
+ <div class="pt-6 border-t border-slate-100">
+ <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Intégration étatique (SIMEN)</h3>
+ <p class="text-xs text-slate-400 mt-0.5">
+ Identifiants et localisation attendus par le ministère (Planète, STATEDUC, carte scolaire).
+ Le code établissement national est indispensable à l'export Planète.
+ </p>
+
+ <div class="mt-4 space-y-5">
+ <div>
+ <label for="school-national-code" class="form-label">Code établissement national</label>
+ <input id="school-national-code" type="text" x-model="profile.nationalSchoolCode" maxlength="30" :disabled="!isDirecteur"
+ placeholder="ex : 012347"
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.nationalschoolcode && 'input-field-error'">
+ <p class="mt-1 text-xs text-slate-400">Tel qu'il figure sur les fichiers du SIMEN. Mis en majuscules à l'enregistrement, sans autre retouche.</p>
+ <p x-show="profileErrors.nationalschoolcode" x-cloak x-text="profileErrors.nationalschoolcode" class="field-error"></p>
+ </div>
+
+ <div class="form-grid">
+ <div>
+ <label for="school-authorization" class="form-label">N° d'autorisation ministérielle</label>
+ <input id="school-authorization" type="text" x-model="profile.ministryAuthorizationNumber" maxlength="80" :disabled="!isDirecteur"
+ placeholder="Arrêté d'ouverture"
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.ministryauthorizationnumber && 'input-field-error'">
+ <p x-show="profileErrors.ministryauthorizationnumber" x-cloak x-text="profileErrors.ministryauthorizationnumber" class="field-error"></p>
+ </div>
+ <div>
+ <label for="school-district" class="form-label">Code de circonscription scolaire</label>
+ <input id="school-district" type="text" x-model="profile.schoolDistrictCode" maxlength="30" :disabled="!isDirecteur"
+ placeholder="Carte scolaire"
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.schooldistrictcode && 'input-field-error'">
+ <p x-show="profileErrors.schooldistrictcode" x-cloak x-text="profileErrors.schooldistrictcode" class="field-error"></p>
+ </div>
+ </div>
+
+ <div>
+ <label class="form-label">Coordonnées GPS</label>
+ <div class="form-grid">
+ <input type="number" step="0.000001" min="-90" max="90" x-model="profile.gpsLatitude" :disabled="!isDirecteur"
+ placeholder="Latitude (ex : 14.692800)"
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.gpslatitude && 'input-field-error'">
+ <input type="number" step="0.000001" min="-180" max="180" x-model="profile.gpsLongitude" :disabled="!isDirecteur"
+ placeholder="Longitude (ex : -17.446700)"
+ class="input-field disabled:bg-slate-50 disabled:text-slate-500" :class="profileErrors.gpslongitude && 'input-field-error'">
+ </div>
+ <p class="mt-1 text-xs text-slate-400">Les deux ensemble, ou aucune. Séparateur décimal : le point.</p>
+ <p x-show="profileErrors.gpslatitude" x-cloak x-text="profileErrors.gpslatitude" class="field-error"></p>
+ <p x-show="profileErrors.gpslongitude" x-cloak x-text="profileErrors.gpslongitude" class="field-error"></p>
+ <p x-show="profileErrors.global" x-cloak x-text="profileErrors.global" class="field-error"></p>
+ <p x-show="profile.gpsCoordinates" x-cloak class="mt-1 text-xs text-slate-500">
+ Enregistré : <span class="font-mono" x-text="profile.gpsCoordinates"></span>
+ </p>
+ </div>
+ </div>
+ </div>
  </div>
 
  <div x-show="isDirecteur" x-cloak class="col-span-1 lg:col-span-2 pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-2">

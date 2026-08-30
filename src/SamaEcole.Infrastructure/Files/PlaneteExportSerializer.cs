@@ -162,6 +162,12 @@ public class PlaneteExportSerializer : IPlaneteExportSerializer
         var year = export.SchoolYearLabel.Replace('/', '-').Replace(' ', '-');
         var stamp = export.GeneratedAt.ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture);
 
-        return $"Planete-{export.NationalSchoolCode}-{year}-{stamp}.{extension}";
+        // Le code établissement peut contenir « / » ou « - » selon le document source du ministère :
+        // tout ce qui n'est pas alphanumérique devient « - » dans le NOM DE FICHIER (jamais dans la
+        // donnée), sinon le « / » y ferait un faux séparateur de chemin.
+        var safeCode = new string(export.NationalSchoolCode
+            .Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray());
+
+        return $"Planete-{safeCode}-{year}-{stamp}.{extension}";
     }
 }

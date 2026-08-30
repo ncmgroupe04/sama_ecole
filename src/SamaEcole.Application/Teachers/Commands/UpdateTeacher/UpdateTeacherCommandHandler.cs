@@ -45,6 +45,15 @@ public class UpdateTeacherCommandHandler(IApplicationDbContext dbContext)
         teacher.Address = request.Address;
         teacher.PhotoUrl = request.PhotoUrl;
 
+        // Champs STATEDUC (JGK-M05). Même normalisation du genre qu'à la création.
+        teacher.Gender = CreateTeacher.CreateTeacherCommandHandler.NormalizeGender(request.Gender);
+        teacher.AcademicQualification = request.AcademicQualification;
+        teacher.ProfessionalQualification = request.ProfessionalQualification;
+        teacher.CivilServiceStatus = request.CivilServiceStatus;
+        teacher.CivilServiceMatricule = string.IsNullOrWhiteSpace(request.CivilServiceMatricule)
+            ? null : request.CivilServiceMatricule.Trim();
+        teacher.FirstAppointmentDate = request.FirstAppointmentDate;
+
         // Réconcilie les qualifications (TeacherSubject) avec la liste soumise : retire celles qui ne
         // sont plus cochées, ajoute les nouvelles. Pas de DeleteBehavior.Cascade ici — retrait explicite,
         // cohérent avec le fait que TeacherSubject n'est jamais soft-deleté isolément.

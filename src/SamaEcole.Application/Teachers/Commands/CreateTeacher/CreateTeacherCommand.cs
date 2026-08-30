@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Teachers.Commands.CreateTeacher;
 
@@ -36,6 +37,24 @@ public record CreateTeacherCommand : IRequest<CreateTeacherResult>
     /// pas remonter aux classes assignées de cet enseignant.
     /// </summary>
     public Guid? UserId { get; init; }
+
+    // ---- Champs STATEDUC (rapport annuel, JGK-M04/M05) ---------------------------------------
+    // Tous FACULTATIFS et à leur valeur « non renseigné » par défaut : on n'oblige personne à
+    // remplir un rapport ministériel pour créer une fiche. Le rapport STATEDUC compte ces fiches
+    // dans une ligne « non renseigné » explicite tant qu'elles ne sont pas complétées.
+
+    /// <summary>« M » / « F », même convention que l'élève. Null = non renseigné.</summary>
+    public string? Gender { get; init; }
+
+    public AcademicQualification AcademicQualification { get; init; } = AcademicQualification.NonRenseigne;
+    public ProfessionalQualification ProfessionalQualification { get; init; } = ProfessionalQualification.NonRenseigne;
+    public TeacherCivilServiceStatus CivilServiceStatus { get; init; } = TeacherCivilServiceStatus.NonRenseigne;
+
+    /// <summary>Matricule de solde de la Fonction publique — personnels payés par l'État uniquement.</summary>
+    public string? CivilServiceMatricule { get; init; }
+
+    /// <summary>Première prise de service dans l'enseignement (toutes écoles), pas dans cet établissement.</summary>
+    public DateOnly? FirstAppointmentDate { get; init; }
 }
 
 public record CreateTeacherResult(Guid Id, string Matricule);

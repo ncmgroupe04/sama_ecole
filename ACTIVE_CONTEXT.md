@@ -148,9 +148,19 @@ additive et réversible) ; le Handler fournit toujours `Reason`. Par ailleurs, l
 provisoire sans code établissement renvoyait un 500 (`InvalidOperationException` de
 `NationalIenGenerator`) — désormais un 409 actionnable, même message que le refus de l'export Planète.
 
-**Ce qui reste :** champs de saisie du code établissement national et des coordonnées GPS dans
-*Paramètres → Établissement* (JGK-M05) ; tests d'intégration dédiés (agrégats STATEDUC, concurrence
-sur la séquence IEN, refus 409 code absent).
+**JGK-M05 câblé (30/08/2026)** : *Paramètres → Établissement* porte un bloc « Intégration étatique
+(SIMEN) » (code établissement national, n° d'autorisation, code de circonscription, coordonnées GPS —
+les deux ensemble ou aucune) ; la *fiche enseignant* (création + modification) porte un bloc replié
+« Informations pour le rapport STATEDUC » (genre, diplômes académique et professionnel, statut
+administratif, matricule de solde, date de première prise de service). `UpdateCurrentSchoolCommand` /
+`SchoolProfileDto` / `CreateTeacherCommand` / `UpdateTeacherCommand` / `TeacherProfileDto` étendus.
+Vérifié : `GET /state-integration/planete/export` passe de 409 à 200 dès que le code établissement est
+posé.
+
+**Ce qui reste :** tests d'intégration dédiés (agrégats STATEDUC, concurrence sur la séquence IEN,
+refus 409 code absent). **Bug pré-existant repéré (hors M05)** : retirer une matière à un enseignant
+échoue en 500 — `UpdateTeacherCommandHandler` fait un `DELETE` sur `teacher_subjects` alors que la
+migration `AddTeachers` n'accorde pas ce droit au rôle applicatif. Ticket dédié à ouvrir.
 
 **Trois arbitrages actés, validés par le client :**
 

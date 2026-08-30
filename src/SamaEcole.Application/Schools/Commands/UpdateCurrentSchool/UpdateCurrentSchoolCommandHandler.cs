@@ -48,6 +48,18 @@ public class UpdateCurrentSchoolCommandHandler(
         school.Region = Normalize(request.Region);
         school.PublicDescription = Normalize(request.PublicDescription);
 
+        // Intégration étatique (SIMEN). Le code établissement est juste mis en MAJUSCULES et détouré :
+        // on ne retire NI les tirets NI les barres obliques que certains documents du ministère
+        // portent (« IA-01/2347 »), pour ne pas dénaturer une clé de rapprochement qu'on ne maîtrise
+        // pas. Les consommateurs s'en accommodent — le générateur d'IEN ne garde que les chiffres, et
+        // le nom du fichier Planète neutralise les caractères non alphanumériques. Les deux
+        // coordonnées GPS sont posées ensemble (le validateur rejette une moitié seule).
+        school.NationalSchoolCode = Normalize(request.NationalSchoolCode)?.ToUpperInvariant();
+        school.MinistryAuthorizationNumber = Normalize(request.MinistryAuthorizationNumber);
+        school.SchoolDistrictCode = Normalize(request.SchoolDistrictCode);
+        school.GpsLatitude = request.GpsLatitude;
+        school.GpsLongitude = request.GpsLongitude;
+
         await dbContext.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Identité de l'établissement {SchoolId} mise à jour.", schoolId);
 
@@ -64,7 +76,9 @@ public class UpdateCurrentSchoolCommandHandler(
             school.Name, school.Address, school.Phone, school.LogoUrl,
             school.InspectionAcademie, school.InspectionEducationFormation, school.NomLycee,
             school.Email, school.Ninea, school.RegistreCommerce,
-            school.IsPubliclyListed, school.City, school.Region, school.PublicDescription);
+            school.IsPubliclyListed, school.City, school.Region, school.PublicDescription,
+            school.NationalSchoolCode, school.MinistryAuthorizationNumber, school.SchoolDistrictCode,
+            school.GpsLatitude, school.GpsLongitude, school.GpsCoordinates);
     }
 
     /// <summary>Chaîne vide ⇒ null : un champ optionnel effacé par le Directeur redevient NULL, pas "".</summary>

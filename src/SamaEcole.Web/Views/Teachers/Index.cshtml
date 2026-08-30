@@ -356,6 +356,45 @@
  <p x-show="teacherEditErrors.subjectids" x-text="teacherEditErrors.subjectids" class="field-error"></p>
  </div>
 
+ @* Champs STATEDUC (rapport annuel, JGK-M05) — tous facultatifs. Repliés dans un <details>
+    pour ne pas alourdir le formulaire courant : c'est de la donnée statistique, pas de l'état
+    civil. Le rapport compte « non renseigné » tant que rien n'est saisi. *@
+ <details class="rounded-xl border border-slate-200 px-4 py-3">
+ <summary class="text-sm font-medium text-slate-700 cursor-pointer select-none">
+ Informations pour le rapport STATEDUC <span class="text-slate-400 font-normal">(facultatif)</span>
+ </summary>
+ <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="form-label">Genre</label>
+ <select-field model="editingTeacher.gender" aria-label="Genre" options-expr="genderOptions" />
+ </div>
+ <div>
+ <label class="form-label">Statut administratif</label>
+ <select-field model="editingTeacher.civilServiceStatus" aria-label="Statut administratif" options-expr="civilServiceStatusOptions" />
+ </div>
+ <div>
+ <label class="form-label">Diplôme académique</label>
+ <select-field model="editingTeacher.academicQualification" aria-label="Diplôme académique" options-expr="academicQualificationOptions" />
+ </div>
+ <div>
+ <label class="form-label">Diplôme professionnel</label>
+ <select-field model="editingTeacher.professionalQualification" aria-label="Diplôme professionnel" options-expr="professionalQualificationOptions" />
+ <p class="mt-1 text-xs text-slate-400">C'est ce diplôme qui compte l'enseignant comme « qualifié » au STATEDUC.</p>
+ </div>
+ <div>
+ <label class="form-label">Matricule de solde (Fonction publique)</label>
+ <input type="text" x-model="editingTeacher.civilServiceMatricule" maxlength="30" class="input-field"
+ :class="teacherEditErrors.civilservicematricule && 'input-field-error'">
+ <p x-show="teacherEditErrors.civilservicematricule" x-text="teacherEditErrors.civilservicematricule" class="field-error"></p>
+ </div>
+ <div>
+ <label class="form-label">Première prise de service (dans l'enseignement)</label>
+ <date-field model="editingTeacher.firstAppointmentDate" aria-label="Première prise de service" />
+ <p x-show="teacherEditErrors.firstappointmentdate" x-text="teacherEditErrors.firstappointmentdate" class="field-error"></p>
+ </div>
+ </div>
+ </details>
+
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeEditTeacher()" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isSavingTeacherEdit" class="btn-modal-primary group">
@@ -497,6 +536,43 @@
  options-expr="[{value:'', label:'Aucun'}].concat(eligibleAccounts.map(u => ({value: u.id, label: u.fullName + ' (' + u.email + ')'})))" />
  <p x-show="createErrors.userid" x-text="createErrors.userid" class="field-error"></p>
  </div>
+
+ @* Champs STATEDUC (JGK-M05) — facultatifs, repliés. Voir le formulaire de modification. *@
+ <details class="rounded-xl border border-slate-200 px-4 py-3">
+ <summary class="text-sm font-medium text-slate-700 cursor-pointer select-none">
+ Informations pour le rapport STATEDUC <span class="text-slate-400 font-normal">(facultatif)</span>
+ </summary>
+ <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div>
+ <label class="form-label">Genre</label>
+ <select-field model="newTeacher.gender" aria-label="Genre" options-expr="genderOptions" />
+ </div>
+ <div>
+ <label class="form-label">Statut administratif</label>
+ <select-field model="newTeacher.civilServiceStatus" aria-label="Statut administratif" options-expr="civilServiceStatusOptions" />
+ </div>
+ <div>
+ <label class="form-label">Diplôme académique</label>
+ <select-field model="newTeacher.academicQualification" aria-label="Diplôme académique" options-expr="academicQualificationOptions" />
+ </div>
+ <div>
+ <label class="form-label">Diplôme professionnel</label>
+ <select-field model="newTeacher.professionalQualification" aria-label="Diplôme professionnel" options-expr="professionalQualificationOptions" />
+ <p class="mt-1 text-xs text-slate-400">C'est ce diplôme qui compte l'enseignant comme « qualifié » au STATEDUC.</p>
+ </div>
+ <div>
+ <label class="form-label">Matricule de solde (Fonction publique)</label>
+ <input type="text" x-model="newTeacher.civilServiceMatricule" maxlength="30" class="input-field"
+ :class="createErrors.civilservicematricule && 'input-field-error'">
+ <p x-show="createErrors.civilservicematricule" x-text="createErrors.civilservicematricule" class="field-error"></p>
+ </div>
+ <div>
+ <label class="form-label">Première prise de service (dans l'enseignement)</label>
+ <date-field model="newTeacher.firstAppointmentDate" aria-label="Première prise de service" />
+ <p x-show="createErrors.firstappointmentdate" x-text="createErrors.firstappointmentdate" class="field-error"></p>
+ </div>
+ </div>
+ </details>
 
  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary group">Annuler</button>

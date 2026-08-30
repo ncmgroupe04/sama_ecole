@@ -54,6 +54,12 @@ public class GetTeacherByIdQueryHandler(IApplicationDbContext dbContext)
             teacher.Entity.Status.ToString(),
             subjects,
             assignments,
-            teacher.RowVersion);
+            teacher.RowVersion,
+            teacher.Entity.Gender,
+            teacher.Entity.AcademicQualification,
+            teacher.Entity.ProfessionalQualification,
+            teacher.Entity.CivilServiceStatus,
+            teacher.Entity.CivilServiceMatricule,
+            teacher.Entity.FirstAppointmentDate);
     }
 }

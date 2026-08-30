@@ -4089,6 +4089,48 @@ components:
           maxLength: 50
           example: "SN DKR 2020 B 1234"
           description: 'RCCM — même usage et mêmes règles que `ninea`.'
+        inspectionAcademie: { type: string, nullable: true, maxLength: 150 }
+        inspectionEducationFormation: { type: string, nullable: true, maxLength: 150 }
+        nomLycee:
+          type: string
+          nullable: true
+          maxLength: 150
+          description: Nom porté par l'en-tête du bulletin, SANS préfixe de cycle (ajouté à l'impression).
+        isPubliclyListed: { type: boolean, default: false }
+        city: { type: string, nullable: true, maxLength: 120 }
+        region: { type: string, nullable: true, maxLength: 120 }
+        publicDescription: { type: string, nullable: true, maxLength: 2000 }
+        nationalSchoolCode:
+          type: string
+          nullable: true
+          maxLength: 30
+          description: >-
+            Code établissement national (SIMEN, JGK-M05). Mis en majuscules à l'enregistrement,
+            sans autre retouche. TANT QU'IL EST ABSENT, l'export Planète (GET
+            /state-integration/planete/export) et la génération d'un IEN provisoire renvoient un 409.
+        ministryAuthorizationNumber: { type: string, nullable: true, maxLength: 80 }
+        schoolDistrictCode: { type: string, nullable: true, maxLength: 30 }
+        gpsLatitude:
+          type: number
+          format: double
+          nullable: true
+          minimum: -90
+          maximum: 90
+          description: WGS84. À fournir AVEC gpsLongitude, ou pas du tout (422 sinon).
+        gpsLongitude:
+          type: number
+          format: double
+          nullable: true
+          minimum: -180
+          maximum: 180
+        gpsCoordinates:
+          type: string
+          nullable: true
+          readOnly: true
+          example: "14.692800, -17.446700"
+          description: >-
+            Chaîne « lat, lon » calculée en culture invariante, pour l'affichage seul. Jamais
+            persistée ni acceptée en écriture. Null si l'une des deux coordonnées manque.
 
     SchoolDataResetSummary:
       type: object
@@ -4432,20 +4474,58 @@ components:
         page: { type: integer }
         pageSize: { type: integer }
 
-    TeacherCreateRequest:
+    TeacherStateducFields:
       type: object
-      required: [fullName, email, subjectIds]
+      description: >-
+        Champs alimentant le rapport annuel STATEDUC (JGK-M05). TOUS facultatifs. Les enums valent
+        « NonRenseigne » par défaut : le rapport compte ces fiches dans une ligne « non renseigné »
+        explicite, jamais imputées à une catégorie réelle.
       properties:
-        fullName: { type: string }
-        email: { type: string, format: email }
-        phone: { type: string }
-        subjectIds: { type: array, items: { type: string, format: uuid } }
-        userId:
+        gender:
           type: string
-          format: uuid
-          description: >-
-            Compte de connexion (rôle Enseignant, même école) à rattacher à la fiche (ticket JGK-D06).
-            Optionnel ; requis pour que cet enseignant puisse faire l'appel de ses classes.
+          enum: ["", M, F]
+          nullable: true
+          description: '« M » / « F » ; vide ou absent = non renseigné. Le serveur normalise.'
+        academicQualification:
+          type: string
+          enum: [NonRenseigne, Aucun, BFEM, BAC, Licence, Master, Doctorat]
+          default: NonRenseigne
+        professionalQualification:
+          type: string
+          enum: [NonRenseigne, Aucun, CEAP, CAP, CAEM, CAES]
+          default: NonRenseigne
+          description: C'est CE diplôme qui compte l'enseignant comme « qualifié » au STATEDUC.
+        civilServiceStatus:
+          type: string
+          enum: [NonRenseigne, Fonctionnaire, Contractuel, Vacataire, Volontaire, Benevole]
+          default: NonRenseigne
+        civilServiceMatricule:
+          type: string
+          nullable: true
+          maxLength: 30
+          description: Matricule de solde de la Fonction publique — personnels payés par l'État uniquement.
+        firstAppointmentDate:
+          type: string
+          format: date
+          nullable: true
+          description: Première prise de service dans l'enseignement (toutes écoles), pas dans cet établissement.
+
+    TeacherCreateRequest:
+      allOf:
+        - $ref: '#/components/schemas/TeacherStateducFields'
+        - type: object
+          required: [fullName, email, subjectIds]
+          properties:
+            fullName: { type: string }
+            email: { type: string, format: email }
+            phone: { type: string }
+            subjectIds: { type: array, items: { type: string, format: uuid } }
+            userId:
+              type: string
+              format: uuid
+              description: >-
+                Compte de connexion (rôle Enseignant, même école) à rattacher à la fiche (ticket
+                JGK-D06). Optionnel ; requis pour que cet enseignant puisse faire l'appel de ses classes.
 
     TeacherResult:
       type: object
@@ -4466,19 +4546,21 @@ components:
         rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
 
     TeacherUpdateRequest:
-      type: object
-      required: [fullName, email, subjectIds, rowVersion]
-      description: >-
-        Le matricule et le rattachement d'un compte de connexion (userId) ne sont jamais modifiables
-        ici — absents de ce contrat (voir TeacherCreateRequest pour la création initiale).
-      properties:
-        fullName: { type: string, maxLength: 200 }
-        email: { type: string, format: email, maxLength: 255 }
-        phone: { type: string, maxLength: 30 }
-        birthPlace: { type: string, maxLength: 200 }
-        photoUrl: { type: string, format: uri }
-        subjectIds: { type: array, items: { type: string, format: uuid } }
-        rowVersion: { type: integer, format: int64 }
+      allOf:
+        - $ref: '#/components/schemas/TeacherStateducFields'
+        - type: object
+          required: [fullName, email, subjectIds, rowVersion]
+          description: >-
+            Le matricule et le rattachement d'un compte de connexion (userId) ne sont jamais
+            modifiables ici — absents de ce contrat (voir TeacherCreateRequest pour la création initiale).
+          properties:
+            fullName: { type: string, maxLength: 200 }
+            email: { type: string, format: email, maxLength: 255 }
+            phone: { type: string, maxLength: 30 }
+            birthPlace: { type: string, maxLength: 200 }
+            photoUrl: { type: string, format: uri }
+            subjectIds: { type: array, items: { type: string, format: uuid } }
+            rowVersion: { type: integer, format: int64 }
 
     PaginatedTeachers:
       type: object
@@ -4501,6 +4583,7 @@ components:
     TeacherProfile:
       allOf:
         - $ref: '#/components/schemas/Teacher'
+        - $ref: '#/components/schemas/TeacherStateducFields'
         - type: object
           properties:
             assignments: { type: array, items: { $ref: '#/components/schemas/TeacherAssignment' } }

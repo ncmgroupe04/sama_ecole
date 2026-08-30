@@ -346,7 +346,32 @@ mappé**. `ExamDossier` : `ExamCenterCode`, `TableNumber`, `CivilRegistryDocumen
 remplacer `BirthCertificatePresent`/`CivilStatusConforming`, encore lus par
 `GetExamDossierAuditQuery` ; `TableNumber` (place en salle) reste distinct de `CandidateNumber`
 (numéro d'inscription) ; les coordonnées GPS ne sont jamais stockées en chaîne.
-*Livré (30/08/2026)* : colonnes `School`/`ExamDossier`, `GpsCoordinates` calculé non mappé (`builder.Ignore`), migration, index unique partiel global sur `NationalSchoolCode`. Tests `SimenComplianceTests` : rendu GPS culture invariante, null si une moitié manque. *Reste* : écrans de saisie.
+*Livré (30/08/2026, back-end + écrans)* : colonnes `School`/`ExamDossier`, `GpsCoordinates` calculé non
+mappé (`builder.Ignore`), migration, index unique partiel global sur `NationalSchoolCode`.
+**Écrans** :
+- *Paramètres → Établissement* — nouveau bloc « Intégration étatique (SIMEN) » : code établissement
+  national, n° d'autorisation ministérielle, code de circonscription, coordonnées GPS (deux champs,
+  les deux ensemble ou aucune, 422 sinon ; `gpsCoordinates` affiché en lecture seule). Étend
+  `UpdateCurrentSchoolCommand` + `SchoolProfileDto` + `GetCurrentSchoolQuery`.
+- *Fiche enseignant* (création + modification) — bloc replié « Informations pour le rapport
+  STATEDUC » (facultatif) : genre, diplôme académique, diplôme professionnel, statut administratif,
+  matricule de solde, date de première prise de service. Nouveaux champs sur `Teacher`,
+  `CreateTeacherCommand`, `UpdateTeacherCommand`, `TeacherProfileDto`. Défauts « NonRenseigne » — le
+  rapport les compte dans une ligne dédiée.
+
+*Vérifié au navigateur / `curl` (skill `run`, PostgreSQL réel)* : `PUT /schools/current` persiste code
++ GPS ; `gpsCoordinates` = « 14.692800, -17.446700 » ; latitude seule → 422 ; **`GET
+/state-integration/planete/export` passe de 409 à 200** dès le code posé (objectif du ticket) ; le nom
+du fichier Planète neutralise désormais les caractères non alphanumériques du code ; l'agrégat STATEDUC
+compte correctement un enseignant sans qualification/genre (`unreportedQualificationTeachers`,
+`teachersWithoutGender`).
+
+> **Bug PRÉ-EXISTANT repéré au passage (hors périmètre M05, non corrigé) :** modifier un enseignant en
+> **décochant** une matière qualifiée échoue en 500 — `UpdateTeacherCommandHandler` émet un `DELETE`
+> sur `teacher_subjects`, or la migration `AddTeachers` n'accorde volontairement pas `DELETE` au rôle
+> applicatif (« le soft delete est un UPDATE »). À traiter dans un ticket dédié : soit accorder le
+> `DELETE` sur cette table de liaison (elle n'a pas de soft-delete), soit remplacer le retrait par un
+> marquage. Impact réel : le Directeur ne peut pas retirer une matière à un enseignant depuis l'écran.
 
 **JGK-M06** [H] — Certificat de mutation avec QR de vérification
 Table tenant `student_mutation_certificates` + `GenerateStudentMutationCertificateCommand` +

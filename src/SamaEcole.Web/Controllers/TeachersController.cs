@@ -46,7 +46,15 @@ public class TeachersController(ISender mediator) : ControllerBase
         string? Address,
         string? PhotoUrl,
         IReadOnlyList<Guid> SubjectIds,
-        uint RowVersion);
+        uint RowVersion,
+
+        // Champs STATEDUC (JGK-M05) — facultatifs, mappés à la main vers la commande ci-dessous.
+        string? Gender = null,
+        AcademicQualification AcademicQualification = AcademicQualification.NonRenseigne,
+        ProfessionalQualification ProfessionalQualification = ProfessionalQualification.NonRenseigne,
+        TeacherCivilServiceStatus CivilServiceStatus = TeacherCivilServiceStatus.NonRenseigne,
+        string? CivilServiceMatricule = null,
+        DateOnly? FirstAppointmentDate = null);
 
     private const string ViewRoles =
         $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Secretariat)}";
@@ -203,7 +211,9 @@ public class TeachersController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(
             new UpdateTeacherCommand(
                 id, request.FullName, request.Email, request.Phone, request.BirthDate, request.BirthPlace,
-                request.Address, request.PhotoUrl, request.SubjectIds, request.RowVersion),
+                request.Address, request.PhotoUrl, request.SubjectIds, request.RowVersion,
+                request.Gender, request.AcademicQualification, request.ProfessionalQualification,
+                request.CivilServiceStatus, request.CivilServiceMatricule, request.FirstAppointmentDate),
             cancellationToken));
 
     /// <summary>

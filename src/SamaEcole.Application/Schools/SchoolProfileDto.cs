@@ -28,4 +28,17 @@ public record SchoolProfileDto(
     bool IsPubliclyListed = false,
     string? City = null,
     string? Region = null,
-    string? PublicDescription = null);
+    string? PublicDescription = null,
+
+    // Identification réglementaire SIMEN (module Intégration étatique, JGK-M05) — voir School pour la
+    // sémantique. Sans NationalSchoolCode, l'export Planète refuse de s'exécuter et la génération d'un
+    // IEN provisoire échoue : ce sont les premiers champs à renseigner pour ouvrir le module.
+    string? NationalSchoolCode = null,
+    string? MinistryAuthorizationNumber = null,
+    string? SchoolDistrictCode = null,
+    decimal? GpsLatitude = null,
+    decimal? GpsLongitude = null,
+
+    // Chaîne d'affichage « lat, lon » calculée (culture invariante), null si l'une des deux manque —
+    // pratique pour l'écran, jamais une donnée persistée. Voir School.GpsCoordinates.
+    string? GpsCoordinates = null);

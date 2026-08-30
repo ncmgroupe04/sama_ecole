@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Teachers.Queries.GetTeacherById;
 
@@ -39,4 +40,13 @@ public record TeacherProfileDto(
     string Status,
     IReadOnlyList<string> Subjects,
     IReadOnlyList<TeacherAssignmentDto> Assignments,
-    uint RowVersion);
+    uint RowVersion,
+
+    // Champs STATEDUC (JGK-M05) — round-trip pour l'édition + affichage sur la fiche. Les enums
+    // sérialisent en chaîne (JsonStringEnumConverter global) : « NonRenseigne » tant que rien n'est saisi.
+    string? Gender = null,
+    AcademicQualification AcademicQualification = AcademicQualification.NonRenseigne,
+    ProfessionalQualification ProfessionalQualification = ProfessionalQualification.NonRenseigne,
+    TeacherCivilServiceStatus CivilServiceStatus = TeacherCivilServiceStatus.NonRenseigne,
+    string? CivilServiceMatricule = null,
+    DateOnly? FirstAppointmentDate = null);

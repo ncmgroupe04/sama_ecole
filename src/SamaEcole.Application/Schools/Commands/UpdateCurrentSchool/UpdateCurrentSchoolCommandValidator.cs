@@ -84,6 +84,37 @@ public class UpdateCurrentSchoolCommandValidator : AbstractValidator<UpdateCurre
         RuleFor(c => c.City)
             .NotEmpty().When(c => c.IsPubliclyListed)
             .WithMessage("La ville est obligatoire pour figurer dans l'annuaire public.");
+
+        // Intégration étatique (SIMEN). Formats NON contraints par regex, même raison que le NINEA :
+        // les codes du ministère varient de forme selon le document source. On borne la longueur,
+        // on refuse le HTML.
+        RuleFor(c => c.NationalSchoolCode)
+            .MaximumLength(30).WithMessage("Le code établissement national ne peut pas dépasser 30 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.MinistryAuthorizationNumber)
+            .MaximumLength(80).WithMessage("Le numéro d'autorisation ne peut pas dépasser 80 caractères.")
+            .NoHtml();
+
+        RuleFor(c => c.SchoolDistrictCode)
+            .MaximumLength(30).WithMessage("Le code de circonscription ne peut pas dépasser 30 caractères.")
+            .NoHtml();
+
+        // Coordonnées GPS : bornes WGS84 strictes. Une valeur hors bornes est une faute de saisie
+        // (virgule/point, ordre lat/lon inversé) — la refuser tôt évite un point placé au milieu de
+        // l'océan sur la carte scolaire.
+        RuleFor(c => c.GpsLatitude)
+            .InclusiveBetween(-90m, 90m).When(c => c.GpsLatitude.HasValue)
+            .WithMessage("La latitude doit être comprise entre -90 et 90.");
+
+        RuleFor(c => c.GpsLongitude)
+            .InclusiveBetween(-180m, 180m).When(c => c.GpsLongitude.HasValue)
+            .WithMessage("La longitude doit être comprise entre -180 et 180.");
+
+        // Les deux ensemble ou aucune : une latitude sans longitude (ou l'inverse) ne localise rien.
+        RuleFor(c => c)
+            .Must(c => c.GpsLatitude.HasValue == c.GpsLongitude.HasValue)
+            .WithMessage("Renseignez la latitude ET la longitude, ou laissez les deux vides.");
     }
 
     private static bool BeAValidHttpUrl(string? url) =>

@@ -6,10 +6,50 @@
  * Permissions (confort d'affichage ; l'API garde reste la protection réelle) : Voir → Super Admin /
  * Directeur / Secrétariat ; Créer & Attribuer → Directeur / Secrétariat.
  */
+// Nomenclatures STATEDUC (JGK-M05). Les valeurs correspondent aux enums Domain
+// (AcademicQualification / ProfessionalQualification / TeacherCivilServiceStatus) ; « NonRenseigne »
+// est la valeur par défaut, jamais imputée à une catégorie réelle.
+const GENDER_OPTIONS = [
+    { value: '', label: 'Non renseigné' },
+    { value: 'M', label: 'Homme' },
+    { value: 'F', label: 'Femme' }
+];
+const ACADEMIC_QUALIFICATION_OPTIONS = [
+    { value: 'NonRenseigne', label: 'Non renseigné' },
+    { value: 'Aucun', label: 'Aucun' },
+    { value: 'BFEM', label: 'BFEM' },
+    { value: 'BAC', label: 'Baccalauréat' },
+    { value: 'Licence', label: 'Licence' },
+    { value: 'Master', label: 'Master' },
+    { value: 'Doctorat', label: 'Doctorat' }
+];
+const PROFESSIONAL_QUALIFICATION_OPTIONS = [
+    { value: 'NonRenseigne', label: 'Non renseigné' },
+    { value: 'Aucun', label: 'Aucun' },
+    { value: 'CEAP', label: 'CEAP' },
+    { value: 'CAP', label: 'CAP' },
+    { value: 'CAEM', label: 'CAEM' },
+    { value: 'CAES', label: 'CAES' }
+];
+const CIVIL_SERVICE_STATUS_OPTIONS = [
+    { value: 'NonRenseigne', label: 'Non renseigné' },
+    { value: 'Fonctionnaire', label: 'Fonctionnaire' },
+    { value: 'Contractuel', label: 'Contractuel' },
+    { value: 'Vacataire', label: 'Vacataire' },
+    { value: 'Volontaire', label: 'Volontaire' },
+    { value: 'Benevole', label: 'Bénévole' }
+];
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('teachersView', () => ({
         teachers: [],
         subjects: [],
+
+        // Nomenclatures STATEDUC exposées au gabarit (select-field, options-expr).
+        genderOptions: GENDER_OPTIONS,
+        academicQualificationOptions: ACADEMIC_QUALIFICATION_OPTIONS,
+        professionalQualificationOptions: PROFESSIONAL_QUALIFICATION_OPTIONS,
+        civilServiceStatusOptions: CIVIL_SERVICE_STATUS_OPTIONS,
         eligibleAccounts: [],
         totalCount: 0,
         page: 1,
@@ -321,7 +361,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         openCreate() {
-            this.newTeacher = { fullName: '', email: '', phone: '', birthPlace: '', photoUrl: '', photoData: '', subjectIds: [], userId: '' };
+            this.newTeacher = {
+                fullName: '', email: '', phone: '', birthDate: '', birthPlace: '', address: '',
+                photoUrl: '', photoData: '', subjectIds: [], userId: '',
+                // Champs STATEDUC (JGK-M05) — facultatifs, « non renseigné » par défaut.
+                gender: '', academicQualification: 'NonRenseigne', professionalQualification: 'NonRenseigne',
+                civilServiceStatus: 'NonRenseigne', civilServiceMatricule: '', firstAppointmentDate: ''
+            };
             this.createErrors = {};
             this.isCreateOpen = true;
         },
@@ -340,7 +386,13 @@ document.addEventListener('alpine:init', () => {
                     photoUrl: this.newTeacher.photoUrl || null,
                     photoData: this.newTeacher.photoData || null,
                     subjectIds: this.newTeacher.subjectIds,
-                    userId: this.newTeacher.userId || null
+                    userId: this.newTeacher.userId || null,
+                    gender: this.newTeacher.gender || null,
+                    academicQualification: this.newTeacher.academicQualification,
+                    professionalQualification: this.newTeacher.professionalQualification,
+                    civilServiceStatus: this.newTeacher.civilServiceStatus,
+                    civilServiceMatricule: this.newTeacher.civilServiceMatricule || null,
+                    firstAppointmentDate: this.newTeacher.firstAppointmentDate || null
                 };
                 await window.api.post('/teachers', payload);
 
@@ -397,7 +449,15 @@ document.addEventListener('alpine:init', () => {
                 // La fiche ne renvoie que les NOMS des matières qualifiées (voir TeacherProfileDto) :
                 // on retrouve leurs identifiants dans le référentiel `subjects` déjà chargé.
                 subjectIds: this.subjects.filter((s) => this.detail.subjects.includes(s.name)).map((s) => s.id),
-                rowVersion: this.detail.rowVersion
+                rowVersion: this.detail.rowVersion,
+                // Champs STATEDUC (JGK-M05) — round-trip depuis la fiche. Les enums arrivent en chaîne
+                // (JsonStringEnumConverter) ; « NonRenseigne » tant que rien n'est saisi.
+                gender: this.detail.gender || '',
+                academicQualification: this.detail.academicQualification || 'NonRenseigne',
+                professionalQualification: this.detail.professionalQualification || 'NonRenseigne',
+                civilServiceStatus: this.detail.civilServiceStatus || 'NonRenseigne',
+                civilServiceMatricule: this.detail.civilServiceMatricule || '',
+                firstAppointmentDate: this.detail.firstAppointmentDate || ''
             };
             this.teacherEditErrors = {};
             this.photoUploadError = null;
@@ -442,7 +502,15 @@ document.addEventListener('alpine:init', () => {
             this.isSavingTeacherEdit = true;
             this.teacherEditErrors = {};
             try {
-                await window.api.put(`/teachers/${this.detail.id}`, this.editingTeacher);
+                // Les champs date/texte optionnels partent en null quand vides — un '' ne se lie pas à
+                // un DateOnly? côté serveur, et « genre = '' » doit signifier « non renseigné ».
+                const payload = {
+                    ...this.editingTeacher,
+                    gender: this.editingTeacher.gender || null,
+                    civilServiceMatricule: this.editingTeacher.civilServiceMatricule || null,
+                    firstAppointmentDate: this.editingTeacher.firstAppointmentDate || null
+                };
+                await window.api.put(`/teachers/${this.detail.id}`, payload);
                 this.closeEditTeacher();
                 await this.refreshTeacherDetail();
                 await this.loadTeachers();

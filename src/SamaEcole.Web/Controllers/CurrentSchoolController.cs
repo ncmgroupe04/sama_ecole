@@ -52,7 +52,14 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
         bool IsPubliclyListed = false,
         string? City = null,
         string? Region = null,
-        string? PublicDescription = null);
+        string? PublicDescription = null,
+
+        // Intégration étatique (SIMEN, JGK-M05). Même remarque : mappé à la main ci-dessous.
+        string? NationalSchoolCode = null,
+        string? MinistryAuthorizationNumber = null,
+        string? SchoolDistrictCode = null,
+        decimal? GpsLatitude = null,
+        decimal? GpsLongitude = null);
 
     /// <summary>
     /// LECTURE ouverte à tout utilisateur de l'école : le nom et les coordonnées s'affichent sur le
@@ -76,7 +83,9 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
                 request.Name, request.Address, request.Phone, request.LogoUrl,
                 request.InspectionAcademie, request.InspectionEducationFormation, request.NomLycee,
                 request.Email, request.Ninea, request.RegistreCommerce,
-                request.IsPubliclyListed, request.City, request.Region, request.PublicDescription),
+                request.IsPubliclyListed, request.City, request.Region, request.PublicDescription,
+                request.NationalSchoolCode, request.MinistryAuthorizationNumber, request.SchoolDistrictCode,
+                request.GpsLatitude, request.GpsLongitude),
             cancellationToken));
 
     /// <summary>

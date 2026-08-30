@@ -1,4 +1,5 @@
 using MediatR;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Teachers.Commands.UpdateTeacher;
 
@@ -25,6 +26,17 @@ public record UpdateTeacherCommand(
     string? Address,
     string? PhotoUrl,
     IReadOnlyList<Guid> SubjectIds,
-    uint RowVersion) : IRequest<UpdateTeacherResult>;
+    uint RowVersion,
+
+    // Champs STATEDUC (JGK-M05) — facultatifs, position après RowVersion pour ne pas casser les
+    // appelants existants. Défauts « non renseigné » : un PUT qui les omet remet donc l'enseignant
+    // en « non renseigné ». L'écran renvoie toujours les valeurs courantes (round-trip), ce n'est
+    // donc un souci que pour un client tiers qui construirait le corps à la main.
+    string? Gender = null,
+    AcademicQualification AcademicQualification = AcademicQualification.NonRenseigne,
+    ProfessionalQualification ProfessionalQualification = ProfessionalQualification.NonRenseigne,
+    TeacherCivilServiceStatus CivilServiceStatus = TeacherCivilServiceStatus.NonRenseigne,
+    string? CivilServiceMatricule = null,
+    DateOnly? FirstAppointmentDate = null) : IRequest<UpdateTeacherResult>;
 
 public record UpdateTeacherResult(Guid Id, uint RowVersion);

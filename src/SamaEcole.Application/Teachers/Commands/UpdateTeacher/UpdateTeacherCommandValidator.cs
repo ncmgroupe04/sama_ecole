@@ -29,6 +29,17 @@ public class UpdateTeacherCommandValidator : AbstractValidator<UpdateTeacherComm
             .Must(ids => ids.Distinct().Count() == ids.Count)
             .When(x => x.SubjectIds.Count > 0)
             .WithMessage("Une même matière ne peut être indiquée deux fois.");
+
+        // Champs STATEDUC (JGK-M05) — mêmes règles qu'à la création.
+        RuleFor(x => x.Gender).MaximumLength(1).NoHtml();
+        RuleFor(x => x.AcademicQualification).IsInEnum();
+        RuleFor(x => x.ProfessionalQualification).IsInEnum();
+        RuleFor(x => x.CivilServiceStatus).IsInEnum();
+        RuleFor(x => x.CivilServiceMatricule).MaximumLength(30).NoHtml();
+        RuleFor(x => x.FirstAppointmentDate)
+            .LessThanOrEqualTo(DateOnly.FromDateTime(DateTime.UtcNow))
+            .When(x => x.FirstAppointmentDate.HasValue)
+            .WithMessage("La date de première prise de service ne peut pas être dans le futur.");
     }
 
     private static bool BeAValidHttpUrl(string? url) =>

@@ -30,4 +30,13 @@ public record UpdateCurrentSchoolCommand(
     bool IsPubliclyListed = false,
     string? City = null,
     string? Region = null,
-    string? PublicDescription = null) : IRequest<SchoolProfileDto>;
+    string? PublicDescription = null,
+
+    // Bloc « Intégration étatique (SIMEN) » — module Intégration étatique (JGK-M05). Facultatifs, mais
+    // NationalSchoolCode conditionne l'export Planète et la génération d'IEN provisoire. Les deux
+    // coordonnées GPS sont renseignées ensemble ou pas du tout (validateur).
+    string? NationalSchoolCode = null,
+    string? MinistryAuthorizationNumber = null,
+    string? SchoolDistrictCode = null,
+    decimal? GpsLatitude = null,
+    decimal? GpsLongitude = null) : IRequest<SchoolProfileDto>;

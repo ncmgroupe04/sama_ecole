@@ -46,7 +46,11 @@ document.addEventListener('alpine:init', () => {
             name: '', address: '', phone: '', logoUrl: '',
             inspectionAcademie: '', inspectionEducationFormation: '', nomLycee: '',
             // Coordonnées et mentions légales de l'en-tête du reçu (NINEA / RCCM).
-            email: '', ninea: '', registreCommerce: ''
+            email: '', ninea: '', registreCommerce: '',
+            // Intégration étatique (SIMEN, JGK-M05). GPS en deux champs numériques ; « lat, lon »
+            // calculé côté serveur (gpsCoordinates) pour l'affichage seul.
+            nationalSchoolCode: '', ministryAuthorizationNumber: '', schoolDistrictCode: '',
+            gpsLatitude: '', gpsLongitude: '', gpsCoordinates: ''
         },
         profileErrors: {},
         profileSaving: false,
@@ -163,18 +167,7 @@ document.addEventListener('alpine:init', () => {
                 const [profile, config, mentions] = await Promise.all(requests);
                 if (this.canViewMentions) this.mentions = mentions;
 
-                this.profile = {
-                    name: profile.name || '',
-                    address: profile.address || '',
-                    phone: profile.phone || '',
-                    logoUrl: profile.logoUrl || '',
-                    inspectionAcademie: profile.inspectionAcademie || '',
-                    inspectionEducationFormation: profile.inspectionEducationFormation || '',
-                    nomLycee: profile.nomLycee || '',
-                    email: profile.email || '',
-                    ninea: profile.ninea || '',
-                    registreCommerce: profile.registreCommerce || ''
-                };
+                this.profile = this.toProfileState(profile);
                 this.config = {
                     gradingScale: config.gradingScale,
                     dateFormat: config.dateFormat,
@@ -201,11 +194,38 @@ document.addEventListener('alpine:init', () => {
 
         // ---------------------------------------------------------------- Établissement
 
+        /** Hydrate l'état du formulaire depuis un SchoolProfileDto (chargement + après enregistrement). */
+        toProfileState(dto) {
+            return {
+                name: dto.name || '',
+                address: dto.address || '',
+                phone: dto.phone || '',
+                logoUrl: dto.logoUrl || '',
+                inspectionAcademie: dto.inspectionAcademie || '',
+                inspectionEducationFormation: dto.inspectionEducationFormation || '',
+                nomLycee: dto.nomLycee || '',
+                email: dto.email || '',
+                ninea: dto.ninea || '',
+                registreCommerce: dto.registreCommerce || '',
+                nationalSchoolCode: dto.nationalSchoolCode || '',
+                ministryAuthorizationNumber: dto.ministryAuthorizationNumber || '',
+                schoolDistrictCode: dto.schoolDistrictCode || '',
+                // Number|null -> chaîne pour les <input type="number"> ; '' quand non renseigné.
+                gpsLatitude: dto.gpsLatitude === null || dto.gpsLatitude === undefined ? '' : String(dto.gpsLatitude),
+                gpsLongitude: dto.gpsLongitude === null || dto.gpsLongitude === undefined ? '' : String(dto.gpsLongitude),
+                gpsCoordinates: dto.gpsCoordinates || ''
+            };
+        },
+
         async saveProfile() {
             this.profileErrors = {};
             this.profileSaved = false;
             this.profileSaving = true;
             try {
+                // GPS : '' -> null (les deux ensemble ou aucune, le serveur revalide) ; sinon Number.
+                const lat = this.profile.gpsLatitude === '' ? null : Number(this.profile.gpsLatitude);
+                const lon = this.profile.gpsLongitude === '' ? null : Number(this.profile.gpsLongitude);
+
                 const saved = await window.api.put('/schools/current', {
                     name: this.profile.name,
                     address: this.profile.address || null,
@@ -216,20 +236,14 @@ document.addEventListener('alpine:init', () => {
                     nomLycee: this.profile.nomLycee || null,
                     email: this.profile.email || null,
                     ninea: this.profile.ninea || null,
-                    registreCommerce: this.profile.registreCommerce || null
+                    registreCommerce: this.profile.registreCommerce || null,
+                    nationalSchoolCode: this.profile.nationalSchoolCode || null,
+                    ministryAuthorizationNumber: this.profile.ministryAuthorizationNumber || null,
+                    schoolDistrictCode: this.profile.schoolDistrictCode || null,
+                    gpsLatitude: Number.isFinite(lat) ? lat : null,
+                    gpsLongitude: Number.isFinite(lon) ? lon : null
                 });
-                this.profile = {
-                    name: saved.name || '',
-                    address: saved.address || '',
-                    phone: saved.phone || '',
-                    logoUrl: saved.logoUrl || '',
-                    inspectionAcademie: saved.inspectionAcademie || '',
-                    inspectionEducationFormation: saved.inspectionEducationFormation || '',
-                    nomLycee: saved.nomLycee || '',
-                    email: saved.email || '',
-                    ninea: saved.ninea || '',
-                    registreCommerce: saved.registreCommerce || ''
-                };
+                this.profile = this.toProfileState(saved);
                 this.profileSaved = true;
             } catch (err) {
                 this.profileErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");

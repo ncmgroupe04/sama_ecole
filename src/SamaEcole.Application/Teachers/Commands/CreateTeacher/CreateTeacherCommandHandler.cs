@@ -88,7 +88,14 @@ public class CreateTeacherCommandHandler(
                 Address = request.Address,
                 PhotoUrl = request.PhotoUrl,
                 PhotoData = request.PhotoData is null ? null : Convert.FromBase64String(request.PhotoData),
-                UserId = request.UserId
+                UserId = request.UserId,
+                Gender = NormalizeGender(request.Gender),
+                AcademicQualification = request.AcademicQualification,
+                ProfessionalQualification = request.ProfessionalQualification,
+                CivilServiceStatus = request.CivilServiceStatus,
+                CivilServiceMatricule = string.IsNullOrWhiteSpace(request.CivilServiceMatricule)
+                    ? null : request.CivilServiceMatricule.Trim(),
+                FirstAppointmentDate = request.FirstAppointmentDate
             };
 
             dbContext.Teachers.Add(teacher);
@@ -107,5 +114,15 @@ public class CreateTeacherCommandHandler(
 
             return new CreateTeacherResult(teacher.Id, teacher.Matricule);
         }, cancellationToken);
+    }
+
+    /// <summary>
+    /// « m » / « F  » → « M » / « F » ; toute autre valeur (y compris vide) → null. Le rapport
+    /// STATEDUC préfère une case « non renseigné » visible à un genre deviné.
+    /// </summary>
+    internal static string? NormalizeGender(string? gender)
+    {
+        var trimmed = gender?.Trim().ToUpperInvariant();
+        return trimmed is "M" or "F" ? trimmed : null;
     }
 }
