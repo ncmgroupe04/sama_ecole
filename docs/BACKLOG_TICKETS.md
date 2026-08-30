@@ -366,12 +366,8 @@ du fichier Planète neutralise désormais les caractères non alphanumériques d
 compte correctement un enseignant sans qualification/genre (`unreportedQualificationTeachers`,
 `teachersWithoutGender`).
 
-> **Bug PRÉ-EXISTANT repéré au passage (hors périmètre M05, non corrigé) :** modifier un enseignant en
-> **décochant** une matière qualifiée échoue en 500 — `UpdateTeacherCommandHandler` émet un `DELETE`
-> sur `teacher_subjects`, or la migration `AddTeachers` n'accorde volontairement pas `DELETE` au rôle
-> applicatif (« le soft delete est un UPDATE »). À traiter dans un ticket dédié : soit accorder le
-> `DELETE` sur cette table de liaison (elle n'a pas de soft-delete), soit remplacer le retrait par un
-> marquage. Impact réel : le Directeur ne peut pas retirer une matière à un enseignant depuis l'écran.
+> **Bug pré-existant repéré au passage → corrigé par JGK-T01 (voir ci-dessous).** Décocher une matière
+> sur la fiche enseignant échouait en 500 (`42501: permission denied for table teacher_subjects`).
 
 **JGK-M06** [H] — Certificat de mutation avec QR de vérification
 Table tenant `student_mutation_certificates` + `GenerateStudentMutationCertificateCommand` +
@@ -397,6 +393,25 @@ périodes est **lu sur la configuration**, jamais codé en dur ; une case vide s
 et **jamais** « non acquis » ; la légende des abréviations est obligatoire (le livret est d'abord
 destiné à la famille).
 *Livré (30/08/2026)* : `GetSkillsBookletPdfQuery`/Handler (fusionne les grilles APC trimestre par trimestre via `EvaluationStructureBuilder`), `SkillsBookletDocument` (A4 portrait multi-pages), route `GET /api/v1/state-integration/students/{id}/skills-booklet`, `SkillAcquisition` (seuils 40/60/85). Tests `SimenComplianceTests` : seuils, null si pas de note / barème nul. *Écran (30/08/2026)* : le livret se télécharge depuis la fiche élève (route `GET /state-integration/students/{id}/skills-booklet`). Pas d'onglet dédié — c'est une pièce jointe au dossier, comme le bulletin.
+
+---
+
+## Correctifs
+
+**JGK-T01** [H] — Retrait de matière enseignant (privilège SQL vs soft-delete)
+**Statut : livré (30/08/2026).** Décocher une matière sur la fiche enseignant échouait en 500
+(`42501: permission denied for table teacher_subjects`) : `UpdateTeacherCommandHandler` retire une
+qualification par un `DELETE` physique, or `AddTeachers` n'accordait au rôle applicatif que
+`SELECT, INSERT, UPDATE`. **Option A retenue** — micro-migration `GrantDeleteOnTeacherSubjects` qui
+accorde `DELETE` sur cette table de liaison (`Down` : `REVOKE`). Justification : `teacher_subjects`
+n'est qu'un lien « qualifié pour », sans valeur d'audit ; le `DELETE` est déjà accordé à des tables
+de même nature (`refresh_tokens`, `classrooms`, `AddPayrollAndTax`, `AddScheduleAndDisbursements`).
+Les tables à donnée métier historisée (élèves, notes, paiements) restent sans `DELETE` — l'invariant
+de la règle #6 pour celles-là est intact. `TeacherSubjectConfiguration` documente l'écart.
+*Critères vérifiés* : `TeacherSubjectUnassignmentTests.cs` (catégorie `MultiTenant`) — avec le rôle
+BRIDÉ, retirer une matière ne lève plus rien ET la ligne a disparu physiquement (contrôle SQL brut,
+filtres EF hors jeu : un soft-delete silencieux ferait échouer ce second contrôle). Suite Teacher
+d'intégration : 14/14. `dotnet build` 0 erreur ; unitaires 1004/1004.
 
 ---
 

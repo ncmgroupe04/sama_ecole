@@ -4,6 +4,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace SamaEcole.Persistence.Configurations;
 
+/// <summary>
+/// Table de LIAISON pure : « cet enseignant est qualifié pour cette matière ». Contrairement au reste
+/// du modèle, le rôle applicatif y a le droit <c>DELETE</c> (migration
+/// <c>GrantDeleteOnTeacherSubjects</c>, ticket JGK-T01) : retirer une qualification est une vraie
+/// suppression — aucune valeur d'audit à conserver « untel a pu enseigner les maths jusqu'en mars »,
+/// et <c>UpdateTeacherCommandHandler</c> recrée la ligne à l'identique si le Directeur se ravise.
+/// </summary>
 public class TeacherSubjectConfiguration : IEntityTypeConfiguration<TeacherSubject>
 {
     public void Configure(EntityTypeBuilder<TeacherSubject> builder)

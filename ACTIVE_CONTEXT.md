@@ -158,9 +158,16 @@ Vérifié : `GET /state-integration/planete/export` passe de 409 à 200 dès que
 posé.
 
 **Ce qui reste :** tests d'intégration dédiés (agrégats STATEDUC, concurrence sur la séquence IEN,
-refus 409 code absent). **Bug pré-existant repéré (hors M05)** : retirer une matière à un enseignant
-échoue en 500 — `UpdateTeacherCommandHandler` fait un `DELETE` sur `teacher_subjects` alors que la
-migration `AddTeachers` n'accorde pas ce droit au rôle applicatif. Ticket dédié à ouvrir.
+refus 409 code absent).
+
+**JGK-T01 (30/08/2026) — corrigé** : retirer une matière à un enseignant échouait en 500
+(`42501: permission denied for table teacher_subjects`). `UpdateTeacherCommandHandler` fait un
+`DELETE` physique ; `AddTeachers` n'accordait que `SELECT, INSERT, UPDATE`. Micro-migration
+`GrantDeleteOnTeacherSubjects` (Option A du ticket) : `GRANT DELETE` sur cette table de LIAISON —
+« qualifié pour cette matière » n'a aucune valeur d'audit, et le `DELETE` est déjà accordé à des
+tables de même nature (`refresh_tokens`, `classrooms`, paie, décaissements). Les tables à donnée
+métier historisée restent sans `DELETE`. Test `TeacherSubjectUnassignmentTests` (rôle bridé + contrôle
+SQL brut de la disparition physique).
 
 **Trois arbitrages actés, validés par le client :**
 
