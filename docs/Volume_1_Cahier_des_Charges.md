@@ -674,7 +674,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 ## 22. Examens officiels (CFEE/BFEM/BAC)
 
-**Statut : à construire (Module J du backlog).** Concerne les classes d'examen : CM2 (CFEE), 3ème (BFEM), Terminale et ses séries (BAC).
+**Statut : livré (Module J du backlog).** Concerne les classes d'examen : CM2 (CFEE), 3ème (BFEM), Terminale et ses séries (BAC).
 
 ### 22.1 Sessions et dossiers
 

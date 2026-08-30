@@ -8,7 +8,9 @@
  * Trois onglets :
  *  - Export Planète : matrice élèves (CSV ou JSON) pour une année, éventuellement une classe.
  *  - Rapport STATEDUC : agrégats à l'écran + téléchargement PDF (formulaire officiel) et Excel.
- *  - Certificats de mutation : le registre des pièces délivrées, avec révocation (JGK-M06).
+ *  - Certificats de mutation : le registre des pièces délivrées (JGK-M06), avec délivrance,
+ *    révocation, et téléchargement du livret de compétences (JGK-M07) — un élève se retrouve par
+ *    recherche nom/matricule (même widget que /caisse), pas depuis la fiche élève.
  *
  * Matrice de droits reproduite ICI en confort d'affichage — la garde réelle est
  * StateIntegrationController : Planète et STATEDUC sont Directeur seul ; IEN et certificats de
@@ -50,6 +52,25 @@ document.addEventListener('alpine:init', () => {
         // ---- Onglet Certificats ---------------------------------------------------------------
         certificates: { items: [], total: 0, page: 1, pageSize: 20, loading: false },
         revokeModal: { open: false, id: null, number: '', reason: '', busy: false, error: null },
+
+        // Délivrance d'un certificat de mutation (JGK-M06) : recherche élève + formulaire + résultat.
+        issueModal: {
+            open: false,
+            studentSearch: '', students: [], isSearchingStudents: false, studentsLoaded: false, studentSearchError: null,
+            selectedStudent: null,
+            schoolYearId: '', reason: 'Demenagement', reasonDetails: '',
+            destinationSchoolName: '', destinationCity: '',
+            busy: false, error: null, result: null,
+            bookletBusy: false, bookletError: null
+        },
+
+        // Téléchargement autonome du livret de compétences (JGK-M07), sans passer par une mutation.
+        livretModal: {
+            open: false,
+            studentSearch: '', students: [], isSearchingStudents: false, studentsLoaded: false, studentSearchError: null,
+            selectedStudent: null,
+            schoolYearId: '', busy: false, error: null
+        },
 
         async init() {
             try {
@@ -250,6 +271,151 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        // ================================ Délivrance de certificat (JGK-M06) ================================
+
+        get reasonOptions() {
+            return Object.keys(REASON_LABELS).map((value) => ({ value, label: REASON_LABELS[value] }));
+        },
+
+        get issueYearOptions() {
+            return [{ value: '', label: 'Sélectionnez une année…' }]
+                .concat(this.schoolYears.map((y) => ({ value: y.id, label: y.label })));
+        },
+
+        openIssue() {
+            const active = this.schoolYears.find((y) => y.isActive) || this.schoolYears[0];
+            this.issueModal = {
+                open: true,
+                studentSearch: '', students: [], isSearchingStudents: false, studentsLoaded: false, studentSearchError: null,
+                selectedStudent: null,
+                schoolYearId: active ? active.id : '', reason: 'Demenagement', reasonDetails: '',
+                destinationSchoolName: '', destinationCity: '',
+                busy: false, error: null, result: null,
+                bookletBusy: false, bookletError: null
+            };
+        },
+        closeIssue() { this.issueModal.open = false; },
+
+        /**
+         * Recherche CÔTÉ SERVEUR (GET /students?search=…), même mécanique que /caisse (studentSearch
+         * de caisse.js) : un établissement compte couramment plus de mille élèves, un plafond de page
+         * chargé une fois pour toutes les rendrait invisibles à la recherche. Anti-rebond dans la vue
+         * (x-on:input.debounce.300ms). Factorisée sur `modal` pour servir issueModal ET livretModal.
+         */
+        async searchStudentsFor(modal) {
+            modal.selectedStudent = null;
+            const q = modal.studentSearch.trim();
+            if (q.length < 2) {
+                modal.students = [];
+                modal.studentsLoaded = false;
+                modal.studentSearchError = null;
+                return;
+            }
+            modal.isSearchingStudents = true;
+            modal.studentSearchError = null;
+            try {
+                const page = await window.api.get(`/students?search=${encodeURIComponent(q)}&page=1&pageSize=20`);
+                modal.students = page.items;
+                modal.studentsLoaded = true;
+            } catch (err) {
+                modal.studentSearchError = window.api.toMessage(err, 'Erreur lors de la recherche.');
+            } finally {
+                modal.isSearchingStudents = false;
+            }
+        },
+        selectStudentFor(modal, student) {
+            modal.selectedStudent = student;
+            modal.studentSearch = `${student.matricule} — ${student.fullName}`;
+            modal.students = [];
+        },
+
+        searchIssueStudents() { this.searchStudentsFor(this.issueModal); },
+        selectIssueStudent(s) { this.selectStudentFor(this.issueModal, s); },
+
+        async submitIssue() {
+            const m = this.issueModal;
+            if (!m.selectedStudent || !m.schoolYearId || m.busy) return;
+            if (m.reason === 'Autre' && !m.reasonDetails.trim()) return;
+
+            m.busy = true;
+            m.error = null;
+            try {
+                const outcome = await this.postAndDownloadFile(
+                    `/api/v1/state-integration/students/${m.selectedStudent.id}/mutation-certificate`,
+                    {
+                        schoolYearId: m.schoolYearId,
+                        reason: m.reason,
+                        reasonDetails: m.reasonDetails.trim() || null,
+                        destinationSchoolName: m.destinationSchoolName.trim() || null,
+                        destinationCity: m.destinationCity.trim() || null
+                    },
+                    'certificat-mutation.pdf'
+                );
+                m.result = outcome;
+                await this.loadCertificates();
+            } catch (err) {
+                m.error = window.api.toMessage(err, 'Erreur lors de la délivrance du certificat.');
+            } finally {
+                m.busy = false;
+            }
+        },
+
+        // Après délivrance, le livret est la pièce que l'école d'accueil réclame « aux côtés du
+        // certificat » (Volume 1 §23.6) : proposé ici avec le même élève et la même année, sans ressaisie.
+        async downloadIssueBooklet() {
+            const m = this.issueModal;
+            if (!m.selectedStudent || !m.schoolYearId || m.bookletBusy) return;
+
+            m.bookletBusy = true;
+            m.bookletError = null;
+            try {
+                await this.downloadFile(
+                    `/api/v1/state-integration/students/${m.selectedStudent.id}/skills-booklet?schoolYearId=${m.schoolYearId}`,
+                    'livret-competences.pdf'
+                );
+            } catch (err) {
+                m.bookletError = window.api.toMessage(err, "Erreur lors du téléchargement du livret.");
+            } finally {
+                m.bookletBusy = false;
+            }
+        },
+
+        // ================================ Livret de compétences autonome (JGK-M07) ================================
+
+        openLivret() {
+            const active = this.schoolYears.find((y) => y.isActive) || this.schoolYears[0];
+            this.livretModal = {
+                open: true,
+                studentSearch: '', students: [], isSearchingStudents: false, studentsLoaded: false, studentSearchError: null,
+                selectedStudent: null,
+                schoolYearId: active ? active.id : '', busy: false, error: null
+            };
+        },
+        closeLivret() { this.livretModal.open = false; },
+
+        searchLivretStudents() { this.searchStudentsFor(this.livretModal); },
+        selectLivretStudent(s) { this.selectStudentFor(this.livretModal, s); },
+
+        async downloadLivret() {
+            const m = this.livretModal;
+            if (!m.selectedStudent || !m.schoolYearId || m.busy) return;
+
+            m.busy = true;
+            m.error = null;
+            try {
+                await this.downloadFile(
+                    `/api/v1/state-integration/students/${m.selectedStudent.id}/skills-booklet?schoolYearId=${m.schoolYearId}`,
+                    'livret-competences.pdf'
+                );
+                m.open = false;
+            } catch (err) {
+                // 409 = pas de grille de compétences configurée pour le niveau de l'élève.
+                m.error = window.api.toMessage(err, "Erreur lors du téléchargement du livret. Vérifiez que le niveau de l'élève dispose d'une grille de compétences APC configurée.");
+            } finally {
+                m.busy = false;
+            }
+        },
+
         // ================================ Téléchargement de fichier ================================
 
         /**
@@ -292,6 +458,53 @@ document.addEventListener('alpine:init', () => {
             const disposition = response.headers.get('Content-Disposition') || '';
             const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
             return match ? decodeURIComponent(match[1]) : fallbackName;
+        },
+
+        /**
+         * Variante POST de downloadFile() : la délivrance d'un certificat de mutation ÉCRIT (numéro
+         * séquentiel, ligne en base) et renvoie le PDF en même temps — le contrôleur fait voyager le
+         * numéro et l'état financier en EN-TÊTES (X-Certificate-Number, X-Financially-Clear) parce que
+         * le corps de la réponse est déjà pris par le PDF. On les lit ici pour les rendre à l'écran sans
+         * ressaisir de requête.
+         */
+        async postAndDownloadFile(url, body, fallbackName) {
+            if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
+                await window.api.refreshOrRedirect();
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${window.auth.accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                const payload = await response.json().catch(() => null);
+                const err = new Error((payload && payload.message) || `Erreur HTTP ${response.status}`);
+                err.code = payload && payload.code;
+                err.details = payload && payload.details;
+                err.status = response.status;
+                throw err;
+            }
+
+            const certificateNumber = response.headers.get('X-Certificate-Number');
+            const wasFinanciallyClear = response.headers.get('X-Financially-Clear') === 'true';
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = this.fileNameFrom(response, fallbackName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+
+            return { certificateNumber, wasFinanciallyClear };
         }
     }));
 });

@@ -244,14 +244,26 @@
     <!-- ============================= ONGLET CERTIFICATS ============================= -->
     <div x-show="tab === 'certificats'" x-cloak class="mt-6">
         <div class="card overflow-hidden">
-            <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                <h2 class="section-title">Certificats de mutation délivrés</h2>
-                <span class="text-xs text-slate-400" x-text="certificates.total + ' au total'"></span>
+            <div class="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="section-title">Certificats de mutation délivrés</h2>
+                    <span class="text-xs text-slate-400" x-text="certificates.total + ' au total'"></span>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" x-on:click="openLivret()" class="btn-modal-secondary group">
+                        <icon name="document" class="w-4 h-4" />
+                        Livret de compétences
+                    </button>
+                    <button type="button" x-on:click="openIssue()" class="btn-modal-primary group">
+                        <icon name="plus" class="w-4 h-4" />
+                        Délivrer un certificat
+                    </button>
+                </div>
             </div>
 
             <template x-if="!certificates.loading && certificates.items.length === 0">
                 <p class="p-8 text-center text-sm text-slate-400">
-                    Aucun certificat de mutation délivré. Un certificat se délivre depuis la fiche d'un élève.
+                    Aucun certificat de mutation délivré. Bouton « Délivrer un certificat » ci-dessus.
                 </p>
             </template>
 
@@ -338,5 +350,191 @@
                 </button>
             </div>
         </form>
+    </modal-shell>
+
+    <!-- Modale : délivrer un certificat de mutation (JGK-M06) -->
+    <modal-shell open="issueModal.open" on-close="closeIssue()" size="lg" title="Délivrer un certificat de mutation">
+        <modal-subtitle>
+            Recherchez l'élève par nom ou matricule — la délivrance n'est pas rattachée à la fiche
+            élève. Chaque délivrance produit un numéro officiel distinct ; elle ne se corrige qu'en
+            révoquant puis en délivrant un nouveau certificat.
+        </modal-subtitle>
+
+        <!-- ======================== Résultat après délivrance ======================== -->
+        <template x-if="issueModal.result">
+            <div class="space-y-4">
+                <div class="card border-emerald-200 bg-emerald-50/60 p-4 flex items-start gap-3">
+                    <icon name="checkmark-circle" class="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
+                    <div>
+                        <p class="text-sm font-semibold text-emerald-800">
+                            Certificat <span x-text="issueModal.result.certificateNumber"></span> délivré et téléchargé.
+                        </p>
+                        <p class="text-sm text-emerald-700 mt-0.5">
+                            Le PDF a été enregistré dans vos téléchargements. Remettez-le signé et cacheté au tuteur.
+                        </p>
+                    </div>
+                </div>
+
+                <div x-show="!issueModal.result.wasFinanciallyClear" x-cloak
+                     class="card border-amber-200 bg-amber-50/60 p-4 flex items-start gap-3">
+                    <icon name="alert-circle" class="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
+                    <p class="text-sm text-amber-800">
+                        Cet élève avait un solde débiteur au moment de la délivrance. Le certificat n'a
+                        pas été retenu pour autant — retenir une pièce de mutation à un élève débiteur
+                        reviendrait à le retenir de force dans l'établissement.
+                    </p>
+                </div>
+
+                <div class="card p-4">
+                    <p class="text-sm font-medium text-slate-700">Livret de compétences</p>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        À remettre aux côtés du certificat — c'est ce que l'école d'accueil utilisera
+                        pour affecter l'élève au bon niveau.
+                    </p>
+                    <p x-show="issueModal.bookletError" x-cloak class="text-sm text-danger mt-2" x-text="issueModal.bookletError"></p>
+                    <button type="button" x-on:click="downloadIssueBooklet()" :disabled="issueModal.bookletBusy"
+                            class="btn-modal-secondary group mt-3">
+                        <icon name="download" class="w-4 h-4" />
+                        <span x-text="issueModal.bookletBusy ? 'Téléchargement…' : 'Télécharger le livret de compétences'"></span>
+                    </button>
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <button type="button" x-on:click="closeIssue()" class="btn-modal-primary group">Fermer</button>
+                </div>
+            </div>
+        </template>
+
+        <!-- ======================== Formulaire de délivrance ======================== -->
+        <form x-show="!issueModal.result" x-cloak x-on:submit.prevent="submitIssue()" novalidate class="space-y-4">
+            <div x-show="issueModal.error" x-cloak class="form-error-banner" x-text="issueModal.error"></div>
+
+            <div>
+                <label for="issue-student-search" class="form-label form-label-required">Élève</label>
+                <input id="issue-student-search" type="text" x-model="issueModal.studentSearch"
+                       placeholder="Nom ou matricule… (2 caractères min.)"
+                       x-on:input.debounce.300ms="searchIssueStudents()" class="input-field" />
+
+                <p x-show="issueModal.studentSearchError" x-cloak class="mt-2 text-sm text-danger" x-text="issueModal.studentSearchError"></p>
+
+                <div x-show="!issueModal.selectedStudent && (issueModal.students.length > 0 || issueModal.isSearchingStudents || issueModal.studentsLoaded)"
+                     x-cloak class="mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-56 overflow-y-auto">
+                    <template x-for="s in issueModal.students" :key="s.id">
+                        <button type="button" x-on:click="selectIssueStudent(s)"
+                                class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors duration-150">
+                            <span class="text-sm text-slate-900" x-text="s.fullName"></span>
+                            <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
+                        </button>
+                    </template>
+                    <div x-show="issueModal.isSearchingStudents" x-cloak class="px-3 py-3 text-sm text-slate-400 text-center">Recherche…</div>
+                    <div x-show="!issueModal.isSearchingStudents && issueModal.studentsLoaded && issueModal.students.length === 0"
+                         x-cloak class="px-3 py-3 text-sm text-slate-400 text-center">Aucun élève ne correspond.</div>
+                </div>
+
+                <div x-show="issueModal.selectedStudent" x-cloak class="mt-2 flex items-center gap-2 text-sm">
+                    <span class="status-badge-success" x-text="issueModal.selectedStudent ? issueModal.selectedStudent.matricule : ''"></span>
+                    <span class="text-slate-700" x-text="issueModal.selectedStudent ? issueModal.selectedStudent.fullName : ''"></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Année scolaire</label>
+                    <select-field model="issueModal.schoolYearId" aria-label="Année scolaire"
+                                  placeholder="Sélectionnez une année…" options-expr="issueYearOptions" />
+                </div>
+                <div>
+                    <label class="form-label form-label-required">Motif de la mutation</label>
+                    <select-field model="issueModal.reason" aria-label="Motif" options-expr="reasonOptions" />
+                </div>
+            </div>
+
+            <div>
+                <label class="form-label" x-bind:class="issueModal.reason === 'Autre' ? 'form-label-required' : ''">
+                    Motif détaillé
+                </label>
+                <textarea x-model="issueModal.reasonDetails" rows="2" maxlength="300"
+                          placeholder="Précision, obligatoire si le motif est « Autre »…"
+                          class="input-field"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label">Établissement de destination</label>
+                    <input type="text" x-model="issueModal.destinationSchoolName" maxlength="150" class="input-field" />
+                </div>
+                <div>
+                    <label class="form-label">Ville de destination</label>
+                    <input type="text" x-model="issueModal.destinationCity" maxlength="100" class="input-field" />
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" x-on:click="closeIssue()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit"
+                        :disabled="!issueModal.selectedStudent || !issueModal.schoolYearId || (issueModal.reason === 'Autre' && !issueModal.reasonDetails.trim()) || issueModal.busy"
+                        class="btn-modal-primary group">
+                    <icon name="download" class="w-4 h-4" />
+                    <span x-text="issueModal.busy ? 'Délivrance…' : 'Délivrer et télécharger'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    <!-- Modale : télécharger un livret de compétences hors mutation (JGK-M07) -->
+    <modal-shell open="livretModal.open" on-close="closeLivret()" size="md" title="Livret de compétences">
+        <modal-subtitle>
+            Document APC recalculé à la demande — une case vide signifie « non évaluée sur cette
+            période », jamais « non acquis ». Ne s'applique qu'à un niveau dont l'école a configuré une
+            grille de compétences.
+        </modal-subtitle>
+
+        <div x-show="livretModal.error" x-cloak class="form-error-banner" x-text="livretModal.error"></div>
+
+        <div class="space-y-4">
+            <div>
+                <label for="livret-student-search" class="form-label form-label-required">Élève</label>
+                <input id="livret-student-search" type="text" x-model="livretModal.studentSearch"
+                       placeholder="Nom ou matricule… (2 caractères min.)"
+                       x-on:input.debounce.300ms="searchLivretStudents()" class="input-field" />
+
+                <p x-show="livretModal.studentSearchError" x-cloak class="mt-2 text-sm text-danger" x-text="livretModal.studentSearchError"></p>
+
+                <div x-show="!livretModal.selectedStudent && (livretModal.students.length > 0 || livretModal.isSearchingStudents || livretModal.studentsLoaded)"
+                     x-cloak class="mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-56 overflow-y-auto">
+                    <template x-for="s in livretModal.students" :key="s.id">
+                        <button type="button" x-on:click="selectLivretStudent(s)"
+                                class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors duration-150">
+                            <span class="text-sm text-slate-900" x-text="s.fullName"></span>
+                            <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
+                        </button>
+                    </template>
+                    <div x-show="livretModal.isSearchingStudents" x-cloak class="px-3 py-3 text-sm text-slate-400 text-center">Recherche…</div>
+                    <div x-show="!livretModal.isSearchingStudents && livretModal.studentsLoaded && livretModal.students.length === 0"
+                         x-cloak class="px-3 py-3 text-sm text-slate-400 text-center">Aucun élève ne correspond.</div>
+                </div>
+
+                <div x-show="livretModal.selectedStudent" x-cloak class="mt-2 flex items-center gap-2 text-sm">
+                    <span class="status-badge-success" x-text="livretModal.selectedStudent ? livretModal.selectedStudent.matricule : ''"></span>
+                    <span class="text-slate-700" x-text="livretModal.selectedStudent ? livretModal.selectedStudent.fullName : ''"></span>
+                </div>
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Année scolaire</label>
+                <select-field model="livretModal.schoolYearId" aria-label="Année scolaire"
+                              placeholder="Sélectionnez une année…" options-expr="issueYearOptions" />
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" x-on:click="closeLivret()" class="btn-modal-secondary group">Annuler</button>
+                <button type="button" x-on:click="downloadLivret()"
+                        :disabled="!livretModal.selectedStudent || !livretModal.schoolYearId || livretModal.busy"
+                        class="btn-modal-primary group">
+                    <icon name="download" class="w-4 h-4" />
+                    <span x-text="livretModal.busy ? 'Téléchargement…' : 'Télécharger le livret'"></span>
+                </button>
+            </div>
+        </div>
     </modal-shell>
 </div>

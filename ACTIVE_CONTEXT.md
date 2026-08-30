@@ -157,8 +157,39 @@ administratif, matricule de solde, date de première prise de service). `UpdateC
 Vérifié : `GET /state-integration/planete/export` passe de 409 à 200 dès que le code établissement est
 posé.
 
-**Ce qui reste :** tests d'intégration dédiés (agrégats STATEDUC, concurrence sur la séquence IEN,
-refus 409 code absent).
+**Écrans complétés (30/08/2026)** : l'écran `/integration-etatique` ne se contentait que de lister et
+révoquer les certificats — aucun bouton ne permettait de délivrer un certificat (`POST
+.../mutation-certificate`, livré côté API depuis JGK-M06 mais orphelin côté écran) ni de télécharger le
+livret de compétences (`GET .../skills-booklet`, JGK-M07, jusque-là inaccessible en dehors de l'aide en
+ligne). L'onglet Certificats porte maintenant deux modales : « Délivrer un certificat » (recherche
+élève par nom/matricule — même widget que `/caisse` — puis motif, destination, téléchargement immédiat
+du PDF, et proposition du livret pour le même élève/année une fois délivré) et « Livret de compétences »
+(téléchargement autonome, hors mutation). Recherche élève NON rattachée à la fiche élève : ce choix
+évite de dépendre d'un écran distinct pour ce dernier kilomètre. `state-integration.js` / `Views/State
+Integration/Index.cshtml` étendus, aucun autre écran touché.
+
+**Tests d'intégration ajoutés (30/08/2026)** — comblent le manque ci-dessus :
+`tests/SamaEcole.IntegrationTests/StateIntegration/` (`IenProvisionalSequenceTests`,
+`StateIntegrationRefusalTests`, `GetStateducReportQueryHandlerTests`), 13 tests, vérifiés contre
+PostgreSQL réel (Testcontainers, rôle applicatif) : unicité de la séquence IEN sous 20 générations
+concurrentes, rembobinage sur rollback, séquence par école, refus 409 (export Planète et IEN
+provisoire) sans code établissement, et agrégats STATEDUC (périmètre = inscriptions non annulées, âge
+à la date d'observation, enseignant archivé/sans genre non imputé).
+
+**Carte scolaire & état civil du dossier d'examen — livré (30/08/2026, commits `86e4398` +
+`729ce9d`).** Les trois champs « carte scolaire & état civil » du dossier d'examen
+(`ExamDossier.ExamCenterCode`, `TableNumber`, `CivilRegistryDocumentStatus` — Volume 1 §23.4), jusque-là
+présents en base et dans la configuration EF sans aucun câblage applicatif, sont maintenant saisissables
+de bout en bout. `AssignExamCenterCommand` porte le code du centre et le numéro de table
+(préserve-si-vide, jamais générés ni effacés par un envoi à blanc — même contrat qu'`ExamCenterName`) ;
+`UpdateExamDossierCommand` porte `CivilRegistryDocumentStatus` en NULLABLE (`null` = préserve la valeur
+en base, ne la ramène jamais à `NonFourni` en silence) — seul point d'écriture d'`EnRegularisation`,
+désormais réellement sélectionnable. Le couple booléen existant (`BirthCertificatePresent` /
+`CivilStatusConforming`) reste la source du statut Incomplet/Complet du dossier ; l'enum ne fait que le
+COMPLÉTER. Lecture (`GetExamDossierDetail`, `GetExamDossiers`), `ExamsController`, `openapi.yaml` et
+tests (Exams unitaires 34/34, intégration 33/33) à jour. Écrans : modale « Attribuer un centre » (code +
+numéro de table), modale « Modifier le dossier » (select à 5 états), fiche détaillée (affichage des 3
+champs + ligne « régularisation en cours » dans l'encadré pièces manquantes).
 
 **JGK-T01 (30/08/2026) — corrigé** : retirer une matière à un enseignant échouait en 500
 (`42501: permission denied for table teacher_subjects`). `UpdateTeacherCommandHandler` fait un
