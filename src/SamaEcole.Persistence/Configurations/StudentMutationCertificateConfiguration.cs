@@ -31,11 +31,15 @@ public class StudentMutationCertificateConfiguration : IEntityTypeConfiguration<
         builder.Property(c => c.RevocationReason).HasMaxLength(300);
         builder.Property(c => c.WasFinanciallyClear).IsRequired();
 
+        // PAS de HasDefaultValue ici : la valeur CLR par défaut de l'enum (Demenagement = 0) est aussi
+        // celle qu'EF Core lit comme « propriété non affectée ». Avec un défaut base, une mutation
+        // réellement pour « Déménagement » serait donc silencieusement enregistrée avec le défaut
+        // (« Autre »). Le Handler fournit toujours Reason (paramètre requis de la commande) — aucun
+        // défaut base n'est nécessaire.
         builder.Property(c => c.Reason)
             .HasConversion<string>()
             .HasMaxLength(30)
-            .IsRequired()
-            .HasDefaultValue(StudentMutationReason.Autre);
+            .IsRequired();
 
         // Le numéro est unique PAR ÉCOLE, comme le matricule et le numéro de reçu : deux
         // établissements peuvent légitimement émettre chacun leur « MUT-2026-0001 ».

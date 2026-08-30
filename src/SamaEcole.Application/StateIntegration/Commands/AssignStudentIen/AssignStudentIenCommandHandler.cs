@@ -79,6 +79,22 @@ public class AssignStudentIenCommandHandler(
     private async Task<AssignStudentIenResult> AssignProvisionalAsync(
         Guid studentId, Guid schoolId, CancellationToken cancellationToken)
     {
+        // Pré-contrôle du code établissement national AVANT d'ouvrir la transaction : sans lui, la
+        // génération échouerait de toute façon (garde bas niveau de NationalIenGenerator), mais avec
+        // une InvalidOperationException traduite en 500. Ici, on renvoie un 409 actionnable — même
+        // message et même endroit à corriger que le refus de l'export Planète.
+        var hasSchoolCode = await dbContext.Schools.AsNoTracking()
+            .AnyAsync(s => s.Id == schoolId && s.NationalSchoolCode != null && s.NationalSchoolCode != "",
+                cancellationToken);
+
+        if (!hasSchoolCode)
+        {
+            throw new BusinessRuleException(
+                "Le code établissement national (SIMEN) n'est pas renseigné. Saisissez-le dans "
+                + "Paramètres → Établissement avant de générer un IEN provisoire : sans lui, le numéro "
+                + "fabriqué ne rattacherait l'élève à aucune école.");
+        }
+
         // Génération ET écriture dans UNE transaction (AGENTS.md règle #3) : si l'écriture échoue,
         // le compteur de séquence est rembobiné avec elle et aucun numéro n'est perdu.
         return await dbContext.ExecuteInTransactionAsync(async ct =>

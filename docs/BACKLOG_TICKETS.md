@@ -253,19 +253,39 @@ Middleware d'autorisation bloquant tout endpoint hors `/subscriptions/{schoolId}
 
 ## Module M — Intégration étatique (SIMEN / Planète / STATEDUC)
 
-> **Statut d'ensemble : BACK-END LIVRÉ (30/08/2026).** Abstractions, schéma, migration
-> `AddStateIntegrationModule` (colonnes + table `student_mutation_certificates` + policy RLS + fonction
-> SECURITY DEFINER `verify_mutation_certificate`), handlers, documents QuestPDF, sérialiseur Planète,
-> contrôleur (`/api/v1/state-integration`, 9 routes dont la vérification publique du QR). `dotnet build`
-> **vert (0 erreur)**, `SimenComplianceTests` **26/26**, `RlsCoverageTests` **vert** (la nouvelle table
-> tenant est bien couverte), suite unitaire **1004/1004**.
+> **Statut d'ensemble : LIVRÉ (back-end 30/08/2026, front-end 30/08/2026).** Abstractions, schéma,
+> migrations `AddStateIntegrationModule` + `FixMutationCertificateReasonDefault` (colonnes + table
+> `student_mutation_certificates` + policy RLS + fonction SECURITY DEFINER
+> `verify_mutation_certificate`), handlers, documents QuestPDF, sérialiseur Planète, contrôleur
+> (`/api/v1/state-integration`, 11 routes dont la vérification publique du QR + le registre + la
+> révocation). **Écrans** : `/integration-etatique` (3 onglets : export Planète, rapport STATEDUC,
+> registre des certificats avec révocation) + bandeau « Statut du relais SIMEN » ; champ IEN sur la
+> fiche élève (saisie officielle / génération provisoire) ; page publique `/verifier/mutation/{token}`.
 >
-> **Reste à faire, transversal :** écrans (`/integration-etatique`, actions sur la fiche élève),
-> commande de révocation d'un certificat, et la page publique HTML de vérification (l'API JSON existe).
+> `dotnet build` **vert (0 erreur)** ; `SimenComplianceTests` **26/26** ; `RlsCoverageTests` **vert** ;
+> suite unitaire **1004/1004** ; intégration ciblée (Students, ReportCards, RLS) **vert** ; parcours
+> complet vérifié au navigateur/`curl` sur PostgreSQL réel (skill `run`) : login Directeur → IEN
+> officiel + provisoire (`P…` + clé Luhn) → export Planète CSV (BOM, `;`, cellules vides) → STATEDUC
+> JSON/PDF/Excel → délivrance d'un certificat (`MUT-2025-0001`, PDF+QR) → révocation (motif obligatoire,
+> 2ᵉ révocation en 409) → vérification publique anonyme du certificat révoqué (statut seul, aucune
+> donnée d'élève).
+>
+> **Écart trouvé et corrigé pendant la vérification :** `StudentMutationCertificate.Reason` portait un
+> `HasDefaultValue(Autre)` — or la valeur CLR par défaut de l'enum (`Demenagement` = 0) est aussi celle
+> qu'EF lit comme « non affectée » : une mutation réellement pour « Déménagement » aurait été
+> enregistrée « Autre » en silence. Défaut retiré (`FixMutationCertificateReasonDefault`, additive), le
+> Handler fournit toujours `Reason`. La génération d'IEN provisoire sans code établissement renvoyait un
+> 500 (InvalidOperationException) — désormais un 409 actionnable, même message que le refus de l'export
+> Planète.
+>
+> **Reste à faire :** champ de saisie du code établissement national et des coordonnées GPS dans
+> *Paramètres → Établissement* (JGK-M05) ; tests d'intégration dédiés (agrégats STATEDUC, concurrence
+> sur la séquence IEN, refus 409 code absent).
 >
 > **Cadre non négociable du module** : aucune API publique du SIMEN n'existe. Le module produit des
 > FICHIERS que l'école transmet par la voie habituelle. Rien dans l'interface ne doit laisser croire à
-> un dialogue avec le ministère. → Volume 1 §23.
+> un dialogue avec le ministère — d'où le bandeau « Statut du relais » qui affiche l'indisponibilité
+> plutôt qu'une action de transmission. → Volume 1 §23.
 
 **JGK-M01** [H] — IEN : champ, index et générateur de secours
 Champ `Students.IenNumber` (nullable, `varchar(24)`) + `IsIenProvisional`, index unique **partiel**
@@ -342,7 +362,7 @@ n'affiche **aucun montant** ; une erreur se corrige par révocation, jamais par 
 fonction SECURITY DEFINER `verify_mutation_certificate`), route publique
 `GET /api/v1/state-integration/certificates/verify/{token}` (anonyme, rate-limité, réponse sans
 donnée d'élève, `unknown` en 200), `VerifyMutationCertificateQuery`/Handler. `RlsCoverageTests` vert.
-*Reste* : commande de révocation, page HTML publique de vérification, écran de délivrance.
+*Écran (30/08/2026)* : registre `/integration-etatique` (onglet « Certificats de mutation ») avec révocation (motif obligatoire) ; délivrance et « Gérer l'IEN » sur la fiche élève ; page publique `/verifier/mutation/{token}` (statut seul, aucune donnée d'élève). Routes ajoutées : `GET /certificates`, `POST /certificates/{id}/revoke`.
 
 **JGK-M07** [M] — Livret de compétences (PDF multi-pages)
 `SkillsBookletModel` + `SkillsBookletDocument` (A4 portrait, **plusieurs pages admises**), échelle
@@ -351,7 +371,7 @@ NA/ECA/A/E dérivée du pourcentage de réussite (`SkillAcquisition`, seuils 40/
 périodes est **lu sur la configuration**, jamais codé en dur ; une case vide signifie « non évaluée »
 et **jamais** « non acquis » ; la légende des abréviations est obligatoire (le livret est d'abord
 destiné à la famille).
-*Livré (30/08/2026)* : `GetSkillsBookletPdfQuery`/Handler (fusionne les grilles APC trimestre par trimestre via `EvaluationStructureBuilder`), `SkillsBookletDocument` (A4 portrait multi-pages), route `GET /api/v1/state-integration/students/{id}/skills-booklet`, `SkillAcquisition` (seuils 40/60/85). Tests `SimenComplianceTests` : seuils, null si pas de note / barème nul. *Reste* : écran.
+*Livré (30/08/2026)* : `GetSkillsBookletPdfQuery`/Handler (fusionne les grilles APC trimestre par trimestre via `EvaluationStructureBuilder`), `SkillsBookletDocument` (A4 portrait multi-pages), route `GET /api/v1/state-integration/students/{id}/skills-booklet`, `SkillAcquisition` (seuils 40/60/85). Tests `SimenComplianceTests` : seuils, null si pas de note / barème nul. *Écran (30/08/2026)* : le livret se télécharge depuis la fiche élève (route `GET /state-integration/students/{id}/skills-booklet`). Pas d'onglet dédié — c'est une pièce jointe au dossier, comme le bulletin.
 
 ---
 

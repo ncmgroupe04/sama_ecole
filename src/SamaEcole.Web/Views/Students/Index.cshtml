@@ -224,6 +224,30 @@
                 <p class="text-slate-400 italic text-sm">Non renseignée</p>
             </template>
         </div>
+
+        @* Identifiant National de l'Élève (module Intégration étatique, JGK-M01). Lu sur la fiche
+           complète (studentDetail.identity), pas sur la ligne de liste. Un numéro provisoire est
+           marqué comme tel — jamais présenté comme un identifiant national valide. *@
+        <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">IEN</p>
+            <template x-if="studentDetail && studentDetail.identity && studentDetail.identity.ienNumber">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-sm font-semibold px-2 py-1 rounded"
+                          :class="studentDetail.identity.isIenProvisional ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-800'"
+                          x-text="studentDetail.identity.ienNumber"></span>
+                    <span x-show="studentDetail.identity.isIenProvisional" class="text-[10px] font-bold text-amber-600 uppercase">provisoire</span>
+                    <button type="button" x-show="canManageStudent" x-on:click="openIenModal()"
+                            class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Gérer</button>
+                </div>
+            </template>
+            <template x-if="studentDetail && studentDetail.identity && !studentDetail.identity.ienNumber">
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 italic text-sm">Non attribué</span>
+                    <button type="button" x-show="canManageStudent" x-on:click="openIenModal()"
+                            class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Renseigner</button>
+                </div>
+            </template>
+        </div>
     </div>
 
     <div class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm">
@@ -1094,6 +1118,42 @@
  <button type="submit" :disabled="isSavingCommitment" class="btn-modal-primary group">
  <span x-text="isSavingCommitment ? 'Enregistrement...' : 'Enregistrer'"></span>
  </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Modale : Identifiant National de l'Élève (module Intégration étatique, JGK-M01) -->
+ <modal-shell open="ienModal.open" on-close="closeIenModal()" size="md" title="Identifiant National de l'Élève (IEN)">
+ <modal-subtitle>
+ Saisissez le numéro OFFICIEL communiqué par l'IEF. À défaut, générez un numéro PROVISOIRE de
+ secours — préfixé « P », sans valeur officielle, remplacé dès réception du vrai numéro.
+ </modal-subtitle>
+
+ <div x-show="ienModal.error" x-cloak class="form-error-banner" x-text="ienModal.error"></div>
+
+ <form x-on:submit.prevent="saveOfficialIen()" novalidate class="space-y-4">
+ <div>
+ <label class="form-label">Numéro IEN officiel</label>
+ <input type="text" x-model="ienModal.official" maxlength="24" autocomplete="off"
+ placeholder="Tel qu'il figure sur la liste de l'IEF" class="input-field mt-1 font-mono" />
+ <p class="text-xs text-slate-400 mt-1">
+ Le contrôle porte sur la forme (longueur, caractères, clé) : aucune vérification auprès du SIMEN n'est possible à ce jour.
+ </p>
+ </div>
+
+ <div class="flex flex-col sm:flex-row justify-between gap-3 pt-2">
+ <button type="button" x-on:click="generateProvisionalIen()"
+ :disabled="ienModal.busy || ienModal.provisioning"
+ class="btn-modal-secondary group">
+ <span x-text="ienModal.provisioning ? 'Génération…' : 'Générer un numéro provisoire'"></span>
+ </button>
+ <div class="flex justify-end gap-3">
+ <button type="button" x-on:click="closeIenModal()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="!ienModal.official.trim() || ienModal.busy || ienModal.provisioning"
+ class="btn-modal-primary group">
+ <span x-text="ienModal.busy ? 'Enregistrement…' : 'Enregistrer'"></span>
+ </button>
+ </div>
  </div>
  </form>
  </modal-shell>

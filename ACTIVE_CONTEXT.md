@@ -6,7 +6,7 @@ dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question —
 la V1, et qu'est-ce qui n'y est pas ?*
 
 **Dernière mise à jour : 30/08/2026** (Module M « Intégration étatique / Passerelle SIMEN » —
-**back-end, persistance, migration RLS et documentation livrés**, écrans à faire, voir §2 ; JGK-F09 —
+**livré : back-end, persistance, migrations RLS, écrans et documentation**, voir §2 ; JGK-F09 —
 contrôle du comptage physique et écarts de caisse à la clôture le 29/08/2026, voir §5 ; câblage de la
 session de caisse sur `/caisse` le 27/08/2026 — JGK-F02 était inutilisable en production faute d'écran
 d'ouverture/clôture ; écran `/examens` livré le 26/08/2026 — backend Module J déjà complet ; module
@@ -61,7 +61,7 @@ Livrés, câblés à l'IHM, et couverts par la suite de tests :
 | **Rapports financiers** | `/rapports/financiers` | `GetRevenueConsolidationQuery` + export `.xlsx` |
 | **Inventaire** | `/inventaire` | API `/api/v1/inventory` — catalogue, journal de stock, prêts, 2 PDF |
 | **Examens officiels** | `/examens` | API `/api/v1/exams` — sessions, dossiers CFEE/BFEM/BAC, audit, attribution centre/table, transmission, résultats, statistiques, export ministériel, convocations |
-| **Intégration étatique** | *(écrans à faire)* | API `/api/v1/state-integration` — IEN, export Planète (CSV/JSON), rapport STATEDUC (PDF + Excel), certificat de mutation avec QR, livret de compétences, vérification publique du certificat |
+| **Intégration étatique** | `/integration-etatique` + fiche élève + `/verifier/mutation/{token}` | API `/api/v1/state-integration` — IEN, export Planète (CSV/JSON), rapport STATEDUC (PDF + Excel), certificat de mutation avec QR + registre + révocation, livret de compétences, vérification publique du certificat |
 
 Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bulletins, Frais,
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
@@ -94,31 +94,63 @@ dans cet environnement — à valider en local avant mise en production.
 
 Export `.xlsx` de l'inventaire : **écarté pour ce lot** (PDF seul), à arbitrer si le besoin remonte.
 
-### Intégration étatique / Passerelle SIMEN (30/08/2026) — back-end livré, écrans à faire
+### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
 Module M (`docs/Volume_1_Cahier_des_Charges.md` §23, `docs/Volume_3_DDS.md` §5.11,
 `docs/Volume_4_API_Design.md` §23, tickets `JGK-M01`..`M07`). Le socle producteur des **pièces et
-fichiers réglementaires** dus au ministère de l'Éducation. Migration `AddStateIntegrationModule`
-(colonnes sur `students`/`schools`/`teachers`/`exam_dossiers` + table `student_mutation_certificates`
-+ policy RLS + fonction `SECURITY DEFINER verify_mutation_certificate`).
+fichiers réglementaires** dus au ministère de l'Éducation. Migrations `AddStateIntegrationModule` +
+`FixMutationCertificateReasonDefault` (colonnes sur `students`/`schools`/`teachers`/`exam_dossiers` +
+table `student_mutation_certificates` + policy RLS + fonction
+`SECURITY DEFINER verify_mutation_certificate`).
 
-**Cadre non négociable, rappelé dans l'aide en ligne et le contrôleur :** le SIMEN n'expose **aucune
-API publique** à ce jour. Le module produit des fichiers que l'école transmet par la voie habituelle.
-`ISimenBridgeService` est un contrat seul ; l'implémentation livrée (`UnavailableSimenBridgeService`)
-refuse explicitement chaque appel — aucune réussite simulée, jamais d'état « Transmis » posé par une
-route client (règle #11).
+**Cadre non négociable, rappelé dans l'aide en ligne, le contrôleur ET l'écran :** le SIMEN n'expose
+**aucune API publique** à ce jour. Le module produit des fichiers que l'école transmet par la voie
+habituelle. `ISimenBridgeService` est un contrat seul ; l'implémentation livrée
+(`UnavailableSimenBridgeService`) refuse explicitement chaque appel — aucune réussite simulée, jamais
+d'état « Transmis » posé par une route client (règle #11). L'écran `/integration-etatique` affiche un
+bandeau **« Statut du relais SIMEN »** qui montre l'indisponibilité plutôt qu'une action de
+transmission.
 
-**Ce qui est livré :** entités, migration + RLS, handlers CQRS, `StateIntegrationController`
-(9 routes), `PlaneteExportSerializer` (CSV/JSON, une seule définition de colonnes), documents QuestPDF
+**Ce qui est livré :** entités, migrations + RLS, handlers CQRS, `StateIntegrationController`
+(11 routes), `PlaneteExportSerializer` (CSV/JSON, une seule définition de colonnes), documents QuestPDF
 (`StateducReportDocument` A4 paysage, `StudentMutationCertificateDocument` avec QR,
 `SkillsBookletDocument` multi-pages), `StateducReportExcelGenerator`, `openapi.yaml`, Volumes 1/3/4,
-Centre d'aide §11. `dotnet build` **0 erreur** ; `SimenComplianceTests` **26/26** ; `RlsCoverageTests`
-**vert** (la nouvelle table tenant est couverte automatiquement) ; suite unitaire **1004/1004**.
+Centre d'aide §11.
 
-**Ce qui reste :** les écrans (`/integration-etatique`, gestion du champ IEN sur la fiche élève, page
-publique HTML de vérification du QR), la commande de révocation d'un certificat, et des tests
-d'intégration dédiés (refus 409 code établissement absent, concurrence sur la séquence IEN, agrégats
-STATEDUC).
+**Écrans (Razor + Tailwind + Alpine) :**
+- `/integration-etatique` (`Views/StateIntegration/Index.cshtml` + `wwwroot/js/state-integration.js`) —
+  3 onglets : **Export Planète** (année + périmètre + format CSV/JSON → téléchargement, message
+  actionnable si le code établissement manque), **Rapport STATEDUC** (année + date d'observation →
+  agrégats à l'écran avec encadré « Données incomplètes » + téléchargement PDF/Excel), **Certificats
+  de mutation** (registre paginé + révocation avec motif obligatoire). Réservé Directeur ; le
+  Secrétariat n'a que l'onglet Certificats. Entrée de menu sous « Gestion Scolaire ».
+- **Fiche élève** (`Views/Students/Index.cshtml` + `students.js`) — ligne « IEN » dans le cartouche
+  d'identité (numéro provisoire distingué visuellement) + modale « Gérer l'IEN » : saisie du numéro
+  officiel, ou bouton « Générer un numéro provisoire ».
+- **Page publique** `/verifier/mutation/{token}` (`Views/StateIntegration/VerifyMutation.cshtml` +
+  `verify-mutation.js`, layout `_LayoutPublic`) — scan du QR par l'école d'accueil : statut
+  (authentique / révoqué / introuvable) + numéro, date, établissement émetteur. **Aucune donnée
+  d'élève.** `unknown` renvoyé en HTTP 200, jamais 404.
+
+**Vérifié au navigateur / `curl` sur PostgreSQL réel (skill `run`, 30/08/2026)** : login Directeur →
+IEN officiel + provisoire (`P` + code + millésime + séquence + clé Luhn) → export Planète CSV (BOM,
+`;`, cellules vides pour l'absent) → STATEDUC JSON/PDF/Excel → délivrance d'un certificat
+(`MUT-2025-0001`, PDF + QR) → révocation (motif obligatoire, 2ᵉ tentative en 409) → vérification
+publique anonyme du certificat révoqué. `dotnet build` **0 erreur** ; `SimenComplianceTests`
+**26/26** ; `RlsCoverageTests` **vert** ; suite unitaire **1004/1004** ; intégration ciblée
+(Students, ReportCards, RLS) **vert**.
+
+**Écart trouvé et corrigé pendant cette vérification :** `StudentMutationCertificate.Reason` portait
+un `HasDefaultValue(Autre)`. La valeur CLR par défaut de l'enum (`Demenagement` = 0) étant aussi celle
+qu'EF Core lit comme « propriété non affectée », une mutation réellement pour « Déménagement » aurait
+été enregistrée « Autre » **en silence**. Défaut base retiré (`FixMutationCertificateReasonDefault`,
+additive et réversible) ; le Handler fournit toujours `Reason`. Par ailleurs, la génération d'un IEN
+provisoire sans code établissement renvoyait un 500 (`InvalidOperationException` de
+`NationalIenGenerator`) — désormais un 409 actionnable, même message que le refus de l'export Planète.
+
+**Ce qui reste :** champs de saisie du code établissement national et des coordonnées GPS dans
+*Paramètres → Établissement* (JGK-M05) ; tests d'intégration dédiés (agrégats STATEDUC, concurrence
+sur la séquence IEN, refus 409 code absent).
 
 **Trois arbitrages actés, validés par le client :**
 

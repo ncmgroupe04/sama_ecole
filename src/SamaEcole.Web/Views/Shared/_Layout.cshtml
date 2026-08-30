@@ -109,7 +109,7 @@
  // État initial (ouvert/replié) des sous-menus, calculé côté serveur à partir de l'URL
  // courante. L'ouverture/fermeture au clic est ensuite gérée par wwwroot/js/sidebar-nav.js
  // (voir Styles/input.css pour les classes [data-submenu] / .is-closed).
- bool gestionScolaireOpen = path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/inventaire") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/examens") || path.StartsWith("/rapports/assiduite");
+ bool gestionScolaireOpen = path.StartsWith("/eleves") || path.StartsWith("/inscriptions") || path.StartsWith("/classes") || path.StartsWith("/infrastructures") || path.StartsWith("/inventaire") || path.StartsWith("/matieres") || path.StartsWith("/enseignants") || path.StartsWith("/notes") || path.StartsWith("/examens") || path.StartsWith("/integration-etatique") || path.StartsWith("/rapports/assiduite");
  bool surveillanceOpen = path.StartsWith("/presences") || path.StartsWith("/billets") || path.StartsWith("/discipline") || path.StartsWith("/convocations") || path.StartsWith("/pointage");
  bool comptabiliteOpen = path.StartsWith("/frais") || path.StartsWith("/caisse") || path.StartsWith("/paie") || path.StartsWith("/fiscalite") || path.StartsWith("/tresorerie") || path.StartsWith("/rapports/financiers");
  }
@@ -174,6 +174,10 @@
  <a href="/examens" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/examens") ? LinkActive : LinkIdle)">
  <icon name="document-text" class="w-5 h-5" />
  <span class="text-sm font-medium">Examens officiels</span>
+ </a>
+ <a href="/integration-etatique" x-show="canView(['Directeur', 'Secretariat'])" class="@(path.StartsWith("/integration-etatique") ? LinkActive : LinkIdle)">
+ <icon name="globe" class="w-5 h-5" />
+ <span class="text-sm font-medium">Intégration étatique</span>
  </a>
  <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" class="@(path.StartsWith("/rapports/assiduite") ? LinkActive : LinkIdle)">
  <icon name="chart-multiple" class="w-5 h-5" />

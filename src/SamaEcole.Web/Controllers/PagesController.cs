@@ -104,6 +104,24 @@ public class PagesController : Controller
     [HttpGet("/examens")]
     public IActionResult Exams() => View("~/Views/Exams/Index.cshtml");
 
+    // Module Intégration étatique (SIMEN / Planète / STATEDUC) — StateIntegrationController garde
+    // l'accès (Directeur sur tout ; Secrétariat en plus sur IEN et certificats de mutation) et la RLS
+    // isole. Gabarit anonyme comme le reste, l'API porte la garde.
+    [HttpGet("/integration-etatique")]
+    public IActionResult StateIntegration() => View("~/Views/StateIntegration/Index.cshtml");
+
+    // Vérification PUBLIQUE d'un certificat de mutation (scan du QR imprimé sur la pièce). Anonyme :
+    // c'est l'école d'accueil, extérieure à la plateforme, qui arrive ici. L'API sous-jacente
+    // (GET /api/v1/state-integration/certificates/verify/{token}) ne révèle aucune donnée d'élève.
+    // Le format de cette URL est fixé par GenerateStudentMutationCertificateCommandHandler
+    // (BuildVerificationUrl) : ne pas le changer sans migrer les certificats déjà émis.
+    [HttpGet("/verifier/mutation/{token}")]
+    public IActionResult VerifyMutation(string token)
+    {
+        ViewData["Token"] = token;
+        return View("~/Views/StateIntegration/VerifyMutation.cshtml");
+    }
+
     // JGK-F05 : consolidation des revenus + export comptable .xlsx. Même gabarit anonyme que
     // ci-dessus — l'accès réel est gardé par FinancialReportsController, qui cumule
     // [Authorize(Directeur, Finance)] ET [RequireFeature(AdvancedFinancialReports)].

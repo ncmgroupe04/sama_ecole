@@ -5,6 +5,8 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.StateIntegration;
 using SamaEcole.Application.StateIntegration.Commands.AssignStudentIen;
 using SamaEcole.Application.StateIntegration.Commands.GenerateStudentMutationCertificate;
+using SamaEcole.Application.StateIntegration.Commands.RevokeStudentMutationCertificate;
+using SamaEcole.Application.StateIntegration.Queries.GetMutationCertificates;
 using SamaEcole.Application.StateIntegration.Queries.GetPlaneteExport;
 using SamaEcole.Application.StateIntegration.Queries.GetSkillsBookletPdf;
 using SamaEcole.Application.StateIntegration.Queries.GetStateducReport;
@@ -179,6 +181,39 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     }
 
     /// <summary>
+    /// GET /certificates — les certificats de mutation délivrés (réimpression, révocation). Les
+    /// révoqués restent dans la liste, marqués. `studentId` restreint à un élève (fiche élève).
+    /// </summary>
+    [HttpGet("certificates")]
+    [Authorize(Roles = DirectorAndSecretariat)]
+    public async Task<ActionResult<PaginatedMutationCertificates>> GetMutationCertificates(
+        [FromQuery] Guid? studentId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default) =>
+        Ok(await mediator.Send(
+            new GetMutationCertificatesQuery { StudentId = studentId, Page = page, PageSize = pageSize },
+            cancellationToken));
+
+    /// <summary>
+    /// POST /certificates/{id}/revoke — révoque un certificat. La révocation est le SEUL moyen de
+    /// corriger une pièce délivrée : un certificat n'est jamais modifié (Volume 1 §23.5). Motif
+    /// obligatoire. Effet immédiat sur le point de vérification publique.
+    /// </summary>
+    [HttpPost("certificates/{id:guid}/revoke")]
+    [Authorize(Roles = DirectorAndSecretariat)]
+    public async Task<IActionResult> RevokeMutationCertificate(
+        Guid id,
+        [FromBody] RevokeCertificateRequest request,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(
+            new RevokeStudentMutationCertificateCommand(id, request.Reason), cancellationToken);
+
+        return NoContent();
+    }
+
+    /// <summary>
     /// GET /certificates/verify/{token} — vérification PUBLIQUE d'un certificat de mutation depuis son
     /// QR code. ANONYME : c'est l'école d'accueil, extérieure à la plateforme, qui scanne.
     ///
@@ -238,4 +273,6 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
         string? ReasonDetails,
         string? DestinationSchoolName,
         string? DestinationCity);
+
+    public record RevokeCertificateRequest(string Reason);
 }

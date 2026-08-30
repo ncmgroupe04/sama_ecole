@@ -645,6 +645,10 @@ déclarations engageant l'établissement devant le ministère, et l'export sort 
 | `GET` | `/stateduc/excel?schoolYearId=&observationDate=` | Directeur | Classeur `.xlsx` |
 | `PUT` | `/students/{studentId}/ien` | Directeur, Secrétariat | Enregistre l'IEN officiel, ou génère un provisoire |
 | `POST` | `/students/{studentId}/mutation-certificate` | Directeur, Secrétariat | Délivre le certificat, renvoie le PDF |
+| `GET` | `/students/{studentId}/skills-booklet?schoolYearId=` | Directeur, Secrétariat | Livret de compétences PDF (APC) |
+| `GET` | `/certificates?studentId=&page=&pageSize=` | Directeur, Secrétariat | Registre des certificats de mutation délivrés |
+| `POST` | `/certificates/{id}/revoke` | Directeur, Secrétariat | Révoque un certificat (motif obligatoire) |
+| `GET` | `/certificates/verify/{token}` | **anonyme** | Vérification publique d'un certificat (scan du QR) |
 
 ### 23.1 Points d'attention du contrat
 
@@ -678,6 +682,18 @@ accompagnent le corps binaire :
 - `X-Certificate-Number` — le numéro délivré ;
 - `X-Financially-Clear` — `true`/`false`, pour que l'écran alerte l'agent. **Un `false` ne bloque
   jamais la délivrance** (Volume 1 §23.5).
+
+**`POST .../certificates/{id}/revoke` — la révocation est le SEUL moyen de corriger une pièce
+délivrée.** Un certificat n'est jamais modifié : deux versions du même numéro se contrediraient, la
+version papier faisant foi contre l'école. Motif obligatoire (`422` sinon). Une seconde révocation du
+même certificat renvoie `409`. La ligne reste en base — aucune suppression physique (règle #6). Effet
+immédiat sur `/certificates/verify/{token}`, qui répond alors `status: revoked`.
+
+**`GET .../certificates/verify/{token}` ne renvoie AUCUNE donnée de l'élève** — ni nom, ni date de
+naissance, ni IEN, ni classe. Seulement `status` (`valid` / `revoked` / `unknown`), le numéro, la
+date, l'établissement émetteur : de quoi rapprocher le papier présenté. Le `token` est le code de
+vérification (32 hex d'aléa) porté par le QR ; il n'est **jamais** exposé par `/certificates` (le
+registre), pour qu'une fuite de la liste ne permette pas de forger des liens de vérification.
 
 **Aucune route de ce module ne marque un lot « Transmis ».** Cet état ne pourra venir que d'un webhook
 signé HMAC du SIMEN, vérifié avant toute écriture — par symétrie avec les paiements d'abonnement

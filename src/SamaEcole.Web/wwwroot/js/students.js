@@ -35,6 +35,13 @@ document.addEventListener('alpine:init', () => {
         detailError: null,
         detailTab: 'history',
 
+        // Identifiant National de l'Élève (module Intégration étatique, JGK-M01). Géré depuis la
+        // fiche : soit on saisit le numéro OFFICIEL reçu de l'IEF, soit on demande un numéro
+        // PROVISOIRE de secours (préfixé « P », sans valeur officielle). La garde réelle est
+        // StateIntegrationController (Directeur/Secrétariat) ; le refus d'écraser un IEN officiel par
+        // un provisoire est porté par le Handler.
+        ienModal: { open: false, official: '', busy: false, provisioning: false, error: null },
+
         // Bulletin PDF (JGK-G03) : téléchargé depuis l'onglet Notes & bulletins, un trimestre à la
         // fois. Réservé au Directeur/Enseignant côté serveur (ReportCardsController) — même règle
         // qu'ici pour ne pas afficher un bouton qui répondrait 403.
@@ -263,6 +270,64 @@ document.addEventListener('alpine:init', () => {
             // La ligne de liste sert encore à l'en-tête de la modale (voir la vue) : on la resynchronise
             // avec l'identité fraîchement rechargée pour qu'un champ modifié s'y reflète immédiatement.
             Object.assign(this.detailStudent, this.studentDetail.identity);
+        },
+
+        // ---------------------------------------------- Identifiant National de l'Élève (JGK-M01)
+
+        openIenModal() {
+            const identity = this.studentDetail?.identity;
+            // Pré-remplit avec le numéro OFFICIEL en place ; jamais avec un provisoire (le champ sert
+            // à saisir le vrai numéro, pas à recopier celui de secours).
+            this.ienModal = {
+                open: true,
+                official: identity && identity.ienNumber && !identity.isIenProvisional ? identity.ienNumber : '',
+                busy: false,
+                provisioning: false,
+                error: null
+            };
+        },
+
+        closeIenModal() { this.ienModal.open = false; },
+
+        /** Enregistre l'IEN OFFICIEL saisi (reçu de l'IEF). */
+        async saveOfficialIen() {
+            const value = this.ienModal.official.trim();
+            if (!value || this.ienModal.busy || this.ienModal.provisioning) return;
+
+            this.ienModal.busy = true;
+            this.ienModal.error = null;
+            try {
+                await window.api.put(
+                    `/state-integration/students/${this.detailStudent.id}/ien`,
+                    { ienNumber: value }
+                );
+                this.ienModal.open = false;
+                await this.refreshStudentDetail();
+            } catch (err) {
+                this.ienModal.error = window.api.toMessage(err, "Erreur lors de l'enregistrement de l'IEN.");
+            } finally {
+                this.ienModal.busy = false;
+            }
+        },
+
+        /** Demande la génération d'un IEN PROVISOIRE de secours (corps sans numéro). */
+        async generateProvisionalIen() {
+            if (this.ienModal.busy || this.ienModal.provisioning) return;
+
+            this.ienModal.provisioning = true;
+            this.ienModal.error = null;
+            try {
+                await window.api.put(
+                    `/state-integration/students/${this.detailStudent.id}/ien`,
+                    { ienNumber: null }
+                );
+                this.ienModal.open = false;
+                await this.refreshStudentDetail();
+            } catch (err) {
+                this.ienModal.error = window.api.toMessage(err, "Erreur lors de la génération d'un IEN provisoire.");
+            } finally {
+                this.ienModal.provisioning = false;
+            }
         },
 
         // ------------------------------------------------------------ Bulletin PDF (JGK-G03)

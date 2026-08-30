@@ -53,6 +53,14 @@ public record StudentDetailDto(
 public record StudentIdentityDto(
     Guid Id,
     string Matricule,
+
+    // Identifiant National de l'Élève (module Intégration étatique, JGK-M01). Null tant que l'école
+    // ne l'a pas saisi ou fait générer. <see cref="IsIenProvisional"/> distingue un numéro officiel
+    // d'un numéro de secours fabriqué localement — l'UI l'affiche différemment, jamais comme un
+    // identifiant national valide.
+    string? IenNumber,
+    bool IsIenProvisional,
+
     string FullName,
     DateOnly BirthDate,
     string? BirthPlace,
@@ -154,6 +162,8 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
             {
                 s.Id,
                 s.Matricule,
+                s.IenNumber,
+                s.IsIenProvisional,
                 s.FullName,
                 s.BirthDate,
                 s.BirthPlace,
@@ -181,6 +191,8 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
         var identity = new StudentIdentityDto(
             student.Id,
             student.Matricule,
+            student.IenNumber,
+            student.IsIenProvisional,
             student.FullName,
             student.BirthDate,
             student.BirthPlace,

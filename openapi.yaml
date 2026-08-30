@@ -281,6 +281,87 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /state-integration/certificates:
+    get:
+      tags: [StateIntegration]
+      summary: Registre des certificats de mutation délivrés
+      description: >
+        Du plus récent au plus ancien. Les certificats RÉVOQUÉS restent dans la liste, marqués — une
+        pièce révoquée doit rester traçable. `studentId` restreint à un élève (fiche élève).
+      parameters:
+        - name: studentId
+          in: query
+          schema: { type: string, format: uuid }
+        - { $ref: '#/components/parameters/PageNumber' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200':
+          description: Page du registre.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCount: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        certificateNumber: { type: string }
+                        studentId: { type: string, format: uuid }
+                        studentFullName: { type: string }
+                        studentMatricule: { type: string }
+                        schoolYearLabel: { type: string }
+                        classroomNameSnapshot: { type: string }
+                        reason:
+                          type: string
+                          enum: [Demenagement, ChangementEtablissement, RaisonFamiliale, RaisonMedicale, Autre]
+                        destinationSchoolName: { type: string, nullable: true }
+                        destinationCity: { type: string, nullable: true }
+                        wasFinanciallyClear: { type: boolean }
+                        issuedOn: { type: string, format: date }
+                        revokedAt: { type: string, format: date-time, nullable: true }
+                        revocationReason: { type: string, nullable: true }
+                        isRevoked: { type: boolean }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /state-integration/certificates/{id}/revoke:
+    post:
+      tags: [StateIntegration]
+      summary: Révoquer un certificat de mutation
+      description: >
+        La révocation est le SEUL moyen de corriger une pièce délivrée : un certificat n'est jamais
+        modifié (Volume 1 §23.5). Effet immédiat sur le point de vérification publique. Motif
+        obligatoire. La ligne reste en base — aucune suppression physique (règle #6).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 300 }
+      responses:
+        '204': { description: Certificat révoqué. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Le certificat est déjà révoqué.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /state-integration/certificates/verify/{token}:
     get:
       tags: [StateIntegration]

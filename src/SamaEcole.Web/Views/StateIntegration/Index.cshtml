@@ -1,0 +1,342 @@
+@{
+    ViewData["Title"] = "Intégration étatique";
+}
+
+@* auth.js, api.js et formatters.js sont chargés par _Layout. *@
+@section Scripts {
+    <script src="~/js/state-integration.js" asp-append-version="true"></script>
+}
+
+<div x-data="stateIntegrationView()" x-init="init()">
+
+    <div>
+        <h1 class="page-title">Intégration étatique</h1>
+        <p class="page-subtitle">
+            Pièces et fichiers réglementaires dus au ministère : export Planète, rapport annuel STATEDUC,
+            registre des certificats de mutation.
+        </p>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- Bandeau permanent : état du relais SIMEN. Aucune API publique n'existe à ce jour ; l'écran le
+         dit plutôt que de proposer une transmission qui échouerait. -->
+    <div class="card mt-6 p-4 flex items-start gap-3"
+         :class="relais.isConfigured ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60'">
+        <icon :name="relais.isConfigured ? 'checkmark-circle' : 'alert-circle'"
+              class="w-5 h-5 shrink-0 mt-0.5"
+              :class="relais.isConfigured ? 'text-emerald-600' : 'text-amber-600'" />
+        <div>
+            <p class="text-sm font-semibold text-slate-800">Statut du relais SIMEN</p>
+            <p class="text-sm text-slate-600" x-text="relais.message || 'Vérification…'"></p>
+        </div>
+    </div>
+
+    <!-- Onglets -->
+    <div class="mt-6">
+        <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist"
+             aria-label="Onglets Intégration étatique">
+            <button type="button" role="tab" x-show="isDirector" x-cloak x-on:click="switchTab('planete')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('planete')">
+                Export Planète
+            </button>
+            <button type="button" role="tab" x-show="isDirector" x-cloak x-on:click="switchTab('stateduc')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('stateduc')">
+                Rapport STATEDUC
+            </button>
+            <button type="button" role="tab" x-on:click="switchTab('certificats')"
+                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
+                    :class="tabClass('certificats')">
+                Certificats de mutation
+            </button>
+        </nav>
+    </div>
+
+    <!-- ============================= ONGLET EXPORT PLANÈTE ============================= -->
+    <div x-show="tab === 'planete' && isDirector" x-cloak class="mt-6">
+        <div class="card p-6 space-y-5">
+            <div>
+                <h2 class="section-title">Export « Planète Ready »</h2>
+                <p class="text-sm text-slate-500 mt-1">
+                    Matrice de l'état civil scolaire de tous les élèves d'une année, au format d'échange
+                    du ministère. Aucune donnée financière n'y figure. À transmettre par la voie habituelle.
+                </p>
+            </div>
+
+            <div class="filter-bar lg:items-end">
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="form-label-sm">Année scolaire</label>
+                        <select-field model="planete.schoolYearId" aria-label="Année scolaire"
+                                      placeholder="Sélectionnez une année…"
+                                      options-expr="planeteYearOptions" class="mt-0" />
+                    </div>
+                    <div>
+                        <label class="form-label-sm">Périmètre</label>
+                        <select-field model="planete.classroomId" aria-label="Classe"
+                                      placeholder="Tout l’établissement"
+                                      options-expr="planeteClassroomOptions" class="mt-0" />
+                    </div>
+                    <div>
+                        <label class="form-label-sm">Format</label>
+                        <div class="flex gap-2 mt-1">
+                            <label class="inline-flex items-center gap-1.5 text-sm">
+                                <input type="radio" value="Csv" x-model="planete.format" class="text-indigo-600" />
+                                CSV
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 text-sm">
+                                <input type="radio" value="Json" x-model="planete.format" class="text-indigo-600" />
+                                JSON
+                            </label>
+                        </div>
+                    </div>
+                    <button type="button" x-on:click="downloadPlanete()" :disabled="!planete.schoolYearId || planete.busy"
+                            class="btn-modal-primary group">
+                        <icon name="download" class="w-4 h-4" />
+                        <span x-text="planete.busy ? 'Génération…' : 'Générer et télécharger'"></span>
+                    </button>
+                </div>
+            </div>
+
+            <p x-show="planete.notice" x-cloak class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3"
+               x-text="planete.notice"></p>
+
+            <p class="text-xs text-slate-400">
+                Le fichier annonce, à l'ouverture, le nombre d'élèves sans IEN et le nombre d'IEN
+                provisoires : contrôlez-les avant transmission.
+            </p>
+        </div>
+    </div>
+
+    <!-- ============================= ONGLET RAPPORT STATEDUC ============================= -->
+    <div x-show="tab === 'stateduc' && isDirector" x-cloak class="mt-6 space-y-6">
+        <div class="card p-6 space-y-5">
+            <div>
+                <h2 class="section-title">Rapport annuel STATEDUC</h2>
+                <p class="text-sm text-slate-500 mt-1">
+                    Effectifs par niveau, pyramide des âges, qualifications du personnel. Les âges sont
+                    calculés à la date d'observation — laissez la date du jour pour un état courant.
+                </p>
+            </div>
+
+            <div class="filter-bar lg:items-end">
+                <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="form-label-sm">Année scolaire</label>
+                        <select-field model="stateduc.schoolYearId" aria-label="Année scolaire"
+                                      placeholder="Sélectionnez une année…"
+                                      options-expr="stateducYearOptions" class="mt-0" />
+                    </div>
+                    <div>
+                        <label class="form-label-sm">Date d'observation</label>
+                        <date-field model="stateduc.observationDate" aria-label="Date d'observation" class="mt-0" />
+                    </div>
+                    <button type="button" x-on:click="loadStateduc()" :disabled="!stateduc.schoolYearId || stateduc.busy"
+                            class="btn-modal-primary group">
+                        <icon name="chart-multiple" class="w-4 h-4" />
+                        <span x-text="stateduc.busy ? 'Calcul…' : 'Consulter'"></span>
+                    </button>
+                    <button type="button" x-on:click="downloadStateduc('pdf')"
+                            :disabled="!stateduc.data || stateduc.downloading" class="btn-modal-secondary group">
+                        <icon name="print" class="w-4 h-4" />
+                        <span x-text="stateduc.downloading === 'pdf' ? 'PDF…' : 'PDF officiel'"></span>
+                    </button>
+                    <button type="button" x-on:click="downloadStateduc('excel')"
+                            :disabled="!stateduc.data || stateduc.downloading" class="btn-modal-secondary group">
+                        <icon name="download" class="w-4 h-4" />
+                        <span x-text="stateduc.downloading === 'excel' ? 'Excel…' : 'Classeur .xlsx'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <template x-if="stateduc.data">
+            <div class="space-y-6">
+                <!-- Encadré « Données incomplètes » : la contrepartie du principe « aucune case devinée ». -->
+                <template x-if="stateduc.data.studentsWithoutIen > 0 || stateduc.data.unreportedQualificationTeachers > 0 || stateduc.data.teachersWithoutGender > 0">
+                    <div class="card border-amber-200 bg-amber-50/60 p-4">
+                        <p class="text-sm font-semibold text-amber-800">Données incomplètes à la date d'observation</p>
+                        <ul class="text-sm text-amber-700 mt-1 list-disc pl-5 space-y-0.5">
+                            <template x-if="stateduc.data.studentsWithoutIen > 0">
+                                <li><span x-text="stateduc.data.studentsWithoutIen"></span> élève(s) sans IEN renseigné</li>
+                            </template>
+                            <template x-if="stateduc.data.unreportedQualificationTeachers > 0">
+                                <li><span x-text="stateduc.data.unreportedQualificationTeachers"></span> enseignant(s) sans diplôme professionnel saisi</li>
+                            </template>
+                            <template x-if="stateduc.data.teachersWithoutGender > 0">
+                                <li><span x-text="stateduc.data.teachersWithoutGender"></span> enseignant(s) sans genre saisi</li>
+                            </template>
+                        </ul>
+                        <p class="text-xs text-amber-600 mt-2">
+                            Ces effectifs sont comptés à part. Complétez la saisie avant de signer et déposer le formulaire.
+                        </p>
+                    </div>
+                </template>
+
+                <!-- Synthèse -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="card p-4">
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Effectif total</p>
+                        <p class="text-2xl font-bold text-slate-900 mt-1" x-text="stateduc.data.totalStudents"></p>
+                    </div>
+                    <div class="card p-4">
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Filles</p>
+                        <p class="text-2xl font-bold text-slate-900 mt-1">
+                            <span x-text="stateduc.data.totalGirls"></span>
+                            <span class="text-sm font-medium text-slate-400" x-text="'(' + pct(stateduc.data.girlsRatio) + ')'"></span>
+                        </p>
+                    </div>
+                    <div class="card p-4">
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Enseignants qualifiés</p>
+                        <p class="text-2xl font-bold text-slate-900 mt-1">
+                            <span x-text="stateduc.data.qualifiedTeachers"></span>
+                            <span class="text-sm font-medium text-slate-400" x-text="'/ ' + stateduc.data.totalTeachers"></span>
+                        </p>
+                    </div>
+                    <div class="card p-4">
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Élèves / enseignant</p>
+                        <p class="text-2xl font-bold text-slate-900 mt-1" x-text="num(stateduc.data.studentsPerTeacher)"></p>
+                    </div>
+                </div>
+
+                <!-- Effectifs par niveau -->
+                <div class="card overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100">
+                        <h3 class="section-title">Effectifs par niveau</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="py-2.5 px-4 text-left">Niveau</th>
+                                    <th class="py-2.5 px-4 text-left">Cycle</th>
+                                    <th class="py-2.5 px-4 text-center">Garçons</th>
+                                    <th class="py-2.5 px-4 text-center">Filles</th>
+                                    <th class="py-2.5 px-4 text-center">Total</th>
+                                    <th class="py-2.5 px-4 text-center">% filles</th>
+                                    <th class="py-2.5 px-4 text-center">Redoublants</th>
+                                    <th class="py-2.5 px-4 text-center">Sans IEN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="row in stateduc.data.enrollmentsByLevel" :key="row.level + row.cycle">
+                                    <tr>
+                                        <td class="py-2 px-4 font-medium text-slate-900" x-text="row.level"></td>
+                                        <td class="py-2 px-4 text-slate-600" x-text="row.cycle"></td>
+                                        <td class="py-2 px-4 text-center" x-text="row.boys"></td>
+                                        <td class="py-2 px-4 text-center" x-text="row.girls"></td>
+                                        <td class="py-2 px-4 text-center font-semibold" x-text="row.total"></td>
+                                        <td class="py-2 px-4 text-center text-slate-600" x-text="pct(row.girlsRatio)"></td>
+                                        <td class="py-2 px-4 text-center" x-text="row.repeaters"></td>
+                                        <td class="py-2 px-4 text-center" x-text="row.withoutIen"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- ============================= ONGLET CERTIFICATS ============================= -->
+    <div x-show="tab === 'certificats'" x-cloak class="mt-6">
+        <div class="card overflow-hidden">
+            <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                <h2 class="section-title">Certificats de mutation délivrés</h2>
+                <span class="text-xs text-slate-400" x-text="certificates.total + ' au total'"></span>
+            </div>
+
+            <template x-if="!certificates.loading && certificates.items.length === 0">
+                <p class="p-8 text-center text-sm text-slate-400">
+                    Aucun certificat de mutation délivré. Un certificat se délivre depuis la fiche d'un élève.
+                </p>
+            </template>
+
+            <div x-show="certificates.items.length > 0" class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                        <tr>
+                            <th class="py-2.5 px-4 text-left">N°</th>
+                            <th class="py-2.5 px-4 text-left">Élève</th>
+                            <th class="py-2.5 px-4 text-left">Année</th>
+                            <th class="py-2.5 px-4 text-left">Classe quittée</th>
+                            <th class="py-2.5 px-4 text-left">Motif</th>
+                            <th class="py-2.5 px-4 text-left">Destination</th>
+                            <th class="py-2.5 px-4 text-left">Délivré le</th>
+                            <th class="py-2.5 px-4 text-left">Statut</th>
+                            <th class="py-2.5 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <template x-for="c in certificates.items" :key="c.id">
+                            <tr :class="c.isRevoked ? 'bg-slate-50/60 text-slate-400' : ''">
+                                <td class="py-2 px-4 font-mono text-xs" x-text="c.certificateNumber"></td>
+                                <td class="py-2 px-4">
+                                    <span class="font-medium" x-text="c.studentFullName"></span>
+                                    <span class="block text-xs text-slate-400" x-text="c.studentMatricule"></span>
+                                </td>
+                                <td class="py-2 px-4" x-text="c.schoolYearLabel"></td>
+                                <td class="py-2 px-4" x-text="c.classroomNameSnapshot"></td>
+                                <td class="py-2 px-4" x-text="reasonLabel(c.reason)"></td>
+                                <td class="py-2 px-4">
+                                    <span x-text="c.destinationSchoolName || '—'"></span>
+                                    <span class="block text-xs text-slate-400" x-text="c.destinationCity || ''"></span>
+                                </td>
+                                <td class="py-2 px-4" x-text="formatDate(c.issuedOn)"></td>
+                                <td class="py-2 px-4">
+                                    <span x-show="!c.isRevoked" class="status-badge-success">Valide</span>
+                                    <span x-show="c.isRevoked" class="status-badge-danger" :title="c.revocationReason || ''">Révoqué</span>
+                                </td>
+                                <td class="py-2 px-4 text-right whitespace-nowrap space-x-3">
+                                    <button type="button" x-on:click="openRevoke(c)" x-show="!c.isRevoked"
+                                            class="text-xs font-medium text-red-600 hover:text-red-800">
+                                        Révoquer
+                                    </button>
+                                    <span x-show="c.isRevoked" class="text-xs text-slate-400" x-text="c.revocationReason ? ('Révoqué : ' + c.revocationReason) : 'Révoqué'"></span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div x-show="certificates.total > certificates.pageSize" class="px-5 py-3 border-t border-slate-100 flex items-center justify-between text-sm">
+                <button type="button" x-on:click="changeCertificatePage(-1)" :disabled="certificates.page <= 1"
+                        class="text-slate-500 hover:text-slate-900 disabled:opacity-40">← Précédent</button>
+                <span class="text-slate-400" x-text="'Page ' + certificates.page + ' / ' + certificatePageCount"></span>
+                <button type="button" x-on:click="changeCertificatePage(1)" :disabled="certificates.page >= certificatePageCount"
+                        class="text-slate-500 hover:text-slate-900 disabled:opacity-40">Suivant →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale : révoquer un certificat -->
+    <modal-shell open="revokeModal.open" on-close="closeRevoke()" size="md" title="Révoquer le certificat">
+        <modal-subtitle>
+            <span x-text="'Certificat ' + revokeModal.number"></span> — la révocation est immédiate et
+            définitive. Le point de vérification publique répondra « révoqué ». Pour corriger une erreur,
+            révoquez puis délivrez un nouveau certificat.
+        </modal-subtitle>
+
+        <div x-show="revokeModal.error" x-cloak class="form-error-banner" x-text="revokeModal.error"></div>
+
+        <form x-on:submit.prevent="submitRevoke()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Motif de la révocation</label>
+                <textarea x-model="revokeModal.reason" rows="3" required
+                          placeholder="Ex. erreur sur l'année scolaire, mutation annulée…"
+                          class="input-field"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" x-on:click="closeRevoke()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="!revokeModal.reason.trim() || revokeModal.busy"
+                        class="btn-modal-primary group bg-red-600 hover:bg-red-700">
+                    <span x-text="revokeModal.busy ? 'Révocation…' : 'Révoquer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+</div>
