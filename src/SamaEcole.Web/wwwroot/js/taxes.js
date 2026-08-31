@@ -16,8 +16,8 @@ document.addEventListener('alpine:init', () => {
                          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
     Alpine.data('taxesView', () => ({
-        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
-        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
+        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
         ...window.pdfPreview.state(),
 
         isLoading: false,
@@ -113,7 +113,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** État synthétique : aperçu dans la modale partagée (visionneuse PDF native du navigateur). */
+        /** État synthétique : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
         async downloadDeclarationPdf(declarationId) {
             if (!declarationId || declarationId === 'undefined') {
                 console.error('Identifiant de déclaration invalide ou indéfini', declarationId);

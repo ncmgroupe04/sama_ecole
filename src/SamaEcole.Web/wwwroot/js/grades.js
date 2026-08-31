@@ -31,7 +31,7 @@ const SIMPLIFIED_GRADING_CYCLES = ['Primaire', 'Maternelle'];
 document.addEventListener('alpine:init', () => {
     Alpine.data('gradesView', () => ({
         // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : previewClassBulletinsMergedPdf() appelle
-        // openPdfPreview ; la vue monte la partial _PdfPreviewModal.
+        // openPdfPreview (ouvre le PDF dans un nouvel onglet, visionneuse native du navigateur).
         ...window.pdfPreview.state(),
 
         canEnterGrades: window.auth.role === 'Enseignant' || window.auth.role === 'Directeur',
@@ -320,7 +320,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Aperçu des bulletins fusionnés (une page A5 par élève) dans la modale partagée : le
+         * Aperçu des bulletins fusionnés (une page A5 par élève), ouvert dans un nouvel onglet : le
          * Directeur/Enseignant/Secrétariat les vérifie AVANT impression ou téléchargement, tout
          * depuis l'en-tête de la modale. Le ZIP et le PV restent en téléchargement direct (un ZIP
          * ne se prévisualise pas, et le PV est un document unique déjà court).

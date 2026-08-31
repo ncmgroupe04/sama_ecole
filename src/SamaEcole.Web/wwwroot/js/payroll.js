@@ -8,8 +8,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('payrollView', () => ({
-        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
-        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
+        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
         ...window.pdfPreview.state(),
 
         tab: 'contrats',
@@ -359,7 +359,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Bulletin de paie : aperçu dans la modale partagée (visionneuse PDF native du navigateur). */
+        /** Bulletin de paie : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
         async printPayslip(fichePaieId) {
             if (!fichePaieId || fichePaieId === 'undefined') {
                 console.error('Identifiant de fiche de paie invalide ou indéfini', fichePaieId);
@@ -376,7 +376,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Attestation de travail : aperçu dans la modale partagée (visionneuse PDF native du navigateur). */
+        /** Attestation de travail : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
         async downloadWorkCertificate(contract) {
             if (!contract || !contract.id || contract.id === 'undefined') {
                 console.error('Identifiant de contrat invalide ou indéfini', contract && contract.id);
@@ -436,7 +436,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Fiche heures du mois/année sélectionné : aperçu dans la modale partagée (visionneuse native). */
+        /** Fiche heures du mois/année sélectionné : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
         async previewHourRecordSheet() {
             if (!this.hourRecordsContract) return;
             this.downloadingHourRecordSheet = true;

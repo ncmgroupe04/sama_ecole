@@ -5,8 +5,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('parentSummonsView', () => ({
-        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
-        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
+        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
         ...window.pdfPreview.state(),
 
         records: [],
@@ -90,7 +90,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Convocation : aperçu dans la modale partagée (visionneuse PDF native du navigateur). */
+        /** Convocation : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
         async printNotice(recordId) {
             if (!recordId || recordId === 'undefined') {
                 console.error('Identifiant de convocation invalide ou indéfini', recordId);

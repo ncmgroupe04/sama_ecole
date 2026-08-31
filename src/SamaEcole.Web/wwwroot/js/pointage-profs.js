@@ -9,8 +9,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('pointageProfsView', () => ({
-        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
-        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
+        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
         ...window.pdfPreview.state(),
 
         isLoading: false,
@@ -84,7 +84,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Fiche d'heures Vacataire : aperçu dans la modale partagée (visionneuse PDF native du navigateur). */
+        /** Fiche d'heures Vacataire : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
         async downloadHourRecordSheet() {
             if (!this.selectedContractId) return;
             this.downloadingSheet = true;

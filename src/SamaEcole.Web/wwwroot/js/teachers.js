@@ -58,7 +58,7 @@ document.addEventListener('alpine:init', () => {
         error: null,
         search: '',
 
-        // Aperçu/impression PDF partagé (closePdfPreview, printPreviewPdf, downloadPreviewPdf) —
+        // Ouverture PDF partagée (openPdfPreview → nouvel onglet, visionneuse native) —
         // même mixin que la liste des élèves, voir wwwroot/js/pdf-preview.js.
         ...window.pdfPreview.state(),
 

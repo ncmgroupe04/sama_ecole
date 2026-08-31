@@ -416,7 +416,7 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------ Bulletin PDF (JGK-G03)
 
         /**
-         * Ouvre l'APERÇU du bulletin PDF d'un trimestre dans la modale partagée (impression et
+         * Ouvre le bulletin PDF d'un trimestre dans un nouvel onglet (visionneuse native ; impression et
          * téléchargement depuis son en-tête) — plus de téléchargement direct « à l'aveugle ».
          * Le bulletin est produit par POST /report-cards/generate (corps { studentId, termId }) :
          * le moteur d'aperçu partagé sait désormais servir une route POST à corps JSON.
@@ -1141,6 +1141,6 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
-        // closePdfPreview / printPreviewPdf / downloadPreviewPdf : voir window.pdfPreview.state().
+        // openPdfPreview / openPdfModalWithBlob : voir window.pdfPreview.state() (ouverture nouvel onglet).
     }));
 });

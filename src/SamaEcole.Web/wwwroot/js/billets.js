@@ -11,8 +11,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('billetsView', () => ({
-        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
-        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
+        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
         ...window.pdfPreview.state(),
 
         tab: 'entree',
@@ -124,7 +124,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Billet d'entrée A5 : aperçu dans la modale partagée (visionneuse PDF native du navigateur),
+         * Billet d'entrée A5 : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur),
          * avec impression et téléchargement. Le moteur gère seul le jeton, les erreurs et le repli —
          * plus de fetch/blob/window.open recopié ici.
          */

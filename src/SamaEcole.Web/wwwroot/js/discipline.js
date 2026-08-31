@@ -4,8 +4,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('disciplineView', () => ({
-        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
-        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
+        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
         ...window.pdfPreview.state(),
 
         records: [],
@@ -109,7 +109,7 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        /** PV de discipline : aperçu dans la modale partagée (visionneuse PDF native du navigateur). */
+        /** PV de discipline : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
         async printPv(recordId) {
             if (!recordId || recordId === 'undefined') {
                 console.error('Identifiant de dossier de discipline invalide ou indéfini', recordId);
