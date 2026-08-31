@@ -11,8 +11,9 @@ namespace SamaEcole.Infrastructure.Documents;
 /// reçu d'inscription, la licence Community est posée une fois via le constructeur statique, et un logo
 /// illisible ne doit JAMAIS empêcher l'émission d'un reçu officiel : on régénère alors sans le logo.
 ///
-/// Le générateur ne renvoie JAMAIS un tableau vide : il retente sans logo en cas de premier échec, et
-/// consigne l'erreur pour investigation sans bloquer l'émission du reçu.
+/// Le générateur ne renvoie JAMAIS un tableau vide : il retente sans logo (exception OU document de
+/// 0 octet), et si le repli échoue encore il LÈVE — le middleware d'exception en fait un 500 normalisé
+/// journalisé, jamais un 200 à corps vide qui bloquerait l'aperçu client sans laisser de trace.
 /// </summary>
 public class PaymentReceiptPdfGenerator(ILogger<PaymentReceiptPdfGenerator> logger) : IPaymentReceiptPdfGenerator
 {
@@ -23,26 +24,45 @@ public class PaymentReceiptPdfGenerator(ILogger<PaymentReceiptPdfGenerator> logg
 
     public byte[] Generate(PaymentReceiptDto receipt, byte[]? logo)
     {
-        try
+        byte[]? pdf = null;
+
+        if (logo is not null)
         {
-            var pdf = new PaymentReceiptDocument(receipt, logo).GeneratePdf();
+            try
+            {
+                pdf = new PaymentReceiptDocument(receipt, logo).GeneratePdf();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Erreur lors de la génération du reçu de paiement {ReceiptNumber} avec logo. Nouvelle tentative sans logo.", receipt.ReceiptNumber);
+            }
+
             if (pdf is null || pdf.Length == 0)
             {
-                logger.LogWarning("QuestPDF a renvoyé un PDF vide pour le reçu de paiement {ReceiptNumber}. Nouvelle tentative sans logo.", receipt.ReceiptNumber);
+                logger.LogWarning("Reçu de paiement {ReceiptNumber} : rendu avec logo vide ou en échec. Nouvelle tentative sans logo.", receipt.ReceiptNumber);
+                pdf = null;
+            }
+        }
+
+        if (pdf is null || pdf.Length == 0)
+        {
+            try
+            {
                 pdf = new PaymentReceiptDocument(receipt, null).GeneratePdf();
             }
-            return pdf;
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Erreur fatale lors de la génération du reçu de paiement {ReceiptNumber} (sans logo). Données : SchoolName={SchoolName}, Matricule={Matricule}",
+                    receipt.ReceiptNumber, receipt.SchoolName, receipt.Matricule);
+                throw;
+            }
         }
-        catch (Exception ex) when (logo is not null)
+
+        if (pdf is null || pdf.Length == 0)
         {
-            logger.LogWarning(ex, "Erreur lors de la génération du reçu de paiement {ReceiptNumber} avec logo. Nouvelle tentative sans logo.", receipt.ReceiptNumber);
-            return new PaymentReceiptDocument(receipt, null).GeneratePdf();
+            throw new InvalidOperationException($"Le reçu de paiement généré est vide (reçu {receipt.ReceiptNumber}).");
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Erreur fatale lors de la génération du reçu de paiement {ReceiptNumber} (sans logo). Données : SchoolName={SchoolName}, Matricule={Matricule}",
-                receipt.ReceiptNumber, receipt.SchoolName, receipt.Matricule);
-            throw;
-        }
+
+        return pdf;
     }
 }

@@ -12,6 +12,7 @@ using SamaEcole.Persistence;
 using SamaEcole.Persistence.Seed;
 using SamaEcole.Web.Authorization;
 using SamaEcole.Web.Configuration;
+using SamaEcole.Web.Filters;
 using SamaEcole.Web.HealthChecks;
 using SamaEcole.Web.Middleware;
 using SamaEcole.Web.RateLimiting;
@@ -166,7 +167,14 @@ builder.Services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>()
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, FeatureAuthorizationResultHandler>();
 
 builder.Services
-    .AddControllersWithViews() // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
+    .AddControllersWithViews(options =>
+    {
+        // Filet global : une réponse fichier de 0 octet (générateur PDF/xlsx qui a produit du vide)
+        // ne doit JAMAIS partir en 200 muet — le client afficherait « aperçu impossible, 0 octet »
+        // sur un cul-de-sac. Le filtre la convertit en 500 normalisé + journal Error. Couvre toutes
+        // les actions `return File(...)` du projet, sans garde à recopier dans chacune.
+        options.Filters.Add<EmptyFileResultGuardFilter>();
+    }) // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
     .AddJsonOptions(options =>
     {
         // Les énumérations circulent en CHAÎNES, pas en entiers : openapi.yaml les déclare ainsi

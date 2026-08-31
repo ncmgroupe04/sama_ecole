@@ -1,6 +1,7 @@
 using System.Globalization;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Finance.Queries.GetDailyClosingReportPdf;
+using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -277,7 +278,7 @@ public class DailyClosingReportDocument(DailyClosingReportDto report, byte[]? lo
         date.ToString("dddd d MMMM yyyy", new CultureInfo("fr-FR"));
 }
 
-public class DailyClosingReportPdfGenerator : IDailyClosingReportPdfGenerator
+public class DailyClosingReportPdfGenerator(ILogger<DailyClosingReportPdfGenerator> logger) : IDailyClosingReportPdfGenerator
 {
     // Manquait ici alors que les 25 autres générateurs QuestPDF du projet le posent tous dans leur
     // constructeur statique : sans lui, QuestPDF.Drawing.DocumentGenerator.ValidateLicense() lève à
@@ -289,9 +290,54 @@ public class DailyClosingReportPdfGenerator : IDailyClosingReportPdfGenerator
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
+    /// <summary>
+    /// Même filet que <see cref="PaymentReceiptPdfGenerator"/> / <see cref="ReportCardPdfGenerator"/>,
+    /// qui manquait ici : un logo d'établissement illisible ou corrompu ne doit JAMAIS empêcher
+    /// l'émission du rapport de clôture — on régénère alors sans lui. Et si QuestPDF renvoie un
+    /// document vide (0 octet) malgré tout, on LÈVE : le middleware d'exception le transforme en 500
+    /// normalisé journalisé, jamais un 200 au corps vide qui bloque l'aperçu client sans laisser de trace.
+    /// </summary>
     public byte[] Generate(DailyClosingReportDto report, byte[]? schoolLogo)
     {
-        var document = new DailyClosingReportDocument(report, schoolLogo);
-        return document.GeneratePdf();
+        byte[]? pdf = null;
+
+        if (schoolLogo is not null)
+        {
+            try
+            {
+                pdf = new DailyClosingReportDocument(report, schoolLogo).GeneratePdf();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Rapport de clôture {SessionId} : rendu avec logo en échec. Nouvelle tentative sans logo.",
+                    report.SessionId);
+            }
+
+            if (pdf is { Length: > 0 })
+            {
+                return pdf;
+            }
+
+            if (pdf is not null)
+            {
+                logger.LogWarning(
+                    "Rapport de clôture {SessionId} : rendu avec logo vide (0 octet). Nouvelle tentative sans logo.",
+                    report.SessionId);
+            }
+            pdf = null;
+        }
+
+        pdf ??= new DailyClosingReportDocument(report, null).GeneratePdf();
+
+        if (pdf is null || pdf.Length == 0)
+        {
+            // Toujours vide après le repli : on LÈVE. Le middleware d'exception en fait un 500 normalisé
+            // journalisé — jamais un 200 au corps vide qui bloque l'aperçu client sans laisser de trace.
+            throw new InvalidOperationException(
+                $"Le rapport de clôture de caisse généré est vide (session {report.SessionId}).");
+        }
+
+        return pdf;
     }
 }

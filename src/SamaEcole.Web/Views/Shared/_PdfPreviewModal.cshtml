@@ -6,7 +6,12 @@
              accessibles en permanence (elle reste collée en haut pendant le défilement de l'aperçu). -->
         <div x-show="pdfPreviewUrl" x-cloak
              class="sticky top-0 z-10 -mt-6 -mx-6 px-6 py-3 bg-white/95 backdrop-blur border-b border-slate-100 flex flex-wrap items-center justify-end gap-2">
-            <button type="button" x-on:click="openPdfInNewTab()" class="btn-modal-secondary text-xs group">
+            <!-- « Ouvrir dans un nouvel onglet » : sortie de secours la plus fiable (visualiseur natif
+                 du navigateur) quand l'aperçu intégré rame ou se fige. Mise en avant à gauche, séparée
+                 du reste, avec une icône — c'est le premier réflexe à proposer en cas de souci. -->
+            <button type="button" x-on:click="openPdfInNewTab()"
+                    class="btn-modal-secondary text-xs group mr-auto ring-1 ring-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                <icon name="link" class="w-4 h-4" />
                 <span>Ouvrir dans un nouvel onglet</span>
             </button>
             <button type="button" x-on:click="downloadPreviewPdf()" class="btn-modal-secondary text-xs group">
@@ -22,7 +27,7 @@
         <!-- Bandeau d'astuce -->
         <div x-show="pdfPreviewUrl" x-cloak class="flex items-center gap-2 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-900 text-xs font-medium">
             <icon name="document" class="w-4 h-4 text-indigo-600 shrink-0" />
-            <span>Astuce : si l'aperçu ne s'affiche pas correctement, ouvrez le document dans un nouvel onglet ou téléchargez-le depuis les boutons ci-dessus.</span>
+            <span>Astuce : si l'aperçu ne s'affiche pas correctement, cliquez sur <strong>« Ouvrir dans un nouvel onglet »</strong> — le document s'ouvre alors dans le lecteur PDF du navigateur.</span>
         </div>
 
         <!-- Chargement : récupération du document, ou moteur d'aperçu (PDF.js) encore en cours de chargement. -->
@@ -40,11 +45,16 @@
                 <p class="text-sm font-medium text-slate-700">Impossible d'afficher l'aperçu.</p>
                 <p class="text-xs text-slate-500 max-w-md" x-text="pdfErrorMessage"></p>
                 <div class="flex flex-wrap justify-center gap-3 mt-4">
-                    <button type="button" x-show="!pdfDegraded" x-on:click="retryPdfPreview()" class="btn-modal-primary text-xs group">
-                        <span>Réessayer</span>
-                    </button>
-                    <button type="button" x-show="pdfPreviewUrl" x-on:click="openPdfInNewTab()" class="btn-modal-secondary text-xs group">
+                    <!-- Document récupéré mais moteur d'aperçu KO (pdfDegraded) : « nouvel onglet » devient
+                         l'action principale — c'est le meilleur recours disponible. Sinon Réessayer prime. -->
+                    <button type="button" x-show="pdfPreviewUrl" x-on:click="openPdfInNewTab()"
+                            class="text-xs group" :class="pdfDegraded ? 'btn-modal-primary' : 'btn-modal-secondary ring-1 ring-indigo-200 text-indigo-700 hover:bg-indigo-50'">
+                        <icon name="link" class="w-4 h-4" />
                         <span>Ouvrir dans un nouvel onglet</span>
+                    </button>
+                    <button type="button" x-show="!pdfDegraded" x-on:click="retryPdfPreview()"
+                            class="text-xs group" :class="pdfPreviewUrl ? 'btn-modal-secondary' : 'btn-modal-primary'">
+                        <span>Réessayer</span>
                     </button>
                     <button type="button" x-show="pdfPreviewUrl" x-on:click="downloadPreviewPdf()" class="btn-modal-secondary text-xs group">
                         <icon name="download" class="w-4 h-4" />

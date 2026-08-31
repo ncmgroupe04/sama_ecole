@@ -32,6 +32,10 @@ public class GetDailyClosingReportPdfQueryHandler(
             .FirstOrDefaultAsync(s => s.Id == request.SessionId, cancellationToken)
             ?? throw new KeyNotFoundException($"Session {request.SessionId} introuvable.");
 
+        // Caissier désactivé/supprimé depuis la clôture : la nav peut être nulle. Le rapport reste
+        // émissible — un « — » vaut mieux qu'un NullReferenceException transformé en 500 muet.
+        var cashierName = session.Cashier?.FullName ?? "—";
+
         var payments = await dbContext.Payments.AsNoTracking()
             .Include(p => p.Breakdowns)
             .ThenInclude(b => b.FeeCategory)
@@ -93,7 +97,7 @@ public class GetDailyClosingReportPdfQueryHandler(
             SchoolLogoUrl: school.LogoUrl ?? string.Empty,
             Date: session.OpenedAt.Date,
             SessionId: $"SES-{session.OpenedAt:yyyy-MMdd}-{session.Id.ToString().Substring(0, 4).ToUpper()}",
-            CashierName: session.Cashier.FullName,
+            CashierName: cashierName,
             TimeRange: timeRange,
             OpeningBalance: session.OpeningBalance,
             TotalCollected: totalCollected,
