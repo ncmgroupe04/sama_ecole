@@ -20,7 +20,9 @@
 //          nouvel onglet (visionneuse native du navigateur), plus d'iframe ni de modale.
 // v1.0.3 — pdf-preview.js : récupération résiliente (application/pdf normal d'abord, replis
 //          adaptatifs) + onglet ouvert dès le clic. Corrige « document vide (0 octet) ».
-const CACHE_NAME = 'samaecole-static-v1.0.3';
+// v1.0.4 — modèle hybride inscription/caisse : réécriture d'enrollments.js et caisse.js
+//          (bouton « Envoyer en Caisse », modale de recouvrement) + site.css (btn-modal-success).
+const CACHE_NAME = 'samaecole-static-v1.0.4';
 
 const STATIC_ASSETS = [
     '/',
