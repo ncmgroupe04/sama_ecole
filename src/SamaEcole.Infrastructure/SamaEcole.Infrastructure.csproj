@@ -10,6 +10,12 @@
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.1" />
+    <!-- Épinglage de sécurité (directive #5) : Microsoft.AspNetCore.Identity 2.3.1 tire
+         transitivement System.Security.Cryptography.Xml 8.0.2, marqué « High » (GHSA-37gx-xxp4-5rgx
+         et suivants) via Microsoft.AspNetCore.DataProtection 2.3.0. On force la version corrigée,
+         alignée sur le millésime 9.0.x des autres packages Microsoft.* de ce projet. À retirer si un
+         jour le package standalone AspNetCore.Identity est remplacé par le framework partagé. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.19" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.1" />
     <!-- Version alignée sur ce que résout déjà Authentication.JwtBearer 9.0.1 dans SamaEcole.Web :
          épingler une autre version rejouerait un downgrade NU1605 et casserait la restauration. -->
