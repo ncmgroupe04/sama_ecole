@@ -26,7 +26,8 @@
 //          pour déjouer Internet Download Manager qui vidait le fetch de l'aperçu (204 → 0 octet).
 // v1.0.6 — retour de la modale d'aperçu PDF (_PdfPreviewModal, iframe + visionneuse native) :
 //          pdf-preview.js réexpose l'état Alpine de la modale au lieu d'ouvrir un onglet.
-const CACHE_NAME = 'samaecole-static-v1.0.6';
+// v1.0.7 — modale d'aperçu PDF élargie de 40 % (site.css : nouvelle largeur sm:max-w-[50.4rem]).
+const CACHE_NAME = 'samaecole-static-v1.0.7';
 
 const STATIC_ASSETS = [
     '/',

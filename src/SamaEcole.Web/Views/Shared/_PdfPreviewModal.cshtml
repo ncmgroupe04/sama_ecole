@@ -2,7 +2,7 @@
    L'affichage est confié à la visionneuse PDF NATIVE du navigateur via un <iframe> pointant sur une
    blob URL locale (auth impossible sur une navigation d'iframe → fetch d'abord ; <object> bloqué par
    la CSP object-src 'none'). Le composant Alpine hôte étale `...window.pdfPreview.state()`. *@
-<modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
+<modal-shell open="showPdfModal" size="pdf" on-close="closePdfPreview()" :title="pdfPreviewTitle">
     <div class="space-y-4">
         <!-- Barre d'actions : ouverture dans un onglet, téléchargement, impression. Collée en haut. -->
         <div x-show="pdfPreviewUrl" x-cloak

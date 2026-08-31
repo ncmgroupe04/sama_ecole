@@ -125,6 +125,9 @@ public class ModalShellTagHelper : TagHelper
         "lg" => "sm:max-w-lg",
         "xl" => "sm:max-w-xl",
         "2xl" => "sm:max-w-2xl",
+        // Aperçu PDF : « xl » élargi de 40 % (36rem → 50.4rem) — assez pour lire une page A4/A5 sans
+        // débordement, sans occuper tout l'écran.
+        "pdf" => "sm:w-full sm:max-w-[50.4rem]",
         "60" => "sm:w-[60%] sm:max-w-4xl",
         "wide" => "sm:w-[85%] sm:max-w-6xl",
         _ => "sm:max-w-3xl"
