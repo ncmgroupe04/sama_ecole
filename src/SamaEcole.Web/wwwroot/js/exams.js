@@ -781,9 +781,10 @@ document.addEventListener('alpine:init', () => {
         closeBatchPrint() { this.isBatchPrintOpen = false; },
 
         /**
-         * POST à réponse binaire (filtre en corps JSON, pas en query) : la modale d'aperçu partagée
-         * (pdf-preview.js) ne fait que du GET — on télécharge donc directement, comme l'export Excel.
-         * 422 si aucun dossier du filtre n'est Complet/Transmis/Valide (Volume 1 §22.5).
+         * POST à réponse binaire (filtre en corps JSON, pas en query). La modale d'aperçu partagée
+         * (pdf-preview.js) accepte un requestInit POST : le lot s'ouvre en aperçu, l'utilisateur
+         * imprime ou télécharge depuis l'en-tête. 422 si aucun dossier du filtre n'est
+         * Complet/Transmis/Valide (Volume 1 §22.5) — remonté comme message dans la modale d'aperçu.
          */
         async submitBatchPrint() {
             if (!this.batchPrintForm.examSessionId && !this.batchPrintForm.classroomId) {
@@ -793,35 +794,20 @@ document.addEventListener('alpine:init', () => {
             this.isBatchPrinting = true;
             this.batchPrintError = null;
             try {
-                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                    await window.api.refreshOrRedirect();
-                }
-                const response = await fetch('/api/v1/exams/dossiers/candidate-forms/pdf', {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}`, 'Content-Type': 'application/json' },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        examSessionId: this.batchPrintForm.examSessionId || null,
-                        classroomId: this.batchPrintForm.classroomId || null
-                    })
-                });
-                if (!response.ok) {
-                    const apiErr = await window.api.toError(response);
-                    this.batchPrintError = window.api.toMessage(apiErr, "Erreur lors de l'impression par lot.");
-                    return;
-                }
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'Fiches-Candidature.pdf';
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                URL.revokeObjectURL(url);
                 this.isBatchPrintOpen = false;
-            } catch (err) {
-                this.batchPrintError = window.api.toMessage(err, "Erreur lors de l'impression par lot.");
+                await this.openPdfPreview(
+                    '/api/v1/exams/dossiers/candidate-forms/pdf',
+                    'Fiches de candidature — impression par lot',
+                    'Fiches-Candidature.pdf',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            examSessionId: this.batchPrintForm.examSessionId || null,
+                            classroomId: this.batchPrintForm.classroomId || null
+                        })
+                    }
+                );
             } finally {
                 this.isBatchPrinting = false;
             }

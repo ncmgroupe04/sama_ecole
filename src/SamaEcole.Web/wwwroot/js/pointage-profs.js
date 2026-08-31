@@ -9,6 +9,10 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('pointageProfsView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : la fiche d'heures s'ouvre dans la modale
+        // _PdfPreviewModal (impression / téléchargement au choix), jamais un download forcé.
+        ...window.pdfPreview.state(),
+
         isLoading: false,
         error: null,
 
@@ -80,30 +84,17 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Fiche d'heures Vacataire PDF — le jeton ne voyage pas en navigation classique : fetch brut + blob (même mécanique que Paie/Billets/Caisse). */
+        /** Fiche d'heures Vacataire PDF — ouverte dans la modale d'aperçu partagée (pdf-preview.js). */
         async downloadHourRecordSheet() {
             if (!this.selectedContractId) return;
             this.downloadingSheet = true;
             try {
                 const params = new URLSearchParams({ month: this.filter.month, year: this.filter.year });
-                const response = await fetch(
+                await this.openPdfPreview(
                     `/api/v1/finance/employee-contracts/${this.selectedContractId}/hour-records/sheet/pdf?${params.toString()}`,
-                    { headers: { Authorization: `Bearer ${window.auth.accessToken}` } });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Fiche-Heures-${this.selectedContractId}.pdf`;
-                    link.click();
-                }
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (err) {
-                toast.error(window.api.toMessage(err, 'Erreur lors de la génération de la fiche.'));
+                    "Fiche d'heures — Vacataire",
+                    `Fiche-Heures-${this.selectedContractId}.pdf`
+                );
             } finally {
                 this.downloadingSheet = false;
             }

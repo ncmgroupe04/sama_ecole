@@ -5,6 +5,10 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('parentSummonsView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : la convocation s'ouvre dans la modale
+        // _PdfPreviewModal (impression / téléchargement au choix), jamais un download forcé.
+        ...window.pdfPreview.state(),
+
         records: [],
         isLoading: true,
         printingId: null,
@@ -86,7 +90,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Convocation PDF, ouverte dans un nouvel onglet — même mécanique que discipline.js printPv. */
+        /** Convocation PDF, ouverte dans la modale d'aperçu partagée — même mécanique que discipline.js printPv. */
         async printNotice(recordId) {
             if (!recordId || recordId === 'undefined') {
                 console.error('Identifiant de convocation invalide ou indéfini', recordId);
@@ -94,25 +98,11 @@ document.addEventListener('alpine:init', () => {
             }
             this.printingId = recordId;
             try {
-                const response = await fetch(`/api/v1/parent-summons/${recordId}/notice/pdf`, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
-                });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Convocation-${recordId}.pdf`;
-                    link.click();
-                }
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (error) {
-                console.error('Parent notice print error:', error);
-                toast.error(window.api.toMessage(error, 'Erreur lors de la génération de la convocation.'));
+                await this.openPdfPreview(
+                    `/api/v1/parent-summons/${recordId}/notice/pdf`,
+                    'Convocation parent',
+                    `Convocation-${recordId}.pdf`
+                );
             } finally {
                 this.printingId = null;
             }

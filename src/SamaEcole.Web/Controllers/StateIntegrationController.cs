@@ -12,6 +12,7 @@ using SamaEcole.Application.StateIntegration.Queries.GetSkillsBookletPdf;
 using SamaEcole.Application.StateIntegration.Queries.GetStateducReport;
 using SamaEcole.Application.StateIntegration.Queries.VerifyMutationCertificate;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Infrastructure;
 using SamaEcole.Web.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -105,10 +106,9 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
         var report = await mediator.Send(
             new GetStateducReportQuery(schoolYearId, observationDate), cancellationToken);
 
-        return File(
-            pdfGenerator.Generate(report),
-            "application/pdf",
-            BuildStateducFileName(report, "pdf"));
+        // `inline` : le formulaire s'ouvre dans la modale d'aperçu partagée (_PdfPreviewModal) — le
+        // Directeur le relit avant d'imprimer ou de télécharger, jamais un téléchargement forcé.
+        return this.InlinePdf(pdfGenerator.Generate(report), BuildStateducFileName(report, "pdf"));
     }
 
     /// <summary>GET /stateduc/excel — le même rapport en classeur .xlsx, pour consolidation à l'IEF.</summary>
@@ -177,7 +177,9 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
         Response.Headers["X-Certificate-Number"] = result.CertificateNumber;
         Response.Headers["X-Financially-Clear"] = result.WasFinanciallyClear ? "true" : "false";
 
-        return File(result.Content, "application/pdf", result.FileName);
+        // `inline` : le certificat s'ouvre dans la modale d'aperçu (impression / téléchargement au
+        // choix), au lieu d'un download forcé dès la délivrance.
+        return this.InlinePdf(result.Content, result.FileName);
     }
 
     /// <summary>
@@ -250,7 +252,8 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
         var result = await mediator.Send(
             new GetSkillsBookletPdfQuery(studentId, schoolYearId), cancellationToken);
 
-        return File(result.Content, "application/pdf", result.FileName);
+        // `inline` : le livret s'ouvre dans la modale d'aperçu partagée avant impression/téléchargement.
+        return this.InlinePdf(result.Content, result.FileName);
     }
 
     private static string BuildStateducFileName(StateducReportDto report, string extension)

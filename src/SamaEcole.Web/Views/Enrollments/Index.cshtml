@@ -59,9 +59,15 @@
             position: absolute !important; left: 0 !important; top: 0 !important;
             /* La marge est portée par @@page : la feuille imprimée est la zone utile seule. */
             width: 190mm !important;
+            /* Les trois bornes à 128 mm : sans `min-height`, la classe utilitaire `min-h-[148mm]`
+               de la feuille l'emporte en impression et le bloc de signatures (poussé en bas par
+               `justify-between`) déborde de ~20 mm sur une 2e page. */
+            min-height: 128mm !important;
             height: 128mm !important;
             max-height: 128mm !important;
-            margin: 0 !important; padding: 0 !important;
+            /* Filet bas de 4 mm : le pied (signatures + mention) ne touche plus le bord de la
+               feuille. Pris sur la zone utile, sans risque : le contenu ne la remplit pas. */
+            margin: 0 !important; padding: 0 0 4mm !important;
             box-shadow: none !important; border: 0 !important; border-radius: 0 !important;
             /* Dernier garde-fou : rien ne peut déclencher une 2e page. L'indicateur de tenue en page
                signale le cas À L'ÉCRAN avant l'impression, pour qu'il soit corrigé et non subi. */
@@ -163,10 +169,10 @@
  <!-- Classe -->
  <div>
  <label for="enr-classroom" class="form-label form-label-required">Classe d'affectation</label>
- @* on-change : les frais diffèrent d'une classe à l'autre — la sélection d'encaissement est
- recomposée sur le barème de la nouvelle classe (voir resetCollected). *@
+ @* on-change : les frais diffèrent d'une classe à l'autre — on remet le simulateur de mois à 1
+ pour ne pas reporter une simulation faite sur le barème d'une autre classe (voir resetSimulator). *@
  <select-field id="enr-classroom" model="form.classroomId" required="true"
- placeholder="— Choisir une classe —" on-change="resetCollected()"
+ placeholder="— Choisir une classe —" on-change="resetSimulator()"
  options-expr="[{value:'', label:'— Choisir une classe —'}].concat(classrooms.map(c => ({value: c.id, label: classroomLabel(c)})))" />
  <p x-show="formErrors.classroomid" x-cloak x-text="formErrors.classroomid" class="field-error"></p>
  <p x-show="classrooms.length === 0" x-cloak class="mt-1 text-xs text-slate-400">
@@ -259,8 +265,11 @@
  <!-- Colonne aperçu des frais -->
  <div class="lg:col-span-1">
  <div class="card p-5 lg:sticky lg:top-4">
- <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Frais &amp; encaissement</h2>
- <p class="text-xs text-slate-400 mt-0.5">Cochez ce qui est réglé au guichet. Le serveur fait foi à l'enregistrement.</p>
+ <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Frais</h2>
+ <p class="text-xs text-slate-400 mt-0.5">
+ Aide au calcul pour le secrétariat. Aucun encaissement ici : le règlement s'effectue à la
+ Caisse (Comptabilité).
+ </p>
 
  <!-- Pas de classe -->
  <div x-show="!form.classroomId" x-cloak class="py-8 text-center">
@@ -273,36 +282,19 @@
  <p class="text-xs text-slate-400 mt-1">Le montant dû sera de 0 FCFA. Paramétrez les frais dans <a href="/frais" class="underline">Finance</a>.</p>
  </div>
 
- @* Détail du dû annuel ET encaissement du jour, au même endroit : la case cochée dit
- « ce frais est réglé maintenant », le reste alimentera la Caisse plus tard. Seul le
- total ENCAISSÉ partira sur le reçu (pièce comptable), le dû annuel n'y est qu'un rappel. *@
+ @* Détail du dû annuel, EN LECTURE SEULE : le secrétariat s'appuie sur ces montants pour
+ renseigner le parent. Il n'encaisse rien — le règlement, y compris le premier versement,
+ se fait à la Caisse, seule pièce comptable (docs/design-references/README.md §1). *@
  <div x-show="form.classroomId && hasFeesForSelectedClass()" x-cloak class="mt-4">
  <ul class="divide-y divide-slate-100">
  <template x-for="line in previewLines()" :key="line.feeCategoryId">
- <li class="py-2.5">
- <label class="flex items-start justify-between gap-3 cursor-pointer select-none">
- <span class="flex items-start gap-2.5 min-w-0">
- <input type="checkbox" x-model="collectedEntry(line).checked"
- class="checkbox-field mt-0.5 shrink-0">
+ <li class="py-2.5 flex items-start justify-between gap-3">
  <span class="min-w-0">
  <span class="block text-sm text-slate-800" x-text="line.designation"></span>
  <span x-show="line.isRecurring" x-cloak class="block text-xs text-slate-400"
  x-text="formatMoney(line.unitAmount) + ' × ' + line.months + ' mois'"></span>
  </span>
- </span>
  <span class="text-sm font-medium text-slate-900 whitespace-nowrap amount" x-text="formatMoney(line.lineTotal)"></span>
- </label>
-
- @* Mensualité : le tuteur règle rarement l'année entière le jour de l'inscription —
- il choisit le nombre de mois d'avance qu'il paie (1 par défaut). *@
- <div x-show="line.isRecurring && collectedEntry(line).checked" x-cloak
- class="mt-2 ml-7 flex items-center gap-2">
- <label class="text-xs text-slate-500" :for="'enr-months-' + line.feeCategoryId">Mois réglés</label>
- <input type="number" :id="'enr-months-' + line.feeCategoryId"
- x-model.number="collectedEntry(line).months" min="1" :max="line.months"
- class="input-field mt-0 w-20 py-1 text-sm">
- <span class="text-xs text-slate-400 amount" x-text="'= ' + formatMoney(collectedAmount(line))"></span>
- </div>
  </li>
  </template>
  </ul>
@@ -312,20 +304,24 @@
  <span class="text-sm font-semibold amount" x-text="formatMoney(previewTotal())"></span>
  </div>
 
- <div class="mt-4 rounded-xl bg-primary-50 p-3">
- <label for="enr-payment-method" class="block text-xs font-medium text-primary-700">Mode de règlement</label>
- <select-field id="enr-payment-method" model="paymentMethod" class="mt-1"
- options-expr="[{value:'Cash', label:'Espèces'}, {value:'Cheque', label:'Chèque'}, {value:'Transfer', label:'Virement'}, {value:'MobileMoney', label:'Mobile Money'}]" />
+ @* Simulateur : PUREMENT indicatif, n'enregistre rien. Il aide le secrétaire à dire au
+ parent « pour N mensualités d'avance, ça fait X » sans sortir de calculatrice. *@
+ <div class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-3">
+ <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Aide au calcul</p>
+
+ <div x-show="previewLines().some(l => l.isRecurring)" x-cloak class="mt-2 flex items-center gap-2">
+ <label for="enr-sim-months" class="text-xs text-slate-500">Mensualités à régler d'avance</label>
+ <input id="enr-sim-months" type="number" x-model.number="simMonths"
+ min="1" :max="tuitionMonths" class="input-field mt-0 w-20 py-1 text-sm">
+ </div>
 
  <div class="mt-3 flex items-center justify-between">
- <span class="text-sm font-semibold text-primary-700 uppercase tracking-wide">Encaissé ce jour</span>
- <span class="text-lg font-bold text-primary amount" x-text="formatMoney(collectedTotal())"></span>
+ <span class="text-xs text-slate-500">Sous-total simulé</span>
+ <span class="text-base font-bold text-slate-900 amount" x-text="formatMoney(simSubtotal())"></span>
  </div>
- <p x-show="collectedTotal() === 0" x-cloak class="mt-1 text-xs text-primary-700">
- Aucun frais coché : le dossier est ouvert sans versement, le reçu s'imprimera à 0 FCFA.
+ <p class="mt-1 text-xs text-slate-400">
+ Montant à communiquer au parent. Le règlement et son reçu se font à la Caisse.
  </p>
- <p x-show="collectedTotal() > 0" x-cloak class="mt-1 text-xs text-primary-700"
- x-text="'Reste à payer après ce versement : ' + formatMoney(previewTotal() - collectedTotal())"></p>
  </div>
  </div>
  </div>
@@ -385,22 +381,26 @@
  Aucun badge d'ÉTAT DE PAIEMENT ici, volontairement : réimprimée trois mois plus tard,
  l'attestation en afficherait un faux. Le badge ne qualifie que l'acte administratif,
  vrai à toute date. *@
- <div class="receipt-header flex items-start gap-4 border-b border-slate-200 pb-3">
+ @* pt-1.5 : l'en-tête ne colle plus au bord haut de la feuille (aération demandée).
+    `relative` : ancre le badge N° de reçu centré ci-dessous. *@
+ <div class="receipt-header relative flex items-start gap-4 border-b border-slate-200 pb-2.5 pt-1.5">
  <img x-show="receipt.schoolLogoUrl" x-cloak :src="receipt.schoolLogoUrl" class="h-10 w-10 shrink-0 object-contain" alt="" />
- <div class="min-w-0 flex-1">
+ <div class="min-w-0 flex-1 pr-24">
  <h2 class="text-lg font-bold text-slate-900 tracking-tight" x-text="receipt.schoolName"></h2>
  <p class="text-[10px] text-slate-500 mt-0.5" x-text="contactLine()"></p>
  <p x-show="legalMentions()" x-cloak class="text-[10px] text-slate-500" x-text="legalMentions()"></p>
  </div>
+ @* N° de reçu : centré dans l'en-tête (horizontal + vertical). En absolu pour un centrage VRAI
+    sur la feuille, indépendant de la largeur des colonnes gauche/droite. *@
+ <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-center text-[10.5px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
  <div class="shrink-0 flex flex-col items-end gap-1">
  <span class="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-indigo-700 whitespace-nowrap">Inscription enregistrée</span>
- <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
  <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Année&nbsp;<span x-text="receipt.schoolYearLabel"></span></span>
  </div>
  </div>
 
  <!-- B. Cartouche d'identité (grille 2 × 2) -->
- <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
+ <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
  <div>
  <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Élève</div>
  <div class="text-xs font-semibold text-slate-900" x-text="receipt.studentFullName"></div>
@@ -422,7 +422,7 @@
  </div>
 
  <!-- C. Déclaration officielle -->
- <div class="mt-3 border-l-2 border-slate-200 pl-3 text-[11px] leading-snug text-slate-600 text-justify">
+ <div class="mt-2 border-l-2 border-slate-200 pl-3 text-[11px] leading-snug text-slate-600 text-justify">
  L'administration de l'établissement atteste que l'élève
  <span class="font-semibold text-slate-900" x-text="receipt.studentFullName"></span> (matricule
  <span class="font-semibold text-slate-900" x-text="receipt.matricule"></span>) est régulièrement inscrit(e) au sein de
@@ -437,7 +437,7 @@
 
  Le cumul annuel (totalDue) et le « reste à payer » ont disparu : c'est l'objet même de la
  refonte du 25/08/2026. Voir docs/design-references/README.md §1, rubrique « Interdits ». *@
- <div class="mt-3 grid grid-cols-2 gap-5 items-start">
+ <div class="mt-2 grid grid-cols-2 gap-5 items-start">
 
  <!-- BLOC 1 — Règlement à effectuer (engagement initial) -->
  <div>

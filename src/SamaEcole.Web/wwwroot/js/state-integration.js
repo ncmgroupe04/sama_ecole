@@ -28,6 +28,11 @@ document.addEventListener('alpine:init', () => {
     };
 
     Alpine.data('stateIntegrationView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : rapport STATEDUC et livret de compétences
+        // s'ouvrent dans la modale _PdfPreviewModal (impression / téléchargement au choix). L'export
+        // Planète (CSV/JSON) et l'Excel STATEDUC, qui ne se prévisualisent pas, restent en download.
+        ...window.pdfPreview.state(),
+
         error: null,
 
         // Le Directeur voit tout ; le Secrétariat n'a que l'onglet Certificats (IEN se gère sur la
@@ -193,10 +198,14 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ schoolYearId: this.stateduc.schoolYearId });
                 if (this.stateduc.observationDate) params.set('observationDate', this.stateduc.observationDate);
 
-                await this.downloadFile(
-                    `/api/v1/state-integration/stateduc/${kind}?${params.toString()}`,
-                    kind === 'pdf' ? 'STATEDUC.pdf' : 'STATEDUC.xlsx'
-                );
+                const url = `/api/v1/state-integration/stateduc/${kind}?${params.toString()}`;
+                if (kind === 'pdf') {
+                    // Le formulaire officiel s'ouvre dans la modale d'aperçu partagée : le Directeur
+                    // le relit avant d'imprimer ou de télécharger depuis l'en-tête de la modale.
+                    await this.openPdfPreview(url, 'Rapport STATEDUC', 'STATEDUC.pdf');
+                } else {
+                    await this.downloadFile(url, 'STATEDUC.xlsx');
+                }
             } catch (err) {
                 this.error = window.api.toMessage(err, "Erreur lors du téléchargement du rapport STATEDUC.");
             } finally {
@@ -369,12 +378,13 @@ document.addEventListener('alpine:init', () => {
             m.bookletBusy = true;
             m.bookletError = null;
             try {
-                await this.downloadFile(
+                await this.openPdfPreview(
                     `/api/v1/state-integration/students/${m.selectedStudent.id}/skills-booklet?schoolYearId=${m.schoolYearId}`,
+                    'Livret de compétences',
                     'livret-competences.pdf'
                 );
             } catch (err) {
-                m.bookletError = window.api.toMessage(err, "Erreur lors du téléchargement du livret.");
+                m.bookletError = window.api.toMessage(err, "Erreur lors de l'ouverture du livret.");
             } finally {
                 m.bookletBusy = false;
             }
@@ -403,14 +413,15 @@ document.addEventListener('alpine:init', () => {
             m.busy = true;
             m.error = null;
             try {
-                await this.downloadFile(
+                await this.openPdfPreview(
                     `/api/v1/state-integration/students/${m.selectedStudent.id}/skills-booklet?schoolYearId=${m.schoolYearId}`,
+                    'Livret de compétences',
                     'livret-competences.pdf'
                 );
                 m.open = false;
             } catch (err) {
                 // 409 = pas de grille de compétences configurée pour le niveau de l'élève.
-                m.error = window.api.toMessage(err, "Erreur lors du téléchargement du livret. Vérifiez que le niveau de l'élève dispose d'une grille de compétences APC configurée.");
+                m.error = window.api.toMessage(err, "Erreur lors de l'ouverture du livret. Vérifiez que le niveau de l'élève dispose d'une grille de compétences APC configurée.");
             } finally {
                 m.busy = false;
             }

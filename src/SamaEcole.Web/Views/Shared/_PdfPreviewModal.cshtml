@@ -1,6 +1,6 @@
 @* Modale d'aperçu PDF partagée — moteur JS unique dans wwwroot/js/pdf-preview.js.
    Le composant Alpine hôte doit étaler `...window.pdfPreview.state()` dans son Alpine.data(). *@
-<modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
+<modal-shell open="showPdfModal" size="xl" panel-style="pdfPanelStyle" on-close="closePdfPreview()" :title="pdfPreviewTitle">
     <div class="space-y-4">
         <!-- Barre d'actions de l'en-tête : impression, téléchargement et ouverture dans un onglet,
              accessibles en permanence (elle reste collée en haut pendant le défilement de l'aperçu). -->

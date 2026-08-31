@@ -59,6 +59,10 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     private record StudentSearchItem(Guid Id, string Matricule, string FullName);
     private record StudentSearchPage(List<StudentSearchItem> Items);
 
+    // Miroir PARTIEL de StudentBalanceDto (GET /finance/students/{id}/balance) : seuls les montants
+    // vérifiés ici — le reste (installments, paymentsHistory…) est ignoré par la désérialisation.
+    private record StudentBalance(decimal TotalDue, decimal AmountPaid, decimal RemainingBalance, string Status);
+
     private async Task<string> TokenAsync(string email, string password)
     {
         var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
@@ -125,25 +129,6 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         birthPlace = "Dakar",
         gender = "F"
     };
-
-    /// <summary>
-    /// Liste les catégories de frais de l'école courante — utilisé par le test de ventilation pour
-    /// récupérer les IDs réels des catégories semées dans SeedEnrollableSchoolAsync.
-    /// </summary>
-    private async Task<List<FeeCategoryDto>> ListFeeCategoriesAsync(string token)
-    {
-        var response = await SendAsync(HttpMethod.Get, "/api/v1/finance/fee-categories", token);
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        return (await response.Content.ReadFromJsonAsync<List<FeeCategoryDto>>())!;
-    }
-
-    /// <summary>
-    /// Convertit un objet anonyme en <see cref="Dictionary{TKey,TValue}"/> pour pouvoir lui ajouter
-    /// des clés (collectedFees, paymentMethod) sans abandonner le typage structurel sur le noyau du body.
-    /// </summary>
-    private static Dictionary<string, object?> ToDictionary(object anonymous) =>
-        anonymous.GetType().GetProperties()
-            .ToDictionary(p => char.ToLowerInvariant(p.Name[0]) + p.Name[1..], p => p.GetValue(anonymous));
 
     /// <summary>
     /// Le reçu (Receipt) porte le matricule mais pas l'identifiant brut de l'élève : on le retrouve par
@@ -291,10 +276,11 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     }
 
     [Fact]
-    public async Task An_Enrollment_Without_Any_Collection_Should_Not_Create_A_Payment()
+    public async Task An_Enrollment_Never_Records_A_Payment_And_Leaves_The_Whole_Balance_Due()
     {
-        // Dossier ouvert sans versement : le dû annuel est bien figé, mais le reçu n'atteste de rien
-        // — total encaissé à 0, aucun mode de règlement, et surtout aucune écriture de caisse.
+        // Règle #4 / refonte du 25/08/2026 : le secrétariat n'encaisse rien. L'inscription fige le dû
+        // annuel, le reçu n'atteste d'aucun versement, et la Caisse voit l'intégralité du solde à
+        // encaisser (aucun paiement en base). Le premier versement se fait ensuite via /caisse.
         var directeur = await DirecteurTokenAsync();
         var classroomId = await SeedEnrollableSchoolAsync(directeur);
 
@@ -309,47 +295,17 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         receipt.CollectedLines.Should().BeEmpty();
         receipt.PaymentMethod.Should().BeNull("aucun versement : aucun mode de règlement à afficher");
         receipt.RemainingBalance.Should().Be(ExpectedTotal);
-    }
 
-    [Fact]
-    public async Task Fees_Collected_At_Enrollment_Should_Be_Itemised_On_The_Receipt()
-    {
-        // Cas courant au guichet : le tuteur règle les droits d'inscription ET la première mensualité.
-        // Le reçu doit ventiler CES deux lignes, et son total être exactement la somme encaissée —
-        // jamais le dû annuel.
-        var directeur = await DirecteurTokenAsync();
-        var classroomId = await SeedEnrollableSchoolAsync(directeur);
-        var categories = await ListFeeCategoriesAsync(directeur);
+        // Le solde vu par la Caisse : rien de réglé, tout est dû (lecture ouverte à tout rôle).
+        var studentId = await FindStudentIdByMatriculeAsync(secretaire, receipt.Matricule);
+        var balanceResponse = await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", secretaire);
+        balanceResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var balance = (await balanceResponse.Content.ReadFromJsonAsync<StudentBalance>())!;
 
-        var secretaire = await SecretaireTokenAsync();
-        var body = new Dictionary<string, object?>(ToDictionary(NewEnrollmentBody(classroomId, "Awa Ndiaye")))
-        {
-            ["collectedFees"] = categories.Select(c => new { feeCategoryId = c.Id, months = 1 }).ToList(),
-            ["paymentMethod"] = "MobileMoney"
-        };
-
-        var createResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire, body);
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var receipt = (await createResponse.Content.ReadFromJsonAsync<Receipt>())!;
-
-        receipt.CollectedLines.Should().HaveCount(2, "une ligne par frais réellement réglé");
-        receipt.CollectedLines.Single(l => l.IsRecurring).Months
-            .Should().Be(1, "une seule mensualité est réglée le jour de l'inscription");
-        receipt.TotalCollected.Should().Be(Inscription + Mensualite,
-            "le reçu n'atteste que de l'encaissement du jour, pas des 9 mensualités dues");
-        receipt.TotalDue.Should().Be(ExpectedTotal);
-        receipt.RemainingBalance.Should().Be(ExpectedTotal - (Inscription + Mensualite));
-        receipt.PaymentMethod.Should().Be("MobileMoney");
-
-        // Réimpression : la ventilation est figée, elle ne se recalcule pas sur l'état courant.
-        var reread = await SendAsync(
-            HttpMethod.Get, $"/api/v1/enrollments/{receipt.EnrollmentId}/receipt", secretaire);
-        reread.StatusCode.Should().Be(HttpStatusCode.OK);
-        var rereadReceipt = (await reread.Content.ReadFromJsonAsync<Receipt>())!;
-
-        rereadReceipt.TotalCollected.Should().Be(Inscription + Mensualite);
-        rereadReceipt.CollectedLines.Should().HaveCount(2);
-        rereadReceipt.PaymentMethod.Should().Be("MobileMoney", "le mode de règlement est relu du versement");
+        balance.TotalDue.Should().Be(ExpectedTotal);
+        balance.AmountPaid.Should().Be(0, "l'inscription n'encaisse jamais un fonds");
+        balance.RemainingBalance.Should().Be(ExpectedTotal);
     }
 
     [Fact]

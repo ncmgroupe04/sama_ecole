@@ -221,6 +221,12 @@
                 pdfPageCount: 0,
                 pdfRenderedCount: 0,
                 pdfZoom: 1,
+                /**
+                 * Ratio largeur/hauteur de la 1re page (0 tant qu'elle n'est pas mesurée). Pilote
+                 * `pdfPanelStyle` : la modale épouse le format du document (A4 portrait, paysage, A5)
+                 * au lieu d'un gabarit fixe.
+                 */
+                pdfDocRatio: 0,
 
                 // --------------------------------------------------------------------- ouverture
                 /**
@@ -244,6 +250,7 @@
                     this.pdfPageCount = 0;
                     this.pdfRenderedCount = 0;
                     this.pdfZoom = 1;
+                    this.pdfDocRatio = 0;
                     this.pdfStatus = 'loading';
                     this.showPdfModal = true;
 
@@ -324,6 +331,18 @@
                     const token = { cancelled: false, task: null };
                     renderToken = token;
 
+                    // Mesure la 1re page AVANT de dimensionner le rendu : la modale adopte alors la
+                    // largeur du FORMAT du document (portrait / paysage / A5) et `container.clientWidth`
+                    // reflète cette largeur définitive plutôt que le gabarit initial.
+                    if (!this.pdfDocRatio) {
+                        const firstPage = await doc.getPage(1);
+                        if (token.cancelled) return;
+                        const nativeViewport = firstPage.getViewport({ scale: 1 });
+                        this.pdfDocRatio = nativeViewport.width / nativeViewport.height;
+                        await this.$nextTick();
+                        if (token.cancelled) return;
+                    }
+
                     const ratio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
                     const available = Math.max((container.clientWidth || FALLBACK_WIDTH) - 8, 280);
                     const painted = document.createDocumentFragment();
@@ -393,6 +412,21 @@
                 get pdfZoomLabel() { return `${Math.round(this.pdfZoom * 100)} %`; },
                 get canZoomPdfIn() { return this.pdfZoom < ZOOM_MAX; },
                 get canZoomPdfOut() { return this.pdfZoom > ZOOM_MIN; },
+
+                /**
+                 * Largeur de la modale d'aperçu, ajustée au FORMAT du document plutôt qu'à un gabarit
+                 * fixe : largeur d'une page affichée à ~74 % de la hauteur de la fenêtre, plus les
+                 * gouttières de la modale (~7 rem), bornée à 94 % de la largeur d'écran. Portrait →
+                 * étroit, paysage → large. Chaîne vide tant que la 1re page n'est pas mesurée : le
+                 * gabarit `size="xl"` de modal-shell s'applique alors.
+                 */
+                get pdfPanelStyle() {
+                    if (!this.pdfDocRatio) return '';
+                    const pageHeight = 0.74 * (window.innerHeight || 800);
+                    const pageWidth = pageHeight * this.pdfDocRatio;
+                    const maxWidth = Math.min(pageWidth + 112, (window.innerWidth || 1024) * 0.94);
+                    return `max-width: ${Math.round(Math.max(maxWidth, 320))}px`;
+                },
 
                 // ---------------------------------------------------------------------- actions
                 /**

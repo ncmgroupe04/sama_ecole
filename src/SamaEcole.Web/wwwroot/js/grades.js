@@ -343,28 +343,23 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /**
+         * PV de délibération : aperçu dans la modale partagée (comme previewClassBulletinsMergedPdf) —
+         * le conseil de classe le relit avant impression ou téléchargement, tout depuis l'en-tête.
+         */
         async downloadClassDeliberationPdf() {
             if (!this.hasClassAndTerm) return;
             this.classBulletinsError = null;
             this.downloadingClassDeliberation = true;
             try {
-                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                    await window.api.refreshOrRedirect();
-                }
-
-                const response = await fetch(
+                const className = this.classNameFor(this.selectedClassroomId);
+                await this.openPdfPreview(
                     `/api/v1/report-cards/class-deliberation/pdf?classroomId=${this.selectedClassroomId}&termId=${this.selectedTermId}`,
-                    {
-                        headers: { Authorization: `Bearer ${window.auth.accessToken}` },
-                        credentials: 'same-origin'
-                    });
-
-                if (!response.ok) throw await window.api.toError(response);
-
-                const blob = await response.blob();
-                this.triggerDownload(blob, `PV_Deliberation_${this.classNameFor(this.selectedClassroomId)}.pdf`);
+                    `PV de délibération — ${className}`,
+                    `PV_Deliberation_${className}.pdf`
+                );
             } catch (err) {
-                this.classBulletinsError = (err && err.message) || 'Téléchargement du PV de délibération impossible.';
+                this.classBulletinsError = (err && err.message) || 'Aperçu du PV de délibération impossible.';
             } finally {
                 this.downloadingClassDeliberation = false;
             }

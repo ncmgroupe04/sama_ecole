@@ -17,22 +17,6 @@ public class CreateEnrollmentCommandValidator : AbstractValidator<CreateEnrollme
         RuleFor(x => x.Type).IsInEnum();
         RuleFor(x => x.ClassroomId).NotEmpty();
 
-        // Encaissement du jour. Le MONTANT n'est pas validé ici — il n'est pas transmis : seules la
-        // catégorie et la durée le sont, le serveur reprenant les montants du barème (règle #4).
-        RuleFor(x => x.PaymentMethod).IsInEnum();
-        RuleForEach(x => x.CollectedFees).ChildRules(fee =>
-        {
-            fee.RuleFor(f => f.FeeCategoryId).NotEmpty();
-            fee.RuleFor(f => f.Months)
-                .GreaterThan(0).WithMessage("Le nombre de mois réglés doit être supérieur à zéro.")
-                .LessThanOrEqualTo(24).WithMessage("Le nombre de mois réglés semble irréaliste.");
-        });
-
-        // Deux fois la même catégorie ferait payer deux fois le même frais sur un seul reçu.
-        RuleFor(x => x.CollectedFees)
-            .Must(fees => fees.Select(f => f.FeeCategoryId).Distinct().Count() == fees.Count)
-            .WithMessage("Une même catégorie de frais ne peut être encaissée qu'une fois.");
-
         When(x => x.Type == EnrollmentType.ReEnrollment, () =>
         {
             RuleFor(x => x.StudentId)

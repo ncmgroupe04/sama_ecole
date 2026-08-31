@@ -332,22 +332,69 @@
                         "Renseignez le tuteur légal : nom, lien de parenté, téléphone et adresse. Ce numéro est celui qui recevra les notifications par SMS ou WhatsApp.",
                         "Ajoutez la photographie de l'élève : elle est automatiquement compressée avant transmission et alimente la carte scolaire.",
                         "Enregistrez. Le matricule est généré dans la transaction même, ce qui garantit l'absence de trou et de collision dans la numérotation.",
-                        "Procédez ensuite à l'inscription proprement dite : sélectionnez la classe, contrôlez le barème de frais proposé, puis validez.",
-                        "Éditez et remettez à la famille le reçu d'inscription ainsi que l'attestation, tous deux au format PDF."
+                        "Procédez ensuite à l'inscription proprement dite : sélectionnez la classe et consultez le panneau « Frais », qui n'est qu'une aide au calcul — aucun encaissement ne s'y fait —, puis validez.",
+                        "Éditez et remettez à la famille l'attestation d'inscription au format PDF, puis orientez-la vers la Caisse pour le règlement."
                     ],
                     impacts: [
-                        "Comptabilité : la validation de l'inscription fige le montant total dû, ligne par ligne, et ouvre le dossier financier de l'élève.",
+                        "Comptabilité : la validation de l'inscription fige le montant total dû, ligne par ligne, et ouvre le dossier financier de l'élève ; elle n'enregistre aucun versement.",
                         "Échéancier : les échéances de règlement sont établies à partir du barème de la classe.",
                         "Classe : l'effectif de la classe s'accroît immédiatement et se confronte à la capacité de la salle affectée.",
                         "Notes : l'élève apparaît dès la validation dans les listes de saisie des notes et dans les feuilles d'appel.",
-                        "Documents : reçu, attestation d'inscription et carte scolaire sont produits à partir de cet état civil."
+                        "Documents : l'attestation d'inscription et la carte scolaire sont produites à partir de cet état civil ; le reçu de paiement, lui, est délivré par la Caisse lors du règlement."
                     ],
                     recommandations: [
                         "N'ouvrez jamais deux formulaires de création simultanément sur deux postes pour le même élève.",
                         "Le matricule n'est jamais réservé à l'avance : un formulaire abandonné ne consomme aucun numéro. Ne cherchez donc pas à « garder » un matricule.",
                         "Une erreur d'état civil se corrige par la fiche élève, et la correction est historisée. Ne créez jamais un second élève pour rectifier le premier.",
-                        "Le reçu doit impérativement être remis à la famille, revêtu de la mention réglementaire invitant les parents à le conserver avec soin.",
+                        "Le secrétariat n'encaisse rien : après l'inscription, la famille se présente à la Caisse, qui constate le versement et délivre le reçu portant la mention réglementaire invitant à le conserver.",
                         "Contrôlez le numéro de téléphone du tuteur au moment de la saisie : un numéro erroné rend inopérante toute la chaîne de relance."
+                    ]
+                },
+                {
+                    id: 'apercu-frais-inscription',
+                    title: "Panneau « Frais » à l'inscription — aide au calcul, sans encaissement",
+                    location: 'Gestion Scolaire › Inscriptions',
+                    href: '/inscriptions',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Panneau affiché à droite du formulaire d'inscription. Il reprend, pour la classe " +
+                        "sélectionnée, le barème paramétré par la Comptabilité — frais d'inscription, tenue, " +
+                        "mensualité unitaire — ainsi que le total dû pour l'année. Un simulateur y calcule, à " +
+                        "titre purement indicatif, le sous-total correspondant au nombre de mensualités d'avance " +
+                        "que l'on saisit. Ce panneau ne comporte AUCUNE saisie d'encaissement : ni case " +
+                        "« réglé », ni mode de règlement, ni montant versé.",
+                    objectif:
+                        "Donner au secrétariat le montant exact à annoncer à la famille sans recourir à une " +
+                        "calculatrice, et fonder sur ce chiffre l'attestation d'inscription. La séparation des " +
+                        "rôles est nette : le secrétariat calcule et inscrit, il n'encaisse rien. Le versement — " +
+                        "y compris le tout premier — se constate à la Caisse, seul service habilité à délivrer " +
+                        "un reçu de paiement.",
+                    probleme:
+                        "Quand le même écran calcule les frais et enregistre le paiement, la frontière entre " +
+                        "l'inscription et l'encaissement s'efface : un versement finit saisi par le secrétariat, " +
+                        "hors session de caisse, sans rattachement à une journée comptable ni à un caissier " +
+                        "responsable. Le rapprochement de caisse en fin de journée devient alors impossible à tenir.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Inscriptions et sélectionnez la classe d'affectation.",
+                        "Le panneau « Frais » affiche aussitôt le détail du barème de cette classe et le total dû pour l'année.",
+                        "Pour chiffrer une avance de plusieurs mensualités, ajustez le champ « Mensualités à régler d'avance » : le sous-total simulé se recalcule à l'écran.",
+                        "Ce sous-total est indicatif : rien n'est enregistré, aucune donnée financière n'est modifiée.",
+                        "Communiquez le montant à la famille, puis validez l'inscription : seul le dû annuel est alors figé, ligne à ligne.",
+                        "Éditez l'attestation d'inscription et orientez la famille vers la Caisse pour le règlement.",
+                        "À la Caisse, le caissier ouvre sa session, recherche l'élève et constate le versement, qui donne lieu au reçu de paiement."
+                    ],
+                    impacts: [
+                        "Inscription : la validation fige le montant dû, mais ne crée aucun paiement et laisse le solde entièrement dû.",
+                        "Caisse : l'élève fraîchement inscrit y apparaît avec l'intégralité de son solde à encaisser, échéancier compris.",
+                        "Attestation d'inscription : elle annonce ce qu'il y a à régler ; elle ne vaut jamais reçu de paiement.",
+                        "Barème : le panneau reflète en lecture seule la grille de la Comptabilité et ne permet pas de la modifier.",
+                        "Journal d'audit : aucune écriture financière n'étant produite ici, seule l'inscription elle-même est tracée."
+                    ],
+                    recommandations: [
+                        "N'attendez aucun encaissement de cet écran : il n'en propose pas, et c'est délibéré.",
+                        "Le sous-total simulé n'engage à rien — il aide seulement à annoncer un montant juste à la famille.",
+                        "Orientez systématiquement la famille vers la Caisse après l'inscription : le premier versement s'y constate comme tous les suivants.",
+                        "Une remise ou un échelonnement particulier se traite en amont — barème, puis échéancier personnalisé —, jamais en minorant le montant annoncé ici."
                     ]
                 },
                 {
@@ -377,7 +424,7 @@
                         "Sélectionnez la classe d'accueil de la nouvelle année ; l'application propose le barème correspondant.",
                         "Vérifiez le montant dû et l'échéancier, puis validez la réinscription.",
                         "CHANGEMENT DE CLASSE EN COURS D'ANNÉE : ouvrez l'inscription en cours et sélectionnez la nouvelle classe. Si le barème diffère, la régularisation est historisée et demeure traçable.",
-                        "Éditez le reçu de réinscription et remettez-le à la famille."
+                        "Éditez l'attestation de réinscription, remettez-la à la famille et orientez-la vers la Caisse pour le règlement."
                     ],
                     impacts: [
                         "Historique : notes, bulletins et règlements des exercices antérieurs restent attachés au même élève et demeurent consultables.",
@@ -658,7 +705,8 @@
                     roles: ['Directeur', 'Finance'],
                     definition:
                         "Acte de caisse par lequel un versement de la famille est imputé sur le solde d'une inscription. " +
-                        "Chaque encaissement donne lieu à un reçu numéroté, édité au format PDF, portant la mention " +
+                        "L'inscription elle-même n'encaisse rien : tout versement, y compris le tout premier, se constate " +
+                        "ici. Chaque encaissement donne lieu à un reçu numéroté, édité au format PDF, portant la mention " +
                         "réglementaire invitant les parents à conserver soigneusement leur reçu après paiement.",
                     objectif:
                         "Constater sans délai tout versement, en délivrer la preuve à la famille, et tenir en permanence un solde " +
@@ -687,6 +735,7 @@
                     ],
                     recommandations: [
                         "N'encaissez jamais sans avoir ouvert votre session de caisse : le versement ne serait rattaché à aucune journée comptable.",
+                        "Le premier versement d'un élève se constate ici comme tous les autres : l'écran d'inscription ne prend aucun paiement et n'édite aucun reçu de caisse.",
                         "Remettez systématiquement le reçu, même pour un versement partiel. C'est l'unique preuve dont dispose la famille.",
                         "Le service Finance ne modifie jamais un montant dû issu d'une inscription : il ne fait qu'y imputer des versements. Toute correction du montant dû relève du Secrétariat ou de la Direction.",
                         "En cas de micro-coupure réseau pendant l'envoi, l'application retente automatiquement l'enregistrement en arrière-plan (bandeau « en attente d'envoi ») tant que l'onglet reste ouvert, sans jamais créer de doublon. Si la coupure persiste au-delà de ces tentatives, rien n'est enregistré et vous en êtes averti : reprenez alors la validation vous-même.",
