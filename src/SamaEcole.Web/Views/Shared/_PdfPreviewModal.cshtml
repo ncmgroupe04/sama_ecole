@@ -1,0 +1,74 @@
+@* Modale d'aperçu PDF partagée — logique dans wwwroot/js/pdf-preview.js.
+   L'affichage est confié à la visionneuse PDF NATIVE du navigateur via un <iframe> pointant sur une
+   blob URL locale (auth impossible sur une navigation d'iframe → fetch d'abord ; <object> bloqué par
+   la CSP object-src 'none'). Le composant Alpine hôte étale `...window.pdfPreview.state()`. *@
+<modal-shell open="showPdfModal" size="xl" on-close="closePdfPreview()" :title="pdfPreviewTitle">
+    <div class="space-y-4">
+        <!-- Barre d'actions : ouverture dans un onglet, téléchargement, impression. Collée en haut. -->
+        <div x-show="pdfPreviewUrl" x-cloak
+             class="sticky top-0 z-10 -mt-6 -mx-6 px-6 py-3 bg-white/95 backdrop-blur border-b border-slate-100 flex flex-wrap items-center justify-end gap-2">
+            <!-- « Ouvrir dans un nouvel onglet » : recours le plus fiable si la visionneuse intégrée
+                 ne s'affiche pas. Mise en avant à gauche, avec icône. -->
+            <button type="button" x-on:click="openPdfInNewTab()"
+                    class="btn-modal-secondary text-xs group mr-auto ring-1 ring-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                <icon name="link" class="w-4 h-4" />
+                <span>Ouvrir dans un nouvel onglet</span>
+            </button>
+            <button type="button" x-on:click="downloadPreviewPdf()" class="btn-modal-secondary text-xs group">
+                <icon name="download" class="w-4 h-4" />
+                <span>Télécharger</span>
+            </button>
+            <button type="button" x-on:click="printPreviewPdf()" class="btn-modal-primary text-xs group">
+                <icon name="print" class="w-4 h-4" />
+                <span>Imprimer</span>
+            </button>
+        </div>
+
+        <!-- Chargement : récupération du document. -->
+        <template x-if="pdfStatus === 'loading'">
+            <div class="w-full bg-slate-50 rounded-xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-3" style="min-height: 400px;">
+                <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <p class="text-sm text-slate-500">Génération de l'aperçu…</p>
+            </div>
+        </template>
+
+        <!-- Erreur : cause précise + « Réessayer », jamais un cul-de-sac. -->
+        <template x-if="pdfStatus === 'error'">
+            <div class="w-full bg-slate-50 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 text-center px-6 py-10" style="min-height: 400px;">
+                <icon name="document" class="w-10 h-10 text-slate-400 mb-1" />
+                <p class="text-sm font-medium text-slate-700">Impossible d'afficher l'aperçu.</p>
+                <p class="text-xs text-slate-500 max-w-md" x-text="pdfErrorMessage"></p>
+                <div class="flex flex-wrap justify-center gap-3 mt-4">
+                    <button type="button" x-on:click="retryPdfPreview()" class="btn-modal-primary text-xs group">
+                        <span>Réessayer</span>
+                    </button>
+                    <button type="button" x-show="pdfPreviewUrl" x-on:click="openPdfInNewTab()" class="btn-modal-secondary text-xs group">
+                        <icon name="link" class="w-4 h-4" />
+                        <span>Ouvrir dans un nouvel onglet</span>
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <!-- Aperçu : visionneuse PDF native du navigateur, bornée dans la modale (aucun débordement :
+             largeur 100 % du corps, hauteur plafonnée, la visionneuse adapte le document et scrolle
+             en interne). -->
+        <template x-if="pdfStatus === 'ready'">
+            <div class="w-full overflow-hidden">
+                <iframe x-ref="pdfFrame" :src="pdfPreviewUrl" x-on:load="pdfViewerLoaded()"
+                        title="Aperçu du document"
+                        class="block w-full max-w-full rounded-xl border border-slate-200 bg-slate-100"
+                        style="height: 72vh; max-height: 900px;"></iframe>
+                <p x-show="pdfViewerHint" x-cloak class="mt-2 text-center text-xs text-slate-500">
+                    Le document ne s'affiche pas ?
+                    <button type="button" x-on:click="openPdfInNewTab()" class="font-medium text-indigo-600 hover:underline">Ouvrez-le dans un nouvel onglet</button>
+                    ou <button type="button" x-on:click="downloadPreviewPdf()" class="font-medium text-indigo-600 hover:underline">téléchargez-le</button>.
+                </p>
+            </div>
+        </template>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button type="button" x-on:click="closePdfPreview()" class="btn-modal-secondary group">Fermer</button>
+        </div>
+    </div>
+</modal-shell>

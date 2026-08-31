@@ -1145,6 +1145,7 @@
  </modal-shell>
 
  <!-- Modale d'Aperçu PDF (Certificats et Reçus) -->
+ @await Html.PartialAsync("_PdfPreviewModal")
 
  <!-- Modale : Nouvel engagement financier (échéancier) -->
  <modal-shell size="60" open="isCommitmentModalOpen" on-close="isCommitmentModalOpen = false" title="Nouvel engagement financier">

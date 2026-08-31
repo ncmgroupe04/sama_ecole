@@ -24,7 +24,9 @@
 //          (bouton « Envoyer en Caisse », modale de recouvrement) + site.css (btn-modal-success).
 // v1.0.5 — pdf-preview.js : renvoi de l'en-tête X-Pdf-Preview (réponse text/plain côté serveur)
 //          pour déjouer Internet Download Manager qui vidait le fetch de l'aperçu (204 → 0 octet).
-const CACHE_NAME = 'samaecole-static-v1.0.5';
+// v1.0.6 — retour de la modale d'aperçu PDF (_PdfPreviewModal, iframe + visionneuse native) :
+//          pdf-preview.js réexpose l'état Alpine de la modale au lieu d'ouvrir un onglet.
+const CACHE_NAME = 'samaecole-static-v1.0.6';
 
 const STATIC_ASSETS = [
     '/',

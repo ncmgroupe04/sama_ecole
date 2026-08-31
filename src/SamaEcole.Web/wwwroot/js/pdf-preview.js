@@ -1,51 +1,54 @@
 /**
- * Ouverture PDF partagée — point d'entrée unique de TOUS les aperçus/impressions de documents
- * (reçus, bulletins, attestations, billets, PV, convocations, exports…).
+ * Aperçu PDF partagé — moteur unique de TOUTES les modales de prévisualisation (reçus, bulletins,
+ * attestations, billets, sommations, convocations, exports…).
  *
- * PLUS DE MODALE. Le document s'ouvre dans un NOUVEL ONGLET, rendu par la visionneuse PDF native du
- * navigateur (Chrome/Edge/Firefox) avec ses propres commandes de zoom, d'impression et de
- * téléchargement. Ni canvas PDF.js, ni iframe, ni fenêtre applicative.
+ * AFFICHAGE — MODALE + <iframe> + VISIONNEUSE NATIVE
+ * -------------------------------------------------
+ * Le document s'affiche dans une modale applicative (`Views/Shared/_PdfPreviewModal.cshtml`), rendu
+ * par un `<iframe>` pointant sur une **blob URL locale** et donc par la visionneuse PDF NATIVE du
+ * navigateur (zoom / impression / téléchargement intégrés). Pas de PDF.js/canvas (≈1,8 Mo de deps,
+ * plus lent). `<object data=…>` serait équivalent mais la CSP pose `object-src 'none'` (JGK-F01) —
+ * seul `<iframe>` passe (`frame-src 'self' blob:`). Repli « Ouvrir dans un nouvel onglet » toujours
+ * visible : si la visionneuse intégrée ne s'affiche pas (rare), la modale n'est jamais un cul-de-sac.
  *
- * POURQUOI PASSER PAR UN fetch ET UNE BLOB URL, ET PAS `window.open('/api/…/pdf')` DIRECT
- * ------------------------------------------------------------------------------------------
- * Les endpoints PDF exigent `Authorization: Bearer …` et ce jeton vit dans localStorage : il ne
- * voyage jamais sur une navigation classique (Volume_7 §12bis). On récupère donc les octets par
- * `fetch()` (en-tête d'auth), on en fait un `Blob` typé `application/pdf`, et on ouvre CETTE blob URL
- * dans l'onglet. Une blob URL n'est pas un téléchargement HTTP : un gestionnaire de téléchargement
- * (Internet Download Manager & co.) ne peut pas l'intercepter une fois les octets en mémoire.
+ * POURQUOI fetch + blob, ET PAS `iframe.src = '/api/…/pdf'` DIRECT
+ * --------------------------------------------------------------
+ * Les endpoints PDF exigent `Authorization: Bearer …`, jeton en localStorage qui ne voyage pas sur
+ * une navigation d'iframe (Volume_7 §12bis). On récupère donc les octets par `fetch()`, on en fait
+ * un `Blob { type:'application/pdf' }`, et l'iframe charge CE blob.
  *
  * DÉGUISEMENT ANTI-GESTIONNAIRE DE TÉLÉCHARGEMENT (en-tête `X-Pdf-Preview: 1`)
- * ------------------------------------------------------------------------------------------
+ * ------------------------------------------------------------------------------
  * Internet Download Manager (IDM) & consorts, avec l'« intégration avancée au navigateur »,
  * DÉTOURNENT tout `fetch` dont la réponse ressemble à un fichier (`application/pdf`, mais aussi
  * `application/octet-stream`) : ils happent les octets vers leur file et laissent au `fetch` de la
- * page une réponse VIDE (`204`) → toast « document vide (0 octet) ». On envoie donc `X-Pdf-Preview: 1`
- * sur le fetch d'aperçu : le serveur (PdfPreviewDispositionFilter) répond alors en `text/plain`
- * inline sans nom de fichier — invisible pour ces outils. On relit les octets, on vérifie `%PDF-`,
- * on reconstruit un `Blob { type:'application/pdf' }` local.
+ * page une réponse VIDE (`204`) → « document vide (0 octet) ». On envoie donc `X-Pdf-Preview: 1` :
+ * le serveur (`PdfPreviewDispositionFilter`) répond alors en `text/plain` inline sans nom de
+ * fichier — invisible pour ces outils. On relit les octets bruts, on vérifie la signature `%PDF-`,
+ * on reconstruit le `Blob` typé en local.
  *
- * En plus, deux relances au plus :
- *  - `fetch` COUPÉ sans réponse → 1 relance à l'identique.
- *  - Réponse 2xx mais corps VIDE / pas un `%PDF-` → 1 relance après une courte pause.
- * Passé ça, l'échec est affiché honnêtement (dans l'onglet déjà ouvert, ou via un toast), avec un
- * indice « désactivez l'intégration IDM » quand la réponse était un 204/`Content-Length: 0`.
+ * FILET DE SÉCURITÉ
+ * ----------------
+ * `fetchPdfBlobResilient` vérifie AVANT affichage : HTTP OK, corps non vide, signature `%PDF-`.
+ * Chaque cause a son message (dont un indice « désactivez l'intégration IDM » sur un 204). Deux
+ * relances au plus : une sur `fetch` coupé, une sur corps vide/non-PDF après une courte pause.
  *
- * L'onglet est ouvert DÈS LE CLIC (avant tout `await`) avec un écran d'attente : après un `await`,
- * le bloqueur de pop-up du navigateur refuserait `window.open`.
- *
- * USAGE — un composant Alpine étale `window.pdfPreview.state()` (rétro-compatible : mêmes noms de
- * méthodes qu'avant, `openPdfPreview` / `openPdfModalWithBlob` ouvrent un onglet) :
+ * USAGE — un composant Alpine réutilise l'ensemble en étalant `window.pdfPreview.state()` :
  * <code>
  * Alpine.data('students', () => ({
  *     ...window.pdfPreview.state(),
  *     openReceipt(id) { this.openPdfPreview(`/api/v1/…/${id}/pdf`, 'Reçu', 'Recu.pdf'); }
  * }));
  * </code>
+ * puis, dans la vue : <code>@await Html.PartialAsync("_PdfPreviewModal")</code>.
  */
 (function () {
     'use strict';
 
-    // Corps 2xx vide / pas un PDF : re-tentable (proxy qui purge, générateur qui hoquette).
+    /** Délai après lequel, sans événement `load` de l'iframe, on suggère l'ouverture en nouvel onglet. */
+    const VIEWER_LOAD_HINT_MS = 3500;
+
+    // Corps 2xx vide / pas un PDF : re-tentable (gestionnaire de téléchargement, proxy, hoquet du générateur).
     const EMPTY = 'EMPTY_OR_INVALID';
     // `fetch` rejeté sans réponse : coupure réseau, ou gestionnaire de téléchargement qui happe le flux.
     const NETWORK = 'NETWORK';
@@ -62,12 +65,9 @@
 
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    /** Neutralise tout balisage avant injection dans la page d'attente (le message vient du serveur). */
-    function escapeHtml(value) {
-        return String(value).replace(/[&<>"']/g, (c) => (
-            { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-        ));
-    }
+    /** Message d'aide quand la réponse trahit un détournement par un gestionnaire de téléchargement. */
+    const IDM_HINT = " Un gestionnaire de téléchargement (Internet Download Manager & co.) intercepte "
+        + "sans doute l'aperçu : désactivez son intégration au navigateur, ou ajoutez ce site à ses exceptions.";
 
     /** Vrai si les 5 premiers octets sont la signature « %PDF- » d'un fichier PDF. */
     function looksLikePdf(bytes) {
@@ -87,10 +87,6 @@
         }
     }
 
-    /** Message d'aide quand la réponse trahit un détournement par un gestionnaire de téléchargement. */
-    const IDM_HINT = " Un gestionnaire de téléchargement (Internet Download Manager & co.) intercepte "
-        + "sans doute l'aperçu : désactivez son intégration au navigateur, ou ajoutez ce site à ses exceptions.";
-
     /**
      * Un aller-retour réseau. Envoie `X-Pdf-Preview: 1` : le serveur répond alors en `text/plain`
      * inline sans nom de fichier (PdfPreviewDispositionFilter), invisible pour IDM & consorts. On
@@ -108,9 +104,9 @@
         }
 
         // requestInit permet un aperçu servi par une route POST à corps JSON (ex. bulletin de notes,
-        // POST /report-cards/generate) : method/body/headers viennent de l'appelant, l'en-tête
-        // Authorization reste géré ici. Accept est posé avant le spread pour que l'appelant puisse le
-        // remplacer ; Authorization après, pour qu'aucun appelant ne l'écrase.
+        // POST /report-cards/generate) : method/body/headers viennent de l'appelant. Accept avant le
+        // spread pour que l'appelant puisse le remplacer ; Authorization après, pour qu'aucun appelant
+        // ne l'écrase.
         const headers = {
             Accept: 'application/pdf',
             'X-Pdf-Preview': '1',
@@ -130,7 +126,8 @@
             });
         } catch {
             throw new PdfFetchError(
-                'Connexion interrompue pendant le téléchargement du document.', NETWORK);
+                'Connexion interrompue pendant le téléchargement du document. Vérifiez votre connexion, puis réessayez.',
+                NETWORK);
         }
 
         if (!response.ok) {
@@ -166,14 +163,14 @@
                 `Le serveur n'a pas renvoyé un PDF valide${hint ? ` : ${hint}` : '.'}`, EMPTY);
         }
 
-        // Le type MIME est réaffirmé côté client : c'est lui qui fait que le nouvel onglet traite la
-        // blob URL comme un PDF (visionneuse native) plutôt que comme un binaire à télécharger.
+        // Le type MIME est réaffirmé côté client : c'est lui qui fait que l'iframe, le nouvel onglet et
+        // l'impression traitent la blob URL comme un PDF (et non comme un téléchargement binaire).
         return new Blob([bytes], { type: 'application/pdf' });
     }
 
     /**
-     * Récupère le PDF avec au plus deux relances (voir en-tête de fichier) : une sur `fetch` coupé,
-     * une sur corps vide/non-PDF après une courte pause. Toute autre erreur remonte immédiatement.
+     * Récupère le PDF avec au plus deux relances : une sur `fetch` coupé, une sur corps vide/non-PDF
+     * après une courte pause. Toute autre erreur remonte immédiatement.
      */
     async function fetchPdfBlobResilient(url, requestInit) {
         try {
@@ -190,110 +187,148 @@
         }
     }
 
-    /** Page d'attente / d'erreur écrite dans l'onglet déjà ouvert (évite un onglet blanc). */
-    function renderInterstitial(win, { title, body, spinner }) {
-        if (!win || win.closed) {
-            return;
-        }
-        try {
-            win.document.open();
-            win.document.write(
-                '<!doctype html><html lang="fr"><head><meta charset="utf-8">'
-                + '<meta name="viewport" content="width=device-width,initial-scale=1">'
-                + `<title>${escapeHtml(title)}</title><style>`
-                + ':root{color-scheme:light dark}'
-                + 'body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;'
-                + 'font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;'
-                + 'background:Canvas;color:CanvasText}'
-                + '.box{max-width:24rem;padding:2rem;text-align:center}'
-                + '.sp{width:2.25rem;height:2.25rem;margin:0 auto 1rem;border-radius:50%;'
-                + 'border:3px solid rgba(128,128,128,.35);border-top-color:currentColor;'
-                + 'animation:spin .8s linear infinite}'
-                + '@keyframes spin{to{transform:rotate(360deg)}}'
-                + 'p{margin:.25rem 0}'
-                + '</style></head><body><div class="box">'
-                + (spinner ? '<div class="sp"></div>' : '')
-                + `<p>${escapeHtml(body)}</p>`
-                + '</div></body></html>');
-            win.document.close();
-        } catch {
-            /* onglet inaccessible (rare) : on laisse tomber, le toast prendra le relais */
-        }
-    }
-
-    /**
-     * Récupère le PDF puis l'ouvre dans l'onglet pré-ouvert (visionneuse native). Repli en
-     * téléchargement si le navigateur a bloqué l'onglet. Toute erreur est signalée dans l'onglet
-     * (page lisible) ou, à défaut, par un toast.
-     */
-    async function openInBrowser(url, downloadName, requestInit) {
-        // Ouvrir l'onglet MAINTENANT, dans le geste de clic : après l'await du fetch, window.open
-        // serait refusé par le bloqueur de pop-up.
-        const win = window.open('', '_blank');
-        renderInterstitial(win, {
-            title: 'Document', spinner: true, body: 'Génération du document en cours…'
-        });
-
-        let blob;
-        try {
-            blob = await fetchPdfBlobResilient(url, requestInit);
-        } catch (err) {
-            console.error('[pdf-preview]', err);
-            // Suffixe générique seulement si on n'a pas déjà donné une piste concrète (indice IDM).
-            const retryHint = err.kind === EMPTY && !String(err.message).includes('Internet Download Manager')
-                ? ' Réessayez ; si le problème persiste, signalez-le.'
-                : '';
-            const message = (err.message || "Le document n'a pas pu être ouvert.") + retryHint;
-            if (win && !win.closed) {
-                renderInterstitial(win, { title: 'Document indisponible', spinner: false, body: message });
-            } else {
-                (window.toast?.error || window.alert)(message);
-            }
-            return;
-        }
-
-        const blobUrl = URL.createObjectURL(blob);
-        let openedInTab = false;
-        if (win && !win.closed) {
-            try {
-                win.location.replace(blobUrl);
-                openedInTab = true;
-            } catch {
-                openedInTab = false;
-            }
-        }
-
-        if (!openedInTab) {
-            // Onglet bloqué ou inaccessible : repli en téléchargement, le document n'est jamais perdu.
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = downloadName || 'document.pdf';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            (window.toast?.error || window.alert)(
-                "Le navigateur a bloqué l'ouverture d'un nouvel onglet : le document a été téléchargé à la place.");
-        }
-
-        // Laisse au nouvel onglet le temps de charger la blob URL avant de la révoquer.
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-    }
-
     window.pdfPreview = {
         /**
-         * Méthodes étalées dans un composant Alpine. Noms inchangés pour ne pas toucher les ~14
-         * appelants — `openPdfPreview` / `openPdfModalWithBlob` ouvrent un onglet, pas une modale.
-         * `closePdfPreview` est un no-op conservé (encore appelé par enrollments.js).
+         * Fabrique l'état + les méthodes d'aperçu d'UN composant Alpine. Le Blob et le jeton de la
+         * dernière demande vivent dans la fermeture ; seules des primitives traversent la réactivité.
          */
         state() {
+            let blob = null;         // Blob source, conservé pour imprimer / télécharger / ouvrir
+            let lastRequest = null;  // { url, title, downloadName, requestInit } pour « Réessayer »
+            let loadHintTimer = null;
+
+            /** Libère Blob URL et minuteur. Appelé à la fermeture et avant tout rechargement. */
+            function releaseDocument(component) {
+                if (loadHintTimer) {
+                    clearTimeout(loadHintTimer);
+                    loadHintTimer = null;
+                }
+                blob = null;
+                if (component.pdfPreviewUrl) {
+                    URL.revokeObjectURL(component.pdfPreviewUrl);
+                    component.pdfPreviewUrl = null;
+                }
+            }
+
             return {
+                // ----------------------------------------------------------------- état (réactif)
+                showPdfModal: false,
+                pdfPreviewTitle: '',
+                pdfDownloadName: 'document.pdf',
+                /** 'idle' | 'loading' | 'ready' | 'error' */
+                pdfStatus: 'idle',
+                pdfErrorMessage: null,
+                /** blob: URL — src de l'iframe, cible du téléchargement et du « nouvel onglet ». */
+                pdfPreviewUrl: null,
+                /** Vrai quand l'iframe n'a pas signalé `load` : on suggère alors le nouvel onglet. */
+                pdfViewerHint: false,
+
+                // --------------------------------------------------------------------- ouverture
+                /**
+                 * Ouvre la modale et affiche `url`. La modale s'ouvre TOUJOURS, y compris en erreur :
+                 * l'utilisateur doit pouvoir lire la cause et cliquer « Réessayer ».
+                 */
                 async openPdfPreview(url, title, downloadName, requestInit) {
-                    await openInBrowser(url, downloadName, requestInit);
+                    lastRequest = { url, title, downloadName, requestInit };
+
+                    // Un aperçu est presque toujours ouvert DEPUIS une autre modale (fiche élève, reçu,
+                    // tableau des paiements) : sans cette fermeture, les deux `modal-shell` s'empilent.
+                    window.closeAllModals?.();
+
+                    releaseDocument(this);
+                    this.pdfPreviewTitle = title || 'Document officiel';
+                    this.pdfDownloadName = downloadName || 'document.pdf';
+                    this.pdfErrorMessage = null;
+                    this.pdfViewerHint = false;
+                    this.pdfStatus = 'loading';
+                    this.showPdfModal = true;
+
+                    try {
+                        blob = await fetchPdfBlobResilient(url, requestInit);
+                        this.pdfPreviewUrl = URL.createObjectURL(blob);
+                        this.pdfStatus = 'ready';
+                        await this.$nextTick();
+                        this.armViewerHint();
+                    } catch (err) {
+                        console.error('[pdf-preview] récupération du document :', err);
+                        this.pdfErrorMessage = err.message;
+                        this.pdfStatus = 'error';
+                    }
                 },
+
+                /** Alias historique — conservé pour ne pas toucher aux appelants existants. */
                 async openPdfModalWithBlob(url, title, downloadName, requestInit) {
-                    await openInBrowser(url, downloadName, requestInit);
+                    await this.openPdfPreview(url, title, downloadName, requestInit);
                 },
-                closePdfPreview() { /* plus de modale à fermer */ }
+
+                /** Rejoue la dernière demande (bouton « Réessayer »). */
+                async retryPdfPreview() {
+                    if (!lastRequest) return;
+                    await this.openPdfPreview(lastRequest.url, lastRequest.title, lastRequest.downloadName, lastRequest.requestInit);
+                },
+
+                // -------------------------------------------------------------- visionneuse iframe
+                /** Armé après le rendu de l'iframe : si `load` ne vient pas, on montre l'astuce. */
+                armViewerHint() {
+                    if (loadHintTimer) clearTimeout(loadHintTimer);
+                    loadHintTimer = setTimeout(() => {
+                        if (this.pdfStatus === 'ready') this.pdfViewerHint = true;
+                    }, VIEWER_LOAD_HINT_MS);
+                },
+
+                /** `x-on:load` de l'iframe : la visionneuse native a affiché le document. */
+                pdfViewerLoaded() {
+                    if (loadHintTimer) {
+                        clearTimeout(loadHintTimer);
+                        loadHintTimer = null;
+                    }
+                    this.pdfViewerHint = false;
+                },
+
+                // ---------------------------------------------------------------------- actions
+                /**
+                 * Impression. La visionneuse native de l'iframe a déjà son propre bouton ; ce bouton
+                 * déclenche la même impression. Si le navigateur refuse `print()` sur le document
+                 * embarqué, on retombe sur l'ouverture en nouvel onglet.
+                 */
+                printPreviewPdf() {
+                    const frame = this.$refs.pdfFrame;
+                    try {
+                        if (frame && frame.contentWindow) {
+                            frame.contentWindow.focus();
+                            frame.contentWindow.print();
+                            return;
+                        }
+                    } catch {
+                        /* certains navigateurs bloquent print() sur un PDF embarqué : repli ci-dessous */
+                    }
+                    this.openPdfInNewTab();
+                },
+
+                downloadPreviewPdf() {
+                    if (!this.pdfPreviewUrl) return;
+                    const link = document.createElement('a');
+                    link.href = this.pdfPreviewUrl;
+                    link.download = this.pdfDownloadName || 'document.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                },
+
+                openPdfInNewTab() {
+                    if (!this.pdfPreviewUrl) return;
+                    const win = window.open(this.pdfPreviewUrl, '_blank');
+                    if (win) win.focus();
+                },
+
+                // ------------------------------------------------------------------- fermeture
+                closePdfPreview() {
+                    this.showPdfModal = false;
+                    releaseDocument(this);
+                    this.pdfStatus = 'idle';
+                    this.pdfErrorMessage = null;
+                    this.pdfViewerHint = false;
+                }
             };
         }
     };
