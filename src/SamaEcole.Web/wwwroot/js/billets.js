@@ -11,6 +11,10 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('billetsView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
+        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        ...window.pdfPreview.state(),
+
         tab: 'entree',
         lateArrivals: [],
         isLoading: true,
@@ -120,9 +124,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Récupère le billet A5 en PDF et l'ouvre dans un nouvel onglet (aperçu + impression).
-         * Le PDF n'est pas du JSON : fetch brut avec le jeton, puis blob URL — même mécanique que la
-         * Caisse (le jeton ne voyage pas sur une navigation classique).
+         * Billet d'entrée A5 : aperçu dans la modale partagée (visionneuse PDF native du navigateur),
+         * avec impression et téléchargement. Le moteur gère seul le jeton, les erreurs et le repli —
+         * plus de fetch/blob/window.open recopié ici.
          */
         async printBillet(lateArrivalId) {
             if (!lateArrivalId || lateArrivalId === 'undefined') {
@@ -131,27 +135,10 @@ document.addEventListener('alpine:init', () => {
             }
             this.printingId = lateArrivalId;
             try {
-                const response = await fetch(`/api/v1/billets/late-arrival/${lateArrivalId}/pdf`, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
-                });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    // Bloqueur de pop-up : on retombe sur un téléchargement.
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Billet-${lateArrivalId}.pdf`;
-                    link.click();
-                }
-                // Libère l'URL une fois le document chargé (délai large pour l'onglet).
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (error) {
-                console.error('Billet print error:', error);
-                toast.error(window.api.toMessage(error, "Erreur lors de la génération du billet."));
+                await this.openPdfPreview(
+                    `/api/v1/billets/late-arrival/${lateArrivalId}/pdf`,
+                    "Billet d'entrée",
+                    `Billet-${lateArrivalId}.pdf`);
             } finally {
                 this.printingId = null;
             }
@@ -226,25 +213,10 @@ document.addEventListener('alpine:init', () => {
             }
             this.printingExitId = earlyDepartureId;
             try {
-                const response = await fetch(`/api/v1/billets/early-departure/${earlyDepartureId}/pdf`, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
-                });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Billet-Sortie-${earlyDepartureId}.pdf`;
-                    link.click();
-                }
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (error) {
-                console.error('Exit billet print error:', error);
-                toast.error(window.api.toMessage(error, "Erreur lors de la génération du billet."));
+                await this.openPdfPreview(
+                    `/api/v1/billets/early-departure/${earlyDepartureId}/pdf`,
+                    'Billet de sortie',
+                    `Billet-Sortie-${earlyDepartureId}.pdf`);
             } finally {
                 this.printingExitId = null;
             }

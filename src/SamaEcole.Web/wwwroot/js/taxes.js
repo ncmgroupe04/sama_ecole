@@ -16,6 +16,10 @@ document.addEventListener('alpine:init', () => {
                          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
     Alpine.data('taxesView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
+        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        ...window.pdfPreview.state(),
+
         isLoading: false,
         error: null,
 
@@ -109,7 +113,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** État synthétique PDF : le jeton ne voyage pas en navigation classique — fetch brut + blob (même mécanique que Paie/Billets/Caisse). */
+        /** État synthétique : aperçu dans la modale partagée (visionneuse PDF native du navigateur). */
         async downloadDeclarationPdf(declarationId) {
             if (!declarationId || declarationId === 'undefined') {
                 console.error('Identifiant de déclaration invalide ou indéfini', declarationId);
@@ -117,24 +121,10 @@ document.addEventListener('alpine:init', () => {
             }
             this.downloadingPdfId = declarationId;
             try {
-                const response = await fetch(`/api/v1/finance/tax-declarations/${declarationId}/pdf`, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
-                });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `Declaration-Fiscale-${declarationId}.pdf`;
-                    link.click();
-                }
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (err) {
-                toast.error(window.api.toMessage(err, "Erreur lors de la génération de l'état synthétique."));
+                await this.openPdfPreview(
+                    `/api/v1/finance/tax-declarations/${declarationId}/pdf`,
+                    'Déclaration fiscale',
+                    `Declaration-Fiscale-${declarationId}.pdf`);
             } finally {
                 this.downloadingPdfId = null;
             }

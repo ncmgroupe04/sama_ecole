@@ -4,6 +4,10 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('disciplineView', () => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : visionneuse native du navigateur dans la
+        // modale _PdfPreviewModal, comme tous les autres écrans qui impriment un document.
+        ...window.pdfPreview.state(),
+
         records: [],
         isLoading: true,
         printingId: null,
@@ -105,10 +109,7 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        /**
-         * PV de discipline en PDF, ouvert dans un nouvel onglet (même mécanique que
-         * billets.js printBillet) : le jeton ne voyage pas sur une navigation classique.
-         */
+        /** PV de discipline : aperçu dans la modale partagée (visionneuse PDF native du navigateur). */
         async printPv(recordId) {
             if (!recordId || recordId === 'undefined') {
                 console.error('Identifiant de dossier de discipline invalide ou indéfini', recordId);
@@ -116,25 +117,10 @@ document.addEventListener('alpine:init', () => {
             }
             this.printingId = recordId;
             try {
-                const response = await fetch(`/api/v1/discipline/${recordId}/pv/pdf`, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` }
-                });
-                if (!response.ok) {
-                    throw new Error(`Le serveur a renvoyé ${response.status}.`);
-                }
-                const blob = new Blob([await response.blob()], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                const win = window.open(url, '_blank');
-                if (!win) {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `PV-Discipline-${recordId}.pdf`;
-                    link.click();
-                }
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-            } catch (error) {
-                console.error('PV discipline print error:', error);
-                toast.error(window.api.toMessage(error, "Erreur lors de la génération du PV."));
+                await this.openPdfPreview(
+                    `/api/v1/discipline/${recordId}/pv/pdf`,
+                    'PV de discipline',
+                    `PV-Discipline-${recordId}.pdf`);
             } finally {
                 this.printingId = null;
             }
