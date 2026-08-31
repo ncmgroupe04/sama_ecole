@@ -22,7 +22,9 @@
 //          adaptatifs) + onglet ouvert dès le clic. Corrige « document vide (0 octet) ».
 // v1.0.4 — modèle hybride inscription/caisse : réécriture d'enrollments.js et caisse.js
 //          (bouton « Envoyer en Caisse », modale de recouvrement) + site.css (btn-modal-success).
-const CACHE_NAME = 'samaecole-static-v1.0.4';
+// v1.0.5 — pdf-preview.js : renvoi de l'en-tête X-Pdf-Preview (réponse text/plain côté serveur)
+//          pour déjouer Internet Download Manager qui vidait le fetch de l'aperçu (204 → 0 octet).
+const CACHE_NAME = 'samaecole-static-v1.0.5';
 
 const STATIC_ASSETS = [
     '/',

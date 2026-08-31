@@ -14,17 +14,21 @@
  * dans l'onglet. Une blob URL n'est pas un téléchargement HTTP : un gestionnaire de téléchargement
  * (Internet Download Manager & co.) ne peut pas l'intercepter une fois les octets en mémoire.
  *
- * STRATÉGIE DE RÉCUPÉRATION RÉSILIENTE
+ * DÉGUISEMENT ANTI-GESTIONNAIRE DE TÉLÉCHARGEMENT (en-tête `X-Pdf-Preview: 1`)
  * ------------------------------------------------------------------------------------------
- * On demande TOUJOURS un `application/pdf` normal (aucune réécriture serveur : l'ancien en-tête
- * `X-Pdf-Preview` et le filtre `PdfPreviewDispositionFilter` qui renvoyait un `octet-stream` anonyme
- * ont été retirés — cette réécriture de ContentType était une source de suspicion de troncature du
- * corps). Deux relances au plus :
- *  - `fetch` COUPÉ sans réponse (coupure réseau, gestionnaire de téléchargement qui happe le flux)
- *    → 1 relance à l'identique.
- *  - Réponse 2xx mais corps VIDE / pas un `%PDF-` (proxy d'opérateur qui l'a purgé, hoquet ponctuel
- *    du générateur QuestPDF) → 1 relance après une courte pause.
- * Passé ça, l'échec est affiché honnêtement (dans l'onglet déjà ouvert, ou via un toast).
+ * Internet Download Manager (IDM) & consorts, avec l'« intégration avancée au navigateur »,
+ * DÉTOURNENT tout `fetch` dont la réponse ressemble à un fichier (`application/pdf`, mais aussi
+ * `application/octet-stream`) : ils happent les octets vers leur file et laissent au `fetch` de la
+ * page une réponse VIDE (`204`) → toast « document vide (0 octet) ». On envoie donc `X-Pdf-Preview: 1`
+ * sur le fetch d'aperçu : le serveur (PdfPreviewDispositionFilter) répond alors en `text/plain`
+ * inline sans nom de fichier — invisible pour ces outils. On relit les octets, on vérifie `%PDF-`,
+ * on reconstruit un `Blob { type:'application/pdf' }` local.
+ *
+ * En plus, deux relances au plus :
+ *  - `fetch` COUPÉ sans réponse → 1 relance à l'identique.
+ *  - Réponse 2xx mais corps VIDE / pas un `%PDF-` → 1 relance après une courte pause.
+ * Passé ça, l'échec est affiché honnêtement (dans l'onglet déjà ouvert, ou via un toast), avec un
+ * indice « désactivez l'intégration IDM » quand la réponse était un 204/`Content-Length: 0`.
  *
  * L'onglet est ouvert DÈS LE CLIC (avant tout `await`) avec un écran d'attente : après un `await`,
  * le bloqueur de pop-up du navigateur refuserait `window.open`.
@@ -83,7 +87,15 @@
         }
     }
 
-    /** Un aller-retour réseau : demande toujours un `application/pdf` normal, sniffe les octets reçus. */
+    /** Message d'aide quand la réponse trahit un détournement par un gestionnaire de téléchargement. */
+    const IDM_HINT = " Un gestionnaire de téléchargement (Internet Download Manager & co.) intercepte "
+        + "sans doute l'aperçu : désactivez son intégration au navigateur, ou ajoutez ce site à ses exceptions.";
+
+    /**
+     * Un aller-retour réseau. Envoie `X-Pdf-Preview: 1` : le serveur répond alors en `text/plain`
+     * inline sans nom de fichier (PdfPreviewDispositionFilter), invisible pour IDM & consorts. On
+     * relit les octets bruts et on vérifie la signature `%PDF-`.
+     */
     async function fetchOnce(url, requestInit) {
         if (!url || url.includes('undefined') || url.includes('null')) {
             throw new PdfFetchError(
@@ -101,6 +113,7 @@
         // remplacer ; Authorization après, pour qu'aucun appelant ne l'écrase.
         const headers = {
             Accept: 'application/pdf',
+            'X-Pdf-Preview': '1',
             ...(requestInit && requestInit.headers),
             Authorization: `Bearer ${window.auth?.accessToken}`
         };
@@ -135,11 +148,14 @@
             throw new PdfFetchError('Le téléchargement du document a été interrompu avant la fin.', EMPTY);
         }
 
-        // Un 200 à corps vide = une boîte intermédiaire (proxy, antivirus) a purgé le binaire, ou le
-        // générateur a hoqueté. Un 200 qui ne commence pas par « %PDF- » = une page/JSON passée à
-        // travers les mailles du filet serveur. Les deux sont re-tentables.
+        // Corps vide sur une réponse "réussie" : soit un gestionnaire de téléchargement a happé les
+        // octets (signature : 204, ou Content-Length: 0), soit une boîte intermédiaire les a purgés,
+        // soit le générateur a hoqueté. Re-tentable ; on ajoute l'indice IDM quand il s'applique.
         if (bytes.length === 0) {
-            throw new PdfFetchError('Le document généré par le serveur est vide (0 octet).', EMPTY);
+            const hijacked = response.status === 204 || response.headers.get('content-length') === '0';
+            throw new PdfFetchError(
+                'Le document reçu par le navigateur est vide (0 octet).' + (hijacked ? IDM_HINT : ''),
+                EMPTY);
         }
         if (!looksLikePdf(bytes)) {
             let hint = '';
@@ -223,7 +239,8 @@
             blob = await fetchPdfBlobResilient(url, requestInit);
         } catch (err) {
             console.error('[pdf-preview]', err);
-            const retryHint = err.kind === EMPTY
+            // Suffixe générique seulement si on n'a pas déjà donné une piste concrète (indice IDM).
+            const retryHint = err.kind === EMPTY && !String(err.message).includes('Internet Download Manager')
                 ? ' Réessayez ; si le problème persiste, signalez-le.'
                 : '';
             const message = (err.message || "Le document n'a pas pu être ouvert.") + retryHint;

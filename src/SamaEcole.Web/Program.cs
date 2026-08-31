@@ -174,14 +174,15 @@ builder.Services
         // sur un cul-de-sac. Le filtre la convertit en 500 normalisé + journal Error (avec la route et
         // une exception synthétique pour la stack). Couvre toutes les actions `return File(...)` du
         // projet, sans garde à recopier dans chacune.
-        //
-        // NB : il n'y a PLUS de filtre qui réécrit la réponse PDF à la volée. L'ancien
-        // PdfPreviewDispositionFilter (réponse renvoyée en application/octet-stream anonyme sur
-        // l'en-tête X-Pdf-Preview, pour désarmer les gestionnaires de téléchargement) est retiré :
-        // wwwroot/js/pdf-preview.js récupère le PDF par fetch puis l'ouvre en blob URL locale — une
-        // blob URL n'est pas un téléchargement HTTP, aucun IDM ne l'intercepte, et cette réécriture
-        // de ContentType/Content-Disposition était une source de suspicion de troncature du corps.
         options.Filters.Add<EmptyFileResultGuardFilter>();
+
+        // Aperçu PDF intégré : sur l'en-tête X-Pdf-Preview (posé par wwwroot/js/pdf-preview.js), la
+        // réponse PDF part en text/plain inline, SANS nom de fichier. Sans ça, Internet Download
+        // Manager (« intégration avancée au navigateur ») happe le fetch de l'aperçu et laisse à la
+        // page une réponse VIDE (204) → toast « document vide (0 octet) ». text/plain — et non
+        // application/octet-stream, qu'IDM intercepte aussi — n'est jamais vu comme un fichier.
+        // Aucun effet sur les téléchargements normaux, qui n'envoient pas l'en-tête.
+        options.Filters.Add<PdfPreviewDispositionFilter>();
     }) // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
     .AddJsonOptions(options =>
     {
