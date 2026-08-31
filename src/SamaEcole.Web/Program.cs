@@ -224,6 +224,11 @@ var publicDirectoryWindowMinutes = builder.Configuration.GetValue("RateLimiting:
 var reportCardPermitLimit = builder.Configuration.GetValue("RateLimiting:ReportCardGeneration:PermitLimit", 20);
 var reportCardWindowMinutes = builder.Configuration.GetValue("RateLimiting:ReportCardGeneration:WindowMinutes", 1);
 
+// Webhooks entrants (paiement, accusés SMS) : plafond anti-flood large sur deux endpoints publics
+// non authentifiés. La signature HMAC reste la garde réelle ; ceci borne juste le volume.
+var webhookPermitLimit = builder.Configuration.GetValue("RateLimiting:Webhooks:PermitLimit", 120);
+var webhookWindowMinutes = builder.Configuration.GetValue("RateLimiting:Webhooks:WindowMinutes", 1);
+
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy(RegistrationRateLimiting.PolicyName, httpContext =>
@@ -299,6 +304,21 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = reportCardPermitLimit,
             Window = TimeSpan.FromMinutes(reportCardWindowMinutes),
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy(SensitiveEndpointRateLimiting.WebhookInboundPolicyName, httpContext =>
+    {
+        // Par IP : l'émetteur est un service tiers sans identité JWT. Derrière le proxy, l'IP réelle
+        // n'est vue que si ForwardedHeaders est actif (voir plus haut) — sinon tous les webhooks
+        // partagent la partition du proxy, ce qui reste un plafond acceptable pour ce trafic.
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = webhookPermitLimit,
+            Window = TimeSpan.FromMinutes(webhookWindowMinutes),
             QueueLimit = 0
         });
     });

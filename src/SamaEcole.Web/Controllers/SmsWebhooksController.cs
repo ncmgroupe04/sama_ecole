@@ -1,7 +1,9 @@
 using SamaEcole.Application.Notifications.Commands.ProcessSmsDeliveryReceipt;
+using SamaEcole.Web.RateLimiting;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace SamaEcole.Web.Controllers;
 
@@ -19,6 +21,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/webhooks/sms")]
 [AllowAnonymous]
+[EnableRateLimiting(SensitiveEndpointRateLimiting.WebhookInboundPolicyName)]
 public class SmsWebhooksController(ISender mediator) : ControllerBase
 {
     /// <summary>En-tête portant la signature. Configurable côté agrégateur, constant côté serveur.</summary>

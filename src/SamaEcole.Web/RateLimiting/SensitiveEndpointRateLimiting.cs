@@ -43,4 +43,15 @@ public static class SensitiveEndpointRateLimiting
     /// systématique de l'annuaire et à la saturation du serveur depuis une seule source.
     /// </summary>
     public const string PublicDirectoryPolicyName = "public-directory";
+
+    /// <summary>
+    /// POST /webhooks/payments/{provider} et POST /webhooks/sms/{provider} — accusés serveur-à-serveur
+    /// de l'agrégateur de paiement (PayDunya/CinetPay) et du fournisseur SMS. Routes [AllowAnonymous]
+    /// par nature (l'émetteur n'a pas de JWT) : la vraie garde est la signature HMAC vérifiée dans le
+    /// Handler. Cette limite, par IP, ajoute un simple plafond anti-flood sur deux endpoints publics
+    /// non authentifiés. Volontairement GÉNÉREUSE : un agrégateur rejoue légitimement (retry réseau) et
+    /// peut émettre des rafales d'accusés (batch de DLR) — la limite casse l'abus de masse, pas le
+    /// trafic normal. Le corps non signé est rejeté avant toute recherche en base, de toute façon.
+    /// </summary>
+    public const string WebhookInboundPolicyName = "webhooks-inbound";
 }

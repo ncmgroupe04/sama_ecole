@@ -261,6 +261,12 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("RateLimiting__PasswordReset__PermitLimit", "1000");
         Environment.SetEnvironmentVariable("RateLimiting__PasswordReset__WindowMinutes", "5");
 
+        // Même raison : TestServer ne renseigne aucune IP source, tous les webhooks d'une classe
+        // partagent la partition « unknown ». La limite de production (120 / min) n'a rien à prouver
+        // ici — un test qui rejoue un webhook plusieurs fois (idempotence) la ferait sauter.
+        Environment.SetEnvironmentVariable("RateLimiting__Webhooks__PermitLimit", "1000");
+        Environment.SetEnvironmentVariable("RateLimiting__Webhooks__WindowMinutes", "5");
+
         // COUPE le dépilage de la file SMS. Sans cela, SmsQueueHostedService tournerait en tâche de
         // fond pendant toute la suite et ferait passer un message de Pending à Sent entre l'action
         // d'un test et son assertion : l'issue dépendrait du moment où le minuteur se déclenche.
@@ -294,7 +300,9 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "Auth__RefreshTokenDays", "RateLimiting__Registration__PermitLimit",
                      "RateLimiting__Registration__WindowMinutes", "RateLimiting__Login__PermitLimit",
                      "RateLimiting__Login__WindowMinutes", "RateLimiting__PasswordReset__PermitLimit",
-                     "RateLimiting__PasswordReset__WindowMinutes", "Sms__Queue__Enabled",
+                     "RateLimiting__PasswordReset__WindowMinutes",
+                     "RateLimiting__Webhooks__PermitLimit", "RateLimiting__Webhooks__WindowMinutes",
+                     "Sms__Queue__Enabled",
                      "Finance__DebtorAging__Enabled", "Subscriptions__Lifecycle__Enabled",
                      "Kpi__Cache__Enabled"
                  })

@@ -1,7 +1,9 @@
 using SamaEcole.Application.Subscriptions.Commands.ProcessPaymentWebhook;
+using SamaEcole.Web.RateLimiting;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace SamaEcole.Web.Controllers;
 
@@ -18,6 +20,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/webhooks/payments")]
 [AllowAnonymous]
+[EnableRateLimiting(SensitiveEndpointRateLimiting.WebhookInboundPolicyName)]
 public class PaymentWebhooksController(ISender mediator) : ControllerBase
 {
     [HttpPost("{provider}")]

@@ -14,6 +14,10 @@
 .env
 .env.*
 !.env.example
+# appsettings.Development.json porte le sentinel de clé JWT de dev et des mots de passe
+# « changeme » : inerte sous ASPNETCORE_ENVIRONMENT=Production/Staging (non chargé) et Program.cs
+# refuse de démarrer sur la clé sentinel hors Development, mais rien à faire dans une couche d'image.
+**/appsettings.Development.json
 
 # Historique et outillage de développement
 .git/

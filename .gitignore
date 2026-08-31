@@ -9,8 +9,10 @@ obj/
 artifacts/
 
 # --- Secrets & environnement ---
+# Directive sécurité #1 : AUCUN fichier .env* (hors modèle .env.example) n'entre dans Git.
 .env
-*.env.local
+.env.*
+!.env.example
 appsettings.*.Local.json
 appsettings.Development.json
 appsettings*.Secret.json
