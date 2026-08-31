@@ -16,6 +16,14 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         {
             await next(context);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Le client a coupé la connexion (onglet fermé, navigation, ou gestionnaire de
+            // téléchargement qui intercepte le fetch d'un PDF). Plus personne pour lire une réponse :
+            // tenter d'en écrire une relèverait, et journaliser une stack trace en Error noierait les
+            // vraies erreurs sous le bruit des annulations. On sort en silence (trace Debug seulement).
+            logger.LogDebug("Requête annulée par le client : {Method} {Path}", context.Request.Method, context.Request.Path);
+        }
         catch (Exception ex)
         {
             await HandleExceptionAsync(context, ex);

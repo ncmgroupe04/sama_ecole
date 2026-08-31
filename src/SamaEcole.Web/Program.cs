@@ -174,6 +174,12 @@ builder.Services
         // sur un cul-de-sac. Le filtre la convertit en 500 normalisé + journal Error. Couvre toutes
         // les actions `return File(...)` du projet, sans garde à recopier dans chacune.
         options.Filters.Add<EmptyFileResultGuardFilter>();
+
+        // Aperçu PDF intégré (en-tête X-Pdf-Preview) : renvoie les octets en application/octet-stream
+        // inline pour qu'un gestionnaire de téléchargement (IDM, extensions « grab », mode
+        // « télécharger les PDF ») cesse d'intercepter le fetch de la modale. Sans effet sur les
+        // téléchargements normaux (bouton « Télécharger », exports), qui n'envoient pas l'en-tête.
+        options.Filters.Add<PdfPreviewDispositionFilter>();
     }) // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
     .AddJsonOptions(options =>
     {

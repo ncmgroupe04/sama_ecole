@@ -86,6 +86,12 @@
         return pdfjsPromise;
     }
 
+    /** Vrai si les 5 premiers octets sont la signature « %PDF- » d'un fichier PDF. */
+    async function looksLikePdf(blob) {
+        const head = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+        return head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46 && head[4] === 0x2d;
+    }
+
     /**
      * Récupère le document et vérifie qu'il s'agit bien d'un PDF exploitable AVANT de le confier au
      * moteur de rendu — chaque vérification correspond à une panne réellement observée en production.
@@ -103,13 +109,20 @@
         // requestInit permet un aperçu servi par une route POST à corps JSON (ex. bulletin de notes,
         // POST /report-cards/generate) : method/body/headers viennent de l'appelant, l'en-tête
         // Authorization reste géré ici.
+        //
+        // X-Pdf-Preview: 1 — signale au serveur que ce téléchargement alimente l'aperçu intégré, pas
+        // un enregistrement de fichier. Le serveur renvoie alors les octets en `application/octet-stream`
+        // `inline` : un gestionnaire de téléchargement (Internet Download Manager, extension « grab »,
+        // mode « télécharger les PDF » du navigateur) n'y voit plus un fichier PDF et cesse d'intercepter
+        // le fetch — sans quoi il coupe la requête de la page et propose un enregistrement à la place.
         let response;
         try {
             response = await fetch(url, {
                 method: (requestInit && requestInit.method) || 'GET',
                 headers: {
                     Authorization: `Bearer ${window.auth?.accessToken}`,
-                    ...(requestInit && requestInit.headers)
+                    ...(requestInit && requestInit.headers),
+                    'X-Pdf-Preview': '1'
                 },
                 body: requestInit && requestInit.body,
                 credentials: 'same-origin'
@@ -131,10 +144,12 @@
         // Un 200 qui ne transporte pas un PDF signale une erreur applicative passée à travers les
         // mailles du filet (page HTML de session expirée, corps JSON d'erreur) : le dire franchement
         // vaut mieux que laisser PDF.js échouer sur un « InvalidPDFException » incompréhensible.
-        const contentType = (response.headers.get('Content-Type') || '').toLowerCase();
-        if (contentType && !contentType.includes('pdf')) {
+        // On teste la signature « %PDF- » des octets reçus plutôt que l'en-tête Content-Type : depuis
+        // X-Pdf-Preview, le serveur répond volontairement en `application/octet-stream`, et la
+        // signature est de toute façon une vérification plus fiable qu'un en-tête déclaratif.
+        if (!(await looksLikePdf(blob))) {
             const detail = (await blob.text().catch(() => '')).slice(0, 200);
-            throw new Error(`Le serveur a renvoyé un contenu qui n'est pas un PDF (${contentType})${detail ? ` : ${detail}` : '.'}`);
+            throw new Error(`Le serveur n'a pas renvoyé un PDF valide${detail ? ` : ${detail}` : '.'}`);
         }
 
         // Le type MIME est réaffirmé côté client : Blob.type conditionne l'ouverture dans un nouvel
