@@ -19,10 +19,16 @@ namespace SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
 /// Le montant dû est CALCULÉ ici à partir du barème de la classe (JGK-F01), figé ligne à ligne, et
 /// n'est jamais lu de la requête (règle #4 et #10).
 ///
-/// L'ENCAISSEMENT DU JOUR est ventilé dans la même transaction : le guichet coche les frais réglés
-/// (inscription, tenue, 1re mensualité…), le serveur en reprend les montants du barème qu'il vient de
-/// figer, écrit la part encaissée sur chaque ligne et matérialise un <see cref="Payment"/> unique.
-/// Inscription et versement sont ainsi indissociables — jamais un reçu sans écriture de caisse en face.
+/// MODÈLE HYBRIDE (<see cref="CreateEnrollmentCommand.IsDirectPayment"/>) :
+///   * <c>true</c> (défaut) — L'ENCAISSEMENT DU JOUR est ventilé dans la même transaction : le guichet
+///     coche les frais réglés (inscription, tenue, 1re mensualité…), le serveur en reprend les montants
+///     du barème qu'il vient de figer, écrit la part encaissée sur chaque ligne et matérialise un
+///     <see cref="Payment"/> unique. Inscription et versement sont indissociables — jamais un reçu sans
+///     écriture de caisse en face. Statut <c>Confirmed</c>.
+///   * <c>false</c> (« Envoyer en Caisse ») — on FIGE seulement le dû (<c>TotalDue</c>), <c>AmountPaid
+///     = 0</c>, aucune session de caisse, aucun <see cref="Payment"/>, aucun numéro de reçu officiel
+///     consommé (règle #3). Statut <see cref="EnrollmentStatus.PendingPayment"/> : la Caisse recouvre
+///     ensuite, et le premier encaissement confirme l'inscription (RecordPaymentCommandHandler).
 /// </summary>
 public class CreateEnrollmentCommandHandler(
     IApplicationDbContext dbContext,
@@ -70,6 +76,8 @@ public class CreateEnrollmentCommandHandler(
 
             // Un élève n'a qu'une inscription (non annulée) par année (DDS §5.4). L'index unique en base
             // en est la garantie dure ; ce pré-contrôle offre un message lisible plutôt qu'un 409 brut.
+            // Une inscription PendingPayment compte : le créneau est pris (index partiel : seul
+            // Cancelled l'exclut) — on ne « double-engage » pas une dette sur le même élève/année.
             var alreadyEnrolled = await dbContext.Enrollments.AnyAsync(
                 e => e.StudentId == student.Id
                      && e.SchoolYearId == activeYear.Id
@@ -89,9 +97,112 @@ public class CreateEnrollmentCommandHandler(
             var lines = await BuildFeeLinesAsync(schoolId, request.ClassroomId, tuitionMonths, ct);
             var totalDue = lines.Sum(l => l.LineTotal);
 
+            // Fabrique du DTO de reçu, commune aux deux volets : les deux renvoient le MÊME contrat
+            // (EnrollmentReceiptDto) — seuls le montant encaissé et le mode de règlement changent.
+            async Task<EnrollmentReceiptDto> BuildReceipt(Enrollment e, decimal totalCollected, PaymentMethod? method)
+            {
+                var school = await dbContext.Schools.AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Id == schoolId, ct);
+
+                return new EnrollmentReceiptDto(
+                    e.Id,
+                    e.ReceiptNumber,
+                    school?.Name ?? string.Empty,
+                    school?.Address,
+                    school?.Phone,
+                    school?.Email,
+                    school?.Ninea,
+                    school?.RegistreCommerce,
+                    ReceiptCity.FromAddress(school?.Address),
+                    school?.LogoUrl,
+                    matricule,
+                    student.FullName,
+                    classroom.Name,
+                    classroom.Level,
+                    activeYear.Label,
+                    student.GuardianName,
+                    student.GuardianPhone,
+                    e.Type.ToString(),
+                    e.Status.ToString(),
+                    e.EnrolledAt,
+                    lines.Select(l => new EnrollmentFeeLineDto(
+                        l.Designation, l.IsRecurring, l.UnitAmount, l.Months, l.LineTotal)).ToList(),
+                    totalDue,
+                    ToCollectedLines(lines),
+                    totalCollected,
+                    method?.ToString(),
+                    classroom.IsAccelerated);
+            }
+
+            // ────────────────────────────────────────────────────────────────────────────────────────
+            // VOLET 1 — « Inscrire l'élève (Envoyer en Caisse) » : on engage la dette, sans argent.
+            //
+            // On FIGE le dû et on ouvre le dossier sans toucher à la caisse : aucune session requise,
+            // AUCUN Payment, AUCUN numéro de reçu officiel consommé (règle #3 — le registre gapless
+            // est réservé à un mouvement d'argent réel). L'inscription part en PendingPayment ; la
+            // Caisse la détecte au premier passage de l'élève et la CONFIRME au premier encaissement,
+            // même partiel (RecordPaymentCommandHandler). Le validateur a déjà rejeté toute
+            // CollectedFees sur ce chemin — inutile d'appeler ApplyCollectedFees.
+            // ────────────────────────────────────────────────────────────────────────────────────────
+            if (!request.IsDirectPayment)
+            {
+                // Défense en profondeur, doublant CreateEnrollmentCommandValidator (le Handler est
+                // aussi appelé hors pipeline MediatR, ex. tests d'intégration) : engager la dette
+                // n'encaisse rien.
+                if (request.CollectedFees.Count > 0)
+                {
+                    throw new ValidationException([
+                        new ValidationFailure(
+                            nameof(request.CollectedFees),
+                            "Une inscription « envoyée en caisse » ne peut pas encaisser de frais à "
+                            + "l'enregistrement : le règlement se fait ensuite depuis l'écran Caisse.")
+                    ]);
+                }
+
+                var pendingId = Guid.CreateVersion7();
+
+                var pendingEnrollment = new Enrollment
+                {
+                    Id = pendingId,
+                    SchoolId = schoolId,
+                    StudentId = student.Id,
+                    SchoolYearId = activeYear.Id,
+                    ClassroomId = request.ClassroomId,
+                    Type = request.Type,
+                    IsRepeating = request.IsRepeating,
+                    Status = EnrollmentStatus.PendingPayment,
+                    TotalDue = totalDue,
+                    AmountPaid = 0m,
+                    // Jeton PROVISOIRE, non financier : la colonne ReceiptNumber est NOT NULL et
+                    // l'index UX_enrollments_receipt_number est unique par école — il faut donc une
+                    // valeur, mais surtout PAS un vrai numéro du registre gapless. Reconnaissable, et
+                    // remplacé par le numéro officiel au premier encaissement (RecordPaymentCommandHandler).
+                    ReceiptNumber = $"EN-ATTENTE-{pendingId:N}",
+                    EnrolledAt = timeProvider.GetUtcNow()
+                };
+
+                dbContext.Enrollments.Add(pendingEnrollment);
+
+                foreach (var line in lines)
+                {
+                    line.SchoolId = schoolId;
+                    line.EnrollmentId = pendingEnrollment.Id;
+                    // AmountCollected / MonthsCollected restent à 0 : rien n'est réglé à ce stade.
+                    dbContext.EnrollmentFeeLines.Add(line);
+                }
+
+                await dbContext.SaveChangesAsync(ct);
+
+                return await BuildReceipt(pendingEnrollment, totalCollected: 0m, method: null);
+            }
+
+            // ────────────────────────────────────────────────────────────────────────────────────────
+            // VOLET 2 (historique) — « Inscrire et procéder au paiement » : encaissement du jour.
+            // ────────────────────────────────────────────────────────────────────────────────────────
+
             // Ventilation de l'encaissement du jour SUR ces lignes (montants du barème, jamais du client).
             ApplyCollectedFees(lines, request.CollectedFees);
-            var totalCollected = lines.Sum(l => l.AmountCollected);
+            var totalCollectedNow = lines.Sum(l => l.AmountCollected);
 
             // L'encaissement du jour est une opération de CAISSE à part entière : comme
             // RecordPaymentCommandHandler, il exige une session de caisse OUVERTE pour l'opérateur et s'y
@@ -101,7 +212,7 @@ public class CreateEnrollmentCommandHandler(
             // encaisser plus tard depuis l'écran Caisse. Le refus intervient AVANT le numéro de reçu :
             // rien n'est consommé (le rollback rembobinerait de toute façon, mais autant échouer tôt).
             CashierSession? cashierSession = null;
-            if (totalCollected > 0)
+            if (totalCollectedNow > 0)
             {
                 cashierSession = await dbContext.CashierSessions
                     .FirstOrDefaultAsync(
@@ -129,7 +240,7 @@ public class CreateEnrollmentCommandHandler(
                 IsRepeating = request.IsRepeating,
                 Status = EnrollmentStatus.Confirmed,
                 TotalDue = totalDue,
-                AmountPaid = totalCollected,
+                AmountPaid = totalCollectedNow,
                 ReceiptNumber = receiptNumber,
                 EnrolledAt = timeProvider.GetUtcNow()
             };
@@ -147,18 +258,18 @@ public class CreateEnrollmentCommandHandler(
             // repart avec UNE pièce, qui atteste à la fois de l'affectation et du versement — deux numéros
             // pour un seul papier rendraient le carnet de reçus incompréhensible au contrôle.
             // Aucun versement ⇒ aucun Payment : un encaissement de 0 F n'est pas un encaissement.
-            if (totalCollected > 0)
+            if (totalCollectedNow > 0)
             {
                 dbContext.Payments.Add(new Payment
                 {
                     SchoolId = schoolId,
                     EnrollmentId = enrollment.Id,
-                    // Non-null dès que totalCollected > 0 : la garde ci-dessus a jeté sinon.
+                    // Non-null dès que totalCollectedNow > 0 : la garde ci-dessus a jeté sinon.
                     CashierSessionId = cashierSession!.Id,
-                    Amount = totalCollected,
+                    Amount = totalCollectedNow,
                     Method = request.PaymentMethod,
-                    Status = totalCollected >= totalDue ? PaymentStatus.Paid : PaymentStatus.Partial,
-                    BalanceAfter = totalDue - totalCollected,
+                    Status = totalCollectedNow >= totalDue ? PaymentStatus.Paid : PaymentStatus.Partial,
+                    BalanceAfter = totalDue - totalCollectedNow,
                     ReceiptNumber = receiptNumber,
                     ReceivedByUserId = actorId,
                     PaidAt = enrollment.EnrolledAt
@@ -167,37 +278,8 @@ public class CreateEnrollmentCommandHandler(
 
             await dbContext.SaveChangesAsync(ct);
 
-            var school = await dbContext.Schools.AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == schoolId, ct);
-
-            return new EnrollmentReceiptDto(
-                enrollment.Id,
-                receiptNumber,
-                school?.Name ?? string.Empty,
-                school?.Address,
-                school?.Phone,
-                school?.Email,
-                school?.Ninea,
-                school?.RegistreCommerce,
-                ReceiptCity.FromAddress(school?.Address),
-                school?.LogoUrl,
-                matricule,
-                student.FullName,
-                classroom.Name,
-                classroom.Level,
-                activeYear.Label,
-                student.GuardianName,
-                student.GuardianPhone,
-                enrollment.Type.ToString(),
-                enrollment.Status.ToString(),
-                enrollment.EnrolledAt,
-                lines.Select(l => new EnrollmentFeeLineDto(
-                    l.Designation, l.IsRecurring, l.UnitAmount, l.Months, l.LineTotal)).ToList(),
-                totalDue,
-                ToCollectedLines(lines),
-                totalCollected,
-                totalCollected > 0 ? request.PaymentMethod.ToString() : null,
-                classroom.IsAccelerated);
+            return await BuildReceipt(
+                enrollment, totalCollectedNow, totalCollectedNow > 0 ? request.PaymentMethod : null);
         }, cancellationToken);
 
         // Une nouvelle inscription change à la fois le dû/attendu financier et les effectifs du

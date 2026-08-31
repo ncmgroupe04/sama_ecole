@@ -252,14 +252,24 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `GET` | `/api/v1/classrooms/{id}/availability` | Places disponibles |
 | `POST` | `/api/v1/waiting-list` | Inscrire sur liste d'attente (Post-MVP V1.1) |
 
+**`POST /enrollments` — champ `isDirectPayment` (bool, défaut `true`).** Modèle hybride, Volume 1 §7.2bis :
+
+- `true` (défaut, « Inscrire et procéder au paiement ») — comportement historique : `collectedFees` est encaissé dans la transaction, une session de caisse ouverte est exigée dès qu'un montant est coché, un `Payment` et un numéro de reçu officiel gapless sont créés, statut `Confirmed`.
+- `false` (« Inscrire l'élève — Envoyer en Caisse ») — on fige seulement le dû (`TotalDue`, `AmountPaid = 0`). Aucune session de caisse, **aucun `Payment`, aucun numéro de reçu officiel consommé**. Statut `PendingPayment`. Toute ligne de `collectedFees` transmise avec `isDirectPayment = false` est **refusée en 422**.
+
+`EnrollmentStatus` gagne la valeur `PendingPayment` (persistée en `string`, aucune migration de schéma). Le premier encaissement enregistré via `POST /finance/payments` — même partiel — la fait passer à `Confirmed` et lui attribue son numéro de reçu officiel.
+
 ## 7. API Finance
 
 | Méthode | Route | Description |
 |---|---|---|
 | `POST` | `/api/v1/fee-categories` | Créer une catégorie de frais |
 | `POST` | `/api/v1/school-fees` | Paramétrer les frais (application globale ou par classe, Volume 1 §7.4) |
+| `GET` | `/api/v1/finance/caisse/lookup?query={studentId\|matricule}` | Détection de dette d'inscription pour la Caisse (modèle hybride, Volume 1 §7.2bis) |
 | `POST` | `/api/v1/payments` | Encaisser un paiement |
 | `GET` | `/api/v1/payments/{id}/receipt` | Reçu (PDF) |
+
+**`GET /finance/caisse/lookup`** (rôles de caisse : Directeur, Finance, Secrétariat). L'élève est d'abord résolu par `GET /students?search` (recherche par nom, UI existante) ; `query` porte donc son **identifiant (GUID)** ou son **matricule exact** — jamais une recherche par nom. Réponse : identité de l'élève + `hasPendingEnrollment` (vrai si inscription `PendingPayment` **ou** solde non nul sur l'année active), `enrollmentId`, `totalDue`, `amountPaid`, `balanceRemaining`, `status`, et `breakdown` (ventilation du dû annuel, une ligne par frais du barème figé). Élève introuvable → `404` ; élève sans inscription active → `200` avec `hasPendingEnrollment = false`. C'est ce drapeau qui déclenche la **modale prioritaire de recouvrement** côté Caisse, dont la validation appelle `POST /finance/payments`.
 | `POST` | `/api/v1/expenses` | Enregistrer une dépense |
 | `GET` | `/api/v1/finance/dashboard` | Tableau de bord (encaissé jour/mois/année, taux de recouvrement) |
 | `GET` | `/api/v1/finance/statistics/{classes\|levels\|debtors\|monthly}` | Statistiques détaillées |

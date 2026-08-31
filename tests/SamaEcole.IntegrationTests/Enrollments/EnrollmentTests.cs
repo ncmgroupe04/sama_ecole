@@ -332,6 +332,79 @@ public class EnrollmentTests : IAsyncLifetime
         payment.Amount.Should().Be(Inscription);
     }
 
+    // ---------------------------------------------------------------- Modèle hybride (volet 1)
+
+    [Fact]
+    public async Task Sending_An_Enrollment_To_The_Cashier_Freezes_The_Debt_Without_Any_Money()
+    {
+        // « Inscrire l'élève — Envoyer en Caisse » (IsDirectPayment = false) : le dû est figé depuis
+        // le barème, mais AUCUN encaissement — aucune session de caisse requise, aucun Payment,
+        // statut PendingPayment.
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var receipt = await NewHandler(db, EcoleA).Handle(
+            NewStudentCommand("Dette Diallo") with { IsDirectPayment = false },
+            CancellationToken.None);
+
+        receipt.TotalDue.Should().Be(Inscription + Mensualite * TuitionMonths, "le dû reste calculé depuis le barème");
+        receipt.TotalCollected.Should().Be(0m);
+        receipt.PaymentMethod.Should().BeNull();
+        receipt.Status.Should().Be(nameof(EnrollmentStatus.PendingPayment));
+
+        await using var check = _db.NewAppContext(EcoleA);
+        var enrollment = await check.Enrollments.SingleAsync(e => e.Id == receipt.EnrollmentId);
+        enrollment.Status.Should().Be(EnrollmentStatus.PendingPayment);
+        enrollment.AmountPaid.Should().Be(0m);
+        enrollment.ReceiptNumber.Should().StartWith("EN-ATTENTE-", "aucun numéro de reçu officiel n'est consommé tant qu'aucun argent n'a bougé");
+
+        (await check.Payments.CountAsync(p => p.EnrollmentId == receipt.EnrollmentId))
+            .Should().Be(0, "engager la dette ne crée aucun encaissement");
+
+        // Les lignes de frais sont bien figées, simplement sans part encaissée.
+        var lines = await check.EnrollmentFeeLines.Where(l => l.EnrollmentId == receipt.EnrollmentId).ToListAsync();
+        lines.Should().HaveCount(2);
+        lines.Sum(l => l.AmountCollected).Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task A_Cashier_Send_Does_Not_Consume_An_Official_Receipt_Number()
+    {
+        // Une inscription « envoyée en caisse » ne doit pas laisser de trou dans le registre gapless :
+        // l'inscription payée au guichet qui suit récupère bien REC-<année>-0001.
+        await using var db1 = _db.NewAppContext(EcoleA);
+        await NewHandler(db1, EcoleA).Handle(
+            NewStudentCommand("Sans Reçu") with { IsDirectPayment = false }, CancellationToken.None);
+
+        await using var db2 = _db.NewAppContext(EcoleA);
+        var paid = await NewHandler(db2, EcoleA).Handle(
+            NewStudentCommand("Payée Au Guichet"), CancellationToken.None);
+
+        paid.ReceiptNumber.Should().Be($"REC-{_year}-0001",
+            "le compteur de reçus officiels n'a pas été entamé par l'inscription envoyée en caisse");
+    }
+
+    [Fact]
+    public async Task A_Cashier_Send_That_Also_Tries_To_Collect_Fees_Is_Refused()
+    {
+        // Garde-fou : IsDirectPayment = false + CollectedFees non vide est rejeté (ValidationException),
+        // rien n'est écrit.
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var act = async () => await NewHandler(db, EcoleA).Handle(
+            NewStudentCommand("Confusion Ba") with
+            {
+                IsDirectPayment = false,
+                CollectedFees = [new CollectedFeeInput(CatInscription)]
+            },
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ValidationException>();
+
+        await using var check = _db.NewAppContext(EcoleA);
+        (await check.Enrollments.CountAsync()).Should().Be(0);
+        (await check.Students.CountAsync()).Should().Be(0);
+    }
+
     private sealed class StubTenantProvider(Guid? schoolId) : ITenantProvider
     {
         public Guid? CurrentSchoolId => schoolId;

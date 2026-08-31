@@ -149,4 +149,68 @@ public class CreateEnrollmentCommandValidatorTests
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == nameof(command.ClassroomId));
     }
+
+    // ---------------------------------------------------------------- Modèle hybride (volet 1)
+
+    [Fact]
+    public void A_Cashier_Send_With_No_Collected_Fees_Should_Pass()
+    {
+        // « Inscrire l'élève — Envoyer en Caisse » : on engage la dette sans encaisser. Liste de
+        // frais vide, aucune session de caisse — la forme est valide, le Handler fera le reste.
+        var command = new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.NewEnrollment,
+            ClassroomId = Guid.NewGuid(),
+            FullName = "Awa Ndiaye",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
+            Gender = "F",
+            IsDirectPayment = false
+        };
+
+        _validator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void A_Cashier_Send_That_Also_Collects_Fees_Should_Fail()
+    {
+        // Engager la dette ET encaisser sont deux gestes distincts : envoyer des CollectedFees avec
+        // IsDirectPayment = false est une confusion d'intention, refusée (422) plutôt qu'ignorée.
+        var command = new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.NewEnrollment,
+            ClassroomId = Guid.NewGuid(),
+            FullName = "Awa Ndiaye",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
+            Gender = "F",
+            IsDirectPayment = false,
+            CollectedFees = [new CollectedFeeInput(Guid.NewGuid())]
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.CollectedFees));
+    }
+
+    [Fact]
+    public void A_Direct_Payment_That_Collects_Fees_Should_Still_Pass()
+    {
+        // Contre-épreuve : la règle ne mord QUE sur IsDirectPayment = false. Le chemin historique
+        // (encaissement du jour) accepte évidemment toujours des CollectedFees.
+        var command = new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.NewEnrollment,
+            ClassroomId = Guid.NewGuid(),
+            FullName = "Awa Ndiaye",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
+            Gender = "F",
+            IsDirectPayment = true,
+            CollectedFees = [new CollectedFeeInput(Guid.NewGuid())]
+        };
+
+        _validator.Validate(command).IsValid.Should().BeTrue();
+    }
 }
