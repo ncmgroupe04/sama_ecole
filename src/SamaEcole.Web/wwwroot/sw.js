@@ -15,9 +15,10 @@
 // Bumper cette version à chaque déploiement qui SUPPRIME un asset front ou réécrit un fichier JS/CSS
 // servi en Cache-First : le handler `activate` purge alors tous les caches nommés autrement, ce qui
 // force la reprise des nouveaux fichiers sans que l'utilisateur ait à vider son cache manuellement.
-// v1.0.1 — retrait de PDF.js (pdf.min.mjs / worker / polices) + réécriture de pdf-preview.js
-//          (aperçu PDF confié à la visionneuse native du navigateur dans un <iframe>).
-const CACHE_NAME = 'samaecole-static-v1.0.1';
+// v1.0.1 — retrait de PDF.js (pdf.min.mjs / worker / polices) + réécriture de pdf-preview.js.
+// v1.0.2 — suppression de la modale d'aperçu : pdf-preview.js ouvre désormais le PDF dans un
+//          nouvel onglet (visionneuse native du navigateur), plus d'iframe ni de modale.
+const CACHE_NAME = 'samaecole-static-v1.0.2';
 
 const STATIC_ASSETS = [
     '/',
