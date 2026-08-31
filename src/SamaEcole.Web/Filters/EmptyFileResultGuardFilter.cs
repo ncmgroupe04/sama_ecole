@@ -10,18 +10,22 @@ namespace SamaEcole.Web.Filters;
 /// ------------------------
 /// Une petite quinzaine d'actions font <c>return File(result.Content, "application/pdf")</c> sans
 /// garde préalable : le jour où le générateur renvoie un tableau d'octets VIDE (QuestPDF sait le
-/// faire silencieusement — voir <c>PaymentReceiptPdfGenerator</c>), ASP.NET répond alors
-/// <c>200 OK</c> + <c>Content-Length: 0</c>. Côté navigateur, ni le visualiseur natif ni le moteur
-/// PDF.js (<c>wwwroot/js/pdf-preview.js</c>) n'ont rien à afficher : l'utilisateur voit
-/// « Impossible d'afficher l'aperçu — document vide (0 octet) » sur un cul-de-sac, alors que la
+/// faire silencieusement — voir <c>PdfRenderGuard</c>), ASP.NET répond alors
+/// <c>200 OK</c> + <c>Content-Length: 0</c>. Côté navigateur, ni le visualiseur natif ni
+/// <c>wwwroot/js/pdf-preview.js</c> n'ont rien à afficher : l'utilisateur voit
+/// « Le document généré par le serveur est vide (0 octet) » sur un cul-de-sac, alors que la
 /// vraie panne est côté serveur et n'est même pas journalisée.
 ///
-/// Les actions qui gardaient déjà le cas le faisaient chacune à sa façon (<c>NotFound(new { message })</c>) :
-/// mauvais statut (404 = « n'existe pas », pas « génération ratée ») et hors format d'erreur normalisé
-/// (AGENTS.md règle #9, docs/Volume_4_API_Design.md §0.4). Ce filtre unifie tout : une réponse fichier
-/// de 0 octet devient un <c>500</c> normalisé, journalisé en <c>Error</c> avec la route en cause, et
-/// le client (<c>api.js</c> / <c>pdf-preview.js</c>) affiche un message exploitable + « Réessayer »
-/// au lieu d'une impasse muette. Couvre toutes les actions actuelles ET futures, sans garde à recopier.
+/// Ce filtre unifie tout : une réponse fichier de 0 octet devient un <c>500</c> normalisé
+/// (AGENTS.md règle #9, docs/Volume_4_API_Design.md §0.4), journalisé en <c>Error</c> AVEC la route en
+/// cause ET une exception synthétique (<see cref="InvalidOperationException"/>) pour disposer d'une
+/// pile d'appels exploitable en supervision. Couvre toutes les actions actuelles ET futures, sans
+/// garde à recopier.
+///
+/// MÉCANISME : on REMPLACE <see cref="ResultExecutingContext.Result"/> par un <see cref="ObjectResult"/>
+/// 500 — on ne LÈVE pas. À ce stade du pipeline MVC le résultat est déjà sélectionné ; lever ici
+/// risquerait un « response already started ». Le remplacement garantit un vrai 500 (jamais un 200
+/// muet), et le log porté par une exception synthétique donne la même traçabilité qu'un throw.
 /// </summary>
 public sealed class EmptyFileResultGuardFilter(ILogger<EmptyFileResultGuardFilter> logger) : IAsyncResultFilter
 {
@@ -33,10 +37,19 @@ public sealed class EmptyFileResultGuardFilter(ILogger<EmptyFileResultGuardFilte
         if (IsEmptyFileResult(context.Result, out var contentType))
         {
             var request = context.HttpContext.Request;
+            var route = $"{request.Method} {request.Path.Value}";
+            var action = context.ActionDescriptor.DisplayName ?? "action inconnue";
+
+            // Exception synthétique : jamais levée (voir le commentaire de classe), mais passée au
+            // logger pour capturer une pile d'appels et rendre l'incident cherchable en supervision.
+            var diagnostic = new InvalidOperationException(
+                $"Génération PDF vide : {action} a produit un FileResult de 0 octet pour {route} " +
+                $"(type {contentType ?? "inconnu"}). Aucun 200 muet n'est renvoyé — le client reçoit un 500 normalisé.");
+
             logger.LogError(
-                "Réponse fichier vide (0 octet) interceptée pour {Method} {Path} (type {ContentType}). " +
-                "Le générateur a produit un contenu vide — renvoi d'une erreur normalisée au lieu d'un 200 muet.",
-                request.Method, request.Path.Value, contentType ?? "inconnu");
+                diagnostic,
+                "Réponse fichier vide (0 octet) interceptée pour {Route} → {Action} (type {ContentType}).",
+                route, action, contentType ?? "inconnu");
 
             // Le flux du résultat écarté ne sera jamais exécuté (donc jamais disposé par MVC) : on s'en
             // charge. Sans conséquence pour un MemoryStream, correct si un jour c'est un vrai FileStream.
@@ -62,7 +75,7 @@ public sealed class EmptyFileResultGuardFilter(ILogger<EmptyFileResultGuardFilte
 
     /// <summary>
     /// Vrai uniquement pour une réponse fichier dont le corps est certain d'être vide. Un flux non
-    /// rembobinable (<c>CanSeek == false</c>) ne peut pas être mesuré sans le consommer : on le laisse
+    /// rembobinable (<c>CanSeek == false</c>) ne peut pas être mesuré sans le consumer : on le laisse
     /// passer plutôt que de risquer de vider une réponse légitime — aucun endpoint fichier du projet
     /// n'est dans ce cas (tous partent d'un <c>byte[]</c> ou d'un <c>MemoryStream</c>).
     /// </summary>

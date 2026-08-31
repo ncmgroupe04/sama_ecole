@@ -171,15 +171,17 @@ builder.Services
     {
         // Filet global : une réponse fichier de 0 octet (générateur PDF/xlsx qui a produit du vide)
         // ne doit JAMAIS partir en 200 muet — le client afficherait « aperçu impossible, 0 octet »
-        // sur un cul-de-sac. Le filtre la convertit en 500 normalisé + journal Error. Couvre toutes
-        // les actions `return File(...)` du projet, sans garde à recopier dans chacune.
+        // sur un cul-de-sac. Le filtre la convertit en 500 normalisé + journal Error (avec la route et
+        // une exception synthétique pour la stack). Couvre toutes les actions `return File(...)` du
+        // projet, sans garde à recopier dans chacune.
+        //
+        // NB : il n'y a PLUS de filtre qui réécrit la réponse PDF à la volée. L'ancien
+        // PdfPreviewDispositionFilter (réponse renvoyée en application/octet-stream anonyme sur
+        // l'en-tête X-Pdf-Preview, pour désarmer les gestionnaires de téléchargement) est retiré :
+        // wwwroot/js/pdf-preview.js récupère le PDF par fetch puis l'ouvre en blob URL locale — une
+        // blob URL n'est pas un téléchargement HTTP, aucun IDM ne l'intercepte, et cette réécriture
+        // de ContentType/Content-Disposition était une source de suspicion de troncature du corps.
         options.Filters.Add<EmptyFileResultGuardFilter>();
-
-        // Aperçu PDF intégré (en-tête X-Pdf-Preview) : renvoie les octets en application/octet-stream
-        // inline pour qu'un gestionnaire de téléchargement (IDM, extensions « grab », mode
-        // « télécharger les PDF ») cesse d'intercepter le fetch de la modale. Sans effet sur les
-        // téléchargements normaux (bouton « Télécharger », exports), qui n'envoient pas l'en-tête.
-        options.Filters.Add<PdfPreviewDispositionFilter>();
     }) // API + vues Razor (Views/), voir docs/BACKLOG_TICKETS.md
     .AddJsonOptions(options =>
     {

@@ -57,8 +57,10 @@ public class ReportsController(ISender mediator) : ControllerBase
     {
         var result = await mediator.Send(query, cancellationToken);
 
-        // FileStreamResult : le contenu est déjà en mémoire, on l'enveloppe dans un flux pour un
-        // téléchargement nommé avec le bon type MIME (application/pdf ou text/csv).
-        return File(new MemoryStream(result.Content), result.ContentType, result.FileName);
+        // Le contenu est déjà un byte[] en mémoire : on le sert directement en FileContentResult.
+        // (Pas de MemoryStream intermédiaire — inutile, et un flux mal disposé est une source
+        // classique de corps de réponse tronqué.) Un contenu vide est intercepté par
+        // EmptyFileResultGuardFilter et transformé en 500 normalisé, jamais un 200 muet.
+        return File(result.Content, result.ContentType, result.FileName);
     }
 }

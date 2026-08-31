@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using SamaEcole.Application.Common.Interfaces;
@@ -5,7 +6,7 @@ using SamaEcole.Application.StateIntegration;
 
 namespace SamaEcole.Infrastructure.Documents;
 
-public class StateducReportPdfGenerator : IStateducReportPdfGenerator
+public class StateducReportPdfGenerator(ILogger<StateducReportPdfGenerator>? logger = null) : IStateducReportPdfGenerator
 {
     static StateducReportPdfGenerator()
     {
@@ -16,5 +17,11 @@ public class StateducReportPdfGenerator : IStateducReportPdfGenerator
         StateducReportDto report,
         byte[]? directorSignature = null,
         byte[]? officialStamp = null) =>
-        new StateducReportDocument(report, directorSignature, officialStamp).GeneratePdf();
+        PdfRenderGuard.Render(
+            logger,
+            $"rapport STATEDUC (école {report.SchoolName}, code {report.NationalSchoolCode ?? "—"})",
+            () => new StateducReportDocument(report, directorSignature, officialStamp).GeneratePdf(),
+            directorSignature is not null || officialStamp is not null
+                ? () => new StateducReportDocument(report, null, null).GeneratePdf()
+                : null);
 }

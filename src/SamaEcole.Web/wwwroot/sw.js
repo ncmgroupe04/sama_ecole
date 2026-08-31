@@ -18,7 +18,9 @@
 // v1.0.1 — retrait de PDF.js (pdf.min.mjs / worker / polices) + réécriture de pdf-preview.js.
 // v1.0.2 — suppression de la modale d'aperçu : pdf-preview.js ouvre désormais le PDF dans un
 //          nouvel onglet (visionneuse native du navigateur), plus d'iframe ni de modale.
-const CACHE_NAME = 'samaecole-static-v1.0.2';
+// v1.0.3 — pdf-preview.js : récupération résiliente (application/pdf normal d'abord, replis
+//          adaptatifs) + onglet ouvert dès le clic. Corrige « document vide (0 octet) ».
+const CACHE_NAME = 'samaecole-static-v1.0.3';
 
 const STATIC_ASSETS = [
     '/',

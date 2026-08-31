@@ -34,6 +34,22 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     {
         var traceId = context.TraceIdentifier;
 
+        // La réponse a déjà commencé à partir (en-têtes + une partie du corps envoyés) : impossible
+        // d'y écrire une erreur normalisée — `Response.StatusCode = …` lèverait « response has already
+        // started ». C'est le cas typique d'un `FileResult` volumineux dont le rendu casse en cours
+        // d'écriture. On journalise et on coupe net la connexion : le client verra un transfert
+        // incomplet (à retenter) plutôt qu'un corps tronqué présenté comme complet.
+        if (context.Response.HasStarted)
+        {
+            logger.LogError(
+                exception,
+                "Exception APRÈS le début de la réponse ({Method} {Path}, {Written} octet(s) déjà écrits). " +
+                "Connexion coupée — aucune erreur normalisée ne peut plus être renvoyée. TraceId: {TraceId}",
+                context.Request.Method, context.Request.Path, context.Response.Headers.ContentLength, traceId);
+            context.Abort();
+            return;
+        }
+
         var (statusCode, code, message, details) = exception switch
         {
             ValidationException validationEx => (

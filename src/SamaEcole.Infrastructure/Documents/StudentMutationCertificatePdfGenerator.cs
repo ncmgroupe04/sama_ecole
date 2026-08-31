@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using SamaEcole.Application.Common.Interfaces;
@@ -5,7 +6,8 @@ using SamaEcole.Application.StateIntegration;
 
 namespace SamaEcole.Infrastructure.Documents;
 
-public class StudentMutationCertificatePdfGenerator : IStudentMutationCertificatePdfGenerator
+public class StudentMutationCertificatePdfGenerator(ILogger<StudentMutationCertificatePdfGenerator>? logger = null)
+    : IStudentMutationCertificatePdfGenerator
 {
     static StudentMutationCertificatePdfGenerator()
     {
@@ -13,5 +15,8 @@ public class StudentMutationCertificatePdfGenerator : IStudentMutationCertificat
     }
 
     public byte[] Generate(StudentMutationCertificateModel model, byte[]? qrCode) =>
-        new StudentMutationCertificateDocument(model, qrCode).GeneratePdf();
+        PdfRenderGuard.Render(
+            logger,
+            $"certificat de mutation {model.CertificateNumber} (école {model.SchoolName})",
+            () => new StudentMutationCertificateDocument(model, qrCode).GeneratePdf());
 }
