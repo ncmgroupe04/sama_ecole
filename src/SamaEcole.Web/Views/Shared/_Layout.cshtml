@@ -12,6 +12,9 @@
  @* Scripts CLASSIQUES, donc exécutés avant le script différé d'Alpine, quel que soit leur
  emplacement dans le document : window.auth et window.api existent avant qu'Alpine ne
  s'initialise, et les écouteurs alpine:init sont enregistrés à temps. *@
+ @* Anti-flash du menu latéral réduit : pose .sidebar-collapsed sur <html> avant le rendu,
+ donc avant Alpine. Script classique synchrone, tout en haut du <head>. *@
+ <script src="~/js/sidebar-boot.js" asp-append-version="true"></script>
  <script src="~/js/auth.js" asp-append-version="true"></script>
  <script src="~/js/api.js" asp-append-version="true"></script>
  @* Contrôle d'accès par formule (affichage) — après api.js, dont il dépend. *@
@@ -76,12 +79,12 @@
  (lg:static) : aucun décalage codé en dur ailleurs ne dépend de cette largeur — vérifié. *@
  <aside
  :class="[sidebarOpen ? 'translate-x-0' : '-translate-x-full', sidebarCollapsed ? 'lg:w-20 sidebar-collapsed' : 'lg:w-72']"
- class="fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-auto lg:rounded-tr-[2rem] lg:rounded-br-[2rem] flex flex-col h-full shadow-sm">
+ class="app-sidebar fixed inset-y-0 left-0 z-30 w-72 bg-slate-50 border-r border-slate-200 transition-all duration-300 lg:translate-x-0 lg:static lg:inset-auto flex flex-col h-full shadow-sm">
 
  <!-- En-tête Sidebar / Logo -->
- <div class="flex items-center justify-center h-16 border-b border-slate-100 px-6">
+ <div class="sidebar-header flex items-center justify-start h-16 border-b border-slate-100 pl-7 pr-4">
  <div class="flex items-center gap-3">
- <div class="w-12 h-12 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center shrink-0" aria-hidden="true">
+ <div class="sidebar-logo w-12 h-12 rounded-none bg-primary-600 text-white flex items-center justify-center shrink-0" aria-hidden="true">
  <svg class="w-[1.875rem] h-[1.875rem]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z" /></svg>
  </div>
  <span class="sidebar-label font-bold text-[1.6875rem] text-slate-900 tracking-tight">Unikol</span>
@@ -97,16 +100,16 @@
  @{
  var path = Context.Request.Path.Value ?? "/";
 
- // text-primary (#6366F1 DEFAULT) sur bg-indigo-50 ne tient que 3.99:1 — sous le seuil
- // WCAG AA 4.5:1 (Volume 5 §8). primary-700 (7.07:1 sur indigo-50, 7.90:1 sur blanc) le
- // respecte largement sans changer la teinte de marque utilisée ailleurs (logo, avatars).
+ // text-primary (#6366F1 DEFAULT) sur ce fond ne tient que 3.99:1 — sous le seuil WCAG AA
+ // 4.5:1 (Volume 5 §8). primary-600 (#4F46E5) sur primary-50 (#EEF2FF) tient ~5.6:1,
+ // conforme AA, et aligne l'état actif sur le bleu du logo et de l'avatar (harmonie sidebar).
  @* whitespace-nowrap : un libellé de menu ne passe JAMAIS à la ligne. S'il ne tient pas, c'est
  la barre qu'il faut élargir (voir w-72 sur l'aside) ou le libellé qu'il faut raccourcir —
  pas la ligne qu'il faut casser, ce qui désaligne toute la colonne et fait sauter la hauteur
  des lignes voisines. *@
  const string LinkBase = "flex items-center gap-3 px-3 py-2 rounded-2xl whitespace-nowrap transition-all duration-200 active:scale-95";
- const string LinkIdle = $"{LinkBase} text-slate-600 hover:bg-slate-50 hover:text-primary-700";
- const string LinkActive = $"{LinkBase} text-primary-700 bg-indigo-50 font-medium";
+ const string LinkIdle = $"{LinkBase} text-slate-500 hover:bg-slate-100 hover:text-primary-600";
+ const string LinkActive = $"{LinkBase} text-primary-600 bg-primary-50 font-medium";
  const string LinkSoon = $"{LinkBase} text-slate-400 cursor-not-allowed select-none";
 
  // État initial (ouvert/replié) des sous-menus, calculé côté serveur à partir de l'URL
@@ -134,7 +137,7 @@
  matériel) : il n'a accès à aucun autre sous-menu de ce pôle. Si un sous-menu ci-dessous
  gagne ou perd un rôle, cette liste doit être mise à jour en écho. -->
  <div class="sidebar-pole relative space-y-1" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat', 'Finance', 'Enseignant', 'Surveillant'])" x-cloak>
- <button type="button" title="Gestion Scolaire" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
+ <button type="button" title="Gestion Scolaire" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-primary-600" aria-expanded="@(gestionScolaireOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="book" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Gestion Scolaire</span>
@@ -202,7 +205,7 @@
  Admin n'a accès à aucun de ces sous-menus (console plateforme, pas d'établissement) : le
  pôle lui reste donc masqué, comme au Surveillant pour Gestion Scolaire. -->
  <div class="sidebar-pole relative space-y-1" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Finance', 'Surveillant'])" x-cloak>
- <button type="button" title="Surveillance" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(surveillanceOpen ? "true" : "false")">
+ <button type="button" title="Surveillance" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-primary-600" aria-expanded="@(surveillanceOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="shield" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Surveillance</span>
@@ -239,7 +242,7 @@
  aucune union supplémentaire à calculer ici — seul x-cloak manquait, ajouté pour éviter le
  flash d'affichage avant l'hydratation d'Alpine (même garde que les autres pôles). -->
  <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" x-cloak class="sidebar-pole relative space-y-1">
- <button type="button" title="Comptabilité" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-600 hover:bg-slate-50 hover:text-primary-700" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
+ <button type="button" title="Comptabilité" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-primary-600" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="wallet" class="w-6 h-6 shrink-0" />
  <span class="sidebar-label text-base font-medium">Comptabilité</span>
@@ -296,22 +299,22 @@
  </div>
  </nav>
 
- @* Profil réel de la session : l'e-mail est celui saisi à la connexion, le rôle est lu dans le
- JWT. Le nom complet manque tant qu'aucun endpoint ne l'expose (pas de GET /users/me). La carte
- entière EST le bouton de déconnexion — la barre supérieure n'en propose plus une deuxième —,
- avec le gabarit de mise en évidence de l'ancien bouton (fond bleu, blanc au repos, rouge/rose
- au survol) pour qu'elle reste aussi visible qu'avant son déplacement. *@
- <div class="p-3 border-t border-slate-100" x-data="sessionMenu()">
+ @* Profil réel de la session : le nom complet et le rôle sont lus dans le JWT (claims `name` =
+ User.FullName, `role`). La carte affiche « Nom / Rôle » sur deux lignes ; l'e-mail n'y figure
+ plus (donnée personnelle, et déjà dans la topbar). La carte entière EST le bouton de déconnexion
+ — la barre supérieure n'en propose plus une deuxième —, avec le gabarit de mise en évidence de
+ l'ancien bouton (fond bleu, blanc au repos, rouge/rose au survol). *@
+ <div class="sidebar-profile p-3 border-t border-slate-100" x-data="sessionMenu()">
  <button type="button" x-on:click="logout()" aria-label="Se déconnecter"
- class="sidebar-user-card w-full flex items-center gap-3 px-3 py-2 rounded-[2rem] bg-primary-600 text-white hover:bg-rose-600 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary"
- :title="'Se déconnecter (' + email + ')'">
+ class="sidebar-user-card w-full flex items-center gap-3 px-3 py-2 rounded-none bg-primary-600 text-white hover:bg-rose-600 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary"
+ :title="'Se déconnecter (' + (name || role) + ')'">
  @* Initiale calculée localement : envoyer l'e-mail à un service d'avatars tiers
  (ui-avatars.com, comme précédemment) revient à lui divulguer une donnée personnelle. *@
- <div aria-hidden="true" class="w-10 h-10 shrink-0 rounded-full bg-white/20 text-white flex items-center justify-center font-medium uppercase"
- x-text="email ? email[0] : '?'"></div>
+ <div aria-hidden="true" class="sidebar-user-avatar w-10 h-10 shrink-0 rounded-none bg-white/20 text-white flex items-center justify-center font-medium uppercase"
+ x-text="(name || role) ? (name || role)[0] : '?'"></div>
 
  <div class="sidebar-label flex-1 min-w-0 text-left">
- <p class="text-sm font-medium truncate" x-text="email"></p>
+ <p class="text-sm font-medium truncate" x-text="name || role"></p>
  <p class="text-xs text-white/80 truncate" x-text="role"></p>
  </div>
 
@@ -336,7 +339,7 @@
  se fait par rechargement complet de page (MVC classique), donc l'état Alpine du <body> ne
  survit pas d'une page à l'autre sans cette persistance. *@
  <button type="button"
- x-on:click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed)"
+ x-on:click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed); document.documentElement.classList.toggle('sidebar-collapsed', sidebarCollapsed)"
  :title="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
  :aria-label="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
  @* focus-visible et non focus : un clic souris ne doit laisser aucun halo, seule la navigation
@@ -362,7 +365,7 @@
  entrées, ce qui est le cas de l'immense majorité des comptes. *@
  <div x-data="schoolSwitcher()" x-show="hasMultipleSchools" x-cloak class="relative hidden sm:block">
  <button type="button" x-on:click="isOpen = !isOpen" :disabled="isSwitching"
- class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 disabled:opacity-60">
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 disabled:opacity-60">
  <icon name="building" class="w-4 h-4" />
  <span class="max-w-[10rem] truncate" x-text="isSwitching ? 'Bascule…' : currentSchoolName"></span>
  <icon name="chevron-down" class="w-3.5 h-3.5" />
@@ -396,7 +399,7 @@
  faisait le plus gros élément de la barre — plus imposant que le nom de l'utilisateur ou que
  l'année scolaire active, alors qu'elle ne porte aucune information propre à l'établissement.
  Ramenée au gabarit des autres pastilles (text-sm, px-2.5 py-1), elle s'y harmonise. *@
- <div x-data="digitalClock()" class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium shrink-0 whitespace-nowrap" x-cloak>
+ <div x-data="digitalClock()" class="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium shrink-0 whitespace-nowrap" x-cloak>
  <icon name="clock" class="w-4 h-4 shrink-0" />
  <span x-text="currentTime"></span>
  </div>
@@ -414,13 +417,13 @@
  <div x-data="activeSchoolYearBadge()" x-show="loaded && label" x-cloak class="hidden sm:block">
  <a x-show="isDirecteur" x-cloak href="/annees-scolaires"
  title="Année scolaire active — gérer dans Paramètres › Années"
- class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-primary-700 text-sm font-medium hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-indigo-50 text-primary-700 text-sm font-medium hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
  <icon name="calendar" class="w-4 h-4" />
  <span x-text="label"></span>
  </a>
  <span x-show="!isDirecteur" x-cloak
  title="Année scolaire active de l'établissement"
- class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 text-sm font-medium">
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-100 text-slate-600 text-sm font-medium">
  <icon name="calendar" class="w-4 h-4" />
  <span x-text="label"></span>
  </span>
@@ -455,7 +458,7 @@
  <button type="button" x-on:click="toggle()"
  :title="allDone ? 'Assistant de démarrage — paramétrage terminé' : 'Assistant de démarrage — paramétrage de l\'établissement (' + percent + '%)'"
  :class="allDone ? 'bg-success-bg text-success hover:bg-success/10' : 'bg-primary-50 text-primary-700 hover:bg-primary-100'"
- class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary">
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary">
  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4 shrink-0"><use href="#icon-sparkle"></use></svg>
  <span class="hidden sm:block">Démarrage</span>
  <span x-show="loaded && !allDone" x-cloak x-text="percent + '%'"
@@ -555,17 +558,13 @@
  </modal-shell>
  </div>
 
- @* Utilisateur connecté : remplace l'ancienne cloche de notifications (module jamais livré).
- Aucun contexte d'authentification Razor côté serveur n'existe ici — l'access token JWT vit
- uniquement dans le navigateur (localStorage, voir auth.js). Le nom complet vient du claim
- `name` du JWT (User.FullName, JwtTokenGenerator), déjà exposé par sessionMenu(). L'aide et la
- déconnexion ne sont plus dupliquées ici : « Aide & Documentation » et la carte de profil (avec
- son bouton Déconnexion) vivent toutes deux dans la barre latérale — un seul endroit pour
- chacune. *@
- <div x-data="sessionMenu()" class="flex items-center gap-2 px-1" :title="email">
- <div aria-hidden="true" class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white flex items-center justify-center text-xs font-medium uppercase"
- x-text="(name || email) ? (name || email)[0] : '?'"></div>
- <span class="hidden sm:block text-sm font-medium text-slate-700 truncate max-w-[10rem]" x-text="name || email"></span>
+ @* Salutation selon l'heure. Remplace l'ancienne pastille utilisateur (avatar « C » + nom
+ complet), devenue redondante avec la carte de profil de la barre latérale — laquelle porte
+ déjà le nom, le rôle et la déconnexion. Purement décorative, aucune donnée personnelle : une
+ touche chaleureuse qui accompagne l'horloge (voir greeting() dans ui-components.js). *@
+ <div x-data="greeting()" x-cloak class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-slate-100 text-slate-600 text-sm font-medium shrink-0 whitespace-nowrap">
+ <span x-text="emoji" aria-hidden="true"></span>
+ <span x-text="label"></span>
  </div>
  </div>
  </header>

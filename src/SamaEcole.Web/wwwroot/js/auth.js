@@ -74,8 +74,11 @@
         if (!token) return null;
 
         try {
-            const payload = token.split('.')[1];
-            const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+            const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            // atob() rend une chaîne d'OCTETS : sans re-décoder en UTF-8, un claim accentué
+            // (« Mbacké ») ressort en mojibake (« MbackÃ© ») dans la barre latérale et la topbar.
+            const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+            const json = new TextDecoder('utf-8').decode(bytes);
             return JSON.parse(json);
         } catch {
             return null;

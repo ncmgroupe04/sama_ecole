@@ -266,4 +266,23 @@ document.addEventListener('alpine:init', () => {
             this.currentTime = `${capitalizedDate} • ${timeStr}`;
         }
     }));
+
+    // Salutation selon l'heure (barre superieure) — accompagne l'horloge, sans aucune donnee
+    // personnelle. Recalculee chaque minute pour franchir les seuils matin / apres-midi / soir /
+    // nuit sans recharger la page.
+    Alpine.data('greeting', () => ({
+        label: '',
+        emoji: '',
+        init() {
+            this.update();
+            setInterval(() => this.update(), 60000);
+        },
+        update() {
+            const h = new Date().getHours();
+            if (h >= 5 && h < 12)       { this.label = 'Bonjour';        this.emoji = '☀️'; }
+            else if (h >= 12 && h < 18) { this.label = 'Bon après-midi'; this.emoji = '🌤️'; }
+            else if (h >= 18 && h < 22) { this.label = 'Bonsoir';        this.emoji = '🌆'; }
+            else                        { this.label = 'Bonne nuit';     this.emoji = '🌙'; }
+        }
+    }));
 });

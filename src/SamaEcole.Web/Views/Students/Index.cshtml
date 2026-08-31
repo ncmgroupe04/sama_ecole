@@ -90,7 +90,7 @@
  <!-- Barre de filtres -->
  <div class="filter-bar">
  <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full">
- <div class="relative flex-1 min-w-[12rem] lg:max-w-xs">
+ <div class="relative flex-1 min-w-[12rem] lg:max-w-[18rem]">
  <span class="absolute inset-y-0 left-0 flex items-center pl-3">
  <icon name="search" class="w-4 h-4 text-slate-400" />
  </span>
@@ -106,32 +106,30 @@
  options-expr="[{value:'', label:'Classe : Toutes'}].concat(classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'})))" />
  <select-field model="genderFilter" on-change="applyFilters()" aria-label="Filtrer par genre"
  class="mt-0 w-full sm:w-44" placeholder="Genre : Tous" options="genderFilterOptions" />
- </div>
 
- @* Portée par année scolaire, sur sa propre ligne pour laisser les trois libellés respirer :
- « Inscrits cette année » (défaut) borne à l'effectif inscrit pour l'année active ;
- « Non inscrits » ne montre QUE les élèves enregistrés SANS inscription (ré)active — ceux
- créés/importés puis pas encore inscrits ; « Tous les élèves » rebascule sur l'annuaire complet.
- Segments à largeur de contenu FIXE : le libellé ne passe jamais à la ligne, même en changeant de
- vue. Voir studentsView.yearScope / GetStudentsQuery.NotEnrolledForActiveYear. *@
- <div class="w-full">
- @* flex-col sur mobile (3 boutons pleine largeur empilés dans le cadre arrondi), pill horizontal
- dès sm : jamais de libellé tronqué ni de débordement horizontal sur petit écran. *@
+ @* Portée par année scolaire — sur la MÊME ligne que les filtres, calée pour occuper toute la
+ largeur restante après « Genre » (lg:flex-1). Les trois segments ont une largeur STRICTEMENT
+ identique (flex-1 basis-0) ; un libellé trop long tronque proprement (truncate) au lieu de
+ déborder. Couleur d'état : vert = inscrits, rouge = non inscrits, bleu = tous les élèves.
+ « Inscrits cette année » (défaut) borne à l'effectif inscrit pour l'année active ; « Non
+ inscrits » ne montre QUE les élèves enregistrés SANS inscription (ré)active ; « Tous les
+ élèves » rebascule sur l'annuaire complet. Voir studentsView.yearScope /
+ GetStudentsQuery.NotEnrolledForActiveYear. *@
  <div role="group" aria-label="Portée par année scolaire"
- class="flex flex-col sm:flex-row w-full sm:w-auto rounded-2xl border border-slate-300 bg-slate-50 p-0.5">
- <button type="button" @@click="if (yearScope !== 'active') { yearScope = 'active'; applyFilters(); }"
- :class="yearScope === 'active' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'"
- class="w-full sm:w-auto px-4 py-1.5 text-sm font-medium rounded-xl transition-colors whitespace-nowrap text-left sm:text-center">
+ class="flex w-full lg:flex-1 rounded-2xl border border-slate-300 bg-slate-50 p-1">
+ <button type="button" title="Inscrits cette année" @@click="if (yearScope !== 'active') { yearScope = 'active'; applyFilters(); }"
+ :class="yearScope === 'active' ? 'bg-success text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+ class="flex-1 basis-0 min-w-0 px-2 py-2.5 text-xs font-medium rounded-xl transition-colors truncate text-center">
  Inscrits cette année
  </button>
- <button type="button" @@click="if (yearScope !== 'notEnrolled') { yearScope = 'notEnrolled'; applyFilters(); }"
- :class="yearScope === 'notEnrolled' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'"
- class="w-full sm:w-auto px-4 py-1.5 text-sm font-medium rounded-xl transition-colors whitespace-nowrap text-left sm:text-center">
+ <button type="button" title="Non inscrits" @@click="if (yearScope !== 'notEnrolled') { yearScope = 'notEnrolled'; applyFilters(); }"
+ :class="yearScope === 'notEnrolled' ? 'bg-danger text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+ class="flex-1 basis-0 min-w-0 px-2 py-2.5 text-xs font-medium rounded-xl transition-colors truncate text-center">
  Non inscrits
  </button>
- <button type="button" @@click="if (yearScope !== 'all') { yearScope = 'all'; applyFilters(); }"
- :class="yearScope === 'all' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'"
- class="w-full sm:w-auto px-4 py-1.5 text-sm font-medium rounded-xl transition-colors whitespace-nowrap text-left sm:text-center">
+ <button type="button" title="Tous les élèves" @@click="if (yearScope !== 'all') { yearScope = 'all'; applyFilters(); }"
+ :class="yearScope === 'all' ? 'bg-primary text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+ class="flex-1 basis-0 min-w-0 px-2 py-2.5 text-xs font-medium rounded-xl transition-colors truncate text-center">
  Tous les élèves
  </button>
  </div>
