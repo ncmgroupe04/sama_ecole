@@ -33,6 +33,18 @@ public record GetStudentsQuery : IRequest<PaginatedStudents>
     /// inscrire », où les élèves ne sont pas encore rattachés à une année. Voir GetStudentsQueryHandler.
     /// </summary>
     public bool ActiveYearOnly { get; init; }
+
+    /// <summary>
+    /// L'INVERSE d'<see cref="ActiveYearOnly"/> : ne garder QUE les élèves SANS inscription (non annulée)
+    /// pour l'année active — ceux enregistrés (création manuelle ou import) mais pas encore (ré)inscrits.
+    ///
+    /// Alimente la vue « Non inscrits » de l'écran Élèves (wwwroot/js/students.js). Exclusif
+    /// d'<see cref="ActiveYearOnly"/> côté UI (interrupteur à trois positions) ; si les deux arrivent
+    /// vrais, <see cref="ActiveYearOnly"/> l'emporte (voir GetStudentsQueryHandler). Sans année active,
+    /// personne n'est inscrit : le filtre laisse alors passer l'annuaire complet plutôt que rien —
+    /// contraste voulu avec <see cref="ActiveYearOnly"/>, où « inscrits » n'a pas de sens et la liste est vide.
+    /// </summary>
+    public bool NotEnrolledForActiveYear { get; init; }
 }
 
 public record StudentListItem(

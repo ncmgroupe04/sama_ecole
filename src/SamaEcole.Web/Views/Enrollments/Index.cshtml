@@ -159,6 +159,12 @@
  <!-- Erreur métier globale -->
  <div x-show="formErrors.global" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="formErrors.global"></div>
  <div x-show="formErrors.schoolyear" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="formErrors.schoolyear"></div>
+ @* Encaisser des frais à l'inscription exige une session de caisse ouverte (CreateEnrollmentCommandHandler).
+    Message actionnable : ouvrir sa caisse, ou décocher les frais pour ouvrir le dossier sans versement. *@
+ <div x-show="formErrors.cashiersession" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning">
+ <span x-text="formErrors.cashiersession"></span>
+ <a href="/caisse" class="underline font-medium whitespace-nowrap">Ouvrir ma caisse</a>
+ </div>
 
  <!-- Classe -->
  <div>

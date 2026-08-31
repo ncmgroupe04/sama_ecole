@@ -84,10 +84,16 @@ public class StudentsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ExportPdf(
-        [FromQuery] Guid? classroomId, [FromQuery] bool activeYearOnly, CancellationToken cancellationToken)
+        [FromQuery] Guid? classroomId, [FromQuery] bool activeYearOnly,
+        [FromQuery] bool notEnrolledForActiveYear, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(
-            new GetStudentsExportPdfQuery { ClassroomId = classroomId, ActiveYearOnly = activeYearOnly },
+            new GetStudentsExportPdfQuery
+            {
+                ClassroomId = classroomId,
+                ActiveYearOnly = activeYearOnly,
+                NotEnrolledForActiveYear = notEnrolledForActiveYear
+            },
             cancellationToken);
 
         Response.Headers["Content-Disposition"] =

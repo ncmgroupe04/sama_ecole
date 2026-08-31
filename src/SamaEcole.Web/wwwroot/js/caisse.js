@@ -13,8 +13,10 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('caisseView', () => ({
-        // Seuls le Directeur et la Finance encaissent (règle #4). Confort d'affichage : l'API garde.
-        canRecordPayment: window.auth.role === 'Directeur' || window.auth.role === 'Finance',
+        // Directeur, Finance et Secrétariat tiennent une caisse (ouvrent une session, encaissent, la
+        // clôturent). La règle #4 sépare l'encaissement de la santé financière AGRÉGÉE (dashboards,
+        // liste globale des paiements), qui reste Directeur/Finance. Confort d'affichage : l'API garde.
+        canRecordPayment: ['Directeur', 'Finance', 'Secretariat'].includes(window.auth.role),
 
         students: [],
         studentsLoaded: false,

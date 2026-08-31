@@ -185,13 +185,23 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     /// </summary>
     private async Task RecordPaymentAsync(string financeToken, Guid enrollmentId, decimal amount)
     {
-        var sessionResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions/open", financeToken, new { openingBalance = 0m });
-        if (!sessionResponse.IsSuccessStatusCode && sessionResponse.StatusCode != HttpStatusCode.Conflict)
-            sessionResponse.EnsureSuccessStatusCode();
+        await OpenCashierSessionAsync(financeToken);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", financeToken,
             new { enrollmentId, amount, method = "Cash", category = "Tuition" });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    /// <summary>
+    /// Ouvre une session de caisse pour le porteur du jeton (idempotent : un 409 « déjà ouverte » est
+    /// un succès pour l'appelant). Encaisser — à l'inscription comme à la Caisse — l'exige désormais,
+    /// Secrétariat compris (le Secrétariat tient sa propre caisse, cf. Volume 7).
+    /// </summary>
+    private async Task OpenCashierSessionAsync(string token)
+    {
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions/open", token, new { openingBalance = 0m });
+        if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.Conflict)
+            response.EnsureSuccessStatusCode();
     }
 
     /// <summary>Noms des élèves renvoyés par GET /students pour une recherche donnée, filtre d'année optionnel.</summary>
@@ -322,6 +332,10 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         var categories = await ListFeeCategoriesAsync(directeur);
 
         var secretaire = await SecretaireTokenAsync();
+        // Encaisser à l'inscription exige une session de caisse ouverte pour l'opérateur — le
+        // Secrétariat tient la sienne (CreateEnrollmentCommandHandler, Volume 7).
+        await OpenCashierSessionAsync(secretaire);
+
         var body = new Dictionary<string, object?>(ToDictionary(NewEnrollmentBody(classroomId, "Awa Ndiaye")))
         {
             ["collectedFees"] = categories.Select(c => new { feeCategoryId = c.Id, months = 1 }).ToList(),
@@ -350,6 +364,56 @@ public class EnrollmentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         rereadReceipt.TotalCollected.Should().Be(Inscription + Mensualite);
         rereadReceipt.CollectedLines.Should().HaveCount(2);
         rereadReceipt.PaymentMethod.Should().Be("MobileMoney", "le mode de règlement est relu du versement");
+    }
+
+    [Fact]
+    public async Task Collecting_Fees_At_Enrollment_Without_An_Open_Cashier_Session_Is_Refused()
+    {
+        // L'encaissement du jour est une opération de caisse : sans session ouverte pour l'opérateur,
+        // il échapperait au rapprochement de clôture (Volume 1 §14). On refuse en 422 — l'inscription
+        // n'est PAS créée, plutôt qu'un versement fantôme hors caisse.
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+        var categories = await ListFeeCategoriesAsync(directeur);
+
+        var secretaire = await SecretaireTokenAsync(); // aucune session ouverte pour lui
+        var body = new Dictionary<string, object?>(ToDictionary(NewEnrollmentBody(classroomId, "Sans Caisse")))
+        {
+            ["collectedFees"] = categories.Select(c => new { feeCategoryId = c.Id, months = 1 }).ToList(),
+            ["paymentMethod"] = "Cash"
+        };
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire, body);
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        // Contre-épreuve : la MÊME inscription sans frais cochés passe (dossier ouvert sans versement).
+        var withoutCollection = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Sans Caisse"));
+        withoutCollection.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task A_Secretariat_Holds_Its_Own_Cashier_Session_And_Can_Record_A_Payment()
+    {
+        // Le Secrétariat n'était pas caissier ; il l'est désormais (Volume 7). Il ouvre sa session,
+        // encaisse un versement autonome à la Caisse, sur une inscription qu'il a lui-même ouverte
+        // sans versement.
+        var directeur = await DirecteurTokenAsync();
+        var classroomId = await SeedEnrollableSchoolAsync(directeur);
+
+        var secretaire = await SecretaireTokenAsync();
+        var enrollResponse = await SendAsync(HttpMethod.Post, "/api/v1/enrollments", secretaire,
+            NewEnrollmentBody(classroomId, "Élève À Encaisser"));
+        enrollResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var receipt = (await enrollResponse.Content.ReadFromJsonAsync<Receipt>())!;
+
+        var openSession = await SendAsync(HttpMethod.Post, "/api/v1/finance/sessions/open", secretaire,
+            new { openingBalance = 0m });
+        openSession.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var payResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", secretaire,
+            new { enrollmentId = receipt.EnrollmentId, amount = Inscription, method = "Cash", category = "Tuition" });
+        payResponse.StatusCode.Should().Be(HttpStatusCode.Created);
     }
 
     [Fact]

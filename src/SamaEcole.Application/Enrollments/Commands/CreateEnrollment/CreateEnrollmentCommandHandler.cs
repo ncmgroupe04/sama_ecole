@@ -93,6 +93,28 @@ public class CreateEnrollmentCommandHandler(
             ApplyCollectedFees(lines, request.CollectedFees);
             var totalCollected = lines.Sum(l => l.AmountCollected);
 
+            // L'encaissement du jour est une opération de CAISSE à part entière : comme
+            // RecordPaymentCommandHandler, il exige une session de caisse OUVERTE pour l'opérateur et s'y
+            // rattache — sans quoi ces espèces échapperaient au rapprochement de clôture (Volume 1 §14 :
+            // « tous les encaissements de guichet de la journée sont rattachés à la session ouverte »).
+            // Aucun encaissement ⇒ aucune session requise : on peut ouvrir un dossier sans versement et
+            // encaisser plus tard depuis l'écran Caisse. Le refus intervient AVANT le numéro de reçu :
+            // rien n'est consommé (le rollback rembobinerait de toute façon, mais autant échouer tôt).
+            CashierSession? cashierSession = null;
+            if (totalCollected > 0)
+            {
+                cashierSession = await dbContext.CashierSessions
+                    .FirstOrDefaultAsync(
+                        s => s.CashierId == actorId && s.Status == CashierSessionStatus.Open, ct)
+                    ?? throw new ValidationException([
+                        new ValidationFailure(
+                            "CashierSession",
+                            "Aucune session de caisse ouverte : ouvrez votre caisse (menu Caisse) avant "
+                            + "d'encaisser des frais à l'inscription, ou enregistrez l'inscription sans "
+                            + "versement — les frais pourront être encaissés ensuite depuis la Caisse.")
+                    ]);
+            }
+
             // Numéro officiel du reçu (JGK-E02), attribué DANS la transaction comme le matricule : s'il y
             // a le moindre rollback ensuite, le compteur de reçus est rembobiné avec — aucun trou.
             var receiptNumber = await matriculeGenerator.GenerateNextReceiptNumberAsync(schoolId, ct);
@@ -131,6 +153,8 @@ public class CreateEnrollmentCommandHandler(
                 {
                     SchoolId = schoolId,
                     EnrollmentId = enrollment.Id,
+                    // Non-null dès que totalCollected > 0 : la garde ci-dessus a jeté sinon.
+                    CashierSessionId = cashierSession!.Id,
                     Amount = totalCollected,
                     Method = request.PaymentMethod,
                     Status = totalCollected >= totalDue ? PaymentStatus.Paid : PaymentStatus.Partial,

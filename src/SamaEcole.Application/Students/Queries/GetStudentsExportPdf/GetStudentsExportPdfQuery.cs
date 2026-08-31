@@ -20,6 +20,13 @@ public record GetStudentsExportPdfQuery : IRequest<StudentsExportPdfResult>, IAu
     /// couvre l'annuaire complet de l'école.
     /// </summary>
     public bool ActiveYearOnly { get; init; }
+
+    /// <summary>
+    /// L'INVERSE : ne conserver que les élèves SANS inscription (non annulée) pour l'année active —
+    /// même sémantique que GetStudentsQuery.NotEnrolledForActiveYear, pour que l'export reflète la
+    /// vue « Non inscrits » de l'écran Élèves. Exclusif d'<see cref="ActiveYearOnly"/>.
+    /// </summary>
+    public bool NotEnrolledForActiveYear { get; init; }
 }
 
 public record StudentsExportPdfResult(byte[] Content);

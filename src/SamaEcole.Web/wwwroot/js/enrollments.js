@@ -71,6 +71,7 @@ document.addEventListener('alpine:init', () => {
 
         async init() {
             await this.loadReferenceData();
+            await this.applyStudentFromQuery();
             if (window.formDraft && window.formDraft.has('enrollment_form')) {
                 this.hasDraft = true;
             }
@@ -100,6 +101,39 @@ document.addEventListener('alpine:init', () => {
         clearDraft() {
             if (window.formDraft) window.formDraft.clear('enrollment_form');
             this.hasDraft = false;
+        },
+
+        /**
+         * Raccourci « Inscrire maintenant » venu de l'écran Élèves (?studentId=…&matricule=…) :
+         * on bascule en réinscription et on pré-sélectionne l'élève. Le matricule sert de
+         * recherche ciblée quand l'élève n'est pas dans le lot initial (plafonné à 100). Sans
+         * correspondance, on laisse le formulaire en réinscription pour une sélection manuelle.
+         */
+        async applyStudentFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const studentId = params.get('studentId');
+            if (!studentId) return;
+
+            await this.selectMode('ReEnrollment');
+
+            let student = this.students.find((s) => s.id === studentId);
+            if (!student) {
+                const term = (params.get('matricule') || '').trim();
+                if (term) {
+                    try {
+                        const page = await window.api.get(
+                            `/students?page=1&pageSize=20&search=${encodeURIComponent(term)}`);
+                        student = (page.items || []).find((s) => s.id === studentId);
+                        if (student) {
+                            this.students = [student, ...this.students.filter((s) => s.id !== student.id)];
+                        }
+                    } catch (err) {
+                        /* recherche ciblée impossible : l'utilisateur sélectionnera manuellement */
+                    }
+                }
+            }
+
+            if (student) this.selectStudent(student);
         },
 
         async loadReferenceData() {

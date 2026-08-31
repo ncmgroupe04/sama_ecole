@@ -39,6 +39,24 @@ public class GetStudentsQueryHandler(IApplicationDbContext dbContext)
             query = query.Where(s => dbContext.Enrollments.Any(e =>
                 e.StudentId == s.Id && e.SchoolYearId == yearId && e.Status != EnrollmentStatus.Cancelled));
         }
+        // Vue « Non inscrits » (miroir exact du filtre ci-dessus) : élèves de l'annuaire SANS inscription
+        // vivante pour l'année active — ceux créés/importés puis pas encore (ré)inscrits. `else if` :
+        // exclusif d'ActiveYearOnly, qui l'emporte si les deux arrivent vrais. Sans année active,
+        // personne n'est inscrit ⇒ on ne filtre pas (annuaire complet), au lieu de la liste vide que
+        // renvoie ActiveYearOnly — là, « non inscrits » garde un sens, « inscrits » non.
+        else if (request.NotEnrolledForActiveYear)
+        {
+            var activeYearId = await dbContext.SchoolYears.AsNoTracking()
+                .Where(y => y.IsActive)
+                .Select(y => (Guid?)y.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (activeYearId is { } yearId)
+            {
+                query = query.Where(s => !dbContext.Enrollments.Any(e =>
+                    e.StudentId == s.Id && e.SchoolYearId == yearId && e.Status != EnrollmentStatus.Cancelled));
+            }
+        }
 
         if (request.ClassroomId is { } classroomId)
         {

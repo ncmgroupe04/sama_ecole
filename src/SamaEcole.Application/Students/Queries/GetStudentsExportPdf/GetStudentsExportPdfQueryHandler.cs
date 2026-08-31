@@ -40,6 +40,23 @@ public class GetStudentsExportPdfQueryHandler(
             query = query.Where(s => dbContext.Enrollments.Any(e =>
                 e.StudentId == s.Id && e.SchoolYearId == yearId && e.Status != EnrollmentStatus.Cancelled));
         }
+        // Vue « Non inscrits » (miroir de GetStudentsQueryHandler) : élèves SANS inscription vivante
+        // pour l'année active. `else if` : exclusif d'ActiveYearOnly. Sans année active, on ne filtre
+        // pas — tout l'annuaire est « non inscrit ». On ne pose PAS schoolYearLabel : l'en-tête du PDF
+        // n'annonce pas une année pour une liste d'élèves qui n'y sont justement pas rattachés.
+        else if (request.NotEnrolledForActiveYear)
+        {
+            var activeYearId = await dbContext.SchoolYears.AsNoTracking()
+                .Where(y => y.IsActive)
+                .Select(y => (Guid?)y.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (activeYearId is { } yearId)
+            {
+                query = query.Where(s => !dbContext.Enrollments.Any(e =>
+                    e.StudentId == s.Id && e.SchoolYearId == yearId && e.Status != EnrollmentStatus.Cancelled));
+            }
+        }
 
         if (request.ClassroomId is { } classroomId)
         {

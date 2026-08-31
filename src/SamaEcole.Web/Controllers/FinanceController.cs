@@ -187,10 +187,15 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
 
     // ------------------------------------------------------------------ Caisse (JGK-F02)
 
-    // ÉCRITURE réservée au Directeur et à la Finance : c'est la Finance qui encaisse (le Secrétariat, lui,
-    // compose le montant dû à l'inscription). Miroir exact d'EnrollmentsController (Directeur+Secrétariat)
-    // — la règle #4 sépare qui fixe le dû de qui l'encaisse.
-    private const string PaymentWriters = "Directeur,Finance";
+    // ENCAISSEMENT (JGK-F02 + inscription au guichet) : Directeur, Finance ET Secrétariat. Le Secrétariat
+    // tient sa propre caisse — il ouvre une session, encaisse (à l'inscription ou ici), la clôture avec
+    // comptage physique. La règle #4 n'interdit pas au Secrétariat d'encaisser : elle sépare qui FIXE le
+    // dû (Secrétariat/Directeur, jamais Finance) de la santé financière AGRÉGÉE (liste globale des
+    // paiements, dashboards, trésorerie), qui reste réservée à Directeur/Finance ci-dessous.
+    private const string PaymentWriters = "Directeur,Finance,Secretariat";
+
+    /// <summary>Opérations de caisse (session + encaissement), ouvertes à quiconque tient une caisse.</summary>
+    private const string CashierRoles = "Directeur,Finance,Secretariat";
 
     /// <summary>
     /// Point d'entrée de l'écran caisse : à partir d'un élève trouvé par recherche, l'inscription et le
@@ -337,13 +342,13 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     /// ou afficher le statut de celle déjà ouverte (ticket JGK — câblage écran, 27/08/2026).
     /// </summary>
     [HttpGet("sessions/current")]
-    [Authorize(Roles = "Directeur,Finance")]
+    [Authorize(Roles = CashierRoles)]
     [ProducesResponseType<CurrentCashierSessionDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCurrentSession(CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetCurrentCashierSessionQuery(), cancellationToken));
 
     [HttpPost("sessions/open")]
-    [Authorize(Roles = "Directeur,Finance")]
+    [Authorize(Roles = CashierRoles)]
     [ProducesResponseType<Guid>(StatusCodes.Status200OK)]
     public async Task<IActionResult> OpenSession([FromBody] OpenCashierSessionCommand command, CancellationToken cancellationToken)
     {
@@ -355,7 +360,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
 
     /// <summary>Le comptage physique (JGK-F09) est obligatoire ; le motif d'écart ne l'est que si un écart est réellement constaté (422 sinon).</summary>
     [HttpPost("sessions/{id}/close")]
-    [Authorize(Roles = "Directeur,Finance")]
+    [Authorize(Roles = CashierRoles)]
     [ProducesResponseType<CloseCashierSessionResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
@@ -369,7 +374,7 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     }
 
     [HttpGet("sessions/{id}/closing-report")]
-    [Authorize(Roles = "Directeur,Finance")]
+    [Authorize(Roles = CashierRoles)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileResult))]
     public async Task<IActionResult> GetClosingReportPdf(Guid id, CancellationToken cancellationToken)
     {

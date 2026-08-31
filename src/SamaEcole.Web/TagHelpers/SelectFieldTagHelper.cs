@@ -141,7 +141,7 @@ public class SelectFieldTagHelper : TagHelper
                             <li role="option" :aria-selected="({{Model}} === option.value).toString()">
                                 <button type="button" x-on:click="{{Model}} = option.value; close(){{onChange}}"
                                         :class="{{Model}} === option.value ? 'bg-primary-50 text-primary-700' : 'text-gray-700 hover:bg-gray-50'"
-                                        class="w-full rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors" x-text="option.label"></button>
+                                        class="w-full truncate rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors" x-text="option.label" :title="option.label"></button>
                             </li>
                         </template>
                         <li x-show="filteredOptions.length === 0" x-cloak class="px-3 py-2 text-sm text-gray-400">Aucun résultat</li>

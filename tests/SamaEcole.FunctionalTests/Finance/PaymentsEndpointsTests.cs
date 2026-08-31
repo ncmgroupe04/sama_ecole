@@ -13,8 +13,10 @@ namespace SamaEcole.FunctionalTests.Finance;
 /// Ticket JGK-F02 — caisse, de bout en bout contre un vrai PostgreSQL.
 ///
 /// Deux critères du ticket :
-///   • séparation des rôles (règle #4) — la Finance encaisse, le Secrétariat NON : test d'autorisation
-///     négatif obligatoire (Secrétariat → 403 sur POST /finance/payments), miroir de l'inscription ;
+///   • séparation des rôles (règle #4) — ce que la règle sépare est FIXER LE DÛ (Secrétariat/Directeur,
+///     jamais Finance) de la santé financière AGRÉGÉE (Directeur/Finance) ; ENCAISSER, lui, est ouvert
+///     au Secrétariat qui tient sa propre caisse (cf. Volume 7). On le prouve par le test positif
+///     Secrétariat + session ouverte → 201 sur POST /finance/payments ;
 ///   • on n'encaisse jamais au-delà du solde, et un reçu officiel sort du pipeline.
 /// (La non-régression sous concurrence est prouvée à part par PaymentConcurrencyTests, en intégration.)
 /// </summary>
@@ -231,16 +233,36 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     }
 
     [Fact]
-    public async Task A_Secretariat_Must_Not_Be_Allowed_To_Record_A_Payment()
+    public async Task A_Secretariat_With_An_Open_Session_Can_Record_A_Payment()
     {
-        // Critère miroir de l'inscription : la Finance encaisse, le Secrétariat compose le dû mais
-        // n'encaisse pas (règle #4). Le contrôle de rôle précède tout traitement.
+        // Le Secrétariat tient sa propre caisse (Volume 7) : session ouverte à son nom, il encaisse
+        // comme la Finance. La règle #4 lui interdit la santé financière agrégée, pas l'encaissement.
+        var enrollment = await SeedEnrolledStudentAsync();
+
         var secretaire = await SecretaireTokenAsync();
+        await OpenFinanceSessionAsync(secretaire);
 
         var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", secretaire,
-            PaymentBody(Guid.NewGuid(), 5_000m));
+            PaymentBody(enrollment.EnrollmentId, 30_000m));
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var result = (await response.Content.ReadFromJsonAsync<PaymentResult>())!;
+        result.ReceiptNumber.Should().MatchRegex(@"^REC-\d{4}-\d{4}$");
+        result.Amount.Should().Be(30_000m);
+    }
+
+    [Fact]
+    public async Task Recording_A_Payment_Without_Any_Open_Session_Is_Refused()
+    {
+        // Invariant de caisse (Volume 1 §14) : pas de session ouverte pour l'opérateur ⇒ 422, quel que
+        // soit le rôle. Vérifié ici pour la Finance, hors de tout OpenFinanceSessionAsync.
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance,
+            PaymentBody(enrollment.EnrollmentId, 5_000m));
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]

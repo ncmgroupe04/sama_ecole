@@ -226,6 +226,18 @@ logique que les documents d'inscription ci-dessus) : l'écran caisse doit pouvoi
 des encaissements (`GET /finance/payments`, restreinte à Directeur et Finance, `FinanceController.ListPayments`)
 ni au tableau de bord financier agrégé.
 
+**Le Secrétariat tient sa propre caisse.** L'ENCAISSEMENT n'est pas réservé à la Finance : le Secrétariat
+ouvre sa session de caisse (`POST /finance/sessions/open`), encaisse — à l'inscription (bloc « Frais &
+encaissement ») comme depuis l'écran Caisse (`POST /finance/payments`) — et la clôture avec comptage
+physique (`POST /finance/sessions/{id}/close`, plus son rapport de clôture). Chaque caissier a sa propre
+session, keyée sur son `UserId` ; tout encaissement y est rattaché (`Payment.CashierSessionId`) et entre
+dans le rapprochement de clôture (Volume 1 §14). Ce que la règle #4 sépare, ce n'est pas « encaisser »,
+c'est **fixer le dû** (Secrétariat/Directeur, jamais Finance) d'un côté, et de l'autre la santé financière
+AGRÉGÉE — liste globale des paiements, tableaux de bord Finance et Trésorerie, journal de caisse de
+l'établissement — qui reste réservée à Directeur/Finance. Corollaire : encaisser des frais au moment de
+l'inscription EXIGE désormais une session de caisse ouverte (422 sinon) ; sans session, l'inscription
+s'enregistre sans versement et les frais s'encaissent ensuite depuis la Caisse.
+
 **Notes**
 
 | Action | Directeur | Secrétariat | Enseignant |

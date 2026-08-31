@@ -43,6 +43,15 @@ document.addEventListener('alpine:init', () => {
         // (GetStudentsQuery), qui reste par défaut l'annuaire complet.
         yearScope: 'active',
 
+        // Libellé de l'année scolaire active (ex. « 2026-2027 »), pour les messages « pas encore
+        // inscrit pour … ». Confort d'affichage, chargé à part : jamais bloquant s'il manque.
+        activeYearLabel: '',
+
+        // Élèves de l'annuaire (aux filtres de classe/genre courants) SANS inscription pour l'année
+        // active : ceux que le basculement sur « Tous les élèves » ferait apparaître. Déduit côté
+        // client de deux comptages, uniquement en vue « Inscrits cette année » et hors recherche texte.
+        nonEnrolledCount: 0,
+
 
         // Fiche élève (JGK-D02) — detailStudent porte la ligne de liste (affichage immédiat de
         // l'identité), studentDetail la fiche complète chargée depuis GET /students/{id}
@@ -107,6 +116,9 @@ document.addEventListener('alpine:init', () => {
         // Confirmation « Élève ajouté » affichée après un enregistrement réussi.
         showAddedDialog: false,
         addedStudentName: '',
+        // Élève tout juste créé { id, matricule, fullName } : cible du raccourci « Inscrire
+        // maintenant » de cette confirmation (voir goToEnrollCreated).
+        createdStudent: null,
 
         // Créer un élève, corriger/archiver une fiche, et gérer le cycle de vie d'une inscription
         // (annuler, déclarer un abandon/transfert) sont réservés au Directeur et au Secrétariat côté
@@ -193,7 +205,18 @@ document.addEventListener('alpine:init', () => {
                 this.classroomFilter = urlParams.get('classroomId');
             }
             this.loadClassrooms();
+            this.loadActiveYear();
             this.loadStudents();
+        },
+
+        async loadActiveYear() {
+            try {
+                const years = await window.api.get('/school-years');
+                const active = Array.isArray(years) ? years.find(y => y.isActive) : null;
+                this.activeYearLabel = active ? active.label : '';
+            } catch (err) {
+                this.activeYearLabel = ''; // libellé de confort : on n'interrompt jamais la liste pour ça
+            }
         },
 
         async loadClassrooms() {
@@ -213,7 +236,12 @@ document.addEventListener('alpine:init', () => {
                 if (this.search.trim()) params.set('search', this.search.trim());
                 if (this.classroomFilter) params.set('classroomId', this.classroomFilter);
                 if (this.genderFilter) params.set('gender', this.genderFilter);
-                if (this.yearScope === 'active') params.set('activeYearOnly', 'true');
+                const activeScope = this.yearScope === 'active';
+                if (activeScope) {
+                    params.set('activeYearOnly', 'true');
+                } else if (this.yearScope === 'notEnrolled') {
+                    params.set('notEnrolledForActiveYear', 'true');
+                }
 
                 const data = await window.api.get(`/students?${params.toString()}`);
                 this.students = data.items || [];
@@ -221,10 +249,34 @@ document.addEventListener('alpine:init', () => {
                 this.girlsCount = data.girlsCount || 0;
                 this.boysCount = data.boysCount || 0;
                 this.newEnrollmentsCount = data.newEnrollmentsCount || 0;
+
+                // Bandeau « pas encore inscrits » : seulement en vue restreinte, hors recherche
+                // texte (transitoire) et sur la 1re page (un changement de filtre y ramène, une
+                // création aussi — inutile de recompter à chaque pagination). Comptage léger de
+                // l'annuaire aux mêmes filtres de classe / genre ; la différence est l'effectif
+                // que « Tous les élèves » révélerait.
+                if (!activeScope) {
+                    this.nonEnrolledCount = 0;
+                } else if (this.page === 1 && !this.search.trim()) {
+                    await this.countNonEnrolled(params);
+                }
             } catch (err) {
                 this.error = window.api.toMessage(err, "Erreur lors du chargement des élèves.");
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        async countNonEnrolled(baseParams) {
+            try {
+                const p = new URLSearchParams(baseParams);
+                p.delete('activeYearOnly');
+                p.set('page', '1');
+                p.set('pageSize', '1');
+                const all = await window.api.get(`/students?${p.toString()}`);
+                this.nonEnrolledCount = Math.max((all.totalCount || 0) - this.totalCount, 0);
+            } catch (err) {
+                this.nonEnrolledCount = 0; // le bandeau est un confort, jamais bloquant
             }
         },
 
@@ -252,6 +304,7 @@ document.addEventListener('alpine:init', () => {
             const params = new URLSearchParams();
             if (this.classroomFilter) params.set('classroomId', this.classroomFilter);
             if (this.yearScope === 'active') params.set('activeYearOnly', 'true');
+            else if (this.yearScope === 'notEnrolled') params.set('notEnrolledForActiveYear', 'true');
 
             const classroom = this.classrooms.find(c => c.id === this.classroomFilter);
             const title = classroom ? `Liste des élèves — ${classroom.name}` : 'Liste des élèves';
@@ -695,6 +748,8 @@ document.addEventListener('alpine:init', () => {
                 // Fermer la modale et réinitialiser
                 this.isCreateOpen = false;
                 this.addedStudentName = this.newStudent.fullName;
+                // Cible du raccourci « Inscrire maintenant » — capturée AVANT la remise à zéro du formulaire.
+                this.createdStudent = { id: created.id, matricule: created.matricule, fullName: this.newStudent.fullName };
                 this.newStudent = { fullName: '', birthDate: '', birthPlace: '', gender: 'M', classroomId: '', photoUrl: '', photoData: '', guardianName: '', guardianPhone: '', guardianEmail: '', address: '' };
 
                 // Rafraîchir la liste
@@ -722,6 +777,26 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.isSubmitting = false;
             }
+        },
+
+        /**
+         * « Inscrire maintenant » depuis la confirmation d'ajout : ouvre l'écran Inscriptions
+         * pré-réglé pour cet élève. Une fiche déjà créée s'inscrit par le chemin ReEnrollment
+         * (voir CreateEnrollmentCommandHandler) ; le matricule accompagne l'id pour permettre à
+         * l'écran Inscriptions une recherche ciblée si l'élève n'est pas dans son premier lot.
+         */
+        goToEnrollCreated() {
+            if (!this.createdStudent) return;
+            const p = new URLSearchParams({ studentId: this.createdStudent.id });
+            if (this.createdStudent.matricule) p.set('matricule', this.createdStudent.matricule);
+            window.location.href = `/inscriptions?${p.toString()}`;
+        },
+
+        /** Phrase « pas encore inscrit … » de la confirmation d'ajout, avec l'année active si connue. */
+        addedNotEnrolledHint() {
+            return this.activeYearLabel
+                ? `Pas encore inscrit(e) pour l'année ${this.activeYearLabel}.`
+                : "Pas encore inscrit(e) pour l'année active.";
         },
 
         // ------------------------------------------------------------ Import de masse (rentrée scolaire)
