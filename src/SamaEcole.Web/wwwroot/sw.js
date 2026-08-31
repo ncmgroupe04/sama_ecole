@@ -12,7 +12,12 @@
  * - Fournir une résilience de navigation (Network-First avec revalidation pour les pages HTML), mais SANS JAMAIS intercepter la logique métier ni les transactions RLS.
  */
 
-const CACHE_NAME = 'samaecole-static-v1.0.0';
+// Bumper cette version à chaque déploiement qui SUPPRIME un asset front ou réécrit un fichier JS/CSS
+// servi en Cache-First : le handler `activate` purge alors tous les caches nommés autrement, ce qui
+// force la reprise des nouveaux fichiers sans que l'utilisateur ait à vider son cache manuellement.
+// v1.0.1 — retrait de PDF.js (pdf.min.mjs / worker / polices) + réécriture de pdf-preview.js
+//          (aperçu PDF confié à la visionneuse native du navigateur dans un <iframe>).
+const CACHE_NAME = 'samaecole-static-v1.0.1';
 
 const STATIC_ASSETS = [
     '/',
