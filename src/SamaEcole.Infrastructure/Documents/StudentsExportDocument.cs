@@ -17,7 +17,7 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
     public DocumentMetadata GetMetadata() => new()
     {
         Title = $"Liste des élèves — {model.ClassName ?? "Toutes les classes"}",
-        Author = model.SchoolName
+        Author = model.SchoolName ?? string.Empty
     };
 
     public void Compose(IDocumentContainer container)
@@ -40,7 +40,7 @@ public class StudentsExportDocument(StudentsExportModel model) : IDocument
         {
             column.Item().Row(row =>
             {
-                row.RelativeItem().Text(model.SchoolName.ToUpperInvariant()).Bold().FontSize(12);
+                row.RelativeItem().Text((model.SchoolName ?? string.Empty).ToUpperInvariant()).Bold().FontSize(12);
                 row.RelativeItem().AlignRight().Text("LISTE DES ÉLÈVES").Bold().FontSize(12);
             });
 

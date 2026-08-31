@@ -10,5 +10,10 @@ namespace SamaEcole.Infrastructure.Documents;
 /// </summary>
 internal static class NoBreakText
 {
-    public static string NoBreak(string value) => value.Replace('-', '‑');
+    /// <summary>
+    /// <paramref name="value"/> null ou vide ressort en chaîne vide : un identifiant manquant ne doit
+    /// jamais faire échouer QuestPDF (NRE dans <c>Compose</c>) et donc l'émission de tout le document.
+    /// </summary>
+    public static string NoBreak(string? value) =>
+        string.IsNullOrEmpty(value) ? string.Empty : value.Replace('-', '‑');
 }
