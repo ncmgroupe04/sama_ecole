@@ -150,6 +150,24 @@ document.addEventListener('alpine:init', () => {
         isResetting: false,
         resetSummary: null,
 
+        // --- Bac à sable / mode réel ---
+        // isLiveMode pilote les DEUX régimes de la Zone de danger : test (purge + « Passer en mode
+        // réel ») ou réel (lecture seule + éventuellement « Repasser en mode test »). Chargé dans
+        // load() depuis GET /schools/current/mode ; le serveur revérifie tout (GoLiveCommandHandler,
+        // ResetSchoolDataCommandHandler), cet état n'est qu'un confort d'affichage.
+        isLiveMode: false,
+        wentLiveAt: null,
+        // Drapeau d'ENVIRONNEMENT (Development ou SAMA_RETOUR_MODE_TEST_AUTORISE=true), pas un
+        // process.env côté front : c'est l'API qui décide si le bouton « Repasser en mode test »
+        // existe. Toujours faux en vraie production.
+        revertToTestAvailable: false,
+        isGoLiveOpen: false,
+        goLiveConfirmation: '',
+        goLiveError: null,
+        isGoingLive: false,
+        isRevertingToTest: false,
+        revertToTestError: null,
+
         // « PURGER » est comparé à la casse — comme côté serveur (ResetSchoolDataConfirmation.Keyword) :
         // c'est le geste délibéré qui fait la valeur de la garde. Le nom de l'école, lui, tolère la
         // casse et les espaces de bord : le Directeur le recopie, il n'a pas à en refaire la graphie.
@@ -159,6 +177,17 @@ document.addEventListener('alpine:init', () => {
 
             const schoolName = (this.profile.name || '').trim();
             return typed === 'PURGER'
+                || (schoolName !== '' && typed.toLocaleLowerCase() === schoolName.toLocaleLowerCase());
+        },
+
+        // Même garde que resetConfirmationMatches, mot-clé « CONFIRMER » — miroir exact de
+        // GoLiveConfirmation.Matches côté serveur (mot-clé à la casse, nom d'école tolérant).
+        get goLiveConfirmationMatches() {
+            const typed = (this.goLiveConfirmation || '').trim();
+            if (!typed) return false;
+
+            const schoolName = (this.profile.name || '').trim();
+            return typed === 'CONFIRMER'
                 || (schoolName !== '' && typed.toLocaleLowerCase() === schoolName.toLocaleLowerCase());
         },
 
@@ -198,12 +227,17 @@ document.addEventListener('alpine:init', () => {
             try {
                 const requests = [
                     window.api.get('/schools/current'),
-                    window.api.get('/schools/current/settings')
+                    window.api.get('/schools/current/settings'),
+                    window.api.get('/schools/current/mode')
                 ];
                 if (this.canViewMentions) requests.push(window.api.get('/grades/mentions'));
 
-                const [profile, config, mentions] = await Promise.all(requests);
+                const [profile, config, mode, mentions] = await Promise.all(requests);
                 if (this.canViewMentions) this.mentions = mentions;
+
+                this.isLiveMode = !!(mode && mode.isLive);
+                this.wentLiveAt = mode ? mode.wentLiveAt : null;
+                this.revertToTestAvailable = !!(mode && mode.revertToTestAvailable);
 
                 this.profile = this.toProfileState(profile);
                 this.config = {
@@ -694,6 +728,60 @@ document.addEventListener('alpine:init', () => {
         closeResetSummary() {
             this.resetSummary = null;
             window.location.reload();
+        },
+
+        // ------------------------------------------- Bac à sable → mode réel
+
+        openGoLive() {
+            this.goLiveConfirmation = '';
+            this.goLiveError = null;
+            this.isGoLiveOpen = true;
+        },
+
+        closeGoLive() {
+            // Ne se ferme pas pendant l'appel : le rechargement de page qui suit un succès s'en charge.
+            if (this.isGoingLive) return;
+            this.isGoLiveOpen = false;
+            this.goLiveConfirmation = '';
+            this.goLiveError = null;
+        },
+
+        async confirmGoLive() {
+            if (!this.goLiveConfirmationMatches || this.isGoingLive) return;
+
+            this.isGoingLive = true;
+            this.goLiveError = null;
+            try {
+                await window.api.post('/schools/current/go-live', {
+                    confirmation: this.goLiveConfirmation.trim()
+                });
+
+                // Rechargement COMPLET : la pastille « Mode test » de la barre supérieure, les deux
+                // régimes de la Zone de danger et l'assistant de démarrage doivent tous refléter le
+                // nouveau régime. isGoingLive reste vrai — la page part.
+                window.location.reload();
+            } catch (err) {
+                this.goLiveError = window.api.toMessage(err, "Le passage en mode réel a échoué. Aucun changement n'a été enregistré.");
+                this.isGoingLive = false;
+            }
+        },
+
+        // ---------------------------- Retour mode test (recette / environnements jetables uniquement)
+
+        async revertToTest() {
+            if (this.isRevertingToTest) return;
+
+            this.isRevertingToTest = true;
+            this.revertToTestError = null;
+            try {
+                // Endpoint monté seulement si revertToTestAvailable ; un 404 ici signifie « pas sur cet
+                // environnement » — le message générique convient.
+                await window.api.post('/schools/current/dev/revert-to-test');
+                window.location.reload();
+            } catch (err) {
+                this.revertToTestError = window.api.toMessage(err, "Le retour en mode test a échoué.");
+                this.isRevertingToTest = false;
+            }
         },
 
         // Même contournement du sérialiseur decimal que Subjects.formatCoefficient (16.00 → 16).

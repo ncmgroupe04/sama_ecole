@@ -42,6 +42,17 @@ public class ResetSchoolDataCommandHandler(
             .FirstOrDefaultAsync(s => s.Id == schoolId, cancellationToken)
             ?? throw new NotFoundException("École", schoolId);
 
+        // Mode réel : la purge n'est plus une option. Les données enregistrées font partie de la
+        // comptabilité, l'invariant d'immuabilité (AGENTS.md règle #6) interdit de les effacer. On
+        // échoue AVANT même de regarder le mot de confirmation. La bascule s'annule sur les seuls
+        // environnements jetables (RevertToTestCommand), jamais en production.
+        if (school.WentLiveAt is { } wentLiveAt)
+        {
+            throw new BusinessRuleException(
+                $"La réinitialisation n'est possible qu'en mode test. Cet établissement est passé en mode réel le {wentLiveAt:dd/MM/yyyy} : les données enregistrées ne peuvent plus être effacées.",
+                "RESET_UNAVAILABLE_LIVE_MODE");
+        }
+
         EnsureConfirmed(request.Confirmation, school.Name);
 
         logger.LogWarning(

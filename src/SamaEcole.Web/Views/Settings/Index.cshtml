@@ -788,7 +788,9 @@
  le mot de confirmation. Reste sur le spoke « Paramètres système » (pas un spoke à part) : une
  action irréversible d'administration a sa place ici, tout en bas, jamais mêlée aux réglages
  courants au-dessus (Volume 5 §2 — hiérarchie visuelle). *@
- <div x-show="isDirecteur" x-cloak class="mt-6 rounded-xl border border-red-200 bg-red-50/50 p-6">
+ @* ── Régime MODE TEST (bac à sable) : la purge est disponible, et on peut passer en mode réel.
+ isLiveMode vient de GET /schools/current/mode ; le serveur revérifie chaque action. *@
+ <div x-show="isDirecteur && !isLiveMode" x-cloak class="mt-6 rounded-xl border border-red-200 bg-red-50/50 p-6">
  <div class="flex items-center gap-2">
  <icon name="alert-circle" class="w-5 h-5 text-red-600" />
  <h2 class="text-sm font-semibold uppercase tracking-wider text-red-700">Zone de danger</h2>
@@ -813,6 +815,59 @@
  Réinitialiser l'école
  </button>
  </div>
+
+ <div class="my-5 border-t border-red-200"></div>
+
+ <div class="flex flex-col gap-4 rounded-xl border border-primary-200 bg-white p-5 lg:flex-row lg:items-center lg:justify-between">
+ <div class="max-w-2xl">
+ <p class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+ <icon name="shield" class="w-4 h-4 text-primary-600" />
+ Passer en mode réel
+ </p>
+ <p class="mt-1 text-sm text-slate-500">
+ Fait passer l'établissement en exploitation réelle. Les données enregistrées deviennent
+ définitives et la réinitialisation ci-dessus n'est plus proposée.
+ <span class="font-medium text-slate-700">Cette bascule est définitive.</span>
+ </p>
+ </div>
+ <button type="button" x-on:click="openGoLive()"
+ class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2">
+ <icon name="shield" class="w-4 h-4" />
+ Passer en mode réel
+ </button>
+ </div>
+ </div>
+
+ @* ── Régime MODE RÉEL : lecture seule. La purge n'existe plus. Seule reste, sur un
+ environnement jetable (revertToTestAvailable, issu de l'API — jamais process.env), la porte
+ de recette « Repasser en mode test ». *@
+ <div x-show="isDirecteur && isLiveMode" x-cloak class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
+ <div class="flex items-start gap-3">
+ <icon name="lock-closed" class="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+ <div>
+ <h2 class="text-sm font-semibold text-slate-900">Mode réel actif</h2>
+ <p class="mt-1 max-w-2xl text-sm text-slate-500">
+ Cette entreprise est passée en exploitation réelle<span x-show="wentLiveAt" x-cloak> le <span x-text="wentLiveAt ? new Date(wentLiveAt).toLocaleDateString('fr-FR') : ''"></span></span>.
+ La réinitialisation des données n'est plus disponible : les élèves, inscriptions, paiements et
+ documents enregistrés font partie de la comptabilité et ne peuvent pas être effacés.
+ </p>
+ </div>
+ </div>
+
+ <template x-if="revertToTestAvailable">
+ <div class="mt-5 border-t border-dashed border-slate-300 pt-5">
+ <p class="text-xs">
+ <span class="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 font-semibold uppercase tracking-wider text-amber-800">Bac à sable</span>
+ <span class="ml-2 text-slate-500">— repasser l'entreprise en mode test pour rejouer la bascule. Indisponible en production.</span>
+ </p>
+ <button type="button" x-on:click="revertToTest()" :disabled="isRevertingToTest"
+ class="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
+ <icon name="arrow-down" class="w-4 h-4" />
+ <span x-text="isRevertingToTest ? 'Retour…' : 'Repasser en mode test'"></span>
+ </button>
+ <div x-show="revertToTestError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="revertToTestError"></div>
+ </div>
+ </template>
  </div>
  </div>
 
@@ -972,6 +1027,50 @@
  :disabled="!resetConfirmationMatches || isResetting"
  class="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2">
  <span x-text="isResetting ? 'Réinitialisation…' : 'Confirmer la réinitialisation'"></span>
+ </button>
+ </div>
+ </modal-shell>
+
+ @* ================== Confirmation du passage en mode réel ==================
+ Même patron que la réinitialisation : un mot à recopier (« CONFIRMER » ou le nom de l'école)
+ déverrouille le bouton, et rien de plus. Le serveur revérifie la garde (GoLiveCommandHandler) —
+ cette modale ne protège que l'interface. Accent PRIMAIRE, pas rouge : ce n'est pas une
+ destruction mais une bascule structurante, elle aussi définitive en production. *@
+ <modal-shell open="isGoLiveOpen" size="lg" on-close="closeGoLive()" title="Passer en mode réel">
+ <div class="rounded-xl border-l-4 border-primary-500 bg-primary-50 p-4">
+ <div class="flex items-start gap-3">
+ <icon name="shield" class="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+ <div class="text-sm text-primary-800">
+ <p class="font-semibold">Cette bascule est définitive.</p>
+ <p class="mt-1">
+ <span class="font-semibold" x-text="profile.name || 'Votre établissement'"></span>
+ passera en exploitation réelle. La réinitialisation des données ne sera plus disponible :
+ tout ce qui est enregistré ensuite fait partie de la comptabilité et ne peut plus être effacé.
+ </p>
+ </div>
+ </div>
+ </div>
+
+ <p class="mt-4 text-sm text-slate-600">
+ Pour confirmer, saisissez <span class="font-mono font-semibold text-slate-900">CONFIRMER</span>
+ ou le nom exact de votre établissement.
+ </p>
+
+ <div class="mt-3">
+ <label for="golive-confirmation" class="sr-only">Mot de confirmation</label>
+ <input id="golive-confirmation" type="text" x-model="goLiveConfirmation" autocomplete="off"
+ placeholder="CONFIRMER" class="input-field" :class="goLiveError && 'input-field-error'"
+ x-on:keydown.enter.prevent="goLiveConfirmationMatches && confirmGoLive()">
+ </div>
+
+ <div x-show="goLiveError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="goLiveError"></div>
+
+ <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeGoLive()" class="btn-modal-secondary group">Annuler</button>
+ <button type="button" x-on:click="confirmGoLive()"
+ :disabled="!goLiveConfirmationMatches || isGoingLive"
+ class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2">
+ <span x-text="isGoingLive ? 'Bascule…' : 'Confirmer le passage en mode réel'"></span>
  </button>
  </div>
  </modal-shell>

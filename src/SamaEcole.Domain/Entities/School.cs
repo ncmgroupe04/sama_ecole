@@ -16,6 +16,20 @@ public class School : AuditableEntity
     public string? LogoUrl { get; set; }
     public EntityStatus Status { get; set; } = EntityStatus.Active;
 
+    /// <summary>
+    /// Bascule « bac à sable → exploitation réelle ». <c>null</c> = mode TEST : le Directeur peut
+    /// réinitialiser (purger) autant de fois qu'il veut pour refaire des essais. DATÉ = mode RÉEL :
+    /// horodatage du passage EXPLICITE, la purge devient indisponible (les données enregistrées font
+    /// partie de la comptabilité — invariant d'immuabilité, AGENTS.md règle #6).
+    ///
+    /// Jamais posé par un effet de bord (première clôture, première inscription…) : c'est une action
+    /// délibérée du Directeur, pour qu'en phase de recette on puisse tout nettoyer sans être bloqué
+    /// par une opération de test. En vraie production le passage est DÉFINITIF ; un retour au mode
+    /// test n'existe que sur les environnements jetables, derrière le drapeau
+    /// <c>SAMA_RETOUR_MODE_TEST_AUTORISE</c> (voir ISandboxModeProvider).
+    /// </summary>
+    public DateTimeOffset? WentLiveAt { get; set; }
+
     /// <summary>Adresse e-mail de contact de l'établissement, imprimée dans l'en-tête du reçu.</summary>
     public string? Email { get; set; }
 

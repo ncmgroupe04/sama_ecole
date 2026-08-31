@@ -409,6 +409,18 @@
  deux affichaient parfois des messages contradictoires. La barre d'état est l'emplacement
  spécifié par le Volume 5 §3.3/§9 pour cette information — elle seule la porte désormais. *@
 
+ @* Pastille « MODE TEST » (bac à sable) : rappelle à tout le personnel que les données saisies
+ sont des essais, purgeables depuis Paramètres › Zone de danger, tant que l'établissement n'est
+ pas passé en mode réel (School.WentLiveAt). Disparaît au passage en mode réel. Source :
+ GET /schools/current/mode, voir sandboxModeBadge(). Informatif — n'ouvre rien. *@
+ <div x-data="sandboxModeBadge()" x-show="loaded && !isLive" x-cloak class="hidden sm:block">
+ <span title="Mode test — les données saisies sont des essais et peuvent être réinitialisées (Paramètres › Zone de danger)"
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-amber-50 text-amber-700 text-sm font-medium ring-1 ring-amber-200">
+ <icon name="lightbulb" class="w-4 h-4" />
+ Mode test
+ </span>
+ </div>
+
  @* Indicateur d'ANNÉE SCOLAIRE ACTIVE (JGK-C01) : rend visible sur chaque écran l'exercice de
  travail courant, dont dépendent inscriptions, frais, notes et finances (résolu serveur via
  SchoolYear.IsActive, voir activeSchoolYearBadge()). Cliquable pour le seul Directeur — vers

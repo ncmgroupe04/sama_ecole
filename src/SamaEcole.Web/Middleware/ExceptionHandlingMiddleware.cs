@@ -55,7 +55,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             // encaissée) — pas une écriture concurrente, mais un conflit avec l'état existant.
             BusinessRuleException businessRuleEx => (
                 HttpStatusCode.Conflict,
-                "BUSINESS_RULE_VIOLATION",
+                businessRuleEx.Code ?? "BUSINESS_RULE_VIOLATION",
                 businessRuleEx.Message,
                 null),
 

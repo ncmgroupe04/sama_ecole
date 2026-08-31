@@ -1,9 +1,11 @@
 using System.IO;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
+using SamaEcole.Application.Schools.Commands.GoLive;
 using SamaEcole.Application.Schools.Commands.ResetSchoolData;
 using SamaEcole.Application.Schools.Commands.UpdateCurrentSchool;
 using SamaEcole.Application.Schools.Queries.GetCurrentSchool;
+using SamaEcole.Application.Schools.Queries.GetSchoolMode;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -31,6 +33,9 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
     /// côté serveur — la modale ne protège que les appelants qui passent par l'interface.
     /// </summary>
     public record ResetSchoolDataRequest(string Confirmation);
+
+    /// <summary>Garde du passage en mode réel : le mot-clé CONFIRMER, ou le nom de l'établissement.</summary>
+    public record GoLiveRequest(string Confirmation);
 
     public record UpdateSchoolProfileRequest(
         string Name,
@@ -102,10 +107,38 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
     [Authorize(Roles = nameof(Role.Directeur))]
     [ProducesResponseType<SchoolDataResetSummary>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> ResetData(
         [FromBody] ResetSchoolDataRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new ResetSchoolDataCommand(request.Confirmation), cancellationToken));
+
+    /// <summary>
+    /// État « bac à sable / mode réel » de l'établissement courant, plus le drapeau d'environnement
+    /// qui pilote le bouton « Repasser en mode test ». Lecture ouverte à tout rôle de l'école : la
+    /// pastille « Mode test » de la barre supérieure s'affiche pour tous.
+    /// </summary>
+    [HttpGet("mode")]
+    [ProducesResponseType<SchoolModeDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMode(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetSchoolModeQuery(), cancellationToken));
+
+    /// <summary>
+    /// Fait passer l'établissement COURANT du mode test (bac à sable) au mode réel (exploitation).
+    /// Action DÉLIBÉRÉE, réservée au Directeur, confirmée par saisie de « CONFIRMER » (ou du nom de
+    /// l'école). Conséquence : POST reset-data devient indisponible (409 RESET_UNAVAILABLE_LIVE_MODE).
+    /// Non rejouable : un second appel renvoie 409 ALREADY_LIVE. En vraie production, la bascule est
+    /// définitive — voir la porte de recette /schools/current/dev/revert-to-test (Program.cs).
+    /// </summary>
+    [HttpPost("go-live")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<GoLiveResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GoLive(
+        [FromBody] GoLiveRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GoLiveCommand(request.Confirmation), cancellationToken));
 
     /// <summary>Upload local d'un fichier image (logo) par le Directeur.</summary>
     [HttpPost("logo")]

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -18,8 +19,13 @@ namespace SamaEcole.IntegrationTests.Schools;
 ///
 ///   1. la purge s'arrête à la frontière du tenant — une école voisine ne perd rien ;
 ///   2. elle atteint AUSSI les lignes en suppression logique, sans quoi l'école ne serait pas « à neuf » ;
-///   3. elle épargne ce qui a été CONFIGURÉ (utilisateurs, réglages, années, classes, matières) ;
-///   4. elle remet les compteurs de matricules à zéro, sinon l'école garde la mémoire de ses essais.
+///   3. elle épargne ce qui a été CONFIGURÉ (utilisateurs, réglages, années, classes, matières, patrimoine) ;
+///   4. elle remet les compteurs de matricules à zéro, sinon l'école garde la mémoire de ses essais ;
+///   5. elle emporte les enfants de l'élève ajoutés par les modules livrés APRÈS elle (dossiers
+///      d'examen, certificats de mutation, prêts de matériel) — chacun porte une FK ON DELETE
+///      RESTRICT vers students, et sans leur purge la « remise à neuf » échoue en 23503 (bug corrigé
+///      par la migration FixResetSchoolDataMissingChildTables). Un test générique le garantit pour
+///      tout module futur.
 ///
 /// La purge tourne ici avec le rôle applicatif bridé, exactement comme au runtime — un rôle qui n'a
 /// AUCUN droit de DELETE sur ces tables. Elle passe donc par la fonction SECURITY DEFINER
@@ -136,6 +142,65 @@ public class ResetSchoolDataTests : IAsyncLifetime
             EvaluationType = EvaluationType.Devoir1, Value = 14.5m
         });
 
+        // Modules livrés APRÈS reset_school_data (Examens, Intégration étatique, Inventaire) : chacun
+        // rattache une ligne à l'élève par une FK ON DELETE RESTRICT. Sans leur purge, DELETE FROM
+        // students lève une violation de clé étrangère et toute la « remise à neuf » est annulée.
+        var examSessionId = Guid.NewGuid();
+        var examDossierId = Guid.NewGuid();
+
+        owner.Set<ExamSession>().Add(new ExamSession
+        {
+            Id = examSessionId, SchoolId = schoolId, SchoolYearId = schoolYearId,
+            ExamType = ExamType.CFEE, Status = ExamSessionStatus.EnPreparation
+        });
+
+        owner.Set<ExamDossier>().Add(new ExamDossier
+        {
+            Id = examDossierId, SchoolId = schoolId, ExamSessionId = examSessionId,
+            StudentId = studentId, ClassroomId = classroomId, Status = ExamDossierStatus.Incomplet
+        });
+
+        owner.Set<ExamResult>().Add(new ExamResult
+        {
+            SchoolId = schoolId, ExamDossierId = examDossierId, IsAdmitted = true,
+            AverageScore = 12.5m, DeliberatedOn = new DateOnly(2027, 7, 5)
+        });
+
+        owner.Set<StudentMutationCertificate>().Add(new StudentMutationCertificate
+        {
+            SchoolId = schoolId, StudentId = studentId, SchoolYearId = schoolYearId,
+            CertificateNumber = "MUT-2026-0001",
+            // Unique GLOBAL (pas par école) : Seed() tourne pour EcoleA et EcoleB, d'où le SchoolId.
+            VerificationCode = schoolId.ToString("N").ToUpperInvariant(),
+            ClassroomNameSnapshot = "CM2", Reason = StudentMutationReason.Demenagement,
+            IssuedOn = new DateOnly(2027, 6, 1), WasFinanciallyClear = true
+        });
+
+        // Patrimoine (catégorie + lot) : CONSERVÉ par la purge. Seule la fiche de prêt, qui lie un
+        // bien à l'élève, doit partir avec lui.
+        var inventoryCategoryId = Guid.NewGuid();
+        var inventoryItemId = Guid.NewGuid();
+
+        owner.Set<InventoryCategory>().Add(new InventoryCategory
+        {
+            Id = inventoryCategoryId, SchoolId = schoolId, Name = "Manuels scolaires"
+        });
+
+        owner.Set<InventoryItem>().Add(new InventoryItem
+        {
+            Id = inventoryItemId, SchoolId = schoolId, CategoryId = inventoryCategoryId,
+            Name = "Manuel de lecture CM2", QuantityTotal = 30, QuantityAvailable = 29,
+            Condition = ItemCondition.Bon
+        });
+
+        owner.Set<ItemAssignment>().Add(new ItemAssignment
+        {
+            SchoolId = schoolId, ItemId = inventoryItemId, Quantity = 1,
+            BeneficiaryType = AssignmentBeneficiaryType.Eleve, StudentId = studentId,
+            BeneficiaryLabel = "Awa Fall", AssignedOn = new DateOnly(2026, 10, 5),
+            Status = AssignmentStatus.EnCours
+        });
+
         owner.Set<MatriculeSequence>().Add(new MatriculeSequence
         {
             SchoolId = schoolId, Kind = MatriculeKind.Student, Year = 2026, LastValue = 42
@@ -161,12 +226,20 @@ public class ResetSchoolDataTests : IAsyncLifetime
         (await owner.Enrollments.IgnoreQueryFilters().CountAsync(e => e.SchoolId == EcoleA)).Should().Be(0);
         (await owner.Payments.IgnoreQueryFilters().CountAsync(p => p.SchoolId == EcoleA)).Should().Be(0);
         (await owner.Grades.IgnoreQueryFilters().CountAsync(g => g.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<ExamDossier>().IgnoreQueryFilters().CountAsync(x => x.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<ExamResult>().IgnoreQueryFilters().CountAsync(x => x.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<ExamSession>().IgnoreQueryFilters().CountAsync(x => x.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<StudentMutationCertificate>().IgnoreQueryFilters().CountAsync(x => x.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<ItemAssignment>().IgnoreQueryFilters().CountAsync(x => x.SchoolId == EcoleA)).Should().Be(0);
 
         (await owner.Students.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleB)).Should().Be(2,
             "purger une école ne doit jamais entamer les données d'un autre établissement");
         (await owner.Enrollments.IgnoreQueryFilters().CountAsync(e => e.SchoolId == EcoleB)).Should().Be(1);
         (await owner.Payments.IgnoreQueryFilters().CountAsync(p => p.SchoolId == EcoleB)).Should().Be(1);
         (await owner.Grades.IgnoreQueryFilters().CountAsync(g => g.SchoolId == EcoleB)).Should().Be(1);
+        (await owner.Set<ExamDossier>().IgnoreQueryFilters().CountAsync(x => x.SchoolId == EcoleB)).Should().Be(1);
+        (await owner.Set<StudentMutationCertificate>().IgnoreQueryFilters().CountAsync(x => x.SchoolId == EcoleB)).Should().Be(1);
+        (await owner.Set<ItemAssignment>().IgnoreQueryFilters().CountAsync(x => x.SchoolId == EcoleB)).Should().Be(1);
     }
 
     [Fact]
@@ -202,6 +275,9 @@ public class ResetSchoolDataTests : IAsyncLifetime
         (await owner.Terms.IgnoreQueryFilters().CountAsync(t => t.SchoolId == EcoleA)).Should().Be(1);
         (await owner.Classrooms.IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleA)).Should().Be(1);
         (await owner.Subjects.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(1);
+        (await owner.Set<InventoryCategory>().IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleA)).Should().Be(1,
+            "le patrimoine (inventaire) est configuré, pas saisi pendant l'essai : il survit à la purge");
+        (await owner.Set<InventoryItem>().IgnoreQueryFilters().CountAsync(i => i.SchoolId == EcoleA)).Should().Be(1);
     }
 
     [Fact]
@@ -226,10 +302,14 @@ public class ResetSchoolDataTests : IAsyncLifetime
 
         var summary = await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleA, CancellationToken.None);
 
-        // 2 élèves (dont un supprimé logiquement) + 1 inscription + 1 paiement + 1 note + 1 compteur.
-        summary.TotalRowsDeleted.Should().Be(6);
+        // 2 élèves (dont un supprimé logiquement) + 1 inscription + 1 paiement + 1 note + 1 compteur
+        // + 1 session d'examen + 1 dossier + 1 résultat + 1 certificat de mutation + 1 prêt = 11.
+        summary.TotalRowsDeleted.Should().Be(11);
         summary.Entries.Should().Contain(e => e.Label == "Élèves" && e.RowsDeleted == 2);
         summary.Entries.Should().Contain(e => e.Label == "Paiements" && e.RowsDeleted == 1);
+        summary.Entries.Should().Contain(e => e.Label == "Dossiers de candidature aux examens" && e.RowsDeleted == 1);
+        summary.Entries.Should().Contain(e => e.Label == "Certificats de mutation" && e.RowsDeleted == 1);
+        summary.Entries.Should().Contain(e => e.Label == "Affectations de matériel" && e.RowsDeleted == 1);
     }
 
     [Fact]
@@ -281,5 +361,84 @@ public class ResetSchoolDataTests : IAsyncLifetime
 
         second.TotalRowsDeleted.Should().Be(0,
             "un double clic, ou un Directeur qui recommence, ne doit produire ni erreur ni effet de bord");
+    }
+
+    /// <summary>
+    /// Le garde-fou générique — dans l'esprit de RlsCoverageTests. reset_school_data supprime ses
+    /// tables dans un ordre FIGÉ dans son propre corps ; toute clé étrangère ON DELETE RESTRICT (ou
+    /// NO ACTION) qui vise l'une d'elles depuis une table NON purgée fera échouer la « Zone de
+    /// danger » en violation de clé étrangère (SQLSTATE 23503) dès qu'une école a une telle ligne —
+    /// c'est exactement le bug qu'ont introduit les modules Examens, Intégration étatique et
+    /// Inventaire, livrés après la fonction.
+    ///
+    /// Ce test n'énumère aucune liste à la main : il lit les tables purgées dans le corps de la
+    /// fonction (pg_proc.prosrc) et confronte le schéma réel (pg_constraint). Le prochain module qui
+    /// oubliera d'étendre v_targets fera échouer la CI de lui-même.
+    /// </summary>
+    [Fact]
+    public async Task Every_Restrict_Foreign_Key_Into_A_Purged_Table_Must_Come_From_A_Purged_Table_Too()
+    {
+        var purged = await PurgedTableNamesAsync();
+        purged.Should().Contain("students",
+            "reset_school_data doit au moins purger les élèves — sinon ce test ne teste rien");
+
+        await using var owner = _db.NewOwnerContext();
+        var connection = owner.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT ref.relname AS referenced, child.relname AS referencing, con.conname AS fk
+            FROM pg_constraint con
+            JOIN pg_class child ON child.oid = con.conrelid
+            JOIN pg_class ref   ON ref.oid   = con.confrelid
+            JOIN pg_namespace n ON n.oid = child.relnamespace
+            WHERE con.contype = 'f'
+              AND n.nspname = 'public'
+              AND con.confdeltype IN ('a', 'r')   -- NO ACTION / RESTRICT : la FK bloque le DELETE
+              AND ref.relname   = ANY(@purged)    -- la cible est purgée...
+              AND child.relname <> ALL(@purged)   -- ...mais pas la table qui la référence
+            ORDER BY 1, 2;
+            """;
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "purged";
+        parameter.Value = purged.ToArray();
+        command.Parameters.Add(parameter);
+
+        var offenders = new List<string>();
+        await using (var reader = await command.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                offenders.Add($"{reader.GetString(1)} → {reader.GetString(0)} ({reader.GetString(2)})");
+            }
+        }
+
+        offenders.Should().BeEmpty(
+            "toute table qui référence une table purgée par reset_school_data avec une FK RESTRICT " +
+            "doit être ajoutée à v_targets AVANT sa cible (voir la migration " +
+            "FixResetSchoolDataMissingChildTables) — sinon « Réinitialiser les données » échoue en 23503");
+    }
+
+    /// <summary>Les tables listées dans v_targets, lues dans le corps même de reset_school_data.</summary>
+    private async Task<List<string>> PurgedTableNamesAsync()
+    {
+        await using var owner = _db.NewOwnerContext();
+        var connection = owner.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT prosrc FROM pg_proc WHERE proname = 'reset_school_data'";
+
+        var source = (string?)await command.ExecuteScalarAsync()
+            ?? throw new InvalidOperationException(
+                "Fonction reset_school_data introuvable — la migration AddSchoolDataReset a-t-elle tourné ?");
+
+        // Chaque cible est le premier élément d'un couple ['table', 'libellé'] du tableau v_targets.
+        return Regex.Matches(source, @"\[\s*'([A-Za-z_]+)'\s*,")
+            .Select(match => match.Groups[1].Value)
+            .Distinct()
+            .ToList();
     }
 }

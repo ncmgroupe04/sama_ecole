@@ -11,9 +11,13 @@ using SamaEcole.Infrastructure.Notifications;
 using SamaEcole.Persistence;
 using SamaEcole.Persistence.Seed;
 using SamaEcole.Web.Authorization;
+using SamaEcole.Web.Configuration;
 using SamaEcole.Web.HealthChecks;
 using SamaEcole.Web.Middleware;
 using SamaEcole.Web.RateLimiting;
+using SamaEcole.Application.Schools.Commands.RevertToTest;
+using SamaEcole.Domain.Enums;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
@@ -61,6 +65,15 @@ builder.Services.AddPersistence(builder.Configuration);
 // Paramètres d'authentification (verrouillage, durée du refresh token) — ticket JGK-A04.
 builder.Services.AddSingleton(
     builder.Configuration.GetSection("Auth").Get<AuthSettings>() ?? new AuthSettings());
+
+// --- Bac à sable / mode réel : drapeau « le retour au mode test est-il autorisé ici ? » ---
+// true en Development, OU si SAMA_RETOUR_MODE_TEST_AUTORISE=true (posé sur les seuls environnements
+// jetables — dev, recette, staging). false partout ailleurs, donc en vraie production : le passage
+// en mode réel y est DÉFINITIF et l'endpoint /schools/current/dev/revert-to-test n'est pas monté.
+// Volontairement pas conditionné à ASPNETCORE_ENVIRONMENT : la recette tourne avec l'image de prod.
+var revertToTestEnabled = builder.Environment.IsDevelopment()
+    || builder.Configuration.GetValue<bool>("SAMA_RETOUR_MODE_TEST_AUTORISE");
+builder.Services.AddSingleton<ISandboxModeProvider>(new SandboxModeProvider(revertToTestEnabled));
 
 // --- Authentification JWT (AGENTS.md — Décision D-07) ---
 var jwtSection = builder.Configuration.GetSection("Jwt");
@@ -491,6 +504,19 @@ app.MapControllers();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}"); // Vues Razor — voir docs/BACKLOG_TICKETS.md
+
+// Porte de SORTIE « repasser en mode test » — montée UNIQUEMENT sur les environnements jetables
+// (revertToTestEnabled, voir plus haut). En vraie production, la route n'existe pas : une requête
+// directe reçoit un 404 du routeur, avant tout code métier. Le Handler la revérifie malgré tout
+// (double garde). Minimal API plutôt qu'une action de contrôleur : c'est justement pour que le
+// mapping soit CONDITIONNEL, ce qu'un [HttpPost] sur un contrôleur ne permet pas proprement.
+if (revertToTestEnabled)
+{
+    app.MapPost("/api/v1/schools/current/dev/revert-to-test",
+            async (ISender mediator, CancellationToken cancellationToken) =>
+                Results.Ok(await mediator.Send(new RevertToTestCommand(), cancellationToken)))
+        .RequireAuthorization(policy => policy.RequireRole(nameof(Role.Directeur)));
+}
 
 // Sondes de santé, publiques et hors /api/ (donc jamais filtrées par SubscriptionAwaitingPaymentMiddleware,
 // jamais soumises à un limiteur de débit) — corps minimal, aucune donnée sensible.

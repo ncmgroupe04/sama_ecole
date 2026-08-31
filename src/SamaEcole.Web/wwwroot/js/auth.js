@@ -464,4 +464,34 @@ document.addEventListener('alpine:init', () => {
             }
         }
     }));
+
+    /**
+     * Pastille « Mode test » de la barre supérieure. Tant que l'établissement n'est pas passé en mode
+     * réel (School.WentLiveAt), TOUT le personnel voit ce rappel : les données saisies sont des
+     * essais et peuvent être purgées depuis Paramètres › Zone de danger. Elle disparaît d'elle-même
+     * au passage en mode réel.
+     *
+     * Source unique : GET /schools/current/mode (isLive). N'ACTIVE rien — la bascule reste un acte
+     * confirmé du Directeur. Non bloquante : en cas d'échec réseau, la pastille reste simplement
+     * absente (on ne crie pas « mode test » sans en être sûr).
+     */
+    Alpine.data('sandboxModeBadge', () => ({
+        isLive: true, // défaut prudent : pas de pastille tant qu'on n'a pas confirmé le mode test
+        loaded: false,
+
+        async init() {
+            if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') {
+                this.loaded = true;
+                return;
+            }
+            try {
+                const mode = await window.api.get('/schools/current/mode');
+                this.isLive = !!(mode && mode.isLive);
+            } catch {
+                this.isLive = true;
+            } finally {
+                this.loaded = true;
+            }
+        }
+    }));
 });
