@@ -500,9 +500,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
     app.UseHttpsRedirection();
 }
-// La table MIME par défaut d'ASP.NET Core ne connaît pas .mjs (module ES) : sans cette extension, les
-// GET sur wwwroot/js/vendor/pdf*.min.mjs renverraient 404 avant même d'atteindre le navigateur — le
-// moteur d'aperçu PDF (pdf-preview.js) échouerait à charger PDF.js pour TOUS les documents.
+// La table MIME par défaut d'ASP.NET Core ne connaît pas .mjs (module ES) : elle le renverrait en
+// application/octet-stream, qu'un navigateur refuse d'exécuter comme module. Conservé bien qu'aucun
+// .mjs ne soit servi aujourd'hui (PDF.js retiré) — le mapping est correct et sans coût, tout futur
+// module ES auto-hébergé le suppose en place.
 var staticFileContentTypes = new FileExtensionContentTypeProvider();
 staticFileContentTypes.Mappings[".mjs"] = "text/javascript";
 app.UseStaticFiles(new StaticFileOptions // sert wwwroot/css/site.css compilé depuis Tailwind (Décision D-13)
