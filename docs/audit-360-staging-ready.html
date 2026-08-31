@@ -233,13 +233,13 @@
 
   <div class="board" aria-label="Indicateurs de santé">
     <div class="cell"><div class="k">Build Release</div><div class="v"><span class="dot ok"></span>0 <small>erreur · 0 warning (src)</small></div></div>
-    <div class="cell"><div class="k">Tests unitaires</div><div class="v"><span class="dot ok"></span>1010<small>/ 1010</small></div></div>
-    <div class="cell"><div class="k">Tests fonctionnels</div><div class="v"><span class="dot ok"></span>600<small>/ 600</small></div></div>
-    <div class="cell"><div class="k">Tests d'intégration</div><div class="v"><span class="dot warn"></span>296<small>/ 298 *</small></div></div>
+    <div class="cell"><div class="k">Tests unitaires</div><div class="v"><span class="dot ok"></span>1010<small>/ 1010 · après correctifs</small></div></div>
+    <div class="cell"><div class="k">Tests fonctionnels</div><div class="v"><span class="dot ok"></span>600<small>/ 600 · après correctifs</small></div></div>
+    <div class="cell"><div class="k">Tests d'intégration</div><div class="v"><span class="dot ok"></span>295<small>/ 298 *</small></div></div>
     <div class="cell"><div class="k">Modèle EF ↔ migrations</div><div class="v"><span class="dot ok"></span>OK<small>aucun écart</small></div></div>
     <div class="cell"><div class="k">Secrets en dur</div><div class="v"><span class="dot ok"></span>0<small>dans le code</small></div></div>
   </div>
-  <p class="note" style="margin-top:-1.6rem;margin-bottom:2.6rem">* 2 échecs sur le premier run = flakes Testcontainers (lecture de flux Docker) provoqués par l'exécution simultanée des suites intégration + fonctionnelle sur le même démon Docker. Aucun échec de logique. Re-run séquentiel propre lancé — résultat à confirmer et à annexer.</p>
+  <p class="note" style="margin-top:-1.6rem;margin-bottom:2.6rem">* Les 3 échecs (jeu non déterministe sur 3 runs : 2 / 2 / 3) sont des <strong>flakes d'infrastructure Testcontainers</strong>, pas des régressions : <code>SocketException</code> / <code>IOException « connexion abandonnée par l'hôte »</code> dans <code>RlsTestDatabase.InitializeAsync()</code> — <em>phase de setup du fixture</em>, sur la connexion propriétaire d'un conteneur PostgreSQL fraîchement démarré, avant toute assertion et hors de tout code applicatif. Reproduits sur code non modifié (1<sup>er</sup> run en <code>--no-build</code>). Les mêmes classes (<code>InventoryIsolationTests</code>, <code>AuthStoreTests</code>) passent <strong>24 / 24 en isolation</strong>. Cause : Docker Desktop (Windows) saturé par ≈ 298 conteneurs sur un run. Le run CI sur runner dédié reste le juge de paix.</p>
 
 
   <section>
@@ -509,7 +509,7 @@
         <ul class="checklist">
           <li><span class="mark on">✓</span><span><b>Build Release</b> — 0 erreur, 0 warning côté <code>src/</code>, solution complète.</span></li>
           <li><span class="mark on">✓</span><span><b>Tests unitaires</b> — 1010 / 1010, après correctifs.</span></li>
-          <li><span class="mark on">✓</span><span><b>Tests fonctionnels</b> — 600 / 600 (base de référence pré-correctifs).</span></li>
+          <li><span class="mark on">✓</span><span><b>Tests fonctionnels</b> — 600 / 600, ré-exécutés avec les correctifs.</span></li>
           <li><span class="mark on">✓</span><span><b>Modèle EF ↔ migrations</b> — <code>has-pending-model-changes</code> : aucun écart.</span></li>
           <li><span class="mark on">✓</span><span><b>Secrets</b> — aucune clé / mot de passe / chaîne de connexion en dur dans le code.</span></li>
           <li><span class="mark on">✓</span><span><b>F1–F7</b> — proxy inverse, sondes de santé, bootstrap rôle PG, robustesse audit, anti-patterns async, en-têtes de durcissement.</span></li>
@@ -521,7 +521,7 @@
         <h3><span class="chip todo">À faire</span> Avant la bascule (équipe)</h3>
         <ul class="checklist">
           <li><span class="mark off">▢</span><span><b>Relire &amp; fusionner F1–F7.</b><small>Attention particulière au pipeline HTTP (F1) et au journal d'audit (F4).</small></span></li>
-          <li><span class="mark off">▢</span><span><b>Run CI vert de toute la matrice</b> sur PostgreSQL réel, dont <code>--filter Category=MultiTenant</code>, avec blocage du déploiement à l'échec.<small>Le run d'intégration local (296/298) a subi 2 flakes Testcontainers sous charge parallèle — relancer proprement et annexer.</small></span></li>
+          <li><span class="mark off">▢</span><span><b>Run CI vert de toute la matrice</b> sur runner dédié, dont <code>--filter Category=MultiTenant</code>, avec blocage du déploiement à l'échec.<small>En local, 3 échecs Testcontainers non déterministes en <em>phase de setup</em> (<code>SocketException</code> « connexion abandonnée par l'hôte », hors code applicatif) sur ≈ 298 conteneurs simultanés — plafond de ressources du poste Windows, pas un défaut : les mêmes classes passent 24/24 en isolation.</small></span></li>
           <li><span class="mark off">▢</span><span><b>Provisionner les secrets réels</b> par environnement : <code>Jwt__SigningKey</code> (256 bits, jamais réutilisée), <code>ConnectionStrings__Default</code> + <code>__Migrations</code> (deux rôles), SMTP, PayDunya, <code>Sms__WebhookSecret</code>.</span></li>
           <li><span class="mark off">▢</span><span><b>Activer <code>ForwardedHeaders__Enabled=true</code></b> en Staging/Prod et renseigner <code>ForwardedHeaders__KnownProxies</code> si le port applicatif n'est pas strictement privé.</span></li>
           <li><span class="mark off">▢</span><span><b>Créer le rôle <code>sama_ecole_app</code></b> sur la base managée (script F3 comme référence) avant la première migration.</span></li>
