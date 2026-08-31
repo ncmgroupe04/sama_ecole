@@ -24,24 +24,35 @@ public class TenantConnectionInterceptor(ITenantProvider tenantProvider) : DbCon
         ConnectionEndEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        await ApplyTenantAsync(connection, cancellationToken);
+        await using var command = BuildApplyTenantCommand(connection);
+        await command.ExecuteNonQueryAsync(cancellationToken);
         await base.ConnectionOpenedAsync(connection, eventData, cancellationToken);
     }
 
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
     {
-        ApplyTenantAsync(connection, CancellationToken.None).GetAwaiter().GetResult();
+        // Chemin d'ouverture SYNCHRONE d'EF Core. On exécute réellement la commande en synchrone
+        // (ExecuteNonQuery) plutôt qu'un .GetAwaiter().GetResult() sur la variante async : bloquer un
+        // thread du pool sur une E/S base, à CHAQUE ouverture de connexion, expose à la famine de
+        // threads sous charge. set_config sur une connexion déjà ouverte est une opération synchrone
+        // légitime — aucune raison d'y faire tourner une machine à états asynchrone.
+        using var command = BuildApplyTenantCommand(connection);
+        command.ExecuteNonQuery();
         base.ConnectionOpened(connection, eventData);
     }
 
-    private async Task ApplyTenantAsync(DbConnection connection, CancellationToken cancellationToken)
+    /// <summary>
+    /// Compose l'unique instruction posée sur chaque connexion : <c>set_config('app.current_school_id', …)</c>.
+    /// Hors requête authentifiée (login, migrations, tâches de fond) il n'y a pas de tenant : on pose la
+    /// chaîne vide. Les policies la traduisent en NULL (NULLIF) et ne laissent donc passer aucune ligne,
+    /// au lieu de faire échouer le cast en uuid. Le SchoolId vient de ITenantProvider — du claim JWT,
+    /// jamais d'un paramètre client (règle #10) — et transite en PARAMÈTRE, jamais par interpolation.
+    /// </summary>
+    private DbCommand BuildApplyTenantCommand(DbConnection connection)
     {
-        // Hors requête authentifiée (login, migrations, tâches de fond) il n'y a pas de tenant :
-        // on pose la chaîne vide. Les policies la traduisent en NULL (NULLIF) et ne laissent donc
-        // passer aucune ligne, au lieu de faire échouer le cast en uuid.
         var schoolId = tenantProvider.CurrentSchoolId?.ToString() ?? string.Empty;
 
-        await using var command = connection.CreateCommand();
+        var command = connection.CreateCommand();
         command.CommandText = "SELECT set_config('app.current_school_id', @schoolId, false)";
 
         var parameter = command.CreateParameter();
@@ -49,6 +60,6 @@ public class TenantConnectionInterceptor(ITenantProvider tenantProvider) : DbCon
         parameter.Value = schoolId;
         command.Parameters.Add(parameter);
 
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        return command;
     }
 }

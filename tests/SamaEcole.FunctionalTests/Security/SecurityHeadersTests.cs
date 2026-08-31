@@ -24,6 +24,17 @@ public class SecurityHeadersTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         response.Headers.GetValues("X-XSS-Protection").Should().ContainSingle()
             .Which.Should().Be("1; mode=block");
+
+        response.Headers.GetValues("Referrer-Policy").Should().ContainSingle()
+            .Which.Should().Be("strict-origin-when-cross-origin");
+
+        // L'appareil photo, la géolocalisation et le paiement navigateur sont explicitement neutralisés :
+        // l'application ne s'en sert jamais (saisie GPS au clavier, QR lu par l'appareil photo natif).
+        var permissionsPolicy = response.Headers.GetValues("Permissions-Policy").Should().ContainSingle().Subject;
+        permissionsPolicy.Should().Contain("camera=()");
+        permissionsPolicy.Should().Contain("geolocation=()");
+        permissionsPolicy.Should().Contain("microphone=()");
+        permissionsPolicy.Should().Contain("payment=()");
     }
 
     [Fact]

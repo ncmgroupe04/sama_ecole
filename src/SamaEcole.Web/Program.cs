@@ -11,11 +11,14 @@ using SamaEcole.Infrastructure.Notifications;
 using SamaEcole.Persistence;
 using SamaEcole.Persistence.Seed;
 using SamaEcole.Web.Authorization;
+using SamaEcole.Web.HealthChecks;
 using SamaEcole.Web.Middleware;
 using SamaEcole.Web.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
@@ -316,6 +319,56 @@ builder.Services.AddHsts(options =>
     options.MaxAge = TimeSpan.FromDays(365);
 });
 
+// Derrière le reverse proxy qui termine TLS (Nginx, docs/Volume_9_Deployment_Operations.md §2) :
+// sans ceci, HttpContext.Connection.RemoteIpAddress vaut l'IP DU PROXY pour toutes les requêtes — les
+// limiteurs de débit partitionnés par IP (login/credential stuffing, inscription publique de masse,
+// réinitialisation de mot de passe) s'effondrent alors sur une partition unique — et Request.Scheme
+// reste « http », ce qui fait boucler UseHttpsRedirection.
+//
+// Opt-in par configuration : ForwardedHeaders:Enabled=true en Staging/Production (voir .env.example),
+// absent en Development qui n'a pas de proxy.
+//
+// KnownProxies / KnownNetworks vidés : on fait confiance à l'en-tête X-Forwarded-* de n'importe quel
+// émetteur. C'est le mode recommandé par Microsoft quand l'application tourne DERRIÈRE un proxy dans
+// un réseau clos et que son port n'est JAMAIS exposé directement (équivalent de
+// ASPNETCORE_FORWARDEDHEADERS_ENABLED=true). Si le port applicatif peut être atteint autrement que
+// par le proxy, renseigner plutôt ForwardedHeaders:KnownProxies (IP du/des proxys) et retirer le
+// Clear() — sinon un client pourrait usurper son IP source et contourner les limiteurs par IP.
+var forwardedHeadersEnabled = builder.Configuration.GetValue("ForwardedHeaders:Enabled", false);
+if (forwardedHeadersEnabled)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = builder.Configuration.GetValue<int?>("ForwardedHeaders:ForwardLimit") ?? 1;
+
+        var knownProxies = builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+        if (knownProxies.Length > 0)
+        {
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
+            foreach (var proxy in knownProxies)
+            {
+                if (IPAddress.TryParse(proxy, out var ip))
+                {
+                    options.KnownProxies.Add(ip);
+                }
+            }
+        }
+        else
+        {
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
+        }
+    });
+}
+
+// Sondes de santé (docs/Volume_9_Deployment_Operations.md §2, §4 étape 10, §9) : le load balancer et
+// le rolling update en ont besoin pour ne router du trafic que vers une instance réellement prête.
+// "/health/live" = process vivant (sans dépendance) ; "/health/ready" = PostgreSQL joignable.
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
+
 var app = builder.Build();
 
 // Refuse de démarrer si l'application se connecte à PostgreSQL avec un rôle qui contourne la RLS
@@ -341,6 +394,14 @@ foreach (var warning in new[]
     {
         app.Logger.LogWarning("{Warning}", warning);
     }
+}
+
+// AVANT tout : réécrit RemoteIpAddress / Request.Scheme depuis les en-têtes X-Forwarded-* du proxy,
+// pour que les limiteurs de débit par IP et la détection HTTPS voient la VRAIE requête cliente et non
+// le proxy. Opt-in (ForwardedHeaders:Enabled) — inerte en Development.
+if (forwardedHeadersEnabled)
+{
+    app.UseForwardedHeaders();
 }
 
 // Ticket JGK-F01 — en-têtes de sécurité (nosniff, X-Frame-Options, CSP…) sur TOUTES les réponses, y
@@ -430,6 +491,16 @@ app.MapControllers();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}"); // Vues Razor — voir docs/BACKLOG_TICKETS.md
+
+// Sondes de santé, publiques et hors /api/ (donc jamais filtrées par SubscriptionAwaitingPaymentMiddleware,
+// jamais soumises à un limiteur de débit) — corps minimal, aucune donnée sensible.
+//   /health/live  — vivacité : le process répond. Aucune dépendance testée : une base momentanément
+//                   injoignable ne doit pas provoquer un redémarrage en boucle.
+//   /health/ready — préparation : PostgreSQL joignable. C'est la sonde du rolling update / load balancer.
+//   /health       — agrégat de tous les contrôles.
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 try
 {

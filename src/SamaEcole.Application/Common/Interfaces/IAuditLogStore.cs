@@ -1,14 +1,17 @@
 namespace SamaEcole.Application.Common.Interfaces;
 
 /// <summary>
-/// Écrit une entrée du journal d'audit (JGK-H01) pour les scénarios où l'acteur n'a pas de tenant
-/// établi côté session — connexion (JGK-A04, avant authentification) et actions Super Admin (aucun
-/// SchoolId propre). Passe par une fonction PostgreSQL SECURITY DEFINER (append_audit_log, migration
-/// AddAuditLogAppendFunction), exactement comme ISchoolProvisioningStore/IAuthStore contournent la
-/// même policy RLS pour la même raison.
+/// Écrit une entrée du journal d'audit (JGK-H01). Passe par une fonction PostgreSQL SECURITY DEFINER
+/// (append_audit_log, migration AddAuditLogAppendFunction), en une seule instruction ADO.NET brute :
+/// exactement comme ISchoolProvisioningStore/IAuthStore contournent la même policy RLS.
 ///
-/// Pour tout le reste (un acteur déjà authentifié, avec SON PROPRE SchoolId), AuditLoggingBehavior
-/// suffit : un INSERT EF normal satisfait la policy RLS sans qu'il soit besoin de la contourner.
+/// Deux appelants :
+///   • les scénarios SANS tenant établi côté session — connexion (JGK-A04, avant authentification) et
+///     actions Super Admin (aucun SchoolId propre) — où un INSERT EF classique serait rejeté par la
+///     policy RLS de audit_logs ;
+///   • AuditLoggingBehavior, y compris le cas nominal (acteur authentifié, SchoolId propre) : l'écriture
+///     brute n'appelle jamais SaveChangesAsync, donc elle ne repartage pas le ChangeTracker d'un Handler
+///     qui vient d'échouer — ni perte silencieuse de l'entrée d'échec, ni commit d'un état partiel.
 /// </summary>
 public interface IAuditLogStore
 {

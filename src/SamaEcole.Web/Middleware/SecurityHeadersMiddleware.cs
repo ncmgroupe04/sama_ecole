@@ -53,6 +53,18 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
         // d'anciens moteurs — exigé par le ticket JGK-F01.
         headers["X-XSS-Protection"] = "1; mode=block";
 
+        // N'expose l'URL complète qu'en navigation MÊME ORIGINE : vers une origine tierce (logo
+        // d'établissement en img-src https:, lien sortant), seul le domaine part, et rien en clair.
+        headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+        // Coupe les API navigateur puissantes que l'application n'utilise pas : la saisie GPS SIMEN et
+        // la lecture d'un QR de mutation passent par un formulaire ou l'appareil photo natif du
+        // téléphone, jamais par ces API web. Réduit la surface d'une éventuelle injection de script.
+        headers["Permissions-Policy"] =
+            "accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), " +
+            "fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), " +
+            "midi=(), payment=(), usb=(), xr-spatial-tracking=()";
+
         // Swagger UI (Development uniquement, voir Program.cs) embarque ses propres scripts et styles
         // inline : la CSP stricte le rendrait illisible. Les trois en-têtes ci-dessus s'appliquent, la
         // CSP seule est levée — en production, /swagger n'est pas mappé, l'exemption est donc inerte.

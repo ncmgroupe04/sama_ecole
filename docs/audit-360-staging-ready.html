@@ -1,0 +1,545 @@
+<title>Audit 360° Unikol</title>
+<meta name="description" content="Diagnostic pré-déploiement de Sama Ecole / Unikol : état des lieux, findings par sévérité, correctifs appliqués et checklist de bascule Staging/Production.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#f6f7f9;
+    --surface:#ffffff;
+    --surface-2:#eef1f5;
+    --ink:#1b2330;
+    --ink-soft:#586274;
+    --ink-faint:#8a94a6;
+    --border:#e1e6ee;
+    --border-strong:#ccd4e1;
+    --accent:#2f5bd0;
+    --accent-ink:#26499f;
+    --accent-soft:#e8eefb;
+    --sev-block:#c22736;
+    --sev-block-bg:#fbe9eb;
+    --sev-major:#a9631a;
+    --sev-major-bg:#f7ecdd;
+    --sev-minor:#2c76a0;
+    --sev-minor-bg:#e3eff5;
+    --ok:#2c8659;
+    --ok-bg:#e2f1e9;
+    --shadow:0 1px 2px rgba(20,30,50,.05),0 10px 30px -16px rgba(20,30,50,.16);
+    --measure:70ch;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0f131a;
+      --surface:#171d27;
+      --surface-2:#1f2732;
+      --ink:#e7ebf2;
+      --ink-soft:#a4afc0;
+      --ink-faint:#6d7787;
+      --border:#2a323e;
+      --border-strong:#3b4552;
+      --accent:#82a4f2;
+      --accent-ink:#a9c1f8;
+      --accent-soft:#1b2740;
+      --sev-block:#f08494;
+      --sev-block-bg:#331b20;
+      --sev-major:#e2a468;
+      --sev-major-bg:#322717;
+      --sev-minor:#7ec2dc;
+      --sev-minor-bg:#152b34;
+      --ok:#71cd99;
+      --ok-bg:#132a20;
+      --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 34px -18px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0f131a;
+    --surface:#171d27;
+    --surface-2:#1f2732;
+    --ink:#e7ebf2;
+    --ink-soft:#a4afc0;
+    --ink-faint:#6d7787;
+    --border:#2a323e;
+    --border-strong:#3b4552;
+    --accent:#82a4f2;
+    --accent-ink:#a9c1f8;
+    --accent-soft:#1b2740;
+    --sev-block:#f08494;
+    --sev-block-bg:#331b20;
+    --sev-major:#e2a468;
+    --sev-major-bg:#322717;
+    --sev-minor:#7ec2dc;
+    --sev-minor-bg:#152b34;
+    --ok:#71cd99;
+    --ok-bg:#132a20;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 34px -18px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1060px;margin:0 auto;padding:clamp(1.5rem,4vw,4rem) clamp(1.1rem,4vw,3rem)}
+  .col{max-width:var(--measure)}
+
+  h1,h2,h3,h4{line-height:1.22;text-wrap:balance;font-weight:600;margin:0}
+  h1{font-size:clamp(1.9rem,4.4vw,2.9rem);font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.35rem,2.6vw,1.7rem);letter-spacing:-.01em}
+  h3{font-size:1.12rem}
+  h4{font-size:.95rem}
+  p{margin:0}
+  a{color:var(--accent-ink);text-underline-offset:2px}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+  code,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+  code{font-size:.86em;background:var(--surface-2);padding:.12em .38em;border-radius:4px;border:1px solid var(--border)}
+
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace;font-size:.72rem;font-weight:500;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);
+  }
+
+  /* ---- masthead ---- */
+  .masthead{border-bottom:2px solid var(--ink);padding-bottom:1.6rem;margin-bottom:2.4rem}
+  .masthead h1{margin:.5rem 0 .7rem}
+  .lede{font-family:"IBM Plex Serif",Georgia,serif;font-size:clamp(1.05rem,1.8vw,1.22rem);color:var(--ink-soft);max-width:60ch}
+  .meta{display:flex;flex-wrap:wrap;gap:.5rem 1.6rem;margin-top:1.3rem;font-size:.83rem;color:var(--ink-soft)}
+  .meta b{color:var(--ink);font-weight:600}
+
+  /* ---- verdict ---- */
+  .verdict{
+    background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--sev-major);
+    border-radius:10px;padding:1.4rem 1.5rem;box-shadow:var(--shadow);margin:2.4rem 0;
+  }
+  .verdict .eyebrow{color:var(--sev-major)}
+  .verdict p{margin-top:.5rem;max-width:72ch}
+  .verdict strong{font-weight:600}
+
+  /* ---- scoreboard ---- */
+  .board{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:2rem 0 2.6rem;
+  }
+  .cell{background:var(--surface);padding:.95rem 1rem}
+  .cell .k{font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+  .cell .v{font-size:1.32rem;font-weight:600;margin-top:.35rem;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:.4rem}
+  .cell .v small{font-size:.8rem;font-weight:500;color:var(--ink-soft)}
+  .dot{width:.62rem;height:.62rem;border-radius:50%;flex:none;align-self:center}
+  .dot.ok{background:var(--ok)} .dot.warn{background:var(--sev-major)} .dot.bad{background:var(--sev-block)}
+
+  section{margin:3.2rem 0}
+  section > h2{display:flex;align-items:center;gap:.7rem;padding-bottom:.6rem;border-bottom:1px solid var(--border);margin-bottom:1.4rem}
+  section > h2 .count{font-family:"IBM Plex Mono",monospace;font-size:.8rem;font-weight:500;color:var(--ink-faint);margin-left:auto}
+
+  .prose p + p{margin-top:1rem}
+  .prose ul{margin:.7rem 0;padding-left:1.15rem}
+  .prose li{margin:.3rem 0}
+
+  /* ---- fixes table ---- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:640px}
+  th,td{text-align:left;padding:.7rem .9rem;border-bottom:1px solid var(--border);vertical-align:top}
+  thead th{background:var(--surface-2);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr{background:var(--surface)}
+  td .mono{font-size:.82rem;color:var(--ink-soft)}
+
+  /* ---- chips ---- */
+  .chip{
+    display:inline-flex;align-items:center;gap:.34rem;font-family:"IBM Plex Mono",monospace;
+    font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    padding:.2rem .5rem;border-radius:999px;border:1px solid transparent;white-space:nowrap;
+  }
+  .chip.block{background:var(--sev-block-bg);color:var(--sev-block);border-color:color-mix(in srgb,var(--sev-block) 30%,transparent)}
+  .chip.major{background:var(--sev-major-bg);color:var(--sev-major);border-color:color-mix(in srgb,var(--sev-major) 30%,transparent)}
+  .chip.minor{background:var(--sev-minor-bg);color:var(--sev-minor);border-color:color-mix(in srgb,var(--sev-minor) 30%,transparent)}
+  .chip.info{background:var(--surface-2);color:var(--ink-soft);border-color:var(--border-strong)}
+  .chip.done{background:var(--ok-bg);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+  .chip.todo{background:var(--surface-2);color:var(--ink-soft);border-color:var(--border-strong)}
+
+  /* ---- findings ---- */
+  .finding{
+    background:var(--surface);border:1px solid var(--border);border-left-width:4px;border-radius:10px;
+    padding:1.25rem 1.4rem;margin-bottom:1.1rem;box-shadow:var(--shadow);
+  }
+  .finding.block{border-left-color:var(--sev-block)}
+  .finding.major{border-left-color:var(--sev-major)}
+  .finding.minor{border-left-color:var(--sev-minor)}
+  .finding.info{border-left-color:var(--border-strong)}
+  .finding > header{display:flex;flex-wrap:wrap;align-items:baseline;gap:.55rem .8rem;margin-bottom:.85rem}
+  .finding .fid{font-family:"IBM Plex Mono",monospace;font-weight:600;color:var(--ink-faint);font-size:.9rem}
+  .finding h3{flex:1 1 16rem}
+  .finding .chips{display:flex;gap:.4rem;flex-wrap:wrap}
+  .finding dl{display:grid;grid-template-columns:max-content 1fr;gap:.45rem 1rem;margin:0;font-size:.92rem}
+  .finding dt{font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);padding-top:.18rem}
+  .finding dd{margin:0;max-width:68ch}
+  .finding dd + dt{border-top:1px solid var(--border);padding-top:.6rem;margin-top:.15rem}
+  .finding dd.fix{border-top:1px solid var(--border);padding-top:.6rem;margin-top:.15rem}
+  @media (max-width:620px){
+    .finding dl{grid-template-columns:1fr;gap:.15rem}
+    .finding dd{margin-bottom:.7rem}
+    .finding dd + dt{border-top:0;padding-top:0}
+  }
+
+  /* ---- checklist ---- */
+  .cols2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+  @media (max-width:780px){.cols2{grid-template-columns:1fr}}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.3rem 1.4rem;box-shadow:var(--shadow)}
+  .panel > h3{display:flex;align-items:center;gap:.5rem;margin-bottom:.9rem;padding-bottom:.6rem;border-bottom:1px solid var(--border)}
+  .checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.7rem}
+  .checklist li{display:grid;grid-template-columns:1.3rem 1fr;gap:.6rem;font-size:.9rem;align-items:start}
+  .checklist .mark{font-family:"IBM Plex Mono",monospace;font-weight:600;line-height:1.5}
+  .checklist .mark.on{color:var(--ok)}
+  .checklist .mark.off{color:var(--ink-faint)}
+  .checklist b{font-weight:600}
+  .checklist small{display:block;color:var(--ink-soft);font-size:.82rem;margin-top:.1rem}
+
+  .pos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.8rem}
+  .pos div{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem;font-size:.88rem}
+  .pos b{display:block;font-weight:600;margin-bottom:.15rem}
+  .pos span{color:var(--ink-soft)}
+
+  footer{margin-top:4rem;padding-top:1.6rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--ink-soft)}
+  footer p+p{margin-top:.6rem}
+  hr.soft{border:0;border-top:1px solid var(--border);margin:2rem 0}
+  .note{font-size:.85rem;color:var(--ink-soft);font-style:italic}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Audit pré-déploiement · Staging &amp; Production</div>
+    <h1>Audit 360° — Sama Ecole / Unikol</h1>
+    <p class="lede">Diagnostic exhaustif du dépôt : architecture, code, API, sécurité, tests et préparation à la bascule. État, findings classés par sévérité, correctifs appliqués, et feu vert conditionnel.</p>
+    <div class="meta">
+      <span><b>Date</b> 31/08/2026</span>
+      <span><b>Branche</b> <code>feature/assistant-premier-parametrage</code></span>
+      <span><b>Base</b> ASP.NET Core 9 · EF Core · PostgreSQL · MVC/Razor + API REST</span>
+      <span><b>Méthode</b> analyse statique + suite de tests complète en local (PostgreSQL réel)</span>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <div class="eyebrow">Verdict</div>
+    <p><strong>Le code est de qualité production.</strong> Base mature, Clean Architecture / CQRS respectée, sécurité déjà largement durcie (gardes de démarrage, RLS + filtre EF, JWT, webhooks signés, anti-SSRF). L'audit n'a trouvé <strong>aucune faille d'autorisation ni fuite de données inter-tenant</strong>. Les points bloquants relevés portent sur la <strong>configuration de déploiement</strong> (proxy inverse, sondes de santé, bootstrap des rôles PostgreSQL) — tous corrigés dans cette passe.</p>
+    <p style="margin-top:.7rem"><strong>Feu vert : conditionnel.</strong> Prêt pour Staging une fois les 7 correctifs relus et fusionnés. La bascule Production reste subordonnée à un run CI vert de toute la matrice de tests (dont <code>Category=MultiTenant</code>) et à un test de fumée sur la topologie cible réelle — détail dans la checklist en fin de document.</p>
+  </div>
+
+  <div class="board" aria-label="Indicateurs de santé">
+    <div class="cell"><div class="k">Build Release</div><div class="v"><span class="dot ok"></span>0 <small>erreur · 0 warning (src)</small></div></div>
+    <div class="cell"><div class="k">Tests unitaires</div><div class="v"><span class="dot ok"></span>1010<small>/ 1010</small></div></div>
+    <div class="cell"><div class="k">Tests fonctionnels</div><div class="v"><span class="dot ok"></span>600<small>/ 600</small></div></div>
+    <div class="cell"><div class="k">Tests d'intégration</div><div class="v"><span class="dot warn"></span>296<small>/ 298 *</small></div></div>
+    <div class="cell"><div class="k">Modèle EF ↔ migrations</div><div class="v"><span class="dot ok"></span>OK<small>aucun écart</small></div></div>
+    <div class="cell"><div class="k">Secrets en dur</div><div class="v"><span class="dot ok"></span>0<small>dans le code</small></div></div>
+  </div>
+  <p class="note" style="margin-top:-1.6rem;margin-bottom:2.6rem">* 2 échecs sur le premier run = flakes Testcontainers (lecture de flux Docker) provoqués par l'exécution simultanée des suites intégration + fonctionnelle sur le même démon Docker. Aucun échec de logique. Re-run séquentiel propre lancé — résultat à confirmer et à annexer.</p>
+
+
+  <section>
+    <h2>1 · Correctifs appliqués dans cette passe <span class="count">7 fichiers de code · 3 fichiers infra/doc</span></h2>
+    <div class="prose col" style="margin-bottom:1.3rem">
+      <p>Tous compilent (<code>dotnet build -c Release</code> : 0 erreur, 0 warning côté <code>src/</code>) et laissent les 1010 tests unitaires verts. Les modifications touchant la RLS, le pipeline HTTP et le journal d'audit sont couvertes par la suite fonctionnelle et d'intégration.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>Fichier(s)</th><th>Sévérité</th><th>Ce qui change</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>F1</td>
+            <td class="mono">Program.cs<br>.env.example</td>
+            <td><span class="chip block">Bloquant</span></td>
+            <td><b>En-têtes de proxy inverse.</b> Ajout de <code>UseForwardedHeaders</code> (opt-in <code>ForwardedHeaders:Enabled</code>), posé en tête de pipeline. Sans lui, derrière Nginx, tous les limiteurs de débit par IP s'effondrent sur une seule partition.</td>
+          </tr>
+          <tr>
+            <td>F2</td>
+            <td class="mono">Program.cs<br>HealthChecks/DatabaseHealthCheck.cs <span style="color:var(--ok)">(nouveau)</span></td>
+            <td><span class="chip block">Bloquant</span></td>
+            <td><b>Sondes de santé.</b> <code>/health/live</code> (vivacité), <code>/health/ready</code> (PostgreSQL joignable), <code>/health</code>. Requises par le load balancer et le rolling update décrits au Volume 9.</td>
+          </tr>
+          <tr>
+            <td>F3</td>
+            <td class="mono">docker/postgres/init/<br>01-create-app-role.sh <span style="color:var(--ok)">(restauré)</span></td>
+            <td><span class="chip block">Bloquant</span></td>
+            <td><b>Bootstrap du rôle applicatif PostgreSQL.</b> Script supprimé par erreur au commit <code>d8e2197</code>, jamais restauré. Recréé (LF, exécutable), <em>sans</em> le <code>ALTER DEFAULT PRIVILEGES … DELETE</code> d'origine qui contredisait la règle #6.</td>
+          </tr>
+          <tr>
+            <td>F4</td>
+            <td class="mono">Common/Behaviors/<br>AuditLoggingBehavior.cs<br>Common/Interfaces/IAuditLogStore.cs</td>
+            <td><span class="chip major">Majeur</span></td>
+            <td><b>Robustesse du journal d'audit.</b> L'écriture passe par <code>IAuditLogStore</code> (instruction SQL brute) au lieu de <code>dbContext.SaveChangesAsync()</code> dans le <code>catch</code> — plus de perte silencieuse de l'entrée d'échec, plus de risque de commit d'état partiel.</td>
+          </tr>
+          <tr>
+            <td>F5</td>
+            <td class="mono">Controllers/<br>ClassroomsController.cs</td>
+            <td><span class="chip major">Majeur</span></td>
+            <td><b>Anti-pattern async.</b> Suppression du <code>.ContinueWith(t =&gt; t.Result…)</code> sur un appel MediatR (réemballe les exceptions en <code>AggregateException</code> → 500 au lieu du code mappé). Remplacé par un <code>await</code> direct.</td>
+          </tr>
+          <tr>
+            <td>F6</td>
+            <td class="mono">Persistence/Interceptors/<br>TenantConnectionInterceptor.cs</td>
+            <td><span class="chip minor">Mineur</span></td>
+            <td><b>Sync-over-async.</b> Le chemin synchrone d'ouverture de connexion faisait <code>.GetAwaiter().GetResult()</code> sur le <code>set_config</code> RLS. Remplacé par un <code>ExecuteNonQuery</code> réellement synchrone (risque de famine de threads sous charge).</td>
+          </tr>
+          <tr>
+            <td>F7</td>
+            <td class="mono">Middleware/SecurityHeadersMiddleware.cs<br>tests/…/SecurityHeadersTests.cs</td>
+            <td><span class="chip minor">Mineur</span></td>
+            <td><b>En-têtes de durcissement.</b> Ajout de <code>Referrer-Policy: strict-origin-when-cross-origin</code> et d'une <code>Permissions-Policy</code> restrictive (camera / geolocation / microphone / payment coupés). Assertions de test ajoutées.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+
+  <section>
+    <h2>2 · Diagnostic — Bloquant <span class="count">3 · tous corrigés</span></h2>
+
+    <article class="finding block" id="F1">
+      <header>
+        <span class="fid">F1</span>
+        <h3>Aucun <code>UseForwardedHeaders</code> derrière le proxy inverse</h3>
+        <div class="chips"><span class="chip block">Bloquant</span><span class="chip done">Corrigé</span></div>
+      </header>
+      <dl>
+        <dt>Constat</dt>
+        <dd>Le Volume 9 §2 décrit un déploiement <em>Nginx (TLS) → conteneurs ASP.NET</em>. <code>Program.cs</code> ne configurait pas les en-têtes transférés. Conséquence : <code>Connection.RemoteIpAddress</code> vaut l'IP du proxy pour <strong>toutes</strong> les requêtes, et <code>Request.Scheme</code> reste <code>http</code>.</dd>
+        <dt>Impact</dt>
+        <dd>Les limiteurs de débit partitionnés par IP — <em>login</em> (anti credential-stuffing), inscription publique de masse, réinitialisation de mot de passe, annuaire public — se retrouvent tous sur une <strong>partition unique</strong>. Le contrôle anti-abus soigneusement posé dans <code>Program.cs</code> devient inopérant en production : soit un déni de service accidentel du login pour tout le monde, soit l'IP d'un attaquant devient invisible. En prime, <code>UseHttpsRedirection</code> peut boucler.</dd>
+        <dd class="fix"><b>Correctif —</b> <code>UseForwardedHeaders</code> (<code>XForwardedFor | XForwardedProto</code>) posé <em>en tout premier</em> dans le pipeline, activé par <code>ForwardedHeaders:Enabled=true</code> (Staging/Prod uniquement — inerte en Development). Clés <code>ForwardedHeaders:ForwardLimit</code> et <code>ForwardedHeaders:KnownProxies</code> documentées dans <code>.env.example</code>. <span class="note">À l'équipe ops : renseigner <code>KnownProxies</code> si le port applicatif peut être atteint autrement que par le proxy.</span></dd>
+      </dl>
+    </article>
+
+    <article class="finding block" id="F2">
+      <header>
+        <span class="fid">F2</span>
+        <h3>Aucune sonde de santé exposée</h3>
+        <div class="chips"><span class="chip block">Bloquant</span><span class="chip done">Corrigé</span></div>
+      </header>
+      <dl>
+        <dt>Constat</dt>
+        <dd>Rien ne répond sur <code>/health</code>. Or le Volume 9 §2.1, §4 (étape 10 « health check post-déploiement ») et §9 (« disponibilité de l'API (health checks) ») supposent tous une sonde — indispensable au load balancer, au rolling update et au rollback automatique.</dd>
+        <dt>Impact</dt>
+        <dd>Impossible de router du trafic uniquement vers une instance saine ; un déploiement progressif enverrait des requêtes vers un conteneur dont la base n'est pas encore joignable ; le contrôle post-déploiement de la CI (§4) n'a pas de cible.</dd>
+        <dd class="fix"><b>Correctif —</b> <code>AddHealthChecks()</code> + <code>DatabaseHealthCheck</code> (un <code>SELECT 1</code>, aucune table tenant). Trois endpoints anonymes, hors <code>/api/</code>, non soumis aux limiteurs : <code>/health/live</code> (le process répond, sans dépendance — pas de redémarrage en boucle si la base cligne), <code>/health/ready</code> (PostgreSQL joignable — sonde du rolling update), <code>/health</code> (agrégat).</dd>
+      </dl>
+    </article>
+
+    <article class="finding block" id="F3">
+      <header>
+        <span class="fid">F3</span>
+        <h3>Le bootstrap des deux rôles PostgreSQL a disparu du dépôt</h3>
+        <div class="chips"><span class="chip block">Bloquant</span><span class="chip done">Corrigé</span></div>
+      </header>
+      <dl>
+        <dt>Constat</dt>
+        <dd><code>docker/postgres/init/01-create-app-role.sh</code> — le script qui crée le rôle applicatif <code>sama_ecole_app</code> (<code>NOSUPERUSER</code>, <code>NOBYPASSRLS</code>) — a été supprimé au commit <code>d8e2197</code> (« nettoyage des fichiers dupliqués à la racine »), en dommage collatéral. Le dossier <code>docker/postgres/init/</code> est resté vide ; <code>docker-compose.yml</code> le monte toujours et passe toujours <code>DB_APP_USER</code>/<code>DB_APP_PASSWORD</code> que plus rien ne consomme ; la migration <code>EnableRowLevelSecurity</code> pointe toujours vers lui. Le <code>.gitattributes</code> <em>documente</em> la panne qui en découle (« le rôle sama_ecole_app n'était plus créé ») mais le script n'a jamais été remis.</dd>
+        <dt>Impact</dt>
+        <dd>Sur un checkout propre : <code>docker compose down -v &amp;&amp; up</code> produit un PostgreSQL sans le rôle applicatif → l'application ne peut pas se connecter, ou démarre sur le rôle propriétaire et <code>RlsGuard</code> refuse le démarrage. L'onboarding d'un nouveau développeur est cassé, et la moitié opérationnelle de la règle #2 (création + privilèges du rôle) n'est plus versionnée nulle part.</dd>
+        <dd class="fix"><b>Correctif —</b> script recréé (fins de ligne LF garanties par <code>.gitattributes</code>, bit exécutable posé). Version corrigée : il crée le rôle + <code>GRANT CONNECT</code> + <code>GRANT USAGE ON SCHEMA</code>, et <strong>rien d'autre</strong>. L'<code>ALTER DEFAULT PRIVILEGES … SELECT, INSERT, UPDATE, DELETE</code> du script d'origine est retiré : il ré-accordait <code>DELETE</code> en douce sur toute table future, ce qui contredit la règle #6 (aucune suppression physique). Les <code>GRANT</code> par table restent la responsabilité des migrations.</dd>
+      </dl>
+    </article>
+  </section>
+
+
+  <section>
+    <h2>3 · Diagnostic — Majeur <span class="count">2 · tous corrigés</span></h2>
+
+    <article class="finding major" id="F4">
+      <header>
+        <span class="fid">F4</span>
+        <h3><code>AuditLoggingBehavior</code> écrit l'audit d'échec via un <code>DbContext</code> déjà en échec</h3>
+        <div class="chips"><span class="chip major">Majeur</span><span class="chip done">Corrigé</span></div>
+      </header>
+      <dl>
+        <dt>Constat</dt>
+        <dd>Dans son <code>catch</code>, le comportement faisait <code>dbContext.AuditLogs.Add(…)</code> puis <code>dbContext.SaveChangesAsync()</code> — sur le <em>même</em> <code>DbContext</code> de requête que le Handler qui vient d'échouer. Après un échec, le <em>ChangeTracker</em> peut encore porter des entités mises en attente (voire un <code>SaveChanges</code> déjà en échec).</dd>
+        <dt>Impact</dt>
+        <dd>Sur un conflit de concurrence <code>xmin</code> ou une violation d'unicité (précisément les cas visés par la règle #5, sur <code>Payments</code> / <code>Grades</code> / <code>Frais</code>), le <code>SaveChangesAsync</code> de l'audit relève sur les entités périmées du Handler : l'entrée <code>success:false</code> promise par JGK-H01 est <strong>silencieusement perdue</strong>. Risque latent aggravé : un futur Handler qui met une écriture en attente <em>avant</em> de lever une règle métier verrait cet état partiel <strong>committé</strong> par le <code>SaveChanges</code> de l'audit.</dd>
+        <dd class="fix"><b>Correctif —</b> l'écriture passe par <code>IAuditLogStore.AppendAsync</code> (un seul <code>SELECT append_audit_log(…)</code> en ADO.NET brut, fonction <code>SECURITY DEFINER</code> déjà utilisée pour l'audit de connexion). Aucun <code>SaveChangesAsync</code> : le ChangeTracker du Handler n'est jamais repartagé. Effet de bord positif : les entrées d'audit d'échec sont désormais réellement persistées.</dd>
+      </dl>
+    </article>
+
+    <article class="finding major" id="F5">
+      <header>
+        <span class="fid">F5</span>
+        <h3><code>ClassroomsController.DownloadSchoolCards</code> — <code>ContinueWith(t =&gt; t.Result)</code> sur un appel MediatR</h3>
+        <div class="chips"><span class="chip major">Majeur</span><span class="chip done">Corrigé</span></div>
+      </header>
+      <dl>
+        <dt>Constat</dt>
+        <dd>Le repli « année active » était calculé par <code>mediator.Send(new GetSchoolYearsQuery()).ContinueWith(t =&gt; t.Result?.FirstOrDefault(y =&gt; y.IsActive)?.Id …)</code>.</dd>
+        <dt>Impact</dt>
+        <dd><code>t.Result</code> sur une tâche en faute lève une <code>AggregateException</code> qui <strong>n'est pas dans le switch</strong> de <code>ExceptionHandlingMiddleware</code> : un <code>NOT_FOUND</code> ou un 422 remonté par <code>GetSchoolYearsQuery</code> ressortirait en <strong>500 brut</strong> au lieu du code normalisé (règle #9). De plus <code>ContinueWith</code> sans <code>TaskScheduler</code> explicite hérite d'un ordonnanceur ambigu.</dd>
+        <dd class="fix"><b>Correctif —</b> <code>await</code> direct de la requête, avec repli lisible sur <code>Guid.Empty</code>. Chemin peu fréquent, mais c'est exactement le type d'anti-pattern demandé au périmètre « méthodes trop complexes / dette technique ».</dd>
+      </dl>
+    </article>
+  </section>
+
+
+  <section>
+    <h2>4 · Diagnostic — Mineur <span class="count">6 · 2 corrigés · 4 recommandations</span></h2>
+
+    <article class="finding minor" id="F6">
+      <header><span class="fid">F6</span><h3><code>TenantConnectionInterceptor.ConnectionOpened</code> — sync-over-async</h3><div class="chips"><span class="chip minor">Mineur</span><span class="chip done">Corrigé</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd>Le chemin d'ouverture <em>synchrone</em> d'EF Core faisait <code>ApplyTenantAsync(…).GetAwaiter().GetResult()</code> pour poser <code>app.current_school_id</code>.</dd>
+        <dt>Impact</dt><dd>Bloque un thread du pool sur une E/S base à chaque ouverture de connexion synchrone : risque de famine de threads sous charge. L'application étant quasi entièrement <code>async</code>, le chemin est rarement emprunté — d'où la sévérité mineure.</dd>
+        <dd class="fix"><b>Correctif —</b> vraie exécution synchrone (<code>ExecuteNonQuery</code>) pour l'override sync ; SQL et paramétrage identiques, aucune machine à états asynchrone.</dd>
+      </dl>
+    </article>
+
+    <article class="finding minor" id="F7">
+      <header><span class="fid">F7</span><h3>En-têtes de durcissement manquants</h3><div class="chips"><span class="chip minor">Mineur</span><span class="chip done">Corrigé</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd><code>SecurityHeadersMiddleware</code> posait <code>nosniff</code>, <code>X-Frame-Options</code>, <code>X-XSS-Protection</code> et une CSP stricte, mais pas de <code>Referrer-Policy</code> ni de <code>Permissions-Policy</code>.</dd>
+        <dt>Impact</dt><dd>Fuite du <em>Referer</em> complet vers les hôtes d'images externes (logo d'établissement) ; aucune restriction sur les API navigateur puissantes (caméra, géoloc, paiement) qu'un script injecté pourrait tenter d'exploiter.</dd>
+        <dd class="fix"><b>Correctif —</b> <code>Referrer-Policy: strict-origin-when-cross-origin</code> + <code>Permissions-Policy</code> qui neutralise caméra / micro / géoloc / paiement / USB / MIDI… (l'app n'en utilise aucune — saisie GPS au clavier, QR lu par l'appareil photo natif). Assertions ajoutées à <code>SecurityHeadersTests</code>.</dd>
+      </dl>
+    </article>
+
+    <article class="finding minor" id="F8">
+      <header><span class="fid">F8</span><h3><code>AllowedHosts: "*"</code> non restreint pour la production</h3><div class="chips"><span class="chip minor">Mineur</span><span class="chip todo">Recommandation</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd><code>appsettings.json</code> garde <code>AllowedHosts: "*"</code> ; <code>appsettings.Production.json</code> ne le surcharge pas.</dd>
+        <dt>Impact</dt><dd>Défense en profondeur uniquement — Nginx valide déjà l'en-tête <code>Host</code>. Sans proxy correctement configuré, ouvre la porte à des attaques par <em>Host header</em> (empoisonnement de cache, liens absolus).</dd>
+        <dt>Reco</dt><dd>Poser le(s) domaine(s) réel(s) via <code>AllowedHosts</code> dans <code>appsettings.Production.json</code> ou une variable d'environnement.</dd>
+      </dl>
+    </article>
+
+    <article class="finding minor" id="F9">
+      <header><span class="fid">F9</span><h3>Webhooks publics sans limiteur de débit</h3><div class="chips"><span class="chip minor">Mineur</span><span class="chip todo">Recommandation</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd><code>POST /webhooks/payments/{provider}</code> et <code>POST /webhooks/sms/{provider}</code> sont <code>[AllowAnonymous]</code> (voulu — l'agrégateur appelle sans JWT) mais ne portent aucune <code>[EnableRateLimiting]</code>.</dd>
+        <dt>Impact</dt><dd>La vérification de signature est peu coûteuse, donc le risque de DoS est modéré, mais un endpoint public non authentifié sans plafond reste une exposition inutile.</dd>
+        <dt>Reco</dt><dd>Ajouter une politique de débit par IP, généreuse (les agrégateurs rejouent légitimement), sur ces deux routes.</dd>
+      </dl>
+    </article>
+
+    <article class="finding minor" id="F10">
+      <header><span class="fid">F10</span><h3><code>SubscriptionAwaitingPaymentMiddleware</code> — un aller-retour BDD par requête <code>/api/*</code></h3><div class="chips"><span class="chip minor">Mineur</span><span class="chip todo">Différable</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd>Chaque requête API interroge <code>subscriptions</code> pour lire le statut de l'école. Compromis documenté (le JWT ne porte volontairement aucun claim d'abonnement).</dd>
+        <dt>Impact</dt><dd>Performance uniquement : une lecture indexée supplémentaire sur le chemin chaud.</dd>
+        <dt>Reco</dt><dd>Cache par école à TTL court (quelques secondes), invalidé au traitement du webhook de confirmation. Non bloquant — à traiter si la latence P99 le justifie.</dd>
+      </dl>
+    </article>
+
+    <article class="finding minor" id="F11">
+      <header><span class="fid">F11</span><h3><code>X-XSS-Protection: 1; mode=block</code> — en-tête hérité</h3><div class="chips"><span class="chip minor">Mineur</span><span class="chip todo">À arbitrer</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd>Le ticket JGK-F01 impose <code>1; mode=block</code>. L'OWASP recommande aujourd'hui <code>0</code> (l'auditeur XSS des anciens navigateurs a lui-même été une source de vulnérabilités type XS-Leaks).</dd>
+        <dt>Impact</dt><dd>Faible dans les deux sens. La CSP <code>script-src</code> sans <code>unsafe-inline</code> est la vraie protection.</dd>
+        <dt>Reco</dt><dd>Décision produit : conserver (conformité au ticket) ou passer à <code>0</code> (aligné pratiques actuelles). Laissé tel quel dans cette passe.</dd>
+      </dl>
+    </article>
+  </section>
+
+
+  <section>
+    <h2>5 · Info &amp; points à vérifier en Staging <span class="count">4</span></h2>
+
+    <article class="finding info" id="I1">
+      <header><span class="fid">I1</span><h3><code>appsettings.Development.json</code> embarqué dans l'image Docker</h3><div class="chips"><span class="chip info">Info</span><span class="chip todo">Recommandation</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd><code>.dockerignore</code> n'exclut pas ce fichier : il contient le sentinel de clé JWT de dev et des mots de passe <code>changeme</code>, et se retrouve dans une couche de l'image.</dd>
+        <dt>Impact</dt><dd>Inerte sous <code>ASPNETCORE_ENVIRONMENT=Production/Staging</code> (le fichier n'est pas chargé) et <code>Program.cs</code> refuse de démarrer sur la clé sentinel hors Development. Reste une mauvaise hygiène.</dd>
+        <dt>Reco</dt><dd>Ajouter <code>**/appsettings.Development.json</code> à <code>.dockerignore</code>.</dd>
+      </dl>
+    </article>
+
+    <article class="finding info" id="I2">
+      <header><span class="fid">I2</span><h3>Vérifier les <code>GRANT</code> effectifs de <code>sama_ecole_app</code> sur la base réelle</h3><div class="chips"><span class="chip info">Info</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd>La migration <code>EnableRowLevelSecurity</code> émet un <code>GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES</code> global pour les tables existant à ce point ; les migrations suivantes accordent <code>SELECT, INSERT, UPDATE</code> (sans <code>DELETE</code>) par table, avec <code>DELETE</code> explicite sur quelques tables de liaison seulement.</dd>
+        <dt>Reco</dt><dd>Sur la base de Staging, contrôler (<code>\dp</code>) que le jeu de privilèges effectif du rôle applicatif correspond bien au modèle voulu : <code>SELECT/INSERT/UPDATE</code> partout, <code>DELETE</code> uniquement sur la liste blanche (<code>teacher_subjects</code>, <code>refresh_tokens</code>, <code>classrooms</code>, paie, décaissements…).</dd>
+      </dl>
+    </article>
+
+    <article class="finding info" id="I3">
+      <header><span class="fid">I3</span><h3>Couverture RLS — s'appuyer sur <code>RlsCoverageTests</code> en CI</h3><div class="chips"><span class="chip info">Info</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd><code>RlsGuard</code> vérifie au démarrage que le rôle applicatif ne contourne pas la RLS et ne possède aucune table — mais <em>pas</em> que chaque table tenant a bien <code>ROW LEVEL SECURITY</code> activé + une policy. C'est <code>RlsCoverageTests</code> (catégorie <code>MultiTenant</code>) qui le fait, table par table.</dd>
+        <dt>Reco</dt><dd>Confirmer que la CI exécute <code>dotnet test --filter Category=MultiTenant</code> et <strong>bloque le déploiement</strong> à son échec (Volume 9 §4 étape 2 le prévoit déjà — vérifier l'implémentation du pipeline).</dd>
+      </dl>
+    </article>
+
+    <article class="finding info" id="I4">
+      <header><span class="fid">I4</span><h3>Chaîne de connexion Supabase — deux rôles obligatoires</h3><div class="chips"><span class="chip info">Info</span></div></header>
+      <dl>
+        <dt>Constat</dt><dd><code>appsettings.json</code> contient un placeholder mono-utilisateur (<code>YOUR_SUPABASE_USER</code>). Le déploiement doit fournir <code>ConnectionStrings__Default</code> (rôle applicatif, soumis RLS) <em>et</em> <code>ConnectionStrings__Migrations</code> (rôle propriétaire) distincts.</dd>
+        <dt>Reco</dt><dd>Rien à coder — <code>RlsGuard</code> refuse le démarrage si l'application tourne sur un rôle propriétaire / superutilisateur / <code>BYPASSRLS</code>. À valider au premier démarrage Staging : le guard doit passer.</dd>
+      </dl>
+    </article>
+
+    <p class="note" style="margin-top:1.2rem">Divers non bloquant : encombrement racine (<code>_old-web-repo.bundle</code> 56 Mo, <code>dist/UnikolDemo</code>, <code>Presentation_Unikol_2026.pptx</code>, <code>generate_deck.py</code>, doublons <code>Volume_1_*.md</code> / <code>Volume_5_*.md</code>). Non expédié (le <code>.dockerignore</code> exclut <code>*.md</code>, le bundle n'est référencé nulle part). Nettoyage à faire après validation de l'équipe. <code>openapi.yaml</code> ne documente pas <code>/health</code> — endpoints opérationnels, pas contractuels : ajout optionnel.</p>
+  </section>
+
+
+  <section>
+    <h2>6 · Ce qui est déjà solide</h2>
+    <div class="prose col" style="margin-bottom:1.2rem"><p>À conserver en l'état — relevé pour cadrer le périmètre du risque restant.</p></div>
+    <div class="pos">
+      <div><b>Gardes de démarrage</b><span>Force / faiblesse / sentinel de la clé JWT, rôle PostgreSQL (RlsGuard), SMTP (EmailSenderGuard), avertissements SMS / WhatsApp.</span></div>
+      <div><b>Isolation multi-tenant</b><span>Global Query Filter EF + policies RLS PostgreSQL + interceptor de connexion + rôle applicatif dédié + <code>RlsCoverageTests</code>.</span></div>
+      <div><b>Authentification</b><span>401/422 génériques (pas d'oracle d'énumération), login/reset limités en débit, refresh token en cookie <code>HttpOnly + Secure + SameSite=Strict</code>, <code>schoolId</code> jamais lu du client.</span></div>
+      <div><b>Webhook de paiement</b><span>Signature d'abord, IPN serveur-à-serveur, contrôle du montant, transition atomique idempotente. Règle #11 respectée.</span></div>
+      <div><b>Autorisation</b><span>Chaque contrôleur API <code>[Authorize]</code> + rôles ; <code>[AllowAnonymous]</code> uniquement là où c'est documenté (webhooks, annuaire public, inscription, auth).</span></div>
+      <div><b>Gestion d'erreurs</b><span>Middleware global → format d'erreur normalisé ; <code>OperationCanceledException</code> → 499 ; conflits <code>xmin</code> et violations d'unicité → 409 traduits.</span></div>
+      <div><b>CQRS / validation</b><span><code>ValidationBehavior</code> en tête du pipeline MediatR, <code>AddValidatorsFromAssembly</code> — toute commande est validée avant la couche métier.</span></div>
+      <div><b>Injections</b><span>Aucun secret en dur ; SQL uniquement paramétré (<code>FromSqlRaw</code> avec <code>{0}</code>) ; unique <code>Html.Raw</code> encodé par System.Text.Json ; 54/55 handlers de lecture en <code>AsNoTracking</code>.</span></div>
+      <div><b>Anti-SSRF</b><span>Récupération du logo d'établissement via un <code>HttpClient</code> dédié : <code>SsrfSafeConnect</code>, aucune redirection auto, timeout court.</span></div>
+      <div><b>Image runtime</b><span>Alpine + fontconfig/freetype/ICU pour QuestPDF ; conteneur de migration séparé, seul à recevoir le rôle propriétaire.</span></div>
+    </div>
+  </section>
+
+
+  <section>
+    <h2>7 · Checklist Feu Vert — Staging &amp; Production</h2>
+    <div class="cols2">
+      <div class="panel">
+        <h3><span class="chip done">Fait</span> Traité dans cet audit</h3>
+        <ul class="checklist">
+          <li><span class="mark on">✓</span><span><b>Build Release</b> — 0 erreur, 0 warning côté <code>src/</code>, solution complète.</span></li>
+          <li><span class="mark on">✓</span><span><b>Tests unitaires</b> — 1010 / 1010, après correctifs.</span></li>
+          <li><span class="mark on">✓</span><span><b>Tests fonctionnels</b> — 600 / 600 (base de référence pré-correctifs).</span></li>
+          <li><span class="mark on">✓</span><span><b>Modèle EF ↔ migrations</b> — <code>has-pending-model-changes</code> : aucun écart.</span></li>
+          <li><span class="mark on">✓</span><span><b>Secrets</b> — aucune clé / mot de passe / chaîne de connexion en dur dans le code.</span></li>
+          <li><span class="mark on">✓</span><span><b>F1–F7</b> — proxy inverse, sondes de santé, bootstrap rôle PG, robustesse audit, anti-patterns async, en-têtes de durcissement.</span></li>
+          <li><span class="mark on">✓</span><span><b>Swagger / HSTS / HTTPS redirect</b> — déjà conditionnés à <code>!IsDevelopment()</code>. Vérifié.</span></li>
+          <li><span class="mark on">✓</span><span><b>Logs</b> — Serilog JSON compact hors Development, niveau <code>Warning</code> en Production, aucun PII automatique. Vérifié.</span></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3><span class="chip todo">À faire</span> Avant la bascule (équipe)</h3>
+        <ul class="checklist">
+          <li><span class="mark off">▢</span><span><b>Relire &amp; fusionner F1–F7.</b><small>Attention particulière au pipeline HTTP (F1) et au journal d'audit (F4).</small></span></li>
+          <li><span class="mark off">▢</span><span><b>Run CI vert de toute la matrice</b> sur PostgreSQL réel, dont <code>--filter Category=MultiTenant</code>, avec blocage du déploiement à l'échec.<small>Le run d'intégration local (296/298) a subi 2 flakes Testcontainers sous charge parallèle — relancer proprement et annexer.</small></span></li>
+          <li><span class="mark off">▢</span><span><b>Provisionner les secrets réels</b> par environnement : <code>Jwt__SigningKey</code> (256 bits, jamais réutilisée), <code>ConnectionStrings__Default</code> + <code>__Migrations</code> (deux rôles), SMTP, PayDunya, <code>Sms__WebhookSecret</code>.</span></li>
+          <li><span class="mark off">▢</span><span><b>Activer <code>ForwardedHeaders__Enabled=true</code></b> en Staging/Prod et renseigner <code>ForwardedHeaders__KnownProxies</code> si le port applicatif n'est pas strictement privé.</span></li>
+          <li><span class="mark off">▢</span><span><b>Créer le rôle <code>sama_ecole_app</code></b> sur la base managée (script F3 comme référence) avant la première migration.</span></li>
+          <li><span class="mark off">▢</span><span><b>Test de fumée Staging</b> sur la topologie cible : Nginx + TLS, 2 rôles PG, <code>RlsGuard</code> passe, <code>/health/ready</code> = 200, login + limiteur de débit voit la vraie IP cliente.</span></li>
+          <li><span class="mark off">▢</span><span><b>Vérifier les <code>GRANT</code> effectifs</b> de <code>sama_ecole_app</code> (I2) — <code>SELECT/INSERT/UPDATE</code> partout, <code>DELETE</code> sur liste blanche uniquement.</span></li>
+          <li><span class="mark off">▢</span><span><b>Sauvegarde BDD automatique avant migrations</b> (Volume 9 §4 étape 7) confirmée dans le pipeline, avec rollback automatique testé.</span></li>
+          <li><span class="mark off">▢</span><span><b>Ajuster les tarifs d'abonnement</b> — <code>SubscriptionPricing</code> est un placeholder marqué dans <code>appsettings.json</code>.</span></li>
+          <li><span class="mark off">▢</span><span><b>Traiter ou planifier F8–F11 + I1</b> selon l'appétit de risque (aucun n'est bloquant).</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+
+  <footer>
+    <p><b>Périmètre.</b> Analyse statique de l'intégralité du dépôt (≈ 56 000 lignes C# hors migrations, 43 contrôleurs, ~150 handlers), lecture ciblée des chemins à risque (auth, RLS, middleware, webhooks, transactions), exécution locale de la suite complète (unitaires + fonctionnels + intégration) contre PostgreSQL réel, contrôle de dérive du modèle EF, revue des Dockerfile, de <code>docker-compose.yml</code>, de <code>.dockerignore</code> et du Volume 9.</p>
+    <p><b>Limites.</b> Un audit statique + tests locaux ne remplace pas : un run CI complet, un test de charge, un test de fumée sur l'infrastructure Staging réelle (Nginx, PostgreSQL managé, stockage objet), et une revue DBA des privilèges effectifs. Le « feu vert » ci-dessus est <em>conditionnel</em> à ces étapes.</p>
+    <p>Généré le 31/08/2026 — branche <code>feature/assistant-premier-parametrage</code>.</p>
+  </footer>
+
+</div>

@@ -3,6 +3,7 @@ using SamaEcole.Application.Classrooms.Commands.DeleteClassroom;
 using SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
 using SamaEcole.Application.Classrooms.Queries.GetClassrooms;
 using SamaEcole.Application.Classrooms.Queries.GetSchoolCardsPdf;
+using SamaEcole.Application.SchoolYears.Queries.GetSchoolYears;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -97,10 +98,17 @@ public class ClassroomsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> DownloadSchoolCards(
         Guid id, [FromQuery] Guid? schoolYearId, CancellationToken cancellationToken)
     {
-        // Si non fourni, on prend l'année active
-        var targetYearId = schoolYearId ?? await mediator.Send(new SamaEcole.Application.SchoolYears.Queries.GetSchoolYears.GetSchoolYearsQuery(), cancellationToken)
-            .ContinueWith(t => t.Result?.FirstOrDefault(y => y.IsActive)?.Id ?? Guid.Empty);
-        
+        // Si non fourni, on prend l'année active. `await` direct plutôt que ContinueWith(t => t.Result) :
+        // t.Result réemballe toute exception du Handler dans une AggregateException, que
+        // ExceptionHandlingMiddleware ne sait pas traduire (un NOT_FOUND ou un 422 deviendrait un 500) ;
+        // et ContinueWith sans TaskScheduler explicite hérite d'un ordonnanceur ambigu.
+        var targetYearId = schoolYearId ?? Guid.Empty;
+        if (targetYearId == Guid.Empty)
+        {
+            var schoolYears = await mediator.Send(new GetSchoolYearsQuery(), cancellationToken);
+            targetYearId = schoolYears.FirstOrDefault(y => y.IsActive)?.Id ?? Guid.Empty;
+        }
+
         var pdfBytes = await mediator.Send(new GetSchoolCardsPdfQuery(id, targetYearId), cancellationToken);
         return File(pdfBytes, "application/pdf", $"Cartes_Scolaires_{id}.pdf");
     }

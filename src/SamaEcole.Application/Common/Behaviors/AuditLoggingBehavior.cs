@@ -1,5 +1,4 @@
 using SamaEcole.Application.Common.Interfaces;
-using SamaEcole.Domain.Entities;
 using MediatR;
 
 namespace SamaEcole.Application.Common.Behaviors;
@@ -18,7 +17,7 @@ namespace SamaEcole.Application.Common.Behaviors;
 /// statut/mot de passe/création de compte utilisateur (JGK-A05 et extensions), impressions de reçus.
 /// </summary>
 public class AuditLoggingBehavior<TRequest, TResponse>(
-    IApplicationDbContext dbContext,
+    IAuditLogStore auditLogStore,
     ITenantProvider tenantProvider,
     ICurrentUserService currentUser,
     TimeProvider timeProvider)
@@ -62,7 +61,7 @@ public class AuditLoggingBehavior<TRequest, TResponse>(
         Guid actorId, bool success, string? failureReason, CancellationToken cancellationToken)
     {
         // Sans tenant établi (Super Admin, ou tout appelant sans SchoolId propre), la policy RLS
-        // rejetterait l'INSERT quelle que soit la valeur visée — rien à journaliser ici pour ce cas
+        // rejetterait l'écriture quelle que soit la valeur visée — rien à journaliser ici pour ce cas
         // (voir la remarque de classe : nécessiterait sa propre fonction SECURITY DEFINER).
         var schoolId = tenantProvider.CurrentSchoolId;
 
@@ -78,19 +77,17 @@ public class AuditLoggingBehavior<TRequest, TResponse>(
         action = action.Length > 100 ? action[..97] + "..." : action;
         failureReason = failureReason?.Length > 3950 ? failureReason[..3950] + "..." : failureReason;
 
-        dbContext.AuditLogs.Add(new AuditLog
-        {
-            SchoolId = schoolId.Value,
-            UserId = actorId,
-            Module = module,
-            Action = action,
-            Success = success,
-            FailureReason = failureReason,
-            IpAddress = currentUser.IpAddress,
-            OccurredAt = timeProvider.GetUtcNow()
-        });
-
-        await dbContext.SaveChangesAsync(cancellationToken);
+        // Passe par IAuditLogStore (SELECT append_audit_log(...), une seule instruction en ADO.NET brut)
+        // plutôt que par dbContext.AuditLogs.Add + SaveChangesAsync. Décisif sur le chemin d'ERREUR :
+        // quand le Handler a échoué, son ChangeTracker peut encore porter des entités mises en attente
+        // (voire un SaveChanges déjà en échec). Un SaveChangesAsync ici les repartagerait — soit en
+        // perdant silencieusement l'entrée d'audit d'un échec (le Save relève sur les entités périmées),
+        // soit, pour un futur Handler qui met en attente AVANT de lever, en committant un état partiel
+        // qui devait être annulé. L'écriture brute n'écrit QUE la ligne d'audit et respecte la
+        // transaction courante si l'appelant en a ouvert une.
+        await auditLogStore.AppendAsync(
+            schoolId.Value, actorId, module, action, success, failureReason,
+            currentUser.IpAddress, timeProvider.GetUtcNow(), cancellationToken);
     }
 
     /// <summary>
