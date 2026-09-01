@@ -40,9 +40,26 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
 {
     public DocumentMetadata GetMetadata() => new()
     {
-        Title = $"Attestation d'inscription {receipt.ReceiptNumber}",
+        Title = $"Attestation d'inscription — {ReceiptReference()}",
         Author = receipt.SchoolName
     };
+
+    /// <summary>
+    /// Référence affichée sur le badge « N° … » et dans le titre du document. Sur une inscription
+    /// « envoyée en Caisse » (paiement différé), AUCUN numéro de reçu officiel n'a été consommé
+    /// (AGENTS.md règle #3 — le registre gapless est réservé à un mouvement d'argent réel) : la
+    /// colonne porte un jeton provisoire <c>EN-ATTENTE-{guid}</c>. On l'affiche alors
+    /// « en attente de règlement », comme l'écran (<c>receiptReference()</c> dans enrollments.js) ;
+    /// le numéro officiel apparaît au premier encaissement, à la Caisse.
+    /// </summary>
+    private string ReceiptReference()
+    {
+        var pending =
+            (receipt.ReceiptNumber?.StartsWith("EN-ATTENTE-", StringComparison.OrdinalIgnoreCase) ?? false)
+            || string.Equals(receipt.Status, "PendingPayment", StringComparison.OrdinalIgnoreCase);
+
+        return pending ? "en attente de règlement" : receipt.ReceiptNumber;
+    }
 
     public void Compose(IDocumentContainer container)
     {
@@ -65,7 +82,7 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
                     receipt.SchoolRegistreCommerce,
                     logo,
                     ("Inscription enregistrée", ReceiptTheme.BadgeStyle.Info),
-                    ($"N° {receipt.ReceiptNumber}", ReceiptTheme.BadgeStyle.Neutral),
+                    ($"N° {ReceiptReference()}", ReceiptTheme.BadgeStyle.Neutral),
                     ($"Année {receipt.SchoolYearLabel}", ReceiptTheme.BadgeStyle.Neutral));
 
                 column.Item().PaddingTop(7).Element(ComposeCartouche);

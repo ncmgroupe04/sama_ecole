@@ -30,9 +30,11 @@ public class ReceiptPdfGeneratorTests
         IReadOnlyList<CollectedFeeLineDto>? collected = null,
         string? legalMentions = "SN-DKR-2020-B-1234",
         bool isAcceleratedClass = false,
-        string classroomName = "CE1") => new(
+        string classroomName = "CE1",
+        string receiptNumber = "REC-2025-0002",
+        string status = nameof(EnrollmentStatus.Confirmed)) => new(
         EnrollmentId: Guid.NewGuid(),
-        ReceiptNumber: "REC-2025-0002",
+        ReceiptNumber: receiptNumber,
         SchoolName: "École Primaire Les Baobabs",
         SchoolAddress: city is null ? null : $"Rue 12, Médina, {city}",
         SchoolPhone: phone,
@@ -49,7 +51,7 @@ public class ReceiptPdfGeneratorTests
         GuardianName: legalMentions is null ? null : "Ndèye Fall",
         GuardianPhone: legalMentions is null ? null : "77 000 00 00",
         Type: nameof(EnrollmentType.NewEnrollment),
-        Status: nameof(EnrollmentStatus.Confirmed),
+        Status: status,
         EnrolledAt: new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero),
         Lines: lines ?? new List<EnrollmentFeeLineDto>
         {
@@ -117,6 +119,27 @@ public class ReceiptPdfGeneratorTests
             Receipt(collected: new List<CollectedFeeLineDto>()), logo: null);
 
         ShouldBeAValidPdf(pdf);
+    }
+
+    /// <summary>
+    /// Inscription « envoyée en Caisse » (paiement différé) : aucun numéro de reçu officiel n'a été
+    /// consommé (AGENTS.md règle #3), la colonne porte un jeton provisoire <c>EN-ATTENTE-{guid}</c>.
+    /// Le document doit se générer sans encombre ; le badge affiche alors « N° en attente de règlement »
+    /// (logique <c>ReceiptReference()</c>, mêmes cas que <c>receiptReference()</c> dans enrollments.js).
+    /// Le titre du PDF (métadonnées, non compressé) ne laisse pas fuiter le jeton brut.
+    /// </summary>
+    [Fact]
+    public void Generate_Handles_A_Deferred_Enrollment_Without_An_Official_Receipt_Number()
+    {
+        var token = $"EN-ATTENTE-{Guid.NewGuid():N}";
+
+        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(
+            Receipt(receiptNumber: token, status: nameof(EnrollmentStatus.PendingPayment)), logo: null);
+
+        ShouldBeAValidPdf(pdf);
+        pdf.Length.Should().BeGreaterThan(1000);
+        Encoding.ASCII.GetString(pdf).Should().NotContain(
+            token, "le jeton provisoire EN-ATTENTE-… ne doit pas figurer dans le titre du document");
     }
 
     [Fact]
