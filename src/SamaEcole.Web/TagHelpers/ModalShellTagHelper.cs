@@ -57,6 +57,12 @@ public class ModalShellTagHelper : TagHelper
     public bool NoPadding { get; set; } = false;
 
     /// <summary>
+    /// Hauteur FIXE et haute (≈ 92 vh) au lieu de « s'adapte au contenu, plafonné à 90 vh ». Pour une
+    /// modale dont le corps doit remplir l'écran — l'aperçu PDF (l'iframe occupe alors toute la place).
+    /// </summary>
+    public bool Tall { get; set; } = false;
+
+    /// <summary>
     /// Expression Alpine exécutée à la fermeture (fond, ✕, Échap). Par défaut « {Open} = false » ; à
     /// fournir explicitement quand <see cref="Open"/> n'est pas un booléen simple — ex. la fiche élève
     /// se ferme par « detailStudent = null », pas par une affectation à false.
@@ -92,7 +98,7 @@ public class ModalShellTagHelper : TagHelper
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
-                     class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl sm:my-8 sm:h-auto sm:max-h-[90vh] sm:w-full {maxWidth} sm:rounded-xl">
+                     class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-xl">
                     {(HideHeader ? "" : $"""
                     <div class="flex-shrink-0 bg-white border-b border-slate-100 p-6">
                         <div class="flex items-center justify-between gap-4">
@@ -125,9 +131,9 @@ public class ModalShellTagHelper : TagHelper
         "lg" => "sm:max-w-lg",
         "xl" => "sm:max-w-xl",
         "2xl" => "sm:max-w-2xl",
-        // Aperçu PDF : « xl » élargi de 40 % (36rem → 50.4rem) — assez pour lire une page A4/A5 sans
-        // débordement, sans occuper tout l'écran.
-        "pdf" => "sm:w-full sm:max-w-[50.4rem]",
+        // Aperçu PDF : ≈ 70 % de la largeur d'écran (plafond 6xl / 72rem) — combiné à `tall` (≈ 92 vh),
+        // l'iframe de la visionneuse a de la place sans que la modale occupe tout l'écran.
+        "pdf" => "sm:w-[70%] sm:max-w-6xl",
         "60" => "sm:w-[60%] sm:max-w-4xl",
         "wide" => "sm:w-[85%] sm:max-w-6xl",
         _ => "sm:max-w-3xl"

@@ -27,7 +27,9 @@
 // v1.0.6 — retour de la modale d'aperçu PDF (_PdfPreviewModal, iframe + visionneuse native) :
 //          pdf-preview.js réexpose l'état Alpine de la modale au lieu d'ouvrir un onglet.
 // v1.0.7 — modale d'aperçu PDF élargie de 40 % (site.css : nouvelle largeur sm:max-w-[50.4rem]).
-const CACHE_NAME = 'samaecole-static-v1.0.7';
+// v1.0.8 — modale d'aperçu PDF : refonte du header (barre d'actions unique avec la croix Fermer,
+//          plus de bandeau titre), gabarit ≈ 70 % de large (sm:w-[70%] max-w-6xl), hauteur 92vh.
+const CACHE_NAME = 'samaecole-static-v1.0.8';
 
 const STATIC_ASSETS = [
     '/',
