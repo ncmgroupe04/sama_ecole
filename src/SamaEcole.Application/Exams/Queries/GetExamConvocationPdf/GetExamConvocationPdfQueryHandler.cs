@@ -38,7 +38,7 @@ public class GetExamConvocationPdfQueryHandler(
         if (string.IsNullOrWhiteSpace(dossier.CandidateNumber) || string.IsNullOrWhiteSpace(dossier.ExamCenterName))
         {
             throw new BusinessRuleException(
-                "Le centre d'examen et le numéro de table doivent être attribués avant d'émettre la convocation.");
+                "Le centre d'examen et le numéro de candidat doivent être attribués avant d'émettre la convocation.");
         }
 
         var school = await dbContext.Schools.AsNoTracking()

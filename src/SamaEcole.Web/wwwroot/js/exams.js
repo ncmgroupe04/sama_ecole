@@ -758,7 +758,11 @@ document.addEventListener('alpine:init', () => {
                 `Fiche-Candidature-${dossier.candidateNumber || dossier.studentFullName}.pdf`);
         },
 
-        /** Refusée (409) tant que centre et numéro de table ne sont pas attribués — message API affiché tel quel via un toast. */
+        /**
+         * L'action est masquée tant que centre et numéro de candidat ne sont pas attribués (Index.cshtml).
+         * Si l'endpoint est tout de même atteint sans eux (lien direct), il répond 409 et le message API
+         * s'affiche tel quel dans la modale d'aperçu partagée.
+         */
         async printConvocation(dossier) {
             await this.openPdfPreview(
                 `/api/v1/exams/dossiers/${dossier.id}/convocation/pdf`,

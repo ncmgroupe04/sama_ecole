@@ -220,7 +220,8 @@
                                         <row-action icon="checkmark-circle" label="Saisir le résultat" on-click="openRecordResult(dossier)"
                                                     show="canManage && (dossier.status === 'Transmis' || dossier.status === 'Valide')" />
                                         <row-action icon="print" label="Fiche de candidature (PDF)" on-click="printCandidateForm(dossier)" show="canManage" />
-                                        <row-action icon="document-text" label="Convocation (PDF)" on-click="printConvocation(dossier)" show="canManage" />
+                                        <row-action icon="document-text" label="Convocation (PDF)" on-click="printConvocation(dossier)"
+                                                    show="canManage && dossier.candidateNumber && dossier.examCenterName" />
                                     </row-actions>
                                 </td>
                             </tr>
