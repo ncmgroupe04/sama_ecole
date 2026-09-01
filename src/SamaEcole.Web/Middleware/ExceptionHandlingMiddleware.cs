@@ -91,6 +91,18 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 credentialsEx.Message,
                 null),
 
+            // Refus de portée dont le message a été rédigé POUR l'écran (classe non assignée, dossier
+            // hors périmètre, créneau d'un collègue) : on le renvoie tel quel, avec l'action
+            // corrective — docs/Volume_4_API_Design.md §22. Doit précéder le cas UnauthorizedAccessException
+            // ci-dessous, dont il hérite.
+            ForbiddenException forbiddenEx => (
+                HttpStatusCode.Forbidden,
+                "FORBIDDEN",
+                forbiddenEx.Message,
+                null),
+
+            // Garde interne « ne devrait jamais arriver » (« Tenant is required. », « Utilisateur
+            // courant inconnu. »…) : message aplati, il ne doit pas fuir de vocabulaire technique.
             UnauthorizedAccessException => (
                 HttpStatusCode.Forbidden,
                 "FORBIDDEN",

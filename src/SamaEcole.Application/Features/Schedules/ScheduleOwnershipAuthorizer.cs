@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +46,7 @@ public class ScheduleOwnershipAuthorizer(
 
         if (teacherId is null)
         {
-            throw new UnauthorizedAccessException(
+            throw new ForbiddenException(
                 "Votre compte n'est rattaché à aucune fiche enseignant : demandez au Directeur de faire le rattachement.");
         }
 
@@ -72,13 +73,13 @@ public class ScheduleOwnershipAuthorizer(
 
         if (currentSlotTeacherId is not null && currentSlotTeacherId != ownTeacherId)
         {
-            throw new UnauthorizedAccessException(
+            throw new ForbiddenException(
                 "Ce créneau appartient à un autre enseignant : vous ne pouvez pas le modifier.");
         }
 
         if (requestedTeacherId != ownTeacherId)
         {
-            throw new UnauthorizedAccessException(
+            throw new ForbiddenException(
                 "Vous ne pouvez créer un créneau que pour vous-même.");
         }
 

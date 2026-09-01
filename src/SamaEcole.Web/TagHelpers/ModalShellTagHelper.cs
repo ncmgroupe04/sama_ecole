@@ -131,9 +131,10 @@ public class ModalShellTagHelper : TagHelper
         "lg" => "sm:max-w-lg",
         "xl" => "sm:max-w-xl",
         "2xl" => "sm:max-w-2xl",
-        // Aperçu PDF : ≈ 70 % de la largeur d'écran (plafond 6xl / 72rem) — combiné à `tall` (≈ 92 vh),
-        // l'iframe de la visionneuse a de la place sans que la modale occupe tout l'écran.
-        "pdf" => "sm:w-[70%] sm:max-w-6xl",
+        // Aperçu PDF : plafond 4xl (56rem / 896px). La visionneuse native centre la page sur un fond
+        // sombre — au-delà de cette largeur, ce ne sont plus que deux larges bandes vides de part et
+        // d'autre du document. Combiné à `tall` (≈ 92 vh), la page respire sans que la modale s'étale.
+        "pdf" => "sm:max-w-4xl",
         "60" => "sm:w-[60%] sm:max-w-4xl",
         "wide" => "sm:w-[85%] sm:max-w-6xl",
         _ => "sm:max-w-3xl"

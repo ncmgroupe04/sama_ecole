@@ -49,6 +49,11 @@ window.toast = (function () {
     }
 
     function show(message, variant) {
+        // Message vide : rien à annoncer. Cas concret — window.api.toMessage() renvoie '' pour une
+        // erreur déjà portée par la modale universelle « Accès refusé » (voir api.js) ; sans ce garde,
+        // un rectangle rouge vide s'afficherait par-dessus.
+        if (message === null || message === undefined || String(message).trim() === '') return;
+
         const container = ensureContainer();
         const el = document.createElement('div');
         const styles = variant === 'error'

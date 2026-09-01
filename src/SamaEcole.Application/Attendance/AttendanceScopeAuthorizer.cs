@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -47,7 +48,7 @@ public class AttendanceScopeAuthorizer(
 
         if (teacherId is null)
         {
-            throw new UnauthorizedAccessException(
+            throw new ForbiddenException(
                 "Votre compte n'est rattaché à aucune fiche enseignant : demandez au Directeur de faire le rattachement.");
         }
 
@@ -60,8 +61,9 @@ public class AttendanceScopeAuthorizer(
 
         if (!isAssigned)
         {
-            throw new UnauthorizedAccessException(
-                "Vous n'êtes pas assigné à cette classe pour cette matière : vous ne pouvez pas en faire l'appel.");
+            throw new ForbiddenException(
+                "Vous n'êtes pas assigné à cette classe pour cette matière : vous ne pouvez pas en faire l'appel. "
+                + "Demandez au Directeur ou au Secrétariat de vous y affecter, ou de faire l'appel à votre place.");
         }
     }
 }

@@ -19,9 +19,11 @@
  @await Html.PartialAsync("_ErrorBanner")
 
  <!-- Sélecteurs -->
- <div class="card mt-6 p-6">
- <div class="flex flex-col sm:flex-row sm:items-end gap-5">
- <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 flex-1">
+ @* p-4 (et non p-6) + gap-3 : carte volontairement compacte — c'est un bandeau de filtres, pas
+    un formulaire. Chaque rangée gagnée ici est une rangée d'élèves visible sans défiler. *@
+ <div class="card mt-4 p-4">
+ <div class="flex flex-col gap-3">
+ <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
  <div>
  <label for="grades-classroom" class="form-label">Classe</label>
  <select-field id="grades-classroom" model="selectedClassroomId" on-change="reload()"
@@ -42,9 +44,14 @@
  </div>
  </div>
 
+ <!-- Actions : TOUJOURS sous les sélecteurs, jamais à leur droite — à côté des trois listes,
+ ces boutons chevauchaient les libellés « Classe / Matière / Trimestre » (capture d'écran).
+ Collées aux sélecteurs (gap-3 du parent, pas de filet ni de pt-5) : mêmes filtres, même bloc. -->
+ <div x-show="(canDownloadReportCard && hasClassAndTerm) || (canEnterGrades && hasSelection)" x-cloak
+ class="flex flex-wrap items-center gap-2">
  <!-- Bulletins de toute la classe (JGK-G03) : classe + trimestre suffisent, indépendant de la
  matière sélectionnée pour la saisie — ouvert au Directeur, à l'Enseignant et au Secrétariat. -->
- <div x-show="canDownloadReportCard && hasClassAndTerm" x-cloak class="flex gap-2">
+ <div x-show="canDownloadReportCard && hasClassAndTerm" x-cloak class="flex flex-wrap gap-2">
  <button type="button" x-on:click="previewClassBulletinsMergedPdf()" :disabled="downloadingClassBulletins"
  class="btn-modal-secondary whitespace-nowrap text-sm group" title="Aperçu avant impression ou téléchargement — un seul PDF, une page par élève">
  <icon name="eye" class="w-4 h-4" />
@@ -64,10 +71,11 @@
 
  <!-- Mode de saisie alternatif : réservé à l'Enseignant, comme la saisie cellule par cellule. -->
  <button type="button" x-show="canEnterGrades && hasSelection" x-cloak x-on:click="openImport()"
- class="btn-modal-secondary whitespace-nowrap group">
+ class="btn-modal-secondary whitespace-nowrap text-sm group">
  <icon name="upload" class="w-4 h-4" />
  Importer un fichier
  </button>
+ </div>
  </div>
 
  <!-- Erreur de génération/téléchargement des bulletins de classe (JGK-G03). -->

@@ -39,10 +39,18 @@ namespace SamaEcole.Web.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/exams")]
-[Authorize(Roles = Roles)]
+// Garde de classe = plancher COMMUN à toutes les actions du module (Volume_4 §22) : Directeur,
+// Secrétariat, ET Enseignant (lecture bornée). ASP.NET Core combine les [Authorize] en ET : une garde
+// de classe « Directeur,Secretariat » se réintersecte avec la garde de méthode
+// « Directeur,Secretariat,Enseignant » et retombe sur « Directeur,Secretariat » — l'Enseignant
+// récoltait alors un 403 sur la liste et la fiche des dossiers alors que le contrat les lui ouvre
+// (c'était la cause de l'« Erreur HTTP 403 » à l'ouverture de l'écran). Les actions de gestion
+// reposent leur garde explicitement ci-dessous (ManageRoles). Même correctif que StateIntegrationController.
+[Authorize(Roles = ReadRoles)]
 public class ExamsController(ISender mediator) : ControllerBase
 {
-    private const string Roles = "Directeur,Secretariat";
+    /// <summary>Gestion du module : sessions, écriture des dossiers, transmission, résultats, documents, export.</summary>
+    private const string ManageRoles = "Directeur,Secretariat";
 
     /// <summary>Lecture seule (liste + fiche détaillée) : bornée à ses classes assignées côté handler (JGK-J08).</summary>
     private const string ReadRoles = "Directeur,Secretariat,Enseignant";
@@ -50,12 +58,14 @@ public class ExamsController(ISender mediator) : ControllerBase
     // ------------------------------------------------------------------ Sessions
 
     [HttpGet("sessions")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<IReadOnlyList<ExamSessionResult>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ListSessions(
         [FromQuery] GetExamSessionsQuery query, CancellationToken cancellationToken)
         => Ok(await mediator.Send(query, cancellationToken));
 
     [HttpPost("sessions")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<ExamSessionResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -71,6 +81,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     public record UpdateExamSessionRequest(string? CenterName, Domain.Enums.ExamSessionStatus Status, uint RowVersion);
 
     [HttpPut("sessions/{id:guid}")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<ExamSessionResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -99,6 +110,7 @@ public class ExamsController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(query, cancellationToken));
 
     [HttpGet("dossiers/audit")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<IReadOnlyList<ExamDossierAuditEntry>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> AuditDossiers(
         [FromQuery] Guid examSessionId, CancellationToken cancellationToken)
@@ -114,6 +126,7 @@ public class ExamsController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(new GetExamDossierDetailQuery(id), cancellationToken));
 
     [HttpPost("dossiers")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<ExamDossierResult>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -137,6 +150,7 @@ public class ExamsController(ISender mediator) : ControllerBase
         Domain.Enums.CivilRegistryDocumentStatus? CivilRegistryDocumentStatus = null);
 
     [HttpPut("dossiers/{id:guid}")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<ExamDossierResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -168,6 +182,7 @@ public class ExamsController(ISender mediator) : ControllerBase
 
     /// <summary>Le numéro de table est généré DANS la transaction de ce Handler — jamais à la création du dossier.</summary>
     [HttpPost("dossiers/{id:guid}/assign-center")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<ExamDossierResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -188,6 +203,7 @@ public class ExamsController(ISender mediator) : ControllerBase
 
     /// <summary>Refusé (409) si le dossier est encore Incomplet — voir GET dossiers/audit.</summary>
     [HttpPost("dossiers/{id:guid}/transmit")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<ExamDossierResult>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -198,6 +214,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     public record RecordExamResultRequest(bool IsAdmitted, Domain.Enums.ExamMention? Mention, decimal? AverageScore, DateOnly DeliberatedOn);
 
     [HttpPut("dossiers/{id:guid}/result")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<ExamResultDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -219,6 +236,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     // ------------------------------------------------------------------ Statistiques
 
     [HttpGet("statistics")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType<ExamStatistics>(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetStatistics(
         [FromQuery] Guid? schoolYearId, CancellationToken cancellationToken)
@@ -227,6 +245,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     // ------------------------------------------------------------------ Documents et export
 
     [HttpGet("dossiers/{id:guid}/candidate-form/pdf")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetCandidateFormPdf(Guid id, CancellationToken cancellationToken)
@@ -237,6 +256,7 @@ public class ExamsController(ISender mediator) : ControllerBase
 
     /// <summary>Ne retient que les dossiers Complet/Transmis/Valide — voir GetExamCandidateFormsBatchPdfQuery.</summary>
     [HttpPost("dossiers/candidate-forms/pdf")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> GetCandidateFormsBatchPdf(
@@ -248,6 +268,7 @@ public class ExamsController(ISender mediator) : ControllerBase
 
     /// <summary>Refusée (409) tant que centre et numéro de table ne sont pas attribués.</summary>
     [HttpGet("dossiers/{id:guid}/convocation/pdf")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -263,6 +284,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     /// le reste de la plateforme).
     /// </summary>
     [HttpPost("sessions/{id:guid}/dispatch-convocations")]
+    [Authorize(Roles = ManageRoles)]
     [RequireFeature(Feature.SmsNotifications)]
     [ProducesResponseType<DispatchExamConvocationsResult>(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -274,6 +296,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     }
 
     [HttpGet("export/ministerial")]
+    [Authorize(Roles = ManageRoles)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRegistrationExport(
         [FromQuery] Guid examSessionId, CancellationToken cancellationToken)

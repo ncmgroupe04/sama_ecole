@@ -4,8 +4,10 @@
  * complet (POST /attendance).
  *
  * Portée : l'Enseignant ne peut faire l'appel que pour ses classes/matières assignées — la garde est
- * côté API (403 si non assigné), on se contente ici d'afficher le message renvoyé. Directeur et
- * Secrétariat ne sont pas bornés.
+ * côté API (403 « FORBIDDEN » si non assigné, ou compte non rattaché à une fiche enseignant). Ce
+ * n'est pas une panne : window.api la présente dans la modale universelle « Accès refusé »
+ * (access-denied.js) et neutralise le message local (toMessage renvoie ''), donc rien à traiter ici.
+ * Directeur et Secrétariat ne sont pas bornés.
  */
 document.addEventListener('alpine:init', () => {
     const STATUS_OPTIONS = [
@@ -113,7 +115,9 @@ document.addEventListener('alpine:init', () => {
                 this.alreadySubmitted = roster.alreadySubmitted;
                 this.rosterLoaded = true;
             } catch (err) {
-                // 403 (enseignant non assigné), 422 (classe/matière/année invalide)… : on affiche le message serveur.
+                // 403 « FORBIDDEN » (non assigné, compte non rattaché) → modale universelle « Accès
+                // refusé » via window.api, toMessage renvoie alors '' et le bandeau reste muet.
+                // 422 (classe/matière/année invalide)… → bandeau d'erreur classique.
                 this.error = window.api.toMessage(err, "Erreur lors du chargement de l'appel.");
             } finally {
                 this.isLoading = false;
@@ -175,8 +179,9 @@ document.addEventListener('alpine:init', () => {
                     this.submitSuccess = true;
                     this.alreadySubmitted = true;
                 } else {
-                    // 409 dès le premier essai : appel déjà enregistré pour ce créneau ; 403 : non
-                    // assigné ; 422 : saisie invalide.
+                    // 409 dès le premier essai : appel déjà enregistré pour ce créneau ; 422 : saisie
+                    // invalide. 403 « FORBIDDEN » (non assigné) → modale universelle via window.api,
+                    // toMessage renvoie alors '' et le bandeau reste muet.
                     this.submitError = window.api.toMessage(err, "Erreur lors de l'enregistrement de l'appel.");
                 }
             } finally {

@@ -22,6 +22,9 @@
  @* Sélecteur d'établissement (groupe scolaire) — dépend d'auth.js et api.js. *@
  <script src="~/js/school-switcher.js" asp-append-version="true"></script>
  <script src="~/js/ui-components.js" asp-append-version="true"></script>
+ @* Modale universelle « Accès refusé » : store Alpine + pont depuis window.api. Script classique
+    (enregistre un écouteur alpine:init), donc avant Alpine différé ; après api.js dont il dépend. *@
+ <script src="~/js/access-denied.js" asp-append-version="true"></script>
  @* Assistant de Premier Paramétrage (bouton de la barre supérieure) — dépend d'auth.js et api.js,
  enregistre un écouteur alpine:init, donc script classique chargé avant Alpine (différé). *@
  <script src="~/js/setup-assistant.js" asp-append-version="true"></script>
@@ -633,6 +636,11 @@
  </footer>
  </div>
  </div>
+
+ @* Modale universelle « Accès refusé » — un seul montage pour toute l'application (piloté par le
+    store Alpine `accessDenied`, alimenté par window.api sur les 403 « FORBIDDEN »). *@
+ @await Html.PartialAsync("_AccessDeniedModal")
+
  @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,7 @@ public class GetExamDossiersQueryHandler(IApplicationDbContext dbContext, ExamDo
             // une simple absence de résultat — même règle que GetExamDossierDetailQueryHandler.
             if (readableClassroomIds is not null && !readableClassroomIds.Contains(classroomId))
             {
-                throw new UnauthorizedAccessException(
+                throw new ForbiddenException(
                     "Vous n'êtes pas assigné à cette classe : vous ne pouvez pas consulter ses dossiers.");
             }
 

@@ -4,7 +4,8 @@
    la CSP object-src 'none'). Le composant Alpine hôte étale `...window.pdfPreview.state()`.
 
    Gabarit : `hide-header` (pas de bandeau titre), `no-padding` (bord à bord), `tall` (hauteur fixe
-   ≈ 92 vh), `size="pdf"` (95 % de large, plafond 7xl). UNE seule barre d'actions compacte en haut —
+   ≈ 92 vh), `size="pdf"` (plafond 4xl / 896px — au-delà, la visionneuse native n'ajoute que du vide
+   sombre autour de la page). UNE seule barre d'actions compacte en haut —
    « Ouvrir dans un nouvel onglet » à gauche, puis Télécharger / Imprimer / ✕ à l'extrême droite —
    et l'iframe remplit tout l'espace restant. *@
 <modal-shell open="showPdfModal" size="pdf" hide-header no-padding tall on-close="closePdfPreview()">

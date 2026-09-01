@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +46,7 @@ public class ExamDossierScopeAuthorizer(
 
         if (teacherId is null)
         {
-            throw new UnauthorizedAccessException(
+            throw new ForbiddenException(
                 "Votre compte n'est rattaché à aucune fiche enseignant : demandez au Directeur de faire le rattachement.");
         }
 
@@ -69,7 +70,7 @@ public class ExamDossierScopeAuthorizer(
 
         if (readableClassroomIds is not null && !readableClassroomIds.Contains(classroomId))
         {
-            throw new UnauthorizedAccessException(
+            throw new ForbiddenException(
                 "Vous n'êtes pas assigné à cette classe : vous ne pouvez pas consulter ce dossier.");
         }
     }

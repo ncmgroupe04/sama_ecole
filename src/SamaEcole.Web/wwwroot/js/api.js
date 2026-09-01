@@ -190,6 +190,10 @@ window.api = {
      * (createErrors.fullname, createErrors.classroomid…).
      */
     toFieldErrors(error, fallbackMessage) {
+        // Déjà porté par la modale universelle « Accès refusé » (access-denied.js) : aucun message
+        // local, sinon il s'affiche en double derrière la modale.
+        if (error && error.handledGlobally) return {};
+
         const details = error && error.details;
 
         if (details && typeof details === 'object' && !Array.isArray(details)) {
@@ -220,6 +224,11 @@ window.api = {
      * cacher tous sauf un obligerait l'utilisateur à corriger en plusieurs allers-retours.
      */
     toMessage(error, fallbackMessage) {
+        // Déjà affiché par la modale universelle « Accès refusé » (access-denied.js) : on ne renvoie
+        // rien, pour que le bandeau/toast de l'écran ne double pas la modale (« '' » est falsy, donc
+        // x-show="error" et toast.error('') restent silencieux).
+        if (error && error.handledGlobally) return '';
+
         const details = error && error.details;
 
         if (details && typeof details === 'object' && !Array.isArray(details)) {
@@ -243,6 +252,19 @@ window.api = {
             error.code = payload.code;
             error.details = payload.details;
             error.status = response.status;
+
+            // Refus de PORTÉE de rôle (ForbiddenException serveur → code FORBIDDEN) : présenté par la
+            // modale universelle « Accès refusé » (access-denied.js), identique sur tous les écrans,
+            // plutôt que par le bandeau rouge de chacun. `handledGlobally` dit à toMessage()/
+            // toFieldErrors() de ne rien renvoyer, pour ne pas doubler la modale. Le 403 d'abonnement
+            // impayé (SUBSCRIPTION_AWAITING_PAYMENT) a son propre code et n'est pas concerné.
+            if (response.status === 403 && payload.code === 'FORBIDDEN') {
+                error.handledGlobally = true;
+                window.dispatchEvent(new CustomEvent('sama:access-denied', {
+                    detail: { message: payload.message }
+                }));
+            }
+
             return error;
         }
 
