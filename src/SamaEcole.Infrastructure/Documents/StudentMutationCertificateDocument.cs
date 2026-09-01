@@ -125,22 +125,39 @@ public class StudentMutationCertificateDocument(
         container.Border(0.75f).BorderColor(Colors.Black).Background(Colors.Grey.Lighten5)
             .Padding(8).Column(column =>
             {
+                // Deux colonnes fixes sur toute la hauteur du bloc : à gauche l'état civil, à droite
+                // le rattachement scolaire (matricule PUIS classe quittée). Les deux champs de droite
+                // partagent la même bande verticale — ils sont donc alignés l'un sous l'autre, au lieu
+                // de « flotter » chacun dans sa ligne comme dans l'ancienne grille 2 lignes / N colonnes.
                 column.Item().Row(row =>
                 {
-                    row.RelativeItem(2).Element(c => Field(c, "Élève", model.StudentFullName, strong: true));
-                    row.RelativeItem().Element(c => Field(c, "Matricule", model.Matricule));
+                    row.RelativeItem(7).Column(left =>
+                    {
+                        left.Item().Element(c => Field(c, "Élève", model.StudentFullName, strong: true));
+
+                        left.Item().PaddingTop(6).Row(birth =>
+                        {
+                            birth.Spacing(14);
+                            birth.RelativeItem(3).Element(c => Field(c, "Né(e) le",
+                                model.BirthDate.ToString("dd/MM/yyyy", FrenchCulture)));
+                            birth.RelativeItem(3).Element(c => Field(c, "À", model.BirthPlace));
+                            // « Sexe » centré et détaché du bloc de naissance : une valeur d'un seul
+                            // caractère (F/M) lue à gauche d'une cellule large paraît décrochée.
+                            birth.RelativeItem(2).Element(c => FieldCentered(c, "Sexe", model.Gender));
+                        });
+                    });
+
+                    row.ConstantItem(16);
+
+                    row.RelativeItem(3).BorderLeft(0.75f).BorderColor(Colors.Grey.Lighten1)
+                        .PaddingLeft(10).Column(right =>
+                        {
+                            right.Item().Element(c => Field(c, "Matricule", model.Matricule));
+                            right.Item().PaddingTop(6).Element(c => Field(c, "Classe quittée", model.ClassroomName));
+                        });
                 });
 
-                column.Item().PaddingTop(5).Row(row =>
-                {
-                    row.RelativeItem().Element(c => Field(c, "Né(e) le",
-                        model.BirthDate.ToString("dd/MM/yyyy", FrenchCulture)));
-                    row.RelativeItem().Element(c => Field(c, "À", model.BirthPlace));
-                    row.RelativeItem().Element(c => Field(c, "Sexe", model.Gender));
-                    row.RelativeItem().Element(c => Field(c, "Classe quittée", model.ClassroomName));
-                });
-
-                column.Item().PaddingTop(5).Element(ComposeIenField);
+                column.Item().PaddingTop(6).Element(ComposeIenField);
             });
 
     /// <summary>
@@ -297,5 +314,14 @@ public class StudentMutationCertificateDocument(
             {
                 text.FontSize(10);
             }
+        });
+
+    /// <summary>Variante de <see cref="Field"/> centrée — pour une valeur courte (ex. « F ») qui,
+    /// alignée à gauche dans une cellule large, semblerait détachée de son étiquette.</summary>
+    private static void FieldCentered(IContainer container, string label, string? value) =>
+        container.Column(column =>
+        {
+            column.Item().AlignCenter().Text(label.ToUpperInvariant()).FontSize(6.5f).FontColor(Colors.Grey.Darken2);
+            column.Item().AlignCenter().Text(string.IsNullOrWhiteSpace(value) ? "—" : value).FontSize(10);
         });
 }
