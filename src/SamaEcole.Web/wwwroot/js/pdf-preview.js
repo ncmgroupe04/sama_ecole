@@ -261,6 +261,31 @@
                     await this.openPdfPreview(url, title, downloadName, requestInit);
                 },
 
+                /**
+                 * Affiche un Blob PDF DÉJÀ récupéré, sans aucun aller-retour réseau.
+                 *
+                 * Pour les documents produits par une écriture NON idempotente : le certificat de
+                 * mutation (POST qui grave un numéro officiel séquentiel) ne doit jamais être rejoué —
+                 * or fetchPdfBlobResilient relance sur coupure réseau / corps vide. L'appelant fait donc
+                 * son unique POST lui-même, puis nous passe les octets obtenus.
+                 */
+                showPdfBlob(pdfBlob, title, downloadName) {
+                    window.closeAllModals?.();
+                    releaseDocument(this);
+
+                    this.pdfPreviewTitle = title || 'Document officiel';
+                    this.pdfDownloadName = downloadName || 'document.pdf';
+                    this.pdfErrorMessage = null;
+                    this.pdfViewerHint = false;
+                    lastRequest = null; // rien à rejouer : le blob est unique
+
+                    blob = pdfBlob;
+                    this.pdfPreviewUrl = URL.createObjectURL(pdfBlob);
+                    this.pdfStatus = 'ready';
+                    this.showPdfModal = true;
+                    this.$nextTick(() => this.armViewerHint());
+                },
+
                 /** Rejoue la dernière demande (bouton « Réessayer »). */
                 async retryPdfPreview() {
                     if (!lastRequest) return;

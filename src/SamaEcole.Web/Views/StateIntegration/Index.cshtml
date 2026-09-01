@@ -362,53 +362,10 @@
             révoquant puis en délivrant un nouveau certificat.
         </modal-subtitle>
 
-        <!-- ======================== Résultat après délivrance ======================== -->
-        <template x-if="issueModal.result">
-            <div class="space-y-4">
-                <div class="card border-emerald-200 bg-emerald-50/60 p-4 flex items-start gap-3">
-                    <icon name="checkmark-circle" class="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" />
-                    <div>
-                        <p class="text-sm font-semibold text-emerald-800">
-                            Certificat <span x-text="issueModal.result.certificateNumber"></span> délivré et téléchargé.
-                        </p>
-                        <p class="text-sm text-emerald-700 mt-0.5">
-                            Le PDF a été enregistré dans vos téléchargements. Remettez-le signé et cacheté au tuteur.
-                        </p>
-                    </div>
-                </div>
-
-                <div x-show="!issueModal.result.wasFinanciallyClear" x-cloak
-                     class="card border-amber-200 bg-amber-50/60 p-4 flex items-start gap-3">
-                    <icon name="alert-circle" class="w-5 h-5 shrink-0 mt-0.5 text-amber-600" />
-                    <p class="text-sm text-amber-800">
-                        Cet élève avait un solde débiteur au moment de la délivrance. Le certificat n'a
-                        pas été retenu pour autant — retenir une pièce de mutation à un élève débiteur
-                        reviendrait à le retenir de force dans l'établissement.
-                    </p>
-                </div>
-
-                <div class="card p-4">
-                    <p class="text-sm font-medium text-slate-700">Livret de compétences</p>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                        À remettre aux côtés du certificat — c'est ce que l'école d'accueil utilisera
-                        pour affecter l'élève au bon niveau.
-                    </p>
-                    <p x-show="issueModal.bookletError" x-cloak class="text-sm text-danger mt-2" x-text="issueModal.bookletError"></p>
-                    <button type="button" x-on:click="downloadIssueBooklet()" :disabled="issueModal.bookletBusy"
-                            class="btn-modal-secondary group mt-3">
-                        <icon name="download" class="w-4 h-4" />
-                        <span x-text="issueModal.bookletBusy ? 'Téléchargement…' : 'Télécharger le livret de compétences'"></span>
-                    </button>
-                </div>
-
-                <div class="flex justify-end pt-2">
-                    <button type="button" x-on:click="closeIssue()" class="btn-modal-primary group">Fermer</button>
-                </div>
-            </div>
-        </template>
-
-        <!-- ======================== Formulaire de délivrance ======================== -->
-        <form x-show="!issueModal.result" x-cloak x-on:submit.prevent="submitIssue()" novalidate class="space-y-4">
+        <!-- ======================== Formulaire de délivrance ========================
+             Au succès, le formulaire se ferme et le PDF s'ouvre dans la visionneuse partagée
+             (_PdfPreviewModal) — plus d'écran « résultat » intermédiaire. -->
+        <form x-on:submit.prevent="submitIssue()" novalidate class="space-y-4">
             <div x-show="issueModal.error" x-cloak class="form-error-banner" x-text="issueModal.error"></div>
 
             <div>
@@ -476,8 +433,8 @@
                 <button type="submit"
                         :disabled="!issueModal.selectedStudent || !issueModal.schoolYearId || (issueModal.reason === 'Autre' && !issueModal.reasonDetails.trim()) || issueModal.busy"
                         class="btn-modal-primary group">
-                    <icon name="download" class="w-4 h-4" />
-                    <span x-text="issueModal.busy ? 'Délivrance…' : 'Délivrer et télécharger'"></span>
+                    <icon name="document" class="w-4 h-4" />
+                    <span x-text="issueModal.busy ? 'Délivrance…' : 'Délivrer le certificat'"></span>
                 </button>
             </div>
         </form>
@@ -539,4 +496,20 @@
             </div>
         </div>
     </modal-shell>
+
+    <!-- Modale d'information : une orientation, pas une panne (ex. « ce niveau n'a pas de grille APC,
+         utilisez le bulletin »). Même gabarit centré que « Accès refusé ». -->
+    <modal-shell open="notice" on-close="notice = null" size="md" title="Information">
+        <div class="text-center">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning-bg">
+                <icon name="alert-circle" class="h-7 w-7 text-warning" />
+            </div>
+            <p class="mt-4 text-sm text-slate-600" x-text="notice"></p>
+        </div>
+        <div class="mt-8 flex justify-center border-t border-slate-200 pt-4">
+            <button type="button" x-on:click="notice = null" class="btn-modal-primary group">J'ai compris</button>
+        </div>
+    </modal-shell>
+
+    @await Html.PartialAsync("_PdfPreviewModal")
 </div>
