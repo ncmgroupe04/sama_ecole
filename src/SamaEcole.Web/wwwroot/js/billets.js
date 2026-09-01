@@ -80,7 +80,12 @@ document.addEventListener('alpine:init', () => {
 
         async loadStudents() {
             try {
-                const data = await api.get('/students?page=1&pageSize=1000');
+                // pageSize plafonné à 100 côté serveur (GetStudentsQueryValidator.MaxPageSize) : au-delà,
+                // la requête part en 422 et le sélecteur « Élève concerné » reste vide sans qu'aucune
+                // erreur ne s'affiche — c'est le « Aucun résultat » constaté en Surveillance. Même
+                // correctif que payroll.js (bug identique du 27/08/2026). Pour un très gros effectif,
+                // la vraie réponse serait une recherche serveur comme state-integration.js / caisse.js.
+                const data = await api.get('/students?page=1&pageSize=100');
                 this.students = (data && data.items) || [];
             } catch (error) {
                 console.error('Erreur chargement élèves:', error);

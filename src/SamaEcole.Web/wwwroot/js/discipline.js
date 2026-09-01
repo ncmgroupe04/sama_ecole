@@ -53,8 +53,10 @@ document.addEventListener('alpine:init', () => {
 
         async loadStudents() {
             try {
-                // On récupère une large liste pour le menu déroulant
-                const data = await api.get('/students?page=1&pageSize=1000');
+                // pageSize plafonné à 100 côté serveur (GetStudentsQueryValidator.MaxPageSize) :
+                // pageSize=1000 partait toujours en 422 et laissait le menu déroulant vide sans erreur
+                // visible. Même correctif que payroll.js / billets.js (bug identique du 27/08/2026).
+                const data = await api.get('/students?page=1&pageSize=100');
                 this.students = (data && data.items) || [];
             } catch (error) {
                 console.error("Erreur chargement élèves:", error);
