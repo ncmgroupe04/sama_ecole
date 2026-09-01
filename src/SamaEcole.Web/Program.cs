@@ -419,6 +419,9 @@ if (forwardedHeadersEnabled)
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 var app = builder.Build();
 
 // Refuse de démarrer si l'application se connecte à PostgreSQL avec un rôle qui contourne la RLS

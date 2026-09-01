@@ -32,18 +32,21 @@ RUN dotnet publish src/SamaEcole.Web/SamaEcole.Web.csproj -c Release -o /app --n
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
 WORKDIR /app
 
-# Activer la mondialisation Unicode complète pour .NET sur Alpine
-ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
-ENV ASPNETCORE_URLS=http://+:8080
-
-# Installation des dépendances graphiques et polices pour QuestPDF / SkiaSharp
-RUN apk add --no-cache \
-    fontconfig \
-    freetype \
-    ttf-dejavu \
-    ttf-liberation \
-    icu-libs \
-    libgdiplus \
+# QuestPDF (reçus, bulletins — AGENTS.md règle #12) s'appuie sur SkiaSharp, qui délègue le rendu du
+# texte à fontconfig/freetype et à une police système : contrairement à l'image Debian, l'Alpine de
+# base n'embarque ni l'un ni l'autre, et la génération de PDF échouerait silencieusement (texte vide
+# ou exception au premier document généré). icu-libs : composants Unicode complets, pour rester au
+# plus près du comportement de l'image Debian précédente plutôt que de basculer en mode Invariant.
+#
+# ttf-liberation : le bulletin (ReportCardDocument) demande la police « Times New Roman », polie
+# propriétaire Microsoft absente de tout dépôt Linux. Liberation Serif en est le clone À MÉTRIQUES
+# IDENTIQUES (mêmes largeurs de caractère, mêmes sauts de ligne) — la substitution standard sur Linux
+# (LibreOffice, etc.). L'alias fontconfig ci-dessous fait que demander « Times New Roman » dans le
+# code renvoie Liberation Serif ici, sans rien changer côté application ni en développement (Windows,
+# où la vraie Times New Roman est déjà installée).
+# /etc/fonts/local.conf : hook d'override standard, déjà inclus par le fonts.conf par défaut du
+# paquet fontconfig (`<include ignore_missing="yes">local.conf</include>`) — pas besoin d'y toucher.
+RUN apk add --no-cache fontconfig freetype ttf-dejavu ttf-liberation icu-libs \
     && printf '%s\n' \
         '<?xml version="1.0"?>' \
         '<!DOCTYPE fontconfig SYSTEM "fonts.dtd">' \
@@ -57,5 +60,7 @@ RUN apk add --no-cache \
 
 COPY --from=build /app .
 
+ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
+
 ENTRYPOINT ["dotnet", "SamaEcole.Web.dll"]
