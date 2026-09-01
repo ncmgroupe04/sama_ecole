@@ -553,11 +553,13 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        printReceipt() {
-            // Remesure au dernier moment : une police chargée tardivement change les métriques,
-            // et c'est précisément l'instant où un débordement doit être connu.
-            this.checkReceiptFit();
-            window.print();
+        /**
+         * « Imprimer » ouvre le reçu de caisse PDF dans la modale d'aperçu partagée (visionneuse PDF
+         * native du navigateur, avec ses propres boutons Imprimer / Télécharger). Plus de
+         * window.print() sur le rendu HTML de la page.
+         */
+        async printReceipt() {
+            await this.downloadPdf();
         },
 
         // Aperçu PDF (reçu de caisse) — état + méthodes étalés depuis le moteur partagé

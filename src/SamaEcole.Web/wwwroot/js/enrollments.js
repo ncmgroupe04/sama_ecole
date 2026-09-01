@@ -408,11 +408,13 @@ document.addEventListener('alpine:init', () => {
             this.lastSubmitWasDirect = true;
         },
 
-        printReceipt() {
-            // Remesure au dernier moment : une police chargée tardivement change les métriques,
-            // et c'est précisément l'instant où un débordement doit être connu.
-            this.checkReceiptFit();
-            window.print();
+        /**
+         * « Imprimer » ouvre l'attestation PDF dans la modale d'aperçu partagée (visionneuse PDF
+         * native du navigateur, avec ses propres boutons Imprimer / Télécharger). Plus de
+         * window.print() sur le rendu HTML de la page : une seule pièce, la même partout.
+         */
+        async printReceipt() {
+            await this.downloadPdf();
         },
 
         // Aperçu PDF (reçu, certificat) — état + méthodes étalés depuis le moteur partagé

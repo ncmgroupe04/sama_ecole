@@ -458,17 +458,10 @@
  Le cumul annuel (totalDue) et le « reste à payer » ont disparu : c'est l'objet même de la
  refonte du 25/08/2026. Voir docs/design-references/README.md §1, rubrique « Interdits ». *@
 
- @* Modèle hybride — mention de règlement, selon le geste de soumission :
-    • « Envoyer en Caisse » (PendingPayment) : rien n'est encaissé → « à effectuer auprès de la comptabilité ».
-    • « Inscrire et procéder au paiement » avec encaissement : « effectué auprès du Secrétariat ». *@
- <div x-show="receipt && receipt.status === 'PendingPayment'" x-cloak
- class="mt-3 rounded-lg border border-warning bg-warning-bg px-3 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider text-warning">
- Paiement à effectuer auprès de la comptabilité
- </div>
- <div x-show="receipt && receipt.status !== 'PendingPayment' && receipt.totalCollected > 0" x-cloak
- class="mt-3 rounded-lg border border-success bg-success-bg px-3 py-1.5 text-center text-[10px] font-bold uppercase tracking-wider text-success">
- Paiement effectué auprès du Secrétariat
- </div>
+ @* Aucun bandeau d'état de paiement (« à effectuer… », « effectué auprès du Secrétariat ») :
+    README.md §1 l'interdit — réimprimée plus tard, l'attestation afficherait un état faux, et le
+    vert signifierait « acquitté » alors que le secrétariat n'encaisse pas. La note de pied et le
+    libellé « auprès du service de la comptabilité » du bloc de gauche suffisent. *@
 
  <div class="mt-3 grid grid-cols-2 gap-5 items-start">
 
