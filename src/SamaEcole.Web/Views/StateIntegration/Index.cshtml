@@ -20,8 +20,10 @@
     @await Html.PartialAsync("_ErrorBanner")
 
     <!-- Bandeau permanent : état du relais SIMEN. Aucune API publique n'existe à ce jour ; l'écran le
-         dit plutôt que de proposer une transmission qui échouerait. -->
-    <div class="card mt-6 p-4 flex items-start gap-3"
+         dit plutôt que de proposer une transmission qui échouerait. Réservé au Directeur : la route
+         /simen/status ne lui est ouverte qu'à lui (Volume_4 §23), et la transmission au ministère
+         n'est pas un geste de guichet. -->
+    <div x-show="isDirector" x-cloak class="card mt-6 p-4 flex items-start gap-3"
          :class="relais.isConfigured ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60'">
         <icon :name="relais.isConfigured ? 'checkmark-circle' : 'alert-circle'"
               class="w-5 h-5 shrink-0 mt-0.5"

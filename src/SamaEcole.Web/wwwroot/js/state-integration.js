@@ -90,10 +90,14 @@ document.addEventListener('alpine:init', () => {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des référentiels.');
             }
 
-            // Best-effort : un échec du statut du relais ne doit pas bloquer l'écran.
-            try {
-                this.relais = await window.api.get('/state-integration/simen/status');
-            } catch { /* le bandeau restera sur son défaut « non configuré » */ }
+            // Statut du relais SIMEN : route réservée au Directeur (Volume_4 §23 — elle concerne la
+            // transmission au ministère, pas le guichet). Ne pas l'appeler pour le Secrétariat, sinon
+            // le 403 laisse le bandeau bloqué sur « Vérification… ». Best-effort même pour le Directeur.
+            if (this.isDirector) {
+                try {
+                    this.relais = await window.api.get('/state-integration/simen/status');
+                } catch { /* le bandeau restera sur son défaut « non configuré » */ }
+            }
 
             if (this.tab === 'certificats') this.loadCertificates();
         },

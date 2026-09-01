@@ -33,11 +33,18 @@ namespace SamaEcole.Web.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/v1/state-integration")]
-[Authorize(Roles = DirectorOnly)]
+[Authorize(Roles = DirectorAndSecretariat)]
 public class StateIntegrationController(ISender mediator, ISimenBridgeService simenBridge) : ControllerBase
 {
     private const string DirectorOnly = "Directeur";
     private const string DirectorAndSecretariat = "Directeur,Secretariat";
+
+    // Garde de classe = plancher COMMUN aux deux rôles du module (Volume_4 §23). ASP.NET Core combine
+    // les [Authorize] en ET : une garde de classe « Directeur » se réintersecte avec les gardes de
+    // méthode « Directeur,Secretariat » et retombe sur « Directeur seul » — le Secrétariat récoltait
+    // alors un 403 sur /certificates et /simen/status alors que le contrat les lui ouvre. Les routes
+    // réservées au seul Directeur (Planète, STATEDUC, statut du relais) reposent leur garde
+    // explicitement ci-dessous.
 
     // ------------------------------------------------------------------- Export « Planète Ready »
 
@@ -49,6 +56,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// à l'écran obligerait l'utilisateur à faire un copier-coller pour le récupérer.
     /// </summary>
     [HttpGet("planete/export")]
+    [Authorize(Roles = DirectorOnly)]
     public async Task<IActionResult> GetPlaneteExport(
         [FromQuery] Guid schoolYearId,
         [FromQuery] StateExportFormat format = StateExportFormat.Csv,
@@ -69,6 +77,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// transite par cette route — elle ne décrit que l'état de la plateforme.
     /// </summary>
     [HttpGet("simen/status")]
+    [Authorize(Roles = DirectorOnly)]
     public IActionResult GetSimenStatus() => Ok(new
     {
         isConfigured = simenBridge.IsConfigured,
@@ -82,6 +91,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
 
     /// <summary>GET /stateduc — le rapport agrégé, en JSON, pour l'écran de consultation.</summary>
     [HttpGet("stateduc")]
+    [Authorize(Roles = DirectorOnly)]
     public async Task<ActionResult<StateducReportDto>> GetStateducReport(
         [FromQuery] Guid schoolYearId,
         [FromQuery] DateOnly? observationDate = null,
@@ -96,6 +106,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// l'école déposerait un formulaire que son propre écran contredit.
     /// </summary>
     [HttpGet("stateduc/pdf")]
+    [Authorize(Roles = DirectorOnly)]
     public async Task<IActionResult> GetStateducReportPdf(
         [FromQuery] Guid schoolYearId,
         [FromQuery] DateOnly? observationDate,
@@ -113,6 +124,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
 
     /// <summary>GET /stateduc/excel — le même rapport en classeur .xlsx, pour consolidation à l'IEF.</summary>
     [HttpGet("stateduc/excel")]
+    [Authorize(Roles = DirectorOnly)]
     public async Task<IActionResult> GetStateducReportExcel(
         [FromQuery] Guid schoolYearId,
         [FromQuery] DateOnly? observationDate,
