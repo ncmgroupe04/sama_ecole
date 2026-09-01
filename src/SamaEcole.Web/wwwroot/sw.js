@@ -31,7 +31,9 @@
 //          plus de bandeau titre), gabarit ≈ 70 % de large (sm:w-[70%] max-w-6xl), hauteur 92vh.
 // v1.0.9 — « Imprimer » (inscription & caisse) ouvre le PDF dans la modale, plus window.print() ;
 //          retrait des bandeaux d'état de paiement de l'attestation à l'écran.
-const CACHE_NAME = 'samaecole-static-v1.0.9';
+// v1.1.0 — attestation/reçu : suppression du « FCFA » en double sur les totaux ; bouton Fermer de
+//          la modale PDF en rouge plein + libellé.
+const CACHE_NAME = 'samaecole-static-v1.1.0';
 
 const STATIC_ASSETS = [
     '/',

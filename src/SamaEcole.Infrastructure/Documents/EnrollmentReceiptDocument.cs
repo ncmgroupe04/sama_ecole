@@ -203,9 +203,15 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
 
                 table.Cell().Element(TotalCell).Text("TOTAL À RÉGLER").Bold().FontSize(7.5f)
                     .FontColor(ReceiptTheme.InkSoft).LetterSpacing(0.04f);
-                table.Cell().Element(TotalCell).AlignRight()
-                    .Text($"{FormatMoney(receipt.InitialSettlementTotal)} FCFA")
-                    .Bold().FontSize(10.5f).FontColor(ReceiptTheme.Ink);
+                table.Cell().Element(TotalCell).AlignRight().Text(text =>
+                {
+                    // Nombre et « FCFA » sur la MÊME ligne : « FCFA » en plus petit pour tenir dans la
+                    // colonne Amount sans repli (même hiérarchie que le panneau mensuel), et espace
+                    // insécable entre les groupes de chiffres pour que « 67 000 » ne se coupe jamais.
+                    text.Span(FormatMoney(receipt.InitialSettlementTotal).Replace(' ', ' '))
+                        .Bold().FontSize(10.5f).FontColor(ReceiptTheme.Ink);
+                    text.Span(" FCFA").SemiBold().FontSize(7.5f).FontColor(ReceiptTheme.InkSoft);
+                });
             });
         });
     }
