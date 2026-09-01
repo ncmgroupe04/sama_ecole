@@ -177,7 +177,7 @@
     MODALES — Bâtiments
     ═══════════════════════════════════════════════════════════════════════════ *@
 
- <modal-shell size="60" open="isCreateBuildingOpen" on-close="closeCreateBuilding()" title="Nouveau bâtiment">
+ <modal-shell size="lg" open="isCreateBuildingOpen" on-close="closeCreateBuilding()" title="Nouveau bâtiment">
   <modal-subtitle>Nom et description du bâtiment physique.</modal-subtitle>
   <div x-show="createBuildingErrors.global" x-cloak class="form-error-banner" x-text="createBuildingErrors.global"></div>
   <form x-on:submit.prevent="submitCreateBuilding()" novalidate class="space-y-4">
@@ -200,7 +200,7 @@
   </form>
  </modal-shell>
 
- <modal-shell size="60" open="editingBuilding" on-close="closeEditBuilding()" title="Modifier le bâtiment">
+ <modal-shell size="lg" open="editingBuilding" on-close="closeEditBuilding()" title="Modifier le bâtiment">
   <modal-subtitle><span x-text="editingBuilding ? editingBuilding.name : ''"></span></modal-subtitle>
   <div x-show="editBuildingErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editBuildingErrors.global"></div>
   <form x-on:submit.prevent="submitEditBuilding()" novalidate class="space-y-4">
@@ -245,7 +245,7 @@
     MODALES — Salles
     ═══════════════════════════════════════════════════════════════════════════ *@
 
- <modal-shell size="60" open="isCreateRoomOpen" on-close="closeCreateRoom()" title="Nouvelle salle">
+ <modal-shell size="lg" open="isCreateRoomOpen" on-close="closeCreateRoom()" title="Nouvelle salle">
   <modal-subtitle>Configurez une nouvelle salle et sa capacité physique.</modal-subtitle>
   <div x-show="createRoomErrors.global" x-cloak class="form-error-banner" x-text="createRoomErrors.global"></div>
   <form x-on:submit.prevent="submitCreateRoom()" novalidate class="space-y-4">
@@ -274,7 +274,7 @@
   </form>
  </modal-shell>
 
- <modal-shell size="60" open="editingRoom" on-close="closeEditRoom()" title="Modifier la salle">
+ <modal-shell size="lg" open="editingRoom" on-close="closeEditRoom()" title="Modifier la salle">
   <modal-subtitle><span x-text="editingRoom ? editingRoom.name : ''"></span></modal-subtitle>
   <div x-show="editRoomErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editRoomErrors.global"></div>
   <form x-on:submit.prevent="submitEditRoom()" novalidate class="space-y-4">

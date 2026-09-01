@@ -372,7 +372,7 @@
        MODALES — Sessions
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isCreateSessionOpen" on-close="closeCreateSession()" title="Nouvelle session d'examen" size="60">
+    <modal-shell open="isCreateSessionOpen" on-close="closeCreateSession()" title="Nouvelle session d'examen" size="lg">
         <modal-subtitle>Une session par année scolaire, type d'examen et série.</modal-subtitle>
         <div x-show="createSessionErrors.global" x-cloak class="form-error-banner" x-text="createSessionErrors.global"></div>
         <form x-on:submit.prevent="submitCreateSession()" novalidate class="space-y-4">
@@ -412,7 +412,7 @@
         </form>
     </modal-shell>
 
-    <modal-shell open="editingSession" on-close="closeEditSession()" title="Modifier la session" size="60">
+    <modal-shell open="editingSession" on-close="closeEditSession()" title="Modifier la session" size="lg">
         <modal-subtitle><span x-text="editingSession ? sessionLabel(editingSession) : ''"></span></modal-subtitle>
         <div x-show="editSessionErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editSessionErrors.global"></div>
         <form x-on:submit.prevent="submitEditSession()" novalidate class="space-y-4">
@@ -479,7 +479,7 @@
        MODALES — Dossiers
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isCreateDossierOpen" on-close="closeCreateDossier()" title="Nouveau dossier de candidature" size="60">
+    <modal-shell open="isCreateDossierOpen" on-close="closeCreateDossier()" title="Nouveau dossier de candidature" size="lg">
         <modal-subtitle>Un dossier par élève et par session — la classe se préremplit depuis la classe actuelle de l'élève.</modal-subtitle>
         <div x-show="createDossierErrors.global" x-cloak class="form-error-banner" x-text="createDossierErrors.global"></div>
         <form x-on:submit.prevent="submitCreateDossier()" novalidate class="space-y-4">
@@ -607,7 +607,7 @@
         </template>
     </modal-shell>
 
-    <modal-shell open="editingDossier" on-close="closeEditDossier()" title="Modifier le dossier" size="60">
+    <modal-shell open="editingDossier" on-close="closeEditDossier()" title="Modifier le dossier" size="lg">
         <modal-subtitle>État civil et centre déclaré — la classe reste figée depuis l'ouverture du dossier.</modal-subtitle>
         <div x-show="editDossierErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editDossierErrors.global"></div>
         <form x-on:submit.prevent="submitEditDossier()" novalidate class="space-y-4">
@@ -654,7 +654,7 @@
         </form>
     </modal-shell>
 
-    <modal-shell open="assigningDossier" on-close="closeAssignCenter()" title="Attribuer centre et numéro de table" size="60">
+    <modal-shell open="assigningDossier" on-close="closeAssignCenter()" title="Attribuer centre et numéro de table" size="lg">
         <modal-subtitle>Laissez le numéro vide pour une génération automatique — c'est le cas normal.</modal-subtitle>
         <div x-show="assignCenterErrors.global" x-cloak class="form-error-banner" x-text="assignCenterErrors.global"></div>
         <form x-on:submit.prevent="submitAssignCenter()" novalidate class="space-y-4">
@@ -725,7 +725,7 @@
         </div>
     </modal-shell>
 
-    <modal-shell open="recordingDossier" on-close="closeRecordResult()" title="Saisir le résultat de délibération" size="60">
+    <modal-shell open="recordingDossier" on-close="closeRecordResult()" title="Saisir le résultat de délibération" size="lg">
         <modal-subtitle><span x-text="recordingDossier ? recordingDossier.studentFullName : ''"></span></modal-subtitle>
         <div x-show="resultErrors.global" x-cloak class="form-error-banner" x-text="resultErrors.global"></div>
         <form x-on:submit.prevent="submitRecordResult()" novalidate class="space-y-4">
@@ -769,7 +769,7 @@
         </form>
     </modal-shell>
 
-    <modal-shell open="isBatchPrintOpen" on-close="closeBatchPrint()" title="Impression par lot" size="60">
+    <modal-shell open="isBatchPrintOpen" on-close="closeBatchPrint()" title="Impression par lot" size="lg">
         <modal-subtitle>Ne retient que les dossiers Complet, Transmis ou Validé — au moins un des deux filtres est requis.</modal-subtitle>
         <div x-show="batchPrintError" x-cloak class="form-error-banner" x-text="batchPrintError"></div>
         <form x-on:submit.prevent="submitBatchPrint()" novalidate class="space-y-4">

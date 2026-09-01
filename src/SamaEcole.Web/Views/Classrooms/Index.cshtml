@@ -281,7 +281,7 @@
     ═══════════════════════════════════════════════════════════════════════════ *@
 
  @* Création de classe *@
- <modal-shell size="60" open="isCreateOpen" on-close="closeCreate()" title="Nouvelle classe">
+ <modal-shell size="lg" open="isCreateOpen" on-close="closeCreate()" title="Nouvelle classe">
   <modal-subtitle>Configurez une nouvelle classe et sa capacité.</modal-subtitle>
 
   <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
@@ -353,7 +353,7 @@
  </modal-shell>
 
  @* Modification d'une classe *@
- <modal-shell size="60" open="isEditOpen" on-close="closeEdit()" title="Modifier la classe">
+ <modal-shell size="lg" open="isEditOpen" on-close="closeEdit()" title="Modifier la classe">
   <modal-subtitle><span x-text="editing.name"></span></modal-subtitle>
 
   <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>

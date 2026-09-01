@@ -378,7 +378,7 @@
        MODALES — Catalogue (biens)
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isCreateItemOpen" on-close="closeCreateItem()" title="Nouveau bien" size="60">
+    <modal-shell open="isCreateItemOpen" on-close="closeCreateItem()" title="Nouveau bien" size="lg">
         <modal-subtitle>Un bien est un LOT : une quantité de matériel identique (ex. 40 manuels, 1 vidéoprojecteur).</modal-subtitle>
         <div x-show="createItemErrors.global" x-cloak class="form-error-banner" x-text="createItemErrors.global"></div>
         <form x-on:submit.prevent="submitCreateItem()" novalidate class="space-y-4">
@@ -637,7 +637,7 @@
        MODALES — Catégories
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isCreateCategoryOpen" on-close="closeCreateCategory()" title="Nouvelle catégorie" size="60">
+    <modal-shell open="isCreateCategoryOpen" on-close="closeCreateCategory()" title="Nouvelle catégorie" size="lg">
         <modal-subtitle>Une famille de biens propre à votre établissement (ex : Manuels scolaires, Informatique, Tenues).</modal-subtitle>
         <div x-show="createCategoryErrors.global" x-cloak class="form-error-banner" x-text="createCategoryErrors.global"></div>
         <form x-on:submit.prevent="submitCreateCategory()" novalidate class="space-y-4">
@@ -661,7 +661,7 @@
         </form>
     </modal-shell>
 
-    <modal-shell size="60" open="editingCategory" on-close="closeEditCategory()" title="Modifier la catégorie">
+    <modal-shell size="lg" open="editingCategory" on-close="closeEditCategory()" title="Modifier la catégorie">
         <modal-subtitle><span x-text="editingCategory ? editingCategory.name : ''"></span></modal-subtitle>
         <div x-show="editCategoryErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editCategoryErrors.global"></div>
         <form x-on:submit.prevent="submitEditCategory()" novalidate class="space-y-4">
@@ -705,7 +705,7 @@
        MODALE — Nouveau mouvement de stock
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isMovementModalOpen" on-close="closeMovementModal()" title="Nouveau mouvement de stock" size="60">
+    <modal-shell open="isMovementModalOpen" on-close="closeMovementModal()" title="Nouveau mouvement de stock" size="lg">
         <modal-subtitle>Entrée, sortie, ajustement d'inventaire ou mise au rebut — journalisé, jamais modifiable après coup.</modal-subtitle>
         <div x-show="movementErrors.global" x-cloak class="form-error-banner" x-text="movementErrors.global"></div>
         <form x-on:submit.prevent="submitMovement()" novalidate class="space-y-4">
@@ -761,7 +761,7 @@
        MODALE — Nouveau prêt
        ═══════════════════════════════════════════════════════════════════════════ *@
 
-    <modal-shell open="isAssignmentModalOpen" on-close="closeAssignmentModal()" title="Nouveau prêt de matériel" size="60">
+    <modal-shell open="isAssignmentModalOpen" on-close="closeAssignmentModal()" title="Nouveau prêt de matériel" size="lg">
         <modal-subtitle>Produit la fiche de décharge à faire signer par le bénéficiaire.</modal-subtitle>
         <div x-show="assignmentErrors.global" x-cloak class="form-error-banner" x-text="assignmentErrors.global"></div>
         <form x-on:submit.prevent="submitAssignment()" novalidate class="space-y-4">

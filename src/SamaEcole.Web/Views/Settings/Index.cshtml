@@ -890,7 +890,7 @@
  </div>
 
  <!-- Création d'une mention -->
- <modal-shell size="60" open="isMentionCreateOpen" title="Nouvelle mention">
+ <modal-shell size="lg" open="isMentionCreateOpen" title="Nouvelle mention">
  <modal-subtitle>Le seuil est la moyenne minimale, sur 20, pour l'obtenir. Le bulletin du Primaire le transpose automatiquement sur 10.</modal-subtitle>
 
  <div x-show="mentionCreateErrors.global" x-cloak class="form-error-banner" x-text="mentionCreateErrors.global"></div>
@@ -927,7 +927,7 @@
  </modal-shell>
 
  <!-- Modification d'une mention (correction d'une erreur de saisie) -->
- <modal-shell size="60" open="editingMention" on-close="closeEditMention()" title="Modifier la mention">
+ <modal-shell size="lg" open="editingMention" on-close="closeEditMention()" title="Modifier la mention">
  <modal-subtitle>Le seuil est la moyenne minimale, sur 20, pour l'obtenir. Le bulletin du Primaire le transpose automatiquement sur 10.</modal-subtitle>
 
  <div x-show="mentionEditErrors.global" x-cloak class="form-error-banner" x-text="mentionEditErrors.global"></div>
