@@ -129,13 +129,16 @@ document.addEventListener('alpine:init', () => {
         conditionOptions: CONDITION_OPTIONS,
         conditionFilterOptions: [{ value: '', label: 'Tous états' }].concat(CONDITION_OPTIONS),
 
-        // « Personnel administratif » exige la liste des comptes (GET /users, Directeur seul). On ne
-        // propose ce type de bénéficiaire qu'à qui a pu la charger — sinon la Surveillance verrait une
-        // option qui n'ouvre que sur un sélecteur vide.
+        // On n'offre un type de bénéficiaire que si sa liste a pu être chargée : le Surveillant n'a
+        // accès ni à /users (Directeur seul) ni à /teachers (Directeur/Secrétariat), et proposer
+        // « Personnel » ou « Enseignant » avec un menu vide ne ferait que rejouer le 403 au submit.
+        // Il lui reste « Élève », le bénéficiaire réel d'un prêt de manuels.
         get beneficiaryTypeOptions() {
-            return this.users.length > 0
-                ? BENEFICIARY_TYPE_OPTIONS
-                : BENEFICIARY_TYPE_OPTIONS.filter((o) => o.value !== 'Personnel');
+            return BENEFICIARY_TYPE_OPTIONS.filter((o) => {
+                if (o.value === 'Personnel') return this.users.length > 0;
+                if (o.value === 'Enseignant') return this.teachers.length > 0;
+                return true;
+            });
         },
 
         conditionLabel(value) { return CONDITION_LABELS[value] || value; },
@@ -236,32 +239,42 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Élèves, enseignants et personnel pour le sélecteur de bénéficiaire — chargés une seule fois. */
+        /**
+         * Élèves, enseignants et personnel pour le sélecteur de bénéficiaire — chargés une seule fois.
+         *
+         * Les trois listes se chargent INDÉPENDAMMENT, chacune tolérante à un 403 : selon le rôle,
+         * l'API en refuse certaines sans qu'un prêt en devienne impossible.
+         *   • /students — ouvert à tout rôle authentifié (StudentsController) ;
+         *   • /teachers — réservé Directeur/Secrétariat/Super Admin (TeachersController.ViewRoles) :
+         *     403 pour le Surveillant, qui distribue pourtant les manuels à la rentrée. La matrice
+         *     (Volume 7 §21) l'autorise à prêter, mais pas à consulter le corps professoral — il
+         *     prête aux ÉLÈVES. On avale donc ce 403 attendu ;
+         *   • /users — réservé au Directeur (UsersController), même traitement.
+         * Regrouper /students et /teachers dans un même Promise.all transformait ce 403 attendu en
+         * « Erreur HTTP 403 » à l'ouverture de « Nouveau prêt » pour la Surveillance.
+         */
         async loadBeneficiaries() {
             if (this.beneficiariesLoaded) return;
-            try {
-                const [students, teachers] = await Promise.all([
-                    this.fetchAllPages('/students'),
-                    this.fetchAllPages('/teachers')
-                ]);
-                this.students = students;
-                this.teachers = teachers;
 
-                // GET /users est réservé au Directeur (UsersController) : pour le Surveillant et le
-                // Secrétariat il répond 403. Ce n'est pas bloquant — un prêt à un élève ou à un
-                // enseignant reste possible — donc on le charge à part, sans faire échouer le reste.
-                // C'est justement ce 403, avalé par le Promise.all précédent, qui affichait « Erreur
-                // HTTP 403 » à l'ouverture de « Nouveau prêt » pour la Surveillance.
-                try {
-                    this.users = (await window.api.get('/users')) || [];
-                } catch {
-                    this.users = [];
-                }
+            let studentsError = null;
+            const [students, teachers, users] = await Promise.all([
+                this.fetchAllPages('/students').catch((err) => { studentsError = err; return []; }),
+                this.fetchAllPages('/teachers').catch(() => []),
+                window.api.get('/users').catch(() => [])
+            ]);
 
-                this.beneficiariesLoaded = true;
-            } catch (err) {
-                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des bénéficiaires possibles.'));
+            this.students = students;
+            this.teachers = teachers;
+            this.users = users || [];
+
+            // Seul l'échec du chargement des ÉLÈVES est signalé : sans eux, aucun prêt courant n'est
+            // possible. Un 403 sur enseignants ou personnel laisse simplement ces options vides.
+            if (studentsError) {
+                toast.error(window.api.toMessage(studentsError, 'Erreur lors du chargement des bénéficiaires possibles.'));
+                return;
             }
+
+            this.beneficiariesLoaded = true;
         },
 
         get beneficiaryOptionsForType() {
