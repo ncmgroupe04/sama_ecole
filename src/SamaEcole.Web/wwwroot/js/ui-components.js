@@ -15,6 +15,11 @@ window.closeAllModals = function() {
  * Partagé par selectField() (listes déroulantes — filtres Mois/Années, onglets…) et dateField()
  * (calendrier) : un menu ouvert près du pli n'est plus tronqué ni caché sous la fenêtre.
  *
+ * La place disponible est mesurée contre le plus proche CONTENEUR QUI ROGNE (overflow auto / scroll
+ * / hidden) — typiquement le corps défilant d'une modale — et non la seule fenêtre : un popover
+ * `absolute` enfermé dans une modale est coupé par ce conteneur bien avant d'atteindre le bord de
+ * l'écran. C'était la cause des calendriers tronqués dans « Nouveau prêt » / « Nouveau mouvement ».
+ *
  * @param {Element} anchorEl Élément racine du composant (le déclencheur mesuré).
  * @param {number} estimatedMenuHeight Hauteur approximative du menu, en pixels.
  * @returns {'top'|'bottom'}
@@ -22,10 +27,25 @@ window.closeAllModals = function() {
 window.computeFlipPlacement = function (anchorEl, estimatedMenuHeight) {
     if (!anchorEl || typeof anchorEl.getBoundingClientRect !== 'function') return 'bottom';
     const rect = anchorEl.getBoundingClientRect();
-    const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
-    const spaceBelow = viewportH - rect.bottom;
-    const spaceAbove = rect.top;
     const needed = estimatedMenuHeight || 288;
+
+    // Bornes de la zone visible : la fenêtre, resserrée par chaque ancêtre qui rogne le débordement
+    // (le corps d'une modale, un panneau scrollable…). L'intersection de tous donne la zone où le
+    // popover restera réellement visible.
+    let clipTop = 0;
+    let clipBottom = window.innerHeight || document.documentElement.clientHeight || 0;
+
+    for (let el = anchorEl.parentElement; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+        const overflowY = window.getComputedStyle(el).overflowY;
+        if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'hidden') {
+            const r = el.getBoundingClientRect();
+            clipTop = Math.max(clipTop, r.top);
+            clipBottom = Math.min(clipBottom, r.bottom);
+        }
+    }
+
+    const spaceBelow = clipBottom - rect.bottom;
+    const spaceAbove = rect.top - clipTop;
     return (spaceBelow < needed && spaceAbove > spaceBelow) ? 'top' : 'bottom';
 };
 
@@ -116,11 +136,17 @@ document.addEventListener('alpine:init', () => {
         /** Rouvre toujours sur le mois de la valeur actuelle — un panneau réutilisé (modal-shell,
          *  x-show) garde sinon la navigation du dernier enregistrement affiché. */
         toggle(currentIso) {
-            if (!this.open) {
-                this.setView(currentIso);
-                this.placement = window.computeFlipPlacement(this.$root, 380);
+            if (this.open) {
+                this.open = false;
+                return;
             }
-            this.open = !this.open;
+            this.setView(currentIso);
+            this.placement = window.computeFlipPlacement(this.$root, 380);
+            this.open = true;
+            // Repli : si, malgré le flip, le calendrier dépasse encore de son conteneur (modale très
+            // courte), on l'y ramène par un défilement minimal — jamais un saut de toute la page.
+            this.$nextTick(() =>
+                this.$refs.calendarPopover?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
         },
 
         /** Classes de position du popover selon le placement calculé (auto-flip). */

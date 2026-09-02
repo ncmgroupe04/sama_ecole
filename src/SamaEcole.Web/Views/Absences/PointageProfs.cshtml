@@ -91,7 +91,7 @@
             <form x-on:submit.prevent="submitHourRecord()" novalidate class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
                 <div>
                     <label class="form-label">Date <span class="text-red-500">*</span></label>
-                    <input type="date" x-model="hourRecordForm.date" required class="input-field mt-1" />
+                    <date-field model="hourRecordForm.date" required="true" aria-label="Date" class="mt-1" />
                 </div>
                 <div>
                     <label class="form-label">Heures <span class="text-red-500">*</span></label>

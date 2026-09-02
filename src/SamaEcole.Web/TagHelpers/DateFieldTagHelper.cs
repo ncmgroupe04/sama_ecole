@@ -97,7 +97,7 @@ public class DateFieldTagHelper : TagHelper
                     </button>
                 </div>
 
-                <div x-show="open" x-cloak x-on:click.outside="open = false" x-on:keydown.escape="open = false"
+                <div x-show="open" x-cloak x-ref="calendarPopover" x-on:click.outside="open = false" x-on:keydown.escape="open = false"
                      x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                      :class="menuPlacementClass"
                      class="absolute z-30 w-[300px] rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100">

@@ -1161,7 +1161,7 @@
  </div>
  <div>
  <label class="form-label form-label-required">Échéance</label>
- <input type="date" x-model="commitmentForm.dueDate" required class="input-field mt-1" :class="commitmentErrors.dueDate && 'input-field-error'" />
+ <date-field model="commitmentForm.dueDate" required="true" aria-label="Échéance" class="mt-1" />
  <p x-show="commitmentErrors.dueDate" x-cloak x-text="commitmentErrors.dueDate" class="field-error"></p>
  </div>
  <div>
