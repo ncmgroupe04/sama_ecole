@@ -72,8 +72,31 @@ builder.Services.AddSingleton(
 // jetables — dev, recette, staging). false partout ailleurs, donc en vraie production : le passage
 // en mode réel y est DÉFINITIF et l'endpoint /schools/current/dev/revert-to-test n'est pas monté.
 // Volontairement pas conditionné à ASPNETCORE_ENVIRONMENT : la recette tourne avec l'image de prod.
-var revertToTestEnabled = builder.Environment.IsDevelopment()
-    || builder.Configuration.GetValue<bool>("SAMA_RETOUR_MODE_TEST_AUTORISE");
+var revertToTestRequested = builder.Configuration.GetValue<bool>("SAMA_RETOUR_MODE_TEST_AUTORISE");
+
+// Garde de démarrage — même idiome que RlsGuard (rôle PostgreSQL), la clé JWT sentinelle et
+// EmailSenderGuard : sur une configuration dangereuse, on REFUSE DE DÉMARRER plutôt que de tourner
+// en silence avec une porte ouverte.
+//
+// Ce drapeau commande la capacité la plus destructrice du produit : repasser l'établissement en mode
+// test rend la « Zone de danger » de nouveau disponible, donc la purge de données devenues
+// comptables (AGENTS.md règle #6). Toute la chaîne en aval est correctement gardée — route montée
+// conditionnellement, RequireRole(Directeur), double contrôle dans le Handler — mais rien
+// n'empêchait ce commutateur RACINE d'être posé par erreur sur la production, où il aurait ouvert
+// l'effacement définitif de la comptabilité d'une école.
+//
+// La recette garde sa porte de sortie : elle tourne avec l'image de production mais sous
+// ASPNETCORE_ENVIRONMENT=Staging, que ce garde laisse passer. Seul Production est refusé.
+if (revertToTestRequested && builder.Environment.IsProduction())
+{
+    throw new InvalidOperationException(
+        "SAMA_RETOUR_MODE_TEST_AUTORISE=true est refusé en Production : ce drapeau rouvre la purge " +
+        "des données d'un établissement passé en mode réel (« Zone de danger »), alors que ces " +
+        "données sont comptables et inaltérables (AGENTS.md règle #6). Réservez-le aux " +
+        "environnements jetables (Development, Staging/recette).");
+}
+
+var revertToTestEnabled = builder.Environment.IsDevelopment() || revertToTestRequested;
 builder.Services.AddSingleton<ISandboxModeProvider>(new SandboxModeProvider(revertToTestEnabled));
 
 // --- Authentification JWT (AGENTS.md — Décision D-07) ---
