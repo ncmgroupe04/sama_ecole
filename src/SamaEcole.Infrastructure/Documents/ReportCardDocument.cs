@@ -17,9 +17,12 @@ namespace SamaEcole.Infrastructure.Documents;
 /// (gauche) et récapitulatif des moyennes + signature du Chef d'établissement avec emplacement de
 /// cachet (droite).
 ///
-/// Une case de la référence reste volontairement VIDE — visuellement présente, jamais remplie d'une
-/// donnée inventée — car rien dans le système ne l'alimente : T.H. Le champ « Classe redoublée » porte,
-/// lui, « Oui »/« Non » d'après <see cref="ReportCardDto.IsRepeating"/> (feature F, Enrollment.IsRepeating).
+/// Plus aucune case du gabarit n'est laissée vide faute de donnée. La dernière — T.H — porte désormais
+/// le Tableau d'Honneur par matière (« TH » dès 14/20, <see cref="ReportCardDto.SubjectHonors"/>) ;
+/// ÉCART ASSUMÉ avec la référence visuelle, qui l'imprime sur toutes ses lignes y compris une moyenne
+/// de 7,75 — un marquage constant ne distingue rien, et la colonne y perdait son sens. Écart tracé dans
+/// docs/design-references/README.md §2. Le champ « Classe redoublée » porte, lui, « Oui »/« Non »
+/// d'après <see cref="ReportCardDto.IsRepeating"/> (feature F, Enrollment.IsRepeating).
 /// L'assiduité (Absences/Retards) s'imprime « - » tant qu'aucun appel n'a été fait sur la période (voir
 /// ReportCardDto), jamais un zéro trompeur. La distinction du conseil (Blâme… Félicitations), la
 /// Décision du Conseil (Admis/Redouble/Exclusion) et les Observations, elles, SONT modélisées
@@ -39,11 +42,14 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     private const float RuleThickness = 0.75f;
 
     /// <summary>
-    /// Corps du tableau des disciplines — en-têtes compris. Un demi-point au-dessus du corps courant du
-    /// document (7,5 pt) : c'est le tableau que le tuteur lit en premier, et les colonnes de chiffres,
-    /// désormais à largeur fixe, ont la place de le porter sans qu'aucune valeur ne se replie.
+    /// Corps du tableau des disciplines — en-têtes compris. Un point au-dessus du corps courant du
+    /// document (7,5 pt) : c'est le tableau que le tuteur lit en premier — notes, coefficients,
+    /// appréciations — et il doit rester confortablement lisible à l'impression d'une A5, pas seulement
+    /// « tenir ». Les colonnes de chiffres à largeur fixe (<see cref="NumericColumnWidths"/>) ont la
+    /// place de porter cette taille sans qu'aucune valeur ne se replie ; le test à 12 disciplines
+    /// (JGK-G03) garde la tenue sur une page sous garantie.
     /// </summary>
-    private const float TableFontSize = 8f;
+    private const float TableFontSize = 8.5f;
 
     /// <summary>
     /// Rembourrage horizontal d'une cellule de tableau. Serré à dessein : chaque point pris ici est un
@@ -100,7 +106,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
 
         if (rows <= ComfortRows)
         {
-            return (TableFontSize, Math.Clamp(24f / rows, 2f, 8f));
+            return (TableFontSize, Math.Clamp(24f / rows, 2f, 8.5f));
         }
 
         // Progression de 0 (ComfortRows lignes) à 1 (capacité maximale), bornée au-delà.
@@ -110,8 +116,12 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 DensePadding + (1f - density) * (2f - DensePadding));
     }
 
-    /// <summary>Corps plancher du tableau, atteint à <see cref="MaxRowCapacity"/> lignes — 85 % du corps plein.</summary>
-    private const float MinTableFontSize = TableFontSize * 0.85f;
+    /// <summary>
+    /// Corps plancher du tableau, atteint à <see cref="MaxRowCapacity"/> lignes — 88 % du corps plein,
+    /// soit ~7,5 pt, le corps courant du document. Un bulletin à 20 disciplines (cas extrême) reste
+    /// ainsi lisible à la taille du reste de la page, jamais en dessous.
+    /// </summary>
+    private const float MinTableFontSize = TableFontSize * 0.88f;
 
     /// <summary>Interligne plancher, atteint à <see cref="MaxRowCapacity"/> lignes.</summary>
     private const float DensePadding = 1f;
@@ -408,7 +418,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Coefficient));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.WeightedPoints));
-                table.Cell().Element(BodyCell).Text(""); // T.H : signification non établie, case vide.
+                table.Cell().Element(BodyCell).AlignCenter().Text(HonorsFor(subject.SubjectId)).Bold();
                 table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
                 table.Cell().Element(BodyCell).Text(reportCard.SubjectAppreciations.GetValueOrDefault(subject.SubjectId) ?? "");
             }
@@ -489,7 +499,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
-                table.Cell().Element(BodyCell).Text(""); // T.H : signification non établie, case vide.
+                table.Cell().Element(BodyCell).AlignCenter().Text(HonorsFor(subject.SubjectId)).Bold();
                 table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
             }
 
@@ -807,6 +817,21 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             });
         });
     }
+
+    /// <summary>
+    /// Colonne « T.H » : « TH » quand la matière décroche le Tableau d'Honneur, case VIDE sinon. Jamais
+    /// un « - » ni un « Non » — la colonne distingue les matières remarquables, et un marquage négatif
+    /// ferait lire un échec là où il n'y a qu'une absence de distinction (une matière à 13,5 n'a rien
+    /// d'un échec). C'est aussi ce que fait la rangée des distinctions du bas, qui n'imprime que la case
+    /// cochée.
+    ///
+    /// Le seuil lui-même est calculé en amont (SubjectAppreciationScale, via ReportCardDataService) : ce
+    /// document ne fait que mettre en page, aucun calcul ne s'y trouve. Un dictionnaire null — un DTO
+    /// construit sans cette donnée, ce que font plusieurs tests de mise en page — vaut « aucune matière
+    /// distinguée », jamais une exception.
+    /// </summary>
+    private string HonorsFor(Guid subjectId) =>
+        reportCard.SubjectHonors?.GetValueOrDefault(subjectId) == true ? "TH" : "";
 
     private static string FormatDate(DateOnly date) => date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 

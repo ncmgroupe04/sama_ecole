@@ -65,10 +65,10 @@ public record EvaluationStructureDto(
 /// Toutes les données du bulletin, déjà résolues et classées — <see cref="ReportCardPdfGenerator"/> (ou
 /// son équivalent Infrastructure) n'a plus qu'à mettre en page, aucun calcul ne s'y trouve.
 ///
-/// Champ volontairement ABSENT malgré la présence de sa case sur la référence visuelle — le document
-/// IMPRIMÉ reproduit la case, restée vide, plutôt que d'inventer une donnée : T.H (la signification de
-/// cette colonne sur la référence n'est pas établie). La case « Classe redoublée », elle, EST désormais
-/// alimentée (feature F) depuis <see cref="IsRepeating"/> (Enrollment.IsRepeating).
+/// Plus aucune case du gabarit n'est laissée vide faute de donnée : la dernière — T.H, dont la
+/// signification n'avait jamais été établie — est désormais alimentée par <see cref="SubjectHonors"/>
+/// (Tableau d'Honneur par matière). La case « Classe redoublée » l'est depuis <see cref="IsRepeating"/>
+/// (feature F, Enrollment.IsRepeating).
 /// </summary>
 public record ReportCardDto(
     string SchoolName,
@@ -113,9 +113,10 @@ public record ReportCardDto(
     int GeneralRank,
     IReadOnlyDictionary<Guid, int> SubjectRanks,
 
-    // Appréciation par matière : la mention du barème de l'école atteinte par la moyenne de la matière
-    // (même échelle que la mention générale — aucun vocabulaire parallèle inventé). Null si la moyenne
-    // n'atteint aucun seuil : la case s'imprime vide.
+    // Appréciation par matière : le vocabulaire fixe des bulletins sénégalais (Faible, Insuffisant,
+    // Moyen, Assez Bien, Bon Travail, Très Bien), et NON l'échelle de mentions configurable de l'école,
+    // qui qualifie la seule moyenne générale — voir SubjectAppreciationScale pour ce partage. Toute
+    // matière notée en reçoit une : le barème a un plancher, contrairement aux mentions.
     IReadOnlyDictionary<Guid, string?> SubjectAppreciations,
 
     string? Mention,
@@ -159,7 +160,18 @@ public record ReportCardDto(
     // Grille d'évaluation par compétences (APC) configurée par l'école pour le NIVEAU de la classe.
     // Null — le cas de tout niveau dont les matières sont restées plates, c'est-à-dire de toutes les
     // données antérieures à cette option — laisse le bulletin sur ses tableaux d'origine.
-    EvaluationStructureDto? EvaluationStructure = null);
+    EvaluationStructureDto? EvaluationStructure = null,
+
+    // Tableau d'Honneur par matière (colonne « T.H ») : true dès que la moyenne de la matière atteint
+    // le seuil de SubjectAppreciationScale.HonorMinAverage, transposé au barème du bulletin. La case
+    // s'imprime « TH » ou reste vide — jamais « non », qui ferait lire un échec là où il n'y a qu'une
+    // absence de distinction.
+    //
+    // Placé en fin de liste, loin de ses deux jumelles SubjectRanks/SubjectAppreciations, pour une
+    // raison de langage et non de conception : un paramètre à valeur par défaut ne peut pas précéder
+    // un paramètre obligatoire dans un record positionnel. Le défaut null (traité comme vide) est ce
+    // qui laisse compiler les sites d'appel qui l'ignorent, à commencer par les tests des documents.
+    IReadOnlyDictionary<Guid, bool>? SubjectHonors = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -286,18 +298,23 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         // global d'école : le bulletin d'un CM2 affiche /10, celui d'une 3e /20, dans le même établissement.
         var gradingScale = await GradingScaleGuard.ResolveScaleForClassroomAsync(dbContext, student.ClassroomId, cancellationToken);
 
-        // Appréciation par matière : la même échelle de mentions que la moyenne générale, appliquée à
-        // la moyenne de CHAQUE matière — une seule source de vérité pour « comment se qualifie une
-        // moyenne », aucun vocabulaire parallèle.
-        //
-        // Les seuils sortent sur /20 (MentionScales.Reference) : il faut donc les TRANSPOSER au barème
-        // du bulletin, sans quoi un CM2 noté /10 était jugé sur des seuils /20 — « Passable » (8/20)
-        // pour un 9/10, et aucune appréciation pour un 7,5/10 pourtant équivalent à 15/20.
+        // Échelle de mentions de l'ÉCOLE (configurable par le Directeur) : elle ne qualifie plus que la
+        // moyenne générale et les lignes des grilles APC. Les deux colonnes par matière du tableau du
+        // secondaire — Appréciations et T.H — relèvent désormais d'un barème distinct, voir ci-dessous.
         var mentionScale = await MentionScale.ResolveAsync(dbContext, cancellationToken);
-        var appreciationScale = MentionScales.RescaleTo(mentionScale, gradingScale);
+
+        // Appréciation et Tableau d'Honneur par matière : le barème FIXE des bulletins sénégalais
+        // (Faible → Très Bien, seuil T.H à 14/20), transposé au barème du bulletin — un CM2 noté /10
+        // est jugé sur des seuils /10. Ce barème n'est PAS celui des mentions de l'école : voir
+        // SubjectAppreciationScale, qui explique pourquoi les confondre imprimait « Passable » là où la
+        // référence visuelle porte « Faible ».
         var subjectAppreciations = summary.Subjects.ToDictionary(
             s => s.SubjectId,
-            s => GradeCalculator.MentionFor(s.Average, appreciationScale));
+            s => SubjectAppreciationScale.For(s.Average, gradingScale));
+
+        var subjectHonors = summary.Subjects.ToDictionary(
+            s => s.SubjectId,
+            s => SubjectAppreciationScale.QualifiesForHonors(s.Average, gradingScale));
 
         // Grille d'évaluation par compétences configurée pour le NIVEAU de la classe (domaines →
         // activités, barèmes propres, entêtes de colonnes). Null si ce niveau n'en déclare aucune : le
@@ -312,6 +329,14 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
 
         var remark = await dbContext.ReportCardRemarks.AsNoTracking()
             .FirstOrDefaultAsync(r => r.StudentId == student.Id && r.TermId == term.Id, cancellationToken);
+
+        // Distinction de la rangée du bas : la saisie du conseil des professeurs l'emporte TOUJOURS —
+        // y compris une sanction sur un excellent bulletin. À défaut seulement, la proposition déduite
+        // de la moyenne générale, et uniquement dans sa moitié haute : DisciplinaryMentionPolicy ne
+        // propose jamais de Blâme ni d'Avertissement, qu'aucune moyenne ne justifie.
+        var disciplinaryMention = remark?.DisciplinaryMention
+            ?? DisciplinaryMentionPolicy.Suggest(
+                summary.GeneralAverage, gradingScale, hasGrades: summary.TotalCoefficients > 0);
 
         // Redoublement (feature F) : lu sur l'inscription NON annulée de l'élève pour l'exercice du
         // trimestre. Un élève sans inscription active sur cette année (cas limite d'un bulletin d'archive)
@@ -355,7 +380,7 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             termRecaps,
             annualAverage,
             annualRank,
-            remark?.DisciplinaryMention,
+            disciplinaryMention,
             remark?.CouncilDecision,
             remark?.Observations,
             settings?.DirectorSignatureUrl,
@@ -367,7 +392,8 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             ClassroomPromotion.AcceleratedPathLabel(classroom),
             ClassroomPromotion.ValidatedLevels(classroom, remark?.CouncilDecision),
 
-            evaluationStructure);
+            evaluationStructure,
+            subjectHonors);
 
         return dto;
     }
