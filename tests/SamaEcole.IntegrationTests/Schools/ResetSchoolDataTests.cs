@@ -363,6 +363,86 @@ public class ResetSchoolDataTests : IAsyncLifetime
             "un double clic, ou un Directeur qui recommence, ne doit produire ni erreur ni effet de bord");
     }
 
+    /// <summary>Passe une école en mode réel, comme le ferait GoLiveCommand.</summary>
+    private async Task MarkAsLiveAsync(Guid schoolId)
+    {
+        await using var owner = _db.NewOwnerContext();
+
+        var school = await owner.Schools.IgnoreQueryFilters().SingleAsync(s => s.Id == schoolId);
+        school.WentLiveAt = new DateTimeOffset(2027, 1, 15, 9, 0, 0, TimeSpan.Zero);
+
+        await owner.SaveChangesAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Purging_A_School_In_Live_Mode_Must_Be_Refused_By_The_Database_Itself()
+    {
+        // Le contrôle du mode réel existe AUSSI dans ResetSchoolDataCommandHandler. Ce test prouve
+        // qu'il ne repose plus sur lui SEUL : on appelle le service directement, en court-circuitant
+        // le Handler exactement comme le ferait un futur second appelant (commande d'administration,
+        // tâche de reprise, script) qui aurait oublié de rejouer la règle. La base refuse d'elle-même.
+        await MarkAsLiveAsync(EcoleA);
+
+        await using var appA = _db.NewAppContext(EcoleA);
+
+        var act = async () => await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleA, CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<PostgresException>()
+            .Where(e => e.SqlState == PostgresErrorCodes.RaiseException);
+
+        thrown.Which.MessageText.Should().Contain("RESET_UNAVAILABLE_LIVE_MODE",
+            "le jeton d'erreur doit être le MÊME des deux côtés — c'est celui que l'API renvoie déjà au client");
+
+        // Et surtout : pas une ligne effacée. La fonction échoue AVANT sa boucle de suppression.
+        await using var owner = _db.NewOwnerContext();
+
+        (await owner.Students.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(2);
+        (await owner.Payments.IgnoreQueryFilters().CountAsync(p => p.SchoolId == EcoleA)).Should().Be(1);
+        (await owner.Grades.IgnoreQueryFilters().CountAsync(g => g.SchoolId == EcoleA)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task The_Tenant_Guard_Must_Take_Precedence_Over_The_Live_Mode_Guard()
+    {
+        // Ordre des gardes dans la fonction : tenant D'ABORD, état métier ENSUITE. Sans cet ordre, une
+        // session de l'École A qui vise l'École B apprendrait, à la seule lecture du message d'erreur,
+        // si B est passée en mode réel — une information sur un établissement qui ne la regarde pas.
+        await MarkAsLiveAsync(EcoleB);
+
+        await using var appA = _db.NewAppContext(EcoleA);
+
+        var act = async () => await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleB, CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<PostgresException>()
+            .Where(e => e.SqlState == PostgresErrorCodes.InsufficientPrivilege);
+
+        thrown.Which.MessageText.Should().NotContain("RESET_UNAVAILABLE_LIVE_MODE",
+            "le refus doit porter sur le tenant, sans rien divulguer de l'état de l'école visée");
+    }
+
+    [Fact]
+    public async Task Reverting_To_Test_Mode_Must_Make_The_Purge_Possible_Again()
+    {
+        // Le garde lit l'état COURANT de l'école, il ne se souvient de rien : repasser en mode test
+        // (RevertToTestCommand, réservé aux environnements jetables) rouvre réellement la purge. Sans
+        // ce test, un garde qui bloquerait définitivement après un premier passage en mode réel
+        // passerait inaperçu — la recette ne pourrait plus se remettre à neuf.
+        await MarkAsLiveAsync(EcoleA);
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            var school = await owner.Schools.IgnoreQueryFilters().SingleAsync(s => s.Id == EcoleA);
+            school.WentLiveAt = null;
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var appA = _db.NewAppContext(EcoleA);
+
+        var summary = await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleA, CancellationToken.None);
+
+        summary.TotalRowsDeleted.Should().Be(11);
+    }
+
     /// <summary>
     /// Le garde-fou générique — dans l'esprit de RlsCoverageTests. reset_school_data supprime ses
     /// tables dans un ordre FIGÉ dans son propre corps ; toute clé étrangère ON DELETE RESTRICT (ou
