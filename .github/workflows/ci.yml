@@ -33,6 +33,25 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      # Tests JS (node:test, ni navigateur ni dépendance externe). Ils portent notamment les
+      # GARDE-FOUS de non-régression de wwwroot/js — plafond pageSize, synchronisation du calendrier
+      # avec son Tag Helper, cliquet sur les chargements qui échouent en silence. Placés AVANT le
+      # build .NET : ils tournent en quelques secondes, ne dépendent ni de PostgreSQL ni de Docker,
+      # et attrapent en amont exactement le genre de défaut qui n'était jusqu'ici trouvé qu'en
+      # production, par un utilisateur (« la liste des élèves ne charge pas »).
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: src/SamaEcole.Web/package-lock.json
+
+      - name: Installer les dépendances front
+        run: npm ci --prefix src/SamaEcole.Web
+
+      - name: Tests JS (garde-fous de non-régression)
+        run: npm test --prefix src/SamaEcole.Web
+
       - name: Restore
         run: dotnet restore SamaEcole.sln
 

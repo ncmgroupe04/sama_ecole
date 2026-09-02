@@ -115,6 +115,23 @@ document.addEventListener('alpine:init', () => {
         viewMonth: null,
         weekdayLabels: ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'],
 
+        /**
+         * Bornes de la navigation, IDENTIQUES à la plage d'<option> rendue par
+         * TagHelpers/DateFieldTagHelper.cs (`Enumerable.Range(currentYear - 100, 106)`).
+         *
+         * Elles ne sont pas cosmétiques : si prevMonth()/nextMonth() emmène `viewYear` hors de cette
+         * plage, le <select x-model.number="viewYear"> n'a plus aucune <option> correspondante. Le
+         * navigateur retombe alors sur sa PREMIÈRE option et x-model réécrit `viewYear` avec — le
+         * calendrier saute brutalement d'un siècle sous les doigts de l'utilisateur. Le test
+         * date-field-taghelper-sync.test.mjs échoue si ces deux constantes cessent de correspondre
+         * au Tag Helper.
+         */
+        yearsBack: 100,
+        yearsForward: 5,
+
+        get minYear() { return new Date().getFullYear() - this.yearsBack; },
+        get maxYear() { return new Date().getFullYear() + this.yearsForward; },
+
         // Saisie clavier (hybride avec le calendrier) : `text` est le tampon affiché/tapé
         // (JJ/MM/AAAA), distinct de Model — Model ne reçoit une écriture que lorsque `text` forme
         // une date complète et valide (voir onTextInput). `pendingIso` porte le résultat du dernier
@@ -127,9 +144,29 @@ document.addEventListener('alpine:init', () => {
             this.setView(initialIso);
         },
 
+        /**
+         * Ramène n'importe quelle valeur de modèle à `yyyy-MM-dd`, ou '' si elle n'en contient pas.
+         *
+         * Indispensable parce que le modèle lié n'est PAS toujours une DateOnly : une propriété
+         * DateTimeOffset de l'API arrive horodatée (« 2024-03-07T00:00:00+00:00 »), et un formulaire
+         * encore vide porte null. Sans cette normalisation, `split('-')` rendait « 07T00:00:00+00:00 »
+         * comme jour, et `formatInput(null)` levait un TypeError qui cassait toute l'expression Alpine.
+         */
+        normalizeIso(value) {
+            if (typeof value !== 'string') return '';
+            const match = /^(\d{4}-\d{2}-\d{2})/.exec(value.trim());
+            return match ? match[1] : '';
+        },
+
+        /** Borne l'année dans la plage réellement offerte par le <select> (voir yearsBack/yearsForward). */
+        clampYear(year) {
+            return Math.min(this.maxYear, Math.max(this.minYear, year));
+        },
+
         setView(iso) {
-            const base = iso ? new Date(iso + 'T00:00:00') : new Date();
-            this.viewYear = base.getFullYear();
+            const normalized = this.normalizeIso(iso);
+            const base = normalized ? new Date(normalized + 'T00:00:00') : new Date();
+            this.viewYear = this.clampYear(base.getFullYear());
             this.viewMonth = base.getMonth();
         },
 
@@ -177,32 +214,52 @@ document.addEventListener('alpine:init', () => {
 
         isToday(iso) { return iso === this.toIso(new Date()); },
 
+        /** Recule d'un mois, sans jamais sortir de la plage d'années du <select> (voir yearsBack). */
         prevMonth() {
+            if (this.viewMonth === 0) {
+                if (this.viewYear <= this.minYear) return; // borne atteinte : on ne bouge plus
+                this.viewMonth = 11;
+                this.viewYear--;
+                return;
+            }
             this.viewMonth--;
-            if (this.viewMonth < 0) { this.viewMonth = 11; this.viewYear--; }
         },
 
+        /** Avance d'un mois, sans jamais sortir de la plage d'années du <select> (voir yearsForward). */
         nextMonth() {
+            if (this.viewMonth === 11) {
+                if (this.viewYear >= this.maxYear) return; // borne atteinte : on ne bouge plus
+                this.viewMonth = 0;
+                this.viewYear++;
+                return;
+            }
             this.viewMonth++;
-            if (this.viewMonth > 11) { this.viewMonth = 0; this.viewYear++; }
         },
 
         formatDisplay(iso) {
-            return new Date(iso + 'T00:00:00').toLocaleDateString('fr-FR', {
+            const normalized = this.normalizeIso(iso);
+            // Jamais « Invalid Date » à l'écran : une valeur absente ou illisible n'affiche RIEN.
+            if (!normalized) return '';
+            return new Date(normalized + 'T00:00:00').toLocaleDateString('fr-FR', {
                 day: '2-digit', month: 'long', year: 'numeric'
             });
         },
 
-        /** ISO (yyyy-MM-dd) → JJ/MM/AAAA, pour le champ texte. */
+        /** ISO (yyyy-MM-dd, horodaté toléré) → JJ/MM/AAAA. '' si la valeur est absente. */
         formatInput(iso) {
-            const [y, m, d] = iso.split('-');
+            const normalized = this.normalizeIso(iso);
+            if (!normalized) return '';
+            const [y, m, d] = normalized.split('-');
             return `${d}/${m}/${y}`;
         },
 
         /** JJ/MM/AAAA → ISO, ou null si incomplet/invalide (rejette aussi les débordements de
-         *  calendrier silencieusement corrigés par Date, ex. « 31/02/2024 » → mars). */
+         *  calendrier silencieusement corrigés par Date, ex. « 31/02/2024 » → mars).
+         *  Jour et mois sur 1 OU 2 chiffres : la frappe est normalisée par onTextInput, mais un
+         *  COLLAGE (« 1/1/2024 ») arrive tel quel et ne doit pas être perdu en silence. */
         parseInput(text) {
-            const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text.trim());
+            if (typeof text !== 'string') return null;
+            const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text.trim());
             if (!match) return null;
             const day = Number(match[1]), month = Number(match[2]), year = Number(match[3]);
             const d = new Date(year, month - 1, day);
