@@ -5,6 +5,10 @@
  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
  <title>@ViewData["Title"] - Unikol</title>
  <link rel="icon" type="image/png" href="~/images/logo-school.png" />
+ @* Police plateforme Inter, auto-hébergée (CSP font-src 'self' — voir @@font-face en tête de
+    Styles/input.css). Préchargement de la seule fonte latine « normal », la plus utilisée, pour
+    réduire le flash de bascule ; les variantes latin-ext / italique se chargent à la demande. *@
+ <link rel="preload" href="~/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
  <!-- CSS généré dans wwwroot/css/site.css par `npm run build:css` (Tailwind, Décision D-13) -->
  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
  <link rel="manifest" href="~/manifest.json" />

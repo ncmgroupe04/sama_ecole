@@ -52,8 +52,16 @@ module.exports = {
         neutral: "#6B7280"      // Gris — textes secondaires, séparateurs
       },
       fontFamily: {
-        // Police Inter avec repli système Segoe UI (Volume 5 §2.2)
-        sans: ["Inter", "Segoe UI", "system-ui", "sans-serif"]
+        // Inter (variable, AUTO-HÉBERGÉE — voir les @font-face en tête de Styles/input.css), repli
+        // système Segoe UI (Volume 5 §2.2). Elle était déjà déclarée ici mais jamais chargée : la
+        // plateforme rendait en Segoe UI.
+        sans: ["Inter", "Segoe UI", "system-ui", "sans-serif"],
+        // Harmonisation demandée : `font-mono` ne bascule PLUS vers une chasse fixe. C'est la même
+        // Inter que le reste de la plateforme ; les chiffres tabulaires (pour aligner les colonnes
+        // de nombres — matricules, montants FCFA, n° de reçu, dates, ~22 vues) sont ajoutés via une
+        // règle `.font-mono { font-variant-numeric: tabular-nums }` dans Styles/input.css. Une seule
+        // redéfinition ici plutôt que 22 vues éditées, et tout futur `font-mono` hérite du bon rendu.
+        mono: ["Inter", "Segoe UI", "system-ui", "sans-serif"]
       },
       fontSize: {
         "jgk-title": ["22px", { lineHeight: "1.3" }],
