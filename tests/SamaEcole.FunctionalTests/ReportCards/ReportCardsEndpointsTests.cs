@@ -235,6 +235,31 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
     }
 
     [Fact]
+    public async Task Getting_The_Remark_Surfaces_The_Distinction_The_A5_Engine_Would_Print()
+    {
+        // Rien n'a encore été saisi par le conseil : la réponse porte SuggestedDisciplinaryMention, la
+        // distinction que le bulletin imprimerait faute de saisie (DisciplinaryMentionPolicy). L'élève
+        // seedé a 15 et 17 sur un unique coefficient → moyenne 16 → seuil « Félicitations ». L'écran de
+        // saisie s'en sert pour pré-cocher la distinction, que le conseil valide ou remplace.
+        var directeur = await DirecteurTokenAsync();
+        var enseignant = await EnseignantTokenAsync();
+        var (studentId, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+
+        var response = await SendAsync(HttpMethod.Get,
+            $"/api/v1/report-cards/remark?studentId={studentId}&termId={termId}", directeur);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var remark = (await response.Content.ReadFromJsonAsync<RemarkResponse>())!;
+        remark.DisciplinaryMention.Should().BeNull("le conseil n'a encore rien saisi");
+        remark.SuggestedDisciplinaryMention.Should().Be("Felicitations");
+        remark.GeneralAverage.Should().Be(16m);
+    }
+
+    private record RemarkResponse(
+        string? DisciplinaryMention, string? CouncilDecision, string? Observations,
+        string? SuggestedDisciplinaryMention, decimal? GeneralAverage);
+
+    [Fact]
     public async Task Downloading_Class_Bulletins_For_An_Unknown_Classroom_Should_Return_404()
     {
         var directeur = await DirecteurTokenAsync();

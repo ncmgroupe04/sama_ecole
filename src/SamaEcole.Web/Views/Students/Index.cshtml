@@ -730,6 +730,14 @@
  <label class="form-label">Distinction</label>
  <select-field model="editingReportCardRemark.disciplinaryMention" aria-label="Distinction"
  placeholder="Aucune" options="disciplinaryMentionOptions" />
+ <!-- Distinction calculée par le moteur A5 (DisciplinaryMentionPolicy) : pré-cochée à l'ouverture,
+      le conseil valide en enregistrant ou choisit autre chose. Le bandeau disparaît dès que la
+      valeur retenue s'écarte de la proposition — signal discret d'un override. -->
+ <p x-cloak class="mt-1.5 text-xs text-slate-500"
+    x-show="editingReportCardRemark.suggestedDisciplinaryMention && editingReportCardRemark.disciplinaryMention === editingReportCardRemark.suggestedDisciplinaryMention">
+ Proposé automatiquement<template x-if="editingReportCardRemark.suggestedFromAverage !== null"><span> d'après la moyenne <span x-text="formatAverage(editingReportCardRemark.suggestedFromAverage)"></span></span></template> :
+ <span class="font-medium text-slate-700" x-text="disciplinaryMentionLabel(editingReportCardRemark.suggestedDisciplinaryMention)"></span>. Le conseil peut le modifier.
+ </p>
  </div>
 
  <div>

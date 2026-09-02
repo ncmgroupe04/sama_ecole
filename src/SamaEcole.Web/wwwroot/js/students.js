@@ -479,18 +479,30 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Ouvre l'écran, préreempli depuis GET /report-cards/remark (vide si rien n'a encore été saisi). */
+        /**
+         * Ouvre l'écran, prérempli depuis GET /report-cards/remark.
+         *
+         * Rien de saisi encore → on PRÉ-SÉLECTIONNE la distinction que le moteur A5 propose d'après la
+         * moyenne (`suggestedDisciplinaryMention`) : le conseil valide d'un clic sur Enregistrer, ou
+         * choisit autre chose. `suggestedDisciplinaryMention` et `suggestedFromAverage` sont conservés
+         * pour le bandeau d'aide, qui s'efface dès que la valeur choisie s'écarte de la proposition.
+         */
         async openReportCardRemark(term) {
             if (!this.detailStudent) return;
             this.reportCardRemarkErrors = {};
-            this.editingReportCardRemark = { termId: term.termId, disciplinaryMention: '', councilDecision: '', observations: '' };
+            this.editingReportCardRemark = {
+                termId: term.termId, disciplinaryMention: '', councilDecision: '', observations: '',
+                suggestedDisciplinaryMention: '', suggestedFromAverage: null
+            };
             try {
                 const remark = await window.api.get(`/report-cards/remark?studentId=${this.detailStudent.id}&termId=${term.termId}`);
                 this.editingReportCardRemark = {
                     termId: term.termId,
-                    disciplinaryMention: remark.disciplinaryMention || '',
+                    disciplinaryMention: remark.disciplinaryMention || remark.suggestedDisciplinaryMention || '',
                     councilDecision: remark.councilDecision || '',
-                    observations: remark.observations || ''
+                    observations: remark.observations || '',
+                    suggestedDisciplinaryMention: remark.suggestedDisciplinaryMention || '',
+                    suggestedFromAverage: typeof remark.generalAverage === 'number' ? remark.generalAverage : null
                 };
             } catch (err) {
                 this.reportCardRemarkErrors = { global: window.api.toMessage(err, 'Impossible de charger les observations du conseil.') };
@@ -988,6 +1000,14 @@ document.addEventListener('alpine:init', () => {
             if (value === null || value === undefined) return '—';
             const scale = this.studentDetail?.gradingScale ?? 20;
             return `${this.formatGrade(value)}/${scale}`;
+        },
+
+        /** Libellé humain d'une valeur de DisciplinaryMention (bandeau d'aide de la modale « Observations du conseil »). */
+        disciplinaryMentionLabel(value) {
+            return {
+                Blame: 'Blâme', Avertissement: 'Avertissement', TableauHonneur: "Tableau d'honneur",
+                Encouragements: 'Encouragements', Felicitations: 'Félicitations'
+            }[value] || value;
         },
 
         /**
