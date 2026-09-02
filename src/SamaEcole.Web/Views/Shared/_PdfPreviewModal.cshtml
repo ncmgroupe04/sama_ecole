@@ -4,7 +4,7 @@
    x-bind, jamais lié à la propriété C# `Title` — soit ~100 px de bandeau blanc pour un seul ✕
    esseulé. La barre d'outils ci-dessous en tient lieu : « Ouvrir dans un nouvel onglet » à gauche,
    « Télécharger » / « Imprimer » / « Fermer » (rouge) regroupés à droite, le tout collé en haut. *@
-<modal-shell open="showPdfModal" size="5xl" panel-style="pdfPanelStyle" on-close="closePdfPreview()" hide-header="true">
+<modal-shell open="showPdfModal" size="5xl" panel-style="pdfPanelStyle()" on-close="closePdfPreview()" hide-header="true">
     <div class="space-y-4">
         <!-- Barre d'outils : elle tient lieu d'en-tête (modal-shell est en hide-header) et reste
              collée en haut pendant le défilement de l'aperçu. « Ouvrir dans un nouvel onglet » à
@@ -80,9 +80,9 @@
                     <span x-text="pdfRenderedCount"></span> / <span x-text="pdfPageCount"></span> page(s)
                 </p>
                 <div class="flex items-center gap-1 ml-auto">
-                    <button type="button" x-on:click="zoomPdfOut()" :disabled="!canZoomPdfOut" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Réduire">−</button>
-                    <button type="button" x-on:click="zoomPdfReset()" class="text-xs text-slate-500 w-14 text-center hover:text-indigo-600" x-text="pdfZoomLabel"></button>
-                    <button type="button" x-on:click="zoomPdfIn()" :disabled="!canZoomPdfIn" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Agrandir">+</button>
+                    <button type="button" x-on:click="zoomPdfOut()" :disabled="!canZoomPdfOut()" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Réduire">−</button>
+                    <button type="button" x-on:click="zoomPdfReset()" class="text-xs text-slate-500 w-14 text-center hover:text-indigo-600" x-text="pdfZoomLabel()"></button>
+                    <button type="button" x-on:click="zoomPdfIn()" :disabled="!canZoomPdfIn()" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Agrandir">+</button>
                 </div>
             </div>
             <div class="w-full bg-slate-100 rounded-xl border border-slate-200 overflow-auto p-3" style="max-height: 600px;">

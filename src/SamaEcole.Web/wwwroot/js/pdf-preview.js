@@ -425,9 +425,14 @@
                     if (this.pdfStatus === 'ready') this.renderPdfPages();
                 },
 
-                get pdfZoomLabel() { return `${Math.round(this.pdfZoom * 100)} %`; },
-                get canZoomPdfIn() { return this.pdfZoom < ZOOM_MAX; },
-                get canZoomPdfOut() { return this.pdfZoom > ZOOM_MIN; },
+                // MÉTHODES et non getters : `state()` est consommé par `{ ...window.pdfPreview.state() }`
+                // dans chaque écran, et le spread d'objet ÉVALUE un getter une fois pour en copier la
+                // valeur — la réactivité serait perdue (label de zoom figé à « 100 % », largeur de
+                // panneau figée à vide). Une méthode, elle, se copie par référence et reste appelée à
+                // chaque rendu. Les vues les invoquent donc avec des parenthèses : `pdfZoomLabel()`.
+                pdfZoomLabel() { return `${Math.round(this.pdfZoom * 100)} %`; },
+                canZoomPdfIn() { return this.pdfZoom < ZOOM_MAX; },
+                canZoomPdfOut() { return this.pdfZoom > ZOOM_MIN; },
 
                 /**
                  * Largeur de la modale d'aperçu : le gabarit `size="5xl"` de modal-shell
@@ -437,7 +442,7 @@
                  * tant que la 1re page n'est pas mesurée : le gabarit `size` de modal-shell s'applique
                  * alors (transitoire, < 1 s).
                  */
-                get pdfPanelStyle() {
+                pdfPanelStyle() {
                     if (!this.pdfDocRatio) return '';
                     const maxWidth = Math.min(PANEL_MAX_WIDTH, (window.innerWidth || 1024) - PANEL_GUTTERS);
                     return `max-width: ${Math.round(Math.max(maxWidth, 320))}px`;
