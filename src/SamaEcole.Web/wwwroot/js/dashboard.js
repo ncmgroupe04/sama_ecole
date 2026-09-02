@@ -26,7 +26,12 @@ document.addEventListener('alpine:init', () => {
         isFinanceLoading: false,
         financeError: null,
         financeData: null,
-        
+
+        // Consommé par le partiel _ErrorBanner partagé (x-show="error") : jamais renseigné en
+        // pratique ici (chaque chargement a son propre *Error ci-dessus), mais sans cette
+        // déclaration Alpine évalue "error" comme une référence indéfinie à chaque rendu.
+        error: null,
+
         search: '',
         activeTab: 'synth', // 'synth', 'expenses'
 
