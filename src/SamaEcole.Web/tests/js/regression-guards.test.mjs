@@ -108,9 +108,6 @@ test('garde-fou : la plage d\'années de dateField() colle à celle du DateField
  * `this.error`) dans le catch, puis supprimer la ligne ici.
  */
 const SILENT_LOADERS_DEBT = [
-    'attendance.js :: loadClassrooms',
-    'attendance.js :: loadSubjects',
-    'attendance.js :: loadRoster',
     'caisse.js :: loadCurrentSession',
     'caisse.js :: loadBalance',
     'dashboard.js :: loadAnalytics',
@@ -119,29 +116,66 @@ const SILENT_LOADERS_DEBT = [
     'exams.js :: loadAudit',
     'exams.js :: loadStatistics',
     'features.js :: load',
-    'inventory.js :: loadBeneficiaries',
-    'payroll.js :: loadTeachers',
-    'payroll.js :: loadUsers',
     'payroll.js :: loadSuggestedHours',
+    'settings.js :: load',
     'sms-settings.js :: load',
-    'students.js :: loadActiveYear',
-    'teachers.js :: loadSubjects',
-    'teachers.js :: loadClassrooms'
+    'students.js :: loadActiveYear'
 ];
+
+/**
+ * Extrait le bloc `{ … }` équilibré qui commence à `openIndex`.
+ *
+ * La première version de ce détecteur découpait des fenêtres de N caractères après le mot-clé. Elle
+ * s'est révélée fausse DANS LES DEUX SENS : elle accusait `inventory.js :: loadBeneficiaries` (dont
+ * le toast tombait 200 caractères trop loin) et laissait passer quatre vrais coupables
+ * (`settings.js :: load`, `students.js :: loadClassrooms`…) dont le corps dépassait la fenêtre. Un
+ * garde-fou qui rassure à tort est pire que pas de garde-fou du tout — d'où ce comptage d'accolades.
+ */
+function balancedBlock(source, openIndex) {
+    let depth = 0;
+    for (let i = openIndex; i < source.length; i++) {
+        if (source[i] === '{') depth++;
+        else if (source[i] === '}' && --depth === 0) return source.slice(openIndex, i + 1);
+    }
+    return source.slice(openIndex);
+}
+
+/** Un échec est « remonté » s'il aboutit à quelque chose que l'utilisateur peut VOIR. */
+const SURFACES_ERROR = /toast\.|this\.error\s*=|showError|notify|alert\(/;
+
+/**
+ * Silence assumé : un `catch` portant `silence-volontaire:` suivi de sa justification. Réservé aux
+ * refus ATTENDUS — typiquement un 403 sur une route réservée à un autre rôle, où un message
+ * transformerait le fonctionnement normal en incident (voir payroll.js :: loadUsers).
+ */
+const DELIBERATE_SILENCE = /silence-volontaire\s*:/;
 
 function findSilentLoaders() {
     const found = [];
+
     for (const { name, source } of jsFiles()) {
         for (const match of source.matchAll(/async\s+(load[A-Za-z0-9_]*)\s*\([^)]*\)\s*\{/g)) {
-            const body = source.slice(match.index, match.index + 1400);
-            const catchAt = body.indexOf('catch');
-            if (catchAt === -1) continue;
+            const bodyStart = source.indexOf('{', match.index + match[0].length - 1);
+            const body = balancedBlock(source, bodyStart);
 
-            const catchBlock = body.slice(catchAt, catchAt + 400);
-            const surfacesError = /toast\.|this\.error\s*=|showError|notify|alert\(/.test(catchBlock);
-            if (!surfacesError) found.push(`${name} :: ${match[1]}`);
+            const handlers = [];
+            for (const c of body.matchAll(/catch\s*(\([^)]*\))?\s*\{/g)) {
+                handlers.push(balancedBlock(body, body.indexOf('{', c.index + c[0].length - 1)));
+            }
+            for (const a of body.matchAll(/\.catch\s*\(/g)) {
+                handlers.push(body.slice(a.index, a.index + 200));
+            }
+            if (handlers.length === 0) continue;
+
+            if (handlers.some((h) => DELIBERATE_SILENCE.test(h))) continue;
+            if (handlers.some((h) => SURFACES_ERROR.test(h))) continue;
+            // Certains écrans posent `this.error` hors du catch (avant l'appel) : le corps entier fait foi.
+            if (SURFACES_ERROR.test(body)) continue;
+
+            found.push(`${name} :: ${match[1]}`);
         }
     }
+
     return found;
 }
 

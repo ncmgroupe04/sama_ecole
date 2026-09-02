@@ -180,6 +180,8 @@ document.addEventListener('alpine:init', () => {
                 this.subjects = Array.isArray(data) ? data : (data.items || []);
             } catch (err) {
                 console.error('Erreur chargement matières:', err);
+                this.subjects = [];
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des matières.'));
             }
         },
 
@@ -189,6 +191,8 @@ document.addEventListener('alpine:init', () => {
                 this.classrooms = Array.isArray(data) ? data : (data.items || []);
             } catch (err) {
                 console.error('Erreur chargement classes:', err);
+                this.classrooms = [];
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des classes.'));
             }
         },
 
@@ -198,7 +202,12 @@ document.addEventListener('alpine:init', () => {
                 const users = await window.api.get('/users');
                 this.eligibleAccounts = (users || []).filter((u) => u.role === 'Enseignant');
             } catch (err) {
+                // silence-volontaire: GET /users est réservé au Directeur (UsersController). Un 403 est
+                // donc le cas NORMAL pour le Secrétariat, qui gère les fiches enseignant sans pouvoir
+                // les rattacher à un compte. Afficher une erreur ici alarmerait à chaque ouverture de
+                // l'écran pour un refus attendu ; la liste vide masque simplement l'option.
                 console.error('Erreur chargement comptes:', err);
+                this.eligibleAccounts = [];
             }
         },
 

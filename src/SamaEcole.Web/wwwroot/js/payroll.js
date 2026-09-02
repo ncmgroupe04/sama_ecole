@@ -119,6 +119,8 @@ document.addEventListener('alpine:init', () => {
                 this.teachers = data.items || [];
             } catch (err) {
                 console.error('Erreur chargement enseignants:', err);
+                this.teachers = [];
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des enseignants.'));
             }
         },
 
@@ -127,6 +129,10 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.users = await api.get('/users');
             } catch (err) {
+                // silence-volontaire: GET /users est réservé au Directeur (UsersController). Un 403 est
+                // le cas NORMAL pour la Finance, qui ne crée alors que des contrats Enseignant — c'est
+                // exactement ce que dit le commentaire de la méthode. Un toast transformerait ce refus
+                // attendu en incident à chaque chargement de l'écran Paie.
                 this.users = [];
             }
         },

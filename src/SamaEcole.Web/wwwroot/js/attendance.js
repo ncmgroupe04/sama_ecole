@@ -71,6 +71,8 @@ document.addEventListener('alpine:init', () => {
                 this.classrooms = Array.isArray(data) ? data : (data.items || []);
             } catch (err) {
                 console.error('Erreur chargement classes:', err);
+                this.classrooms = [];
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des classes.'));
             }
         },
 
@@ -80,6 +82,8 @@ document.addEventListener('alpine:init', () => {
                 this.subjects = Array.isArray(data) ? data : (data.items || []);
             } catch (err) {
                 console.error('Erreur chargement matières:', err);
+                this.subjects = [];
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des matières.'));
             }
         },
 
