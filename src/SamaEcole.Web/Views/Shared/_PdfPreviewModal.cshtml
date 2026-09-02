@@ -2,13 +2,14 @@
    Le composant Alpine hôte doit étaler `...window.pdfPreview.state()` dans son Alpine.data(). *@
 @* hide-header : l'en-tête par défaut de modal-shell (titre + ✕) restait vide ici — `:title` est du
    x-bind, jamais lié à la propriété C# `Title` — soit ~100 px de bandeau blanc pour un seul ✕
-   esseulé. La barre d'outils ci-dessous en tient lieu : actions à gauche, « Fermer » (rouge) à
-   droite, le tout collé en haut. *@
+   esseulé. La barre d'outils ci-dessous en tient lieu : « Ouvrir dans un nouvel onglet » à gauche,
+   « Télécharger » / « Imprimer » / « Fermer » (rouge) regroupés à droite, le tout collé en haut. *@
 <modal-shell open="showPdfModal" size="5xl" panel-style="pdfPanelStyle" on-close="closePdfPreview()" hide-header="true">
     <div class="space-y-4">
         <!-- Barre d'outils : elle tient lieu d'en-tête (modal-shell est en hide-header) et reste
-             collée en haut pendant le défilement de l'aperçu — actions PDF à gauche, « Fermer » à
-             droite (poussé par ml-auto).
+             collée en haut pendant le défilement de l'aperçu. « Ouvrir dans un nouvel onglet » à
+             gauche ; « Télécharger », « Imprimer » et « Fermer » regroupés à droite (le groupe est
+             poussé par ml-auto).
              Fond 100 % opaque et largeur alignée sur le corps (pas de -mx négatif) : l'aperçu défile
              dessous sans transparaître ni pousser de barre de défilement horizontale.
              `-top-6` compense le `-mt-6` : sans lui, l'ancrage sticky se ferait sur la marge, et la
@@ -20,19 +21,21 @@
             <button type="button" x-show="pdfPreviewUrl" x-cloak x-on:click="openPdfInNewTab()" class="btn-modal-secondary text-xs group">
                 <span>Ouvrir dans un nouvel onglet</span>
             </button>
-            <button type="button" x-show="pdfPreviewUrl" x-cloak x-on:click="downloadPreviewPdf()" class="btn-modal-secondary text-xs group">
-                <icon name="download" class="w-4 h-4" />
-                <span>Télécharger</span>
-            </button>
-            <button type="button" x-show="pdfPreviewUrl" x-cloak x-on:click="printPreviewPdf()" class="btn-modal-primary text-xs group">
-                <icon name="print" class="w-4 h-4" />
-                <span>Imprimer</span>
-            </button>
-            <button type="button" x-on:click="closePdfPreview()"
-                    class="btn-modal-primary text-xs group ml-auto bg-rose-600 hover:bg-rose-700 focus:ring-rose-600">
-                <icon name="x" class="w-4 h-4" />
-                <span>Fermer</span>
-            </button>
+            <div class="ml-auto flex flex-wrap items-center gap-2">
+                <button type="button" x-show="pdfPreviewUrl" x-cloak x-on:click="downloadPreviewPdf()" class="btn-modal-secondary text-xs group">
+                    <icon name="download" class="w-4 h-4" />
+                    <span>Télécharger</span>
+                </button>
+                <button type="button" x-show="pdfPreviewUrl" x-cloak x-on:click="printPreviewPdf()" class="btn-modal-primary text-xs group">
+                    <icon name="print" class="w-4 h-4" />
+                    <span>Imprimer</span>
+                </button>
+                <button type="button" x-on:click="closePdfPreview()"
+                        class="btn-modal-primary text-xs group bg-rose-600 hover:bg-rose-700 focus:ring-rose-600">
+                    <icon name="x" class="w-4 h-4" />
+                    <span>Fermer</span>
+                </button>
+            </div>
         </div>
 
         <!-- Bandeau d'astuce -->
