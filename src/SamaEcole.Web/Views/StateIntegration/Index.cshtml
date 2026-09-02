@@ -7,7 +7,11 @@
     <script src="~/js/state-integration.js" asp-append-version="true"></script>
 }
 
-<div x-data="stateIntegrationView()" x-init="init()">
+@* Pas de `x-init="init()"` : Alpine appelle DÉJÀ tout seul la méthode `init()` d'un composant
+   x-data. L'ajouter la déclenchait une seconde fois — mesuré au navigateur le 02/09/2026 :
+   /school-years, /classrooms et /state-integration/simen/status partaient en double à chaque
+   ouverture de l'écran. C'est la convention du reste du dépôt (voir les trois autres featureGate). *@
+<div x-data="stateIntegrationView()">
 
     <div>
         <h1 class="page-title">Intégration étatique</h1>

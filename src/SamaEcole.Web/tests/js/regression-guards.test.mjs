@@ -404,3 +404,186 @@ test('garde-fou : la dette des déréférencements null ne fait que diminuer', (
         'cliquet se resserre.\n  ' + fixed.join('\n  ')
     );
 });
+
+/* ------------------------------------------------------------------------------------------------
+ * GARDE-FOU 5 — toute route appelée par le front existe côté serveur.
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Une URL mal orthographiée, ou une route jamais implémentée, ne se voit pas : l'appel part, revient
+ * en 404, et l'écran se contente de son état vide. Le cas fondateur est
+ * `GET /reports/surveillant-dashboard` (supprimé le 02/09/2026) : cette route n'a JAMAIS existé, et
+ * son `catch` fabriquait des chiffres d'absences EN DUR (« 12 absents, 5 retards ») pour meubler le
+ * tableau de bord. Des données inventées, à un branchement de vue près de passer pour réelles.
+ *
+ * Le contrôle compare des FORMES : `/finance/payments/${id}/receipt` et
+ * `[HttpGet("payments/{id:guid}/receipt")]` se réduisent tous deux à `finance/payments/*​/receipt`.
+ * Les segments interpolés et les paramètres de route deviennent des jokers, la query est ignorée.
+ */
+
+/** Routes déclarées par les contrôleurs — `[Route(...)]` de classe + `[HttpXxx(...)]` de méthode. */
+function declaredRoutes() {
+    const dir = path.join(WEB_ROOT, 'Controllers');
+    const routes = new Set();
+
+    for (const f of readdirSync(dir).filter((x) => x.endsWith('.cs'))) {
+        const src = readFileSync(path.join(dir, f), 'utf8');
+        const base = /\[Route\("([^"]+)"\)\]/.exec(src)?.[1] ?? '';
+
+        for (const m of src.matchAll(/\[Http(?:Get|Post|Put|Patch|Delete)(?:\("([^"]*)"\))?\]/g)) {
+            const tmpl = m[1] ?? '';
+            const full = tmpl.startsWith('/') ? tmpl : (base ? `${base}/${tmpl}` : tmpl);
+            routes.add(routeShape(full));
+        }
+    }
+
+    // Endpoints minimal API montés directement dans Program.cs (porte de recette, webhooks…).
+    const program = readFileSync(path.join(WEB_ROOT, 'Program.cs'), 'utf8');
+    for (const m of program.matchAll(/Map(?:Get|Post|Put|Patch|Delete)\(\s*"([^"]+)"/g)) {
+        routes.add(routeShape(m[1]));
+    }
+    return routes;
+}
+
+/** Réduit un chemin à sa forme comparable : préfixe d'API retiré, segments variables en `*`. */
+function routeShape(p) {
+    return p
+        .replace(/\$\{[^}]*\}/g, '*')       // interpolation JS
+        .replace(/\{[^}]*\}/g, '*')          // paramètre de route ASP.NET
+        .split('?')[0]
+        .replace(/^\/?api\/v1\/?/, '')
+        .replace(/^\/+|\/+$/g, '')
+        .replace(/\/{2,}/g, '/');
+}
+
+/** Routes réellement appelées depuis wwwroot/js — via le client `api.*` ou une URL /api/v1 littérale. */
+function calledRoutes() {
+    const calls = [];
+
+    for (const { name, source } of jsFiles()) {
+        const code = stripComments(source);
+
+        for (const m of code.matchAll(
+            /\bapi\.(?:get|post|put|patch|delete|postWithRetry|getAllPages)\(\s*[`'"]([^`'"]+)[`'"]/g)) {
+            calls.push({ file: name, url: m[1] });
+        }
+        for (const m of code.matchAll(/[`'"](\/api\/v1\/[^`'"\s]+)/g)) {
+            calls.push({ file: name, url: m[1] });
+        }
+    }
+    return calls;
+}
+
+/**
+ * URL dont la forme n'est PAS connaissable statiquement : morceau assemblé ailleurs (`${endpoint}`
+ * en tête), ou interpolation que l'extraction a tronquée (`${query` sans accolade fermante, quand le
+ * gabarit contenait une expression à quotes). On ne peut ni les valider ni les accuser — les ignorer
+ * est le seul choix honnête. Un garde-fou qui accuse à tort finit ignoré, donc inutile.
+ */
+function isUnresolvable(url, shape) {
+    if (!shape || shape.startsWith('*')) return true;
+    const opens = (url.match(/\$\{/g) ?? []).length;
+    const closes = (url.match(/\}/g) ?? []).length;
+    return opens > closes;
+}
+
+/**
+ * Comparaison SEGMENT PAR SEGMENT, où un `*` de l'un ou l'autre côté accepte n'importe quel segment.
+ * Indispensable dans les deux sens : l'appel peut être littéral là où la route est paramétrée
+ * (`webhooks/payments/PayDunya` contre `webhooks/payments/{provider}`), et inversement paramétré là
+ * où le serveur déclare des littéraux (`class-bulletins/${endpoint}` contre `class-bulletins/zip`).
+ */
+function shapeMatches(called, declared) {
+    const a = called.split('/');
+    const b = declared.split('/');
+    if (a.length !== b.length) return false;
+    return a.every((seg, i) => seg === b[i] || seg === '*' || b[i] === '*');
+}
+
+function findUnknownRoutes() {
+    const declared = [...declaredRoutes()];
+    const unknown = new Set();
+
+    for (const { file, url } of calledRoutes()) {
+        const shape = routeShape(url);
+        if (isUnresolvable(url, shape)) continue;
+        if (declared.some((d) => shapeMatches(shape, d))) continue;
+
+        // Interpolation COLLÉE au dernier segment : c'est presque toujours une query construite plus
+        // haut (`const query = '?status=…'` puis `/x${query}`), pas un segment de chemin. On retente
+        // donc sans elle avant d'accuser — `/admin/registration-requests${query}` vaut alors
+        // `admin/registration-requests`, qui existe bel et bien.
+        const withoutTrailing = shape.replace(/\*$/, '').replace(/\/$/, '');
+        if (withoutTrailing !== shape && declared.some((d) => shapeMatches(withoutTrailing, d))) continue;
+
+        unknown.add(`${file} :: ${url}`);
+    }
+    return [...unknown].sort();
+}
+
+test('garde-fou : aucune route appelée par le front n\'est absente du serveur', () => {
+    const unknown = findUnknownRoutes();
+
+    assert.deepEqual(
+        unknown,
+        [],
+        'Ces appels ne correspondent à aucune route de contrôleur : ils partiront en 404, et l\'écran ' +
+        'restera vide sans que rien ne le dise. Vérifier l\'orthographe, ou implémenter la route.\n  ' +
+        unknown.join('\n  ')
+    );
+});
+
+/* ------------------------------------------------------------------------------------------------
+ * GARDE-FOU 6 — pas de `x-init="init()"` sur un composant qui définit déjà `init()`.
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Alpine appelle DÉJÀ tout seul la méthode `init()` d'un composant `x-data`. Ajouter `x-init="init()"`
+ * sur la même balise la déclenche une SECONDE fois. Rien ne casse à l'écran : le composant se charge
+ * simplement deux fois, et l'on ne s'en aperçoit qu'en comptant les requêtes.
+ *
+ * Mesuré au navigateur le 02/09/2026 sur /integration-etatique : `/school-years`, `/classrooms` et
+ * `/state-integration/simen/status` partaient en double à chaque ouverture. Sur une route
+ * volontairement limitée en débit, ce doublon rapproche le 429 sans raison.
+ */
+function findDoubleInit() {
+    const jsSources = jsFiles();
+    // Une balise ouvrante entière, en tolérant les `>` à l'intérieur des valeurs entre guillemets.
+    const TAG = /<[a-zA-Z][a-zA-Z0-9-]*(?:[^"'>]|"[^"]*"|'[^']*')*>/g;
+    const found = new Set();
+
+    for (const file of cshtmlFiles()) {
+        const html = blankRazorComments(readFileSync(file, 'utf8'));
+        const label = path.relative(WEB_ROOT, file).split(path.sep).join('/');
+
+        for (const m of html.matchAll(TAG)) {
+            const tag = m[0];
+            const comp = /x-data="([A-Za-z_$][\w$]*)\s*\(/.exec(tag)?.[1];
+            const xInit = /x-init="([^"]*)"/.exec(tag)?.[1];
+            if (!comp || !xInit || !/\binit\s*\(/.test(xInit)) continue;
+
+            const owner = jsSources.find((j) => j.source.includes(`Alpine.data('${comp}'`));
+            if (!owner) continue;
+
+            const at = owner.source.indexOf(`Alpine.data('${comp}'`);
+            const next = owner.source.indexOf("Alpine.data('", at + 20);
+            const body = owner.source.slice(at, next === -1 ? owner.source.length : next);
+            if (!/^\s+(?:async\s+)?init\s*\(\s*\)\s*\{/m.test(body)) continue;
+
+            found.add(`${label} :: ${comp}`);
+        }
+    }
+    return [...found].sort();
+}
+
+test('garde-fou : aucun composant Alpine n\'exécute son init() deux fois', () => {
+    const doubled = findDoubleInit();
+
+    assert.deepEqual(
+        doubled,
+        [],
+        'Alpine appelle déjà `init()` seul : le `x-init="init()"` posé sur la même balise le relance ' +
+        'une seconde fois, et le composant charge tout en double. Retirer le x-init.\n  ' +
+        doubled.join('\n  ')
+    );
+});

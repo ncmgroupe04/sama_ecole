@@ -238,7 +238,7 @@
              <tbody class="divide-y divide-slate-100">
                  <template x-for="inst in (balance?.installments ?? [])" :key="inst.id">
                      <tr class="hover:bg-slate-50/60 transition-colors">
-                         <td class="py-2.5 px-3 font-medium text-slate-800" x-text="inst.feeLineName"></td>
+                         <td class="py-2.5 px-3 font-medium text-slate-800" x-text="inst.designation"></td>
                          <td class="py-2.5 px-3 text-slate-500" x-text="formatDateOnly(inst.dueDate)"></td>
                          <td class="py-2.5 px-3 text-right font-medium text-slate-900 amount" x-text="formatMoney(inst.amount)"></td>
                          <td class="py-2.5 px-3 text-right text-slate-600 amount" x-text="formatMoney(inst.amountPaid)"></td>

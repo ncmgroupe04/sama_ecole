@@ -13,15 +13,10 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('mainDashboard', () => ({
         analyticsRole: window.auth.role === 'Directeur' || window.auth.role === 'SuperAdmin',
         financeRole: window.auth.role === 'Directeur' || window.auth.role === 'Finance',
-        surveillantRole: window.auth.role === 'Surveillant',
 
         isAnalyticsLoading: false,
         analyticsError: null,
         analyticsData: null,
-
-        isSurveillantLoading: false,
-        surveillantError: null,
-        surveillantData: null,
 
         isFinanceLoading: false,
         financeError: null,
@@ -41,12 +36,6 @@ document.addEventListener('alpine:init', () => {
         async init() {
             if (this.analyticsRole) this.loadAnalytics();
             if (this.financeRole) this.loadFinance();
-            if (this.surveillantRole) this.loadSurveillant();
-        },
-
-        get dashboardSubtitle() {
-            if (this.surveillantRole) return "Suivi quotidien des absences et de la discipline.";
-            return "Vue consolidée des activités et finances.";
         },
 
         async loadAnalytics() {
@@ -61,25 +50,19 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async loadSurveillant() {
-            this.isSurveillantLoading = true;
-            this.surveillantError = null;
-            try {
-                // Fictive endpoint for now, or real endpoint once implemented
-                this.surveillantData = await window.api.get('/reports/surveillant-dashboard');
-            } catch (err) {
-                this.surveillantError = window.api.toMessage(err, 'Erreur lors du chargement des données surveillant.');
-                // Mock data for demo purposes since endpoint might not exist yet
-                this.surveillantData = {
-                    totalAbsentsToday: 12,
-                    totalRetardsToday: 5,
-                    teachersPresent: 45,
-                    teachersAbsent: 2
-                };
-            } finally {
-                this.isSurveillantLoading = false;
-            }
-        },
+        // Il y avait ici un `loadSurveillant()` appelant `/reports/surveillant-dashboard` — route qui
+        // N'A JAMAIS EXISTÉ côté serveur (404 systématique, vérifié le 02/09/2026). Son `catch`
+        // fabriquait des chiffres EN DUR (« 12 absents, 5 retards, 45 enseignants présents ») et les
+        // posait dans `surveillantData`, présenté comme le résultat de l'appel.
+        //
+        // Rien n'affichait ces données : ni `surveillantData`, ni `surveillantError`, ni le rôle
+        // Surveillant n'apparaissaient dans Views/Dashboard/Index.cshtml. Le bloc entier était donc
+        // mort, et ne produisait qu'une requête 404 à chaque ouverture de l'écran par un Surveillant.
+        //
+        // Supprimé plutôt que gardé « en attendant » : des chiffres d'absences inventés, à un
+        // brancher-la-vue près de s'afficher comme réels, sont exactement ce qui fait convoquer un
+        // parent à tort. Le jour où ce tableau de bord sera livré, il partira d'une vraie route et
+        // d'un vrai handler, comme /reports/dashboard et /finance/dashboard juste à côté.
 
         async loadFinance() {
             this.isFinanceLoading = true;

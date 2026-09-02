@@ -456,7 +456,9 @@
 
         <template x-if="!dispatchResult">
             @* Hors formule Premium : on explique et on incite, on ne masque pas (même patron que _SmsSettingsPanel). *@
-            <div x-data="featureGate('SmsNotifications')" x-init="init()">
+            @* Pas de `x-init="init()"` : Alpine appelle déjà `init()` seul, et le doublon relançait
+               window.features.load(). Les trois autres featureGate du dépôt s'en passent déjà. *@
+            <div x-data="featureGate('SmsNotifications')">
                 <div x-show="!allowed" x-cloak class="rounded-xl border-l-4 border-amber-400 bg-amber-50 p-4">
                     <p class="text-sm font-medium text-amber-900">Fonctionnalité réservée à la formule Premium</p>
                     <p class="mt-1 text-sm text-amber-800" x-text="label"></p>
