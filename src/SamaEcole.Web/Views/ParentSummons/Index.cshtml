@@ -22,16 +22,26 @@
     </div>
 
     <!-- Tableau -->
+    @* table-fixed + largeurs en % (02/09/2026) : en table-layout automatique, les 5 colonnes se
+       dimensionnaient sur leur contenu le plus large TOUTES LIGNES confondues, sans jamais tenir
+       compte de la largeur du conteneur — un débordement de quelques pixels en usage normal
+       (Motif + Suite déjà tronqués par un <div>, mais Élève et Actions ne l'étaient pas), qui
+       passait à plus de 150 px avec un nom d'élève long. Les pourcentages ci-dessous somment à
+       100 % et sont calés sur les deux colonnes qui ne peuvent PAS se tronquer (Date/heure,
+       toujours entière ; Actions, deux boutons `whitespace-nowrap` côte à côte) — Motif et Suite
+       reçoivent le reste, Élève le minimum qui garde le matricule lisible. min-w-[860px] fait
+       reprendre le défilement horizontal du conteneur (overflow-x-auto) sous ce seuil, plutôt que
+       de comprimer les colonnes jusqu'à l'illisible. *@
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left border-collapse">
+            <table class="w-full min-w-[860px] table-fixed text-sm text-left border-collapse">
                 <thead>
                     <tr class="table-head">
-                        <th class="py-3.5 px-4">Élève</th>
-                        <th class="py-3.5 px-4">Date/heure convoquée</th>
-                        <th class="py-3.5 px-4">Motif</th>
-                        <th class="py-3.5 px-4">Suite</th>
-                        <th class="py-3.5 px-4 text-right">Actions</th>
+                        <th class="py-3.5 px-4 w-[14%]">Élève</th>
+                        <th class="py-3.5 px-4 w-[18%]">Date/heure convoquée</th>
+                        <th class="py-3.5 px-4 w-[26%]">Motif</th>
+                        <th class="py-3.5 px-4 w-[18%]">Suite</th>
+                        <th class="py-3.5 px-4 w-[24%] text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -52,22 +62,24 @@
                     </template>
                     <template x-for="record in records" :key="record.id">
                         <tr class="hover:bg-slate-50/60 transition-colors">
-                            @* `whitespace-nowrap` : la colonne « Suite » ajoutée le 02/09/2026 a resserré
-                               le tableau au point de casser « Awa Fall Test » sur trois lignes et le
-                               matricule sur quatre. Le conteneur défile déjà en largeur (overflow-x-auto) —
-                               c'est lui qui doit absorber la largeur, pas l'identité de l'élève. *@
-                            <td class="px-4 py-4 whitespace-nowrap">
-                                <div class="font-semibold text-slate-900" x-text="record.studentFullName"></div>
-                                <div class="font-mono text-xs text-slate-500" x-text="record.studentMatricule"></div>
+                            @* Nom et matricule tronqués (`truncate`), comme Motif et Suite ci-dessous : en
+                               table-fixed, la colonne a une largeur FIXE (w-[14%] sur le <th>) — un nom qui
+                               ne se tronque pas déborde de sa cellule plutôt que de forcer la colonne à
+                               s'élargir (c'est exactement ce qui produisait le débordement horizontal
+                               avant le 02/09/2026 : Élève seule sans troncature grossissait avec le
+                               contenu le plus long, toutes lignes confondues). :title porte le nom complet. *@
+                            <td class="px-4 py-4">
+                                <div class="font-semibold text-slate-900 truncate" x-text="record.studentFullName" :title="record.studentFullName"></div>
+                                <div class="font-mono text-xs text-slate-500 truncate" x-text="record.studentMatricule"></div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-slate-600" x-text="formatDateTime(record.scheduledAt)"></td>
-                            @* Troncature portée par un <div> INTERNE, jamais par le <td> : en table-layout
-                               automatique le navigateur ignore `max-width` sur une cellule, et le
-                               `white-space: nowrap` de `truncate` la fait au contraire réclamer toute la
-                               largeur du motif. Résultat observé le 02/09/2026 : la colonne Motif
-                               s'étalait et poussait « Suite » et « Actions » hors de l'écran. *@
+                            @* Troncature portée par un <div> INTERNE, jamais par le <td> : c'est le <div>,
+                               pas la cellule, qui porte `overflow: hidden` (`truncate`). Plus de max-w en
+                               dur — en table-fixed la largeur de la colonne (w-[26%] sur le <th>) est déjà
+                               la seule contrainte qui compte, et un plafond fixe la sous-utiliserait sur un
+                               grand écran ou une colonne Suite étroite. *@
                             <td class="px-4 py-4 text-slate-600">
-                                <div class="max-w-[16rem] truncate" x-text="record.reason" :title="record.reason"></div>
+                                <div class="truncate" x-text="record.reason" :title="record.reason"></div>
                             </td>
 
                             @* Suite donnée. Le compte rendu est affiché SOUS le badge : une convocation
@@ -78,7 +90,7 @@
                                     <span x-text="outcomeLabel(record.status)"></span>
                                 </span>
                                 <div x-show="record.outcomeNotes" x-cloak
-                                     class="mt-1 max-w-[15rem] text-xs text-slate-500 truncate"
+                                     class="mt-1 truncate text-xs text-slate-500"
                                      x-text="record.outcomeNotes" :title="record.outcomeNotes"></div>
                             </td>
 

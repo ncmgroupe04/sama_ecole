@@ -41,6 +41,7 @@ tags:
   - name: Notifications
   - name: Inventory
   - name: Exams
+  - name: VieScolaire
   - name: StateIntegration
 
 paths:
@@ -3950,6 +3951,49 @@ paths:
             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
               schema: { type: string, format: binary }
 
+  /parent-summons/{id}/outcome:
+    patch:
+      tags: [VieScolaire]
+      summary: Consigner la suite d'une convocation de parent (Directeur + Surveillant + SuperAdmin) — Volume 1 §18.2, Volume 4 §16
+      description: >-
+        Consigne l'issue de l'entretien : le parent s'est présenté (Honored), ne s'est pas présenté
+        (Missed), ou l'entretien est reporté (Postponed). La suite se pose UNE SEULE FOIS, et
+        seulement depuis l'état de départ Scheduled : une convocation déjà close repart en 422, jamais
+        en écrasement silencieux. La correction consiste à émettre une NOUVELLE convocation, qui
+        laisse les deux traces — le registre de la Vie scolaire vaut par son intégrité, exactement
+        comme le registre disciplinaire (règle #6).
+        outcomeNotes est OBLIGATOIRE pour Missed et Postponed (une absence ou un report appellent une
+        suite écrite) et facultatif pour Honored : même arbitrage que discrepancyReason à la clôture
+        de caisse, qui n'exige un motif que lorsqu'un écart existe réellement.
+        L'avis PDF (/parent-summons/{id}/notice/pdf) reste le document remis AVANT l'entretien ; il ne
+        porte donc jamais la suite, qui n'existe pas encore au moment où on l'imprime.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de la convocation — lu depuis la route, jamais depuis le corps.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ParentSummonsOutcomeRequest' }
+      responses:
+        '200':
+          description: Suite consignée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ParentSummonsOutcomeResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Convocation introuvable dans cet établissement }
+        '422':
+          description: >-
+            outcome vaut Scheduled (état de départ, pas une suite), outcomeNotes manque alors que la
+            suite est Missed ou Postponed, ou la suite de cette convocation est déjà consignée.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6411,3 +6455,39 @@ components:
         women: { type: integer }
         genderNotReported: { type: integer }
         count: { type: integer }
+
+    ParentSummonsStatus:
+      type: string
+      enum: [Scheduled, Honored, Missed, Postponed]
+      description: >-
+        Cycle de vie d'une convocation de parent (Volume 1 §18.2). Scheduled est l'état de départ,
+        posé à la création ; les trois autres sont les suites possibles de l'entretien et ne se
+        consignent qu'une fois.
+
+    ParentSummonsOutcomeRequest:
+      type: object
+      description: Corps de PATCH /parent-summons/{id}/outcome — l'identifiant vient de la route.
+      required: [outcome]
+      properties:
+        outcome:
+          allOf:
+            - $ref: '#/components/schemas/ParentSummonsStatus'
+          description: >-
+            Suite de l'entretien. Scheduled est refusé (422) : c'est l'état de départ, pas une suite,
+            et l'accepter laisserait une convocation close sans l'être.
+        outcomeNotes:
+          type: string
+          maxLength: 2000
+          nullable: true
+          description: >-
+            Compte rendu. Requis (422 sinon) pour Missed et Postponed ; facultatif pour Honored, qui
+            se suffit à elle-même.
+
+    ParentSummonsOutcomeResult:
+      type: object
+      description: État de la convocation après consignation de la suite.
+      properties:
+        summonsId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ParentSummonsStatus' }
+        outcomeNotes: { type: string, nullable: true }
+        closedAt: { type: string, format: date-time }
