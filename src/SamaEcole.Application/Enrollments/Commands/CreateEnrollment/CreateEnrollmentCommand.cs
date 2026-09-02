@@ -27,26 +27,6 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     /// <summary>L'élève redouble cette classe (feature F) — coché sur le bulletin. Faux par défaut.</summary>
     public bool IsRepeating { get; init; }
 
-    /// <summary>
-    /// Modèle hybride inscription/caisse (volet 1).
-    ///
-    /// <c>true</c> (défaut — comportement historique « Inscrire et procéder au paiement ») : le
-    /// versement du jour est encaissé DANS la transaction. <see cref="CollectedFees"/> est ventilé sur
-    /// le barème que le serveur vient de figer, une session de caisse OUVERTE est exigée dès qu'un
-    /// montant est coché, un <c>Payment</c> et un numéro de reçu officiel gapless sont créés, et
-    /// l'inscription part en <c>Confirmed</c>. Une liste <see cref="CollectedFees"/> vide reste
-    /// permise : dossier ouvert, reçu à 0.
-    ///
-    /// <c>false</c> (« Inscrire l'élève — Envoyer en Caisse ») : on FIGE seulement le dû
-    /// (<c>TotalDue</c>, calculé comme d'habitude à partir du barème), <c>AmountPaid = 0</c>. AUCUNE
-    /// session de caisse requise, AUCUN <c>Payment</c>, AUCUN numéro de reçu officiel consommé
-    /// (règle #3). L'inscription part en <see cref="Domain.Enums.EnrollmentStatus.PendingPayment"/> ;
-    /// la Caisse la recouvre ensuite. Toute ligne de <see cref="CollectedFees"/> est alors REFUSÉE
-    /// (422, <see cref="CreateEnrollmentCommandValidator"/>) : engager la dette et encaisser sont deux
-    /// gestes distincts, portés par deux écrans.
-    /// </summary>
-    public bool IsDirectPayment { get; init; } = true;
-
     // --- Réinscription : élève existant ---
     public Guid? StudentId { get; init; }
 

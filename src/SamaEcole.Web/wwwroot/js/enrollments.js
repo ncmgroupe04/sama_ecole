@@ -46,12 +46,6 @@ document.addEventListener('alpine:init', () => {
         formErrors: {},
         isSubmitting: false,
 
-        // Modèle hybride : quel bouton a lancé l'envoi en cours ('direct' | 'debt'), pour le libellé
-        // « Enregistrement… » ; et lequel a validé la dernière inscription, pour choisir la fenêtre de
-        // confirmation (reçu à imprimer vs. orientation vers la Caisse).
-        submitKind: null,
-        lastSubmitWasDirect: true,
-
         /**
          * Encaissement du jour, ventilé : { [feeCategoryId]: { checked, months } }. Le guichet coche ce
          * que le tuteur règle réellement (inscription, tenue, 1re mensualité…) ; seul ce qui est coché
@@ -296,23 +290,16 @@ document.addEventListener('alpine:init', () => {
             return this.mode === 'ReEnrollment' ? !!this.form.studentId : !!this.form.fullName;
         },
 
-        /**
-         * @param {boolean} isDirectPayment — true (« Inscrire et procéder au paiement », défaut,
-         *   touche Entrée) : encaissement du jour dans la même transaction. false (« Envoyer en
-         *   Caisse ») : on FIGE seulement la dette, aucun frais encaissé, statut PendingPayment ;
-         *   le règlement se fera depuis l'écran Caisse (modèle hybride, volet 1).
-         */
-        async submit(isDirectPayment = true) {
+        async submit() {
             this.formErrors = {};
             this.isSubmitting = true;
-            this.submitKind = isDirectPayment ? 'direct' : 'debt';
 
-            // « Envoyer en Caisse » n'encaisse RIEN : on n'envoie aucune ligne de frais (le serveur
-            // rejette d'ailleurs collectedFees non vide quand isDirectPayment = false). Le mode de
-            // règlement reste transmis mais est ignoré serveur dans ce cas.
-            const collection = isDirectPayment
-                ? { collectedFees: this.collectedPayload(), paymentMethod: this.paymentMethod }
-                : { collectedFees: [], paymentMethod: this.paymentMethod };
+            // Encaissement du jour, commun aux deux modes : une réinscription se règle au guichet
+            // exactement comme une première inscription.
+            const collection = {
+                collectedFees: this.collectedPayload(),
+                paymentMethod: this.paymentMethod
+            };
 
             const command = this.mode === 'ReEnrollment'
                 ? {
@@ -320,7 +307,6 @@ document.addEventListener('alpine:init', () => {
                     classroomId: this.form.classroomId,
                     isRepeating: this.form.isRepeating,
                     studentId: this.form.studentId,
-                    isDirectPayment,
                     ...collection
                 }
                 : {
@@ -333,15 +319,13 @@ document.addEventListener('alpine:init', () => {
                     gender: this.form.gender,
                     guardianName: this.form.guardianName || null,
                     guardianPhone: this.form.guardianPhone || null,
-                    isDirectPayment,
                     ...collection
                 };
 
             try {
                 this.receipt = await window.api.post('/enrollments', command);
-                this.lastSubmitWasDirect = isDirectPayment;
                 // Étape 1 : on confirme l'enregistrement dans une fenêtre dédiée. Le reçu n'apparaît
-                // qu'ensuite (cas paiement direct), si l'utilisateur clique « Imprimer le reçu ».
+                // qu'ensuite, si l'utilisateur clique « Imprimer le reçu ».
                 this.showReceipt = false;
                 this.showConfirmDialog = true;
                 if (window.formDraft) window.formDraft.clear('enrollment_form');
@@ -350,7 +334,6 @@ document.addEventListener('alpine:init', () => {
                 this.formErrors = window.api.toFieldErrors(err, "Erreur lors de l'inscription.");
             } finally {
                 this.isSubmitting = false;
-                this.submitKind = null;
             }
         },
 
@@ -404,8 +387,6 @@ document.addEventListener('alpine:init', () => {
             this.mode = 'NewEnrollment';
             this.collected = {};
             this.paymentMethod = 'Cash';
-            this.submitKind = null;
-            this.lastSubmitWasDirect = true;
         },
 
         /**
@@ -539,18 +520,9 @@ document.addEventListener('alpine:init', () => {
             return window.formatFCFA(amount);
         },
 
-        /**
-         * Numéro officiel du reçu (ticket JGK-E02), ex. « REC-2025-0002 ». Une inscription « envoyée
-         * en caisse » (PendingPayment) porte un jeton provisoire non comptable (« EN-ATTENTE-… ») :
-         * on n'affiche jamais ce jeton, on annonce l'état.
-         */
+        /** Numéro officiel du reçu (ticket JGK-E02), ex. « REC-2025-0002 ». */
         receiptReference() {
-            if (!this.receipt) return '';
-            const n = this.receipt.receiptNumber || '';
-            if (this.receipt.status === 'PendingPayment' || n.startsWith('EN-ATTENTE-')) {
-                return 'en attente de règlement';
-            }
-            return n;
+            return this.receipt ? this.receipt.receiptNumber : '';
         },
 
         /** Bas de reçu « Fait à [ville], le [date] » (référence de design §1.6) ; sans ville, on abrège. */

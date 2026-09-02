@@ -30,22 +30,6 @@ document.addEventListener('alpine:init', () => {
         balanceError: null,
         conflictError: false,
 
-        // Modèle hybride (volet 2) — modale prioritaire de recouvrement. Alimentée par
-        // GET /finance/caisse/lookup dès qu'un élève sélectionné a une inscription en attente de
-        // règlement (statut PendingPayment) ou un solde d'inscription non nul. L'encaissement s'y
-        // fait comme ailleurs : POST /finance/payments, qui solde la dette, confirme l'inscription
-        // et émet le premier reçu officiel gapless.
-        recovery: {
-            open: false,
-            data: null,        // CaisseLookupDto
-            amount: '',
-            method: 'Cash',
-            submitting: false,
-            error: null,
-            conflict: false,
-            idempotencyKey: null
-        },
-
         form: { amount: '', method: 'Cash' },
         formErrors: {},
         isSubmitting: false,
@@ -253,116 +237,12 @@ document.addEventListener('alpine:init', () => {
             this.selectedStudent = null;
             this.balance = null;
             this.balanceError = null;
-            this.recovery.open = false;
-            this.recovery.data = null;
         },
 
         async selectStudent(student) {
             this.selectedStudent = student;
             this.studentSearch = `${student.matricule} — ${student.fullName}`;
             await this.loadBalance();
-            // Détection de dette d'inscription : ouvre la modale prioritaire de recouvrement si besoin.
-            await this.checkPendingEnrollment(student.id);
-        },
-
-        // ---------------------------------------------------------------- Recouvrement d'inscription
-
-        /**
-         * Interroge GET /finance/caisse/lookup pour l'élève choisi. Si une dette d'inscription
-         * existe (statut PendingPayment, ou solde non nul), ouvre la modale prioritaire pré-remplie
-         * avec le reste à régler. Silencieux sur erreur : la détection est un confort, elle ne doit
-         * jamais bloquer l'écran (le solde reste affiché dans le panneau principal).
-         */
-        async checkPendingEnrollment(studentId) {
-            try {
-                const lookup = await window.api.get(
-                    `/finance/caisse/lookup?query=${encodeURIComponent(studentId)}`);
-
-                if (!lookup || !lookup.hasPendingEnrollment) {
-                    this.recovery.open = false;
-                    this.recovery.data = null;
-                    return;
-                }
-
-                this.recovery.data = lookup;
-                this.recovery.amount = lookup.balanceRemaining;
-                this.recovery.method = 'Cash';
-                this.recovery.error = null;
-                this.recovery.conflict = false;
-                this.recovery.idempotencyKey = window.networkGuard.newIdempotencyKey();
-                this.recovery.open = true;
-            } catch {
-                // 403 (rôle sans accès caisse) ou autre : on n'ouvre simplement pas la modale.
-                this.recovery.open = false;
-                this.recovery.data = null;
-            }
-        },
-
-        closeRecovery() {
-            this.recovery.open = false;
-        },
-
-        canSubmitRecovery() {
-            const d = this.recovery.data;
-            if (!d || this.recovery.submitting) return false;
-            const amount = Number(this.recovery.amount);
-            return amount > 0 && amount <= d.balanceRemaining;
-        },
-
-        /**
-         * Encaisse le versement saisi dans la modale. Même contrat que submit() : POST
-         * /finance/payments avec une clé d'idempotence rejouable, gestion explicite du 409 (verrou
-         * xmin, règle #5 — jamais de réessai silencieux). Au succès, on ferme la modale, on recharge
-         * le solde et on bascule sur la fenêtre de confirmation + reçu, exactement comme un
-         * encaissement lancé depuis le panneau principal.
-         */
-        async submitRecovery() {
-            const d = this.recovery.data;
-            if (!d) return;
-
-            this.recovery.error = null;
-            this.recovery.conflict = false;
-            this.recovery.submitting = true;
-
-            try {
-                this.paymentResult = await window.api.postWithRetry('/finance/payments', {
-                    enrollmentId: d.enrollmentId,
-                    amount: Number(this.recovery.amount),
-                    method: this.recovery.method,
-                    category: 'Enrollment',
-                    idempotencyKey: this.recovery.idempotencyKey
-                }, { onStateChange: (state) => { this.sendState = state; } });
-
-                this.receipt = await window.api.get(
-                    `/finance/payments/${this.paymentResult.paymentId}/receipt`);
-
-                this.recovery.open = false;
-                this.showReceipt = false;
-                this.showConfirmDialog = true;
-                if (window.formDraft) window.formDraft.clear('caisse_form');
-                this.hasDraft = false;
-
-                // Le panneau principal doit refléter le versement (solde, statut, historique).
-                await this.reloadBalance();
-            } catch (err) {
-                if (err.status === 409) {
-                    // Le solde a bougé entre l'ouverture de la modale et la validation : on relit.
-                    this.recovery.conflict = true;
-                } else {
-                    this.recovery.error = window.api.toMessage(err, "Erreur lors de l'encaissement.");
-                }
-            } finally {
-                this.recovery.submitting = false;
-            }
-        },
-
-        /** Après un 409 dans la modale : on relit le lookup à jour avant toute nouvelle tentative. */
-        async reloadRecovery() {
-            this.recovery.conflict = false;
-            if (this.selectedStudent) {
-                await this.loadBalance();
-                await this.checkPendingEnrollment(this.selectedStudent.id);
-            }
         },
 
         // ---------------------------------------------------------------- Solde
@@ -491,10 +371,6 @@ document.addEventListener('alpine:init', () => {
             this.receipt = null;
             this.showReceipt = false;
             this.showConfirmDialog = false;
-            this.recovery.open = false;
-            this.recovery.data = null;
-            this.recovery.error = null;
-            this.recovery.conflict = false;
             // Nouvel encaissement = nouvelle clé (JGK-L03) : réutiliser l'ancienne rejouerait le
             // paiement précédent au lieu d'en enregistrer un nouveau.
             this.idempotencyKey = window.networkGuard.newIdempotencyKey();

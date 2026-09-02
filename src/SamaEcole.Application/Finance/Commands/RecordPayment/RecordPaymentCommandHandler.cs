@@ -21,11 +21,6 @@ namespace SamaEcole.Application.Finance.Commands.RecordPayment;
 ///
 /// Tout est atomique : si quoi que ce soit échoue après l'attribution du numéro de reçu, celui-ci est
 /// rembobiné avec la transaction — aucun trou dans la numérotation, aucun paiement orphelin.
-///
-/// MODÈLE HYBRIDE (volet 2) : si l'inscription est en <see cref="EnrollmentStatus.PendingPayment"/>
-/// (dette engagée au secrétariat, « Envoyer en Caisse »), CE versement — même partiel — la fait
-/// passer à <c>Confirmed</c> et lui donne son vrai numéro de reçu officiel (jusque-là un jeton
-/// provisoire). Une inscription déjà <c>Confirmed</c> n'est pas affectée.
 /// </summary>
 public class RecordPaymentCommandHandler(
     IApplicationDbContext dbContext,
@@ -159,20 +154,6 @@ public class RecordPaymentCommandHandler(
             }
 
             dbContext.Payments.Add(payment);
-
-            // Modèle hybride (volet 2) : une inscription « engagée » puis envoyée en caisse
-            // (PendingPayment) se CONFIRME dès le premier encaissement, même partiel (choix produit).
-            // Le jeton de reçu PROVISOIRE posé à la création (« EN-ATTENTE-… ») cède alors la place au
-            // vrai numéro officiel gapless de CE versement : le tuteur repart avec UNE pièce, UN
-            // numéro, exactement comme une inscription réglée au guichet. Fait dans le MÊME
-            // SaveChanges que l'écriture d'AmountPaid ci-dessous — le verrou xmin de l'inscription
-            // couvre donc aussi cette transition (règle #5). Une inscription déjà Confirmed n'est pas
-            // touchée : son ReceiptNumber d'origine reste le sien, les versements suivants ont le leur.
-            if (enrollment.Status == EnrollmentStatus.PendingPayment)
-            {
-                enrollment.Status = EnrollmentStatus.Confirmed;
-                enrollment.ReceiptNumber = receiptNumber;
-            }
 
             // L'écriture qui compte pour la concurrence : UPDATE enrollments ... WHERE xmin = <valeur lue>.
             // Deux encaissements concurrents ont lu le même xmin ; le second UPDATE ne touchera aucune

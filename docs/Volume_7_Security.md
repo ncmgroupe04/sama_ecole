@@ -204,15 +204,6 @@ document d'une autre école reste introuvable (404 — `EnrollmentsController.Re
 commentaire « lecture ouverte comme le certificat de scolarité »). Seule l'ÉCRITURE (nouvelle inscription,
 réinscription, annulation) reste réservée à Directeur et Secrétariat (`EnrollmentWriters`).
 
-**Modèle hybride — « Envoyer en Caisse » (Volume 1 §7.2bis).** `POST /enrollments` accepte
-`isDirectPayment = false` : l'inscription est créée en statut `PendingPayment`, dû figé, sans aucun
-encaissement ni numéro de reçu officiel. C'est toujours une ÉCRITURE d'inscription — réservée à
-`EnrollmentWriters` (Directeur, Secrétariat), jamais à Finance : la règle #4 tient, c'est le
-Secrétariat qui compose le dû. Le recouvrement passe ensuite par `GET /finance/caisse/lookup`
-(`hasPendingEnrollment`) puis `POST /finance/payments` — ouverts aux rôles de caisse (Directeur,
-Finance, Secrétariat, `CashierRoles`). Le premier encaissement, même partiel, confirme l'inscription
-et lui donne son numéro de reçu officiel.
-
 **Finance**
 
 | Action | Directeur | Finance |

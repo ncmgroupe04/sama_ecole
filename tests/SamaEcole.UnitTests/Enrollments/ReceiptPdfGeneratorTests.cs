@@ -121,27 +121,6 @@ public class ReceiptPdfGeneratorTests
         ShouldBeAValidPdf(pdf);
     }
 
-    /// <summary>
-    /// Inscription « envoyée en Caisse » (paiement différé) : aucun numéro de reçu officiel n'a été
-    /// consommé (AGENTS.md règle #3), la colonne porte un jeton provisoire <c>EN-ATTENTE-{guid}</c>.
-    /// Le document doit se générer sans encombre ; le badge affiche alors « N° en attente de règlement »
-    /// (logique <c>ReceiptReference()</c>, mêmes cas que <c>receiptReference()</c> dans enrollments.js).
-    /// Le titre du PDF (métadonnées, non compressé) ne laisse pas fuiter le jeton brut.
-    /// </summary>
-    [Fact]
-    public void Generate_Handles_A_Deferred_Enrollment_Without_An_Official_Receipt_Number()
-    {
-        var token = $"EN-ATTENTE-{Guid.NewGuid():N}";
-
-        var pdf = new ReceiptPdfGenerator(Mock.Of<ILogger<ReceiptPdfGenerator>>()).Generate(
-            Receipt(receiptNumber: token, status: nameof(EnrollmentStatus.PendingPayment)), logo: null);
-
-        ShouldBeAValidPdf(pdf);
-        pdf.Length.Should().BeGreaterThan(1000);
-        Encoding.ASCII.GetString(pdf).Should().NotContain(
-            token, "le jeton provisoire EN-ATTENTE-… ne doit pas figurer dans le titre du document");
-    }
-
     [Fact]
     public void Generate_Embeds_A_Provided_Logo_Without_Error()
     {

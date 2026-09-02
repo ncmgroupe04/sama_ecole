@@ -199,21 +199,6 @@ Lorsqu'un membre du secrétariat crée une inscription, le montant dû (inscript
 
 Ceci évite les écarts comptables, les doubles saisies et réduit le risque de fraude.
 
-### 7.2bis Modèle hybride — encaisser au guichet OU engager la dette
-
-Le formulaire d'inscription (Secrétariat/Directeur) propose **deux gestes de soumission distincts** :
-
-| Bouton | Effet | Statut d'inscription |
-|---|---|---|
-| **« Inscrire et procéder au paiement »** (principal, touche Entrée) | Comportement historique : le versement du jour coché au guichet est encaissé **dans la même transaction**, une session de caisse ouverte est exigée, un `Payment` et un **numéro de reçu officiel** sont émis. | `Confirmed` |
-| **« Inscrire l'élève (Envoyer en Caisse) »** (secondaire) | On **fige seulement le dû** (calculé depuis le barème comme d'habitude). Aucune manipulation d'argent : pas de session de caisse, **aucun `Payment`**, **aucun numéro de reçu officiel consommé**. | `PendingPayment` |
-
-Une inscription `PendingPayment` **occupe déjà le créneau** (élève inscrit, compté dans l'effectif, dans le « dû attendu » du tableau de bord financier) : le dossier existe, seul le règlement manque. La règle #4 tient toujours — c'est bien le **Secrétariat/Directeur** qui compose le dû, jamais la Finance.
-
-**Recouvrement à la Caisse.** Dès qu'un élève est recherché à la Caisse, le système signale s'il porte une inscription à régler (statut `PendingPayment`, ou solde non nul) et ouvre une **modale prioritaire de recouvrement** : ventilation des frais, montant perçu, mode de règlement, puis *« Valider l'encaissement et imprimer le reçu »*. Ce **premier encaissement** — même partiel — fait passer l'inscription en `Confirmed` et lui attribue enfin son **numéro de reçu officiel** (jusque-là un jeton provisoire non comptable). Le tuteur repart avec **une seule pièce, un seul numéro**, exactement comme une inscription réglée au guichet.
-
-Une inscription `PendingPayment` créée par erreur, **sans aucun encaissement**, reste annulable comme une simple erreur de saisie (§6). Elle est en revanche **exclue des relances automatiques de débiteurs** (aging report, SMS d'impayés, projection de trésorerie) : une dette d'inscription toute fraîche se recouvre au guichet, pas par relance.
-
 ### 7.3 Paiements
 
 - Encaissement, historique, annulation (avec motif), remboursement.

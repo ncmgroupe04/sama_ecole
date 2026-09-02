@@ -15,7 +15,6 @@ using SamaEcole.Application.Finance.Queries.GetPaymentReceiptPdf;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Finance.Queries.GetPayments;
 using SamaEcole.Application.Finance.Queries.GetStudentBalance;
-using SamaEcole.Application.Finance.Queries.GetCaisseLookup;
 using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -207,24 +206,6 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> StudentBalance(Guid studentId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetStudentBalanceQuery(studentId), cancellationToken));
-
-    /// <summary>
-    /// Modèle hybride (volet 2) — détection de dette d'inscription. À partir d'un élève DÉJÀ résolu
-    /// (par GET /students?search), renvoie son inscription de l'année active et son solde, avec le
-    /// drapeau <c>hasPendingEnrollment</c> qui déclenche la modale prioritaire de recouvrement.
-    /// <paramref name="query"/> : l'identifiant de l'élève (GUID) ou son matricule EXACT — jamais une
-    /// recherche par nom (rôle de GET /students). Élève introuvable ⇒ 404 ; élève sans inscription
-    /// active ⇒ 200 avec <c>hasPendingEnrollment = false</c>. LECTURE réservée aux rôles de caisse
-    /// (comme les sessions de caisse) : la Caisse est le seul écran qui consomme ce point d'entrée.
-    /// </summary>
-    [HttpGet("caisse/lookup")]
-    [Authorize(Roles = CashierRoles)]
-    [ProducesResponseType<CaisseLookupDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CaisseLookup(
-        [FromQuery] string query, CancellationToken cancellationToken)
-        => Ok(await mediator.Send(new GetCaisseLookupQuery(query), cancellationToken));
 
     /// <summary>
     /// Liste paginée et filtrée des encaissements de l'établissement (GET /finance/payments). Réservé

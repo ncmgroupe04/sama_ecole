@@ -51,12 +51,6 @@
     @apply inline-flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:opacity-50;
   }
 
-  /* Vert plein — action « engager sans encaisser » du formulaire d'inscription (modèle hybride,
-     Volume 1 §7.2bis). Même gabarit que .btn-modal-primary, couleur success. */
-  .btn-modal-success {
-    @apply inline-flex items-center justify-center gap-2 bg-success text-white hover:bg-success/90 px-5 py-2 rounded-xl font-medium text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-2 disabled:opacity-50;
-  }
-
   /* Bordure en slate-200/60 et non slate-100 (refonte 2026) : sur le fond stone-50 du corps de
      page, une bordure slate-100 est pratiquement invisible — les panneaux flottaient sans contour,
      et seule l'ombre portée les séparait du fond. Le ton 200 à 60 % d'opacité pose un contour lu

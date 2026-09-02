@@ -33,17 +33,6 @@ public class CreateEnrollmentCommandValidator : AbstractValidator<CreateEnrollme
             .Must(fees => fees.Select(f => f.FeeCategoryId).Distinct().Count() == fees.Count)
             .WithMessage("Une même catégorie de frais ne peut être encaissée qu'une fois.");
 
-        // Modèle hybride (volet 1) : « engager la dette » (IsDirectPayment = false) et « encaisser »
-        // sont deux gestes distincts. Recevoir des CollectedFees avec IsDirectPayment = false trahit
-        // une confusion d'intention côté client — on refuse (422) plutôt que d'ignorer en silence un
-        // versement que le guichetier croit enregistré. Le règlement se fait ensuite depuis la Caisse.
-        RuleFor(x => x.CollectedFees)
-            .Empty()
-            .When(x => !x.IsDirectPayment)
-            .WithMessage(
-                "Une inscription « envoyée en caisse » ne peut pas encaisser de frais à l'enregistrement : "
-                + "le règlement se fait ensuite depuis l'écran Caisse.");
-
         When(x => x.Type == EnrollmentType.ReEnrollment, () =>
         {
             RuleFor(x => x.StudentId)

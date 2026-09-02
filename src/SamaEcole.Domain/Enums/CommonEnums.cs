@@ -80,31 +80,7 @@ public enum EnrollmentStatus
     Confirmed,
     Cancelled,
     DroppedOut,
-    Transferred,
-
-    /// <summary>
-    /// Modèle hybride inscription/caisse. Le Secrétariat a créé l'inscription en « engageant la
-    /// dette » (bouton « Inscrire l'élève — Envoyer en Caisse », <c>CreateEnrollmentCommand.IsDirectPayment
-    /// = false</c>) : <c>TotalDue</c> figé depuis le barème, <c>AmountPaid = 0</c>, AUCUN <c>Payment</c>,
-    /// AUCUN numéro de reçu officiel consommé (règle #3 — le registre gapless est réservé à un
-    /// mouvement d'argent réel). L'inscription occupe déjà le créneau (élève inscrit, effectif,
-    /// dashboards) mais reste À RÉGLER : la Caisse la détecte au premier passage de l'élève
-    /// (<c>GET /finance/caisse/lookup</c>, drapeau <c>hasPendingEnrollment</c>) et ouvre une modale
-    /// prioritaire de recouvrement. Le PREMIER encaissement — même partiel — la fait passer à
-    /// <see cref="Confirmed"/> et lui attribue le vrai numéro de reçu officiel (RecordPaymentCommandHandler).
-    ///
-    /// AJOUTÉ EN FIN d'énumération à dessein : la colonne <c>Status</c> est persistée en string
-    /// (EnrollmentConfiguration.HasConversion&lt;string&gt;, max 20) — aucune migration de schéma, et
-    /// les membres existants gardent leur valeur entière pour tout code qui en dépendrait.
-    ///
-    /// CONSÉQUENCE À CONNAÎTRE : les requêtes Finance qui filtrent <c>Status == Confirmed</c> de façon
-    /// stricte (relance des débiteurs, aging report, projection de trésorerie, échéanciers) EXCLUENT
-    /// une inscription <c>PendingPayment</c> — voulu : une dette d'inscription toute fraîche se
-    /// recouvre à la Caisse, pas par une relance automatique. Les requêtes qui filtrent
-    /// <c>Status != Cancelled</c> (effectifs, dû attendu du dashboard financier, isolation)
-    /// l'INCLUENT — voulu aussi : le créneau est pris, le dû est réel.
-    /// </summary>
-    PendingPayment
+    Transferred
 }
 
 /// <summary>
