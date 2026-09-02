@@ -80,10 +80,15 @@ document.addEventListener('alpine:init', () => {
 
         async loadStudents() {
             try {
-                const data = await api.get('/students?page=1&pageSize=1000');
-                this.students = (data && data.items) || [];
+                // Toutes les pages : le serveur plafonne pageSize à 100 (GetStudentsQueryValidator).
+                // Un `pageSize=1000` partait en 422 et laissait le sélecteur VIDE sans message —
+                // les billets d'entrée et de sortie étaient inutilisables (voir api.getAllPages).
+                this.students = await api.getAllPages('/students');
             } catch (error) {
                 console.error('Erreur chargement élèves:', error);
+                this.students = [];
+                // Sans ce toast, l'échec est invisible : un menu vide ressemble à « aucun élève ».
+                toast.error(window.api.toMessage(error, 'Erreur lors du chargement des élèves.'));
             }
         },
 

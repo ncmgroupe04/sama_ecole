@@ -278,6 +278,46 @@ window.api = {
     put(endpoint, body) { return this.request(endpoint, 'PUT', body); },
     patch(endpoint, body) { return this.request(endpoint, 'PATCH', body); },
     delete(endpoint) { return this.request(endpoint, 'DELETE'); },
+
+    /**
+     * Récupère la TOTALITÉ d'une collection paginée (`{ items, totalCount, page, pageSize }`), en
+     * enchaînant les pages jusqu'à `totalCount`.
+     *
+     * Pourquoi ce helper existe : les validateurs serveur plafonnent `pageSize` à 100
+     * (GetStudentsQueryValidator.MaxPageSize & consorts) — ce plafond est la seule chose qui empêche
+     * un client de dicter la taille de la réponse, il ne doit PAS être relevé. Or plusieurs écrans
+     * demandaient `pageSize=1000` pour remplir un menu déroulant : la requête partait en 422
+     * VALIDATION_ERROR et le sélecteur restait vide, SANS message (bug constaté sur /teachers le
+     * 27/08/2026, puis sur les trois écrans Surveillant — billets, discipline, convocations).
+     *
+     * Le repli « demander seulement 100 » n'est pas acceptable pour les élèves : un établissement
+     * sénégalais dépasse couramment le millier (cf. GetStudentsQuery), et l'écran aurait alors
+     * silencieusement masqué les élèves au-delà du centième — un bug invisible, pire que le bug
+     * visible qu'il remplace.
+     *
+     * `maxPages` est un garde-fou anti-boucle (60 × 100 = 6 000 lignes) : au-delà, un menu déroulant
+     * n'est plus le bon composant, il faut une recherche serveur (cf. le widget de /caisse).
+     */
+    async getAllPages(endpoint, options) {
+        const pageSize = (options && options.pageSize) || 100;
+        const maxPages = (options && options.maxPages) || 60;
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const all = [];
+
+        for (let page = 1; page <= maxPages; page++) {
+            const data = await this.get(`${endpoint}${separator}page=${page}&pageSize=${pageSize}`);
+            const items = (data && data.items) || [];
+            all.push(...items);
+
+            // Page vide => plus rien à lire (borne sûre même si totalCount venait à manquer).
+            if (items.length === 0) break;
+
+            const total = data && typeof data.totalCount === 'number' ? data.totalCount : all.length;
+            if (all.length >= total) break;
+        }
+
+        return all;
+    },
     /** Upload multipart (FormData) — même robustesse (renouvellement de jeton, 401, erreurs) que post(). */
     upload(endpoint, formData) { return this.request(endpoint, 'POST', formData); },
 
