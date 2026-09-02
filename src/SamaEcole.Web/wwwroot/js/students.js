@@ -1005,6 +1005,7 @@ document.addEventListener('alpine:init', () => {
         /** Libellé humain d'une valeur de DisciplinaryMention (bandeau d'aide de la modale « Observations du conseil »). */
         disciplinaryMentionLabel(value) {
             return {
+                None: 'Sans distinction',
                 Blame: 'Blâme', Avertissement: 'Avertissement', TableauHonneur: "Tableau d'honneur",
                 Encouragements: 'Encouragements', Felicitations: 'Félicitations'
             }[value] || value;

@@ -255,6 +255,29 @@ public class ReportCardsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLi
         remark.GeneralAverage.Should().Be(16m);
     }
 
+    [Fact]
+    public async Task Choosing_Sans_Distinction_Persists_None_And_Is_Not_Replaced_By_The_Suggestion()
+    {
+        // L'élève seedé a 15 + 17 sur un unique coefficient → moyenne 16, que le moteur A5 imprimerait
+        // « Félicitations » faute de saisie. Le conseil choisit EXPLICITEMENT « Sans distinction »
+        // (DisciplinaryMention.None) : la valeur est persistée telle quelle et jamais réécrite par la
+        // proposition — c'est tout l'objet de cette option.
+        var directeur = await DirecteurTokenAsync();
+        var enseignant = await EnseignantTokenAsync();
+        var (studentId, _, termId) = await SeedGradedStudentAsync(directeur, enseignant);
+
+        var put = await SendAsync(HttpMethod.Put, "/api/v1/report-cards/remark", directeur,
+            new { studentId, termId, disciplinaryMention = "None", councilDecision = (string?)null, observations = (string?)null });
+        put.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var get = await SendAsync(HttpMethod.Get,
+            $"/api/v1/report-cards/remark?studentId={studentId}&termId={termId}", directeur);
+        get.StatusCode.Should().Be(HttpStatusCode.OK);
+        var remark = (await get.Content.ReadFromJsonAsync<RemarkResponse>())!;
+        remark.DisciplinaryMention.Should().Be("None", "le choix explicite du conseil est conservé au fil des rechargements");
+        remark.SuggestedDisciplinaryMention.Should().Be("Felicitations", "la proposition reste indiquée, purement informative");
+    }
+
     private record RemarkResponse(
         string? DisciplinaryMention, string? CouncilDecision, string? Observations,
         string? SuggestedDisciplinaryMention, decimal? GeneralAverage);

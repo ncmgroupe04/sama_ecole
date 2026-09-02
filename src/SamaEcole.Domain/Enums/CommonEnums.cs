@@ -243,9 +243,25 @@ public enum AttendanceStatus
 /// Distinction du conseil de classe (docs/design-references/bulletin-reference.png : ligne Blâme /
 /// Avertissement / Tableau d'honneur / Encouragements / Félicitations). Au plus UNE par
 /// (élève, trimestre) — un conseil ne prononce pas deux distinctions contradictoires à la fois.
+///
+/// TROIS états sur <see cref="Entities.ReportCardRemark.DisciplinaryMention"/>, et c'est
+/// <see cref="None"/> qui les sépare :
+///   • <b>null</b> — le conseil ne s'est pas prononcé : le bulletin imprime la proposition automatique
+///     déduite de la moyenne (<c>DisciplinaryMentionPolicy</c>) ;
+///   • <b><see cref="None"/></b> — le conseil a EXPLICITEMENT écarté toute distinction : aucune case
+///     cochée, et la proposition automatique est neutralisée ;
+///   • une des cinq autres valeurs — le choix du conseil, qui l'emporte toujours (y compris une
+///     sanction sur un excellent bulletin).
+///
+/// <see cref="None"/> n'est pas un second « rien » redondant avec null : « indécis » et « décidé :
+/// aucune » s'impriment pareil mais ne réagissent pas pareil à la proposition — seul <see cref="None"/>
+/// la neutralise. Persistée EN CHAÎNE (ReportCardRemarkConfiguration, HasConversion&lt;string&gt;),
+/// sans contrainte CHECK : ajouter ce membre n'entraîne aucune migration de schéma.
 /// </summary>
 public enum DisciplinaryMention
 {
+    /// <summary>« Sans distinction », choix explicite du conseil — neutralise la proposition automatique du bulletin.</summary>
+    None,
     Blame,
     Avertissement,
     TableauHonneur,
@@ -257,8 +273,10 @@ public enum DisciplinaryMention
 /// Décision du conseil de classe à l'issue d'un trimestre (docs/design-references/bulletin-reference.png :
 /// bloc « Décision du Conseil »). PAS de membre <c>None</c> : « aucune décision encore prise » est
 /// l'absence de valeur sur <see cref="Entities.ReportCardRemark.CouncilDecision"/> (nullable), jamais une
-/// valeur d'énumération supplémentaire — même parti pris que <see cref="DisciplinaryMention"/>, qui
-/// évite qu'un état "rien coché" soit représentable de deux façons différentes (null ET None).
+/// valeur d'énumération supplémentaire. <see cref="DisciplinaryMention"/>, elle, s'est dotée d'un
+/// <c>None</c> — mais pour un besoin DISTINCT (écarter explicitement la proposition automatique du
+/// bulletin), pas pour représenter « pas encore décidé ». Le bloc « Décision du Conseil » n'a pas de
+/// proposition automatique, donc pas ce besoin.
 /// </summary>
 public enum CouncilDecision
 {

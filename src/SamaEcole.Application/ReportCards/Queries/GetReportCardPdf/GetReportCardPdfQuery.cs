@@ -330,13 +330,20 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         var remark = await dbContext.ReportCardRemarks.AsNoTracking()
             .FirstOrDefaultAsync(r => r.StudentId == student.Id && r.TermId == term.Id, cancellationToken);
 
-        // Distinction de la rangée du bas : la saisie du conseil des professeurs l'emporte TOUJOURS —
-        // y compris une sanction sur un excellent bulletin. À défaut seulement, la proposition déduite
-        // de la moyenne générale, et uniquement dans sa moitié haute : DisciplinaryMentionPolicy ne
-        // propose jamais de Blâme ni d'Avertissement, qu'aucune moyenne ne justifie.
-        var disciplinaryMention = remark?.DisciplinaryMention
-            ?? DisciplinaryMentionPolicy.Suggest(
-                summary.GeneralAverage, gradingScale, hasGrades: summary.TotalCoefficients > 0);
+        // Distinction de la rangée du bas — trois cas (voir DisciplinaryMention) :
+        //  • None : le conseil a explicitement écarté toute distinction → aucune case, et la
+        //    proposition automatique est neutralisée (c'est tout l'objet de cette valeur) ;
+        //  • une autre valeur saisie : elle l'emporte TOUJOURS, y compris une sanction sur un
+        //    excellent bulletin ;
+        //  • rien de saisi (null) : la proposition déduite de la moyenne, et seulement dans sa moitié
+        //    haute — DisciplinaryMentionPolicy ne propose jamais Blâme ni Avertissement.
+        var disciplinaryMention = remark?.DisciplinaryMention switch
+        {
+            DisciplinaryMention.None => (DisciplinaryMention?)null,
+            { } chosen => chosen,
+            null => DisciplinaryMentionPolicy.Suggest(
+                summary.GeneralAverage, gradingScale, hasGrades: summary.TotalCoefficients > 0)
+        };
 
         // Redoublement (feature F) : lu sur l'inscription NON annulée de l'élève pour l'exercice du
         // trimestre. Un élève sans inscription active sur cette année (cas limite d'un bulletin d'archive)

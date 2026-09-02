@@ -142,6 +142,57 @@ public class GetReportCardPdfTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// Option « Sans distinction » du conseil (<see cref="DisciplinaryMention.None"/>) : elle écarte
+    /// EXPLICITEMENT la proposition automatique du bulletin, là où l'absence de saisie (null) la laisse
+    /// s'appliquer. Et une distinction saisie — fût-ce une sanction — l'emporte toujours.
+    /// </summary>
+    [Fact]
+    public async Task Sans_Distinction_Neutralises_The_Auto_Proposal_While_An_Explicit_One_Still_Wins()
+    {
+        await using var db = _db.NewAppContext(Ecole);
+        var createGrade = NewCreateGradeHandler(db);
+
+        // Un seul coefficient, 15 au devoir + 17 à la composition → moyenne 16 → seuil « Félicitations ».
+        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 15), CancellationToken.None);
+        await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Composition, 17), CancellationToken.None);
+
+        var handler = new GetReportCardPdfQueryHandler(new ReportCardDataService(new FakeMediator(db), db), new StubPdfGenerator(), Logo);
+
+        // 1. Rien de saisi : le bulletin imprime la proposition automatique.
+        await handler.Handle(new GetReportCardPdfQuery(EleveA, Trimestre1), CancellationToken.None);
+        StubPdfGenerator.LastReportCard!.DisciplinaryMention.Should().Be(DisciplinaryMention.Felicitations);
+
+        // 2. « Sans distinction » (None) : proposition neutralisée, aucune case cochée sur le bulletin.
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.ReportCardRemarks.Add(new ReportCardRemark
+            {
+                SchoolId = Ecole, StudentId = EleveA, TermId = Trimestre1,
+                DisciplinaryMention = DisciplinaryMention.None
+            });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await handler.Handle(new GetReportCardPdfQuery(EleveA, Trimestre1), CancellationToken.None);
+        StubPdfGenerator.LastReportCard!.DisciplinaryMention.Should().BeNull(
+            "« Sans distinction » est un choix explicite du conseil qui écarte la proposition automatique");
+
+        // 3. Une distinction explicite l'emporte toujours, y compris une sanction sur un bon bulletin.
+        //    IgnoreQueryFilters : le contexte propriétaire n'a pas de tenant, le Global Query Filter
+        //    (SchoolId == null) masquerait sinon la ligne qu'on vient d'insérer — comme le DbSeeder.
+        await using (var owner = _db.NewOwnerContext())
+        {
+            var remark = await owner.ReportCardRemarks.IgnoreQueryFilters()
+                .FirstAsync(r => r.StudentId == EleveA && r.TermId == Trimestre1, CancellationToken.None);
+            remark.DisciplinaryMention = DisciplinaryMention.Blame;
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await handler.Handle(new GetReportCardPdfQuery(EleveA, Trimestre1), CancellationToken.None);
+        StubPdfGenerator.LastReportCard!.DisciplinaryMention.Should().Be(DisciplinaryMention.Blame);
+    }
+
+    /// <summary>
     /// L'en-tête du bulletin suit le CYCLE DE LA CLASSE de l'élève, pas un réglage global : dans le même
     /// établissement, le bulletin d'un CM1 s'intitule « ÉCOLE ÉLÉMENTAIRE DE » là où celui d'une 3e
     /// s'intitule « COLLÈGE DE » — un « LYCÉE DE » codé en dur s'imprimait auparavant sur les trois.

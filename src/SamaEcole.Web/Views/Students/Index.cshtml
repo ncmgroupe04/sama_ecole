@@ -5,8 +5,12 @@
  // avec un retour possible sur l'annuaire complet pour gérer un élève pas encore (ré)inscrit.
  // Rendue en interrupteur segmenté dans la barre de filtres, plus en menu déroulant.
  var studentGenderOptions = new List<SelectFieldOption> { new("M", "Garçon"), new("F", "Fille") };
+ // « Aucune — proposition automatique » (valeur vide → null) laisse le bulletin imprimer la
+ // distinction déduite de la moyenne ; « Sans distinction » (valeur None) l'en empêche
+ // explicitement — voir l'énum DisciplinaryMention.
  var disciplinaryMentionOptions = new List<SelectFieldOption> {
- new("", "Aucune"), new("Blame", "Blâme"), new("Avertissement", "Avertissement"),
+ new("", "Aucune — proposition automatique"), new("None", "Sans distinction"),
+ new("Blame", "Blâme"), new("Avertissement", "Avertissement"),
  new("TableauHonneur", "Tableau d'honneur"), new("Encouragements", "Encouragements"), new("Felicitations", "Félicitations")
  };
  var councilDecisionOptions = new List<SelectFieldOption> {
@@ -729,7 +733,7 @@
  <div>
  <label class="form-label">Distinction</label>
  <select-field model="editingReportCardRemark.disciplinaryMention" aria-label="Distinction"
- placeholder="Aucune" options="disciplinaryMentionOptions" />
+ placeholder="Aucune — proposition automatique" options="disciplinaryMentionOptions" />
  <!-- Distinction calculée par le moteur A5 (DisciplinaryMentionPolicy) : pré-cochée à l'ouverture,
       le conseil valide en enregistrant ou choisit autre chose. Le bandeau disparaît dès que la
       valeur retenue s'écarte de la proposition — signal discret d'un override. -->
@@ -737,6 +741,12 @@
     x-show="editingReportCardRemark.suggestedDisciplinaryMention && editingReportCardRemark.disciplinaryMention === editingReportCardRemark.suggestedDisciplinaryMention">
  Proposé automatiquement<template x-if="editingReportCardRemark.suggestedFromAverage !== null"><span> d'après la moyenne <span x-text="formatAverage(editingReportCardRemark.suggestedFromAverage)"></span></span></template> :
  <span class="font-medium text-slate-700" x-text="disciplinaryMentionLabel(editingReportCardRemark.suggestedDisciplinaryMention)"></span>. Le conseil peut le modifier.
+ </p>
+ <!-- « Sans distinction » : choix explicite qui écarte la proposition automatique. Distinct de
+      « Aucune », qui la laisse s'appliquer. -->
+ <p x-cloak class="mt-1.5 text-xs text-slate-500"
+    x-show="editingReportCardRemark.disciplinaryMention === 'None'">
+ Aucune distinction ne sera imprimée sur le bulletin, même si la moyenne en justifierait une.
  </p>
  </div>
 

@@ -19,7 +19,12 @@ public class ReportCardRemark : AuditableEntity, ITenantEntity
     public Guid StudentId { get; set; }
     public Guid TermId { get; set; }
 
-    /// <summary>Null tant qu'aucune distinction n'a été cochée — la ligne s'imprime alors sans coche.</summary>
+    /// <summary>
+    /// Trois états (voir <see cref="Enums.DisciplinaryMention"/>) : <c>null</c> = le conseil ne s'est
+    /// pas prononcé, le bulletin imprime alors la proposition automatique déduite de la moyenne ;
+    /// <see cref="Enums.DisciplinaryMention.None"/> = « Sans distinction » explicite, aucune coche et
+    /// proposition neutralisée ; toute autre valeur = le choix du conseil, qui l'emporte.
+    /// </summary>
     public DisciplinaryMention? DisciplinaryMention { get; set; }
 
     /// <summary>Null tant qu'aucune décision n'a été prise — les trois cases du bloc « Décision du

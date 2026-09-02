@@ -54,13 +54,17 @@ public class DisciplinaryMentionPolicyTests
     }
 
     [Fact]
-    public void Blame_And_Avertissement_Are_Never_Returned_At_Any_Average()
+    public void Only_An_Award_Or_Nothing_Is_Ever_Proposed_Never_A_Sanction_Nor_Sans_Distinction()
     {
+        // Suggest ne propose qu'une récompense (Encouragements/Tableau d'honneur/Félicitations) ou
+        // rien du tout. Ni Blâme/Avertissement (une sanction ne se déduit pas d'un chiffre), ni None
+        // (« Sans distinction » est un choix explicite du conseil, jamais une proposition).
         for (var avg = 0m; avg <= 20m; avg += 0.25m)
         {
             var suggestion = DisciplinaryMentionPolicy.Suggest(avg, 20, hasGrades: true);
             suggestion.Should().NotBe(DisciplinaryMention.Blame);
             suggestion.Should().NotBe(DisciplinaryMention.Avertissement);
+            suggestion.Should().NotBe(DisciplinaryMention.None);
         }
     }
 }

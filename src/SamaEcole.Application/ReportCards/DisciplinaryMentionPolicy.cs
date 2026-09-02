@@ -17,14 +17,12 @@ namespace SamaEcole.Application.ReportCards;
 /// et rien ici ne les propose jamais.
 ///
 /// La proposition ne s'impose pas : <c>ReportCardDataService</c> ne la retient que si le conseil n'a
-/// rien saisi (<c>remark?.DisciplinaryMention ?? Suggest(...)</c>). Toute saisie l'emporte, y compris
-/// une sanction sur un excellent bulletin.
-///
-/// LIMITE ASSUMÉE : le conseil ne peut plus exprimer « aucune distinction » pour un élève à 13/20 —
-/// l'absence de saisie vaut désormais « Encouragements ». Le rendre possible demanderait un membre
-/// <c>None</c> sur <see cref="DisciplinaryMention"/> (et sa migration), ce que l'énumération refuse
-/// aujourd'hui par principe : « rien coché » y est représenté par le null, une seule fois. Décocher
-/// suppose donc pour l'instant de cocher autre chose.
+/// rien saisi. Toute saisie l'emporte, y compris une sanction sur un excellent bulletin — et y
+/// compris <see cref="DisciplinaryMention.None"/> (« Sans distinction »), le choix explicite par
+/// lequel le conseil écarte cette proposition pour un élève à 13/20 sans rien cocher d'autre. Faute
+/// de cette valeur, l'absence de saisie était l'unique « rien », et valait donc « Encouragements » ;
+/// <see cref="DisciplinaryMention.None"/> (stockée en chaîne, sans migration) sépare enfin « pas
+/// encore décidé » de « décidé : aucune ».
 /// </summary>
 public static class DisciplinaryMentionPolicy
 {
