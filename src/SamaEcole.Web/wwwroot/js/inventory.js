@@ -128,7 +128,15 @@ document.addEventListener('alpine:init', () => {
 
         conditionOptions: CONDITION_OPTIONS,
         conditionFilterOptions: [{ value: '', label: 'Tous états' }].concat(CONDITION_OPTIONS),
-        beneficiaryTypeOptions: BENEFICIARY_TYPE_OPTIONS,
+
+        // « Personnel administratif » exige la liste des comptes (GET /users, Directeur seul). On ne
+        // propose ce type de bénéficiaire qu'à qui a pu la charger — sinon la Surveillance verrait une
+        // option qui n'ouvre que sur un sélecteur vide.
+        get beneficiaryTypeOptions() {
+            return this.users.length > 0
+                ? BENEFICIARY_TYPE_OPTIONS
+                : BENEFICIARY_TYPE_OPTIONS.filter((o) => o.value !== 'Personnel');
+        },
 
         conditionLabel(value) { return CONDITION_LABELS[value] || value; },
         movementTypeLabel(value) { return MOVEMENT_TYPE_LABELS[value] || value; },
@@ -232,14 +240,24 @@ document.addEventListener('alpine:init', () => {
         async loadBeneficiaries() {
             if (this.beneficiariesLoaded) return;
             try {
-                const [students, teachers, users] = await Promise.all([
+                const [students, teachers] = await Promise.all([
                     this.fetchAllPages('/students'),
-                    this.fetchAllPages('/teachers'),
-                    window.api.get('/users')
+                    this.fetchAllPages('/teachers')
                 ]);
                 this.students = students;
                 this.teachers = teachers;
-                this.users = users || [];
+
+                // GET /users est réservé au Directeur (UsersController) : pour le Surveillant et le
+                // Secrétariat il répond 403. Ce n'est pas bloquant — un prêt à un élève ou à un
+                // enseignant reste possible — donc on le charge à part, sans faire échouer le reste.
+                // C'est justement ce 403, avalé par le Promise.all précédent, qui affichait « Erreur
+                // HTTP 403 » à l'ouverture de « Nouveau prêt » pour la Surveillance.
+                try {
+                    this.users = (await window.api.get('/users')) || [];
+                } catch {
+                    this.users = [];
+                }
+
                 this.beneficiariesLoaded = true;
             } catch (err) {
                 toast.error(window.api.toMessage(err, 'Erreur lors du chargement des bénéficiaires possibles.'));
