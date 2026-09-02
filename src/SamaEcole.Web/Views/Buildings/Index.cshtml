@@ -203,6 +203,12 @@
  <modal-shell size="lg" open="editingBuilding" on-close="closeEditBuilding()" title="Modifier le bâtiment">
   <modal-subtitle><span x-text="editingBuilding ? editingBuilding.name : ''"></span></modal-subtitle>
   <div x-show="editBuildingErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editBuildingErrors.global"></div>
+  @* Formulaire MONTÉ seulement quand editingBuilding n'est pas null : `x-model` ne peut pas s'écrire
+     avec un accès optionnel (`a?.b = x` est une erreur de syntaxe JS), donc seul `x-if` protège une
+     liaison bidirectionnelle. Le panneau lui-même continue de s'animer normalement : ses transitions
+     portent sur `Open` (modal-shell), jamais sur `editingBuilding` — closeEditBuilding() remet les
+     deux à zéro dans le même tick, le formulaire disparaît donc avec le panneau, pas avant lui. *@
+  <template x-if="editingBuilding">
   <form x-on:submit.prevent="submitEditBuilding()" novalidate class="space-y-4">
    <div>
     <label class="form-label form-label-required">Nom du bâtiment</label>
@@ -221,6 +227,7 @@
     </button>
    </div>
   </form>
+  </template>
  </modal-shell>
 
  <modal-shell open="deletingBuilding" on-close="closeDeleteBuilding()" size="md">
@@ -277,6 +284,9 @@
  <modal-shell size="lg" open="editingRoom" on-close="closeEditRoom()" title="Modifier la salle">
   <modal-subtitle><span x-text="editingRoom ? editingRoom.name : ''"></span></modal-subtitle>
   <div x-show="editRoomErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editRoomErrors.global"></div>
+  @* Formulaire MONTÉ seulement quand editingRoom n'est pas null — même raison et même garantie
+     d'animation que le formulaire « Modifier le bâtiment » ci-dessus. *@
+  <template x-if="editingRoom">
   <form x-on:submit.prevent="submitEditRoom()" novalidate class="space-y-4">
    <div>
     <label class="form-label form-label-required">Nom de la salle</label>
@@ -301,6 +311,7 @@
     </button>
    </div>
   </form>
+  </template>
  </modal-shell>
 
  <modal-shell open="deletingRoom" on-close="closeDeleteRoom()" size="md">

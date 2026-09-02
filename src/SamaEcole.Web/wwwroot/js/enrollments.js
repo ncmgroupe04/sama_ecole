@@ -336,6 +336,9 @@ document.addEventListener('alpine:init', () => {
             this.receipt = null;
             this.showReceipt = false;
             this.showConfirmDialog = false;
+            // La feuille A5 est démontée avec `receipt` (x-if) : sa mesure de tenue en page ne
+            // vaut plus rien. La garder afficherait le verdict du reçu PRÉCÉDENT sur le suivant.
+            this.receiptFitMm = null;
             this.closePdfPreview();
             this.form = {
                 classroomId: '',

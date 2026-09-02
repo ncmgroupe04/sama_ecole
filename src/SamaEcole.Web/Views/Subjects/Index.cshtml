@@ -539,6 +539,11 @@
 
   <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
 
+  @* Formulaire MONTÉ seulement quand editing n'est pas null : `x-model` ne peut pas s'écrire avec un
+     accès optionnel (`a?.b = x` est une erreur de syntaxe JS), et le `x-if="!editing.parentSubjectId"`
+     plus bas déréférencerait lui aussi editing null au montage. closeEdit() remet editing à null dans
+     le même tick que le panneau commence à disparaître — aucun flash visible. *@
+  <template x-if="editing">
   <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
    <div>
     <label for="edit-subject-name" class="form-label form-label-required">Nom de la matière</label>
@@ -616,6 +621,7 @@
     </button>
    </div>
   </form>
+  </template>
  </modal-shell>
 
  @* Confirmation : matière modifiée *@

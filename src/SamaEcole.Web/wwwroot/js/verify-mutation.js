@@ -9,13 +9,18 @@
  * Le token est injecté par la vue (data-token) : il vient du chemin d'URL, jamais d'un champ.
  */
 document.addEventListener('alpine:init', () => {
-    Alpine.data('verifyMutationView', (token) => ({
-        token: token || '',
+    Alpine.data('verifyMutationView', () => ({
+        // Lu depuis `data-token` au montage, jamais reçu en argument de `x-data`. Un jeton passé en
+        // littéral dans l'expression Alpine devait être sérialisé en JSON, et ses guillemets
+        // refermaient l'attribut HTML avant même que le composant existe (voir VerifyMutation.cshtml).
+        token: '',
         loading: true,
         result: null,   // { status, certificateNumber, issuedOn, issuingSchoolName, revokedAt }
         failed: false,   // vrai si l'appel lui-même a échoué (réseau, rate-limit) — distinct de « inconnu »
 
         async init() {
+            this.token = this.$el.dataset.token || '';
+
             if (!this.token) {
                 this.loading = false;
                 this.result = { status: 'unknown' };

@@ -9,7 +9,22 @@
 }
 
 <main class="max-w-xl mx-auto px-4 py-16">
-    <div x-data="verifyMutationView(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(token)))" x-init="init()">
+    @* Le jeton passe par un attribut `data-token` ENCODÉ par Razor, jamais par un littéral injecté
+       dans l'expression `x-data`.
+
+       L'ancienne forme — `x-data="verifyMutationView(@@Html.Raw(JsonSerializer.Serialize(token)))"` —
+       plaçait les guillemets JSON bruts À L'INTÉRIEUR d'un attribut HTML lui-même délimité par des
+       guillemets : le premier `"` du jeton sérialisé refermait l'attribut, et le reste partait en
+       attributs parasites. Résultat, pour TOUT jeton réel, `x-data` ne contenait plus qu'un
+       `verifyMutationView(` bancal : erreur de syntaxe à l'évaluation, composant jamais initialisé,
+       et la page de vérification restait bloquée sur « Vérification en cours… ». C'est la page que
+       scanne l'école d'accueil depuis le QR du certificat — elle ne fonctionnait pour personne.
+
+       Avec `data-token`, Razor encode `"` en `&quot;` : aucun contenu de jeton ne peut plus sortir de
+       l'attribut, et l'expression `x-data` reste une constante valide. C'est aussi ce que le
+       commentaire de tête de verify-mutation.js décrivait déjà (« Le token est injecté par la vue
+       (data-token) »), et la convention déjà employée par Checkout.cshtml (data-reference). *@
+    <div x-data="verifyMutationView()" data-token="@token">
 
         <h1 class="text-2xl font-bold text-slate-900 text-center">Vérification d'un certificat de mutation</h1>
         <p class="text-sm text-slate-500 text-center mt-1">
@@ -26,7 +41,13 @@
             <p class="text-sm text-slate-500 mt-1">Réessayez dans quelques instants.</p>
         </div>
 
-        <template x-if="!loading && !failed">
+        @* `&& result` est REDONDANT avec la logique actuelle : isValid/isRevoked/isUnknown sont des
+           getters qui vérifient déjà `this.result` avant de lire son statut (verify-mutation.js), donc
+           aucun des `result.x` ci-dessous ne peut s'exécuter avec result encore null aujourd'hui. Il
+           reste posé explicitement : une garde qui ne passe QUE par un getter indirect n'est vérifiable
+           ni par un lecteur humain pressé, ni par une analyse statique — un futur getter qui oublierait
+           son propre null-check romprait cette protection sans que rien ici ne le signale. *@
+        <template x-if="!loading && !failed && result">
             <div class="mt-10">
 
                 <!-- VALIDE -->

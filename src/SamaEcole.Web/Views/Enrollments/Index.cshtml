@@ -345,10 +345,10 @@
  débordement (overflow:hidden) ; ce badge existe pour qu'il soit vu avant, et corrigé. *@
  <span x-show="receiptFitMm !== null && receiptFitMm >= -0.2" x-cloak
  class="rounded-full border border-success bg-success-bg px-2.5 py-0.5 text-xs font-medium text-success"
- x-text="'Tient sur une page · ' + receiptFitMm.toFixed(1) + ' mm libres'"></span>
+ x-text="'Tient sur une page · ' + (receiptFitMm ?? 0).toFixed(1) + ' mm libres'"></span>
  <span x-show="receiptFitMm !== null && receiptFitMm < -0.2" x-cloak
  class="rounded-full border border-warning bg-warning-bg px-2.5 py-0.5 text-xs font-medium text-warning"
- x-text="'Débordement : ' + Math.abs(receiptFitMm).toFixed(1) + ' mm — le bas sera rogné à l\'impression'"></span>
+ x-text="'Débordement : ' + Math.abs(receiptFitMm ?? 0).toFixed(1) + ' mm — le bas sera rogné à l\'impression'"></span>
  </div>
  <div class="flex flex-row flex-nowrap items-center justify-end gap-2 overflow-x-auto">
  <button type="button" x-on:click="closeReceipt()" class="btn-modal-secondary group shrink-0">
@@ -373,160 +373,169 @@
  </div>
 
  @* Document imprimable A5 PAYSAGE : sobre, moderne, aux normes officielles *@
- <div id="receipt-printable" class="receipt-a5 receipt-container bg-white border border-slate-200/80 mx-auto text-slate-800 shadow-sm rounded-xl flex flex-col justify-between min-h-[148mm]">
+ @* La feuille n'est MONTÉE que lorsque le reçu est chargé.
+   `x-show` ne masque qu'à l'affichage : Alpine évalue quand même toutes les liaisons
+   qu'il contient dès le montage de la vue, et `receipt` y vaut encore null — d'où des
+   « Cannot read properties of null » au chargement à froid de /inscriptions, même motif
+   que sur /caisse (corrigé le 02/09/2026). `x-if` ne rend rien tant que la condition est
+   fausse : c'est la seule forme qui protège le document ENTIER, sans semer un `receipt?.`
+   par ligne. *@
+<template x-if="receipt">
+    <div id="receipt-printable" class="receipt-a5 receipt-container bg-white border border-slate-200/80 mx-auto text-slate-800 shadow-sm rounded-xl flex flex-col justify-between min-h-[148mm]">
 
- @* A. En-tête : logo à GAUCHE du nom, badges à droite. Le nom n'est plus en majuscules —
- refonte du 25/08/2026, cf. docs/design-references/README.md §1.1.
+     @* A. En-tête : logo à GAUCHE du nom, badges à droite. Le nom n'est plus en majuscules —
+     refonte du 25/08/2026, cf. docs/design-references/README.md §1.1.
 
- Aucun badge d'ÉTAT DE PAIEMENT ici, volontairement : réimprimée trois mois plus tard,
- l'attestation en afficherait un faux. Le badge ne qualifie que l'acte administratif,
- vrai à toute date. *@
- @* pt-1.5 : l'en-tête ne colle plus au bord haut de la feuille (aération demandée).
-    `relative` : ancre le badge N° de reçu centré ci-dessous. *@
- <div class="receipt-header relative flex items-start gap-4 border-b border-slate-200 pb-2.5 pt-1.5">
- <img x-show="receipt.schoolLogoUrl" x-cloak :src="receipt.schoolLogoUrl" class="h-10 w-10 shrink-0 object-contain" alt="" />
- <div class="min-w-0 flex-1 pr-24">
- <h2 class="text-lg font-bold text-slate-900 tracking-tight" x-text="receipt.schoolName"></h2>
- <p class="text-[10px] text-slate-500 mt-0.5" x-text="contactLine()"></p>
- <p x-show="legalMentions()" x-cloak class="text-[10px] text-slate-500" x-text="legalMentions()"></p>
- </div>
- @* N° de reçu : centré dans l'en-tête (horizontal + vertical). En absolu pour un centrage VRAI
-    sur la feuille, indépendant de la largeur des colonnes gauche/droite. *@
- <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-center text-[10.5px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
- <div class="shrink-0 flex flex-col items-end gap-1">
- <span class="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-indigo-700 whitespace-nowrap">Inscription enregistrée</span>
- <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Année&nbsp;<span x-text="receipt.schoolYearLabel"></span></span>
- </div>
- </div>
+     Aucun badge d'ÉTAT DE PAIEMENT ici, volontairement : réimprimée trois mois plus tard,
+     l'attestation en afficherait un faux. Le badge ne qualifie que l'acte administratif,
+     vrai à toute date. *@
+     @* pt-1.5 : l'en-tête ne colle plus au bord haut de la feuille (aération demandée).
+        `relative` : ancre le badge N° de reçu centré ci-dessous. *@
+     <div class="receipt-header relative flex items-start gap-4 border-b border-slate-200 pb-2.5 pt-1.5">
+     <img x-show="receipt.schoolLogoUrl" x-cloak :src="receipt.schoolLogoUrl" class="h-10 w-10 shrink-0 object-contain" alt="" />
+     <div class="min-w-0 flex-1 pr-24">
+     <h2 class="text-lg font-bold text-slate-900 tracking-tight" x-text="receipt.schoolName"></h2>
+     <p class="text-[10px] text-slate-500 mt-0.5" x-text="contactLine()"></p>
+     <p x-show="legalMentions()" x-cloak class="text-[10px] text-slate-500" x-text="legalMentions()"></p>
+     </div>
+     @* N° de reçu : centré dans l'en-tête (horizontal + vertical). En absolu pour un centrage VRAI
+        sur la feuille, indépendant de la largeur des colonnes gauche/droite. *@
+     <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-center text-[10.5px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
+     <div class="shrink-0 flex flex-col items-end gap-1">
+     <span class="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-indigo-700 whitespace-nowrap">Inscription enregistrée</span>
+     <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Année&nbsp;<span x-text="receipt.schoolYearLabel"></span></span>
+     </div>
+     </div>
 
- <!-- B. Cartouche d'identité (grille 2 × 2) -->
- <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
- <div>
- <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Élève</div>
- <div class="text-xs font-semibold text-slate-900" x-text="receipt.studentFullName"></div>
- </div>
- <div>
- <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Matricule</div>
- <div class="text-xs font-semibold text-slate-900 whitespace-nowrap" x-text="receipt.matricule"></div>
- </div>
- <div>
- <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Classe &amp; niveau</div>
- @* Classe passerelle : même mention qu'en PDF (ClassroomPromotion.DisplayName) — l'aperçu à
- l'écran et la pièce imprimée ne doivent jamais dire deux choses. *@
- <div class="text-xs font-semibold text-slate-900" x-text="receipt.classroomName + (receipt.isAcceleratedClass ? ' (Cursus Accéléré Passerelle)' : '') + (receipt.classroomLevel ? ' — ' + receipt.classroomLevel : '')"></div>
- </div>
- <div x-show="receipt.guardianName || receipt.guardianPhone" x-cloak>
- <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Tuteur</div>
- <div class="text-xs font-semibold text-slate-900" x-text="[receipt.guardianName, receipt.guardianPhone].filter(Boolean).join('  ·  ')"></div>
- </div>
- </div>
+     <!-- B. Cartouche d'identité (grille 2 × 2) -->
+     <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
+     <div>
+     <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Élève</div>
+     <div class="text-xs font-semibold text-slate-900" x-text="receipt.studentFullName"></div>
+     </div>
+     <div>
+     <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Matricule</div>
+     <div class="text-xs font-semibold text-slate-900 whitespace-nowrap" x-text="receipt.matricule"></div>
+     </div>
+     <div>
+     <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Classe &amp; niveau</div>
+     @* Classe passerelle : même mention qu'en PDF (ClassroomPromotion.DisplayName) — l'aperçu à
+     l'écran et la pièce imprimée ne doivent jamais dire deux choses. *@
+     <div class="text-xs font-semibold text-slate-900" x-text="receipt.classroomName + (receipt.isAcceleratedClass ? ' (Cursus Accéléré Passerelle)' : '') + (receipt.classroomLevel ? ' — ' + receipt.classroomLevel : '')"></div>
+     </div>
+     <div x-show="receipt.guardianName || receipt.guardianPhone" x-cloak>
+     <div class="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Tuteur</div>
+     <div class="text-xs font-semibold text-slate-900" x-text="[receipt.guardianName, receipt.guardianPhone].filter(Boolean).join('  ·  ')"></div>
+     </div>
+     </div>
 
- <!-- C. Déclaration officielle -->
- <div class="mt-2 border-l-2 border-slate-200 pl-3 text-[11px] leading-snug text-slate-600 text-justify">
- L'administration de l'établissement atteste que l'élève
- <span class="font-semibold text-slate-900" x-text="receipt.studentFullName"></span> (matricule
- <span class="font-semibold text-slate-900" x-text="receipt.matricule"></span>) est régulièrement inscrit(e) au sein de
- notre établissement en classe de
- <span class="font-semibold text-slate-900" x-text="receipt.classroomName + (receipt.isAcceleratedClass ? ' (Cursus Accéléré Passerelle)' : '')"></span>
- pour l'année scolaire <span class="font-semibold text-slate-900" x-text="receipt.schoolYearLabel"></span>.
- </div>
+     <!-- C. Déclaration officielle -->
+     <div class="mt-2 border-l-2 border-slate-200 pl-3 text-[11px] leading-snug text-slate-600 text-justify">
+     L'administration de l'établissement atteste que l'élève
+     <span class="font-semibold text-slate-900" x-text="receipt.studentFullName"></span> (matricule
+     <span class="font-semibold text-slate-900" x-text="receipt.matricule"></span>) est régulièrement inscrit(e) au sein de
+     notre établissement en classe de
+     <span class="font-semibold text-slate-900" x-text="receipt.classroomName + (receipt.isAcceleratedClass ? ' (Cursus Accéléré Passerelle)' : '')"></span>
+     pour l'année scolaire <span class="font-semibold text-slate-900" x-text="receipt.schoolYearLabel"></span>.
+     </div>
 
- @* D. Corps : deux blocs de NATURE différente. À gauche ce qu'il y a à régler maintenant, à
- l'ENCRE NOIRE — rien n'est acquitté, le secrétariat n'encaisse pas, et le vert signifierait
- « payé ». À droite le prospectif, en indigo.
+     @* D. Corps : deux blocs de NATURE différente. À gauche ce qu'il y a à régler maintenant, à
+     l'ENCRE NOIRE — rien n'est acquitté, le secrétariat n'encaisse pas, et le vert signifierait
+     « payé ». À droite le prospectif, en indigo.
 
- Le cumul annuel (totalDue) et le « reste à payer » ont disparu : c'est l'objet même de la
- refonte du 25/08/2026. Voir docs/design-references/README.md §1, rubrique « Interdits ». *@
- <div class="mt-2 grid grid-cols-2 gap-5 items-start">
+     Le cumul annuel (totalDue) et le « reste à payer » ont disparu : c'est l'objet même de la
+     refonte du 25/08/2026. Voir docs/design-references/README.md §1, rubrique « Interdits ». *@
+     <div class="mt-2 grid grid-cols-2 gap-5 items-start">
 
- <!-- BLOC 1 — Règlement à effectuer (engagement initial) -->
- <div>
- <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500">
- Règlement à effectuer
- <span class="font-medium normal-case tracking-normal text-slate-400">auprès du service de la comptabilité, ce jour</span>
- </div>
- <table class="mt-1.5 w-full text-[11px]">
- <thead>
- <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
- <th class="text-left py-1 px-2 text-[9px] font-semibold uppercase tracking-wider">Poste à régler</th>
- <th class="text-right py-1 px-2 text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap">Montant</th>
- </tr>
- </thead>
- <tbody>
- <template x-for="line in receipt.lines" :key="line.designation">
- <tr class="border-b border-slate-200">
- <td class="py-1 px-2 text-slate-900">
- <span x-text="line.designation"></span>
- @* « (1 mois) » : le tuteur doit voir qu'il ne règle QU'UN mois, pas l'année. *@
- <span x-show="line.isRecurring" x-cloak class="text-slate-500">(1 mois)</span>
- </td>
- <td class="py-1 px-2 text-right text-slate-900 amount" x-text="formatMoney(line.unitAmount)"></td>
- </tr>
- </template>
- <tr x-show="receipt.lines.length === 0" x-cloak class="border-b border-slate-200">
- <td class="py-1 px-2 text-slate-400 italic">Aucun frais engagé</td>
- <td class="py-1 px-2 text-right text-slate-400">0</td>
- </tr>
- <tr class="border-t border-slate-300">
- <td class="pt-1.5 px-2 text-[9px] font-bold uppercase tracking-wider text-slate-700">Total à régler</td>
- <td class="pt-1.5 px-2 text-right text-sm font-bold text-slate-900 amount whitespace-nowrap" x-text="formatMoney(settlementTotal()) + ' FCFA'"></td>
- </tr>
- </tbody>
- </table>
- </div>
+     <!-- BLOC 1 — Règlement à effectuer (engagement initial) -->
+     <div>
+     <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+     Règlement à effectuer
+     <span class="font-medium normal-case tracking-normal text-slate-400">auprès du service de la comptabilité, ce jour</span>
+     </div>
+     <table class="mt-1.5 w-full text-[11px]">
+     <thead>
+     <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
+     <th class="text-left py-1 px-2 text-[9px] font-semibold uppercase tracking-wider">Poste à régler</th>
+     <th class="text-right py-1 px-2 text-[9px] font-semibold uppercase tracking-wider whitespace-nowrap">Montant</th>
+     </tr>
+     </thead>
+     <tbody>
+     <template x-for="line in receipt.lines" :key="line.designation">
+     <tr class="border-b border-slate-200">
+     <td class="py-1 px-2 text-slate-900">
+     <span x-text="line.designation"></span>
+     @* « (1 mois) » : le tuteur doit voir qu'il ne règle QU'UN mois, pas l'année. *@
+     <span x-show="line.isRecurring" x-cloak class="text-slate-500">(1 mois)</span>
+     </td>
+     <td class="py-1 px-2 text-right text-slate-900 amount" x-text="formatMoney(line.unitAmount)"></td>
+     </tr>
+     </template>
+     <tr x-show="receipt.lines.length === 0" x-cloak class="border-b border-slate-200">
+     <td class="py-1 px-2 text-slate-400 italic">Aucun frais engagé</td>
+     <td class="py-1 px-2 text-right text-slate-400">0</td>
+     </tr>
+     <tr class="border-t border-slate-300">
+     <td class="pt-1.5 px-2 text-[9px] font-bold uppercase tracking-wider text-slate-700">Total à régler</td>
+     <td class="pt-1.5 px-2 text-right text-sm font-bold text-slate-900 amount whitespace-nowrap" x-text="formatMoney(settlementTotal()) + ' FCFA'"></td>
+     </tr>
+     </tbody>
+     </table>
+     </div>
 
- <!-- BLOC 2 — Échéancier mensuel : tarifs UNITAIRES, jamais multipliés par le nombre de mois -->
- <div>
- <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500">
- Échéancier mensuel
- <span class="font-medium normal-case tracking-normal text-slate-400">à titre indicatif</span>
- </div>
+     <!-- BLOC 2 — Échéancier mensuel : tarifs UNITAIRES, jamais multipliés par le nombre de mois -->
+     <div>
+     <div class="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+     Échéancier mensuel
+     <span class="font-medium normal-case tracking-normal text-slate-400">à titre indicatif</span>
+     </div>
 
- <div class="mt-1.5">
- <template x-for="line in monthlyLines()" :key="line.designation">
- <div class="flex items-baseline justify-between gap-3 border-b border-slate-200 py-1 text-[11px]">
- <span class="text-slate-900" x-text="line.designation"></span>
- <span class="whitespace-nowrap font-semibold text-slate-900 amount"><span x-text="formatMoney(line.unitAmount)"></span><span class="text-[9px] font-medium text-slate-500"> FCFA / mois</span></span>
- </div>
- </template>
- <p x-show="monthlyLines().length === 0" x-cloak class="py-1 text-[11px] italic text-slate-400">Aucun frais mensuel souscrit.</p>
- </div>
+     <div class="mt-1.5">
+     <template x-for="line in monthlyLines()" :key="line.designation">
+     <div class="flex items-baseline justify-between gap-3 border-b border-slate-200 py-1 text-[11px]">
+     <span class="text-slate-900" x-text="line.designation"></span>
+     <span class="whitespace-nowrap font-semibold text-slate-900 amount"><span x-text="formatMoney(line.unitAmount)"></span><span class="text-[9px] font-medium text-slate-500"> FCFA / mois</span></span>
+     </div>
+     </template>
+     <p x-show="monthlyLines().length === 0" x-cloak class="py-1 text-[11px] italic text-slate-400">Aucun frais mensuel souscrit.</p>
+     </div>
 
- <div class="mt-2 flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
- <div>
- <div class="text-[9px] font-bold uppercase tracking-wider text-indigo-700">Total à prévoir chaque mois</div>
- <div class="text-[9px] text-indigo-500">Règlement du 1<sup>er</sup> au 5 de chaque mois</div>
- </div>
- <div class="whitespace-nowrap text-lg font-bold leading-none text-indigo-700 amount"><span x-text="formatMoney(monthlyTotal())"></span><span class="text-[10px] font-medium text-indigo-500"> FCFA / mois</span></div>
- </div>
- </div>
+     <div class="mt-2 flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+     <div>
+     <div class="text-[9px] font-bold uppercase tracking-wider text-indigo-700">Total à prévoir chaque mois</div>
+     <div class="text-[9px] text-indigo-500">Règlement du 1<sup>er</sup> au 5 de chaque mois</div>
+     </div>
+     <div class="whitespace-nowrap text-lg font-bold leading-none text-indigo-700 amount"><span x-text="formatMoney(monthlyTotal())"></span><span class="text-[10px] font-medium text-indigo-500"> FCFA / mois</span></div>
+     </div>
+     </div>
 
- </div>
+     </div>
 
- @* E. Pied de page, ancré en bas. « Le Secrétariat » et non « Le Caissier » : cette pièce est
- délivrée sans qu'aucun fonds ne soit encaissé. *@
- <div class="receipt-footer mt-auto pt-2 border-t border-slate-200">
- <div class="flex items-end gap-6 text-[10px]">
- <div class="flex-1">
- <p class="italic text-slate-500" x-text="faitMention()"></p>
- <p class="mt-2.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Cachet officiel</p>
- </div>
- <div class="flex-1 text-right">
- <div class="h-6"></div>
- <div class="border-t border-dashed border-slate-400 pt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Le Secrétariat</div>
- </div>
- <div class="flex-1 text-right">
- <div class="h-6"></div>
- <div class="border-t border-dashed border-slate-400 pt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Le Directeur</div>
- </div>
- </div>
- <p class="mt-2 text-center text-[8px] leading-tight text-slate-400">
- Le secrétariat n'encaisse aucun fonds : tout règlement s'effectue auprès de la comptabilité,
- seule habilitée à délivrer un reçu de caisse valant validation définitive.
- </p>
- </div>
+     @* E. Pied de page, ancré en bas. « Le Secrétariat » et non « Le Caissier » : cette pièce est
+     délivrée sans qu'aucun fonds ne soit encaissé. *@
+     <div class="receipt-footer mt-auto pt-2 border-t border-slate-200">
+     <div class="flex items-end gap-6 text-[10px]">
+     <div class="flex-1">
+     <p class="italic text-slate-500" x-text="faitMention()"></p>
+     <p class="mt-2.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Cachet officiel</p>
+     </div>
+     <div class="flex-1 text-right">
+     <div class="h-6"></div>
+     <div class="border-t border-dashed border-slate-400 pt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Le Secrétariat</div>
+     </div>
+     <div class="flex-1 text-right">
+     <div class="h-6"></div>
+     <div class="border-t border-dashed border-slate-400 pt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Le Directeur</div>
+     </div>
+     </div>
+     <p class="mt-2 text-center text-[8px] leading-tight text-slate-400">
+     Le secrétariat n'encaisse aucun fonds : tout règlement s'effectue auprès de la comptabilité,
+     seule habilitée à délivrer un reçu de caisse valant validation définitive.
+     </p>
+     </div>
 
- </div>
+     </div>
+</template>
  </div>
 
  </div>

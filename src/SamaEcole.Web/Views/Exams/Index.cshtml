@@ -415,6 +415,11 @@
     <modal-shell open="editingSession" on-close="closeEditSession()" title="Modifier la session" size="lg">
         <modal-subtitle><span x-text="editingSession ? sessionLabel(editingSession) : ''"></span></modal-subtitle>
         <div x-show="editSessionErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editSessionErrors.global"></div>
+        @* Formulaire MONTÉ seulement quand editingSession n'est pas null : `x-model` ne peut pas
+           s'écrire avec un accès optionnel (`a?.b = x` est une erreur de syntaxe JS), donc seul
+           `x-if` protège la liaison. closeEditSession() remet editingSession à null dans le même
+           tick que le panneau se ferme — aucun flash visible. *@
+        <template x-if="editingSession">
         <form x-on:submit.prevent="submitEditSession()" novalidate class="space-y-4">
             <div>
                 <label class="form-label">Centre par défaut</label>
@@ -433,6 +438,7 @@
                 </button>
             </div>
         </form>
+        </template>
     </modal-shell>
 
     <modal-shell open="dispatchingSession" on-close="closeDispatchConvocations()" title="Envoyer les convocations" size="md">
@@ -610,6 +616,9 @@
     <modal-shell open="editingDossier" on-close="closeEditDossier()" title="Modifier le dossier" size="lg">
         <modal-subtitle>État civil et centre déclaré — la classe reste figée depuis l'ouverture du dossier.</modal-subtitle>
         <div x-show="editDossierErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editDossierErrors.global"></div>
+        @* Formulaire MONTÉ seulement quand editingDossier n'est pas null — même raison et même
+           garantie d'animation que « Modifier la session » ci-dessus. *@
+        <template x-if="editingDossier">
         <form x-on:submit.prevent="submitEditDossier()" novalidate class="space-y-4">
             <div>
                 <label class="form-label">Centre d'examen déclaré</label>
@@ -652,11 +661,15 @@
                 </button>
             </div>
         </form>
+        </template>
     </modal-shell>
 
     <modal-shell open="assigningDossier" on-close="closeAssignCenter()" title="Attribuer centre et numéro de table" size="lg">
         <modal-subtitle>Laissez le numéro vide pour une génération automatique — c'est le cas normal.</modal-subtitle>
         <div x-show="assignCenterErrors.global" x-cloak class="form-error-banner" x-text="assignCenterErrors.global"></div>
+        @* Formulaire MONTÉ seulement quand assigningDossier n'est pas null — même raison et même
+           garantie d'animation que « Modifier la session » plus haut. *@
+        <template x-if="assigningDossier">
         <form x-on:submit.prevent="submitAssignCenter()" novalidate class="space-y-4">
             <div>
                 <label class="form-label">Centre d'examen</label>
@@ -705,6 +718,7 @@
                 </button>
             </div>
         </form>
+        </template>
     </modal-shell>
 
     <modal-shell open="transmittingDossier" on-close="closeTransmitDossier()" size="md">

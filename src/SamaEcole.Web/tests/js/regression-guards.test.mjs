@@ -225,12 +225,23 @@ test('garde-fou : la dette des chargements muets ne fait que diminuer', () => {
  * de l'écran — `installments`, `receiptNumber`, `amount` — alors que rien n'était encore sélectionné.
  *
  * Les deux seules protections reconnues ici :
- *   1. `<template x-if="…">` — Alpine ne rend PAS le contenu tant que la condition est fausse ;
+ *   1. `<template x-if="…">`, à condition que la condition NOMME la racine en cause — `x-if="receipt"`
+ *      ou `x-if="!loading && receipt"` protègent `receipt.x` ; `x-if="isValid"` ne le protège PAS aux
+ *      yeux de ce garde-fou, même si `isValid` est un getter qui vérifie `receipt` en coulisse : une
+ *      garde qui ne passe que par un intermédiaire indirect n'est vérifiable ni par un lecteur pressé
+ *      ni par une analyse statique, et un futur getter qui perdrait son null-check romprait la
+ *      protection sans que rien ici ne le signale (cas réel : VerifyMutation.cshtml, 02/09/2026) ;
  *   2. un garde dans l'expression elle-même : `receipt?.x`, `receipt && receipt.x`,
- *      `receipt ? receipt.x : ''`, `(balance?.installments ?? [])`.
+ *      `receipt ? receipt.x : ''`, `(balance?.installments ?? [])`. `!receipt.x` n'en est PAS un : la
+ *      négation porte sur `receipt.x` tout entier, qui a déjà fallu déréférencer `receipt` pour la
+ *      calculer — seul `!receipt` (sans suite) garde réellement.
  *
  * Le corps d'un `<template x-for>` est également exempté : il n'est instancié que par élément de la
  * collection, donc jamais quand celle-ci est vide ou pas encore chargée.
+ *
+ * Un commentaire Razor (`@* … *@`) est neutralisé avant l'analyse : un exemple de balise cité en
+ * prose (« évite `<template x-for="…">` ici ») ne doit jamais compter comme du vrai balisage — sans
+ * quoi le comptage de balises `<template>`/`</template>` part en vrille pour tout le reste du fichier.
  */
 
 /** Tous les gabarits Razor de Views/, sous-dossiers compris. */
@@ -255,11 +266,28 @@ function nullableRoots(jsSources, component) {
     return roots;
 }
 
-/** Portées `<template>` du gabarit, avec leur nature (`x-if` conditionnel / `x-for` répété). */
+/**
+ * Neutralise les commentaires Razor `@* … *@` : chaque caractère devient une espace (les sauts de
+ * ligne restent), pour que positions et numéros de ligne calculés ensuite restent valables sur le
+ * HTML original. Un exemple de balise cité en prose dans un commentaire ne doit jamais compter comme
+ * du vrai balisage — voir le commentaire de tête du garde-fou 4.
+ */
+function blankRazorComments(html) {
+    return html.replace(/@\*[\s\S]*?\*@/g, (m) => m.replace(/[^\n]/g, ' '));
+}
+
+/**
+ * Portées `<template>` du gabarit, avec leur nature (`x-if` conditionnel / `x-for` répété).
+ *
+ * Le motif `[^>]*` pour capturer les attributs d'une balise casse dès que la condition contient un
+ * `>` littéral (`x-if="data.byMonth.length > 0"` par exemple, courant sur un rapport) : la balise est
+ * alors tronquée au MAUVAIS `>`, et tout le comptage de profondeur qui suit part de travers. La forme
+ * ci-dessous tolère un `>` À L'INTÉRIEUR d'une valeur entre guillemets (simples ou doubles).
+ */
 function templateScopes(html) {
     const scopes = [];
     const open = [];
-    const tagRE = /<template\b([^>]*)>|<\/template>/g;
+    const tagRE = /<template\b(?:[^"'>]|"[^"]*"|'[^']*')*>|<\/template>/g;
     let tag;
 
     while ((tag = tagRE.exec(html))) {
@@ -267,10 +295,11 @@ function templateScopes(html) {
             const start = open.pop();
             if (start) scopes.push({ ...start, end: tag.index });
         } else {
+            const condMatch = /x-if="([^"]*)"/.exec(tag[0]);
             open.push({
                 start: tagRE.lastIndex,
-                conditional: /x-if="/.test(tag[1]),
-                loop: /x-for="/.test(tag[1])
+                cond: condMatch ? condMatch[1] : null,
+                loop: /x-for="/.test(tag[0])
             });
         }
     }
@@ -286,7 +315,7 @@ function findNullDerefs() {
     const found = new Set();
 
     for (const file of cshtmlFiles()) {
-        const html = readFileSync(file, 'utf8');
+        const html = blankRazorComments(readFileSync(file, 'utf8'));
 
         const roots = new Set();
         for (const m of html.matchAll(/x-data="([A-Za-z_$][\w$]*)\s*[("]/g)) {
@@ -305,15 +334,18 @@ function findNullDerefs() {
             for (const root of roots) {
                 if (!new RegExp(`(?<![\\w$.?])${root}\\s*\\.`).test(expr)) continue;
 
-                // Garde dans l'expression : `root?.`, `root &&`, `root ?`, `root ||`, `!root`…
+                // Garde dans l'expression : `root?.`, `root &&`, `root ?`, `root ||`, `!root` SEUL —
+                // `!root.x` n'en est PAS un (voir le commentaire de tête du garde-fou 4).
                 const guarded = new RegExp(
                     `(?<![\\w$.])${root}\\s*(\\?\\.|\\?[^.]|&&|\\|\\||===?\\s*null|!==?\\s*null)`
-                    + `|!\\s*${root}(?![\\w$])`);
+                    + `|(?<![\\w$.])!\\s*${root}(?![\\w$.])`);
                 if (guarded.test(expr)) continue;
 
-                // Protection structurelle : un `<template x-if>` ou le corps d'un `<template x-for>`.
+                // Protection structurelle : le corps d'un `<template x-for>` (jamais instancié à
+                // vide), ou un `<template x-if="…">` dont la condition NOMME cette racine.
+                const rootInCond = new RegExp(`(?<![\\w$.])${root}(?![\\w$])`);
                 const sheltered = scopes.some((s) =>
-                    at > s.start && at < s.end && (s.conditional || s.loop));
+                    at > s.start && at < s.end && (s.loop || (s.cond && rootInCond.test(s.cond))));
                 if (sheltered) continue;
 
                 found.add(`${label} :: ${root}`);
@@ -328,25 +360,24 @@ function findNullDerefs() {
  * Écrans où le motif subsiste, RECENSÉS et non autorisés. Comme SILENT_LOADERS_DEBT, cette liste ne
  * peut que rétrécir. Chaque entrée = au moins une erreur en console au chargement à froid de l'écran.
  *
- * Pour en retirer une : envelopper le bloc dans un `<template x-if="…">`, ou garder chaque expression
- * (`root?.champ`, `root ? root.champ : ''`), puis supprimer la ligne ici.
+ * Pour en retirer une : envelopper le bloc dans un `<template x-if="…">` dont la condition NOMME la
+ * racine en cause, ou garder chaque expression (`root?.champ`, `root ? root.champ : ''`), puis
+ * supprimer la ligne ici.
  *
- * /caisse n'y figure pas — c'est le bug fondateur, corrigé le 02/09/2026. Sa réapparition, ici ou
- * ailleurs, fait échouer ce test.
+ * VIDE — et c'est le but (assainissement du 02/09/2026 : Buildings, Dashboard, Enrollments, Exams,
+ * Reports/Financial, Settings, Subjects, StateIntegration/VerifyMutation). /caisse n'y figure pas non
+ * plus — c'est le bug fondateur, corrigé le même jour. Le cliquet est donc entièrement fermé : le
+ * moindre nouveau déréférencement null au montage fait échouer la suite.
+ *
+ * Deux vrais bugs de CE garde-fou ont été corrigés au passage, sans quoi cette liste resterait fausse :
+ *   1. `[^>]*` sur une balise cassait dès qu'une condition contenait un `>` littéral
+ *      (`data.byMonth.length > 0`) — Dashboard et Reports/Financial étaient déjà protégés, mais le
+ *      comptage de profondeur corrompu les faisait remonter comme des violations.
+ *   2. « n'importe quel `x-if` ancêtre protège » était trop permissif — un `x-if="isValid"` (getter
+ *      qui vérifie `result` en coulisse, sans le NOMMER) ne prouve rien par lecture statique
+ *      (StateIntegration/VerifyMutation.cshtml). La condition doit désormais citer la racine.
  */
-const NULL_DEREF_DEBT = [
-    'Views/Buildings/Index.cshtml :: editingBuilding',
-    'Views/Buildings/Index.cshtml :: editingRoom',
-    'Views/Dashboard/Index.cshtml :: financeData',
-    'Views/Enrollments/Index.cshtml :: receipt',
-    'Views/Enrollments/Index.cshtml :: receiptFitMm',
-    'Views/Exams/Index.cshtml :: assigningDossier',
-    'Views/Exams/Index.cshtml :: editingDossier',
-    'Views/Exams/Index.cshtml :: editingSession',
-    'Views/Reports/Financial.cshtml :: data',
-    'Views/Settings/Index.cshtml :: editingMention',
-    'Views/Subjects/Index.cshtml :: editing',
-];
+const NULL_DEREF_DEBT = [];
 
 test('garde-fou : aucune NOUVELLE liaison Alpine ne déréférence un état null au montage', () => {
     const current = findNullDerefs();

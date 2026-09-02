@@ -932,7 +932,13 @@
 
  <div x-show="mentionEditErrors.global" x-cloak class="form-error-banner" x-text="mentionEditErrors.global"></div>
 
- <form x-on:submit.prevent="submitEditMention()" novalidate class="space-y-4" x-show="editingMention">
+ @* Formulaire MONTÉ seulement quand editingMention n'est pas null : le `x-show="editingMention"`
+    précédent ne suffisait pas — il masque le formulaire, mais Alpine évalue quand même `x-model`
+    au montage, avec editingMention encore null. `x-model` ne peut pas non plus s'écrire avec un
+    accès optionnel (`a?.b = x` est une erreur de syntaxe JS) : seul `x-if` protège la liaison.
+    closeEditMention() remet editingMention à null dans le même tick que le panneau se ferme. *@
+ <template x-if="editingMention">
+ <form x-on:submit.prevent="submitEditMention()" novalidate class="space-y-4">
  <div>
  <label for="mention-edit-label" class="form-label form-label-required">Libellé</label>
  <input id="mention-edit-label" type="text" x-model="editingMention.label" required maxlength="40" placeholder="ex : Excellent" class="input-field" :class="mentionEditErrors.label && 'input-field-error'">
@@ -953,6 +959,7 @@
  </button>
  </div>
  </form>
+ </template>
  </modal-shell>
 
  <!-- Suppression d'une mention -->
