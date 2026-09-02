@@ -63,6 +63,16 @@
     /** Largeur de repli quand le conteneur n'est pas encore mesurable (modale en cours d'ouverture). */
     const FALLBACK_WIDTH = 640;
 
+    /**
+     * Largeur maximale de la modale d'aperçu, en pixels — alignée sur le gabarit `5xl` de
+     * modal-shell (64 rem), celui des fiches élève et enseignant, pour une présentation homogène
+     * d'un écran à l'autre.
+     */
+    const PANEL_MAX_WIDTH = 1024;
+
+    /** Gouttières horizontales de modal-shell (`sm:p-4`, 2 × 1 rem) : la modale ne les dépasse jamais. */
+    const PANEL_GUTTERS = 32;
+
     let pdfjsPromise = null;
 
     /**
@@ -222,9 +232,9 @@
                 pdfRenderedCount: 0,
                 pdfZoom: 1,
                 /**
-                 * Ratio largeur/hauteur de la 1re page (0 tant qu'elle n'est pas mesurée). Pilote
-                 * `pdfPanelStyle` : la modale épouse le format du document (A4 portrait, paysage, A5)
-                 * au lieu d'un gabarit fixe.
+                 * Ratio largeur/hauteur de la 1re page (0 tant qu'elle n'est pas mesurée). Sert de
+                 * signal « 1re page mesurée » : tant qu'il vaut 0, `pdfPanelStyle` reste vide et le
+                 * gabarit `size` de modal-shell s'applique.
                  */
                 pdfDocRatio: 0,
 
@@ -331,9 +341,9 @@
                     const token = { cancelled: false, task: null };
                     renderToken = token;
 
-                    // Mesure la 1re page AVANT de dimensionner le rendu : la modale adopte alors la
-                    // largeur du FORMAT du document (portrait / paysage / A5) et `container.clientWidth`
-                    // reflète cette largeur définitive plutôt que le gabarit initial.
+                    // Laisse passer une frame de layout AVANT de dimensionner le rendu : `pdfPanelStyle`
+                    // s'applique (la modale prend sa largeur définitive) et `container.clientWidth`
+                    // reflète cette largeur plutôt que le gabarit initial.
                     if (!this.pdfDocRatio) {
                         const firstPage = await doc.getPage(1);
                         if (token.cancelled) return;
@@ -414,17 +424,15 @@
                 get canZoomPdfOut() { return this.pdfZoom > ZOOM_MIN; },
 
                 /**
-                 * Largeur de la modale d'aperçu, ajustée au FORMAT du document plutôt qu'à un gabarit
-                 * fixe : largeur d'une page affichée à ~74 % de la hauteur de la fenêtre, plus les
-                 * gouttières de la modale (~7 rem), bornée à 94 % de la largeur d'écran. Portrait →
-                 * étroit, paysage → large. Chaîne vide tant que la 1re page n'est pas mesurée : le
-                 * gabarit `size="xl"` de modal-shell s'applique alors.
+                 * Largeur de la modale d'aperçu, alignée sur les fiches élève et enseignant
+                 * (`size="5xl"` de modal-shell, soit 64 rem / 1024 px) pour une présentation homogène
+                 * d'un écran à l'autre, plutôt qu'un gabarit calé au format du document. Bornée à la
+                 * largeur de la fenêtre moins les gouttières de la modale. Chaîne vide tant que la
+                 * 1re page n'est pas mesurée : le gabarit `size` de modal-shell s'applique alors.
                  */
                 get pdfPanelStyle() {
                     if (!this.pdfDocRatio) return '';
-                    const pageHeight = 0.74 * (window.innerHeight || 800);
-                    const pageWidth = pageHeight * this.pdfDocRatio;
-                    const maxWidth = Math.min(pageWidth + 112, (window.innerWidth || 1024) * 0.94);
+                    const maxWidth = Math.min(PANEL_MAX_WIDTH, (window.innerWidth || 1024) - PANEL_GUTTERS);
                     return `max-width: ${Math.round(Math.max(maxWidth, 320))}px`;
                 },
 
