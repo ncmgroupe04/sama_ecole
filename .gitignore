@@ -16,6 +16,16 @@ artifacts/
 appsettings.*.Local.json
 appsettings.Development.json
 appsettings*.Secret.json
+# Clés privées et certificats. La règle .env* ne les couvrait PAS : un certificat HTTPS, une clé de
+# signature ou un identifiant d'agrégateur déposé à la racine passait droit dans un `git add .`.
+# appsettings.json et appsettings.Production.json restent VERSIONNÉS à dessein — ils ne portent que
+# des gabarits (YOUR_SUPABASE_HOST…) et des niveaux de log ; les vraies valeurs viennent de .env.
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
 
 # --- Frontend / outillage ---
 node_modules/
@@ -24,7 +34,15 @@ src/SamaEcole.Web/wwwroot/css/site.css
 
 # --- IDE ---
 .idea/
+.vscode/
 *.swp
+
+# --- Restes de résolution de conflit et sauvegardes d'éditeur ---
+# `git merge` laisse des .orig, certains outils des .rej ou des .bak : jamais du code à versionner,
+# et une source classique de fichiers à moitié fusionnés committés par mégarde.
+*.bak
+*.orig
+*.rej
 
 # --- Logs & données locales ---
 *.log
@@ -35,8 +53,26 @@ sama_ecole_pg_data/
 .DS_Store
 Thumbs.db
 
-# --- Résultats de tests (générés par `dotnet test`) ---
+# --- Résultats de tests et de build (régénérables) ---
+# TestResults/ vient de `dotnet test` ; test-results/ et playwright-report/ de Playwright, utilisé
+# pour les vérifications navigateur ; coverage/ des rapports de couverture ; *.binlog de `dotnet
+# build -bl`. Aucun n'a de valeur en dépôt, et une trace Playwright pèse plusieurs mégaoctets.
 TestResults/
+test-results/
+playwright-report/
+coverage/
+*.binlog
+*.trx
+
+# --- Fichiers déposés par les utilisateurs à l'exécution (CurrentSchoolController, SchoolSettingsController) ---
+# Logos d'établissement et signatures numérisées, écrits sur disque par dotnet run. Ce sont des
+# DONNÉES d'exploitation propres à chaque installation, jamais du code source : les versionner ferait
+# entrer dans l'historique les logos d'écoles clientes, et ferait diverger le dépôt à chaque envoi
+# depuis un poste de développement. En production, le stockage cible est un service dédié
+# (S3-compatible), pas le système de fichiers de l'app.
+# Pas de .gitkeep : les deux contrôleurs créent l'arborescence si elle manque (Directory.CreateDirectory),
+# un clone neuf n'a donc rien à trouver ici pour que l'envoi fonctionne.
+src/SamaEcole.Web/wwwroot/uploads/
 
 # --- Sortie de publication (`dotnet publish`) ---
 # Binaires, PDB et archives : ~138 Mo régénérables à chaque build, que `git add .` embarquait
