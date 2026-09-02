@@ -73,7 +73,7 @@
     </div>
 
     <!-- Modale de création -->
-    <modal-shell size="lg" open="isCreateOpen" on-close="closeCreate()" title="Nouvelle convocation">
+    <modal-shell size="60" open="isCreateOpen" on-close="closeCreate()" title="Nouvelle convocation">
         <modal-subtitle>Convoquer le parent/tuteur d'un élève.</modal-subtitle>
 
         <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
@@ -124,5 +124,6 @@
         </confirm-dialog-body>
     </modal-shell>
 
+    @* Aperçu PDF partagé — voir wwwroot/js/pdf-preview.js *@
     @await Html.PartialAsync("_PdfPreviewModal")
 </div>

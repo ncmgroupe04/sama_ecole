@@ -6,6 +6,11 @@
  * — réglage TuitionMonthsPerYear), puis l'enregistrement crée l'élève (avec son matricule) et son
  * inscription en un seul appel, et renvoie le reçu.
  *
+ * Le panneau « Frais » est une AIDE AU CALCUL, rien de plus : il n'encaisse rien (le secrétariat
+ * n'enregistre aucun versement, AGENTS.md règle #4). Le simulateur `simMonths` / `simSubtotal()` sert
+ * uniquement à annoncer un montant au parent — tout règlement, y compris le premier, se fait à la
+ * Caisse (/caisse, RecordPaymentCommand).
+ *
  * Le calcul affiché n'est qu'un APERÇU : c'est le serveur qui recalcule et fait foi (voir
  * CreateEnrollmentCommandHandler). Le rôle est relu du JWT pour masquer le formulaire aux rôles qui
  * n'inscrivent pas, mais l'API répond 403 de toute façon (le service Finance ne compose jamais un
@@ -47,13 +52,11 @@ document.addEventListener('alpine:init', () => {
         isSubmitting: false,
 
         /**
-         * Encaissement du jour, ventilé : { [feeCategoryId]: { checked, months } }. Le guichet coche ce
-         * que le tuteur règle réellement (inscription, tenue, 1re mensualité…) ; seul ce qui est coché
-         * figure sur le reçu. Les MONTANTS ne sont pas transmis — le serveur les reprend du barème
-         * (règle #4) ; ce qui part dans la requête n'est que « cette catégorie, sur N mois ».
+         * Simulateur d'aide au calcul — PUREMENT indicatif, jamais transmis au serveur. Nombre de
+         * mensualités que le secrétaire veut chiffrer pour le parent ; simSubtotal() en déduit un
+         * sous-total. Aucun encaissement : le règlement se fait à la Caisse.
          */
-        collected: {},
-        paymentMethod: 'Cash',
+        simMonths: 1,
 
         // Reçu émis
         receipt: null,
@@ -80,8 +83,7 @@ document.addEventListener('alpine:init', () => {
                     window.formDraft.save('enrollment_form', {
                         mode: this.mode,
                         form: val,
-                        collected: this.collected,
-                        paymentMethod: this.paymentMethod
+                        simMonths: this.simMonths
                     });
                 }
             });
@@ -93,8 +95,7 @@ document.addEventListener('alpine:init', () => {
             if (!draft) return;
             if (draft.mode) this.selectMode(draft.mode);
             if (draft.form) Object.assign(this.form, draft.form);
-            if (draft.collected) Object.assign(this.collected, draft.collected);
-            if (draft.paymentMethod) this.paymentMethod = draft.paymentMethod;
+            if (draft.simMonths) this.simMonths = draft.simMonths;
             this.hasDraft = false;
         },
 
@@ -204,50 +205,22 @@ document.addEventListener('alpine:init', () => {
             return (this.feesByClassroom[this.form.classroomId] || []).length > 0;
         },
 
-        // ---------------------------------------------------------------- Encaissement du jour
+        // ---------------------------------------------------------------- Aide au calcul (simulateur)
+
+        /** Remet le simulateur à 1 mois — appelé au changement de classe (le barème change). */
+        resetSimulator() {
+            this.simMonths = 1;
+        },
 
         /**
-         * Réinitialise la sélection au changement de classe : les frais ne sont pas les mêmes d'une
-         * classe à l'autre, garder les cases cochées de la précédente encaisserait un frais inexistant.
-         *
-         * Pré-cochage du cas courant au guichet — les frais ponctuels (inscription, tenue, carnet…) et
-         * la PREMIÈRE mensualité. C'est ce que règle un tuteur le jour de l'inscription ; tout reste
-         * décochable, et le total encaissé est affiché en permanence au-dessus du bouton d'envoi.
+         * Sous-total INDICATIF : tous les frais ponctuels (réglés une fois) + les mensualités prises
+         * `simMonths` fois. Purement local, jamais transmis — sert à annoncer un montant au parent
+         * avant qu'il passe à la Caisse.
          */
-        resetCollected() {
-            this.collected = {};
-            this.previewLines().forEach((line) => {
-                this.collected[line.feeCategoryId] = { checked: true, months: 1 };
-            });
-        },
-
-        collectedEntry(line) {
-            return this.collected[line.feeCategoryId] ||= { checked: false, months: 1 };
-        },
-
-        /** Montant réellement encaissé pour une ligne : mensualité = unitaire × mois réglés, sinon total. */
-        collectedAmount(line) {
-            const entry = this.collectedEntry(line);
-            if (!entry.checked) return 0;
-            const months = Math.min(Math.max(Number(entry.months) || 1, 1), line.months);
-            return line.isRecurring ? line.unitAmount * months : line.lineTotal;
-        },
-
-        /** Somme encaissée le jour même — le seul montant qui figurera en gras sur le reçu. */
-        collectedTotal() {
-            return this.previewLines().reduce((sum, line) => sum + this.collectedAmount(line), 0);
-        },
-
-        /** Ce qu'on transmet au serveur : les catégories cochées et leur durée, jamais un montant. */
-        collectedPayload() {
-            return this.previewLines()
-                .filter((line) => this.collectedEntry(line).checked)
-                .map((line) => ({
-                    feeCategoryId: line.feeCategoryId,
-                    months: line.isRecurring
-                        ? Math.min(Math.max(Number(this.collectedEntry(line).months) || 1, 1), line.months)
-                        : 1
-                }));
+        simSubtotal() {
+            const months = Math.max(Number(this.simMonths) || 1, 1);
+            return this.previewLines().reduce(
+                (sum, line) => sum + (line.isRecurring ? line.unitAmount * months : line.lineTotal), 0);
         },
 
         // ---------------------------------------------------------------- Réinscription
@@ -294,20 +267,14 @@ document.addEventListener('alpine:init', () => {
             this.formErrors = {};
             this.isSubmitting = true;
 
-            // Encaissement du jour, commun aux deux modes : une réinscription se règle au guichet
-            // exactement comme une première inscription.
-            const collection = {
-                collectedFees: this.collectedPayload(),
-                paymentMethod: this.paymentMethod
-            };
-
+            // L'inscription fige la dette et rien d'autre : aucun encaissement n'est transmis. Le
+            // règlement se fait ensuite à la Caisse (/caisse).
             const command = this.mode === 'ReEnrollment'
                 ? {
                     type: 'ReEnrollment',
                     classroomId: this.form.classroomId,
                     isRepeating: this.form.isRepeating,
-                    studentId: this.form.studentId,
-                    ...collection
+                    studentId: this.form.studentId
                 }
                 : {
                     type: 'NewEnrollment',
@@ -318,8 +285,7 @@ document.addEventListener('alpine:init', () => {
                     birthPlace: this.form.birthPlace || null,
                     gender: this.form.gender,
                     guardianName: this.form.guardianName || null,
-                    guardianPhone: this.form.guardianPhone || null,
-                    ...collection
+                    guardianPhone: this.form.guardianPhone || null
                 };
 
             try {
@@ -385,8 +351,7 @@ document.addEventListener('alpine:init', () => {
             this.studentSearch = '';
             this.formErrors = {};
             this.mode = 'NewEnrollment';
-            this.collected = {};
-            this.paymentMethod = 'Cash';
+            this.simMonths = 1;
         },
 
         /**

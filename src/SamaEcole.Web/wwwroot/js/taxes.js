@@ -16,8 +16,8 @@ document.addEventListener('alpine:init', () => {
                          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
     Alpine.data('taxesView', () => ({
-        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
-        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : l'état synthétique s'ouvre dans la modale
+        // _PdfPreviewModal (impression / téléchargement au choix), jamais un download forcé.
         ...window.pdfPreview.state(),
 
         isLoading: false,
@@ -113,7 +113,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** État synthétique : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
+        /** État synthétique PDF — ouvert dans la modale d'aperçu partagée (pdf-preview.js). */
         async downloadDeclarationPdf(declarationId) {
             if (!declarationId || declarationId === 'undefined') {
                 console.error('Identifiant de déclaration invalide ou indéfini', declarationId);
@@ -123,8 +123,9 @@ document.addEventListener('alpine:init', () => {
             try {
                 await this.openPdfPreview(
                     `/api/v1/finance/tax-declarations/${declarationId}/pdf`,
-                    'Déclaration fiscale',
-                    `Declaration-Fiscale-${declarationId}.pdf`);
+                    'État synthétique — déclaration fiscale',
+                    `Declaration-Fiscale-${declarationId}.pdf`
+                );
             } finally {
                 this.downloadingPdfId = null;
             }

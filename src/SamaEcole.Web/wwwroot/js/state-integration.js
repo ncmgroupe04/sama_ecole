@@ -28,15 +28,12 @@ document.addEventListener('alpine:init', () => {
     };
 
     Alpine.data('stateIntegrationView', () => ({
-        // Visionneuse PDF partagée (wwwroot/js/pdf-preview.js) : le certificat de mutation s'ouvre
-        // dedans (voir / imprimer / télécharger) au lieu d'un téléchargement direct « à l'aveugle ».
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : rapport STATEDUC et livret de compétences
+        // s'ouvrent dans la modale _PdfPreviewModal (impression / téléchargement au choix). L'export
+        // Planète (CSV/JSON) et l'Excel STATEDUC, qui ne se prévisualisent pas, restent en download.
         ...window.pdfPreview.state(),
 
         error: null,
-
-        // Information bloquante mais non-erreur (ex. « ce niveau n'a pas de grille APC ») : présentée
-        // dans une petite modale centrée, comme « Accès refusé », plutôt qu'en bandeau rouge.
-        notice: null,
 
         // Le Directeur voit tout ; le Secrétariat n'a que l'onglet Certificats (IEN se gère sur la
         // fiche élève). Un rôle sans accès n'arrive pas ici — le lien de menu est déjà masqué.
@@ -61,15 +58,15 @@ document.addEventListener('alpine:init', () => {
         certificates: { items: [], total: 0, page: 1, pageSize: 20, loading: false },
         revokeModal: { open: false, id: null, number: '', reason: '', busy: false, error: null },
 
-        // Délivrance d'un certificat de mutation (JGK-M06) : recherche élève + formulaire. Le succès
-        // n'ouvre plus un écran « résultat » : le PDF part directement dans la visionneuse partagée.
+        // Délivrance d'un certificat de mutation (JGK-M06) : recherche élève + formulaire + résultat.
         issueModal: {
             open: false,
             studentSearch: '', students: [], isSearchingStudents: false, studentsLoaded: false, studentSearchError: null,
             selectedStudent: null,
             schoolYearId: '', reason: 'Demenagement', reasonDetails: '',
             destinationSchoolName: '', destinationCity: '',
-            busy: false, error: null
+            busy: false, error: null, result: null,
+            bookletBusy: false, bookletError: null
         },
 
         // Téléchargement autonome du livret de compétences (JGK-M07), sans passer par une mutation.
@@ -98,14 +95,10 @@ document.addEventListener('alpine:init', () => {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des référentiels.');
             }
 
-            // Statut du relais SIMEN : route réservée au Directeur (Volume_4 §23 — elle concerne la
-            // transmission au ministère, pas le guichet). Ne pas l'appeler pour le Secrétariat, sinon
-            // le 403 laisse le bandeau bloqué sur « Vérification… ». Best-effort même pour le Directeur.
-            if (this.isDirector) {
-                try {
-                    this.relais = await window.api.get('/state-integration/simen/status');
-                } catch { /* le bandeau restera sur son défaut « non configuré » */ }
-            }
+            // Best-effort : un échec du statut du relais ne doit pas bloquer l'écran.
+            try {
+                this.relais = await window.api.get('/state-integration/simen/status');
+            } catch { /* le bandeau restera sur son défaut « non configuré » */ }
 
             if (this.tab === 'certificats') this.loadCertificates();
         },
@@ -205,10 +198,14 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ schoolYearId: this.stateduc.schoolYearId });
                 if (this.stateduc.observationDate) params.set('observationDate', this.stateduc.observationDate);
 
-                await this.downloadFile(
-                    `/api/v1/state-integration/stateduc/${kind}?${params.toString()}`,
-                    kind === 'pdf' ? 'STATEDUC.pdf' : 'STATEDUC.xlsx'
-                );
+                const url = `/api/v1/state-integration/stateduc/${kind}?${params.toString()}`;
+                if (kind === 'pdf') {
+                    // Le formulaire officiel s'ouvre dans la modale d'aperçu partagée : le Directeur
+                    // le relit avant d'imprimer ou de télécharger depuis l'en-tête de la modale.
+                    await this.openPdfPreview(url, 'Rapport STATEDUC', 'STATEDUC.pdf');
+                } else {
+                    await this.downloadFile(url, 'STATEDUC.xlsx');
+                }
             } catch (err) {
                 this.error = window.api.toMessage(err, "Erreur lors du téléchargement du rapport STATEDUC.");
             } finally {
@@ -302,7 +299,8 @@ document.addEventListener('alpine:init', () => {
                 selectedStudent: null,
                 schoolYearId: active ? active.id : '', reason: 'Demenagement', reasonDetails: '',
                 destinationSchoolName: '', destinationCity: '',
-                busy: false, error: null
+                busy: false, error: null, result: null,
+                bookletBusy: false, bookletError: null
             };
         },
         closeIssue() { this.issueModal.open = false; },
@@ -351,7 +349,7 @@ document.addEventListener('alpine:init', () => {
             m.busy = true;
             m.error = null;
             try {
-                const { blob, certificateNumber, wasFinanciallyClear } = await this.postForPdfBlob(
+                const outcome = await this.postAndDownloadFile(
                     `/api/v1/state-integration/students/${m.selectedStudent.id}/mutation-certificate`,
                     {
                         schoolYearId: m.schoolYearId,
@@ -359,30 +357,36 @@ document.addEventListener('alpine:init', () => {
                         reasonDetails: m.reasonDetails.trim() || null,
                         destinationSchoolName: m.destinationSchoolName.trim() || null,
                         destinationCity: m.destinationCity.trim() || null
-                    }
+                    },
+                    'certificat-mutation.pdf'
                 );
-
-                // Le certificat est gravé : on ferme le formulaire, on rafraîchit le registre, puis on
-                // présente le PDF dans la visionneuse partagée (voir / imprimer / télécharger) — même
-                // parcours que le reçu d'inscription ou le billet d'entrée. Le numéro officiel et la
-                // situation financière figurent sur le document lui-même.
-                this.closeIssue();
+                m.result = outcome;
                 await this.loadCertificates();
-                this.showPdfBlob(
-                    blob,
-                    'Certificat de mutation',
-                    `certificat-mutation-${certificateNumber || 'eleve'}.pdf`
-                );
-
-                if (!wasFinanciallyClear) {
-                    window.toast.error(
-                        'Solde débiteur au jour de la délivrance : la mention figure sur le certificat, '
-                        + 'qui reste valable.');
-                }
             } catch (err) {
                 m.error = window.api.toMessage(err, 'Erreur lors de la délivrance du certificat.');
             } finally {
                 m.busy = false;
+            }
+        },
+
+        // Après délivrance, le livret est la pièce que l'école d'accueil réclame « aux côtés du
+        // certificat » (Volume 1 §23.6) : proposé ici avec le même élève et la même année, sans ressaisie.
+        async downloadIssueBooklet() {
+            const m = this.issueModal;
+            if (!m.selectedStudent || !m.schoolYearId || m.bookletBusy) return;
+
+            m.bookletBusy = true;
+            m.bookletError = null;
+            try {
+                await this.openPdfPreview(
+                    `/api/v1/state-integration/students/${m.selectedStudent.id}/skills-booklet?schoolYearId=${m.schoolYearId}`,
+                    'Livret de compétences',
+                    'livret-competences.pdf'
+                );
+            } catch (err) {
+                m.bookletError = window.api.toMessage(err, "Erreur lors de l'ouverture du livret.");
+            } finally {
+                m.bookletBusy = false;
             }
         },
 
@@ -409,20 +413,15 @@ document.addEventListener('alpine:init', () => {
             m.busy = true;
             m.error = null;
             try {
-                await this.downloadFile(
+                await this.openPdfPreview(
                     `/api/v1/state-integration/students/${m.selectedStudent.id}/skills-booklet?schoolYearId=${m.schoolYearId}`,
+                    'Livret de compétences',
                     'livret-competences.pdf'
                 );
                 m.open = false;
             } catch (err) {
-                // 409 = pas de grille de compétences pour le niveau de l'élève. Ce n'est pas une panne :
-                // c'est une orientation (« utilisez le bulletin de notes »). On ferme le formulaire et on
-                // la présente dans la modale d'information centrée, pas en bandeau rouge sous les champs.
-                m.open = false;
-                this.notice = window.api.toMessage(
-                    err,
-                    "Le livret de compétences ne s'applique qu'aux niveaux dotés d'une grille APC. "
-                    + 'Pour les autres, utilisez le bulletin de notes.');
+                // 409 = pas de grille de compétences configurée pour le niveau de l'élève.
+                m.error = window.api.toMessage(err, "Erreur lors de l'ouverture du livret. Vérifiez que le niveau de l'élève dispose d'une grille de compétences APC configurée.");
             } finally {
                 m.busy = false;
             }
@@ -473,13 +472,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * POST qui ÉCRIT (numéro de certificat séquentiel, ligne en base) et renvoie le PDF dans le
-         * corps, avec le numéro et la situation financière en EN-TÊTES (X-Certificate-Number,
-         * X-Financially-Clear). UN SEUL essai, jamais de relance : rejouer graverait un second numéro
-         * officiel. On rend les octets bruts à l'appelant, qui les confie à la visionneuse partagée —
-         * `openPdfPreview`, lui, relance sur coupure réseau et ne conviendrait donc pas ici.
+         * Variante POST de downloadFile() : la délivrance d'un certificat de mutation ÉCRIT (numéro
+         * séquentiel, ligne en base) et renvoie le PDF en même temps — le contrôleur fait voyager le
+         * numéro et l'état financier en EN-TÊTES (X-Certificate-Number, X-Financially-Clear) parce que
+         * le corps de la réponse est déjà pris par le PDF. On les lit ici pour les rendre à l'écran sans
+         * ressaisir de requête.
          */
-        async postForPdfBlob(url, body) {
+        async postAndDownloadFile(url, body, fallbackName) {
             if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
                 await window.api.refreshOrRedirect();
             }
@@ -503,11 +502,20 @@ document.addEventListener('alpine:init', () => {
                 throw err;
             }
 
-            return {
-                blob: await response.blob(),
-                certificateNumber: response.headers.get('X-Certificate-Number'),
-                wasFinanciallyClear: response.headers.get('X-Financially-Clear') === 'true'
-            };
+            const certificateNumber = response.headers.get('X-Certificate-Number');
+            const wasFinanciallyClear = response.headers.get('X-Financially-Clear') === 'true';
+
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = this.fileNameFrom(response, fallbackName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+
+            return { certificateNumber, wasFinanciallyClear };
         }
     }));
 });

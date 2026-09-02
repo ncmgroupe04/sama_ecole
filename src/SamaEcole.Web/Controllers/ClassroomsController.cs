@@ -4,6 +4,7 @@ using SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
 using SamaEcole.Application.Classrooms.Queries.GetClassrooms;
 using SamaEcole.Application.Classrooms.Queries.GetSchoolCardsPdf;
 using SamaEcole.Application.SchoolYears.Queries.GetSchoolYears;
+using SamaEcole.Web.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -110,6 +111,9 @@ public class ClassroomsController(ISender mediator) : ControllerBase
         }
 
         var pdfBytes = await mediator.Send(new GetSchoolCardsPdfQuery(id, targetYearId), cancellationToken);
-        return File(pdfBytes, "application/pdf", $"Cartes_Scolaires_{id}.pdf");
+
+        // `inline` : le PDF s'ouvre d'abord dans la modale d'aperçu partagée (_PdfPreviewModal),
+        // jamais un téléchargement forcé.
+        return this.InlinePdf(pdfBytes, $"Cartes_Scolaires_{id}.pdf");
     }
 }

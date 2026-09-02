@@ -11,12 +11,16 @@ namespace SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
 ///   * ReEnrollment — inscrit un élève DÉJÀ connu (<see cref="StudentId"/> requis), sans nouveau matricule.
 ///
 /// Dans les deux cas, le service calcule le montant dû à partir du barème de la classe (JGK-F01) et
-/// initialise le compte financier (lignes de frais figées). Ce qui ne figure PAS ici, à dessein :
+/// initialise le compte financier (lignes de frais figées). L'inscription FIGE LA DETTE, elle
+/// n'encaisse rien : le secrétariat n'enregistre aucun versement (AGENTS.md règle #4,
+/// docs/design-references/README.md §1). Tout règlement passe ensuite par la Caisse
+/// (RecordPaymentCommand). Ce qui ne figure PAS ici, à dessein :
 ///
 ///   * Le SchoolId — lu du JWT, jamais du client (AGENTS.md règle #10).
 ///   * L'année scolaire — l'inscription porte l'année ACTIVE, résolue serveur (mission JGK-E01).
 ///   * Le TotalDue — calculé serveur ; l'accepter du client laisserait fixer un montant arbitraire
 ///     (règle #4 : le montant d'une inscription n'est pas une donnée d'entrée).
+///   * Tout encaissement — aucun versement, aucun mode de règlement : ce n'est pas le rôle de cet acte.
 /// </summary>
 public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
 {
@@ -40,26 +44,4 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     public string? Gender { get; init; }
     public string? GuardianName { get; init; }
     public string? GuardianPhone { get; init; }
-
-    // --- Encaissement du jour (ventilé) ---
-
-    /// <summary>
-    /// Frais réglés au guichet AU MOMENT de l'inscription, catégorie par catégorie. Liste vide = dossier
-    /// ouvert sans versement : l'inscription est créée, aucun paiement ne l'est, et le reçu s'imprime
-    /// avec un total encaissé de 0.
-    ///
-    /// Le client désigne QUOI est réglé, jamais COMBIEN : les montants sont repris du barème que le
-    /// serveur vient lui-même de figer (règle #4 — un montant n'est pas une donnée d'entrée).
-    /// </summary>
-    public IReadOnlyList<CollectedFeeInput> CollectedFees { get; init; } = [];
-
-    /// <summary>Mode de règlement du versement du jour. Ignoré si <see cref="CollectedFees"/> est vide.</summary>
-    public PaymentMethod PaymentMethod { get; init; } = PaymentMethod.Cash;
 }
-
-/// <summary>
-/// Une catégorie de frais réglée à l'inscription. <paramref name="Months"/> ne vaut que pour une
-/// mensualité (« le tuteur règle 2 mois d'avance ») : sur un frais ponctuel il est ignoré, la ligne
-/// étant réglée en entier ou pas du tout. Le serveur borne ce nombre au nombre de mois facturés.
-/// </summary>
-public record CollectedFeeInput(Guid FeeCategoryId, int Months = 1);

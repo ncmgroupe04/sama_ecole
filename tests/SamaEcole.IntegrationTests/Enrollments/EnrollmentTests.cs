@@ -12,16 +12,6 @@ using Xunit;
 
 namespace SamaEcole.IntegrationTests.Enrollments;
 
-/// <summary>
-/// Le Handler ne lit qu'un champ : l'auteur de l'encaissement du jour (Payment.ReceivedByUserId).
-/// </summary>
-file sealed class FakeCurrentUserService(Guid userId) : ICurrentUserService
-{
-    public Guid? UserId => userId;
-    public Role? Role => SamaEcole.Domain.Enums.Role.Secretariat;
-    public string? IpAddress => null;
-}
-
 /// <summary>Cache KPI désactivé : ces tests exercent le Handler directement, hors DI (donc hors le
 /// Kpi__Cache__Enabled=false posé par AuthApiFactory pour les tests fonctionnels).</summary>
 file sealed class NoOpKpiCacheService : IKpiCacheService
@@ -87,23 +77,13 @@ public class EnrollmentTests : IAsyncLifetime
 
         owner.SchoolSettings.Add(new SchoolSettings { SchoolId = EcoleA, TuitionMonthsPerYear = TuitionMonths });
 
-        // L'opérateur (FakeCurrentUserService renvoie Caissier) doit exister : cashier_sessions.CashierId
-        // et payments.ReceivedByUserId portent une FK vers users.
-        owner.Users.Add(new User
-        {
-            Id = Caissier, SchoolId = EcoleA, Email = "caissier.a@ecole-a.sn",
-            PasswordHash = "hash", FullName = "Caissier A", Role = Role.Secretariat
-        });
-
         await owner.SaveChangesAsync(CancellationToken.None);
     }
 
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
-    private static readonly Guid Caissier = Guid.Parse("eeeeeeee-0000-0000-0000-00000000000e");
-
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db, Guid schoolId) =>
-        new(db, new StubTenantProvider(schoolId), new FakeCurrentUserService(Caissier),
+        new(db, new StubTenantProvider(schoolId),
             _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService());
 
     private static CreateEnrollmentCommand NewStudentCommand(string fullName) => new()
@@ -150,6 +130,27 @@ public class EnrollmentTests : IAsyncLifetime
         lines.Should().HaveCount(2);
         lines.Sum(l => l.LineTotal).Should().Be(receipt.TotalDue);
         lines.Should().Contain(l => l.Designation == "Mensualité" && l.Months == TuitionMonths);
+    }
+
+    [Fact]
+    public async Task A_New_Enrollment_Freezes_The_Debt_But_Records_No_Payment()
+    {
+        // Règle #4 / refonte du 25/08/2026 : le secrétariat n'encaisse rien. L'inscription fige le dû
+        // annuel, laisse AmountPaid à 0, et ne crée AUCUN Payment — le règlement se fait à la Caisse.
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var receipt = await NewHandler(db, EcoleA).Handle(NewStudentCommand("Sans Versement"), CancellationToken.None);
+
+        receipt.TotalCollected.Should().Be(0m);
+        receipt.CollectedLines.Should().BeEmpty();
+        receipt.PaymentMethod.Should().BeNull();
+        receipt.RemainingBalance.Should().Be(receipt.TotalDue);
+
+        await using var check = _db.NewAppContext(EcoleA);
+        (await check.Payments.CountAsync(p => p.EnrollmentId == receipt.EnrollmentId))
+            .Should().Be(0, "l'inscription n'encaisse jamais un fonds");
+        (await check.Enrollments.Where(e => e.Id == receipt.EnrollmentId).Select(e => e.AmountPaid).FirstAsync())
+            .Should().Be(0m);
     }
 
     [Fact]
@@ -270,66 +271,6 @@ public class EnrollmentTests : IAsyncLifetime
 
         var visibleToB = (long)(await command.ExecuteScalarAsync())!;
         visibleToB.Should().Be(0, "une inscription d'une autre école ne doit jamais être visible (règle #2)");
-    }
-
-    [Fact]
-    public async Task Collecting_Fees_At_Enrollment_Without_An_Open_Cashier_Session_Is_Refused()
-    {
-        // L'encaissement du jour est une opération de CAISSE : sans session ouverte pour l'opérateur,
-        // ces espèces échapperaient au rapprochement de clôture (Volume 1 §14). Le Handler refuse
-        // (ValidationException) et le rollback rembobine tout — aucun élève, aucune inscription.
-        await using var db = _db.NewAppContext(EcoleA);
-        var command = NewStudentCommand("Sans Caisse") with
-        {
-            CollectedFees = [new CollectedFeeInput(CatInscription)],
-            PaymentMethod = PaymentMethod.Cash
-        };
-
-        var act = async () => await NewHandler(db, EcoleA).Handle(command, CancellationToken.None);
-
-        await act.Should().ThrowAsync<ValidationException>();
-
-        await using var check = _db.NewAppContext(EcoleA);
-        (await check.Students.CountAsync()).Should().Be(0, "le rollback rembobine tout, matricule compris");
-        (await check.Enrollments.CountAsync()).Should().Be(0);
-    }
-
-    [Fact]
-    public async Task Fees_Collected_At_Enrollment_Are_Attached_To_The_Operators_Open_Cashier_Session()
-    {
-        // Session ouverte pour le caissier (le Handler lit currentUser.UserId == Caissier) : l'encaissement
-        // du jour s'y rattache, exactement comme RecordPaymentCommand — c'est ce qui le fait entrer dans
-        // le rapprochement de clôture.
-        var sessionId = Guid.CreateVersion7();
-        await using (var owner = _db.NewOwnerContext())
-        {
-            owner.CashierSessions.Add(new CashierSession
-            {
-                Id = sessionId,
-                SchoolId = EcoleA,
-                CashierId = Caissier,
-                OpenedAt = DateTimeOffset.UtcNow,
-                OpeningBalance = 0m,
-                Status = CashierSessionStatus.Open
-            });
-            await owner.SaveChangesAsync(CancellationToken.None);
-        }
-
-        await using var db = _db.NewAppContext(EcoleA);
-        var receipt = await NewHandler(db, EcoleA).Handle(
-            NewStudentCommand("Awa Encaissée") with
-            {
-                CollectedFees = [new CollectedFeeInput(CatInscription)],
-                PaymentMethod = PaymentMethod.Cash
-            },
-            CancellationToken.None);
-
-        receipt.TotalCollected.Should().Be(Inscription);
-
-        await using var check = _db.NewAppContext(EcoleA);
-        var payment = await check.Payments.SingleAsync(p => p.EnrollmentId == receipt.EnrollmentId);
-        payment.CashierSessionId.Should().Be(sessionId, "l'encaissement d'inscription est une écriture de la session de caisse ouverte");
-        payment.Amount.Should().Be(Inscription);
     }
 
     private sealed class StubTenantProvider(Guid? schoolId) : ITenantProvider

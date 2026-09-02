@@ -19,15 +19,14 @@ namespace SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
 /// Le montant dû est CALCULÉ ici à partir du barème de la classe (JGK-F01), figé ligne à ligne, et
 /// n'est jamais lu de la requête (règle #4 et #10).
 ///
-/// L'ENCAISSEMENT DU JOUR est ventilé dans la même transaction : le guichet coche les frais réglés
-/// (inscription, tenue, 1re mensualité…), le serveur en reprend les montants du barème qu'il vient de
-/// figer, écrit la part encaissée sur chaque ligne et matérialise un <see cref="Payment"/> unique.
-/// Inscription et versement sont ainsi indissociables — jamais un reçu sans écriture de caisse en face.
+/// L'inscription FIGE LA DETTE et rien d'autre : elle ne crée AUCUN <see cref="Payment"/>,
+/// <c>AmountPaid</c> reste à 0. Le secrétariat n'encaisse aucun fonds (AGENTS.md règle #4,
+/// docs/design-references/README.md §1) ; tout règlement, y compris le premier, se fait ensuite à la
+/// Caisse (RecordPaymentCommand), sur la base du reçu d'inscription.
 /// </summary>
 public class CreateEnrollmentCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
-    ICurrentUserService currentUser,
     IMatriculeGenerator matriculeGenerator,
     TimeProvider timeProvider,
     IKpiCacheService kpiCache)
@@ -37,9 +36,6 @@ public class CreateEnrollmentCommandHandler(
     {
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
-
-        var actorId = currentUser.UserId
-            ?? throw new UnauthorizedAccessException("Utilisateur courant inconnu.");
 
         // L'inscription porte l'année ACTIVE (mission JGK-E01). Sans année active, l'école ne peut rien
         // rattacher : on refuse en 422 plutôt que de deviner une année.
@@ -89,32 +85,6 @@ public class CreateEnrollmentCommandHandler(
             var lines = await BuildFeeLinesAsync(schoolId, request.ClassroomId, tuitionMonths, ct);
             var totalDue = lines.Sum(l => l.LineTotal);
 
-            // Ventilation de l'encaissement du jour SUR ces lignes (montants du barème, jamais du client).
-            ApplyCollectedFees(lines, request.CollectedFees);
-            var totalCollected = lines.Sum(l => l.AmountCollected);
-
-            // L'encaissement du jour est une opération de CAISSE à part entière : comme
-            // RecordPaymentCommandHandler, il exige une session de caisse OUVERTE pour l'opérateur et s'y
-            // rattache — sans quoi ces espèces échapperaient au rapprochement de clôture (Volume 1 §14 :
-            // « tous les encaissements de guichet de la journée sont rattachés à la session ouverte »).
-            // Aucun encaissement ⇒ aucune session requise : on peut ouvrir un dossier sans versement et
-            // encaisser plus tard depuis l'écran Caisse. Le refus intervient AVANT le numéro de reçu :
-            // rien n'est consommé (le rollback rembobinerait de toute façon, mais autant échouer tôt).
-            CashierSession? cashierSession = null;
-            if (totalCollected > 0)
-            {
-                cashierSession = await dbContext.CashierSessions
-                    .FirstOrDefaultAsync(
-                        s => s.CashierId == actorId && s.Status == CashierSessionStatus.Open, ct)
-                    ?? throw new ValidationException([
-                        new ValidationFailure(
-                            "CashierSession",
-                            "Aucune session de caisse ouverte : ouvrez votre caisse (menu Caisse) avant "
-                            + "d'encaisser des frais à l'inscription, ou enregistrez l'inscription sans "
-                            + "versement — les frais pourront être encaissés ensuite depuis la Caisse.")
-                    ]);
-            }
-
             // Numéro officiel du reçu (JGK-E02), attribué DANS la transaction comme le matricule : s'il y
             // a le moindre rollback ensuite, le compteur de reçus est rembobiné avec — aucun trou.
             var receiptNumber = await matriculeGenerator.GenerateNextReceiptNumberAsync(schoolId, ct);
@@ -129,7 +99,8 @@ public class CreateEnrollmentCommandHandler(
                 IsRepeating = request.IsRepeating,
                 Status = EnrollmentStatus.Confirmed,
                 TotalDue = totalDue,
-                AmountPaid = totalCollected,
+                // L'inscription n'encaisse rien : la dette est intégralement à régler à la Caisse.
+                AmountPaid = 0m,
                 ReceiptNumber = receiptNumber,
                 EnrolledAt = timeProvider.GetUtcNow()
             };
@@ -141,28 +112,6 @@ public class CreateEnrollmentCommandHandler(
                 line.SchoolId = schoolId;
                 line.EnrollmentId = enrollment.Id;
                 dbContext.EnrollmentFeeLines.Add(line);
-            }
-
-            // Écriture de caisse du jour. Elle porte le MÊME numéro de reçu que l'inscription : le tuteur
-            // repart avec UNE pièce, qui atteste à la fois de l'affectation et du versement — deux numéros
-            // pour un seul papier rendraient le carnet de reçus incompréhensible au contrôle.
-            // Aucun versement ⇒ aucun Payment : un encaissement de 0 F n'est pas un encaissement.
-            if (totalCollected > 0)
-            {
-                dbContext.Payments.Add(new Payment
-                {
-                    SchoolId = schoolId,
-                    EnrollmentId = enrollment.Id,
-                    // Non-null dès que totalCollected > 0 : la garde ci-dessus a jeté sinon.
-                    CashierSessionId = cashierSession!.Id,
-                    Amount = totalCollected,
-                    Method = request.PaymentMethod,
-                    Status = totalCollected >= totalDue ? PaymentStatus.Paid : PaymentStatus.Partial,
-                    BalanceAfter = totalDue - totalCollected,
-                    ReceiptNumber = receiptNumber,
-                    ReceivedByUserId = actorId,
-                    PaidAt = enrollment.EnrolledAt
-                });
             }
 
             await dbContext.SaveChangesAsync(ct);
@@ -194,9 +143,12 @@ public class CreateEnrollmentCommandHandler(
                 lines.Select(l => new EnrollmentFeeLineDto(
                     l.Designation, l.IsRecurring, l.UnitAmount, l.Months, l.LineTotal)).ToList(),
                 totalDue,
-                ToCollectedLines(lines),
-                totalCollected,
-                totalCollected > 0 ? request.PaymentMethod.ToString() : null,
+                // Rien n'est encaissé à l'inscription : ventilation vide, total à 0, aucun mode de
+                // règlement. Ces champs ne sont peuplés que par la relecture d'un reçu historique
+                // (GetEnrollmentReceiptQuery) et restent au DTO pour la stabilité de forme côté Finance.
+                [],
+                0m,
+                null,
                 classroom.IsAccelerated);
         }, cancellationToken);
 
@@ -207,40 +159,6 @@ public class CreateEnrollmentCommandHandler(
 
         return receipt;
     }
-
-    /// <summary>
-    /// Reporte les frais cochés au guichet sur les lignes de barème déjà figées. Le montant vient
-    /// TOUJOURS de la ligne (donc du barème) : la requête ne dit que « cette catégorie, sur N mois ».
-    ///
-    /// Une catégorie inconnue de la classe est ignorée en silence plutôt que rejetée : le barème peut
-    /// avoir changé entre l'ouverture du formulaire et l'enregistrement, et refuser toute l'inscription
-    /// pour une case cochée devenue caduque serait disproportionné — le reçu, lui, reste exact
-    /// puisqu'il n'imprime que ce qui a réellement été encaissé.
-    /// </summary>
-    private static void ApplyCollectedFees(
-        List<EnrollmentFeeLine> lines, IReadOnlyList<CollectedFeeInput> collected)
-    {
-        foreach (var input in collected)
-        {
-            var line = lines.FirstOrDefault(l => l.FeeCategoryId == input.FeeCategoryId);
-            if (line is null)
-            {
-                continue;
-            }
-
-            // Un frais ponctuel se règle en entier ou pas du tout ; une mensualité se règle au mois, dans
-            // la limite des mois facturés à l'année — on n'encaisse jamais plus que ce qui est dû.
-            var months = line.IsRecurring ? Math.Min(input.Months, line.Months) : 1;
-
-            line.MonthsCollected = months;
-            line.AmountCollected = line.IsRecurring ? line.UnitAmount * months : line.LineTotal;
-        }
-    }
-
-    private static List<CollectedFeeLineDto> ToCollectedLines(IEnumerable<EnrollmentFeeLine> lines) =>
-        lines.Where(l => l.MonthsCollected > 0)
-            .Select(l => new CollectedFeeLineDto(l.Designation, l.IsRecurring, l.MonthsCollected, l.AmountCollected))
-            .ToList();
 
     private async Task<(Student student, string matricule)> CreateStudentAsync(
         Guid schoolId, CreateEnrollmentCommand request, CancellationToken ct)

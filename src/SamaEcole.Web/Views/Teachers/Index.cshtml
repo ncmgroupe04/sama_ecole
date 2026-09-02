@@ -291,6 +291,12 @@
  <modal-shell size="lg" open="editingTeacher" on-close="closeEditTeacher()" title="Modifier la fiche">
  <modal-subtitle>Le matricule reste celui déjà attribué : il n'est jamais modifiable.</modal-subtitle>
 
+ <!-- editingTeacher démarre à null : sans ce garde, Alpine évalue "editingTeacher.fullName" etc.
+      contre null dès le premier rendu (ReferenceError avalée en silence par Alpine, mais bruit de
+      console réel sur une fiche qui n'a pourtant jamais été ouverte en édition). -->
+ <template x-if="editingTeacher">
+ <div>
+
  <div x-show="teacherEditErrors.global" x-cloak class="form-error-banner" x-text="teacherEditErrors.global"></div>
 
  <form x-on:submit.prevent="submitEditTeacher()" novalidate class="space-y-4">
@@ -402,6 +408,8 @@
  </button>
  </div>
  </form>
+ </div>
+ </template>
  </modal-shell>
 
  <!-- Confirmation : fiche modifiée -->

@@ -49,14 +49,20 @@ public class ItemAssignmentConfiguration : IEntityTypeConfiguration<ItemAssignme
             "CK_item_assignments_quantity_positive", "\"Quantity\" > 0"));
 
         // Exactement UN bénéficiaire, et il correspond au type déclaré.
+        //
+        // Chaîne sur UNE seule ligne (\n explicites), jamais un raw string multi-lignes : un littéral
+        // qui s'étend sur plusieurs lignes physiques du fichier source contient de VRAIS caractères de
+        // fin de ligne, que git réécrit au checkout selon core.autocrlf — CRLF sur Windows, LF partout
+        // ailleurs. La migration qui a figé cette contrainte capture un octet précis ; la relire sur une
+        // machine dont le retour à la ligne diffère fait croire à EF Core que le modèle a changé
+        // (PendingModelChangesWarning, qui casse net tous les tests d'intégration au démarrage). Un \n
+        // explicite est un caractère d'échappement, jamais transformé par le checkout.
         builder.ToTable(t => t.HasCheckConstraint(
             "CK_item_assignments_beneficiary",
-            """
-            (("StudentId" IS NOT NULL)::int + ("TeacherId" IS NOT NULL)::int + ("UserId" IS NOT NULL)::int) = 1
-            AND ("BeneficiaryType" <> 'Eleve' OR "StudentId" IS NOT NULL)
-            AND ("BeneficiaryType" <> 'Enseignant' OR "TeacherId" IS NOT NULL)
-            AND ("BeneficiaryType" <> 'Personnel' OR "UserId" IS NOT NULL)
-            """));
+            "((\"StudentId\" IS NOT NULL)::int + (\"TeacherId\" IS NOT NULL)::int + (\"UserId\" IS NOT NULL)::int) = 1\n"
+            + "AND (\"BeneficiaryType\" <> 'Eleve' OR \"StudentId\" IS NOT NULL)\n"
+            + "AND (\"BeneficiaryType\" <> 'Enseignant' OR \"TeacherId\" IS NOT NULL)\n"
+            + "AND (\"BeneficiaryType\" <> 'Personnel' OR \"UserId\" IS NOT NULL)"));
 
         builder.HasIndex(a => new { a.SchoolId, a.ItemId });
         builder.HasIndex(a => new { a.SchoolId, a.StudentId });

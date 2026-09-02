@@ -456,6 +456,12 @@
 
     <modal-shell open="editingItem" on-close="closeEditItem()" title="Modifier le bien" size="lg">
         <modal-subtitle><span x-text="editingItem ? editingItem.name : ''"></span></modal-subtitle>
+        <!-- editingItem démarre à null (voir Alpine.data) : tant que la modale n'a jamais été ouverte,
+             ce sous-arbre ne doit pas exister, sans quoi Alpine évalue "editingItem.name" etc. contre
+             null dès le premier rendu (ReferenceError avalée en silence, mais bruit de console réel
+             sur un formulaire qui n'a pourtant jamais été ouvert). -->
+        <template x-if="editingItem">
+        <div>
         <div x-show="editItemErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editItemErrors.global"></div>
         <form x-on:submit.prevent="submitEditItem()" novalidate class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -519,6 +525,8 @@
                 </button>
             </div>
         </form>
+        </div>
+        </template>
     </modal-shell>
 
     <modal-shell open="deletingItem" on-close="closeDeleteItem()" size="md">
@@ -663,6 +671,9 @@
 
     <modal-shell size="lg" open="editingCategory" on-close="closeEditCategory()" title="Modifier la catégorie">
         <modal-subtitle><span x-text="editingCategory ? editingCategory.name : ''"></span></modal-subtitle>
+        <!-- editingCategory démarre à null — voir la même remarque sur editingItem plus haut. -->
+        <template x-if="editingCategory">
+        <div>
         <div x-show="editCategoryErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editCategoryErrors.global"></div>
         <form x-on:submit.prevent="submitEditCategory()" novalidate class="space-y-4">
             <div>
@@ -683,6 +694,8 @@
                 </button>
             </div>
         </form>
+        </div>
+        </template>
     </modal-shell>
 
     <modal-shell open="deletingCategory" on-close="closeDeleteCategory()" size="md">

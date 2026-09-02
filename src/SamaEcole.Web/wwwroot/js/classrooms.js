@@ -101,6 +101,10 @@ document.addEventListener('alpine:init', () => {
      * refuserait. Un objet vide reste un défaut sûr : la liste s'affiche alors vide, jamais une erreur.
      */
     Alpine.data('classroomsView', (gradeLevels = {}) => ({
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : les cartes scolaires s'ouvrent dans la
+        // modale _PdfPreviewModal (impression / téléchargement au choix), jamais un download forcé.
+        ...window.pdfPreview.state(),
+
         gradeLevels,
         classrooms: [],
         isLoading: false,
@@ -377,28 +381,14 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------ Téléchargement Cartes Scolaires
         
         async downloadSchoolCards(classroom) {
-            try {
-                const response = await fetch(`/api/v1/classrooms/${classroom.id}/school-cards`, {
-                    headers: { 'Authorization': `Bearer ${window.auth.accessToken}` }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Erreur lors de la génération des cartes scolaires.');
-                }
-                
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `Cartes_Scolaires_${classroom.name}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-            } catch (err) {
-                console.error(err);
-                alert('Impossible de télécharger les cartes scolaires. Vérifiez qu\'il y a bien des élèves inscrits dans cette classe pour l\'année en cours.');
-            }
+            // Ouvre les cartes dans la modale d'aperçu partagée (pdf-preview.js) : l'utilisateur
+            // vérifie le rendu puis imprime ou télécharge depuis l'en-tête de la modale. Un 422
+            // (aucun élève inscrit pour l'année) remonte comme message lisible dans la modale.
+            await this.openPdfPreview(
+                `/api/v1/classrooms/${classroom.id}/school-cards`,
+                `Cartes scolaires — ${classroom.name}`,
+                `Cartes_Scolaires_${classroom.name}.pdf`
+            );
         },
 
         /**

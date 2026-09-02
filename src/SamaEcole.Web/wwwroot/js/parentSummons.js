@@ -5,8 +5,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('parentSummonsView', () => ({
-        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
-        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : la convocation s'ouvre dans la modale
+        // _PdfPreviewModal (impression / téléchargement au choix), jamais un download forcé.
         ...window.pdfPreview.state(),
 
         records: [],
@@ -49,10 +49,7 @@ document.addEventListener('alpine:init', () => {
 
         async loadStudents() {
             try {
-                // pageSize plafonné à 100 côté serveur (GetStudentsQueryValidator.MaxPageSize) :
-                // pageSize=1000 partait toujours en 422 et laissait le sélecteur d'élève vide sans
-                // erreur visible. Même correctif que payroll.js / billets.js (bug du 27/08/2026).
-                const data = await api.get('/students?page=1&pageSize=100');
+                const data = await api.get('/students?page=1&pageSize=1000');
                 this.students = (data && data.items) || [];
             } catch (error) {
                 console.error('Erreur chargement élèves:', error);
@@ -93,7 +90,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Convocation : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
+        /** Convocation PDF, ouverte dans la modale d'aperçu partagée — même mécanique que discipline.js printPv. */
         async printNotice(recordId) {
             if (!recordId || recordId === 'undefined') {
                 console.error('Identifiant de convocation invalide ou indéfini', recordId);
@@ -103,8 +100,9 @@ document.addEventListener('alpine:init', () => {
             try {
                 await this.openPdfPreview(
                     `/api/v1/parent-summons/${recordId}/notice/pdf`,
-                    'Convocation de parent',
-                    `Convocation-${recordId}.pdf`);
+                    'Convocation parent',
+                    `Convocation-${recordId}.pdf`
+                );
             } finally {
                 this.printingId = null;
             }

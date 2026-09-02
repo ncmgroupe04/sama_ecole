@@ -17,6 +17,7 @@ using SamaEcole.Application.Exams.Queries.GetExamSessions;
 using SamaEcole.Application.Exams.Queries.GetExamStatistics;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
+using SamaEcole.Web.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -251,7 +252,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> GetCandidateFormPdf(Guid id, CancellationToken cancellationToken)
     {
         var pdf = await mediator.Send(new GetExamCandidateFormPdfQuery(id), cancellationToken);
-        return File(pdf, "application/pdf");
+        return this.InlinePdf(pdf, "Fiche-Candidature.pdf");
     }
 
     /// <summary>Ne retient que les dossiers Complet/Transmis/Valide — voir GetExamCandidateFormsBatchPdfQuery.</summary>
@@ -263,7 +264,7 @@ public class ExamsController(ISender mediator) : ControllerBase
         [FromBody] GetExamCandidateFormsBatchPdfQuery query, CancellationToken cancellationToken)
     {
         var pdf = await mediator.Send(query, cancellationToken);
-        return File(pdf, "application/pdf");
+        return this.InlinePdf(pdf, "Fiches-Candidature.pdf");
     }
 
     /// <summary>Refusée (409) tant que centre et numéro de table ne sont pas attribués.</summary>
@@ -275,7 +276,7 @@ public class ExamsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> GetConvocationPdf(Guid id, CancellationToken cancellationToken)
     {
         var pdf = await mediator.Send(new GetExamConvocationPdfQuery(id), cancellationToken);
-        return File(pdf, "application/pdf");
+        return this.InlinePdf(pdf, "Convocation.pdf");
     }
 
     /// <summary>

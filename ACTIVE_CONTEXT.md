@@ -384,3 +384,26 @@ jamais anticipé côté client, qui ne connaît pas les espèces attendues. Vér
 (navigateur + PostgreSQL) : montant incorrect → 422 → motif → clôture → rapport à jour. Tests :
 `CloseCashierSessionCommandValidatorTests.cs` (5/5), `CashierSessionClosingTests.cs` (6/6, dont la preuve
 qu'un paiement non-espèces n'entre jamais dans l'écart).
+
+### Inscription = calcul seul, encaissement = Caisse (30/08/2026)
+
+L'écran `/inscriptions` mélangeait deux métiers : il **calculait** les frais dus **et** encaissait le
+versement du jour (cases « ce frais est réglé », mode de règlement, création d'un `Payment` dans la
+transaction). Contraire au principe déjà acté par la refonte du reçu du 25/08/2026 (`docs/design-
+references/README.md` §1 : « le secrétariat n'encaisse aucun fonds »). Séparation appliquée :
+
+- **`POST /api/v1/enrollments`** n'accepte plus `collectedFees` / `paymentMethod` (retirés de
+  `CreateEnrollmentCommand`, du validateur et d'`openapi.yaml`). `CreateEnrollmentCommandHandler` fige
+  le dû annuel, laisse `AmountPaid = 0` et ne crée **jamais** de `Payment` — la dépendance
+  `ICurrentUserService` (n'y servait qu'à l'auteur du versement) a été retirée du constructeur.
+- **Écran `/inscriptions`** : panneau renommé « Frais », barème en **lecture seule** + un simulateur
+  de mensualités **purement indicatif** (`simMonths` / `simSubtotal()` dans `enrollments.js`, aucun
+  appel réseau). Plus de mode de règlement, plus de « Encaissé ce jour ».
+- **Caisse (`/caisse`) inchangée** : elle voit désormais l'intégralité du solde à encaisser et prend
+  le premier versement comme les suivants (`RecordPaymentCommand`). Le solde/échéancier ne dépendaient
+  déjà pas du `Payment` d'inscription (`InstallmentScheduleCalculator`).
+- `EnrollmentReceiptDto` garde `CollectedLines` / `TotalCollected` / `PaymentMethod` (front + Finance)
+  mais ils valent toujours vide / 0 / null pour une inscription ; `GetEnrollmentReceiptQuery` les
+  renseigne encore à la relecture d'un reçu historique. Tests :
+  `EnrollmentTests.A_New_Enrollment_Freezes_The_Debt_But_Records_No_Payment`,
+  `EnrollmentsEndpointsTests.An_Enrollment_Never_Records_A_Payment_And_Leaves_The_Whole_Balance_Due`.

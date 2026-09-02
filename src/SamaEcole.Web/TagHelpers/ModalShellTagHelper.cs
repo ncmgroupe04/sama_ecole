@@ -47,6 +47,14 @@ public class ModalShellTagHelper : TagHelper
     public string Size { get; set; } = "3xl";
 
     /// <summary>
+    /// Expression Alpine liée en <c>:style</c> sur le panneau, pour piloter dynamiquement sa largeur
+    /// depuis le composant hôte — ex. l'aperçu PDF qui ajuste sa largeur au format du document
+    /// (A4 portrait / paysage / A5) plutôt qu'à un gabarit fixe. S'ajoute à <see cref="Size"/> (qui
+    /// reste le plafond de repli tant que l'expression renvoie une chaîne vide).
+    /// </summary>
+    public string? PanelStyle { get; set; }
+
+    /// <summary>
     /// Masquer l'en-tête bleu par défaut pour créer un en-tête personnalisé dans le corps de la modale.
     /// </summary>
     public bool HideHeader { get; set; } = false;
@@ -83,6 +91,8 @@ public class ModalShellTagHelper : TagHelper
         // Un <modal-title> (HTML brut, liaisons Alpine possibles) l'emporte sur l'attribut title encodé.
         var titleHtml = titleSlot ?? WebUtility.HtmlEncode(Title);
         var maxWidth = MaxWidthClass(Size);
+        // Liaison Alpine émise telle quelle (comme Open/OnClose) : jamais une donnée utilisateur.
+        var panelStyleAttr = string.IsNullOrWhiteSpace(PanelStyle) ? "" : $""" x-bind:style="{PanelStyle}" """;
 
         output.TagName = null; // pas de <modal-shell> littéral au rendu : uniquement le HTML ci-dessous.
         output.Content.SetHtmlContent($"""
@@ -98,7 +108,7 @@ public class ModalShellTagHelper : TagHelper
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
-                     class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-xl">
+                     class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-xl"{panelStyleAttr}>
                     {(HideHeader ? "" : $"""
                     <div class="flex-shrink-0 bg-white border-b border-slate-100 p-6">
                         <div class="flex items-center justify-between gap-4">

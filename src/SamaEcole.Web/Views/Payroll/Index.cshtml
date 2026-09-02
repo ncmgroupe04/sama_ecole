@@ -243,7 +243,7 @@
     </div>
 
     <!-- ===================== Modale : Nouveau contrat ===================== -->
-    <modal-shell size="lg" open="isContractModalOpen" title="Nouveau contrat">
+    <modal-shell size="60" open="isContractModalOpen" title="Nouveau contrat">
         <form x-on:submit.prevent="submitContract()" novalidate class="space-y-5">
             <div>
                 <label class="form-label">Type d'employé</label>
@@ -314,7 +314,7 @@
     </modal-shell>
 
     <!-- ===================== Modale : Modifier un contrat (Volume 1 §14.1) ===================== -->
-    <modal-shell size="lg" open="isEditContractModalOpen" title="Modifier le contrat">
+    <modal-shell size="60" open="isEditContractModalOpen" title="Modifier le contrat">
         <form x-on:submit.prevent="submitEditContract()" novalidate class="space-y-5">
             <div class="form-grid">
                 <div x-show="editContractForm.type === 'Permanent'">
@@ -358,7 +358,7 @@
     </modal-shell>
 
     <!-- ===================== Modale : Clôturer un contrat (Volume 1 §14.1) ===================== -->
-    <modal-shell size="lg" open="isCloseContractModalOpen" title="Clôturer le contrat">
+    <modal-shell size="60" open="isCloseContractModalOpen" title="Clôturer le contrat">
         <form x-on:submit.prevent="submitCloseContract()" novalidate class="space-y-5">
             <p class="text-sm text-slate-500">
                 <span x-text="closeContractForm.employeeFullName" class="font-medium text-slate-700"></span> —
@@ -387,7 +387,7 @@
     </modal-shell>
 
     <!-- ===================== Modale : Générer une fiche de paie ===================== -->
-    <modal-shell size="lg" open="isPayslipModalOpen" title="Générer une fiche de paie">
+    <modal-shell size="60" open="isPayslipModalOpen" title="Générer une fiche de paie">
         <form x-on:submit.prevent="submitPayslip()" novalidate class="space-y-5">
             <div>
                 <label class="form-label">Contrat <span class="text-red-500">*</span></label>
@@ -459,7 +459,7 @@
     </modal-shell>
 
     <!-- ===================== Modale : Générer une déclaration fiscale ===================== -->
-    <modal-shell size="lg" open="isTaxModalOpen" title="Générer une déclaration fiscale">
+    <modal-shell size="60" open="isTaxModalOpen" title="Générer une déclaration fiscale">
         <form x-on:submit.prevent="submitTaxDeclaration()" novalidate class="space-y-5">
             <p class="text-sm text-slate-500">Agrège les charges sociales de toutes les fiches de paie du mois choisi.</p>
             <div class="form-grid">
@@ -488,7 +488,7 @@
     </modal-shell>
 
     <!-- ===================== Modale : Fiche heures Vacataire ===================== -->
-    <modal-shell size="lg" open="isHourRecordsModalOpen" title="Fiche heures — Vacataire">
+    <modal-shell size="60" open="isHourRecordsModalOpen" title="Fiche heures — Vacataire">
         <modal-subtitle><span x-text="hourRecordsContract ? hourRecordsContract.employeeFullName : ''"></span></modal-subtitle>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
@@ -560,5 +560,6 @@
         </div>
     </modal-shell>
 
+    @* Aperçu PDF partagé — voir wwwroot/js/pdf-preview.js *@
     @await Html.PartialAsync("_PdfPreviewModal")
 </div>

@@ -9,8 +9,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('pointageProfsView', () => ({
-        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
-        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : la fiche d'heures s'ouvre dans la modale
+        // _PdfPreviewModal (impression / téléchargement au choix), jamais un download forcé.
         ...window.pdfPreview.state(),
 
         isLoading: false,
@@ -84,7 +84,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Fiche d'heures Vacataire : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
+        /** Fiche d'heures Vacataire PDF — ouverte dans la modale d'aperçu partagée (pdf-preview.js). */
         async downloadHourRecordSheet() {
             if (!this.selectedContractId) return;
             this.downloadingSheet = true;
@@ -92,8 +92,9 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ month: this.filter.month, year: this.filter.year });
                 await this.openPdfPreview(
                     `/api/v1/finance/employee-contracts/${this.selectedContractId}/hour-records/sheet/pdf?${params.toString()}`,
-                    'Fiche des heures',
-                    `Fiche-Heures-${this.selectedContractId}.pdf`);
+                    "Fiche d'heures — Vacataire",
+                    `Fiche-Heures-${this.selectedContractId}.pdf`
+                );
             } finally {
                 this.downloadingSheet = false;
             }

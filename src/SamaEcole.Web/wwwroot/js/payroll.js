@@ -8,8 +8,9 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('payrollView', () => ({
-        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
-        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : bulletin de paie, attestation de travail et
+        // fiche d'heures s'ouvrent dans la modale _PdfPreviewModal (impression / téléchargement au
+        // choix), jamais un download forcé.
         ...window.pdfPreview.state(),
 
         tab: 'contrats',
@@ -359,7 +360,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Bulletin de paie : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
+        /** Bulletin PDF ouvert dans la modale d'aperçu partagée (pdf-preview.js) : impression / téléchargement au choix. */
         async printPayslip(fichePaieId) {
             if (!fichePaieId || fichePaieId === 'undefined') {
                 console.error('Identifiant de fiche de paie invalide ou indéfini', fichePaieId);
@@ -370,13 +371,14 @@ document.addEventListener('alpine:init', () => {
                 await this.openPdfPreview(
                     `/api/v1/finance/payroll/${fichePaieId}/pdf`,
                     'Bulletin de paie',
-                    `Bulletin-${fichePaieId}.pdf`);
+                    `Bulletin-${fichePaieId}.pdf`
+                );
             } finally {
                 this.printingPayslipId = null;
             }
         },
 
-        /** Attestation de travail : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
+        /** Attestation de travail PDF — ouverte dans la modale d'aperçu partagée (même mécanique que printPayslip). */
         async downloadWorkCertificate(contract) {
             if (!contract || !contract.id || contract.id === 'undefined') {
                 console.error('Identifiant de contrat invalide ou indéfini', contract && contract.id);
@@ -387,7 +389,8 @@ document.addEventListener('alpine:init', () => {
                 await this.openPdfPreview(
                     `/api/v1/finance/employee-contracts/${contract.id}/work-certificate/pdf`,
                     'Attestation de travail',
-                    `Attestation-Travail-${contract.employeeFullName}.pdf`);
+                    `Attestation-Travail-${contract.employeeFullName}.pdf`
+                );
             } finally {
                 this.downloadingCertificateId = null;
             }
@@ -436,7 +439,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Fiche heures du mois/année sélectionné : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
+        /** Fiche heures PDF du mois/année sélectionné — ouverte dans la modale d'aperçu partagée. */
         async previewHourRecordSheet() {
             if (!this.hourRecordsContract) return;
             this.downloadingHourRecordSheet = true;
@@ -444,8 +447,9 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ month: this.hourRecordsFilter.month, year: this.hourRecordsFilter.year });
                 await this.openPdfPreview(
                     `/api/v1/finance/employee-contracts/${this.hourRecordsContract.id}/hour-records/sheet/pdf?${params.toString()}`,
-                    'Fiche des heures',
-                    `Fiche-Heures-${this.hourRecordsContract.employeeFullName}.pdf`);
+                    "Fiche d'heures — Vacataire",
+                    `Fiche-Heures-${this.hourRecordsContract.employeeFullName}.pdf`
+                );
             } finally {
                 this.downloadingHourRecordSheet = false;
             }

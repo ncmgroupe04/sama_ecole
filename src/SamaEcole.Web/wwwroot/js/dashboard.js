@@ -229,53 +229,22 @@ document.addEventListener('alpine:init', () => {
         },
 
         async downloadDailyCashRegisterPdf(dateStr) {
-            try {
-                let dateParam = '';
-                if (dateStr) {
-                    dateParam = `?date=${dateStr}`;
-                } else {
-                    const today = new Date();
-                    const yyyy = today.getFullYear();
-                    const mm = String(today.getMonth() + 1).padStart(2, '0');
-                    const dd = String(today.getDate()).padStart(2, '0');
-                    dateParam = `?date=${yyyy}-${mm}-${dd}`;
-                }
-
-                const url = `/api/v1/finance/daily-cash-register/pdf${dateParam}`;
-                if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
-                    await window.api.refreshOrRedirect();
-                }
-
-                const response = await fetch(url, {
-                    headers: { Authorization: `Bearer ${window.auth.accessToken}` },
-                    credentials: 'same-origin'
-                });
-                
-                if (!response.ok) {
-                    const errText = await response.text().catch(() => '');
-                    throw new Error(`Erreur ${response.status}: Impossible de générer le journal de caisse (${errText || response.statusText}).`);
-                }
-
-                const rawBlob = await response.blob();
-                if (!rawBlob || rawBlob.size === 0) {
-                    throw new Error("Le document PDF généré est vide.");
-                }
-                
-                const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
-                const blobUrl = URL.createObjectURL(pdfBlob);
-                
-                const link = document.createElement('a');
-                link.href = blobUrl;
-                link.download = `Journal_Caisse_${dateParam.replace('?date=', '')}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                
-                setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-            } catch (err) {
-                console.error("Erreur downloadDailyCashRegisterPdf:", err);
-                alert(window.api.toMessage(err, "Une erreur est survenue lors du téléchargement du journal de caisse."));
+            let date = dateStr;
+            if (!date) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                date = `${yyyy}-${mm}-${dd}`;
             }
+
+            // Le journal de caisse s'ouvre dans la modale d'aperçu partagée (pdf-preview.js) :
+            // l'utilisateur le relit puis imprime ou télécharge depuis l'en-tête de la modale.
+            await this.openPdfPreview(
+                `/api/v1/finance/daily-cash-register/pdf?date=${date}`,
+                'Journal de caisse',
+                `Journal_Caisse_${date}.pdf`
+            );
         }
     }));
 });

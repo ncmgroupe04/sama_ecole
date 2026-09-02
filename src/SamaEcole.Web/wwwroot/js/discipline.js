@@ -4,8 +4,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('disciplineView', () => ({
-        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
-        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : le PV s'ouvre dans la modale
+        // _PdfPreviewModal (impression / téléchargement au choix), jamais un download forcé.
         ...window.pdfPreview.state(),
 
         records: [],
@@ -53,10 +53,8 @@ document.addEventListener('alpine:init', () => {
 
         async loadStudents() {
             try {
-                // pageSize plafonné à 100 côté serveur (GetStudentsQueryValidator.MaxPageSize) :
-                // pageSize=1000 partait toujours en 422 et laissait le menu déroulant vide sans erreur
-                // visible. Même correctif que payroll.js / billets.js (bug identique du 27/08/2026).
-                const data = await api.get('/students?page=1&pageSize=100');
+                // On récupère une large liste pour le menu déroulant
+                const data = await api.get('/students?page=1&pageSize=1000');
                 this.students = (data && data.items) || [];
             } catch (error) {
                 console.error("Erreur chargement élèves:", error);
@@ -111,7 +109,10 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
-        /** PV de discipline : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur). */
+        /**
+         * PV de discipline en PDF, ouvert dans la modale d'aperçu partagée (pdf-preview.js) :
+         * l'utilisateur le relit puis imprime ou télécharge depuis l'en-tête de la modale.
+         */
         async printPv(recordId) {
             if (!recordId || recordId === 'undefined') {
                 console.error('Identifiant de dossier de discipline invalide ou indéfini', recordId);
@@ -122,7 +123,8 @@ document.addEventListener('alpine:init', () => {
                 await this.openPdfPreview(
                     `/api/v1/discipline/${recordId}/pv/pdf`,
                     'PV de discipline',
-                    `PV-Discipline-${recordId}.pdf`);
+                    `PV-Discipline-${recordId}.pdf`
+                );
             } finally {
                 this.printingId = null;
             }

@@ -11,8 +11,8 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('billetsView', () => ({
-        // Ouverture PDF partagée (wwwroot/js/pdf-preview.js) : le document s'ouvre dans un nouvel
-        // onglet, rendu par la visionneuse PDF native du navigateur. Plus de modale.
+        // Aperçu PDF partagé (wwwroot/js/pdf-preview.js) : le billet s'ouvre dans la modale
+        // _PdfPreviewModal (impression / téléchargement au choix), jamais un download forcé.
         ...window.pdfPreview.state(),
 
         tab: 'entree',
@@ -80,12 +80,7 @@ document.addEventListener('alpine:init', () => {
 
         async loadStudents() {
             try {
-                // pageSize plafonné à 100 côté serveur (GetStudentsQueryValidator.MaxPageSize) : au-delà,
-                // la requête part en 422 et le sélecteur « Élève concerné » reste vide sans qu'aucune
-                // erreur ne s'affiche — c'est le « Aucun résultat » constaté en Surveillance. Même
-                // correctif que payroll.js (bug identique du 27/08/2026). Pour un très gros effectif,
-                // la vraie réponse serait une recherche serveur comme state-integration.js / caisse.js.
-                const data = await api.get('/students?page=1&pageSize=100');
+                const data = await api.get('/students?page=1&pageSize=1000');
                 this.students = (data && data.items) || [];
             } catch (error) {
                 console.error('Erreur chargement élèves:', error);
@@ -129,9 +124,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Billet d'entrée A5 : ouverture dans un nouvel onglet (visionneuse PDF native du navigateur),
-         * avec impression et téléchargement. Le moteur gère seul le jeton, les erreurs et le repli —
-         * plus de fetch/blob/window.open recopié ici.
+         * Ouvre le billet A5 en PDF dans la modale d'aperçu partagée (pdf-preview.js) : l'utilisateur
+         * le relit puis imprime ou télécharge depuis l'en-tête de la modale. Le jeton voyage en
+         * en-tête Authorization (géré par openPdfPreview), jamais sur une navigation classique.
          */
         async printBillet(lateArrivalId) {
             if (!lateArrivalId || lateArrivalId === 'undefined') {
@@ -143,7 +138,8 @@ document.addEventListener('alpine:init', () => {
                 await this.openPdfPreview(
                     `/api/v1/billets/late-arrival/${lateArrivalId}/pdf`,
                     "Billet d'entrée",
-                    `Billet-${lateArrivalId}.pdf`);
+                    `Billet-${lateArrivalId}.pdf`
+                );
             } finally {
                 this.printingId = null;
             }
@@ -210,7 +206,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Billet de sortie A5 en PDF — même mécanique que printBillet. */
+        /** Billet de sortie A5 en PDF — même mécanique que printBillet (modale d'aperçu partagée). */
         async printExitBillet(earlyDepartureId) {
             if (!earlyDepartureId || earlyDepartureId === 'undefined') {
                 console.error('Identifiant de billet de sortie invalide ou indéfini', earlyDepartureId);
@@ -221,7 +217,8 @@ document.addEventListener('alpine:init', () => {
                 await this.openPdfPreview(
                     `/api/v1/billets/early-departure/${earlyDepartureId}/pdf`,
                     'Billet de sortie',
-                    `Billet-Sortie-${earlyDepartureId}.pdf`);
+                    `Billet-Sortie-${earlyDepartureId}.pdf`
+                );
             } finally {
                 this.printingExitId = null;
             }

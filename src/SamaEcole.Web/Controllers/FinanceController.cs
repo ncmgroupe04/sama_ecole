@@ -16,6 +16,7 @@ using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Finance.Queries.GetPayments;
 using SamaEcole.Application.Finance.Queries.GetStudentBalance;
 using SamaEcole.Web.Authorization;
+using SamaEcole.Web.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -379,7 +380,10 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     public async Task<IActionResult> GetClosingReportPdf(Guid id, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new GetDailyClosingReportPdfQuery(id), cancellationToken);
-        return File(result.Content, "application/pdf", result.FileName);
+
+        // `inline` : le rapport de clôture s'ouvre dans la modale d'aperçu (impression / téléchargement
+        // au choix depuis l'en-tête), au lieu d'atterrir directement dans les téléchargements.
+        return this.InlinePdf(result.Content, result.FileName);
     }
 
     // ------------------------------------------------------------------ Module Comptabilité & Fiscalité (JGK)
