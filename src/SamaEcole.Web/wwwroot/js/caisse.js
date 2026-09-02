@@ -373,6 +373,9 @@ document.addEventListener('alpine:init', () => {
             this.receipt = null;
             this.showReceipt = false;
             this.showConfirmDialog = false;
+            // La feuille A5 est démontée avec `receipt` (x-if) : sa mesure de tenue en page ne
+            // vaut plus rien. La garder afficherait le verdict du reçu PRÉCÉDENT sur le suivant.
+            this.receiptFitMm = null;
             // Nouvel encaissement = nouvelle clé (JGK-L03) : réutiliser l'ancienne rejouerait le
             // paiement précédent au lieu d'en enregistrer un nouveau.
             this.idempotencyKey = window.networkGuard.newIdempotencyKey();

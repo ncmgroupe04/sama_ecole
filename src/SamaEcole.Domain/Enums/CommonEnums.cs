@@ -365,3 +365,21 @@ public enum RoomType
     Bureau,
     Autre
 }
+
+/// <summary>
+/// Suite donnée à une convocation de parent (<see cref="Entities.ParentSummons"/>).
+/// <c>Scheduled</c> : convocation émise, entretien pas encore tenu — seul état depuis lequel une
+/// suite peut être posée. <c>Honored</c> : le parent s'est présenté. <c>Missed</c> : il ne s'est pas
+/// présenté. <c>Postponed</c> : entretien reporté, une nouvelle convocation reste à émettre.
+///
+/// Une suite, une fois posée, ne se réécrit pas : le registre de la Vie scolaire est une pièce à
+/// charge comme à décharge (Volume 1 §18), au même titre que le registre disciplinaire. Une erreur
+/// se corrige par une nouvelle convocation, jamais en repassant la précédente en Scheduled.
+/// </summary>
+public enum ParentSummonsStatus
+{
+    Scheduled,
+    Honored,
+    Missed,
+    Postponed
+}

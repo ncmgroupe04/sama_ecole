@@ -10,6 +10,20 @@ document.addEventListener('alpine:init', () => {
         // prévisualise pas, reste en téléchargement direct.
         ...window.pdfPreview.state(),
 
+        // Convoquer depuis le bilan (02/09/2026). Le rapport est ouvert au Secrétariat, la convocation
+        // ne l'est pas (ParentSummonsController : SuperAdmin, Directeur, Surveillant) — l'action n'est
+        // proposée qu'à l'intersection. Confort d'affichage : le 403 reste la garde réelle.
+        canSummon: ['Directeur', 'SuperAdmin'].includes(window.auth.role),
+
+        isSummonsOpen: false,
+        isSummoning: false,
+        summonsErrors: {},
+        summonsTarget: null,
+        summonsForm: { scheduledDate: '', scheduledTime: '', reason: '' },
+        showSummonsCreated: false,
+        summonsCreatedName: '',
+        createdSummonsId: null,
+
         classrooms: [],
         data: null,
         totalCount: 0,
@@ -95,6 +109,99 @@ document.addEventListener('alpine:init', () => {
         periodLabel() {
             if (!this.data) return '';
             return `${this.formatDate(this.data.startDate)} → ${this.formatDate(this.data.endDate)}`;
+        },
+
+        // ------------------------------------------------- Convoquer depuis le bilan (02/09/2026)
+        //
+        // Le bilan comptait les retards et les absences ; convoquer un parent obligeait à ouvrir un
+        // autre écran et à ressaisir ces chiffres de mémoire. Les deux modules existaient, rien ne
+        // les reliait. Le motif part donc d'ici, PRÉ-REMPLI et modifiable — aucun seuil automatique
+        // ne déclenche quoi que ce soit : c'est le Directeur qui convoque (Volume 1 §18.2).
+
+        /** Une ligne sans un seul retard ni une seule absence n'a rien à convoquer. */
+        hasAttendanceIssue(row) {
+            if (!row) return false;
+            return (row.late || 0) > 0
+                || (row.unjustifiedAbsences || 0) > 0
+                || (row.justifiedAbsences || 0) > 0;
+        },
+
+        openSummons(row) {
+            this.summonsTarget = row;
+            this.summonsErrors = {};
+            // Demain, pas aujourd'hui : une convocation remise en main propre à l'élève doit laisser
+            // au parent le temps de s'organiser.
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            this.summonsForm = {
+                scheduledDate: this.toIsoDate(tomorrow),
+                scheduledTime: '09:00',
+                reason: this.buildSummonsReason(row)
+            };
+            this.isSummonsOpen = true;
+        },
+
+        closeSummons() {
+            this.isSummonsOpen = false;
+            this.summonsTarget = null;
+            this.summonsErrors = {};
+        },
+
+        /**
+         * Motif pré-rempli : uniquement ce qui a été RÉELLEMENT compté sur la période affichée.
+         * Un poste à zéro n'est pas écrit — « 0 absence » sur une convocation ferait douter du
+         * relevé entier. Les minutes de retard ne sont citées que si elles ont été saisies.
+         */
+        buildSummonsReason(row) {
+            const parts = [];
+            if (row.late > 0) {
+                const minutes = row.totalLateMinutes > 0 ? ` (${row.totalLateMinutes} min au total)` : '';
+                parts.push(`${row.late} retard${row.late > 1 ? 's' : ''}${minutes}`);
+            }
+            if (row.unjustifiedAbsences > 0) {
+                parts.push(`${row.unjustifiedAbsences} absence${row.unjustifiedAbsences > 1 ? 's' : ''} non justifiée${row.unjustifiedAbsences > 1 ? 's' : ''}`);
+            }
+            if (row.justifiedAbsences > 0) {
+                parts.push(`${row.justifiedAbsences} absence${row.justifiedAbsences > 1 ? 's' : ''} justifiée${row.justifiedAbsences > 1 ? 's' : ''}`);
+            }
+
+            const releve = parts.length > 0 ? parts.join(', ') : 'assiduité irrégulière';
+            return `Entretien sur l'assiduité de l'élève : ${releve}, `
+                + `relevé du ${this.formatDate(this.startDate)} au ${this.formatDate(this.endDate)}.`;
+        },
+
+        async submitSummons() {
+            if (!this.summonsTarget) return;
+
+            this.isSummoning = true;
+            this.summonsErrors = {};
+            try {
+                const scheduledAt = new Date(
+                    `${this.summonsForm.scheduledDate}T${this.summonsForm.scheduledTime || '09:00'}`);
+
+                this.createdSummonsId = await window.api.post('/parent-summons', {
+                    studentId: this.summonsTarget.studentId,
+                    scheduledAt: scheduledAt.toISOString(),
+                    reason: this.summonsForm.reason
+                });
+
+                this.summonsCreatedName = this.summonsTarget.fullName;
+                this.closeSummons();
+                this.showSummonsCreated = true;
+            } catch (err) {
+                this.summonsErrors = window.api.toFieldErrors(err, "Erreur lors de l'enregistrement de la convocation.");
+            } finally {
+                this.isSummoning = false;
+            }
+        },
+
+        /** Avis de convocation, dans la même modale d'aperçu que l'export du rapport. */
+        async printCreatedSummons() {
+            if (!this.createdSummonsId) return;
+            await this.openPdfPreview(
+                `/api/v1/parent-summons/${this.createdSummonsId}/notice/pdf`,
+                'Convocation parent',
+                `Convocation-${this.createdSummonsId}.pdf`);
         },
 
         /**

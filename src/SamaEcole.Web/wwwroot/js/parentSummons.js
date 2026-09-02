@@ -30,6 +30,18 @@ document.addEventListener('alpine:init', () => {
             reason: ''
         },
 
+        // ------------------------------------------------------- Suite de l'entretien (02/09/2026)
+        //
+        // Une convocation sans suite est un rendez-vous, pas un entretien : le registre listait des
+        // dates sans jamais dire si le parent était venu. La suite se consigne UNE FOIS, depuis
+        // « Planifiée » — le serveur (CloseParentSummonsCommandHandler) refuse la seconde en 422,
+        // ce formulaire ne fait que ne pas la proposer.
+        isOutcomeOpen: false,
+        isClosingOutcome: false,
+        outcomeErrors: {},
+        outcomeTarget: null,
+        outcomeForm: { outcome: '', outcomeNotes: '' },
+
         init() {
             this.loadRecords();
             this.loadStudents();
@@ -92,6 +104,82 @@ document.addEventListener('alpine:init', () => {
                 this.createErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement.");
             } finally {
                 this.isCreating = false;
+            }
+        },
+
+        openOutcome(record) {
+            this.outcomeTarget = record;
+            this.outcomeForm = { outcome: '', outcomeNotes: '' };
+            this.outcomeErrors = {};
+            this.isOutcomeOpen = true;
+        },
+
+        closeOutcome() {
+            this.isOutcomeOpen = false;
+            this.outcomeTarget = null;
+            this.outcomeForm = { outcome: '', outcomeNotes: '' };
+            this.outcomeErrors = {};
+        },
+
+        /**
+         * Compte rendu obligatoire dès que l'entretien n'a PAS eu lieu comme prévu. Même règle que le
+         * Handler : « Honorée » se suffit à elle-même, une absence ou un report appellent une suite.
+         * Reproduite ici pour l'astérisque et le texte d'aide, jamais pour remplacer la garde serveur.
+         */
+        outcomeNotesRequired() {
+            return this.outcomeForm.outcome === 'Missed' || this.outcomeForm.outcome === 'Postponed';
+        },
+
+        outcomeNotesPlaceholder() {
+            switch (this.outcomeForm.outcome) {
+                case 'Missed': return 'Suite donnée à cette absence : relance, nouvelle convocation…';
+                case 'Postponed': return 'Motif du report et suite prévue…';
+                case 'Honored': return "Ce qui s'est dit pendant l'entretien, engagements pris… (facultatif)";
+                default: return 'Compte rendu de l\'entretien…';
+            }
+        },
+
+        async submitOutcome() {
+            if (!this.outcomeTarget) return;
+
+            this.isClosingOutcome = true;
+            this.outcomeErrors = {};
+            try {
+                await api.patch(`/parent-summons/${this.outcomeTarget.id}/outcome`, {
+                    outcome: this.outcomeForm.outcome,
+                    outcomeNotes: this.outcomeForm.outcomeNotes || null
+                });
+                this.closeOutcome();
+                // Relecture plutôt que mise à jour locale : le tri place les convocations SANS suite
+                // en tête, celle qu'on vient de clore doit descendre — recopier le statut sur place
+                // la laisserait en haut de liste, à contre-emploi de l'écran.
+                await this.loadRecords();
+                toast.success('Suite consignée.');
+            } catch (error) {
+                this.outcomeErrors = window.api.toFieldErrors(error, "Erreur lors de l'enregistrement de la suite.");
+            } finally {
+                this.isClosingOutcome = false;
+            }
+        },
+
+        /** Libellé français d'un ParentSummonsStatus (l'API renvoie le nom anglais de l'enum). */
+        outcomeLabel(status) {
+            switch (status) {
+                case 'Honored': return 'Honorée';
+                case 'Missed': return 'Non honorée';
+                case 'Postponed': return 'Reportée';
+                case 'Scheduled': return 'Planifiée';
+                default: return status || '—';
+            }
+        },
+
+        outcomeBadgeClass(status) {
+            switch (status) {
+                case 'Honored': return 'status-badge-success';
+                case 'Missed': return 'status-badge-danger';
+                case 'Postponed': return 'status-badge-warning';
+                case 'Scheduled': return 'status-badge-primary';
+                default: return 'status-badge-neutral';
             }
         },
 

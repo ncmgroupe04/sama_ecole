@@ -206,3 +206,170 @@ test('garde-fou : la dette des chargements muets ne fait que diminuer', () => {
         'pour que le cliquet se resserre.\n  ' + fixed.join('\n  ')
     );
 });
+
+/* ------------------------------------------------------------------------------------------------
+ * GARDE-FOU 4 — `x-show` ne protège RIEN : une liaison Alpine ne doit jamais déréférencer un état
+ * encore null au montage de la vue.
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Le piège, en une phrase : `x-show` ne fait que poser `display:none`. Alpine construit et ÉVALUE
+ * quand même toutes les liaisons du sous-arbre dès le montage — y compris `x-text`, `x-model`,
+ * `:class` et le `x-for` d'un `<template>`. Un bloc masqué par `x-show="receipt"` qui contient
+ * `x-text="receipt.receiptNumber"` lève donc, au chargement à froid de la page, un
+ * « TypeError: Cannot read properties of null ».
+ *
+ * Ce n'est pas cosmétique : Alpine ARRÊTE l'évaluation de l'expression fautive. Le rendu du reste de
+ * l'élément est abandonné, et la console de l'utilisateur se remplit d'erreurs qui masquent les
+ * vraies. Le cas fondateur est /caisse (02/09/2026) : trois familles d'erreurs au simple chargement
+ * de l'écran — `installments`, `receiptNumber`, `amount` — alors que rien n'était encore sélectionné.
+ *
+ * Les deux seules protections reconnues ici :
+ *   1. `<template x-if="…">` — Alpine ne rend PAS le contenu tant que la condition est fausse ;
+ *   2. un garde dans l'expression elle-même : `receipt?.x`, `receipt && receipt.x`,
+ *      `receipt ? receipt.x : ''`, `(balance?.installments ?? [])`.
+ *
+ * Le corps d'un `<template x-for>` est également exempté : il n'est instancié que par élément de la
+ * collection, donc jamais quand celle-ci est vide ou pas encore chargée.
+ */
+
+/** Tous les gabarits Razor de Views/, sous-dossiers compris. */
+function cshtmlFiles(dir = path.join(WEB_ROOT, 'Views'), out = []) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) cshtmlFiles(full, out);
+        else if (entry.name.endsWith('.cshtml')) out.push(full);
+    }
+    return out;
+}
+
+/** Champs du composant initialisés à `null` — donc déréférençables à vide au montage. */
+function nullableRoots(jsSources, component) {
+    const at = jsSources.indexOf(`Alpine.data('${component}'`);
+    if (at === -1) return null;
+    const next = jsSources.indexOf("Alpine.data('", at + 20);
+    const body = jsSources.slice(at, next === -1 ? jsSources.length : next);
+
+    const roots = new Set();
+    for (const m of body.matchAll(/^\s{4,}([A-Za-z_$][\w$]*)\s*:\s*null\s*,/gm)) roots.add(m[1]);
+    return roots;
+}
+
+/** Portées `<template>` du gabarit, avec leur nature (`x-if` conditionnel / `x-for` répété). */
+function templateScopes(html) {
+    const scopes = [];
+    const open = [];
+    const tagRE = /<template\b([^>]*)>|<\/template>/g;
+    let tag;
+
+    while ((tag = tagRE.exec(html))) {
+        if (tag[0].startsWith('</')) {
+            const start = open.pop();
+            if (start) scopes.push({ ...start, end: tag.index });
+        } else {
+            open.push({
+                start: tagRE.lastIndex,
+                conditional: /x-if="/.test(tag[1]),
+                loop: /x-for="/.test(tag[1])
+            });
+        }
+    }
+    return scopes;
+}
+
+/** Attributs qu'Alpine évalue — `x-show` COMPRIS, et c'est tout l'intérêt du garde-fou. */
+const ALPINE_ATTR =
+    /(?:x-text|x-html|x-for|x-if|x-model|x-show|x-effect|:[\w:.-]+|@[\w.:-]+|x-on:[\w.:-]+)="([^"]*)"/g;
+
+function findNullDerefs() {
+    const jsSources = jsFiles().map(({ source }) => source).join('\n');
+    const found = new Set();
+
+    for (const file of cshtmlFiles()) {
+        const html = readFileSync(file, 'utf8');
+
+        const roots = new Set();
+        for (const m of html.matchAll(/x-data="([A-Za-z_$][\w$]*)\s*[("]/g)) {
+            const fields = nullableRoots(jsSources, m[1]);
+            if (fields) for (const f of fields) roots.add(f);
+        }
+        if (roots.size === 0) continue;
+
+        const scopes = templateScopes(html);
+        const label = path.relative(WEB_ROOT, file).split(path.sep).join('/');
+
+        for (const attr of html.matchAll(ALPINE_ATTR)) {
+            const expr = attr[1];
+            const at = attr.index;
+
+            for (const root of roots) {
+                if (!new RegExp(`(?<![\\w$.?])${root}\\s*\\.`).test(expr)) continue;
+
+                // Garde dans l'expression : `root?.`, `root &&`, `root ?`, `root ||`, `!root`…
+                const guarded = new RegExp(
+                    `(?<![\\w$.])${root}\\s*(\\?\\.|\\?[^.]|&&|\\|\\||===?\\s*null|!==?\\s*null)`
+                    + `|!\\s*${root}(?![\\w$])`);
+                if (guarded.test(expr)) continue;
+
+                // Protection structurelle : un `<template x-if>` ou le corps d'un `<template x-for>`.
+                const sheltered = scopes.some((s) =>
+                    at > s.start && at < s.end && (s.conditional || s.loop));
+                if (sheltered) continue;
+
+                found.add(`${label} :: ${root}`);
+            }
+        }
+    }
+
+    return [...found].sort();
+}
+
+/**
+ * Écrans où le motif subsiste, RECENSÉS et non autorisés. Comme SILENT_LOADERS_DEBT, cette liste ne
+ * peut que rétrécir. Chaque entrée = au moins une erreur en console au chargement à froid de l'écran.
+ *
+ * Pour en retirer une : envelopper le bloc dans un `<template x-if="…">`, ou garder chaque expression
+ * (`root?.champ`, `root ? root.champ : ''`), puis supprimer la ligne ici.
+ *
+ * /caisse n'y figure pas — c'est le bug fondateur, corrigé le 02/09/2026. Sa réapparition, ici ou
+ * ailleurs, fait échouer ce test.
+ */
+const NULL_DEREF_DEBT = [
+    'Views/Buildings/Index.cshtml :: editingBuilding',
+    'Views/Buildings/Index.cshtml :: editingRoom',
+    'Views/Dashboard/Index.cshtml :: financeData',
+    'Views/Enrollments/Index.cshtml :: receipt',
+    'Views/Enrollments/Index.cshtml :: receiptFitMm',
+    'Views/Exams/Index.cshtml :: assigningDossier',
+    'Views/Exams/Index.cshtml :: editingDossier',
+    'Views/Exams/Index.cshtml :: editingSession',
+    'Views/Reports/Financial.cshtml :: data',
+    'Views/Settings/Index.cshtml :: editingMention',
+    'Views/Subjects/Index.cshtml :: editing',
+];
+
+test('garde-fou : aucune NOUVELLE liaison Alpine ne déréférence un état null au montage', () => {
+    const current = findNullDerefs();
+    const introduced = current.filter((entry) => !NULL_DEREF_DEBT.includes(entry));
+
+    assert.deepEqual(
+        introduced,
+        [],
+        'Liaison évaluée au montage sur un état encore null : « Cannot read properties of null » dès ' +
+        'le chargement de l\'écran. `x-show` n\'est PAS une protection — Alpine évalue quand même. ' +
+        'Envelopper dans un <template x-if="…"> ou garder l\'expression (root?.champ).\n  ' +
+        introduced.join('\n  ')
+    );
+});
+
+test('garde-fou : la dette des déréférencements null ne fait que diminuer', () => {
+    const current = findNullDerefs();
+    const fixed = NULL_DEREF_DEBT.filter((entry) => !current.includes(entry));
+
+    assert.deepEqual(
+        fixed,
+        [],
+        'Ces écrans sont désormais protégés : retirer ces lignes de NULL_DEREF_DEBT pour que le ' +
+        'cliquet se resserre.\n  ' + fixed.join('\n  ')
+    );
+});

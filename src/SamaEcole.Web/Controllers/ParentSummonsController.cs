@@ -1,3 +1,4 @@
+using SamaEcole.Application.VieScolaire.Commands.CloseParentSummons;
 using SamaEcole.Application.VieScolaire.Commands.CreateParentSummons;
 using SamaEcole.Application.VieScolaire.Queries.GetParentNotice;
 using SamaEcole.Application.VieScolaire.Queries.GetParentNoticePdf;
@@ -18,6 +19,9 @@ namespace SamaEcole.Web.Controllers;
 [Authorize(Roles = $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Surveillant)}")]
 public class ParentSummonsController(ISender mediator, ILogger<ParentSummonsController> logger) : ControllerBase
 {
+    /// <summary>Corps du PATCH de suite : l'identifiant vient de la route, jamais du corps.</summary>
+    public record CloseParentSummonsOutcomeRequest(ParentSummonsStatus Outcome, string? OutcomeNotes);
+
     [HttpGet]
     [ProducesResponseType<List<ParentSummonsDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<List<ParentSummonsDto>>> GetParentSummons(CancellationToken cancellationToken)
@@ -30,6 +34,19 @@ public class ParentSummonsController(ISender mediator, ILogger<ParentSummonsCont
         var id = await mediator.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetNotice), new { id }, id);
     }
+
+    /// <summary>
+    /// Consigne la suite de l'entretien (honorée, non honorée, reportée). Une seule fois : une
+    /// convocation déjà close repart en 422, jamais en écrasement silencieux.
+    /// </summary>
+    [HttpPatch("{id:guid}/outcome")]
+    [ProducesResponseType<CloseParentSummonsResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<CloseParentSummonsResult>> CloseParentSummons(
+        Guid id, CloseParentSummonsOutcomeRequest request, CancellationToken cancellationToken)
+        => await mediator.Send(
+            new CloseParentSummonsCommand(id, request.Outcome, request.OutcomeNotes), cancellationToken);
 
     [HttpGet("{id:guid}/notice")]
     [ProducesResponseType<ParentNoticeDto>(StatusCodes.Status200OK)]

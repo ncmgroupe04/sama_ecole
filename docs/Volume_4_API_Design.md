@@ -418,12 +418,25 @@ Registre disciplinaire de la Vie scolaire et convocations des parents/tuteurs.
 | `GET` | `/api/v1/discipline/{id}/pv/pdf` | Procès-verbal de discipline (PDF officiel) |
 | `GET` | `/api/v1/parent-summons` | Liste des convocations |
 | `POST` | `/api/v1/parent-summons` | Créer une convocation de parent/tuteur |
+| `PATCH` | `/api/v1/parent-summons/{id}/outcome` | Consigner la suite de l'entretien |
 | `GET` | `/api/v1/parent-summons/{id}/notice` | Avis de convocation (données) |
 | `GET` | `/api/v1/parent-summons/{id}/notice/pdf` | Avis de convocation (PDF officiel) |
+
+**Suite de l'entretien** — `PATCH /api/v1/parent-summons/{id}/outcome`
+
+```json
+{ "outcome": "Honored | Missed | Postponed", "outcomeNotes": "Le père s'est présenté." }
+```
+
+- `outcome` est obligatoire et ne peut pas valoir `Scheduled` : c'est l'état de départ, pas une suite.
+- `outcomeNotes` est **obligatoire pour `Missed` et `Postponed`** (une absence ou un report appellent une suite écrite), facultatif pour `Honored` — même arbitrage que `DiscrepancyReason` à la clôture de caisse, qui n'exige un motif que lorsqu'un écart existe réellement.
+- Une convocation déjà close renvoie **422**, jamais un écrasement : la correction se fait en émettant une nouvelle convocation.
 
 **Règles :**
 - Une convocation n'est **pas un portail parent** : c'est un document interne imprimé et remis en main propre ou envoyé. Elle ne crée aucun compte, n'ouvre aucun accès en consultation, et ne préfigure pas le §13 du Volume 1 (reporté en V3).
 - Un fait disciplinaire enregistré n'est jamais effacé (règle #6) — une erreur de saisie se corrige par une mention rectificative tracée.
+- **La suite d'une convocation obéit à la même intégrité** : elle se consigne une seule fois, depuis `Scheduled`. L'avis PDF reste le document remis **avant** l'entretien ; il ne porte donc jamais la suite, qui n'existe pas encore au moment où on l'imprime.
+- **Aucun seuil n'émet de convocation automatiquement.** Le rapport d'assiduité (`GET /api/v1/reports/attendance`) propose l'action et pré-remplit le motif avec les retards et absences comptés sur la période affichée ; c'est le Directeur qui convoque.
 
 ---
 

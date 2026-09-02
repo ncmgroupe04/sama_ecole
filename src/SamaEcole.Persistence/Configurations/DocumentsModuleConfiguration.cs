@@ -29,6 +29,18 @@ public class ParentSummonsConfiguration : IEntityTypeConfiguration<ParentSummons
     {
         builder.HasIndex(e => new { e.SchoolId, e.StudentId });
         builder.Property(e => e.Reason).HasMaxLength(1000);
+
+        // Suite donnée (02/09/2026). Statut en TEXTE, comme CashierSession et DebtorReminderBatch :
+        // un registre de vie scolaire se relit en base des années plus tard, un entier n'y dit rien.
+        builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(e => e.OutcomeNotes).HasMaxLength(2000);
+
+        // Le tableau de bord de la Vie scolaire ne cherche que les convocations EN ATTENTE de suite.
+        // Index partiel : les convocations closes s'accumulent année après année, les indexer toutes
+        // ferait grossir l'index sans jamais servir cette lecture.
+        builder.HasIndex(e => new { e.SchoolId, e.ScheduledAt })
+            .HasFilter("\"Status\" = 'Scheduled'")
+            .HasDatabaseName("IX_parent_summons_pending");
     }
 }
 

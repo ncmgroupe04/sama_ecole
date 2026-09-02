@@ -97,17 +97,20 @@
  <th class="py-3 px-4 text-center">Abs. justif.</th>
  <th class="py-3 px-4 text-center">Abs. non justif.</th>
  <th class="py-3 px-4 text-right">Taux</th>
+ @* Colonne masquée au Secrétariat : ParentSummonsController n'accepte que Directeur,
+    Surveillant et Super Admin. Un bouton qui partirait en 403 vaut moins que pas de bouton. *@
+ <th class="py-3 px-4 text-right" x-show="canSummon" x-cloak>Action</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
  <template x-if="isLoading">
  <template x-for="i in 5" :key="i">
- <tr class="hover:bg-slate-50 transition-colors duration-150"><td class="py-3 px-4" colspan="9"><div class="skeleton h-4 w-full"></div></td></tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150"><td class="py-3 px-4" colspan="10"><div class="skeleton h-4 w-full"></div></td></tr>
  </template>
  </template>
 
  <tr class="hover:bg-slate-50 transition-colors duration-150" x-show="!isLoading && (!data || data.students.length === 0)" x-cloak>
- <td colspan="9">
+ <td colspan="10">
  <empty-state icon="checkmark-circle" title="Aucun appel sur cette période."
  hint="Ajustez la classe ou les dates ; les fiches d'appel saisies apparaîtront ici." />
  </td>
@@ -140,6 +143,18 @@
  :class="rateBadgeClass(row.attendanceRate)"
  x-text="formatPercent(row.attendanceRate)"></span>
  </td>
+
+ @* Le bilan devient actionnable : la convocation part des chiffres comptés sur la période
+    affichée, plus d'une ressaisie de mémoire dans un autre écran. Proposée UNIQUEMENT quand
+    il y a matière (au moins un retard ou une absence) — sur une ligne à 100 % de présence,
+    le bouton n'aurait aucun sens. *@
+ <td class="py-3 px-4 text-right" x-show="canSummon" x-cloak>
+ <button type="button" x-show="hasAttendanceIssue(row)" x-on:click="openSummons(row)"
+ class="text-xs font-semibold text-primary hover:underline py-1 px-2 rounded hover:bg-primary-50 transition-colors whitespace-nowrap">
+ Convoquer
+ </button>
+ <span x-show="!hasAttendanceIssue(row)" class="text-slate-300">—</span>
+ </td>
  </tr>
  </template>
  </template>
@@ -149,6 +164,64 @@
 
  <pagination page="page" page-size="pageSize" total="totalCount" on-change="load()" />
  </div>
+
+    @* Convocation émise DEPUIS le bilan (02/09/2026). Le motif est pré-rempli avec les retards et
+       absences réellement comptés sur la période affichée — il reste modifiable : c'est le Directeur
+       qui convoque, pas le compteur. Aucun seuil automatique (Volume 1 §18.2). *@
+    <modal-shell size="60" open="isSummonsOpen" on-close="closeSummons()" title="Convoquer le parent">
+        <modal-subtitle>
+            <span x-text="summonsTarget ? summonsTarget.fullName : ''"></span>
+            <span x-show="summonsTarget" x-cloak>
+                · <span x-text="summonsTarget ? summonsTarget.classroomName : ''"></span>
+            </span>
+        </modal-subtitle>
+
+        <div x-show="summonsErrors.global" x-cloak class="form-error-banner" x-text="summonsErrors.global"></div>
+
+        <form x-on:submit.prevent="submitSummons()" novalidate class="space-y-4">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                Relevé de la période affichée :
+                <span class="font-semibold text-slate-900" x-text="summonsTarget ? summonsTarget.late : 0"></span> retard(s),
+                <span class="font-semibold text-slate-900" x-text="summonsTarget ? summonsTarget.unjustifiedAbsences : 0"></span> absence(s) non justifiée(s),
+                <span class="font-semibold text-slate-900" x-text="summonsTarget ? summonsTarget.justifiedAbsences : 0"></span> justifiée(s).
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Date de convocation</label>
+                <date-field model="summonsForm.scheduledDate" required="true" aria-label="Date de convocation" />
+                <p x-show="summonsErrors.scheduledat" x-cloak x-text="summonsErrors.scheduledat" class="field-error"></p>
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Heure de convocation</label>
+                <input type="time" x-model="summonsForm.scheduledTime" required class="input-field" />
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Motif</label>
+                <textarea x-model="summonsForm.reason" rows="4" required
+                          class="input-field" :class="summonsErrors.reason && 'input-field-error'"></textarea>
+                <p x-show="summonsErrors.reason" x-cloak x-text="summonsErrors.reason" class="field-error"></p>
+            </div>
+
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeSummons()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSummoning" class="btn-modal-primary group">
+                    <span x-text="isSummoning ? 'Enregistrement...' : 'Convoquer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* Convocation émise : le PDF s'imprime depuis ici, sans passer par l'écran Convocations. *@
+    <modal-shell open="showSummonsCreated" size="md" on-close="showSummonsCreated = false" title="Convocation enregistrée">
+        <confirm-dialog-body close-action="showSummonsCreated = false"
+                             new-action="showSummonsCreated = false; printCreatedSummons()"
+                             new-label="Imprimer la convocation">
+            La convocation de <span class="font-medium text-slate-900" x-text="summonsCreatedName"></span>
+            est enregistrée au registre de la Vie scolaire.
+        </confirm-dialog-body>
+    </modal-shell>
 
     @* Aperçu PDF partagé — voir wwwroot/js/pdf-preview.js *@
     @await Html.PartialAsync("_PdfPreviewModal")

@@ -30,20 +30,21 @@
                         <th class="py-3.5 px-4">Élève</th>
                         <th class="py-3.5 px-4">Date/heure convoquée</th>
                         <th class="py-3.5 px-4">Motif</th>
+                        <th class="py-3.5 px-4">Suite</th>
                         <th class="py-3.5 px-4 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     <template x-if="isLoading">
                         <tr>
-                            <td colspan="4" class="px-4 py-8 text-center text-slate-500">
+                            <td colspan="5" class="px-4 py-8 text-center text-slate-500">
                                 Chargement des convocations...
                             </td>
                         </tr>
                     </template>
                     <template x-if="!isLoading && records.length === 0">
                         <tr>
-                            <td colspan="4">
+                            <td colspan="5">
                                 <empty-state icon="envelope" title="Aucune convocation enregistrée."
                                     hint="Les convocations de parents/tuteurs apparaîtront ici." />
                             </td>
@@ -51,19 +52,51 @@
                     </template>
                     <template x-for="record in records" :key="record.id">
                         <tr class="hover:bg-slate-50/60 transition-colors">
-                            <td class="px-4 py-4">
+                            @* `whitespace-nowrap` : la colonne « Suite » ajoutée le 02/09/2026 a resserré
+                               le tableau au point de casser « Awa Fall Test » sur trois lignes et le
+                               matricule sur quatre. Le conteneur défile déjà en largeur (overflow-x-auto) —
+                               c'est lui qui doit absorber la largeur, pas l'identité de l'élève. *@
+                            <td class="px-4 py-4 whitespace-nowrap">
                                 <div class="font-semibold text-slate-900" x-text="record.studentFullName"></div>
-                                <div class="text-xs text-slate-500" x-text="'Matricule : ' + record.studentMatricule"></div>
+                                <div class="font-mono text-xs text-slate-500" x-text="record.studentMatricule"></div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap text-slate-600" x-text="formatDateTime(record.scheduledAt)"></td>
-                            <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="record.reason" :title="record.reason"></td>
+                            @* Troncature portée par un <div> INTERNE, jamais par le <td> : en table-layout
+                               automatique le navigateur ignore `max-width` sur une cellule, et le
+                               `white-space: nowrap` de `truncate` la fait au contraire réclamer toute la
+                               largeur du motif. Résultat observé le 02/09/2026 : la colonne Motif
+                               s'étalait et poussait « Suite » et « Actions » hors de l'écran. *@
+                            <td class="px-4 py-4 text-slate-600">
+                                <div class="max-w-[16rem] truncate" x-text="record.reason" :title="record.reason"></div>
+                            </td>
+
+                            @* Suite donnée. Le compte rendu est affiché SOUS le badge : une convocation
+                               non honorée sans sa suite ne dit rien d'exploitable au Surveillant. *@
+                            <td class="px-4 py-4">
+                                <span class="status-badge whitespace-nowrap" :class="outcomeBadgeClass(record.status)">
+                                    <span class="status-dot" aria-hidden="true"></span>
+                                    <span x-text="outcomeLabel(record.status)"></span>
+                                </span>
+                                <div x-show="record.outcomeNotes" x-cloak
+                                     class="mt-1 max-w-[15rem] text-xs text-slate-500 truncate"
+                                     x-text="record.outcomeNotes" :title="record.outcomeNotes"></div>
+                            </td>
+
                             <td class="px-4 py-4 whitespace-nowrap text-right">
-                                <button type="button" @@click="printNotice(record.id)" :disabled="printingId === record.id"
-                                        class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
-                                    <icon name="print" class="w-4 h-4" x-show="printingId !== record.id" />
-                                    <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingId === record.id" x-cloak />
-                                    <span x-text="printingId === record.id ? 'Génération...' : 'Convocation PDF'"></span>
-                                </button>
+                                <div class="inline-flex items-center gap-2">
+                                    <button type="button" x-show="canManageParentSummons && record.status === 'Scheduled'" x-cloak
+                                            @@click="openOutcome(record)"
+                                            class="btn-modal-secondary inline-flex items-center gap-2 group">
+                                        <icon name="checkmark-circle" class="w-4 h-4" />
+                                        Consigner
+                                    </button>
+                                    <button type="button" @@click="printNotice(record.id)" :disabled="printingId === record.id"
+                                            class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
+                                        <icon name="print" class="w-4 h-4" x-show="printingId !== record.id" />
+                                        <icon name="loader" class="w-4 h-4 animate-spin" x-show="printingId === record.id" x-cloak />
+                                        <span x-text="printingId === record.id ? 'Génération...' : 'Avis PDF'"></span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </template>
@@ -111,6 +144,63 @@
                 <button type="button" @@click="closeCreate()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isCreating" class="btn-modal-primary group">
                     <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* Suite de l'entretien (02/09/2026). Consignée UNE FOIS : le formulaire n'est offert que sur une
+       convocation encore « Planifiée » — le serveur refuse toute seconde écriture en 422. *@
+    <modal-shell size="60" open="isOutcomeOpen" on-close="closeOutcome()" title="Consigner la suite de la convocation">
+        <modal-subtitle>
+            <span x-text="outcomeTarget ? outcomeTarget.studentFullName : ''"></span>
+            <span x-show="outcomeTarget" x-cloak>
+                · convoqué le <span x-text="outcomeTarget ? formatDateTime(outcomeTarget.scheduledAt) : ''"></span>
+            </span>
+        </modal-subtitle>
+
+        <div x-show="outcomeErrors.global" x-cloak class="form-error-banner" x-text="outcomeErrors.global"></div>
+
+        <form x-on:submit.prevent="submitOutcome()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Suite donnée</label>
+                @* Apostrophes TYPOGRAPHIQUES (’) et non droites : `options-expr` et `placeholder` sont
+                   injectés tels quels dans des chaînes JS délimitées par des apostrophes droites
+                   (SelectFieldTagHelper, x-effect="options = …"), où un `\'` ne survit pas au passage
+                   par l'attribut HTML — la liste entière partait en « Unexpected identifier » et le
+                   formulaire ne s'ouvrait plus. Le ’ n'est pas un délimiteur : il traverse sans rien
+                   casser, et c'est de toute façon la bonne apostrophe française. *@
+                <select-field model="outcomeForm.outcome" required="true" aria-label="Suite donnée"
+                              placeholder="Que s’est-il passé ?"
+                              options-expr="[{value:'Honored', label:'Honorée — le parent s’est présenté'}, {value:'Missed', label:'Non honorée — le parent ne s’est pas présenté'}, {value:'Postponed', label:'Reportée — entretien à reprogrammer'}]" />
+                <p x-show="outcomeErrors.outcome" x-cloak x-text="outcomeErrors.outcome" class="field-error"></p>
+            </div>
+
+            <div>
+                @* Obligatoire dès que l'entretien n'a pas eu lieu comme prévu : c'est la règle du
+                   Handler, reprise ici pour que l'astérisque apparaisse au bon moment. *@
+                <label class="form-label" :class="outcomeNotesRequired() && 'form-label-required'">
+                    Compte rendu
+                </label>
+                <textarea x-model="outcomeForm.outcomeNotes" rows="4"
+                          :placeholder="outcomeNotesPlaceholder()"
+                          class="input-field" :class="outcomeErrors.outcomenotes && 'input-field-error'"></textarea>
+                <p x-show="outcomeErrors.outcomenotes" x-cloak x-text="outcomeErrors.outcomenotes" class="field-error"></p>
+            </div>
+
+            <p class="rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning">
+                Cette suite ne pourra plus être modifiée. Une erreur se corrige en émettant une nouvelle
+                convocation, qui laisse les deux traces au registre.
+            </p>
+
+            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" @@click="closeOutcome()" class="btn-modal-secondary group">Annuler</button>
+                @* Bouton verrouillé tant qu'aucune suite n'est choisie : envoyer une chaîne vide dans
+                   un champ typé enum fait échouer la LIAISON du modèle (400 brut d'ASP.NET), pas la
+                   validation — donc pas de message normalisé, et l'utilisateur reste devant un
+                   formulaire muet. Le serveur refuse toujours, ce verrou évite juste le 400 stérile. *@
+                <button type="submit" :disabled="isClosingOutcome || !outcomeForm.outcome" class="btn-modal-primary group">
+                    <span x-text="isClosingOutcome ? 'Enregistrement...' : 'Consigner la suite'"></span>
                 </button>
             </div>
         </form>

@@ -266,6 +266,35 @@ aucun tableau de matières codé en dur. Migration `AddHierarchicalEvaluationStr
   d'interdire deux matières de même nom au même niveau. Les deux moitiés de la règle sont testées contre un
   vrai PostgreSQL (`SubjectStructureEndpointsTests`).
 
+### Présences & Discipline — bilan actionnable et suite des convocations (02/09/2026)
+
+Les deux modules étaient livrés depuis des sprints, **et sans aucun lien entre eux**. Le bilan
+d'assiduité comptait les retards et les absences ; convoquer un parent obligeait à ouvrir un autre
+écran et à ressaisir ces chiffres de mémoire. Symétriquement, une convocation n'avait ni statut ni
+compte rendu : le registre listait des rendez-vous, jamais des entretiens tenus.
+
+- **Convoquer depuis le bilan.** `/reports/attendance` porte une colonne « Action » : sur toute ligne
+  présentant au moins un retard ou une absence, « Convoquer » ouvre une convocation dont le **motif
+  est pré-rempli** avec les chiffres réellement comptés sur la période affichée, et reste modifiable.
+  L'avis PDF s'imprime dans la foulée, sans passer par `/convocations`.
+- **Aucun seuil automatique.** Le bilan propose, le Directeur décide (Volume 1 §18.2). L'option d'un
+  seuil paramétrable avec génération par lot — sur le modèle de `GenerateDebtorReminderBatches` — a
+  été écartée à l'arbitrage du 02/09/2026 ; la porte reste ouverte, rien n'a été construit dans ce sens.
+- **Colonne masquée au Secrétariat.** Le rapport lui est ouvert, `ParentSummonsController` ne l'est pas
+  (SuperAdmin, Directeur, Surveillant) : l'action n'apparaît qu'à l'intersection des deux rôles.
+- **Suite de l'entretien** (Volume 1 §18.3, migration `AddParentSummonsOutcome`) : `Status`,
+  `OutcomeNotes`, `ClosedAt`, `ClosedByUserId` sur `ParentSummons`, plus
+  `PATCH /parent-summons/{id}/outcome`. Trois invariants, figés par `ParentSummonsIsolationTests` :
+  la suite se pose **une seule fois** et depuis `Scheduled` seulement (sinon 422, jamais d'écrasement) ;
+  un **compte rendu est exigé** pour « non honorée » et « reportée », facultatif pour « honorée » ;
+  les convocations **sans suite passent en tête** du registre, quelle que soit leur date.
+- **L'avis PDF n'a pas changé** — et ne doit pas changer : c'est la pièce remise **avant** l'entretien,
+  elle ne peut pas porter une suite qui n'existe pas encore au moment de son impression.
+- **Migration : `defaultValue` repris à la main.** L'échafaudage EF proposait la chaîne vide pour
+  `Status`, qui n'est pas un `ParentSummonsStatus` : toute convocation antérieure se serait relue en
+  `""` et aurait fait lever la conversion enum ↔ texte à la première lecture du registre. Corrigé en
+  `'Scheduled'` avant application.
+
 ### Zone de danger — réinitialisation des données d'essai (22/08/2026)
 
 Le Directeur teste l'application avec des données fictives, puis remet son établissement à neuf depuis

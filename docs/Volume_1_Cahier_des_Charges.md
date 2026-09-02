@@ -594,6 +594,14 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - L'établissement crée une **convocation** du parent ou du tuteur : motif, date et heure du rendez-vous, élève concerné.
 - Un **avis de convocation** (PDF officiel) est édité pour remise en main propre à l'élève, ou envoi.
 - **Une convocation n'est pas un portail parent** (§13) : elle ne crée aucun compte, n'ouvre aucun accès en consultation, et ne constitue pas une amorce du chapitre 13. C'est un registre interne de la Vie scolaire.
+- La convocation se crée aussi **depuis le bilan d'assiduité** (`/reports/attendance`, §11) : le motif y est pré-rempli avec les retards et les absences réellement comptés sur la période affichée, et reste modifiable. **Aucun seuil ne convoque à la place du Directeur** — le bilan propose, l'humain décide.
+
+### 18.3 Suite donnée à une convocation
+
+- Une convocation porte une **suite** : *honorée* (le parent s'est présenté), *non honorée*, ou *reportée*. Tant qu'elle n'est pas consignée, la convocation reste *planifiée* et figure en tête du registre.
+- Un **compte rendu** est obligatoire lorsque l'entretien n'a pas eu lieu comme prévu — une absence ou un report appellent une suite écrite. Il reste facultatif quand l'entretien s'est tenu.
+- La suite se consigne **une seule fois**. Le registre de la Vie scolaire vaut par son intégrité, au même titre que le registre disciplinaire (§18.1) : une erreur se corrige en émettant une **nouvelle** convocation, qui laisse les deux traces, jamais en réécrivant la précédente.
+- L'avis PDF est le document remis **avant** l'entretien : il ne porte pas la suite, qui n'existe pas encore au moment de son impression.
 
 ---
 
