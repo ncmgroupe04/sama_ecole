@@ -131,6 +131,9 @@ public class ModalShellTagHelper : TagHelper
         "lg" => "sm:max-w-lg",
         "xl" => "sm:max-w-xl",
         "2xl" => "sm:max-w-2xl",
+        // Fiches de détail (élève, enseignant) : un cran sous `wide` — assez large pour une grille à
+        // 4 colonnes, sans occuper presque tout l'écran.
+        "5xl" => "sm:max-w-5xl",
         // Aperçu PDF : plafond 4xl (56rem / 896px). La visionneuse native centre la page sur un fond
         // sombre — au-delà de cette largeur, ce ne sont plus que deux larges bandes vides de part et
         // d'autre du document. Combiné à `tall` (≈ 92 vh), la page respire sans que la modale s'étale.

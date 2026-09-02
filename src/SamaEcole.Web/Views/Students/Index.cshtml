@@ -204,7 +204,7 @@
  <!-- Fiche élève complète (ticket JGK-D02) : l'identité vient de la ligne de liste (affichage
  immédiat) ; l'historique scolaire, les notes et les paiements sont chargés depuis
  GET /students/{id} (studentDetail) et présentés en onglets ci-dessous. -->
- <modal-shell open="detailStudent" on-close="closeDetail()" hide-header="true" no-padding="true" size="wide">
+ <modal-shell open="detailStudent" on-close="closeDetail()" hide-header="true" no-padding="true" size="5xl">
     <div class="bg-white border-b border-slate-100 p-6 flex justify-between items-start">
         <div class="flex items-center gap-4">
             <img x-show="detailStudent && detailStudent.photoDisplayUrl" :src="detailStudent ? detailStudent.photoDisplayUrl : ''" alt=""
