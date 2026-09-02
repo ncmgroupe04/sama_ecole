@@ -64,11 +64,11 @@
     const FALLBACK_WIDTH = 640;
 
     /**
-     * Largeur maximale de la modale d'aperçu, en pixels — alignée sur le gabarit `5xl` de
-     * modal-shell (64 rem), celui des fiches élève et enseignant, pour une présentation homogène
-     * d'un écran à l'autre.
+     * Largeur maximale de la modale d'aperçu, en pixels — le gabarit `5xl` de modal-shell
+     * (64 rem / 1024 px, celui des fiches élève et enseignant) MOINS 10 %, pour un cadre un peu
+     * plus resserré autour du document sans casser l'homogénéité d'un écran à l'autre.
      */
-    const PANEL_MAX_WIDTH = 1024;
+    const PANEL_MAX_WIDTH = 922;
 
     /** Gouttières horizontales de modal-shell (`sm:p-4`, 2 × 1 rem) : la modale ne les dépasse jamais. */
     const PANEL_GUTTERS = 32;
@@ -187,6 +187,7 @@
          */
         state() {
             let doc = null;          // PDFDocumentProxy en cours
+            let loadingTask = null;  // PDFDocumentLoadingTask : c'est ELLE qui porte destroy(), pas le proxy
             let blob = null;         // Blob source, conservé pour imprimer / télécharger / ouvrir
             let lastRequest = null;  // { url, title, downloadName } pour le bouton « Réessayer »
             let renderToken = null;  // jeton d'annulation du rendu en cours
@@ -208,7 +209,11 @@
                     window.removeEventListener('resize', resizeHandler);
                     resizeHandler = null;
                 }
-                doc?.destroy();
+                // Le proxy rendu par `getDocument().promise` n'expose pas destroy() (pdf.js v4) :
+                // détruire la TÂCHE de chargement démonte le worker ET le proxy. Sans await —
+                // téléchargement/impression tirent leur contenu de `blob`, pas de `doc`.
+                loadingTask?.destroy();
+                loadingTask = null;
                 doc = null;
                 blob = null;
                 if (component.pdfPreviewUrl) {
@@ -295,10 +300,11 @@
                         // `data` détache l'ArrayBuffer transmis : on repart d'une copie fraîche du Blob
                         // pour que `blob` reste exploitable par l'impression et le téléchargement.
                         const bytes = new Uint8Array(await blob.arrayBuffer());
-                        doc = await pdfjsLib.getDocument({
+                        loadingTask = pdfjsLib.getDocument({
                             data: bytes,
                             standardFontDataUrl: PDFJS_STANDARD_FONTS
-                        }).promise;
+                        });
+                        doc = await loadingTask.promise;
 
                         this.pdfPageCount = doc.numPages;
                         await this.renderPdfPages();
@@ -424,11 +430,12 @@
                 get canZoomPdfOut() { return this.pdfZoom > ZOOM_MIN; },
 
                 /**
-                 * Largeur de la modale d'aperçu, alignée sur les fiches élève et enseignant
-                 * (`size="5xl"` de modal-shell, soit 64 rem / 1024 px) pour une présentation homogène
-                 * d'un écran à l'autre, plutôt qu'un gabarit calé au format du document. Bornée à la
-                 * largeur de la fenêtre moins les gouttières de la modale. Chaîne vide tant que la
-                 * 1re page n'est pas mesurée : le gabarit `size` de modal-shell s'applique alors.
+                 * Largeur de la modale d'aperçu : le gabarit `size="5xl"` de modal-shell
+                 * (64 rem / 1024 px, celui des fiches élève et enseignant) moins 10 %
+                 * (PANEL_MAX_WIDTH), plutôt qu'un gabarit calé au format du document.
+                 * Bornée à la largeur de la fenêtre moins les gouttières de la modale. Chaîne vide
+                 * tant que la 1re page n'est pas mesurée : le gabarit `size` de modal-shell s'applique
+                 * alors (transitoire, < 1 s).
                  */
                 get pdfPanelStyle() {
                     if (!this.pdfDocRatio) return '';
