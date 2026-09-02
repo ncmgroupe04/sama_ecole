@@ -215,7 +215,10 @@ document.addEventListener('alpine:init', () => {
                 const active = Array.isArray(years) ? years.find(y => y.isActive) : null;
                 this.activeYearLabel = active ? active.label : '';
             } catch (err) {
-                this.activeYearLabel = ''; // libellé de confort : on n'interrompt jamais la liste pour ça
+                // silence-volontaire: libellé de confort affiché à côté du titre. Son absence ne
+                // change ni la liste, ni les filtres, ni aucune action possible — interrompre
+                // l'écran pour ça serait disproportionné.
+                this.activeYearLabel = '';
             }
         },
 

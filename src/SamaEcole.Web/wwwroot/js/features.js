@@ -25,9 +25,10 @@ window.features = {
                 this.plan = result.plan || null;
                 this.enabled = result.features || [];
             } catch {
-                // Session absente ou réseau coupé : on reste sur « aucune option ». Ne jamais ouvrir
-                // une fonctionnalité facturée parce que sa vérification a échoué — l'API refuserait
-                // de toute façon, autant ne pas la proposer.
+                // silence-volontaire: échec FERMÉ, par sécurité. Session absente ou réseau coupé : on
+                // reste sur « aucune option ». Ne jamais ouvrir une fonctionnalité facturée parce que
+                // sa vérification a échoué — l'API refuserait de toute façon, autant ne pas la
+                // proposer. Un toast au chargement de CHAQUE page serait par ailleurs intenable.
                 this.plan = null;
                 this.enabled = [];
             } finally {

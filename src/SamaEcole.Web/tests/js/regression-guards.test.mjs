@@ -108,18 +108,9 @@ test('garde-fou : la plage d\'années de dateField() colle à celle du DateField
  * `this.error`) dans le catch, puis supprimer la ligne ici.
  */
 const SILENT_LOADERS_DEBT = [
-    'caisse.js :: loadCurrentSession',
-    'caisse.js :: loadBalance',
-    'dashboard.js :: loadAnalytics',
-    'dashboard.js :: loadSurveillant',
-    'dashboard.js :: loadFinance',
-    'exams.js :: loadAudit',
-    'exams.js :: loadStatistics',
-    'features.js :: load',
-    'payroll.js :: loadSuggestedHours',
-    'settings.js :: load',
-    'sms-settings.js :: load',
-    'students.js :: loadActiveYear'
+    // VIDE — et c'est le but. Tout chargement du produit remonte désormais son échec (toast ou état
+    // d'erreur rendu par le gabarit), ou déclare son silence par un `silence-volontaire:` justifié.
+    // Le cliquet est donc entièrement fermé : le moindre nouveau `catch` muet fait échouer la suite.
 ];
 
 /**
@@ -140,8 +131,21 @@ function balancedBlock(source, openIndex) {
     return source.slice(openIndex);
 }
 
-/** Un échec est « remonté » s'il aboutit à quelque chose que l'utilisateur peut VOIR. */
-const SURFACES_ERROR = /toast\.|this\.error\s*=|showError|notify|alert\(/;
+/**
+ * Notification visible. Cherchée dans TOUT le corps : un `toast.error(...)` n'est jamais une
+ * réinitialisation, où qu'il se trouve. Nécessaire pour inventory.js :: loadBeneficiaries, qui
+ * mémorise l'échec dans une variable locale et ne le signale qu'après un Promise.all.
+ */
+const NOTIFIES = /toast\.|showError|notify\(|alert\(/;
+
+/**
+ * Affectation d'un état d'erreur rendu par le gabarit (`analyticsError`, `financeError`,
+ * `submitError`…). Cherchée UNIQUEMENT dans les gestionnaires : presque tous les chargements
+ * remettent leur état à `null` AVANT le try, et compter cette remise à zéro rendrait le garde-fou
+ * aveugle. C'est ce détail qui faisait passer les trois tuiles du tableau de bord pour muettes alors
+ * qu'elles affichent chacune son erreur depuis toujours.
+ */
+const SETS_ERROR_STATE = /this\.[A-Za-z0-9_]*[Ee]rror\s*=/;
 
 /**
  * Silence assumé : un `catch` portant `silence-volontaire:` suivi de sa justification. Réservé aux
@@ -168,9 +172,8 @@ function findSilentLoaders() {
             if (handlers.length === 0) continue;
 
             if (handlers.some((h) => DELIBERATE_SILENCE.test(h))) continue;
-            if (handlers.some((h) => SURFACES_ERROR.test(h))) continue;
-            // Certains écrans posent `this.error` hors du catch (avant l'appel) : le corps entier fait foi.
-            if (SURFACES_ERROR.test(body)) continue;
+            if (NOTIFIES.test(body)) continue;
+            if (handlers.some((h) => SETS_ERROR_STATE.test(h))) continue;
 
             found.push(`${name} :: ${match[1]}`);
         }

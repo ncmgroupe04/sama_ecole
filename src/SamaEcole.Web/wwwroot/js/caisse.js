@@ -86,8 +86,10 @@ document.addEventListener('alpine:init', () => {
             try {
                 this.currentSession = await window.api.get('/finance/sessions/current');
             } catch {
-                // 403 possible si le rôle n'a pas accès (canRecordPayment filtre déjà l'appelant réel) ;
-                // dans tous les cas, l'absence de session se traite comme "pas encore ouverte".
+                // silence-volontaire: 403 possible si le rôle n'a pas accès (canRecordPayment filtre
+                // déjà l'appelant réel) ; dans tous les cas, l'absence de session se traite comme
+                // "pas encore ouverte" — l'écran affiche alors son bandeau d'ouverture, qui EST la
+                // bonne conduite à tenir. Un message d'erreur n'ajouterait rien d'actionnable.
                 this.currentSession = null;
             } finally {
                 this.isLoadingSession = false;
