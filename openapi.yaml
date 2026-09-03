@@ -519,12 +519,16 @@ paths:
               schema: { type: array, items: { $ref: '#/components/schemas/UserSummary' } }
     post:
       tags: [Users]
-      summary: Créer un compte Secrétariat/Finance/Enseignant (Directeur uniquement)
+      summary: Créer un compte Secrétariat/Finance/Enseignant/Surveillant (Directeur uniquement)
       description: >-
-        SuperAdmin et Directeur sont volontairement exclus des rôles assignables ici : SuperAdmin est
-        un rôle plateforme hors du contrôle d'une école, Directeur ne se crée que via POST /schools
-        (JGK-B01). Le mot de passe est saisi DIRECTEMENT par le Directeur, jamais généré ni envoyé par
-        e-mail (l'adaptateur SMTP réel relève de JGK-G03, hors périmètre MVP).
+        Quatre rôles assignables, alignés sur CreateUserCommandValidator.AssignableRoles :
+        Secretariat, Finance, Enseignant et Surveillant. Ce dernier manquait à ce résumé alors que le
+        serveur l'accepte et que l'écran Utilisateurs le propose — tout le module Surveillance
+        (appel en classe, billets d'entrée, discipline, convocations) repose pourtant sur lui.
+        SuperAdmin et Directeur sont volontairement exclus : SuperAdmin est un rôle plateforme hors
+        du contrôle d'une école, Directeur ne se crée que via POST /schools (JGK-B01). Le mot de
+        passe est saisi DIRECTEMENT par le Directeur, jamais généré ni envoyé par e-mail
+        (l'adaptateur SMTP réel relève de JGK-G03, hors périmètre MVP).
       requestBody:
         required: true
         content:
@@ -3951,6 +3955,46 @@ paths:
             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
               schema: { type: string, format: binary }
 
+  /parent-summons:
+    get:
+      tags: [VieScolaire]
+      summary: Liste des convocations de parent/tuteur (Directeur, Surveillant, SuperAdmin) — Volume 1 §18.2, Volume 4 §16
+      description: >-
+        Liste complète de l'établissement, toutes suites confondues — pas de pagination ni de filtre à
+        ce jour. Les convocations SANS suite (`status: Scheduled`) remontent en tête, la plus ancienne
+        d'abord : ce sont les seules sur lesquelles il reste quelque chose à faire ; un tri purement
+        chronologique enterrerait une convocation oubliée d'octobre sous les entretiens déjà clos de
+        juin.
+      responses:
+        '200':
+          description: Liste des convocations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ParentSummons' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [VieScolaire]
+      summary: Convoquer un parent/tuteur (Directeur, Surveillant, SuperAdmin) — Volume 1 §18.2
+      description: >-
+        Motif libre, distinct d'une sanction disciplinaire (voir /discipline) : cette convocation ne
+        crée aucun accès portail, elle n'est qu'un document interne imprimé ou envoyé (règle de non
+        régression du §13, reporté en V3). La suite de l'entretien se consigne séparément, une fois
+        celui-ci tenu, via `PATCH /parent-summons/{id}/outcome` — pas ici.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ParentSummonsCreateRequest' }
+      responses:
+        '201':
+          description: Convocation créée (identifiant)
+          content:
+            application/json:
+              schema: { type: string, format: uuid }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Élève introuvable dans l'établissement courant }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /parent-summons/{id}/outcome:
     patch:
       tags: [VieScolaire]
@@ -3993,6 +4037,43 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /parent-summons/{id}/notice:
+    get:
+      tags: [VieScolaire]
+      summary: Avis de convocation — données (aperçu à l'écran avant impression) — Volume 4 §18, doc n°3
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Avis de convocation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ParentNotice' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /parent-summons/{id}/notice/pdf:
+    get:
+      tags: [VieScolaire]
+      summary: Avis de convocation — PDF officiel (en-tête M.E.N. + QR code) — Volume 4 §18, doc n°3
+      description: >-
+        Document remis AVANT l'entretien : il ne porte jamais la suite (Honored/Missed/Postponed), qui
+        n'existe pas encore au moment où on l'imprime — voir PATCH /parent-summons/{id}/outcome.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Le PDF (Content-Disposition inline)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { description: Convocation introuvable, ou PDF généré vide }
 
 components:
   securitySchemes:
@@ -4043,7 +4124,7 @@ components:
   schemas:
     Role:
       type: string
-      enum: [SuperAdmin, Directeur, Secretariat, Finance, Enseignant]
+      enum: [SuperAdmin, Directeur, Secretariat, Finance, Enseignant, Surveillant]
 
     ErrorResponse:
       type: object
@@ -6455,6 +6536,56 @@ components:
         women: { type: integer }
         genderNotReported: { type: integer }
         count: { type: integer }
+
+    ParentSummons:
+      type: object
+      description: Ligne de GET /parent-summons.
+      properties:
+        id: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        studentFullName: { type: string }
+        studentMatricule: { type: string }
+        scheduledAt: { type: string, format: date-time }
+        reason: { type: string }
+        createdAt: { type: string, format: date-time }
+        status: { $ref: '#/components/schemas/ParentSummonsStatus' }
+        outcomeNotes: { type: string, nullable: true }
+        closedAt: { type: string, format: date-time, nullable: true }
+
+    ParentSummonsCreateRequest:
+      type: object
+      required: [studentId, scheduledAt, reason]
+      properties:
+        studentId: { type: string, format: uuid }
+        scheduledAt: { type: string, format: date-time }
+        reason: { type: string, maxLength: 1000 }
+
+    ParentNotice:
+      type: object
+      description: >-
+        Avis de convocation imprimable — même formalisme M.E.N. que le certificat de scolarité et le
+        PV de discipline (en-tête République/Ministère/IA/IEF). Ne porte jamais la suite de
+        l'entretien : voir la règle sur PATCH /parent-summons/{id}/outcome.
+      properties:
+        parentSummonsId: { type: string, format: uuid }
+        noticeNumber: { type: string, example: "CONV-3F2A9C1B" }
+        matricule: { type: string }
+        studentFullName: { type: string }
+        classroomName: { type: string }
+        schoolYearLabel: { type: string, nullable: true }
+        scheduledAt: { type: string, format: date-time }
+        reason: { type: string }
+        issuedAt: { type: string, format: date-time }
+        guardianName: { type: string, nullable: true }
+        guardianPhone: { type: string, nullable: true }
+        schoolName: { type: string }
+        schoolAddress: { type: string, nullable: true }
+        schoolCity: { type: string, nullable: true }
+        inspectionAcademie: { type: string, nullable: true }
+        inspectionEducationFormation: { type: string, nullable: true }
+        headingPrefix: { type: string, description: "« Lycée » / « Collège » / « École » selon le cycle — voir SchoolHeading." }
+        headingName: { type: string, nullable: true }
+        schoolLogoUrl: { type: string, nullable: true }
 
     ParentSummonsStatus:
       type: string

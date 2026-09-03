@@ -16,6 +16,26 @@ document.addEventListener('alpine:init', () => {
         // Rôles alignés sur ParentSummonsController (SuperAdmin/Directeur/Surveillant).
         canManageParentSummons: window.auth.role === 'Directeur' || window.auth.role === 'Surveillant',
 
+        // ------------------------------------------------------ Convocations en retard (03/09/2026)
+        //
+        // « Planifiée » ne dit pas si la date est déjà passée : une convocation du mois dernier sans
+        // suite consignée se noyait visuellement parmi celles de la semaine prochaine, alors que
+        // l'entretien aurait dû avoir lieu et que rien n'a été consigné. Calculé côté client — le
+        // serveur ne pose aucun statut « en retard », scheduledAt + status suffisent.
+        overdueOnly: false,
+
+        isOverdue(record) {
+            return record.status === 'Scheduled' && new Date(record.scheduledAt).getTime() < Date.now();
+        },
+
+        overdueCount() {
+            return this.records.filter((r) => this.isOverdue(r)).length;
+        },
+
+        filteredRecords() {
+            return this.overdueOnly ? this.records.filter((r) => this.isOverdue(r)) : this.records;
+        },
+
         // Modale de création
         isCreateOpen: false,
         isCreating: false,

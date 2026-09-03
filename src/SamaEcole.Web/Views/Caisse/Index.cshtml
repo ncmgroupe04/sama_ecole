@@ -60,7 +60,11 @@
             min-height: 128mm !important;
             height: 128mm !important;
             max-height: 128mm !important;
-            margin: 0 !important; padding: 0 !important;
+            /* Filet bas de 4 mm : le pied (signatures + mention) ne touche plus le bord de la
+               feuille. Pris sur la zone utile, sans risque : le contenu ne la remplit pas.
+               Aligné sur /inscriptions, qui portait déjà ce filet — les deux reçus A5 partagent la
+               même feuille et le même pied signé, ils doivent s'imprimer à l'identique. */
+            margin: 0 !important; padding: 0 0 4mm !important;
             box-shadow: none !important; border: 0 !important; border-radius: 0 !important;
             /* Dernier garde-fou : rien ne peut déclencher une 2e page. L'indicateur de tenue en page
                signale le cas À L'ÉCRAN avant l'impression, pour qu'il soit corrigé et non subi. */

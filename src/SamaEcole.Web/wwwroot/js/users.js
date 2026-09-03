@@ -1,7 +1,8 @@
 /**
  * Onglet Utilisateurs (Paramètres) — gestion du personnel par le Directeur : création de comptes
- * Secrétariat/Finance/Enseignant, blocage/suspension/réactivation (motif obligatoire, JGK-A05),
- * réinitialisation de mot de passe et historique des changements de statut.
+ * Secrétariat/Finance/Enseignant/Surveillant (les quatre rôles de
+ * CreateUserCommandValidator.AssignableRoles), blocage/suspension/réactivation (motif obligatoire,
+ * JGK-A05), réinitialisation de mot de passe et historique des changements de statut.
  *
  * Le serveur reste seul juge : l'API entière (UsersController) est [Authorize(Roles = Directeur)],
  * les autres rôles ne voient même pas cet onglet (voir Settings/Index.cshtml) — confort d'affichage,
