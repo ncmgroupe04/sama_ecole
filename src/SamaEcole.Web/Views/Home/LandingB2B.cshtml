@@ -1,236 +1,598 @@
-@* 
-    Vue: Views/Home/LandingB2B.cshtml 
-    Description: Landing Page B2B (Vitrine du Logiciel)
-*@
-
+@using SamaEcole.Web.Content
 @{
-    ViewData["Title"] = "Le logiciel de gestion scolaire complet";
-    Layout = "_LayoutPublic"; // Assuming a public layout exists
+    ViewData["Title"] = "Plateforme de gestion pour établissements scolaires";
+    ViewData["Description"] = "Unikol centralise la gestion scolaire, administrative, financière et disciplinaire de votre établissement dans une seule plateforme : inscriptions, notes et bulletins, caisse et recouvrements, paie, vie scolaire, examens officiels et pièces réglementaires.";
+    ViewData["ActivePage"] = "accueil";
+    Layout = "_LayoutPublic";
 }
 
-<!-- Hero Section -->
-<section class="relative bg-white overflow-hidden">
-    <div class="max-w-7xl mx-auto">
-        <div class="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32 pt-20">
-            <main class="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-                <div class="sm:text-center lg:text-left">
-                    <h1 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                        <span class="block xl:inline">Gérez votre établissement</span>
-                        <span class="block text-indigo-600 xl:inline">en toute sérénité</span>
-                    </h1>
-                    <p class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                        Unikol est la plateforme SaaS n°1 au Sénégal pour l'administration scolaire. Finances, notes, présences et communication centralisées en un seul endroit.
-                    </p>
-                    <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
-                        <div class="rounded-md shadow">
-                            @* /inscription : formulaire self-service réel (ticket JGK-I01, AccountController.Register)
-                               — pas de modale de contact séparée à maintenir en double. *@
-                            <a href="/inscription" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10 transition-colors">
-                                Demander une démo
-                            </a>
+@*
+    VITRINE COMMERCIALE (/vitrine). Parcours de conversion : problème → solution → preuve → offre.
+    Le catalogue détaillé des 14 modules vit sur /modules (Views/Home/Modules.cshtml) — c'est cette
+    séparation qui empêche la vitrine de redevenir une page de documentation.
+
+    Contenu : SamaEcole.Web/Content/MarketingCatalog.cs. Rien ici n'affirme ce que le code ne fait
+    pas — pas de chiffre de clientèle, pas de prix, pas de portail parents (hors périmètre V1).
+*@
+
+<!-- ══════════════════════════════════════════════════════════════════ HERO -->
+<section class="relative overflow-hidden">
+    <div class="mkt-hero-bg"></div>
+    <div class="mkt-container px-4 sm:px-6 lg:px-8 pt-16 pb-16 lg:pt-24 lg:pb-24">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+
+            <div>
+                <span class="mkt-eyebrow">Plateforme de gestion scolaire · Sénégal</span>
+                @* Coupure forcée après « établissement. » à toutes les largeurs, et chaque membre
+                   de la seconde ligne insécable : sans cela, « Tout-en-un. » se brise sur ses
+                   traits d'union en dessous de 600px. *@
+                <h1 class="mkt-h1 mt-5">
+                    Gérez votre établissement.<br />
+                    <span class="text-primary-600">
+                        <span class="whitespace-nowrap">Tout-en-un.</span>
+                        <span class="whitespace-nowrap">Simplement.</span>
+                    </span>
+                </h1>
+                <p class="mkt-lead mt-5 max-w-xl">
+                    Unikol centralise la gestion scolaire, administrative, financière et disciplinaire
+                    de votre établissement dans une seule plateforme.
+                </p>
+                <div class="mt-8 flex flex-col sm:flex-row gap-3">
+                    <a href="/inscription" class="mkt-btn mkt-btn-primary">Demander une démonstration</a>
+                    <a href="#fonctionnalites" class="mkt-btn mkt-btn-secondary">Découvrir les fonctionnalités</a>
+                </div>
+                <p class="mt-5 text-sm text-slate-500">
+                    Sans engagement · Mise en route accompagnée · Conçu pour les cycles sénégalais
+                </p>
+            </div>
+
+            @* La maquette porte seule l'illustration : elle contient déjà les KPI chiffrés, un
+               histogramme et un panneau « vie scolaire ». Des cartes flottantes en superposition
+               reviendraient à répéter ces chiffres tout en masquant le mockup — testé, abandonné. *@
+            <div data-reveal>
+                @await Html.PartialAsync("Marketing/_MockupDashboard")
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ BANDEAU DE CONFIANCE -->
+<section class="border-y border-slate-200 bg-slate-50">
+    <div class="mkt-container px-4 sm:px-6 lg:px-8 py-10">
+        <p class="text-center text-sm font-semibold uppercase tracking-wider text-slate-500">
+            Une seule plateforme pour piloter tout votre établissement
+        </p>
+        <dl class="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
+            @foreach (var figure in MarketingCatalog.Figures)
+            {
+                <div class="text-center" data-reveal>
+                    <dt class="text-3xl font-extrabold tabular-nums text-slate-900 sm:text-4xl">@figure.Value</dt>
+                    <dd class="mt-1 text-sm text-slate-500">@figure.Label</dd>
+                </div>
+            }
+        </dl>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ PROBLÈMES -->
+<section class="mkt-section">
+    <div class="mkt-container">
+        <div class="max-w-2xl">
+            <span class="mkt-eyebrow">Le constat</span>
+            <h2 class="mkt-h2 mt-4">Gérer une école ne devrait pas être un casse-tête.</h2>
+            <p class="mkt-lead mt-4">
+                La difficulté n'est presque jamais le manque d'information — c'est qu'elle est
+                dispersée, sur papier, dans plusieurs outils qui ne se parlent pas.
+            </p>
+        </div>
+
+        <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-5">
+            @{ var pi = 0; }
+            @foreach (var problem in MarketingCatalog.Problems)
+            {
+                pi++;
+                <div class="mkt-card flex gap-4" data-reveal data-reveal-delay="@(pi % 3 == 0 ? 3 : pi % 3)">
+                    <span class="mkt-icon-tile bg-slate-100 text-slate-500" aria-hidden="true">
+                        <icon name="@problem.Icon" class="h-5 w-5" />
+                    </span>
+                    <div>
+                        <h3 class="mkt-h3">@problem.Title</h3>
+                        <p class="mkt-body mt-1.5 text-sm">@problem.Description</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="mt-10 rounded-2xl bg-primary-600 px-6 py-8 text-center lg:px-10">
+            <p class="text-xl font-bold text-white sm:text-2xl">Unikol rassemble tout au même endroit.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ GRANDES FAMILLES -->
+<section id="fonctionnalites" class="mkt-section bg-slate-50 scroll-mt-16">
+    <div class="mkt-container">
+        <div class="max-w-2xl">
+            <span class="mkt-eyebrow">Ce que couvre la plateforme</span>
+            <h2 class="mkt-h2 mt-4">Tout votre établissement. Un seul logiciel.</h2>
+            <p class="mkt-lead mt-4">
+                Huit domaines, quatorze modules. Le socle métier — élèves, classes, notes,
+                inscriptions, encaissement, bulletins, documents — est inclus dans toutes les formules.
+            </p>
+        </div>
+
+        <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            @{ var fi = 0; }
+            @foreach (var family in MarketingCatalog.Families)
+            {
+                fi++;
+                <div class="mkt-card mkt-card-hover" data-reveal data-reveal-delay="@((fi % 3) + 1)">
+                    <span class="mkt-icon-tile" aria-hidden="true">
+                        <icon name="@family.Icon" class="h-5 w-5" />
+                    </span>
+                    <h3 class="mkt-h3 mt-4">@family.Title</h3>
+                    <p class="mkt-body mt-1.5 text-sm">@family.Description</p>
+                    <p class="mt-3 text-xs font-semibold text-primary-600">@family.Modules</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ UNIKOL EN UN COUP D'ŒIL -->
+<section class="mkt-section">
+    <div class="mkt-container">
+        <div class="mx-auto max-w-2xl text-center">
+            <span class="mkt-eyebrow">L'architecture fonctionnelle</span>
+            <h2 class="mkt-h2 mt-4">Unikol, au centre de la gestion de l'établissement.</h2>
+        </div>
+
+        @* Le « diagramme » se résume à un centre affirmé et neuf domaines qui gravitent autour.
+           Un vrai tracé radial (9 satellites à équidistance, traits de liaison) tient mal la
+           réduction et ne se replie pas proprement en cartes : ici, une bande centrale forte,
+           puis une grille régulière — lisible du smartphone au grand écran, sans placement de
+           grille fragile. « Sur mobile, cartes empilées » (brief §13) est alors le cas par défaut,
+           pas une adaptation. *@
+        <div class="mt-12">
+            <div class="rounded-2xl bg-primary-600 px-6 py-8 text-center flex flex-col items-center">
+                <span aria-hidden="true" class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 text-2xl font-extrabold text-white">U</span>
+                <p class="mt-3 text-2xl font-extrabold tracking-tight text-white">UNIKOL</p>
+                <p class="mt-1 text-sm text-primary-100">Un établissement · une plateforme · une vision</p>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 lg:grid-cols-3 gap-4">
+                @{
+                    var hub = new (string Icon, string Label)[]
+                    {
+                        ("users", "Scolarité"), ("book", "Pédagogie"), ("wallet", "Finance"),
+                        ("shield", "Administration"), ("eye", "Vie scolaire"), ("document-text", "Examens"),
+                        ("payment", "Ressources humaines"), ("archive", "Patrimoine"), ("building", "Intégrations")
+                    };
+                }
+                @foreach (var (icon, label) in hub)
+                {
+                    <div class="mkt-card mkt-card-hover flex items-center gap-3 py-4" data-reveal>
+                        <span class="mkt-icon-tile" aria-hidden="true"><icon name="@icon" class="h-5 w-5" /></span>
+                        <span class="text-sm font-semibold text-slate-900">@label</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ EXPLORATEUR DE MODULES -->
+<section id="modules" class="mkt-section bg-slate-50 scroll-mt-16"
+         x-data="moduleExplorer('tous')">
+    <div class="mkt-container">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div class="max-w-2xl">
+                <span class="mkt-eyebrow">L'écosystème</span>
+                <h2 class="mkt-h2 mt-4">Explorez les 14 modules.</h2>
+                <p class="mkt-lead mt-4">
+                    Filtrez par domaine, dépliez une carte pour voir ses fonctionnalités, les profils
+                    concernés et l'écran qui l'implémente.
+                </p>
+            </div>
+            <a href="/modules" class="mkt-btn mkt-btn-secondary mkt-btn-sm shrink-0">Voir le catalogue détaillé</a>
+        </div>
+
+        <div class="mt-8 flex flex-wrap gap-2" role="group" aria-label="Filtrer les modules par domaine">
+            @foreach (var category in MarketingCatalog.Categories)
+            {
+                <button type="button" class="mkt-filter"
+                        x-on:click="select('@category.Key')"
+                        :aria-pressed="category === '@category.Key' ? 'true' : 'false'">
+                    @category.Label
+                </button>
+            }
+        </div>
+
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            @foreach (var module in MarketingCatalog.Modules)
+            {
+                @await Html.PartialAsync("Marketing/_ModuleCard", module)
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ PRODUIT EN ACTION -->
+<section class="mkt-section" x-data="marketingTabs('dashboard')">
+    <div class="mkt-container">
+        <div class="mx-auto max-w-2xl text-center">
+            <span class="mkt-eyebrow">Aperçu</span>
+            <h2 class="mkt-h2 mt-4">Voyez Unikol en action.</h2>
+            <p class="mkt-lead mt-4">
+                Les libellés sont ceux de l'application. Les chiffres illustrent — ils ne
+                représentent aucun établissement réel.
+            </p>
+        </div>
+
+        <div class="mt-10 flex justify-center">
+            <div class="inline-flex flex-wrap justify-center gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Écrans de l'application">
+                <button type="button" class="mkt-tab" role="tab" id="tab-dashboard"
+                        :aria-selected="isCurrent('dashboard') ? 'true' : 'false'" tabindex="0"
+                        x-on:click="select('dashboard')" x-on:keydown.arrow-right.prevent="move($event, 1)" x-on:keydown.arrow-left.prevent="move($event, -1)"
+                        aria-controls="panel-dashboard">Tableau de bord</button>
+                <button type="button" class="mkt-tab" role="tab" id="tab-students"
+                        :aria-selected="isCurrent('students') ? 'true' : 'false'" tabindex="0"
+                        x-on:click="select('students')" x-on:keydown.arrow-right.prevent="move($event, 1)" x-on:keydown.arrow-left.prevent="move($event, -1)"
+                        aria-controls="panel-students">Élèves</button>
+                <button type="button" class="mkt-tab" role="tab" id="tab-finance"
+                        :aria-selected="isCurrent('finance') ? 'true' : 'false'" tabindex="0"
+                        x-on:click="select('finance')" x-on:keydown.arrow-right.prevent="move($event, 1)" x-on:keydown.arrow-left.prevent="move($event, -1)"
+                        aria-controls="panel-finance">Caisse</button>
+            </div>
+        </div>
+
+        <div class="mt-8" data-reveal>
+            <div id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" x-show="isCurrent('dashboard')" x-transition:enter.opacity.duration.200ms>
+                @await Html.PartialAsync("Marketing/_MockupDashboard")
+            </div>
+            <div id="panel-students" role="tabpanel" aria-labelledby="tab-students" x-show="isCurrent('students')" x-transition:enter.opacity.duration.200ms x-cloak>
+                @await Html.PartialAsync("Marketing/_MockupStudents")
+            </div>
+            <div id="panel-finance" role="tabpanel" aria-labelledby="tab-finance" x-show="isCurrent('finance')" x-transition:enter.opacity.duration.200ms x-cloak>
+                @await Html.PartialAsync("Marketing/_MockupFinance")
+            </div>
+            <p class="mkt-demo-note">Écrans reconstitués à partir de l'application — données de démonstration.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ GESTION FINANCIÈRE -->
+<section class="mkt-section bg-slate-50">
+    <div class="mkt-container grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div data-reveal>
+            @await Html.PartialAsync("Marketing/_MockupFinance")
+            <p class="mkt-demo-note">Écran Caisse — données de démonstration.</p>
+        </div>
+        <div>
+            <span class="mkt-eyebrow">Finance &amp; comptabilité</span>
+            <h2 class="mkt-h2 mt-4">Votre situation financière, en temps réel.</h2>
+            <p class="mkt-lead mt-4">
+                Chaque encaissement génère son reçu. Les impayés se suivent par classe comme par
+                élève. La caisse reste comptable parce que la Finance encaisse sans jamais fixer ni
+                corriger un montant dû.
+            </p>
+            <ul class="mt-6 space-y-3">
+                @foreach (var line in new[]
+                {
+                    "Barème des frais d'inscription et des mensualités",
+                    "Encaissement au guichet et reçu de paiement A5",
+                    "Suivi des recouvrements, des impayés et des relances",
+                    "Décaissements, fournisseurs, salaires et charges",
+                    "Tableau de bord de trésorerie — encaissements et sorties consolidés",
+                    "Rapports financiers et export comptable .xlsx"
+                })
+                {
+                    <li class="flex items-start gap-2.5 text-slate-700">
+                        <icon name="check" class="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
+                        <span>@line</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ DOSSIER ÉLÈVE -->
+<section class="mkt-section">
+    <div class="mkt-container grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div class="lg:order-2" data-reveal>
+            @await Html.PartialAsync("Marketing/_MockupStudents")
+            <p class="mkt-demo-note">Fiche élève — données de démonstration.</p>
+        </div>
+        <div class="lg:order-1">
+            <span class="mkt-eyebrow">Gestion scolaire</span>
+            <h2 class="mkt-h2 mt-4">Chaque élève a son dossier.</h2>
+            <p class="mkt-lead mt-4">
+                Matricule, état civil, classe et inscription, situation financière, résultats,
+                assiduité, discipline, identifiant national : tout est réuni sur une seule fiche,
+                sans avoir à ouvrir trois outils.
+            </p>
+            <ul class="mt-6 grid grid-cols-2 gap-x-4 gap-y-2.5">
+                @foreach (var chip in new[]
+                {
+                    "Matricule", "Classe & inscription", "Situation financière", "Bulletins PDF",
+                    "Assiduité", "Discipline", "Identifiant national (IEN)", "Certificats"
+                })
+                {
+                    <li class="flex items-center gap-2 text-sm text-slate-700">
+                        <icon name="check" class="h-4 w-4 shrink-0 text-primary-500" />
+                        <span>@chip</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ AVANT / APRÈS -->
+<section class="mkt-section bg-slate-50">
+    <div class="mkt-container">
+        <div class="mx-auto max-w-2xl text-center">
+            <h2 class="mkt-h2">Une seule source de vérité pour votre établissement.</h2>
+        </div>
+        <div class="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="mkt-card border-slate-200" data-reveal>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Avant Unikol</p>
+                <ul class="mt-4 space-y-2.5">
+                    @foreach (var line in new[]
+                    {
+                        "Registres, cahiers d'appel et souches de reçus",
+                        "Un tableur pour les paiements, un autre pour les notes",
+                        "Des documents Word recomposés à chaque édition",
+                        "Plusieurs outils qui ne communiquent pas",
+                        "Une situation financière connue avec plusieurs jours de retard"
+                    })
+                    {
+                        <li class="flex items-start gap-2.5 text-slate-600">
+                            <icon name="x" class="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
+                            <span>@line</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div class="mkt-card border-primary-200 bg-primary-50/40" data-reveal data-reveal-delay="1">
+                <p class="text-xs font-bold uppercase tracking-wider text-primary-600">Après Unikol</p>
+                <ul class="mt-4 space-y-2.5">
+                    @foreach (var line in new[]
+                    {
+                        "Une plateforme, accessible d'un ordinateur comme d'un téléphone",
+                        "Des données saisies une fois, partagées par tous les écrans",
+                        "Reçus, bulletins et certificats générés automatiquement",
+                        "Matricules, moyennes et échéanciers calculés, jamais ressaisis",
+                        "Tableaux de bord et rapports à jour en permanence"
+                    })
+                    {
+                        <li class="flex items-start gap-2.5 text-slate-700">
+                            <icon name="check" class="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
+                            <span>@line</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ POUR CHAQUE RÔLE -->
+<section id="profils" class="mkt-section scroll-mt-16" x-data="marketingTabs('directeur')">
+    <div class="mkt-container">
+        <div class="max-w-2xl">
+            <span class="mkt-eyebrow">Pour qui&nbsp;?</span>
+            <h2 class="mkt-h2 mt-4">Une plateforme adaptée à chaque rôle.</h2>
+            <p class="mkt-lead mt-4">
+                Cinq profils d'accès, des permissions distinctes. Chacun ne voit que ce que son rôle
+                autorise — sans réglage à faire.
+            </p>
+        </div>
+
+        <div class="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible scrollbar-hide" role="tablist" aria-label="Profils utilisateurs" aria-orientation="vertical">
+                @foreach (var profile in MarketingCatalog.Profiles)
+                {
+                    <button type="button" role="tab" id="roletab-@profile.Key"
+                            class="flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary
+                                   aria-selected:bg-primary-50 aria-selected:text-primary-700 text-slate-600 hover:bg-slate-50"
+                            :aria-selected="isCurrent('@profile.Key') ? 'true' : 'false'" tabindex="0"
+                            x-on:click="select('@profile.Key')"
+                            x-on:keydown.arrow-down.prevent="move($event, 1)" x-on:keydown.arrow-up.prevent="move($event, -1)"
+                            aria-controls="rolepanel-@profile.Key">
+                        <span class="mkt-icon-tile h-9 w-9" aria-hidden="true"><icon name="@profile.Icon" class="h-4 w-4" /></span>
+                        @profile.Name
+                    </button>
+                }
+            </div>
+
+            <div class="lg:col-span-2">
+                @foreach (var profile in MarketingCatalog.Profiles)
+                {
+                    <div id="rolepanel-@profile.Key" role="tabpanel" aria-labelledby="roletab-@profile.Key"
+                         x-show="isCurrent('@profile.Key')" x-transition:enter.opacity.duration.200ms
+                         @(profile.Key == "directeur" ? "" : "x-cloak")>
+                        <div class="mkt-card">
+                            <h3 class="mkt-h3">@profile.Name</h3>
+                            <p class="mt-2 text-lg font-medium text-primary-700">@profile.Promise</p>
+                            <ul class="mt-5 space-y-2.5">
+                                @foreach (var capability in profile.Capabilities)
+                                {
+                                    <li class="flex items-start gap-2.5 text-slate-700">
+                                        <icon name="check" class="mt-0.5 h-5 w-5 shrink-0 text-primary-500" />
+                                        <span>@capability</span>
+                                    </li>
+                                }
+                            </ul>
+                            <p class="mt-5 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                <span class="font-semibold text-slate-700">À noter —</span> @profile.Note
+                            </p>
                         </div>
-                        <div class="mt-3 sm:mt-0 sm:ml-3">
-                            <a href="#tarifs" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 md:py-4 md:text-lg md:px-10 transition-colors">
-                                Voir les tarifs
-                            </a>
+                    </div>
+                }
+                <p class="mt-4 text-sm text-slate-500">
+                    Un sixième rôle, <span class="font-medium text-slate-700">Super Admin</span>, est réservé
+                    à l'exploitant de la plateforme pour l'administration des abonnements. Il n'accède
+                    à aucune donnée pédagogique ou financière d'un établissement.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ COMMENT ÇA MARCHE -->
+<section class="mkt-section bg-slate-50">
+    <div class="mkt-container">
+        <div class="max-w-2xl">
+            <span class="mkt-eyebrow">Mise en route</span>
+            <h2 class="mkt-h2 mt-4">Commencer avec Unikol est simple.</h2>
+        </div>
+
+        <ol class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            @{ var si = 0; }
+            @foreach (var step in MarketingCatalog.Steps)
+            {
+                si++;
+                <li class="mkt-card relative" data-reveal data-reveal-delay="@(si > 3 ? 3 : si)">
+                    <span class="text-2xl font-extrabold tabular-nums text-primary-200">@step.Number</span>
+                    <h3 class="mkt-h3 mt-2">@step.Title</h3>
+                    <p class="mkt-body mt-1.5 text-sm">@step.Description</p>
+                </li>
+            }
+        </ol>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ SÉCURITÉ -->
+<section id="securite" class="mkt-section scroll-mt-16">
+    <div class="mkt-container">
+        <div class="max-w-2xl">
+            <span class="mkt-eyebrow">Sécurité &amp; contrôle</span>
+            <h2 class="mkt-h2 mt-4">Vos données doivent rester sous contrôle.</h2>
+            <p class="mkt-lead mt-4">
+                Chaque garantie ci-dessous correspond à un mécanisme réellement en place dans la
+                plateforme, pas à une intention.
+            </p>
+        </div>
+
+        <div class="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            @{ var gi = 0; }
+            @foreach (var guarantee in MarketingCatalog.Guarantees)
+            {
+                gi++;
+                <div class="mkt-card" data-reveal data-reveal-delay="@((gi % 3) + 1)">
+                    <span class="mkt-icon-tile" aria-hidden="true"><icon name="@guarantee.Icon" class="h-5 w-5" /></span>
+                    <h3 class="mkt-h3 mt-4">@guarantee.Title</h3>
+                    <p class="mkt-body mt-1.5 text-sm">@guarantee.Description</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ FORMULES -->
+<section id="tarifs" class="mkt-section bg-slate-50 scroll-mt-16">
+    <div class="mkt-container">
+        <div class="mx-auto max-w-2xl text-center">
+            <span class="mkt-eyebrow">Formules</span>
+            <h2 class="mkt-h2 mt-4">Une formule pour chaque taille d'établissement.</h2>
+            <p class="mkt-lead mt-4">
+                Le socle métier est inclus partout. Chaque formule ajoute des capacités adaptées à
+                un effectif et à un mode d'organisation.
+            </p>
+        </div>
+
+        <div class="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            @foreach (var plan in MarketingCatalog.Plans)
+            {
+                <div class="mkt-card @(plan.Recommended ? "border-2 border-primary-600 relative lg:-mt-3 lg:shadow-lg" : "")" data-reveal>
+                    @if (plan.Recommended)
+                    {
+                        <span class="absolute -top-3 left-6 rounded-full bg-primary-600 px-3 py-1 text-xs font-semibold text-white">Recommandée</span>
+                    }
+                    <h3 class="mkt-h3">@plan.Name</h3>
+                    <p class="mt-2 text-sm text-slate-500">@plan.Audience</p>
+                    <ul class="mt-5 space-y-2.5">
+                        @foreach (var item in plan.Includes)
+                        {
+                            <li class="flex items-start gap-2.5 text-sm text-slate-700">
+                                <icon name="check" class="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
+                                <span>@item</span>
+                            </li>
+                        }
+                    </ul>
+                    <a href="/inscription?plan=@plan.Name"
+                       class="mkt-btn @(plan.Recommended ? "mkt-btn-primary" : "mkt-btn-secondary") mt-6 w-full">
+                        Demander un devis
+                    </a>
+                </div>
+            }
+        </div>
+        <p class="mt-8 text-center text-sm text-slate-500">
+            Les tarifs sont établis avec chaque établissement selon son effectif. Décrivez votre
+            besoin dans le formulaire pour recevoir une proposition chiffrée.
+        </p>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ FAQ -->
+<section id="faq" class="mkt-section scroll-mt-16" x-data="marketingAccordion()">
+    <div class="mkt-container-narrow">
+        <div class="text-center">
+            <span class="mkt-eyebrow">Questions fréquentes</span>
+            <h2 class="mkt-h2 mt-4">Une question avant de vous lancer&nbsp;?</h2>
+        </div>
+
+        <div class="mt-10 divide-y divide-slate-200 border-y border-slate-200">
+            @{ var qi = 0; }
+            @foreach (var question in MarketingCatalog.Questions)
+            {
+                qi++;
+                var qId = $"faq-{qi}";
+                <div>
+                    <h3>
+                        <button type="button"
+                                class="flex w-full items-center justify-between gap-4 py-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                                x-on:click="toggle('@qId')"
+                                :aria-expanded="isOpen('@qId') ? 'true' : 'false'"
+                                aria-controls="@(qId)-panel">
+                            <span class="text-base font-semibold text-slate-900">@question.Ask</span>
+                            <icon name="chevron-down" class="h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200"
+                                  x-bind:class="isOpen('@qId') ? 'rotate-180' : ''" />
+                        </button>
+                    </h3>
+                    <div id="@(qId)-panel" class="mkt-panel" :class="isOpen('@qId') ? 'is-open' : ''">
+                        <div>
+                            <p class="mkt-body pb-5 pr-8 text-sm">@question.Answer</p>
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
-    </div>
-    <div class="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 bg-gray-50">
-        <!-- Remplacer par une belle illustration de dashboard -->
-        <div class="h-56 w-full object-cover sm:h-72 md:h-96 lg:w-full lg:h-full bg-gradient-to-br from-indigo-100 to-white flex items-center justify-center">
-            <svg class="w-32 h-32 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            }
         </div>
     </div>
 </section>
 
-<!-- Modules / Features Section — six blocs, un par domaine fonctionnel réellement livré (voir
-     ACTIVE_CONTEXT.md pour le périmètre V1). Rôles cités dans le module Sécurité : les cinq RÉELS
-     de Domain/Enums/Role.cs (Directeur, Secrétariat, Finance, Enseignant, Surveillant) — pas de rôle
-     Parent/Élève, le portail correspondant est explicitement hors périmètre V1 (AGENTS.md). -->
-<section id="modules" class="py-16 bg-gray-50 overflow-hidden lg:py-24">
-    <div class="relative max-w-xl mx-auto px-4 sm:px-6 lg:px-8 lg:max-w-7xl">
-        <div class="relative">
-            <h2 class="text-center text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                Toute la gestion de votre établissement, un seul logiciel
-            </h2>
-            <p class="mt-4 max-w-3xl mx-auto text-center text-xl text-gray-500">
-                Six domaines, une seule plateforme : voici précisément ce que Unikol prend en charge au quotidien.
-            </p>
-        </div>
-
-        <div class="mt-12 lg:mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <div class="bg-white rounded-2xl border border-gray-200 p-8">
-                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                    <icon name="users" class="h-6 w-6" />
-                </div>
-                <h3 class="mt-5 text-xl font-bold text-gray-900">Gestion Scolaire & Administrative</h3>
-                <p class="mt-3 text-base text-gray-500">
-                    Inscription, réinscription et suivi complet des fiches élèves et parents, du premier jour à la sortie.
-                    Les classes, l'affectation des enseignants et l'emploi du temps se pilotent depuis un même écran.
-                    Cartes scolaires, certificats de scolarité et listes d'émargement s'éditent automatiquement, sans ressaisie.
-                </p>
-            </div>
-
-            <div class="bg-white rounded-2xl border border-gray-200 p-8">
-                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                    <icon name="document-text" class="h-6 w-6" />
-                </div>
-                <h3 class="mt-5 text-xl font-bold text-gray-900">Suivi Académique & Bulletins de Notes</h3>
-                <p class="mt-3 text-base text-gray-500">
-                    Les enseignants saisissent devoirs et compositions directement en ligne, matière par matière.
-                    Moyennes, rangs et appréciations sont calculés automatiquement selon le système éducatif.
-                    Bulletins trimestriels ou semestriels et relevés de notes se génèrent aussitôt en PDF, prêts à imprimer.
-                </p>
-            </div>
-
-            <div class="bg-white rounded-2xl border border-gray-200 p-8">
-                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                    <icon name="wallet" class="h-6 w-6" />
-                </div>
-                <h3 class="mt-5 text-xl font-bold text-gray-900">Comptabilité, Recouvrement & Facturation</h3>
-                <p class="mt-3 text-base text-gray-500">
-                    Frais de scolarité, inscriptions et impayés sont suivis en temps réel, par classe comme par élève.
-                    Chaque paiement génère automatiquement son reçu, caisse et dépenses restant traçables au quotidien.
-                    Les retardataires reçoivent des relances automatisées, et la direction garde un tableau de bord financier à jour.
-                </p>
-            </div>
-
-            <div class="bg-white rounded-2xl border border-gray-200 p-8">
-                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                    <icon name="eye" class="h-6 w-6" />
-                </div>
-                <h3 class="mt-5 text-xl font-bold text-gray-900">Surveillance, Discipline & Présences</h3>
-                <p class="mt-3 text-base text-gray-500">
-                    Le pointage quotidien des absences et des retards se fait classe par classe, justificatifs à l'appui.
-                    Les incidents de discipline, avertissements et rapports destinés au conseil de classe sont centralisés et consultables à tout moment.
-                </p>
-            </div>
-
-            <div class="bg-white rounded-2xl border border-gray-200 p-8">
-                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                    <icon name="bell" class="h-6 w-6" />
-                </div>
-                <h3 class="mt-5 text-xl font-bold text-gray-900">Communication SMS & Parents</h3>
-                <p class="mt-3 text-base text-gray-500">
-                    Convocations, rappels de paiement ou bulletins peuvent être envoyés par SMS, en un clic, à un parent ou à toute une classe.
-                    La communication avec les tuteurs reste directe et transparente, sans dépendre du carnet de correspondance papier.
-                </p>
-            </div>
-
-            <div class="bg-white rounded-2xl border border-gray-200 p-8">
-                <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white">
-                    <icon name="shield" class="h-6 w-6" />
-                </div>
-                <h3 class="mt-5 text-xl font-bold text-gray-900">Sécurité, Multi-Rôles & Paramétrage</h3>
-                <p class="mt-3 text-base text-gray-500">
-                    Chaque utilisateur — Directeur, Secrétariat, Finance, Enseignant, Surveillant — n'accède qu'à ce que son rôle autorise.
-                    Cycles, matières, coefficients et en-tête officiel de l'établissement se paramètrent une fois, pour tous les documents générés ensuite.
-                </p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Tarifs Section — trois formules réelles (SubscriptionPlan : Primaire/Standard/Premium,
-     PlanFeatures.cs). Pas de montant chiffré : le CDC (Volume_1_Cahier_des_Charges.md §11.1) marque
-     sa grille FCFA comme indicative, non encore validée commercialement — chaque carte renvoie donc
-     vers /inscription pour un devis plutôt que d'afficher un prix. -->
-<section id="tarifs" class="py-16 bg-white lg:py-24">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center">
-            <h2 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                Une formule pour chaque taille d'établissement
-            </h2>
-            <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">
-                Le socle métier (élèves, classes, notes, inscriptions, encaissement, bulletins, documents) est inclus dans toutes les formules.
-            </p>
-        </div>
-
-        <div class="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <div class="rounded-2xl border border-gray-200 p-8 flex flex-col">
-                <h3 class="text-lg font-semibold text-gray-900">Primaire</h3>
-                <p class="mt-2 text-sm text-gray-500">Pour un établissement à effectif réduit — jusqu'à 500 élèves.</p>
-                <ul class="mt-6 space-y-3 text-sm text-gray-600 flex-1">
-                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Gestion élèves, classes et inscriptions</li>
-                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Notes, bulletins et présences</li>
-                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Encaissement et documents officiels</li>
-                </ul>
-                <a href="/inscription?plan=Primaire" class="mt-8 block w-full text-center px-5 py-3 border border-indigo-600 rounded-md text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">
-                    Demander un devis
-                </a>
-            </div>
-
-            <div class="rounded-2xl border-2 border-indigo-600 p-8 flex flex-col relative">
-                <span class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white">Recommandée</span>
-                <h3 class="text-lg font-semibold text-gray-900">Standard</h3>
-                <p class="mt-2 text-sm text-gray-500">Pour un établissement de taille moyenne — jusqu'à 2 000 élèves.</p>
-                <ul class="mt-6 space-y-3 text-sm text-gray-600 flex-1">
-                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Tout ce qui est inclus dans Primaire</li>
-                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Rapports financiers consolidés et exports comptables</li>
-                </ul>
-                <a href="/inscription?plan=Standard" class="mt-8 block w-full text-center px-5 py-3 rounded-md text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
-                    Demander un devis
-                </a>
-            </div>
-
-            <div class="rounded-2xl border border-gray-200 p-8 flex flex-col">
-                <h3 class="text-lg font-semibold text-gray-900">Premium</h3>
-                <p class="mt-2 text-sm text-gray-500">Pour un établissement à effectif illimité, ou un groupe scolaire.</p>
-                <ul class="mt-6 space-y-3 text-sm text-gray-600 flex-1">
-                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Tout ce qui est inclus dans Standard</li>
-                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Notifications SMS aux parents</li>
-                    <li class="flex items-start"><icon name="check" class="h-5 w-5 text-indigo-600 mr-2 shrink-0" /> Groupe scolaire (plusieurs établissements)</li>
-                </ul>
-                <a href="/inscription?plan=Premium" class="mt-8 block w-full text-center px-5 py-3 border border-indigo-600 rounded-md text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">
-                    Demander un devis
-                </a>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Contact Section -->
-<section id="contact" class="py-16 bg-gray-50 lg:py-24">
-    <div class="max-w-2xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-        <h2 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-            Une question avant de vous lancer ?
+<!-- ══════════════════════════════════════════════════════════════════ CTA FINAL -->
+<section class="mkt-section bg-primary-600">
+    <div class="mkt-container-narrow text-center">
+        <h2 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            Prêt à moderniser votre établissement&nbsp;?
         </h2>
-        <p class="mt-4 text-lg text-gray-500">
-            Décrivez-nous votre établissement dans le formulaire d'inscription : notre équipe revoit chaque
-            demande et revient vers vous pour organiser une démonstration. Vous préférez nous parler directement ?
+        <p class="mt-4 text-lg text-primary-100">
+            Découvrez comment Unikol peut centraliser votre gestion scolaire, administrative et
+            financière. Notre équipe organise une démonstration adaptée à votre établissement.
         </p>
-
-        <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="tel:+221763545916" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-md border border-gray-300 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-                +221 76 354 59 16
-            </a>
-            <a href="https://wa.me/221763545916" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-md border border-green-600 bg-green-50 text-sm font-semibold text-green-700 hover:bg-green-100 transition-colors">
-                <icon name="whatsapp" class="h-5 w-5 text-green-600" />
-                Discuter sur WhatsApp
+        <div class="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+            <a href="/inscription" class="mkt-btn mkt-btn-inverse">Demander une démonstration</a>
+            <a href="@MarketingCatalog.WhatsAppHref" target="_blank" rel="noopener"
+               class="mkt-btn border border-white/30 text-white hover:bg-white/10">
+                <icon name="whatsapp" class="h-5 w-5" />
+                Parler à un conseiller
             </a>
         </div>
-
-        <a href="/inscription" class="mt-8 inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
-            Remplir le formulaire
-        </a>
-    </div>
-</section>
-
-<!-- CTA Section -->
-<section class="bg-indigo-700">
-    <div class="max-w-2xl mx-auto text-center py-16 px-4 sm:py-20 sm:px-6 lg:px-8">
-        <h2 class="text-3xl font-extrabold text-white sm:text-4xl">
-            <span class="block">Prêt à moderniser votre école ?</span>
-        </h2>
-        <p class="mt-4 text-lg leading-6 text-indigo-200">
-            Rejoignez des dizaines d'établissements qui font déjà confiance à Unikol.
+        <p class="mt-6 text-sm text-primary-100">
+            Ou appelez-nous au <a href="@MarketingCatalog.PhoneHref" class="font-semibold text-white underline">@MarketingCatalog.PhoneDisplay</a>
         </p>
-        <a href="/inscription" class="mt-8 w-full inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-indigo-600 bg-white hover:bg-indigo-50 sm:w-auto transition-colors">
-            Demander une démo gratuite
-        </a>
     </div>
 </section>

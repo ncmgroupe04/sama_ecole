@@ -1,0 +1,108 @@
+@*
+    Maquette de l'écran /eleves — liste et fiche.
+
+    Les CHAMPS reproduits sont ceux de la vraie fiche élève (Views/Students/Index.cshtml) :
+    matricule, date et lieu de naissance, genre, classe, adresse et Identifiant National de
+    l'Élève (IEN), qui porte bien une mention « provisoire » quand il n'est pas encore définitif.
+    Aucun champ inventé : montrer une donnée que l'application ne collecte pas serait une promesse
+    que le produit ne tiendrait pas.
+*@
+<div class="mkt-mockup">
+    <div class="mkt-mockup-bar">
+        <span aria-hidden="true" class="mkt-mockup-dot bg-red-300"></span>
+        <span aria-hidden="true" class="mkt-mockup-dot bg-amber-300"></span>
+        <span aria-hidden="true" class="mkt-mockup-dot bg-green-300"></span>
+        <span class="ml-2 text-xs font-medium text-slate-500">Gestion Scolaire › Élèves</span>
+    </div>
+
+    <div class="mkt-mockup-body bg-slate-50/60">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-3">
+
+            @* Liste — trois lignes suffisent à faire lire « tableau », six feraient lire « données ». *@
+            <div class="lg:col-span-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
+                <div class="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+                    <icon name="search" class="h-3.5 w-3.5 text-slate-400" />
+                    <span class="text-[11px] text-slate-400">Rechercher un élève…</span>
+                </div>
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                            <th class="px-3 py-2">Matricule</th>
+                            <th class="px-3 py-2">Nom complet</th>
+                            <th class="px-3 py-2">Classe</th>
+                            <th class="px-3 py-2">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-[11px]">
+                        <tr class="border-t border-slate-100 bg-primary-50/50">
+                            <td class="px-3 py-2 font-mono font-semibold text-slate-700">EL-2026-0412</td>
+                            <td class="px-3 py-2 font-medium text-slate-900">Awa Diagne</td>
+                            <td class="px-3 py-2 text-slate-600">6e B</td>
+                            <td class="px-3 py-2"><span class="rounded-full bg-success-bg px-2 py-0.5 text-[9px] font-semibold text-success">Inscrit</span></td>
+                        </tr>
+                        <tr class="border-t border-slate-100">
+                            <td class="px-3 py-2 font-mono font-semibold text-slate-700">EL-2026-0413</td>
+                            <td class="px-3 py-2 font-medium text-slate-900">Moussa Fall</td>
+                            <td class="px-3 py-2 text-slate-600">6e B</td>
+                            <td class="px-3 py-2"><span class="rounded-full bg-success-bg px-2 py-0.5 text-[9px] font-semibold text-success">Inscrit</span></td>
+                        </tr>
+                        <tr class="border-t border-slate-100">
+                            <td class="px-3 py-2 font-mono font-semibold text-slate-700">EL-2026-0414</td>
+                            <td class="px-3 py-2 font-medium text-slate-900">Fatou Ndiaye</td>
+                            <td class="px-3 py-2 text-slate-600">5e A</td>
+                            <td class="px-3 py-2"><span class="rounded-full bg-warning-bg px-2 py-0.5 text-[9px] font-semibold text-warning">Solde partiel</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            @* Fiche — le panneau latéral du vrai écran. *@
+            <div class="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-4">
+                <div class="flex items-center gap-3">
+                    <span aria-hidden="true" class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700">AD</span>
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-bold text-slate-900">Awa Diagne</p>
+                        <p class="font-mono text-[10px] text-slate-500">EL-2026-0412</p>
+                    </div>
+                </div>
+
+                <dl class="mt-4 space-y-2.5">
+                    <div class="flex items-baseline justify-between gap-3">
+                        <dt class="text-[9px] font-bold uppercase tracking-wide text-slate-400">Classe</dt>
+                        <dd class="text-[11px] font-medium text-slate-900">6e B</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3">
+                        <dt class="text-[9px] font-bold uppercase tracking-wide text-slate-400">Date de naissance</dt>
+                        <dd class="text-[11px] font-medium tabular-nums text-slate-900">14/03/2014</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3">
+                        <dt class="text-[9px] font-bold uppercase tracking-wide text-slate-400">Lieu de naissance</dt>
+                        <dd class="text-[11px] font-medium text-slate-900">Thiès</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3">
+                        <dt class="text-[9px] font-bold uppercase tracking-wide text-slate-400">IEN</dt>
+                        <dd class="font-mono text-[11px] font-semibold text-slate-900">SN-2014-0087341</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3 border-t border-slate-100 pt-2.5">
+                        <dt class="text-[9px] font-bold uppercase tracking-wide text-slate-400">Situation financière</dt>
+                        <dd class="text-[11px] font-bold tabular-nums text-success">À jour</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3">
+                        <dt class="text-[9px] font-bold uppercase tracking-wide text-slate-400">Moyenne T1</dt>
+                        <dd class="text-[11px] font-bold tabular-nums text-slate-900">13,45 / 20</dd>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-3">
+                        <dt class="text-[9px] font-bold uppercase tracking-wide text-slate-400">Assiduité</dt>
+                        <dd class="text-[11px] font-bold tabular-nums text-slate-900">96&nbsp;%</dd>
+                    </div>
+                </dl>
+
+                <div class="mt-4 flex flex-wrap gap-1.5">
+                    <span class="mkt-chip">Bulletin PDF</span>
+                    <span class="mkt-chip">Certificat</span>
+                    <span class="mkt-chip">Échéancier</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

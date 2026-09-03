@@ -799,10 +799,284 @@
   .stat-tile-value {
     @apply text-sm font-bold tabular-nums text-slate-900;
   }
+
+  /* ══════════════════════════════════════════════════════════════════════════════════════════
+     VITRINE PUBLIQUE (/vitrine, /modules, /annuaire) — préfixe `mkt-`
+     ══════════════════════════════════════════════════════════════════════════════════════════
+
+     Espace de nommage séparé, et non une réutilisation de `.card` / `.btn-primary` : les
+     composants ci-dessus sont calibrés pour une application DENSE (14px de corps, tableaux,
+     formulaires). Une landing page a besoin de l'inverse — respiration, échelle typographique
+     plus large, cibles de clic généreuses. Les faire cohabiter dans les mêmes classes aurait
+     obligé à choisir entre une vitrine étriquée et un applicatif étalé.
+
+     Les TOKENS, eux, sont partagés : `primary-*`, `slate-*`, Inter, mêmes rayons. La vitrine
+     ressemble donc au produit sans en copier la densité.
+
+     RAPPEL : seuls `sm:` (600px) et `lg:` (1024px) existent (tailwind.config.js redéfinit
+     `screens` hors de `extend`). `md:` et `xl:` ne compilent RIEN.
+     ────────────────────────────────────────────────────────────────────────────────────────── */
+
+  /* ---------------------------------------------------------------- Lien d'évitement */
+  .mkt-skip {
+    @apply sr-only;
+  }
+
+  .mkt-skip:focus {
+    @apply not-sr-only fixed left-4 top-4 z-50 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-lg;
+  }
+
+  /* ---------------------------------------------------------------- En-tête collant
+     Fond translucide au repos, opaque et ombré dès que la page a défilé (data-scrolled posé
+     par marketingNav dans marketing.js — aucun style calculé en JavaScript). */
+  .mkt-header {
+    @apply sticky top-0 z-40 border-b border-transparent bg-white/85 backdrop-blur transition-all duration-200;
+  }
+
+  .mkt-header[data-scrolled] {
+    @apply border-slate-200 bg-white shadow-sm;
+  }
+
+  .mkt-icon-btn {
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  /* Tiroir mobile — hauteur animée par grid-template-rows, comme .help-panel : c'est la seule
+     façon d'animer vers une hauteur AUTO sans la mesurer en JavaScript. */
+  .mkt-mobile-nav {
+    @apply grid overflow-hidden bg-white transition-[grid-template-rows] duration-300 ease-out;
+    grid-template-rows: 0fr;
+  }
+
+  .mkt-mobile-nav.is-open {
+    grid-template-rows: 1fr;
+  }
+
+  .mkt-mobile-nav > div {
+    @apply min-h-0;
+  }
+
+  .mkt-mobile-link {
+    @apply rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  /* ---------------------------------------------------------------- Boutons de vitrine
+     Plus hauts et plus larges que `.btn-primary` de l'application : une cible de 48px de haut
+     reste confortable au pouce, ce qui est la façon dont la moitié des visiteurs arrive. */
+  .mkt-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-base font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-[0.98];
+  }
+
+  .mkt-btn-sm {
+    @apply rounded-lg px-4 py-2 text-sm;
+  }
+
+  .mkt-btn-primary {
+    @apply bg-primary-600 text-white shadow-sm hover:bg-primary-700 hover:shadow;
+  }
+
+  .mkt-btn-secondary {
+    @apply border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50;
+  }
+
+  .mkt-btn-ghost {
+    @apply text-primary-700 hover:bg-primary-50;
+  }
+
+  .mkt-btn-inverse {
+    @apply bg-white text-primary-700 shadow-sm hover:bg-primary-50;
+  }
+
+  /* ---------------------------------------------------------------- Rythme des sections
+     Une seule source pour l'espacement vertical : c'est ce qui donne à une landing page sa
+     respiration régulière, et ce que des `py-*` recopiés section par section perdent aussitôt. */
+  .mkt-section {
+    @apply px-4 py-16 sm:px-6 lg:px-8 lg:py-24;
+  }
+
+  .mkt-container {
+    @apply mx-auto max-w-7xl;
+  }
+
+  .mkt-container-narrow {
+    @apply mx-auto max-w-3xl;
+  }
+
+  .mkt-eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-700;
+  }
+
+  /* Échelle typographique de la vitrine. Elle NE réutilise pas `jgk-title` (22px) : un titre de
+     section de landing page vit entre 30 et 44px. Le pas s'ouvre à 1024px seulement, faute de
+     point de rupture intermédiaire. */
+  .mkt-h1 {
+    @apply text-4xl font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl;
+  }
+
+  .mkt-h2 {
+    @apply text-3xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-4xl;
+  }
+
+  .mkt-h3 {
+    @apply text-lg font-bold leading-snug text-slate-900;
+  }
+
+  .mkt-lead {
+    @apply text-lg leading-relaxed text-slate-600 sm:text-xl;
+  }
+
+  .mkt-body {
+    @apply text-base leading-relaxed text-slate-600;
+  }
+
+  /* ---------------------------------------------------------------- Cartes */
+  .mkt-card {
+    @apply rounded-2xl border border-slate-200 bg-white p-6 transition-all duration-200;
+  }
+
+  .mkt-card-hover {
+    @apply hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg hover:shadow-primary-500/5;
+  }
+
+  .mkt-chip {
+    @apply inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600;
+  }
+
+  /* Pastille d'icône de section. Volontairement discrète : sur une page qui en compte une
+     trentaine, un carré plein de couleur vive à chaque carte fatigue avant la moitié. */
+  .mkt-icon-tile {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600;
+  }
+
+  .mkt-icon-tile-solid {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white;
+  }
+
+  /* ---------------------------------------------------------------- Onglets de vitrine */
+  .mkt-tab {
+    @apply inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-white hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .mkt-tab[aria-selected="true"] {
+    @apply bg-white font-semibold text-primary-700 shadow-sm;
+  }
+
+  /* Filtre de catégorie de l'explorateur de modules — une puce, pas un onglet : ces filtres
+     passent à la ligne, ce qu'un `tablist` ne fait pas proprement. */
+  .mkt-filter {
+    @apply rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:border-primary-300 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .mkt-filter[aria-pressed="true"] {
+    @apply border-primary-600 bg-primary-600 font-semibold text-white hover:text-white;
+  }
+
+  /* ---------------------------------------------------------------- Panneau dépliable
+     Même mécanique que `.help-panel` : le contenu reste dans le DOM une fois replié, donc
+     indexable et imprimable, et la hauteur s'anime sans mesure JavaScript. */
+  .mkt-panel {
+    @apply grid overflow-hidden transition-[grid-template-rows] duration-300 ease-out;
+    grid-template-rows: 0fr;
+  }
+
+  .mkt-panel.is-open {
+    grid-template-rows: 1fr;
+  }
+
+  .mkt-panel > div {
+    @apply min-h-0;
+  }
+
+  /* ---------------------------------------------------------------- Maquettes d'écran
+     Cadre de « capture » : c'est lui qui fait lire les blocs qu'il contient comme une fenêtre
+     d'application plutôt que comme une section de plus de la page. */
+  .mkt-mockup {
+    @apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5;
+  }
+
+  .mkt-mockup-bar {
+    @apply flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5;
+  }
+
+  .mkt-mockup-dot {
+    @apply h-2.5 w-2.5 rounded-full;
+  }
+
+  .mkt-mockup-body {
+    @apply p-4 sm:p-5;
+  }
+
+  /* Étiquette « données de démonstration ». Obligatoire sur toute maquette chiffrée : les
+     nombres qui y figurent sont inventés pour l'illustration, et rien ne doit laisser croire
+     qu'ils décrivent un établissement réel ou une moyenne de clientèle. */
+  .mkt-demo-note {
+    @apply mt-3 text-center text-xs text-slate-400;
+  }
+
+  /* Carte flottante posée sur une maquette (hero). Retirée du flux SOUS 1024px : superposée à un
+     mockup déjà rétréci, elle en masquerait le contenu au lieu de l'illustrer. */
+  .mkt-float {
+    @apply hidden rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg lg:absolute lg:block;
+  }
+
+  /* ---------------------------------------------------------------- Fond décoratif
+     Dégradé très plat (primary-50 -> blanc) et grille légère. Volontairement pauvre en contraste :
+     le brief demande un fond, pas un décor qui concurrence le titre. */
+  .mkt-hero-bg {
+    @apply pointer-events-none absolute inset-0 -z-10;
+    background:
+      radial-gradient(60rem 30rem at 70% -10%, theme('colors.primary.50'), transparent 70%),
+      linear-gradient(to bottom, theme('colors.slate.50'), #fff 45%);
+  }
 }
 
 @keyframes skeleton-shimmer {
   100% {
     transform: translateX(100%);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════
+   APPARITION AU DÉFILEMENT (vitrine)
+
+   Inversion volontaire de la logique habituelle : l'état par défaut est VISIBLE. C'est
+   marketing.js qui, une fois certain de pouvoir animer (IntersectionObserver disponible ET
+   animations non réduites), pose `data-reveal-ready` sur <html> — ce qui active alors seulement
+   l'opacité initiale. Un script qui ne se charge pas laisse donc une page complète, jamais une
+   page blanche dont le contenu attend un observateur qui ne viendra pas.
+   ════════════════════════════════════════════════════════════════════════════════════════════ */
+[data-reveal-ready] [data-reveal] {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 500ms ease-out, transform 500ms ease-out;
+}
+
+[data-reveal-ready] [data-reveal][data-revealed] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Décalage en cascade à l'intérieur d'une grille — trois crans suffisent : au-delà, l'œil
+   perçoit un chargement lent plutôt qu'une intention. */
+[data-reveal-ready] [data-reveal][data-reveal-delay="1"] { transition-delay: 80ms; }
+[data-reveal-ready] [data-reveal][data-reveal-delay="2"] { transition-delay: 160ms; }
+[data-reveal-ready] [data-reveal][data-reveal-delay="3"] { transition-delay: 240ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Ceinture et bretelles : marketing.js n'active déjà pas l'apparition dans ce cas, mais la
+     préférence peut basculer APRÈS le chargement de la page. */
+  [data-reveal-ready] [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .mkt-mobile-nav,
+  .mkt-panel {
+    transition: none;
+  }
+
+  .mkt-card-hover:hover {
+    transform: none;
   }
 }

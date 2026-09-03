@@ -1,0 +1,97 @@
+@*
+    Maquette de l'écran /tableau-de-bord.
+
+    Les LIBELLÉS sont ceux du vrai écran (Views/Dashboard/Index.cshtml) — « Élèves inscrits »,
+    « Taux de présence (Mois) », « Reste à recouvrer », « Taux Recouvrement »… Les VALEURS, elles,
+    sont inventées pour l'illustration : d'où la mention « données de démonstration » posée par la
+    section qui inclut cette maquette. Ne jamais présenter ces nombres comme une moyenne de
+    clientèle ou le résultat d'un établissement réel.
+
+    Aucun composant de l'application n'est réutilisé ici (<stat-card>, .kpi-card) : ils sont
+    calibrés pour un écran de travail réel, et rendus à l'échelle d'une maquette ils deviennent
+    illisibles. Cette maquette est donc une IMITATION fidèle, volontairement plus compacte.
+*@
+<div class="mkt-mockup">
+    <div class="mkt-mockup-bar">
+        <span aria-hidden="true" class="mkt-mockup-dot bg-red-300"></span>
+        <span aria-hidden="true" class="mkt-mockup-dot bg-amber-300"></span>
+        <span aria-hidden="true" class="mkt-mockup-dot bg-green-300"></span>
+        <span class="ml-2 text-xs font-medium text-slate-500">Tableau de bord · Année 2026-2027</span>
+    </div>
+
+    <div class="mkt-mockup-body bg-slate-50/60">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Élèves inscrits</p>
+                <p class="mt-1 text-xl font-extrabold tabular-nums text-slate-900">1&nbsp;248</p>
+                <p class="mt-0.5 text-[10px] text-slate-400">Garçons 612 · Filles 636</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Taux de présence</p>
+                <p class="mt-1 text-xl font-extrabold tabular-nums text-success">94,2&nbsp;%</p>
+                <p class="mt-0.5 text-[10px] text-slate-400">Sur le mois en cours</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Taux recouvrement</p>
+                <p class="mt-1 text-xl font-extrabold tabular-nums text-primary-700">87&nbsp;%</p>
+                <p class="mt-0.5 text-[10px] text-slate-400">Sur l'année scolaire</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Reste à recouvrer</p>
+                <p class="mt-1 text-xl font-extrabold tabular-nums text-warning">4,1&nbsp;M</p>
+                <p class="mt-0.5 text-[10px] text-slate-400">FCFA</p>
+            </div>
+        </div>
+
+        <div class="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-3">
+            @* Histogramme en CSS pur — pas de Chart.js. Charger 200 Ko de bibliothèque pour six
+               barres décoratives contredirait le budget de performance d'une page d'accueil. *@
+            <div class="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-4">
+                <div class="flex items-baseline justify-between">
+                    <p class="text-xs font-bold text-slate-700">Encaissements par mois</p>
+                    <p class="text-[10px] text-slate-400">FCFA</p>
+                </div>
+                @* Histogramme décoratif, en CSS pur (pas de Chart.js sur une page d'accueil). Chaque
+                   colonne prend la hauteur pleine de la bande (h-full sur une bande h-24, donc
+                   définie) : c'est ce qui permet à la barre de résoudre son `height: %`. Sans cette
+                   hauteur définie, un pourcentage retombe à « auto » et la barre disparaît. *@
+                <div class="mt-4 flex h-24 items-end gap-2" aria-hidden="true">
+                    @{
+                        var bars = new[] { 46, 72, 58, 88, 64, 95 };
+                        var months = new[] { "Oct", "Nov", "Déc", "Jan", "Fév", "Mar" };
+                    }
+                    @for (var i = 0; i < bars.Length; i++)
+                    {
+                        <div class="flex h-full flex-1 flex-col items-stretch justify-end gap-1.5">
+                            <div class="rounded-t-md @(i == bars.Length - 1 ? "bg-primary-600" : "bg-primary-200")"
+                                 style="height: @(bars[i])%"></div>
+                            <span class="text-[9px] text-center text-slate-400 shrink-0">@months[i]</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <p class="text-xs font-bold text-slate-700">Vie scolaire — aujourd'hui</p>
+                <ul class="mt-3 space-y-2.5">
+                    <li class="flex items-center justify-between text-[11px]">
+                        <span class="text-slate-600">Présents</span>
+                        <span class="font-bold tabular-nums text-success">1&nbsp;176</span>
+                    </li>
+                    <li class="flex items-center justify-between text-[11px]">
+                        <span class="text-slate-600">Retards</span>
+                        <span class="font-bold tabular-nums text-warning">23</span>
+                    </li>
+                    <li class="flex items-center justify-between text-[11px]">
+                        <span class="text-slate-600">Absents non justifiés</span>
+                        <span class="font-bold tabular-nums text-danger">49</span>
+                    </li>
+                    <li class="flex items-center justify-between border-t border-slate-100 pt-2.5 text-[11px]">
+                        <span class="text-slate-600">Convocations en attente</span>
+                        <span class="font-bold tabular-nums text-slate-900">7</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

@@ -188,6 +188,13 @@ public class PagesController : Controller
     [HttpGet("/vitrine")]
     public IActionResult LandingB2B() => View("~/Views/Home/LandingB2B.cshtml");
 
+    // Catalogue commercial détaillé des 14 modules. Séparé de /vitrine (qui reste orientée
+    // conversion) pour que la présentation ne redevienne pas une longue page de documentation.
+    // Même contenu source (SamaEcole.Web.Content.MarketingCatalog), rendu côté serveur — statique,
+    // aucun appel API.
+    [HttpGet("/modules")]
+    public IActionResult Modules() => View("~/Views/Home/Modules.cshtml");
+
     // Annuaire B2C (orientation des familles) — même principe que PublicDirectoryController :
     // vitrine anonyme, en lecture seule. Gabarit statique pour l'instant ; le branchement sur
     // GET /api/v1/public/schools reste à faire (voir PublicDirectoryController).

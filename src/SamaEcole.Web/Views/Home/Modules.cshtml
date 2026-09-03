@@ -1,0 +1,88 @@
+@using SamaEcole.Web.Content
+@{
+    ViewData["Title"] = "Les 14 modules — catalogue détaillé";
+    ViewData["Description"] = "Le catalogue complet des 14 modules d'Unikol : configuration et années scolaires, structure pédagogique, personnel, inscriptions, notes et bulletins, comptabilité et caisse, rapports et audit, examens officiels, paie, résilience réseau, intégration étatique, inventaire, vie scolaire et trésorerie. Fonctionnalités, profils concernés et écrans pour chacun.";
+    ViewData["ActivePage"] = "modules";
+    Layout = "_LayoutPublic";
+}
+
+@*
+    CATALOGUE DÉTAILLÉ (/modules). Page d'EXPLORATION, distincte de la vitrine (/vitrine), qui reste
+    orientée conversion. Même contenu source (MarketingCatalog.cs) et même carte partagée
+    (_ModuleCard.cshtml) que l'explorateur de la vitrine — ici, développée : sommaire ancré,
+    filtre par domaine, et toutes les cartes rendues côté serveur (donc indexables, et complètes
+    sans JavaScript).
+*@
+
+<section class="border-b border-slate-200 bg-slate-50">
+    <div class="mkt-container px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
+        <span class="mkt-eyebrow">Catalogue</span>
+        <h1 class="mkt-h1 mt-5 max-w-3xl">Les 14 modules d'Unikol, en détail.</h1>
+        <p class="mkt-lead mt-5 max-w-2xl">
+            Chaque module correspond à un domaine de la gestion d'un établissement. Le socle métier —
+            élèves, classes, notes, inscriptions, encaissement, bulletins, documents — est inclus
+            dans toutes les formules.
+        </p>
+        <div class="mt-8 flex flex-col sm:flex-row gap-3">
+            <a href="/inscription" class="mkt-btn mkt-btn-primary">Demander une démonstration</a>
+            <a href="/vitrine" class="mkt-btn mkt-btn-secondary">Retour à la présentation</a>
+        </div>
+    </div>
+</section>
+
+<section class="mkt-section" x-data="moduleExplorer('tous')">
+    <div class="mkt-container">
+
+        @* Sommaire — 14 entrées ancrées. Rendu côté serveur : utilisable sans JavaScript, et
+           chaque lien pointe vers l'id posé par _ModuleCard (module-<slug>). *@
+        <nav aria-label="Sommaire des modules" class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Aller à un module</p>
+            <ol class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5">
+                @foreach (var module in MarketingCatalog.Modules)
+                {
+                    <li>
+                        <a href="#module-@module.Slug" class="group flex items-baseline gap-2 py-1 text-sm text-slate-600 hover:text-primary-700">
+                            <span class="w-6 shrink-0 text-right font-bold tabular-nums text-primary-400 group-hover:text-primary-600">@module.Number</span>
+                            <span>@module.Title</span>
+                        </a>
+                    </li>
+                }
+            </ol>
+        </nav>
+
+        <div class="mt-10 flex flex-wrap gap-2" role="group" aria-label="Filtrer les modules par domaine">
+            @foreach (var category in MarketingCatalog.Categories)
+            {
+                <button type="button" class="mkt-filter"
+                        x-on:click="select('@category.Key')"
+                        :aria-pressed="category === '@category.Key' ? 'true' : 'false'">
+                    @category.Label
+                </button>
+            }
+        </div>
+
+        <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            @foreach (var module in MarketingCatalog.Modules)
+            {
+                @await Html.PartialAsync("Marketing/_ModuleCard", module)
+            }
+        </div>
+    </div>
+</section>
+
+<section class="mkt-section bg-slate-50">
+    <div class="mkt-container-narrow text-center">
+        <h2 class="mkt-h2">Un module vous manque&nbsp;? Parlons-en.</h2>
+        <p class="mkt-lead mt-4">
+            Décrivez votre établissement et vos priorités : nous vous montrons les modules qui
+            répondent à votre besoin, en conditions réelles.
+        </p>
+        <div class="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+            <a href="/inscription" class="mkt-btn mkt-btn-primary">Demander une démonstration</a>
+            <a href="@MarketingCatalog.WhatsAppHref" target="_blank" rel="noopener" class="mkt-btn mkt-btn-secondary">
+                <icon name="whatsapp" class="h-5 w-5 text-green-600" />
+                Discuter sur WhatsApp
+            </a>
+        </div>
+    </div>
+</section>

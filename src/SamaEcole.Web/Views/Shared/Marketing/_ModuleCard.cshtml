@@ -1,0 +1,78 @@
+@model SamaEcole.Web.Content.MarketingCatalog.Module
+@{
+    // Carte de module — PARTAGÉE entre l'explorateur de /vitrine et le catalogue /modules.
+    //
+    // Elle suppose se trouver dans une portée Alpine (composant `moduleExplorer` de marketing.js)
+    // qui expose : shows(category) pour le filtre, toggle(slug) / isExpanded(slug) pour le
+    // dépliage. Les deux pages fournissent cette portée. Sans JavaScript, le panneau de détail
+    // reste dans le DOM (mkt-panel : hauteur repliée par CSS, contenu toujours présent), donc
+    // lisible et indexable — l'accordéon n'est qu'un confort.
+    //
+    // `id` sur l'article : cible des ancres /modules#module-<slug> et du sommaire de /modules.
+    var panelId = $"detail-{Model.Slug}";
+}
+<article id="module-@Model.Slug"
+         class="mkt-card mkt-card-hover scroll-mt-24 flex flex-col"
+         x-show="shows('@Model.Category')"
+         x-transition:enter.opacity.duration.200ms
+         data-reveal>
+    <div class="flex items-start gap-4">
+        <span class="mkt-icon-tile" aria-hidden="true">
+            <icon name="@Model.Icon" class="h-5 w-5" />
+        </span>
+        <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold tabular-nums text-primary-600">Module @Model.Number</span>
+                <span class="mkt-chip">@SamaEcole.Web.Content.MarketingCatalog.CategoryLabel(Model.Category)</span>
+            </div>
+            <h3 class="mkt-h3 mt-1">@Model.Title</h3>
+        </div>
+    </div>
+
+    <p class="mt-3 text-sm font-medium text-slate-500">@Model.Tagline</p>
+    <p class="mkt-body mt-2 text-sm">@Model.Description</p>
+
+    <button type="button"
+            class="mt-4 lg:mt-auto lg:pt-4 inline-flex items-center gap-1.5 self-start text-sm font-semibold text-primary-700 hover:text-primary-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+            x-on:click="toggle('@Model.Slug')"
+            :aria-expanded="isExpanded('@Model.Slug') ? 'true' : 'false'"
+            aria-controls="@panelId">
+        <span x-text="isExpanded('@Model.Slug') ? 'Masquer le détail' : 'Voir le détail'">Voir le détail</span>
+        <icon name="chevron-down" class="h-4 w-4 transition-transform duration-200"
+              x-bind:class="isExpanded('@Model.Slug') ? 'rotate-180' : ''" />
+    </button>
+
+    <div id="@panelId" class="mkt-panel mt-0" :class="isExpanded('@Model.Slug') ? 'is-open' : ''">
+        <div>
+            <div class="mt-4 border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Fonctionnalités</h4>
+                    <ul class="mt-2 space-y-1.5">
+                        @foreach (var feature in Model.Features)
+                        {
+                            <li class="flex items-start gap-2 text-sm text-slate-600">
+                                <icon name="check" class="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
+                                <span>@feature</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Profils concernés</h4>
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                            @foreach (var role in Model.Roles)
+                            {
+                                <span class="mkt-chip">@role</span>
+                            }
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Écran dans l'application</h4>
+                        <p class="mt-2 text-sm text-slate-600">@Model.Screen</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</article>
