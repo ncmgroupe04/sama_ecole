@@ -106,6 +106,7 @@ La solution `.NET` (`SamaEcole.sln`, 5 projets `src/`, 3 projets `tests/`, 1 pro
 | Schéma entité-relation visuel | `docs/ERD.md` |
 | Données de test | `docs/seed-data.json` |
 | **Reçu, bulletin, dashboard — design à reproduire à l'identique** | `docs/design-references/` — voir règle ci-dessous |
+| Dette technique connue, contournée mais non corrigée | `docs/technical-debt/` |
 
 ## Note pour les outils multi-agents
 
