@@ -539,7 +539,15 @@ document.addEventListener('alpine:init', () => {
             let used = 0;
             for (const child of sheet.children) used += child.offsetHeight;
 
-            this.receiptFitMm = (inner - used) / (96 / 25.4);
+            // Le filet bas ne s'applique qu'À L'IMPRESSION : la feuille mesurée ici est celle de
+            // L'ÉCRAN, qui ne le porte pas encore. Sans cette soustraction, l'indicateur annonce
+            // 4 mm de place qui n'existent pas au moment d'imprimer — mesuré le 03/09/2026 :
+            // 127,4 mm annoncés contre 124,1 mm réellement disponibles. Un reçu affiché comme
+            // « tient sur une page » avec 2 mm libres serait alors rogné en silence, ce que cet
+            // indicateur existe précisément pour empêcher. Valeur lue sur l'élément : le CSS
+            // (--receipt-print-bottom-inset) reste la seule source de vérité.
+            const printInsetMm = parseFloat(style.getPropertyValue('--receipt-print-bottom-inset')) || 0;
+            this.receiptFitMm = (inner - used) / (96 / 25.4) - printInsetMm;
         },
 
         // ---------------------------------------------------------------- Affichage

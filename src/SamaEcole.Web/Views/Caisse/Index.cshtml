@@ -27,6 +27,12 @@
         flex-direction: column;
         /* Aucun bloc ne se laisse comprimer : un dépassement doit être VISIBLE et mesurable,
            jamais absorbé par un écrasement silencieux du texte. */
+        /* Filet bas appliqué À L'IMPRESSION seulement (voir @@media print plus bas).
+           Déclaré ICI parce que checkReceiptFit() le RELIT sur l'élément : l'indicateur de
+           tenue en page mesure la feuille À L'ÉCRAN, où ce filet n'existe pas encore, et
+           surestimerait donc de 4 mm la place réellement imprimable. Une seule source de
+           vérité : changer la valeur ici corrige du même coup le CSS et l'indicateur. */
+        --receipt-print-bottom-inset: 4mm;
         --receipt-tabular: tabular-nums;
         font-variant-numeric: var(--receipt-tabular);
         -webkit-print-color-adjust: exact;
@@ -64,7 +70,7 @@
                feuille. Pris sur la zone utile, sans risque : le contenu ne la remplit pas.
                Aligné sur /inscriptions, qui portait déjà ce filet — les deux reçus A5 partagent la
                même feuille et le même pied signé, ils doivent s'imprimer à l'identique. */
-            margin: 0 !important; padding: 0 0 4mm !important;
+            margin: 0 !important; padding: 0 0 var(--receipt-print-bottom-inset) !important;
             box-shadow: none !important; border: 0 !important; border-radius: 0 !important;
             /* Dernier garde-fou : rien ne peut déclencher une 2e page. L'indicateur de tenue en page
                signale le cas À L'ÉCRAN avant l'impression, pour qu'il soit corrigé et non subi. */
