@@ -287,6 +287,49 @@ public class ParentSummonsIsolationTests : IAsyncLifetime
         result.First().Id.Should().Be(ancienne);
         result.First().Status.Should().Be(ParentSummonsStatus.Scheduled);
     }
+
+    // Garde-fou du 03/09/2026 — le tri par ancienneté AU SEIN du groupe « sans suite » n'était couvert
+    // par aucun test : Pending_Summons_Are_Listed_First ne contient qu'UNE seule convocation Scheduled,
+    // ce qui valide le premier niveau de tri (Scheduled avant Honored/Missed/Postponed) sans jamais
+    // exercer le second (ScheduledAt). Le second niveau triait par date la PLUS RÉCENTE d'abord —
+    // l'inverse de ce que le commentaire du Handler et la doc OpenAPI promettent, et l'inverse de ce
+    // dont l'alerte « convocations en retard » de /convocations a besoin pour faire remonter la plus
+    // ancienne en premier. Ce test aurait détecté la régression.
+    [Fact]
+    public async Task Pending_Summons_Are_Ordered_Oldest_First()
+    {
+        await using var owner = _db.NewOwnerContext();
+
+        var recente = Guid.NewGuid();
+        owner.ParentSummons.Add(new ParentSummons
+        {
+            Id = recente,
+            SchoolId = EcoleA,
+            StudentId = EleveA,
+            ScheduledAt = new DateTimeOffset(2026, 12, 15, 9, 0, 0, TimeSpan.Zero),
+            Reason = "Convoquée récemment"
+        });
+
+        var ancienne = Guid.NewGuid();
+        owner.ParentSummons.Add(new ParentSummons
+        {
+            Id = ancienne,
+            SchoolId = EcoleA,
+            StudentId = EleveA,
+            ScheduledAt = new DateTimeOffset(2026, 10, 1, 9, 0, 0, TimeSpan.Zero),
+            Reason = "Convoquée en octobre, jamais traitée"
+        });
+
+        await owner.SaveChangesAsync(CancellationToken.None);
+
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var result = await new GetParentSummonsQueryHandler(ctx).Handle(
+            new GetParentSummonsQuery(), CancellationToken.None);
+
+        // Les deux sont Scheduled : la plus ANCIENNE (octobre) doit remonter en tête, pas la plus
+        // récente insérée en premier dans le jeu de données ci-dessus.
+        result.Select(r => r.Id).Should().Equal(ancienne, recente);
+    }
 }
 
 /// <summary>Fournit un SchoolId fixe, sans passer par le contexte HTTP — suffisant pour un handler appelé directement en test.</summary>

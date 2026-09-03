@@ -34,7 +34,13 @@ public class GetParentSummonsQueryHandler(IApplicationDbContext dbContext)
             // Les convocations SANS suite d'abord, la plus ancienne en tête : ce sont les seules sur
             // lesquelles il reste quelque chose à faire. Un tri purement chronologique enterrait une
             // convocation oubliée d'octobre sous les entretiens déjà clos de juin.
-            orderby p.Status == ParentSummonsStatus.Scheduled descending, p.ScheduledAt descending
+            //
+            // ScheduledAt ASCENDING au sein du groupe « sans suite » — pas descending : la revue du
+            // 03/09/2026 a trouvé que le tri triait par date la PLUS RÉCENTE en tête, à l'encontre de
+            // ce commentaire et de la doc OpenAPI, ce qui enterrait précisément la convocation en
+            // retard que l'alerte de /convocations (parentSummons.js, isOverdue/overdueCount) est
+            // censée faire remonter.
+            orderby p.Status == ParentSummonsStatus.Scheduled descending, p.ScheduledAt ascending
             select new ParentSummonsDto
             {
                 Id = p.Id,
