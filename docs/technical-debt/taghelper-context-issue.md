@@ -1,6 +1,6 @@
 # Dette technique — `TagHelperContext.Items` ne restitue pas le contenu d'un Tag Helper enfant à son parent
 
-**Statut :** confirmé, reproduit, non corrigé. **Sévérité :** haute (défaut visuel silencieux sur environ 22 écrans). **Trouvé le :** 02-03/09/2026, en construisant `ReceiptA5TagHelper` (factorisation du reçu A5 de `/caisse` et `/inscriptions`).
+**Statut :** confirmé, reproduit, cause racine non corrigée — **1 écran sur 22 contourné localement** (`Views/ParentSummons/Index.cshtml`, commit `da8a3d8`, 03/09/2026 : voir « Progrès » ci-dessous). **Sévérité :** haute (défaut visuel silencieux sur les 21 écrans restants). **Trouvé le :** 02-03/09/2026, en construisant `ReceiptA5TagHelper` (factorisation du reçu A5 de `/caisse` et `/inscriptions`).
 
 ## Comportement observé
 
@@ -58,24 +58,30 @@ Recensée le 03/09/2026 par recherche de toutes les vues utilisant les Tag Helpe
 
 | Tag Helper enfant | Fichier(s) TagHelpers | Vues utilisatrices |
 |---|---|---|
-| `<modal-subtitle>` | `TagHelpers/ModalShellTagHelper.cs` | `Views/Absences/Billets.cshtml`, `Views/Admin/RegistrationRequests.cshtml`, `Views/Buildings/Index.cshtml`, `Views/Classrooms/Index.cshtml`, `Views/Discipline/Index.cshtml`, `Views/Exams/Index.cshtml`, `Views/Fees/Index.cshtml`, `Views/Grades/Index.cshtml`, `Views/Inventory/Index.cshtml`, `Views/ParentSummons/Index.cshtml`, `Views/Payroll/Index.cshtml`, `Views/Reports/Attendance.cshtml`, `Views/Settings/Index.cshtml`, `Views/Shared/_Layout.cshtml`, `Views/Shared/_SchoolYearsPanel.cshtml`, `Views/Shared/_UsersPanel.cshtml`, `Views/StateIntegration/Index.cshtml`, `Views/Students/Index.cshtml`, `Views/Subjects/Index.cshtml`, `Views/Teachers/Index.cshtml` (20 fichiers) |
+| `<modal-subtitle>` | `TagHelpers/ModalShellTagHelper.cs` | `Views/Absences/Billets.cshtml`, `Views/Admin/RegistrationRequests.cshtml`, `Views/Buildings/Index.cshtml`, `Views/Classrooms/Index.cshtml`, `Views/Discipline/Index.cshtml`, `Views/Exams/Index.cshtml`, `Views/Fees/Index.cshtml`, `Views/Grades/Index.cshtml`, `Views/Inventory/Index.cshtml`, ~~`Views/ParentSummons/Index.cshtml`~~ **corrigé, voir Progrès**, `Views/Payroll/Index.cshtml`, `Views/Reports/Attendance.cshtml`, `Views/Settings/Index.cshtml`, `Views/Shared/_Layout.cshtml`, `Views/Shared/_SchoolYearsPanel.cshtml`, `Views/Shared/_UsersPanel.cshtml`, `Views/StateIntegration/Index.cshtml`, `Views/Students/Index.cshtml`, `Views/Subjects/Index.cshtml`, `Views/Teachers/Index.cshtml` (19 restants sur 20 d'origine) |
 | `<modal-title>` | idem | Sous-ensemble de la liste ci-dessus : `Admin/RegistrationRequests`, `Buildings`, `Classrooms`, `Exams`, `Fees`, `Inventory`, `Shared/_Layout`, `Shared/_UsersPanel`, `Students`, `Subjects`, `Teachers` (11 fichiers) |
 | `<modal-footer>` | idem | `Views/Shared/_Layout.cshtml` — partagé par **toutes** les pages de l'application (modale universelle « Accès refusé », voir commit `b308263`) |
 | `<stat-hint>` | `TagHelpers/StatCardTagHelper.cs` | `Views/Dashboard/Index.cshtml`, `Views/Taxes/Index.cshtml` (2 fichiers) |
 
 **Non affecté**, pour référence — patron différent, ne dépend pas de `context.Items` : `<row-action>` / `<row-actions>` (`TagHelpers/RowActionsTagHelper.cs`) transmet tout par attributs C# simples (`Icon`, `Label`, `OnClick`…), jamais par contenu enfant capturé.
 
-**Total unique : 22 fichiers de vue.** `_Layout.cshtml` étant partagé, le défaut touche potentiellement une modale sur chaque page de l'application, même celles qui n'apparaissent pas dans le tableau ci-dessus.
+**Total unique restant : 21 fichiers de vue** (22 d'origine, 1 corrigé — voir Progrès). `_Layout.cshtml` étant partagé, le défaut touche potentiellement une modale sur chaque page de l'application, même celles qui n'apparaissent pas dans le tableau ci-dessus.
 
-## Pourquoi ce n'est pas corrigé ici
+## Progrès
+
+**`Views/ParentSummons/Index.cshtml` corrigé le 03/09/2026 (commit `da8a3d8`)**, en application de la Piste 1 ci-dessous mais SANS toucher `ModalShellTagHelper` : les deux `<modal-subtitle>` de cette vue (modale de création, modale « Consigner la suite ») ont été remplacés par un `<div class="mt-2 text-sm text-slate-500">` simple, portant les mêmes classes que le rendu que `ModalShellTagHelper` produit pour un sous-titre — capturé directement par le `GetChildContentAsync()` du parent, sans passer par un Tag Helper enfant. Vérifié au navigateur : les deux sous-titres s'affichent, zéro erreur console, 78 tests JS au vert.
+
+C'est un contournement PAR VUE, pas une correction de la cause racine : `ModalShellTagHelper` reste inchangé, et les 21 autres vues du tableau ci-dessus restent affectées. Un modèle direct à suivre pour les corriger une par une en attendant le chantier de résolution complet (Piste 1).
+
+## Pourquoi la cause racine n'est pas corrigée ici
 
 Découvert en construisant `ReceiptA5TagHelper` (commit `0dae564`, factorisation du reçu A5), qui l'a **contourné localement** — voir sa documentation XML dans `TagHelpers/ReceiptA5TagHelper.cs` — en évitant tout Tag Helper enfant : un seul appel à `GetChildContentAsync()` (celui du composant sur ses propres enfants directs, prouvé fiable) capture tout le contenu, puis un découpage par marqueurs HTML (`<!--badges--> … <!--/badges-->`) en mémoire remplace la communication inter-Tag-Helpers.
 
-Corriger la cause racine touche `ModalShellTagHelper` et `StatCardTagHelper`, utilisés par 22 écrans déjà livrés : le risque de régression sur une refonte à cette échelle dépasse le périmètre d'un correctif ponctuel, et mérite son propre chantier avec revue navigateur systématique des 22 écrans listés ci-dessus.
+Corriger la cause racine touche `ModalShellTagHelper` et `StatCardTagHelper`, utilisés par 21 écrans déjà livrés (22 avant le correctif ponctuel ci-dessus) : le risque de régression sur une refonte à cette échelle dépasse le périmètre d'un correctif ponctuel, et mérite son propre chantier avec revue navigateur systématique des écrans listés ci-dessus.
 
 ## Pistes de résolution pour le chantier ultérieur
 
-1. **Découpage par marqueurs HTML**, comme `ReceiptA5TagHelper` : remplacer `<modal-subtitle>…</modal-subtitle>` par un marqueur (`<!--subtitle--> … <!--/subtitle-->`) dans les 20 vues concernées, et réécrire `ModalShellTagHelper.ProcessAsync` pour découper son unique contenu enfant capturé plutôt que lire `context.Items`. Avantage : la technique est déjà écrite et vérifiée (voir `ReceiptA5TagHelper.ExtractMarked`). Inconvénient : touche les 22 fichiers de vue, syntaxe moins lisible qu'une balise nommée.
+1. **Découpage par marqueurs HTML**, comme `ReceiptA5TagHelper` : remplacer `<modal-subtitle>…</modal-subtitle>` par un marqueur (`<!--subtitle--> … <!--/subtitle-->`) dans les vues concernées, et réécrire `ModalShellTagHelper.ProcessAsync` pour découper son unique contenu enfant capturé plutôt que lire `context.Items`. Avantage : la technique est déjà écrite et vérifiée (voir `ReceiptA5TagHelper.ExtractMarked`, et le contournement par `<div>` simple déjà validé sur `Views/ParentSummons/Index.cshtml`). Inconvénient : touche les 21 fichiers de vue restants, syntaxe moins lisible qu'une balise nommée.
 2. **Isoler et signaler le défaut à l'écosystème .NET** (issue sur `dotnet/aspnetcore`) avant de contourner à grande échelle — si c'est une régression connue et déjà corrigée dans une version de correctif du SDK, un simple bump (avec `global.json` pour fixer la version testée) suffirait, et éviterait de réécrire 22 vues pour un défaut potentiellement déjà résolu en amont.
 3. **Repli côté attribut** pour les cas les plus simples (ex. `<stat-hint>`, contenu presque toujours un texte court sans liaison Alpine complexe) : ajouter une propriété `Hint` en texte simple sur `<stat-card hint="…">`, en gardant `<stat-hint>` comme forme HTML libre pour les cas qui en ont réellement besoin. Ne résout pas `modal-subtitle`/`modal-title`/`modal-footer`, dont le contenu porte quasi systématiquement des liaisons Alpine (`x-text`, interpolation), incompatibles avec un attribut de chaîne simple.
 

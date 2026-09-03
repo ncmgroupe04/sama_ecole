@@ -414,21 +414,24 @@ filtres EF hors jeu : un soft-delete silencieux ferait échouer ce second contr�
 d'intégration : 14/14. `dotnet build` 0 erreur ; unitaires 1004/1004.
 
 **JGK-T02** [H] — `TagHelperContext.Items` ne restitue pas le contenu d'un Tag Helper enfant à son parent
-**Statut : documenté (03/09/2026), non corrigé.** `<modal-subtitle>`, `<modal-title>`, `<modal-footer>`
+**Statut : documenté (03/09/2026), cause racine non corrigée — 1 écran sur 22 contourné ponctuellement
+(03/09/2026, commit `da8a3d8`).** `<modal-subtitle>`, `<modal-title>`, `<modal-footer>`
 (`ModalShellTagHelper`) et `<stat-hint>` (`StatCardTagHelper`) communiquent avec leur parent via
 `TagHelperContext.Items`, en s'appuyant sur le patron documenté (et attendu) de partage par référence
 tout au long de l'arborescence d'une vue. Vérifié par instrumentation directe que ce n'est pas le cas
 sur cet environnement (SDK `10.0.302` **et** `9.0.315`, testés tous les deux) : l'enfant et le parent
 reçoivent chacun une instance différente du dictionnaire — le contenu écrit par l'enfant n'atteint
 jamais le parent. Défaut silencieux (zéro erreur, ni serveur ni console) : le sous-titre ou l'indication
-disparaît simplement du rendu. **22 fichiers de vue touchés**, dont `_Layout.cshtml` (modale
-universelle « Accès refusé », partagée par toute l'application). Détail complet, preuve de diagnostic
-et pistes de résolution : `docs/technical-debt/taghelper-context-issue.md`.
-*Contournement déjà en place, non généralisé* : `ReceiptA5TagHelper` (reçu A5 de `/caisse` et
+disparaît simplement du rendu. **21 fichiers de vue restent touchés** (22 d'origine), dont
+`_Layout.cshtml` (modale universelle « Accès refusé », partagée par toute l'application). Détail
+complet, preuve de diagnostic et pistes de résolution : `docs/technical-debt/taghelper-context-issue.md`.
+*Contournements déjà en place, non généralisés* : `ReceiptA5TagHelper` (reçu A5 de `/caisse` et
 `/inscriptions`) évite le patron défaillant par un découpage de contenu par marqueurs HTML plutôt que
-des Tag Helpers enfants — voir sa doc XML.
-*Dépend de* : aucune. *Critères d'acceptation pour la clôture* : sur les 22 fichiers listés dans
-`docs/technical-debt/taghelper-context-issue.md`, le sous-titre/titre/pied/indication concerné
+des Tag Helpers enfants — voir sa doc XML. `Views/ParentSummons/Index.cshtml` remplace ses deux
+`<modal-subtitle>` par un `<div>` simple portant les mêmes classes (même esprit, technique plus légère
+pour un cas à une seule ligne) — voir « Progrès » dans le document technique.
+*Dépend de* : aucune. *Critères d'acceptation pour la clôture* : sur les 21 fichiers restants listés
+dans `docs/technical-debt/taghelper-context-issue.md`, le sous-titre/titre/pied/indication concerné
 s'affiche à l'écran ; `npm test` et la suite .NET complète restent au vert.
 
 ---
