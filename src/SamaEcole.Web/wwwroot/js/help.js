@@ -35,6 +35,51 @@
                 "gestion scolaire.",
             articles: [
                 {
+                    id: 'assistant-premier-parametrage',
+                    title: 'Assistant de premier paramétrage express',
+                    location: 'Barre supérieure — bouton dédié, sur tout écran',
+                    href: '/parametres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Un parcours guidé en six étapes — année scolaire, configuration pédagogique, " +
+                        "grille tarifaire, fiches enseignants, première inscription, paramètres SIMEN " +
+                        "— accessible depuis un bouton dédié de la barre supérieure, distinct du Centre " +
+                        "d'aide. L'assistant ne configure RIEN lui-même : chaque étape renvoie vers " +
+                        "l'écran déjà en place et se contente de LIRE l'état réel de l'établissement, " +
+                        "via les mêmes routes et les mêmes gardes que ces écrans, pour cocher ce qui " +
+                        "est fait.",
+                    objectif:
+                        "Répondre à une seule question au tout premier accès — par quoi commencer, et " +
+                        "dans quel ordre — pour qu'un Directeur ne tente pas d'inscrire un élève avant " +
+                        "d'avoir créé ses classes, ni de saisir une note avant d'avoir déclaré ses " +
+                        "matières. Pour la direction, c'est la garantie qu'aucune étape fondatrice n'est " +
+                        "oubliée par simple méconnaissance de l'application.",
+                    probleme:
+                        "Un établissement qui découvre Unikol sans guide tâtonne : il ouvre l'écran des " +
+                        "élèves en premier, découvre qu'aucune classe n'existe, crée une classe, " +
+                        "découvre qu'aucun barème n'est défini, et ainsi de suite — une découverte par " +
+                        "l'échec, module après module, alors que l'ordre à suivre est connu d'avance et " +
+                        "toujours le même.",
+                    procedure: [
+                        "Le bouton de l'assistant s'affiche sur TOUTE la barre supérieure, quel que soit l'écran ouvert — inutile de naviguer vers une adresse particulière.",
+                        "À la toute première connexion d'un compte Directeur ou Secrétariat, le parcours s'ouvre automatiquement, une seule fois par navigateur.",
+                        "Chaque étape affiche pourquoi elle importe et propose un raccourci direct vers l'écran correspondant : « Activer l'année scolaire », « Niveaux & classes », « Configurer les frais »…",
+                        "Une étape n'est déverrouillée que si les précédentes, quand elles s'appliquent, sont déjà faites : le parcours impose l'ordre qui évite les blocages en cascade.",
+                        "Traitez l'étape depuis son propre écran, puis revenez à l'assistant et cliquez sur « Revérifier » : son état se recalcule depuis la base, jamais par une simple coche manuelle.",
+                        "La grille tarifaire se marque automatiquement « Non applicable » pour un établissement public : elle disparaît du calcul d'avancement plutôt que de rester indéfiniment « à faire »."
+                    ],
+                    impacts: [
+                        "Toutes les étapes renvoient vers des écrans déjà documentés ailleurs dans ce guide — l'assistant n'introduit aucun nouvel écran, il n'en est que la porte d'entrée ordonnée.",
+                        "Une route interrogée qui échoue (réseau, droit insuffisant) laisse simplement son étape à « à faire » : l'assistant ne coche jamais par excès de confiance.",
+                        "Le pourcentage d'avancement affiché exclut les étapes non applicables, pour ne jamais laisser croire à un établissement public qu'il lui manque une grille tarifaire qui ne le concerne pas."
+                    ],
+                    recommandations: [
+                        "Suivez l'ordre proposé même si l'envie est de foncer directement sur les élèves : chaque étape verrouillée l'est pour une raison réelle, pas par excès de prudence.",
+                        "Rouvrez l'assistant à tout moment via son bouton — il ne s'ouvre automatiquement qu'une fois, mais reste accessible en permanence pour vérifier ce qu'il reste à faire.",
+                        "Un compte Finance, Enseignant ou Surveillant ne voit jamais ce bouton : ce n'est pas une restriction à signaler, ces rôles n'ont rien à paramétrer au démarrage de l'établissement."
+                    ]
+                },
+                {
                     id: 'annee-scolaire',
                     title: "Ouverture et clôture d'une année académique",
                     location: 'Paramètres › Années scolaires',
@@ -118,6 +163,48 @@
                         "Actualisez la capacité après tout réaménagement mobilier : un chiffre obsolète alimente des ratios trompeurs.",
                         "Distinguez rigoureusement les bureaux administratifs des salles de classe, sous peine de gonfler artificiellement la capacité pédagogique.",
                         "Archivez plutôt que de supprimer : l'application ne pratique aucune suppression définitive des données de gestion, et c'est une garantie."
+                    ]
+                },
+                {
+                    id: 'mode-sandbox-golive',
+                    title: 'Mode bac à sable et passage en exploitation réelle',
+                    location: 'Paramètres › Sécurité — Zone de danger',
+                    href: '/parametres?tab=securite',
+                    roles: ['Directeur'],
+                    definition:
+                        "Un établissement démarre en MODE BAC À SABLE : tout ce qui y est saisi — " +
+                        "élèves, notes, encaissements — peut être effacé d'un geste pour repartir d'une " +
+                        "base vierge, aussi souvent que nécessaire le temps de la prise en main. Le " +
+                        "PASSAGE EN MODE RÉEL est une bascule DÉFINITIVE, déclenchée par le Directeur : " +
+                        "au-delà, la réinitialisation disparaît de l'écran et tout ce qui est enregistré " +
+                        "devient de la comptabilité véritable.",
+                    objectif:
+                        "Laisser l'établissement s'exercer sans crainte de « salir » ses données " +
+                        "définitives — tester une inscription, une grille tarifaire, un encaissement, " +
+                        "puis tout effacer et recommencer — jusqu'au jour, choisi par le Directeur, où " +
+                        "l'application prend le relais du fonctionnement réel de l'école.",
+                    probleme:
+                        "Sans distinction entre essai et réel, un établissement qui teste l'application " +
+                        "avec de vraies données de test se retrouve avec des élèves fictifs mélangés aux " +
+                        "vrais, ou renonce purement à essayer de peur de devoir tout nettoyer à la main " +
+                        "avant l'ouverture officielle.",
+                    procedure: [
+                        "Tant que l'établissement est en mode bac à sable, ouvrez Paramètres › Sécurité pour retrouver la Zone de danger.",
+                        "« Réinitialiser l'école » efface élèves, notes, bulletins et transactions de test — mais conserve les comptes du personnel, la fiche établissement, les années scolaires, les classes, les matières, les enseignants, le barème des frais et le journal d'audit.",
+                        "Le jour où l'établissement est prêt, cliquez sur « Passer en mode réel ».",
+                        "Une modale rappelle que la bascule est définitive et que la réinitialisation ne sera plus disponible ensuite.",
+                        "Saisissez « CONFIRMER », ou le nom exact de l'établissement, pour débloquer le bouton de confirmation — la vérification réelle est refaite côté serveur, la saisie côté écran n'est qu'un confort.",
+                        "Une fois en mode réel, l'écran devient un simple rappel en lecture seule : la date de bascule y est affichée, et aucune action n'y reste possible."
+                    ],
+                    impacts: [
+                        "Tous les modules : chaque écran de l'application continue de fonctionner à l'identique avant et après la bascule — seule la possibilité de tout réinitialiser disparaît.",
+                        "Journal d'audit : la date de passage en mode réel est conservée et affichée, mais la réinitialisation elle-même n'est PAS rejouable — un établissement déjà passé en mode réel ne peut pas revenir en arrière.",
+                        "Comptes et paramètres : contrairement aux données opérationnelles, les comptes du personnel et les réglages déjà faits (années, classes, matières, enseignants, barème) survivent à une réinitialisation — ce n'est pas une remise à zéro totale de l'application."
+                    ],
+                    recommandations: [
+                        "Ne passez en mode réel qu'après avoir testé au moins une fois la chaîne complète — inscription, encaissement, saisie de notes — pour vérifier que tout est correctement paramétré : la bascule ne se défait pas.",
+                        "Réinitialisez librement pendant la phase de test, sans économiser les essais : c'est précisément à cela que sert le mode bac à sable.",
+                        "Une fois en mode réel, une donnée erronée se corrige au cas par cas dans son module d'origine — jamais par une tentative de retour au mode test, qui n'existe plus pour un établissement en production."
                     ]
                 }
             ]
@@ -619,7 +706,7 @@
                         "Définissez les seuils de mention dans Paramètres › Configuration : libellé et moyenne minimale, exprimée sur vingt.",
                         "Saisissez les notes : les moyennes, les totaux et le rang se recalculent à chaque enregistrement.",
                         "Consultez la synthèse de la classe pour vérifier la cohérence d'ensemble avant le conseil.",
-                        "APPRÉCIATIONS : pour chaque élève, cochez la distinction retenue par le conseil — du blâme aux félicitations — et rédigez les observations.",
+                        "APPRÉCIATIONS : le moteur du bulletin propose une distinction à partir de la moyenne générale (Félicitations à partir de 16, Tableau d'honneur à partir de 14, Encouragements à partir de 12) ; le conseil des professeurs la reprend, la corrige, ou choisit « Sans distinction » — sa décision prévaut TOUJOURS sur la proposition automatique, jamais l'inverse.",
                         "Renseignez la décision du conseil lorsque la période concernée l'exige.",
                         "Tant qu'aucune appréciation n'a été saisie, le bulletin imprime les cases vierges plutôt qu'une valeur inventée."
                     ],
@@ -627,7 +714,7 @@
                         "Barèmes hétérogènes : chaque note est ramenée au barème de référence avant pondération, de sorte qu'un 45/60 et un 18/24 pèsent identiquement.",
                         "Coefficients : ils déterminent le total des points et la moyenne générale ; une erreur s'y propage jusqu'au rang.",
                         "Rang : il se recalcule automatiquement dès qu'une note de la classe est modifiée.",
-                        "Bulletin : mention, rang et appréciations y sont imprimés tels qu'ils sont calculés ou saisis.",
+                        "Bulletin : mention, rang et appréciations y sont imprimés tels qu'ils sont calculés ou saisis. Une colonne T.H. (Tableau d'Honneur par matière, à partir de 14/20 ramené au barème du cycle) signale, matière par matière, les résultats qui s'en approchent.",
                         "Procès-verbal de délibération : il consolide moyennes et rangs pour le conseil de classe."
                     ],
                     recommandations: [
@@ -1804,12 +1891,14 @@
                     impacts: [
                         "Registre de discipline : une convocation née d'une sanction grave reste liée, dans le dossier de l'élève, au fait qui l'a motivée, même si les deux registres ne se confondent pas.",
                         "Appel en classe : un absentéisme répété visible dans l'historique de présence est un motif fréquent de convocation.",
-                        "Dossier de l'élève : l'historique des convocations reste consultable, daté et motivé."
+                        "Dossier de l'élève : l'historique des convocations reste consultable, daté et motivé.",
+                        "Signalement « en retard » : une convocation Planifiée dont la date est dépassée sans qu'aucune suite n'ait été consignée est repérée comme telle sur l'écran et peut être isolée par un filtre — un calcul d'affichage, aucun statut supplémentaire n'est écrit en base."
                     ],
                     recommandations: [
                         "N'attendez pas qu'une situation s'aggrave pour convoquer : une convocation précoce, sur un motif d'assiduité par exemple, prévient souvent une sanction disciplinaire ultérieure.",
                         "Formulez le motif clairement sur l'avis remis à la famille : un parent convoqué sans savoir pourquoi arrive à l'entretien sur la défensive.",
-                        "Conservez systématiquement une trace de la tenue effective de l'entretien, même informelle — c'est ce qui distingue une démarche accomplie d'une convocation restée lettre morte."
+                        "Conservez systématiquement une trace de la tenue effective de l'entretien, même informelle — c'est ce qui distingue une démarche accomplie d'une convocation restée lettre morte.",
+                        "Traitez en priorité les convocations signalées « en retard » : une convocation planifiée puis oubliée n'est pas neutre — c'est une démarche promise à la famille et jamais tenue."
                     ]
                 }
             ]
