@@ -157,7 +157,13 @@
 
     <!-- Modale de création -->
     <modal-shell size="60" open="isCreateOpen" on-close="closeCreate()" title="Nouvelle convocation">
-        <modal-subtitle>Convoquer le parent/tuteur d'un élève.</modal-subtitle>
+        @* <modal-subtitle> REMPLACÉ par un <div> simple (03/09/2026) : dette technique confirmée,
+           docs/technical-debt/taghelper-context-issue.md — le contenu d'un <modal-subtitle> imbriqué
+           n'atteint jamais son ModalShellTagHelper parent (TagHelperContext.Items non partagé entre
+           Tag Helpers, deux instances distinctes du dictionnaire) et disparaît SANS erreur, ici comme
+           sur les 21 autres vues listées dans ce document. Même classes que le rendu prévu
+           (ModalShellTagHelper.cs ligne ~121), pour un résultat visuel identique. *@
+        <div class="mt-2 text-sm text-slate-500">Convoquer le parent/tuteur d'un élève.</div>
 
         <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
 
@@ -202,12 +208,17 @@
     @* Suite de l'entretien (02/09/2026). Consignée UNE FOIS : le formulaire n'est offert que sur une
        convocation encore « Planifiée » — le serveur refuse toute seconde écriture en 422. *@
     <modal-shell size="60" open="isOutcomeOpen" on-close="closeOutcome()" title="Consigner la suite de la convocation">
-        <modal-subtitle>
+        @* <modal-subtitle> REMPLACÉ par un <div> simple — même raison et même renvoi que la modale
+           de création ci-dessus. Ce sous-titre-ci n'est pas cosmétique : plusieurs convocations
+           peuvent partager le même élève et le même horodatage (observé le 03/09/2026 sur ce
+           registre même), et « Consigner la suite de la convocation » seul, sans savoir laquelle,
+           expose à consigner la suite de la MAUVAISE convocation. *@
+        <div class="mt-2 text-sm text-slate-500">
             <span x-text="outcomeTarget ? outcomeTarget.studentFullName : ''"></span>
             <span x-show="outcomeTarget" x-cloak>
                 · convoqué le <span x-text="outcomeTarget ? formatDateTime(outcomeTarget.scheduledAt) : ''"></span>
             </span>
-        </modal-subtitle>
+        </div>
 
         <div x-show="outcomeErrors.global" x-cloak class="form-error-banner" x-text="outcomeErrors.global"></div>
 
