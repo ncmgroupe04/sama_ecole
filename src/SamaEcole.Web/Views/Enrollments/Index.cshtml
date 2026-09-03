@@ -379,33 +379,29 @@
    « Cannot read properties of null » au chargement à froid de /inscriptions, même motif
    que sur /caisse (corrigé le 02/09/2026). `x-if` ne rend rien tant que la condition est
    fausse : c'est la seule forme qui protège le document ENTIER, sans semer un `receipt?.`
-   par ligne. *@
+   par ligne. Cette garde reste ICI, en clair — jamais dans <receipt-a5>
+   (TagHelpers/ReceiptA5TagHelper.cs) : voir sa doc pour la raison (garde-fou
+   NULL_DEREF_DEBT, qui lit le texte source des vues). *@
 <template x-if="receipt">
-    <div id="receipt-printable" class="receipt-a5 receipt-container bg-white border border-slate-200/80 mx-auto text-slate-800 shadow-sm rounded-xl flex flex-col justify-between min-h-[148mm]">
-
-     @* A. En-tête : logo à GAUCHE du nom, badges à droite. Le nom n'est plus en majuscules —
-     refonte du 25/08/2026, cf. docs/design-references/README.md §1.1.
+    <receipt-a5 center-badge="true" signatory="Le Secrétariat">
+     @* A. En-tête : logo à GAUCHE du nom (partie commune, dans receipt-a5), badges et pastille
+     centrée propres à ce document (marqueurs HTML — pas des Tag Helpers enfants, voir la doc
+     de ReceiptA5TagHelper). Le nom n'est plus en majuscules — refonte du 25/08/2026, cf.
+     docs/design-references/README.md §1.1.
 
      Aucun badge d'ÉTAT DE PAIEMENT ici, volontairement : réimprimée trois mois plus tard,
      l'attestation en afficherait un faux. Le badge ne qualifie que l'acte administratif,
      vrai à toute date. *@
-     @* pt-1.5 : l'en-tête ne colle plus au bord haut de la feuille (aération demandée).
-        `relative` : ancre le badge N° de reçu centré ci-dessous. *@
-     <div class="receipt-header relative flex items-start gap-4 border-b border-slate-200 pb-2.5 pt-1.5">
-     <img x-show="receipt.schoolLogoUrl" x-cloak :src="receipt.schoolLogoUrl" class="h-10 w-10 shrink-0 object-contain" alt="" />
-     <div class="min-w-0 flex-1 pr-24">
-     <h2 class="text-lg font-bold text-slate-900 tracking-tight" x-text="receipt.schoolName"></h2>
-     <p class="text-[10px] text-slate-500 mt-0.5" x-text="contactLine()"></p>
-     <p x-show="legalMentions()" x-cloak class="text-[10px] text-slate-500" x-text="legalMentions()"></p>
-     </div>
      @* N° de reçu : centré dans l'en-tête (horizontal + vertical). En absolu pour un centrage VRAI
-        sur la feuille, indépendant de la largeur des colonnes gauche/droite. *@
+        sur la feuille, indépendant de la largeur des colonnes gauche/droite — receipt-a5 pose déjà
+        `relative` sur l'en-tête et `pr-24` sur le bloc nom dès que center-badge="true". *@
+     <!--center-badge-->
      <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-center text-[10.5px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
-     <div class="shrink-0 flex flex-col items-end gap-1">
+     <!--/center-badge-->
+     <!--badges-->
      <span class="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-indigo-700 whitespace-nowrap">Inscription enregistrée</span>
      <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Année&nbsp;<span x-text="receipt.schoolYearLabel"></span></span>
-     </div>
-     </div>
+     <!--/badges-->
 
      <!-- B. Cartouche d'identité (grille 2 × 2) -->
      <div class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
@@ -511,30 +507,14 @@
 
      </div>
 
-     @* E. Pied de page, ancré en bas. « Le Secrétariat » et non « Le Caissier » : cette pièce est
-     délivrée sans qu'aucun fonds ne soit encaissé. *@
-     <div class="receipt-footer mt-auto pt-2 border-t border-slate-200">
-     <div class="flex items-end gap-6 text-[10px]">
-     <div class="flex-1">
-     <p class="italic text-slate-500" x-text="faitMention()"></p>
-     <p class="mt-2.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Cachet officiel</p>
-     </div>
-     <div class="flex-1 text-right">
-     <div class="h-6"></div>
-     <div class="border-t border-dashed border-slate-400 pt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Le Secrétariat</div>
-     </div>
-     <div class="flex-1 text-right">
-     <div class="h-6"></div>
-     <div class="border-t border-dashed border-slate-400 pt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Le Directeur</div>
-     </div>
-     </div>
-     <p class="mt-2 text-center text-[8px] leading-tight text-slate-400">
+     @* E. Pied de page — partie commune (case Fait à…/cachet/deux signatures) dans receipt-a5
+     (signatory="Le Secrétariat" ci-dessus, et non « Le Caissier » : cette pièce est délivrée sans
+     qu'aucun fonds ne soit encaissé) ; seule cette mention varie. *@
+     <!--footer-->
      Le secrétariat n'encaisse aucun fonds : tout règlement s'effectue auprès de la comptabilité,
      seule habilitée à délivrer un reçu de caisse valant validation définitive.
-     </p>
-     </div>
-
-     </div>
+     <!--/footer-->
+    </receipt-a5>
 </template>
  </div>
 

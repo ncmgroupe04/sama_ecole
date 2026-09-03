@@ -397,26 +397,21 @@
            qu'il contient dès le montage de la vue, et `receipt` y vaut encore null — d'où les
            « Cannot read properties of null (reading 'receiptNumber' / 'amount') » au chargement
            à froid de /caisse. `x-if` ne rend rien tant que la condition est fausse : c'est la
-           seule forme qui protège le document ENTIER, sans semer un `receipt?.` par ligne. *@
+           seule forme qui protège le document ENTIER, sans semer un `receipt?.` par ligne. Cette
+           garde reste ICI, en clair — jamais dans <receipt-a5> (TagHelpers/ReceiptA5TagHelper.cs) :
+           voir sa doc pour la raison (garde-fou NULL_DEREF_DEBT, qui lit le texte source des vues). *@
         <template x-if="receipt">
-            <div id="receipt-printable" class="receipt-a5 receipt-container bg-white border border-slate-200/80 mx-auto text-slate-800 shadow-sm rounded-xl flex flex-col justify-between min-h-[148mm]">
-
-                @* A. En-tête : logo à GAUCHE du nom, badges à droite. « PAYÉ » en vert — c'est ICI, et
-                   nulle part ailleurs, que le vert est légitime : le reçu de caisse est la seule pièce
-                   qui atteste d'un encaissement (docs/design-references/README.md §1ter). *@
-                <div class="receipt-header flex items-start gap-4 border-b border-slate-200 pb-3">
-                    <img x-show="receipt.schoolLogoUrl" x-cloak :src="receipt.schoolLogoUrl" class="h-10 w-10 shrink-0 object-contain" alt="" />
-                    <div class="min-w-0 flex-1">
-                        <h2 class="text-lg font-bold text-slate-900 tracking-tight" x-text="receipt.schoolName"></h2>
-                        <p class="text-[10px] text-slate-500 mt-0.5" x-text="contactLine()"></p>
-                        <p x-show="legalMentions()" x-cloak class="text-[10px] text-slate-500" x-text="legalMentions()"></p>
-                    </div>
-                    <div class="shrink-0 flex flex-col items-end gap-1">
-                        <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-700">Payé</span>
-                        <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Reçu&nbsp;n°&nbsp;<span x-text="receipt.receiptNumber"></span></span>
-                        <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap" x-text="formatDate(receipt.paidAt)"></span>
-                    </div>
-                </div>
+            <receipt-a5 signatory="Le Caissier">
+                @* A. En-tête : logo à GAUCHE du nom (partie commune, dans receipt-a5), badges à
+                   droite (propres à ce document, délimitées par des marqueurs HTML — pas des Tag
+                   Helpers enfants, voir la doc de ReceiptA5TagHelper). « PAYÉ » en vert — c'est ICI,
+                   et nulle part ailleurs, que le vert est légitime : le reçu de caisse est la seule
+                   pièce qui atteste d'un encaissement (docs/design-references/README.md §1ter). *@
+                <!--badges-->
+                    <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-700">Payé</span>
+                    <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Reçu&nbsp;n°&nbsp;<span x-text="receipt.receiptNumber"></span></span>
+                    <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap" x-text="formatDate(receipt.paidAt)"></span>
+                <!--/badges-->
 
                 <!-- B. Cartouche d'identité (grille 2 × 2) -->
                 <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
@@ -498,27 +493,12 @@
                     Il est demandé aux parents de garder minutieusement leur reçu après le paiement.
                 </p>
 
-                <!-- E. Pied de page, ancré en bas -->
-                <div class="receipt-footer mt-auto pt-2 border-t border-slate-200">
-                    <div class="flex items-end gap-6 text-[10px]">
-                        <div class="flex-1">
-                            <p class="italic text-slate-500" x-text="faitMention()"></p>
-                            <p class="mt-2.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Cachet officiel</p>
-                        </div>
-                        <div class="flex-1 text-right">
-                            <div class="h-6"></div>
-                            <div class="border-t border-dashed border-slate-400 pt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Le Caissier</div>
-                        </div>
-                        <div class="flex-1 text-right">
-                            <div class="h-6"></div>
-                            <div class="border-t border-dashed border-slate-400 pt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Le Directeur</div>
-                        </div>
-                    </div>
-                    <p class="mt-2 text-center text-[8px] leading-tight text-slate-400"
-                       x-text="'Ce reçu atteste uniquement des sommes encaissées le ' + formatDate(receipt.paidAt) + '. Il ne constitue pas un relevé de compte.'"></p>
-                </div>
-
-            </div>
+                @* E. Pied de page — partie commune (case Fait à…/cachet/deux signatures) dans
+                   receipt-a5 (signatory="Le Caissier" ci-dessus) ; seule cette mention varie. *@
+                <!--footer-->
+                    Ce reçu atteste uniquement des sommes encaissées le <span x-text="formatDate(receipt.paidAt)"></span>. Il ne constitue pas un relevé de compte.
+                <!--/footer-->
+            </receipt-a5>
         </template>
 
  </div>
