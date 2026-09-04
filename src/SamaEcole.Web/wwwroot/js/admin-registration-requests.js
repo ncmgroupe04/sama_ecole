@@ -60,12 +60,18 @@ document.addEventListener('alpine:init', () => {
             return { Pending: 'En attente', Approved: 'Approuvée', Rejected: 'Rejetée' }[status] || status;
         },
 
-        statusBadgeVariant(status) {
+        /**
+         * Classes de la pastille de statut. Renvoie les classes EN DUR plutôt qu'un nom de variante
+         * (.status-badge-warning & consorts) : ces variantes partagées sont définies en thème CLAIR,
+         * et cet écran vit désormais dans la console Super Admin, toujours sombre. Même forme que
+         * statusClasses() de superadmin-billing.js et superadmin-schools.js.
+         */
+        statusClasses(status) {
             return {
-                Pending: 'status-badge-warning',
-                Approved: 'status-badge-success',
-                Rejected: 'status-badge-danger'
-            }[status] || 'status-badge-neutral';
+                Pending: 'bg-amber-500/15 text-amber-400 ring-1 ring-inset ring-amber-500/20',
+                Approved: 'bg-emerald-500/15 text-emerald-400 ring-1 ring-inset ring-emerald-500/20',
+                Rejected: 'bg-rose-500/15 text-rose-400 ring-1 ring-inset ring-rose-500/20'
+            }[status] || 'bg-zinc-800 text-zinc-300';
         },
 
         planLabel(plan) {
