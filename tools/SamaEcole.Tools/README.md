@@ -33,3 +33,32 @@ L'ordre de `docs/Volume_9_Deployment_Operations.md` §85-86 reste inchangé :
 3. Démarrage de l'application web — rôle applicatif, `RlsGuard` actif
 
 Cette commande n'assume pas l'étape 1 : elle applique des migrations, elle ne sauvegarde rien.
+
+## `seed-superadmin`
+
+Crée le tout premier compte Super Admin d'un déploiement — sans lui, aucun chemin n'existe pour en
+créer un : `CreateUserCommandValidator` exclut délibérément ce rôle des rôles assignables via l'API
+(anti-escalade de privilège), et `DbSeeder` (seul autre endroit qui sème ce rôle) est réservé à
+Development, avec un mot de passe public codé en dur.
+
+```bash
+ConnectionStrings__Migrations="Host=…;Username=sama_ecole;Password=…" \
+  dotnet run --project tools/SamaEcole.Tools -- seed-superadmin --email admin@exemple.sn --password "…"
+
+# nom complet optionnel (par défaut "Super Admin"), chaîne de connexion explicite possible
+dotnet run --project tools/SamaEcole.Tools -- seed-superadmin \
+  --email admin@exemple.sn --password "…" --name "Prénom Nom" --connection "Host=…"
+```
+
+Même rôle **propriétaire** requis que `migrate`, pour la même raison : `users` est sous RLS, et les
+fonctions SECURITY DEFINER du chemin de login (`provision_school_director` compris) n'ont aucune
+variante Super Admin. Le mot de passe suit la même politique que toute création de compte humaine
+(Volume_7 §2 — 12 caractères minimum, majuscule, minuscule, chiffre, caractère spécial) ; la commande
+le rejette sinon, avant tout accès à la base.
+
+Idempotente par e-mail : si le compte existe déjà, la commande ne fait rien et sort en `0` — jamais de
+doublon, jamais un mot de passe déjà en usage écrasé par une relance accidentelle.
+
+Sur Cloud Run, cette commande s'exécute par un Job dédié qui réutilise l'image de `migrate` avec des
+arguments de conteneur différents (voir `docs/Volume_9_Deployment_Operations.md`, section « Premier
+compte Super Admin »).

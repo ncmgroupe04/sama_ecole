@@ -14,6 +14,7 @@ WORKDIR /src
 COPY SamaEcole.sln .
 COPY src/SamaEcole.Domain/SamaEcole.Domain.csproj src/SamaEcole.Domain/
 COPY src/SamaEcole.Application/SamaEcole.Application.csproj src/SamaEcole.Application/
+COPY src/SamaEcole.Infrastructure/SamaEcole.Infrastructure.csproj src/SamaEcole.Infrastructure/
 COPY src/SamaEcole.Persistence/SamaEcole.Persistence.csproj src/SamaEcole.Persistence/
 COPY tools/SamaEcole.Tools/SamaEcole.Tools.csproj tools/SamaEcole.Tools/
 RUN dotnet restore tools/SamaEcole.Tools/SamaEcole.Tools.csproj

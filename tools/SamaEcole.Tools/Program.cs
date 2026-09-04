@@ -5,6 +5,7 @@ using SamaEcole.Tools.Commands;
 return args switch
 {
     ["migrate", ..] => await MigrateCommand.RunAsync(ConnectionArgument(args), Console.Out, Console.Error),
+    ["seed-superadmin", ..] => await SeedSuperAdminCommand.RunAsync(args, Console.Out, Console.Error),
     _ => Usage()
 };
 
@@ -25,6 +26,11 @@ static int Usage()
           migrate [--connection <chaîne>]   Applique les migrations EF Core en attente.
                                             À défaut d'argument, lit ConnectionStrings__Migrations
                                             (rôle propriétaire sama_ecole — jamais le rôle applicatif).
+
+          seed-superadmin --email <adresse> --password <mot de passe> [--name <nom>] [--connection <chaîne>]
+                                            Crée le premier compte Super Admin s'il n'existe pas déjà
+                                            (idempotent par e-mail). Même résolution de connexion que
+                                            migrate — rôle propriétaire requis.
         """);
 
     return 1;

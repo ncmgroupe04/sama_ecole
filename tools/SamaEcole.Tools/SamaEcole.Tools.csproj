@@ -13,6 +13,10 @@
     <!-- Commande `migrate` : a besoin d'ApplicationDbContext et de ses migrations. Toujours AUCUNE
          référence vers SamaEcole.Web (voir README) — cet outil tourne sans host ASP.NET. -->
     <ProjectReference Include="..\..\src\SamaEcole.Persistence\SamaEcole.Persistence.csproj" />
+    <!-- Commande `seed-superadmin` : réutilise IdentityPasswordHasher (PBKDF2 via ASP.NET Core
+         Identity) — même hacheur que le chemin de login, source unique pour du code de sécurité.
+         N'exige aucun host ASP.NET : PasswordHasher<T> est autonome, sans dépendance à Kestrel/MVC. -->
+    <ProjectReference Include="..\..\src\SamaEcole.Infrastructure\SamaEcole.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
