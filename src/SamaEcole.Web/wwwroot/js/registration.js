@@ -8,48 +8,51 @@
  * `website` est le champ HONEYPOT : invisible pour un humain, laissé vide. Un bot de remplissage
  * automatique le renseigne et trahit sa nature — le serveur ignore alors silencieusement la soumission.
  */
-(() => {
-    'use strict';
+'use strict';
 
-    const API_BASE = '/api/v1';
+// Miroir CÔTÉ CLIENT des règles serveur (SubmitRegistrationRequestValidator, PasswordPolicy,
+// SenegalPhoneValidation, SafeTextValidation) : un retour immédiat, sans aller-retour réseau. Le
+// serveur reste la seule source de vérité — ces mêmes règles y sont réappliquées de toute façon.
+// Déclarés hors de l'IIFE ci-dessous car réutilisés par le composant Alpine `registrationForm`
+// (voir plus bas) : partager la même portée que window.registration évite un ReferenceError au
+// premier clic sur « Envoyer ma demande » (isSafeText, EMAIL_REGEX… hors de portée sinon).
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SENEGAL_PHONE_REGEX = /^(?:\+221|00221)?\s?(?:77|76|78|70|75|33)(?:\s?\d){7}$/;
+const UNSAFE_TEXT_REGEX = /[<>]|javascript\s*:|&#/i;
+const FORBIDDEN_PASSWORD_SEQUENCES = ['123456', 'azerty', 'qwerty', 'password', 'motdepasse', 'abcdef'];
 
-    // Miroir CÔTÉ CLIENT des règles serveur (SubmitRegistrationRequestValidator, PasswordPolicy,
-    // SenegalPhoneValidation, SafeTextValidation) : un retour immédiat, sans aller-retour réseau. Le
-    // serveur reste la seule source de vérité — ces mêmes règles y sont réappliquées de toute façon.
-    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const SENEGAL_PHONE_REGEX = /^(?:\+221|00221)?\s?(?:77|76|78|70|75|33)(?:\s?\d){7}$/;
-    const UNSAFE_TEXT_REGEX = /[<>]|javascript\s*:|&#/i;
-    const FORBIDDEN_PASSWORD_SEQUENCES = ['123456', 'azerty', 'qwerty', 'password', 'motdepasse', 'abcdef'];
+const isSafeText = (value) => !UNSAFE_TEXT_REGEX.test(value);
 
-    const isSafeText = (value) => !UNSAFE_TEXT_REGEX.test(value);
+/** Reproduit PasswordPolicy.Validate (C#) : mêmes règles, mêmes messages. */
+function passwordPolicyErrors(password, personalTerms) {
+    const errors = [];
 
-    /** Reproduit PasswordPolicy.Validate (C#) : mêmes règles, mêmes messages. */
-    function passwordPolicyErrors(password, personalTerms) {
-        const errors = [];
-
-        if (password.length < 12) errors.push('Le mot de passe doit contenir au moins 12 caractères.');
-        if (!/[A-Z]/.test(password)) errors.push('Le mot de passe doit contenir au moins une majuscule.');
-        if (!/[a-z]/.test(password)) errors.push('Le mot de passe doit contenir au moins une minuscule.');
-        if (!/[0-9]/.test(password)) errors.push('Le mot de passe doit contenir au moins un chiffre.');
-        if (password.length > 0 && /^[a-zA-Z0-9]*$/.test(password)) {
-            errors.push('Le mot de passe doit contenir au moins un caractère spécial.');
-        }
-
-        const lowered = password.toLowerCase();
-        if (FORBIDDEN_PASSWORD_SEQUENCES.some((seq) => lowered.includes(seq))) {
-            errors.push('Le mot de passe ne doit pas contenir de suite évidente (ex. 123456, password).');
-        }
-
-        const personalWords = personalTerms
-            .filter(Boolean)
-            .flatMap((term) => term.split(' ').map((w) => w.trim()).filter((w) => w.length >= 3));
-
-        if (personalWords.some((word) => lowered.includes(word.toLowerCase()))) {
-            errors.push('Le mot de passe ne doit pas contenir votre nom ou celui de l’établissement.');
-        }
-
-        return errors;
+    if (password.length < 12) errors.push('Le mot de passe doit contenir au moins 12 caractères.');
+    if (!/[A-Z]/.test(password)) errors.push('Le mot de passe doit contenir au moins une majuscule.');
+    if (!/[a-z]/.test(password)) errors.push('Le mot de passe doit contenir au moins une minuscule.');
+    if (!/[0-9]/.test(password)) errors.push('Le mot de passe doit contenir au moins un chiffre.');
+    if (password.length > 0 && /^[a-zA-Z0-9]*$/.test(password)) {
+        errors.push('Le mot de passe doit contenir au moins un caractère spécial.');
     }
+
+    const lowered = password.toLowerCase();
+    if (FORBIDDEN_PASSWORD_SEQUENCES.some((seq) => lowered.includes(seq))) {
+        errors.push('Le mot de passe ne doit pas contenir de suite évidente (ex. 123456, password).');
+    }
+
+    const personalWords = personalTerms
+        .filter(Boolean)
+        .flatMap((term) => term.split(' ').map((w) => w.trim()).filter((w) => w.length >= 3));
+
+    if (personalWords.some((word) => lowered.includes(word.toLowerCase()))) {
+        errors.push('Le mot de passe ne doit pas contenir votre nom ou celui de l’établissement.');
+    }
+
+    return errors;
+}
+
+(() => {
+    const API_BASE = '/api/v1';
 
     /** Traduit une réponse d'erreur en Error exploitable (corps JSON normalisé, ou vide). */
     async function toError(response) {
