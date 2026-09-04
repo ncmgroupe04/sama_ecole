@@ -78,7 +78,8 @@ export function loadScripts(files, options = {}) {
         clearTimeout,
         CustomEvent,
         AbortController,
-        FormData
+        FormData,
+        URLSearchParams
     };
 
     sandbox.globalThis = sandbox;
