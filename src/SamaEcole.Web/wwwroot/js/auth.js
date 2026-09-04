@@ -364,11 +364,16 @@ document.addEventListener('alpine:init', () => {
         }
     }));
 
-    /** Bandeau utilisateur de la barre supérieure : e-mail saisi à la connexion + rôle lu dans le JWT. */
+    /**
+     * Carte de profil de la barre latérale (_Layout.cshtml) : nom + rôle lus dans le JWT, ouvre un
+     * petit menu (isOpen) avec « Changer mon mot de passe » (délègue au store Alpine
+     * changePasswordModal, wwwroot/js/change-password.js) et « Se déconnecter ».
+     */
     Alpine.data('sessionMenu', () => ({
         email: window.auth.email,
         name: window.auth.name,
         role: window.auth.role,
+        isOpen: false,
         logout: () => window.auth.logout()
     }));
 

@@ -29,6 +29,9 @@
  @* Modale universelle « Accès refusé » : store Alpine + pont depuis window.api. Script classique
     (enregistre un écouteur alpine:init), donc avant Alpine différé ; après api.js dont il dépend. *@
  <script src="~/js/access-denied.js" asp-append-version="true"></script>
+ @* Modale universelle « Changer mon mot de passe » : même schéma (store Alpine), ouverte depuis
+    la carte de profil de la barre latérale — après api.js, dont submit() dépend. *@
+ <script src="~/js/change-password.js" asp-append-version="true"></script>
  @* Assistant de Premier Paramétrage (bouton de la barre supérieure) — dépend d'auth.js et api.js,
  enregistre un écouteur alpine:init, donc script classique chargé avant Alpine (différé). *@
  <script src="~/js/setup-assistant.js" asp-append-version="true"></script>
@@ -308,13 +311,15 @@
 
  @* Profil réel de la session : le nom complet et le rôle sont lus dans le JWT (claims `name` =
  User.FullName, `role`). La carte affiche « Nom / Rôle » sur deux lignes ; l'e-mail n'y figure
- plus (donnée personnelle, et déjà dans la topbar). La carte entière EST le bouton de déconnexion
- — la barre supérieure n'en propose plus une deuxième —, avec le gabarit de mise en évidence de
- l'ancien bouton (fond bleu, blanc au repos, rouge/rose au survol). *@
- <div class="sidebar-profile p-3 border-t border-slate-100" x-data="sessionMenu()">
- <button type="button" x-on:click="logout()" aria-label="Se déconnecter"
- class="sidebar-user-card w-full flex items-center gap-3 px-3 py-2 rounded-none bg-primary-600 text-white hover:bg-rose-600 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary"
- :title="'Se déconnecter (' + (name || role) + ')'">
+ plus (donnée personnelle, et déjà dans la topbar). La carte entière ouvre désormais un petit menu
+ (mêmes ancre/positionnement que schoolSwitcher() dans la topbar) au lieu de déconnecter
+ directement : « Se déconnecter » y reste la première entrée (gabarit de mise en évidence hérité de
+ l'ancien bouton conservé pour elle), « Changer mon mot de passe » s'y ajoute — seul point d'entrée
+ de _ChangePasswordModal.cshtml, accessible depuis n'importe quelle page. *@
+ <div class="sidebar-profile relative p-3 border-t border-slate-100" x-data="sessionMenu()">
+ <button type="button" x-on:click="isOpen = !isOpen" aria-haspopup="true" :aria-expanded="isOpen.toString()"
+ class="sidebar-user-card w-full flex items-center gap-3 px-3 py-2 rounded-none bg-primary-600 text-white hover:bg-primary-700 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary"
+ :title="name || role">
  @* Initiale calculée localement : envoyer l'e-mail à un service d'avatars tiers
  (ui-avatars.com, comme précédemment) revient à lui divulguer une donnée personnelle. *@
  <div aria-hidden="true" class="sidebar-user-avatar w-10 h-10 shrink-0 rounded-none bg-white/20 text-white flex items-center justify-center font-medium uppercase"
@@ -325,8 +330,24 @@
  <p class="text-xs text-white/80 truncate" x-text="role"></p>
  </div>
 
- <icon name="sign-out" class="sidebar-label w-6 h-6 shrink-0" />
+ <icon name="chevron-down" class="sidebar-label w-4 h-4 shrink-0 transition-transform" :class="isOpen ? 'rotate-180' : ''" />
  </button>
+
+ @* Ouvert vers le HAUT (bottom-full) : la carte est ancrée en bas de la barre latérale, un menu
+ qui s'ouvrirait vers le bas sortirait de l'écran. Même gabarit que le panneau de schoolSwitcher(). *@
+ <div x-show="isOpen" x-cloak x-on:click.outside="isOpen = false" x-on:keydown.escape.window="isOpen = false"
+ class="absolute bottom-full left-3 right-3 mb-2 rounded-xl bg-white p-2 shadow-lg ring-1 ring-slate-100 z-30">
+ <button type="button" x-on:click="isOpen = false; $store.changePasswordModal.open()"
+ class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+ <icon name="key" class="w-4 h-4 shrink-0 text-slate-400" />
+ Changer mon mot de passe
+ </button>
+ <button type="button" x-on:click="isOpen = false; logout()"
+ class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors">
+ <icon name="sign-out" class="w-4 h-4 shrink-0" />
+ Se déconnecter
+ </button>
+ </div>
  </div>
  </aside>
 
@@ -644,6 +665,11 @@
  @* Modale universelle « Accès refusé » — un seul montage pour toute l'application (piloté par le
     store Alpine `accessDenied`, alimenté par window.api sur les 403 « FORBIDDEN »). *@
  @await Html.PartialAsync("_AccessDeniedModal")
+
+ @* Modale universelle « Changer mon mot de passe » — un seul montage pour toute l'application,
+    ouverte depuis la carte de profil de la barre latérale ci-dessus (store Alpine
+    `changePasswordModal`, wwwroot/js/change-password.js). *@
+ @await Html.PartialAsync("_ChangePasswordModal")
 
  @await RenderSectionAsync("Scripts", required: false)
 </body>

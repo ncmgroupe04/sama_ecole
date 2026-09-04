@@ -78,6 +78,17 @@ public interface IAuthStore
     /// </summary>
     Task<int> CompletePasswordResetAsync(
         Guid tokenId, Guid userId, string newPasswordHash, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Change le mot de passe d'un compte AUTHENTIFIÉ (l'utilisateur connaît déjà l'ancien — voir
+    /// ChangePasswordCommandHandler, qui l'a vérifié avant l'appel). Même geste que
+    /// <see cref="CompletePasswordResetAsync"/> côté écriture (fonction SECURITY DEFINER, révocation de
+    /// TOUTES les sessions, y compris celle qui vient de faire la demande) mais sans jeton : rien à
+    /// consommer, rien à périmer par usage unique. Périme malgré tout les demandes de réinitialisation
+    /// EN COURS — un lien de « mot de passe oublié » encore valide ne doit pas pouvoir contourner le
+    /// mot de passe qu'on vient de choisir volontairement. Renvoie le nombre de sessions coupées.
+    /// </summary>
+    Task<int> ChangePasswordAsync(Guid userId, string newPasswordHash, CancellationToken cancellationToken);
 }
 
 public record StoredPasswordResetToken(

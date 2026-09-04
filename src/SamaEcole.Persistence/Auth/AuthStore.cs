@@ -153,17 +153,7 @@ public class AuthStore(ApplicationDbContext dbContext, TimeProvider timeProvider
     {
         return await dbContext.ExecuteInTransactionAsync(async ct =>
         {
-            // users est sous RLS et ce chemin n'a AUCUN tenant (l'appelant n'est pas authentifié) :
-            // l'écriture passe par la fonction SECURITY DEFINER dédiée, une requête EF ne verrait
-            // aucune ligne et l'UPDATE serait un silencieux « 0 ligne modifiée ».
-            await using (var command = await CreateCommandAsync(
-                "SELECT auth_set_password_hash(@userId, @hash)", ct))
-            {
-                command.Parameters.AddWithValue("userId", userId);
-                command.Parameters.AddWithValue("hash", newPasswordHash);
-
-                await command.ExecuteNonQueryAsync(ct);
-            }
+            await SetPasswordHashAsync(userId, newPasswordHash, ct);
 
             var now = timeProvider.GetUtcNow();
 
@@ -178,6 +168,38 @@ public class AuthStore(ApplicationDbContext dbContext, TimeProvider timeProvider
 
             return await RevokeAllRefreshTokensAsync(userId, ct);
         }, cancellationToken);
+    }
+
+    public async Task<int> ChangePasswordAsync(
+        Guid userId, string newPasswordHash, CancellationToken cancellationToken)
+    {
+        return await dbContext.ExecuteInTransactionAsync(async ct =>
+        {
+            await SetPasswordHashAsync(userId, newPasswordHash, ct);
+
+            // Même raisonnement que CompletePasswordResetAsync : un lien de réinitialisation encore
+            // valide ne doit pas pouvoir contourner le mot de passe qu'on vient de choisir soi-même.
+            await RevokeOutstandingResetTokensAsync(userId, ct);
+
+            return await RevokeAllRefreshTokensAsync(userId, ct);
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// users est sous RLS, et ni le login (aucun tenant) ni un changement de mot de passe (le Super
+    /// Admin qui change le sien n'a lui non plus aucun SchoolId de session) ne peuvent compter sur la
+    /// policy standard : l'écriture passe par la fonction SECURITY DEFINER dédiée, une requête EF ne
+    /// verrait aucune ligne et l'UPDATE serait un silencieux « 0 ligne modifiée ».
+    /// </summary>
+    private async Task SetPasswordHashAsync(Guid userId, string newPasswordHash, CancellationToken cancellationToken)
+    {
+        await using var command = await CreateCommandAsync(
+            "SELECT auth_set_password_hash(@userId, @hash)", cancellationToken);
+
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("hash", newPasswordHash);
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private async Task RevokeOutstandingResetTokensAsync(Guid userId, CancellationToken cancellationToken)

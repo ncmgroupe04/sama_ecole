@@ -1,4 +1,5 @@
 using SamaEcole.Application.Auth;
+using SamaEcole.Application.Auth.Commands.ChangePassword;
 using SamaEcole.Application.Auth.Commands.ForgotPassword;
 using SamaEcole.Application.Auth.Commands.Login;
 using SamaEcole.Application.Auth.Commands.Logout;
@@ -125,6 +126,28 @@ public class AuthController(
         // Toutes les sessions viennent d'être coupées, y compris celle du navigateur courant s'il en
         // avait une : le cookie doit partir avec elles, sinon il serait présenté à chaque refresh
         // jusqu'à sa date d'expiration, pour un jeton désormais révoqué.
+        RefreshTokenCookie.Delete(Response);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Change le mot de passe du compte AUTHENTIFIÉ courant, qui doit prouver connaître l'actuel —
+    /// contrairement à /reset-password (jeton par e-mail) et à PATCH /users/{id}/password (un
+    /// Directeur fixe le mot de passe d'AUTRUI). Ouvert à tout rôle : Super Admin compris.
+    ///
+    /// Toutes les sessions viennent d'être coupées (voir ChangePasswordCommandHandler), y compris
+    /// celle du navigateur courant : le cookie de refresh part avec elles, comme sur /reset-password.
+    /// </summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType<ChangePasswordResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordCommand command, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(command, cancellationToken);
+
         RefreshTokenCookie.Delete(Response);
 
         return Ok(result);
