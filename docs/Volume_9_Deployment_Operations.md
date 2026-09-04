@@ -194,7 +194,15 @@ différente (rejet PostgreSQL, pas `SocketException`) une fois la connectivité 
 `tools/SamaEcole.Tools` (rôle **propriétaire** `sama_ecole`, jamais le rôle applicatif — voir son
 README) tourne en production comme un **Cloud Run Job**, pas comme un conteneur local ni un script
 sur le poste du développeur. Mis en place le 04/09/2026, image sur le même Artifact Registry que
-le service web :
+le service web.
+
+**Depuis la mise en place du pipeline (§4), la mise à jour de l'image et l'exécution du Job sont
+automatiques à chaque push sur `main`** (`gcloud run jobs update --image=...` puis `jobs execute
+--wait`, sans repasser `--set-cloudsql-instances` ni les identifiants). La séquence ci-dessous reste
+la référence pour la création initiale du Job (déjà faite) ou une reconstruction manuelle ponctuelle
+— `cloudbuild-tools.yaml` n'existe pas dans ce dépôt, c'était un fichier de config Cloud Build ad hoc
+utilisé une fois ; `docker build -f tools/SamaEcole.Tools/Dockerfile -t <image> .` (contexte racine)
+fait exactement la même chose sans dépendre d'un fichier absent :
 
 ```bash
 gcloud builds submit --config=cloudbuild-tools.yaml --substitutions=_IMAGE=europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/sama-ecole-tools:latest .
@@ -267,20 +275,35 @@ Les migrations ne sont **jamais** appliquées par le service web : elles passent
 
 ## 4. Intégration et déploiement continus (CI/CD)
 
-Pipeline déclenché à chaque fusion sur `main` (Volume 6 §9) :
+Pipeline GitHub Actions (`.github/workflows/ci.yml`), déclenché à chaque `push` sur `main`. Le job
+`deploy` s'exécute seulement si le job `build-and-test` réussit :
 
-1. Build et exécution des tests unitaires et d'intégration (Volume 8).
-2. Exécution du test critique d'isolation multi-tenant (Volume 8 §5) — échec = blocage automatique du déploiement.
-3. Construction de l'image Docker.
-4. Déploiement automatique en **staging**.
-5. Exécution des tests End-to-End en staging.
-6. Validation manuelle (déploiement en production non automatique pour les versions majeures).
-7. Sauvegarde automatique de la base de production **avant** application des migrations.
-8. Application des migrations EF Core.
-9. Déploiement en production (déploiement progressif — ex. rolling update — pour éviter toute interruption de service).
-10. Contrôle de bon fonctionnement automatique (health check) post-déploiement.
+1. Build et exécution des tests unitaires, d'intégration et fonctionnels (Volume 8), y compris le
+   test critique d'isolation multi-tenant (Volume 8 §5) et la vérification que le rôle applicatif ne
+   contourne pas la RLS — échec = blocage automatique de la suite.
+2. Authentification GCP par **Workload Identity Federation** (`google-github-actions/auth`), aucune
+   clé de service account stockée dans GitHub. Le compte `github-deployer@sama-ecole-prod` n'est
+   autorisé qu'à agir depuis le dépôt `ncmgroupe04/sama_ecole` (attribute condition posée sur le
+   provider `github-provider`, pool `github-pool`).
+3. Construction et push des images web et outils vers Artifact Registry
+   (`europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/`), taguées par le SHA du commit et
+   `latest`.
+4. Mise à jour de l'image du Job `sama-ecole-migrate` (`gcloud run jobs update --image=...` — ne
+   touche qu'à l'image, laisse `--set-cloudsql-instances` et les identifiants du rôle propriétaire
+   intacts) puis exécution des migrations EF Core (`gcloud run jobs execute --wait`). Un échec de
+   migration bloque le déploiement du service : le code neuf n'est jamais servi sur un schéma qui ne
+   correspond pas.
+5. Déploiement du service `sama-ecole-web` (`gcloud run deploy`, sans `--set-env-vars` : les variables
+   d'environnement et secrets déjà posés sur la révision précédente sont repris automatiquement — voir
+   §3ter).
+6. Contrôle de bon fonctionnement post-déploiement (`/health/live`, `/health/ready`).
 
-En cas d'échec à une étape quelconque, retour automatique à la version précédente.
+**Ce qui n'est PAS encore automatisé** (écart assumé avec la version 1.0 de ce document) : pas
+d'environnement de staging séparé, pas de suite End-to-End, pas de validation manuelle avant
+production, pas de sauvegarde ad hoc déclenchée par le pipeline (elle est déjà continue, voir §5), et
+pas de rollback automatique en cas d'échec du déploiement lui-même — seule l'étape de migration
+bloque le pipeline avant que le service ne soit mis à jour. À reconsidérer si des versions majeures
+justifient une porte de validation manuelle (ex. GitHub Environments avec reviewers requis).
 
 ## 5. Sauvegardes
 

@@ -129,16 +129,75 @@ jobs:
           name: test-results
           path: '**/*.trx'
 
-  docker-build:
+  deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      id-token: write # requis par google-github-actions/auth (Workload Identity Federation)
+    env:
+      REGION: europe-west1
+      WEB_IMAGE: europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/sama-ecole-web
+      TOOLS_IMAGE: europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/sama-ecole-tools
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build image
-        run: docker build -f src/SamaEcole.Web/Dockerfile -t sama-ecole-api:${{ github.sha }} .
+      # Fédération d'identité de charge de travail : aucune clé de service account stockée dans
+      # GitHub. github-deployer@sama-ecole-prod n'est autorisé qu'à agir depuis CE dépôt (attribute
+      # condition posée côté GCP sur github-provider) — voir docs/Volume_9_Deployment_Operations.md §4.
+      - name: Authentification GCP (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/403364907293/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-deployer@sama-ecole-prod.iam.gserviceaccount.com
 
-      # Étape de push vers le registre + déploiement : voir docs/Volume_9_Deployment_Operations.md §CI/CD.
-      # Volontairement non automatisée ici pour garder une porte de validation manuelle avant la mise en production.
+      - name: Configurer gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Authentifier Docker sur Artifact Registry
+        run: gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+
+      - name: Construire et pousser l'image web
+        run: |
+          docker build -f Dockerfile -t "$WEB_IMAGE:${{ github.sha }}" -t "$WEB_IMAGE:latest" .
+          docker push "$WEB_IMAGE:${{ github.sha }}"
+          docker push "$WEB_IMAGE:latest"
+
+      # Image séparée (rôle propriétaire, jamais applicatif) pour le Job de migration — voir
+      # tools/SamaEcole.Tools/Dockerfile et AGENTS.md règle #2.
+      - name: Construire et pousser l'image des outils (migrations)
+        run: |
+          docker build -f tools/SamaEcole.Tools/Dockerfile -t "$TOOLS_IMAGE:${{ github.sha }}" -t "$TOOLS_IMAGE:latest" .
+          docker push "$TOOLS_IMAGE:${{ github.sha }}"
+          docker push "$TOOLS_IMAGE:latest"
+
+      # `jobs update` ne touche qu'à l'image : --set-cloudsql-instances, les variables d'environnement
+      # et le mot de passe du rôle propriétaire déjà posés sur le Job restent intacts.
+      - name: Mettre à jour l'image du Job de migration
+        run: |
+          gcloud run jobs update sama-ecole-migrate \
+            --region="$REGION" \
+            --image="$TOOLS_IMAGE:${{ github.sha }}"
+
+      # Bloque le déploiement du service si une migration échoue : le code neuf n'est jamais servi
+      # sur un schéma qui ne correspond pas. Rejouer sur une base à jour est sans danger (voir doc).
+      - name: Exécuter les migrations EF Core
+        run: gcloud run jobs execute sama-ecole-migrate --region="$REGION" --wait
+
+      # Volontairement SANS --set-env-vars/--update-env-vars : gcloud run deploy reprend automatiquement
+      # les variables d'environnement et secrets de la révision précédente quand on ne les repasse pas.
+      - name: Déployer le service Cloud Run
+        run: |
+          gcloud run deploy sama-ecole-web \
+            --image="$WEB_IMAGE:${{ github.sha }}" \
+            --region="$REGION" \
+            --platform=managed \
+            --quiet
+
+      - name: Vérifier la santé du service déployé
+        run: |
+          URL=$(gcloud run services describe sama-ecole-web --region="$REGION" --format="value(status.url)")
+          curl -fsS "$URL/health/live"
+          curl -fsS "$URL/health/ready"
