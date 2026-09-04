@@ -442,22 +442,30 @@ if (forwardedHeadersEnabled)
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("database", tags: ["ready"]);
 
+// Liaison du port. Les ordonnanceurs de conteneurs (Cloud Run, Heroku, Fly.io) IMPOSENT le port par
+// la variable d'environnement PORT et considèrent le déploiement en échec si le conteneur n'écoute pas
+// dessus. UseUrls est appelé APRÈS toute la configuration : il prévaut sur ASPNETCORE_URLS, qui n'a
+// donc pas à être posé dans l'image (une seule source de vérité, voir Dockerfile). 5000 est le repli
+// du poste de développement (`dotnet run`) — jamais utilisé en conteneur, où PORT est toujours défini.
+// 0.0.0.0 et non localhost : sinon rien depuis l'extérieur du conteneur ne peut joindre le processus.
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 
-// Refuse de démarrer si l'application se connecte à PostgreSQL avec un rôle qui contourne la RLS
-// (superutilisateur, BYPASSRLS, ou propriétaire des tables) : l'isolation multi-tenant serait
-// silencieusement inopérante (ticket JGK-A03, AGENTS.md règle #2).
-await app.Services.EnsureRuntimeRoleCannotBypassRlsAsync();
-
 // Canaux sortants non configurés : AVERTIT sans empêcher le démarrage (voir SmsServiceGuard pour la
 // justification de cette différence avec RlsGuard/EmailSenderGuard). Emis ici, et non dans
 // AddInfrastructure, parce que c'est le premier endroit où un ILogger existe — sans cet appel, les
 // gardes ne seraient qu'un texte que personne n'affiche jamais.
+//
+// AVANT la garde RLS ci-dessous, qui exige un aller-retour SQL : sur une base injoignable, ces
+// avertissements de CONFIGURATION seraient sinon perdus, et le journal de démarrage ne montrerait que
+// l'échec réseau — en cachant qu'un canal sortant est par ailleurs mal configuré.
 foreach (var warning in new[]
          {
+             EmailSenderGuard.DescribeDegradedMode(
+                 app.Services.GetRequiredService<IOptions<SmtpOptions>>().Value,
+                 app.Environment.IsDevelopment()),
              SmsServiceGuard.DescribeMisconfiguration(
                  app.Services.GetRequiredService<IOptions<SmsOptions>>().Value,
                  app.Environment.IsDevelopment()),
@@ -471,6 +479,17 @@ foreach (var warning in new[]
         app.Logger.LogWarning("{Warning}", warning);
     }
 }
+
+// Refuse de démarrer si l'application se connecte à PostgreSQL avec un rôle qui contourne la RLS
+// (superutilisateur, BYPASSRLS, ou propriétaire des tables) : l'isolation multi-tenant serait
+// silencieusement inopérante (ticket JGK-A03, AGENTS.md règle #2). Réessaie tant que l'échec vient de
+// la CONNEXION (base gérée qui se réveille au premier démarrage), jamais du verdict — voir RlsGuard.
+app.Logger.LogInformation(
+    "Démarrage : environnement {Environment}, écoute prévue sur http://0.0.0.0:{Port}. "
+    + "Vérification RLS avant ouverture du port…",
+    app.Environment.EnvironmentName, port);
+
+await app.Services.EnsureRuntimeRoleCannotBypassRlsAsync();
 
 // AVANT tout : réécrit RemoteIpAddress / Request.Scheme depuis les en-têtes X-Forwarded-* du proxy,
 // pour que les limiteurs de débit par IP et la détection HTTPS voient la VRAIE requête cliente et non

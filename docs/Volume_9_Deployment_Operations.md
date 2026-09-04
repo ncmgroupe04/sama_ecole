@@ -14,6 +14,7 @@
 2. Architecture de déploiement (cloud, unique)
 3. Environnements
 3bis. Configuration & secrets
+3ter. Cloud Run — variables requises et mise en service
 4. Intégration et déploiement continus (CI/CD)
 5. Sauvegardes
 6. Restauration
@@ -98,6 +99,140 @@ ajoutée au moment où elle est introduite.
 - Rotation d'un secret compromis : le remplacer côté plateforme d'hébergement puis redéployer (pas de
   procédure applicative dédiée — aucun secret n'est mis en cache au-delà de la durée de vie du
   processus).
+
+## 3ter. Cloud Run — variables requises et mise en service
+
+Cloud Run est une variante d'hébergement du §2 : il remplace « Nginx + Docker Compose » par son propre
+frontal TLS et son propre ordonnanceur. L'image applicative, elle, ne change pas.
+
+**`sama-ecole-prod` est le PROJET GCP, pas un nom de service.** Le service Cloud Run qui héberge ce
+monolithe s'appelle **`sama-ecole-web`**, région `europe-west1`, image publiée sur Artifact Registry
+(`europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/sama-ecole-web`). Confondre les deux
+fait chercher un service qui n'existe pas (`gcloud run services describe sama-ecole-prod` échoue par
+« Cannot find service »).
+
+Un second service, `sama-ecole-api` (image `gcr.io/sama-ecole-prod/sama-ecole-api`, Container
+Registry et non Artifact Registry), existe encore dans le même projet — c'est un reliquat de
+l'ancienne architecture front React + API séparée (voir `_old-web-repo.bundle` à la racine du dépôt,
+et les clés `NEXT_PUBLIC_API_URL`/`VITE_API_URL` d'un `.env.production` local non versionné qui
+pointent dessus). Il n'est plus le chemin de déploiement de ce dépôt ; ne pas y déployer par réflexe
+sous prétexte que son nom contient « api ».
+
+**Une seule image, une seule révision.** `SamaEcole.Web` est un monolithe : les 42 contrôleurs `api/v1`
+et les vues Razor vivent dans le MÊME processus. Il n'y a pas de service « API » séparé à joindre par
+HTTP, donc **aucune variable de type `Api__BaseUrl`** — le front appelle ses contrôleurs en interne. Le
+service a donc besoin de sa base PostgreSQL et de sa configuration complète, exactement comme en §3bis.
+
+### Deux contraintes propres à Cloud Run
+
+1. **Le port est imposé par la plateforme.** Cloud Run injecte `PORT` et déclare la révision en échec si
+   le conteneur n'écoute pas dessus dans le délai de démarrage. `Program.cs` lit `PORT` et appelle
+   `UseUrls("http://0.0.0.0:$PORT")` — ne posez ni `PORT` ni `ASPNETCORE_URLS` à la main dans le
+   service, ce sont deux sources de vérité pour la même chose.
+2. **Toute garde de démarrage qui échoue produit le même message.** `The user-provided container failed
+   to start and listen on the port` ne dit RIEN du port dans ce cas : c'est le processus qui s'est
+   arrêté avant d'écouter. La cause réelle est toujours dans les journaux de la révision, quelques
+   lignes plus haut — clé de configuration manquante, ou base injoignable.
+
+### Variables à poser sur le service
+
+| Variable | Statut | Effet si absente |
+|---|---|---|
+| `ConnectionStrings__Default` | **requise** | `AddPersistence` : « ConnectionStrings:Default est manquant » |
+| `Jwt__SigningKey` | **requise** (≥ 32 octets, aléatoire, propre à l'environnement) | `Program.cs` refuse de démarrer |
+| `Smtp__Host`, `Smtp__User`, `Smtp__Password`, `Smtp__FromAddress` | **requises** | `EmailSenderGuard` refuse de démarrer (voir la sortie de secours ci-dessous) |
+| `ForwardedHeaders__Enabled=true` | **requise** | Le frontal Cloud Run termine TLS : sans cela l'application voit l'IP du frontal pour toutes les requêtes (les limiteurs par IP s'effondrent sur une partition unique) et `Request.Scheme` reste `http` |
+| `ASPNETCORE_ENVIRONMENT=Production` | recommandée | Défaut de l'image ; à poser explicitement pour lever toute ambiguïté (`Staging` sur la recette) |
+| `Auth__PublicBaseUrl`, `PayDunya__PublicBaseUrl` | requises en production | URL publique du service — sert à construire les liens envoyés par e-mail et les retours PayDunya |
+| `Sms__*`, `WhatsApp__*`, `PayDunya__*` | optionnelles | Avertissement au démarrage, canal inactif (§3bis) |
+| `ConnectionStrings__Migrations` | **à NE PAS poser** | Rôle propriétaire, exempté de RLS. Il n'appartient qu'au travail de migration (AGENTS.md règle #2) |
+| `SAMA_RETOUR_MODE_TEST_AUTORISE` | **à NE PAS poser en production** | `Program.cs` refuse explicitement `true` en `Production` |
+
+`ConnectionStrings__Default` doit porter le rôle **applicatif** (`sama_ecole_app`). Sur une base gérée
+joignable par Internet, gardez `SslMode=Require`. `RlsGuard` vérifie au démarrage que ce rôle ne
+contourne pas la RLS et réessaie la connexion (4 tentatives, 2 s + 4 s + 8 s) le temps qu'une base gérée
+se réveille ; passé ce délai il refuse de démarrer avec un message explicite plutôt que de servir des
+données dont l'isolation n'a pas pu être vérifiée.
+
+### Base de données Cloud SQL — se connecter par le socket Unix, pas par un nom d'hôte TCP
+
+La production utilise l'instance Cloud SQL PostgreSQL `sama-ecole` (nom de connexion
+`sama-ecole-prod:europe-west1:sama-ecole`), IP publique uniquement (pas d'IP privée activée à ce
+jour). **Sur Cloud Run, une instance Cloud SQL se rattache au SERVICE, pas seulement à la base :**
+
+```bash
+gcloud run services update sama-ecole-web \
+  --region europe-west1 \
+  --add-cloudsql-instances=sama-ecole-prod:europe-west1:sama-ecole
+```
+
+Sans cet indicateur, Cloud Run ne provisionne pas le proxy Cloud SQL Auth géré et rien ne route vers
+l'instance — la panne observée le 04/09/2026 sur `sama-ecole-web-00008-bjd` correspond exactement à
+ça : `RlsGuard` réessayait 4 fois puis échouait sur une `SocketException` (résolution DNS/route
+absente pour le nom d'hôte configuré), jamais sur un identifiant ou un mot de passe refusé. Le
+message de `RlsGuard` distingue maintenant ce cas (voir `SamaEcole.Persistence.RlsGuard.ContainsSocketException`).
+
+Une fois l'instance rattachée, `ConnectionStrings__Default` doit pointer le **socket Unix** que le
+proxy expose dans le conteneur, pas un nom d'hôte TCP :
+
+```
+Host=/cloudsql/sama-ecole-prod:europe-west1:sama-ecole;Port=5432;Database=sama-ecole-db;Username=sama_ecole_app;Password=<mot de passe du rôle applicatif>;SSL Mode=Disable
+```
+
+`SSL Mode=Disable` est correct ici et pas un relâchement de sécurité : le socket Unix ne sort jamais
+du conteneur, le chiffrement vers Cloud SQL est déjà assuré par le proxy géré (mTLS), et Npgsql
+n'accepte pas de négocier TLS sur un socket Unix. Ne PAS réutiliser `SslMode=Require;Trust Server
+Certificate=true`, qui suppose une connexion TCP.
+
+Le nom de la base (`sama-ecole-db`, avec des tirets) et le rôle applicatif (`sama_ecole_app`) sont
+confirmés par `gcloud sql databases list` / `gcloud sql users list --instance=sama-ecole` — à
+vérifier avant de coller cette chaîne, un nom de base qui ne correspond à rien produit une erreur
+différente (rejet PostgreSQL, pas `SocketException`) une fois la connectivité réseau réglée.
+
+### Déployer sans serveur SMTP (recette, démonstration, première mise en service)
+
+`Smtp__AllowUnconfigured=true` lève l'échec de démarrage — et rien d'autre. L'application n'utilise
+alors PAS `LoggingEmailSender` (réservé à Development, il écrit le corps des messages en clair, mot de
+passe provisoire du Directeur compris) mais `UnconfiguredEmailSender`, qui ne journalise que
+destinataire et objet et qui échoue au premier envoi. Un avertissement est émis à chaque démarrage.
+À réserver aux environnements dont les utilisateurs n'attendent pas leurs e-mails.
+
+### Commandes
+
+Le contexte de build est la RACINE du dépôt : `Dockerfile` (racine) et `src/SamaEcole.Web/Dockerfile`
+sont deux copies identiques de la même image, à garder synchronisées.
+
+```bash
+gcloud builds submit --tag europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/sama-ecole-web:latest
+
+gcloud run deploy sama-ecole-web \
+  --image europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/sama-ecole-web:latest \
+  --region europe-west1 \
+  --platform managed
+```
+
+**Sans `--set-env-vars`/`--update-env-vars` volontairement.** Sur un service déjà déployé au moins une
+fois, `gcloud run deploy` reprend automatiquement les variables d'environnement de la révision
+précédente si on ne les repasse pas explicitement — c'est ce qui permet de rebuilder et redéployer une
+correction de code sans jamais ressaisir `ConnectionStrings__Default` ni `Jwt__SigningKey` en clair
+dans une commande. Ne les repasser en `--set-env-vars` que pour les CHANGER, jamais pour les redire à
+l'identique.
+
+Idéalement, ces deux clés (et `Smtp__Password` le jour où le SMTP réel est configuré) migrent vers
+Secret Manager (`--set-secrets`, valeur `nom-du-secret:latest`) plutôt que de rester des variables
+d'environnement en clair, lisibles par quiconque a le droit de décrire le service et conservées dans
+l'historique de chaque révision. Non fait à ce jour sur `sama-ecole-web` — à planifier, pas urgent tant
+que l'accès au projet GCP reste restreint à l'équipe.
+
+### Vérification post-déploiement
+
+```bash
+curl -fsS https://<service>/health/live    # le processus répond, sans dépendance
+curl -fsS https://<service>/health/ready   # PostgreSQL joignable — c'est la sonde qui compte
+```
+
+Les migrations ne sont **jamais** appliquées par le service web : elles passent par l'outil dédié
+(`tools/SamaEcole.Tools`, rôle propriétaire), comme le service `migrate` de `docker-compose.yml`.
 
 ## 4. Intégration et déploiement continus (CI/CD)
 

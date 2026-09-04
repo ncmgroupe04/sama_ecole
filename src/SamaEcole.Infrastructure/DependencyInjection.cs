@@ -87,10 +87,18 @@ public static class DependencyInjection
         {
             services.AddSingleton<IEmailSender, LoggingEmailSender>();
         }
+        else if (smtpOptions.IsConfigured)
+        {
+            services.AddSingleton<IEmailSender, SmtpEmailSender>();
+        }
         else
         {
+            // Ni Development, ni SMTP configuré : la garde fait échouer le démarrage, SAUF renonciation
+            // explicite (Smtp__AllowUnconfigured=true), qui bascule alors sur un adaptateur qui refuse
+            // d'envoyer sans jamais journaliser de corps de message. Program.cs émet l'avertissement
+            // correspondant (EmailSenderGuard.DescribeDegradedMode).
             EmailSenderGuard.EnsureEmailSenderIsConfigured(smtpOptions, isDevelopment);
-            services.AddSingleton<IEmailSender, SmtpEmailSender>();
+            services.AddSingleton<IEmailSender, UnconfiguredEmailSender>();
         }
 
         // WhatsApp — même règle de choix que les SMS, et pour la même raison : une configuration

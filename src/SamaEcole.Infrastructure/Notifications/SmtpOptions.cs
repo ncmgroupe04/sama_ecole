@@ -17,6 +17,22 @@ public class SmtpOptions
     public string FromAddress { get; set; } = string.Empty;
 
     /// <summary>
+    /// Renonciation EXPLICITE à la garde de démarrage (EmailSenderGuard), pour un déploiement qui doit
+    /// pouvoir monter sans serveur SMTP : recette, démonstration, ou première mise en service d'un
+    /// hébergement avant que les identifiants SMTP ne soient disponibles.
+    ///
+    /// Ce n'est PAS un retour à LoggingEmailSender : l'adaptateur retenu dans ce mode
+    /// (UnconfiguredEmailSender) ne journalise jamais le corps d'un message — le mot de passe
+    /// provisoire du Directeur (JGK-B01) ne peut donc pas fuiter dans les journaux, ce que la garde
+    /// existe précisément pour empêcher. Il échoue bruyamment au premier envoi, plutôt que de laisser
+    /// croire qu'un e-mail est parti.
+    ///
+    /// Faux par défaut, et volontairement à poser variable par variable (Smtp__AllowUnconfigured=true) :
+    /// aucun environnement ne bascule dans ce mode par accident.
+    /// </summary>
+    public bool AllowUnconfigured { get; set; }
+
+    /// <summary>
     /// Centralisé ici pour que SmtpEmailSender ET DependencyInjection (choix entre SmtpEmailSender et
     /// LoggingEmailSender, garde de démarrage) partagent EXACTEMENT la même définition de "non configuré"
     /// — même raisonnement que PayDunyaOptions.IsConfigured.
