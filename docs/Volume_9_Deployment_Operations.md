@@ -189,6 +189,37 @@ confirmés par `gcloud sql databases list` / `gcloud sql users list --instance=s
 vérifier avant de coller cette chaîne, un nom de base qui ne correspond à rien produit une erreur
 différente (rejet PostgreSQL, pas `SocketException`) une fois la connectivité réseau réglée.
 
+### Appliquer les migrations sur Cloud SQL — Cloud Run Job
+
+`tools/SamaEcole.Tools` (rôle **propriétaire** `sama_ecole`, jamais le rôle applicatif — voir son
+README) tourne en production comme un **Cloud Run Job**, pas comme un conteneur local ni un script
+sur le poste du développeur. Mis en place le 04/09/2026, image sur le même Artifact Registry que
+le service web :
+
+```bash
+gcloud builds submit --config=cloudbuild-tools.yaml --substitutions=_IMAGE=europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/sama-ecole-tools:latest .
+
+gcloud run jobs deploy sama-ecole-migrate \
+  --image=europe-west1-docker.pkg.dev/sama-ecole-prod/sama-ecole-repo/sama-ecole-tools:latest \
+  --region=europe-west1 \
+  --set-cloudsql-instances=sama-ecole-prod:europe-west1:sama-ecole \
+  --set-env-vars="ConnectionStrings__Migrations=Host=/cloudsql/sama-ecole-prod:europe-west1:sama-ecole;Port=5432;Database=sama-ecole-db;Username=sama_ecole;Password=<mot de passe du role proprietaire>;SSL Mode=Disable" \
+  --max-retries=0 \
+  --task-timeout=300
+
+gcloud run jobs execute sama-ecole-migrate --region=europe-west1 --wait
+```
+
+**`--set-cloudsql-instances`, pas `--add-cloudsql-instances`** : ce dernier n'existe que pour
+`gcloud run services deploy/update` ; sur un Job, gcloud refuse l'argument (constaté le
+04/09/2026). L'exécution du job affiche le nombre de migrations en attente puis les applique ;
+relancer le même job sur une base déjà à jour est sans danger — il rapporte simplement
+« Aucune migration en attente » et sort en 0.
+
+Comme pour `ConnectionStrings__Default` (§ précédente), le mot de passe du rôle propriétaire
+passe par une variable d'environnement du Job, jamais par un fichier versionné, et devrait migrer
+vers Secret Manager au même titre.
+
 ### Déployer sans serveur SMTP (recette, démonstration, première mise en service)
 
 `Smtp__AllowUnconfigured=true` lève l'échec de démarrage — et rien d'autre. L'application n'utilise
