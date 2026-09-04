@@ -124,33 +124,48 @@
  <label for="schoolName" class="form-label">Nom de l'établissement</label>
  <input id="schoolName" type="text" x-model="schoolName" required maxlength="200"
  placeholder="Complexe scolaire Les Baobabs"
+ x-bind:aria-invalid="errors.schoolname ? 'true' : 'false'" aria-describedby="schoolNameError"
+ x-bind:class="errors.schoolname && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ <p id="schoolNameError" x-cloak x-show="errors.schoolname" x-text="errors.schoolname" class="field-error" role="alert"></p>
  </div>
 
  <div class="form-grid">
  <div>
  <label for="city" class="form-label">Ville <span class="text-slate-400 font-normal">(facultatif)</span></label>
  <input id="city" type="text" x-model="city" maxlength="100" placeholder="Dakar"
+ x-bind:aria-invalid="errors.city ? 'true' : 'false'" aria-describedby="cityError"
+ x-bind:class="errors.city && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ <p id="cityError" x-cloak x-show="errors.city" x-text="errors.city" class="field-error" role="alert"></p>
  </div>
  <div>
  <label for="region" class="form-label">Région <span class="text-slate-400 font-normal">(facultatif)</span></label>
  <input id="region" type="text" x-model="region" maxlength="100" placeholder="Dakar"
+ x-bind:aria-invalid="errors.region ? 'true' : 'false'" aria-describedby="regionError"
+ x-bind:class="errors.region && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ <p id="regionError" x-cloak x-show="errors.region" x-text="errors.region" class="field-error" role="alert"></p>
  </div>
  </div>
 
  <div>
  <label for="schoolAddress" class="form-label">Adresse <span class="text-slate-400 font-normal">(facultatif)</span></label>
  <input id="schoolAddress" type="text" x-model="schoolAddress" maxlength="300" placeholder="Rue 12 x Avenue Bourguiba"
+ x-bind:aria-invalid="errors.schooladdress ? 'true' : 'false'" aria-describedby="schoolAddressError"
+ x-bind:class="errors.schooladdress && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ <p id="schoolAddressError" x-cloak x-show="errors.schooladdress" x-text="errors.schooladdress" class="field-error" role="alert"></p>
  </div>
 
  <div class="form-grid">
  <div>
  <label for="estimatedStudentCount" class="form-label">Effectif estimé <span class="text-slate-400 font-normal">(facultatif)</span></label>
  <input id="estimatedStudentCount" type="number" min="1" x-model="estimatedStudentCount" placeholder="250"
+ x-bind:aria-invalid="errors.estimatedstudentcount ? 'true' : 'false'" aria-describedby="estimatedStudentCountError"
+ x-bind:class="errors.estimatedstudentcount && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ <p id="estimatedStudentCountError" x-cloak x-show="errors.estimatedstudentcount" x-text="errors.estimatedstudentcount" class="field-error" role="alert"></p>
  </div>
  <div>
  <label for="requestedPlan" class="form-label">Formule souhaitée</label>
@@ -166,7 +181,10 @@
  <label for="directorFullName" class="form-label">Nom complet</label>
  <input id="directorFullName" type="text" x-model="directorFullName" required maxlength="200"
  placeholder="Awa Ndiaye"
+ x-bind:aria-invalid="errors.directorfullname ? 'true' : 'false'" aria-describedby="directorFullNameError"
+ x-bind:class="errors.directorfullname && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ <p id="directorFullNameError" x-cloak x-show="errors.directorfullname" x-text="errors.directorfullname" class="field-error" role="alert"></p>
  </div>
 
  <div class="form-grid">
@@ -174,13 +192,19 @@
  <label for="directorEmail" class="form-label">Adresse e-mail</label>
  <input id="directorEmail" type="email" x-model="directorEmail" required maxlength="200"
  autocomplete="email" placeholder="awa@monecole.sn"
+ x-bind:aria-invalid="errors.directoremail ? 'true' : 'false'" aria-describedby="directorEmailError"
+ x-bind:class="errors.directoremail && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ <p id="directorEmailError" x-cloak x-show="errors.directoremail" x-text="errors.directoremail" class="field-error" role="alert"></p>
  </div>
  <div>
  <label for="directorPhone" class="form-label">Téléphone</label>
  <input id="directorPhone" type="tel" x-model="directorPhone" required maxlength="30"
  placeholder="+221 77 000 00 00"
+ x-bind:aria-invalid="errors.directorphone ? 'true' : 'false'" aria-describedby="directorPhoneError"
+ x-bind:class="errors.directorphone && 'input-field-error'"
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
+ <p id="directorPhoneError" x-cloak x-show="errors.directorphone" x-text="errors.directorphone" class="field-error" role="alert"></p>
  </div>
  </div>
 
@@ -191,6 +215,8 @@
  x-bind:type="showPassword ? 'text' : 'password'"
  x-model="directorPassword" required minlength="12"
  autocomplete="new-password" placeholder="12 caractères minimum"
+ x-bind:aria-invalid="errors.directorpassword ? 'true' : 'false'" aria-describedby="directorPasswordError"
+ x-bind:class="errors.directorpassword && 'input-field-error'"
  class="w-full pl-4 pr-11 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  <button type="button"
  x-on:click="showPassword = !showPassword"
@@ -201,7 +227,8 @@
  <svg x-cloak x-show="showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
  </button>
  </div>
- <p class="mt-1.5 text-jgk-table text-slate-500">Au moins 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial — sans suite évidente ni votre nom. C'est ce mot de passe qui vous connectera une fois la demande validée.</p>
+ <p id="directorPasswordError" x-cloak x-show="errors.directorpassword" x-text="errors.directorpassword" class="field-error" role="alert"></p>
+ <p x-show="!errors.directorpassword" class="mt-1.5 text-jgk-table text-slate-500">Au moins 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial — sans suite évidente ni votre nom. C'est ce mot de passe qui vous connectera une fois la demande validée.</p>
  </div>
  </fieldset>
 

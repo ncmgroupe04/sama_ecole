@@ -18,7 +18,7 @@ public class SubmitRegistrationRequestValidator : AbstractValidator<SubmitRegist
     {
         RuleFor(x => x.DirectorFullName).NotEmpty().MaximumLength(200).NoHtml();
         RuleFor(x => x.DirectorEmail).NotEmpty().EmailAddress().MaximumLength(200).NoHtml();
-        RuleFor(x => x.DirectorPhone).NotEmpty().MaximumLength(30).NoHtml();
+        RuleFor(x => x.DirectorPhone).NotEmpty().MaximumLength(30).NoHtml().MustBeValidSenegalPhone();
 
         RuleFor(x => x.DirectorPassword).Custom((password, context) =>
         {

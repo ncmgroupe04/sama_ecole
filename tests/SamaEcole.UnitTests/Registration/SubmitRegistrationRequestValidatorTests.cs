@@ -76,6 +76,16 @@ public class SubmitRegistrationRequestValidatorTests
     }
 
     [Fact]
+    public void Should_Fail_When_Director_Phone_Is_Not_A_Valid_Senegal_Number()
+    {
+        var command = ValidCommand() with { DirectorPhone = "0123456789" };
+
+        var result = _validator.Validate(command);
+
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.DirectorPhone));
+    }
+
+    [Fact]
     public void Should_Fail_When_School_Name_Is_Empty()
     {
         var command = ValidCommand() with { SchoolName = "" };

@@ -302,15 +302,48 @@
 })();
 
 document.addEventListener('alpine:init', () => {
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     Alpine.data('loginForm', () => ({
         email: '',
         password: '',
         showPassword: false,
         isSubmitting: false,
         error: null,
+        errors: {},
+
+        /** Validation CLIENT immédiate — forme uniquement (format d'e-mail, champs requis) : ni la
+         * robustesse du mot de passe ni son existence ne sont vérifiées ici, ça reste l'affaire du
+         * serveur (LoginCommandHandler), seul à savoir si les identifiants correspondent à un compte. */
+        validate() {
+            const errors = {};
+
+            if (!this.email) {
+                errors.email = "L'adresse e-mail est obligatoire.";
+            } else if (!EMAIL_REGEX.test(this.email)) {
+                errors.email = "Le format de l'adresse e-mail est invalide.";
+            }
+
+            if (!this.password) {
+                errors.password = 'Le mot de passe est obligatoire.';
+            }
+
+            this.errors = errors;
+            return Object.keys(errors).length === 0;
+        },
 
         async submit() {
             this.error = null;
+            this.errors = {};
+
+            // Espaces superflus retirés de l'e-mail uniquement : un espace dans le mot de passe est un
+            // caractère comme un autre, le rogner changerait le secret saisi par l'utilisateur.
+            this.email = this.email.trim();
+
+            if (!this.validate()) {
+                return;
+            }
+
             this.isSubmitting = true;
 
             try {
@@ -318,9 +351,12 @@ document.addEventListener('alpine:init', () => {
                 window.location.assign(window.auth.landingUrl());
             } catch (err) {
                 // Le serveur renvoie le MÊME message pour un e-mail inconnu, un mot de passe faux et
-                // un compte verrouillé (LoginCommandHandler) : ne rien ajouter ici qui permettrait de
-                // distinguer les cas, sous peine de rouvrir l'énumération de comptes qu'il évite.
-                this.error = window.api.toMessage(err, 'Connexion impossible. Vérifiez votre réseau et réessayez.');
+                // un compte verrouillé (LoginCommandHandler), sans `details` par champ (voir
+                // InvalidCredentialsException) : toFieldErrors retombe donc sur errors.global, jamais
+                // sur errors.email/errors.password — impossible d'en déduire lequel des deux est en
+                // cause, ce qui rouvrirait l'énumération de comptes que le serveur évite déjà.
+                this.errors = window.api.toFieldErrors(err, 'Connexion impossible. Vérifiez votre réseau et réessayez.');
+                this.error = this.errors.global || null;
                 this.password = '';
             } finally {
                 this.isSubmitting = false;

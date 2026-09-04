@@ -91,9 +91,12 @@
  autocomplete="email"
  autofocus
  placeholder="directeur@monecole.sn"
- x-bind:aria-invalid="error ? 'true' : 'false'"
+ x-bind:aria-invalid="(error || errors.email) ? 'true' : 'false'"
+ aria-describedby="emailError"
+ x-bind:class="errors.email && 'input-field-error'"
  class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  </div>
+ <p id="emailError" x-cloak x-show="errors.email" x-text="errors.email" class="field-error" role="alert"></p>
  </div>
 
  <div>
@@ -112,7 +115,9 @@
  required
  autocomplete="current-password"
  placeholder="••••••••••••"
- x-bind:aria-invalid="error ? 'true' : 'false'"
+ x-bind:aria-invalid="(error || errors.password) ? 'true' : 'false'"
+ aria-describedby="passwordError"
+ x-bind:class="errors.password && 'input-field-error'"
  class="w-full pl-10 pr-11 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
 
  <button type="button"
@@ -124,6 +129,7 @@
  <svg x-cloak x-show="showPassword" aria-hidden="true" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
  </button>
  </div>
+ <p id="passwordError" x-cloak x-show="errors.password" x-text="errors.password" class="field-error" role="alert"></p>
  </div>
 
  <button type="submit"

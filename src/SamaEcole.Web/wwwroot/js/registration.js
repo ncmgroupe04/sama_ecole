@@ -13,6 +13,44 @@
 
     const API_BASE = '/api/v1';
 
+    // Miroir CÔTÉ CLIENT des règles serveur (SubmitRegistrationRequestValidator, PasswordPolicy,
+    // SenegalPhoneValidation, SafeTextValidation) : un retour immédiat, sans aller-retour réseau. Le
+    // serveur reste la seule source de vérité — ces mêmes règles y sont réappliquées de toute façon.
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const SENEGAL_PHONE_REGEX = /^(?:\+221|00221)?\s?(?:77|76|78|70|75|33)(?:\s?\d){7}$/;
+    const UNSAFE_TEXT_REGEX = /[<>]|javascript\s*:|&#/i;
+    const FORBIDDEN_PASSWORD_SEQUENCES = ['123456', 'azerty', 'qwerty', 'password', 'motdepasse', 'abcdef'];
+
+    const isSafeText = (value) => !UNSAFE_TEXT_REGEX.test(value);
+
+    /** Reproduit PasswordPolicy.Validate (C#) : mêmes règles, mêmes messages. */
+    function passwordPolicyErrors(password, personalTerms) {
+        const errors = [];
+
+        if (password.length < 12) errors.push('Le mot de passe doit contenir au moins 12 caractères.');
+        if (!/[A-Z]/.test(password)) errors.push('Le mot de passe doit contenir au moins une majuscule.');
+        if (!/[a-z]/.test(password)) errors.push('Le mot de passe doit contenir au moins une minuscule.');
+        if (!/[0-9]/.test(password)) errors.push('Le mot de passe doit contenir au moins un chiffre.');
+        if (password.length > 0 && /^[a-zA-Z0-9]*$/.test(password)) {
+            errors.push('Le mot de passe doit contenir au moins un caractère spécial.');
+        }
+
+        const lowered = password.toLowerCase();
+        if (FORBIDDEN_PASSWORD_SEQUENCES.some((seq) => lowered.includes(seq))) {
+            errors.push('Le mot de passe ne doit pas contenir de suite évidente (ex. 123456, password).');
+        }
+
+        const personalWords = personalTerms
+            .filter(Boolean)
+            .flatMap((term) => term.split(' ').map((w) => w.trim()).filter((w) => w.length >= 3));
+
+        if (personalWords.some((word) => lowered.includes(word.toLowerCase()))) {
+            errors.push('Le mot de passe ne doit pas contenir votre nom ou celui de l’établissement.');
+        }
+
+        return errors;
+    }
+
     /** Traduit une réponse d'erreur en Error exploitable (corps JSON normalisé, ou vide). */
     async function toError(response) {
         const payload = await response.json().catch(() => null);
@@ -69,6 +107,7 @@ document.addEventListener('alpine:init', () => {
 
         isSubmitting: false,
         error: null,
+        errors: {},
         trackingReference: null,
 
         // Pré-remplit la formule quand on arrive depuis une carte tarifaire de la vitrine
@@ -81,8 +120,86 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /**
+         * Validation CLIENT avant tout envoi réseau : champs requis, formats (e-mail, téléphone),
+         * robustesse du mot de passe, caractères interdits (XSS). Clés en MINUSCULES pour rester
+         * compatibles avec window.api.toFieldErrors, qui aplatit de la même façon les erreurs 422
+         * renvoyées par le serveur — un même x-show="errors.xxx" couvre les deux origines.
+         */
+        validate() {
+            const errors = {};
+
+            if (!this.directorFullName) {
+                errors.directorfullname = 'Le nom complet est obligatoire.';
+            } else if (!isSafeText(this.directorFullName)) {
+                errors.directorfullname = 'Le nom complet contient des caractères interdits.';
+            }
+
+            if (!this.directorEmail) {
+                errors.directoremail = "L'adresse e-mail est obligatoire.";
+            } else if (!EMAIL_REGEX.test(this.directorEmail)) {
+                errors.directoremail = "Le format de l'adresse e-mail est invalide.";
+            }
+
+            if (!this.directorPhone) {
+                errors.directorphone = 'Le numéro de téléphone est obligatoire.';
+            } else if (!SENEGAL_PHONE_REGEX.test(this.directorPhone)) {
+                errors.directorphone = 'Le numéro doit être un numéro sénégalais valide (ex: 77 123 45 67).';
+            }
+
+            if (!this.directorPassword) {
+                errors.directorpassword = 'Le mot de passe est obligatoire.';
+            } else {
+                const passwordErrors = passwordPolicyErrors(
+                    this.directorPassword, [this.directorFullName, this.schoolName]);
+                if (passwordErrors.length) errors.directorpassword = passwordErrors[0];
+            }
+
+            if (!this.schoolName) {
+                errors.schoolname = "Le nom de l'établissement est obligatoire.";
+            } else if (!isSafeText(this.schoolName)) {
+                errors.schoolname = "Le nom de l'établissement contient des caractères interdits.";
+            }
+
+            if (this.schoolAddress && !isSafeText(this.schoolAddress)) {
+                errors.schooladdress = "L'adresse contient des caractères interdits.";
+            }
+            if (this.city && !isSafeText(this.city)) {
+                errors.city = 'La ville contient des caractères interdits.';
+            }
+            if (this.region && !isSafeText(this.region)) {
+                errors.region = 'La région contient des caractères interdits.';
+            }
+
+            if (this.estimatedStudentCount !== '' && this.estimatedStudentCount !== null) {
+                const count = Number(this.estimatedStudentCount);
+                if (!Number.isInteger(count) || count <= 0 || count > 100000) {
+                    errors.estimatedstudentcount = "L'effectif estimé doit être un nombre entier entre 1 et 100 000.";
+                }
+            }
+
+            this.errors = errors;
+            return Object.keys(errors).length === 0;
+        },
+
         async submit() {
             this.error = null;
+            this.errors = {};
+
+            // Nettoyage des espaces superflus AVANT validation et envoi (jamais le mot de passe : un
+            // espace y est un caractère valide, le rogner changerait le secret saisi par l'utilisateur).
+            this.directorFullName = this.directorFullName.trim();
+            this.directorEmail = this.directorEmail.trim();
+            this.directorPhone = this.directorPhone.trim();
+            this.schoolName = this.schoolName.trim();
+            this.schoolAddress = this.schoolAddress.trim();
+            this.city = this.city.trim();
+            this.region = this.region.trim();
+
+            if (!this.validate()) {
+                return;
+            }
+
             this.isSubmitting = true;
 
             try {
@@ -111,16 +228,11 @@ document.addEventListener('alpine:init', () => {
                     this.error = 'Trop de demandes envoyées depuis votre connexion. Réessayez dans quelques minutes.';
                 } else {
                     // Validation (422) : `details` est un DICTIONNAIRE { "Champ": ["motif"] }
-                    // (ExceptionHandlingMiddleware y place le dictionnaire de FluentValidation). On aplatit
-                    // les motifs en un message lisible ; sinon on retombe sur le message global.
-                    const details = err.details;
-                    const reasons = details && typeof details === 'object' && !Array.isArray(details)
-                        ? Object.values(details).flat().filter(Boolean)
-                        : [];
-
-                    this.error = reasons.length
-                        ? reasons.join(' ')
-                        : (window.api.toMessage(err, 'Envoi impossible. Vérifiez votre réseau et réessayez.'));
+                    // (ExceptionHandlingMiddleware y place le dictionnaire de FluentValidation).
+                    // toFieldErrors l'aplatit en { champ_en_minuscule: premier_motif }, mêmes clés que
+                    // validate() ci-dessus — un seul jeu de x-show="errors.xxx" couvre les deux cas.
+                    this.errors = window.api.toFieldErrors(err, 'Envoi impossible. Vérifiez votre réseau et réessayez.');
+                    this.error = this.errors.global || null;
                 }
             } finally {
                 this.isSubmitting = false;
