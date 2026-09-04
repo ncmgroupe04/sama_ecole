@@ -3,10 +3,13 @@
  Layout = "_SuperAdminLayout";
 }
 
-@* Cet écran consomme le VRAI GET /api/v1/admin/platform/dashboard (PlatformController, migration
- AddPlatformAdminViews). Limité aux quatre agrégats de la vue `v_platform_dashboard_stats` — voir le
- commentaire de wwwroot/js/superadmin-dashboard.js pour ce qui reste volontairement hors périmètre
- (MRR, effectifs cumulés, notes saisies, santé serveur). *@
+@* Cet écran consomme deux VRAIS endpoints (PlatformController, [Authorize(Roles = SuperAdmin)]) :
+ GET /api/v1/admin/platform/dashboard — 8 agrégats de la vue `v_platform_dashboard_stats`
+ (établissements, utilisateurs, revenu confirmé, abonnements actifs, puis MRR, ARR, prévisionnel
+ 30 j et ARPU, ajoutés par la migration AddPlatformFinancialKpis) ; et
+ GET /admin/platform/revenue-projection — 12 points mensuels pour la courbe de projection, calculée
+ sur les échéances RÉELLES des abonnements Active (voir GetPlatformRevenueProjectionQuery), jamais
+ une extrapolation. Le Simulateur de Croissance, lui, est un calcul purement client (ARPU × N). *@
 <div x-data="superAdminDashboard()" x-init="load()">
 
  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

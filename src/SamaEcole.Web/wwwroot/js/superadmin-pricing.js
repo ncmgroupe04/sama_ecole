@@ -94,9 +94,40 @@ document.addEventListener('alpine:init', () => {
             this.isCreateOpen = false;
         },
 
+        /**
+         * Garde-fou de saisie : les deux champs de date ne portent aucun `required`, et
+         * `new Date('').toISOString()` lève un RangeError AVANT le moindre appel réseau. L'écran
+         * affichait donc « Invalid time value » dans le bandeau global — un message que personne ne
+         * peut relier à un champ vide. On valide ici, et on rend le reproche SOUS son champ.
+         *
+         * Ce n'est pas une duplication de la validation serveur : CreatePromoCodeCommandValidator
+         * reste seul juge de l'unicité du code et de la cohérence de la période.
+         */
+        dateErrors() {
+            const errors = {};
+
+            if (!this.newCode.startDate || Number.isNaN(new Date(this.newCode.startDate).getTime())) {
+                errors.startdateutc = 'La date de début est obligatoire.';
+            }
+            if (!this.newCode.endDate || Number.isNaN(new Date(this.newCode.endDate).getTime())) {
+                errors.enddateutc = 'La date de fin est obligatoire.';
+            }
+
+            return errors;
+        },
+
         async submitCreate() {
-            this.isSubmitting = true;
             this.createErrors = {};
+
+            // Rendre la main SANS passer par isSubmitting : le bouton ne doit pas clignoter pour une
+            // saisie qui n'est jamais partie.
+            const dateErrors = this.dateErrors();
+            if (Object.keys(dateErrors).length > 0) {
+                this.createErrors = dateErrors;
+                return;
+            }
+
+            this.isSubmitting = true;
             try {
                 await window.api.post('/admin/promo-codes', {
                     code: this.newCode.code,

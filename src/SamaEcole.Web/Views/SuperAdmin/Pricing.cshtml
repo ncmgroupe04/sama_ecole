@@ -187,6 +187,7 @@
                         <label class="form-label-inverse">Date de début</label>
                         <input type="date" x-model="newCode.startDate"
                                class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+                        <p x-show="createErrors.startdateutc" x-text="createErrors.startdateutc" class="mt-1 text-xs text-rose-400"></p>
                     </div>
                     <div>
                         <label class="form-label-inverse">Date de fin</label>

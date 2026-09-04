@@ -35,9 +35,9 @@
  <button type="button"
  x-on:click="statusFilter = option.value; load()"
  :class="statusFilter === option.value
- ? 'bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out-600 text-white'
- : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' transition-all duration-200 ease-in-out"
- class="rounded-2xl px-3 py-1.5 text-sm font-medium transition-colors">
+ ? 'bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm'
+ : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'"
+ class="rounded-2xl px-3 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out">
  <span x-text="option.label"></span>
  </button>
  </template>
