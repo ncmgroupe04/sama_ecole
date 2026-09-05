@@ -52,12 +52,15 @@
  <!-- Grille d'appel -->
  <div class="card mt-6 relative" x-show="rosterLoaded" x-cloak>
  <div class="card-header">
- <div class="flex items-center flex-wrap gap-2 text-sm">
- <span class="status-badge-success"><span class="status-dot" aria-hidden="true"></span>Présents : <span class="font-bold" x-text="countBy('Present')"></span>
+ @* Compteurs de l'appel AGRANDIS et mis en évidence (demande produit) : ils résument l'état de
+    la classe, on les veut lisibles d'un coup d'œil — d'où `text-base`, plus de hauteur (`py-2`),
+    graisse et anneau renforcé (`ring-2`) par-dessus la pastille `.status-badge-*`. *@
+ <div class="flex items-center flex-wrap gap-3 text-base">
+ <span class="status-badge-success gap-2 px-4 py-2 text-base font-semibold ring-2"><span class="status-dot" aria-hidden="true"></span>Présents : <span class="font-bold" x-text="countBy('Present')"></span>
  </span>
- <span class="status-badge-warning"><span class="status-dot" aria-hidden="true"></span>Retards : <span class="font-bold" x-text="countBy('Late')"></span>
+ <span class="status-badge-warning gap-2 px-4 py-2 text-base font-semibold ring-2"><span class="status-dot" aria-hidden="true"></span>Retards : <span class="font-bold" x-text="countBy('Late')"></span>
  </span>
- <span class="status-badge-danger"><span class="status-dot" aria-hidden="true"></span>Absents non justifiés : <span class="font-bold" x-text="countBy('UnjustifiedAbsence')"></span>
+ <span class="status-badge-danger gap-2 px-4 py-2 text-base font-semibold ring-2"><span class="status-dot" aria-hidden="true"></span>Absents non justifiés : <span class="font-bold" x-text="countBy('UnjustifiedAbsence')"></span>
  </span>
  </div>
  <div class="flex items-center gap-3">

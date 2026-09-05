@@ -232,8 +232,11 @@
     @apply text-jgk-table text-gray-700;
   }
 
+  /* `whitespace-nowrap` : une pastille de statut ne doit JAMAIS passer à la ligne. Sans elle, un
+     libellé en deux mots (« En attente », « Solde partiel »…) se coupe dès que sa colonne est
+     étroite — c'était le cas de la colonne Statut de l'échéancier détaillé de la Caisse. */
   .status-badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 
   .status-badge-neutral {

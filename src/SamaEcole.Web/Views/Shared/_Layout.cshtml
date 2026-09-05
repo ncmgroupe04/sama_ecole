@@ -347,13 +347,16 @@
  <aside> n'a pas d'overflow-hidden. *@
  <div x-show="isOpen" x-cloak x-on:click.outside="isOpen = false" x-on:keydown.escape.window="isOpen = false"
  class="absolute bottom-full left-3 w-64 mb-2 rounded-xl bg-white p-2 shadow-lg ring-1 ring-slate-100 z-30">
+ @* Deux actions PLEINES et contrastées (demande produit) : « Changer mon mot de passe » sur fond
+    noir, « Se déconnecter » sur fond rouge (jeton danger, comme .btn-danger) — texte et icône
+    blancs dans les deux cas. `mt-1.5` sépare les deux pavés pleins. *@
  <button type="button" x-on:click="isOpen = false; $store.changePasswordModal.open()"
- class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
- <icon name="key" class="w-4 h-4 shrink-0 text-slate-400" />
+ class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
+ <icon name="key" class="w-4 h-4 shrink-0 text-white/70" />
  Changer mon mot de passe
  </button>
  <button type="button" x-on:click="isOpen = false; logout()"
- class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors">
+ class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-danger text-white hover:opacity-90 transition-opacity">
  <icon name="sign-out" class="w-4 h-4 shrink-0" />
  Se déconnecter
  </button>
