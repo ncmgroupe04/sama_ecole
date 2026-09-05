@@ -73,7 +73,10 @@ document.addEventListener('alpine:init', () => {
             // Intégration étatique (SIMEN, JGK-M05). GPS en deux champs numériques ; « lat, lon »
             // calculé côté serveur (gpsCoordinates) pour l'affichage seul.
             nationalSchoolCode: '', ministryAuthorizationNumber: '', schoolDistrictCode: '',
-            gpsLatitude: '', gpsLongitude: '', gpsCoordinates: ''
+            gpsLatitude: '', gpsLongitude: '', gpsCoordinates: '',
+            // Annuaire public (B2C) — consentement de publication, FAUX par défaut (voir
+            // School.IsPubliclyListed). Ville/région/présentation ne servent qu'à cette vitrine.
+            isPubliclyListed: false, city: '', region: '', publicDescription: ''
         },
         profileErrors: {},
         profileSaving: false,
@@ -285,7 +288,11 @@ document.addEventListener('alpine:init', () => {
                 // Number|null -> chaîne pour les <input type="number"> ; '' quand non renseigné.
                 gpsLatitude: dto.gpsLatitude === null || dto.gpsLatitude === undefined ? '' : String(dto.gpsLatitude),
                 gpsLongitude: dto.gpsLongitude === null || dto.gpsLongitude === undefined ? '' : String(dto.gpsLongitude),
-                gpsCoordinates: dto.gpsCoordinates || ''
+                gpsCoordinates: dto.gpsCoordinates || '',
+                isPubliclyListed: !!dto.isPubliclyListed,
+                city: dto.city || '',
+                region: dto.region || '',
+                publicDescription: dto.publicDescription || ''
             };
         },
 
@@ -313,7 +320,11 @@ document.addEventListener('alpine:init', () => {
                     ministryAuthorizationNumber: this.profile.ministryAuthorizationNumber || null,
                     schoolDistrictCode: this.profile.schoolDistrictCode || null,
                     gpsLatitude: Number.isFinite(lat) ? lat : null,
-                    gpsLongitude: Number.isFinite(lon) ? lon : null
+                    gpsLongitude: Number.isFinite(lon) ? lon : null,
+                    isPubliclyListed: this.profile.isPubliclyListed,
+                    city: this.profile.city || null,
+                    region: this.profile.region || null,
+                    publicDescription: this.profile.publicDescription || null
                 });
                 this.profile = this.toProfileState(saved);
                 this.profileSaved = true;
