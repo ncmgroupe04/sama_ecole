@@ -225,8 +225,11 @@ document.addEventListener('alpine:init', () => {
             this.isSearchingStudents = true;
             this.studentSearchError = null;
             try {
-                const page = await window.api.get(`/students?search=${encodeURIComponent(q)}&page=1&pageSize=20`);
-                this.students = page.items;
+                // Route dédiée (finance/students/search), pas la recherche générique /students : chaque
+                // ligne porte déjà le solde de l'inscription active, pour signaler dans LA LISTE — avant
+                // toute sélection — qu'un élève vient d'être inscrit par le secrétariat mais n'a encore
+                // rien versé (voir badgeFor ci-dessous).
+                this.students = await window.api.get(`/finance/students/search?q=${encodeURIComponent(q)}`);
                 this.studentsLoaded = true;
             } catch (err) {
                 this.studentSearchError = window.api.toMessage(err, 'Erreur lors de la recherche.');

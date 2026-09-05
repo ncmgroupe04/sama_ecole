@@ -147,10 +147,33 @@
  <div class="mt-2 border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-96 overflow-y-auto">
  <template x-for="s in students" :key="s.id">
  <button type="button" x-on:click="selectStudent(s)"
- class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors duration-150"
+ class="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors duration-150"
  :class="selectedStudent && selectedStudent.id === s.id ? 'bg-indigo-50' : ''">
+ <span class="flex items-center justify-between gap-2">
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
- <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
+ <span class="text-xs font-mono text-slate-500 shrink-0" x-text="s.matricule"></span>
+ </span>
+ @* Signal visible SANS ouvrir la fiche : un élève tout juste inscrit par le secrétariat mais
+ qui n'a encore rien versé (amountPaid = 0) est le cas qui doit sauter aux yeux — c'est celui
+ qu'une caissière risque de manquer en enchaînant les recherches. Le solde restant, lui,
+ est le montant EXACT programmé par le secrétariat : à régler en une fois plutôt qu'en
+ plusieurs passages fragmentés (voir Régler le solde intégral une fois l'élève sélectionné). *@
+ <span x-show="s.hasActiveEnrollment && s.amountPaid === 0 && s.totalDue > 0" x-cloak
+ class="mt-1 inline-flex items-center gap-1 status-badge-warning">
+ Aucun versement · <span x-text="formatMoney(s.totalDue)"></span> à encaisser
+ </span>
+ <span x-show="s.hasActiveEnrollment && s.amountPaid > 0 && s.remainingBalance > 0" x-cloak
+ class="mt-1 inline-flex items-center gap-1 status-badge-neutral">
+ Solde restant : <span x-text="formatMoney(s.remainingBalance)"></span>
+ </span>
+ <span x-show="s.hasActiveEnrollment && s.totalDue > 0 && s.remainingBalance <= 0" x-cloak
+ class="mt-1 inline-flex items-center gap-1 status-badge-success">
+ Soldé
+ </span>
+ <span x-show="!s.hasActiveEnrollment" x-cloak
+ class="mt-1 inline-flex items-center gap-1 status-badge-neutral">
+ Aucune inscription active
+ </span>
  </button>
  </template>
  <div x-show="isSearchingStudents" x-cloak class="px-3 py-4 text-sm text-slate-400 text-center">Recherche…</div>

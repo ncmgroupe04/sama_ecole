@@ -15,6 +15,7 @@ using SamaEcole.Application.Finance.Queries.GetPaymentReceiptPdf;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Finance.Queries.GetPayments;
 using SamaEcole.Application.Finance.Queries.GetStudentBalance;
+using SamaEcole.Application.Finance.Queries.SearchStudentsForCashier;
 using SamaEcole.Web.Authorization;
 using SamaEcole.Web.Infrastructure;
 using MediatR;
@@ -207,6 +208,17 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> StudentBalance(Guid studentId, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetStudentBalanceQuery(studentId), cancellationToken));
+
+    /// <summary>
+    /// Recherche élève DÉDIÉE à la caisse (GET /finance/students/search?q=...) : mêmes résultats que
+    /// la recherche générique (nom/matricule), mais chaque ligne porte déjà le solde de l'inscription
+    /// active — la caissière voit tout de suite qu'un élève vient d'être inscrit par le secrétariat
+    /// sans avoir encore rien versé, sans devoir ouvrir sa fiche pour le découvrir.
+    /// </summary>
+    [HttpGet("students/search")]
+    [ProducesResponseType<IReadOnlyList<CashierStudentSearchResultDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SearchStudentsForCashier([FromQuery] string q, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new SearchStudentsForCashierQuery(q ?? string.Empty), cancellationToken));
 
     /// <summary>
     /// Liste paginée et filtrée des encaissements de l'établissement (GET /finance/payments). Réservé
