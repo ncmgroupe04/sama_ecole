@@ -285,6 +285,29 @@ document.addEventListener('alpine:init', () => {
             if (this.balance) this.form.amount = this.balance.remainingBalance;
         },
 
+        /**
+         * Somme de tout ce qui est ÉCHU aujourd'hui (droits d'inscription, uniforme, mensualités déjà
+         * arrivées à échéance...) et pas encore réglé — jamais les mensualités FUTURES, qui n'ont pas
+         * lieu d'être encaissées d'avance. C'est le montant que le secrétariat programme à
+         * l'inscription et que l'élève doit régler EN UNE FOIS en arrivant à la caisse : le bouton
+         * "Régler" de chaque ligne de l'échéancier n'existe que pour un paiement partiel volontaire
+         * (le parent ne peut régler qu'une partie aujourd'hui) — le laisser comme SEULE voie évidente
+         * fragmentait ce versement unique en plusieurs reçus (un par ligne), a lieu d'un reçu unique
+         * pour le montant total dû à ce jour.
+         */
+        get dueNowTotal() {
+            if (!this.balance || !this.balance.installments) return 0;
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            return this.balance.installments
+                .filter((inst) => inst.remainingDue > 0 && new Date(inst.dueDate) <= today)
+                .reduce((sum, inst) => sum + inst.remainingDue, 0);
+        },
+
+        fillDueNow() {
+            const total = this.dueNowTotal;
+            if (total > 0) this.form.amount = total;
+        },
+
         // ---------------------------------------------------------------- Encaissement
 
         canSubmit() {
