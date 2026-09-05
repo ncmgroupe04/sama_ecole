@@ -10,6 +10,10 @@
  s'exécutent avant Alpine, require-session.js protège l'affichage, Alpine est auto-hébergé. *@
  <script src="~/js/auth.js" asp-append-version="true"></script>
  <script src="~/js/api.js" asp-append-version="true"></script>
+ @* Modale universelle « Changer mon mot de passe » (store Alpine `changePasswordModal`) — après
+ api.js, dont submit() dépend. Même script que _Layout, seul le balisage qui l'ouvre/l'affiche
+ diffère (voir la carte de profil ci-dessous et _ChangePasswordModalDark.cshtml). *@
+ <script src="~/js/change-password.js" asp-append-version="true"></script>
  <script src="~/js/require-session.js" asp-append-version="true"></script>
  <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
 </head>
@@ -73,18 +77,36 @@
  </nav>
 
  @* sessionMenu() est déjà enregistré globalement dans wwwroot/js/auth.js (utilisé par _Layout) :
- on le réutilise tel quel, pas de duplication de logique de session. *@
- <div class="p-3 border-t border-zinc-800 shrink-0" x-data="sessionMenu()">
- <div class="flex items-center gap-3 rounded-2xl px-2 py-2">
+ on le réutilise tel quel, pas de duplication de logique de session. Cette console n'a PAS de
+ barre latérale réductible (contrairement à _Layout/sidebarCollapsed) : le popover ci-dessous
+ n'a donc pas à s'adapter à un rail réduit — largeur fixe w-64 ancrée à gauche dès le départ,
+ même gabarit que _Layout après son correctif (menu illisible une fois la barre pliée, voir
+ dca4330) plutôt que "left-3 right-3", qui étirerait le menu à la largeur du panneau parent. *@
+ <div class="relative p-3 border-t border-zinc-800 shrink-0" x-data="sessionMenu()">
+ <button type="button" x-on:click="isOpen = !isOpen" aria-haspopup="true" :aria-expanded="isOpen.toString()"
+ class="w-full flex items-center gap-3 rounded-2xl px-2 py-2 hover:bg-zinc-900 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500">
  <div aria-hidden="true" class="w-9 h-9 shrink-0 rounded-full bg-sky-500/15 text-sky-400 ring-1 ring-sky-500/30 flex items-center justify-center text-sm font-semibold uppercase"
  x-text="email ? email[0] : '?'"></div>
- <div class="flex-1 min-w-0">
+ <div class="flex-1 min-w-0 text-left">
  <p class="text-sm font-medium text-zinc-100 truncate" x-text="email" x-bind:title="email"></p>
  <p class="text-xs text-zinc-500 truncate">Super Admin</p>
  </div>
- <button type="button" x-on:click="logout()" title="Se déconnecter" aria-label="Se déconnecter"
- class="p-1.5 text-zinc-500 hover:text-rose-400 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500">
- <icon name="sign-out" class="w-5 h-5" />
+ <icon name="chevron-down" class="w-4 h-4 shrink-0 text-zinc-500 transition-transform" :class="isOpen ? 'rotate-180' : ''" />
+ </button>
+
+ @* Ouvert vers le HAUT (bottom-full) : la carte est ancrée en bas de la barre latérale, un menu
+ qui s'ouvrirait vers le bas sortirait de l'écran — même raisonnement que _Layout. *@
+ <div x-show="isOpen" x-cloak x-on:click.outside="isOpen = false" x-on:keydown.escape.window="isOpen = false"
+ class="absolute bottom-full left-3 w-64 mb-2 rounded-xl border border-zinc-800 bg-zinc-900 p-2 shadow-lg z-30">
+ <button type="button" x-on:click="isOpen = false; $store.changePasswordModal.open()"
+ class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
+ <icon name="key" class="w-4 h-4 shrink-0 text-zinc-500" />
+ Changer mon mot de passe
+ </button>
+ <button type="button" x-on:click="isOpen = false; logout()"
+ class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-400 hover:bg-rose-500/10 transition-colors">
+ <icon name="sign-out" class="w-4 h-4 shrink-0" />
+ Se déconnecter
  </button>
  </div>
  </div>
@@ -125,6 +147,11 @@
  </div>
  </main>
  </div>
+
+ @* Modale universelle « Changer mon mot de passe », variante sombre — un seul montage pour toute la
+ console, ouverte depuis la carte de profil de la barre latérale ci-dessus. *@
+ @await Html.PartialAsync("_ChangePasswordModalDark")
+
  @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
