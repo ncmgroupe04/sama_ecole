@@ -12,7 +12,7 @@ window.closeAllModals = function() {
 /**
  * Position `fixed` (coordonnées VIEWPORT) d'un popover flottant — calendrier ou liste déroulante.
  * Partagé par selectField() (listes déroulantes — filtres Mois/Années, onglets…) et dateField()
- * (calendrier).
+ * (calendrier). Le résultat se transforme en chaîne de style par window.floatingStyleFrom().
  *
  * REMPLACE un ancien mécanisme `position: absolute` + classe CSS `top-full`/`bottom-full`, qui ne
  * protégeait le popover QUE contre un dépassement du bas de l'ÉCRAN. Un élément `absolute` reste
@@ -28,6 +28,14 @@ window.closeAllModals = function() {
  * popover à la place réellement disponible (il défile alors EN INTERNE, jamais invisible en silence)
  * et `left`/`width` le ramènent dans l'écran horizontalement.
  *
+ * AUTO-FLIP + OFFSET : par défaut le menu s'ouvre SOUS le champ, à `GAP` px sous son bord bas. Quand
+ * la place manque réellement dessous et qu'il y en a davantage dessus, il bascule AU-DESSUS — ancré
+ * cette fois par son bord BAS à `GAP` px du haut du champ (propriété CSS `bottom`, pas `top`). C'est
+ * ce point qui corrige le « décalage bizarre » signalé : l'ancien calcul plaçait `top = rect.top -
+ * maxHeight` en réservant TOUTE la hauteur maximale, si bien qu'un menu au contenu court (2-3
+ * options) flottait loin au-dessus du champ, détaché de lui. Ancré par le bas, le menu reste collé
+ * au champ et grandit vers le haut selon son contenu, borné par `maxHeight`.
+ *
  * Recalculée à l'OUVERTURE seulement (pas en continu) : le composant hôte ferme le popover au
  * défilement d'un ancêtre (voir closeOnScroll ci-dessous) plutôt que de re-suivre une ancre qui
  * bouge — plus simple, et un popover qui suit le doigt pendant qu'on défile n'apporte rien ici.
@@ -36,33 +44,50 @@ window.closeAllModals = function() {
  * @param {number} menuHeight Hauteur approximative du popover à pleine place, en pixels.
  * @param {number} [menuWidth] Largeur fixe voulue ; omis, la largeur suit celle du déclencheur
  *   (reproduit l'ancien `w-full` d'un select-field relatif à son ancre).
- * @returns {{top:number, left:number, width:number, maxHeight:number}} en pixels viewport.
+ * @returns {{openUp:boolean, top:(number|null), bottom:(number|null), left:number, width:number, maxHeight:number}}
+ *   en pixels viewport. `top` est renseigné pour une ouverture vers le bas, `bottom` pour une
+ *   ouverture vers le haut ; l'autre vaut null.
  */
 window.computeFloatingPosition = function (anchorEl, menuHeight, menuWidth) {
-    const margin = 8;
+    const margin = 8;   // respiration minimale entre le popover et le bord du viewport
+    const gap = 6;      // décalage voulu entre le champ et le popover (4-8 px demandés)
+    const minHeight = 120; // en deçà, un menu ne sert plus à rien — on garde ce plancher, défilement interne
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
     const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
     const needed = menuHeight || 300;
 
     if (!anchorEl || typeof anchorEl.getBoundingClientRect !== 'function') {
-        return { top: margin, left: margin, width: menuWidth || 300, maxHeight: needed };
+        return { openUp: false, top: margin, bottom: null, left: margin, width: menuWidth || 300, maxHeight: needed };
     }
 
     const rect = anchorEl.getBoundingClientRect();
-    const spaceBelow = viewportHeight - rect.bottom - margin;
-    const spaceAbove = rect.top - margin;
+    const spaceBelow = viewportHeight - rect.bottom - gap - margin;
+    const spaceAbove = rect.top - gap - margin;
     // Ouvre vers le bas par défaut ; bascule vers le haut seulement quand la place manque réellement
     // dessous ET qu'il y en a davantage dessus — sinon, autant garder le sens le plus prévisible.
     const openUp = spaceBelow < needed && spaceAbove > spaceBelow;
 
-    const available = Math.max(160, openUp ? spaceAbove : spaceBelow);
-    const maxHeight = Math.min(needed, available);
-    const top = openUp ? Math.max(margin, rect.top - maxHeight) : rect.bottom;
+    const chosenSpace = openUp ? spaceAbove : spaceBelow;
+    // Jamais plus haut que la place réelle du côté choisi (sinon le menu déborde du viewport, contenu
+    // inaccessible) ; jamais moins que `minHeight`, pour rester utilisable même à l'étroit.
+    const maxHeight = Math.max(minHeight, Math.min(needed, chosenSpace));
 
     const width = menuWidth || rect.width;
-    const left = Math.min(Math.max(margin, rect.left), viewportWidth - margin - width);
+    const left = Math.min(Math.max(margin, rect.left), Math.max(margin, viewportWidth - margin - width));
 
-    return { top, left, width, maxHeight };
+    return openUp
+        ? { openUp: true, top: null, bottom: viewportHeight - rect.top + gap, left, width, maxHeight }
+        : { openUp: false, top: rect.bottom + gap, bottom: null, left, width, maxHeight };
+};
+
+/**
+ * Chaîne de style `:style` d'un popover flottant à partir du retour de window.computeFloatingPosition.
+ * Émet `top:` OU `bottom:` selon le sens d'ouverture — les deux composants hôtes (dateField,
+ * selectField) partagent ce format pour ne pas dupliquer la règle top/bottom.
+ */
+window.floatingStyleFrom = function (pos) {
+    const vertical = pos.openUp ? `bottom:${pos.bottom}px` : `top:${pos.top}px`;
+    return `${vertical}; left:${pos.left}px; width:${pos.width}px; max-height:${pos.maxHeight}px;`;
 };
 
 /**
@@ -206,7 +231,7 @@ document.addEventListener('alpine:init', () => {
             // frame à sa position précédente (ou vide, à la toute première ouverture) avant de
             // sauter à la bonne place.
             const pos = window.computeFloatingPosition(this.$root, 380, 300);
-            this.floatingStyle = `top:${pos.top}px; left:${pos.left}px; width:${pos.width}px; max-height:${pos.maxHeight}px;`;
+            this.floatingStyle = window.floatingStyleFrom(pos);
             this.open = true;
             // position:fixed ne suit pas le défilement d'un ancêtre (corps de modale, panneau) : on
             // ferme plutôt que de laisser le popover figé au-dessus d'un autre champ. capture:true
@@ -350,7 +375,7 @@ document.addEventListener('alpine:init', () => {
             }
             // AVANT d'afficher (pas de $nextTick) : voir le commentaire équivalent de dateField.toggle().
             const pos = window.computeFloatingPosition(this.$root, 300);
-            this.floatingStyle = `top:${pos.top}px; left:${pos.left}px; width:${pos.width}px; max-height:${pos.maxHeight}px;`;
+            this.floatingStyle = window.floatingStyleFrom(pos);
             this.open = true;
             this.search = '';
             // Le champ de recherche, lui, n'existe dans le DOM qu'une fois `open` vrai (x-show) :
