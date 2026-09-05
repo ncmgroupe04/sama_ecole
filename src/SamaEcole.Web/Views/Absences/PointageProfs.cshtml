@@ -44,7 +44,30 @@
         </div>
     </div>
 
-    <template x-if="!selectedContractId">
+    @* Le champ ci-dessus ne liste que les CONTRATS de type Vacataire (Comptabilité > Paie), pas le
+       « Statut administratif » du formulaire Enseignant (STATEDUC, Paramètres du même nom) — deux
+       champs distincts qui portent la même étiquette et se confondent facilement : marquer un
+       enseignant "Vacataire" sur sa fiche ne suffit pas, il faut aussi lui créer un contrat Vacataire
+       dans Paie pour qu'il apparaisse ici. Message dédié tant qu'aucun contrat n'existe DU TOUT,
+       distinct du cas "des contrats existent, choisissez-en un". *@
+    <template x-if="!isLoading && !selectedContractId && vacataireContracts.length === 0">
+        <div class="card p-6">
+            <div class="flex flex-col items-center justify-center py-12 text-center">
+                <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-warning-bg text-warning">
+                    <icon name="alert-circle" class="h-6 w-6" />
+                </div>
+                <p class="font-medium text-slate-600">Aucun enseignant vacataire n'a de contrat actif.</p>
+                <p class="mt-1 max-w-md text-xs text-slate-400">
+                    Marquer un enseignant « Vacataire » sur sa fiche (onglet STATEDUC) ne suffit pas : il lui faut
+                    aussi un <strong>contrat</strong> de type Vacataire, créé dans Comptabilité — c'est ce contrat,
+                    pas le statut de la fiche, qui le fait apparaître ici.
+                </p>
+                <a href="/paie" class="mt-4 text-sm font-medium text-primary hover:underline">Créer son contrat dans Paie →</a>
+            </div>
+        </div>
+    </template>
+
+    <template x-if="!selectedContractId && vacataireContracts.length > 0">
         <div class="card p-6">
             <empty-state icon="clock" title="Aucun enseignant vacataire sélectionné."
                 hint="Choisissez un enseignant vacataire ci-dessus pour consulter ou saisir son relevé d'heures." />
