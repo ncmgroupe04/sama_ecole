@@ -4,7 +4,7 @@
  <meta charset="utf-8" />
  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
  <title>@ViewData["Title"] - Unikol</title>
- <link rel="icon" type="image/png" href="~/images/logo-school.png" />
+ <link rel="icon" type="image/png" href="~/images/logo-unikol-solid.png" />
  @* Police plateforme Inter, auto-hébergée (CSP font-src 'self' — voir @@font-face en tête de
     Styles/input.css). Préchargement de la seule fonte latine « normal », la plus utilisée, pour
     réduire le flash de bascule ; les variantes latin-ext / italique se chargent à la demande. *@
@@ -650,7 +650,11 @@
  remettez pas ce padding sur <main> — voir .sticky-sub-header (Styles/input.css) et
  Views/Classrooms|Subjects|Buildings/Index.cshtml, qui en dépendent. *@
  <main class="flex-1 overflow-y-auto overflow-x-hidden">
- <div class="max-w-7xl mx-auto space-y-6 p-8 lg:p-10">
+ @* Padding resserré sur mobile (p-4 = 16px) pour rendre ~32px de largeur utile sur un téléphone —
+    p-8 étranglait le contenu. Il s'ouvre par palier : sm:p-6 sur tablette, lg:p-10 sur desktop
+    (gabarit d'origine). `.sticky-sub-header` (Styles/input.css) suit ces trois paliers avec ses
+    marges négatives — modifier l'un sans l'autre ré-indente ou fait déborder l'en-tête sticky. *@
+ <div class="max-w-7xl mx-auto space-y-6 p-4 sm:p-6 lg:p-10">
  @RenderBody()
  </div>
  </main>

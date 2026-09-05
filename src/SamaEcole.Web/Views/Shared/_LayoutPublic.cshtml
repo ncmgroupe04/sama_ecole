@@ -32,8 +32,13 @@
     <meta property="og:title" content="@ViewData["Title"] — Unikol" />
     <meta property="og:description" content="@(ViewData["Description"] as string ?? "La plateforme centralisée de gestion des établissements scolaires.")" />
     <meta property="og:locale" content="fr_SN" />
+    @* Carte de partage : version sur fond blanc (jamais la transparente) — les aperçus la posent
+       sur des fonds imprévisibles. URL absolue exigée par Open Graph. *@
+    <meta property="og:image" content="@($"{Context.Request.Scheme}://{Context.Request.Host}/images/logo-unikol-solid.png")" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:image" content="@($"{Context.Request.Scheme}://{Context.Request.Host}/images/logo-unikol-solid.png")" />
 
-    <link rel="icon" type="image/png" href="~/images/logo-school.png" />
+    <link rel="icon" type="image/png" href="~/images/logo-unikol-solid.png" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
     @* auth.js/api.js sont chargés même ici : l'Annuaire B2C (AnnuaireB2C.cshtml) consomme
@@ -85,9 +90,11 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="h-16 flex items-center justify-between gap-4">
 
-                <a href="/vitrine" class="flex items-center gap-2 shrink-0" aria-label="Unikol — accueil">
-                    <span aria-hidden="true" class="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center font-extrabold text-base">U</span>
-                    <span class="font-extrabold text-xl tracking-tight text-slate-900">Unikol</span>
+                @* Lockup transparent : il porte déjà le mot « Unikol », d'où pas de libellé séparé.
+                   Fond de barre semi-transparent (bg-white/85 + backdrop-blur) → jamais la version
+                   sur fond blanc, qui y ferait un pavé. *@
+                <a href="/vitrine" class="flex items-center shrink-0" aria-label="Unikol — accueil">
+                    <img src="~/images/logo-unikol.png" asp-append-version="true" alt="Unikol" class="h-11 w-auto" />
                 </a>
 
                 @* Navigation principale — masquée sous 1024px, remplacée par le tiroir plus bas. *@
@@ -135,7 +142,10 @@
         </div>
     </header>
 
-    <main id="contenu">
+    @* overflow-x-clip (et non -hidden) : empêche tout débordement horizontal parasite des sections
+       décoratives (fonds en dégradé, cartes flottantes) sans faire de <main> un conteneur de
+       défilement — l'en-tête sticky, qui lui est extérieur, n'est pas affecté. *@
+    <main id="contenu" class="overflow-x-clip">
         @RenderBody()
     </main>
 
@@ -145,9 +155,8 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10">
 
                 <div class="lg:col-span-2">
-                    <div class="flex items-center gap-2">
-                        <span aria-hidden="true" class="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center font-extrabold text-base">U</span>
-                        <span class="font-extrabold text-xl tracking-tight text-slate-900">Unikol</span>
+                    <div class="flex items-center">
+                        <img src="~/images/logo-unikol.png" asp-append-version="true" alt="Unikol" class="h-16 w-auto" />
                     </div>
                     <p class="mt-4 text-sm leading-relaxed text-slate-600 max-w-sm">
                         Une plateforme centralisée pour piloter votre établissement — scolarité, pédagogie,

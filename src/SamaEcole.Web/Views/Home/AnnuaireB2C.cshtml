@@ -20,6 +20,10 @@
 <!-- Header & Search Bar -->
 <div class="bg-indigo-700 py-16 sm:py-24">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        @* Bandeau bleu foncé : le lockup bleu-sur-transparent y disparaîtrait — on prend donc la
+           version sur fond blanc (logo-unikol-solid.png), qui s'y lit comme un cartouche. *@
+        <img src="~/images/logo-unikol-solid.png" asp-append-version="true" alt="Unikol"
+             class="mx-auto mb-8 h-24 w-auto rounded-2xl shadow-lg" />
         <h1 class="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
             Trouvez l'établissement idéal pour votre enfant
         </h1>
@@ -56,10 +60,10 @@
 
 <!-- Filters & Results Grid -->
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <div class="flex flex-col md:flex-row gap-8">
+    <div class="flex flex-col lg:flex-row gap-8">
 
         <!-- Sidebar Filters -->
-        <aside class="w-full md:w-64 flex-shrink-0">
+        <aside class="w-full lg:w-64 flex-shrink-0">
             <h2 class="text-lg font-medium text-gray-900 mb-4">Filtres</h2>
 
             <div class="border-t border-gray-200 pt-4">
