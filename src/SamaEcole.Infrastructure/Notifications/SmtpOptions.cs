@@ -17,6 +17,13 @@ public class SmtpOptions
     public string FromAddress { get; set; } = string.Empty;
 
     /// <summary>
+    /// Nom d'expéditeur affiché ("Unikol" plutôt que la seule adresse) : un en-tête From nommé est un
+    /// des signaux que les filtres anti-spam associent à un expéditeur légitime plutôt qu'automatisé.
+    /// N'affecte ni Host/User/Password/FromAddress ni IsConfigured — reste optionnel côté configuration.
+    /// </summary>
+    public string FromName { get; set; } = "Unikol";
+
+    /// <summary>
     /// Renonciation EXPLICITE à la garde de démarrage (EmailSenderGuard), pour un déploiement qui doit
     /// pouvoir monter sans serveur SMTP : recette, démonstration, ou première mise en service d'un
     /// hébergement avant que les identifiants SMTP ne soient disponibles.

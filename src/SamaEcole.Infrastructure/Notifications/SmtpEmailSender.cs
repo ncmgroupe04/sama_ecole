@@ -26,7 +26,13 @@ public class SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<SmtpEmailSen
             Credentials = new NetworkCredential(smtp.User, smtp.Password)
         };
 
-        using var mail = new MailMessage(smtp.FromAddress, message.To, message.Subject, message.Body);
+        using var mail = new MailMessage
+        {
+            From = new MailAddress(smtp.FromAddress, smtp.FromName),
+            Subject = message.Subject,
+            Body = message.Body
+        };
+        mail.To.Add(message.To);
 
         if (message.Attachments is { Count: > 0 })
         {
