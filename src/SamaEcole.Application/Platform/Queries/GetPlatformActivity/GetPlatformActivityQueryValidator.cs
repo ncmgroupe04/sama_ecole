@@ -11,5 +11,11 @@ public class GetPlatformActivityQueryValidator : AbstractValidator<GetPlatformAc
     {
         RuleFor(x => x.Page).GreaterThan(0);
         RuleFor(x => x.PageSize).GreaterThan(0).LessThanOrEqualTo(MaxPageSize);
+        RuleFor(x => x.Module).MaximumLength(50);
+
+        RuleFor(x => x.DateTo)
+            .GreaterThanOrEqualTo(x => x.DateFrom)
+            .When(x => x.DateFrom.HasValue && x.DateTo.HasValue)
+            .WithMessage("La date de fin doit être postérieure ou égale à la date de début.");
     }
 }

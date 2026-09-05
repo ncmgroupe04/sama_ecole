@@ -6,7 +6,7 @@
 @* Consomme le VRAI GET /admin/platform/subscriptions (PlatformController, migration
  AddPlatformSubscriptionsAndImpersonation : vue `v_platform_subscriptions`). Le bouton « Relancer »
  appelle POST /admin/platform/subscriptions/{schoolId}/remind (SendSubscriptionReminderCommand). *@
-<div x-data="superAdminBilling()" x-init="load()">
+<div x-data="superAdminBilling()" x-init="load()" class="space-y-6">
 
  <div>
  <h1 class="text-xl font-semibold text-white">Abonnements &amp; Facturation</h1>
@@ -31,6 +31,23 @@
  </div>
  </div>
  </template>
+ </div>
+
+ <!-- Graphiques -->
+ <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+ <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm">
+ <h2 class="text-sm font-semibold text-white mb-4">Répartition du MRR par formule</h2>
+ <div class="relative h-56 w-full">
+ <canvas id="mrrByPlanChart" x-ref="mrrByPlanCanvas"></canvas>
+ </div>
+ </div>
+
+ <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm">
+ <h2 class="text-sm font-semibold text-white mb-4">Échéancier des abonnements (90 jours)</h2>
+ <div class="relative h-56 w-full">
+ <canvas id="dueScheduleChart" x-ref="dueScheduleCanvas"></canvas>
+ </div>
+ </div>
  </div>
 
  <!-- Filtres -->
@@ -184,5 +201,7 @@
 </div>
 
 @section Scripts {
+ @* Auto-hébergé, jamais un CDN tiers (CSP script-src 'self', JGK-F01) — voir Dashboard.cshtml. *@
+ <script src="~/js/vendor/chart.min.js" asp-append-version="true"></script>
  <script src="~/js/superadmin-billing.js" asp-append-version="true"></script>
 }

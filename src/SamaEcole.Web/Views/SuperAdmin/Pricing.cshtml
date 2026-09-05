@@ -8,7 +8,7 @@
    de Schools.cshtml) plutôt que <modal-shell>/<select-field> : ces composants partagés sont codés en dur
    en thème CLAIR (bg-white, text-gray-900) et casseraient visuellement cette console, TOUJOURS sombre
    (voir le commentaire de tête de _SuperAdminLayout.cshtml). *@
-<div x-data="superAdminPricing()" x-init="load()">
+<div x-data="superAdminPricing()" x-init="load()" class="space-y-6">
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

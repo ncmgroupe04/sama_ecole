@@ -3,11 +3,20 @@
  Layout = "_SuperAdminLayout";
 }
 
-@* Cet écran consomme le VRAI GET /api/v1/admin/platform/activity (PlatformController, migration
- AddPlatformAdminViews : fonction SECURITY DEFINER get_global_audit_logs). Même nature de données que
- l'onglet Journal d'audit des Paramètres (Views/Shared/_AuditLogPanel.cshtml), mais toutes écoles
- confondues — d'où la colonne Établissement en plus. *@
-<div x-data="superAdminSecurity()" x-init="load()">
+@{
+ var moduleFilterOptions = new List<SelectFieldOption> {
+ new("", "Tous les domaines"), new("Auth", "Authentification"), new("Schools", "Établissements"),
+ new("Finance", "Finance"), new("Subscriptions", "Abonnements"), new("RegistrationRequests", "Inscriptions"),
+ new("Sms", "SMS"), new("Users", "Utilisateurs"), new("Platform", "Plateforme")
+ };
+}
+
+@* Cet écran consomme le VRAI GET /api/v1/admin/platform/activity (PlatformController, migrations
+ AddPlatformAdminViews puis ExtendGlobalAuditLogsFilters : fonction SECURITY DEFINER
+ get_global_audit_logs, désormais paramétrée par module/succès/école/plage de dates). Même nature de
+ données que l'onglet Journal d'audit des Paramètres (Views/Shared/_AuditLogPanel.cshtml), mais toutes
+ écoles confondues — d'où la colonne Établissement, et le filtre École, en plus. *@
+<div x-data="superAdminSecurity()" x-init="load(); loadSchools()" class="space-y-6">
 
  <div>
  <h1 class="text-xl font-semibold text-white">Sécurité &amp; Logs</h1>
@@ -24,6 +33,66 @@
  </div>
 
  <div x-show="error" x-cloak class="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" x-text="error"></div>
+
+ <!-- Filtres -->
+ <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-4 space-y-3">
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+ <div>
+ <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Domaine</label>
+ <select x-model="moduleFilter" x-on:change="applyFilters()"
+ class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
+ @foreach (var option in moduleFilterOptions)
+ {
+ <option value="@option.Value">@option.Label</option>
+ }
+ </select>
+ </div>
+
+ <div>
+ <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Établissement</label>
+ <select x-model="schoolFilter" x-on:change="applyFilters()"
+ class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
+ <option value="">Toutes les écoles</option>
+ <template x-for="school in schools" :key="school.id">
+ <option :value="school.id" x-text="school.name"></option>
+ </template>
+ </select>
+ </div>
+
+ <div>
+ <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Du</label>
+ <input type="date" x-model="dateFrom" x-on:change="applyFilters()"
+ class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+ </div>
+
+ <div>
+ <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">Au</label>
+ <input type="date" x-model="dateTo" x-on:change="applyFilters()"
+ class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+ </div>
+ </div>
+
+ <div class="flex flex-wrap items-center justify-between gap-3">
+ <div class="flex flex-wrap items-center gap-2">
+ <template x-for="option in [
+ { value: '', label: 'Tous résultats' },
+ { value: 'true', label: 'Succès' },
+ { value: 'false', label: 'Échecs' }
+ ]" :key="option.value">
+ <button type="button" x-on:click="successFilter = option.value; applyFilters()"
+ :class="successFilter === option.value ? 'bg-sky-500/15 text-sky-400 ring-1 ring-inset ring-sky-500/30' : 'text-zinc-400 border border-zinc-800 hover:bg-zinc-900'"
+ class="rounded-2xl px-3 py-1.5 text-xs font-medium transition-colors">
+ <span x-text="option.label"></span>
+ </button>
+ </template>
+ </div>
+
+ <button type="button" x-on:click="resetFilters()"
+ class="text-xs font-medium text-zinc-500 hover:text-zinc-200 transition-colors">
+ Réinitialiser les filtres
+ </button>
+ </div>
+ </div>
 
  <!-- Journal -->
  <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 backdrop-blur overflow-hidden">

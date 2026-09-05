@@ -14,6 +14,21 @@ public record GetPlatformActivityQuery : IRequest<PaginatedGlobalAuditLogs>
 {
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 20;
+
+    /// <summary>Filtre optionnel sur le domaine fonctionnel (ex. "Finance", "Schools") — même convention que GetAuditLogsQuery.Module.</summary>
+    public string? Module { get; init; }
+
+    /// <summary>Filtre optionnel sur le résultat : true = succès uniquement, false = échecs uniquement, null = tous.</summary>
+    public bool? Success { get; init; }
+
+    /// <summary>Filtre optionnel sur l'établissement concerné.</summary>
+    public Guid? SchoolId { get; init; }
+
+    /// <summary>Borne basse (incluse) de la plage de dates, sur OccurredAt.</summary>
+    public DateTimeOffset? DateFrom { get; init; }
+
+    /// <summary>Borne haute (incluse) de la plage de dates, sur OccurredAt.</summary>
+    public DateTimeOffset? DateTo { get; init; }
 }
 
 public record GlobalAuditLogItem(
@@ -40,7 +55,9 @@ public class GetPlatformActivityQueryHandler(IApplicationDbContext dbContext)
     {
         var offset = (request.Page - 1) * request.PageSize;
 
-        var rows = await dbContext.GetGlobalAuditLogsAsync(request.PageSize, offset, cancellationToken);
+        var rows = await dbContext.GetGlobalAuditLogsAsync(
+            request.PageSize, offset, request.Module, request.Success, request.SchoolId,
+            request.DateFrom, request.DateTo, cancellationToken);
 
         // Le total (COUNT(*) OVER() côté SQL) voyage sur chaque ligne : à 0 lignes renvoyées (page
         // au-delà du dernier total, ou aucune entrée du tout), on ne peut pas le lire — 0 est alors la

@@ -196,13 +196,16 @@ public interface IApplicationDbContext
 
     /// <summary>
     /// Journal d'audit toutes écoles confondues (console Super Admin), une page à la fois — appelle la
-    /// fonction SECURITY DEFINER `get_global_audit_logs` (migration AddPlatformAdminViews) via
-    /// FromSqlRaw. Encapsulé ici (comme SetOriginalConcurrencyToken/ExecuteInTransactionAsync) : FromSqlRaw
-    /// exige le package EF Core Relational, volontairement absent de SamaEcole.Application (règle #1 —
-    /// seul SamaEcole.Persistence référence un provider/l'infrastructure relationnelle).
+    /// fonction SECURITY DEFINER `get_global_audit_logs` (migrations AddPlatformAdminViews puis
+    /// ExtendGlobalAuditLogsFilters pour les 5 filtres) via FromSqlRaw. Encapsulé ici (comme
+    /// SetOriginalConcurrencyToken/ExecuteInTransactionAsync) : FromSqlRaw exige le package EF Core
+    /// Relational, volontairement absent de SamaEcole.Application (règle #1 — seul SamaEcole.Persistence
+    /// référence un provider/l'infrastructure relationnelle). Chaque filtre à `null` désactive sa
+    /// condition côté SQL (voir la fonction) — même convention que GetAuditLogsQuery côté tenant.
     /// </summary>
     Task<IReadOnlyList<GlobalAuditLogEntry>> GetGlobalAuditLogsAsync(
-        int limit, int offset, CancellationToken cancellationToken);
+        int limit, int offset, string? module, bool? success, Guid? schoolId,
+        DateTimeOffset? dateFrom, DateTimeOffset? dateTo, CancellationToken cancellationToken);
 
     /// <summary>
     /// Vérification PUBLIQUE d'un certificat de mutation scanné depuis son QR (Volume 1 §23.5) —

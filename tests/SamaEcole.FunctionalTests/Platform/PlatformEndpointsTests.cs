@@ -62,6 +62,12 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
         return await _client.SendAsync(request);
     }
 
+    private async Task LoginExpectingUnauthorizedAsync(string email, string password)
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     /// <summary>Sème une seconde école, hors de celle de test (EcoleId), avec un abonnement ACTIF et
     /// un paiement CONFIRMÉ — le strict minimum pour prouver l'agrégation inter-écoles. Les paramètres
     /// optionnels (période de facturation, échéance, statut) servent aux tests des KPIs financiers
@@ -275,6 +281,86 @@ public class PlatformEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
         var superAdmin = await SuperAdminTokenAsync();
 
         var response = await GetAsync("/api/v1/admin/platform/activity?page=1&pageSize=1000", superAdmin);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    /// <summary>
+    /// Écran Sécurité &amp; Logs — filtres module/succès/école (migration ExtendGlobalAuditLogsFilters).
+    /// École de test (EcoleId) : un Login réussi (Directeur) PUIS un Login échoué (mauvais mot de passe
+    /// sur le Secrétariat) — deux entrées Auth/Login sur la MÊME école, l'une réussie, l'autre non.
+    /// École Les Filaos (créée par le Super Admin) : une entrée Schools/CreateSchool, réussie, sur une
+    /// AUTRE école — de quoi distinguer les trois filtres sans ambiguïté.
+    /// </summary>
+    [Fact]
+    public async Task Platform_Activity_Should_Filter_By_Module_Success_And_School()
+    {
+        await DirecteurTokenAsync();
+        await LoginExpectingUnauthorizedAsync(AuthApiFactory.SecretaireEmail, "mauvais-mot-de-passe");
+
+        var superAdmin = await SuperAdminTokenAsync();
+        var createSchool = new HttpRequestMessage(HttpMethod.Post, "/api/v1/schools")
+        {
+            Content = JsonContent.Create(new
+            {
+                name = "École Les Filaos",
+                address = "Rue 12, Médina, Dakar",
+                phone = "+221771234567",
+                directorEmail = "directrice@filaos.sn",
+                directorFullName = "Aminata Sow"
+            })
+        };
+        createSchool.Headers.Authorization = new AuthenticationHeaderValue("Bearer", superAdmin);
+        (await _client.SendAsync(createSchool)).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var byModule = (await (await GetAsync(
+            "/api/v1/admin/platform/activity?page=1&pageSize=20&module=Schools", superAdmin))
+            .Content.ReadFromJsonAsync<PaginatedGlobalAuditLogs>())!;
+        byModule.TotalCount.Should().Be(1, "seule l'entrée Schools/CreateSchool porte ce domaine");
+        byModule.Items.Single().Action.Should().Be("CreateSchool");
+
+        var byFailure = (await (await GetAsync(
+            "/api/v1/admin/platform/activity?page=1&pageSize=20&success=false", superAdmin))
+            .Content.ReadFromJsonAsync<PaginatedGlobalAuditLogs>())!;
+        byFailure.TotalCount.Should().Be(1, "seul le login au mauvais mot de passe a échoué");
+        byFailure.Items.Single().Success.Should().BeFalse();
+
+        var bySchool = (await (await GetAsync(
+            $"/api/v1/admin/platform/activity?page=1&pageSize=20&schoolId={AuthApiFactory.EcoleId}", superAdmin))
+            .Content.ReadFromJsonAsync<PaginatedGlobalAuditLogs>())!;
+        bySchool.TotalCount.Should().Be(2, "les deux tentatives de connexion, pas la création d'école (autre établissement)");
+        bySchool.Items.Should().OnlyContain(l => l.SchoolId == AuthApiFactory.EcoleId);
+    }
+
+    [Fact]
+    public async Task Platform_Activity_Should_Filter_By_Date_Range()
+    {
+        await DirecteurTokenAsync(); // Auth/Login, à l'instant.
+        var superAdmin = await SuperAdminTokenAsync();
+
+        var tomorrow = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddDays(1).ToString("O"));
+        var strictlyFuture = (await (await GetAsync(
+            $"/api/v1/admin/platform/activity?page=1&pageSize=20&dateFrom={tomorrow}", superAdmin))
+            .Content.ReadFromJsonAsync<PaginatedGlobalAuditLogs>())!;
+        strictlyFuture.TotalCount.Should().Be(0, "aucune entrée ne peut être postérieure à demain");
+
+        var fiveMinutesAgo = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddMinutes(-5).ToString("O"));
+        var sinceRecently = (await (await GetAsync(
+            $"/api/v1/admin/platform/activity?page=1&pageSize=20&dateFrom={fiveMinutesAgo}", superAdmin))
+            .Content.ReadFromJsonAsync<PaginatedGlobalAuditLogs>())!;
+        sinceRecently.TotalCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task An_Inverted_Date_Range_On_Platform_Activity_Should_Be_Rejected()
+    {
+        var superAdmin = await SuperAdminTokenAsync();
+
+        var dateFrom = Uri.EscapeDataString(DateTimeOffset.UtcNow.ToString("O"));
+        var dateTo = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddDays(-1).ToString("O"));
+
+        var response = await GetAsync(
+            $"/api/v1/admin/platform/activity?page=1&pageSize=20&dateFrom={dateFrom}&dateTo={dateTo}", superAdmin);
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }

@@ -41,6 +41,19 @@
         </button>
     </div>
 
+    <!-- KPI -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 shadow-sm flex items-center justify-between transition-all duration-200 ease-in-out hover:-translate-y-1 hover:shadow-lg">
+            <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Demandes en attente</p>
+                <p class="mt-1 text-2xl font-black text-amber-400" x-text="pendingCount"></p>
+            </div>
+            <div class="w-11 h-11 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0 ml-3">
+                <icon name="clock" class="w-5 h-5 text-amber-400" />
+            </div>
+        </div>
+    </div>
+
     <!-- Filtres par statut -->
     <div class="flex flex-wrap items-center gap-2">
         <template x-for="option in [
