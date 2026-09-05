@@ -804,9 +804,34 @@ document.addEventListener('alpine:init', () => {
          */
         goToEnrollCreated() {
             if (!this.createdStudent) return;
-            const p = new URLSearchParams({ studentId: this.createdStudent.id });
-            if (this.createdStudent.matricule) p.set('matricule', this.createdStudent.matricule);
+            this.goToEnrollStudent(this.createdStudent);
+        },
+
+        /**
+         * Raccourci « Inscrire cette année » : ouvre l'écran Inscriptions pré-réglé pour cet élève
+         * (chemin ReEnrollment — la fiche existe déjà, aucun nouveau matricule). Le matricule
+         * accompagne l'id pour une recherche ciblée si l'élève n'est pas dans le premier lot de
+         * /inscriptions (voir applyStudentFromQuery côté enrollments.js). Utilisé aussi bien par la
+         * ligne de la vue « Non inscrits » que par la bannière de la fiche élève.
+         */
+        goToEnrollStudent(student) {
+            if (!student || !student.id) return;
+            const p = new URLSearchParams({ studentId: student.id });
+            if (student.matricule) p.set('matricule', student.matricule);
             window.location.href = `/inscriptions?${p.toString()}`;
+        },
+
+        /**
+         * Vrai quand la fiche ouverte n'a AUCUNE inscription vivante pour l'année active : la
+         * bannière « Élève non inscrit pour [année] » s'affiche alors en tête de la modale de
+         * détail. Dérivé de l'historique scolaire (AcademicHistoryEntryDto.isActiveYear/status),
+         * jamais d'un appel dédié. Faux tant que la fiche complète n'est pas chargée — on n'affiche
+         * pas une alerte sur une donnée encore absente.
+         */
+        detailNotEnrolledForActiveYear() {
+            const history = this.studentDetail && this.studentDetail.academicHistory;
+            if (!Array.isArray(history)) return false;
+            return !history.some((h) => h.isActiveYear && h.status !== 'Cancelled');
         },
 
         /** Phrase « pas encore inscrit … » de la confirmation d'ajout, avec l'année active si connue. */

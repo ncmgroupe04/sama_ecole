@@ -191,8 +191,17 @@
  x-text="student.gender === 'F' ? 'Fille' : 'Garçon'">
  </span>
  </td>
- <td class="py-2 px-4 w-[18%] text-right">
- <button @@click="openDetail(student)" title="Voir la fiche" aria-label="Voir la fiche" class="p-1.5 text-slate-400 hover:text-primary rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+ <td class="py-2 px-4 w-[18%] text-right whitespace-nowrap">
+ @* Action rapide de la vue « Non inscrits » : tous les élèves y sont, par construction, sans
+    inscription pour l'année active — on propose donc de les inscrire en un clic, sans passer par
+    la fiche. Ouvre /inscriptions pré-réglé (chemin ReEnrollment, voir goToEnrollStudent). *@
+ <button x-show="yearScope === 'notEnrolled'" x-cloak @@click="goToEnrollStudent(student)"
+ title="Inscrire cet élève pour l'année active" aria-label="Inscrire cet élève pour l'année active"
+ class="inline-flex items-center gap-1 px-2.5 py-1 mr-1 rounded-lg border border-primary/30 bg-primary-50 text-primary text-xs font-semibold hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary transition-colors align-middle">
+ <icon name="document-text" class="w-3.5 h-3.5" />
+ Inscrire cette année
+ </button>
+ <button @@click="openDetail(student)" title="Voir la fiche" aria-label="Voir la fiche" class="p-1.5 text-slate-400 hover:text-primary rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-colors align-middle">
  <icon name="eye" class="w-5 h-5" />
  </button>
  </td>
@@ -220,13 +229,36 @@
                 <h2 class="text-2xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></h2>
                 <div class="mt-1.5 flex items-center gap-2">
                     <span class="status-badge-primary" x-text="detailStudent ? detailStudent.classroomName : ''"></span>
-                    <span class="status-badge-success"><span class="status-dot" aria-hidden="true"></span>Actif</span>
+                    @* « Inscrit » plutôt qu'un « Actif » systématique : masqué quand la bannière
+                       « non inscrit pour l'année active » est affichée, pour ne pas se contredire. *@
+                    <span x-show="!studentDetail || !detailNotEnrolledForActiveYear()" x-cloak
+                          class="status-badge-success"><span class="status-dot" aria-hidden="true"></span>Inscrit</span>
+                    <span x-show="studentDetail && detailNotEnrolledForActiveYear()" x-cloak
+                          class="status-badge-warning"><span class="status-dot" aria-hidden="true"></span>Non inscrit</span>
                 </div>
             </div>
         </div>
         <button type="button" @@click="closeDetail()" class="bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200 p-2 rounded-xl transition-all duration-200 shadow-sm flex items-center justify-center focus:outline-none shrink-0">
             <span class="sr-only">Fermer</span>
             <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
+    </div>
+
+    @* Élève enregistré à l'annuaire mais sans inscription vivante pour l'année active : on le
+       signale en tête de fiche et on propose de l'inscrire en un clic (chemin ReEnrollment,
+       même raccourci que la vue « Non inscrits »). Dérivé de l'historique scolaire chargé
+       (detailNotEnrolledForActiveYear), jamais d'un appel dédié — masqué tant que la fiche
+       complète n'est pas là. *@
+    <div x-show="studentDetail && detailNotEnrolledForActiveYear()" x-cloak
+         class="mx-6 mt-5 rounded-xl border-l-4 border-warning bg-warning-bg px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p class="text-sm font-medium text-warning">
+            <span x-text="activeYearLabel ? ('Élève non inscrit pour l\'année ' + activeYearLabel) : 'Élève non inscrit pour l\'année active'"></span>.
+            <span class="font-normal">Il figure à l'annuaire mais n'a aucune inscription pour l'exercice en cours.</span>
+        </p>
+        <button type="button" @@click="goToEnrollStudent(detailStudent)"
+                class="inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary transition-colors">
+            <icon name="document-text" class="w-4 h-4" />
+            Inscrire maintenant
         </button>
     </div>
 
