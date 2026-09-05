@@ -10,11 +10,22 @@
 # qu'on testait en local.
 
 # --- Étape 1 : compilation du CSS Tailwind (Décision D-13, Volume 0 §0.13) ---
+# tailwind.config.js scanne Views/**, wwwroot/js/** ET TagHelpers/**/*.cs (les Tag Helpers, dont
+# ModalShellTagHelper, composent leurs classes Tailwind en C#, pas dans un .cshtml — voir le
+# commentaire en tête de tailwind.config.js). Sans wwwroot/js et TagHelpers dans CE contexte de
+# build, purgecss ne les voit jamais : les classes qui n'apparaissent QUE là (ex. `fixed`, `z-[60]`,
+# `sm:max-w-md`, `bg-opacity-75` de ModalShellTagHelper) disparaissaient du site.css de production —
+# chaque <modal-shell> (assistant de démarrage, confirmations « … enregistré ») s'affichait alors en
+# pleine page, non centré, sans fond assombri, tronqué derrière la barre latérale. Invisible en
+# `npm run watch:css` local (lancé depuis src/SamaEcole.Web, qui voit tout l'arbre) : uniquement
+# reproductible dans CE contexte de build Docker restreint.
 FROM node:20-alpine AS css-build
 WORKDIR /src/web
 COPY src/SamaEcole.Web/package.json src/SamaEcole.Web/tailwind.config.js ./
 COPY src/SamaEcole.Web/Styles ./Styles
 COPY src/SamaEcole.Web/Views ./Views
+COPY src/SamaEcole.Web/wwwroot/js ./wwwroot/js
+COPY src/SamaEcole.Web/TagHelpers ./TagHelpers
 RUN npm install
 RUN npm run build:css
 
