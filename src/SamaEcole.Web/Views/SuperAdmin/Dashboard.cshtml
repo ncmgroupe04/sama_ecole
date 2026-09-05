@@ -10,7 +10,7 @@
  GET /admin/platform/revenue-projection — 12 points mensuels pour la courbe de projection, calculée
  sur les échéances RÉELLES des abonnements Active (voir GetPlatformRevenueProjectionQuery), jamais
  une extrapolation. Le Simulateur de Croissance, lui, est un calcul purement client (ARPU × N). *@
-<div x-data="superAdminDashboard()" x-init="load()">
+<div x-data="superAdminDashboard()" x-init="load()" class="space-y-6">
 
  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
  <div>
@@ -61,7 +61,7 @@
  </template>
  </div>
     <!-- Section Projections & Simulateur -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Graphique (2/3) -->
         <div class="lg:col-span-2 rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm">
             <h2 class="text-sm font-semibold text-white mb-4">Projection Financière (12 mois)</h2>
@@ -94,6 +94,23 @@
                     <span class="text-xs text-zinc-400">ARR Projeté</span>
                     <span class="text-sm font-bold text-emerald-400" x-text="formatCompactXof(simulatorSchools * (data.arpu || 0) * 12)"></span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Répartition MRR & Croissance -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm">
+            <h2 class="text-sm font-semibold text-white mb-4">Répartition du MRR par formule</h2>
+            <div class="relative h-56 w-full">
+                <canvas id="mrrByPlanChart" x-ref="mrrByPlanCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm">
+            <h2 class="text-sm font-semibold text-white mb-4">Nouveaux établissements par mois</h2>
+            <div class="relative h-56 w-full">
+                <canvas id="newSchoolsChart" x-ref="newSchoolsCanvas"></canvas>
             </div>
         </div>
     </div>

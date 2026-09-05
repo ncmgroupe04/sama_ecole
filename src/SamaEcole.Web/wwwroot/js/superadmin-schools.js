@@ -9,6 +9,9 @@
  * l'identité du Directeur de l'école ciblée. auth.enterImpersonation() bascule la session dessus et
  * on redirige vers le tableau de bord tenant — _Layout.cshtml affiche alors le bandeau permettant d'en
  * sortir (wwwroot/js/auth.js, impersonationBanner).
+ *
+ * Les deux graphiques (statuts, courbe d'inscriptions) sont dérivés CÔTÉ CLIENT de cette même liste —
+ * même raisonnement que superadmin-dashboard.js/superadmin-billing.js.
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('superAdminSchools', () => ({
@@ -36,7 +39,102 @@ document.addEventListener('alpine:init', () => {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des établissements.');
             } finally {
                 this.isLoading = false;
+                this.initializeStatusChart();
+                this.initializeGrowthChart();
             }
+        },
+
+        /**
+         * Courbe CUMULATIVE d'inscriptions : total d'établissements atteint mois après mois, sur les 12
+         * derniers mois — la forme classique d'une courbe de croissance (contrairement à l'histogramme
+         * « Nouveaux établissements/mois » du tableau de bord, qui compte les ajouts PAR mois, pas le
+         * cumul). `count` inclut tout établissement créé AVANT ou PENDANT le mois, y compris ceux
+         * créés avant la fenêtre des 12 mois — la courbe part donc du total déjà acquis, pas de zéro.
+         */
+        get cumulativeGrowth() {
+            const now = new Date();
+            const months = Array.from({ length: 12 }, (_, i) => {
+                const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+                return { end: new Date(d.getFullYear(), d.getMonth() + 1, 1), label: d.toLocaleDateString('fr-FR', { month: 'short' }), count: 0 };
+            });
+
+            for (const school of this.schools) {
+                const createdAt = new Date(school.createdAt);
+                for (const month of months) {
+                    if (createdAt < month.end) month.count++;
+                }
+            }
+            return months;
+        },
+
+        initializeStatusChart() {
+            if (!this.$refs.statusCanvas || typeof Chart === 'undefined') return;
+
+            const ctx = this.$refs.statusCanvas.getContext('2d');
+            if (this.statusChart) this.statusChart.destroy();
+
+            this.statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Actifs', 'Suspendus', 'Bloqués'],
+                    datasets: [{
+                        data: [this.countByStatus('Active'), this.countByStatus('Suspended'), this.countByStatus('Blocked')],
+                        backgroundColor: ['#34d399', '#fbbf24', '#fb7185'],
+                        borderColor: '#18181b',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#9ca3af', boxWidth: 12, padding: 16 } }
+                    }
+                }
+            });
+        },
+
+        initializeGrowthChart() {
+            if (!this.$refs.growthCanvas || typeof Chart === 'undefined') return;
+
+            const ctx = this.$refs.growthCanvas.getContext('2d');
+            if (this.growthChart) this.growthChart.destroy();
+
+            const months = this.cumulativeGrowth;
+
+            this.growthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months.map((m) => m.label),
+                    datasets: [{
+                        label: 'Établissements (cumul)',
+                        data: months.map((m) => m.count),
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#9ca3af', precision: 0 },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#9ca3af' }
+                        }
+                    }
+                }
+            });
         },
 
         get filteredSchools() {

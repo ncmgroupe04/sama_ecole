@@ -245,16 +245,41 @@ public class ApplicationDbContext(
 
     /// <summary>
     /// Console Super Admin — une page du journal d'audit toutes écoles confondues, via la fonction
-    /// SECURITY DEFINER `get_global_audit_logs` (migration AddPlatformAdminViews). IgnoreQueryFilters()
-    /// est un no-op ici (GlobalAuditLogEntry, ToView(null), n'a aucun HasQueryFilter), gardé explicite
-    /// pour documenter que cette lecture est volontairement hors du cloisonnement tenant.
+    /// SECURITY DEFINER `get_global_audit_logs` (migrations AddPlatformAdminViews puis
+    /// ExtendGlobalAuditLogsFilters). IgnoreQueryFilters() est un no-op ici (GlobalAuditLogEntry,
+    /// ToView(null), n'a aucun HasQueryFilter), gardé explicite pour documenter que cette lecture est
+    /// volontairement hors du cloisonnement tenant.
+    ///
+    /// Paramètres NOMMÉS avec un NpgsqlDbType explicite plutôt que des `{0}` positionnels : un `null`
+    /// C# passé tel quel à FromSqlRaw n'a pas de type Postgres déterminable pour une fonction
+    /// surchargeable, et Npgsql échoue à résoudre l'appel (« could not determine polymorphic type »).
+    /// Même prudence que SubscriptionAdminStore avec DBNull.Value.
     /// </summary>
     public async Task<IReadOnlyList<GlobalAuditLogEntry>> GetGlobalAuditLogsAsync(
-        int limit, int offset, CancellationToken cancellationToken)
-        => await GlobalAuditLogEntries
-            .FromSqlRaw("SELECT * FROM public.get_global_audit_logs({0}, {1})", limit, offset)
+        int limit, int offset, string? module, bool? success, Guid? schoolId,
+        DateTimeOffset? dateFrom, DateTimeOffset? dateTo, CancellationToken cancellationToken)
+    {
+        var parameters = new[]
+        {
+            new NpgsqlParameter("limit_val", NpgsqlTypes.NpgsqlDbType.Integer) { Value = limit },
+            new NpgsqlParameter("offset_val", NpgsqlTypes.NpgsqlDbType.Integer) { Value = offset },
+            new NpgsqlParameter("module_filter", NpgsqlTypes.NpgsqlDbType.Text) { Value = (object?)module ?? DBNull.Value },
+            new NpgsqlParameter("success_filter", NpgsqlTypes.NpgsqlDbType.Boolean) { Value = (object?)success ?? DBNull.Value },
+            new NpgsqlParameter("school_id_filter", NpgsqlTypes.NpgsqlDbType.Uuid) { Value = (object?)schoolId ?? DBNull.Value },
+            new NpgsqlParameter("date_from", NpgsqlTypes.NpgsqlDbType.TimestampTz) { Value = (object?)dateFrom ?? DBNull.Value },
+            new NpgsqlParameter("date_to", NpgsqlTypes.NpgsqlDbType.TimestampTz) { Value = (object?)dateTo ?? DBNull.Value }
+        };
+
+        return await GlobalAuditLogEntries
+            .FromSqlRaw(
+                """
+                SELECT * FROM public.get_global_audit_logs(
+                    @limit_val, @offset_val, @module_filter, @success_filter, @school_id_filter, @date_from, @date_to)
+                """,
+                parameters)
             .IgnoreQueryFilters()
             .ToListAsync(cancellationToken);
+    }
 
     /// <summary>
     /// Vérification publique d'un certificat de mutation (Volume 1 §23.5) — la fonction SECURITY

@@ -10,7 +10,7 @@
 
  Bouton « Infiltrer » : POST /admin/platform/schools/{schoolId}/impersonate
  (ImpersonateSchoolCommand) — voir wwwroot/js/superadmin-schools.js pour le flux complet. *@
-<div x-data="superAdminSchools()" x-init="load()">
+<div x-data="superAdminSchools()" x-init="load()" class="space-y-6">
 
  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
  <div>
@@ -55,6 +55,23 @@
  </div>
  <div class="w-11 h-11 rounded-full bg-rose-500/15 flex items-center justify-center shrink-0 ml-3">
  <icon name="block" class="w-5 h-5 text-rose-400" />
+ </div>
+ </div>
+ </div>
+
+ <!-- Graphiques -->
+ <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+ <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm">
+ <h2 class="text-sm font-semibold text-white mb-4">Établissements par statut</h2>
+ <div class="relative h-56 w-full">
+ <canvas id="statusChart" x-ref="statusCanvas"></canvas>
+ </div>
+ </div>
+
+ <div class="rounded-2xl border border-zinc-800 bg-zinc-900/60 backdrop-blur p-5 shadow-sm">
+ <h2 class="text-sm font-semibold text-white mb-4">Croissance du parc d'établissements</h2>
+ <div class="relative h-56 w-full">
+ <canvas id="growthChart" x-ref="growthCanvas"></canvas>
  </div>
  </div>
  </div>
@@ -252,5 +269,7 @@
 </div>
 
 @section Scripts {
+ @* Auto-hébergé, jamais un CDN tiers (CSP script-src 'self', JGK-F01) — voir Dashboard.cshtml. *@
+ <script src="~/js/vendor/chart.min.js" asp-append-version="true"></script>
  <script src="~/js/superadmin-schools.js" asp-append-version="true"></script>
 }
