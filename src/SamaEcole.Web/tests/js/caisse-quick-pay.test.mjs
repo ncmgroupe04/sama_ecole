@@ -83,6 +83,23 @@ test('recocher une ligne recoche aussi toutes celles qui précèdent', () => {
     assert.equal(v.quickPayTotal(), 69000);
 });
 
+test('rouvrir le guichet après [Annuler] repart sur toutes les cases cochées', () => {
+    const v = caisseView();
+    v.balance = balanceWith3DueLines();
+
+    v.openQuickPay();
+    v.quickPay.checked = [true, false, false]; // l'utilisateur avait restreint la sélection
+    v.closeQuickPay();
+    assert.equal(v.quickPay.open, false);
+    // L'élève reste sélectionné : le solde est toujours là.
+    assert.ok(v.balance);
+
+    v.openQuickPay(); // clic sur « ⚡ Encaisser les frais dus »
+    assert.equal(v.quickPay.open, true);
+    assert.deepEqual(v.quickPay.checked, [true, true, true]);
+    assert.equal(v.quickPay.amount, 69000);
+});
+
 test('quickPayNote extrait « Mois 1 » d\'une désignation de mensualité, null sinon', () => {
     const v = caisseView();
     assert.equal(v.quickPayNote('Mensualité (Mois 1)'), 'Mois 1');

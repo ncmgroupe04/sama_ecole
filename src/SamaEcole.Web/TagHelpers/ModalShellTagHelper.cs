@@ -77,6 +77,15 @@ public class ModalShellTagHelper : TagHelper
     /// </summary>
     public string? OnClose { get; set; }
 
+    /// <summary>
+    /// Vrai (défaut) : la modale se ferme aussi au clic sur le fond assombri et à la touche Échap —
+    /// la convention pour la quasi-totalité des panneaux. À passer à <c>false</c> pour une modale où
+    /// une fermeture accidentelle ferait perdre une saisie ou un contexte de travail (ex. le guichet
+    /// rapide de la caisse) : seuls le bouton ✕ et un bouton explicite du corps ferment alors. La
+    /// fermeture programmatique (<c>close-modals</c>) reste active dans les deux cas.
+    /// </summary>
+    public bool Dismissible { get; set; } = true;
+
     public override async Task ProcessAsync(TagHelperContext context, TagHelperOutput output)
     {
         // GetChildContentAsync exécute aussi les <modal-subtitle>/<modal-title> imbriqués, qui écrivent
@@ -88,6 +97,11 @@ public class ModalShellTagHelper : TagHelper
         var footer = context.Items.TryGetValue(ModalFooterTagHelper.ItemsKey, out var f) ? (string)f! : null;
         var close = string.IsNullOrWhiteSpace(OnClose) ? $"{Open} = false" : OnClose;
 
+        // Fermeture "accidentelle" (fond + Échap) : retirée quand Dismissible est faux. Le ✕ de
+        // l'en-tête et l'événement close-modals restent, eux, toujours câblés.
+        var escapeClose = Dismissible ? $""" x-on:keydown.escape.window="{close}" """ : " ";
+        var backdropClose = Dismissible ? $""" x-on:click="{close}" """ : "";
+
         // Un <modal-title> (HTML brut, liaisons Alpine possibles) l'emporte sur l'attribut title encodé.
         var titleHtml = titleSlot ?? WebUtility.HtmlEncode(Title);
         var maxWidth = MaxWidthClass(Size);
@@ -98,12 +112,11 @@ public class ModalShellTagHelper : TagHelper
         output.Content.SetHtmlContent($"""
             <div x-show="{Open}" x-cloak
                  class="fixed inset-0 z-[60] flex items-stretch justify-center sm:items-center sm:p-4"
-                 x-on:keydown.escape.window="{close}"
-                 x-on:close-modals.window="{close}">
+                 {escapeClose}x-on:close-modals.window="{close}">
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                     class="fixed inset-0 bg-gray-500 bg-opacity-75" x-on:click="{close}"></div>
+                     class="fixed inset-0 bg-gray-500 bg-opacity-75"{backdropClose}></div>
 
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"

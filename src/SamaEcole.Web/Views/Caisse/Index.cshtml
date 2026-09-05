@@ -240,6 +240,17 @@
  <dd class="text-base font-bold text-primary" x-text="formatMoney(balance ? balance.remainingBalance : 0)"></dd>
  </div>
  </dl>
+
+ @* Rappel bien visible : après un [Annuler] dans le guichet rapide, l'élève reste
+    sélectionné — ce bouton rouvre la pop-up directement, cases contiguës déjà cochées,
+    sans re-rechercher l'élève. Masqué quand la pop-up est déjà ouverte, ou qu'il n'y a
+    plus rien d'échu à encaisser. *@
+ <button type="button" x-show="dueNowTotal > 0 && !quickPay.open" x-cloak
+ x-on:click="openQuickPay()"
+ class="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors">
+ <span aria-hidden="true" class="text-base leading-none">⚡</span>
+ Encaisser les frais dus (<span x-text="formatMoney(dueNowTotal)"></span>)
+ </button>
  </div>
 
  <!-- Inscription déjà soldée : pas de formulaire -->
@@ -607,7 +618,9 @@
     referme sans rien encaisser et laisse le panneau détaillé (échéancier ligne à ligne, solde
     intégral, historique) accessible pour les cas particuliers. *@
  <div class="no-print">
- <modal-shell open="quickPay.open" size="2xl" on-close="closeQuickPay()" title="Encaissement des frais dus">
+ @* dismissible="false" : un clic à côté ou un Échap ne ferme PAS ce guichet — seuls [Annuler]
+    et la croix ✕ le font, pour ne pas perdre la saisie sur une fausse manœuvre. *@
+ <modal-shell open="quickPay.open" size="2xl" dismissible="false" on-close="closeQuickPay()" title="Encaissement des frais dus">
  <div class="space-y-5">
 
  <!-- En-tête élève -->
