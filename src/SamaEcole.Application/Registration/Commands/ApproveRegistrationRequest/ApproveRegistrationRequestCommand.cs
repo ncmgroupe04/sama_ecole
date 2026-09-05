@@ -18,9 +18,14 @@ public record ApproveRegistrationRequestCommand(Guid Id) : IRequest<ApproveRegis
 /// <summary>
 /// Ne renvoie que des identifiants : aucun mot de passe (le Directeur a choisi le sien à la soumission
 /// et se connecte avec, il n'y a rien à lui transmettre de neuf).
+///
+/// <see cref="EmailSent"/> : l'établissement/compte/abonnement sont créés que l'e-mail parte ou non
+/// (un échec d'envoi ne doit pas remettre en cause l'approbation, voir le Handler) — ce champ permet
+/// au Super Admin de savoir s'il doit prévenir le Directeur par un autre canal.
 /// </summary>
 public record ApproveRegistrationRequestResult(
     Guid SchoolId,
     Guid DirectorUserId,
     Guid SubscriptionId,
-    SubStatus SubscriptionStatus);
+    SubStatus SubscriptionStatus,
+    bool EmailSent);

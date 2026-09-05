@@ -116,10 +116,25 @@ public class ApproveRegistrationRequestHandler(
             return (school.Id, newDirectorId, newSubscriptionId);
         }, cancellationToken);
 
-        // Après le commit : un e-mail parti ne se rembobine pas. Aucun mot de passe dedans — le Directeur
-        // se connecte avec celui qu'il a choisi à la soumission (I01).
-        await SendApprovalEmailAsync(
-            snapshot.DirectorEmail, snapshot.DirectorFullName, snapshot.SchoolName, cancellationToken);
+        // Après le commit : établissement, compte Directeur et abonnement existent déjà, quoi qu'il
+        // arrive à l'e-mail. Un échec d'envoi (ex. déploiement sans SMTP configuré,
+        // Smtp:AllowUnconfigured=true) ne doit donc PAS faire échouer l'approbation — seulement priver
+        // le Super Admin d'une confirmation que le Directeur a été prévenu par e-mail (EmailSent).
+        var emailSent = true;
+        try
+        {
+            // Aucun mot de passe dedans — le Directeur se connecte avec celui qu'il a choisi à la
+            // soumission (I01).
+            await SendApprovalEmailAsync(
+                snapshot.DirectorEmail, snapshot.DirectorFullName, snapshot.SchoolName, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            emailSent = false;
+            logger.LogWarning(ex,
+                "Demande {RequestId} approuvée (école {SchoolId} créée), mais l'e-mail de confirmation n'a pas pu être envoyé à {Email}.",
+                request.Id, schoolId, snapshot.DirectorEmail);
+        }
 
         // L'école existe désormais : première occasion d'imputer l'entrée d'audit à un SchoolId réel.
         await auditLogStore.AppendAsync(
@@ -131,7 +146,7 @@ public class ApproveRegistrationRequestHandler(
             request.Id, schoolId, directorId, subscriptionId);
 
         return new ApproveRegistrationRequestResult(
-            schoolId, directorId, subscriptionId, SubscriptionStatus.AwaitingPayment);
+            schoolId, directorId, subscriptionId, SubscriptionStatus.AwaitingPayment, emailSent);
     }
 
     private async Task SendApprovalEmailAsync(

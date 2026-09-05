@@ -111,11 +111,14 @@ document.addEventListener('alpine:init', () => {
             this.approveError = null;
             try {
                 const { schoolName, directorFullName } = this.approveTarget;
-                await window.api.post(`/admin/registration-requests/${this.approveTarget.id}/approve`);
+                const result = await window.api.post(`/admin/registration-requests/${this.approveTarget.id}/approve`);
                 this.closeApprove();
                 this.closeDetail();
                 await this.load();
-                this.approvedResult = { schoolName, directorFullName }; // confirmation « Demande approuvée »
+                // École/compte/abonnement sont créés même si l'e-mail de confirmation échoue (ex.
+                // aucun SMTP configuré sur ce déploiement) : emailSent le signale, pour prévenir le
+                // Directeur par un autre canal si besoin — voir ApproveRegistrationRequestHandler.
+                this.approvedResult = { schoolName, directorFullName, emailSent: result.emailSent };
             } catch (err) {
                 this.approveError = window.api.toMessage(err, "Erreur lors de l'approbation.");
             } finally {

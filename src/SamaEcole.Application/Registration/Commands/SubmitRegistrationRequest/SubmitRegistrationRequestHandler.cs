@@ -58,8 +58,25 @@ public class SubmitRegistrationRequestHandler(
 
         // Après le commit : un e-mail parti ne se rembobine pas. L'envoyer avant risquerait d'annoncer une
         // référence de suivi qui n'existerait finalement pas si l'écriture échouait.
-        await SendConfirmationAsync(email, registrationRequest.DirectorFullName, request.SchoolName.Trim(),
-            trackingReference, cancellationToken);
+        //
+        // Un échec D'ENVOI ne doit en revanche PAS faire échouer la demande : la ligne est déjà écrite,
+        // la référence de suivi est valide et consultable via /suivi-demande sans compte. Sur un
+        // déploiement sans SMTP configuré (Smtp:AllowUnconfigured=true), UnconfiguredEmailSender échoue
+        // bruyamment PAR CONCEPTION (EmailSenderGuard) — bruyamment dans les journaux, pas dans la
+        // réponse HTTP d'une opération déjà réussie.
+        try
+        {
+            await SendConfirmationAsync(email, registrationRequest.DirectorFullName, request.SchoolName.Trim(),
+                trackingReference, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Warning, pas Error : UnconfiguredEmailSender/SmtpEmailSender ont déjà journalisé l'échec
+            // en Error côté envoi — ici, l'opération elle-même a réussi, seul un effet secondaire a raté.
+            logger.LogWarning(ex,
+                "Demande d'inscription {TrackingReference} enregistrée, mais l'e-mail de confirmation n'a pas pu être envoyé.",
+                trackingReference);
+        }
 
         // Aucun mot de passe ici — seulement des identifiants non sensibles.
         logger.LogInformation(

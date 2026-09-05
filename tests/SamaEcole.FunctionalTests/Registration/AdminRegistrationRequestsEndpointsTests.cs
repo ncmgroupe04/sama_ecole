@@ -24,7 +24,7 @@ public class AdminRegistrationRequestsEndpointsTests(AuthApiFactory factory) : I
     private record SubmitResult(string TrackingReference);
     private record ListItem(
         Guid Id, string TrackingReference, string SchoolName, string DirectorEmail, string Status, Guid? CreatedSchoolId);
-    private record ApprovalResult(Guid SchoolId, Guid DirectorUserId, Guid SubscriptionId, string SubscriptionStatus);
+    private record ApprovalResult(Guid SchoolId, Guid DirectorUserId, Guid SubscriptionId, string SubscriptionStatus, bool EmailSent);
     private record SchoolSummary(Guid Id, string Name, string? Address, string? Phone, string Status);
 
     private const string DirectorPassword = "Correct-Horse-9";
@@ -139,6 +139,7 @@ public class AdminRegistrationRequestsEndpointsTests(AuthApiFactory factory) : I
         result.SubscriptionId.Should().NotBeEmpty();
         result.SubscriptionStatus.Should().Be("AwaitingPayment",
             "aucune date d'expiration tant que le premier paiement n'est pas confirmé (Volume 1 §11.5)");
+        result.EmailSent.Should().BeTrue("LoggingEmailSender (Development) ne fait jamais échouer l'envoi");
 
         // La demande reste un historique immuable — jamais transformée, seul son statut avance.
         var updated = (await GetListAsync(superAdmin.AccessToken, null)).Single(r => r.Id == id);
