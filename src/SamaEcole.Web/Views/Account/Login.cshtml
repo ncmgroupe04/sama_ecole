@@ -92,6 +92,7 @@
  autocomplete="email"
  autofocus
  placeholder="directeur@monecole.sn"
+ x-on:input="errors.email && (errors.email = null)"
  x-on:blur="touchEmail()"
  x-bind:aria-invalid="(error || errors.email) ? 'true' : 'false'"
  aria-describedby="emailError"
@@ -118,6 +119,7 @@
  required
  autocomplete="current-password"
  placeholder="••••••••••••"
+ x-on:input="errors.password && (errors.password = null)"
  x-on:blur="validate()"
  x-bind:aria-invalid="(error || errors.password) ? 'true' : 'false'"
  aria-describedby="passwordError"
@@ -137,7 +139,7 @@
  </div>
 
  <button type="submit"
- x-bind:disabled="isSubmitting || Object.keys(errors).length > 0"
+ x-bind:disabled="isSubmitting || !email || !password"
  x-bind:aria-busy="isSubmitting.toString()"
  class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm hover:shadow-sm transition-all duration-200 ease-in-out text-white rounded-2xl px-5 py-[9px] text-base font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-all">
  <svg x-cloak x-show="isSubmitting" aria-hidden="true" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
