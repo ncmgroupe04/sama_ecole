@@ -104,7 +104,7 @@
                             </td>
                             <td class="py-3 px-4 text-right whitespace-nowrap">
                                 <button type="button" x-show="code.isActive" x-cloak
-                                        x-on:click="deactivate(code)" :disabled="deactivatingId === code.id"
+                                        x-on:click="openDeactivate(code)" :disabled="deactivatingId === code.id"
                                         class="text-xs font-medium text-rose-400 hover:text-rose-300 disabled:opacity-50 disabled:cursor-wait px-1.5 py-1">
                                     <span x-text="deactivatingId === code.id ? 'Désactivation…' : 'Désactiver'"></span>
                                 </button>
@@ -208,6 +208,35 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    @* Confirmation avant désactivation — même gabarit que « Infiltrer un établissement »
+       (Schools.cshtml) : couper un code promo empêche immédiatement toute nouvelle souscription de
+       s'en servir, une conséquence pas toujours voulue d'un simple clic mal placé dans un tableau. *@
+    <div x-show="deactivateTarget" x-cloak
+         class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+         x-on:keydown.escape.window="closeDeactivate()">
+        <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
+            <h2 class="text-base font-semibold text-white">Désactiver le code promo</h2>
+            <p class="mt-2 text-sm text-zinc-400">
+                Le code <span class="font-mono font-medium text-zinc-100" x-text="deactivateTarget ? deactivateTarget.code : ''"></span>
+                ne pourra plus être utilisé pour aucune nouvelle souscription. Les abonnements qui s'en
+                servent déjà ne sont pas affectés.
+            </p>
+
+            <div x-show="deactivateError" x-cloak class="mt-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300" x-text="deactivateError"></div>
+
+            <div class="mt-6 flex justify-end gap-3 border-t border-zinc-800 pt-4">
+                <button type="button" x-on:click="closeDeactivate()" :disabled="deactivatingId === (deactivateTarget && deactivateTarget.id)"
+                        class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50">
+                    Annuler
+                </button>
+                <button type="button" x-on:click="confirmDeactivate()" :disabled="deactivatingId === (deactivateTarget && deactivateTarget.id)"
+                        class="rounded-2xl bg-rose-500 px-3 py-2 text-sm font-medium text-white hover:bg-rose-400 transition-colors disabled:opacity-50">
+                    <span x-text="deactivatingId === (deactivateTarget && deactivateTarget.id) ? 'Désactivation…' : 'Désactiver'"></span>
+                </button>
+            </div>
         </div>
     </div>
 </div>

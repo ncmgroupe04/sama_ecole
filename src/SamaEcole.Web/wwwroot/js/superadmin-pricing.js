@@ -15,6 +15,12 @@ document.addEventListener('alpine:init', () => {
         createErrors: {},
         newCode: emptyNewCode(),
 
+        // Désactiver un code promo coupe immédiatement son usage pour toute nouvelle souscription
+        // (irréversible côté métier — un code redevenu actif ne redonne pas les mêmes conditions à
+        // qui l'aurait manqué entre-temps) : passe par une confirmation, comme Suspendre/Bloquer un
+        // établissement (Schools.cshtml) plutôt qu'un clic direct.
+        deactivateTarget: null,
+        deactivateError: null,
         deactivatingId: null,
 
         async load() {
@@ -148,14 +154,27 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        async deactivate(code) {
+        openDeactivate(code) {
+            this.deactivateTarget = code;
+            this.deactivateError = null;
+        },
+
+        closeDeactivate() {
+            this.deactivateTarget = null;
+            this.deactivateError = null;
+        },
+
+        async confirmDeactivate() {
+            if (!this.deactivateTarget) return;
+            const code = this.deactivateTarget;
             this.deactivatingId = code.id;
-            this.error = null;
+            this.deactivateError = null;
             try {
                 await window.api.post(`/admin/promo-codes/${code.id}/deactivate`);
                 code.isActive = false;
+                this.deactivateTarget = null;
             } catch (err) {
-                this.error = window.api.toMessage(err, 'Erreur lors de la désactivation.');
+                this.deactivateError = window.api.toMessage(err, 'Erreur lors de la désactivation.');
             } finally {
                 this.deactivatingId = null;
             }
