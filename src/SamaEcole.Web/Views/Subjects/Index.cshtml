@@ -514,7 +514,7 @@
     </div>
    </div>
 
-   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+   <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
     <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary group">
      Annuler
     </button>
@@ -614,7 +614,7 @@
     </template>
    </div>
 
-   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+   <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
     <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary group">Annuler</button>
     <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary group">
      <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -645,7 +645,7 @@
    Impossible si des notes existent déjà pour cette matière : son coefficient pilote encore le calcul des moyennes et des bulletins déjà émis.
   </p>
 
-  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
    <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary group">Annuler</button>
    <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingSubject" class="btn-modal-danger">
     <span x-text="isDeletingSubject ? 'Suppression...' : 'Supprimer la matière'"></span>

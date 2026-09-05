@@ -951,7 +951,7 @@
  <p x-show="mentionCreateErrors.minaverage" x-cloak x-text="mentionCreateErrors.minaverage" class="field-error"></p>
  </div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="isMentionCreateOpen = false" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="mentionSubmitting" class="btn-modal-primary group">
  <span x-text="mentionSubmitting ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -994,7 +994,7 @@
  <p x-show="mentionEditErrors.minaverage" x-cloak x-text="mentionEditErrors.minaverage" class="field-error"></p>
  </div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeEditMention()" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isSavingMentionEdit" class="btn-modal-primary group">
  <span x-text="isSavingMentionEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -1012,7 +1012,7 @@
  Elle n'est jamais effacée définitivement (suppression logique) et n'apparaîtra plus dans la liste.
  </p>
  <div x-show="deleteMentionError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteMentionError"></div>
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeDeleteMention()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" x-on:click="confirmDeleteMention()" :disabled="isDeletingMention" class="btn-modal-danger">
  <span x-text="isDeletingMention ? 'Suppression...' : 'Supprimer'"></span>
@@ -1070,7 +1070,7 @@
 
  <div x-show="resetError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="resetError"></div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeResetSchool()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" x-on:click="confirmResetSchool()"
  :disabled="!resetConfirmationMatches || isResetting"
@@ -1114,7 +1114,7 @@
 
  <div x-show="goLiveError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="goLiveError"></div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeGoLive()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" x-on:click="confirmGoLive()"
  :disabled="!goLiveConfirmationMatches || isGoingLive"

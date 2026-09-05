@@ -179,7 +179,7 @@
  <span class="block text-xs text-slate-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
  </label>
  </div>
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="isCategoryOpen = false" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isSavingCategory" class="btn-modal-primary group">
  <span x-text="isSavingCategory ? 'Enregistrement...' : 'Créer'"></span>
@@ -234,7 +234,7 @@
  <span class="block text-xs text-slate-400">Décoché, les exceptions ajustées classe par classe sont préservées.</span>
  </label>
  </div>
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="isApplyOpen = false" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isApplying" class="btn-modal-primary group">
  <span x-text="isApplying ? 'Application...' : 'Appliquer'"></span>
@@ -257,7 +257,7 @@
  x-effect="if (editing) $nextTick(() => $el.focus())" class="input-field">
  <p x-show="editErrors.amount" x-cloak x-text="editErrors.amount" class="field-error"></p>
  </div>
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary group">
  <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -310,7 +310,7 @@
  L'historique comptable des paiements déjà encaissés reste intact : cette action n'efface aucune donnée financière, elle masque seulement la catégorie pour les nouvelles inscriptions.
  </p>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeDeleteCategory()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-modal-danger">
  <span x-text="isDeletingCategory ? 'Suppression...' : 'Supprimer la catégorie'"></span>
@@ -328,7 +328,7 @@
 
  <div x-show="deleteFeeError" x-cloak class="form-error-banner" x-text="deleteFeeError"></div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeDeleteFee()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" x-on:click="confirmDeleteFee()" :disabled="isDeletingFee" class="btn-modal-danger">
  <span x-text="isDeletingFee ? 'Suppression...' : 'Supprimer'"></span>
@@ -447,7 +447,7 @@
                 </div>
             </div>
 
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeCreateDisbursement()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isSubmittingDisbursement" class="btn-modal-primary group">
                     <span x-text="isSubmittingDisbursement ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -465,7 +465,7 @@
         
         <div x-show="deleteDisbursementError" x-cloak class="form-error-banner" x-text="deleteDisbursementError"></div>
         
-        <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
             <button type="button" x-on:click="closeDeleteDisbursement()" class="btn-modal-secondary group">Fermer</button>
             <button type="button" x-on:click="confirmDeleteDisbursement()" :disabled="isDeletingDisbursement" class="btn-modal-danger">
                 <span x-text="isDeletingDisbursement ? 'Annulation...' : 'Oui, annuler'"></span>

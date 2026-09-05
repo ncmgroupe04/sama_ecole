@@ -850,7 +850,7 @@
                     <p x-show="studentEditErrors.guardianemail" x-text="studentEditErrors.guardianemail" class="field-error"></p>
                 </div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" @@click="closeEditStudent()" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isSavingStudentEdit" class="btn-modal-primary group">
  <span x-text="isSavingStudentEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -880,7 +880,7 @@
  Réservé à une fiche créée par pure erreur de saisie : impossible si une inscription ou une note existe déjà pour cet élève.
  </p>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" @@click="closeDeleteStudent()" class="btn-modal-secondary group">Annuler</button>
  <button type="button" @@click="confirmDeleteStudent()" :disabled="isDeletingStudentRecord" class="btn-modal-danger">
  <span x-text="isDeletingStudentRecord ? 'Suppression...' : 'Supprimer la fiche'"></span>
@@ -908,7 +908,7 @@
  À réserver à une erreur de saisie : refusée si un reçu de paiement existe déjà pour cette inscription — utilisez plutôt « Déclarer un abandon/transfert » dans ce cas.
  </p>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" @@click="closeCancelEnrollment()" class="btn-modal-secondary group">Retour</button>
  <button type="button" @@click="confirmCancelEnrollment()" :disabled="isCancelingEnrollment" class="btn-modal-danger">
  <span x-text="isCancelingEnrollment ? 'Annulation...' : 'Annuler l\'inscription'"></span>
@@ -935,7 +935,7 @@
  </p>
  </div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" @@click="closeChangeEnrollmentStatus()" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isChangingEnrollmentStatus" class="btn-modal-primary group">
  <span x-text="isChangingEnrollmentStatus ? 'Enregistrement...' : 'Confirmer'"></span>
@@ -1033,7 +1033,7 @@
                 </div>
 
  <!-- Boutons d'action -->
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" @@click="isCreateOpen = false" class="btn-modal-secondary group">
  Annuler
  </button>
@@ -1188,7 +1188,7 @@
  <p x-show="commitmentErrors.terms" x-cloak x-text="commitmentErrors.terms" class="field-error"></p>
  </div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="isCommitmentModalOpen = false" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isSavingCommitment" class="btn-modal-primary group">
  <span x-text="isSavingCommitment ? 'Enregistrement...' : 'Enregistrer'"></span>

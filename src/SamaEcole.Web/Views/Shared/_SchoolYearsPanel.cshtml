@@ -150,7 +150,7 @@
  La rentrée sénégalaise a lieu en octobre : une année court généralement d'octobre à juillet.
  </p>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="isCreateOpen = false" class="btn-modal-secondary group">
  Annuler
  </button>
@@ -200,7 +200,7 @@
  <p x-show="editErrors.enddate" x-cloak x-text="editErrors.enddate" class="field-error"></p>
  </div>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary group">
  Annuler
  </button>
@@ -258,7 +258,7 @@
  x-effect="if (yearToActivate) $nextTick(() => $el.focus())" class="input-field">
  <p x-show="activateErrors.password" x-cloak x-text="activateErrors.password" class="field-error"></p>
 
- <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="closeActivate()" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isActivating" class="btn-modal-primary group">
  <span x-text="isActivating ? 'Activation...' : 'Activer cette année'"></span>

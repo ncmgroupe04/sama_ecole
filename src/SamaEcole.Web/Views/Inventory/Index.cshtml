@@ -445,7 +445,7 @@
                 <label class="form-label">Notes</label>
                 <textarea x-model="newItem.notes" rows="2" maxlength="500" class="input-field"></textarea>
             </div>
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeCreateItem()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isSavingItem" class="btn-modal-primary group">
                     <span x-text="isSavingItem ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -518,7 +518,7 @@
                 <label class="form-label">Notes</label>
                 <textarea x-model="editingItem.notes" rows="2" maxlength="500" class="input-field"></textarea>
             </div>
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeEditItem()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isSavingEditItem" class="btn-modal-primary group">
                     <span x-text="isSavingEditItem ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -537,7 +537,7 @@
         </modal-subtitle>
         <div x-show="deleteItemError" x-cloak class="form-error-banner" x-text="deleteItemError"></div>
         <p class="text-sm text-slate-500">Impossible si des prêts de ce bien sont encore en cours : clôturez-les d'abord.</p>
-        <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
             <button type="button" x-on:click="closeDeleteItem()" class="btn-modal-secondary group">Annuler</button>
             <button type="button" x-on:click="confirmDeleteItem()" :disabled="isDeletingItem" class="btn-modal-danger">
                 <span x-text="isDeletingItem ? 'Suppression...' : 'Archiver le bien'"></span>
@@ -660,7 +660,7 @@
                 <textarea x-model="newCategory.description" rows="3" maxlength="300" class="input-field"></textarea>
                 <p x-show="createCategoryErrors.description" x-text="createCategoryErrors.description" class="field-error"></p>
             </div>
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeCreateCategory()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isSavingCategory" class="btn-modal-primary group">
                     <span x-text="isSavingCategory ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -687,7 +687,7 @@
                 <textarea x-model="editingCategory.description" rows="3" class="input-field"></textarea>
                 <p x-show="editCategoryErrors.description" x-cloak x-text="editCategoryErrors.description" class="field-error"></p>
             </div>
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeEditCategory()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isSavingEditCategory" class="btn-modal-primary group">
                     <span x-text="isSavingEditCategory ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -706,7 +706,7 @@
         </modal-subtitle>
         <div x-show="deleteCategoryError" x-cloak class="form-error-banner" x-text="deleteCategoryError"></div>
         <p class="text-sm text-slate-500">Impossible si des biens sont encore rattachés à cette catégorie.</p>
-        <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
             <button type="button" x-on:click="closeDeleteCategory()" class="btn-modal-secondary group">Annuler</button>
             <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-modal-danger">
                 <span x-text="isDeletingCategory ? 'Suppression...' : 'Archiver la catégorie'"></span>
@@ -761,7 +761,7 @@
                 <label class="form-label">Fournisseur / destinataire</label>
                 <input type="text" x-model="movementForm.counterpartyLabel" maxlength="150" placeholder="Facultatif" class="input-field">
             </div>
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeMovementModal()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isSavingMovement" class="btn-modal-primary group">
                     <span x-text="isSavingMovement ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -823,7 +823,7 @@
                 <label class="form-label">Notes</label>
                 <textarea x-model="assignmentForm.notes" rows="2" maxlength="500" class="input-field"></textarea>
             </div>
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeAssignmentModal()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isSavingAssignment" class="btn-modal-primary group">
                     <span x-text="isSavingAssignment ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -870,7 +870,7 @@
                     <span class="block text-xs text-slate-400">La part non rendue sort définitivement du patrimoine et la fiche est clôturée.</span>
                 </label>
             </div>
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" x-on:click="closeReturnAssignment()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isSavingReturn" class="btn-modal-primary group">
                     <span x-text="isSavingReturn ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -893,7 +893,7 @@
         <p class="text-sm text-slate-500">
             À réserver à une fiche saisie par erreur. Dès qu'une restitution a été enregistrée, la fiche se clôture au lieu de s'annuler.
         </p>
-        <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
             <button type="button" x-on:click="closeCancelAssignment()" class="btn-modal-secondary group">Retour</button>
             <button type="button" x-on:click="confirmCancelAssignment()" :disabled="isCancellingAssignment" class="btn-modal-danger">
                 <span x-text="isCancellingAssignment ? 'Annulation...' : 'Annuler la fiche'"></span>

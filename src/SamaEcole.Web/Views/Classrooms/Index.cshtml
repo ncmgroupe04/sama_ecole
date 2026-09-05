@@ -333,7 +333,7 @@
     </div>
    </div>
 
-   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+   <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
     <button type="button" @@click="closeCreate()" class="btn-modal-secondary group">
      Annuler
     </button>
@@ -403,7 +403,7 @@
     </div>
    </div>
 
-   <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+   <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
     <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary group">Annuler</button>
     <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary group">
      <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -433,7 +433,7 @@
    Impossible si des élèves sont encore rattachés à cette classe : déplacez-les d'abord vers une autre classe.
   </p>
 
-  <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
    <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary group">Annuler</button>
    <button type="button" x-on:click="confirmDelete()" :disabled="isDeletingClassroom" class="btn-modal-danger">
     <span x-text="isDeletingClassroom ? 'Suppression...' : 'Supprimer la classe'"></span>

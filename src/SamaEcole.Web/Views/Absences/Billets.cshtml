@@ -136,7 +136,7 @@
                 <p x-show="createErrors.observations" x-text="createErrors.observations" class="field-error"></p>
             </div>
 
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" @@click="closeCreate()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isCreating" class="btn-modal-primary group">
                     <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
@@ -251,7 +251,7 @@
                        class="input-field" />
             </div>
 
-            <div class="sticky bottom-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" @@click="closeCreateExit()" class="btn-modal-secondary group">Annuler</button>
                 <button type="submit" :disabled="isCreatingExit" class="btn-modal-primary group">
                     <span x-text="isCreatingExit ? 'Enregistrement...' : 'Enregistrer'"></span>
