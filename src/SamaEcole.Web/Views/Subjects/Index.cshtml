@@ -46,18 +46,16 @@
    <div class="flex flex-wrap items-center gap-3">
     @* ── Bascule de lecture : la grille par catégories (vue d'origine) ou l'arbre
          domaine → activités, seul endroit d'où se configure la grille du bulletin. ── *@
-    <div role="group" aria-label="Mode d'affichage" class="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+    <div role="group" aria-label="Mode d'affichage" class="tab-nav">
      <button type="button" x-on:click="viewMode = 'categories'"
-      :class="viewMode === 'categories' ? 'bg-primary-50 text-primary-700' : 'text-slate-500 hover:text-slate-700'"
       :aria-pressed="viewMode === 'categories'"
-      class="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold transition-colors">
+      class="tab-btn" :class="viewMode === 'categories' ? 'tab-btn-active' : ''">
       <icon name="book" class="w-3.5 h-3.5" />
       Matières
      </button>
      <button type="button" x-on:click="showStructure()"
-      :class="viewMode === 'structure' ? 'bg-primary-50 text-primary-700' : 'text-slate-500 hover:text-slate-700'"
       :aria-pressed="viewMode === 'structure'"
-      class="inline-flex items-center gap-1.5 px-3 h-8 rounded-lg text-xs font-semibold transition-colors">
+      class="tab-btn" :class="viewMode === 'structure' ? 'tab-btn-active' : ''">
       <icon name="layers" class="w-3.5 h-3.5" />
       Structure d'évaluation
      </button>

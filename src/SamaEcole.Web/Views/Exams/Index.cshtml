@@ -19,25 +19,21 @@
 
     <!-- Onglets -->
     <div class="mt-6">
-        <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Onglets Examens officiels">
+        <nav class="tab-nav-scroll" role="tablist" aria-label="Onglets Examens officiels">
             <button type="button" role="tab" x-show="canManage" x-cloak x-on:click="switchTab('sessions')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('sessions')">
+                    class="tab-btn" :class="tabClass('sessions')">
                 Sessions
             </button>
             <button type="button" role="tab" x-on:click="switchTab('dossiers')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('dossiers')">
+                    class="tab-btn" :class="tabClass('dossiers')">
                 Dossiers
             </button>
             <button type="button" role="tab" x-show="canManage" x-cloak x-on:click="switchTab('audit')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('audit')">
+                    class="tab-btn" :class="tabClass('audit')">
                 Audit
             </button>
             <button type="button" role="tab" x-show="canManage" x-cloak x-on:click="switchTab('statistiques')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('statistiques')">
+                    class="tab-btn" :class="tabClass('statistiques')">
                 Statistiques
             </button>
         </nav>

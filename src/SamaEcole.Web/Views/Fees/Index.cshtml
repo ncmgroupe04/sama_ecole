@@ -18,15 +18,13 @@
  </div>
 
  <!-- Navigation principale : Paramétrage des frais vs Décaissements -->
- <div class="mt-6 flex bg-slate-100 p-1 rounded-xl w-fit">
-    <button type="button" x-on:click="activeTab = 'fees'" 
-            :class="activeTab === 'fees' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+ <div class="mt-6 tab-nav" role="tablist" aria-label="Navigation Frais">
+    <button type="button" role="tab" x-on:click="activeTab = 'fees'"
+            class="tab-btn" :class="activeTab === 'fees' ? 'tab-btn-active' : ''">
         Paramétrage des Frais
     </button>
-    <button type="button" x-on:click="activeTab = 'disbursements'" 
-            :class="activeTab === 'disbursements' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'"
-            class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+    <button type="button" role="tab" x-on:click="activeTab = 'disbursements'"
+            class="tab-btn" :class="activeTab === 'disbursements' ? 'tab-btn-active' : ''">
         Décaissements
     </button>
  </div>
@@ -60,22 +58,23 @@
  <!-- Grille -->
  <div x-show="categories.length > 0" x-cloak class="card mt-6 relative">
 
- <!-- Onglets de catégories : segmented control (fond neutre unifié, pastille active blanche +
- ombre légère) — même gabarit que les onglets de /parametres. -->
+ <!-- Onglets de catégories : barre d'onglets partagée (.tab-nav-scroll / .tab-btn / .tab-btn-active,
+ Styles/input.css). Chaque catégorie est un COMPOSÉ (libellé + corbeille), donc `.tab-btn` est
+ posé sur le conteneur — moins le padding, gardé sur le libellé cliquable — et tabClass() n'y
+ bascule que `tab-btn-active` (pastille bleu Unikol plein, texte blanc). -->
  <div class="p-4">
- <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Catégories de frais">
+ <nav class="tab-nav-scroll" role="tablist" aria-label="Catégories de frais">
  <template x-for="category in categories" :key="category.id">
- <div class="group flex shrink-0 items-center whitespace-nowrap rounded-lg transition-all"
- :class="tabClass(category.id)">
+ <div class="tab-btn group !p-0" :class="tabClass(category.id)">
  <button type="button" role="tab" x-on:click="selectedCategoryId = category.id"
- class="flex items-center gap-2 px-4 py-2.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
+ class="flex items-center gap-2 rounded-lg px-3.5 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1">
  <span x-text="category.name"></span>
- @* bg-white + anneau : le badge neutre (bg-gray-100) disparaîtrait sur la piste slate-100 du
- segmented control ; ici il reste lisible aussi bien sur la pastille active que sur la piste. *@
+ @* bg-white + anneau : le badge neutre (bg-gray-100) disparaîtrait sur la piste slate-100 ;
+ blanc, il reste lisible aussi bien sur la pastille active bleue que sur la piste. *@
  <badge x-show="category.isRecurring" x-cloak variant="neutral" class="bg-white text-[10px] uppercase tracking-wide text-slate-600 ring-1 ring-inset ring-slate-200">Mensuel</badge>
  </button>
  <button x-show="canDeleteFees" x-cloak type="button" x-on:click="openDeleteCategory(category)"
- class="mr-2 p-1 text-slate-400 hover:text-danger rounded-lg transition-colors"
+ class="mr-2 p-1 text-current opacity-60 hover:opacity-100 hover:text-danger rounded-lg transition-all"
  title="Supprimer la catégorie">
  <icon name="trash-2" class="w-4 h-4" />
  </button>

@@ -1,11 +1,12 @@
 /**
  * Écran Paramètres — regroupe TOUT ce que le Directeur configure pour son établissement.
  *
- * Ticket JGK-UI02 : navigation Hub & Spoke (sidebar verticale par pilier métier), en remplacement
- * des 7 onglets horizontaux d'origine — même état, mêmes appels API, seule la PRÉSENTATION change.
- * `tab` reste la seule source de vérité de "quel panneau est affiché" ; le sidebar (Views/Settings/
- * _SettingsSidebar.cshtml) ne fait qu'écrire dedans via goToTab(). Deux appels API historiques
- * portent toujours l'essentiel des champs, désormais RÉPARTIS entre plusieurs spokes/piliers :
+ * NAVIGATION : barre d'onglets HORIZONTALE (pill tabs, composant .tab-nav-scroll) sous le titre.
+ * Elle remplace le sidebar vertical Hub & Spoke du ticket JGK-UI02, lui-même issu des 7 onglets
+ * horizontaux d'origine — à chaque fois, même état, mêmes appels API, seule la PRÉSENTATION change.
+ * `tab` reste la seule source de vérité de "quel panneau est affiché" ; la barre d'onglets (dans
+ * Views/Settings/Index.cshtml) ne fait qu'écrire dedans via goToTab(). Deux appels API historiques
+ * portent toujours l'essentiel des champs, RÉPARTIS entre plusieurs sections :
  *   1. /schools/current (saveProfile) : identité, mentions légales, en-tête académique du
  *      bulletin, intégration étatique (SIMEN/GPS) — spokes "profil" et "integration-etatique",
  *      pilier Identité & Conformité.
@@ -47,17 +48,12 @@
  */
 document.addEventListener('alpine:init', () => {
     Alpine.data('settingsView', () => ({
-        // Onglet actif (ticket JGK-UI02 — navigation Hub & Spoke, sidebar verticale par pilier
-        // métier au lieu des 7 onglets horizontaux d'origine). 'profil' remplace l'ancien
-        // 'etablissement' par défaut ; la table VALID_TABS ci-dessous fait le pont avec les deux
-        // seuls identifiants encore utilisés par des liens externes (voir plus bas).
+        // Onglet actif. Depuis la refonte UI/UX : barre d'onglets HORIZONTALE (pill tabs) sous le
+        // titre, à la place du sidebar vertical Hub & Spoke (ticket JGK-UI02). L'état ne change
+        // pas — `tab` reste la seule source de vérité de "quel panneau est affiché", goToTab()
+        // écrit dedans + synchronise l'URL. 'profil' est le défaut ; validTabs (init()) fait le
+        // pont avec les anciens identifiants ('etablissement', 'configuration') d'un lien externe.
         tab: 'profil',
-
-        // Sidebar secondaire (interne à Paramètres) repliée en tiroir sur mobile/tablette — même
-        // mécanique que la barre latérale principale (_Layout.cshtml, sidebarOpen) : overlay +
-        // translate-x, mais un ÉTAT SÉPARÉ, propre à ce composant, pour ne jamais interférer avec
-        // le tiroir de la navigation principale.
-        settingsSidebarOpen: false,
 
         isDirecteur: window.auth.role === 'Directeur',
         isSecretariat: window.auth.role === 'Secretariat',
@@ -800,31 +796,28 @@ document.addEventListener('alpine:init', () => {
             return Number(value).toLocaleString('fr-FR');
         },
 
-        // ---------------------------------------------------------------- Affichage (sidebar JGK-UI02)
+        // ---------------------------------------------------------------- Affichage (barre d'onglets)
 
         /**
-         * Bascule vers le spoke demandé : ferme le tiroir mobile (sans quoi il resterait ouvert
-         * par-dessus le contenu qu'on vient de choisir) et synchronise l'URL via replaceState — un
-         * lien copié/rechargé rouvre le même spoke, sans naviguer ni recharger les données
-         * (même esprit que les "sous-routes" du ticket, sans le coût d'un vrai changement de page :
-         * l'état déjà chargé — profil, config, mentions… — reste intact).
+         * Bascule vers la section demandée et synchronise l'URL via replaceState — un lien
+         * copié/rechargé rouvre le même onglet, sans naviguer ni recharger les données (même esprit
+         * que les "sous-routes" du ticket, sans le coût d'un vrai changement de page : l'état déjà
+         * chargé — profil, config, mentions… — reste intact).
          */
         goToTab(name) {
             this.tab = name;
-            this.settingsSidebarOpen = false;
 
             const url = new URL(window.location.href);
             url.searchParams.set('tab', name);
             window.history.replaceState({}, '', url);
         },
 
-        /** Lien actif du sidebar vertical : fond indigo clair + texte foncé, même langage que le
-         * menu principal (_Layout.cshtml, LinkActive/LinkIdle) pour que les deux sidebars se lisent
-         * comme un seul système, jamais deux composants d'apparence différente. */
-        spokeClass(name) {
-            return this.tab === name
-                ? 'bg-indigo-50 text-primary-700 font-semibold'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-primary-700 font-medium';
+        /** État visuel d'un onglet de la barre horizontale. Renvoie le SEUL modificateur
+         * `tab-btn-active` (pastille bleu Unikol plein, texte blanc — défini dans input.css) ;
+         * la base `.tab-btn` est posée en dur dans la vue. Même composant partagé que Paie,
+         * Inventaire, Examens, Frais… pour que toutes les barres d'onglets se lisent à l'identique. */
+        tabClass(name) {
+            return this.tab === name ? 'tab-btn-active' : '';
         }
     }));
 });

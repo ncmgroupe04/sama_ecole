@@ -5,13 +5,14 @@
  };
 }
 
-@* auth.js et api.js sont chargés par _Layout. school-years.js alimente le spoke « Années
+@* auth.js et api.js sont chargés par _Layout. school-years.js alimente la section « Années
  scolaires » (composant schoolYearsView monté par la partial _SchoolYearsPanel).
 
- Ticket JGK-UI02 : navigation Hub & Spoke — sidebar verticale par pilier métier
- (_SettingsSidebar.cshtml) en remplacement des 7 anciens onglets horizontaux. Même composant
- Alpine settingsView() (settings.js), mêmes appels API : voir l'en-tête de settings.js pour le
- détail de la répartition des champs entre spokes. *@
+ NAVIGATION : barre d'onglets HORIZONTALE (pill tabs, composant partagé .tab-nav-scroll /
+ .tab-btn / .tab-btn-active — voir Styles/input.css) sous le titre. Elle remplace le sidebar
+ vertical Hub & Spoke du ticket JGK-UI02. Même composant Alpine settingsView() (settings.js),
+ mêmes appels API, même variable `tab` : voir l'en-tête de settings.js pour la répartition des
+ champs entre sections. *@
 @section Scripts {
  <script src="~/js/settings.js" asp-append-version="true"></script>
  <script src="~/js/school-years.js" asp-append-version="true"></script>
@@ -46,24 +47,50 @@
  </p>
  </div>
 
- <!-- ============================= COQUILLE HUB & SPOKE (JGK-UI02) ============================= -->
- <div class="mt-6 flex flex-col lg:flex-row gap-6 items-start">
-
- <!-- Bouton d'ouverture du tiroir, MOBILE/TABLETTE UNIQUEMENT (< lg) : le sidebar desktop est
- toujours visible en colonne fixe, ce bouton n'a donc aucune raison d'exister à partir de lg. -->
- <button type="button" x-on:click="settingsSidebarOpen = true"
- class="lg:hidden w-full flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm">
- <span class="flex items-center gap-2">
- <icon name="menu" class="w-4 h-4 text-slate-400" />
- Sections des paramètres
+ <!-- ============================= BARRE D'ONGLETS HORIZONTALE (refonte UI/UX) =============================
+ Remplace le sidebar vertical Hub & Spoke : toutes les sections sur une seule piste sous le
+ titre. `tab` reste la seule source de vérité (settings.js) ; goToTab() écrit dedans + synchronise
+ l'URL, aucun rechargement. `tab-nav-scroll` rend la piste défilable sans barre visible dès que
+ les onglets dépassent la largeur (mobile/tablette). Chaque onglet porte EXACTEMENT le x-show RBAC
+ que son spoke portait dans _SettingsSidebar : profil/intégration/formats/années/finance/système
+ pour tout rôle atteignant l'écran, "Notation & mentions" sous canViewMentions, et
+ Facturation/Utilisateurs/Journal d'audit/Notifications SMS réservés au Directeur. -->
+ <nav class="mt-6 tab-nav-scroll" role="tablist" aria-label="Sections des paramètres">
+ <button type="button" role="tab" x-on:click="goToTab('profil')" :aria-selected="tab === 'profil'"
+ class="tab-btn" :class="tabClass('profil')">Profil de l'établissement</button>
+ <button type="button" role="tab" x-on:click="goToTab('integration-etatique')" :aria-selected="tab === 'integration-etatique'"
+ class="tab-btn" :class="tabClass('integration-etatique')">Intégration étatique (SIMEN)</button>
+ <button type="button" role="tab" x-on:click="goToTab('formats-signatures')" :aria-selected="tab === 'formats-signatures'"
+ class="tab-btn" :class="tabClass('formats-signatures')">Formats &amp; signatures officielles</button>
+ <button type="button" role="tab" x-on:click="goToTab('annees-scolaires')" :aria-selected="tab === 'annees-scolaires'"
+ class="tab-btn" :class="tabClass('annees-scolaires')">Années scolaires</button>
+ <button type="button" role="tab" x-show="canViewMentions" x-cloak x-on:click="goToTab('pedagogie')" :aria-selected="tab === 'pedagogie'"
+ class="tab-btn" :class="tabClass('pedagogie')">Notation &amp; mentions</button>
+ <button type="button" role="tab" x-on:click="goToTab('finance')" :aria-selected="tab === 'finance'"
+ class="tab-btn" :class="tabClass('finance')">Mensualités &amp; autorisations de caisse</button>
+ <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('facturation')" :aria-selected="tab === 'facturation'"
+ class="tab-btn" :class="tabClass('facturation')">Facturation &amp; historique</button>
+ <button type="button" role="tab" x-on:click="goToTab('securite')" :aria-selected="tab === 'securite'"
+ class="tab-btn" :class="tabClass('securite')">Paramètres système</button>
+ <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('utilisateurs')" :aria-selected="tab === 'utilisateurs'"
+ class="tab-btn" :class="tabClass('utilisateurs')">Utilisateurs &amp; rôles</button>
+ <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('journal-audit')" :aria-selected="tab === 'journal-audit'"
+ class="tab-btn" :class="tabClass('journal-audit')">Journal d'audit</button>
+ @* Notifications SMS — offre Premium. L'onglet reste VISIBLE hors formule, avec un badge : une
+ fonctionnalité qu'on cache ne se vend pas. C'est SmsController ([RequireFeature]) qui refuse
+ réellement l'accès, jamais ce x-show. *@
+ <button type="button" role="tab" x-show="isDirecteur" x-cloak x-on:click="goToTab('sms')" :aria-selected="tab === 'sms'"
+ class="tab-btn" :class="tabClass('sms')">
+ <span>Notifications SMS</span>
+ <span x-data="featureGate('SmsNotifications')" x-show="!allowed" x-cloak
+ class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 shrink-0">
+ Premium
  </span>
- <icon name="chevron-right" class="w-4 h-4 text-slate-400" />
  </button>
-
- @await Html.PartialAsync("_SettingsSidebar")
+ </nav>
 
  <!-- ============================= ZONE DE CONTENU (cartes blanches, fond neutre) ============================= -->
- <main class="flex-1 min-w-0 w-full">
+ <main class="mt-6 w-full">
 
  <!-- Chargement -->
  <div x-show="isLoading" class="flex items-center justify-center py-12">
@@ -585,9 +612,9 @@
  @await Html.PartialAsync("_SchoolYearsPanel")
  </div>
 
- <!-- ============================= SPOKE : NOTATION & MENTIONS (Pédagogie) ============================= -->
- @* canViewMentions (Directeur, Secrétariat, Enseignant) garde tout le spoke, comme l'ancien
- bloc « Mentions du bulletin » dans l'onglet Configuration (voir _SettingsSidebar.cshtml). *@
+ <!-- ============================= SECTION : NOTATION & MENTIONS (Pédagogie) ============================= -->
+ @* canViewMentions (Directeur, Secrétariat, Enseignant) garde toute la section, comme l'ancien
+ bloc « Mentions du bulletin » de l'onglet Configuration d'origine. *@
  <div x-show="!isLoading && !loadError && canViewMentions && tab === 'pedagogie'" x-cloak>
  <div class="card p-6 w-full space-y-6">
 
@@ -659,7 +686,8 @@
  <tbody class="divide-y divide-slate-100">
  <tr class="hover:bg-slate-50 transition-colors duration-150" x-show="mentions.length === 0" x-cloak>
  <td colspan="3">
- <empty-state icon="book" title="Aucune mention n'est encore définie." />
+ <empty-state icon="book" title="Aucune mention n'est encore définie."
+ hint="Ajoutez une mention (ex. Passable, Bien, Très bien) pour qu'elle apparaisse sur les bulletins." />
  </td>
  </tr>
  <template x-for="(m, index) in mentions" :key="m.id || index">
@@ -792,20 +820,18 @@
  <p class="text-xs text-slate-400 mt-0.5 mb-4">
  Détermine les modules visibles dans la navigation. Les écoles publiques n'ont pas de recouvrement mensuel.
  </p>
- <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-start w-fit">
+ <div class="tab-nav self-start" role="group" aria-label="Type d'établissement">
  <button type="button" id="cfg-type-prive"
  x-on:click="config.typeEtablissement = 'Prive'; saveConfig(false)"
  :disabled="configSaving"
- :class="config.typeEtablissement === 'Prive' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
- class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50">
+ class="tab-btn" :class="config.typeEtablissement === 'Prive' ? 'tab-btn-active' : ''">
  <icon name="wallet" class="w-4 h-4" />
  Privé — Finance complète
  </button>
  <button type="button" id="cfg-type-public"
  x-on:click="config.typeEtablissement = 'Public'; saveConfig(false)"
  :disabled="configSaving"
- :class="config.typeEtablissement === 'Public' ? 'bg-white text-slate-900 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'"
- class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all disabled:opacity-50">
+ class="tab-btn" :class="config.typeEtablissement === 'Public' ? 'tab-btn-active' : ''">
  <icon name="building" class="w-4 h-4" />
  Public — Pédagogie uniquement
  </button>
@@ -929,7 +955,6 @@
  </div>
 
  </main>
- </div>
 
  <!-- Création d'une mention -->
  <modal-shell size="lg" open="isMentionCreateOpen" title="Nouvelle mention">

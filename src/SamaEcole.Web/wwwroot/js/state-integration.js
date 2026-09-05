@@ -109,10 +109,10 @@ document.addEventListener('alpine:init', () => {
             if (name === 'certificats' && this.certificates.items.length === 0) this.loadCertificates();
         },
 
+        // Barre d'onglets partagée (.tab-nav-scroll / .tab-btn / .tab-btn-active, Styles/input.css) :
+        // ne renvoie que le modificateur actif, la base `.tab-btn` est posée dans la vue.
         tabClass(name) {
-            return this.tab === name
-                ? 'bg-white text-indigo-700 shadow-sm font-medium'
-                : 'text-slate-500 hover:text-slate-800';
+            return this.tab === name ? 'tab-btn-active' : '';
         },
 
         schoolYearLabel(id) {

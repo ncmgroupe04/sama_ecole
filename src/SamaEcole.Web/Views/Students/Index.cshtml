@@ -324,27 +324,26 @@
         </div>
     </div>
 
- <!-- Onglets : -->
-    <nav class="bg-slate-100/80 p-1.5 rounded-xl mx-6 mb-6 flex gap-2 border border-slate-200/50 overflow-x-auto scrollbar-hide" role="tablist" aria-label="Sections de la fiche élève">
+ <!-- Onglets de la fiche élève : barre d'onglets partagée (.tab-nav-scroll / .tab-btn /
+     .tab-btn-active, Styles/input.css). `flex-1` répartit les trois sections à largeur égale ;
+     les icônes héritent de la couleur du texte (blanches sur la pastille active bleue). -->
+    <nav class="tab-nav-scroll mx-6 mb-6" role="tablist" aria-label="Sections de la fiche élève">
         <button type="button" role="tab" @@click="detailTab = 'history'"
                 :aria-selected="detailTab === 'history'"
-                :class="detailTab === 'history' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
-                class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-            <icon name="clock" class="w-4 h-4 text-indigo-600" />
+                class="tab-btn flex-1" :class="detailTab === 'history' ? 'tab-btn-active' : ''">
+            <icon name="clock" class="w-4 h-4" />
             Historique scolaire
         </button>
         <button type="button" role="tab" @@click="detailTab = 'grades'"
                 :aria-selected="detailTab === 'grades'"
-                :class="detailTab === 'grades' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
-                class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-            <icon name="academic-cap" class="w-4 h-4 text-blue-600" />
+                class="tab-btn flex-1" :class="detailTab === 'grades' ? 'tab-btn-active' : ''">
+            <icon name="academic-cap" class="w-4 h-4" />
             Notes & bulletins
         </button>
         <button type="button" role="tab" x-show="canViewPayments" x-cloak @@click="detailTab = 'payments'"
                 :aria-selected="detailTab === 'payments'"
-                :class="detailTab === 'payments' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'text-slate-600 hover:text-slate-900 font-medium hover:bg-slate-200/50'"
-                class="inline-flex items-center justify-center flex-1 gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1">
-            <icon name="wallet" class="w-4 h-4 text-emerald-600" />
+                class="tab-btn flex-1" :class="detailTab === 'payments' ? 'tab-btn-active' : ''">
+            <icon name="wallet" class="w-4 h-4" />
             Paiements
         </button>
     </nav>

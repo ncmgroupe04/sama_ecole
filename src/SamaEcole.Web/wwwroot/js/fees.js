@@ -148,14 +148,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Segmented control des catégories (Views\Fees\Index.cshtml) : pastille blanche + texte
-         * primaire pour l'onglet actif, fond transparent + texte discret (éclairci au survol) pour
-         * les autres. Même gabarit que les onglets de /parametres (settings.js tabClass).
+         * Segmented control des catégories (Views\Fees\Index.cshtml) : barre d'onglets partagée
+         * (.tab-nav-scroll / .tab-btn / .tab-btn-active, Styles/input.css) — pastille active bleu
+         * Unikol plein, comme /parametres et tous les autres modules. Ne renvoie que le
+         * modificateur actif ; la base `.tab-btn` est posée dans la vue.
          */
         tabClass(categoryId) {
-            return this.selectedCategoryId === categoryId
-                ? 'bg-white text-indigo-600 font-semibold shadow-sm'
-                : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50';
+            return this.selectedCategoryId === categoryId ? 'tab-btn-active' : '';
         },
 
         /**

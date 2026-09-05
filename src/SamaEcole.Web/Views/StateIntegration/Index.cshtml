@@ -38,21 +38,17 @@
 
     <!-- Onglets -->
     <div class="mt-6">
-        <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist"
-             aria-label="Onglets Intégration étatique">
+        <nav class="tab-nav-scroll" role="tablist" aria-label="Onglets Intégration étatique">
             <button type="button" role="tab" x-show="isDirector" x-cloak x-on:click="switchTab('planete')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('planete')">
+                    class="tab-btn" :class="tabClass('planete')">
                 Export Planète
             </button>
             <button type="button" role="tab" x-show="isDirector" x-cloak x-on:click="switchTab('stateduc')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('stateduc')">
+                    class="tab-btn" :class="tabClass('stateduc')">
                 Rapport STATEDUC
             </button>
             <button type="button" role="tab" x-on:click="switchTab('certificats')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('certificats')">
+                    class="tab-btn" :class="tabClass('certificats')">
                 Certificats de mutation
             </button>
         </nav>

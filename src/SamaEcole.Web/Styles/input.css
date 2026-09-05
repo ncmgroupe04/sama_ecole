@@ -770,19 +770,40 @@
     @apply border-l-4 border-l-rose-500;
   }
 
-  /* ---------------------------------------------------------------- Onglets internes
-     Groupe de bascule d'un panneau (Synthèse / Décaissements). Trois écritures
-     différentes coexistaient pour ce même contrôle. */
+  /* ---------------------------------------------------------------- Onglets internes / segmented control
+     SOURCE UNIQUE de la barre d'onglets sur toute la plateforme : Paramètres, Paie, Inventaire,
+     Examens, Frais (× 2), Enseignants (× 2), Intégration étatique, Billets d'absence, Matières,
+     fiche élève, tableau de bord (Trésorerie). Chaque écran recopiait sa propre chaîne de classes
+     — piste, pastille, survol — avec des écarts (px-3 vs px-4, text-xs vs text-sm, pastille active
+     blanche ici, indigo clair là). Une seule définition désormais.
+
+     PASTILLE ACTIVE : bleu Unikol PLEIN sous texte blanc, une ombre légère — jamais une autre
+     couleur, quel que soit l'onglet. `primary-600` et non `primary` : #6366F1 sous blanc ne tient
+     que 4.47:1 (< AA 4.5:1), primary-600 (#4F46E5) passe — même arbitrage que `.btn-primary`.
+     ONGLETS INACTIFS : texte discret (slate-600), fond transparent, éclairci + fond au survol.
+
+     EXCEPTION VOULUE, NE PAS porter sur ce composant : l'interrupteur « Inscrits cette année /
+     Non inscrits / Tous les élèves » de la liste Élèves garde ses couleurs SÉMANTIQUES
+     (vert = inscrits, rouge = non inscrits, bleu = tous). La vitrine publique a son propre jeu
+     (`mkt-tab`), elle ne s'aligne pas ici non plus. */
   .tab-nav {
-    @apply inline-flex gap-1 rounded-xl bg-slate-100 p-1;
+    @apply inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1;
+  }
+
+  /* Variante à utiliser dès que les onglets peuvent dépasser la largeur disponible
+     (mobile/tablette, ou beaucoup d'onglets — Paramètres, Examens, Inventaire…) : défilement
+     horizontal, sans barre de défilement visible, et `max-w-full` pour ne jamais pousser la mise
+     en page. */
+  .tab-nav-scroll {
+    @apply flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 scrollbar-hide;
   }
 
   .tab-btn {
-    @apply rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 transition-all duration-200 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary active:scale-95;
+    @apply inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-transparent px-3.5 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-200/50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 disabled:opacity-50;
   }
 
   .tab-btn-active {
-    @apply bg-white font-semibold text-primary-700 shadow-sm;
+    @apply bg-primary-600 text-white shadow-sm hover:bg-primary-700 hover:text-white;
   }
 
   /* ---------------------------------------------------------------- Tuile de synthèse

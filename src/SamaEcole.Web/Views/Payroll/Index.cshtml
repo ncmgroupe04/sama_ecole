@@ -15,20 +15,17 @@
 
     <!-- Onglets -->
     <div class="mt-6">
-        <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Onglets Paie">
+        <nav class="tab-nav-scroll" role="tablist" aria-label="Onglets Paie">
             <button type="button" role="tab" x-on:click="tab = 'contrats'"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('contrats')">
+                    class="tab-btn" :class="tabClass('contrats')">
                 Contrats
             </button>
             <button type="button" role="tab" x-on:click="tab = 'fiches'"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('fiches')">
+                    class="tab-btn" :class="tabClass('fiches')">
                 Fiches de paie
             </button>
             <button type="button" role="tab" x-on:click="tab = 'fiscalite'"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('fiscalite')">
+                    class="tab-btn" :class="tabClass('fiscalite')">
                 Déclarations fiscales
             </button>
         </nav>

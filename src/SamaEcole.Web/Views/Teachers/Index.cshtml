@@ -17,16 +17,14 @@
  </div>
 
  <!-- Navigation principale : Liste vs Emploi du Temps -->
- <div class="mt-6 flex bg-slate-100 p-1 rounded-xl w-fit">
-    <button type="button" x-on:click="activeTab = 'teachers'" 
-            :class="activeTab === 'teachers' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-            class="px-3 py-1.5 text-sm rounded-lg"
+ <div class="mt-6 tab-nav" role="tablist" aria-label="Vue Enseignants">
+    <button type="button" role="tab" x-on:click="activeTab = 'teachers'"
+            class="tab-btn" :class="activeTab === 'teachers' ? 'tab-btn-active' : ''"
             :aria-selected="activeTab === 'teachers'">
         Liste des Enseignants
     </button>
-    <button type="button" x-on:click="activeTab = 'schedule'" 
-            :class="activeTab === 'schedule' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-            class="px-3 py-1.5 text-sm rounded-lg"
+    <button type="button" role="tab" x-on:click="activeTab = 'schedule'"
+            class="tab-btn" :class="activeTab === 'schedule' ? 'tab-btn-active' : ''"
             :aria-selected="activeTab === 'schedule'">
         Emploi du Temps
     </button>
@@ -702,14 +700,12 @@
         <h2 class="text-lg font-bold text-slate-900">Emploi du Temps</h2>
         <div class="flex flex-wrap items-center gap-4">
             <!-- Toggle Vue Enseignant / Vue Classe -->
-            <div class="flex bg-slate-100 p-1 rounded-xl shrink-0">
-                <button type="button" x-on:click="scheduleViewMode = 'teacher'; loadSchedule()" 
-                        :class="scheduleViewMode === 'teacher' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-                        class="px-3 py-1.5 text-xs rounded-lg"
+            <div class="tab-nav shrink-0" role="tablist" aria-label="Mode d'affichage de l'emploi du temps">
+                <button type="button" role="tab" x-on:click="scheduleViewMode = 'teacher'; loadSchedule()"
+                        class="tab-btn" :class="scheduleViewMode === 'teacher' ? 'tab-btn-active' : ''"
                         :aria-selected="scheduleViewMode === 'teacher'">Par Enseignant</button>
-                <button type="button" x-on:click="scheduleViewMode = 'classroom'; loadSchedule()" 
-                        :class="scheduleViewMode === 'classroom' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'"
-                        class="px-3 py-1.5 text-xs rounded-lg"
+                <button type="button" role="tab" x-on:click="scheduleViewMode = 'classroom'; loadSchedule()"
+                        class="tab-btn" :class="scheduleViewMode === 'classroom' ? 'tab-btn-active' : ''"
                         :aria-selected="scheduleViewMode === 'classroom'">Par Classe</button>
             </div>
             

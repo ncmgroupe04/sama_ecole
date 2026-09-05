@@ -25,25 +25,21 @@
 
     <!-- Onglets -->
     <div class="mt-6">
-        <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl overflow-x-auto scrollbar-hide" role="tablist" aria-label="Onglets Inventaire">
+        <nav class="tab-nav-scroll" role="tablist" aria-label="Onglets Inventaire">
             <button type="button" role="tab" x-on:click="switchTab('catalogue')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('catalogue')">
+                    class="tab-btn" :class="tabClass('catalogue')">
                 Catalogue
             </button>
             <button type="button" role="tab" x-on:click="switchTab('categories')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('categories')">
+                    class="tab-btn" :class="tabClass('categories')">
                 Catégories
             </button>
             <button type="button" role="tab" x-on:click="switchTab('mouvements')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('mouvements')">
+                    class="tab-btn" :class="tabClass('mouvements')">
                 Mouvements de stock
             </button>
             <button type="button" role="tab" x-on:click="switchTab('prets')"
-                    class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                    :class="tabClass('prets')">
+                    class="tab-btn" :class="tabClass('prets')">
                 Prêts &amp; Décharges
             </button>
         </nav>
@@ -259,7 +255,8 @@
 
                         <tr x-show="!isLoadingMovements && movements.length === 0" x-cloak>
                             <td colspan="8">
-                                <empty-state icon="database" title="Aucun mouvement ne correspond à ces filtres." />
+                                <empty-state icon="database" title="Aucun mouvement ne correspond à ces filtres."
+ hint="Ajustez les filtres, ou enregistrez une entrée/sortie de stock ci-dessus." />
                             </td>
                         </tr>
 

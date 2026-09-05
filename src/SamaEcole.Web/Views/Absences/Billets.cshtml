@@ -26,15 +26,13 @@
     </div>
 
     <!-- Onglets -->
-    <nav class="flex p-1.5 space-x-1 bg-slate-100 rounded-xl w-fit" role="tablist" aria-label="Onglets Billets">
+    <nav class="tab-nav" role="tablist" aria-label="Onglets Billets">
         <button type="button" role="tab" @@click="tab = 'entree'"
-                class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                :class="tab === 'entree' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'">
+                class="tab-btn" :class="tab === 'entree' ? 'tab-btn-active' : ''">
             Billets d'entrée
         </button>
         <button type="button" role="tab" @@click="tab = 'sortie'"
-                class="px-4 py-2.5 text-sm whitespace-nowrap rounded-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1"
-                :class="tab === 'sortie' ? 'bg-white text-indigo-600 font-semibold shadow-sm' : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50'">
+                class="tab-btn" :class="tab === 'sortie' ? 'tab-btn-active' : ''">
             Billets de sortie
         </button>
     </nav>

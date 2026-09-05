@@ -172,10 +172,10 @@ document.addEventListener('alpine:init', () => {
             await this.loadItems();
         },
 
+        // Barre d'onglets partagée (.tab-nav-scroll / .tab-btn / .tab-btn-active, Styles/input.css) :
+        // ne renvoie que le modificateur actif, la base `.tab-btn` est posée dans la vue.
         tabClass(name) {
-            return this.tab === name
-                ? 'bg-white text-indigo-600 font-semibold shadow-sm'
-                : 'bg-transparent text-slate-700 font-medium hover:text-slate-900 hover:bg-slate-200/50';
+            return this.tab === name ? 'tab-btn-active' : '';
         },
 
         switchTab(tab) {
