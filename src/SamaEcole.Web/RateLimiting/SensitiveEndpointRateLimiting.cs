@@ -9,8 +9,8 @@ namespace SamaEcole.Web.RateLimiting;
 public static class SensitiveEndpointRateLimiting
 {
     /// <summary>
-    /// POST /auth/login. Le verrouillage de compte (Auth:MaxFailedAttempts/LockoutMinutes) protège
-    /// déjà un compte donné contre la force brute — cette limite, partitionnée par IP, protège contre
+    /// POST /auth/login. Le verrouillage progressif de compte (Auth:MaxFailedAttempts) protège déjà
+    /// un compte donné contre la force brute — cette limite, partitionnée par IP, protège contre
     /// le credential stuffing distribué sur de nombreux comptes depuis une même source.
     /// </summary>
     public const string LoginPolicyName = "auth-login";

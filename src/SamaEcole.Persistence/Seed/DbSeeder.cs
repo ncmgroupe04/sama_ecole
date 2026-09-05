@@ -31,7 +31,7 @@ public static class DbSeeder
 {
     /// <summary>
     /// Mot de passe commun aux comptes de démonstration. Respecte la politique du Volume 7 §2
-    /// (12 caractères minimum, majuscule, minuscule, chiffre, caractère spécial) : le login vérifie
+    /// (8 caractères minimum, majuscule, minuscule, chiffre, caractère spécial) : le login vérifie
     /// réellement le hash, un mot de passe trivial ne passerait pas la validation.
     /// </summary>
     public const string DemoPassword = "Motdepasse!Solide2026";

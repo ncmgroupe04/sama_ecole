@@ -56,11 +56,11 @@ public class SubmitRegistrationRequestValidatorTests
         // La politique partagée (PasswordPolicy) est déléguée : un seul cas suffit à prouver le
         // branchement, sa couverture complète (majuscule/chiffre/suite évidente/nom personnel…) est
         // déjà testée par PasswordPolicyTests.
-        var command = ValidCommand() with { DirectorPassword = "Ab1!ab1!" };
+        var command = ValidCommand() with { DirectorPassword = "Ab1!ab1" };
 
         var result = _validator.Validate(command);
 
-        result.Errors.Should().Contain(e => e.ErrorMessage.Contains("12 caractères"));
+        result.Errors.Should().Contain(e => e.ErrorMessage.Contains("8 caractères"));
     }
 
     [Fact]

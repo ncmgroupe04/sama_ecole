@@ -43,8 +43,8 @@ La sécurité est intégrée dès la conception (« Security by Design »), jama
 
 - **ASP.NET Core Identity** + **JWT Bearer** (Volume 4 §1).
 - Connexion par email + mot de passe.
-- **Politique de mot de passe :** minimum 12 caractères, au moins une majuscule, une minuscule, un chiffre, un caractère spécial ; interdiction des suites simples (`123456`, `password`) et des données personnelles évidentes (prénom, nom, nom de l'école).
-- Verrouillage du compte après 5 tentatives échouées consécutives (durée configurable).
+- **Politique de mot de passe :** minimum 8 caractères, au moins une majuscule, une minuscule, un chiffre, un caractère spécial ; interdiction des suites simples (`123456`, `password`) et des données personnelles évidentes (prénom, nom, nom de l'école).
+- Verrouillage PROGRESSIF du compte après 5 tentatives échouées consécutives : 1 minute au 5e échec, puis 1 heure au 8e (+3), et +1 heure par tranche de 3 échecs supplémentaires (11e → 2h, 14e → 3h…).
 - Le Directeur peut configurer l'expiration périodique des mots de passe et l'historique des anciens mots de passe (interdiction de réutilisation immédiate).
 
 ## 3. Gestion des rôles

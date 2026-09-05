@@ -51,9 +51,11 @@ public class LoginCommandHandler(
 
         if (user.LockoutEndAt is { } lockoutEnd && now < lockoutEnd)
         {
+            var retryAfterSeconds = (int)Math.Ceiling((lockoutEnd - now).TotalSeconds);
+
             logger.LogWarning("Échec de connexion : compte {UserId} verrouillé jusqu'à {LockoutEnd}.", user.Id, lockoutEnd);
             await TryAuditAsync(user, success: false, $"Compte verrouillé jusqu'à {lockoutEnd:u}.", now, cancellationToken);
-            throw new InvalidCredentialsException();
+            throw new AccountLockedException(retryAfterSeconds);
         }
 
         if (user.Status is not EntityStatus.Active)
@@ -85,7 +87,7 @@ public class LoginCommandHandler(
         if (!passwordHasher.Verify(user.PasswordHash, request.Password))
         {
             await authStore.RecordLoginAttemptAsync(
-                user.Id, success: false, settings.MaxFailedAttempts, settings.LockoutMinutes, cancellationToken);
+                user.Id, success: false, settings.MaxFailedAttempts, cancellationToken);
 
             logger.LogWarning("Échec de connexion : mot de passe invalide pour {UserId}.", user.Id);
             await TryAuditAsync(user, success: false, "Mot de passe invalide.", now, cancellationToken);
@@ -93,7 +95,7 @@ public class LoginCommandHandler(
         }
 
         await authStore.RecordLoginAttemptAsync(
-            user.Id, success: true, settings.MaxFailedAttempts, settings.LockoutMinutes, cancellationToken);
+            user.Id, success: true, settings.MaxFailedAttempts, cancellationToken);
 
         await TryAuditAsync(user, success: true, failureReason: null, now, cancellationToken);
 

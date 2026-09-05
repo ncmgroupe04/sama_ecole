@@ -5,7 +5,7 @@ namespace SamaEcole.Infrastructure.Security;
 
 /// <summary>
 /// Mot de passe initial du Directeur (ticket JGK-B01), conforme à docs/Volume_7_Security.md §2 :
-/// 12 caractères minimum, au moins une majuscule, une minuscule, un chiffre et un caractère spécial.
+/// 8 caractères minimum, au moins une majuscule, une minuscule, un chiffre et un caractère spécial.
 ///
 /// Tiré du CSPRNG (RandomNumberGenerator), jamais de Random : un mot de passe prédictible depuis
 /// l'horloge annulerait tout l'intérêt de le générer.

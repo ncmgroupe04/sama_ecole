@@ -107,7 +107,7 @@ public class AuthStoreTests : IAsyncLifetime
         for (var attempt = 0; attempt < 5; attempt++)
         {
             await store.RecordLoginAttemptAsync(
-                DirecteurA, success: false, maxFailedAttempts: 5, lockoutMinutes: 15, CancellationToken.None);
+                DirecteurA, success: false, maxFailedAttempts: 5, CancellationToken.None);
         }
 
         var user = await store.FindUserByEmailAsync("directeur.a@sama-ecole.sn", CancellationToken.None);
@@ -115,6 +115,8 @@ public class AuthStoreTests : IAsyncLifetime
         user!.AccessFailedCount.Should().Be(5);
         user.LockoutEndAt.Should().NotBeNull();
         user.LockoutEndAt!.Value.Should().BeAfter(DateTimeOffset.UtcNow);
+        user.LockoutEndAt!.Value.Should().BeCloseTo(DateTimeOffset.UtcNow.AddMinutes(1), TimeSpan.FromSeconds(5),
+            "le 1er palier du verrouillage progressif dure 1 minute");
     }
 
     [Fact]
@@ -126,7 +128,7 @@ public class AuthStoreTests : IAsyncLifetime
         for (var attempt = 0; attempt < 4; attempt++)
         {
             await store.RecordLoginAttemptAsync(
-                DirecteurA, success: false, maxFailedAttempts: 5, lockoutMinutes: 15, CancellationToken.None);
+                DirecteurA, success: false, maxFailedAttempts: 5, CancellationToken.None);
         }
 
         var user = await store.FindUserByEmailAsync("directeur.a@sama-ecole.sn", CancellationToken.None);
@@ -136,14 +138,74 @@ public class AuthStoreTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Eighth_Failure_Should_Lock_For_One_Hour()
+    {
+        // docs/Volume_7_Security.md §2 : 1er palier à 5 échecs (1 minute), 2e palier à 8 (+3) — 1 heure.
+        await using var db = _db.NewAppContext(schoolId: null);
+        var store = _db.NewAuthStore(db);
+
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            await store.RecordLoginAttemptAsync(DirecteurA, success: false, maxFailedAttempts: 5, CancellationToken.None);
+        }
+
+        var user = await store.FindUserByEmailAsync("directeur.a@sama-ecole.sn", CancellationToken.None);
+
+        user!.AccessFailedCount.Should().Be(8);
+        user.LockoutEndAt!.Value.Should().BeCloseTo(DateTimeOffset.UtcNow.AddHours(1), TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Eleventh_Failure_Should_Lock_For_Two_Hours()
+    {
+        // 3e palier à 11 (+3 de plus) : +1h par tranche de 3 échecs au-delà du 2e palier.
+        await using var db = _db.NewAppContext(schoolId: null);
+        var store = _db.NewAuthStore(db);
+
+        for (var attempt = 0; attempt < 11; attempt++)
+        {
+            await store.RecordLoginAttemptAsync(DirecteurA, success: false, maxFailedAttempts: 5, CancellationToken.None);
+        }
+
+        var user = await store.FindUserByEmailAsync("directeur.a@sama-ecole.sn", CancellationToken.None);
+
+        user!.AccessFailedCount.Should().Be(11);
+        user.LockoutEndAt!.Value.Should().BeCloseTo(DateTimeOffset.UtcNow.AddHours(2), TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task Sixth_Failure_Should_Not_Extend_The_Lockout_Yet()
+    {
+        // Entre deux paliers (6e, 7e échec), le compteur avance mais aucun NOUVEAU verrou n'est posé —
+        // seuls 5, 8, 11... déclenchent un calcul de durée.
+        await using var db = _db.NewAppContext(schoolId: null);
+        var store = _db.NewAuthStore(db);
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            await store.RecordLoginAttemptAsync(DirecteurA, success: false, maxFailedAttempts: 5, CancellationToken.None);
+        }
+
+        var afterFifth = await store.FindUserByEmailAsync("directeur.a@sama-ecole.sn", CancellationToken.None);
+        var lockoutAfterFifth = afterFifth!.LockoutEndAt;
+
+        await store.RecordLoginAttemptAsync(DirecteurA, success: false, maxFailedAttempts: 5, CancellationToken.None);
+
+        var afterSixth = await store.FindUserByEmailAsync("directeur.a@sama-ecole.sn", CancellationToken.None);
+
+        afterSixth!.AccessFailedCount.Should().Be(6);
+        afterSixth.LockoutEndAt.Should().Be(lockoutAfterFifth, "le 6e échec ne doit pas recalculer de verrou");
+    }
+
+    [Fact]
     public async Task Successful_Login_Should_Clear_Previous_Failures()
     {
         await using var db = _db.NewAppContext(schoolId: null);
         var store = _db.NewAuthStore(db);
 
-        await store.RecordLoginAttemptAsync(DirecteurA, false, 5, 15, CancellationToken.None);
-        await store.RecordLoginAttemptAsync(DirecteurA, false, 5, 15, CancellationToken.None);
-        await store.RecordLoginAttemptAsync(DirecteurA, true, 5, 15, CancellationToken.None);
+        await store.RecordLoginAttemptAsync(DirecteurA, false, 5, CancellationToken.None);
+        await store.RecordLoginAttemptAsync(DirecteurA, false, 5, CancellationToken.None);
+        await store.RecordLoginAttemptAsync(DirecteurA, true, 5, CancellationToken.None);
 
         var user = await store.FindUserByEmailAsync("directeur.a@sama-ecole.sn", CancellationToken.None);
 

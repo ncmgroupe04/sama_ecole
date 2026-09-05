@@ -51,16 +51,14 @@ public class AuthStore(ApplicationDbContext dbContext, TimeProvider timeProvider
         Guid userId,
         bool success,
         int maxFailedAttempts,
-        int lockoutMinutes,
         CancellationToken cancellationToken)
     {
         await using var command = await CreateCommandAsync(
-            "SELECT auth_touch_login(@userId, @success, @maxFailed, @lockoutMinutes)", cancellationToken);
+            "SELECT auth_touch_login(@userId, @success, @maxFailed)", cancellationToken);
 
         command.Parameters.AddWithValue("userId", userId);
         command.Parameters.AddWithValue("success", success);
         command.Parameters.AddWithValue("maxFailed", maxFailedAttempts);
-        command.Parameters.AddWithValue("lockoutMinutes", lockoutMinutes);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }

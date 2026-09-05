@@ -235,7 +235,6 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Environment.SetEnvironmentVariable("Jwt__SigningKey", SigningKey);
         Environment.SetEnvironmentVariable("Jwt__AccessTokenMinutes", "15");
         Environment.SetEnvironmentVariable("Auth__MaxFailedAttempts", "5");
-        Environment.SetEnvironmentVariable("Auth__LockoutMinutes", "15");
         Environment.SetEnvironmentVariable("Auth__RefreshTokenDays", "14");
 
         // La limite par défaut (5 requêtes / 5 min, appsettings.json) protège le formulaire public
@@ -296,7 +295,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                  {
                      "ConnectionStrings__Default", "ConnectionStrings__Migrations",
                      "Jwt__Issuer", "Jwt__Audience", "Jwt__SigningKey",
-                     "Jwt__AccessTokenMinutes", "Auth__MaxFailedAttempts", "Auth__LockoutMinutes",
+                     "Jwt__AccessTokenMinutes", "Auth__MaxFailedAttempts",
                      "Auth__RefreshTokenDays", "RateLimiting__Registration__PermitLimit",
                      "RateLimiting__Registration__WindowMinutes", "RateLimiting__Login__PermitLimit",
                      "RateLimiting__Login__WindowMinutes", "RateLimiting__PasswordReset__PermitLimit",

@@ -81,6 +81,52 @@ test('une adresse e-mail mal formée est rejetée (EMAIL_REGEX)', () => {
     assert.match(form.errors.directoremail, /invalide/);
 });
 
+test('un domaine e-mail sans TLD alphabétique valide est rejeté (contrôle strict du domaine)', () => {
+    const { form } = mountValidForm();
+    form.directorEmail = 'awa@monecole.c1';
+
+    assert.equal(form.validate(), false);
+    assert.match(form.errors.directoremail, /invalide/);
+});
+
+test('un nom complet contenant un chiffre est rejeté (isValidName)', () => {
+    const { form } = mountValidForm();
+    form.directorFullName = 'Awa123';
+
+    assert.equal(form.validate(), false);
+    assert.match(form.errors.directorfullname, /2 lettres/);
+});
+
+test('un nom complet d\'une seule lettre est rejeté (minimum 2 lettres)', () => {
+    const { form } = mountValidForm();
+    form.directorFullName = 'A';
+
+    assert.equal(form.validate(), false);
+    assert.match(form.errors.directorfullname, /2 lettres/);
+});
+
+test('un nom complet avec tiret et accents est accepté (isValidName)', () => {
+    const { form } = mountValidForm();
+    form.directorFullName = 'Ndèye-Awa Fall';
+
+    assert.equal(form.validate(), true);
+});
+
+test('un mot de passe de 8 caractères respectant toutes les règles est désormais accepté', () => {
+    const { form } = mountValidForm();
+    form.directorPassword = 'Kx7!mQ2p';
+
+    assert.equal(form.validate(), true);
+});
+
+test('un mot de passe de 7 caractères reste rejeté (minimum 8)', () => {
+    const { form } = mountValidForm();
+    form.directorPassword = 'Kx7!mQp';
+
+    assert.equal(form.validate(), false);
+    assert.match(form.errors.directorpassword, /8 caractères/);
+});
+
 test('soumission valide : la requête part et la référence de suivi s\'affiche', async () => {
     const calls = [];
     const fetchStub = async (url, init) => {

@@ -56,7 +56,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 HttpStatusCode.UnprocessableEntity,
                 "VALIDATION_ERROR",
                 "Une ou plusieurs erreurs de validation se sont produites.",
-                validationEx.Errors),
+                (object?)validationEx.Errors),
 
             // Doublon refusé par la base : la ligne existe déjà. Doit précéder le cas
             // ConcurrencyConflictException ci-dessous — dont il hérite — sinon il ne serait jamais
@@ -90,6 +90,15 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 "INVALID_CREDENTIALS",
                 credentialsEx.Message,
                 null),
+
+            // Blocage progressif anti-force-brute (docs/Volume_7_Security.md §2). Contrairement à
+            // InvalidCredentialsException ci-dessus, révéler ce statut n'ouvre pas d'énumération : le
+            // verrou ne se déclenche qu'après plusieurs échecs déjà commis sur CE compte.
+            AccountLockedException lockedEx => (
+                (HttpStatusCode)StatusCodes.Status429TooManyRequests,
+                "ACCOUNT_LOCKED",
+                lockedEx.Message,
+                (object?)new { retryAfterSeconds = lockedEx.RetryAfterSeconds }),
 
             // Refus de portée dont le message a été rédigé POUR l'écran (classe non assignée, dossier
             // hors périmètre, créneau d'un collègue) : on le renvoie tel quel, avec l'action
@@ -164,6 +173,11 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             logger.LogWarning(
                 "Conflit d'écriture ({Code}) sur {TechnicalDetail}. TraceId: {TraceId}",
                 code, conflict.TechnicalDetail, traceId);
+        }
+
+        if (exception is AccountLockedException accountLockedEx)
+        {
+            context.Response.Headers.RetryAfter = accountLockedEx.RetryAfterSeconds.ToString();
         }
 
         context.Response.ContentType = "application/json";

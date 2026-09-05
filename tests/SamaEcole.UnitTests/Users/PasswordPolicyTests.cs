@@ -15,7 +15,13 @@ public class PasswordPolicyTests
     [Fact]
     public void Too_Short_Should_Fail()
     {
-        PasswordPolicy.Validate("Ab1!ab1!").Should().Contain(e => e.Contains("12 caractères"));
+        PasswordPolicy.Validate("Ab1!ab1").Should().Contain(e => e.Contains("8 caractères"));
+    }
+
+    [Fact]
+    public void Exactly_Eight_Characters_Should_Not_Trigger_The_Length_Rule()
+    {
+        PasswordPolicy.Validate("Ab1!ab1!").Should().NotContain(e => e.Contains("8 caractères"));
     }
 
     [Fact]

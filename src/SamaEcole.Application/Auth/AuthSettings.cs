@@ -9,11 +9,12 @@ public record AuthSettings
     /// <summary>Durée de vie du refresh token. Défaut : 14 jours (.env.example / appsettings.json).</summary>
     public int RefreshTokenDays { get; init; } = 14;
 
-    /// <summary>Verrouillage après N échecs consécutifs — docs/Volume_7_Security.md §2.</summary>
+    /// <summary>
+    /// Seuil du PREMIER palier de verrouillage progressif — docs/Volume_7_Security.md §2. La durée
+    /// n'est plus configurable ici : 1 minute à ce seuil, puis +1 heure par tranche de 3 échecs
+    /// supplémentaires (calculé dans auth_touch_login, migration AddProgressiveLoginLockout).
+    /// </summary>
     public int MaxFailedAttempts { get; init; } = 5;
-
-    /// <summary>Durée du verrouillage, configurable (docs/Volume_7_Security.md §2).</summary>
-    public int LockoutMinutes { get; init; } = 15;
 
     /// <summary>
     /// Validité d'un lien de réinitialisation self-service. 20 minutes : assez pour relever sa boîte et

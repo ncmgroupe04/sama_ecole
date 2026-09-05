@@ -1,7 +1,7 @@
 namespace SamaEcole.Application.Users.Common;
 
 /// <summary>
-/// Politique de mot de passe (docs/Volume_7_Security.md §2) : minimum 12 caractères, au moins une
+/// Politique de mot de passe (docs/Volume_7_Security.md §2) : minimum 8 caractères, au moins une
 /// majuscule, une minuscule, un chiffre, un caractère spécial ; ni suite évidente ni donnée
 /// personnelle. Partagée entre la création de compte et la réinitialisation — les deux seuls
 /// endroits où un humain saisit un mot de passe (le mot de passe généré de JGK-B01 n'y est pas
@@ -14,8 +14,8 @@ public static class PasswordPolicy
 
     public static IEnumerable<string> Validate(string password, params string?[] personalTerms)
     {
-        if (password.Length < 12)
-            yield return "Le mot de passe doit contenir au moins 12 caractères.";
+        if (password.Length < 8)
+            yield return "Le mot de passe doit contenir au moins 8 caractères.";
 
         if (!password.Any(char.IsUpper))
             yield return "Le mot de passe doit contenir au moins une majuscule.";

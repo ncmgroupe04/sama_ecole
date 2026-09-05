@@ -122,7 +122,7 @@
  <div>
  <label for="user-password" class="form-label form-label-required">Mot de passe</label>
  <input id="user-password" type="text" x-model="newUser.password" required class="input-field font-mono">
- <p class="mt-1 text-xs text-slate-400">Minimum 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial.</p>
+ <p class="mt-1 text-xs text-slate-400">Minimum 8 caractères, avec majuscule, minuscule, chiffre et caractère spécial.</p>
  <p x-show="createErrors.password" x-cloak x-text="createErrors.password" class="field-error"></p>
  </div>
 
@@ -192,7 +192,7 @@
  <div>
  <label for="reset-password" class="form-label form-label-required">Nouveau mot de passe</label>
  <input id="reset-password" type="text" x-model="newPassword" required class="input-field font-mono">
- <p class="mt-1 text-xs text-slate-400">Minimum 12 caractères, avec majuscule, minuscule, chiffre et caractère spécial.</p>
+ <p class="mt-1 text-xs text-slate-400">Minimum 8 caractères, avec majuscule, minuscule, chiffre et caractère spécial.</p>
  <p x-show="passwordErrors.newpassword" x-cloak x-text="passwordErrors.newpassword" class="field-error"></p>
  </div>
 

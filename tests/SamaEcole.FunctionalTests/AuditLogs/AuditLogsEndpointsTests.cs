@@ -254,6 +254,14 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    /// <summary>Compte déjà verrouillé (blocage progressif anti-force-brute) : 429, pas 401.</summary>
+    private async Task<HttpResponseMessage> LoginExpectingLockedAsync(string email, string password)
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        response.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        return response;
+    }
+
     // Chaque test ci-dessous récupère le token du Directeur AVANT l'action sous test, puis le
     // réutilise pour lire le journal : se reconnecter APRÈS produirait sa propre entrée « Auth/Login »
     // et fausserait les assertions d'unicité/vacuité (la lecture du journal exige un Directeur connecté,
@@ -291,13 +299,21 @@ public class AuditLogsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLife
     {
         var directeur = await DirecteurTokenAsync();
 
-        // AuthApiFactory fixe Auth__MaxFailedAttempts=5 : la 5e tentative déclenche le verrou, la 6e
-        // tombe donc dans la branche « déjà verrouillé » du Handler.
+        // AuthApiFactory fixe Auth__MaxFailedAttempts=5 : la 5e tentative déclenche le verrou (1er
+        // palier, 1 minute), la 6e tombe donc dans la branche « déjà verrouillé » du Handler — 429,
+        // pas 401 (blocage progressif anti-force-brute).
         for (var i = 0; i < 5; i++)
         {
             await LoginExpectingUnauthorizedAsync(AuthApiFactory.SecretaireEmail, "mauvais-mot-de-passe");
         }
-        await LoginExpectingUnauthorizedAsync(AuthApiFactory.SecretaireEmail, "mauvais-mot-de-passe");
+        var locked = await LoginExpectingLockedAsync(AuthApiFactory.SecretaireEmail, "mauvais-mot-de-passe");
+
+        // 1er palier du blocage progressif (docs/Volume_7_Security.md §2) : verrouillage de 1 minute,
+        // durée restante annoncée au client via le corps ET l'en-tête standard Retry-After.
+        locked.Headers.RetryAfter.Should().NotBeNull();
+        var body = await locked.Content.ReadAsStringAsync();
+        body.Should().Contain("ACCOUNT_LOCKED");
+        body.Should().Contain("retryAfterSeconds");
 
         var logs = await GetAuditLogsAsync(directeur);
 

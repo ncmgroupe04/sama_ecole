@@ -53,7 +53,7 @@ dotnet run --project tools/SamaEcole.Tools -- seed-superadmin \
 Même rôle **propriétaire** requis que `migrate`, pour la même raison : `users` est sous RLS, et les
 fonctions SECURITY DEFINER du chemin de login (`provision_school_director` compris) n'ont aucune
 variante Super Admin. Le mot de passe suit la même politique que toute création de compte humaine
-(Volume_7 §2 — 12 caractères minimum, majuscule, minuscule, chiffre, caractère spécial) ; la commande
+(Volume_7 §2 — 8 caractères minimum, majuscule, minuscule, chiffre, caractère spécial) ; la commande
 le rejette sinon, avant tout accès à la base.
 
 Idempotente par e-mail : si le compte existe déjà, la commande ne fait rien et sort en `0` — jamais de

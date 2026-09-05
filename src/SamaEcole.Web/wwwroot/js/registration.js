@@ -16,18 +16,26 @@
 // Déclarés hors de l'IIFE ci-dessous car réutilisés par le composant Alpine `registrationForm`
 // (voir plus bas) : partager la même portée que window.registration évite un ReferenceError au
 // premier clic sur « Envoyer ma demande » (isSafeText, EMAIL_REGEX… hors de portée sinon).
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const SENEGAL_PHONE_REGEX = /^(?:\+221|00221)?\s?(?:77|76|78|70|75|33)(?:\s?\d){7}$/;
 const UNSAFE_TEXT_REGEX = /[<>]|javascript\s*:|&#/i;
+const NAME_REGEX = /^[A-Za-zÀ-ÖØ-öø-ÿ\s-]+$/;
 const FORBIDDEN_PASSWORD_SEQUENCES = ['123456', 'azerty', 'qwerty', 'password', 'motdepasse', 'abcdef'];
 
 const isSafeText = (value) => !UNSAFE_TEXT_REGEX.test(value);
+
+/** Prénom/nom : uniquement lettres (accents compris), espaces et tirets, au moins 2 lettres. */
+function isValidName(value) {
+    if (!NAME_REGEX.test(value)) return false;
+    const letterCount = (value.match(/[A-Za-zÀ-ÖØ-öø-ÿ]/g) || []).length;
+    return letterCount >= 2;
+}
 
 /** Reproduit PasswordPolicy.Validate (C#) : mêmes règles, mêmes messages. */
 function passwordPolicyErrors(password, personalTerms) {
     const errors = [];
 
-    if (password.length < 12) errors.push('Le mot de passe doit contenir au moins 12 caractères.');
+    if (password.length < 8) errors.push('Le mot de passe doit contenir au moins 8 caractères.');
     if (!/[A-Z]/.test(password)) errors.push('Le mot de passe doit contenir au moins une majuscule.');
     if (!/[a-z]/.test(password)) errors.push('Le mot de passe doit contenir au moins une minuscule.');
     if (!/[0-9]/.test(password)) errors.push('Le mot de passe doit contenir au moins un chiffre.');
@@ -134,8 +142,9 @@ document.addEventListener('alpine:init', () => {
 
             if (!this.directorFullName) {
                 errors.directorfullname = 'Le nom complet est obligatoire.';
-            } else if (!isSafeText(this.directorFullName)) {
-                errors.directorfullname = 'Le nom complet contient des caractères interdits.';
+            } else if (!isValidName(this.directorFullName)) {
+                errors.directorfullname =
+                    'Le nom complet doit contenir au moins 2 lettres, uniquement des lettres, espaces et tirets.';
             }
 
             if (!this.directorEmail) {
@@ -183,6 +192,19 @@ document.addEventListener('alpine:init', () => {
 
             this.errors = errors;
             return Object.keys(errors).length === 0;
+        },
+
+        /**
+         * Validation DYNAMIQUE au départ du champ (x-on:blur) : nettoie les espaces superflus puis
+         * revalide tout le formulaire, pour un retour immédiat sans attendre la soumission.
+         */
+        touch(field) {
+            // Jamais le mot de passe : un espace y est un caractère valide, le rogner changerait le
+            // secret saisi par l'utilisateur (même raisonnement que dans submit()).
+            if (field !== 'directorPassword' && typeof this[field] === 'string') {
+                this[field] = this[field].trim();
+            }
+            this.validate();
         },
 
         async submit() {

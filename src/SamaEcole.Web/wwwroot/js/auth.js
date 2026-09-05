@@ -302,7 +302,15 @@
 })();
 
 document.addEventListener('alpine:init', () => {
-    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+    /** Durée de blocage lisible : `retryAfterSeconds` vient de AccountLockedException (voir 429). */
+    function formatRetryAfter(seconds) {
+        if (seconds < 60) return `${seconds} s`;
+        const minutes = Math.ceil(seconds / 60);
+        if (minutes < 60) return `${minutes} min`;
+        return `${Math.ceil(minutes / 60)} h`;
+    }
 
     Alpine.data('loginForm', () => ({
         email: '',
@@ -332,6 +340,12 @@ document.addEventListener('alpine:init', () => {
             return Object.keys(errors).length === 0;
         },
 
+        /** Validation DYNAMIQUE au départ du champ e-mail (x-on:blur) : nettoie puis revalide. */
+        touchEmail() {
+            this.email = this.email.trim();
+            this.validate();
+        },
+
         async submit() {
             this.error = null;
             this.errors = {};
@@ -350,13 +364,24 @@ document.addEventListener('alpine:init', () => {
                 await window.auth.login(this.email, this.password);
                 window.location.assign(window.auth.landingUrl());
             } catch (err) {
-                // Le serveur renvoie le MÊME message pour un e-mail inconnu, un mot de passe faux et
-                // un compte verrouillé (LoginCommandHandler), sans `details` par champ (voir
-                // InvalidCredentialsException) : toFieldErrors retombe donc sur errors.global, jamais
-                // sur errors.email/errors.password — impossible d'en déduire lequel des deux est en
-                // cause, ce qui rouvrirait l'énumération de comptes que le serveur évite déjà.
-                this.errors = window.api.toFieldErrors(err, 'Connexion impossible. Vérifiez votre réseau et réessayez.');
-                this.error = this.errors.global || null;
+                if (err.code === 'ACCOUNT_LOCKED') {
+                    // 429 (blocage progressif anti-force-brute) : `details` porte { retryAfterSeconds },
+                    // pas un dictionnaire de champs — le laisser passer par toFieldErrors le ferait
+                    // traiter comme une erreur de champ « retryafterseconds » muette à l'écran (aucun
+                    // champ n'y est lié), et le bandeau global resterait vide. Cas à part, explicite.
+                    const seconds = err.details && err.details.retryAfterSeconds;
+                    this.error = seconds
+                        ? `Compte temporairement verrouillé. Réessayez dans ${formatRetryAfter(seconds)}.`
+                        : err.message;
+                } else {
+                    // Le serveur renvoie le MÊME message pour un e-mail inconnu et un mot de passe faux
+                    // (LoginCommandHandler), sans `details` par champ (voir InvalidCredentialsException) :
+                    // toFieldErrors retombe donc sur errors.global, jamais sur errors.email/errors.password
+                    // — impossible d'en déduire lequel des deux est en cause, ce qui rouvrirait
+                    // l'énumération de comptes que le serveur évite déjà.
+                    this.errors = window.api.toFieldErrors(err, 'Connexion impossible. Vérifiez votre réseau et réessayez.');
+                    this.error = this.errors.global || null;
+                }
                 this.password = '';
             } finally {
                 this.isSubmitting = false;

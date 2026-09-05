@@ -25,12 +25,16 @@ public interface IAuthStore
     /// </summary>
     Task<AuthUser?> FindActiveDirectorForSchoolAsync(Guid schoolId, CancellationToken cancellationToken);
 
-    /// <summary>Remet à zéro le compteur d'échecs (succès) ou l'incrémente et verrouille au besoin.</summary>
+    /// <summary>
+    /// Remet à zéro le compteur d'échecs (succès), ou l'incrémente et verrouille au besoin. Le
+    /// verrouillage est PROGRESSIF (docs/Volume_7_Security.md §2) : 1 minute au maxFailedAttempts-ième
+    /// échec, puis +1 heure par tranche de 3 échecs supplémentaires — calculé en base, la durée n'est
+    /// donc plus un paramètre d'entrée.
+    /// </summary>
     Task RecordLoginAttemptAsync(
         Guid userId,
         bool success,
         int maxFailedAttempts,
-        int lockoutMinutes,
         CancellationToken cancellationToken);
 
     Task StoreRefreshTokenAsync(Guid userId, string tokenHash, DateTimeOffset expiresAt, CancellationToken cancellationToken);
