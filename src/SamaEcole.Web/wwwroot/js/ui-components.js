@@ -10,43 +10,59 @@ window.closeAllModals = function() {
 };
 
 /**
- * Placement intelligent (auto-flip) d'un menu flottant. Ouvre vers le BAS par défaut ; bascule vers
- * le HAUT uniquement quand la place manque réellement dessous ET qu'il y en a davantage dessus.
+ * Position `fixed` (coordonnées VIEWPORT) d'un popover flottant — calendrier ou liste déroulante.
  * Partagé par selectField() (listes déroulantes — filtres Mois/Années, onglets…) et dateField()
- * (calendrier) : un menu ouvert près du pli n'est plus tronqué ni caché sous la fenêtre.
+ * (calendrier).
  *
- * La place disponible est mesurée contre le plus proche CONTENEUR QUI ROGNE (overflow auto / scroll
- * / hidden) — typiquement le corps défilant d'une modale — et non la seule fenêtre : un popover
- * `absolute` enfermé dans une modale est coupé par ce conteneur bien avant d'atteindre le bord de
- * l'écran. C'était la cause des calendriers tronqués dans « Nouveau prêt » / « Nouveau mouvement ».
+ * REMPLACE un ancien mécanisme `position: absolute` + classe CSS `top-full`/`bottom-full`, qui ne
+ * protégeait le popover QUE contre un dépassement du bas de l'ÉCRAN. Un élément `absolute` reste
+ * physiquement DANS son ancêtre positionné : un ancêtre qui rogne le débordement (`overflow-y-auto`
+ * — le corps défilant d'une <modal-shell>, typiquement) le découpe bien avant qu'il n'atteigne le
+ * bord de l'écran, quel que soit le côté choisi. C'était la cause des calendriers/menus tronqués
+ * (haut OU bas coupé, en-tête mois/année invisible) dès qu'un champ se trouvait vers le bas d'une
+ * modale ou d'une page qui défile.
+ *
+ * `position: fixed` échappe à ce rognage par construction — même principe que <modal-shell>, voir
+ * ModalShellTagHelper — le popover n'est plus jamais tronqué par la modale ou le panneau qui
+ * l'héberge, seulement par le VIEWPORT lui-même, qu'on borne nous-mêmes ici : `maxHeight` clampe le
+ * popover à la place réellement disponible (il défile alors EN INTERNE, jamais invisible en silence)
+ * et `left`/`width` le ramènent dans l'écran horizontalement.
+ *
+ * Recalculée à l'OUVERTURE seulement (pas en continu) : le composant hôte ferme le popover au
+ * défilement d'un ancêtre (voir closeOnScroll ci-dessous) plutôt que de re-suivre une ancre qui
+ * bouge — plus simple, et un popover qui suit le doigt pendant qu'on défile n'apporte rien ici.
  *
  * @param {Element} anchorEl Élément racine du composant (le déclencheur mesuré).
- * @param {number} estimatedMenuHeight Hauteur approximative du menu, en pixels.
- * @returns {'top'|'bottom'}
+ * @param {number} menuHeight Hauteur approximative du popover à pleine place, en pixels.
+ * @param {number} [menuWidth] Largeur fixe voulue ; omis, la largeur suit celle du déclencheur
+ *   (reproduit l'ancien `w-full` d'un select-field relatif à son ancre).
+ * @returns {{top:number, left:number, width:number, maxHeight:number}} en pixels viewport.
  */
-window.computeFlipPlacement = function (anchorEl, estimatedMenuHeight) {
-    if (!anchorEl || typeof anchorEl.getBoundingClientRect !== 'function') return 'bottom';
-    const rect = anchorEl.getBoundingClientRect();
-    const needed = estimatedMenuHeight || 288;
+window.computeFloatingPosition = function (anchorEl, menuHeight, menuWidth) {
+    const margin = 8;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const needed = menuHeight || 300;
 
-    // Bornes de la zone visible : la fenêtre, resserrée par chaque ancêtre qui rogne le débordement
-    // (le corps d'une modale, un panneau scrollable…). L'intersection de tous donne la zone où le
-    // popover restera réellement visible.
-    let clipTop = 0;
-    let clipBottom = window.innerHeight || document.documentElement.clientHeight || 0;
-
-    for (let el = anchorEl.parentElement; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
-        const overflowY = window.getComputedStyle(el).overflowY;
-        if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'hidden') {
-            const r = el.getBoundingClientRect();
-            clipTop = Math.max(clipTop, r.top);
-            clipBottom = Math.min(clipBottom, r.bottom);
-        }
+    if (!anchorEl || typeof anchorEl.getBoundingClientRect !== 'function') {
+        return { top: margin, left: margin, width: menuWidth || 300, maxHeight: needed };
     }
 
-    const spaceBelow = clipBottom - rect.bottom;
-    const spaceAbove = rect.top - clipTop;
-    return (spaceBelow < needed && spaceAbove > spaceBelow) ? 'top' : 'bottom';
+    const rect = anchorEl.getBoundingClientRect();
+    const spaceBelow = viewportHeight - rect.bottom - margin;
+    const spaceAbove = rect.top - margin;
+    // Ouvre vers le bas par défaut ; bascule vers le haut seulement quand la place manque réellement
+    // dessous ET qu'il y en a davantage dessus — sinon, autant garder le sens le plus prévisible.
+    const openUp = spaceBelow < needed && spaceAbove > spaceBelow;
+
+    const available = Math.max(160, openUp ? spaceAbove : spaceBelow);
+    const maxHeight = Math.min(needed, available);
+    const top = openUp ? Math.max(margin, rect.top - maxHeight) : rect.bottom;
+
+    const width = menuWidth || rect.width;
+    const left = Math.min(Math.max(margin, rect.left), viewportWidth - margin - width);
+
+    return { top, left, width, maxHeight };
 };
 
 /**
@@ -109,8 +125,10 @@ document.addEventListener('alpine:init', () => {
      */
     Alpine.data('dateField', (initialIso) => ({
         open: false,
-        // Placement vertical du popover, recalculé à chaque ouverture (auto-flip haut/bas).
-        placement: 'bottom',
+        // Position `fixed` (top/left/width/max-height en px), recalculée à chaque ouverture — voir
+        // window.computeFloatingPosition. Chaîne vide tant que le popover n'a jamais été ouvert :
+        // x-show le garde caché avant ça, aucun flash à la position (0,0) par défaut.
+        floatingStyle: '',
         viewYear: null,
         viewMonth: null,
         weekdayLabels: ['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'],
@@ -142,6 +160,11 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             this.setView(initialIso);
+            // Référence STABLE (une seule fonction pour toute la vie du composant) : addEventListener
+            // et removeEventListener doivent recevoir exactement la même référence pour que le retrait
+            // fonctionne — une fonction fléchée recréée à chaque appel de toggle() ne se retirerait
+            // jamais, laissant une fuite d'écouteurs à chaque ouverture/fermeture.
+            this.boundClose = () => this.close();
         },
 
         /**
@@ -174,21 +197,27 @@ document.addEventListener('alpine:init', () => {
          *  x-show) garde sinon la navigation du dernier enregistrement affiché. */
         toggle(currentIso) {
             if (this.open) {
-                this.open = false;
+                this.close();
                 return;
             }
             this.setView(currentIso);
-            this.placement = window.computeFlipPlacement(this.$root, 380);
+            // AVANT d'afficher (pas de $nextTick) : $root, le déclencheur, est déjà dans le DOM à sa
+            // position finale — inutile d'attendre. Calculer après aurait affiché le popover une
+            // frame à sa position précédente (ou vide, à la toute première ouverture) avant de
+            // sauter à la bonne place.
+            const pos = window.computeFloatingPosition(this.$root, 380, 300);
+            this.floatingStyle = `top:${pos.top}px; left:${pos.left}px; width:${pos.width}px; max-height:${pos.maxHeight}px;`;
             this.open = true;
-            // Repli : si, malgré le flip, le calendrier dépasse encore de son conteneur (modale très
-            // courte), on l'y ramène par un défilement minimal — jamais un saut de toute la page.
-            this.$nextTick(() =>
-                this.$refs.calendarPopover?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+            // position:fixed ne suit pas le défilement d'un ancêtre (corps de modale, panneau) : on
+            // ferme plutôt que de laisser le popover figé au-dessus d'un autre champ. capture:true
+            // attrape aussi le défilement d'un ancêtre scrollable, qui ne bouillonne pas jusqu'à
+            // window en phase normale.
+            window.addEventListener('scroll', this.boundClose, true);
         },
 
-        /** Classes de position du popover selon le placement calculé (auto-flip). */
-        get menuPlacementClass() {
-            return this.placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2';
+        close() {
+            this.open = false;
+            window.removeEventListener('scroll', this.boundClose, true);
         },
 
         get days() {
@@ -299,9 +328,14 @@ document.addEventListener('alpine:init', () => {
         open: false,
         search: '',
         options: [],
-        // Placement vertical du menu, recalculé à chaque ouverture (auto-flip haut/bas selon la
-        // place disponible dans le viewport).
-        placement: 'bottom',
+        // Position `fixed` (top/left/width/max-height en px), recalculée à chaque ouverture — voir
+        // window.computeFloatingPosition et le commentaire équivalent de dateField() ci-dessus.
+        floatingStyle: '',
+
+        init() {
+            // Référence STABLE : voir le commentaire équivalent de dateField.init().
+            this.boundClose = () => this.close();
+        },
 
         get filteredOptions() {
             const query = this.search.trim().toLowerCase();
@@ -309,22 +343,27 @@ document.addEventListener('alpine:init', () => {
             return this.options.filter((option) => option.label.toLowerCase().includes(query));
         },
 
-        /** Classes de position du menu selon le placement calculé (auto-flip). */
-        get menuPlacementClass() {
-            return this.placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2';
-        },
-
         toggle() {
-            this.open = !this.open;
             if (this.open) {
-                this.placement = window.computeFlipPlacement(this.$root, 300);
-                this.search = '';
-                this.$nextTick(() => this.$refs.search?.focus());
+                this.close();
+                return;
             }
+            // AVANT d'afficher (pas de $nextTick) : voir le commentaire équivalent de dateField.toggle().
+            const pos = window.computeFloatingPosition(this.$root, 300);
+            this.floatingStyle = `top:${pos.top}px; left:${pos.left}px; width:${pos.width}px; max-height:${pos.maxHeight}px;`;
+            this.open = true;
+            this.search = '';
+            // Le champ de recherche, lui, n'existe dans le DOM qu'une fois `open` vrai (x-show) :
+            // il lui faut bien le prochain tick avant de pouvoir recevoir le focus.
+            this.$nextTick(() => this.$refs.search?.focus());
+            // position:fixed ne suit pas le défilement d'un ancêtre : voir le commentaire équivalent
+            // de dateField.toggle().
+            window.addEventListener('scroll', this.boundClose, true);
         },
 
         close() {
             this.open = false;
+            window.removeEventListener('scroll', this.boundClose, true);
         },
 
         labelFor(value) {

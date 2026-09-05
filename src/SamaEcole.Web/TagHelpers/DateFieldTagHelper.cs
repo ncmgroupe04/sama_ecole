@@ -97,10 +97,10 @@ public class DateFieldTagHelper : TagHelper
                     </button>
                 </div>
 
-                <div x-show="open" x-cloak x-ref="calendarPopover" x-on:click.outside="open = false" x-on:keydown.escape="open = false"
+                <div x-show="open" x-cloak x-on:click.outside="close()" x-on:keydown.escape="close()"
                      x-transition:enter="ease-out duration-150" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                     :class="menuPlacementClass"
-                     class="absolute z-30 w-[300px] rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100">
+                     :style="floatingStyle"
+                     class="fixed z-30 w-[300px] overflow-y-auto rounded-2xl bg-white p-4 shadow-xl ring-1 ring-gray-100">
                     <div class="flex items-center justify-between gap-1 pb-3 mb-2 border-b border-gray-100">
                         <button type="button" x-on:click="prevMonth()" aria-label="Mois précédent"
                                 class="p-1.5 rounded-full text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors shrink-0">
@@ -133,7 +133,7 @@ public class DateFieldTagHelper : TagHelper
                     <div class="grid grid-cols-7 gap-y-1 text-center text-sm">
                         <template x-for="day in days" :key="day.iso">
                             <button type="button" :disabled="!day.currentMonth"
-                                    x-on:click="day.currentMonth && ({{Model}} = day.iso, open = false)"
+                                    x-on:click="day.currentMonth && ({{Model}} = day.iso, close())"
                                     :class="{
                                         'text-gray-300 cursor-default': !day.currentMonth,
                                         'text-gray-900 hover:bg-gray-50': day.currentMonth && {{Model}} !== day.iso,
@@ -146,7 +146,7 @@ public class DateFieldTagHelper : TagHelper
                     </div>
 
                     <div class="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-                        <button type="button" x-on:click="open = false" class="btn-primary px-4 py-2 text-sm">Terminé</button>
+                        <button type="button" x-on:click="close()" class="btn-primary px-4 py-2 text-sm">Terminé</button>
                     </div>
                 </div>
             </div>
