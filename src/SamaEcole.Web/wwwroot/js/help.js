@@ -80,6 +80,56 @@
                     ]
                 },
                 {
+                    id: 'panneau-parametres',
+                    title: 'Le panneau Paramètres — ses onze sections',
+                    location: 'Paramètres',
+                    href: '/parametres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "L'écran Paramètres regroupe tout ce que l'établissement configure une fois pour toutes. Une barre " +
+                        "d'onglets horizontale défilante en tête donne accès à onze sections : Profil de l'établissement ; " +
+                        "Intégration étatique (SIMEN) ; Formats & signatures officielles ; Années scolaires ; Notation & " +
+                        "mentions ; Mensualités & autorisations de caisse ; Facturation & historique ; Paramètres système ; " +
+                        "Utilisateurs & rôles ; Journal d'audit ; Notifications SMS. L'onglet visible est rappelé dans " +
+                        "l'adresse (?tab=…), ce qui rend chaque section partageable par un lien direct, sans rechargement.",
+                    objectif:
+                        "Rassembler en un seul écran des réglages qui, dispersés, seraient introuvables — et n'exposer chaque " +
+                        "section qu'aux rôles concernés. Pour la direction, c'est le tableau de commande de l'établissement : " +
+                        "identité imprimée sur les documents, seuils de mention, mensualités, délégations de droits, sécurité de " +
+                        "session, et journal de tout ce qui a été modifié.",
+                    probleme:
+                        "Quand les réglages sont éparpillés — un dans l'écran des notes, un autre dans celui des frais, un " +
+                        "troisième nulle part —, personne ne sait plus où se trouve celui qu'il cherche, ni qui a le droit d'y " +
+                        "toucher. Les délégations de droits, en particulier, se donnent alors verbalement et ne se retrouvent " +
+                        "jamais.",
+                    procedure: [
+                        "Profil de l'établissement : nom, adresse, ville, logo, mentions légales, description, et publication dans l'annuaire public.",
+                        "Intégration étatique (SIMEN) : nom de l'établissement sur le bulletin, code établissement national, coordonnées GPS, rattachement IA/IEF — indispensables aux exports Planète et STATEDUC.",
+                        "Formats & signatures officielles : gabarits de matricule, signatures numérisées (Directeur, Secrétariat, Caissier, Surveillant Général) et cachet officiel apposés sur les PDF.",
+                        "Années scolaires : création, activation et clôture des exercices, découpage en trimestres (fiche dédiée « Ouverture et clôture d'une année académique »).",
+                        "Notation & mentions : rappel du barème automatique par cycle, seuils de mention du bulletin, et délégation « le Secrétariat gère la configuration des notes ».",
+                        "Mensualités & autorisations de caisse : nombre de mensualités par an, et deux interrupteurs réservés au Directeur — « la Finance peut modifier les montants de frais », « la Finance peut supprimer des frais ».",
+                        "Facturation & historique : formule d'abonnement Unikol de l'établissement et historique des paiements d'abonnement (Directeur).",
+                        "Paramètres système : format des dates, délai de déconnexion automatique, type d'établissement (Privé / Public — un changement masque ou révèle le module Finance), et la Zone de danger (réinitialisation en mode bac à sable, passage en mode réel).",
+                        "Utilisateurs & rôles : création des comptes du personnel et attribution des rôles (Directeur).",
+                        "Journal d'audit : registre consultable de toutes les opérations sensibles — auteur, date, valeur antérieure (Directeur).",
+                        "Notifications SMS : expéditeur, gabarits et suivi des envois — section de la formule Premium, visible hors formule avec un badge (Directeur)."
+                    ],
+                    impacts: [
+                        "Documents officiels : nom, logo, mentions légales, signatures et cachet proviennent d'ici et s'impriment sur reçus, attestations et bulletins.",
+                        "Navigation : le type d'établissement (Paramètres système) fait apparaître ou disparaître les menus Finance et Caisse pour tout le personnel.",
+                        "Droits : les délégations de « Notation & mentions » et de « Mensualités & autorisations de caisse » sont écrites par le Directeur seul et lues en direct par les écrans Notes et Frais.",
+                        "Visibilité : un rôle qui n'a pas accès à une section ne voit pas son onglet — Facturation, Utilisateurs, Journal d'audit et Notifications SMS sont réservés au Directeur.",
+                        "Écriture réservée : hors Directeur, les autres rôles consultent les valeurs en lecture seule ; l'API refuse toute modification (403)."
+                    ],
+                    recommandations: [
+                        "Renseignez Profil, Formats & signatures et Intégration étatique AVANT la première édition de documents de l'année : un logo ou un cachet ajouté après coup ne réécrit pas les PDF déjà remis.",
+                        "N'accordez une délégation (notation, frais) que lorsqu'elle est réellement nécessaire, et retirez-la quand elle ne l'est plus : chaque interrupteur activé élargit ce qu'un rôle peut faire sans contrôle.",
+                        "Le type d'établissement (Privé / Public) n'est pas un réglage anodin : il masque des modules entiers. Ne le changez qu'en connaissance de cause.",
+                        "Après tout incident, ouvrez le Journal d'audit plutôt que d'interroger les agents : il rétablit la chronologie exacte sans mettre personne en cause."
+                    ]
+                },
+                {
                     id: 'annee-scolaire',
                     title: "Ouverture et clôture d'une année académique",
                     location: 'Paramètres › Années scolaires',
@@ -168,7 +218,7 @@
                 {
                     id: 'mode-sandbox-golive',
                     title: 'Mode bac à sable et passage en exploitation réelle',
-                    location: 'Paramètres › Sécurité — Zone de danger',
+                    location: 'Paramètres › Paramètres système — Zone de danger',
                     href: '/parametres?tab=securite',
                     roles: ['Directeur'],
                     definition:
@@ -189,7 +239,7 @@
                         "vrais, ou renonce purement à essayer de peur de devoir tout nettoyer à la main " +
                         "avant l'ouverture officielle.",
                     procedure: [
-                        "Tant que l'établissement est en mode bac à sable, ouvrez Paramètres › Sécurité pour retrouver la Zone de danger.",
+                        "Tant que l'établissement est en mode bac à sable, ouvrez Paramètres › Paramètres système pour retrouver la Zone de danger, tout en bas de la section.",
                         "« Réinitialiser l'école » efface élèves, notes, bulletins et transactions de test — mais conserve les comptes du personnel, la fiche établissement, les années scolaires, les classes, les matières, les enseignants, le barème des frais et le journal d'audit.",
                         "Le jour où l'établissement est prêt, cliquez sur « Passer en mode réel ».",
                         "Une modale rappelle que la bascule est définitive et que la réinitialisation ne sera plus disponible ensuite.",
@@ -357,7 +407,7 @@
                         "Renseignez l'état civil, le téléphone, l'adresse électronique et la spécialité. Le matricule est attribué automatiquement à l'enregistrement, jamais à l'ouverture du formulaire.",
                         "Précisez la nature du rattachement — permanent ou vacataire — ainsi que les éléments contractuels utiles à la paie.",
                         "Depuis la fiche détaillée, ajoutez les affectations : pour chaque matière enseignée, désignez la ou les classes concernées.",
-                        "Créez, si nécessaire, le compte utilisateur associé depuis Paramètres › Utilisateurs, en lui attribuant le rôle « Enseignant ».",
+                        "Créez, si nécessaire, le compte utilisateur associé depuis Paramètres › Utilisateurs & rôles, en lui attribuant le rôle « Enseignant ».",
                         "Un départ se traduit par l'archivage de la fiche : l'historique des notes saisies et des heures pointées demeure intégralement conservé."
                     ],
                     impacts: [
@@ -413,13 +463,14 @@
                         "document à l'autre et les doublons créés par deux agents travaillant simultanément. Ces défauts se " +
                         "révèlent au pire moment : à l'édition des bulletins ou lors de l'inscription aux examens officiels.",
                     procedure: [
-                        "Ouvrez Gestion Scolaire › Élèves, puis cliquez sur « Nouvel élève ».",
+                        "Ouvrez Gestion Scolaire › Élèves, puis cliquez sur « Ajouter un élève ».",
                         "Recherchez d'abord le nom dans le registre existant : cette précaution élémentaire évite la quasi-totalité des doublons.",
                         "Saisissez l'état civil en le recopiant sur l'extrait de naissance, orthographe et accents compris — c'est cette graphie qui figurera sur tous les documents officiels.",
                         "Renseignez le tuteur légal : nom, lien de parenté, téléphone et adresse. Ce numéro est celui qui recevra les notifications par SMS ou WhatsApp.",
                         "Ajoutez la photographie de l'élève : elle est automatiquement compressée avant transmission et alimente la carte scolaire.",
                         "Enregistrez. Le matricule est généré dans la transaction même, ce qui garantit l'absence de trou et de collision dans la numérotation.",
-                        "Procédez ensuite à l'inscription proprement dite : sélectionnez la classe et consultez le panneau « Frais », qui n'est qu'une aide au calcul — aucun encaissement ne s'y fait —, puis validez.",
+                        "À l'enregistrement, la fenêtre « Élève ajouté » propose trois suites : « Inscrire maintenant » ouvre l'écran Inscriptions déjà pré-réglé pour cet élève ; « Ajouter un autre » enchaîne sur une nouvelle fiche ; « Plus tard » referme sans inscrire — la fiche existe alors à l'annuaire, mais l'élève n'a AUCUNE inscription pour l'année active.",
+                        "Pour inscrire dans la foulée, choisissez « Inscrire maintenant » : sélectionnez la classe et consultez le panneau « Frais », qui n'est qu'une aide au calcul — aucun encaissement ne s'y fait —, puis validez.",
                         "Éditez et remettez à la famille l'attestation d'inscription au format PDF, puis orientez-la vers la Caisse pour le règlement."
                     ],
                     impacts: [
@@ -427,14 +478,63 @@
                         "Échéancier : les échéances de règlement sont établies à partir du barème de la classe.",
                         "Classe : l'effectif de la classe s'accroît immédiatement et se confronte à la capacité de la salle affectée.",
                         "Notes : l'élève apparaît dès la validation dans les listes de saisie des notes et dans les feuilles d'appel.",
+                        "« Plus tard » : une fiche seule ne vaut pas inscription — l'élève reste hors des effectifs, des frais et des présences tant qu'il n'est pas inscrit pour l'année active. Il se retrouve dans la vue « Non inscrits » de la liste (voir la fiche « Inscription différée »).",
                         "Documents : l'attestation d'inscription et la carte scolaire sont produites à partir de cet état civil ; le reçu de paiement, lui, est délivré par la Caisse lors du règlement."
                     ],
                     recommandations: [
                         "N'ouvrez jamais deux formulaires de création simultanément sur deux postes pour le même élève.",
                         "Le matricule n'est jamais réservé à l'avance : un formulaire abandonné ne consomme aucun numéro. Ne cherchez donc pas à « garder » un matricule.",
+                        "Si la classe définitive n'est pas encore arrêtée, choisissez « Plus tard » sans crainte : la vue « Non inscrits » de la liste garde l'élève sous la main, avec un bouton « Inscrire cette année » qui l'inscrit en un clic le moment venu.",
                         "Une erreur d'état civil se corrige par la fiche élève, et la correction est historisée. Ne créez jamais un second élève pour rectifier le premier.",
                         "Le secrétariat n'encaisse rien : après l'inscription, la famille se présente à la Caisse, qui constate le versement et délivre le reçu portant la mention réglementaire invitant à le conserver.",
                         "Contrôlez le numéro de téléphone du tuteur au moment de la saisie : un numéro erroné rend inopérante toute la chaîne de relance."
+                    ]
+                },
+                {
+                    id: 'inscription-differee',
+                    title: 'Inscription différée : « Plus tard », vue « Non inscrits » et « Inscrire cette année »',
+                    location: 'Gestion Scolaire › Élèves — vue « Non inscrits » et fiche élève',
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Créer une fiche élève et l'inscrire pour l'année active sont DEUX actes distincts. Le premier ajoute " +
+                        "l'enfant à l'annuaire de l'établissement ; le second le rattache à une année, une classe et un barème. " +
+                        "Quand on répond « Plus tard » à la fenêtre « Élève ajouté », la fiche existe seule : l'élève est " +
+                        "enregistré mais NON INSCRIT. La liste des élèves offre alors un interrupteur à trois positions — " +
+                        "« Inscrits cette année » (par défaut), « Non inscrits », « Tous les élèves » — et un raccourci " +
+                        "« Inscrire cette année » qui ouvre l'écran Inscriptions déjà pré-réglé pour cet élève, sans nouveau " +
+                        "matricule (chemin Réinscription : la fiche existe déjà).",
+                    objectif:
+                        "Permettre au secrétariat d'enregistrer un enfant dès que son dossier arrive, sans attendre que sa classe " +
+                        "soit tranchée ni que les frais soient reconduits — puis de retrouver sans effort tous ceux qui restent à " +
+                        "inscrire et de les traiter un par un, en un clic. Pour la direction, c'est la garantie qu'un élève accueilli " +
+                        "n'est jamais perdu de vue entre son admission et son inscription effective.",
+                    probleme:
+                        "Sans distinction entre « fiche créée » et « inscrit », soit le secrétariat invente une classe provisoire " +
+                        "pour pouvoir enregistrer l'élève — et fausse aussitôt l'effectif et les frais —, soit il note le nom sur un " +
+                        "papier en attendant, et l'oublie. Les élèves accueillis mais non inscrits deviennent alors invisibles : " +
+                        "ils ne réapparaissent qu'au moment des bulletins ou des examens, quand il est trop tard pour régulariser.",
+                    procedure: [
+                        "À la création d'une fiche, la fenêtre « Élève ajouté » rappelle que l'élève n'est pas encore inscrit et propose « Inscrire maintenant », « Ajouter un autre » ou « Plus tard ». « Plus tard » referme sans inscrire.",
+                        "Un bandeau ambré en tête de la liste Élèves annonce le nombre d'élèves ajoutés mais non inscrits pour l'année active, et renvoie vers la vue qui les isole.",
+                        "Dans la barre de filtres, l'interrupteur « Inscrits cette année / Non inscrits / Tous les élèves » borne la liste : « Non inscrits » (segment rouge) ne montre QUE les élèves de l'annuaire sans inscription vivante pour l'année active.",
+                        "Sur chaque ligne de la vue « Non inscrits », le bouton « Inscrire cette année » ouvre l'écran Inscriptions pré-réglé (élève déjà sélectionné, mode Réinscription) : il ne reste qu'à choisir la classe et valider.",
+                        "Depuis la fiche d'un élève non inscrit, un bandeau « Élève non inscrit pour [année active] » affiche le même bouton « Inscrire maintenant ». La pastille d'en-tête indique alors « Non inscrit » au lieu de « Inscrit ».",
+                        "Une fois l'inscription validée, l'élève quitte la vue « Non inscrits », entre dans les effectifs, son échéancier est créé et il apparaît en Caisse, aux notes et aux présences."
+                    ],
+                    impacts: [
+                        "Effectifs, frais, présences : un élève non inscrit n'y figure pas — c'est voulu, et c'est pourquoi le bandeau ambré le signale plutôt que de le laisser silencieusement absent.",
+                        "Aucun nouveau matricule : « Inscrire cette année » passe par le chemin Réinscription ; la fiche et son matricule d'origine sont conservés.",
+                        "Inscriptions : le raccourci ne fait que pré-remplir l'écran — la classe, le contrôle du barème et la validation restent identiques à une réinscription ordinaire.",
+                        "Fiche élève : la pastille « Inscrit » / « Non inscrit » et le bandeau sont dérivés de l'historique scolaire chargé, jamais d'un statut écrit à part — ils se mettent à jour dès l'inscription faite.",
+                        "Aucun appel réseau supplémentaire : la vue « Non inscrits » et la bannière reposent sur les données déjà chargées (liste et fiche)."
+                    ],
+                    recommandations: [
+                        "Utilisez « Plus tard » chaque fois qu'un doute subsiste sur la classe : mieux vaut un élève clairement « non inscrit » qu'un élève rangé dans une mauvaise classe « pour le faire entrer quelque part ».",
+                        "En début de campagne, passez la liste en vue « Non inscrits » à intervalle régulier : c'est la liste de travail des inscriptions restant à faire.",
+                        "N'activez la nouvelle année et ne reconduisez les barèmes qu'ensuite : une inscription enregistrée avant le barème se retrouve sans montant dû.",
+                        "Le bouton « Inscrire cette année » ne dispense pas du contrôle du montant et de l'échéancier sur l'écran Inscriptions : il fait gagner la recherche de l'élève, pas la vérification.",
+                        "Un élève créé par pure erreur de saisie et jamais inscrit se supprime depuis sa fiche (la fiche est archivée) ; ne le laissez pas encombrer indéfiniment la vue « Non inscrits »."
                     ]
                 },
                 {
@@ -703,7 +803,7 @@
                         "hétérogènes mal ramenés à une échelle commune et de rangs disputés en conseil de classe. Chaque " +
                         "réclamation d'un parent impose alors de refaire le calcul devant lui.",
                     procedure: [
-                        "Définissez les seuils de mention dans Paramètres › Configuration : libellé et moyenne minimale, exprimée sur vingt.",
+                        "Définissez les seuils de mention dans Paramètres › Notation & mentions : libellé et moyenne minimale, exprimée sur vingt.",
                         "Saisissez les notes : les moyennes, les totaux et le rang se recalculent à chaque enregistrement.",
                         "Consultez la synthèse de la classe pour vérifier la cohérence d'ensemble avant le conseil.",
                         "APPRÉCIATIONS : le moteur du bulletin propose une distinction à partir de la moyenne générale (Félicitations à partir de 16, Tableau d'honneur à partir de 14, Encouragements à partir de 12) ; le conseil des professeurs la reprend, la corrige, ou choisit « Sans distinction » — sa décision prévaut TOUJOURS sur la proposition automatique, jamais l'inverse.",
@@ -786,46 +886,60 @@
                 },
                 {
                     id: 'encaissement',
-                    title: 'Encaissement au guichet et reçus de paiement',
+                    title: 'Encaissement au guichet, guichet rapide et reçus de paiement',
                     location: 'Comptabilité › Caisse (Encaissements)',
                     href: '/caisse',
-                    roles: ['Directeur', 'Finance'],
+                    roles: ['Directeur', 'Secrétariat', 'Finance'],
                     definition:
                         "Acte de caisse par lequel un versement de la famille est imputé sur le solde d'une inscription. " +
                         "L'inscription elle-même n'encaisse rien : tout versement, y compris le tout premier, se constate " +
-                        "ici. Chaque encaissement donne lieu à un reçu numéroté, édité au format PDF, portant la mention " +
-                        "réglementaire invitant les parents à conserver soigneusement leur reçu après paiement.",
+                        "ici. Deux chemins mènent au même résultat. Le GUICHET RAPIDE — une modale qui s'ouvre d'elle-même " +
+                        "dès qu'on sélectionne un élève ayant des frais échus — présente une case à cocher par frais dû, " +
+                        "toutes cochées, et produit en un geste un unique reçu ventilé. Le PANNEAU DÉTAILLÉ, accessible " +
+                        "derrière « Annuler », garde l'échéancier ligne à ligne, le règlement d'un montant libre et " +
+                        "l'historique des versements, pour les cas particuliers. Chaque encaissement donne lieu à un reçu " +
+                        "numéroté au format PDF, portant la mention réglementaire invitant les parents à conserver leur reçu.",
                     objectif:
                         "Constater sans délai tout versement, en délivrer la preuve à la famille, et tenir en permanence un solde " +
-                        "exact par élève. Pour le service financier, chaque versement devient immédiatement opposable, appuyé sur " +
-                        "un reçu numéroté ; pour la direction, la recette du jour cesse d'être une estimation pour devenir un " +
-                        "chiffre arrêté, rattaché à un agent et à une journée précise.",
+                        "exact par élève. Le guichet rapide répond au cas le plus courant — un tuteur qui vient régler, muni de " +
+                        "la fiche du secrétariat, tout ce qui est dû à l'entrée de l'élève (inscription + tenue + premier mois) — " +
+                        "en UN SEUL versement, donc UN SEUL reçu, là où enchaîner un « Régler » par ligne d'échéancier " +
+                        "fabriquait plusieurs reçus séparés pour un montant que le secrétariat n'avait consigné qu'une fois.",
                     probleme:
                         "Le carnet à souches se perd, se recopie mal et ne se totalise qu'en fin de journée. Les " +
                         "contestations de paiement sont alors indémontrables dans un sens comme dans l'autre, et le " +
-                        "rapprochement entre la caisse physique et le registre relève de la reconstitution.",
+                        "rapprochement entre la caisse physique et le registre relève de la reconstitution. Et même sur écran, " +
+                        "un guichet qui n'offre qu'un règlement ligne à ligne oblige la caissière à additionner de tête, puis à " +
+                        "valider trois fois, pour un seul montant annoncé.",
                     procedure: [
-                        "Ouvrez Comptabilité › Caisse (Encaissements) et ouvrez votre session de caisse en déclarant le fonds initial.",
-                        "Recherchez l'élève par son matricule ou par son nom : sa situation financière s'affiche — total dû, déjà réglé, solde restant.",
-                        "Saisissez le montant versé et le mode de règlement retenu : espèces, virement bancaire, chèque ou paiement mobile.",
-                        "Vérifiez l'imputation proposée sur les lignes de frais, puis validez l'encaissement.",
-                        "Le solde de l'inscription est mis à jour dans la transaction même : deux encaissements concurrents sur le même élève ne peuvent produire de sur-crédit.",
-                        "Éditez le reçu PDF et remettez-le à la famille, en attirant son attention sur la nécessité de le conserver.",
+                        "Ouvrez Comptabilité › Caisse (Encaissements) et ouvrez votre session de caisse en déclarant le fonds initial — sans session ouverte, ni la recherche d'élève ni le formulaire n'apparaissent.",
+                        "Recherchez l'élève par son matricule ou par son nom. Chaque ligne de résultat porte un repère : « Aucun versement · Montant échu : X » (élève tout juste inscrit), « Frais du jour réglés · reste X », « Soldé », ou « Aucune inscription active ».",
+                        "GUICHET RAPIDE : à la sélection d'un élève ayant un montant échu, la modale « Encaissement des frais dus » s'ouvre — en-tête élève, une case cochée par frais échu, montant perçu pré-rempli avec le total coché, mode de règlement.",
+                        "Ajustez la sélection si besoin : décocher une ligne décoche AUSSI les suivantes (les frais se règlent dans l'ordre : inscription, tenue, puis mensualités). On ne peut donc régler qu'un bloc contigu depuis le plus ancien ; les lignes non cochées restent « En attente ».",
+                        "Cliquez sur « Valider et imprimer le reçu » : un SEUL encaissement est enregistré, et le reçu porte une ligne par frais réglé (reçu ventilé). Un montant perçu différent du total coché est encaissé tel quel, sur un reçu à ligne unique.",
+                        "« Annuler » referme la modale SANS rien encaisser et laisse le panneau détaillé accessible ; l'élève reste sélectionné et un bouton « ⚡ Encaisser les frais dus (XX XXX FCFA) » réapparaît sous le récapitulatif du solde pour rouvrir le guichet rapide, cases contiguës déjà cochées, sans re-rechercher l'élève.",
+                        "PANNEAU DÉTAILLÉ (cas particuliers) : dans le formulaire, « Régler les échéances dues (X) » reporte en un montant tout ce qui est arrivé à échéance ; « Régler le solde intégral » reporte le reste à payer ; le bouton « Régler » de chaque ligne d'échéancier sert à un règlement partiel volontaire.",
+                        "Le solde est mis à jour dans la transaction même : deux encaissements concurrents sur le même élève ne peuvent produire de sur-crédit — un message « le solde a changé entre-temps » invite à recharger.",
+                        "Éditez le reçu PDF et remettez-le à la famille en attirant son attention sur la nécessité de le conserver.",
                         "CORRECTION : un encaissement erroné est ANNULÉ — statut « annulé », conservé dans l'historique —, jamais effacé. La saisie correcte est ensuite reprise."
                     ],
                     impacts: [
-                        "Solde de l'élève : le cumul des versements s'impute immédiatement sur le montant dû de l'inscription.",
-                        "Échéancier : les échéances honorées se soldent au fur et à mesure des encaissements.",
+                        "Montant échu : le repère de la recherche et le guichet rapide affichent l'ENGAGEMENT INITIAL (frais ponctuels + premier mois), calculé par le serveur — jamais le cumul annuel, qui effraie sans informer.",
+                        "Reçu ventilé : une ligne par poste réglé n'apparaît que si le montant perçu correspond EXACTEMENT au total coché et que chaque poste porte sa catégorie de frais ; sinon le reçu retombe sur sa ligne unique — un tableau qui ne balance pas serait un faux.",
+                        "Imputation : le règlement s'applique aux échéances de la plus ancienne à la plus récente ; seul un préfixe des frais dus peut donc passer proprement à « Réglé », ce que reflète la sélection contiguë.",
+                        "Solde et échéancier : le cumul des versements s'impute immédiatement ; les échéances honorées se soldent au fur et à mesure.",
                         "Recouvrement : l'élève sort automatiquement de la liste des débiteurs dès que son solde est apuré.",
-                        "Clôture de caisse : chaque encaissement alimente le journal de la session de caisse ouverte.",
-                        "Trésorerie et rapports : les recettes du jour remontent dans les tableaux de bord de la direction."
+                        "Clôture de caisse : chaque encaissement alimente le journal de la session ouverte ; seules les espèces entrent dans les espèces attendues au comptage.",
+                        "Fausse manœuvre : le guichet rapide ne se ferme NI sur un clic à côté, NI sur la touche Échap — seuls « Annuler » et la croix ✕ le referment, pour ne pas perdre la saisie."
                     ],
                     recommandations: [
                         "N'encaissez jamais sans avoir ouvert votre session de caisse : le versement ne serait rattaché à aucune journée comptable.",
+                        "Fiez-vous au montant échu affiché, pas au total dû annuel : c'est lui que le secrétariat a programmé à l'inscription et que la famille vient régler.",
                         "Le premier versement d'un élève se constate ici comme tous les autres : l'écran d'inscription ne prend aucun paiement et n'édite aucun reçu de caisse.",
+                        "Si le parent ne règle qu'une partie aujourd'hui, décochez à partir de la première ligne qu'il ne paie pas — ou saisissez un montant libre : le reste demeure « En attente » pour un passage ultérieur.",
                         "Remettez systématiquement le reçu, même pour un versement partiel. C'est l'unique preuve dont dispose la famille.",
                         "Le service Finance ne modifie jamais un montant dû issu d'une inscription : il ne fait qu'y imputer des versements. Toute correction du montant dû relève du Secrétariat ou de la Direction.",
-                        "En cas de micro-coupure réseau pendant l'envoi, l'application retente automatiquement l'enregistrement en arrière-plan (bandeau « en attente d'envoi ») tant que l'onglet reste ouvert, sans jamais créer de doublon. Si la coupure persiste au-delà de ces tentatives, rien n'est enregistré et vous en êtes averti : reprenez alors la validation vous-même.",
+                        "En cas de micro-coupure réseau pendant l'envoi, l'application retente l'enregistrement en arrière-plan (bandeau « en attente d'envoi ») tant que l'onglet reste ouvert, sans jamais créer de doublon. Si la coupure persiste, rien n'est enregistré et vous en êtes averti : reprenez alors la validation vous-même.",
                         "Un encaissement erroné s'annule et se ressaisit. Ne tentez jamais de le rectifier par un second versement compensatoire."
                     ]
                 },
@@ -1240,6 +1354,7 @@
                         "désaccord.",
                     procedure: [
                         "Ouvrez Comptabilité › Paie › Pointage Profs, ou la fiche « heures » accessible directement depuis un contrat Vacataire dans l'onglet Contrats.",
+                        "Si le message « Aucun enseignant vacataire n'a de contrat actif » s'affiche : c'est qu'aucun CONTRAT de type Vacataire n'a encore été créé. Marquer un enseignant « Vacataire » sur sa fiche (statut STATEDUC) ne suffit pas — créez d'abord son contrat dans Comptabilité › Paie › Contrats.",
                         "Sélectionnez le contrat concerné, puis ajoutez chaque heure : date, nombre d'heures (les demi-heures sont admises) et une note facultative.",
                         "Consultez, filtré par mois et par année, le récapitulatif des heures déjà pointées pour ce contrat.",
                         "Téléchargez la fiche d'heures au format PDF si une pièce signée est requise.",
@@ -1251,6 +1366,7 @@
                     ],
                     impacts: [
                         "Salaire du vacataire : le brut de sa fiche se calcule directement du produit des heures saisies par le taux horaire de son contrat — la suggestion n'écrit jamais ce champ toute seule, seul un clic explicite la reprend.",
+                        "Contrat vs fiche enseignant : le sélecteur de Pointage Profs liste les CONTRATS Vacataire de la Paie, jamais le statut administratif « Vacataire » de la fiche STATEDUC — un enseignant sans contrat Vacataire n'y apparaît pas.",
                         "Emploi du temps : le rapprochement s'appuie sur les créneaux planifiés de l'enseignant ; un contrat lié à un utilisateur non-enseignant n'a pas d'emploi du temps de classe et ne reçoit que le total agrégé, sans rapprochement.",
                         "Déclarations fiscales : chaque fiche générée entre dans l'agrégat des charges sociales du mois correspondant.",
                         "Historique : les heures pointées restent consultables mois par mois, indépendamment des fiches déjà générées.",
@@ -1451,7 +1567,7 @@
                         "Si votre établissement n'a reçu aucun numéro, vous pouvez demander la génération d'un IEN PROVISOIRE : laissez le champ vide et utilisez l'action « Générer un numéro provisoire ».",
                         "Un numéro provisoire commence toujours par la lettre P et s'affiche partout avec la mention « provisoire ». Il permet de ne pas bloquer vos traitements internes en attendant le vrai numéro.",
                         "Dès réception du numéro officiel, saisissez-le : il remplace le provisoire, qui disparaît définitivement.",
-                        "La génération d'un provisoire exige que le code établissement national soit renseigné dans Paramètres › Établissement : sans lui, le numéro fabriqué ne rattacherait l'élève à aucune école."
+                        "La génération d'un provisoire exige que le code établissement national soit renseigné dans Paramètres › Intégration étatique (SIMEN) : sans lui, le numéro fabriqué ne rattacherait l'élève à aucune école."
                     ],
                     impacts: [
                         "Export Planète : les lignes portant un IEN provisoire sont signalées comme telles dans le fichier, et le nombre d'identifiants fabriqués vous est annoncé AVANT le téléchargement.",
@@ -1485,7 +1601,7 @@
                         "détaillée. La correction impose alors de recommencer le fichier entier en pleine période de " +
                         "remontée.",
                     procedure: [
-                        "Vérifiez d'abord que le code établissement national est renseigné dans Paramètres › Établissement : sans lui, l'export refuse de s'exécuter.",
+                        "Vérifiez d'abord que le code établissement national est renseigné dans Paramètres › Intégration étatique (SIMEN) : sans lui, l'export refuse de s'exécuter.",
                         "Ouvrez Intégration étatique › Export Planète et choisissez l'année scolaire concernée.",
                         "Choisissez le format : CSV pour un contrôle dans Excel, JSON si le portail du ministère le demande.",
                         "Lisez les compteurs affichés avant de télécharger : nombre d'élèves, nombre d'identifiants provisoires, nombre d'élèves sans IEN.",
@@ -1987,6 +2103,111 @@
                     recommandations: [
                         "Consultez le tableau de bord à intervalle régulier plutôt qu'au gré des inquiétudes : une tendance se voit sur plusieurs relevés, jamais sur un seul.",
                         "Un solde négatif sur une courte période n'est pas nécessairement alarmant — une grosse dépense ponctuelle (maintenance lourde, par exemple) peut l'expliquer ; vérifiez la nature des décaissements avant de conclure."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'reperes-interface',
+            number: 15,
+            title: "Repères d'interface — onglets, filtres par année et sélecteurs",
+            icon: 'menu',
+            summary: "Les repères communs à tous les écrans : la barre d'onglets défilante, le filtrage par année active et les listes déroulantes dynamiques.",
+            concept:
+                "Un même vocabulaire visuel se retrouve d'un écran à l'autre, et le connaître une fois dispense de le " +
+                "réapprendre partout. Trois repères comptent. La BARRE D'ONGLETS HORIZONTALE (une pastille bleue pleine " +
+                "marque l'onglet actif) organise les sections d'un module — Paramètres, Examens, Inventaire, fiche élève — " +
+                "et défile quand elle dépasse la largeur de l'écran, sans jamais casser la mise en page. Le FILTRE PAR " +
+                "ANNÉE ACTIVE borne ce qu'on voit à l'exercice de travail courant, rappelé en permanence dans l'en-tête ; " +
+                "quand une liste paraît vide, c'est presque toujours ce filtre qu'il faut interroger avant tout. Les " +
+                "SÉLECTEURS DYNAMIQUES, enfin, se peuplent à partir des données déjà saisies : une classe absente d'un menu " +
+                "est une classe qui n'a pas encore été créée, pas un défaut de l'écran.",
+            articles: [
+                {
+                    id: 'barres-onglets-defilantes',
+                    title: "Barre d'onglets horizontale défilante",
+                    location: 'Présente sur Paramètres, Examens, Inventaire, fiche élève, et la plupart des modules',
+                    href: '/parametres',
+                    roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
+                    definition:
+                        "Une seule et même barre d'onglets équipe désormais tous les écrans à sections : une rangée de " +
+                        "pastilles horizontales, l'onglet actif en bleu Unikol plein sous texte blanc, les autres en gris " +
+                        "discret. Lorsque les onglets dépassent la largeur disponible — sur mobile, sur tablette, ou quand ils " +
+                        "sont nombreux comme aux Paramètres —, la rangée devient DÉFILANTE : pas de retour à la ligne, pas de " +
+                        "barre de défilement visible, un dégradé d'estompement et une flèche apparaissent du seul côté encore " +
+                        "masqué.",
+                    objectif:
+                        "Présenter les sections d'un module de façon identique partout, pour qu'un utilisateur qui a compris " +
+                        "l'écran Paramètres retrouve le même geste sur Examens ou sur la fiche élève. Le défilement garantit " +
+                        "qu'aucun onglet n'est jamais inaccessible, même sur un petit écran, sans que la barre ne repousse le " +
+                        "contenu vers le bas.",
+                    probleme:
+                        "Des barres d'onglets toutes différentes — ici un menu latéral, là des onglets qui passent à la ligne " +
+                        "et doublent la hauteur de l'en-tête, ailleurs des onglets simplement coupés au bord de l'écran — " +
+                        "obligent à réapprendre la navigation écran par écran, et cachent des sections entières sur mobile.",
+                    procedure: [
+                        "Repérez l'onglet actif à sa pastille bleue pleine ; les autres sections sont en gris.",
+                        "Si un dégradé et une flèche apparaissent à droite ou à gauche de la barre, c'est que d'autres onglets sont hors champ de ce côté.",
+                        "Faites défiler la barre : à la molette (le défilement vertical devient horizontal au survol de la barre), en la faisant glisser à la souris, avec les flèches [‹] [›], ou d'un geste tactile horizontal.",
+                        "Changez d'onglet d'un clic : l'onglet choisi se recentre automatiquement dans la barre, et le contenu se met à jour sans recharger la page.",
+                        "Aux Paramètres, l'onglet ouvert est ajouté à l'adresse (?tab=…) : ce lien rouvre directement la même section, et peut être transmis tel quel.",
+                        "Sur la fiche élève, la même barre sépare « Historique scolaire », « Notes & bulletins » et « Paiements » — ce dernier onglet n'apparaît pas pour un compte Enseignant."
+                    ],
+                    impacts: [
+                        "Paramètres : les onglets réservés au Directeur (Facturation, Utilisateurs & rôles, Journal d'audit, Notifications SMS) ne s'affichent pas pour les autres rôles — la barre est plus courte, ce n'est pas une anomalie.",
+                        "Adresse : seul l'écran Paramètres synchronise l'onglet actif dans l'URL ; ailleurs, changer d'onglet ne modifie pas le lien de la page.",
+                        "Mise en page : la barre ne pousse jamais le contenu — au pire elle défile — donc un onglet manquant à l'écran est toujours atteignable, jamais perdu.",
+                        "Exceptions assumées : l'interrupteur « Inscrits cette année / Non inscrits / Tous les élèves » de la liste Élèves garde ses couleurs sémantiques (vert / rouge / bleu), et la vitrine publique a son propre style — ni l'un ni l'autre ne suit ce composant."
+                    ],
+                    recommandations: [
+                        "Sur un petit écran, réflexe utile : si une section attendue manque, faites défiler la barre d'onglets avant de conclure qu'elle n'existe pas.",
+                        "Pour renvoyer un collègue vers un réglage précis, copiez l'adresse de la page Paramètres une fois le bon onglet ouvert : elle porte l'onglet.",
+                        "La molette agit sur la barre uniquement quand le pointeur est dessus : pour faire défiler la page, éloignez le pointeur de la barre d'onglets."
+                    ]
+                },
+                {
+                    id: 'filtres-annee-active-et-selecteurs',
+                    title: "Filtre par année active, états vides et sélecteurs dynamiques",
+                    location: 'En-tête de l\'application, listes Élèves / Classes / Notes, et tous les menus déroulants',
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
+                    definition:
+                        "L'ANNÉE ACTIVE est le contexte implicite de tout le travail quotidien : elle est rappelée en permanence " +
+                        "dans l'en-tête, et la plupart des listes s'y bornent d'office. La liste Élèves l'expose par un " +
+                        "interrupteur à trois positions — « Inscrits cette année » (défaut), « Non inscrits », « Tous les " +
+                        "élèves ». Les MENUS DÉROULANTS (classe, matière, trimestre, enseignant…) sont DYNAMIQUES : ils ne " +
+                        "listent que ce qui a déjà été saisi, et se referment collés au champ lorsqu'ils s'ouvrent vers le " +
+                        "haut, faute de place en dessous.",
+                    objectif:
+                        "Épargner à chaque agent de préciser l'exercice à chaque écran, tout en lui laissant un moyen explicite " +
+                        "d'en sortir quand il doit consulter une autre année ou un élève pas encore inscrit. Les états vides " +
+                        "sont rédigés pour dire POURQUOI une liste est vide et quoi faire, plutôt que d'afficher un simple " +
+                        "« Aucun résultat » sans issue.",
+                    probleme:
+                        "Sans repère d'exercice, deux rentrées se confondent et l'on additionne deux promotions sans s'en " +
+                        "apercevoir. Et une liste qui affiche « Aucun résultat » sans explication laisse croire à une panne " +
+                        "alors qu'il ne manque qu'un filtre à ajuster ou une donnée à créer en amont.",
+                    procedure: [
+                        "Vérifiez l'année active dans l'en-tête avant toute saisie : c'est elle qui recevra ce que vous enregistrez.",
+                        "Liste Élèves : « Inscrits cette année » ne montre que l'effectif inscrit pour l'année active ; « Non inscrits » isole les élèves de l'annuaire sans inscription vivante ; « Tous les élèves » rebascule sur l'annuaire complet.",
+                        "Si une liste semble vide, lisez le message d'état : il indique le filtre à changer (« Essayez Non inscrits ou Tous les élèves »), la donnée à créer, ou le rôle requis.",
+                        "Menu déroulant vide ou trop court : c'est que la donnée n'existe pas encore — créez d'abord vos classes, vos matières ou vos enseignants, puis rouvrez le sélecteur.",
+                        "Changer un sélecteur qui pilote un calcul (la classe sur l'écran Inscriptions, par exemple) réinitialise ce qui en dépend, pour ne pas mélanger deux barèmes.",
+                        "Un menu qui s'ouvre vers le haut reste accolé à son champ : la valeur survolée et le champ restent alignés, sans saut visuel."
+                    ],
+                    impacts: [
+                        "Tableaux de bord et rapports : tous les indicateurs se rapportent à l'année active ; changer d'année change la lecture.",
+                        "Effectifs, frais, présences : un élève non inscrit pour l'année active en est absent tant qu'il n'est pas inscrit (voir « Inscription différée »).",
+                        "Sélecteurs : un enseignant ne voit dans les menus que ses propres affectations ; une liste courte peut donc être normale selon le rôle.",
+                        "Pointage Profs : le menu ne liste que les CONTRATS de type Vacataire (Comptabilité › Paie), pas le statut « Vacataire » de la fiche enseignant — deux notions distinctes portant la même étiquette.",
+                        "États vides : ils sont dérivés des données déjà chargées et se mettent à jour sans rechargement dès que la cause disparaît."
+                    ],
+                    recommandations: [
+                        "Devant une liste vide, lisez le message avant de signaler un incident : neuf fois sur dix, il nomme lui-même la cause et la marche à suivre.",
+                        "Ne travaillez jamais sans avoir vérifié l'année active affichée dans l'en-tête, surtout juste après une bascule d'exercice.",
+                        "Réservez « Tous les élèves » à la gestion d'un cas précis (réinscription, correction) : la vue par défaut « Inscrits cette année » est celle qui reflète l'effectif réel.",
+                        "Si une classe ou une matière manque dans un menu, ne la contournez pas : créez-la dans son module (Classes, Matières), c'est la seule source des sélecteurs."
                     ]
                 }
             ]
