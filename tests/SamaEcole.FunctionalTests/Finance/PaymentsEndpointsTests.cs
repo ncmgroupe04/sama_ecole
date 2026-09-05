@@ -53,7 +53,25 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     private record StudentBalance(
         Guid EnrollmentId, Guid StudentId, string Matricule, string StudentFullName,
         string ClassroomName, string SchoolYearLabel,
-        decimal TotalDue, decimal AmountPaid, decimal RemainingBalance, string Status);
+        decimal TotalDue, decimal AmountPaid, decimal RemainingBalance, string Status,
+        List<Installment> Installments, decimal DueNowTotal);
+
+    private record Installment(
+        string Id, string Designation, decimal Amount, decimal AmountPaid, decimal RemainingDue,
+        DateTimeOffset DueDate, string Status, bool IsInitialScope, Guid? FeeCategoryId);
+
+    private record CashierSearchResult(
+        Guid Id, string Matricule, string FullName, string? ClassroomName,
+        bool HasActiveEnrollment, decimal TotalDue, decimal AmountPaid,
+        decimal RemainingBalance, decimal DueNowTotal);
+
+    private record PaymentReceiptLine(string Designation, string? Label, decimal Amount);
+    private record PaymentReceipt(
+        string ReceiptNumber, decimal Amount, decimal TotalDue, decimal AlreadyPaid,
+        decimal RemainingBalance, List<PaymentReceiptLine> Lines, bool HasBalancedLines);
+
+    // Engagement initial de SeedEnrolledStudentAsync : inscription (ponctuel) + 1er mois de scolarité.
+    private const decimal ExpectedDueNow = Inscription + Mensualite; // 25 000
 
     private async Task<string> TokenAsync(string email, string password)
     {
@@ -326,5 +344,92 @@ public class PaymentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
             PaymentBody(Guid.NewGuid(), 5_000m));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Cashier_Search_And_Balance_Expose_The_Due_Now_Total_Not_The_Annual_Total()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+
+        // La recherche caisse : le badge affiche le MONTANT ÉCHU (inscription + 1er mois), jamais le
+        // cumul annuel.
+        var searchResponse = await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/search?q={enrollment.Matricule}", finance);
+        searchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var hits = (await searchResponse.Content.ReadFromJsonAsync<List<CashierSearchResult>>())!;
+        var hit = hits.Single(h => h.Matricule == enrollment.Matricule);
+        hit.TotalDue.Should().Be(ExpectedTotal);        // le cumul annuel existe toujours…
+        hit.DueNowTotal.Should().Be(ExpectedDueNow);    // …mais ce n'est pas ce que le badge montre
+
+        // Le solde détaillé porte le même montant échu et marque les échéances de l'engagement initial.
+        var studentId = await ResolveStudentIdAsync(finance, enrollment.Matricule);
+        var balanceResponse = await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance);
+        var balance = (await balanceResponse.Content.ReadFromJsonAsync<StudentBalance>())!;
+        balance.DueNowTotal.Should().Be(ExpectedDueNow);
+
+        var initialScope = balance.Installments.Where(i => i.IsInitialScope).ToList();
+        initialScope.Select(i => i.Designation).Should().BeEquivalentTo(["Inscription", "Mensualité (Mois 1)"]);
+        initialScope.Should().OnlyContain(i => i.FeeCategoryId != null);
+        balance.Installments.Where(i => !i.IsInitialScope)
+            .Should().OnlyContain(i => i.Designation.StartsWith("Mensualité (Mois "));
+    }
+
+    [Fact]
+    public async Task Settling_The_Due_Fees_In_One_Payment_Ventilates_The_Receipt_And_Marks_Each_Line_Paid()
+    {
+        var enrollment = await SeedEnrolledStudentAsync();
+        var finance = await FinanceTokenAsync();
+        await OpenFinanceSessionAsync(finance);
+
+        var studentId = await ResolveStudentIdAsync(finance, enrollment.Matricule);
+        var balance = (await (await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance))
+            .Content.ReadFromJsonAsync<StudentBalance>())!;
+
+        // Un SEUL versement pour toutes les échéances dues, ventilé poste par poste (le guichet rapide
+        // envoie exactement cela).
+        var due = balance.Installments.Where(i => i.IsInitialScope).ToList();
+        var breakdowns = due.Select(i => new
+        {
+            feeCategoryId = i.FeeCategoryId,
+            amountAllocated = i.RemainingDue,
+            label = i.Designation.Contains("(Mois 1)") ? "Mois 1" : (string?)null
+        }).ToArray();
+
+        var payResponse = await SendAsync(HttpMethod.Post, "/api/v1/finance/payments", finance, new
+        {
+            enrollmentId = enrollment.EnrollmentId,
+            amount = ExpectedDueNow,
+            method = "Cash",
+            breakdowns
+        });
+        payResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var result = (await payResponse.Content.ReadFromJsonAsync<PaymentResult>())!;
+
+        // UN reçu, deux lignes qui totalisent exactement l'encaissement.
+        var receipt = (await (await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/payments/{result.PaymentId}/receipt", finance))
+            .Content.ReadFromJsonAsync<PaymentReceipt>())!;
+        receipt.Amount.Should().Be(ExpectedDueNow);
+        receipt.HasBalancedLines.Should().BeTrue();
+        receipt.Lines.Should().HaveCount(2);
+        receipt.Lines.Sum(l => l.Amount).Should().Be(ExpectedDueNow);
+        receipt.Lines.Select(l => l.Designation).Should().BeEquivalentTo(["Inscription", "Mensualité"]);
+        receipt.Lines.Single(l => l.Designation == "Mensualité").Label.Should().Be("Mois 1");
+
+        // Les postes réglés passent individuellement à « Réglé » ; le mois 2 reste en attente.
+        var after = (await (await SendAsync(
+            HttpMethod.Get, $"/api/v1/finance/students/{studentId}/balance", finance))
+            .Content.ReadFromJsonAsync<StudentBalance>())!;
+        after.DueNowTotal.Should().Be(0m);
+        after.Installments.Single(i => i.Designation == "Inscription").Status.Should().Be("Paid");
+        after.Installments.Single(i => i.Designation == "Mensualité (Mois 1)").Status.Should().Be("Paid");
+        // Le mois suivant n'est pas touché — encore dû (échu ou à venir selon la date), jamais « Réglé ».
+        var monthTwo = after.Installments.Single(i => i.Designation == "Mensualité (Mois 2)");
+        monthTwo.Status.Should().BeOneOf("Pending", "Overdue");
+        monthTwo.RemainingDue.Should().Be(Mensualite);
     }
 }

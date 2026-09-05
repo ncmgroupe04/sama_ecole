@@ -34,6 +34,13 @@ document.addEventListener('alpine:init', () => {
         formErrors: {},
         isSubmitting: false,
 
+        // Guichet rapide (pop-up « Encaissement des frais dus ») : s'ouvre dès qu'un élève ayant un
+        // montant échu est sélectionné. `checked` est aligné index par index sur quickPayRows() ; la
+        // sélection est CONTIGUË — décocher une ligne décoche aussi toutes les suivantes, car
+        // l'imputation en base suit l'ordre des échéances (InstallmentScheduleCalculator), donc seul
+        // un préfixe de la liste peut passer proprement à « Réglé ».
+        quickPay: { open: false, method: 'Cash', amount: '', checked: [] },
+
         // Résilience réseau (ticket JGK-L03) : clé générée à l'ouverture du formulaire d'encaissement
         // (voir startNewPayment/init), rejouée À L'IDENTIQUE par submitWithRetry à chaque tentative —
         // c'est elle qui garantit qu'un retry après coupure ne crée jamais un second paiement (JGK-L01).
@@ -189,7 +196,7 @@ document.addEventListener('alpine:init', () => {
             const draft = window.formDraft.load('caisse_form');
             if (!draft) return;
             if (draft.student) {
-                this.selectStudent(draft.student).then(() => {
+                this.selectStudent(draft.student, { autoQuickPay: false }).then(() => {
                     if (draft.form) Object.assign(this.form, draft.form);
                 });
             } else if (draft.form) {
@@ -242,12 +249,96 @@ document.addEventListener('alpine:init', () => {
             this.selectedStudent = null;
             this.balance = null;
             this.balanceError = null;
+            this.quickPay.open = false;
         },
 
-        async selectStudent(student) {
+        async selectStudent(student, { autoQuickPay = true } = {}) {
             this.selectedStudent = student;
             this.studentSearch = `${student.matricule} — ${student.fullName}`;
             await this.loadBalance();
+            // Guichet rapide : dès qu'un élève est choisi et qu'il a un montant échu, on ouvre la
+            // pop-up d'encaissement (frais dus pré-cochés). Les cas particuliers — montant libre,
+            // solde intégral, consultation de l'historique — restent accessibles derrière [Annuler],
+            // sur le panneau détaillé qui reste affiché. Jamais à la restauration d'un brouillon
+            // (autoQuickPay=false) : l'utilisateur y reprend une saisie manuelle en cours.
+            if (autoQuickPay && this.balance && this.dueNowTotal > 0 && !this.showReceipt) {
+                this.openQuickPay();
+            }
+        },
+
+        // ---------------------------------------------------------------- Guichet rapide (pop-up)
+
+        /** Échéances de l'ENGAGEMENT INITIAL encore dues — les lignes proposées dans la pop-up. */
+        quickPayRows() {
+            return (this.balance?.installments ?? []).filter((i) => i.isInitialScope && i.remainingDue > 0);
+        },
+
+        /** Total des lignes actuellement COCHÉES — pilote le « Total à encaisser » et le bouton. */
+        quickPayTotal() {
+            return this.quickPayRows().reduce(
+                (sum, row, idx) => sum + (this.quickPay.checked[idx] ? row.remainingDue : 0), 0);
+        },
+
+        openQuickPay() {
+            const rows = this.quickPayRows();
+            if (rows.length === 0) return;
+            this.quickPay.checked = rows.map(() => true); // tout coché par défaut
+            this.quickPay.method = 'Cash';
+            this.quickPay.amount = this.quickPayTotal();
+            this.formErrors = {};
+            this.conflictError = false;
+            this.quickPay.open = true;
+        },
+
+        /** [Annuler] : referme la pop-up et laisse le panneau détaillé accessible (cas particuliers). */
+        closeQuickPay() {
+            this.quickPay.open = false;
+        },
+
+        /**
+         * Sélection CONTIGUË : cocher la ligne i coche aussi 0..i-1 ; décocher la ligne i décoche
+         * aussi i+1..fin. On ne peut donc régler qu'un PRÉFIXE des frais dus — c'est exactement ce
+         * que l'imputation oldest-first de InstallmentScheduleCalculator sait refléter en « Réglé ».
+         */
+        onQuickRowToggle(i) {
+            if (this.quickPay.checked[i]) {
+                for (let j = 0; j < i; j++) this.quickPay.checked[j] = true;
+            } else {
+                for (let j = i + 1; j < this.quickPay.checked.length; j++) this.quickPay.checked[j] = false;
+            }
+            this.quickPay.amount = this.quickPayTotal();
+        },
+
+        /** « Mensualité (Mois 1) » → « Mois 1 » pour la colonne « Période / Note » du reçu ventilé. */
+        quickPayNote(designation) {
+            const match = /\(([^)]+)\)\s*$/.exec(designation || '');
+            return match ? match[1] : null;
+        },
+
+        async submitQuickPay() {
+            if (!this.balance) return;
+            const rows = this.quickPayRows();
+            const chosen = rows.filter((_, idx) => this.quickPay.checked[idx]);
+            if (chosen.length === 0) return;
+
+            const checkedTotal = chosen.reduce((sum, r) => sum + r.remainingDue, 0);
+            const amount = Number(this.quickPay.amount) || checkedTotal;
+
+            // Ventilation (une ligne de reçu par poste) seulement si le montant perçu correspond
+            // EXACTEMENT au total coché ET que chaque poste porte sa catégorie de frais (échéancier
+            // dérivé, pas un plan personnalisé). Sinon le reçu retombe sur sa ligne unique — garde-fou
+            // comptable, cf. PaymentReceiptDto.HasBalancedLines.
+            let breakdowns = null;
+            if (amount === checkedTotal && chosen.every((r) => r.feeCategoryId)) {
+                breakdowns = chosen.map((r) => ({
+                    feeCategoryId: r.feeCategoryId,
+                    amountAllocated: r.remainingDue,
+                    label: this.quickPayNote(r.designation)
+                }));
+            }
+
+            const ok = await this.recordPayment({ amount, method: this.quickPay.method, breakdowns });
+            if (ok) this.quickPay.open = false;
         },
 
         // ---------------------------------------------------------------- Solde
@@ -286,20 +377,24 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
-         * Somme de tout ce qui est ÉCHU aujourd'hui (droits d'inscription, uniforme, mensualités déjà
-         * arrivées à échéance...) et pas encore réglé — jamais les mensualités FUTURES, qui n'ont pas
-         * lieu d'être encaissées d'avance. C'est le montant que le secrétariat programme à
-         * l'inscription et que l'élève doit régler EN UNE FOIS en arrivant à la caisse : le bouton
-         * "Régler" de chaque ligne de l'échéancier n'existe que pour un paiement partiel volontaire
-         * (le parent ne peut régler qu'une partie aujourd'hui) — le laisser comme SEULE voie évidente
-         * fragmentait ce versement unique en plusieurs reçus (un par ligne), a lieu d'un reçu unique
-         * pour le montant total dû à ce jour.
+         * MONTANT ÉCHU à ce jour : l'engagement initial (frais d'inscription, uniforme… + le PREMIER
+         * mois de scolarité) non encore réglé — jamais les mensualités FUTURES, qui n'ont pas lieu
+         * d'être encaissées d'avance. C'est ce que le secrétariat programme à l'inscription et que le
+         * tuteur règle EN UNE FOIS en arrivant à la caisse, muni de sa fiche.
+         *
+         * Le serveur le calcule (StudentBalanceDto.dueNowTotal) à partir des échéances marquées
+         * `isInitialScope` — source de vérité unique. Le repli ne sert qu'à un payload servi par un
+         * cache antérieur : il recompose la même somme depuis les mêmes échéances.
+         *
+         * PLUS de filtre « date d'échéance <= aujourd'hui » : une année qui démarre le mois prochain
+         * n'a AUCUNE échéance passée, et ce montant valait alors 0 à tort — le parent doit pourtant
+         * déjà régler l'inscription et le 1er mois.
          */
         get dueNowTotal() {
-            if (!this.balance || !this.balance.installments) return 0;
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            return this.balance.installments
-                .filter((inst) => inst.remainingDue > 0 && new Date(inst.dueDate) <= today)
+            if (!this.balance) return 0;
+            if (typeof this.balance.dueNowTotal === 'number') return this.balance.dueNowTotal;
+            return (this.balance.installments || [])
+                .filter((inst) => inst.isInitialScope && inst.remainingDue > 0)
                 .reduce((sum, inst) => sum + inst.remainingDue, 0);
         },
 
@@ -318,22 +413,41 @@ document.addEventListener('alpine:init', () => {
 
         async submit() {
             if (!this.balance) return;
+            await this.recordPayment({
+                amount: Number(this.form.amount),
+                method: this.form.method
+            });
+        },
 
+        /**
+         * Cœur de l'encaissement, partagé par le formulaire détaillé (submit) et le guichet rapide
+         * (submitQuickPay). Renvoie true si le versement est passé (fenêtre de confirmation ouverte),
+         * false si l'erreur a été traitée à l'écran (409 concurrentiel, ou 400 de validation).
+         *
+         * @param {{amount:number, method:string, breakdowns?:Array}} p — `breakdowns` : ventilation
+         *   facultative (une entrée {feeCategoryId, amountAllocated, label} par poste imputé). Omise,
+         *   le reçu porte sa ligne unique « Versement reçu ».
+         */
+        async recordPayment({ amount, method, breakdowns }) {
             this.formErrors = {};
             this.conflictError = false;
             this.isSubmitting = true;
             this.sendState = null;
 
             try {
+                const payload = {
+                    enrollmentId: this.balance.enrollmentId,
+                    amount,
+                    method,
+                    idempotencyKey: this.idempotencyKey
+                };
+                if (breakdowns && breakdowns.length) payload.breakdowns = breakdowns;
+
                 // submitWithRetry (JGK-L02) rejoue UNIQUEMENT sur coupure réseau, jamais sur une
                 // réponse HTTP — la même idempotencyKey à chaque tentative fait qu'un retry rejoue le
                 // paiement déjà encaissé (JGK-L01) au lieu d'en créer un second.
-                this.paymentResult = await window.api.postWithRetry('/finance/payments', {
-                    enrollmentId: this.balance.enrollmentId,
-                    amount: Number(this.form.amount),
-                    method: this.form.method,
-                    idempotencyKey: this.idempotencyKey
-                }, { onStateChange: (state) => { this.sendState = state; } });
+                this.paymentResult = await window.api.postWithRetry('/finance/payments', payload,
+                    { onStateChange: (state) => { this.sendState = state; } });
 
                 // Le résultat du POST est volontairement minimal (règle CQRS) : on relit le reçu complet
                 // pour l'affichage/l'impression, comme /inscriptions le fait pour son propre reçu.
@@ -345,6 +459,7 @@ document.addEventListener('alpine:init', () => {
                 this.showConfirmDialog = true;
                 if (window.formDraft) window.formDraft.clear('caisse_form');
                 this.hasDraft = false;
+                return true;
             } catch (err) {
                 if (err.status === 409) {
                     // Solde modifié entre-temps par un autre caissier : jamais un écrasement silencieux
@@ -353,6 +468,7 @@ document.addEventListener('alpine:init', () => {
                 } else {
                     this.formErrors = window.api.toFieldErrors(err, "Erreur lors de l'encaissement.");
                 }
+                return false;
             } finally {
                 this.isSubmitting = false;
             }
@@ -394,6 +510,7 @@ document.addEventListener('alpine:init', () => {
             this.conflictError = false;
             this.studentSearch = '';
             this.form = { amount: '', method: 'Cash' };
+            this.quickPay = { open: false, method: 'Cash', amount: '', checked: [] };
             this.formErrors = {};
             this.paymentResult = null;
             this.receipt = null;

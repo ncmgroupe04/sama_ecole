@@ -30,7 +30,15 @@ public record StudentBalanceDto(
     decimal RemainingBalance,
     string Status,
     IReadOnlyList<InstallmentDto> Installments,
-    IReadOnlyList<StudentBalancePaymentDto> PaymentsHistory);
+    IReadOnlyList<StudentBalancePaymentDto> PaymentsHistory,
+
+    /// <summary>
+    /// Somme des <see cref="InstallmentDto.RemainingDue"/> des échéances de l'ENGAGEMENT INITIAL
+    /// (<see cref="InstallmentDto.IsInitialScope"/>) : ce que le tuteur doit régler EN UNE FOIS à la
+    /// caisse, muni de la fiche du secrétariat — frais ponctuels + premier mois de scolarité, jamais
+    /// le cumul annuel. Montant proposé par défaut au guichet rapide (pop-up d'encaissement).
+    /// </summary>
+    decimal DueNowTotal);
 
 public record InstallmentDto(
     string Id,
@@ -39,7 +47,15 @@ public record InstallmentDto(
     decimal AmountPaid,
     decimal RemainingDue,
     DateTimeOffset DueDate,
-    string Status);
+    string Status,
+
+    /// <summary>Voir <see cref="InstallmentScheduleCalculator.CalculatedInstallment.IsInitialScope"/> :
+    /// échéance de l'engagement initial (frais ponctuel entier, ou premier mois d'un frais récurrent).</summary>
+    bool IsInitialScope,
+
+    /// <summary>Catégorie de frais d'origine — sert à ventiler le reçu de caisse quand plusieurs
+    /// échéances sont réglées d'un coup. <c>null</c> pour un échéancier personnalisé.</summary>
+    Guid? FeeCategoryId);
 
 public record StudentBalancePaymentDto(
     Guid PaymentId,
@@ -111,8 +127,14 @@ public class GetStudentBalanceQueryHandler(IApplicationDbContext dbContext, Time
                 c.AmountPaid,
                 c.RemainingDue,
                 new DateTimeOffset(c.DueDate.ToDateTime(TimeOnly.MinValue), now.Offset),
-                c.Status.ToString()))
+                c.Status.ToString(),
+                c.IsInitialScope,
+                c.FeeCategoryId))
             .ToList();
+
+        var dueNowTotal = installments
+            .Where(i => i.IsInitialScope)
+            .Sum(i => i.RemainingDue);
 
         return new StudentBalanceDto(
             row.Enrollment.Id,
@@ -126,6 +148,7 @@ public class GetStudentBalanceQueryHandler(IApplicationDbContext dbContext, Time
             row.Enrollment.TotalDue - row.Enrollment.AmountPaid,
             row.Enrollment.AmountPaid >= row.Enrollment.TotalDue ? "Paid" : "Partial",
             installments,
-            payments);
+            payments,
+            dueNowTotal);
     }
 }

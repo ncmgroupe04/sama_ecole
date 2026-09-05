@@ -153,19 +153,19 @@
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
  <span class="text-xs font-mono text-slate-500 shrink-0" x-text="s.matricule"></span>
  </span>
- @* Signal visible SANS ouvrir la fiche : un élève tout juste inscrit par le secrétariat mais
- qui n'a encore rien versé (amountPaid = 0) est le cas qui doit sauter aux yeux — c'est celui
- qu'une caissière risque de manquer en enchaînant les recherches. Le total dû ici couvre toute
- l'année ; une fois l'élève sélectionné, "Régler les échéances dues" propose le montant EXACT
- programmé par le secrétariat pour ce jour (inscription + uniforme + mensualité(s) échue(s)),
- en un seul versement plutôt qu'un reçu par ligne de l'échéancier. *@
- <span x-show="s.hasActiveEnrollment && s.amountPaid === 0 && s.totalDue > 0" x-cloak
- class="mt-1 inline-flex items-center gap-1 status-badge-warning">
- Aucun versement · total dû <span x-text="formatMoney(s.totalDue)"></span>
+ @* Signal visible SANS ouvrir la fiche : ce que le tuteur vient régler à la caisse, muni de la
+ fiche du secrétariat, c'est le MONTANT ÉCHU (frais d'inscription + uniforme + 1er mois), JAMAIS
+ le cumul annuel — qui effraie sans informer. `dueNowTotal` est calculé serveur à partir des
+ échéances de l'engagement initial. amountPaid = 0 => l'élève tout juste inscrit n'a encore rien
+ versé : c'est le cas qui doit sauter aux yeux. *@
+ <span x-show="s.hasActiveEnrollment && s.remainingBalance > 0 && s.dueNowTotal > 0" x-cloak
+ class="mt-1 inline-flex items-center gap-1"
+ :class="s.amountPaid === 0 ? 'status-badge-warning' : 'status-badge-neutral'">
+ <span x-show="s.amountPaid === 0" x-cloak>Aucun versement · </span>Montant échu : <span x-text="formatMoney(s.dueNowTotal)"></span>
  </span>
- <span x-show="s.hasActiveEnrollment && s.amountPaid > 0 && s.remainingBalance > 0" x-cloak
+ <span x-show="s.hasActiveEnrollment && s.remainingBalance > 0 && s.dueNowTotal <= 0" x-cloak
  class="mt-1 inline-flex items-center gap-1 status-badge-neutral">
- Solde restant : <span x-text="formatMoney(s.remainingBalance)"></span>
+ Frais du jour réglés · reste <span x-text="formatMoney(s.remainingBalance)"></span>
  </span>
  <span x-show="s.hasActiveEnrollment && s.totalDue > 0 && s.remainingBalance <= 0" x-cloak
  class="mt-1 inline-flex items-center gap-1 status-badge-success">
@@ -598,6 +598,110 @@
              </div>
          </div>
      </template>
+ </modal-shell>
+ </div>
+
+ @* ============================= GUICHET RAPIDE (pop-up d'encaissement) =============================
+    S'ouvre dès la sélection d'un élève ayant un montant échu (voir selectStudent). Passage rapide au
+    guichet : le caissier coche/décoche les frais dus, valide, un SEUL reçu est généré. [Annuler]
+    referme sans rien encaisser et laisse le panneau détaillé (échéancier ligne à ligne, solde
+    intégral, historique) accessible pour les cas particuliers. *@
+ <div class="no-print">
+ <modal-shell open="quickPay.open" size="2xl" on-close="closeQuickPay()" title="Encaissement des frais dus">
+ <div class="space-y-5">
+
+ <!-- En-tête élève -->
+ <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+ <div>
+ <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Élève</div>
+ <div class="font-semibold text-slate-900" x-text="balance ? balance.studentFullName : ''"></div>
+ </div>
+ <div>
+ <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Matricule</div>
+ <div class="font-semibold text-slate-900" x-text="balance ? balance.matricule : ''"></div>
+ </div>
+ <div>
+ <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Classe</div>
+ <div class="font-semibold text-slate-900" x-text="balance ? balance.classroomName : ''"></div>
+ </div>
+ <div>
+ <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Année scolaire</div>
+ <div class="font-semibold text-slate-900" x-text="balance ? balance.schoolYearLabel : ''"></div>
+ </div>
+ </div>
+
+ <!-- Frais échus, une case à cocher par ligne (toutes cochées par défaut) -->
+ <div>
+ <h3 class="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2">Frais échus à ce jour</h3>
+ <div class="rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+ <table class="w-full text-sm text-left">
+ <thead>
+ <tr class="table-head">
+ <th class="py-2 px-3 w-10"></th>
+ <th class="py-2 px-3">Désignation</th>
+ <th class="py-2 px-3 text-right">Montant</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-for="(row, idx) in quickPayRows()" :key="row.id">
+ <tr class="hover:bg-slate-50/60 transition-colors">
+ <td class="py-2 px-3">
+ <input type="checkbox" x-model="quickPay.checked[idx]" x-on:change="onQuickRowToggle(idx)"
+ :aria-label="'Régler ' + row.designation"
+ class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer" />
+ </td>
+ <td class="py-2 px-3 font-medium" :class="quickPay.checked[idx] ? 'text-slate-800' : 'text-slate-400 line-through'" x-text="row.designation"></td>
+ <td class="py-2 px-3 text-right font-semibold amount" :class="quickPay.checked[idx] ? 'text-slate-900' : 'text-slate-400 line-through'" x-text="formatMoney(row.remainingDue)"></td>
+ </tr>
+ </template>
+ <tr x-show="quickPayRows().length === 0" x-cloak>
+ <td colspan="3" class="py-3 px-3 text-sm text-slate-400 text-center">Aucun frais échu à encaisser.</td>
+ </tr>
+ </tbody>
+ <tfoot>
+ <tr class="border-t-2 border-slate-200 bg-slate-50">
+ <td></td>
+ <td class="py-2.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-700">Total à encaisser</td>
+ <td class="py-2.5 px-3 text-right text-base font-bold text-primary amount" x-text="formatMoney(quickPayTotal())"></td>
+ </tr>
+ </tfoot>
+ </table>
+ </div>
+ <p class="mt-2 text-xs text-slate-400">Décocher une ligne décoche aussi les suivantes : les frais se règlent dans l'ordre (inscription, uniforme, puis mensualités). Les lignes non cochées restent « En attente » pour un encaissement ultérieur.</p>
+ </div>
+
+ <!-- Règlement -->
+ <form x-on:submit.prevent="submitQuickPay()" novalidate class="space-y-4 border-t border-slate-100 pt-4">
+ <div x-show="formErrors.global" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="formErrors.global"></div>
+ <div x-show="conflictError" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger">
+ Le solde a changé entre-temps (un autre encaissement a eu lieu).
+ <button type="button" x-on:click="closeQuickPay(); reloadBalance()" class="underline font-medium">Recharger le solde</button>
+ </div>
+
+ <div class="form-grid">
+ <div>
+ <label for="quickpay-amount" class="form-label form-label-required">Montant perçu (FCFA)</label>
+ <input id="quickpay-amount" type="number" min="1" x-model.number="quickPay.amount" class="input-field" :class="formErrors.amount && 'input-field-error'">
+ <p x-show="formErrors.amount" x-cloak x-text="formErrors.amount" class="field-error"></p>
+ <p class="mt-1 text-xs text-slate-400">Pré-rempli avec le total coché. Un montant différent est encaissé tel quel, sur un reçu à ligne unique.</p>
+ </div>
+ <div>
+ <label for="quickpay-method" class="form-label form-label-required">Mode de règlement</label>
+ <select-field id="quickpay-method" model="quickPay.method" options="paymentMethodOptions" />
+ </div>
+ </div>
+
+ <div x-show="sendState === 'retrying' || sendState === 'failed'" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="sendStateLabel()"></div>
+
+ <div class="flex items-center justify-end gap-3 pt-1">
+ <button type="button" x-on:click="closeQuickPay()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isSubmitting || quickPayTotal() <= 0" class="btn-modal-primary group">
+ <icon x-show="!isSubmitting" name="checkmark-circle" class="w-5 h-5" />
+ <span x-text="isSubmitting ? 'Encaissement…' : ('Valider et imprimer le reçu (' + formatMoney(quickPayTotal()) + ')')"></span>
+ </button>
+ </div>
+ </form>
+ </div>
  </modal-shell>
  </div>
 

@@ -33,7 +33,16 @@ public record CashierStudentSearchResultDto(
     bool HasActiveEnrollment,
     decimal TotalDue,
     decimal AmountPaid,
-    decimal RemainingBalance);
+    decimal RemainingBalance,
+
+    /// <summary>
+    /// MONTANT ÉCHU à ce jour, à encaisser en une fois au guichet : l'engagement initial (frais
+    /// ponctuels + premier mois de scolarité — cf. InstallmentScheduleCalculator.IsInitialScope et
+    /// EnrollmentReceiptDto.InitialSettlementTotal) MOINS ce qui a déjà été versé, borné à 0. C'est
+    /// ce chiffre — et jamais <see cref="TotalDue"/>, le cumul annuel — que le badge de recherche
+    /// affiche : le parent vient régler la fiche du secrétariat, pas l'année entière.
+    /// </summary>
+    decimal DueNowTotal);
 
 public class SearchStudentsForCashierQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<SearchStudentsForCashierQuery, IReadOnlyList<CashierStudentSearchResultDto>>
@@ -73,7 +82,7 @@ public class SearchStudentsForCashierQueryHandler(IApplicationDbContext dbContex
         var enrollmentsById = activeYearId is { } yearId
             ? await dbContext.Enrollments.AsNoTracking()
                 .Where(e => studentIds.Contains(e.StudentId) && e.SchoolYearId == yearId && e.Status != EnrollmentStatus.Cancelled)
-                .Select(e => new { e.StudentId, e.TotalDue, e.AmountPaid })
+                .Select(e => new { e.Id, e.StudentId, e.TotalDue, e.AmountPaid })
                 .ToDictionaryAsync(e => e.StudentId, cancellationToken)
             : [];
 
@@ -83,10 +92,51 @@ public class SearchStudentsForCashierQueryHandler(IApplicationDbContext dbContex
             .Select(c => new { c.Id, c.Name })
             .ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
 
+        // Engagement initial par inscription — même définition que InstallmentScheduleCalculator :
+        // chaque frais ponctuel EN ENTIER + le PREMIER mois de chaque frais récurrent. Un échéancier
+        // personnalisé ACTIF prime : l'engagement initial devient alors sa première échéance. Peu de
+        // lignes (≤ 20 inscriptions), le regroupement se fait en mémoire.
+        var initialScopeByEnrollmentId = new Dictionary<Guid, decimal>();
+        var enrollmentIds = enrollmentsById.Values.Select(e => e.Id).ToList();
+        if (enrollmentIds.Count > 0)
+        {
+            var feeLineRows = await dbContext.EnrollmentFeeLines.AsNoTracking()
+                .Where(l => enrollmentIds.Contains(l.EnrollmentId))
+                .Select(l => new { l.EnrollmentId, l.IsRecurring, l.UnitAmount, l.LineTotal })
+                .ToListAsync(cancellationToken);
+
+            foreach (var group in feeLineRows.GroupBy(l => l.EnrollmentId))
+            {
+                initialScopeByEnrollmentId[group.Key] = group.Sum(l => l.IsRecurring ? l.UnitAmount : l.LineTotal);
+            }
+
+            var customFirstInstallments = await (
+                from p in dbContext.FeeInstallmentPlans.AsNoTracking()
+                where enrollmentIds.Contains(p.EnrollmentId) && p.Status == FeeInstallmentPlanStatus.Active
+                join i in dbContext.FeeInstallments.AsNoTracking() on p.Id equals i.FeeInstallmentPlanId
+                where i.SequenceNo == 1
+                select new { p.EnrollmentId, i.Amount })
+                .ToListAsync(cancellationToken);
+
+            foreach (var installment in customFirstInstallments)
+            {
+                initialScopeByEnrollmentId[installment.EnrollmentId] = installment.Amount;
+            }
+        }
+
         return students
             .Select(s =>
             {
                 var enrollment = enrollmentsById.GetValueOrDefault(s.Id);
+
+                var dueNowTotal = 0m;
+                if (enrollment is not null)
+                {
+                    var scope = Math.Min(
+                        initialScopeByEnrollmentId.GetValueOrDefault(enrollment.Id, 0m),
+                        enrollment.TotalDue);
+                    dueNowTotal = Math.Max(0m, scope - enrollment.AmountPaid);
+                }
 
                 return new CashierStudentSearchResultDto(
                     s.Id,
@@ -96,7 +146,8 @@ public class SearchStudentsForCashierQueryHandler(IApplicationDbContext dbContex
                     enrollment is not null,
                     enrollment?.TotalDue ?? 0m,
                     enrollment?.AmountPaid ?? 0m,
-                    (enrollment?.TotalDue ?? 0m) - (enrollment?.AmountPaid ?? 0m));
+                    (enrollment?.TotalDue ?? 0m) - (enrollment?.AmountPaid ?? 0m),
+                    dueNowTotal);
             })
             .ToList();
     }

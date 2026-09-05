@@ -117,6 +117,68 @@ public class InstallmentScheduleCalculatorTests
     }
 
     [Fact]
+    public void Derived_Schedule_Marks_OneOff_Lines_And_Only_The_First_Month_As_InitialScope()
+    {
+        // Engagement initial = frais ponctuels EN ENTIER + le PREMIER mois de scolarité seulement.
+        var lines = new List<EnrollmentFeeLine> { OneOffLine(35_000m), RecurringLine(22_000m, 9) };
+
+        var result = InstallmentScheduleCalculator.Calculate(
+            totalAmountPaid: 0m, today: SchoolYearStart, lines, SchoolYearStart, customInstallments: null);
+
+        result.Should().HaveCount(10);
+        result.Where(i => i.IsInitialScope).Select(i => i.Label)
+            .Should().BeEquivalentTo(["Inscription", "Mensualité (Mois 1)"]);
+        // Les mois 2..9 n'en font pas partie : on n'encaisse pas d'avance une mensualité non échue.
+        result.Where(i => !i.IsInitialScope).Should().OnlyContain(i => i.Label.StartsWith("Mensualité (Mois "));
+    }
+
+    [Fact]
+    public void InitialScope_RemainingDue_Sum_Is_OneOff_Plus_A_Single_Month()
+    {
+        var lines = new List<EnrollmentFeeLine>
+        {
+            OneOffLine(35_000m),                 // inscription
+            RecurringLine(22_000m, 9)            // scolarité : 9 × 22 000
+        };
+
+        var result = InstallmentScheduleCalculator.Calculate(
+            totalAmountPaid: 0m, today: SchoolYearStart, lines, SchoolYearStart, customInstallments: null);
+
+        result.Where(i => i.IsInitialScope).Sum(i => i.RemainingDue).Should().Be(57_000m); // 35 000 + 22 000
+    }
+
+    [Fact]
+    public void Derived_Schedule_Carries_The_Fee_Category_Of_Its_Source_Line()
+    {
+        var oneOff = OneOffLine(35_000m);
+        var recurring = RecurringLine(22_000m, 3);
+
+        var result = InstallmentScheduleCalculator.Calculate(
+            totalAmountPaid: 0m, today: SchoolYearStart, [oneOff, recurring], SchoolYearStart, customInstallments: null);
+
+        result.Single(i => i.Label == "Inscription").FeeCategoryId.Should().Be(oneOff.FeeCategoryId);
+        result.Where(i => i.Label.StartsWith("Mensualité"))
+            .Should().OnlyContain(i => i.FeeCategoryId == recurring.FeeCategoryId);
+    }
+
+    [Fact]
+    public void Custom_Plan_Marks_Only_First_Installment_As_InitialScope_With_No_Fee_Category()
+    {
+        var planId = Guid.NewGuid();
+        var customInstallments = new List<FeeInstallment>
+        {
+            new() { SchoolId = Guid.NewGuid(), FeeInstallmentPlanId = planId, SequenceNo = 1, Label = "Versement 1", Amount = 40_000m, DueDate = SchoolYearStart },
+            new() { SchoolId = Guid.NewGuid(), FeeInstallmentPlanId = planId, SequenceNo = 2, Label = "Versement 2", Amount = 50_000m, DueDate = SchoolYearStart.AddMonths(1) }
+        };
+
+        var result = InstallmentScheduleCalculator.Calculate(
+            totalAmountPaid: 0m, today: SchoolYearStart, [], SchoolYearStart, customInstallments);
+
+        result.Where(i => i.IsInitialScope).Select(i => i.Label).Should().BeEquivalentTo(["Versement 1"]);
+        result.Should().OnlyContain(i => i.FeeCategoryId == null);
+    }
+
+    [Fact]
     public void Custom_Plan_Installments_Are_Allocated_In_SequenceNo_Order_Regardless_Of_Input_Order()
     {
         var planId = Guid.NewGuid();

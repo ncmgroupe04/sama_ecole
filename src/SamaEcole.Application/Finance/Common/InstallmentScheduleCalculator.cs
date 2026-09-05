@@ -31,7 +31,25 @@ public static class InstallmentScheduleCalculator
         decimal AmountPaid,
         decimal RemainingDue,
         DateOnly DueDate,
-        InstallmentState Status);
+        InstallmentState Status,
+
+        /// <summary>
+        /// Catégorie de frais d'origine (traçabilité + ventilation du reçu de caisse). Renseignée
+        /// pour la synthèse dérivée des lignes de frais ; <c>null</c> pour un échéancier personnalisé
+        /// (FeeInstallment ne porte pas de catégorie) — le reçu retombe alors sur sa ligne unique.
+        /// </summary>
+        Guid? FeeCategoryId = null,
+
+        /// <summary>
+        /// Vrai si cette échéance fait partie de l'ENGAGEMENT INITIAL, celui que le secrétariat
+        /// annonce sur l'attestation et que le tuteur règle en arrivant à la caisse : chaque frais
+        /// ponctuel EN ENTIER + le PREMIER mois de chaque frais récurrent (hypothèse « un mois
+        /// d'avance », alignée sur EnrollmentReceiptDto.InitialSettlementTotal et
+        /// docs/design-references/README.md §1). Les mois 2..N n'en font pas partie : on n'encaisse
+        /// pas d'avance une mensualité qui n'est pas échue. Pour un échéancier personnalisé, seule
+        /// la première échéance (SequenceNo 1) est marquée.
+        /// </summary>
+        bool IsInitialScope = false);
 
     /// <param name="customInstallments">
     /// Échéances du plan ACTIF de l'inscription, DÉJÀ TRIÉES par SequenceNo — null ou vide si aucun
@@ -56,7 +74,8 @@ public static class InstallmentScheduleCalculator
         {
             foreach (var installment in customInstallments.OrderBy(i => i.SequenceNo))
             {
-                Allocate($"PLAN-{installment.Id}", installment.Label, installment.Amount, installment.DueDate);
+                Allocate($"PLAN-{installment.Id}", installment.Label, installment.Amount, installment.DueDate,
+                    feeCategoryId: null, isInitialScope: installment.SequenceNo == 1);
             }
 
             return result;
@@ -66,7 +85,8 @@ public static class InstallmentScheduleCalculator
         {
             if (!line.IsRecurring || line.Months <= 1)
             {
-                Allocate($"LINE-{line.Id}", line.Designation, line.LineTotal, schoolYearStart);
+                Allocate($"LINE-{line.Id}", line.Designation, line.LineTotal, schoolYearStart,
+                    feeCategoryId: line.FeeCategoryId, isInitialScope: true);
             }
             else
             {
@@ -76,14 +96,17 @@ public static class InstallmentScheduleCalculator
                         $"MONTH-{line.Id}-{m}",
                         $"{line.Designation} (Mois {m})",
                         line.UnitAmount,
-                        schoolYearStart.AddMonths(m - 1));
+                        schoolYearStart.AddMonths(m - 1),
+                        feeCategoryId: line.FeeCategoryId,
+                        // Seul le premier mois relève de l'engagement initial (un mois d'avance).
+                        isInitialScope: m == 1);
                 }
             }
         }
 
         return result;
 
-        void Allocate(string id, string label, decimal amount, DateOnly dueDate)
+        void Allocate(string id, string label, decimal amount, DateOnly dueDate, Guid? feeCategoryId, bool isInitialScope)
         {
             var paidForThis = Math.Min(remainingPaid, amount);
             remainingPaid -= paidForThis;
@@ -97,7 +120,8 @@ public static class InstallmentScheduleCalculator
                         ? InstallmentState.Overdue
                         : InstallmentState.Pending;
 
-            result.Add(new CalculatedInstallment(id, label, amount, paidForThis, remainingDue, dueDate, status));
+            result.Add(new CalculatedInstallment(
+                id, label, amount, paidForThis, remainingDue, dueDate, status, feeCategoryId, isInitialScope));
         }
     }
 }
