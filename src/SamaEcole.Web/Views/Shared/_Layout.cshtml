@@ -59,6 +59,9 @@
  @* Ouverture/fermeture des sous-menus du menu latéral (verrou anti-étirage/saut, voir
  Styles/input.css [data-submenu]/.is-resetting) — indépendant d'Alpine, defer suffit. *@
  <script src="~/js/sidebar-nav.js" asp-append-version="true" defer></script>
+ @* Barres d'onglets horizontales (.tab-nav-scroll) : molette->défilement horizontal, glisser-souris,
+ auto-centrage de l'onglet actif, flèches + dégradés de débordement. Vanilla, indépendant d'Alpine. *@
+ <script src="~/js/tab-nav-scroll.js" asp-append-version="true" defer></script>
 </head>
 <body class="bg-stone-50 text-slate-900 font-sans h-screen flex flex-col overflow-hidden antialiased"
       x-data="{ sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true' }">

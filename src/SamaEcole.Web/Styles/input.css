@@ -793,9 +793,59 @@
   /* Variante à utiliser dès que les onglets peuvent dépasser la largeur disponible
      (mobile/tablette, ou beaucoup d'onglets — Paramètres, Examens, Inventaire…) : défilement
      horizontal, sans barre de défilement visible, et `max-w-full` pour ne jamais pousser la mise
-     en page. */
+     en page. `scroll-smooth` + `touch-pan-x` : défilement doux au clavier/aux flèches et geste
+     tactile horizontal direct (sans latence de désambiguïsation vertical/horizontal).
+
+     wwwroot/js/tab-nav-scroll.js (chargé globalement par _Layout) complète ce composant : molette
+     verticale -> défilement horizontal, glisser-souris, auto-centrage de l'onglet actif
+     (.tab-btn-active) au chargement et à chaque changement, et l'enveloppe .tab-nav-scroll-wrap
+     ci-dessous (dégradés d'estompement + flèches [<] [>], révélés du seul côté encore masqué). */
   .tab-nav-scroll {
-    @apply flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 scrollbar-hide;
+    @apply flex max-w-full items-center gap-1 overflow-x-auto scroll-smooth touch-pan-x rounded-xl bg-slate-100 p-1 scrollbar-hide;
+  }
+
+  .tab-nav-scroll.is-dragging {
+    @apply cursor-grabbing select-none;
+  }
+
+  /* Enveloppe injectée par tab-nav-scroll.js AUTOUR de la piste : ancre les indicateurs de
+     débordement. `data-overflow-left` / `data-overflow-right` sont posés/retirés au défilement. */
+  .tab-nav-scroll-wrap {
+    @apply relative;
+  }
+
+  .tab-nav-scroll-fade {
+    @apply pointer-events-none absolute inset-y-0 z-10 w-10 opacity-0 transition-opacity duration-200;
+  }
+
+  .tab-nav-scroll-fade-left {
+    @apply left-0 rounded-l-xl bg-gradient-to-r from-slate-100 to-transparent;
+  }
+
+  .tab-nav-scroll-fade-right {
+    @apply right-0 rounded-r-xl bg-gradient-to-l from-slate-100 to-transparent;
+  }
+
+  .tab-nav-scroll-arrow {
+    @apply pointer-events-none absolute top-1/2 z-20 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 opacity-0 shadow-sm transition hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  }
+
+  .tab-nav-scroll-arrow-left {
+    @apply left-1;
+  }
+
+  .tab-nav-scroll-arrow-right {
+    @apply right-1;
+  }
+
+  .tab-nav-scroll-wrap[data-overflow-left] .tab-nav-scroll-fade-left,
+  .tab-nav-scroll-wrap[data-overflow-right] .tab-nav-scroll-fade-right {
+    @apply opacity-100;
+  }
+
+  .tab-nav-scroll-wrap[data-overflow-left] .tab-nav-scroll-arrow-left,
+  .tab-nav-scroll-wrap[data-overflow-right] .tab-nav-scroll-arrow-right {
+    @apply pointer-events-auto opacity-100;
   }
 
   .tab-btn {
