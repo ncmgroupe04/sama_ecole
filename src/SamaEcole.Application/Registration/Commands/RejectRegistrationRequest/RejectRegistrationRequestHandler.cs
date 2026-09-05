@@ -47,10 +47,20 @@ public class RejectRegistrationRequestHandler(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        await SendRejectionEmailAsync(
-            registrationRequest.DirectorEmail, registrationRequest.DirectorFullName,
-            registrationRequest.SchoolName, registrationRequest.TrackingReference,
-            registrationRequest.RejectionReason, cancellationToken);
+        // Le rejet est déjà écrit : un échec d'ENVOI (ex. déploiement sans SMTP configuré) ne doit pas
+        // le remettre en cause — voir SubmitRegistrationRequestHandler pour le même raisonnement.
+        try
+        {
+            await SendRejectionEmailAsync(
+                registrationRequest.DirectorEmail, registrationRequest.DirectorFullName,
+                registrationRequest.SchoolName, registrationRequest.TrackingReference,
+                registrationRequest.RejectionReason, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Demande {RequestId} rejetée, mais l'e-mail de notification n'a pas pu être envoyé.", request.Id);
+        }
 
         logger.LogInformation("Demande {RequestId} rejetée par {ReviewerId}.", request.Id, reviewerId);
 

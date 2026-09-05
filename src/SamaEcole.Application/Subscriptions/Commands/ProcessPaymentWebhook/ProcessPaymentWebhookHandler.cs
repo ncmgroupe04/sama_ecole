@@ -105,7 +105,20 @@ public class ProcessPaymentWebhookHandler(
 
         if (finalStatus == SubscriptionPaymentStatus.Confirmed)
         {
-            await SendActivationEmailAsync(result, cancellationToken);
+            // Le paiement est déjà confirmé en base (ConfirmAsync ci-dessus) : un échec d'ENVOI ne doit
+            // pas faire échouer la réponse au webhook, sous peine de faire croire à l'agrégateur que le
+            // traitement a échoué et de déclencher un rejeu inutile (l'idempotence de ConfirmAsync le
+            // rendrait sans effet, mais autant ne pas le provoquer).
+            try
+            {
+                await SendActivationEmailAsync(result, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Paiement {PaymentId} confirmé pour l'école {SchoolId}, mais l'e-mail d'activation n'a pas pu être envoyé.",
+                    internalPaymentId, result.SchoolId);
+            }
         }
 
         logger.LogInformation(

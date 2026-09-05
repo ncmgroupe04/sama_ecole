@@ -94,7 +94,23 @@ public class CreateSchoolCommandHandler(
 
         // Après le commit : un e-mail parti ne se rembobine pas. L'envoyer dans la transaction
         // risquerait d'annoncer au Directeur des identifiants qui n'existent finalement pas.
-        await SendCredentialsAsync(email, fullName, request.Name, password, cancellationToken);
+        //
+        // Un échec D'ENVOI ne doit PAS faire échouer la création (école + Directeur + abonnement sont
+        // déjà écrits) — mais ici, contrairement aux autres Handlers de ce fichier, c'est CRITIQUE :
+        // le mot de passe généré ne transite QUE par cet e-mail (voir CreateSchoolResult.EmailSent).
+        var emailSent = true;
+        try
+        {
+            await SendCredentialsAsync(email, fullName, request.Name, password, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            emailSent = false;
+            logger.LogWarning(ex,
+                "Établissement {SchoolId} créé, mais l'e-mail d'identifiants n'a pas pu être envoyé à {Email} " +
+                "— le Directeur n'a AUCUN moyen de connaître son mot de passe tant qu'il n'est pas réinitialisé.",
+                schoolId, email);
+        }
 
         // L'école n'existe qu'à partir d'ici : c'est la première occasion d'attribuer l'entrée
         // d'audit à un SchoolId réel (voir la remarque de classe — l'acteur, Super Admin, n'en a pas).
@@ -105,7 +121,7 @@ public class CreateSchoolCommandHandler(
         logger.LogInformation(
             "Établissement {SchoolId} créé avec son Directeur {DirectorId}.", schoolId, directorId);
 
-        return new CreateSchoolResult(schoolId, request.Name.Trim(), directorId, email);
+        return new CreateSchoolResult(schoolId, request.Name.Trim(), directorId, email, emailSent);
     }
 
     private async Task SendCredentialsAsync(

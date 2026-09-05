@@ -52,27 +52,40 @@ public class ForgotPasswordCommandHandler(
 
         var link = $"{authSettings.PublicBaseUrl.TrimEnd('/')}/reinitialiser-mot-de-passe?token={token}";
 
-        await emailSender.SendAsync(
-            new EmailMessage(
-                To: user.Email,
-                Subject: "Réinitialisation de votre mot de passe Unikol",
-                Body: $"""
-                       Bonjour {user.FullName},
+        // Le jeton est déjà stocké : une exception d'ENVOI ne doit surtout pas remonter telle quelle —
+        // ce Handler s'engage explicitement (voir le commentaire de classe) à ne JAMAIS lever, y compris
+        // sur un déploiement sans SMTP configuré (Smtp:AllowUnconfigured=true) ou un envoi qui échoue.
+        // Un échec ici ne se distingue donc pas non plus, côté réponse, d'un compte inexistant.
+        try
+        {
+            await emailSender.SendAsync(
+                new EmailMessage(
+                    To: user.Email,
+                    Subject: "Réinitialisation de votre mot de passe Unikol",
+                    Body: $"""
+                           Bonjour {user.FullName},
 
-                       Vous avez demandé à réinitialiser le mot de passe de votre compte Unikol.
-                       Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :
+                           Vous avez demandé à réinitialiser le mot de passe de votre compte Unikol.
+                           Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe :
 
-                       {link}
+                           {link}
 
-                       Ce lien est valable {authSettings.PasswordResetMinutes} minutes et ne peut servir qu'une seule fois.
+                           Ce lien est valable {authSettings.PasswordResetMinutes} minutes et ne peut servir qu'une seule fois.
 
-                       Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de
-                       passe actuel reste valable et aucune modification n'a été faite sur votre compte.
+                           Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de
+                           passe actuel reste valable et aucune modification n'a été faite sur votre compte.
 
-                       L'équipe Unikol
-                       """),
-            cancellationToken);
+                           L'équipe Unikol
+                           """),
+                cancellationToken);
 
-        logger.LogInformation("Lien de réinitialisation émis pour le compte {UserId}.", user.Id);
+            logger.LogInformation("Lien de réinitialisation émis pour le compte {UserId}.", user.Id);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Jeton de réinitialisation créé pour le compte {UserId}, mais l'e-mail n'a pas pu être envoyé.",
+                user.Id);
+        }
     }
 }

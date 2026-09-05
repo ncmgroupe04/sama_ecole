@@ -25,9 +25,15 @@ public record CreateSchoolCommand(
 /// Ne contient volontairement AUCUN mot de passe : celui du Directeur ne transite que par l'e-mail
 /// qui lui est adressé. Le renvoyer ici le ferait apparaître dans les journaux d'accès, le cache du
 /// navigateur et l'historique de l'outil qui appelle l'API.
+///
+/// <see cref="EmailSent"/> == false est un cas CRITIQUE, contrairement à l'homonyme de
+/// ApproveRegistrationRequestResult : ici, le mot de passe ne transite QUE par cet e-mail (ci-dessus)
+/// — s'il n'est pas parti, le Directeur n'a AUCUN moyen de connaître ses identifiants, et seule une
+/// réinitialisation (POST /users/{id}/reset-password) peut débloquer le compte.
 /// </summary>
 public record CreateSchoolResult(
     Guid SchoolId,
     string Name,
     Guid DirectorUserId,
-    string DirectorEmail);
+    string DirectorEmail,
+    bool EmailSent);
