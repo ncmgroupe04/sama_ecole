@@ -334,9 +334,13 @@
  </button>
 
  @* Ouvert vers le HAUT (bottom-full) : la carte est ancrée en bas de la barre latérale, un menu
- qui s'ouvrirait vers le bas sortirait de l'écran. Même gabarit que le panneau de schoolSwitcher(). *@
+ qui s'ouvrirait vers le bas sortirait de l'écran. Largeur FIXE (w-64, comme schoolSwitcher()) et
+ non "left-3 right-3" : cette dernière étire le menu à la largeur du panneau parent, qui tombe à
+ 5rem (w-20) quand la barre est réduite (.sidebar-collapsed) — le menu se retrouvait alors comprimé
+ à ~56px, un mot par ligne. Ancré à gauche (left-3), il déborde du rail réduit sans être découpé :
+ <aside> n'a pas d'overflow-hidden. *@
  <div x-show="isOpen" x-cloak x-on:click.outside="isOpen = false" x-on:keydown.escape.window="isOpen = false"
- class="absolute bottom-full left-3 right-3 mb-2 rounded-xl bg-white p-2 shadow-lg ring-1 ring-slate-100 z-30">
+ class="absolute bottom-full left-3 w-64 mb-2 rounded-xl bg-white p-2 shadow-lg ring-1 ring-slate-100 z-30">
  <button type="button" x-on:click="isOpen = false; $store.changePasswordModal.open()"
  class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
  <icon name="key" class="w-4 h-4 shrink-0 text-slate-400" />
