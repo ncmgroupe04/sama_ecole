@@ -144,6 +144,11 @@ public class RecordPaymentCommandHandler(
                 {
                     payment.Breakdowns.Add(new PaymentBreakdown
                     {
+                        // SchoolId explicite, comme sur le Payment lui-même : payment_breakdowns est une
+                        // table tenant sous RLS PostgreSQL (AGENTS.md règle #2). Sans lui, l'INSERT de
+                        // la ligne enfant viole la policy (« new row violates row-level security
+                        // policy ») — le SchoolId du parent n'est pas propagé par EF Core.
+                        SchoolId = schoolId,
                         FeeCategoryId = breakdown.FeeCategoryId,
                         AmountAllocated = breakdown.AmountAllocated,
                         // Vide normalisé à null : une chaîne blanche ferait échouer le repli sur
