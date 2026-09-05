@@ -350,6 +350,16 @@ document.addEventListener('alpine:init', () => {
             this.error = null;
             this.errors = {};
 
+            // Le remplissage automatique du navigateur (gestionnaire de mots de passe, suggestion de
+            // l'omnibox) pose la valeur dans le DOM sans toujours déclencher l'évènement `input` dont
+            // x-model dépend pour se synchroniser : this.email/this.password pouvaient alors rester
+            // vides malgré des champs visiblement remplis, un premier clic échouait silencieusement et
+            // DÉSACTIVAIT le bouton (errors se remplissait), qui ne se réactivait qu'après un blur
+            // manuel resynchronisant x-model. On relit donc la valeur RÉELLE du DOM juste avant de
+            // valider — toujours exacte, qu'elle vienne d'une frappe ou d'un remplissage automatique.
+            if (this.$refs && this.$refs.email) this.email = this.$refs.email.value;
+            if (this.$refs && this.$refs.password) this.password = this.$refs.password.value;
+
             // Espaces superflus retirés de l'e-mail uniquement : un espace dans le mot de passe est un
             // caractère comme un autre, le rogner changerait le secret saisi par l'utilisateur.
             this.email = this.email.trim();
