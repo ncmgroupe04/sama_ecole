@@ -40,6 +40,9 @@
  <script src="~/js/formatters.js" asp-append-version="true"></script>
  <script src="~/js/form-draft.js" asp-append-version="true"></script>
  <script src="~/js/network-guard.js" asp-append-version="true"></script>
+ @* Déconnexion automatique par inactivité (Paramètres > Sécurité, config.autoLogoutMinutes) — dépend
+ d'auth.js et api.js. Script classique, s'auto-initialise sans attendre Alpine. *@
+ <script src="~/js/session-idle-guard.js" asp-append-version="true"></script>
  @* Moteur d'aperçu PDF partagé (window.pdfPreview) — doit exister avant que les Alpine.data()
  des vues n'étalent `...window.pdfPreview.state()`, donc avant le script différé d'Alpine. *@
  <script src="~/js/pdf-preview.js" asp-append-version="true"></script>
