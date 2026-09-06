@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
@@ -14,9 +15,10 @@ public class SendReportCardCommandHandler(
     IWhatsAppSender whatsAppSender,
     IEmailSender emailSender,
     ISmsDispatcher smsDispatcher,
-    ITenantProvider tenantProvider) : IRequestHandler<SendReportCardCommand>
+    ITenantProvider tenantProvider,
+    ILogger<SendReportCardCommandHandler> logger) : IRequestHandler<SendReportCardCommand, SendReportCardResult>
 {
-    public async Task Handle(SendReportCardCommand request, CancellationToken cancellationToken)
+    public async Task<SendReportCardResult> Handle(SendReportCardCommand request, CancellationToken cancellationToken)
     {
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à la session.");
@@ -29,32 +31,71 @@ public class SendReportCardCommandHandler(
             throw new ValidationException([new ValidationFailure("StudentId", "L'élève n'existe pas ou n'appartient pas à l'établissement.")]);
         }
 
-        if (string.IsNullOrWhiteSpace(student.GuardianPhone) && (request.Channel == CommunicationChannel.WhatsApp || request.Channel == CommunicationChannel.Both))
+        var wantsWhatsApp = request.Channel is CommunicationChannel.WhatsApp or CommunicationChannel.Both;
+        var wantsEmail = request.Channel is CommunicationChannel.Email or CommunicationChannel.Both;
+
+        if (string.IsNullOrWhiteSpace(student.GuardianPhone) && wantsWhatsApp)
         {
             throw new ValidationException([new ValidationFailure("Channel", "Le numéro WhatsApp du tuteur n'est pas renseigné pour cet élève.")]);
         }
 
-        if (string.IsNullOrWhiteSpace(student.GuardianEmail) && (request.Channel == CommunicationChannel.Email || request.Channel == CommunicationChannel.Both))
+        if (string.IsNullOrWhiteSpace(student.GuardianEmail) && wantsEmail)
         {
             throw new ValidationException([new ValidationFailure("Channel", "L'e-mail du tuteur n'est pas renseigné pour cet élève.")]);
         }
 
-        // Generate the PDF
+        // Libellé du trimestre pour le corps du modèle WhatsApp ({{2}}). Le filtre multi-tenant borne
+        // déjà à l'école courante ; introuvable (bulletin d'archive) → repli neutre, jamais d'échec ici.
+        var termLabel = await dbContext.Terms.AsNoTracking()
+            .Where(t => t.Id == request.TermId)
+            .Select(t => t.Label)
+            .FirstOrDefaultAsync(cancellationToken) ?? "ce trimestre";
+
         var pdfResult = await mediator.Send(new GetReportCardPdfQuery(request.StudentId, request.TermId), cancellationToken);
 
         string tutor = !string.IsNullOrWhiteSpace(student.GuardianName) ? student.GuardianName : "Cher Parent";
         string messageBody = $"Bonjour {tutor},\nVeuillez trouver ci-joint le bulletin de notes de {student.FullName}.\nCordialement,\nLa Direction.";
 
-        // WhatsApp
-        if (request.Channel is CommunicationChannel.WhatsApp or CommunicationChannel.Both)
+        var whatsAppSimulated = false;
+
+        if (wantsWhatsApp)
         {
-            var whatsAppAttachment = new WhatsAppAttachment(pdfResult.FileName, pdfResult.Content, "application/pdf");
-            var whatsAppMsg = new WhatsAppMessage(student.GuardianPhone!, messageBody, [whatsAppAttachment]);
-            await whatsAppSender.SendAsync(whatsAppMsg, cancellationToken);
+            var attachment = new WhatsAppAttachment(pdfResult.FileName, pdfResult.Content, "application/pdf");
+
+            // Le message porte À LA FOIS le texte libre (repli, n'atteint que les tuteurs dans la
+            // fenêtre de 24 h de Meta) ET le contenu métier d'un modèle. L'expéditeur choisit selon SA
+            // configuration : la couche Application n'a pas à connaître le nom du modèle Meta.
+            var whatsAppMessage = new WhatsAppMessage(
+                student.GuardianPhone!,
+                messageBody,
+                [attachment],
+                new WhatsAppTemplateContent([student.FullName, termLabel], attachment));
+
+            var whatsAppResult = await whatsAppSender.SendAsync(whatsAppMessage, cancellationToken);
+
+            if (whatsAppResult.IsFailed)
+            {
+                logger.LogError(
+                    "Envoi manuel du bulletin par WhatsApp échoué (Élève: {StudentId}, code Meta: {MetaCode}, HTTP: {HttpStatus}) : {Reason}",
+                    student.Id, whatsAppResult.MetaErrorCode, whatsAppResult.HttpStatusCode, whatsAppResult.FailureReason);
+
+                throw new WhatsAppDeliveryException(
+                    whatsAppResult.FailureReason ?? "L'envoi WhatsApp a échoué.",
+                    whatsAppResult.MetaErrorCode,
+                    whatsAppResult.HttpStatusCode);
+            }
+
+            whatsAppSimulated = whatsAppResult.IsSimulated;
+
+            if (whatsAppSimulated)
+            {
+                logger.LogWarning(
+                    "Envoi manuel du bulletin par WhatsApp en mode simulation (Élève: {StudentId}) — "
+                    + "section 'WhatsApp' non configurée, rien n'a été transmis.", student.Id);
+            }
         }
 
-        // Email
-        if (request.Channel is CommunicationChannel.Email or CommunicationChannel.Both)
+        if (wantsEmail)
         {
             var emailAttachment = new EmailAttachment(pdfResult.FileName, pdfResult.Content, "application/pdf");
             var emailMsg = new EmailMessage(student.GuardianEmail!, "Bulletin de notes", messageBody, [emailAttachment]);
@@ -78,5 +119,11 @@ public class SendReportCardCommandHandler(
                 SmsTrigger.ReportCard,
                 student.Id),
             cancellationToken);
+
+        return whatsAppSimulated
+            ? new SendReportCardResult(
+                WhatsAppSimulated: true,
+                Message: "Service WhatsApp non configuré (Mode Simulation / Log activé) — le bulletin n'a pas été transmis par WhatsApp.")
+            : new SendReportCardResult(WhatsAppSimulated: false, Message: "Bulletin envoyé avec succès.");
     }
 }

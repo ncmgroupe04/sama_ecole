@@ -6,20 +6,26 @@ using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using SamaEcole.IntegrationTests.Common;
 using MediatR;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using FluentAssertions;
 
 namespace SamaEcole.IntegrationTests.ReportCards;
 
 /// <summary>
-/// Ticket JGK-G03 (envoi du bulletin) — le canal Email envoie désormais au véritable
-/// <see cref="Student.GuardianEmail"/> de l'élève (avant ce correctif, il envoyait toujours à une
-/// adresse fictive codée en dur "tutor@example.com", faute de ce champ sur Student), avec le même
-/// garde-fou que le téléphone WhatsApp : un GuardianEmail absent bloque l'envoi Email/Both en amont.
+/// Ticket JGK-G03 (envoi du bulletin). Le canal Email envoie au véritable
+/// <see cref="Student.GuardianEmail"/> de l'élève ; un GuardianEmail/GuardianPhone absent bloque
+/// l'envoi en amont (ValidationException).
 ///
-/// Le mediator est ici un faux minimal : SendReportCardCommandHandler ne s'en sert QUE pour
-/// régénérer le PDF (GetReportCardPdfQuery) — la mise en page réelle du bulletin est déjà couverte
-/// par ReportCardDocumentTests/GetReportCardPdfTests, aucune raison de la refaire ici.
+/// Depuis la remontée d'erreurs WhatsApp : <see cref="IWhatsAppSender.SendAsync"/> renvoie un
+/// <see cref="WhatsAppSendResult"/>. Le handler PROMEUT un <see cref="WhatsAppSendStatus.Failed"/> en
+/// <see cref="WhatsAppDeliveryException"/> (l'API la traduit en 502), et REMONTE un
+/// <see cref="WhatsAppSendStatus.Simulated"/> dans <see cref="SendReportCardResult.WhatsAppSimulated"/>
+/// sans lever (l'API répond 200 + avertissement). Il fournit aussi le contenu d'un modèle Meta
+/// (<see cref="WhatsAppMessage.Template"/>) pour le contact « à froid ».
+///
+/// Le mediator est un faux minimal : le handler ne s'en sert QUE pour régénérer le PDF
+/// (GetReportCardPdfQuery) — la mise en page réelle est couverte par ReportCardDocumentTests.
 /// </summary>
 [Trait("Category", "MultiTenant")]
 public class SendReportCardCommandTests : IAsyncLifetime
@@ -86,7 +92,9 @@ public class SendReportCardCommandTests : IAsyncLifetime
         email = new FakeEmailSender();
         sms = new FakeSmsDispatcher();
 
-        return new SendReportCardCommandHandler(ctx, new FakeMediator(), whatsApp, email, sms, tenantProvider);
+        return new SendReportCardCommandHandler(
+            ctx, new FakeMediator(), whatsApp, email, sms, tenantProvider,
+            NullLogger<SendReportCardCommandHandler>.Instance);
     }
 
     [Fact]
@@ -104,9 +112,32 @@ public class SendReportCardCommandTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// Le message WhatsApp porte AUSSI le contenu d'un modèle Meta : nom de l'élève en {{1}}, période
+    /// en {{2}}, bulletin PDF en en-tête. C'est l'expéditeur (HttpWhatsAppSender) qui décide, selon SA
+    /// configuration, d'envoyer le modèle ou de retomber sur le texte libre.
+    /// </summary>
+    [Fact]
+    public async Task Report_Card_Carries_WhatsApp_Template_Content_For_Cold_Contact()
+    {
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var handler = MakeHandler(ctx, new FixedTenantProvider(EcoleA), out var whatsApp, out _);
+
+        await handler.Handle(
+            new SendReportCardCommand(EleveAvecTelephone, Guid.NewGuid(), CommunicationChannel.WhatsApp),
+            CancellationToken.None);
+
+        var template = whatsApp.LastMessage!.Template;
+        template.Should().NotBeNull();
+        template!.BodyParameters.Should().HaveCount(2);
+        template.BodyParameters[0].Should().Be("Awa Fall", "{{1}} = nom de l'élève");
+        template.BodyParameters[1].Should().Be("ce trimestre", "{{2}} = période, repli quand le trimestre est introuvable");
+        template.HeaderDocument.Should().NotBeNull();
+        template.HeaderDocument!.ContentType.Should().Be("application/pdf");
+    }
+
+    /// <summary>
     /// Le SMS d'avis part EN PLUS du canal choisi, jamais à sa place : il ne transporte pas le PDF,
-    /// il signale seulement que le bulletin est disponible. Au Sénégal, une partie des tuteurs
-    /// n'ouvre ni WhatsApp ni sa boîte mail — sans cet avis, ils ne sauraient rien.
+    /// il signale seulement que le bulletin est disponible.
     /// </summary>
     [Fact]
     public async Task Report_Card_Also_Queues_An_Sms_Notice_To_The_Guardian()
@@ -224,6 +255,63 @@ public class SendReportCardCommandTests : IAsyncLifetime
         whatsApp.LastMessage.Should().BeNull("un élève d'une autre école ne doit jamais recevoir/déclencher un envoi");
     }
 
+    /// <summary>
+    /// Anti-faux-positif : un rejet de l'API Meta (jeton expiré, fenêtre de 24 h, modèle absent…) NE
+    /// DOIT PLUS passer pour un succès. Le handler promeut le <see cref="WhatsAppSendStatus.Failed"/>
+    /// en <see cref="WhatsAppDeliveryException"/>, que l'API traduit en 502 avec le motif explicite.
+    /// </summary>
+    [Fact]
+    public async Task WhatsApp_Api_Failure_Is_Surfaced_As_A_WhatsAppDeliveryException()
+    {
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var handler = MakeHandler(ctx, new FixedTenantProvider(EcoleA), out var whatsApp, out _);
+        whatsApp.NextResult = WhatsAppSendResult.Failed(
+            "Le jeton d'accès WhatsApp est invalide ou expiré.", metaErrorCode: 190, httpStatusCode: 401);
+
+        var act = async () => await handler.Handle(
+            new SendReportCardCommand(EleveAvecTelephone, Guid.NewGuid(), CommunicationChannel.WhatsApp), CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<WhatsAppDeliveryException>();
+        thrown.Which.Message.Should().Contain("jeton");
+        thrown.Which.MetaErrorCode.Should().Be(190);
+        thrown.Which.HttpStatusCode.Should().Be(401);
+    }
+
+    /// <summary>
+    /// WhatsApp non configuré (LoggingWhatsAppSender → <see cref="WhatsAppSendStatus.Simulated"/>) :
+    /// AUCUNE exception, mais le résultat le signale pour que l'API renvoie 200 + avertissement, et non
+    /// « Bulletin envoyé avec succès ». Les canaux e-mail/SMS du même appel restent servis.
+    /// </summary>
+    [Fact]
+    public async Task WhatsApp_Simulation_Mode_Is_Reported_Without_Throwing()
+    {
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var handler = MakeHandler(ctx, new FixedTenantProvider(EcoleA), out var whatsApp, out _, out var sms);
+        whatsApp.NextResult = WhatsAppSendResult.Simulated;
+
+        var result = await handler.Handle(
+            new SendReportCardCommand(EleveAvecTelephone, Guid.NewGuid(), CommunicationChannel.WhatsApp),
+            CancellationToken.None);
+
+        result.WhatsAppSimulated.Should().BeTrue();
+        result.Message.Should().Contain("Simulation");
+        sms.LastRequest.Should().NotBeNull("l'avis SMS part quel que soit l'état de WhatsApp");
+    }
+
+    [Fact]
+    public async Task A_Successful_Send_Reports_Not_Simulated()
+    {
+        await using var ctx = _db.NewAppContext(EcoleA);
+        var handler = MakeHandler(ctx, new FixedTenantProvider(EcoleA), out _, out _);
+
+        var result = await handler.Handle(
+            new SendReportCardCommand(EleveAvecTelephone, Guid.NewGuid(), CommunicationChannel.WhatsApp),
+            CancellationToken.None);
+
+        result.WhatsAppSimulated.Should().BeFalse();
+        result.Message.Should().Be("Bulletin envoyé avec succès.");
+    }
+
     private sealed class FixedTenantProvider(Guid schoolId) : ITenantProvider
     {
         public Guid? CurrentSchoolId => schoolId;
@@ -233,10 +321,13 @@ public class SendReportCardCommandTests : IAsyncLifetime
     {
         public WhatsAppMessage? LastMessage { get; private set; }
 
-        public Task SendAsync(WhatsAppMessage message, CancellationToken cancellationToken)
+        /// <summary>Issue à renvoyer au prochain appel — <see cref="WhatsAppSendResult.Sent"/> par défaut.</summary>
+        public WhatsAppSendResult NextResult { get; set; } = WhatsAppSendResult.Sent;
+
+        public Task<WhatsAppSendResult> SendAsync(WhatsAppMessage message, CancellationToken cancellationToken)
         {
             LastMessage = message;
-            return Task.CompletedTask;
+            return Task.FromResult(NextResult);
         }
     }
 
