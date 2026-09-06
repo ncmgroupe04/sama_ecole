@@ -83,8 +83,11 @@
 
  <div class="flex-1 flex overflow-hidden min-h-0">
 
- <!-- Overlay pour mobile -->
- <div x-show="sidebarOpen" class="fixed inset-0 z-20 bg-slate-900 bg-opacity-50 transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
+ <!-- Overlay pour mobile : fond assombri + flouté (barème z-index, cf. ModalShellTagHelper), et
+      verrou de défilement de la page tant que le tiroir est ouvert. -->
+ <div x-show="sidebarOpen" x-cloak
+      x-effect="window.__modalScrollLock && window.__modalScrollLock.set($el, sidebarOpen)"
+      class="fixed inset-0 z-20 bg-slate-900/60 backdrop-blur-sm transition-opacity lg:hidden" x-on:click="sidebarOpen = false"></div>
 
  <!-- Barre latérale -->
  @* w-72 et non w-64 : à 16rem, l'espace restant pour un libellé principal (icône w-6, gap-3,

@@ -278,6 +278,11 @@
     animation: skeleton-shimmer 1.5s infinite;
   }
 
+  /* ── Barème z-index unifié de la plateforme (référence unique — cf. TagHelpers/ModalShellTagHelper.cs) ──
+     header sticky = z-10 · sous-header sticky = z-20 · menus déroulants / popovers = z-30 ·
+     tiroir latéral mobile = z-30 (overlay z-20) · MODALE overlay+panneau = z-50 · toasts = z-[60].
+     Ne pas introduire de valeur intermédiaire (z-40, z-45…) sans mettre ce barème à jour. */
+
   /* Sous-header sticky (Classes, Matières, Bâtiments & Salles) : reste en haut de l'écran lors du
      défilement, juste sous le header principal (jamais dessous — z-20 face au z-10 du header, et
      surtout <main> n'a AUCUN padding : voir _Layout.cshtml). top-0 colle contre le bord de <main>,

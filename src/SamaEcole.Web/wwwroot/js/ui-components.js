@@ -10,6 +10,53 @@ window.closeAllModals = function() {
 };
 
 /**
+ * Verrou de défilement de l'arrière-plan pendant qu'un overlay plein écran est ouvert (modale
+ * modal-shell, tiroir latéral mobile). Sans lui, la page continue de défiler DERRIÈRE la modale
+ * pendant qu'on navigue dedans — le « double scroll » signalé.
+ *
+ * Deux cibles, parce que le conteneur défilant dépend du gabarit : <main> dans _Layout (voir
+ * help.js backToTop — `<body>` y est `overflow-hidden`), <html> dans _AuthLayout. On fige les deux,
+ * l'un des deux est toujours le bon et figer l'autre est sans effet.
+ *
+ * Compensation de la largeur de la barre de défilement par un `padding-right` temporaire : sans ça,
+ * sa disparition élargit le contenu de ~15 px à chaque ouverture (saut visible sous le fond flouté).
+ *
+ * Set d'éléments plutôt qu'un booléen : deux overlays superposés (rare — p. ex. l'assistant de
+ * démarrage ouvert par-dessus une fiche) ne déverrouillent qu'une fois le dernier fermé. `set()` est
+ * idempotent : x-effect l'appelle en boucle, `dataset.scrollLocked` évite de re-mesurer le gap.
+ */
+window.__modalScrollLock = {
+    _open: new Set(),
+
+    set(el, isOpen) {
+        if (!el) return;
+        if (isOpen) this._open.add(el); else this._open.delete(el);
+        this._apply(this._open.size > 0);
+    },
+
+    _apply(lock) {
+        const targets = [document.documentElement];
+        const main = document.querySelector('main');
+        if (main) targets.push(main);
+
+        for (const t of targets) {
+            if (lock && !t.dataset.scrollLocked) {
+                const gap = t === document.documentElement
+                    ? window.innerWidth - document.documentElement.clientWidth
+                    : t.offsetWidth - t.clientWidth;
+                if (gap > 0) t.style.paddingRight = gap + 'px';
+                t.style.overflow = 'hidden';
+                t.dataset.scrollLocked = '1';
+            } else if (!lock && t.dataset.scrollLocked) {
+                t.style.overflow = '';
+                t.style.paddingRight = '';
+                delete t.dataset.scrollLocked;
+            }
+        }
+    }
+};
+
+/**
  * Position `fixed` (coordonnées VIEWPORT) d'un popover flottant — calendrier ou liste déroulante.
  * Partagé par selectField() (listes déroulantes — filtres Mois/Années, onglets…) et dateField()
  * (calendrier). Le résultat se transforme en chaîne de style par window.floatingStyleFrom().
@@ -106,7 +153,8 @@ window.toast = (function () {
         if (!el) {
             el = document.createElement('div');
             el.id = 'app-toast-container';
-            el.className = 'fixed top-4 right-4 z-[100] flex flex-col gap-2 items-end pointer-events-none';
+            // z-[60] : au-dessus de la modale (z-50) — une notification reste lisible même modale ouverte.
+            el.className = 'fixed top-4 right-4 z-[60] flex flex-col gap-2 items-end pointer-events-none';
             document.body.appendChild(el);
         }
         return el;

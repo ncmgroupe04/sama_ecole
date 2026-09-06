@@ -109,14 +109,37 @@ public class ModalShellTagHelper : TagHelper
         var panelStyleAttr = string.IsNullOrWhiteSpace(PanelStyle) ? "" : $""" x-bind:style="{PanelStyle}" """;
 
         output.TagName = null; // pas de <modal-shell> littéral au rendu : uniquement le HTML ci-dessous.
+
+        // ──────────────────────────────────────────────────────────────────────────────────────────
+        // x-teleport="body" : la modale est RENDUE COMME ENFANT DIRECT DE <body>, où qu'elle soit
+        // déclarée. Sans ça, une modale déclarée dans un ANCÊTRE qui forme un contexte d'empilement
+        // reste plafonnée au z-index de cet ancêtre. Cas concret : l'assistant de démarrage est dans
+        // <header>, or <header> est un flex-item porteur de `z-10` — donc un contexte d'empilement à
+        // z-10. Le `z-50` de la modale ne comptait alors QUE face aux enfants de <header> ; dans la
+        // page, toute la modale restait à z-10, SOUS le sous-header sticky (z-20) et la barre latérale
+        // (z-30), qui passaient DEVANT le fond assombri (bug « chevauchement des overlays »).
+        // Alpine conserve la portée du composant d'origine à travers le teleport : `{Open}`, `{close}`
+        // et les liaisons de {body} (x-model, etc.) restent évaluées dans le scope de la vue hôte.
+        //
+        // Barème z-index unifié (voir aussi Styles/input.css) :
+        //   header / sous-header sticky ........ z-10 / z-20   ·   menus déroulants, popovers .. z-30
+        //   tiroir latéral mobile + overlay ... z-30 / z-20    ·   MODALE (overlay + panneau) .. z-50
+        //   toasts / notifications ............ z-[60]
+        // Le fond assombri est enfant `fixed` sans z propre → se peint sous le panneau `relative` par
+        // l'ordre du DOM. `bg-slate-900/60 backdrop-blur-sm` : opaque ET flouté (un `bg-opacity-75`
+        // laissait transparaître champs et en-têtes). `x-effect` fige le défilement de la page
+        // derrière la modale (window.__modalScrollLock, wwwroot/js/ui-components.js).
+        // ──────────────────────────────────────────────────────────────────────────────────────────
         output.Content.SetHtmlContent($"""
+            <template x-teleport="body">
             <div x-show="{Open}" x-cloak
-                 class="fixed inset-0 z-[60] flex items-stretch justify-center sm:items-center sm:p-4"
+                 x-effect="window.__modalScrollLock && window.__modalScrollLock.set($el, {Open})"
+                 class="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center sm:p-4"
                  {escapeClose}x-on:close-modals.window="{close}">
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                     class="fixed inset-0 bg-gray-500 bg-opacity-75"{backdropClose}></div>
+                     class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"{backdropClose}></div>
 
                 <div x-show="{Open}"
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
@@ -144,6 +167,7 @@ public class ModalShellTagHelper : TagHelper
                     """)}
                 </div>
             </div>
+            </template>
             """);
     }
 

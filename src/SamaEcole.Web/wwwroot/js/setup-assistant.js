@@ -242,6 +242,10 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------------ Interactions
 
         toggle() {
+            // Une seule modale principale à la fois : en ouvrant l'assistant (bouton de la barre
+            // supérieure), on referme d'abord toute modale-shell restée ouverte (fiche élève,
+            // guichet rapide…), sinon les deux panneaux se superposent.
+            if (!this.open && window.closeAllModals) window.closeAllModals();
             this.open = !this.open;
             if (this.open) this.refresh();
         },
