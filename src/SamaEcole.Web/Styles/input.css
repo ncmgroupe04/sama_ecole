@@ -95,17 +95,19 @@
     @apply inline-flex items-center justify-center gap-2 rounded-md border border-transparent bg-danger px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 disabled:opacity-50;
   }
 
-  /* Boutons standardisés pour les modales (SaaS 2026) */
+  /* Boutons standardisés pour les modales (SaaS 2026). `py-3 sm:py-2` : ~44px de haut sur mobile
+     (plancher tactile — ce sont les actions principales d'une modale, souvent plein écran sur
+     téléphone), retour au gabarit dense `py-2` dès `sm:` pour ne rien changer au rendu desktop. */
   .btn-modal-primary {
-    @apply inline-flex items-center justify-center gap-2 bg-primary-600 text-white hover:bg-primary-700 px-5 py-2 rounded-xl font-medium text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 bg-primary-600 text-white hover:bg-primary-700 px-5 py-3 sm:py-2 rounded-xl font-medium text-sm shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-modal-secondary {
-    @apply inline-flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-3 sm:py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:opacity-50;
   }
 
   .btn-modal-danger {
-    @apply inline-flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 text-rose-600 hover:bg-rose-50 px-4 py-3 sm:py-2 rounded-xl font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:opacity-50;
   }
 
   /* Bordure en slate-200/60 et non slate-100 (refonte 2026) : sur le fond stone-50 du corps de
@@ -128,12 +130,15 @@
      dans une quarantaine d'endroits et REDÉFINISSAIT le focus au lieu de le compléter — d'où deux
      halos différents selon l'écran. Tout est désormais dans la classe.
 
-     Hauteur : h-10 (40px) fixe. `py-3` produisait une hauteur DÉDUITE du contenu, donc variable
-     entre un <input> et un <select> mis côte à côte sur la même ligne — le défaut le plus visible
-     des barres de filtres. Les deux dérogations légitimes (textarea, select natif) sont traitées
-     juste en dessous, PAS par une classe concurrente dans les vues. */
+     Hauteur : h-11 (44px) sur mobile, h-10 (40px) fixe dès `sm:`. 44px est le plancher tactile
+     (WCAG 2.5.5, Apple HIG) — un champ de 40px se rate au pouce sur une barre de filtres dense ;
+     desktop garde 40px (revue design initiale). Les deux valeurs restent COMMUNES à <input> et
+     <select> à chaque point de rupture, donc l'alignement d'une ligne de filtres est préservé.
+     `py-3` produisait une hauteur DÉDUITE du contenu, donc variable entre un <input> et un <select>
+     mis côte à côte — le défaut le plus visible des barres de filtres. Les deux dérogations légitimes
+     (textarea, select natif) sont traitées juste en dessous, PAS par une classe concurrente. */
   .input-field {
-    @apply mt-1 block h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary;
+    @apply mt-1 block h-11 sm:h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 shadow-sm transition-all hover:border-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary;
   }
 
   /* Un <textarea> à hauteur fixe de 40px n'affiche qu'une ligne et demie : la hauteur devient un
@@ -276,14 +281,14 @@
   /* Sous-header sticky (Classes, Matières, Bâtiments & Salles) : reste en haut de l'écran lors du
      défilement, juste sous le header principal (jamais dessous — z-20 face au z-10 du header, et
      surtout <main> n'a AUCUN padding : voir _Layout.cshtml). top-0 colle contre le bord de <main>,
-     le vrai conteneur défilant. -mx-8/-mt-8 (lg:-mx-10/-mt-10) annulent le padding du DIV qui
-     encadre @RenderBody() (celui-là a le padding, précisément pour que ces marges négatives aient
-     un padding à annuler) : sans eux l'en-tête resterait indenté au lieu de border à border.
-     N'ANNULEZ PAS top-0 par un top-8/lg:top-10 : ce fut la régression précédente — top:0 ne colle
-     correctement QUE si <main> reste sans padding ; un top positif ne fait que déplacer le
-     symptôme (bon uniquement tant que sa valeur suit le padding de <main> à la main). */
+     le vrai conteneur défilant. Les marges négatives annulent EXACTEMENT le padding du DIV qui
+     encadre @RenderBody() (p-4 sur mobile, sm:p-6 sur tablette, lg:p-10 sur desktop — voir
+     _Layout.cshtml) : chaque cran de padding a son cran de marge négative en écho, sinon l'en-tête
+     resterait indenté (marge trop faible) ou déborderait vers la gauche (marge trop forte, la
+     régression du resserrement des paddings mobile). N'ANNULEZ PAS top-0 par un top positif : top:0
+     ne colle correctement QUE si <main> reste sans padding. */
   .sticky-sub-header {
-    @apply sticky top-0 z-20 isolate -mx-8 -mt-8 lg:-mx-10 lg:-mt-10 px-8 py-4 lg:px-10 lg:py-4 bg-white border-b border-slate-200 shadow-sm;
+    @apply sticky top-0 z-20 isolate -mx-4 -mt-4 px-4 py-4 sm:-mx-6 sm:-mt-6 sm:px-6 lg:-mx-10 lg:-mt-10 lg:px-10 lg:py-4 bg-white border-b border-slate-200 shadow-sm;
   }
 
   @media (prefers-reduced-motion: reduce) {

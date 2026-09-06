@@ -72,7 +72,10 @@ window.computeFloatingPosition = function (anchorEl, menuHeight, menuWidth) {
     // inaccessible) ; jamais moins que `minHeight`, pour rester utilisable même à l'étroit.
     const maxHeight = Math.max(minHeight, Math.min(needed, chosenSpace));
 
-    const width = menuWidth || rect.width;
+    // Largeur bornée au viewport (moins 2×marge) : sur un téléphone étroit, un popover à largeur
+    // fixe (le calendrier fait 300 px) débordait à droite dès que le champ était près du bord —
+    // `left` seul ne suffit pas, il faut aussi rétrécir le menu. Défilement interne si besoin.
+    const width = Math.min(menuWidth || rect.width, Math.max(0, viewportWidth - 2 * margin));
     const left = Math.min(Math.max(margin, rect.left), Math.max(margin, viewportWidth - margin - width));
 
     return openUp

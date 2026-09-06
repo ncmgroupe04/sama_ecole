@@ -66,10 +66,13 @@ public class RowActionTagHelper : TagHelper
         var label = WebUtility.HtmlEncode(Label);
 
         output.TagName = null;
+        // min-h/min-w 44px sur mobile (plancher tactile — ces boutons vivent dans des tableaux
+        // denses au doigt), remis à la taille compacte dès `sm:` pour ne pas gonfler les lignes
+        // sur desktop. inline-flex centre l'icône dans la cible élargie.
         output.Content.SetHtmlContent($$"""
             <button type="button" {{showAttr}}x-on:click="{{OnClick}}"
                     title="{{label}}" aria-label="{{label}}"
-                    class="p-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 {{buttonClass}}">
+                    class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 p-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 {{buttonClass}}">
                 {{RowActionsTagHelper.Svg(Icon, "w-[18px] h-[18px] flex-shrink-0")}}
             </button>
             """);

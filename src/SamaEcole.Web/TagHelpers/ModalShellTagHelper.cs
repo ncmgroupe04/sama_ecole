@@ -138,7 +138,7 @@ public class ModalShellTagHelper : TagHelper
                         {body}
                     </div>
                     {(footer is null ? "" : $"""
-                    <div class="flex-shrink-0 bg-white border-t border-slate-100 p-4 px-6 flex justify-between items-center gap-4">
+                    <div class="flex-shrink-0 bg-white border-t border-slate-100 p-4 px-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                         {footer}
                     </div>
                     """)}

@@ -226,7 +226,7 @@
  <span x-text="balance ? balance.schoolYearLabel : ''"></span>
  </p>
 
- <dl class="mt-4 grid grid-cols-3 gap-4 text-center border-t border-slate-100 pt-4">
+ <dl class="mt-4 grid grid-cols-1 gap-4 text-center border-t border-slate-100 pt-4 sm:grid-cols-3">
  <div>
  <dt class="text-xs text-slate-500">Total dû</dt>
  <dd class="text-base font-semibold text-slate-900" x-text="formatMoney(balance ? balance.totalDue : 0)"></dd>
@@ -267,8 +267,10 @@
  <!-- Échéancier détaillé (Frais d'inscription + mensualités) -->
  <div x-show="balance && balance.installments && balance.installments.length > 0" x-cloak class="border-t border-slate-100 pt-5 space-y-4">
      <h3 class="text-xs font-semibold text-slate-900 uppercase tracking-wider">Échéancier détaillé</h3>
-     <div class="rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-         <table class="w-full text-xs text-left border-collapse">
+     @* overflow-x-auto (et non -hidden) : 7 colonnes, elles ne tiennent pas sur un téléphone —
+        défilement horizontal assumé plutôt que colonnes tronquées. min-w garde les colonnes lisibles. *@
+     <div class="rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+         <table class="w-full min-w-[680px] text-xs text-left border-collapse">
              <thead>
                  <tr class="table-head">
                      <th class="py-2.5 px-3">Désignation</th>
@@ -310,8 +312,8 @@
  <!-- Historique des versements antérieurs -->
  <div x-show="balance && balance.paymentsHistory && balance.paymentsHistory.length > 0" x-cloak class="border-t border-slate-100 pt-5 space-y-4">
      <h3 class="text-xs font-semibold text-slate-900 uppercase tracking-wider">Historique des versements</h3>
-     <div class="rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-         <table class="w-full text-xs text-left border-collapse">
+     <div class="rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+         <table class="w-full min-w-[560px] text-xs text-left border-collapse">
              <thead>
                  <tr class="table-head">
                      <th class="py-2 px-3">N° Reçu</th>
@@ -646,8 +648,8 @@
  <!-- Frais échus, une case à cocher par ligne (toutes cochées par défaut) -->
  <div>
  <h3 class="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-2">Frais échus à ce jour</h3>
- <div class="rounded-xl border border-slate-100 shadow-sm overflow-hidden">
- <table class="w-full text-sm text-left">
+ <div class="rounded-xl border border-slate-100 shadow-sm overflow-x-auto">
+ <table class="w-full min-w-[380px] text-sm text-left">
  <thead>
  <tr class="table-head">
  <th class="py-2 px-3 w-10"></th>
