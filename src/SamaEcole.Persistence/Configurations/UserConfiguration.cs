@@ -16,15 +16,25 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.ToTable("users");
 
         builder.HasKey(u => u.Id);
-        builder.Property(u => u.Email).IsRequired().HasMaxLength(255);
+
+        // `citext` (et non `varchar`) : l'e-mail est un IDENTIFIANT DE COMPTE, la comparaison — donc
+        // l'unicité — doit être insensible à la casse, comme l'est déjà le login
+        // (auth_find_user_by_email fait lower() = lower()). Sur un btree `varchar`,
+        // « Directeur@ecole.sn » et « directeur@ecole.sn » étaient deux comptes distincts.
+        // Toute écriture passe malgré tout par EmailNormalizer (minuscules) : citext protège l'unicité,
+        // la normalisation garde la valeur stockée propre.
+        builder.Property(u => u.Email).IsRequired().HasColumnType("citext");
         builder.Property(u => u.PasswordHash).IsRequired().HasMaxLength(500);
         builder.Property(u => u.FullName).IsRequired().HasMaxLength(200);
         builder.Property(u => u.Phone).HasMaxLength(30);
         builder.Property(u => u.Role).HasConversion<string>().HasMaxLength(20);
         builder.Property(u => u.Status).HasConversion<string>().HasMaxLength(20);
 
-        // Un email n'appartient qu'à un seul compte sur toute la plateforme (docs/Volume_3_DDS.md §5.2).
-        builder.HasIndex(u => u.Email).IsUnique();
+        // Un e-mail n'identifie qu'un seul compte VIVANT sur toute la plateforme (docs/Volume_3_DDS.md
+        // §5.2), casse ignorée (colonne citext). Filtré sur IsDeleted : un compte soft-deleted ne
+        // réserve plus l'adresse — cohérent avec auth_find_user_by_email, qui ne voit pas les comptes
+        // supprimés (sans ce filtre, l'adresse d'un Directeur soft-deleted restait bloquée à jamais).
+        builder.HasIndex(u => u.Email).IsUnique().HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(u => u.SchoolId);
 
         // FK vers schools, nullable pour le Super Admin (docs/Volume_3_DDS.md §5.2).

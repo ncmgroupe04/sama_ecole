@@ -114,6 +114,11 @@ public class ApplicationDbContext(
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
+        // `citext` : type e-mail insensible à la casse pour `users.Email` (voir UserConfiguration).
+        // Extension « trusted » depuis PostgreSQL 13 — le rôle propriétaire des migrations peut
+        // l'installer sans être superutilisateur. La migration émet CREATE EXTENSION IF NOT EXISTS.
+        modelBuilder.HasPostgresExtension("citext");
+
         // Console Super Admin (contournement RLS auditée, AGENTS.md règle #2) : deux entités SANS CLÉ.
         // La première lit la vue `v_platform_dashboard_stats` (créée par migration, OWNER sama_ecole,
         // security_invoker = false) ; la seconde n'a AUCUNE table/vue propre — elle n'existe que comme

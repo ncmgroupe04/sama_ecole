@@ -1,6 +1,8 @@
 using System.Data;
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Persistence.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
@@ -32,7 +34,23 @@ public class SchoolProvisioningStore(ApplicationDbContext dbContext) : ISchoolPr
         command.Parameters.AddWithValue("fullName", fullName);
         command.Parameters.AddWithValue("role", role.ToString());
 
-        var result = await command.ExecuteScalarAsync(cancellationToken);
+        object? result;
+        try
+        {
+            result = await command.ExecuteScalarAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            // Course entre deux provisionnements portant le MÊME e-mail : le pré-contrôle
+            // EmailExistsAsync des Handlers a été franchi par les deux avant que l'un ne commite.
+            // L'index unique de `users.Email` (citext, insensible à la casse) a tranché. Cet INSERT
+            // passe par une commande ADO brute, hors du SaveChangesAsync qui traduit d'habitude le
+            // 23505 (ApplicationDbContext) — on le traduit donc ici, pour un 409 lisible plutôt qu'un
+            // 500 (AGENTS.md règle #5, docs/Volume_4_API_Design.md §0.4).
+            throw new DuplicateRecordException(
+                UniqueConstraintCatalog.Describe(ex.ConstraintName, ex.TableName ?? "users"),
+                $"{ex.TableName ?? "users"} / {ex.ConstraintName ?? "IX_users_Email"}");
+        }
 
         // NULL = l'établissement a déjà un utilisateur. La fonction refuse alors d'agir : c'est sa
         // garde anti-escalade, pas une erreur technique.

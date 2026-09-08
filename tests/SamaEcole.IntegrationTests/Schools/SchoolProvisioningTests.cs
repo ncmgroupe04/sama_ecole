@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using SamaEcole.IntegrationTests.Common;
@@ -115,5 +116,105 @@ public class SchoolProvisioningTests : IAsyncLifetime
 
         (await store.EmailExistsAsync("personne@sama-ecole.sn", CancellationToken.None))
             .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Provisioning_Two_Schools_With_The_Same_Director_Email_Must_Refuse_The_Second()
+    {
+        // Audit sécurité : deux établissements ne peuvent PAS naître avec le même e-mail de Directeur.
+        // La garde « école vierge » ne s'y oppose pas (les deux écoles sont vierges) — c'est l'unicité
+        // globale de users.Email qui doit trancher, traduite en refus lisible (pas un 23505 brut).
+        var ecoleA = Guid.NewGuid();
+        var ecoleB = Guid.NewGuid();
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Schools.AddRange(
+                new School { Id = ecoleA, Name = "École A" },
+                new School { Id = ecoleB, Name = "École B" });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(schoolId: null);
+        var store = _db.NewProvisioningStore(db);
+
+        var first = await store.CreateInitialDirectorAsync(
+            ecoleA, "directeur@groupe.sn", "hash", "Directeur A", Role.Directeur, CancellationToken.None);
+        first.Should().NotBeNull();
+
+        var act = async () => await store.CreateInitialDirectorAsync(
+            ecoleB, "directeur@groupe.sn", "hash", "Directeur B", Role.Directeur, CancellationToken.None);
+
+        await act.Should().ThrowAsync<DuplicateRecordException>(
+            "un e-mail n'identifie qu'un seul compte sur toute la plateforme");
+    }
+
+    [Fact]
+    public async Task Provisioning_Must_Refuse_A_Director_Email_That_Differs_Only_By_Case()
+    {
+        // Le cœur de la faille : « Directeur@X » et « directeur@X » passaient tous deux, car l'index
+        // unique était un btree varchar sensible à la casse. Colonne citext -> ils se confondent.
+        var ecoleA = Guid.NewGuid();
+        var ecoleB = Guid.NewGuid();
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Schools.AddRange(
+                new School { Id = ecoleA, Name = "École Casse A" },
+                new School { Id = ecoleB, Name = "École Casse B" });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(schoolId: null);
+        var store = _db.NewProvisioningStore(db);
+
+        await store.CreateInitialDirectorAsync(
+            ecoleA, "directeur@casse.sn", "hash", "Directeur A", Role.Directeur, CancellationToken.None);
+
+        var act = async () => await store.CreateInitialDirectorAsync(
+            ecoleB, "DIRECTEUR@CASSE.SN", "hash", "Directeur B", Role.Directeur, CancellationToken.None);
+
+        await act.Should().ThrowAsync<DuplicateRecordException>(
+            "l'unicité de l'e-mail doit ignorer la casse (colonne citext)");
+
+        // Et l'index le confirme du côté « lecture » : la variante de casse est bien vue comme prise.
+        (await store.EmailExistsAsync("Directeur@Casse.SN", CancellationToken.None)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task A_Soft_Deleted_Director_Frees_The_Email_For_A_New_School()
+    {
+        // L'index unique est filtré « WHERE IsDeleted = false » : un compte supprimé ne réserve plus
+        // l'adresse — cohérent avec auth_find_user_by_email, qui ignore déjà les comptes supprimés.
+        var ecoleA = Guid.NewGuid();
+        var ecoleB = Guid.NewGuid();
+        var directeurA = Guid.NewGuid();
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Schools.AddRange(
+                new School { Id = ecoleA, Name = "École Reprise A" },
+                new School { Id = ecoleB, Name = "École Reprise B" });
+            var supprime = new User
+            {
+                Id = directeurA,
+                SchoolId = ecoleA,
+                Email = "reprise@ecole.sn",
+                PasswordHash = "hash",
+                FullName = "Directeur A",
+                Role = Role.Directeur
+            };
+            supprime.SoftDelete("test");
+            owner.Users.Add(supprime);
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(schoolId: null);
+        var store = _db.NewProvisioningStore(db);
+
+        var directorId = await store.CreateInitialDirectorAsync(
+            ecoleB, "reprise@ecole.sn", "hash", "Directeur B", Role.Directeur, CancellationToken.None);
+
+        directorId.Should().NotBeNull("l'adresse d'un compte soft-deleted redevient disponible");
     }
 }

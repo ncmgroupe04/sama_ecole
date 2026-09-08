@@ -1,5 +1,8 @@
+using SamaEcole.Application.Common;
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
+using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -19,18 +22,36 @@ public class SubmitRegistrationRequestHandler(
     IApplicationDbContext dbContext,
     IPasswordHasher passwordHasher,
     IRegistrationReferenceGenerator referenceGenerator,
+    ISchoolProvisioningStore provisioningStore,
     IEmailSender emailSender,
     ILogger<SubmitRegistrationRequestHandler> logger)
     : IRequestHandler<SubmitRegistrationRequestCommand, SubmitRegistrationRequestResult>
 {
     /// <summary>
-    /// Deux soumissions avec le même e-mail sont AUTORISÉES (« une école peut retenter », critère du
-    /// ticket) : on ne contrôle donc pas l'unicité de l'e-mail, seulement celle de la référence de suivi.
+    /// Deux demandes EN ATTENTE avec le même e-mail restent autorisées (« une école peut retenter »,
+    /// critère JGK-I01) : on ne contrôle pas l'unicité entre demandes, seulement celle de la référence
+    /// de suivi. En revanche, si l'e-mail identifie DÉJÀ un compte (docs/Volume_3_DDS.md §5.2), la
+    /// demande n'aboutira jamais — l'approbation la refuse — autant le dire tout de suite à
+    /// l'inscrivant plutôt que de laisser le Super Admin buter dessus plus tard.
     /// </summary>
     public async Task<SubmitRegistrationRequestResult> Handle(
         SubmitRegistrationRequestCommand request, CancellationToken cancellationToken)
     {
-        var email = request.DirectorEmail.Trim();
+        // Forme canonique, identique à tous les chemins de création de compte (EmailNormalizer) :
+        // stockée telle quelle, elle est aussi la valeur que l'approbation posera dans `users.Email`.
+        var email = EmailNormalizer.Normalize(request.DirectorEmail);
+
+        // « Retenter » vise une école SANS compte. Un e-mail déjà rattaché à un compte n'ouvre pas un
+        // second établissement par une nouvelle inscription : le Super Admin RATTACHE l'école au
+        // compte existant (AttachSchoolToUserCommand). Voir docs/Volume_3_DDS.md §5.2.
+        if (await provisioningStore.EmailExistsAsync(email, cancellationToken))
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(request.DirectorEmail),
+                    "Cette adresse e-mail est déjà associée à un compte Unikol. Connectez-vous, ou "
+                    + "demandez au support le rattachement d'un nouvel établissement à votre compte.")
+            ]);
+        }
 
         // Haché DÈS que possible, avant toute écriture : le mot de passe en clair ne survit pas à cette
         // ligne et n'atteint jamais ni la base ni un log (docs/Volume_7_Security.md §Paiements).

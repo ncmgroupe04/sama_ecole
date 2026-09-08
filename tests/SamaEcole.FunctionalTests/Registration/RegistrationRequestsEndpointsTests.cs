@@ -160,4 +160,28 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
+
+    [Fact]
+    public async Task Submitting_With_The_Email_Of_An_Existing_Account_Should_Be_Rejected()
+    {
+        // « Une école peut retenter » vise une école SANS compte. Si l'adresse identifie déjà un
+        // compte (docs/Volume_3_DDS.md §5.2), la demande n'aboutirait jamais — on la refuse tout de
+        // suite plutôt que de laisser le Super Admin buter dessus. Un même responsable qui gère
+        // plusieurs écoles se les fait RATTACHER à son compte, il n'en recrée pas un second.
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/registration-requests", ValidPayload("École Doublon Compte", AuthApiFactory.DirecteurEmail));
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task Submitting_With_A_Case_Variant_Of_An_Existing_Account_Email_Should_Be_Rejected()
+    {
+        // Le cœur de la faille : une simple différence de casse ne doit plus ouvrir un second compte.
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/registration-requests",
+            ValidPayload("École Doublon Casse", AuthApiFactory.DirecteurEmail.ToUpperInvariant()));
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
 }
