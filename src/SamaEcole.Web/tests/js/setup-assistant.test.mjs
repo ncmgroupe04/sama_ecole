@@ -153,6 +153,39 @@ test('ouverture automatique une seule fois par navigateur', async () => {
     assert.equal(second.open, false); // le drapeau localStorage empêche la réouverture
 });
 
+test('toggle() diffère l’ouverture APRÈS le broadcast close-modals (garde anti-flash du bouton « Démarrage »)', async () => {
+    // Régression : depuis la bascule x-teleport (modales sous <body>), toggle() appelle
+    // closeAllModals() → `close-modals` sur window, que la modal-shell de l’assistant écoute AUSSI.
+    // Si toggle() posait open=true dans la foulée, le propre écouteur de l’assistant refermait
+    // aussitôt → la fenêtre « flashait » puis disparaissait.
+    const { a, ctx } = await mount({ responses: FULL() });
+    assert.equal(a.open, false, 'aucune ouverture automatique quand le paramétrage est complet');
+
+    // Câblage réel de modal-shell : closeAllModals diffuse `close-modals`, l’écouteur exécute close().
+    ctx.window.closeAllModals = () => ctx.window.emit('close-modals');
+    ctx.window.addEventListener('close-modals', () => { a.open = false; });
+
+    a.toggle();
+    // Le point clé : rien n’est ouvert de façon synchrone — l’ouverture est repoussée après le
+    // broadcast. (Avec l’ancien `this.open = !this.open`, open valait déjà true ici.)
+    assert.equal(a.open, false, 'toggle() ne doit pas ouvrir avant que close-modals ait été traité');
+
+    await flush();
+    assert.equal(a.open, true, 'la fenêtre « Démarrage » reste ouverte, elle ne flashe plus');
+});
+
+test('toggle() referme immédiatement quand l’assistant est déjà ouvert', async () => {
+    const { a, ctx } = await mount(); // établissement vierge → ouverture automatique
+    assert.equal(a.open, true);
+
+    let broadcasts = 0;
+    ctx.window.closeAllModals = () => { broadcasts++; };
+
+    a.toggle();
+    assert.equal(a.open, false, 'un second clic referme');
+    assert.equal(broadcasts, 0, 'refermer ne diffuse pas close-modals');
+});
+
 test('revérifier reflète un paramétrage complété entre-temps', async () => {
     const calls = [];
     let table = FRESH();
