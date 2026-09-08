@@ -242,12 +242,22 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------------ Interactions
 
         toggle() {
+            if (this.open) { this.open = false; return; }
+
             // Une seule modale principale à la fois : en ouvrant l'assistant (bouton de la barre
             // supérieure), on referme d'abord toute modale-shell restée ouverte (fiche élève,
             // guichet rapide…), sinon les deux panneaux se superposent.
-            if (!this.open && window.closeAllModals) window.closeAllModals();
-            this.open = !this.open;
-            if (this.open) this.refresh();
+            //
+            // closeAllModals() diffuse `close-modals` sur window, que TOUTE modal-shell écoute — y
+            // compris CELLE de l'assistant (x-on:close-modals.window="close()"). On rouvre donc au
+            // tick suivant, une fois le broadcast et le cycle de rendu Alpine passés : sinon la modale
+            // s'ouvre puis se referme aussitôt sur son propre broadcast (le « flash » du bouton
+            // Démarrage, régression de la bascule x-teleport).
+            if (window.closeAllModals) window.closeAllModals();
+            setTimeout(() => {
+                this.open = true;
+                this.refresh();
+            }, 0);
         },
 
         close() {
