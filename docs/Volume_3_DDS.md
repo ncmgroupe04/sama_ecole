@@ -184,12 +184,12 @@ Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas 
 |---|---|---|
 | `Id` | `uuid` | PK |
 | `SchoolId` | `uuid` | FK `Schools.Id`, NULL uniquement pour un Super Admin |
-| `Email` | `varchar(255)` | UNIQUE (global — un email n'appartient qu'à un compte sur toute la plateforme) |
+| `Email` | `citext` | UNIQUE **global, insensible à la casse** — un email n'identifie qu'un seul compte vivant sur toute la plateforme. `citext` (et non `varchar`) : sur un btree `varchar`, `Directeur@x` et `directeur@x` étaient deux comptes acceptés. Toute écriture est en outre normalisée en minuscules (`EmailNormalizer`). Une même personne qui gère plusieurs écoles se les fait **rattacher** à son compte (`user_schools`), elle n'en recrée pas un second. |
 | `PasswordHash` | `varchar(500)` | NOT NULL (géré par ASP.NET Core Identity) |
 | `FullName`, `Phone` | `varchar` | — |
 | `RoleId` | `uuid` | FK `Roles.Id` |
 | `Status` | `varchar(20)` | CHECK IN (`ACTIVE`,`SUSPENDED`,`BLOCKED`) — Volume 1 §1.1 |
-| Index | `IX_Users_SchoolId`, `IX_Users_Email` (unique) | |
+| Index | `IX_Users_SchoolId`, `IX_Users_Email` (`UNIQUE ... WHERE "IsDeleted" = false` — un compte soft-deleted ne réserve plus l'adresse) | |
 
 ### 5.3 `Students`
 
@@ -248,12 +248,14 @@ Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas 
 
 Voir Volume 1 §11.5. Aucune ligne de cette table ne devient jamais une ligne de `Schools` par simple mise à jour de statut : l'approbation **crée** une nouvelle ligne `Schools` (+ `Users` + `Subscriptions`) dans une transaction dédiée, la demande reste un historique immuable de la candidature.
 
+Deux demandes **en attente** peuvent partager le même `DirectorEmail` (« une école peut retenter »). En revanche, la soumission est refusée si l'e-mail identifie **déjà un compte** `Users` (unicité globale, §5.2) : ce responsable se fait **rattacher** l'école à son compte, il n'en ouvre pas un second. L'approbation revérifie cette unicité (pré-contrôle hors puis sous transaction) et l'e-mail écrit dans `Users.Email` est normalisé (`EmailNormalizer`).
+
 | Colonne | Type | Contraintes |
 |---|---|---|
 | `Id` | `uuid` | PK |
 | `TrackingReference` | `varchar(20)` | UNIQUE, index — communiquée au demandeur pour suivre sa demande sans authentification |
 | `DirectorFullName` | `varchar(200)` | NOT NULL |
-| `DirectorEmail` | `varchar(200)` | NOT NULL |
+| `DirectorEmail` | `varchar(200)` | NOT NULL — stocké normalisé (minuscules, sans espaces de bord) ; pas d'unicité entre demandes |
 | `DirectorPhone` | `varchar(30)` | NOT NULL |
 | `DirectorPasswordHash` | `varchar(500)` | NOT NULL — haché dès la soumission, jamais stocké en clair, jamais journalisé |
 | `SchoolName` | `varchar(200)` | NOT NULL |

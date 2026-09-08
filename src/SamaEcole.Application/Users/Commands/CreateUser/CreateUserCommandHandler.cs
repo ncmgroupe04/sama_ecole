@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -19,7 +20,7 @@ public class CreateUserCommandHandler(
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
 
-        var email = request.Email.Trim().ToLowerInvariant();
+        var email = EmailNormalizer.Normalize(request.Email);
 
         // L'e-mail identifie un compte sur TOUTE la plateforme, pas seulement l'école courante. Une
         // requête EF classique, sous RLS, ne verrait que les comptes de l'école courante et laisserait

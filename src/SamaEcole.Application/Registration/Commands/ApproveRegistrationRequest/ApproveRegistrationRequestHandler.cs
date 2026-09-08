@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -55,10 +56,16 @@ public class ApproveRegistrationRequestHandler(
             ]);
         }
 
-        // Un e-mail identifie un compte sur TOUTE la plateforme. Entre la soumission (I01) et
-        // maintenant, il a pu être attribué : sans ce contrôle, l'INSERT du Directeur violerait la
-        // contrainte d'unicité et remonterait, cette fois, en erreur brute non traduite (raw SQL).
-        if (await provisioningStore.EmailExistsAsync(snapshot.DirectorEmail, cancellationToken))
+        // Forme canonique (EmailNormalizer) : les anciennes demandes ont pu être stockées avec une
+        // casse quelconque (avant la normalisation à la soumission). On approuve avec la MÊME valeur
+        // que celle qui ira dans `users.Email`, sinon l'index citext refuserait plus tard un doublon
+        // que ce pré-contrôle, lui, aurait laissé passer.
+        var directorEmail = EmailNormalizer.Normalize(snapshot.DirectorEmail);
+
+        // Un e-mail identifie un compte sur TOUTE la plateforme (docs/Volume_3_DDS.md §5.2). Entre la
+        // soumission (I01) et maintenant, il a pu être attribué : sans ce contrôle, l'INSERT du
+        // Directeur violerait la contrainte d'unicité et remonterait en erreur brute non traduite.
+        if (await provisioningStore.EmailExistsAsync(directorEmail, cancellationToken))
         {
             throw new ValidationException([
                 new ValidationFailure(nameof(snapshot.DirectorEmail), "Un compte utilise déjà l'e-mail de cette demande.")
@@ -79,6 +86,17 @@ public class ApproveRegistrationRequestHandler(
                 ]);
             }
 
+            // Re-contrôle SOUS transaction : entre le pré-contrôle plus haut et ici, une AUTRE
+            // approbation (même e-mail, autre demande) a pu créer le compte. Sans ça, seul l'index
+            // citext de `users.Email` rattraperait le doublon — via un 23505 que SchoolProvisioningStore
+            // traduit en 409. Ici, on tranche AVANT toute écriture et on rend la vraie cause (422).
+            if (await provisioningStore.EmailExistsAsync(directorEmail, ct))
+            {
+                throw new ValidationException([
+                    new ValidationFailure(nameof(reg.DirectorEmail), "Un compte utilise déjà l'e-mail de cette demande.")
+                ]);
+            }
+
             var school = new School
             {
                 Name = reg.SchoolName,
@@ -95,7 +113,7 @@ public class ApproveRegistrationRequestHandler(
 
             // `users` EST sous RLS : cet INSERT passe par la porte étroite SECURITY DEFINER.
             var newDirectorId = await provisioningStore.CreateInitialDirectorAsync(
-                school.Id, reg.DirectorEmail, reg.DirectorPasswordHash, reg.DirectorFullName, Role.Directeur, ct)
+                school.Id, directorEmail, reg.DirectorPasswordHash, reg.DirectorFullName, Role.Directeur, ct)
                 ?? throw new InvalidOperationException(
                     $"L'établissement {school.Id} possède déjà un utilisateur : il n'est pas à provisionner.");
 

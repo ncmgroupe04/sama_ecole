@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -39,7 +40,10 @@ public class CreateSchoolCommandHandler(
 {
     public async Task<CreateSchoolResult> Handle(CreateSchoolCommand request, CancellationToken cancellationToken)
     {
-        var email = request.DirectorEmail.Trim();
+        // Forme canonique (minuscules, sans espaces de bord) : la MÊME que tous les autres chemins de
+        // création de compte, sans quoi une simple différence de casse crée un second compte que
+        // l'index citext de `users.Email` ne rattrape plus (docs/Volume_3_DDS.md §5.2, EmailNormalizer).
+        var email = EmailNormalizer.Normalize(request.DirectorEmail);
 
         // Un e-mail identifie un compte sur toute la plateforme : sans ce contrôle, l'insertion
         // échouerait sur la contrainte d'unicité et remonterait en 409 illisible.

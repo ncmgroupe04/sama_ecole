@@ -237,6 +237,36 @@ public class AdminRegistrationRequestsEndpointsTests(AuthApiFactory factory) : I
         createdCount.Should().Be(1, "la demande dont la création a échoué ne doit laisser AUCUNE école orpheline");
     }
 
+    /// <summary>
+    /// Audit sécurité — LE scénario du bug : deux demandes dont l'e-mail de Directeur ne diffère QUE
+    /// par la casse (« casse@ecole.sn » / « CASSE@ECOLE.SN »). Elles pouvaient toutes deux être
+    /// approuvées car l'index unique de users.Email était un btree sensible à la casse. Colonne citext
+    /// + normalisation : la seconde approbation est refusée (422) et ne crée AUCUNE école.
+    /// </summary>
+    [Fact]
+    public async Task Approving_A_Second_Request_Whose_Email_Differs_Only_By_Case_Is_Rejected()
+    {
+        var idLower = await SubmitAndGetIdAsync("École Casse Minuscule", "casse.approbation@ecole.sn");
+        var idUpper = await SubmitAndGetIdAsync("École Casse Majuscule", "CASSE.APPROBATION@ECOLE.SN");
+        var superAdmin = await LoginAsSuperAdminAsync();
+
+        var firstApproval = await ApproveAsync(superAdmin.AccessToken, idLower);
+        firstApproval.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var secondApproval = await ApproveAsync(superAdmin.AccessToken, idUpper);
+        secondApproval.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity,
+            "un e-mail n'identifie qu'un compte sur toute la plateforme, casse comprise");
+
+        // La seconde demande reste Pending (réapprouvable après résolution), et aucune école majuscule.
+        var list = await GetListAsync(superAdmin.AccessToken, null);
+        list.Single(r => r.Id == idUpper).Status.Should().Be("Pending");
+
+        var schoolsRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/schools");
+        schoolsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", superAdmin.AccessToken);
+        var schools = (await (await _client.SendAsync(schoolsRequest)).Content.ReadFromJsonAsync<List<SchoolSummary>>())!;
+        schools.Should().NotContain(s => s.Name == "École Casse Majuscule");
+    }
+
     // ------------------------------------------------------------ Rejet
 
     [Fact]

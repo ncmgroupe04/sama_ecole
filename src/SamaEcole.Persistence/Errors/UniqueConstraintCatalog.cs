@@ -178,8 +178,10 @@ internal static class UniqueConstraintCatalog
             "Un pointage existe déjà pour cet enseignant à cette date. Modifiez le pointage existant.",
 
         ["users"] =
-            "Un compte utilise déjà cette adresse e-mail dans votre établissement. Chaque compte a "
-            + "sa propre adresse : utilisez-en une autre, ou réactivez le compte existant.",
+            "Un compte utilise déjà cette adresse e-mail. Une adresse n'identifie qu'un seul compte "
+            + "sur toute la plateforme (pas seulement dans cet établissement), casse comprise. "
+            + "Utilisez-en une autre, ou réactivez le compte existant. Pour qu'une même personne gère "
+            + "plusieurs établissements, c'est son compte qu'on y rattache, pas un second compte.",
 
         ["exam_sessions"] =
             "Une session existe déjà pour ce type d'examen et cette série sur cette année scolaire. "
