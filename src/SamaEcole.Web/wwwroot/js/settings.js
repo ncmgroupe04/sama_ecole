@@ -295,6 +295,19 @@ document.addEventListener('alpine:init', () => {
         async saveProfile() {
             this.profileErrors = {};
             this.profileSaved = false;
+
+            // Annuaire public : le serveur exige une ville dès que la publication est activée
+            // (UpdateCurrentSchoolCommandValidator). On l'attrape AVANT l'envoi et on ramène sur
+            // l'onglet Profil : sinon, publier depuis l'onglet « Intégration étatique » (qui appelle
+            // aussi saveProfile()) renvoyait un 422 dont l'erreur « city » n'est rendue nulle part
+            // sur cet onglet — l'enregistrement échouait en silence et le consentement d'annuaire
+            // n'était jamais persisté.
+            if (this.profile.isPubliclyListed && !(this.profile.city || '').trim()) {
+                this.profileErrors = { city: 'La ville est obligatoire pour figurer dans l\'annuaire public.' };
+                this.goToTab('profil');
+                return;
+            }
+
             this.profileSaving = true;
             try {
                 // GPS : '' -> null (les deux ensemble ou aucune, le serveur revalide) ; sinon Number.
@@ -326,6 +339,12 @@ document.addEventListener('alpine:init', () => {
                 this.profileSaved = true;
             } catch (err) {
                 this.profileErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
+                // Les erreurs de champ ne sont affichées que sur l'onglet Profil : si l'échec vient
+                // d'un enregistrement lancé depuis « Intégration étatique », y ramener pour que
+                // l'utilisateur voie ce qui coince plutôt qu'un bouton sans effet.
+                if (this.tab !== 'profil' && Object.keys(this.profileErrors).length > 0) {
+                    this.goToTab('profil');
+                }
             } finally {
                 this.profileSaving = false;
             }
