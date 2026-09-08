@@ -52,6 +52,11 @@ document.addEventListener('alpine:init', () => {
         deleteRoomError: null,
 
         init() {
+            // Deep-link « badge de bâtiment » : un raccourci (ici l'en-tête d'une carte bâtiment,
+            // demain un emplacement de salle depuis l'Inventaire ou l'emploi du temps) renvoie vers
+            // /infrastructures?q=<nom>. La grille se limite alors à ce bâtiment et à ses salles.
+            const q = new URLSearchParams(window.location.search).get('q');
+            if (q) this.search = q;
             this.loadBuildings();
         },
 

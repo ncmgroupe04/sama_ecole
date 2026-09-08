@@ -172,6 +172,13 @@ document.addEventListener('alpine:init', () => {
             this.loadTeachers();
             if (this.canLinkAccount) this.loadEligibleAccounts();
             if (this.canManage) this.loadClassrooms();
+
+            // Deep-link « fiche enseignant » : /enseignants?teacherId=<id> (ex. clic sur un
+            // enseignant dans l'emploi du temps « Par classe », ou lien ouvert dans un nouvel
+            // onglet) ouvre directement la fiche détaillée. openDetail ne se sert que de l'id —
+            // pas besoin d'attendre la liste paginée.
+            const teacherId = new URLSearchParams(window.location.search).get('teacherId');
+            if (teacherId) this.openDetail({ id: teacherId });
         },
 
         async loadSubjects() {

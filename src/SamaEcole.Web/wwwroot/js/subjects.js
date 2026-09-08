@@ -152,6 +152,12 @@ document.addEventListener('alpine:init', () => {
         deletedSubjectName: '',
 
         init() {
+            // Deep-link « badge de matière » : les badges Matières d'autres écrans (colonne Matières
+            // de la liste Enseignants, emploi du temps…) pointent vers /matieres?q=<nom>. On arrive
+            // alors avec la recherche déjà remplie, la grille se limite à cette matière. Faute de
+            // page de détail propre à une matière, c'est la vue la plus ciblée que l'écran propose.
+            const q = new URLSearchParams(window.location.search).get('q');
+            if (q) this.search = q;
             this.loadSubjects();
         },
 

@@ -116,8 +116,12 @@
  <td class="py-3 px-4 text-slate-500" x-text="$phone(teacher.phone)"></td>
  <td class="py-3 px-4">
  <div class="flex flex-wrap gap-1">
+ @* Raccourci de navigation : chaque matière qualifiée renvoie vers l'écran Matières, filtré sur
+    cette matière (subjects.js lit ?q=). Le badge reste identique au repos ; survol et focus
+    signalent qu'il est cliquable (fond plus soutenu + soulignement). *@
  <template x-for="s in teacher.subjects" :key="s">
- <span class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-primary-50 text-primary" x-text="s"></span>
+ <a :href="`/matieres?q=${encodeURIComponent(s)}`" :title="'Voir la matière : ' + s"
+ class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-primary-50 text-primary transition-colors hover:bg-primary-100 hover:text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary" x-text="s"></a>
  </template>
  <span x-show="!teacher.subjects || teacher.subjects.length === 0" class="text-slate-400 text-xs">—</span>
  </div>
@@ -189,8 +193,11 @@
  <div class="mt-6">
  <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Matières qualifiées</p>
  <div class="flex flex-wrap gap-1.5">
+ @* Mêmes raccourcis que la colonne Matières de la liste : chaque badge ouvre l'écran Matières
+    filtré sur cette matière. *@
  <template x-for="s in detail.subjects" :key="s">
- <span class="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-medium bg-primary-50 text-primary" x-text="s"></span>
+ <a :href="`/matieres?q=${encodeURIComponent(s)}`" :title="'Voir la matière : ' + s"
+ class="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-medium bg-primary-50 text-primary transition-colors hover:bg-primary-100 hover:text-primary-700 hover:underline focus:outline-none focus:ring-2 focus:ring-primary" x-text="s"></a>
  </template>
  <span x-show="!detail.subjects || detail.subjects.length === 0" class="text-slate-400 text-sm">Aucune matière.</span>
  </div>
@@ -763,9 +770,17 @@
                                     <div x-data="{ slot: getSlotForDayAndTime(day.value, time.start) }" class="h-full min-h-[5rem]">
                                         <template x-if="slot">
                                             <div class="bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg p-2 text-left shadow-sm relative group/slot h-full flex flex-col">
-                                                <div class="font-semibold text-xs leading-tight" x-text="slot.subjectName"></div>
-                                                <div class="text-[11px] mt-1 text-indigo-700 font-medium" x-show="scheduleViewMode === 'teacher'" x-text="slot.classroomName"></div>
-                                                <div class="text-[11px] mt-1 text-indigo-700 font-medium" x-show="scheduleViewMode === 'classroom'" x-text="slot.teacherName"></div>
+                                                @* Raccourcis de navigation dans l'emploi du temps : la matière ouvre l'écran
+                                                   Matières filtré (subjects.js lit ?q=), la classe l'écran Classes filtré
+                                                   (classrooms.js lit ?q=), et l'enseignant sa fiche détaillée — sans quitter
+                                                   la page (teachers.js sait aussi ouvrir ?teacherId= à froid / nouvel onglet).
+                                                   Survol = soulignement, le seul repère lisible sur ce fond indigo. *@
+                                                <a :href="`/matieres?q=${encodeURIComponent(slot.subjectName)}`" :title="'Voir la matière : ' + slot.subjectName"
+                                                   class="font-semibold text-xs leading-tight rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.subjectName"></a>
+                                                <a x-show="scheduleViewMode === 'teacher'" :href="`/classes?q=${encodeURIComponent(slot.classroomName)}`" :title="'Voir la classe : ' + slot.classroomName"
+                                                   class="text-[11px] mt-1 text-indigo-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.classroomName"></a>
+                                                <a x-show="scheduleViewMode === 'classroom'" :href="`/enseignants?teacherId=${slot.teacherId}`" x-on:click.prevent="openDetail({ id: slot.teacherId })" :title="'Ouvrir la fiche de ' + slot.teacherName"
+                                                   class="text-[11px] mt-1 text-indigo-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.teacherName"></a>
                                                 <div class="text-[10px] mt-auto pt-1 text-indigo-500" x-show="slot.roomNumber" x-text="'Salle: ' + slot.roomNumber"></div>
                                                 
                                                 <!-- Actions rapides -->

@@ -115,7 +115,11 @@
        <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary-100 text-primary-600 shrink-0">
         <icon name="building" class="w-3.5 h-3.5" />
        </span>
-       <span class="text-sm font-bold text-primary-700 truncate" x-text="building.name"></span>
+       @* Raccourci : le nom du bâtiment isole ce bâtiment et ses salles dans la grille
+          (buildings.js lit ?q=). Point d'entrée réutilisable depuis d'autres écrans (un
+          emplacement de salle en Inventaire, un créneau d'emploi du temps…). *@
+       <a :href="`/infrastructures?q=${encodeURIComponent(building.name)}`" :title="'Isoler le bâtiment : ' + building.name"
+          class="text-sm font-bold text-primary-700 truncate rounded transition-colors hover:underline focus:outline-none focus:ring-2 focus:ring-primary" x-text="building.name"></a>
       </div>
       <p x-show="building.description" class="text-xs text-slate-400 mt-1 ml-9 truncate" x-text="building.description"></p>
      </div>

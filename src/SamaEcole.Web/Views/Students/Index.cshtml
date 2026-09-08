@@ -233,7 +233,14 @@
             <div>
                 <h2 class="text-2xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></h2>
                 <div class="mt-1.5 flex items-center gap-2">
-                    <span class="status-badge-primary" x-text="detailStudent ? detailStudent.classroomName : ''"></span>
+                    @* Raccourci : le badge de classe ouvre l'écran Classes filtré sur cette classe
+                       (classrooms.js lit ?q=). Rendu en lien seulement quand une classe est connue —
+                       un élève non inscrit n'a pas de pastille cliquable vide. *@
+                    <a x-show="detailStudent && detailStudent.classroomName" x-cloak
+                       :href="`/classes?q=${encodeURIComponent(detailStudent ? detailStudent.classroomName : '')}`"
+                       :title="'Voir la classe : ' + (detailStudent ? detailStudent.classroomName : '')"
+                       class="status-badge-primary transition-colors hover:bg-primary-100 hover:underline focus:outline-none focus:ring-2 focus:ring-primary"
+                       x-text="detailStudent ? detailStudent.classroomName : ''"></a>
                     @* « Inscrit » plutôt qu'un « Actif » systématique : masqué quand la bannière
                        « non inscrit pour l'année active » est affichée, pour ne pas se contredire. *@
                     <span x-show="!studentDetail || !detailNotEnrolledForActiveYear()" x-cloak

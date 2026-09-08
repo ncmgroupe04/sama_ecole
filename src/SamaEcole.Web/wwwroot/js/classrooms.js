@@ -151,6 +151,12 @@ document.addEventListener('alpine:init', () => {
         deletedClassroomName: '',
 
         init() {
+            // Deep-link « badge de classe » : la fiche élève et l'emploi du temps renvoient vers
+            // /classes?q=<nom de classe>. On arrive alors avec la recherche déjà remplie, la grille
+            // se limite à cette classe. Il n'existe pas de page de détail par classe — c'est la vue
+            // la plus ciblée que l'écran propose.
+            const q = new URLSearchParams(window.location.search).get('q');
+            if (q) this.search = q;
             this.loadClassrooms();
         },
 
