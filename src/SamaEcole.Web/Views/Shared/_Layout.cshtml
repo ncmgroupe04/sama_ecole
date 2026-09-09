@@ -691,6 +691,11 @@
     `changePasswordModal`, wwwroot/js/change-password.js). *@
  @await Html.PartialAsync("_ChangePasswordModal")
 
+ @* Modale de GUIDAGE universelle — un seul montage (store Alpine `guide`, ui-components.js).
+    Ouverte par window.guide('Titre', 'Message') quand un bouton d'action a un pré-requis manquant :
+    remplace le bandeau rouge « erreur système » par un message d'étape à suivre. *@
+ @await Html.PartialAsync("_GuidanceModal")
+
  @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

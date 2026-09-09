@@ -533,7 +533,7 @@
             sera archivé et n'apparaîtra plus dans le catalogue.
         </modal-subtitle>
         <div x-show="deleteItemError" x-cloak class="form-error-banner" x-text="deleteItemError"></div>
-        <p class="text-sm text-slate-500">Impossible si des prêts de ce bien sont encore en cours : clôturez-les d'abord.</p>
+        <p class="text-base font-medium leading-relaxed text-slate-700">Impossible si des prêts de ce bien sont encore en cours : clôturez-les d'abord.</p>
         <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
             <button type="button" x-on:click="closeDeleteItem()" class="btn-modal-secondary group">Annuler</button>
             <button type="button" x-on:click="confirmDeleteItem()" :disabled="isDeletingItem" class="btn-modal-danger">
@@ -702,7 +702,7 @@
             sera archivée et n'apparaîtra plus dans les sélecteurs.
         </modal-subtitle>
         <div x-show="deleteCategoryError" x-cloak class="form-error-banner" x-text="deleteCategoryError"></div>
-        <p class="text-sm text-slate-500">Impossible si des biens sont encore rattachés à cette catégorie.</p>
+        <p class="text-base font-medium leading-relaxed text-slate-700">Impossible si des biens sont encore rattachés à cette catégorie.</p>
         <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
             <button type="button" x-on:click="closeDeleteCategory()" class="btn-modal-secondary group">Annuler</button>
             <button type="button" x-on:click="confirmDeleteCategory()" :disabled="isDeletingCategory" class="btn-modal-danger">
@@ -839,7 +839,7 @@
         </modal-subtitle>
         <div x-show="returnErrors.global" x-cloak class="form-error-banner" x-text="returnErrors.global"></div>
         <form x-on:submit.prevent="submitReturn()" novalidate class="space-y-4">
-            <p class="text-sm text-slate-500">
+            <p class="text-base font-medium leading-relaxed text-slate-700">
                 Reste à restituer : <span class="font-semibold text-slate-900" x-text="returningAssignment ? returningAssignment.outstanding : 0"></span> unité(s).
             </p>
             <div>
@@ -887,7 +887,7 @@
             — rend les unités au disponible.
         </modal-subtitle>
         <div x-show="cancelAssignmentError" x-cloak class="form-error-banner" x-text="cancelAssignmentError"></div>
-        <p class="text-sm text-slate-500">
+        <p class="text-base font-medium leading-relaxed text-slate-700">
             À réserver à une fiche saisie par erreur. Dès qu'une restitution a été enregistrée, la fiche se clôture au lieu de s'annuler.
         </p>
         <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">

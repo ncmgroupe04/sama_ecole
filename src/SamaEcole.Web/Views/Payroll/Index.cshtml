@@ -357,8 +357,8 @@
     <!-- ===================== Modale : Clôturer un contrat (Volume 1 §14.1) ===================== -->
     <modal-shell size="60" open="isCloseContractModalOpen" title="Clôturer le contrat">
         <form x-on:submit.prevent="submitCloseContract()" novalidate class="space-y-5">
-            <p class="text-sm text-slate-500">
-                <span x-text="closeContractForm.employeeFullName" class="font-medium text-slate-700"></span> —
+            <p class="text-base font-medium leading-relaxed text-slate-700">
+                <span x-text="closeContractForm.employeeFullName" class="font-semibold text-slate-900"></span> —
                 le contrat ne sera pas supprimé, mais restera clôturé : aucune nouvelle fiche de paie ne
                 pourra plus être générée à partir de lui.
             </p>
@@ -458,7 +458,7 @@
     <!-- ===================== Modale : Générer une déclaration fiscale ===================== -->
     <modal-shell size="60" open="isTaxModalOpen" title="Générer une déclaration fiscale">
         <form x-on:submit.prevent="submitTaxDeclaration()" novalidate class="space-y-5">
-            <p class="text-sm text-slate-500">Agrège les charges sociales de toutes les fiches de paie du mois choisi.</p>
+            <p class="text-base font-medium leading-relaxed text-slate-700">Agrège les charges sociales de toutes les fiches de paie du mois choisi.</p>
             <div class="form-grid">
                 <div>
                     <label class="form-label">Mois</label>

@@ -1,0 +1,23 @@
+@*
+    Modale de GUIDAGE universelle — montée une seule fois par _Layout, sous le <body x-data>.
+
+    Pilotée par le store Alpine `guide` (wwwroot/js/ui-components.js). Un écran appelle
+    window.guide('Titre', 'Message') quand un bouton d'action a un PRÉ-REQUIS non rempli (aucun
+    enseignant sélectionné, aucune année scolaire active, aucune session de caisse ouverte…) : au
+    lieu d'un bandeau rouge « erreur système », une modale centrée bienveillante qui explique l'étape
+    à faire. L'appelant court-circuite aussi l'appel API voué à l'échec.
+
+    Même patron que _AccessDeniedModal, et même composant visuel que la confirmation « Bulletin
+    envoyé » (modal-shell + confirm-dialog-body) — ici en variant="info" : pastille bleu Unikol,
+    bouton « Compris ».
+
+    Pas de <modal-title> : le titre passe à confirm-dialog-body (title-expr), qui le rend DANS le
+    bloc centré. modal-shell n'a donc plus d'en-tête → plus de bande blanche vide, et sa croix se
+    replie dans le coin du corps. Tout tient dans une carte compacte : croix · icône · titre ·
+    message lisible · « Compris ».
+*@
+<modal-shell open="$store.guide.visible" on-close="$store.guide.dismiss()" size="md">
+    <confirm-dialog-body variant="info" title-expr="$store.guide.title" close-action="$store.guide.dismiss()">
+        <span x-text="$store.guide.message"></span>
+    </confirm-dialog-body>
+</modal-shell>

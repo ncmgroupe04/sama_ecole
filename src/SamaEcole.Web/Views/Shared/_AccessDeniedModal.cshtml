@@ -9,12 +9,12 @@
 *@
 <modal-shell open="$store.accessDenied.message" on-close="$store.accessDenied.clear()" size="md" title="Accès refusé">
  <div class="text-center">
- <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warning-bg">
- <icon name="lock-closed" class="h-7 w-7 text-warning" />
+ <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-warning-bg">
+ <icon name="lock-closed" class="h-6 w-6 text-warning" />
  </div>
- <p class="mt-4 text-sm text-slate-600" x-text="$store.accessDenied.message"></p>
+ <p class="mt-3 text-base font-medium leading-relaxed text-slate-800" x-text="$store.accessDenied.message"></p>
  </div>
- <div class="mt-8 flex justify-center border-t border-slate-200 pt-4">
+ <div class="mt-5 flex justify-center">
  <button type="button" x-on:click="$store.accessDenied.clear()" class="btn-modal-primary group">J'ai compris</button>
  </div>
 </modal-shell>
