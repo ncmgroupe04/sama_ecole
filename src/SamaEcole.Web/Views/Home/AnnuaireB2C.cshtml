@@ -112,31 +112,87 @@
                              hint="Essayez un autre nom, une autre ville, ou retirez le filtre de niveau." />
             </template>
 
-            <div x-show="!isLoading && schools.length > 0" x-cloak class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <template x-for="school in schools" :key="school.id">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
-                        <div class="h-32 bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center">
-                            <img :src="school.logoUrl" x-show="school.logoUrl" class="max-h-full max-w-full object-contain bg-white p-2" alt="">
-                            <span x-show="!school.logoUrl" class="text-3xl font-bold text-white" x-text="school.name.charAt(0)"></span>
+            <div x-show="!isLoading && schools.length > 0" x-cloak
+                 class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <template x-for="(school, index) in schools" :key="school.id">
+                    <article class="dir-card-in group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-1 hover:border-primary-200 hover:shadow-lg hover:shadow-primary-500/10"
+                             :style="'animation-delay:' + Math.min(index * 60, 360) + 'ms'">
+
+                        <!-- Bannière compacte : dégradé Unikol + motif abstrait, léger zoom au survol -->
+                        <div class="relative h-20 overflow-hidden bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700">
+                            <div aria-hidden="true"
+                                 class="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-110">
+                                <span class="absolute -right-6 -top-10 h-28 w-28 rounded-full bg-white/15 blur-xl"></span>
+                                <span class="absolute -left-8 -bottom-10 h-24 w-24 rounded-full bg-white/10 blur-lg"></span>
+                                <span class="absolute right-1/3 top-2 h-10 w-10 rounded-full border border-white/20"></span>
+                            </div>
+                            <img :src="school.logoUrl" x-show="school.logoUrl" alt=""
+                                 class="absolute inset-0 h-full w-full object-cover opacity-40 transition-transform duration-500 ease-out group-hover:scale-105">
                         </div>
-                        <div class="p-5 flex-1 flex flex-col">
-                            <h3 class="text-lg font-bold text-gray-900 truncate" x-text="school.name"></h3>
-                            <p class="text-sm text-gray-500 flex items-center mt-1 mb-3" x-show="school.city || school.region">
-                                <icon name="globe" class="shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                                <span x-text="[school.city, school.region].filter(Boolean).join(', ')"></span>
+
+                        <!-- Avatar superposé : badge circulaire (logo, sinon initiale sur dégradé) -->
+                        <div class="relative -mt-9 px-5">
+                            <div class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-md">
+                                <img :src="school.logoUrl" x-show="school.logoUrl" alt=""
+                                     class="h-full w-full object-contain p-1.5">
+                                <span x-show="!school.logoUrl"
+                                      class="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 text-2xl font-bold text-white"
+                                      x-text="(school.name || '?').charAt(0).toUpperCase()"></span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-1 flex-col p-5 pt-3">
+                            <h3 class="text-base font-bold leading-snug text-slate-900 line-clamp-2" x-text="school.name"></h3>
+
+                            <p x-show="school.city || school.region"
+                               class="mt-1.5 flex items-center gap-1.5 text-sm text-slate-500">
+                                <icon name="map-pin" class="h-4 w-4 shrink-0 text-primary-400" />
+                                <span class="truncate" x-text="[school.city, school.region].filter(Boolean).join(', ')"></span>
                             </p>
-                            <p class="text-sm text-gray-500 mb-4 line-clamp-2" x-show="school.description" x-text="school.description"></p>
-                            <div class="flex flex-wrap gap-2 mb-4 mt-auto">
+
+                            <div x-show="school.description" class="mt-2">
+                                <p class="text-sm leading-relaxed text-slate-500 line-clamp-2" x-text="school.description"></p>
+                                <button type="button" x-on:click="openDetail(school)"
+                                        class="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary-600 transition-colors hover:text-primary-700 hover:underline">
+                                    Lire la présentation
+                                    <icon name="chevron-right" class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+
+                            <!-- Cycles d'enseignement -->
+                            <div x-show="school.cycles && school.cycles.length" class="mt-3 flex flex-wrap gap-1.5">
                                 <template x-for="cycleLabel in school.cycles" :key="cycleLabel">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800" x-text="cycleLabel"></span>
+                                    <span class="inline-flex items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-semibold text-primary-700 ring-1 ring-inset ring-primary-100"
+                                          x-text="cycleLabel"></span>
                                 </template>
                             </div>
-                            <div class="flex flex-col gap-1 text-sm border-t border-gray-100 pt-3" x-show="school.phone || school.email">
-                                <a :href="'tel:' + school.phone" x-show="school.phone" x-text="school.phone" class="text-indigo-600 hover:underline"></a>
-                                <a :href="'mailto:' + school.email" x-show="school.email" x-text="school.email" class="text-indigo-600 hover:underline"></a>
+
+                            <!-- Contact : icônes propres, liens cliquables tel:/mailto: -->
+                            <div x-show="school.phone || school.email"
+                                 class="mt-4 space-y-0.5 border-t border-slate-100 pt-3">
+                                <a x-show="school.phone" :href="'tel:' + (school.phone || '')"
+                                   class="-mx-1 flex items-center gap-2.5 rounded-lg px-1 py-1 text-sm text-slate-600 transition-colors hover:bg-primary-50/70 hover:text-primary-700">
+                                    <icon name="phone" class="h-4 w-4 shrink-0 text-primary-400" />
+                                    <span class="truncate" x-text="school.phone"></span>
+                                </a>
+                                <a x-show="school.email" :href="'mailto:' + (school.email || '')"
+                                   class="-mx-1 flex items-center gap-2.5 rounded-lg px-1 py-1 text-sm text-slate-600 transition-colors hover:bg-primary-50/70 hover:text-primary-700">
+                                    <icon name="envelope" class="h-4 w-4 shrink-0 text-primary-400" />
+                                    <span class="truncate" x-text="school.email"></span>
+                                </a>
+                            </div>
+
+                            <!-- Action principale, ancrée en bas de carte : ouvre la fiche détaillée
+                                 (présentation complète + contact). -->
+                            <div class="mt-4 flex flex-1 items-end pt-1">
+                                <button type="button" x-on:click="openDetail(school)"
+                                        class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-primary-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                                    En savoir plus
+                                    <icon name="chevron-right" class="h-4 w-4" />
+                                </button>
                             </div>
                         </div>
-                    </div>
+                    </article>
                 </template>
             </div>
 
@@ -157,4 +213,93 @@
         </main>
     </div>
 </div>
+
+@* ─────────────────────────────────────────────────────────────────────────────────────────────
+   Fiche détaillée d'un établissement — ouverte depuis « En savoir plus » / « Lire la présentation ».
+   Donne enfin l'espace de lecture pour la présentation COMPLÈTE que le Directeur a rédigée (jusqu'à
+   2000 caractères) : la carte n'en montre que deux lignes. Aucune requête : `selectedSchool` est
+   l'objet déjà chargé dans la grille. x-teleport="body" pour sortir du contexte d'empilement de
+   l'en-tête sticky. Pas de modal-shell (TagHelper) ici : la vitrine ne charge pas ui-components.js.
+   ───────────────────────────────────────────────────────────────────────────────────────────── *@
+<template x-teleport="body">
+<div x-show="selectedSchool" x-cloak
+     class="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4"
+     x-on:keydown.escape.window="closeDetail()">
+
+    <div x-show="selectedSchool" x-transition.opacity
+         class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" x-on:click="closeDetail()"></div>
+
+    <div x-show="selectedSchool"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-6 sm:translate-y-0 sm:scale-95"
+         x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+         class="relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-w-2xl sm:rounded-2xl">
+        <template x-if="selectedSchool">
+        <div class="flex min-h-0 flex-1 flex-col">
+
+            <!-- Bandeau + avatar -->
+            <div class="relative h-24 shrink-0 overflow-hidden bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700">
+                <span aria-hidden="true" class="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/15 blur-2xl"></span>
+                <img :src="selectedSchool.logoUrl" x-show="selectedSchool.logoUrl" alt=""
+                     class="absolute inset-0 h-full w-full object-cover opacity-40">
+                <button type="button" x-on:click="closeDetail()" aria-label="Fermer"
+                        class="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/20 text-white transition hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                    <icon name="x" class="h-4 w-4" />
+                </button>
+            </div>
+            <div class="relative -mt-10 shrink-0 px-6">
+                <div class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-md">
+                    <img :src="selectedSchool.logoUrl" x-show="selectedSchool.logoUrl" alt="" class="h-full w-full object-contain p-2">
+                    <span x-show="!selectedSchool.logoUrl"
+                          class="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 text-3xl font-bold text-white"
+                          x-text="(selectedSchool.name || '?').charAt(0).toUpperCase()"></span>
+                </div>
+            </div>
+
+            <!-- Corps défilant -->
+            <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-3">
+                <h2 class="text-xl font-bold leading-tight text-slate-900" x-text="selectedSchool.name"></h2>
+
+                <p x-show="selectedSchool.city || selectedSchool.region"
+                   class="mt-1.5 flex items-center gap-1.5 text-sm text-slate-500">
+                    <icon name="map-pin" class="h-4 w-4 shrink-0 text-primary-400" />
+                    <span x-text="[selectedSchool.city, selectedSchool.region].filter(Boolean).join(', ')"></span>
+                </p>
+
+                <div x-show="selectedSchool.cycles && selectedSchool.cycles.length" class="mt-3 flex flex-wrap gap-1.5">
+                    <template x-for="c in selectedSchool.cycles" :key="c">
+                        <span class="inline-flex items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-semibold text-primary-700 ring-1 ring-inset ring-primary-100" x-text="c"></span>
+                    </template>
+                </div>
+
+                <div x-show="selectedSchool.description" class="mt-5">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Présentation</h3>
+                    <p class="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-600" x-text="selectedSchool.description"></p>
+                </div>
+
+                <div x-show="selectedSchool.address" class="mt-5">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Adresse</h3>
+                    <p class="mt-1 text-sm text-slate-600" x-text="selectedSchool.address"></p>
+                </div>
+            </div>
+
+            <!-- Pied : contact -->
+            <div x-show="selectedSchool.email || selectedSchool.phone"
+                 class="shrink-0 flex flex-col gap-2 border-t border-slate-100 bg-slate-50/70 p-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+                <a x-show="selectedSchool.phone" :href="'tel:' + (selectedSchool.phone || '')"
+                   class="inline-flex items-center justify-center gap-2 rounded-xl border border-primary-200 bg-white px-4 py-2.5 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-50">
+                    <icon name="phone" class="h-4 w-4" />
+                    <span x-text="selectedSchool.phone"></span>
+                </a>
+                <a x-show="selectedSchool.email" :href="'mailto:' + (selectedSchool.email || '')"
+                   class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-700 hover:shadow-md">
+                    <icon name="envelope" class="h-4 w-4" />
+                    Envoyer un e-mail
+                </a>
+            </div>
+        </div>
+        </template>
+    </div>
+</div>
+</template>
 </div>

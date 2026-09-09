@@ -14,8 +14,24 @@ document.addEventListener('alpine:init', () => {
         city: '',
         cycle: '',
 
+        // Établissement dont la fiche détaillée est ouverte (présentation COMPLÈTE, contact, cycles).
+        // On réutilise l'objet déjà chargé dans `schools` — GET /public/schools/{id} renverrait
+        // exactement les mêmes champs (PublicSchoolDto), inutile de refaire un aller-retour.
+        selectedSchool: null,
+
         init() {
             this.loadSchools();
+        },
+
+        openDetail(school) {
+            this.selectedSchool = school;
+            // Verrou de défilement de l'arrière-plan (pas de ui-components.js sur la vitrine).
+            document.documentElement.style.overflow = 'hidden';
+        },
+
+        closeDetail() {
+            this.selectedSchool = null;
+            document.documentElement.style.overflow = '';
         },
 
         /** Un changement de filtre repart de la page 1 : la page 3 d'une recherche précédente n'a pas de sens ici. */
@@ -36,6 +52,7 @@ document.addEventListener('alpine:init', () => {
                 const data = await window.api.get(`/public/schools?${params.toString()}`);
                 this.schools = data.items || [];
                 this.totalCount = data.totalCount || 0;
+                this.closeDetail(); // une fiche restée ouverte n'a plus de sens après un changement de page/filtre
             } catch (err) {
                 this.error = window.api.toMessage(err, "Impossible de charger l'annuaire des établissements.");
                 this.schools = [];
