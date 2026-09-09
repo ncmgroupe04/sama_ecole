@@ -274,12 +274,15 @@
 
                 <div x-show="selectedSchool.description" class="mt-5">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Présentation</h3>
-                    <p class="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-600" x-text="selectedSchool.description"></p>
+                    @* Jeton de lisibilité des modales (voir ConfirmDialogBodyTagHelper / ModalShellTagHelper) :
+                       c'est LE texte que les familles viennent lire, et il peut faire plusieurs paragraphes —
+                       `whitespace-pre-line` conserve les retours à la ligne saisis par le Directeur. *@
+                    <p class="mt-2 whitespace-pre-line text-base font-medium leading-relaxed text-slate-800" x-text="selectedSchool.description"></p>
                 </div>
 
                 <div x-show="selectedSchool.address" class="mt-5">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Adresse</h3>
-                    <p class="mt-1 text-sm text-slate-600" x-text="selectedSchool.address"></p>
+                    <p class="mt-1 text-base font-medium leading-relaxed text-slate-800" x-text="selectedSchool.address"></p>
                 </div>
             </div>
 
