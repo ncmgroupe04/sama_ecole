@@ -178,7 +178,7 @@ public class ModalShellTagHelper : TagHelper
                                 <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                             </button>
                         </div>
-                        {(subtitle is null ? "" : $"""<div class="mt-2 text-sm leading-relaxed text-slate-600">{subtitle}</div>""")}
+                        {(subtitle is null ? "" : $"""<div class="mt-2 text-base font-medium leading-relaxed text-slate-700">{subtitle}</div>""")}
                     </div>
                     """ : "")}
                     <div class="relative flex-1 overflow-y-auto min-h-0 {bodyClasses}">

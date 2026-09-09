@@ -460,7 +460,7 @@
                     <p class="mt-1 text-sm text-amber-800" x-text="label"></p>
                 </div>
                 <div x-show="allowed" x-cloak class="space-y-4">
-                    <p class="text-sm text-slate-500">
+                    <p class="text-base font-medium leading-relaxed text-slate-700">
                         Envoie une convocation par SMS à chaque candidat de cette session dont le centre et le numéro de
                         table sont déjà attribués. Refusé tant qu'un dossier du lot n'a pas ces informations.
                     </p>
@@ -723,7 +723,7 @@
         <modal-title>Transmettre le dossier</modal-title>
         <modal-subtitle><span x-text="transmittingDossier ? transmittingDossier.studentFullName : ''"></span></modal-subtitle>
         <div x-show="transmitError" x-cloak class="form-error-banner" x-text="transmitError"></div>
-        <p class="text-sm text-slate-500">Marque le dossier comme transmis à l'IEF/l'IA. Cette action ne peut pas être annulée depuis cet écran.</p>
+        <p class="text-base font-medium leading-relaxed text-slate-700">Marque le dossier comme transmis à l'IEF/l'IA. Cette action ne peut pas être annulée depuis cet écran.</p>
         <p x-show="transmittingDossier && transmittingDossier.status === 'Incomplet'" x-cloak class="mt-3 rounded-xl border-l-4 border-amber-400 bg-amber-50 p-3 text-sm text-amber-800">
             Ce dossier est encore Incomplet : la transmission sera refusée tant que l'audit n'est pas résolu (onglet Audit).
         </p>
