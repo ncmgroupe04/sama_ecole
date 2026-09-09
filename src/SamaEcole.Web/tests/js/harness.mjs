@@ -60,6 +60,7 @@ export function loadScripts(files, options = {}) {
     const windowTarget = createEventTarget();
     const documentTarget = createEventTarget();
     const alpineComponents = new Map();
+    const alpineStores = new Map();
 
     const win = Object.assign(windowTarget, {
         location: { protocol: 'https:', hostname: 'localhost', pathname: '/' },
@@ -72,7 +73,17 @@ export function loadScripts(files, options = {}) {
         navigator: { onLine: options.onLine !== false },
         localStorage: createLocalStorage(),
         fetch: options.fetch || (async () => ({ ok: true, status: 200, json: async () => ({}) })),
-        Alpine: { data: (name, factory) => alpineComponents.set(name, factory) },
+        // Alpine.data() enregistre une fabrique de composant ; Alpine.store() lit (1 arg) ou
+        // déclare (2 args) un store global — plusieurs scripts de _Layout en déclarent depuis leur
+        // écouteur alpine:init (accessDenied, changePasswordModal, guide…).
+        Alpine: {
+            data: (name, factory) => alpineComponents.set(name, factory),
+            store: (name, value) => {
+                if (value === undefined) return alpineStores.get(name);
+                alpineStores.set(name, value);
+                return value;
+            }
+        },
         console: { log() {}, warn() {}, error() {}, debug() {} },
         setTimeout,
         clearTimeout,
@@ -100,6 +111,12 @@ export function loadScripts(files, options = {}) {
         initAlpine() {
             documentTarget.emit('alpine:init');
             return alpineComponents;
+        },
+
+        /** Store Alpine global déclaré par un des scripts chargés (après initAlpine()). */
+        store(name) {
+            if (alpineStores.size === 0) this.initAlpine();
+            return alpineStores.get(name);
         },
 
         /** Instancie un composant Alpine et exécute son init(). */

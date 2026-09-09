@@ -719,7 +719,10 @@
                     options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" on-change="loadSchedule()" />
             </div>
 
-            <!-- Actions (Ajouter un créneau) -->
+            <!-- Actions (Ajouter un créneau). Le bouton reste ACTIF même sans enseignant/classe
+                 choisi : le clic est intercepté par openCreateScheduleSlot(), qui ouvre alors la
+                 modale de GUIDAGE (window.guide) expliquant l'étape à faire — plutôt qu'un bouton
+                 grisé et muet. -->
             <div x-show="canManageSchedule" class="shrink-0" x-cloak>
                 <button type="button" x-on:click="openCreateScheduleSlot()" class="btn-modal-primary whitespace-nowrap group">
                     <icon name="plus" class="w-4 h-4 mr-1 transition-transform duration-200 group-hover:rotate-90" />

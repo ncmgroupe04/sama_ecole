@@ -29,8 +29,18 @@ public class ConfirmDialogBodyTagHelper : TagHelper
     /// <summary>Expression Alpine exécutée par le bouton "Retour" (ex. "showAddedDialog = false").</summary>
     public string CloseAction { get; set; } = string.Empty;
 
-    /// <summary>Libellé du bouton de fermeture.</summary>
-    public string CloseLabel { get; set; } = "Retour";
+    /// <summary>
+    /// Libellé du bouton de fermeture. Non renseigné : « Retour » pour <c>success</c>, « Compris »
+    /// pour <c>info</c> (une modale de guidage se ferme sur un accusé de lecture, pas un retour arrière).
+    /// </summary>
+    public string? CloseLabel { get; set; }
+
+    /// <summary>
+    /// <c>success</c> (défaut) : coche verte animée, pour confirmer une action réussie.
+    /// <c>info</c> : pastille d'information bleu Unikol, pour une modale de GUIDAGE (un pré-requis
+    /// manque, on explique l'étape à faire) — surtout PAS un rendu d'erreur système.
+    /// </summary>
+    public string Variant { get; set; } = "success";
 
     /// <summary>
     /// Expression Alpine exécutée par le second bouton (ex. "showAddedDialog = false; isCreateOpen = true").
@@ -48,14 +58,39 @@ public class ConfirmDialogBodyTagHelper : TagHelper
 
         output.TagName = null;
 
+        var isInfo = string.Equals(Variant, "info", StringComparison.OrdinalIgnoreCase);
+        var closeLabel = CloseLabel ?? (isInfo ? "Compris" : "Retour");
+
         var hasNewAction = !string.IsNullOrWhiteSpace(NewAction);
         var justify = hasNewAction ? "sm:justify-end" : "sm:justify-center";
         var buttons = hasNewAction
             ? $"""
-                <button type="button" x-on:click="{CloseAction}" class="btn-secondary">{CloseLabel}</button>
+                <button type="button" x-on:click="{CloseAction}" class="btn-secondary">{closeLabel}</button>
                 <button type="button" x-on:click="{NewAction}" class="btn-primary">{NewLabel}</button>
                 """
-            : $"""<button type="button" x-on:click="{CloseAction}" class="btn-primary">{CloseLabel}</button>""";
+            : $"""<button type="button" x-on:click="{CloseAction}" class="btn-primary">{closeLabel}</button>""";
+
+        // Pastille + glyphe selon le variant. `info` : cercle « i » bleu Unikol, statique (rien à
+        // animer — ce n'est pas une récompense, juste un repère). Même contrainte que la coche :
+        // <icon> ne se compile pas dans une chaîne HTML brute, d'où le SVG en clair.
+        var iconBlock = isInfo
+            ? """
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-50">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-8 w-8 text-primary-600">
+                        <circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.75" />
+                        <path d="M12 11.25v5" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" />
+                        <circle cx="12" cy="7.75" r="1.15" fill="currentColor" />
+                    </svg>
+                </div>
+                """
+            : """
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
+                    <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" class="cdb-success-icon h-8 w-8 text-success">
+                        <circle class="cdb-success-icon-circle" cx="26" cy="26" r="25" stroke="currentColor" stroke-width="2" />
+                        <path class="cdb-success-icon-check" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
+                    </svg>
+                </div>
+                """;
 
         // <icon> est lui-même un TagHelper (IconTagHelper) : il ne se déclenche qu'à la COMPILATION
         // Razor d'un .cshtml, jamais sur une chaîne HTML brute produite ICI, à l'exécution, par
@@ -69,12 +104,7 @@ public class ConfirmDialogBodyTagHelper : TagHelper
         // Couleur success (tailwind.config.js) portée sur le <svg> et héritée par stroke="currentColor".
         output.Content.SetHtmlContent($"""
             <div class="text-center">
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
-                    <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" class="cdb-success-icon h-8 w-8 text-success">
-                        <circle class="cdb-success-icon-circle" cx="26" cy="26" r="25" stroke="currentColor" stroke-width="2" />
-                        <path class="cdb-success-icon-check" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
-                    </svg>
-                </div>
+                {iconBlock}
                 <p class="mt-4 text-sm text-gray-500">{message}</p>
             </div>
             <div class="mt-8 flex flex-col-reverse {justify} gap-3 border-t border-gray-200 pt-4 sm:flex-row">

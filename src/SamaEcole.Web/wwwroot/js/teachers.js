@@ -685,10 +685,27 @@ document.addEventListener('alpine:init', () => {
         },
 
         openCreateScheduleSlot() {
+            // Pré-requis : la modale n'expose QUE « Classe » (vue Par Enseignant) ou « Enseignant »
+            // (vue Par Classe) — l'autre entité vient du sélecteur en haut de l'écran. Sans elle, le
+            // POST partirait avec un GUID vide (400 au binding, sans message exploitable). On
+            // n'ouvre pas un formulaire voué à l'échec : modale de GUIDAGE (pas un bandeau rouge
+            // « erreur système »), qui dit l'étape à faire, et on s'arrête là.
+            const needsTeacher = this.scheduleViewMode === 'teacher';
+            if (needsTeacher ? !this.selectedScheduleTeacherId : !this.selectedScheduleClassroomId) {
+                window.guide(
+                    needsTeacher ? "Sélection d'un enseignant requise" : "Sélection d'une classe requise",
+                    needsTeacher
+                        ? "Choisissez d'abord un enseignant dans la liste déroulante, en haut de l'emploi du temps, pour pouvoir lui attribuer un créneau."
+                        : "Choisissez d'abord une classe dans la liste déroulante, en haut de l'emploi du temps, pour pouvoir y placer un créneau."
+                );
+                return;
+            }
+
+            this.error = null;
             this.createScheduleError = null;
             this.scheduleForm = {
-                teacherId: this.scheduleViewMode === 'teacher' ? this.selectedScheduleTeacherId : '',
-                classroomId: this.scheduleViewMode === 'classroom' ? this.selectedScheduleClassroomId : '',
+                teacherId: needsTeacher ? this.selectedScheduleTeacherId : '',
+                classroomId: needsTeacher ? '' : this.selectedScheduleClassroomId,
                 subjectId: '',
                 dayOfWeek: 1,
                 startTime: '08:00',
@@ -704,6 +721,15 @@ document.addEventListener('alpine:init', () => {
 
         async submitCreateScheduleSlot() {
             this.createScheduleError = null;
+
+            // Classe, matière et enseignant sont des GUID côté serveur : un champ vide échoue au
+            // binding JSON (400 générique « Erreur HTTP 400 ») avant même d'atteindre le validateur.
+            // On le rattrape ici pour afficher un message clair sous le formulaire.
+            if (!this.scheduleForm.teacherId || !this.scheduleForm.classroomId || !this.scheduleForm.subjectId) {
+                this.createScheduleError = "Renseignez la classe, la matière et l'enseignant avant d'enregistrer.";
+                return;
+            }
+
             this.isSubmittingSchedule = true;
             try {
                 await window.api.post('/schedules', this.scheduleForm);

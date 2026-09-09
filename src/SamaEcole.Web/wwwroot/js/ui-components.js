@@ -10,6 +10,28 @@ window.closeAllModals = function() {
 };
 
 /**
+ * Modale de GUIDAGE universelle — window.guide(titre, message).
+ *
+ * À appeler quand un bouton d'action a un PRÉ-REQUIS non rempli (aucun enseignant sélectionné, aucune
+ * année scolaire active, aucune session de caisse ouverte…). À la place d'un bandeau rouge qui donne
+ * une fausse impression d'erreur système, une modale centrée bienveillante qui explique l'étape à
+ * faire. C'est à l'appelant d'AUSSI court-circuiter l'appel API voué à l'échec (return après l'appel).
+ *
+ * Pilote le store Alpine `guide` (défini dans le bloc alpine:init ci-dessous), rendu une seule fois
+ * par _Layout (_GuidanceModal.cshtml). Comme window.closeAllModals, ce point d'entrée reste utilisable
+ * depuis n'importe quel script classique, sans injecter le store.
+ */
+window.guide = function (title, message) {
+    // Appelé sur un clic bouton : Alpine est initialisé depuis longtemps, le store existe.
+    if (typeof Alpine !== 'undefined' && Alpine.store('guide')) {
+        Alpine.store('guide').show(title, message);
+    } else {
+        // Garde-fou (Alpine indisponible) : au pire un avertissement, jamais un crash de l'écran.
+        console.warn('[guide] store Alpine indisponible :', title, message);
+    }
+};
+
+/**
  * Verrou de défilement de l'arrière-plan pendant qu'un overlay plein écran est ouvert (modale
  * modal-shell, tiroir latéral mobile). Sans lui, la page continue de défiler DERRIÈRE la modale
  * pendant qu'on navigue dedans — le « double scroll » signalé.
@@ -187,6 +209,24 @@ window.toast = (function () {
 })();
 
 document.addEventListener('alpine:init', () => {
+    /**
+     * Store de la modale de GUIDAGE (voir window.guide plus haut et _GuidanceModal.cshtml).
+     * `visible` (booléen) pilote l'ouverture de la modal-shell ; `title` / `message` son contenu.
+     */
+    Alpine.store('guide', {
+        visible: false,
+        title: '',
+        message: '',
+        show(title, message) {
+            this.title = title || 'Information';
+            this.message = message || '';
+            this.visible = true;
+        },
+        dismiss() {
+            this.visible = false;
+        }
+    });
+
     /**
      * Navigation mois/année du calendrier maison. La VALEUR sélectionnée (lecture/écriture) est
      * portée directement par l'expression Alpine du parent (voir DateFieldTagHelper) : ce composant
