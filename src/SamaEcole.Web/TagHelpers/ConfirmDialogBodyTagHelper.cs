@@ -43,6 +43,14 @@ public class ConfirmDialogBodyTagHelper : TagHelper
     public string Variant { get; set; } = "success";
 
     /// <summary>
+    /// Expression Alpine optionnelle rendant un titre EN-TÊTE À L'INTÉRIEUR du bloc centré, juste
+    /// au-dessus du message (ex. « $store.guide.title »). Pour une modale sans en-tête modal-shell
+    /// (guidage) : le titre vit alors dans le corps, la bande blanche supérieure disparaît. Vide →
+    /// aucun titre affiché. Expression Alpine, jamais une donnée utilisateur (comme <see cref="CloseAction"/>).
+    /// </summary>
+    public string? TitleExpr { get; set; }
+
+    /// <summary>
     /// Expression Alpine exécutée par le second bouton (ex. "showAddedDialog = false; isCreateOpen = true").
     /// Absent (par défaut) : un seul bouton "Retour" est affiché, centré — cas d'une action ponctuelle
     /// sans suite naturelle (approuver une demande, rejeter…).
@@ -61,6 +69,13 @@ public class ConfirmDialogBodyTagHelper : TagHelper
         var isInfo = string.Equals(Variant, "info", StringComparison.OrdinalIgnoreCase);
         var closeLabel = CloseLabel ?? (isInfo ? "Compris" : "Retour");
 
+        // Titre optionnel rendu DANS le bloc centré (voir TitleExpr) : `x-show` sur la même
+        // expression pour qu'un titre vide ne laisse pas d'espace mort au-dessus du message.
+        var hasTitle = !string.IsNullOrWhiteSpace(TitleExpr);
+        var titleBlock = hasTitle
+            ? $"""<h2 x-show="{TitleExpr}" x-cloak class="mt-3 text-lg font-bold text-slate-900" x-text="{TitleExpr}"></h2>"""
+            : "";
+
         var hasNewAction = !string.IsNullOrWhiteSpace(NewAction);
         var justify = hasNewAction ? "sm:justify-end" : "sm:justify-center";
         var buttons = hasNewAction
@@ -75,8 +90,8 @@ public class ConfirmDialogBodyTagHelper : TagHelper
         // <icon> ne se compile pas dans une chaîne HTML brute, d'où le SVG en clair.
         var iconBlock = isInfo
             ? """
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-50">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-8 w-8 text-primary-600">
+                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-50">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-7 w-7 text-primary-600">
                         <circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.75" />
                         <path d="M12 11.25v5" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" />
                         <circle cx="12" cy="7.75" r="1.15" fill="currentColor" />
@@ -84,8 +99,8 @@ public class ConfirmDialogBodyTagHelper : TagHelper
                 </div>
                 """
             : """
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
-                    <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" class="cdb-success-icon h-8 w-8 text-success">
+                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success-bg">
+                    <svg viewBox="0 0 52 52" fill="none" aria-hidden="true" class="cdb-success-icon h-7 w-7 text-success">
                         <circle class="cdb-success-icon-circle" cx="26" cy="26" r="25" stroke="currentColor" stroke-width="2" />
                         <path class="cdb-success-icon-check" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
                     </svg>
@@ -102,12 +117,16 @@ public class ConfirmDialogBodyTagHelper : TagHelper
         // dédié en contour (cercle puis coche, stroke-dasharray/-dashoffset — voir .cdb-success-icon*
         // dans Styles/input.css) : le cercle se dessine, puis la coche, une seule fois à l'ouverture.
         // Couleur success (tailwind.config.js) portée sur le <svg> et héritée par stroke="currentColor".
+        // Bloc compact et centré (demande produit) : icône plus ramassée, titre optionnel, message
+        // lisible « sans effort » — text-base, font-medium, slate-800 très contrasté — et les
+        // boutons rapprochés, sans filet séparateur qui allongeait le bloc.
         output.Content.SetHtmlContent($"""
             <div class="text-center">
                 {iconBlock}
-                <p class="mt-4 text-sm text-gray-500">{message}</p>
+                {titleBlock}
+                <p class="{(hasTitle ? "mt-1.5" : "mt-3")} text-base font-medium leading-relaxed text-slate-800">{message}</p>
             </div>
-            <div class="mt-8 flex flex-col-reverse {justify} gap-3 border-t border-gray-200 pt-4 sm:flex-row">
+            <div class="mt-5 flex flex-col-reverse {justify} gap-3 sm:flex-row">
                 {buttons}
             </div>
             """);

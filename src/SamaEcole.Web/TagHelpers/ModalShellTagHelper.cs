@@ -108,6 +108,29 @@ public class ModalShellTagHelper : TagHelper
         // Liaison Alpine émise telle quelle (comme Open/OnClose) : jamais une donnée utilisateur.
         var panelStyleAttr = string.IsNullOrWhiteSpace(PanelStyle) ? "" : $""" x-bind:style="{PanelStyle}" """;
 
+        // En-tête rendu SEULEMENT s'il porte un contenu réel — un titre OU un sous-titre. Sans ça,
+        // une modale sans titre (guidage, confirmation nue) affichait une bande blanche vide d'une
+        // centaine de pixels, là juste pour loger la croix. HideHeader=true reste un cas distinct :
+        // la vue fournit alors son propre en-tête dans le corps (fiche élève…), on n'y touche pas.
+        var hasHeader = !HideHeader && (!string.IsNullOrWhiteSpace(titleHtml) || subtitle is not null);
+        var headerlessDialog = !HideHeader && !hasHeader;
+
+        // Croix repositionnée DANS le coin du corps quand l'en-tête disparaît : discrète (pas le
+        // gros carré rose de l'en-tête), mais toujours présente — une modale garde une sortie au clic.
+        var cornerClose = headerlessDialog
+            ? $"""
+                <button type="button" x-on:click="{close}" aria-label="Fermer"
+                        class="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary">
+                    <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                </button>
+                """
+            : "";
+
+        // Corps : fond teinté + space-y-6 pour un FORMULAIRE ; pour un dialogue compact sans en-tête
+        // (guidage, confirmation) on retire la teinte et l'inter-espace — confirm-dialog-body porte
+        // déjà son propre rythme vertical, resserré.
+        var bodyClasses = NoPadding ? "" : headerlessDialog ? "p-6" : "p-6 space-y-6 bg-slate-50/30";
+
         output.TagName = null; // pas de <modal-shell> littéral au rendu : uniquement le HTML ci-dessous.
 
         // ──────────────────────────────────────────────────────────────────────────────────────────
@@ -145,7 +168,8 @@ public class ModalShellTagHelper : TagHelper
                      x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 sm:scale-95" x-transition:enter-end="opacity-100 sm:scale-100"
                      x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 sm:scale-100" x-transition:leave-end="opacity-0 sm:scale-95"
                      class="relative flex w-full flex-col overflow-hidden bg-white shadow-xl {(Tall ? "sm:my-4 sm:h-[92vh]" : "sm:my-8 sm:h-auto sm:max-h-[90vh]")} sm:w-full {maxWidth} sm:rounded-xl"{panelStyleAttr}>
-                    {(HideHeader ? "" : $"""
+                    {cornerClose}
+                    {(hasHeader ? $"""
                     <div class="flex-shrink-0 bg-white border-b border-slate-100 p-6">
                         <div class="flex items-center justify-between gap-4">
                             <h2 class="text-2xl font-bold text-slate-900">{titleHtml}</h2>
@@ -154,10 +178,10 @@ public class ModalShellTagHelper : TagHelper
                                 <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
                             </button>
                         </div>
-                        {(subtitle is null ? "" : $"""<div class="mt-2 text-sm text-slate-500">{subtitle}</div>""")}
+                        {(subtitle is null ? "" : $"""<div class="mt-2 text-sm leading-relaxed text-slate-600">{subtitle}</div>""")}
                     </div>
-                    """)}
-                    <div class="relative flex-1 overflow-y-auto min-h-0 {(NoPadding ? "" : "p-6 space-y-6 bg-slate-50/30")}">
+                    """ : "")}
+                    <div class="relative flex-1 overflow-y-auto min-h-0 {bodyClasses}">
                         {body}
                     </div>
                     {(footer is null ? "" : $"""

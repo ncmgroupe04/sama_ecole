@@ -10,10 +10,14 @@
     Même patron que _AccessDeniedModal, et même composant visuel que la confirmation « Bulletin
     envoyé » (modal-shell + confirm-dialog-body) — ici en variant="info" : pastille bleu Unikol,
     bouton « Compris ».
+
+    Pas de <modal-title> : le titre passe à confirm-dialog-body (title-expr), qui le rend DANS le
+    bloc centré. modal-shell n'a donc plus d'en-tête → plus de bande blanche vide, et sa croix se
+    replie dans le coin du corps. Tout tient dans une carte compacte : croix · icône · titre ·
+    message lisible · « Compris ».
 *@
 <modal-shell open="$store.guide.visible" on-close="$store.guide.dismiss()" size="md">
-    <modal-title><span x-text="$store.guide.title"></span></modal-title>
-    <confirm-dialog-body variant="info" close-action="$store.guide.dismiss()">
+    <confirm-dialog-body variant="info" title-expr="$store.guide.title" close-action="$store.guide.dismiss()">
         <span x-text="$store.guide.message"></span>
     </confirm-dialog-body>
 </modal-shell>
