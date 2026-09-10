@@ -256,6 +256,47 @@
                         "Réinitialisez librement pendant la phase de test, sans économiser les essais : c'est précisément à cela que sert le mode bac à sable.",
                         "Une fois en mode réel, une donnée erronée se corrige au cas par cas dans son module d'origine — jamais par une tentative de retour au mode test, qui n'existe plus pour un établissement en production."
                     ]
+                },
+                {
+                    id: 'comprendre-abonnement',
+                    title: 'Comprendre votre abonnement — Primaire, Standard, Premium',
+                    location: 'Paramètres › Facturation',
+                    href: '/parametres?tab=facturation',
+                    roles: ['Directeur'],
+                    definition:
+                        "Chaque établissement souscrit à l'UNE de trois formules : Primaire (formule d'entrée), Standard, " +
+                        "ou Premium. Le point essentiel : les trois donnent accès à L'INTÉGRALITÉ du socle métier — élèves, " +
+                        "classes, inscriptions, notes, bulletins, caisse, encaissements, documents officiels, inventaire, " +
+                        "examens, RH & paie, trésorerie, vie scolaire, intégration étatique. Une formule supérieure " +
+                        "n'ajoute pas des modules, elle débloque trois fonctionnalités précises, et elles seules.",
+                    objectif:
+                        "Permettre au Directeur de choisir la formule qui correspond réellement à ses besoins, sans payer " +
+                        "pour des options qu'il n'utilisera pas ni découvrir trop tard qu'une fonction attendue relevait " +
+                        "d'un niveau supérieur.",
+                    probleme:
+                        "Sans une lecture claire de ce que chaque formule apporte, un établissement souscrit au hasard : " +
+                        "il prend Premium « pour être tranquille » alors que le socle Primaire lui suffit, ou reste en " +
+                        "Primaire puis se heurte à un bouton d'export grisé le jour du conseil d'administration.",
+                    procedure: [
+                        "FORMULE PRIMAIRE : tout le socle métier, rien de plus. Convient à un établissement qui gère ses élèves, ses notes, sa caisse et ses documents sans envoi de SMS aux parents ni consolidation financière avancée.",
+                        "FORMULE STANDARD : le socle, PLUS les rapports financiers consolidés (ventilation des recettes par cycle, classe et mode de paiement) et l'export comptable au format .xlsx — l'écran Comptabilité › Rapports financiers.",
+                        "FORMULE PREMIUM : le socle et les rapports financiers, PLUS les notifications SMS et WhatsApp sortantes vers les parents (retards, absences, impayés, reçus, convocations, bulletins), PLUS le mode groupe scolaire — plusieurs établissements pilotés depuis un même compte.",
+                        "La formule en cours et sa date d'expiration se consultent dans Paramètres › Facturation ; un changement de formule se fait auprès de l'éditeur, pas depuis cet écran.",
+                        "TARIFICATION INDICATIVE (à confirmer auprès de l'éditeur) : Primaire environ 10 000 FCFA / mois (100 000 / an), Standard environ 25 000 / mois (250 000 / an), Premium environ 45 000 / mois (450 000 / an)."
+                    ],
+                    impacts: [
+                        "Rapports financiers : en formule Primaire, le bouton d'export existe mais reste désactivé et signalé « Standard » — il n'est jamais masqué, pour que le Directeur voie ce qu'une formule supérieure lui apporterait.",
+                        "SMS / WhatsApp : en formule Primaire ou Standard, l'option d'envoi est visible mais marquée « Premium » et le serveur refuse tout envoi — le contrôle n'est jamais porté par le seul badge de l'interface.",
+                        "Plafonds d'effectif : les repères « jusqu'à 500 élèves », « jusqu'à 2 000 » sont COMMERCIAUX, pas techniques. L'application n'empêche pas d'inscrire un élève de plus : seules les trois fonctionnalités ci-dessus sont réellement verrouillées.",
+                        "Expiration : à l'échéance, l'établissement passe en mode restreint (lecture seule, export des données toujours possible) plutôt qu'un blocage total — pour ne jamais empêcher une école de récupérer ses données. Des alertes sont envoyées au Directeur 30, 15 et 7 jours avant.",
+                        "Premier paiement : un établissement nouvellement approuvé mais dont le premier règlement n'est pas encore confirmé n'a accès qu'à l'écran de paiement, à l'exclusion de tout autre module."
+                    ],
+                    recommandations: [
+                        "Choisissez d'abord d'après les TROIS fonctionnalités, pas d'après un nombre d'élèves : si vous n'envoyez pas de SMS aux parents et n'avez qu'un établissement, Premium ne vous apporte que les rapports financiers — que Standard offre déjà.",
+                        "Prenez Standard dès que vous devez présenter un état des recettes ventilé à un conseil d'administration ou à un comptable : reconstituer ces chiffres à la main coûte plus cher que l'écart de formule.",
+                        "Ne laissez pas l'abonnement expirer sans surveillance : le mode restreint bloque toute saisie, et un établissement en pleine rentrée s'en trouve paralysé. Les alertes à 30, 15 et 7 jours sont là pour l'éviter.",
+                        "Le mode groupe scolaire (Premium) ne se justifie que si vous pilotez réellement plusieurs établissements distincts depuis un seul compte — deux cycles d'une même école ne sont pas deux établissements."
+                    ]
                 }
             ]
         },
