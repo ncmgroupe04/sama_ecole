@@ -380,7 +380,9 @@
                 "qui ouvre un accès à l'application. À la fiche se rattachent les AFFECTATIONS, c'est-à-dire les couples " +
                 "matière + classe pour lesquels le professeur est habilité. Cette notion d'affectation est le pivot du module " +
                 ": elle borne ce que chacun voit et saisit, alimente l'emploi du temps et le pointage des heures, et fonde la " +
-                "responsabilité de chaque note portée au dossier d'un élève.",
+                "responsabilité de chaque note portée au dossier d'un élève. L'EMPLOI DU TEMPS lui-même — la grille " +
+                "des créneaux hebdomadaires, consultable par enseignant ou par classe — se construit sur ce même " +
+                "écran, à partir de ces affectations.",
             articles: [
                 {
                     id: 'enseignants',
@@ -403,7 +405,7 @@
                         "matière, les heures effectuées se réconcilient de mémoire en fin de mois, et une erreur de saisie " +
                         "reste sans auteur identifiable. La responsabilité pédagogique se dilue.",
                     procedure: [
-                        "Ouvrez Gestion Scolaire › Enseignants, puis cliquez sur « Nouvel enseignant ».",
+                        "Ouvrez Gestion Scolaire › Enseignants, puis cliquez sur « Ajouter un enseignant ».",
                         "Renseignez l'état civil, le téléphone, l'adresse électronique et la spécialité. Le matricule est attribué automatiquement à l'enregistrement, jamais à l'ouverture du formulaire.",
                         "Précisez la nature du rattachement — permanent ou vacataire — ainsi que les éléments contractuels utiles à la paie.",
                         "Depuis la fiche détaillée, ajoutez les affectations : pour chaque matière enseignée, désignez la ou les classes concernées.",
@@ -422,6 +424,50 @@
                         "La fiche enseignant et le compte utilisateur sont deux objets distincts : le premier décrit une personne, le second ouvre un accès. Les deux sont nécessaires.",
                         "Maintenez le numéro de téléphone à jour : il constitue le canal de rappel le plus rapide en cas d'absence imprévue.",
                         "Vérifiez la spécialité déclarée avant toute affectation : elle vous prémunit contre l'attribution d'une matière à un professeur qui ne la traite pas."
+                    ]
+                },
+                {
+                    id: 'emploi-du-temps',
+                    title: 'Emploi du temps — grille des créneaux hebdomadaires',
+                    location: 'Gestion Scolaire › Enseignants — section « Emploi du temps »',
+                    href: '/enseignants',
+                    roles: ['Directeur', 'Secrétariat', 'Enseignant'],
+                    definition:
+                        "La grille des créneaux d'une semaine type : chaque créneau associe un enseignant, une classe, " +
+                        "une matière, un jour, une heure de début et une heure de fin, et un numéro de salle facultatif. " +
+                        "La grille se lit de deux façons au choix, par un jeu d'onglets : « Par Enseignant » montre la " +
+                        "semaine d'un professeur, « Par Classe » montre celle d'un groupe d'élèves — ce sont deux vues du " +
+                        "même jeu de créneaux, jamais deux saisies séparées.",
+                    objectif:
+                        "Donner à l'établissement une répartition hebdomadaire tenue à un seul endroit, cohérente entre le " +
+                        "point de vue de l'enseignant et celui de la classe. Pour la direction, c'est l'instrument qui " +
+                        "révèle immédiatement un professeur doublement programmé à la même heure, ou une classe laissée " +
+                        "sans cours sur un créneau.",
+                    probleme:
+                        "Un emploi du temps tenu sur une feuille par classe et recopié à part pour chaque enseignant " +
+                        "diverge dès la première modification : la classe croit avoir cours, le professeur pense être " +
+                        "libre, et personne ne détient la version qui fait foi. Les collisions — deux classes pour un " +
+                        "même professeur, deux professeurs pour une même salle — ne se voient qu'une fois les élèves " +
+                        "devant la porte.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Enseignants et faites défiler jusqu'à la section « Emploi du temps ».",
+                        "Choisissez le mode de lecture : « Par Enseignant » puis un professeur dans la liste, ou « Par Classe » puis une classe.",
+                        "Cliquez sur « Nouveau Créneau » : renseignez le jour, l'heure de début et de fin, l'enseignant, la classe, la matière, et le numéro de salle si l'établissement le suit.",
+                        "Enregistrez : le créneau apparaît aussitôt dans les DEUX vues — celle de l'enseignant et celle de la classe.",
+                        "Pour corriger ou retirer un créneau, ouvrez-le depuis la grille : la modification et la suppression se font au même endroit.",
+                        "Un enseignant connecté avec son propre compte ne voit et ne propose des créneaux que pour lui-même ; la Direction et le Secrétariat voient et modifient toute la grille."
+                    ],
+                    impacts: [
+                        "Affectations : un créneau s'appuie sur les couples matière + classe déjà déclarés sur la fiche de l'enseignant — une matière qu'il n'enseigne pas ne lui est pas proposée.",
+                        "Salles : le numéro de salle est un simple libellé indicatif porté par le créneau ; le module Infrastructures reste la référence de la capacité et de l'existence réelle des locaux.",
+                        "Pointage des heures : les heures effectivement faites se saisissent séparément (Comptabilité › Paie, Pointage Profs) et ne se déduisent pas automatiquement de la grille — l'emploi du temps est un prévisionnel, le pointage un constat.",
+                        "Navigation : depuis un créneau, la matière, la classe ou l'enseignant sont cliquables et ouvrent l'écran correspondant, filtré sur l'élément visé."
+                    ],
+                    recommandations: [
+                        "Renseignez les affectations de chaque enseignant AVANT de bâtir sa semaine : sans elles, aucune matière ne peut être placée.",
+                        "Vérifiez la grille dans les deux modes de lecture après une série de modifications : une collision invisible « Par Enseignant » saute aux yeux « Par Classe », et inversement.",
+                        "Ne comptez pas sur l'emploi du temps pour la paie : c'est le pointage des heures qui fait foi sur ce qui est dû, la grille n'est qu'une prévision.",
+                        "Un numéro de salle sur un créneau ne réserve pas la salle : si l'établissement veut éviter les doubles occupations, il lui faut une convention de nommage stricte et un contrôle humain, la grille ne l'impose pas."
                     ]
                 }
             ]
@@ -2208,6 +2254,84 @@
                         "Ne travaillez jamais sans avoir vérifié l'année active affichée dans l'en-tête, surtout juste après une bascule d'exercice.",
                         "Réservez « Tous les élèves » à la gestion d'un cas précis (réinscription, correction) : la vue par défaut « Inscrits cette année » est celle qui reflète l'effectif réel.",
                         "Si une classe ou une matière manque dans un menu, ne la contournez pas : créez-la dans son module (Classes, Matières), c'est la seule source des sélecteurs."
+                    ]
+                },
+                {
+                    id: 'guidage-et-raccourcis',
+                    title: 'Modales de guidage et raccourcis de navigation',
+                    location: 'Commun à tous les écrans',
+                    href: '/aide',
+                    roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
+                    definition:
+                        "Deux aides transverses, présentes sur l'ensemble des écrans. La MODALE DE GUIDAGE remplace le " +
+                        "bandeau rouge « erreur système » quand une action est tentée sans son pré-requis — aucune session " +
+                        "de caisse ouverte, aucun enseignant sélectionné, aucune année active : une fenêtre centrée " +
+                        "explique alors l'étape manquante, et l'appel voué à l'échec n'est même pas envoyé. Les RACCOURCIS " +
+                        "DE NAVIGATION sont les libellés cliquables — un nom de classe, une matière, un enseignant — qui, " +
+                        "d'un écran à l'autre, ouvrent l'écran correspondant déjà filtré sur l'élément visé.",
+                    objectif:
+                        "Faire gagner du temps sur les deux frictions les plus fréquentes : comprendre pourquoi un bouton " +
+                        "« ne marche pas », et retrouver une entité mentionnée ailleurs. Pour la direction, c'est moins " +
+                        "d'appels au support pour des blocages qui portent en réalité leur propre explication.",
+                    probleme:
+                        "Un message d'erreur technique sur une condition simplement non remplie — « 422 Unprocessable " +
+                        "Entity » là où il fallait d'abord ouvrir la caisse — inquiète l'utilisateur et déclenche un appel " +
+                        "au support pour une situation qu'une phrase aurait résolue. Et retrouver « la classe de CM2 B » " +
+                        "citée sur un créneau obligeait à repartir de la liste des classes et à la chercher à la main.",
+                    procedure: [
+                        "Quand une fenêtre de guidage s'ouvre, lisez l'étape qu'elle décrit, faites-la sur l'écran indiqué, puis reprenez l'action : « Compris » referme simplement la fenêtre, elle n'enregistre rien.",
+                        "Un libellé souligné ou présenté comme un lien — nom de classe, de matière, d'élève, d'enseignant — est cliquable : il ouvre l'écran de cette entité, déjà filtré sur elle.",
+                        "Ces raccourcis ouvrent l'écran dans le même onglet ; utilisez le clic du milieu ou « ouvrir dans un nouvel onglet » du navigateur pour garder l'écran de départ sous les yeux.",
+                        "Le Centre d'aide, lui, reste la documentation de fond : la modale de guidage ne le remplace pas, elle traite l'instant présent."
+                    ],
+                    impacts: [
+                        "Tous les écrans : la modale de guidage est un composant unique, monté une seule fois — son apparence et son bouton « Compris » sont identiques partout.",
+                        "Caisse, Emploi du temps, Notes : ce sont les écrans où un pré-requis manquant est le plus fréquent, donc ceux où la modale se déclenche le plus.",
+                        "Filtres d'écran : un raccourci de navigation applique un filtre à l'arrivée ; l'écran cible s'ouvre donc sur une liste déjà restreinte, qu'un clic sur « effacer » ré-élargit."
+                    ],
+                    recommandations: [
+                        "Ne fermez pas une modale de guidage sans avoir lu l'étape : elle nomme précisément ce qui manque, et refaire l'action sans rien changer rouvrira la même fenêtre.",
+                        "Si un écran s'ouvre étrangement vide après un clic sur un raccourci, c'est le filtre d'arrivée : cherchez le bouton qui l'efface plutôt que de conclure à une perte de données.",
+                        "Une vraie erreur système garde le bandeau rouge : si vous en voyez un, ce n'est pas un simple pré-requis manquant — là, un signalement au support est justifié."
+                    ]
+                },
+                {
+                    id: 'securite-du-compte',
+                    title: 'Sécurité de votre compte — mot de passe, verrouillage, session',
+                    location: 'Menu profil et écran de connexion',
+                    href: '/parametres',
+                    roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
+                    definition:
+                        "Trois protections s'appliquent au compte de chaque utilisateur, indépendamment de son rôle. Le " +
+                        "CHANGEMENT DE MOT DE PASSE en libre-service se fait depuis le menu profil, sans passer par un " +
+                        "administrateur. Le VERROUILLAGE PROGRESSIF bloque temporairement les tentatives de connexion " +
+                        "après plusieurs échecs de mot de passe rapprochés, le délai s'allongeant à chaque nouvel échec. " +
+                        "La DÉCONNEXION AUTOMATIQUE ferme la session après une période d'inactivité, dont la durée est " +
+                        "réglée par le Directeur dans les Paramètres système.",
+                    objectif:
+                        "Protéger les données de l'établissement contre un poste laissé ouvert sans surveillance et contre " +
+                        "les tentatives répétées de deviner un mot de passe, tout en laissant chaque utilisateur maître de " +
+                        "son propre mot de passe sans dépendre du secrétariat.",
+                    probleme:
+                        "Un mot de passe qu'on ne peut changer soi-même finit noté sur un papier collé à l'écran. Une " +
+                        "connexion sans limite de tentatives s'attaque à la machine. Et un poste de secrétariat resté " +
+                        "connecté pendant la pause de midi expose élèves, notes et caisse à qui passe devant.",
+                    procedure: [
+                        "CHANGER SON MOT DE PASSE : ouvrez le menu profil, choisissez « Changer mon mot de passe », saisissez l'actuel puis le nouveau — la robustesse du nouveau est vérifiée à la saisie.",
+                        "APRÈS PLUSIEURS ÉCHECS DE CONNEXION : patientez le temps indiqué par l'écran de connexion ; réessayer plus tôt ne fait que rallonger le délai. En cas de doute réel sur le mot de passe, demandez une réinitialisation.",
+                        "DÉCONNEXION AUTOMATIQUE : si l'application vous a déconnecté après une absence, reconnectez-vous simplement — aucune donnée validée avant l'inactivité n'est perdue, seule une saisie en cours non enregistrée l'est.",
+                        "RÉGLER LE DÉLAI (Directeur) : Paramètres › Paramètres système, champ « délai de déconnexion automatique »."
+                    ],
+                    impacts: [
+                        "Paramètres système : le délai d'inactivité y est réglé par le Directeur et s'applique à tous les comptes de l'établissement.",
+                        "Saisies en cours : la déconnexion automatique, comme une coupure réseau, laisse une saisie non validée à l'écran ou la perd selon l'écran — elle ne valide jamais rien à votre place (voir « Résilience réseau »).",
+                        "Comptes du personnel : la réinitialisation d'un mot de passe oublié par un membre du personnel reste, elle, du ressort du Directeur depuis Paramètres › Utilisateurs & rôles."
+                    ],
+                    recommandations: [
+                        "Changez votre mot de passe à la première connexion si un administrateur vous en a communiqué un : tant que vous utilisez le sien, il connaît votre accès.",
+                        "Ne réduisez pas le délai de déconnexion automatique au point de gêner le travail réel : un agent sans cesse déconnecté finit par contourner la sécurité autrement.",
+                        "Un verrouillage qui se déclenche alors que vous êtes sûr du mot de passe peut signaler une tentative d'intrusion sur votre compte : signalez-le, et changez le mot de passe une fois l'accès rétabli.",
+                        "Verrouillez ou fermez votre session en quittant votre poste plutôt que de compter sur la déconnexion automatique : le délai, aussi court soit-il, laisse une fenêtre."
                     ]
                 }
             ]
