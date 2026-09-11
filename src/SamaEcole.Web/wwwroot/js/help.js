@@ -297,6 +297,49 @@
                         "Ne laissez pas l'abonnement expirer sans surveillance : le mode restreint bloque toute saisie, et un établissement en pleine rentrée s'en trouve paralysé. Les alertes à 30, 15 et 7 jours sont là pour l'éviter.",
                         "Le mode groupe scolaire (Premium) ne se justifie que si vous pilotez réellement plusieurs établissements distincts depuis un seul compte — deux cycles d'une même école ne sont pas deux établissements."
                     ]
+                },
+                {
+                    id: 'matricules-format-numero',
+                    title: 'Matricules — format, numéro de départ et correction',
+                    location: 'Paramètres › Formats & signatures officielles',
+                    href: '/parametres?tab=formats-signatures',
+                    roles: ['Directeur'],
+                    definition:
+                        "Le matricule identifie un élève ou un enseignant à l'intérieur de l'établissement. Il est " +
+                        "composé de deux parties. Le GABARIT fixe la forme — par exemple « ELEV-{YEAR}-{SEQ:4} », où " +
+                        "{YEAR} est l'année scolaire et {SEQ:4} un compteur complété à quatre chiffres. Le COMPTEUR " +
+                        "{SEQ} est attribué automatiquement à l'enregistrement, dans l'ordre, sans trou. Trois réglages " +
+                        "sont ouverts au Directeur, et à lui seul : le gabarit, le numéro de départ du compteur pour " +
+                        "l'année en cours, et la correction ponctuelle d'un matricule déjà attribué.",
+                    objectif:
+                        "Laisser l'établissement adopter sa propre convention de numérotation — reprendre celle d'un " +
+                        "ancien logiciel, réserver une plage, préfixer par un sigle maison — sans renoncer à la garantie " +
+                        "d'unicité et de continuité que l'attribution automatique apporte.",
+                    probleme:
+                        "Une numérotation entièrement libre, saisie à la main pour chaque élève, produit tôt ou tard " +
+                        "des doublons, des trous et des formats incohérents d'une classe à l'autre. Une numérotation " +
+                        "entièrement rigide, elle, empêche une école qui migre depuis un autre système de conserver les " +
+                        "numéros que familles et administration connaissent déjà.",
+                    procedure: [
+                        "GABARIT : ouvrez Paramètres › Formats & signatures officielles, section « Format des matricules ». Modifiez le modèle des élèves et/ou des enseignants. Deux jetons seulement sont admis : {YEAR} et {SEQ} (ou {SEQ:n} pour compléter à n chiffres). Un modèle sans {SEQ} est refusé — tous les matricules seraient identiques.",
+                        "NUMÉRO DE DÉPART : dans la même section, encart « Numéro de départ (année en cours) », saisissez le prochain numéro voulu — par exemple 1000 — puis cliquez sur « Appliquer ». Le compteur saute directement à cette valeur pour la prochaine inscription.",
+                        "Le numéro de départ ne peut qu'AUGMENTER : l'application refuse une valeur inférieure ou égale au dernier numéro déjà attribué cette année, car elle réémettrait des matricules en circulation. Le dernier numéro attribué est rappelé sous le champ.",
+                        "CORRECTION D'UN MATRICULE : ouvrez la fiche détaillée de l'élève ou de l'enseignant concerné, cliquez sur le crayon à côté du matricule, saisissez le bon, puis validez. L'application refuse un matricule déjà porté par un autre dossier de l'établissement.",
+                        "La correction est journalisée (auteur, date, ancienne valeur) et ne modifie pas le compteur : corriger « ELEV-2026-0007 » en « ELEV-2026-0071 » ne change ni le dernier numéro attribué ni le prochain."
+                    ],
+                    impacts: [
+                        "Compteur par année : les numéros sont propres à chaque année scolaire (bascule d'octobre) et repartent naturellement à la rentrée suivante. Le numéro de départ se règle pour l'année en cours.",
+                        "Documents officiels : reçus, cartes scolaires, bulletins et listes reprennent le matricule tel qu'il est enregistré — une correction s'y reflète à la prochaine édition.",
+                        "Reçus d'inscription : leur propre numérotation (« REC-{YEAR}-{SEQ} ») a un gabarit FIXE, non réglable — un reçu est une pièce comptable, sa forme ne se paramètre pas.",
+                        "Import Excel de masse : il génère toujours un matricule automatique et ne reprend pas une colonne « matricule » du fichier ; pour aligner des dossiers repris d'un ancien système, la correction ponctuelle après import est la voie prévue.",
+                        "Réinitialisation en mode bac à sable : elle remet les compteurs de matricules à zéro (voir « Mode bac à sable »)."
+                    ],
+                    recommandations: [
+                        "Arrêtez le gabarit AVANT la première inscription de l'année : le changer ensuite ne réécrit pas les matricules déjà émis, et l'établissement se retrouve avec deux formes en circulation.",
+                        "Réglez le numéro de départ juste après avoir activé la nouvelle année, avant d'inscrire : c'est le moment où le compteur est encore à zéro et où la plage est libre.",
+                        "Réservez la correction d'un matricule aux vrais cas — erreur de reprise, alignement sur un dossier administratif : ce n'est pas un champ d'édition ordinaire, et chaque correction laisse une trace.",
+                        "Ne cherchez pas à « rattraper » un trou de numérotation en corrigeant des matricules un par un : un trou est sans conséquence, la cohérence de la série l'est davantage."
+                    ]
                 }
             ]
         },
