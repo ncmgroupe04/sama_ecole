@@ -35,7 +35,7 @@ collisions le 30/08/2026 (`Views/Exams/Index.cshtml`, `Views/Students/Index.csht
 
 | Session | Périmètre | Statut |
 |---|---|---|
-| sama-ecole (matricules) | Option compteur de départ + correction du matricule par le Directeur : Application/Students+Teachers+Schools (Commands/Queries), IApplicationDbContext, StudentsController/TeachersController/SchoolSettingsController, Views Settings/Students/Teachers + settings.js/students.js/teachers.js, tests | en cours |
+| — | — | (aucun en cours au moment de la rédaction — voir git log pour l'historique récent) |
 
 *(Ajoute une ligne quand tu commences un lot de plusieurs fichiers ; retire-la une fois committé et
 poussé. Une ligne orpheline depuis longtemps peut être retirée par n'importe quelle session — vérifie
