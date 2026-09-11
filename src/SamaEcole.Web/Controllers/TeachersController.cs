@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Teachers.Commands.AssignTeacher;
+using SamaEcole.Application.Teachers.Commands.CorrectTeacherMatricule;
 using SamaEcole.Application.Teachers.Commands.UnassignTeacher;
 using SamaEcole.Application.Teachers.Commands.CreateTeacher;
 using SamaEcole.Application.Teachers.Commands.DeleteTeacher;
@@ -36,6 +37,8 @@ public class TeachersController(ISender mediator) : ControllerBase
     public record ImportTeachersRequest(IFormFile? File, bool DryRun);
 
     public record SetTeacherPhotoRequest(string? PhotoData, uint RowVersion);
+
+    public record CorrectMatriculeRequest(string NewMatricule, uint RowVersion);
 
     public record UpdateTeacherRequest(
         string FullName,
@@ -215,6 +218,24 @@ public class TeachersController(ISender mediator) : ControllerBase
                 request.Gender, request.AcademicQualification, request.ProfessionalQualification,
                 request.CivilServiceStatus, request.CivilServiceMatricule, request.FirstAppointmentDate),
             cancellationToken));
+
+    /// <summary>
+    /// Corrige le MATRICULE d'un enseignant (Option 2). Endpoint DÉDIÉ, réservé au DIRECTEUR seul —
+    /// même raisonnement que StudentsController.CorrectMatricule : identifiant officiel, pas une
+    /// correction de saisie ordinaire. 409 si le matricule est déjà pris ou si la fiche a changé
+    /// entre-temps.
+    /// </summary>
+    [HttpPut("{id:guid}/matricule")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<CorrectTeacherMatriculeResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CorrectMatricule(
+        Guid id, [FromBody] CorrectMatriculeRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new CorrectTeacherMatriculeCommand(id, request.NewMatricule, request.RowVersion), cancellationToken));
 
     /// <summary>
     /// Feature B — dépose, remplace ou retire (PhotoData null) la photo téléversée d'une fiche déjà

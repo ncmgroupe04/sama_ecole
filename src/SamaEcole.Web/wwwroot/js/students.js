@@ -167,6 +167,48 @@ document.addEventListener('alpine:init', () => {
         // dès le dépôt du fichier, séparée du bouton « Enregistrer » général (voir uploadStudentPhoto).
         photoUploadError: null,
 
+        // Correction du matricule (Option 2) — DIRECTEUR seul, endpoint dédié PUT /students/{id}/matricule.
+        // Absente de la modale d'édition ordinaire : le matricule est un identifiant officiel, pas un
+        // champ d'état civil. Mini-formulaire en ligne, ouvert depuis la fiche détaillée.
+        isDirecteur: window.auth.role === 'Directeur',
+        matriculeEdit: { open: false, value: '', saving: false, error: null },
+
+        openMatriculeEdit() {
+            const identity = this.studentDetail && this.studentDetail.identity;
+            if (!identity) return;
+            this.matriculeEdit = { open: true, value: identity.matricule || '', saving: false, error: null };
+        },
+
+        closeMatriculeEdit() {
+            this.matriculeEdit = { open: false, value: '', saving: false, error: null };
+        },
+
+        async submitMatriculeEdit() {
+            const identity = this.studentDetail && this.studentDetail.identity;
+            if (!identity) return;
+
+            const newMatricule = (this.matriculeEdit.value || '').trim();
+            if (!newMatricule) {
+                this.matriculeEdit.error = 'Le matricule est obligatoire.';
+                return;
+            }
+
+            this.matriculeEdit.saving = true;
+            this.matriculeEdit.error = null;
+            try {
+                await window.api.put(`/students/${identity.id || this.detailStudent.id}/matricule`, {
+                    newMatricule,
+                    rowVersion: identity.rowVersion
+                });
+                await this.refreshStudentDetail();
+                this.closeMatriculeEdit();
+            } catch (err) {
+                this.matriculeEdit.error = window.api.toMessage(err, "Le matricule n'a pas pu être corrigé.");
+            } finally {
+                this.matriculeEdit.saving = false;
+            }
+        },
+
         // Suppression de la fiche (modale de confirmation)
         deletingStudentRecord: null, // { id, fullName, rowVersion }
         isDeletingStudentRecord: false,

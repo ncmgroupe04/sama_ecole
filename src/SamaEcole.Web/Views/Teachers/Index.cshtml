@@ -158,6 +158,25 @@
  <div class="flex items-center gap-2 mt-1.5">
  <span class="bg-indigo-50 text-indigo-700 font-medium px-2.5 py-0.5 text-xs rounded-full font-mono" x-text="detail.matricule"></span>
  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold" :class="statusClass(detail.status)" x-text="statusLabel(detail.status)"></span>
+ @* Correction du matricule — Directeur seul. Voir teachers.js. *@
+ <button type="button" x-show="isDirecteur && !matriculeEdit.open" x-cloak
+ x-on:click="openMatriculeEdit()" title="Corriger le matricule"
+ class="text-slate-400 hover:text-primary-700 transition-colors">
+ <icon name="pencil" class="w-3.5 h-3.5" />
+ </button>
+ </div>
+ <div x-show="matriculeEdit.open" x-cloak class="mt-2 space-y-1.5 max-w-xs">
+ <input type="text" x-model="matriculeEdit.value" maxlength="30" :disabled="matriculeEdit.saving"
+ class="input-field font-mono text-sm" :class="matriculeEdit.error && 'input-field-error'">
+ <div class="flex items-center gap-2">
+ <button type="button" x-on:click="submitMatriculeEdit()" :disabled="matriculeEdit.saving"
+ class="btn-modal-primary text-xs px-3 py-1 disabled:opacity-50">
+ <span x-text="matriculeEdit.saving ? 'Enregistrement…' : 'Corriger'"></span>
+ </button>
+ <button type="button" x-on:click="closeMatriculeEdit()" :disabled="matriculeEdit.saving"
+ class="btn-modal-secondary text-xs px-3 py-1 disabled:opacity-50">Annuler</button>
+ </div>
+ <p x-show="matriculeEdit.error" x-cloak x-text="matriculeEdit.error" class="field-error"></p>
  </div>
  </div>
  </div>

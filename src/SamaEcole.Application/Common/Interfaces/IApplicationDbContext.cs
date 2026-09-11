@@ -88,6 +88,13 @@ public interface IApplicationDbContext
     /// <summary>Paramètres d'établissement (ticket JGK-B02).</summary>
     DbSet<SchoolSettings> SchoolSettings { get; }
 
+    /// <summary>
+    /// Compteurs de matricules par (école, type, année). Incrémentés par
+    /// <c>SamaEcole.Persistence.MatriculeGenerator</c> ; exposés ici pour que le Directeur puisse
+    /// fixer le numéro de départ d'une année (SetMatriculeSequenceStartCommand).
+    /// </summary>
+    DbSet<MatriculeSequence> MatriculeSequences { get; }
+
     /// <summary>Journal d'audit append-only (ticket JGK-H01) : on y AJOUTE, jamais plus.</summary>
     DbSet<AuditLog> AuditLogs { get; }
 

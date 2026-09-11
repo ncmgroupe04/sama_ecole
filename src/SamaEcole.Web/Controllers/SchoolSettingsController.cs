@@ -1,9 +1,13 @@
 using System.IO;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
+using SamaEcole.Application.Schools.Commands.SetMatriculeSequenceStart;
 using SamaEcole.Application.Schools.Commands.UpdateGradingScale;
 using SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
+using SamaEcole.Application.Schools.Queries.GetMatriculeSequences;
 using SamaEcole.Application.Schools.Queries.GetSchoolSettings;
+using SamaEcole.Application.Common.Exceptions;
+using FluentValidation.Results;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
 using MediatR;
@@ -48,6 +52,9 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
+    /// <summary>Corps du PUT matricule-sequences : le type visé (« Student » / « Teacher ») et le prochain numéro.</summary>
+    public record SetMatriculeSequenceStartRequest(string Kind, int NextValue);
+
     /// <summary>
     /// LECTURE ouverte à tout utilisateur de l'école : le format de date et le barème pilotent
     /// l'affichage de TOUS les écrans (Secrétariat, Finance, Enseignant). Les réserver au Directeur
@@ -90,6 +97,45 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.SmsOnPaymentReceipt,
                 request.DebtorReminderThresholdDays),
             cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// État des compteurs de matricules (élèves, enseignants) pour l'année scolaire en cours :
+    /// dernier numéro attribué et prochain à venir. Réservé au Directeur, comme le réglage.
+    /// </summary>
+    [HttpGet("matricule-sequences")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<MatriculeSequencesDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetMatriculeSequences(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetMatriculeSequencesQuery(), cancellationToken));
+
+    /// <summary>
+    /// Fixe le NUMÉRO DE DÉPART de la numérotation des matricules pour l'année scolaire en cours
+    /// (Option 1). Réservé au Directeur. 409 si la valeur demandée est inférieure ou égale au dernier
+    /// numéro déjà attribué — rétrograder le compteur réémettrait des numéros en circulation.
+    /// </summary>
+    [HttpPut("matricule-sequences")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<MatriculeSequenceInfo>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SetMatriculeSequenceStart(
+        [FromBody] SetMatriculeSequenceStartRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.TryParse<MatriculeKind>(request.Kind, ignoreCase: true, out var kind))
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(request.Kind), "Type de compteur inconnu : attendez « Student » ou « Teacher ».")
+            ]);
+        }
+
+        var result = await mediator.Send(
+            new SetMatriculeSequenceStartCommand(kind, request.NextValue), cancellationToken);
 
         return Ok(result);
     }

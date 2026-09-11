@@ -449,6 +449,46 @@ document.addEventListener('alpine:init', () => {
             this.detail = await window.api.get(`/teachers/${this.detail.id}`);
         },
 
+        // ------------------------------------------------------------ Corriger le matricule (Option 2)
+        // DIRECTEUR seul, endpoint dédié PUT /teachers/{id}/matricule — hors de la modale d'édition
+        // ordinaire, qui rappelle d'ailleurs « le matricule n'est jamais modifiable ». Mini-formulaire
+        // en ligne, sur la fiche détaillée.
+        isDirecteur: window.auth.role === 'Directeur',
+        matriculeEdit: { open: false, value: '', saving: false, error: null },
+
+        openMatriculeEdit() {
+            if (!this.detail) return;
+            this.matriculeEdit = { open: true, value: this.detail.matricule || '', saving: false, error: null };
+        },
+
+        closeMatriculeEdit() {
+            this.matriculeEdit = { open: false, value: '', saving: false, error: null };
+        },
+
+        async submitMatriculeEdit() {
+            if (!this.detail) return;
+            const newMatricule = (this.matriculeEdit.value || '').trim();
+            if (!newMatricule) {
+                this.matriculeEdit.error = 'Le matricule est obligatoire.';
+                return;
+            }
+
+            this.matriculeEdit.saving = true;
+            this.matriculeEdit.error = null;
+            try {
+                await window.api.put(`/teachers/${this.detail.id}/matricule`, {
+                    newMatricule,
+                    rowVersion: this.detail.rowVersion
+                });
+                await this.refreshTeacherDetail();
+                this.closeMatriculeEdit();
+            } catch (err) {
+                this.matriculeEdit.error = window.api.toMessage(err, "Le matricule n'a pas pu être corrigé.");
+            } finally {
+                this.matriculeEdit.saving = false;
+            }
+        },
+
         // ------------------------------------------------------------ Modifier la fiche
 
         openEditTeacher() {

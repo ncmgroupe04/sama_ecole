@@ -102,6 +102,15 @@ document.addEventListener('alpine:init', () => {
         configErrors: {},
         configSaving: false,
         configSaved: false,
+
+        // --- Compteur de départ des matricules (Option 1) — année scolaire en cours ---
+        // matriculeSequences vient de GET /schools/current/settings/matricule-sequences ; input
+        // porte la valeur éditable (« prochain numéro »), initialisée sur nextValue au chargement.
+        matriculeSequences: { student: null, teacher: null },
+        matriculeSeqInput: { student: null, teacher: null },
+        matriculeSeqSaving: { student: false, teacher: false },
+        matriculeSeqError: { student: null, teacher: null },
+        matriculeSeqSaved: { student: false, teacher: false },
         isUploadingDirectorSignature: false,
         directorSignatureUploadError: null,
         isUploadingSecretarySignature: false,
@@ -256,10 +265,70 @@ document.addEventListener('alpine:init', () => {
                     surveillantSignatureUrl: config.surveillantSignatureUrl || '',
                     typeEtablissement: config.typeEtablissement || 'Prive'
                 };
+
+                // Compteurs de matricules : requête à part (Directeur seul), pour ne pas fragiliser
+                // le Promise.all ci-dessus avec un troisième appel conditionnel.
+                if (this.isDirecteur) {
+                    this.loadMatriculeSequences();
+                }
             } catch (err) {
                 this.loadError = window.api.toMessage(err, 'Erreur lors du chargement des paramètres.');
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        /** Charge l'état des compteurs de matricules de l'année en cours et amorce les champs éditables. */
+        async loadMatriculeSequences() {
+            try {
+                const dto = await window.api.get('/schools/current/settings/matricule-sequences');
+                this.matriculeSequences = { student: dto.student, teacher: dto.teacher };
+                this.matriculeSeqInput = {
+                    student: dto.student ? dto.student.nextValue : null,
+                    teacher: dto.teacher ? dto.teacher.nextValue : null
+                };
+            } catch (err) {
+                // Non bloquant : le reste de l'écran reste utilisable.
+                this.matriculeSeqError = {
+                    student: window.api.toMessage(err, 'Compteurs de matricules indisponibles.'),
+                    teacher: null
+                };
+            }
+        },
+
+        /**
+         * Fixe le prochain numéro de matricule pour l'année en cours. `kind` vaut 'student' ou
+         * 'teacher' côté écran ; l'API attend 'Student' / 'Teacher'.
+         */
+        async saveMatriculeSequence(kind) {
+            const nextValue = Number(this.matriculeSeqInput[kind]);
+            if (!Number.isInteger(nextValue) || nextValue < 1) {
+                this.matriculeSeqError = { ...this.matriculeSeqError, [kind]: 'Saisissez un entier supérieur ou égal à 1.' };
+                return;
+            }
+
+            this.matriculeSeqSaving = { ...this.matriculeSeqSaving, [kind]: true };
+            this.matriculeSeqError = { ...this.matriculeSeqError, [kind]: null };
+            this.matriculeSeqSaved = { ...this.matriculeSeqSaved, [kind]: false };
+            try {
+                const apiKind = kind === 'student' ? 'Student' : 'Teacher';
+                const info = await window.api.put('/schools/current/settings/matricule-sequences', {
+                    kind: apiKind,
+                    nextValue
+                });
+                this.matriculeSequences = { ...this.matriculeSequences, [kind]: info };
+                this.matriculeSeqInput = { ...this.matriculeSeqInput, [kind]: info.nextValue };
+                this.matriculeSeqSaved = { ...this.matriculeSeqSaved, [kind]: true };
+                setTimeout(() => {
+                    this.matriculeSeqSaved = { ...this.matriculeSeqSaved, [kind]: false };
+                }, 2500);
+            } catch (err) {
+                this.matriculeSeqError = {
+                    ...this.matriculeSeqError,
+                    [kind]: window.api.toMessage(err, "Le prochain numéro n'a pas pu être enregistré.")
+                };
+            } finally {
+                this.matriculeSeqSaving = { ...this.matriculeSeqSaving, [kind]: false };
             }
         },
 

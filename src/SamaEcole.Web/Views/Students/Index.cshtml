@@ -279,7 +279,30 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-6 px-6">
         <div>
             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Matricule</p>
-            <span class="font-mono bg-slate-100 text-slate-800 px-2 py-1 rounded text-sm font-semibold" x-text="detailStudent ? detailStudent.matricule : ''"></span>
+            <div class="flex items-center gap-2">
+                <span class="font-mono bg-slate-100 text-slate-800 px-2 py-1 rounded text-sm font-semibold" x-text="detailStudent ? detailStudent.matricule : ''"></span>
+                @* Correction du matricule — Directeur seul, et seulement une fois la fiche complète
+                   chargée (studentDetail porte le jeton de concurrence). Voir students.js. *@
+                <button type="button" x-show="isDirecteur && studentDetail && !matriculeEdit.open" x-cloak
+                        x-on:click="openMatriculeEdit()" title="Corriger le matricule"
+                        class="text-slate-400 hover:text-primary-700 transition-colors">
+                    <icon name="pencil" class="w-3.5 h-3.5" />
+                </button>
+            </div>
+            <div x-show="matriculeEdit.open" x-cloak class="mt-2 space-y-1.5">
+                <input type="text" x-model="matriculeEdit.value" maxlength="30"
+                       :disabled="matriculeEdit.saving"
+                       class="input-field font-mono text-sm" :class="matriculeEdit.error && 'input-field-error'">
+                <div class="flex items-center gap-2">
+                    <button type="button" x-on:click="submitMatriculeEdit()" :disabled="matriculeEdit.saving"
+                            class="btn-modal-primary text-xs px-3 py-1 disabled:opacity-50">
+                        <span x-text="matriculeEdit.saving ? 'Enregistrement…' : 'Corriger'"></span>
+                    </button>
+                    <button type="button" x-on:click="closeMatriculeEdit()" :disabled="matriculeEdit.saving"
+                            class="btn-modal-secondary text-xs px-3 py-1 disabled:opacity-50">Annuler</button>
+                </div>
+                <p x-show="matriculeEdit.error" x-cloak x-text="matriculeEdit.error" class="field-error"></p>
+            </div>
         </div>
         <div>
             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
