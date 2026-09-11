@@ -90,7 +90,10 @@ export function loadScripts(files, options = {}) {
         CustomEvent,
         AbortController,
         FormData,
-        URLSearchParams
+        URLSearchParams,
+        // `new URL(window.location.href)` : la façon dont les écrans synchronisent l'onglet ouvert
+        // avec l'URL (history.replaceState — settings.js, subjects.js).
+        URL
     };
 
     sandbox.globalThis = sandbox;

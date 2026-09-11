@@ -48,6 +48,42 @@ document.addEventListener('alpine:init', () => {
         return null; // ni Crèche/Maternelle, ni un mot-clé connu → otherSubjects
     }
 
+    // ── Cycles d'enseignement (filtre supérieur de l'écran) ───────────────────────────────────────
+    // Les domaines (Lettres & Langues, Sciences & Technologies…) traversent TOUS les cycles : sans
+    // second axe, l'Anglais du Lycée et la « Langue et Communication » du Primaire se lisent dans la
+    // même colonne, alors qu'ils ne se gèrent jamais ensemble. Le cycle est donc un FILTRE, pas une
+    // catégorie de plus — la grille par domaines reste la seule structure de la page.
+    //
+    // Le niveau d'une matière est choisi dans une liste fermée à l'écran (Crèche, Maternelle,
+    // Primaire, Collège, Lycée) mais reste un TEXTE LIBRE côté API (CreateSubjectCommandValidator
+    // n'impose aucune liste, et le <select> est postérieur à une partie des données) : la
+    // reconnaissance ci-dessous ignore casse et accents, et les synonymes sont EXACTEMENT ceux du
+    // serveur (ClassroomCycle.ByLevel) — « Élémentaire » pour le primaire, « Moyen »/« CEM » pour
+    // le collège, « Secondaire » pour le lycée. Sans quoi l'écran Classes et l'écran Matières
+    // rangeraient un même niveau dans deux cycles différents.
+    //
+    // Ordre d'affichage : celui de l'écran Classes (classrooms.js, LEVEL_ORDER) — Primaire, Collège
+    // et Lycée en tête, préscolaire en dernier.
+    const ALL_CYCLES = 'all';
+
+    const CYCLES = [
+        { key: 'primaire', label: 'Primaire', levels: ['primaire', 'elementaire', 'ecole elementaire', 'ecole primaire'] },
+        { key: 'college', label: 'Collège', levels: ['college', 'moyen', 'cem'] },
+        { key: 'lycee', label: 'Lycée', levels: ['lycee', 'secondaire'] },
+        { key: 'prescolaire', label: 'Préscolaire', levels: ['creche', 'maternelle', 'prescolaire'] }
+    ];
+
+    // Filet de sécurité, même esprit qu'otherSubjects pour les catégories : un niveau hors
+    // nomenclature obtient son propre onglet plutôt que d'être rangé de force dans un cycle ou —
+    // pire — de disparaître de tous les onglets. L'onglet n'apparaît que s'il contient quelque chose.
+    const OTHER_CYCLE = { key: 'autres', label: 'Autres niveaux', levels: [] };
+
+    function cycleFor(subject) {
+        const level = stripAccents(String(subject.level || '').trim()).toLowerCase();
+        const cycle = CYCLES.find((c) => c.levels.includes(level));
+        return cycle ? cycle.key : OTHER_CYCLE.key;
+    }
+
     // Abrégés D'AFFICHAGE seulement (grille compacte) : « Physique-Chimie » → « PC », « Histoire-
     // Géographie » → « Hist-Géo »… Comparaison sur le nom normalisé (accents/casse/tirets/espaces
     // ignorés). Le nom réel (recherche, édition, suppression, API) reste inchangé ; le nom complet
@@ -90,6 +126,14 @@ document.addEventListener('alpine:init', () => {
         isLoading: false,
         error: null,
         search: '',
+
+        // ── Filtre par cycle (barre d'onglets au-dessus de la grille) ──
+        // 'all' ou la clé d'un cycle (voir CYCLES). `requestedCycle` retient le ?cycle= de l'URL le
+        // temps du premier chargement : les onglets réellement proposés dépendent des matières, on
+        // ne peut donc valider la demande qu'une fois la liste connue (voir resolveInitialCycle).
+        cycle: ALL_CYCLES,
+        requestedCycle: null,
+        hasResolvedCycle: false,
 
         get canCreateSubject() {
             return ['Directeur', 'Secretariat', 'Enseignant'].includes(window.auth.role);
@@ -156,8 +200,10 @@ document.addEventListener('alpine:init', () => {
             // de la liste Enseignants, emploi du temps…) pointent vers /matieres?q=<nom>. On arrive
             // alors avec la recherche déjà remplie, la grille se limite à cette matière. Faute de
             // page de détail propre à une matière, c'est la vue la plus ciblée que l'écran propose.
-            const q = new URLSearchParams(window.location.search).get('q');
+            const params = new URLSearchParams(window.location.search);
+            const q = params.get('q');
             if (q) this.search = q;
+            this.requestedCycle = params.get('cycle');
             this.loadSubjects();
         },
 
@@ -166,6 +212,7 @@ document.addEventListener('alpine:init', () => {
             this.error = null;
             try {
                 this.subjects = await window.api.get('/subjects');
+                if (!this.hasResolvedCycle) this.resolveInitialCycle();
             } catch (err) {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des matières.');
             } finally {
@@ -173,11 +220,108 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        get visibleSubjects() {
+        // ────────────────────────────────────────────────────────────── Filtre par cycle
+
+        /**
+         * Cycle affiché au premier chargement. Il ne peut se décider qu'une fois les matières
+         * connues — il dépend des cycles que l'école couvre réellement :
+         *  - `?cycle=` dans l'URL gagne toujours (lien copié, onglet rouvert), s'il désigne un cycle
+         *    effectivement couvert ;
+         *  - `?q=` (deep-link depuis un badge de matière d'un autre écran — voir init) impose « Tous
+         *    les cycles » : la matière cherchée appartient à n'importe quel cycle, et un onglet
+         *    présélectionné la ferait disparaître de la recherche qu'on vient tout juste d'ouvrir ;
+         *  - une école qui ne couvre qu'un cycle n'a rien à filtrer → « Tous les cycles » ;
+         *  - sinon le premier cycle couvert, parce que c'est précisément le mélange Primaire/Lycée
+         *    dans une même colonne que ce filtre existe pour éviter. Le nombre de matières porté par
+         *    chaque onglet dit tout de suite où sont les autres.
+         */
+        resolveInitialCycle() {
+            this.hasResolvedCycle = true;
+            const active = this.activeCycles;
+            const wanted = this.requestedCycle;
+
+            if (wanted === ALL_CYCLES || (wanted && active.some((c) => c.key === wanted))) {
+                this.cycle = wanted;
+                return;
+            }
+
+            this.cycle = (this.search.trim() || active.length < 2) ? ALL_CYCLES : active[0].key;
+        },
+
+        /** Les cycles réellement couverts par l'école, dans l'ordre d'affichage. Calculé sur TOUTES
+         *  les matières (pas sur la recherche) : la barre d'onglets ne doit pas se réorganiser sous
+         *  les doigts pendant qu'on tape. */
+        get activeCycles() {
+            const present = new Set(this.subjects.map(cycleFor));
+            return [...CYCLES, OTHER_CYCLE].filter((c) => present.has(c.key));
+        },
+
+        /** Onglets de cycle, avec le nombre de matières que chacun contient POUR LA RECHERCHE EN
+         *  COURS — un onglet à 0 pendant une recherche indique où la matière n'est pas. */
+        get cycleTabs() {
+            const searched = this.searchedSubjects;
+            return this.activeCycles.map((c) => ({
+                key: c.key,
+                label: c.label,
+                count: searched.filter((s) => cycleFor(s) === c.key).length
+            }));
+        },
+
+        /** Libellé du cycle affiché, pour les messages (état vide). */
+        get currentCycleLabel() {
+            const cycle = [...CYCLES, OTHER_CYCLE].find((c) => c.key === this.cycle);
+            return cycle ? cycle.label : 'Tous les cycles';
+        },
+
+        /**
+         * Bascule d'onglet et synchronise l'URL via replaceState — un lien copié rouvre le même
+         * cycle, sans recharger les matières déjà en mémoire (même procédé que goToTab dans
+         * settings.js).
+         */
+        selectCycle(key) {
+            this.cycle = key;
+            this.hasResolvedCycle = true;
+
+            const url = new URL(window.location.href);
+            if (key === ALL_CYCLES) {
+                url.searchParams.delete('cycle');
+            } else {
+                url.searchParams.set('cycle', key);
+            }
+            window.history.replaceState({}, '', url);
+        },
+
+        /** État visuel d'un onglet de cycle. Renvoie le SEUL modificateur `tab-btn-active` : la base
+         *  `.tab-btn` est posée en dur dans la vue (composant partagé, input.css). */
+        cycleTabClass(key) {
+            return this.cycle === key ? 'tab-btn-active' : '';
+        },
+
+        /**
+         * Amène l'onglet sur le cycle d'un niveau donné, si la matière qu'on vient d'enregistrer n'y
+         * est pas déjà. Sans cela, créer une matière de Lycée depuis l'onglet Primaire (ou déplacer
+         * une matière d'un niveau à l'autre) afficherait « Matière ajoutée » suivi d'une grille où
+         * elle ne figure nulle part — l'utilisateur conclurait à un échec silencieux.
+         */
+        revealCycleFor(level) {
+            if (this.cycle === ALL_CYCLES) return;
+            const target = cycleFor({ level });
+            if (target !== this.cycle) this.selectCycle(target);
+        },
+
+        /** Matières retenues par la RECHERCHE seule — base de calcul des compteurs d'onglets. */
+        get searchedSubjects() {
             const q = this.search.trim().toLowerCase();
             return q
                 ? this.subjects.filter((s) => s.name.toLowerCase().includes(q) || s.level.toLowerCase().includes(q))
                 : this.subjects;
+        },
+
+        /** Matières effectivement affichées : recherche PUIS cycle. Tout le reste de l'écran en
+         *  découle (grille par domaines, « Autres matières », tuiles de tête). */
+        get visibleSubjects() {
+            const subjects = this.searchedSubjects;
+            return this.cycle === ALL_CYCLES ? subjects : subjects.filter((s) => cycleFor(s) === this.cycle);
         },
 
         /**
@@ -197,7 +341,7 @@ document.addEventListener('alpine:init', () => {
                 byCategory.get(category).push(subject);
             }
 
-            return CATEGORY_ORDER.map((category) => {
+            const groups = CATEGORY_ORDER.map((category) => {
                 const subjects = (byCategory.get(category) || []).slice().sort((a, b) => a.name.localeCompare(b.name, 'fr'));
                 return {
                     category,
@@ -205,6 +349,13 @@ document.addEventListener('alpine:init', () => {
                     totalCoefficient: subjects.reduce((sum, s) => sum + Number(s.coefficient), 0)
                 };
             });
+
+            // Sur « Tous les cycles », les 4 colonnes restent affichées même vides : elles disent à
+            // l'école quels domaines existent et où sa prochaine matière ira se ranger. Dès qu'un
+            // cycle est sélectionné, une colonne vide n'apprend plus rien et coûte une place —
+            // « Éveil & Petite Enfance » est vide PAR CONSTRUCTION hors préscolaire, puisque
+            // categoryFor y envoie les matières de Crèche/Maternelle et elles seules.
+            return this.cycle === ALL_CYCLES ? groups : groups.filter((g) => g.subjects.length > 0);
         },
 
         /** Filet de sécurité : une matière dont le nom ne correspond à aucun mot-clé connu (voir
@@ -488,7 +639,13 @@ document.addEventListener('alpine:init', () => {
         openCreate() {
             // Reprend le dernier niveau saisi : on crée en général toutes les matières d'un niveau à
             // la suite. Repartir d'un champ vide à chaque fois ferait retaper « Primaire » dix fois.
-            const lastLevel = this.subjects.length ? this.subjects[this.subjects.length - 1].level : '';
+            // Quand un cycle est affiché, le niveau proposé est cherché DANS ce cycle : on crée la
+            // matière qu'on est en train de regarder, pas celle du dernier import.
+            const pool = this.cycle === ALL_CYCLES
+                ? this.subjects
+                : this.subjects.filter((s) => cycleFor(s) === this.cycle);
+            const source = pool.length ? pool : this.subjects;
+            const lastLevel = source.length ? source[source.length - 1].level : '';
             this.newSubject = {
                 name: '', nameAr: '', level: lastLevel, coefficient: 1,
                 parentSubjectId: '', maxScore: '', displayOrder: 0
@@ -521,6 +678,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.isCreateOpen = false;
                 this.addedSubjectName = this.newSubject.name;
+                this.revealCycleFor(this.newSubject.level);
                 await this.loadSubjects();
                 this.showAddedDialog = true; // confirmation « Matière ajoutée »
             } catch (err) {
@@ -565,6 +723,7 @@ document.addEventListener('alpine:init', () => {
                 // détacherait l'activité de son domaine et lui ferait perdre son barème.
                 await this.saveSubject(this.editing, {});
                 this.editedSubjectName = this.editing.name;
+                this.revealCycleFor(this.editing.level);
                 this.closeEdit();
                 await this.loadSubjects();
                 this.showEditedDialog = true;

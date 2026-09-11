@@ -20,16 +20,22 @@
 
   @await Html.PartialAsync("_ErrorBanner")
 
-  @* KPI badges + Recherche + Actions *@
+  @* En-tête sur DEUX lignes seulement, chacune avec un rôle net — toute bande supplémentaire est
+     prise sur la hauteur des cartes de matières, seul contenu qu'on vient réellement lire ici :
+       1. ce que contient l'écran (tuiles) et l'action principale, à l'opposé ;
+       2. tout ce qui RESTREINT l'affichage — mode de lecture, recherche, cycle — côte à côte. *@
   <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-   <div class="flex gap-4">
+   <div class="flex flex-wrap items-center gap-4">
     <div class="flex items-center gap-2 px-4 py-2 bg-white/80 rounded-xl border border-slate-200/80 shadow-sm">
      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-50 text-primary-600">
       <icon name="book" class="w-4 h-4" />
      </div>
      <div class="leading-tight">
+      @* Compte ce qui est À L'ÉCRAN, pas le total de l'école : avec un cycle sélectionné, une
+         tuile à 31 au-dessus d'une grille qui en montre 12 se lit comme une perte de données.
+         Le total reste lisible sur l'onglet « Tous les cycles ». *@
       <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Matières</span>
-      <p class="text-base font-bold text-slate-900" x-text="subjects.length">0</p>
+      <p class="text-base font-bold text-slate-900" x-text="visibleSubjects.length">0</p>
      </div>
     </div>
     <div class="flex items-center gap-2 px-4 py-2 bg-white/80 rounded-xl border border-slate-200/80 shadow-sm">
@@ -41,6 +47,14 @@
       <p class="text-base font-bold text-slate-900" x-text="visibleLevelCount">0</p>
      </div>
     </div>
+
+    @* Action principale alignée à droite, sur la même ligne que les tuiles : elle occupe une
+       hauteur déjà payée par les tuiles, au lieu d'en réclamer une à elle. *@
+    <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()"
+     class="btn-modal-primary group h-10 px-4 ml-auto">
+     <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
+     Nouvelle matière
+    </button>
    </div>
 
    <div class="flex flex-wrap items-center gap-3">
@@ -70,11 +84,44 @@
       class="input-field !my-0 pl-9 pr-3 w-full" />
     </div>
 
-    <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()"
-     class="btn-modal-primary group h-10 px-4 ml-auto">
-     <icon name="plus" class="w-5 h-5 transition-transform duration-200 group-hover:rotate-90" />
-     Nouvelle matière
-    </button>
+    @* ── Filtre par CYCLE ────────────────────────────────────────────────────────────────────
+       Second axe de lecture de la grille : les domaines (Lettres & Langues, Sciences…)
+       traversent tous les cycles, si bien que l'Anglais du Lycée et la « Langue et
+       Communication » du Primaire se lisaient dans la même colonne. L'onglet dit QUEL CYCLE on
+       regarde, le badge de chaque matière rappelle SON niveau exact — Préscolaire couvre deux
+       niveaux (Crèche, Maternelle), le badge reste donc nécessaire.
+
+       Sa place est ICI, à la suite du mode de lecture et de la recherche : les trois commandes
+       restreignent ce que la grille montre, et se lisent donc ensemble.
+
+       Barre masquée quand l'école ne couvre qu'un seul cycle : un filtre à un seul choix n'est
+       pas un filtre. Composant partagé .tab-nav-scroll / .tab-btn / .tab-btn-active (input.css),
+       comme Paramètres, Paie, Frais et Inventaire.
+
+       `min-w-0` : sans lui, .tab-nav-scroll ne peut pas rétrécir sous sa largeur intrinsèque et
+       pousserait la ligne au lieu de faire défiler ses onglets. ─────────────────────────── *@
+    <div x-show="viewMode === 'categories' && cycleTabs.length > 1" x-cloak class="min-w-0">
+     <nav class="tab-nav-scroll" role="tablist" aria-label="Cycle d'enseignement">
+      <button type="button" role="tab" :aria-selected="(cycle === 'all').toString()"
+       x-on:click="selectCycle('all')" class="tab-btn" :class="cycleTabClass('all')">
+       Tous les cycles
+       @* bg-white + anneau : un badge neutre (bg-gray-100) disparaîtrait sur la piste slate-100 ;
+          blanc, il reste lisible aussi bien sur la pastille active bleue que sur la piste. *@
+       <badge variant="neutral" class="bg-white text-[10px] tabular-nums text-slate-600 ring-1 ring-inset ring-slate-200">
+        <span x-text="searchedSubjects.length"></span>
+       </badge>
+      </button>
+      <template x-for="tab in cycleTabs" :key="tab.key">
+       <button type="button" role="tab" :aria-selected="(cycle === tab.key).toString()"
+        x-on:click="selectCycle(tab.key)" class="tab-btn" :class="cycleTabClass(tab.key)">
+        <span x-text="tab.label"></span>
+        <badge variant="neutral" class="bg-white text-[10px] tabular-nums text-slate-600 ring-1 ring-inset ring-slate-200">
+         <span x-text="tab.count"></span>
+        </badge>
+       </button>
+      </template>
+     </nav>
+    </div>
    </div>
   </div>
  </div>
@@ -108,8 +155,33 @@
    <div class="mx-auto w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mb-4">
     <icon name="book" class="w-8 h-8 text-primary-400" />
    </div>
-   <h3 class="text-base font-semibold text-slate-700 mb-1">Aucune matière n'est configurée.</h3>
-   <p class="text-sm text-slate-400">Créez vos matières et leurs coefficients pour préparer les bulletins.</p>
+
+   @* Deux vides très différents : l'école n'a rien configuré, ou l'onglet/la recherche en cours
+      ne ramène rien alors que d'autres cycles sont remplis. Le second doit dire où regarder,
+      sinon on croit avoir perdu ses matières. *@
+   <template x-if="cycle === 'all' && searchedSubjects.length === 0 && search.trim() === ''">
+    <div>
+     <h3 class="text-base font-semibold text-slate-700 mb-1">Aucune matière n'est configurée.</h3>
+     <p class="text-sm text-slate-400">Créez vos matières et leurs coefficients pour préparer les bulletins.</p>
+    </div>
+   </template>
+
+   <template x-if="!(cycle === 'all' && searchedSubjects.length === 0 && search.trim() === '')">
+    <div>
+     <h3 class="text-base font-semibold text-slate-700 mb-1">
+      Aucune matière pour <span x-text="cycle === 'all' ? 'cette recherche' : 'le cycle ' + currentCycleLabel"></span>.
+     </h3>
+     <p class="text-sm text-slate-400">
+      <span x-show="subjects.length > 0" x-cloak>
+       <span x-text="subjects.length"></span> matière(s) sont configurées sur les autres cycles.
+      </span>
+     </p>
+     <button type="button" x-show="cycle !== 'all'" x-cloak x-on:click="selectCycle('all')"
+      class="btn-modal-secondary group mt-4 h-9 px-4 mx-auto">
+      Voir tous les cycles
+     </button>
+    </div>
+   </template>
   </div>
  </div>
 
