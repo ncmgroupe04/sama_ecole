@@ -103,6 +103,14 @@ public sealed class RlsTestDatabase : IAsyncDisposable
     public ResetSchoolDataService NewResetSchoolDataService(ApplicationDbContext dbContext) =>
         new(dbContext, NullLogger<ResetSchoolDataService>.Instance);
 
+    /// <summary>
+    /// Suppression d'une année scolaire en mode test (DELETE /school-years/{id}), branchée sur le rôle
+    /// APPLICATIF pour la même raison que la purge ci-dessus : c'est le seul moyen de prouver que
+    /// l'isolation tient au niveau de la base.
+    /// </summary>
+    public SchoolYearPurgeService NewSchoolYearPurgeService(ApplicationDbContext dbContext) =>
+        new(dbContext, NullLogger<SchoolYearPurgeService>.Instance);
+
     /// <summary>Attribution d'accès offert et expiration d'abonnement (JGK-B03), rôle applicatif.</summary>
     public SubscriptionAdminStore NewSubscriptionAdminStore(ApplicationDbContext dbContext) => new(dbContext);
 

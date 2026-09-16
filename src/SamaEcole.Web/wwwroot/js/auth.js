@@ -542,18 +542,24 @@ document.addEventListener('alpine:init', () => {
     }));
 
     /**
-     * Pastille « Mode test » de la barre supérieure. Tant que l'établissement n'est pas passé en mode
-     * réel (School.WentLiveAt), TOUT le personnel voit ce rappel : les données saisies sont des
-     * essais et peuvent être purgées depuis Paramètres › Zone de danger. Elle disparaît d'elle-même
-     * au passage en mode réel.
+     * Pastille de RÉGIME de la barre supérieure — « Mode test » ou « Mode réel ». Elle ne disparaît
+     * plus au passage en mode réel (demande du 15/09/2026) : le régime est le contexte de travail de
+     * l'établissement, et il doit se lire d'un coup d'œil sur chaque écran, dans les deux sens. En
+     * mode test, elle rappelle à tout le personnel que les données saisies sont des essais, purgeables
+     * depuis Paramètres › Sécurité.
      *
      * Source unique : GET /schools/current/mode (isLive). N'ACTIVE rien — la bascule reste un acte
-     * confirmé du Directeur. Non bloquante : en cas d'échec réseau, la pastille reste simplement
-     * absente (on ne crie pas « mode test » sans en être sûr).
+     * confirmé du Directeur. Non bloquante : en cas d'échec réseau on retombe sur `isLive`, le défaut
+     * prudent (on ne crie pas « mode test » sans en être sûr).
      */
     Alpine.data('sandboxModeBadge', () => ({
         isLive: true, // défaut prudent : pas de pastille tant qu'on n'a pas confirmé le mode test
         loaded: false,
+
+        // Seul le Directeur peut agir sur le régime : pour lui la pastille est un LIEN vers
+        // Paramètres › Sécurité (Zone de danger), où le retour au mode test reste visible en
+        // permanence. Pour les autres rôles elle reste purement informative.
+        isDirecteur: window.auth.role === 'Directeur',
 
         async init() {
             if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') {

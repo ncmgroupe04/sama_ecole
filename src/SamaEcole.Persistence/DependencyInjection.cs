@@ -79,6 +79,10 @@ public static class DependencyInjection
         // atteindre aussi les lignes en suppression logique) et suit l'ordre des clés étrangères.
         services.AddScoped<IResetSchoolDataService, ResetSchoolDataService>();
 
+        // Suppression d'une année scolaire en mode test (DELETE /school-years/{id}) : même famille que
+        // la purge ci-dessus — fonction SECURITY DEFINER, gardes tenant + mode test dans la base.
+        services.AddScoped<ISchoolYearPurgeService, SchoolYearPurgeService>();
+
         // File des SMS : le worker et le webhook DLR n'ont AUCUN tenant (ni JWT, ni
         // app.current_school_id), donc aucune ligne visible sous RLS. Même contournement étroit que
         // ci-dessus — trois fonctions SECURITY DEFINER, et rien de plus.

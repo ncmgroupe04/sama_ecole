@@ -28,13 +28,15 @@ public class GetAuditLogsQueryHandler(IApplicationDbContext dbContext)
         // LEFT join, pas INNER : l'acteur d'une entrée « action Super Admin » (ex. CreateSchool) n'a
         // lui-même aucune école — le Global Query Filter de `Users`, cantonné à l'école courante, ne le
         // laissera jamais apparaître dans CETTE liste, quelle que soit l'école consultée.
+        // UserId NULL : compte du personnel supprimé par la purge du mode test (voir AuditLog.UserId).
         var items = await (
             from a in query
-            join actor in dbContext.Users.AsNoTracking() on a.UserId equals actor.Id into actorGroup
+            join actor in dbContext.Users.AsNoTracking() on a.UserId equals (Guid?)actor.Id into actorGroup
             from actor in actorGroup.DefaultIfEmpty()
             orderby a.OccurredAt descending
             select new AuditLogEntry(
-                a.Id, actor != null ? actor.FullName : "Super Administrateur",
+                a.Id,
+                actor != null ? actor.FullName : a.UserId == null ? "Compte supprimé" : "Super Administrateur",
                 a.Module, a.Action, a.Success, a.FailureReason, a.IpAddress, a.OccurredAt))
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)

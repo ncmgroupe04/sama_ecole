@@ -1280,6 +1280,100 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /school-years/{id}:
+    delete:
+      tags: [SchoolYears]
+      summary: Supprimer une année scolaire (Directeur, libellé exact à recopier)
+      description: >-
+        DEUX RÉGIMES, selon le mode de l'établissement.
+
+        MODE TEST (bac à sable) : l'année et TOUT ce qu'elle porte — inscriptions, paiements, notes,
+        appréciations, appels, affectations, examens, certificats de mutation, trimestres — sont
+        effacés définitivement, lignes en suppression logique comprises. Les ÉLÈVES survivent : ils
+        appartiennent à l'établissement, pas à un exercice.
+
+        MODE RÉEL : l'année n'est retirée que si elle ne porte AUCUNE donnée (cas réel : une année
+        créée par erreur ou préparée puis abandonnée) ; elle est alors ARCHIVÉE, en suppression
+        logique, avec ses trimestres et ses affectations. Dès qu'une inscription, une note ou une
+        fiche d'appel y est rattachée, la suppression est refusée en 409 `SCHOOL_YEAR_HAS_DATA` :
+        ces écritures sont la contrepartie de reçus déjà remis aux familles (AGENTS.md règle #6).
+        L'export ZIP (`GET /school-years/{id}/export`) reste la voie d'archivage hors plateforme.
+
+        Le corps porte le LIBELLÉ EXACT de l'année (« 2025-2026 »), et non un mot-clé générique :
+        recopier le libellé oblige à regarder la ligne qu'on supprime. Si l'année supprimée était
+        l'année ACTIVE, l'établissement rebascule sur l'année ouverte la plus proche (la précédente
+        d'abord, la suivante à défaut) ; jamais sur une année terminée. Quand il n'en reste aucune,
+        `requiresActiveYearSelection` vaut true et le Directeur doit en activer ou en créer une.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation:
+                  type: string
+                  maxLength: 20
+                  description: Libellé exact de l'année à supprimer, ex. « 2025-2026 ».
+                  example: '2025-2026'
+      responses:
+        '200':
+          description: Année supprimée (mode test) ou archivée (mode réel)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  label: { type: string, example: '2025-2026' }
+                  wasActive:
+                    type: boolean
+                    description: L'établissement travaillait sur cette année.
+                  wasPurged:
+                    type: boolean
+                    description: true en mode test (effacement définitif), false en mode réel (archivage).
+                  newActiveYear:
+                    allOf: [{ $ref: '#/components/schemas/SchoolYear' }]
+                    nullable: true
+                    description: Année sur laquelle l'établissement a rebasculé, le cas échéant.
+                  requiresActiveYearSelection:
+                    type: boolean
+                    description: >-
+                      true quand l'établissement se retrouve sans année active : aucune année ouverte
+                      ne restait. Aucune inscription ni note ne peut être saisie tant qu'il en manque une.
+                  summary:
+                    type: object
+                    nullable: true
+                    description: Détail de ce qui a été effacé (mode test uniquement).
+                    properties:
+                      totalRowsDeleted: { type: integer, example: 143 }
+                      entries:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            label: { type: string, example: Inscriptions }
+                            rowsDeleted: { type: integer, example: 42 }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Année scolaire introuvable dans cet établissement }
+        '409':
+          description: >-
+            `SCHOOL_YEAR_HAS_DATA` — en mode réel, l'année porte des données et ne peut pas être
+            supprimée. Le message énumère ce qui bloque.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Confirmation absente ou différente du libellé exact de l'année.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /school-years/{id}/activate:
     post:
       tags: [SchoolYears]

@@ -16,7 +16,9 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
 
         builder.HasKey(a => a.Id);
         builder.Property(a => a.SchoolId).IsRequired();
-        builder.Property(a => a.UserId).IsRequired();
+        // Nullable : seule la purge du mode test le remet à NULL, en supprimant les comptes du
+        // personnel (voir AuditLog.UserId). Le rôle applicatif, lui, n'a toujours que SELECT/INSERT.
+        builder.Property(a => a.UserId);
         builder.Property(a => a.Module).IsRequired().HasMaxLength(50);
         builder.Property(a => a.Action).IsRequired().HasMaxLength(100);
         builder.Property(a => a.Success).IsRequired();

@@ -315,15 +315,65 @@ l'onglet **Paramètres → Configuration**, en bas d'écran. `POST /schools/curr
   elle-même la barrière : elle refuse d'agir si `p_school_id` diffère de `app.current_school_id`, ou si
   la session n'a aucun tenant. Les deux refus sont testés (`ResetSchoolDataTests`, catégorie
   `MultiTenant`) — c'est la seule opération du produit où l'isolation ne repose pas sur les policies.
-- **Conservé** : comptes utilisateurs, fiche et réglages de l'école, années scolaires et trimestres,
-  classes, matières, mentions, enseignants, bâtiments/salles, barème des frais et son historique,
-  abonnement, journal d'audit. **Effacé** : élèves et tout ce qui pend à eux (inscriptions, échéanciers,
-  notes, appréciations de bulletin, appels, discipline, convocations, SMS), paiements, sessions de
-  caisse, décaissements, engagements financiers — et les **compteurs de matricules**, sans quoi le
-  premier élève recréé porterait `ELEV-2026-0043`.
+- **Périmètre élargi le 15/09/2026** (migration `ExtendResetSchoolDataToConfiguration`) : la purge
+  emporte désormais la CONFIGURATION métier, pas seulement la saisie.
+  **Conservé** : fiche et réglages de l'école (formats, signatures, SMS), **comptes Directeur**,
+  abonnement, années scolaires et trimestres, mentions, bâtiments et salles, journal d'audit.
+  **Effacé** : élèves et tout ce qui pend à eux (inscriptions, échéanciers, notes, appréciations,
+  appels, discipline, convocations, SMS), paiements, caisse, décaissements, engagements, examens,
+  certificats de mutation — plus les **compteurs de matricules** (sans quoi le premier élève recréé
+  porterait `ELEV-2026-0043`) — et, depuis le 15/09 : **classes** (le niveau n'est qu'une colonne),
+  **matières** (y compris les sous-matières : `ParentSubjectId` est mis à NULL avant la boucle, sa FK
+  auto-référencée étant `RESTRICT`, non différable), **enseignants**, affectations, matières
+  enseignées, **emploi du temps**, pointages, **contrats et fiches de paie**, **déclarations fiscales
+  (TVA)**, **barème des frais** (catégories, frais par classe, historique) et **inventaire**
+  (catégories, biens, `stock_movements` — append-only pour le rôle applicatif : la fonction
+  propriétaire est la seule voie qui l'efface).
+- **Comptes du personnel : supprimés physiquement** (arbitrage du 15/09/2026), avec trois réserves
+  qui sont autant d'invariants testés :
+  1. le **journal d'audit n'est pas purgé** — ses entrées sont **détachées** (`audit_logs.UserId` →
+     NULL, colonne rendue nullable par la même migration ; `get_global_audit_logs` passe en LEFT JOIN,
+     sinon ces entrées disparaîtraient du journal Super Admin). L'écran affiche « Compte supprimé » ;
+  2. un compte rattaché **aussi à un autre établissement** (`user_schools`, groupe scolaire) n'est
+     **jamais** supprimé : purger une école ne doit rien retirer à une autre, qui peut être en mode
+     réel. Seul son rattachement à l'école purgée part ;
+  3. le Directeur (et tout Super Admin) est épargné — il doit pouvoir se reconnecter.
 - **Les fichiers déjà téléversés ne sont pas supprimés** (photos d'élèves sous `wwwroot/uploads/`) : la
   purge est transactionnelle en base, un effacement disque ne l'est pas et laisserait, en cas d'échec,
   une incohérence pire que quelques fichiers orphelins devenus inatteignables.
+- **Le bouton « Repasser en mode test » reste AFFICHÉ en mode réel** (15/09/2026), et non plus masqué
+  hors des environnements jetables : un bouton absent laisse croire que la fonction n'existe pas, là où
+  la vraie raison est l'environnement. Il est **désactivé** quand `revertToTestAvailable` est faux, avec
+  la phrase qui l'explique. Rien n'a changé côté serveur : la route `/dev/revert-to-test` n'est toujours
+  montée que sur les environnements jetables, et le garde de démarrage refuse toujours
+  `SAMA_RETOUR_MODE_TEST_AUTORISE=true` en Production. La pastille de la barre supérieure, elle, affiche
+  désormais les **deux** régimes (« Mode test » / « Mode réel ») et mène, pour le Directeur, à
+  Paramètres › Sécurité.
+
+### Suppression d'une année scolaire (15/09/2026)
+
+`DELETE /api/v1/school-years/{id}`, Directeur seul, confirmé par la **recopie du libellé exact** de
+l'année (« 2025-2026 ») — et non un mot-clé générique, qui se taperait de mémoire sur la mauvaise ligne
+du tableau. Écran : Paramètres › Années scolaires.
+
+- **Deux régimes, et c'est le cœur de l'arbitrage.** En **mode test**, l'année et tout ce qu'elle porte
+  sont effacés par la fonction `delete_school_year` (migration `AddSchoolYearDeletion`, mêmes gardes que
+  `reset_school_data` : tenant, appartenance de l'année, mode test). En **mode réel**, la suppression
+  physique est refusée : le Handler exige une année **VIDE** (aucune inscription, note, appréciation,
+  fiche d'appel, session d'examen ni certificat de mutation — lignes en suppression logique comprises)
+  et se contente alors d'une **suppression logique** de l'année, de ses trimestres et de ses
+  affectations d'enseignants. Une année qui a servi est refusée en **409 `SCHOOL_YEAR_HAS_DATA`**, avec
+  le détail de ce qui bloque : ses inscriptions et paiements sont la contrepartie de reçus déjà remis
+  aux familles, que la règle #6 déclare inaltérables. L'export ZIP reste la voie d'archivage.
+- **Les élèves survivent** à la suppression d'une année : ils appartiennent à l'établissement, pas à un
+  exercice — seule leur inscription à cette année-là disparaît. Les sessions de caisse non plus ne sont
+  pas touchées : elles couvrent une journée, pas une année.
+- **Rebascule de l'année active.** Si l'année supprimée était l'active, l'établissement repart sur
+  l'année **précédente** encore ouverte, à défaut la suivante. Jamais sur une année **terminée** :
+  `ActivateSchoolYearCommandHandler` l'interdit déjà (les écritures du jour s'imputeraient sur un
+  exercice clos), et cette suppression ne crée pas d'exception à cette règle. Quand il ne reste que des
+  années terminées, la réponse porte `requiresActiveYearSelection` et l'écran demande d'en activer ou
+  d'en créer une — c'est la seconde branche demandée à l'arbitrage.
 
 ---
 

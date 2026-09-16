@@ -156,7 +156,9 @@
                         "Vérifiez attentivement les dates saisies, puis enregistrez. L'année est créée à l'état « à venir » et n'a encore aucun effet sur l'application.",
                         "Le jour de la rentrée, cliquez sur « Activer » en regard de l'année concernée. Par mesure de sécurité, la bascule exige la confirmation du mot de passe du Directeur.",
                         "L'année précédente passe automatiquement en lecture seule : ses données demeurent intégralement consultables, mais ne sont plus modifiables.",
-                        "Si le calendrier se décale en cours d'exercice, une année en cours ou à venir reste corrigeable : prolonger la période recale les trimestres sans jamais altérer les notes déjà saisies."
+                        "Si le calendrier se décale en cours d'exercice, une année en cours ou à venir reste corrigeable : prolonger la période recale les trimestres sans jamais altérer les notes déjà saisies.",
+                        "SUPPRIMER UNE ANNÉE (icône corbeille) : réservé au Directeur, et il faut recopier le libellé exact de l'année — « 2025-2026 » — pour débloquer le bouton. En mode bac à sable, l'année et toutes ses données sont effacées ; en mode réel, seule une année qui n'a JAMAIS servi peut être retirée (elle est alors archivée), et l'application refuse en expliquant ce qui la retient dès qu'une inscription, une note ou un appel y est rattaché.",
+                        "Si l'année supprimée était l'année active, l'établissement rebascule tout seul sur l'année ouverte la plus proche. S'il n'en reste aucune, l'écran vous demande d'en activer ou d'en créer une : sans année active, aucune inscription ni aucune note ne peut être saisie."
                     ],
                     impacts: [
                         "Inscriptions : toute nouvelle inscription est rattachée d'office à l'année active. Un élève ne peut détenir qu'une seule inscription active par année.",
@@ -169,7 +171,8 @@
                         "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
                         "N'activez jamais une année en cours de journée comptable : clôturez d'abord la caisse de l'exercice précédent.",
                         "Contrôlez le découpage des trimestres avant la première saisie de notes ; le corriger après coup impose de vérifier chaque bulletin déjà édité.",
-                        "Une année révolue est volontairement verrouillée. Une donnée qui s'y révèle erronée fait l'objet d'une régularisation historisée sur l'exercice courant, jamais d'une réécriture du passé."
+                        "Une année révolue est volontairement verrouillée. Une donnée qui s'y révèle erronée fait l'objet d'une régularisation historisée sur l'exercice courant, jamais d'une réécriture du passé.",
+                        "Avant de supprimer une année en mode bac à sable, exportez-la si elle contient des saisies que vous souhaitez relire : l'effacement est définitif et l'export ZIP (icône de téléchargement) reste la seule copie."
                     ]
                 },
                 {
@@ -239,17 +242,19 @@
                         "vrais, ou renonce purement à essayer de peur de devoir tout nettoyer à la main " +
                         "avant l'ouverture officielle.",
                     procedure: [
-                        "Tant que l'établissement est en mode bac à sable, ouvrez Paramètres › Paramètres système pour retrouver la Zone de danger, tout en bas de la section.",
-                        "« Réinitialiser l'école » efface élèves, notes, bulletins et transactions de test — mais conserve les comptes du personnel, la fiche établissement, les années scolaires, les classes, les matières, les enseignants, le barème des frais et le journal d'audit.",
+                        "La pastille de la barre supérieure indique en permanence le régime en cours : « Mode test » (orange) ou « Mode réel ». Pour le Directeur, elle mène directement à Paramètres › Sécurité, tout en bas de la section.",
+                        "« Réinitialiser l'école » efface tout ce que vous avez saisi ET paramétré pendant vos essais : élèves, inscriptions, notes, bulletins, transactions, mais aussi classes, matières, enseignants, barème des frais, inventaire, paie, et les comptes de votre personnel.",
+                        "Sont CONSERVÉS : votre compte Directeur, la fiche et les réglages de l'établissement (formats, signatures, SMS), votre abonnement, les années scolaires et leurs trimestres, les mentions, les bâtiments et salles, et le journal d'audit.",
                         "Le jour où l'établissement est prêt, cliquez sur « Passer en mode réel ».",
                         "Une modale rappelle que la bascule est définitive et que la réinitialisation ne sera plus disponible ensuite.",
                         "Saisissez « CONFIRMER », ou le nom exact de l'établissement, pour débloquer le bouton de confirmation — la vérification réelle est refaite côté serveur, la saisie côté écran n'est qu'un confort.",
-                        "Une fois en mode réel, l'écran devient un simple rappel en lecture seule : la date de bascule y est affichée, et aucune action n'y reste possible."
+                        "Une fois en mode réel, l'écran devient un rappel en lecture seule : la date de bascule y est affichée. Le bouton « Repasser en mode test » y reste visible mais GRISÉ — il n'est actif que sur les environnements de démonstration, jamais en production."
                     ],
                     impacts: [
                         "Tous les modules : chaque écran de l'application continue de fonctionner à l'identique avant et après la bascule — seule la possibilité de tout réinitialiser disparaît.",
-                        "Journal d'audit : la date de passage en mode réel est conservée et affichée, mais la réinitialisation elle-même n'est PAS rejouable — un établissement déjà passé en mode réel ne peut pas revenir en arrière.",
-                        "Comptes et paramètres : contrairement aux données opérationnelles, les comptes du personnel et les réglages déjà faits (années, classes, matières, enseignants, barème) survivent à une réinitialisation — ce n'est pas une remise à zéro totale de l'application."
+                        "Journal d'audit : il n'est JAMAIS effacé, même par une réinitialisation. Les actions des comptes supprimés y restent, sous la mention « Compte supprimé ».",
+                        "Comptes du personnel : ils sont supprimés par une réinitialisation ; il faudra les recréer. Seul votre compte Directeur survit, pour que vous puissiez vous reconnecter.",
+                        "Groupe scolaire : un compte qui a aussi accès à un AUTRE de vos établissements n'est pas supprimé — il perd seulement son accès à l'école réinitialisée, pour ne rien retirer à l'autre école."
                     ],
                     recommandations: [
                         "Ne passez en mode réel qu'après avoir testé au moins une fois la chaîne complète — inscription, encaissement, saisie de notes — pour vérifier que tout est correctement paramétré : la bascule ne se défait pas.",

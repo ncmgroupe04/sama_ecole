@@ -908,13 +908,15 @@
  <div class="max-w-2xl">
  <p class="text-sm font-medium text-slate-900">Réinitialiser les données de l'établissement</p>
  <p class="mt-1 text-sm text-slate-500">
- Efface l'intégralité des élèves, notes, bulletins et transactions saisies durant vos tests
+ Efface tout ce qui a été saisi ET paramétré durant vos tests — élèves, inscriptions, notes,
+ bulletins, transactions, classes, matières, enseignants, barème des frais, inventaire, paie —
  pour remettre l'application à neuf. Cette action est irréversible.
  </p>
  <p class="mt-2 text-xs text-slate-400">
- Sont conservés : votre compte et ceux de votre personnel, la fiche et les réglages de
- l'établissement, les années scolaires, les classes, les matières, les enseignants, le barème
- des frais et le journal d'audit.
+ Sont conservés : votre compte Directeur, la fiche et les réglages de l'établissement (formats,
+ signatures, SMS), votre abonnement, les années scolaires et leurs trimestres, les mentions,
+ les bâtiments et salles, et le journal d'audit. Les comptes de votre personnel, eux, sont
+ supprimés — leurs actions restent au journal, sous la mention « Compte supprimé ».
  </p>
  </div>
  <button type="button" x-on:click="openResetSchool()"
@@ -962,20 +964,26 @@
  </div>
  </div>
 
- <template x-if="revertToTestAvailable">
+ @* Le retour au mode test est TOUJOURS visible ici (demande du 15/09/2026) : un bouton qui
+ disparaît laisse croire que la fonction n'existe pas, là où la vraie raison est
+ l'environnement. Il n'est ACTIF que là où le retour est autorisé (revertToTestAvailable,
+ issu de l'API — jamais d'un process.env) ; en production il reste affiché, désactivé, et
+ la phrase dit pourquoi. Le serveur ne monte même pas la route ailleurs : ce bouton grisé
+ ne cache aucun pouvoir, il explique une absence. *@
  <div class="mt-5 border-t border-dashed border-slate-300 pt-5">
  <p class="text-xs">
  <span class="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 font-semibold uppercase tracking-wider text-amber-800">Bac à sable</span>
- <span class="ml-2 text-slate-500">— repasser l'entreprise en mode test pour rejouer la bascule. Indisponible en production.</span>
+ <span x-show="revertToTestAvailable" x-cloak class="ml-2 text-slate-500">— repasser l'établissement en mode test pour rejouer la bascule. Indisponible en production.</span>
+ <span x-show="!revertToTestAvailable" x-cloak class="ml-2 text-slate-500">— indisponible sur cet environnement : les données enregistrées en mode réel sont comptables et ne peuvent plus être effacées. Contactez le support Sama Ecole si la bascule a été faite par erreur.</span>
  </p>
- <button type="button" x-on:click="revertToTest()" :disabled="isRevertingToTest"
- class="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
+ <button type="button" x-on:click="revertToTest()" :disabled="!revertToTestAvailable || isRevertingToTest"
+ :title="revertToTestAvailable ? 'Repasser cet établissement en mode test' : 'Indisponible en production'"
+ class="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
  <icon name="arrow-down" class="w-4 h-4" />
  <span x-text="isRevertingToTest ? 'Retour…' : 'Repasser en mode test'"></span>
  </button>
  <div x-show="revertToTestError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="revertToTestError"></div>
  </div>
- </template>
  </div>
  </div>
 
@@ -1115,7 +1123,13 @@
  <p class="mt-1">
  Tous les élèves, inscriptions, notes, bulletins, appels, sanctions et transactions de
  caisse de <span class="font-semibold" x-text="profile.name || 'votre établissement'"></span>
- seront effacés définitivement. Les compteurs de matricules repartiront de 1.
+ seront effacés définitivement — ainsi que vos classes, matières, enseignants, barème des
+ frais, inventaire, paie, et les comptes de votre personnel. Les compteurs de matricules
+ repartiront de 1.
+ </p>
+ <p class="mt-1">
+ Votre compte, la fiche et les réglages de l'établissement, les années scolaires et le
+ journal d'audit sont conservés.
  </p>
  </div>
  </div>

@@ -296,6 +296,21 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `GET` / `PUT` | `/api/v1/settings/grading` | Système de notation par niveau/classe |
 | `GET` / `PUT` | `/api/v1/settings/registration-numbers` | Format des matricules |
 | ~~`GET`~~ | ~~`/api/v1/exports/school-data`~~ | **Reporté après la V1** — voir la note ci-dessous |
+| `GET` | `/api/v1/schools/current/mode` | Régime de l'établissement : `isLive`, `wentLiveAt`, `revertToTestAvailable` (drapeau d'environnement) |
+| `POST` | `/api/v1/schools/current/go-live` | Bascule en mode réel (Directeur, mot « CONFIRMER » ou nom de l'école) — définitive |
+| `POST` | `/api/v1/schools/current/reset-data` | « Zone de danger » : remise à neuf en mode test (Directeur, mot « PURGER » ou nom de l'école) |
+| `DELETE` | `/api/v1/school-years/{id}` | Suppression d'une année scolaire (Directeur, **libellé exact** à recopier) |
+
+> **Mode bac à sable, purge et suppression d'année — les trois gardes.** `reset_school_data` et
+> `delete_school_year` sont les **seules** exceptions à la règle #6 (aucune suppression physique), et
+> elles ne valent **qu'en mode test** : les deux fonctions PostgreSQL le revérifient elles-mêmes, en
+> plus du Handler, parce qu'un `SECURITY DEFINER` est exempté de RLS et qu'un futur appelant pourrait
+> oublier la règle. En **mode réel**, `reset-data` répond 409 `RESET_UNAVAILABLE_LIVE_MODE`, et
+> `DELETE /school-years/{id}` n'accepte qu'une année **vide** — qu'il archive en suppression logique —
+> et refuse les autres en 409 `SCHOOL_YEAR_HAS_DATA`. Le retour au mode test
+> (`POST /schools/current/dev/revert-to-test`) n'est **monté** que sur les environnements jetables ;
+> l'écran affiche malgré tout son bouton, désactivé, pour que l'absence s'explique. Périmètre exact de
+> la purge et arbitrages : `ACTIVE_CONTEXT.md` §2.
 
 > **Export global « Exporter mes données » — reporté.** Cette route était spécifiée mais n'a jamais été implémentée ; elle est actée pour la **version suivante** (Volume 1.5 §8). En V1, un Directeur qui doit sortir ses données dispose des exports **par domaine** déjà livrés, qui couvrent les besoins réels de reporting et d'archivage : rapport financier consolidé `.xlsx` (§14), export des présences (`GET /api/v1/reports/attendance/export`), import/export Excel des notes, et l'ensemble des PDF officiels du §18. La sauvegarde intégrale de la base reste, elle, une responsabilité d'infrastructure (Volume 9) — jamais une action utilisateur.
 

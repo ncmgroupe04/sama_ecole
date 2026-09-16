@@ -35,7 +35,7 @@ public record GlobalAuditLogItem(
     Guid Id,
     Guid SchoolId,
     string SchoolName,
-    Guid UserId,
+    Guid? UserId,
     string ActorFullName,
     string Module,
     string Action,
