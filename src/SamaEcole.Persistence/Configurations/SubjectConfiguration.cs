@@ -43,17 +43,27 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
         // Une matière est unique par (niveau, DOMAINE PARENT, nom) au sein de l'école — pas par nom seul :
         // « Maths » existe légitimement au primaire ET en terminale, avec des coefficients distincts, et
         // « Ressources » existe sous « Français » ET sous « Maths » dans la même grille APC. Sans
-        // ParentSubjectId dans la clé, cette seconde ligne serait rejetée comme un doublon. Le soft
-        // delete fait partie de la clé : sans lui, une matière archivée interdirait à jamais d'en
-        // recréer une de même nom au même endroit.
+        // ParentSubjectId dans la clé, cette seconde ligne serait rejetée comme un doublon.
         //
-        // AreNullsDistinct(false) est INDISPENSABLE ici : PostgreSQL considère par défaut deux NULL comme
+        // Index PARTIEL (« NOT IsDeleted »), même convention que TeacherAssignmentConfiguration,
+        // EnrollmentConfiguration et SchoolConfiguration : sur une table à soft delete, un index unique
+        // est toujours partiel. IsDeleted était auparavant DANS la clé (pas en filtre) pour permettre de
+        // recréer une matière de même nom après archivage — mais ça plafonnait aussi à UNE seule matière
+        // archivée par clé naturelle : reset_school_data détache tous les enfants d'un coup
+        // (ParentSubjectId = NULL, y compris sur des lignes déjà supprimées) avant de les effacer, et
+        // deux matières archivées finissant avec la même clé après ce détachement violaient l'unicité —
+        // alors qu'aucune des deux n'est plus vivante. Un index partiel exclut les lignes supprimées de
+        // la contrainte : plus de plafond sur les doublons archivés, la même garantie qu'avant sur les
+        // lignes vivantes.
+        //
+        // AreNullsDistinct(false) reste INDISPENSABLE : PostgreSQL considère par défaut deux NULL comme
         // distincts, et ParentSubjectId est NULL pour toute matière de premier niveau — l'index aurait
-        // donc cessé d'interdire deux « Maths » au même niveau, la garantie même qu'il portait avant ce
-        // changement. `NULLS NOT DISTINCT` (PostgreSQL 15+, l'image du projet est postgres:16) la rétablit.
-        builder.HasIndex(s => new { s.SchoolId, s.Level, s.ParentSubjectId, s.Name, s.IsDeleted })
+        // donc cessé d'interdire deux « Maths » au même niveau, la garantie même qu'il porte.
+        // `NULLS NOT DISTINCT` (PostgreSQL 15+, l'image du projet est postgres:16) la rétablit.
+        builder.HasIndex(s => new { s.SchoolId, s.Level, s.ParentSubjectId, s.Name })
             .IsUnique()
-            .AreNullsDistinct(false);
+            .AreNullsDistinct(false)
+            .HasFilter("NOT \"IsDeleted\"");
         builder.HasIndex(s => s.SchoolId);
 
         // Hiérarchie APC domaine → activité, dans la MÊME table (Subject.ParentSubjectId). Restrict :
