@@ -256,6 +256,11 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                     t.Span("Année Scolaire : ").Bold().FontSize(8.5f);
                     t.Span(reportCard.SchoolYearLabel).FontSize(8.5f);
                 });
+                if (reportCard.IsBilingualArabic)
+                {
+                    right.Item().AlignRight().Element(c => Bilingual.ArabicBlock(
+                        c, $"{BulletinArabicLabels.SchoolYear} : {reportCard.SchoolYearLabel}", fontSize: 8.5f, bold: true));
+                }
                 right.Item().AlignRight().Text(reportCard.TermLabel).Bold().FontSize(8.5f);
             });
         });

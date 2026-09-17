@@ -12,7 +12,7 @@ namespace SamaEcole.Infrastructure.Documents;
 /// </summary>
 public static class BulletinArabicLabels
 {
-    public const string BulletinTitle = "بطاقة النتائج";
+    public const string BulletinTitle = "كشف النقاط";
     public const string SchoolYear = "السنة الدراسية";
 
     public static readonly IReadOnlyDictionary<CouncilDecision, string> CouncilDecisions = new Dictionary<CouncilDecision, string>

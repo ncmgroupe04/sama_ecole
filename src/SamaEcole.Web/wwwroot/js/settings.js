@@ -137,7 +137,16 @@ document.addEventListener('alpine:init', () => {
         },
 
         // --- Mentions du bulletin (dans l'onglet Configuration) ---
-        canViewMentions: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat' || window.auth.role === 'Enseignant',
+        // Getter, PAS une valeur figée au chargement : dépend de config.isPedagogyEnabled (module
+        // Pédagogie, Paramètres › Modules), connu seulement après load() — les mentions du bulletin
+        // n'ont pas leur place sur une école qui a désactivé la Pédagogie (GradesController, qui sert
+        // /grades/mentions, est sous [RequireModule(SchoolModule.Pedagogy)] côté serveur). Avant le
+        // premier chargement, config.isPedagogyEnabled vaut true (défaut sûr) : la visibilité par rôle
+        // seule s'applique le temps que load() confirme l'état réel du module.
+        get canViewMentions() {
+            return this.config.isPedagogyEnabled
+                && (window.auth.role === 'Directeur' || window.auth.role === 'Secretariat' || window.auth.role === 'Enseignant');
+        },
         mentions: [],
         isMentionCreateOpen: false,
         mentionSubmitting: false,
@@ -239,15 +248,11 @@ document.addEventListener('alpine:init', () => {
             this.isLoading = true;
             this.loadError = null;
             try {
-                const requests = [
+                const [profile, config, mode] = await Promise.all([
                     window.api.get('/schools/current'),
                     window.api.get('/schools/current/settings'),
                     window.api.get('/schools/current/mode')
-                ];
-                if (this.canViewMentions) requests.push(window.api.get('/grades/mentions'));
-
-                const [profile, config, mode, mentions] = await Promise.all(requests);
-                if (this.canViewMentions) this.mentions = mentions;
+                ]);
 
                 this.isLiveMode = !!(mode && mode.isLive);
                 this.wentLiveAt = mode ? mode.wentLiveAt : null;
@@ -281,10 +286,30 @@ document.addEventListener('alpine:init', () => {
                 if (this.isDirecteur) {
                     this.loadMatriculeSequences();
                 }
+
+                // Mentions du bulletin : même raisonnement, ET pour une raison de plus depuis le module
+                // Pédagogie — canViewMentions ne peut être évalué correctement qu'UNE FOIS config chargé
+                // (il dépend de config.isPedagogyEnabled), donc après le Promise.all ci-dessus, jamais
+                // avant. Un échec ici (école qui a désactivé la Pédagogie entre-temps, MODULE_DISABLED)
+                // ne doit sous aucun prétexte faire échouer l'affichage du reste de l'écran.
+                if (this.canViewMentions) {
+                    this.loadMentions();
+                }
             } catch (err) {
                 this.loadError = window.api.toMessage(err, 'Erreur lors du chargement des paramètres.');
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        /** Charge les mentions du bulletin — séparé de load() (voir son commentaire d'appel). */
+        async loadMentions() {
+            try {
+                this.mentions = await window.api.get('/grades/mentions');
+            } catch {
+                // Non bloquant : le reste de l'écran reste utilisable, l'onglet se referme de lui-même
+                // au prochain rendu si canViewMentions est entre-temps repassé à faux.
+                this.mentions = [];
             }
         },
 
