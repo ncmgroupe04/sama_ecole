@@ -2,6 +2,8 @@ using SamaEcole.Application.Subjects.Commands.CreateSubject;
 using SamaEcole.Application.Subjects.Commands.DeleteSubject;
 using SamaEcole.Application.Subjects.Commands.UpdateSubject;
 using SamaEcole.Application.Subjects.Queries.GetSubjects;
+using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +17,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/subjects")]
 [Authorize]
+[RequireModule(SchoolModule.Pedagogy)]
 public class SubjectsController(ISender mediator) : ControllerBase
 {
     /// <summary>

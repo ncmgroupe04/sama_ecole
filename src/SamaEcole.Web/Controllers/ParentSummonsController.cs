@@ -4,6 +4,7 @@ using SamaEcole.Application.VieScolaire.Queries.GetParentNotice;
 using SamaEcole.Application.VieScolaire.Queries.GetParentNoticePdf;
 using SamaEcole.Application.VieScolaire.Queries.GetParentSummons;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
@@ -17,6 +18,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/parent-summons")]
 [Authorize(Roles = $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Surveillant)}")]
+[RequireModule(SchoolModule.Pedagogy)]
 public class ParentSummonsController(ISender mediator, ILogger<ParentSummonsController> logger) : ControllerBase
 {
     /// <summary>Corps du PATCH de suite : l'identifiant vient de la route, jamais du corps.</summary>

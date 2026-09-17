@@ -2,6 +2,7 @@ using SamaEcole.Application.Reports.Queries.GetAttendanceExport;
 using SamaEcole.Application.Reports.Queries.GetAttendanceReport;
 using SamaEcole.Application.Reports.Queries.GetDirectorDashboard;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using SamaEcole.Web.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -36,6 +37,7 @@ public class ReportsController(ISender mediator) : ControllerBase
     /// </summary>
     [HttpGet("attendance")]
     [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.SuperAdmin)}")]
+    [RequireModule(SchoolModule.Pedagogy)]
     [ProducesResponseType<AttendanceReportDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
@@ -50,6 +52,7 @@ public class ReportsController(ISender mediator) : ControllerBase
     /// </summary>
     [HttpGet("attendance/export")]
     [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.SuperAdmin)}")]
+    [RequireModule(SchoolModule.Pedagogy)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]

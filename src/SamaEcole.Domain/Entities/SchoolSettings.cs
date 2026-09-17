@@ -112,6 +112,24 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// interrupteur que pour l'application d'un barème (portée, puis activation).
     /// </summary>
     public int DebtorReminderThresholdDays { get; set; } = SchoolSettingsDefaults.DebtorReminderThresholdDays;
+
+    /// <summary>
+    /// Modules activés/désactivés par le Directeur, indépendamment de la formule d'abonnement — un
+    /// second axe, distinct de <see cref="Domain.Enums.Feature"/>/PlanFeatures (formule payante). Lus
+    /// par ModuleAuthorizationHandler (SamaEcole.Web.Authorization, [RequireModule]) et par la sidebar
+    /// (sidebarNav() dans auth.js). Voir <see cref="Domain.Enums.SchoolModule"/>.
+    ///
+    /// Pédagogie et Finance forment le socle métier livré : activés par défaut, comme le reste du
+    /// produit avant ce réglage. Internat et Coran n'ont encore aucun écran ni route derrière eux
+    /// (réglage anticipé) : désactivés par défaut, sans effet aujourd'hui quelle que soit leur valeur.
+    /// </summary>
+    public bool IsPedagogyEnabled { get; set; } = SchoolSettingsDefaults.IsPedagogyEnabled;
+
+    public bool IsFinanceEnabled { get; set; } = SchoolSettingsDefaults.IsFinanceEnabled;
+
+    public bool IsInternatEnabled { get; set; } = SchoolSettingsDefaults.IsInternatEnabled;
+
+    public bool IsCoranModuleEnabled { get; set; } = SchoolSettingsDefaults.IsCoranModuleEnabled;
 }
 
 /// <summary>
@@ -168,4 +186,21 @@ public static class SchoolSettingsDefaults
     /// <summary>Bornes du seuil de retard : au moins 1 jour, au plus une année scolaire complète.</summary>
     public const int MinDebtorReminderThresholdDays = 1;
     public const int MaxDebtorReminderThresholdDays = 365;
+
+    /// <summary>
+    /// Modules activés à la création d'une école : Pédagogie et Finance forment le socle métier
+    /// existant, elles restent actives tant que le Directeur ne les désactive pas explicitement.
+    /// </summary>
+    public const bool IsPedagogyEnabled = true;
+
+    public const bool IsFinanceEnabled = true;
+
+    /// <summary>
+    /// Internat et filière Coranique/Franco-Arabe : aucun écran ni route ne dépend encore de ces deux
+    /// réglages (Internat/Coran n'existent pas dans le produit). Désactivés par défaut — les activer
+    /// aujourd'hui n'ouvrirait rien, c'est un réglage anticipé pour le jour où ces modules existeront.
+    /// </summary>
+    public const bool IsInternatEnabled = false;
+
+    public const bool IsCoranModuleEnabled = false;
 }

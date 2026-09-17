@@ -40,5 +40,13 @@ public record UpdateSchoolSettingsCommand(
     bool SmsOnPaymentReceipt = false,
 
     /// <summary>Jours de retard avant qu'un débiteur n'entre dans un lot de relance brouillon (Étape 5).</summary>
-    int DebtorReminderThresholdDays = 7) : IRequest<SchoolSettingsDto>;
+    int DebtorReminderThresholdDays = 7,
+
+    // Modules activés/désactivés par le Directeur, indépendamment de la formule d'abonnement (voir
+    // SchoolModule, [RequireModule]) — Pédagogie et Finance sont le socle métier, actifs par défaut ;
+    // Internat et Coran n'ont encore aucun module derrière eux (réglage anticipé), inactifs par défaut.
+    bool IsPedagogyEnabled = true,
+    bool IsFinanceEnabled = true,
+    bool IsInternatEnabled = false,
+    bool IsCoranModuleEnabled = false) : IRequest<SchoolSettingsDto>;
 

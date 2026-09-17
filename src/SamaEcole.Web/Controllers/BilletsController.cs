@@ -3,6 +3,7 @@ using SamaEcole.Application.Absences.Queries.GetEntryTicketPdf;
 using SamaEcole.Application.Absences.Queries.GetExitTicket;
 using SamaEcole.Application.Absences.Queries.GetExitTicketPdf;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/billets")]
 [Authorize(Roles = $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Surveillant)}")]
+[RequireModule(SchoolModule.Pedagogy)]
 public class BilletsController(ISender mediator, ILogger<BilletsController> logger) : ControllerBase
 {
     /// <summary>Données d'un billet d'entrée pour un retard donné (aperçu avant impression).</summary>

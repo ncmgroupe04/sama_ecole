@@ -185,8 +185,13 @@ builder.Services.AddScoped<IAuthorizationHandler, SchoolResourceAuthorizationHan
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, FeaturePolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
 
-// Donne au refus « hors formule » le format d'erreur normalisé (code FEATURE_NOT_IN_PLAN) au lieu
-// d'un 403 au corps vide, pour que l'interface puisse proposer la montée en gamme.
+// Contrôle d'accès par module ([RequireModule]) — même fournisseur de politiques que ci-dessus
+// (FeaturePolicyProvider résout aussi bien « Feature:… » que « Module:… »), seul le handler diffère :
+// il lit SchoolSettings (choix du Directeur), pas Subscriptions.Plan (formule payante).
+builder.Services.AddScoped<IAuthorizationHandler, ModuleAuthorizationHandler>();
+
+// Donne au refus « hors formule »/« module désactivé » le format d'erreur normalisé
+// (FEATURE_NOT_IN_PLAN / MODULE_DISABLED) au lieu d'un 403 au corps vide.
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, FeatureAuthorizationResultHandler>();
 
 builder.Services

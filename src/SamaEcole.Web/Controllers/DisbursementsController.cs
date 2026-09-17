@@ -1,5 +1,6 @@
 using SamaEcole.Application.Features.Disbursements;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/finance/disbursements")]
 [Authorize(Roles = $"{nameof(Role.Directeur)},Finance,{nameof(Role.SuperAdmin)}")]
+[RequireModule(SchoolModule.Finance)]
 public class DisbursementsController(ISender mediator) : ControllerBase
 {
     [HttpGet]

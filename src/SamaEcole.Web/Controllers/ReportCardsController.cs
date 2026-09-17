@@ -6,6 +6,7 @@ using SamaEcole.Application.ReportCards.Queries.GetClassReportCardsZip;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardRemark;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using SamaEcole.Web.RateLimiting;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/report-cards")]
 [Authorize]
+[RequireModule(SchoolModule.Pedagogy)]
 public class ReportCardsController(ISender mediator, ILogger<ReportCardsController> logger) : ControllerBase
 {
     private const string ReportCardWriterRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)},{nameof(Role.Secretariat)}";

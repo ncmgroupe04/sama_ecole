@@ -79,6 +79,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/finance")]
 [Authorize]
+[RequireModule(SchoolModule.Finance)]
 public class FinanceController(ISender mediator, ILogger<FinanceController> logger) : ControllerBase
 {
     public record UpdateFeeRequest(decimal Amount, uint RowVersion);

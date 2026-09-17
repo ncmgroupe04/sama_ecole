@@ -48,7 +48,11 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         bool SmsOnAttendanceAlert = false,
         bool SmsOnDuesReminder = false,
         bool SmsOnPaymentReceipt = false,
-        int DebtorReminderThresholdDays = 7);
+        int DebtorReminderThresholdDays = 7,
+        bool IsPedagogyEnabled = true,
+        bool IsFinanceEnabled = true,
+        bool IsInternatEnabled = false,
+        bool IsCoranModuleEnabled = false);
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
@@ -95,7 +99,11 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.SmsOnAttendanceAlert,
                 request.SmsOnDuesReminder,
                 request.SmsOnPaymentReceipt,
-                request.DebtorReminderThresholdDays),
+                request.DebtorReminderThresholdDays,
+                request.IsPedagogyEnabled,
+                request.IsFinanceEnabled,
+                request.IsInternatEnabled,
+                request.IsCoranModuleEnabled),
             cancellationToken);
 
         return Ok(result);

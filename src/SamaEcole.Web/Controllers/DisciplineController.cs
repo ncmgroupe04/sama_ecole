@@ -3,6 +3,7 @@ using SamaEcole.Application.Discipline.Queries.GetDisciplinaryPv;
 using SamaEcole.Application.Discipline.Queries.GetDisciplinaryPvPdf;
 using SamaEcole.Application.Discipline.Queries.GetDisciplineRecords;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
@@ -12,6 +13,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/discipline")]
 [Authorize(Roles = $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Surveillant)}")]
+[RequireModule(SchoolModule.Pedagogy)]
 public class DisciplineController(IMediator _mediator, ILogger<DisciplineController> logger) : ControllerBase
 {
     [HttpGet]

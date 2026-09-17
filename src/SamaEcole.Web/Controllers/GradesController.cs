@@ -34,6 +34,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/grades")]
 [Authorize]
+[RequireModule(SchoolModule.Pedagogy)]
 public class GradesController(ISender mediator) : ControllerBase
 {
     public record UpdateGradeRequest(decimal Value, uint RowVersion);
