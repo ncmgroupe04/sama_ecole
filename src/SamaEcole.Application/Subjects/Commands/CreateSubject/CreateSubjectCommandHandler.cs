@@ -23,6 +23,7 @@ public class CreateSubjectCommandHandler(
         {
             SchoolId = schoolId,
             Name = request.Name.Trim(),
+            NameAr = Trimmed(request.NameAr),
             Level = level,
             Coefficient = request.Coefficient,
             ParentSubjectId = request.ParentSubjectId,
@@ -45,7 +46,7 @@ public class CreateSubjectCommandHandler(
 
         return new SubjectResult(
             subject.Id, subject.Name, subject.Level, subject.Coefficient,
-            subject.ParentSubjectId, subject.MaxScore, subject.DisplayOrder);
+            subject.ParentSubjectId, subject.MaxScore, subject.DisplayOrder, subject.NameAr);
     }
 
     /// <summary>Entête vide ou blanche = « pas d'entête personnalisé » (null), jamais une chaîne vide stockée.</summary>

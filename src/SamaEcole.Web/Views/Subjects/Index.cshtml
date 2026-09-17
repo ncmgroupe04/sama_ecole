@@ -462,6 +462,15 @@
     <p x-show="createErrors.name" x-cloak x-text="createErrors.name" class="field-error"></p>
    </div>
 
+   @* Module Coran/Franco-Arabe : facultatif, imprimé sur le bulletin bilingue seulement si renseigné —
+      dir="rtl" pour que la saisie se lise dans le bon sens dès la frappe, aucune traduction automatique. *@
+   <div>
+    <label for="subject-name-ar" class="form-label">Nom en arabe (facultatif)</label>
+    <input id="subject-name-ar" type="text" x-model="newSubject.nameAr" maxlength="80" dir="rtl" placeholder="مثال : الرياضيات"
+     class="input-field" :class="createErrors.nameAr && 'input-field-error'">
+    <p x-show="createErrors.nameAr" x-cloak x-text="createErrors.nameAr" class="field-error"></p>
+   </div>
+
    @* ── Niveau : <select> au lieu de <input text> ── *@
    <div>
     <label for="subject-level" class="form-label form-label-required">Niveau</label>
@@ -547,6 +556,14 @@
     <label for="edit-subject-name" class="form-label form-label-required">Nom de la matière</label>
     <input id="edit-subject-name" type="text" x-model="editing.name" required maxlength="80" class="input-field" :class="editErrors.name && 'input-field-error'">
     <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="field-error"></p>
+   </div>
+
+   @* Module Coran/Franco-Arabe : facultatif, même champ que la création. *@
+   <div>
+    <label for="edit-subject-name-ar" class="form-label">Nom en arabe (facultatif)</label>
+    <input id="edit-subject-name-ar" type="text" x-model="editing.nameAr" maxlength="80" dir="rtl" placeholder="مثال : الرياضيات"
+     class="input-field" :class="editErrors.nameAr && 'input-field-error'">
+    <p x-show="editErrors.nameAr" x-cloak x-text="editErrors.nameAr" class="field-error"></p>
    </div>
 
    @* ── Niveau : <select> au lieu de <input text> ── *@

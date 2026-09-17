@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SamaEcole.Persistence;
@@ -11,9 +12,11 @@ using SamaEcole.Persistence;
 namespace SamaEcole.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917222325_AddSubjectArabicName")]
+    partial class AddSubjectArabicName
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -193,7 +196,7 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -1755,7 +1758,7 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<int>("TotalCount")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("UserId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.ToTable((string)null);
@@ -3270,28 +3273,8 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<int>("GradingScale")
                         .HasColumnType("integer");
 
-                    b.Property<bool>("IsCoranModuleEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
-
-                    b.Property<bool>("IsFinanceEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsInternatEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsPedagogyEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
 
                     b.Property<string>("OfficialStampUrl")
                         .HasMaxLength(500)
@@ -3928,11 +3911,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId");
 
-                    b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name")
-                        .IsUnique()
-                        .HasFilter("NOT \"IsDeleted\"");
+                    b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name", "IsDeleted")
+                        .IsUnique();
 
-                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name"), false);
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name", "IsDeleted"), false);
 
                     b.ToTable("subjects", (string)null);
                 });
@@ -4794,7 +4776,8 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasOne("SamaEcole.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.Building", b =>

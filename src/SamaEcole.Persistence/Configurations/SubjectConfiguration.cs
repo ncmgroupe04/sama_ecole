@@ -25,6 +25,7 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
         builder.Property<uint>("xmin").IsRowVersion();
 
         builder.Property(s => s.Name).IsRequired().HasMaxLength(80);
+        builder.Property(s => s.NameAr).HasMaxLength(80);
         builder.Property(s => s.Level).IsRequired().HasMaxLength(50);
 
         // decimal(4,2) : de 0,01 à 99,99. Un coefficient n'a aucune raison de dépasser cette borne,

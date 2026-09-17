@@ -21,6 +21,14 @@ public class Subject : AuditableEntity, ITenantEntity
 
     public required string Name { get; set; }
 
+    /// <summary>
+    /// Nom de la matière en arabe (module Coran/Franco-Arabe), saisi librement par l'école — aucune
+    /// traduction automatique. Null tant que le Directeur/Secrétariat ne l'a pas renseigné : le
+    /// bulletin bilingue imprime alors la ligne sans son second nom, jamais une valeur inventée (même
+    /// convention que <see cref="Column1Header"/>/<see cref="Column2Header"/>).
+    /// </summary>
+    public string? NameAr { get; set; }
+
     /// <summary>Niveau ou cycle, en texte libre — aligné sur la nomenclature des classes de l'établissement.</summary>
     public required string Level { get; set; }
 

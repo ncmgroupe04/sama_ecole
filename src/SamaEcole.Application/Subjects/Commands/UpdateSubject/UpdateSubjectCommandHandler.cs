@@ -33,6 +33,7 @@ public class UpdateSubjectCommandHandler(IApplicationDbContext dbContext)
         var previousLevel = subject.Level;
 
         subject.Name = request.Name.Trim();
+        subject.NameAr = Trimmed(request.NameAr);
         subject.Level = level;
         subject.Coefficient = request.Coefficient;
         subject.ParentSubjectId = request.ParentSubjectId;
@@ -69,7 +70,7 @@ public class UpdateSubjectCommandHandler(IApplicationDbContext dbContext)
 
         return new UpdateSubjectResult(
             subject.Id, subject.Name, subject.Level, subject.Coefficient, newRowVersion,
-            subject.ParentSubjectId, subject.MaxScore, subject.DisplayOrder);
+            subject.ParentSubjectId, subject.MaxScore, subject.DisplayOrder, subject.NameAr);
     }
 
     /// <summary>Entête vide ou blanche = « pas d'entête personnalisé » (null), jamais une chaîne vide stockée.</summary>
