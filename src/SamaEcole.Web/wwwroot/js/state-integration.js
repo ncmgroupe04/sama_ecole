@@ -447,7 +447,7 @@ document.addEventListener('alpine:init', () => {
 
             if (!response.ok) {
                 const payload = await response.json().catch(() => null);
-                const err = new Error((payload && payload.message) || `Erreur HTTP ${response.status}`);
+                const err = new Error((payload && payload.message) || window.api.httpFallbackMessage(response.status));
                 err.code = payload && payload.code;
                 err.details = payload && payload.details;
                 err.status = response.status;
@@ -495,7 +495,7 @@ document.addEventListener('alpine:init', () => {
 
             if (!response.ok) {
                 const payload = await response.json().catch(() => null);
-                const err = new Error((payload && payload.message) || `Erreur HTTP ${response.status}`);
+                const err = new Error((payload && payload.message) || window.api.httpFallbackMessage(response.status));
                 err.code = payload && payload.code;
                 err.details = payload && payload.details;
                 err.status = response.status;
