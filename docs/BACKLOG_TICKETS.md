@@ -100,6 +100,10 @@ Construire le gabarit générique de listing (barre latérale, barre supérieure
 Génération PDF via QuestPDF. **Le reçu reproduit exactement `docs/design-references/receipt-reference.png`** (Volume 1 §7.3bis), y compris la mention obligatoire *"Il est demandé aux parents de garder minutieusement leur reçu après le paiement."*
 *Dépend de* : JGK-E01. *Critères* : comparaison visuelle avec la référence (mise en page, ordre des champs, tableau des frais, mention obligatoire présente).
 
+**JGK-E03** [H] — Notification e-mail du Directeur à chaque inscription
+Un audit a confirmé qu'aucune notification n'est déclenchée lors de l'inscription d'un élève. `CreateEnrollmentCommandHandler` publie un événement de domaine MediatR `StudentEnrolledEvent` (nom de l'élève, matricule, date/heure — pas l'entité complète) après le `SaveChangesAsync` de la transaction d'inscription, jamais avant. Un `INotificationHandler` dédié envoie un e-mail via `IEmailSender` à tous les utilisateurs `Role.Directeur` actifs de l'école (`SchoolId` de l'événement) — jamais à `School.Email`, adresse de contact imprimée sur le reçu et pas forcément surveillée. Un échec d'envoi (SMTP transitoire) est journalisé et n'interrompt ni les autres destinataires ni l'inscription elle-même : `SmtpEmailSender.SendAsync` relance l'exception SMTP, le handler doit l'absorber pour chaque destinataire pris isolément. Aucun Directeur actif trouvé -> avertissement journalisé, aucune exception.
+*Dépend de* : JGK-E01. *Critères* : un Directeur actif reçoit l'e-mail à l'inscription ; aucun Directeur actif ne produit ni exception ni e-mail ; l'échec d'envoi à un destinataire n'empêche pas l'envoi aux autres et ne remonte jamais jusqu'à l'appelant (test dédié obligatoire, comme pour `NotifyParentOnAttendanceEventHandler`).
+
 ---
 
 ## Module F — Finance
@@ -442,7 +446,7 @@ s'affiche à l'écran ; `npm test` et la suite .NET complète restent au vert.
 A01 → A02 → A03 → A04 → { A05, A06, B01 }
 B01 → B02 → { C01 → C02 → C03, B03 }
 C02 → D01 → { D02 → D05, D03 → D04 }
-{ D01, F01 } → E01 → E02
+{ D01, F01 } → E01 → { E02, E03 }
 F01 → F02 → { F03, F04 → F05 }
 { C03, D01 } → G01 → G02 → G03
 Transverse (dès A04) : H01
