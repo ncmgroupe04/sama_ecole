@@ -29,10 +29,36 @@ public class ChangeBoardingAssignmentCommandHandler(IApplicationDbContext dbCont
     public async Task<EnrollmentBoardingDto> Handle(
         ChangeBoardingAssignmentCommand request, CancellationToken cancellationToken)
     {
+        // Garde de forme AVANT toute lecture (revue Task 7, finding 2) : Program.cs enregistre
+        // JsonStringEnumConverter() sans allowIntegerValues: false, donc un client peut poster une
+        // valeur d'enum hors domaine (ex. {"boardingStatus": 99}) qui bind sans erreur. Non filtrée,
+        // cette valeur franchirait les checks "!= Externe" ci-dessous et serait persistée telle quelle
+        // via HasConversion<string>() — empoisonnant la ligne pour toute lecture future.
+        if (!Enum.IsDefined(request.BoardingStatus))
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(request.BoardingStatus), "Le régime d'hébergement indiqué n'est pas valide.")
+            ]);
+        }
+
+        // L'inscription doit être rattachée à l'année ACTIVE (spec §5.2 étape 1 : "tenant courant,
+        // année active — 404 sinon"), même patron que CreateEnrollmentCommandHandler. Sans cette
+        // borne, un EnrollmentId périmé d'une année CLÔTURÉE serait accepté et le Handler écrirait
+        // RoomId/BoardingStatus — voire ajouterait des lignes de pension et gonflerait TotalDue — sur
+        // un dossier qui ne devrait plus bouger (intégrité financière).
+        var activeYear = await dbContext.SchoolYears
+            .FirstOrDefaultAsync(y => y.IsActive, cancellationToken)
+            ?? throw new ValidationException([
+                new ValidationFailure(
+                    "SchoolYear",
+                    "Aucune année scolaire active. Activez une année scolaire avant de gérer l'internat.")
+            ]);
+
         // Le Global Query Filter + la RLS bornent déjà la recherche à l'école courante : une
-        // inscription d'une autre école renvoie 404, jamais un changement silencieux.
+        // inscription d'une autre école, ou d'une année non active, renvoie 404, jamais un changement
+        // silencieux.
         var enrollment = await dbContext.Enrollments
-            .FirstOrDefaultAsync(e => e.Id == request.EnrollmentId, cancellationToken)
+            .FirstOrDefaultAsync(e => e.Id == request.EnrollmentId && e.SchoolYearId == activeYear.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Inscription {request.EnrollmentId} introuvable.");
 
         // Cohérence RoomId / BoardingStatus (même garde que CreateEnrollmentCommandHandler, cf. revue

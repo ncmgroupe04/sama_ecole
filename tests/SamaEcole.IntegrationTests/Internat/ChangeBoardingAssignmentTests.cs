@@ -65,13 +65,16 @@ public class ChangeBoardingAssignmentTests : IAsyncLifetime
 
         result1.TotalDue.Should().Be(15_000m + 20_000m * 9);
 
-        // Second changement de chambre (toujours Interne) : la pension ne doit PAS être doublée.
+        // Second changement de chambre (toujours Interne) : la pension ne doit PAS être doublée. Le
+        // RowVersion utilisé ici est celui RENVOYÉ par le premier appel (result1.RowVersion), pas
+        // relu indépendamment en base (revue Task 7, finding 4) : un DTO qui renverrait encore un
+        // (uint)0 placeholder ferait échouer cet appel en ConcurrencyConflictException, prouvant que
+        // le xmin réel post-SaveChangesAsync est bien celui retourné à l'appelant.
         await using var db2 = _db.NewAppContext(EcoleA);
-        var rowVersion2 = await CurrentRowVersionAsync(db2);
         var handler2 = new ChangeBoardingAssignmentCommandHandler(db2);
 
         var result2 = await handler2.Handle(
-            new ChangeBoardingAssignmentCommand(Inscription, ChambreB, BoardingStatus.Interne, IncludeBoardingFee: true, rowVersion2),
+            new ChangeBoardingAssignmentCommand(Inscription, ChambreB, BoardingStatus.Interne, IncludeBoardingFee: true, result1.RowVersion),
             CancellationToken.None);
 
         result2.TotalDue.Should().Be(15_000m + 20_000m * 9); // inchangé, pas de doublon
@@ -138,6 +141,28 @@ public class ChangeBoardingAssignmentTests : IAsyncLifetime
             CancellationToken.None);
 
         await act.Should().ThrowAsync<ConcurrencyConflictException>();
+    }
+
+    [Fact]
+    public async Task Reassigning_The_Same_Student_To_The_Same_Full_Room_Is_Not_Rejected()
+    {
+        // Protège la clause d'auto-exclusion "e.Id != request.EnrollmentId" du recompte d'occupation
+        // (revue Task 7, finding 3) : ChambreA a Capacity = 1. Un premier appel occupe l'unique place.
+        // Un second appel qui CONFIRME la même chambre pour le MÊME élève ne doit jamais être rejeté
+        // pour "chambre complète" — sans la clause d'auto-exclusion, l'inscription se compterait
+        // elle-même comme occupant et la capacité (1) serait atteinte avant même le second appel.
+        await using var db1 = _db.NewAppContext(EcoleA);
+        var rowVersion = await CurrentRowVersionAsync(db1);
+        var result1 = await new ChangeBoardingAssignmentCommandHandler(db1).Handle(
+            new ChangeBoardingAssignmentCommand(Inscription, ChambreA, BoardingStatus.Interne, IncludeBoardingFee: false, rowVersion),
+            CancellationToken.None);
+
+        await using var db2 = _db.NewAppContext(EcoleA);
+        var act = () => new ChangeBoardingAssignmentCommandHandler(db2).Handle(
+            new ChangeBoardingAssignmentCommand(Inscription, ChambreA, BoardingStatus.Interne, IncludeBoardingFee: false, result1.RowVersion),
+            CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
     }
 
     [Fact]
