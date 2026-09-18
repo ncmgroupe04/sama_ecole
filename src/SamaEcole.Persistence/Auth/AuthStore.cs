@@ -1,7 +1,9 @@
 using System.Data;
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Persistence.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Npgsql;
@@ -198,6 +200,49 @@ public class AuthStore(ApplicationDbContext dbContext, TimeProvider timeProvider
         command.Parameters.AddWithValue("hash", newPasswordHash);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task<int> ChangeEmailAsync(Guid userId, string newEmail, CancellationToken cancellationToken)
+    {
+        return await dbContext.ExecuteInTransactionAsync(async ct =>
+        {
+            await SetEmailAsync(userId, newEmail, ct);
+
+            // L'e-mail vient de changer : c'est l'identifiant de login lui-même. Toute session déjà
+            // ouverte — y compris celle qui vient de faire la demande — doit repartir de zéro, même
+            // raisonnement que ChangePasswordAsync.
+            return await RevokeAllRefreshTokensAsync(userId, ct);
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Même contournement RLS que <see cref="SetPasswordHashAsync"/>, via la fonction SECURITY DEFINER
+    /// dédiée auth_set_email (migration AddAuthSetEmailFunction). Ne revalide PAS l'unicité en amont :
+    /// l'UPDATE laisse l'index unique citext de `users.Email` (UserConfiguration, filtré sur IsDeleted)
+    /// la refuser nativement — SQLSTATE 23505 — pour que Postgres renseigne ConstraintName/TableName
+    /// exactement comme le fait déjà SchoolProvisioningStore.CreateInitialDirectorAsync. Cette commande
+    /// ADO brute est hors du SaveChangesAsync qui traduit d'habitude le 23505 (ApplicationDbContext) :
+    /// on le traduit donc ici, pour un 409 lisible plutôt qu'un 500 (AGENTS.md règle #5,
+    /// docs/Volume_4_API_Design.md §0.4).
+    /// </summary>
+    private async Task SetEmailAsync(Guid userId, string newEmail, CancellationToken cancellationToken)
+    {
+        await using var command = await CreateCommandAsync(
+            "SELECT auth_set_email(@userId, @email)", cancellationToken);
+
+        command.Parameters.AddWithValue("userId", userId);
+        command.Parameters.AddWithValue("email", newEmail);
+
+        try
+        {
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            throw new DuplicateRecordException(
+                UniqueConstraintCatalog.Describe(ex.ConstraintName, ex.TableName ?? "users"),
+                $"{ex.TableName ?? "users"} / {ex.ConstraintName ?? "IX_users_Email"}");
+        }
     }
 
     private async Task RevokeOutstandingResetTokensAsync(Guid userId, CancellationToken cancellationToken)

@@ -312,10 +312,10 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     /// <summary>
     /// Remet les comptes de test à neuf entre deux tests (ticket JGK-A05, puis la réinitialisation de
-    /// mot de passe). Les tests de statut bloquent et débloquent les mêmes comptes, et ceux de mot de
-    /// passe le RÉÉCRIVENT en dur : sans remise à zéro du hash ici aussi, le premier test qui change le
-    /// mot de passe de la secrétaire ferait échouer tous les suivants qui se connectent avec
-    /// SecretairePassword — l'ordre d'exécution deviendrait significatif.
+    /// mot de passe, puis d'e-mail). Les tests de statut bloquent et débloquent les mêmes comptes, et
+    /// ceux de mot de passe/e-mail les RÉÉCRIVENT en dur : sans remise à zéro ici aussi, le premier test
+    /// qui change le mot de passe (ou l'e-mail) de la secrétaire ferait échouer tous les suivants qui se
+    /// connectent avec SecretairePassword/SecretaireEmail — l'ordre d'exécution deviendrait significatif.
     ///
     /// Exécuté par le PROPRIÉTAIRE : le rôle applicatif n'a volontairement pas le droit de purger
     /// user_status_history (journal append-only).
@@ -335,15 +335,15 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
         var hasher = new IdentityPasswordHasher();
         await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(DirecteurPassword)} WHERE "Id" = {DirecteurId};""");
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(DirecteurPassword)}, "Email" = {DirecteurEmail} WHERE "Id" = {DirecteurId};""");
         await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SecretairePassword)} WHERE "Id" = {SecretaireId};""");
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SecretairePassword)}, "Email" = {SecretaireEmail} WHERE "Id" = {SecretaireId};""");
         await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(FinancePassword)} WHERE "Id" = {FinanceId};""");
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(FinancePassword)}, "Email" = {FinanceEmail} WHERE "Id" = {FinanceId};""");
         await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(EnseignantPassword)} WHERE "Id" = {EnseignantId};""");
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(EnseignantPassword)}, "Email" = {EnseignantEmail} WHERE "Id" = {EnseignantId};""");
         await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SuperAdminPassword)} WHERE "Id" = {SuperAdminId};""");
+            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SuperAdminPassword)}, "Email" = {SuperAdminEmail} WHERE "Id" = {SuperAdminId};""");
 
         // Paie (Volume 1 §14) : fiche_paies et employee_contract_histories référencent employee_contracts
         // en Restrict, donc AVANT elle — et employee_contracts référence teachers/users en Restrict,
