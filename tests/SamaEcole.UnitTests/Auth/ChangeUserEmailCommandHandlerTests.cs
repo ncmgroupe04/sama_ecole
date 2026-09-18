@@ -70,7 +70,7 @@ public class ChangeUserEmailCommandHandlerTests
     }
 
     [Fact]
-    public async Task A_Duplicate_Email_Caught_By_The_Precheck_Should_Be_Rejected_As_A_Validation_Error()
+    public async Task A_Duplicate_Email_Caught_By_The_Precheck_Should_Also_Return_A_409_Conflict()
     {
         var user = BuildUser();
         var (handler, _, authStore, passwordHasher) = BuildHandler(user);
@@ -78,7 +78,9 @@ public class ChangeUserEmailCommandHandlerTests
         passwordHasher.Verify(CurrentPasswordHash, CorrectCurrentPassword).Returns(true);
 
         // Un AUTRE compte détient déjà cet e-mail : le pré-contrôle applicatif doit le voir avant
-        // d'atteindre la base (message plus rapide, plus clair — voir le commentaire du Handler).
+        // d'atteindre la base (message plus rapide, plus clair — voir le commentaire du Handler). Même
+        // statut que le filet de sécurité en base (test suivant) : un e-mail déjà pris est un conflit
+        // (409), pas une saisie invalide (422) — les deux chemins doivent s'accorder.
         authStore.FindUserByEmailAsync("deja.pris@sama-ecole.sn", Arg.Any<CancellationToken>())
             .Returns(BuildUser("deja.pris@sama-ecole.sn") with { Id = Guid.NewGuid() });
 
@@ -86,8 +88,7 @@ public class ChangeUserEmailCommandHandlerTests
 
         var act = () => handler.Handle(command, CancellationToken.None);
 
-        var exception = await act.Should().ThrowAsync<ValidationException>();
-        exception.Which.Errors.Should().ContainKey(nameof(ChangeUserEmailCommand.NewEmail));
+        await act.Should().ThrowAsync<DuplicateRecordException>();
 
         await authStore.DidNotReceive().ChangeEmailAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }

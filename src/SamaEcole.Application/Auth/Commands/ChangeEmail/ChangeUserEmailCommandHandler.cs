@@ -48,12 +48,14 @@ public class ChangeUserEmailCommandHandler(
         // sécurité en base (SetEmailAsync, AuthStore) : deux requêtes concurrentes visant le même
         // e-mail franchiraient toutes deux ce contrôle avant que l'une ne commite — seul l'index
         // unique citext de `users.Email` tranche réellement la course.
+        //
+        // DuplicateRecordException (409), pas ValidationException (422) : un e-mail déjà pris est un
+        // conflit refusé par la base (même famille que le filet de sécurité ci-dessous), pas une
+        // saisie invalide — les deux chemins doivent renvoyer le même statut pour la même situation.
         if (!string.Equals(newEmail, user.Email, StringComparison.OrdinalIgnoreCase)
             && await authStore.FindUserByEmailAsync(newEmail, cancellationToken) is not null)
         {
-            throw new ValidationException([
-                new ValidationFailure(nameof(request.NewEmail), "Un compte utilise déjà cet e-mail.")
-            ]);
+            throw new DuplicateRecordException("Un compte utilise déjà cet e-mail.", "users / IX_users_Email");
         }
 
         var revokedSessions = await authStore.ChangeEmailAsync(userId, newEmail, cancellationToken);
