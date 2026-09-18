@@ -93,6 +93,27 @@ public interface IAuthStore
     /// mot de passe qu'on vient de choisir volontairement. Renvoie le nombre de sessions coupées.
     /// </summary>
     Task<int> ChangePasswordAsync(Guid userId, string newPasswordHash, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Change l'e-mail de connexion d'un compte AUTHENTIFIÉ, qui vient de prouver connaître son mot de
+    /// passe actuel (voir ChangeUserEmailCommandHandler) — l'e-mail EST l'identifiant de login, un
+    /// changement mérite la même preuve d'identité qu'un changement de mot de passe, pas moins.
+    ///
+    /// Même raisonnement que <see cref="ChangePasswordAsync"/> côté écriture : `users` est sous RLS
+    /// (ticket JGK-A03) et un Super Admin — qui peut changer son propre e-mail par cette route — n'a
+    /// aucun SchoolId de session pour satisfaire la policy, d'où la fonction SECURITY DEFINER dédiée.
+    /// Et même raisonnement côté sessions : TOUTES sont révoquées, y compris celle qui vient de faire
+    /// la demande — l'ancien détenteur d'une session ouverte ne doit pas pouvoir continuer à agir sous
+    /// un compte dont l'identifiant de connexion vient de changer. Renvoie le nombre de sessions
+    /// coupées.
+    ///
+    /// L'unicité (index citext filtré sur IsDeleted, UserConfiguration) n'est PAS revérifiée ici : la
+    /// fonction SQL laisse l'index la refuser nativement (SQLSTATE 23505), traduit par l'appelant en
+    /// <see cref="SamaEcole.Application.Common.Exceptions.DuplicateRecordException"/> — même filet que
+    /// SchoolProvisioningStore.CreateInitialDirectorAsync, seul rempart réel contre une course entre
+    /// deux changements simultanés vers le même e-mail.
+    /// </summary>
+    Task<int> ChangeEmailAsync(Guid userId, string newEmail, CancellationToken cancellationToken);
 }
 
 public record StoredPasswordResetToken(

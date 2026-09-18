@@ -1,4 +1,5 @@
 using SamaEcole.Application.Auth;
+using SamaEcole.Application.Auth.Commands.ChangeEmail;
 using SamaEcole.Application.Auth.Commands.ChangePassword;
 using SamaEcole.Application.Auth.Commands.ForgotPassword;
 using SamaEcole.Application.Auth.Commands.Login;
@@ -145,6 +146,31 @@ public class AuthController(
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> ChangePassword(
         [FromBody] ChangePasswordCommand command, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(command, cancellationToken);
+
+        RefreshTokenCookie.Delete(Response);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Change l'e-mail de connexion du compte AUTHENTIFIÉ courant, qui doit prouver connaître son mot
+    /// de passe actuel — même exigence que /change-password : l'e-mail EST l'identifiant de login (JWT
+    /// `sub`), une session volée ne doit pas suffire à en prendre le contrôle en le changeant. Ouvert
+    /// à tout rôle : Super Admin compris (ChangeUserEmailCommandHandler passe par IAuthStore, jamais
+    /// par IApplicationDbContext — `users` est sous RLS et un Super Admin n'a aucun SchoolId de session).
+    ///
+    /// Toutes les sessions viennent d'être coupées (voir AuthStore.ChangeEmailAsync), y compris celle
+    /// du navigateur courant : le cookie de refresh part avec elles, comme sur /change-password.
+    /// </summary>
+    [HttpPost("change-email")]
+    [Authorize]
+    [ProducesResponseType<ChangeUserEmailResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ChangeEmail(
+        [FromBody] ChangeUserEmailCommand command, CancellationToken cancellationToken)
     {
         var result = await mediator.Send(command, cancellationToken);
 

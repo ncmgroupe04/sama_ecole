@@ -14,6 +14,9 @@
  api.js, dont submit() dépend. Même script que _Layout, seul le balisage qui l'ouvre/l'affiche
  diffère (voir la carte de profil ci-dessous et _ChangePasswordModalDark.cshtml). *@
  <script src="~/js/change-password.js" asp-append-version="true"></script>
+ @* Modale universelle « Changer mon e-mail » (store Alpine `changeEmailModal`) — même schéma que
+ change-password.js ci-dessus (voir la carte de profil ci-dessous et _ChangeEmailModalDark.cshtml). *@
+ <script src="~/js/change-email.js" asp-append-version="true"></script>
  <script src="~/js/require-session.js" asp-append-version="true"></script>
  <script src="~/js/vendor/alpine.min.js" asp-append-version="true" defer></script>
 </head>
@@ -103,6 +106,11 @@
  <icon name="key" class="w-4 h-4 shrink-0 text-zinc-500" />
  Changer mon mot de passe
  </button>
+ <button type="button" x-on:click="isOpen = false; $store.changeEmailModal.open()"
+ class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
+ <icon name="envelope" class="w-4 h-4 shrink-0 text-zinc-500" />
+ Changer mon e-mail
+ </button>
  <button type="button" x-on:click="isOpen = false; logout()"
  class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-rose-400 hover:bg-rose-500/10 transition-colors">
  <icon name="sign-out" class="w-4 h-4 shrink-0" />
@@ -151,6 +159,10 @@
  @* Modale universelle « Changer mon mot de passe », variante sombre — un seul montage pour toute la
  console, ouverte depuis la carte de profil de la barre latérale ci-dessus. *@
  @await Html.PartialAsync("_ChangePasswordModalDark")
+
+ @* Modale universelle « Changer mon e-mail », variante sombre — même schéma que la modale mot de
+ passe ci-dessus. *@
+ @await Html.PartialAsync("_ChangeEmailModalDark")
 
  @await RenderSectionAsync("Scripts", required: false)
 </body>

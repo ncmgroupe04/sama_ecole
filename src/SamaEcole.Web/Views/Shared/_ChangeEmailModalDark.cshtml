@@ -1,0 +1,75 @@
+@*
+    Variante SOMBRE de _ChangeEmailModal.cshtml, pour la console Super Admin (toujours en thème
+    sombre — voir le commentaire de tête de _SuperAdminLayout.cshtml). Même store Alpine
+    `changeEmailModal` (wwwroot/js/change-email.js), donc AUCUNE logique dupliquée ici — seul le
+    balisage change, hand-roulé comme _ChangePasswordModalDark plutôt que <modal-shell>/.input-field,
+    codés en dur en thème clair et donc impropres ici.
+
+    Montée UNE SEULE FOIS par _SuperAdminLayout, comme _ChangeEmailModal l'est par _Layout — ouverte
+    depuis la carte de profil de la barre latérale (§ ci-dessous, $store.changeEmailModal.open()).
+
+    POST /api/v1/auth/change-email (ChangeUserEmailCommandHandler) révoque TOUTES les sessions, y
+    compris celle qui vient de faire la demande : le succès redirige donc vers /login plutôt que de
+    simplement fermer la modale — même comportement que la variante claire.
+*@
+<div x-show="$store.changeEmailModal.isOpen" x-cloak
+     class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+     x-on:keydown.escape.window="$store.changeEmailModal.close()">
+    <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
+
+        <div x-show="!$store.changeEmailModal.done" x-cloak>
+            <h2 class="text-base font-semibold text-white">Changer mon e-mail</h2>
+
+            <div x-show="$store.changeEmailModal.errors.global" x-cloak
+                 class="mt-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300"
+                 x-text="$store.changeEmailModal.errors.global"></div>
+
+            <form x-on:submit.prevent="$store.changeEmailModal.submit()" novalidate class="mt-4 space-y-4">
+                <div>
+                    <label for="sa-change-email-new" class="form-label-inverse">Nouvel e-mail</label>
+                    <input id="sa-change-email-new" type="email" autocomplete="email" required
+                           x-model="$store.changeEmailModal.newEmail"
+                           class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+                    <p x-show="$store.changeEmailModal.errors.newemail" x-cloak
+                       x-text="$store.changeEmailModal.errors.newemail" class="mt-1 text-xs text-rose-400"></p>
+                </div>
+
+                <div>
+                    <label for="sa-change-email-current-password" class="form-label-inverse">Mot de passe actuel</label>
+                    <input id="sa-change-email-current-password" type="password" autocomplete="current-password" required
+                           x-model="$store.changeEmailModal.currentPassword"
+                           class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500" />
+                    <p class="mt-1.5 text-xs text-zinc-500">Confirmation d'identité : l'e-mail sert à se connecter, comme le mot de passe.</p>
+                    <p x-show="$store.changeEmailModal.errors.currentpassword" x-cloak
+                       x-text="$store.changeEmailModal.errors.currentpassword" class="mt-1 text-xs text-rose-400"></p>
+                </div>
+
+                <div class="flex justify-end gap-3 border-t border-zinc-800 pt-4">
+                    <button type="button" x-on:click="$store.changeEmailModal.close()" :disabled="$store.changeEmailModal.isSubmitting"
+                            class="rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50">
+                        Annuler
+                    </button>
+                    <button type="submit" :disabled="$store.changeEmailModal.isSubmitting"
+                            class="rounded-2xl bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 transition-colors disabled:opacity-50">
+                        <span x-text="$store.changeEmailModal.isSubmitting ? 'Enregistrement…' : 'Changer mon e-mail'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div x-show="$store.changeEmailModal.done" x-cloak class="text-center">
+            <div class="mx-auto w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                <icon name="checkmark-circle" class="w-7 h-7 text-emerald-400" />
+            </div>
+            <p class="mt-4 text-sm text-zinc-400">
+                E-mail changé. Vos autres appareils ont été déconnectés — reconnectez-vous avec votre
+                nouvelle adresse.
+            </p>
+            <div class="mt-6 flex justify-center border-t border-zinc-800 pt-4">
+                <a href="/login" class="rounded-2xl bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 transition-colors">
+                    Aller à la connexion
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
