@@ -32,6 +32,9 @@
  @* Modale universelle « Changer mon mot de passe » : même schéma (store Alpine), ouverte depuis
     la carte de profil de la barre latérale — après api.js, dont submit() dépend. *@
  <script src="~/js/change-password.js" asp-append-version="true"></script>
+ @* Modale universelle « Changer mon e-mail » : même schéma que change-password.js, ouverte depuis
+    la carte de profil de la barre latérale — après api.js, dont submit() dépend. *@
+ <script src="~/js/change-email.js" asp-append-version="true"></script>
  @* Assistant de Premier Paramétrage (bouton de la barre supérieure) — dépend d'auth.js et api.js,
  enregistre un écouteur alpine:init, donc script classique chargé avant Alpine (différé). *@
  <script src="~/js/setup-assistant.js" asp-append-version="true"></script>
@@ -357,6 +360,11 @@
  class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
  <icon name="key" class="w-4 h-4 shrink-0 text-white/70" />
  Changer mon mot de passe
+ </button>
+ <button type="button" x-on:click="isOpen = false; $store.changeEmailModal.open()"
+ class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
+ <icon name="envelope" class="w-4 h-4 shrink-0 text-white/70" />
+ Changer mon e-mail
  </button>
  <button type="button" x-on:click="isOpen = false; logout()"
  class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-danger text-white hover:opacity-90 transition-opacity">
@@ -702,6 +710,10 @@
     ouverte depuis la carte de profil de la barre latérale ci-dessus (store Alpine
     `changePasswordModal`, wwwroot/js/change-password.js). *@
  @await Html.PartialAsync("_ChangePasswordModal")
+
+ @* Modale universelle « Changer mon e-mail » — même schéma que la modale mot de passe ci-dessus
+    (store Alpine `changeEmailModal`, wwwroot/js/change-email.js). *@
+ @await Html.PartialAsync("_ChangeEmailModal")
 
  @* Modale de GUIDAGE universelle — un seul montage (store Alpine `guide`, ui-components.js).
     Ouverte par window.guide('Titre', 'Message') quand un bouton d'action a un pré-requis manquant :

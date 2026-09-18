@@ -1,0 +1,52 @@
+@*
+    Modale UNIVERSELLE « Changer mon e-mail » — montée une seule fois par _Layout, sous le
+    <body x-data>, au même titre que _ChangePasswordModal. Ouverte depuis n'importe quelle page via la
+    carte de profil de la barre latérale (store Alpine `changeEmailModal`, wwwroot/js/change-email.js)
+    — jamais une page dédiée, même raisonnement que _ChangePasswordModal.
+
+    POST /api/v1/auth/change-email (ChangeUserEmailCommandHandler) révoque TOUTES les sessions, y
+    compris celle qui vient de faire la demande : le succès redirige donc vers /login plutôt que de
+    simplement fermer la modale — même comportement que _ChangePasswordModal.
+*@
+<modal-shell open="$store.changeEmailModal.isOpen" on-close="$store.changeEmailModal.close()" size="md" title="Changer mon e-mail">
+    <div x-show="!$store.changeEmailModal.done" x-cloak>
+        <div x-show="$store.changeEmailModal.errors.global" x-cloak class="form-error-banner" x-text="$store.changeEmailModal.errors.global"></div>
+
+        <form x-on:submit.prevent="$store.changeEmailModal.submit()" novalidate class="space-y-4">
+            <div>
+                <label for="change-email-new" class="form-label form-label-required">Nouvel e-mail</label>
+                <input id="change-email-new" type="email" autocomplete="email" required
+                       x-model="$store.changeEmailModal.newEmail" class="input-field">
+                <p x-show="$store.changeEmailModal.errors.newemail" x-cloak x-text="$store.changeEmailModal.errors.newemail" class="field-error"></p>
+            </div>
+
+            <div>
+                <label for="change-email-current-password" class="form-label form-label-required">Mot de passe actuel</label>
+                <input id="change-email-current-password" type="password" autocomplete="current-password" required
+                       x-model="$store.changeEmailModal.currentPassword" class="input-field">
+                <p class="mt-1 text-xs text-slate-400">Confirmation d'identité : l'e-mail sert à se connecter, comme le mot de passe.</p>
+                <p x-show="$store.changeEmailModal.errors.currentpassword" x-cloak x-text="$store.changeEmailModal.errors.currentpassword" class="field-error"></p>
+            </div>
+
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="$store.changeEmailModal.close()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="$store.changeEmailModal.isSubmitting" class="btn-modal-primary group">
+                    <span x-text="$store.changeEmailModal.isSubmitting ? 'Enregistrement...' : 'Changer mon e-mail'"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div x-show="$store.changeEmailModal.done" x-cloak class="text-center">
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success-bg">
+            <icon name="check" class="h-7 w-7 text-success" />
+        </div>
+        <p class="mt-4 text-sm text-slate-600">
+            E-mail changé. Vos autres appareils ont été déconnectés — reconnectez-vous avec votre
+            nouvelle adresse.
+        </p>
+        <div class="mt-8 flex justify-center border-t border-slate-200 pt-4">
+            <a href="/login" class="btn-modal-primary group">Aller à la connexion</a>
+        </div>
+    </div>
+</modal-shell>
