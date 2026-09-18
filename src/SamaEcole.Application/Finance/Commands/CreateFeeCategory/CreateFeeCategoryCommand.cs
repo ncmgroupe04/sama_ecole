@@ -13,6 +13,10 @@ public record CreateFeeCategoryCommand : IRequest<CreateFeeCategoryResult>
 
     /// <summary>Vrai pour une mensualité (due chaque mois), faux pour un frais ponctuel.</summary>
     public bool IsRecurring { get; init; }
+
+    /// <summary>Vrai pour une catégorie de pension (module Internat) : exclue du calcul des frais
+    /// scolaires ordinaires à l'inscription, incluse seulement pour un élève Interne/Demi-pensionnaire.</summary>
+    public bool IsBoardingFee { get; init; }
 }
 
-public record CreateFeeCategoryResult(Guid Id, string Name, bool IsRecurring);
+public record CreateFeeCategoryResult(Guid Id, string Name, bool IsRecurring, bool IsBoardingFee);
