@@ -30,11 +30,17 @@ public class InventoryItemConfiguration : IEntityTypeConfiguration<InventoryItem
         builder.Property(i => i.Notes).HasMaxLength(500);
 
         // Persisté en string, comme tous les enums métier (cf. RoomConfiguration.Type).
+        //
+        // PAS de HasDefaultValue ici : InventoryItem.Condition porte déjà son défaut en C#
+        // (= ItemCondition.Bon), le seul chemin de création de ce lot passant par EF. Un défaut
+        // généré côté base ET côté C# sur le même enum est ambigu — Neuf (valeur CLR 0 de
+        // ItemCondition) ne peut alors plus être distingué d'une valeur non renseignée sans
+        // sentinelle dédiée (PendingModelChangesWarning). Autant ne déclarer le défaut qu'une fois,
+        // là où il est lu : l'entité.
         builder.Property(i => i.Condition)
             .HasConversion<string>()
             .HasMaxLength(20)
-            .IsRequired()
-            .HasDefaultValue(ItemCondition.Bon);
+            .IsRequired();
 
         // Précision (12,2) : convention de TOUT montant du projet (ClassFee.Amount, Payment.Amount…).
         builder.Property(i => i.UnitPrice).HasPrecision(12, 2);
