@@ -17,6 +17,15 @@ public class CreateEnrollmentCommandValidator : AbstractValidator<CreateEnrollme
         RuleFor(x => x.Type).IsInEnum();
         RuleFor(x => x.ClassroomId).NotEmpty();
 
+        RuleFor(x => x.BoardingStatus).IsInEnum();
+
+        // Un régime Interne/Demi-pensionnaire sans chambre est une saisie incomplète — RoomId reste
+        // libre pour Externe (spec §3.3 : significatif seulement si BoardingStatus != Externe).
+        RuleFor(x => x.RoomId)
+            .NotNull()
+            .When(x => x.BoardingStatus != BoardingStatus.Externe)
+            .WithMessage("Une chambre est requise pour un régime Interne ou Demi-pensionnaire.");
+
         When(x => x.Type == EnrollmentType.ReEnrollment, () =>
         {
             RuleFor(x => x.StudentId)

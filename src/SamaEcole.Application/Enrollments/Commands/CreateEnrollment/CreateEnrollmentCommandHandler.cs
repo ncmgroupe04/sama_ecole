@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Enrollments;
 using SamaEcole.Application.Enrollments.Events;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -65,6 +66,25 @@ public class CreateEnrollmentCommandHandler(
         // ExecuteInTransactionAsync ci-dessous revenu sans exception.
         Guid enrolledStudentId = default;
 
+        // Garde serveur (AGENTS.md règle sur les modules) : un client qui poste un régime non-Externe
+        // alors que le Directeur n'a pas activé l'Internat est rejeté en 422 — jamais accepté puis
+        // silencieusement ignoré (même philosophie que la garde déjà en place pour SchoolModule.Pedagogy).
+        if (request.BoardingStatus != BoardingStatus.Externe)
+        {
+            var settings = await dbContext.SchoolSettings.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SchoolId == schoolId, cancellationToken);
+            var internatEnabled = settings?.IsInternatEnabled ?? SchoolSettingsDefaults.IsInternatEnabled;
+
+            if (!internatEnabled)
+            {
+                throw new ValidationException([
+                    new ValidationFailure(
+                        nameof(request.BoardingStatus),
+                        "Le module Internat n'est pas activé pour votre établissement.")
+                ]);
+            }
+        }
+
         var receipt = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
             var (student, matricule) = request.Type == EnrollmentType.NewEnrollment
@@ -90,8 +110,40 @@ public class CreateEnrollmentCommandHandler(
                 ]);
             }
 
+            // Capacité revérifiée DANS la transaction (spec §5.1) : deux inscriptions concurrentes sur
+            // le dernier lit d'une chambre ne doivent jamais toutes les deux réussir.
+            if (request.RoomId is { } roomId)
+            {
+                var room = await dbContext.Rooms.AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Id == roomId, ct)
+                    ?? throw new ValidationException([
+                        new ValidationFailure(nameof(request.RoomId), "La chambre indiquée n'existe pas dans votre établissement.")
+                    ]);
+
+                var occupied = await dbContext.Enrollments.CountAsync(
+                    e => e.RoomId == roomId && e.SchoolYearId == activeYear.Id && e.Status != EnrollmentStatus.Cancelled, ct);
+
+                if (occupied >= room.Capacity)
+                {
+                    throw new ValidationException([
+                        new ValidationFailure(nameof(request.RoomId), "Cette chambre a atteint sa capacité maximale.")
+                    ]);
+                }
+            }
+
             var tuitionMonths = await ResolveTuitionMonthsAsync(ct);
             var lines = await BuildFeeLinesAsync(schoolId, request.ClassroomId, tuitionMonths, ct);
+
+            // Pension (module Internat) : catégories IsBoardingFee, seulement pour Interne/Demi-
+            // pensionnaire et seulement si IncludeBoardingFee — les élèves Externe de la même classe
+            // ne voient jamais ces lignes (spec §5.1).
+            if (request.BoardingStatus != BoardingStatus.Externe && request.IncludeBoardingFee)
+            {
+                var boardingLines = await BoardingFeeLineBuilder.BuildMissingBoardingLinesAsync(
+                    dbContext, schoolId, request.ClassroomId, tuitionMonths, existingFeeCategoryIds: new HashSet<Guid>(), ct);
+                lines.AddRange(boardingLines);
+            }
+
             var totalDue = lines.Sum(l => l.LineTotal);
 
             // Numéro officiel du reçu (JGK-E02), attribué DANS la transaction comme le matricule : s'il y
@@ -106,6 +158,8 @@ public class CreateEnrollmentCommandHandler(
                 ClassroomId = request.ClassroomId,
                 Type = request.Type,
                 IsRepeating = request.IsRepeating,
+                BoardingStatus = request.BoardingStatus,
+                RoomId = request.RoomId,
                 Status = EnrollmentStatus.Confirmed,
                 TotalDue = totalDue,
                 // L'inscription n'encaisse rien : la dette est intégralement à régler à la Caisse.
@@ -236,6 +290,11 @@ public class CreateEnrollmentCommandHandler(
     /// multipliée par le nombre de mensualités de l'année ; un frais ponctuel ne l'est jamais
     /// (règle métier portée par <see cref="FeeCategory.IsRecurring"/>). Les montants sont COPIÉS, pas
     /// référencés : le reçu reste fidèle même si le barème change ensuite (JGK-F01 l'historise).
+    ///
+    /// EXCLUT les catégories <see cref="FeeCategory.IsBoardingFee"/> (module Internat) : ces frais ne
+    /// sont ajoutés que par <see cref="BoardingFeeLineBuilder"/>, conditionnés au régime d'hébergement
+    /// et à <c>IncludeBoardingFee</c> — sinon un élève Externe de la même classe se verrait facturer la
+    /// pension d'office dès lors que l'école aurait un tarif de pension sur cette classe (spec §5.1).
     /// </summary>
     private async Task<List<EnrollmentFeeLine>> BuildFeeLinesAsync(
         Guid schoolId, Guid classroomId, int tuitionMonths, CancellationToken ct)
@@ -243,7 +302,7 @@ public class CreateEnrollmentCommandHandler(
         var fees = await (
             from fee in dbContext.ClassFees
             join category in dbContext.FeeCategories on fee.FeeCategoryId equals category.Id
-            where fee.ClassroomId == classroomId
+            where fee.ClassroomId == classroomId && !category.IsBoardingFee
             orderby category.IsRecurring, category.Name
             select new { fee.FeeCategoryId, category.Name, category.IsRecurring, fee.Amount })
             .ToListAsync(ct);
