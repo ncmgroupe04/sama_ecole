@@ -277,7 +277,10 @@ window.api = {
     post(endpoint, body) { return this.request(endpoint, 'POST', body); },
     put(endpoint, body) { return this.request(endpoint, 'PUT', body); },
     patch(endpoint, body) { return this.request(endpoint, 'PATCH', body); },
-    delete(endpoint) { return this.request(endpoint, 'DELETE'); },
+    // `body` OPTIONNEL : la plupart des suppressions n'en ont pas, mais celles qui se confirment par
+    // recopie d'un libellé en transportent un (DELETE /school-years/{id}). Sans argument, la requête
+    // part exactement comme avant — `request` n'ajoute de corps que s'il y en a un.
+    delete(endpoint, body) { return this.request(endpoint, 'DELETE', body); },
 
     /**
      * Récupère la TOTALITÉ d'une collection paginée (`{ items, totalCount, page, pageSize }`), en

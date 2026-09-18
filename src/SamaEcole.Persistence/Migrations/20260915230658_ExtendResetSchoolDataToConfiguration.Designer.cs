@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SamaEcole.Persistence;
@@ -11,9 +12,11 @@ using SamaEcole.Persistence;
 namespace SamaEcole.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915230658_ExtendResetSchoolDataToConfiguration")]
+    partial class ExtendResetSchoolDataToConfiguration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3904,11 +3907,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId");
 
-                    b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name")
-                        .IsUnique()
-                        .HasFilter("NOT \"IsDeleted\"");
+                    b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name", "IsDeleted")
+                        .IsUnique();
 
-                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name"), false);
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name", "IsDeleted"), false);
 
                     b.ToTable("subjects", (string)null);
                 });

@@ -53,8 +53,36 @@ document.addEventListener('alpine:init', () => {
         // --- Export (ZIP élèves/paiements/classes) ---
         exportingYearId: null,
 
+        // --- Suppression (DELETE /school-years/{id}) ---
+        //
+        // isLiveMode change le RÉCIT, jamais la règle : en mode test l'année et ses données sont
+        // effacées, en mode réel elle n'est archivée que si elle est vide (le serveur refuse en 409
+        // sinon — DeleteSchoolYearCommandHandler). L'écran doit dire laquelle des deux va se produire
+        // AVANT le clic, sans quoi le Directeur ne sait pas ce qu'il confirme.
+        isLiveMode: false,
+        yearToDelete: null,
+        deleteConfirmation: '',
+        isDeleting: false,
+        deleteError: null,
+        deleteResult: null,
+
         init() {
             this.loadYears();
+            this.loadMode();
+        },
+
+        async loadMode() {
+            try {
+                const mode = await window.api.get('/schools/current/mode');
+                this.isLiveMode = !!(mode && mode.isLive);
+            } catch {
+                // silence-volontaire : ce chargement ne remplit AUCUNE liste — il choisit seulement
+                // le texte de la modale de suppression. Un toast d'erreur transformerait un aléa
+                // réseau sans conséquence en incident visible, sur un écran qui s'affiche
+                // normalement. Le défaut retenu est le plus PRUDENT des deux : on annonce le régime
+                // le moins destructeur plutôt que de promettre un effacement que le serveur refusera.
+                this.isLiveMode = true;
+            }
         },
 
         async loadYears() {
@@ -112,6 +140,16 @@ document.addEventListener('alpine:init', () => {
          */
         canEdit(year) {
             return this.isDirecteur && !year.isClosed;
+        },
+
+        /**
+         * Supprimer reste proposé sur TOUTE année, y compris terminée ou active : c'est précisément
+         * une année archivée par erreur, ou créée en double, qu'on veut pouvoir retirer. La garde
+         * n'est pas ici — elle est dans le mot à recopier et, surtout, côté serveur (une année qui
+         * porte des données est refusée en mode réel).
+         */
+        canDelete(year) {
+            return this.isDirecteur && !!year.id;
         },
 
         activeYear() {
@@ -275,6 +313,71 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.isActivating = false;
             }
+        },
+
+        // ------------------------------------------------------------------ Suppression
+
+        openDelete(year) {
+            this.yearToDelete = year;
+            this.deleteConfirmation = '';
+            this.deleteError = null;
+        },
+
+        closeDelete() {
+            // Ne se ferme pas pendant l'appel : la suppression est déjà partie côté serveur, laisser
+            // croire qu'on l'a annulée en refermant la fenêtre serait mensonger.
+            if (this.isDeleting) return;
+
+            this.yearToDelete = null;
+            this.deleteConfirmation = '';
+            this.deleteError = null;
+        },
+
+        /**
+         * Miroir exact de SchoolYearDeletionConfirmation.Matches côté serveur : le LIBELLÉ de l'année,
+         * insensible à la casse et aux espaces de bord (il se recopie à la main). Le bouton reste
+         * inerte tant que c'est faux — un confort, l'API revérifie pour qui passe par curl.
+         */
+        get deleteConfirmationMatches() {
+            const typed = (this.deleteConfirmation || '').trim();
+            const label = (this.yearToDelete?.label || '').trim();
+
+            return typed !== '' && label !== '' && typed.toLocaleLowerCase() === label.toLocaleLowerCase();
+        },
+
+        async submitDelete() {
+            if (!this.yearToDelete || !this.deleteConfirmationMatches || this.isDeleting) return;
+
+            this.isDeleting = true;
+            this.deleteError = null;
+            try {
+                const result = await window.api.delete(`/school-years/${this.yearToDelete.id}`, {
+                    confirmation: this.deleteConfirmation.trim()
+                });
+
+                this.yearToDelete = null;
+                this.deleteConfirmation = '';
+                this.deleteResult = result;
+
+                await this.loadYears();
+            } catch (err) {
+                this.deleteError = window.api.toMessage(
+                    err, "La suppression a échoué. L'année scolaire n'a pas été modifiée.");
+            } finally {
+                this.isDeleting = false;
+            }
+        },
+
+        /**
+         * Rechargement COMPLET de la page quand l'année ACTIVE a changé : la pastille d'année de la
+         * barre supérieure, les sélecteurs d'inscription et les compteurs du tableau de bord encore
+         * en mémoire dans d'autres composants décriraient un exercice qui n'existe plus.
+         */
+        closeDeleteResult() {
+            const reload = this.deleteResult && this.deleteResult.wasActive;
+            this.deleteResult = null;
+
+            if (reload) window.location.reload();
         },
 
         // ------------------------------------------------------------------ Export

@@ -60,9 +60,11 @@ public class ResetSchoolDataTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     /// <summary>
-    /// Une école « après une phase d'essai » : de la configuration (classe, année, trimestre, matière,
-    /// compte utilisateur) ET des données saisies (élève, inscription, paiement, note, compteur de
-    /// matricules), dont un élève déjà supprimé logiquement.
+    /// Une école « après une phase d'essai » : ce qui a été SAISI (élèves, inscriptions, paiements,
+    /// notes…) comme ce qui a été PARAMÉTRÉ (classes, matières, enseignants, barème, inventaire, paie,
+    /// comptes du personnel) — tout cela part depuis le 15/09/2026. Et ce qui doit SURVIVRE : le
+    /// compte Directeur, la fiche et les réglages de l'école, les années et trimestres, les mentions,
+    /// les bâtiments et salles, le journal d'audit.
     /// </summary>
     private static void Seed(ApplicationDbContext owner, Guid schoolId)
     {
@@ -74,13 +76,83 @@ public class ResetSchoolDataTests : IAsyncLifetime
         var deletedStudentId = Guid.NewGuid();
         var enrollmentId = Guid.NewGuid();
 
+        var directeurId = Guid.NewGuid();
+        var secretaireId = Guid.NewGuid();
+        var enseignantUserId = Guid.NewGuid();
+
         owner.Users.Add(new User
         {
+            Id = directeurId,
             SchoolId = schoolId,
             Email = $"directeur-{schoolId:N}@example.sn",
             PasswordHash = "hash",
             FullName = "Le Directeur",
             Role = Role.Directeur
+        });
+
+        // Personnel : deux comptes non-Directeur, supprimés par la purge.
+        owner.Users.AddRange(
+            new User
+            {
+                Id = secretaireId,
+                SchoolId = schoolId,
+                Email = $"secretaire-{schoolId:N}@example.sn",
+                PasswordHash = "hash",
+                FullName = "La Secrétaire",
+                Role = Role.Secretariat
+            },
+            new User
+            {
+                Id = enseignantUserId,
+                SchoolId = schoolId,
+                Email = $"enseignant-{schoolId:N}@example.sn",
+                PasswordHash = "hash",
+                FullName = "L'Enseignant",
+                Role = Role.Enseignant
+            });
+
+        // Jetons et historique pendus à ces comptes : sans leur purge, la suppression des comptes
+        // échouerait en violation de clé étrangère (23503).
+        owner.Set<RefreshToken>().Add(new RefreshToken
+        {
+            UserId = secretaireId,
+            TokenHash = $"hash-{Guid.NewGuid():N}",
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7)
+        });
+
+        owner.Set<UserStatusHistory>().Add(new UserStatusHistory
+        {
+            SchoolId = schoolId,
+            UserId = secretaireId,
+            PreviousStatus = EntityStatus.Active,
+            NewStatus = EntityStatus.Suspended,
+            Reason = "Test",
+            ChangedByUserId = directeurId,
+            ChangedAt = DateTimeOffset.UtcNow
+        });
+
+        // Journal d'audit : CONSERVÉ. Celle du Directeur garde son auteur, celle de la secrétaire
+        // doit se retrouver DÉTACHÉE (UserId à NULL) — l'action reste tracée, le compte non.
+        owner.AuditLogs.AddRange(
+            new AuditLog
+            {
+                SchoolId = schoolId, UserId = directeurId, Module = "Schools", Action = "GoLive",
+                Success = true, OccurredAt = DateTimeOffset.UtcNow
+            },
+            new AuditLog
+            {
+                SchoolId = schoolId, UserId = secretaireId, Module = "Finance", Action = "RecordPayment",
+                Success = true, OccurredAt = DateTimeOffset.UtcNow
+            });
+
+        // Mentions, bâtiments et salles : réglages de l'établissement, CONSERVÉS par la purge.
+        owner.Set<Mention>().Add(new Mention { SchoolId = schoolId, Label = "Très bien", MinAverage = 16m });
+
+        var buildingId = Guid.NewGuid();
+        owner.Set<Building>().Add(new Building { Id = buildingId, SchoolId = schoolId, Name = "Bâtiment A" });
+        owner.Set<Room>().Add(new Room
+        {
+            SchoolId = schoolId, BuildingId = buildingId, Name = "Salle 1", Capacity = 40
         });
 
         owner.Classrooms.Add(new Classroom
@@ -103,6 +175,79 @@ public class ResetSchoolDataTests : IAsyncLifetime
         owner.Subjects.Add(new Subject
         {
             Id = subjectId, SchoolId = schoolId, Name = "Mathématiques", Level = "Primaire", Coefficient = 4
+        });
+
+        // Sous-matière : subjects.ParentSubjectId est une FK ON DELETE RESTRICT vers subjects
+        // elle-même. Sans la mise à NULL que fait la fonction avant sa boucle, la purge des matières
+        // buterait sur cette ligne.
+        owner.Subjects.Add(new Subject
+        {
+            SchoolId = schoolId, Name = "Géométrie", Level = "Primaire", Coefficient = 2,
+            ParentSubjectId = subjectId
+        });
+
+        // Enseignant, son compte, ses matières, son affectation et son créneau : chacun porte une FK
+        // vers teachers, classrooms ou subjects, et doit donc partir AVANT eux.
+        var teacherId = Guid.NewGuid();
+
+        owner.Teachers.Add(new Teacher
+        {
+            Id = teacherId, SchoolId = schoolId, Matricule = "ENS-2026-0001", FullName = "L'Enseignant",
+            Email = $"enseignant-{schoolId:N}@example.sn", BirthDate = new DateOnly(1990, 1, 1),
+            UserId = enseignantUserId
+        });
+
+        owner.Set<TeacherSubject>().Add(new TeacherSubject
+        {
+            SchoolId = schoolId, TeacherId = teacherId, SubjectId = subjectId
+        });
+
+        owner.Set<TeacherAssignment>().Add(new TeacherAssignment
+        {
+            SchoolId = schoolId, TeacherId = teacherId, ClassroomId = classroomId,
+            SubjectId = subjectId, SchoolYearId = schoolYearId
+        });
+
+        owner.Set<ScheduleSlot>().Add(new ScheduleSlot
+        {
+            SchoolId = schoolId, TeacherId = teacherId, ClassroomId = classroomId, SubjectId = subjectId,
+            DayOfWeek = DayOfWeek.Monday,
+            StartTime = new TimeOnly(8, 0), EndTime = new TimeOnly(10, 0)
+        });
+
+        // Paie : fiche_paies et employee_contract_histories portent une FK RESTRICT vers le contrat.
+        var contractId = Guid.NewGuid();
+
+        owner.Set<EmployeeContract>().Add(new EmployeeContract
+        {
+            Id = contractId, SchoolId = schoolId, TeacherId = teacherId, Type = ContractType.Permanent,
+            BaseSalary = 200_000m
+        });
+
+        owner.Set<FichePaie>().Add(new FichePaie
+        {
+            SchoolId = schoolId, EmployeeContractId = contractId, Month = 10, Year = 2026,
+            GrossSalary = 200_000m, NetSalary = 180_000m
+        });
+
+        // Trésorerie & fiscalité.
+        owner.Set<TaxeDeclaration>().Add(new TaxeDeclaration
+        {
+            SchoolId = schoolId, Month = 10, Year = 2026, TotalDueToState = 45_000m
+        });
+
+        // Barème des frais : fee_change_history → class_fees → fee_categories, et payment_breakdowns
+        // (déjà purgé) référence fee_categories.
+        var feeCategoryId = Guid.NewGuid();
+
+        owner.Set<FeeCategory>().Add(new FeeCategory
+        {
+            Id = feeCategoryId, SchoolId = schoolId, Name = "Mensualité", IsRecurring = true
+        });
+
+        owner.Set<ClassFee>().Add(new ClassFee
+        {
+            SchoolId = schoolId, FeeCategoryId = feeCategoryId, ClassroomId = classroomId, Amount = 15_000m
         });
 
         // Élève déjà « supprimé » depuis l'interface : invisible à l'écran, bien présent en base.
@@ -176,8 +321,8 @@ public class ResetSchoolDataTests : IAsyncLifetime
             IssuedOn = new DateOnly(2027, 6, 1), WasFinanciallyClear = true
         });
 
-        // Patrimoine (catégorie + lot) : CONSERVÉ par la purge. Seule la fiche de prêt, qui lie un
-        // bien à l'élève, doit partir avec lui.
+        // Patrimoine (catégorie + lot + journal de stock) : purgé depuis le 15/09/2026 — un inventaire
+        // fictif n'a pas plus sa place dans une école remise à neuf qu'un élève fictif.
         var inventoryCategoryId = Guid.NewGuid();
         var inventoryItemId = Guid.NewGuid();
 
@@ -199,6 +344,15 @@ public class ResetSchoolDataTests : IAsyncLifetime
             BeneficiaryType = AssignmentBeneficiaryType.Eleve, StudentId = studentId,
             BeneficiaryLabel = "Awa Fall", AssignedOn = new DateOnly(2026, 10, 5),
             Status = AssignmentStatus.EnCours
+        });
+
+        // stock_movements est APPEND-ONLY pour le rôle applicatif (SELECT, INSERT seulement) : la
+        // fonction SECURITY DEFINER est la seule voie qui l'efface, et ce test le prouve.
+        owner.Set<StockMovement>().Add(new StockMovement
+        {
+            SchoolId = schoolId, ItemId = inventoryItemId, Type = StockMovementType.Entree,
+            Quantity = 30, MovementDate = new DateOnly(2026, 10, 1), Reason = "Dotation initiale",
+            QuantityTotalAfter = 30, QuantityAvailableAfter = 30
         });
 
         owner.Set<MatriculeSequence>().Add(new MatriculeSequence
@@ -261,23 +415,178 @@ public class ResetSchoolDataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_Configuration_Of_The_School_Must_Survive_The_Purge()
+    public async Task The_Identity_Of_The_School_Must_Survive_The_Purge()
     {
         await PurgeEcoleAAsync();
 
         await using var owner = _db.NewOwnerContext();
 
         (await owner.Schools.CountAsync(s => s.Id == EcoleA)).Should().Be(1);
-        (await owner.Users.IgnoreQueryFilters().CountAsync(u => u.SchoolId == EcoleA)).Should().Be(1,
-            "le Directeur doit pouvoir se reconnecter après avoir remis son école à neuf");
         (await owner.SchoolYears.IgnoreQueryFilters().CountAsync(y => y.SchoolId == EcoleA)).Should().Be(1,
-            "l'année scolaire active est conservée (critère de la Zone de danger)");
+            "l'année scolaire active est conservée : c'est le cadre de l'établissement, pas une donnée d'essai");
         (await owner.Terms.IgnoreQueryFilters().CountAsync(t => t.SchoolId == EcoleA)).Should().Be(1);
-        (await owner.Classrooms.IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleA)).Should().Be(1);
-        (await owner.Subjects.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(1);
-        (await owner.Set<InventoryCategory>().IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleA)).Should().Be(1,
-            "le patrimoine (inventaire) est configuré, pas saisi pendant l'essai : il survit à la purge");
-        (await owner.Set<InventoryItem>().IgnoreQueryFilters().CountAsync(i => i.SchoolId == EcoleA)).Should().Be(1);
+        (await owner.Set<Mention>().IgnoreQueryFilters().CountAsync(m => m.SchoolId == EcoleA)).Should().Be(1,
+            "les mentions sont un réglage de notation, pas une saisie");
+        (await owner.Set<Building>().IgnoreQueryFilters().CountAsync(b => b.SchoolId == EcoleA)).Should().Be(1);
+        (await owner.Set<Room>().IgnoreQueryFilters().CountAsync(r => r.SchoolId == EcoleA)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// Le périmètre élargi du 15/09/2026 : la configuration MÉTIER part elle aussi. Une école « à
+    /// neuf » ne garde ni classe, ni matière, ni enseignant, ni barème, ni inventaire, ni paie fictifs.
+    /// </summary>
+    [Fact]
+    public async Task The_Business_Configuration_Must_Be_Purged_Too()
+    {
+        await PurgeEcoleAAsync();
+
+        await using var owner = _db.NewOwnerContext();
+
+        (await owner.Classrooms.IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Subjects.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(0,
+            "les matières partent AVEC leur sous-matière : la FK auto-référencée ne doit pas bloquer la purge");
+        (await owner.Teachers.IgnoreQueryFilters().CountAsync(t => t.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<TeacherSubject>().IgnoreQueryFilters().CountAsync(t => t.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<TeacherAssignment>().IgnoreQueryFilters().CountAsync(a => a.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<ScheduleSlot>().IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<EmployeeContract>().IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<FichePaie>().IgnoreQueryFilters().CountAsync(f => f.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<TaxeDeclaration>().IgnoreQueryFilters().CountAsync(d => d.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<FeeCategory>().IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<ClassFee>().IgnoreQueryFilters().CountAsync(f => f.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<InventoryCategory>().IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<InventoryItem>().IgnoreQueryFilters().CountAsync(i => i.SchoolId == EcoleA)).Should().Be(0);
+        (await owner.Set<StockMovement>().IgnoreQueryFilters().CountAsync(m => m.SchoolId == EcoleA)).Should().Be(0,
+            "stock_movements est append-only pour l'application : seule la fonction SECURITY DEFINER l'efface");
+
+        // Et l'école voisine n'a rien perdu de sa propre configuration.
+        (await owner.Classrooms.IgnoreQueryFilters().CountAsync(c => c.SchoolId == EcoleB)).Should().Be(1);
+        (await owner.Teachers.IgnoreQueryFilters().CountAsync(t => t.SchoolId == EcoleB)).Should().Be(1);
+        (await owner.Set<InventoryItem>().IgnoreQueryFilters().CountAsync(i => i.SchoolId == EcoleB)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// Les comptes du personnel sont SUPPRIMÉS (arbitrage du 15/09/2026), le Directeur reste — il doit
+    /// pouvoir se reconnecter —, et le journal d'audit n'est pas purgé : les entrées des comptes
+    /// disparus sont DÉTACHÉES (UserId à NULL), jamais effacées.
+    /// </summary>
+    [Fact]
+    public async Task Staff_Accounts_Must_Be_Deleted_And_Their_Audit_Trail_Detached()
+    {
+        await PurgeEcoleAAsync();
+
+        await using var owner = _db.NewOwnerContext();
+
+        var remaining = await owner.Users.IgnoreQueryFilters()
+            .Where(u => u.SchoolId == EcoleA)
+            .ToListAsync();
+
+        remaining.Should().ContainSingle().Which.Role.Should().Be(Role.Directeur,
+            "le Directeur doit pouvoir se reconnecter après avoir remis son école à neuf");
+
+        (await owner.Set<RefreshToken>().IgnoreQueryFilters().CountAsync()).Should().Be(1,
+            "les sessions du personnel supprimé partent ; celle de l'École B reste");
+        (await owner.Set<UserStatusHistory>().IgnoreQueryFilters().CountAsync(h => h.SchoolId == EcoleA)).Should().Be(0);
+
+        var logs = await owner.AuditLogs.IgnoreQueryFilters()
+            .Where(a => a.SchoolId == EcoleA)
+            .ToListAsync();
+
+        logs.Should().HaveCount(2, "le journal d'audit n'est JAMAIS purgé");
+        logs.Should().ContainSingle(a => a.Action == "RecordPayment" && a.UserId == null,
+            "l'entrée d'un compte supprimé est détachée, pas effacée");
+        logs.Should().ContainSingle(a => a.Action == "GoLive" && a.UserId != null,
+            "celle du Directeur garde son auteur");
+
+        // Et le personnel de l'école voisine est intact.
+        (await owner.Users.IgnoreQueryFilters().CountAsync(u => u.SchoolId == EcoleB)).Should().Be(3);
+    }
+
+    /// <summary>
+    /// Le personnel déjà connecté garde un jeton d'accès valide jusqu'à 15 minutes après la purge
+    /// (Auth.AccessTokenMinutes) : sa première action journalisée viserait alors un compte disparu.
+    /// L'écriture d'audit doit se DÉTACHER plutôt que d'échouer — sans quoi une violation de clé
+    /// étrangère ferait perdre à la fois l'action et sa trace (migration AllowAuditLogsWithoutActor).
+    /// </summary>
+    [Fact]
+    public async Task An_Action_By_An_Account_Deleted_Mid_Session_Must_Still_Be_Journalised()
+    {
+        Guid secretaireId;
+
+        await using (var before = _db.NewOwnerContext())
+        {
+            secretaireId = await before.Users.IgnoreQueryFilters()
+                .Where(u => u.SchoolId == EcoleA && u.Role == Role.Secretariat)
+                .Select(u => u.Id)
+                .SingleAsync();
+        }
+
+        await PurgeEcoleAAsync();
+
+        await using (var app = _db.NewAppContext(EcoleA))
+        {
+            await app.Database.OpenConnectionAsync();
+
+            await using var command = app.Database.GetDbConnection().CreateCommand();
+            command.CommandText =
+                "SELECT append_audit_log($1, $2, 'Finance', 'RecordPayment', true, NULL, NULL, NOW())";
+
+            foreach (var value in new object[] { EcoleA, secretaireId })
+            {
+                var parameter = command.CreateParameter();
+                parameter.Value = value;
+                command.Parameters.Add(parameter);
+            }
+
+            await command.ExecuteNonQueryAsync();
+        }
+
+        await using var owner = _db.NewOwnerContext();
+
+        var written = await owner.AuditLogs.IgnoreQueryFilters()
+            .Where(a => a.SchoolId == EcoleA && a.Action == "RecordPayment")
+            .ToListAsync();
+
+        written.Should().HaveCount(2, "l'entrée d'avant la purge est détachée, celle d'après est ajoutée");
+        written.Should().OnlyContain(a => a.UserId == null,
+            "un compte supprimé ne peut plus être l'auteur de rien — mais l'action reste tracée");
+    }
+
+    /// <summary>
+    /// Un compte rattaché AUSSI à un autre établissement (groupe scolaire, table user_schools) n'est
+    /// jamais supprimé : la purge d'une école ne doit rien retirer à une autre — qui peut être, elle,
+    /// en mode réel. Seul son rattachement à l'école purgée disparaît.
+    /// </summary>
+    [Fact]
+    public async Task A_Staff_Account_Shared_With_Another_School_Must_Survive()
+    {
+        var partageId = Guid.NewGuid();
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Users.Add(new User
+            {
+                Id = partageId,
+                SchoolId = EcoleA,
+                Email = "comptable-groupe@example.sn",
+                PasswordHash = "hash",
+                FullName = "Comptable du groupe",
+                Role = Role.Finance
+            });
+
+            owner.UserSchools.Add(new UserSchool { UserId = partageId, SchoolId = EcoleB });
+
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await PurgeEcoleAAsync();
+
+        await using var check = _db.NewOwnerContext();
+
+        (await check.Users.IgnoreQueryFilters().CountAsync(u => u.Id == partageId)).Should().Be(1,
+            "supprimer ce compte retirerait un utilisateur à l'École B, qui n'a rien demandé");
+        (await check.UserSchools.IgnoreQueryFilters().CountAsync(us => us.UserId == partageId)).Should().Be(1,
+            "son rattachement à l'École B est conservé");
     }
 
     [Fact]
@@ -302,14 +611,19 @@ public class ResetSchoolDataTests : IAsyncLifetime
 
         var summary = await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleA, CancellationToken.None);
 
-        // 2 élèves (dont un supprimé logiquement) + 1 inscription + 1 paiement + 1 note + 1 compteur
-        // + 1 session d'examen + 1 dossier + 1 résultat + 1 certificat de mutation + 1 prêt = 11.
-        summary.TotalRowsDeleted.Should().Be(11);
+        // Le compte rendu est ce que le Directeur LIT après la purge : chaque domaine doit y figurer
+        // avec son vrai nombre de lignes. Assertions par LIBELLÉ plutôt que sur le total : un total en
+        // dur se périme à chaque ligne ajoutée au jeu d'essai, sans rien prouver de plus.
         summary.Entries.Should().Contain(e => e.Label == "Élèves" && e.RowsDeleted == 2);
         summary.Entries.Should().Contain(e => e.Label == "Paiements" && e.RowsDeleted == 1);
         summary.Entries.Should().Contain(e => e.Label == "Dossiers de candidature aux examens" && e.RowsDeleted == 1);
         summary.Entries.Should().Contain(e => e.Label == "Certificats de mutation" && e.RowsDeleted == 1);
         summary.Entries.Should().Contain(e => e.Label == "Affectations de matériel" && e.RowsDeleted == 1);
+        summary.Entries.Should().Contain(e => e.Label == "Classes et niveaux" && e.RowsDeleted == 1);
+        summary.Entries.Should().Contain(e => e.Label == "Matières" && e.RowsDeleted == 2);
+        summary.Entries.Should().Contain(e => e.Label == "Enseignants" && e.RowsDeleted == 1);
+        summary.Entries.Should().Contain(e => e.Label == "Comptes du personnel" && e.RowsDeleted == 2);
+        summary.TotalRowsDeleted.Should().Be(summary.Entries.Sum(e => e.RowsDeleted));
     }
 
     [Fact]
@@ -440,7 +754,7 @@ public class ResetSchoolDataTests : IAsyncLifetime
 
         var summary = await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleA, CancellationToken.None);
 
-        summary.TotalRowsDeleted.Should().Be(11);
+        summary.Entries.Should().Contain(e => e.Label == "Élèves" && e.RowsDeleted == 2);
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using SamaEcole.Application.SchoolYears;
 using SamaEcole.Application.SchoolYears.Commands.ActivateSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.CreateSchoolYear;
+using SamaEcole.Application.SchoolYears.Commands.DeleteSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.UpdateSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.ExportSchoolYear;
 using SamaEcole.Application.SchoolYears.Queries.GetSchoolYears;
@@ -23,6 +24,12 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
 {
     /// <summary>Corps du POST d'activation : la ressource est dans l'URL, le mot de passe confirme l'acte.</summary>
     public record ActivateRequest(string Password);
+
+    /// <summary>
+    /// Corps du DELETE : le LIBELLÉ EXACT de l'année à supprimer (« 2025-2026 »). Revérifié côté
+    /// serveur — la modale ne protège que les appelants qui passent par l'interface.
+    /// </summary>
+    public record DeleteRequest(string Confirmation);
 
     /// <summary>
     /// LECTURE ouverte à tout utilisateur de l'école : l'année active est le contexte de travail de
@@ -94,6 +101,33 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Supprime une année scolaire — Directeur, avec recopie du libellé exact dans le corps.
+    ///
+    /// DEUX RÉGIMES, tenus par le Handler puis par la base (voir DeleteSchoolYearCommand) : en mode
+    /// test, l'année et tout ce qu'elle porte sont effacés ; en mode réel, elle n'est ARCHIVÉE que si
+    /// elle ne porte aucune donnée — sinon 409 SCHOOL_YEAR_HAS_DATA, car inscriptions et paiements
+    /// sont la contrepartie de reçus déjà remis (AGENTS.md règle #6).
+    ///
+    /// Si l'année supprimée était l'année ACTIVE, l'établissement rebascule sur l'année ouverte la plus
+    /// proche ; quand il n'en reste aucune, la réponse le signale (requiresActiveYearSelection) et
+    /// l'écran demande d'en activer ou d'en créer une.
+    ///
+    /// DELETE avec un corps : la ressource visée est bien l'année (elle est dans l'URL), seul le mot de
+    /// confirmation voyage dans le corps — contrairement à POST /schools/current/reset-data, qui agit
+    /// sur l'école entière et n'a donc pas de ressource à supprimer.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<DeleteSchoolYearResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Delete(
+        Guid id, [FromBody] DeleteRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new DeleteSchoolYearCommand(id, request.Confirmation), cancellationToken));
 
     /// <summary>
     /// Trimestres générés automatiquement à la création de l'année (ticket JGK-G01) — LECTURE ouverte

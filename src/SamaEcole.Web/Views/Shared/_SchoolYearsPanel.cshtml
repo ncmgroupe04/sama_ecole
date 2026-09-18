@@ -110,6 +110,17 @@
  class="ml-1 p-1.5 text-slate-400 hover:text-primary rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-colors disabled:opacity-50">
  <icon name="download" class="w-4 h-4" />
  </button>
+
+ @* Suppression — Directeur seul (DELETE /school-years/{id}). Proposée sur TOUTE année, y
+ compris active ou terminée : c'est justement une année créée en double, ou archivée par
+ erreur, qu'on veut pouvoir retirer. La modale exige la recopie du libellé, et le serveur
+ refuse en mode réel toute année qui porte des données (409 SCHOOL_YEAR_HAS_DATA). *@
+ <button x-show="canDelete(year)" x-cloak
+ x-on:click="openDelete(year)"
+ title="Supprimer cette année scolaire"
+ class="ml-1 p-1.5 text-slate-400 hover:text-danger rounded-xl focus:outline-none focus:ring-2 focus:ring-danger transition-colors">
+ <icon name="trash-2" class="w-4 h-4" />
+ </button>
  </td>
  </tr>
  </template>
@@ -272,5 +283,106 @@
  <confirm-dialog-body close-action="showActivatedDialog = false">
  L'établissement travaille désormais sur <span class="font-medium text-slate-900" x-text="activatedYearLabel"></span>.
  </confirm-dialog-body>
+ </modal-shell>
+
+ @*
+ Suppression d'une année scolaire. Même patron de garde que la « Zone de danger » : un mot à
+ RECOPIER — ici le libellé de l'année, pas un mot générique, pour obliger à regarder la ligne
+ visée — et rien d'autre. Le texte change avec le régime de l'établissement (isLiveMode), car
+ ce n'est pas la même opération : effacement en mode test, archivage d'une année vide en mode réel.
+ *@
+ <modal-shell open="yearToDelete" on-close="closeDelete()" title="Supprimer l'année scolaire" size="md">
+ <template x-if="yearToDelete">
+ <div>
+ @* Mode TEST : tout part avec l'année. *@
+ <div x-show="!isLiveMode" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-4">
+ <div class="flex items-start gap-3">
+ <icon name="alert-circle" class="w-5 h-5 text-danger shrink-0 mt-0.5" />
+ <div class="text-sm text-danger">
+ <p class="font-semibold">Cette action est irréversible.</p>
+ <p class="mt-1">
+ L'année <span class="font-semibold" x-text="yearToDelete?.label"></span> et TOUT ce qu'elle
+ porte — inscriptions, paiements, notes, bulletins, appels, examens — seront effacés
+ définitivement. Les élèves, eux, restent : seule leur inscription à cette année disparaît.
+ </p>
+ </div>
+ </div>
+ </div>
+
+ @* Mode RÉEL : archivage, et seulement si l'année est vide. *@
+ <div x-show="isLiveMode" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-4">
+ <div class="flex items-start gap-3">
+ <icon name="alert-circle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
+ <div class="text-sm text-slate-700">
+ <p class="font-semibold text-slate-900">L'établissement est en mode réel.</p>
+ <p class="mt-1">
+ L'année <span class="font-semibold" x-text="yearToDelete?.label"></span> ne sera retirée que
+ si elle ne porte AUCUNE donnée. Dès qu'une inscription, une note ou un appel y est
+ rattaché, la suppression est refusée : ces écritures sont la contrepartie de reçus déjà
+ remis aux familles. Exportez l'année pour l'archiver hors de la plateforme.
+ </p>
+ </div>
+ </div>
+ </div>
+
+ <p x-show="yearToDelete?.isActive" x-cloak class="mt-4 text-sm text-slate-600">
+ C'est l'année ACTIVE : l'établissement rebasculera automatiquement sur l'année ouverte la plus
+ proche. S'il n'en reste aucune, il faudra en activer ou en créer une avant toute saisie.
+ </p>
+
+ <p class="mt-4 text-sm text-slate-600">
+ Pour confirmer, saisissez le libellé exact
+ <span class="font-mono font-semibold text-slate-900" x-text="yearToDelete?.label"></span>.
+ </p>
+
+ <div class="mt-3">
+ <label for="delete-year-confirmation" class="sr-only">Libellé de l'année</label>
+ <input id="delete-year-confirmation" type="text" x-model="deleteConfirmation" autocomplete="off"
+ :placeholder="yearToDelete?.label" class="input-field" :class="deleteError && 'input-field-error'"
+ x-on:keydown.enter.prevent="deleteConfirmationMatches && submitDelete()">
+ </div>
+
+ <div x-show="deleteError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="deleteError"></div>
+
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary group">Annuler</button>
+ <button type="button" x-on:click="submitDelete()"
+ :disabled="!deleteConfirmationMatches || isDeleting" class="btn-modal-danger disabled:cursor-not-allowed disabled:opacity-50">
+ <span x-text="isDeleting ? 'Suppression…' : 'Supprimer cette année'"></span>
+ </button>
+ </div>
+ </div>
+ </template>
+ </modal-shell>
+
+ <!-- Compte rendu : ce qui a réellement été fait, pour que le Directeur puisse vérifier. -->
+ <modal-shell open="deleteResult" size="md" on-close="closeDeleteResult()" title="Année scolaire supprimée">
+ <template x-if="deleteResult">
+ <div>
+ <p class="text-sm text-slate-600">
+ L'année <span class="font-medium text-slate-900" x-text="deleteResult?.label"></span>
+ <span x-show="deleteResult?.wasPurged" x-cloak>
+ et ses <span class="font-medium text-slate-900" x-text="deleteResult?.summary ? deleteResult.summary.totalRowsDeleted : 0"></span>
+ ligne(s) de données ont été effacées définitivement.
+ </span>
+ <span x-show="!deleteResult?.wasPurged" x-cloak>a été archivée : elle n'apparaît plus dans la liste.</span>
+ </p>
+
+ <p x-show="deleteResult?.newActiveYear" x-cloak class="mt-3 text-sm text-slate-600">
+ L'établissement travaille désormais sur
+ <span class="font-medium text-slate-900" x-text="deleteResult?.newActiveYear?.label"></span>.
+ </p>
+
+ <div x-show="deleteResult?.requiresActiveYearSelection" x-cloak
+ class="mt-3 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-slate-700">
+ Aucune année active : il ne restait aucune année ouverte. Activez-en une ou créez la nouvelle
+ année scolaire — sans année active, aucune inscription ni aucune note ne peut être saisie.
+ </div>
+
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeDeleteResult()" class="btn-modal-primary group">Fermer</button>
+ </div>
+ </div>
+ </template>
  </modal-shell>
 </div>

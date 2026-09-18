@@ -845,7 +845,9 @@ document.addEventListener('alpine:init', () => {
         // ---------------------------- Retour mode test (recette / environnements jetables uniquement)
 
         async revertToTest() {
-            if (this.isRevertingToTest) return;
+            // Le bouton reste AFFICHÉ en production, mais désactivé (voir Settings/Index.cshtml) :
+            // cette garde évite l'appel — et le 404 du routeur — si un clic passait quand même.
+            if (!this.revertToTestAvailable || this.isRevertingToTest) return;
 
             this.isRevertingToTest = true;
             this.revertToTestError = null;

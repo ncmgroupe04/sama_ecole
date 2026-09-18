@@ -17,11 +17,15 @@ public class AuditLog : AuditableEntity, ITenantEntity
     public Guid SchoolId { get; set; }
 
     /// <summary>
-    /// Acteur de l'action — toujours déterminable pour ce qui est journalisé ici : voir
+    /// Acteur de l'action — toujours déterminable AU MOMENT où l'entrée est écrite : voir
     /// AuditLoggingBehavior (une tentative de connexion sur un e-mail inconnu, sans école ni
     /// utilisateur réel à qui l'imputer, n'est délibérément pas journalisée dans cette table tenant).
+    ///
+    /// <c>null</c> a posteriori UNIQUEMENT : la purge du mode test (<c>reset_school_data</c>, migration
+    /// ExtendResetSchoolDataToConfiguration) supprime les comptes du personnel et détache leurs
+    /// entrées — l'action reste au journal, son auteur s'affiche « Compte supprimé ».
     /// </summary>
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
     /// <summary>Domaine fonctionnel, dérivé automatiquement de l'espace de noms de la commande (ex. "Finance", "Users").</summary>
     public required string Module { get; set; }

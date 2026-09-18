@@ -453,15 +453,27 @@
  deux affichaient parfois des messages contradictoires. La barre d'état est l'emplacement
  spécifié par le Volume 5 §3.3/§9 pour cette information — elle seule la porte désormais. *@
 
- @* Pastille « MODE TEST » (bac à sable) : rappelle à tout le personnel que les données saisies
- sont des essais, purgeables depuis Paramètres › Zone de danger, tant que l'établissement n'est
- pas passé en mode réel (School.WentLiveAt). Disparaît au passage en mode réel. Source :
- GET /schools/current/mode, voir sandboxModeBadge(). Informatif — n'ouvre rien. *@
- <div x-data="sandboxModeBadge()" x-show="loaded && !isLive" x-cloak class="hidden sm:block">
- <span title="Mode test — les données saisies sont des essais et peuvent être réinitialisées (Paramètres › Zone de danger)"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-amber-50 text-amber-700 text-sm font-medium ring-1 ring-amber-200">
- <icon name="lightbulb" class="w-4 h-4" />
- Mode test
+ @* Pastille de RÉGIME (bac à sable / exploitation réelle) : affichée dans les DEUX sens depuis le
+ 15/09/2026 — le régime est le contexte de travail de l'établissement, pas seulement un
+ avertissement de phase d'essai. Pour le Directeur, c'est un raccourci vers Paramètres ›
+ Sécurité, où le retour au mode test reste visible en permanence ; pour les autres rôles, un
+ simple rappel. Source : GET /schools/current/mode, voir sandboxModeBadge(). N'active rien. *@
+ <div x-data="sandboxModeBadge()" x-show="loaded" x-cloak class="hidden sm:block">
+ <a x-show="isDirecteur" x-cloak href="/parametres?tab=securite"
+ :title="isLive ? 'Mode réel — les données enregistrées sont définitives (Paramètres › Sécurité)' : 'Mode test — les données saisies sont des essais et peuvent être réinitialisées (Paramètres › Sécurité)'"
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium ring-1 transition-all duration-200 active:scale-95"
+ :class="isLive ? 'bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200' : 'bg-amber-50 text-amber-700 ring-amber-200 hover:bg-amber-100'">
+ <icon name="lightbulb" class="w-4 h-4" x-show="!isLive" x-cloak />
+ <icon name="shield" class="w-4 h-4" x-show="isLive" x-cloak />
+ <span x-text="isLive ? 'Mode réel' : 'Mode test'"></span>
+ </a>
+ <span x-show="!isDirecteur" x-cloak
+ :title="isLive ? 'Mode réel — les données enregistrées sont définitives' : 'Mode test — les données saisies sont des essais'"
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium ring-1"
+ :class="isLive ? 'bg-slate-100 text-slate-600 ring-slate-200' : 'bg-amber-50 text-amber-700 ring-amber-200'">
+ <icon name="lightbulb" class="w-4 h-4" x-show="!isLive" x-cloak />
+ <icon name="shield" class="w-4 h-4" x-show="isLive" x-cloak />
+ <span x-text="isLive ? 'Mode réel' : 'Mode test'"></span>
  </span>
  </div>
 

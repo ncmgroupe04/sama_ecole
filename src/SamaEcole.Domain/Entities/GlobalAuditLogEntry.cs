@@ -13,7 +13,8 @@ public class GlobalAuditLogEntry
     public Guid Id { get; set; }
     public Guid SchoolId { get; set; }
     public string SchoolName { get; set; } = string.Empty;
-    public Guid UserId { get; set; }
+    /// <summary><c>null</c> quand le compte a été supprimé par la purge du mode test.</summary>
+    public Guid? UserId { get; set; }
     public string ActorFullName { get; set; } = string.Empty;
     public string Module { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
