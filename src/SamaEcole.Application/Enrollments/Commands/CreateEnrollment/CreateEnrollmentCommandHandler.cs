@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Enrollments.Events;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
@@ -29,7 +30,8 @@ public class CreateEnrollmentCommandHandler(
     ITenantProvider tenantProvider,
     IMatriculeGenerator matriculeGenerator,
     TimeProvider timeProvider,
-    IKpiCacheService kpiCache)
+    IKpiCacheService kpiCache,
+    IPublisher publisher)
     : IRequestHandler<CreateEnrollmentCommand, EnrollmentReceiptDto>
 {
     public async Task<EnrollmentReceiptDto> Handle(CreateEnrollmentCommand request, CancellationToken cancellationToken)
@@ -58,11 +60,18 @@ public class CreateEnrollmentCommandHandler(
                     "La classe indiquée n'existe pas dans votre établissement.")
             ]);
 
+        // Capturé DANS la transaction (var student) mais lu APRÈS coup pour StudentEnrolledEvent : la
+        // transaction peut rembobiner, cette variable ne doit donc être exploitée qu'une fois le
+        // ExecuteInTransactionAsync ci-dessous revenu sans exception.
+        Guid enrolledStudentId = default;
+
         var receipt = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
             var (student, matricule) = request.Type == EnrollmentType.NewEnrollment
                 ? await CreateStudentAsync(schoolId, request, ct)
                 : await LoadStudentForReEnrollmentAsync(request, ct);
+
+            enrolledStudentId = student.Id;
 
             // Un élève n'a qu'une inscription (non annulée) par année (DDS §5.4). L'index unique en base
             // en est la garantie dure ; ce pré-contrôle offre un message lisible plutôt qu'un 409 brut.
@@ -156,6 +165,13 @@ public class CreateEnrollmentCommandHandler(
         // dashboard Directeur — les deux caches doivent tomber, jamais un seul.
         kpiCache.Invalidate(KpiCacheKeys.FinanceDashboard);
         kpiCache.Invalidate(KpiCacheKeys.DirectorDashboard);
+
+        // Ticket JGK-E03 : notification e-mail des Directeurs. Publié APRÈS la transaction, une fois
+        // l'inscription réellement enregistrée — jamais avant, sous peine d'annoncer une inscription
+        // qui pourrait encore être rembobinée par un échec de SaveChangesAsync.
+        await publisher.Publish(
+            new StudentEnrolledEvent(schoolId, enrolledStudentId, receipt.EnrollmentId, receipt.StudentFullName, receipt.Matricule, receipt.EnrolledAt),
+            cancellationToken);
 
         return receipt;
     }
