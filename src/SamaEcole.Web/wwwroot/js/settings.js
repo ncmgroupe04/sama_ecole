@@ -312,9 +312,11 @@ document.addEventListener('alpine:init', () => {
         async loadMentions() {
             try {
                 this.mentions = await window.api.get('/grades/mentions');
-            } catch {
+            } catch (err) {
                 // Non bloquant : le reste de l'écran reste utilisable, l'onglet se referme de lui-même
-                // au prochain rendu si canViewMentions est entre-temps repassé à faux.
+                // au prochain rendu si canViewMentions est entre-temps repassé à faux. Mais un échec
+                // silencieux rendrait une vraie panne indiscernable d'une école sans mention configurée.
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des mentions.'));
                 this.mentions = [];
             }
         },
