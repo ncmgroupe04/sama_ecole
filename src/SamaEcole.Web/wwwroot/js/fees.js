@@ -78,7 +78,7 @@ document.addEventListener('alpine:init', () => {
         // Création de catégorie (panneau latéral)
         isCategoryOpen: false,
         isSavingCategory: false,
-        newCategory: { name: '', isRecurring: true },
+        newCategory: { name: '', isRecurring: true, isBoardingFee: false },
         categoryErrors: {},
 
         // Confirmation « Catégorie ajoutée » affichée après un enregistrement réussi.
@@ -215,7 +215,7 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------ Catégories
 
         openCreateCategory() {
-            this.newCategory = { name: '', isRecurring: true };
+            this.newCategory = { name: '', isRecurring: true, isBoardingFee: false };
             this.categoryErrors = {};
             this.isCategoryOpen = true;
         },
