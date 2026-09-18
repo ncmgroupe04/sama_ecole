@@ -9,6 +9,7 @@ document.addEventListener('alpine:init', () => {
         SalleDeClasse: 'Salle de classe',
         Laboratoire: 'Laboratoire',
         Bureau: 'Bureau',
+        Dortoir: 'Dortoir',
         Autre: 'Autre'
     };
 
