@@ -108,7 +108,12 @@ public record AcademicHistoryEntryDto(
     bool IsActiveYear,
     decimal? GeneralAverage,
     DateTimeOffset EnrolledAt,
-    uint RowVersion);
+    uint RowVersion,
+
+    // Module Internat : régime de CETTE inscription (portée annuelle, comme le reste de la ligne).
+    // RoomLabel est null pour Externe ou pour un régime posé sans chambre affectée pour l'instant.
+    string BoardingStatus,
+    string? RoomLabel);
 
 /// <summary>Bloc de notes d'un trimestre : le bulletin lisible matière par matière, plus la synthèse.</summary>
 public record TermReportDto(
@@ -277,7 +282,16 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                 ClassroomName = dbContext.Classrooms.AsNoTracking()
                     .Where(c => c.Id == e.ClassroomId)
                     .Select(c => c.Name)
-                    .FirstOrDefault() ?? "Classe supprimée"
+                    .FirstOrDefault() ?? "Classe supprimée",
+
+                // Module Internat : régime + chambre de CETTE inscription (portée annuelle).
+                e.BoardingStatus,
+                RoomLabel = e.RoomId == null ? null :
+                    dbContext.Rooms.AsNoTracking()
+                        .Where(r => r.Id == e.RoomId)
+                        .Select(r => r.Name + " — " + dbContext.Buildings.AsNoTracking()
+                            .Where(b => b.Id == r.BuildingId).Select(b => b.Name).FirstOrDefault())
+                        .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
 
@@ -299,7 +313,9 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                 e.IsActive,
                 averageByYear.GetValueOrDefault(e.SchoolYearId),
                 e.EnrolledAt,
-                e.RowVersion))
+                e.RowVersion,
+                e.BoardingStatus.ToString(),
+                e.RoomLabel))
             .ToList();
 
         // 4) Paiements — jamais pour l'Enseignant (Volume 7 « Finance », Volume 1 §« Sans accès »).

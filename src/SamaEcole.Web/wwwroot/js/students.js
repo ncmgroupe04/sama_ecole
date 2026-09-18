@@ -1139,6 +1139,15 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
+         * Module Internat : entrée d'historique de l'inscription ACTIVE (régime d'hébergement + chambre),
+         * pour le badge « Hébergement » de la fiche — jamais la première entrée d'historique : un élève
+         * avec plusieurs années doit afficher le logement de l'année EN COURS, pas d'une année passée.
+         */
+        activeEnrollment() {
+            return this.studentDetail?.academicHistory?.find(h => h.isActiveYear) ?? null;
+        },
+
+        /**
          * Coefficient AFFICHÉ, verrouillé à 1 en Primaire : ce cycle n'a pas de système de coefficients
          * (le serveur les renvoie déjà à 1, ce garde-fou empêche tout coefficient pondéré résiduel de
          * s'afficher) — cohérent avec la moyenne simple /10 et le bulletin primaire.

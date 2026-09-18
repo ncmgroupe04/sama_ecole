@@ -366,6 +366,19 @@
                 </div>
             </template>
         </div>
+
+        @* Module Internat : régime d'hébergement de l'inscription ACTIVE (jamais une année passée de
+           l'historique) — activeEnrollment() dans students.js. RoomLabel n'est renseigné que pour un
+           Interne effectivement affecté à une chambre. *@
+        <div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Hébergement</p>
+            <template x-if="activeEnrollment() && activeEnrollment().boardingStatus !== 'Externe'">
+                <badge variant="info" x-text="activeEnrollment().boardingStatus === 'Interne' ? ('Interne' + (activeEnrollment().roomLabel ? ' — ' + activeEnrollment().roomLabel : '')) : 'Demi-pensionnaire'"></badge>
+            </template>
+            <template x-if="!activeEnrollment() || activeEnrollment().boardingStatus === 'Externe'">
+                <span class="text-sm text-slate-400">Externe</span>
+            </template>
+        </div>
     </div>
 
     <div class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm">
