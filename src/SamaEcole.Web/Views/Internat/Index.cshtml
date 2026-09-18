@@ -1,0 +1,107 @@
+@{
+    ViewData["Title"] = "Internat";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/internat.js" asp-append-version="true"></script>
+}
+
+<div x-data="internatPage()" x-init="init()">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Internat</h1>
+            <p class="page-subtitle">Occupation des dortoirs pour l'année scolaire active et affectation des élèves internes et demi-pensionnaires.</p>
+        </div>
+    </div>
+
+    <!-- Barre KPI -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+        <template x-if="loading">
+            <template x-for="i in 4" :key="i">
+                <div class="card p-5 h-[92px] skeleton"></div>
+            </template>
+        </template>
+
+        <template x-if="!loading && dashboard">
+            <stat-card label="Occupation" icon="bed" accent="primary">
+                <span x-text="dashboard.totalOccupied + ' / ' + dashboard.totalCapacity">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading && dashboard">
+            <stat-card label="Internes" icon="users" accent="blue">
+                <span x-text="dashboard.interneCount">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading && dashboard">
+            <stat-card label="Demi-pensionnaires" icon="users" accent="purple">
+                <span x-text="dashboard.demiPensionnaireCount">0</span>
+            </stat-card>
+        </template>
+        <template x-if="!loading && dashboard">
+            <stat-card label="Chambres complètes" icon="alert-circle" accent="warning">
+                <span x-text="dashboard.fullRoomsCount + ' / ' + dashboard.rooms.length">0</span>
+            </stat-card>
+        </template>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <!-- Cartes par chambre -->
+    <div class="mt-6">
+        <template x-if="!loading && dashboard && dashboard.rooms.length === 0">
+            <div class="card p-12">
+                <empty-state icon="bed" title="Aucun dortoir n'est configuré."
+                             hint="Créez une salle de type « Dortoir » depuis Bâtiments et Salles (/infrastructures) pour commencer à affecter des élèves." />
+            </div>
+        </template>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="room in (dashboard ? dashboard.rooms : [])" :key="room.roomId">
+                <div class="card p-4" x-data="{ expanded: false }">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="font-semibold text-slate-800 truncate" x-text="room.roomName"></p>
+                            <p class="text-xs text-slate-400 truncate" x-text="room.buildingName"></p>
+                        </div>
+                        <badge :variant="room.occupantsCount >= room.capacity ? 'danger' : (room.occupantsCount === 0 ? 'neutral' : 'success')">
+                            <span x-text="room.occupantsCount + ' / ' + room.capacity"></span>
+                        </badge>
+                    </div>
+
+                    <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div class="h-full rounded-full transition-all" :class="occupancyColor(room)" :style="'width: ' + occupancyPercent(room) + '%'"></div>
+                    </div>
+
+                    <button type="button" x-show="room.occupants.length > 0" x-cloak
+                            class="mt-3 text-xs font-medium text-primary-600 hover:text-primary-700"
+                            x-on:click="expanded = !expanded">
+                        <span x-text="expanded ? 'Masquer les occupants' : 'Voir les occupants (' + room.occupants.length + ')'"></span>
+                    </button>
+
+                    <ul x-show="expanded" x-cloak class="mt-2 space-y-2 border-t border-slate-100 pt-2">
+                        <template x-for="occupant in room.occupants" :key="occupant.enrollmentId">
+                            <li class="flex items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-slate-700 truncate" x-text="occupant.fullName"></p>
+                                    <p class="text-xs text-slate-400 truncate" x-text="occupant.classroomName + (occupant.guardianPhone ? ' · ' + occupant.guardianPhone : '')"></p>
+                                </div>
+                                <badge :variant="occupant.boardingStatus === 'Interne' ? 'primary' : 'neutral'">
+                                    <span x-text="occupant.boardingStatus === 'Interne' ? 'Interne' : 'Demi-pensionnaire'"></span>
+                                </badge>
+                            </li>
+                        </template>
+                    </ul>
+
+                    <button type="button"
+                            class="mt-3 inline-flex items-center justify-center gap-1.5 w-full px-3 py-1.5 rounded-lg border border-primary/30 bg-primary-50 text-primary text-xs font-semibold hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            :disabled="room.occupantsCount >= room.capacity"
+                            x-on:click="openAssignModal(room)">
+                        <icon name="plus" class="w-4 h-4" />
+                        Affecter un élève
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
