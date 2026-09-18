@@ -7,7 +7,10 @@
     <script src="~/js/internat.js" asp-append-version="true"></script>
 }
 
-<div x-data="internatPage()" x-init="init()">
+@* Pas de `x-init="init()"` : Alpine appelle DÉJÀ tout seul la méthode `init()` d'un composant
+   x-data. L'ajouter la déclenchait une seconde fois — GET /api/v1/internat/dashboard
+   serait demandé deux fois à chaque ouverture. *@
+<div x-data="internatPage()">
     <div class="page-header">
         <div>
             <h1 class="page-title">Internat</h1>
