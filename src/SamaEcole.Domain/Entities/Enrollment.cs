@@ -66,4 +66,18 @@ public class Enrollment : AuditableEntity, ITenantEntity
     public string ReceiptNumber { get; set; } = string.Empty;
 
     public DateTimeOffset EnrolledAt { get; set; }
+
+    /// <summary>
+    /// Régime d'hébergement (module Internat), portée ANNUELLE comme <see cref="IsRepeating"/>.
+    /// Défaut Externe : le module est désactivé par défaut (SchoolSettingsDefaults.IsInternatEnabled),
+    /// donc toute inscription existante ou nouvelle sans saisie explicite reste Externe.
+    /// </summary>
+    public BoardingStatus BoardingStatus { get; set; } = BoardingStatus.Externe;
+
+    /// <summary>
+    /// Chambre affectée (module Internat) — significatif seulement si <see cref="BoardingStatus"/> ≠
+    /// Externe. Null pour un externe, ou un interne/demi-pensionnaire pas encore affecté à une
+    /// chambre précise (l'école a choisi le régime avant de loger l'élève).
+    /// </summary>
+    public Guid? RoomId { get; set; }
 }

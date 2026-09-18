@@ -21,4 +21,12 @@ public class FeeCategory : AuditableEntity, ITenantEntity
 
     /// <summary>Vrai pour une mensualité (due chaque mois), faux pour un frais ponctuel.</summary>
     public bool IsRecurring { get; set; }
+
+    /// <summary>
+    /// Désigne cette catégorie comme frais d'internat (module Internat) : elle peut être incluse
+    /// automatiquement sur l'inscription d'un élève Interne/Demi-pensionnaire (voir
+    /// BoardingFeeLineBuilder), en plus des ClassFee ordinaires appliqués à tous les élèves de la
+    /// classe. Faux par défaut — un choix explicite de l'école, comme IsRecurring.
+    /// </summary>
+    public bool IsBoardingFee { get; set; }
 }

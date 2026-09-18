@@ -363,6 +363,7 @@ public enum RoomType
     SalleDeClasse,
     Laboratoire,
     Bureau,
+    Dortoir,
     Autre
 }
 
