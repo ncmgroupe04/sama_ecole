@@ -175,43 +175,49 @@ document.addEventListener('alpine:init', () => {
 
         // --- Bac à sable / mode réel ---
         // isLiveMode pilote les DEUX régimes de la Zone de danger : test (purge + « Passer en mode
-        // réel ») ou réel (lecture seule + éventuellement « Repasser en mode test »). Chargé dans
-        // load() depuis GET /schools/current/mode ; le serveur revérifie tout (GoLiveCommandHandler,
-        // ResetSchoolDataCommandHandler), cet état n'est qu'un confort d'affichage.
+        // réel ») ou réel (lecture seule + « Repasser en mode test », toujours disponible au
+        // Directeur). Chargé dans load() depuis GET /schools/current/mode ; le serveur revérifie tout
+        // (GoLiveCommandHandler, ResetSchoolDataCommandHandler, RevertToTestCommandHandler), cet état
+        // n'est qu'un confort d'affichage.
         isLiveMode: false,
         wentLiveAt: null,
-        // Drapeau d'ENVIRONNEMENT (Development ou SAMA_RETOUR_MODE_TEST_AUTORISE=true), pas un
-        // process.env côté front : c'est l'API qui décide si le bouton « Repasser en mode test »
-        // existe. Toujours faux en vraie production.
-        revertToTestAvailable: false,
+        // Verrou PERMANENT (School.HasEverGoneLive) : reste vrai après un retour en mode test. Sert à
+        // masquer « Réinitialiser l'école » dans ce cas précis — sans quoi le bouton resterait affiché
+        // en mode test tout en étant systématiquement refusé (409) après la confirmation.
+        hasEverGoneLive: false,
         isGoLiveOpen: false,
         goLiveConfirmation: '',
         goLiveError: null,
         isGoingLive: false,
+        isRevertToTestOpen: false,
+        revertToTestConfirmation: '',
         isRevertingToTest: false,
         revertToTestError: null,
 
-        // « PURGER » est comparé à la casse — comme côté serveur (ResetSchoolDataConfirmation.Keyword) :
-        // c'est le geste délibéré qui fait la valeur de la garde. Le nom de l'école, lui, tolère la
-        // casse et les espaces de bord : le Directeur le recopie, il n'a pas à en refaire la graphie.
-        get resetConfirmationMatches() {
-            const typed = (this.resetConfirmation || '').trim();
-            if (!typed) return false;
+        // Garde partagée par les trois actions critiques de l'établissement (Réinitialiser / Passer en
+        // mode réel / Repasser en mode test) : mot-clé comparé À LA CASSE — miroir exact de
+        // TypedConfirmationGuard.Matches côté serveur — ou nom de l'école, lui toléré en casse et en
+        // espaces de bord. Centralisée ici pour que les trois getters ci-dessous ne dérivent jamais
+        // l'un de l'autre (même risque que côté C#, voir TypedConfirmationGuard).
+        confirmationMatches(typed, keyword) {
+            const value = (typed || '').trim();
+            if (!value) return false;
 
             const schoolName = (this.profile.name || '').trim();
-            return typed === 'PURGER'
-                || (schoolName !== '' && typed.toLocaleLowerCase() === schoolName.toLocaleLowerCase());
+            return value === keyword
+                || (schoolName !== '' && value.toLocaleLowerCase() === schoolName.toLocaleLowerCase());
         },
 
-        // Même garde que resetConfirmationMatches, mot-clé « CONFIRMER » — miroir exact de
-        // GoLiveConfirmation.Matches côté serveur (mot-clé à la casse, nom d'école tolérant).
-        get goLiveConfirmationMatches() {
-            const typed = (this.goLiveConfirmation || '').trim();
-            if (!typed) return false;
+        get resetConfirmationMatches() {
+            return this.confirmationMatches(this.resetConfirmation, 'PURGER');
+        },
 
-            const schoolName = (this.profile.name || '').trim();
-            return typed === 'CONFIRMER'
-                || (schoolName !== '' && typed.toLocaleLowerCase() === schoolName.toLocaleLowerCase());
+        get goLiveConfirmationMatches() {
+            return this.confirmationMatches(this.goLiveConfirmation, 'CONFIRMER');
+        },
+
+        get revertToTestConfirmationMatches() {
+            return this.confirmationMatches(this.revertToTestConfirmation, 'TEST');
         },
 
         // Le compte rendu du serveur liste TOUTES les tables, y compris celles à 0 ligne (utile au
@@ -256,7 +262,7 @@ document.addEventListener('alpine:init', () => {
 
                 this.isLiveMode = !!(mode && mode.isLive);
                 this.wentLiveAt = mode ? mode.wentLiveAt : null;
-                this.revertToTestAvailable = !!(mode && mode.revertToTestAvailable);
+                this.hasEverGoneLive = !!(mode && mode.hasEverGoneLive);
 
                 this.profile = this.toProfileState(profile);
                 this.config = {
@@ -885,22 +891,37 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        // ---------------------------- Retour mode test (recette / environnements jetables uniquement)
+        // ------------------------------------------- Mode réel → mode test (à tout moment)
 
-        async revertToTest() {
-            // Le bouton reste AFFICHÉ en production, mais désactivé (voir Settings/Index.cshtml) :
-            // cette garde évite l'appel — et le 404 du routeur — si un clic passait quand même.
-            if (!this.revertToTestAvailable || this.isRevertingToTest) return;
+        openRevertToTest() {
+            this.revertToTestConfirmation = '';
+            this.revertToTestError = null;
+            this.isRevertToTestOpen = true;
+        },
+
+        closeRevertToTest() {
+            // Ne se ferme pas pendant l'appel : le rechargement de page qui suit un succès s'en charge.
+            if (this.isRevertingToTest) return;
+            this.isRevertToTestOpen = false;
+            this.revertToTestConfirmation = '';
+            this.revertToTestError = null;
+        },
+
+        async confirmRevertToTest() {
+            if (!this.revertToTestConfirmationMatches || this.isRevertingToTest) return;
 
             this.isRevertingToTest = true;
             this.revertToTestError = null;
             try {
-                // Endpoint monté seulement si revertToTestAvailable ; un 404 ici signifie « pas sur cet
-                // environnement » — le message générique convient.
-                await window.api.post('/schools/current/dev/revert-to-test');
+                await window.api.post('/schools/current/revert-to-test', {
+                    confirmation: this.revertToTestConfirmation.trim()
+                });
+
+                // Rechargement COMPLET : la pastille « Mode test » de la barre supérieure et les deux
+                // régimes de la Zone de danger doivent refléter le nouveau régime.
                 window.location.reload();
             } catch (err) {
-                this.revertToTestError = window.api.toMessage(err, "Le retour en mode test a échoué.");
+                this.revertToTestError = window.api.toMessage(err, "Le retour en mode test a échoué. Aucun changement n'a été enregistré.");
                 this.isRevertingToTest = false;
             }
         },

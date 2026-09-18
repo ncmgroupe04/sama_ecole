@@ -3,6 +3,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
 using SamaEcole.Application.Schools.Commands.GoLive;
 using SamaEcole.Application.Schools.Commands.ResetSchoolData;
+using SamaEcole.Application.Schools.Commands.RevertToTest;
 using SamaEcole.Application.Schools.Commands.UpdateCurrentSchool;
 using SamaEcole.Application.Schools.Queries.GetCurrentSchool;
 using SamaEcole.Application.Schools.Queries.GetSchoolMode;
@@ -36,6 +37,9 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
 
     /// <summary>Garde du passage en mode réel : le mot-clé CONFIRMER, ou le nom de l'établissement.</summary>
     public record GoLiveRequest(string Confirmation);
+
+    /// <summary>Garde du retour en mode test : le mot-clé TEST, ou le nom de l'établissement.</summary>
+    public record RevertToTestRequest(string Confirmation);
 
     public record UpdateSchoolProfileRequest(
         string Name,
@@ -114,9 +118,8 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(new ResetSchoolDataCommand(request.Confirmation), cancellationToken));
 
     /// <summary>
-    /// État « bac à sable / mode réel » de l'établissement courant, plus le drapeau d'environnement
-    /// qui pilote le bouton « Repasser en mode test ». Lecture ouverte à tout rôle de l'école : la
-    /// pastille « Mode test » de la barre supérieure s'affiche pour tous.
+    /// État « bac à sable / mode réel » de l'établissement courant. Lecture ouverte à tout rôle de
+    /// l'école : la pastille « Mode test » de la barre supérieure s'affiche pour tous.
     /// </summary>
     [HttpGet("mode")]
     [ProducesResponseType<SchoolModeDto>(StatusCodes.Status200OK)]
@@ -126,9 +129,10 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
     /// <summary>
     /// Fait passer l'établissement COURANT du mode test (bac à sable) au mode réel (exploitation).
     /// Action DÉLIBÉRÉE, réservée au Directeur, confirmée par saisie de « CONFIRMER » (ou du nom de
-    /// l'école). Conséquence : POST reset-data devient indisponible (409 RESET_UNAVAILABLE_LIVE_MODE).
-    /// Non rejouable : un second appel renvoie 409 ALREADY_LIVE. En vraie production, la bascule est
-    /// définitive — voir la porte de recette /schools/current/dev/revert-to-test (Program.cs).
+    /// l'école). Conséquence : POST reset-data devient indisponible POUR TOUJOURS (409
+    /// RESET_UNAVAILABLE_LIVE_MODE, School.HasEverGoneLive), même après un retour en mode test. Non
+    /// rejouable tel quel : un second appel renvoie 409 ALREADY_LIVE — il faut d'abord repasser en
+    /// mode test (POST /schools/current/revert-to-test).
     /// </summary>
     [HttpPost("go-live")]
     [Authorize(Roles = nameof(Role.Directeur))]
@@ -139,6 +143,21 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
     public async Task<IActionResult> GoLive(
         [FromBody] GoLiveRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GoLiveCommand(request.Confirmation), cancellationToken));
+
+    /// <summary>
+    /// Fait repasser l'établissement COURANT du mode réel au mode test, pour que le Directeur garde le
+    /// contrôle de son environnement (familiarisation, simulation). Réservé au Directeur, confirmé par
+    /// saisie de « TEST » (ou du nom de l'école) — même patron que GoLive. Ne rouvre JAMAIS la « Zone
+    /// de danger » : voir School.HasEverGoneLive et RevertToTestCommand.
+    /// </summary>
+    [HttpPost("revert-to-test")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<RevertToTestResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RevertToTest(
+        [FromBody] RevertToTestRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new RevertToTestCommand(request.Confirmation), cancellationToken));
 
     /// <summary>Upload local d'un fichier image (logo) par le Directeur.</summary>
     [HttpPost("logo")]

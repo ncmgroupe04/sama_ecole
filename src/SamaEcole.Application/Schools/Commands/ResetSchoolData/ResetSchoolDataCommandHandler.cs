@@ -42,15 +42,19 @@ public class ResetSchoolDataCommandHandler(
             .FirstOrDefaultAsync(s => s.Id == schoolId, cancellationToken)
             ?? throw new NotFoundException("École", schoolId);
 
-        // Mode réel : la purge n'est plus une option. Les données enregistrées font partie de la
-        // comptabilité, l'invariant d'immuabilité (AGENTS.md règle #6) interdit de les effacer. On
-        // échoue AVANT même de regarder le mot de confirmation. La bascule s'annule sur les seuls
-        // environnements jetables (RevertToTestCommand), jamais en production.
-        if (school.WentLiveAt is { } wentLiveAt)
+        // Verrou PERMANENT : une fois qu'une école est passée en mode réel une seule fois, la purge
+        // reste interdite pour toujours (AGENTS.md règle #6) — même après un retour en mode test
+        // (RevertToTestCommand, disponible à tout moment), qui remet WentLiveAt à null mais jamais
+        // HasEverGoneLive. On échoue AVANT même de regarder le mot de confirmation. La fonction
+        // PostgreSQL reset_school_data porte la MÊME garde, en défense de profondeur (migration
+        // GuardResetSchoolDataAgainstLiveMode / AddHasEverGoneLiveLock).
+        if (school.HasEverGoneLive)
         {
-            throw new BusinessRuleException(
-                $"La réinitialisation n'est possible qu'en mode test. Cet établissement est passé en mode réel le {wentLiveAt:dd/MM/yyyy} : les données enregistrées ne peuvent plus être effacées.",
-                "RESET_UNAVAILABLE_LIVE_MODE");
+            var message = school.WentLiveAt is { } wentLiveAt
+                ? $"La réinitialisation n'est possible qu'en mode test. Cet établissement est passé en mode réel le {wentLiveAt:dd/MM/yyyy} : les données enregistrées ne peuvent plus être effacées."
+                : "La réinitialisation n'est plus possible : cet établissement est déjà passé en mode réel par le passé. Les données enregistrées à ce moment-là font partie de la comptabilité et restent inaltérables, même après un retour en mode test.";
+
+            throw new BusinessRuleException(message, "RESET_UNAVAILABLE_LIVE_MODE");
         }
 
         EnsureConfirmed(request.Confirmation, school.Name);

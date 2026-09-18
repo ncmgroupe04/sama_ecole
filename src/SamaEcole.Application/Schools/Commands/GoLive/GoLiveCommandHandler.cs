@@ -54,6 +54,10 @@ public class GoLiveCommandHandler(
 
         var wentLiveAt = timeProvider.GetUtcNow();
         school.WentLiveAt = wentLiveAt;
+
+        // Verrou permanent : jamais effacé, même par un futur RevertToTestCommand (voir School.HasEverGoneLive).
+        school.HasEverGoneLive = true;
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // LogWarning et non LogInformation : une bascule définitive doit ressortir dans les journaux

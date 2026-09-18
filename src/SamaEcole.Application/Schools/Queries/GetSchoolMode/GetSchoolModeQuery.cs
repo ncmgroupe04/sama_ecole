@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace SamaEcole.Application.Schools.Queries.GetSchoolMode;
 
 /// <summary>
-/// GET /schools/current/mode — état « bac à sable / réel » de l'établissement courant, plus le
-/// drapeau d'environnement qui pilote le bouton « Repasser en mode test ».
+/// GET /schools/current/mode — état « bac à sable / réel » de l'établissement courant.
 ///
 /// Lecture LÉGÈRE, ouverte à tout rôle de l'école : la barre supérieure affiche une pastille « Mode
 /// test » pour tous tant que l'école n'est pas passée en mode réel, et l'écran Paramètres bascule ses
@@ -21,16 +20,18 @@ public record GetSchoolModeQuery : IRequest<SchoolModeDto>;
 
 /// <param name="IsLive">Vrai dès que l'établissement est passé en mode réel.</param>
 /// <param name="WentLiveAt">Horodatage du passage, ou <c>null</c> en mode test.</param>
-/// <param name="RevertToTestAvailable">
-/// Vrai si l'environnement autorise le retour en mode test (Development ou
-/// <c>SAMA_RETOUR_MODE_TEST_AUTORISE=true</c>). Toujours faux en vraie production.
+/// <param name="HasEverGoneLive">
+/// Verrou PERMANENT (School.HasEverGoneLive) : vrai si l'établissement est DÉJÀ passé en mode réel
+/// une fois, même s'il est repassé en mode test depuis (<c>IsLive</c> serait alors faux). L'écran
+/// Paramètres s'en sert pour ne jamais proposer « Réinitialiser l'école » dans ce cas — la purge y
+/// serait de toute façon refusée (409 RESET_UNAVAILABLE_LIVE_MODE), et un bouton qui échoue après
+/// une confirmation saisie est précisément la surprise que ce champ évite.
 /// </param>
-public sealed record SchoolModeDto(bool IsLive, DateTimeOffset? WentLiveAt, bool RevertToTestAvailable);
+public sealed record SchoolModeDto(bool IsLive, DateTimeOffset? WentLiveAt, bool HasEverGoneLive);
 
 public class GetSchoolModeQueryHandler(
     IApplicationDbContext dbContext,
-    ITenantProvider tenantProvider,
-    ISandboxModeProvider sandboxMode)
+    ITenantProvider tenantProvider)
     : IRequestHandler<GetSchoolModeQuery, SchoolModeDto>
 {
     public async Task<SchoolModeDto> Handle(GetSchoolModeQuery request, CancellationToken cancellationToken)
@@ -38,15 +39,15 @@ public class GetSchoolModeQueryHandler(
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
 
-        var wentLiveAt = await dbContext.Schools
+        var school = await dbContext.Schools
             .AsNoTracking()
             .Where(s => s.Id == schoolId)
-            .Select(s => s.WentLiveAt)
+            .Select(s => new { s.WentLiveAt, s.HasEverGoneLive })
             .FirstOrDefaultAsync(cancellationToken);
 
         return new SchoolModeDto(
-            IsLive: wentLiveAt is not null,
-            WentLiveAt: wentLiveAt,
-            RevertToTestAvailable: sandboxMode.RevertToTestEnabled);
+            IsLive: school?.WentLiveAt is not null,
+            WentLiveAt: school?.WentLiveAt,
+            HasEverGoneLive: school?.HasEverGoneLive ?? false);
     }
 }
