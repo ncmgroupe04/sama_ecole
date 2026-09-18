@@ -78,7 +78,18 @@ public record StudentIdentityDto(
     string? GuardianPhone,
     string? GuardianEmail,
     string? Address,
-    uint RowVersion);
+    uint RowVersion,
+
+    // Régime d'hébergement (module Internat) pour l'année scolaire ACTIVE — jamais une autre année,
+    // le régime étant annuel (Enrollment.BoardingStatus). "Externe" (valeur par défaut) tant que le
+    // module est inactif, que l'élève n'a pas d'inscription pour l'année active, ou n'est pas
+    // interne/demi-pensionnaire : l'UI ne montre alors aucun badge, cohérent avec ChangeBoardingAssignment.
+    string BoardingStatus,
+
+    // Nom de la chambre affectée, renseigné seulement pour BoardingStatus == Interne. Comme
+    // ClassroomName : une chambre supprimée (soft delete) sort du Global Query Filter et s'affiche
+    // explicitement plutôt que de faire disparaître silencieusement l'information.
+    string? RoomName);
 
 /// <summary>
 /// Une ligne d'historique par inscription (année + classe + type + statut). Les inscriptions annulées
@@ -188,6 +199,32 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Élève {request.StudentId} introuvable.");
 
+        // Régime d'hébergement de l'année ACTIVE (module Internat) — même résolution que
+        // GetInternatDashboardQueryHandler : aucune année active ou aucune inscription non annulée
+        // pour cette année ⇒ Externe par défaut, jamais une exception (une fiche élève doit toujours
+        // s'afficher, module Internat activé ou non).
+        var activeYearId = await dbContext.SchoolYears.AsNoTracking()
+            .Where(y => y.IsActive)
+            .Select(y => (Guid?)y.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var boarding = activeYearId is null
+            ? null
+            : await dbContext.Enrollments.AsNoTracking()
+                .Where(e => e.StudentId == request.StudentId && e.SchoolYearId == activeYearId
+                            && e.Status != EnrollmentStatus.Cancelled)
+                .Select(e => new
+                {
+                    e.BoardingStatus,
+                    RoomName = e.RoomId == null
+                        ? null
+                        : dbContext.Rooms.AsNoTracking()
+                            .Where(r => r.Id == e.RoomId)
+                            .Select(r => r.Name)
+                            .FirstOrDefault() ?? "Chambre supprimée"
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
         var identity = new StudentIdentityDto(
             student.Id,
             student.Matricule,
@@ -205,7 +242,9 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
             student.GuardianPhone,
             student.GuardianEmail,
             student.Address,
-            student.RowVersion);
+            student.RowVersion,
+            (boarding?.BoardingStatus ?? BoardingStatus.Externe).ToString(),
+            boarding?.RoomName);
 
         // Barème du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20), et NON un réglage
         // global d'école : il pilote l'affichage des moyennes sur la fiche (« /10 » ou « /20 ») et, pour

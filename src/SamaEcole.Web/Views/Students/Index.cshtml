@@ -247,6 +247,11 @@
                           class="status-badge-success"><span class="status-dot" aria-hidden="true"></span>Inscrit</span>
                     <span x-show="studentDetail && detailNotEnrolledForActiveYear()" x-cloak
                           class="status-badge-warning"><span class="status-dot" aria-hidden="true"></span>Non inscrit</span>
+                    @* Badge d'hébergement (module Internat, Task 14) : régime de l'année active
+                       uniquement (voir StudentIdentityDto.BoardingStatus) — absent pour un élève
+                       Externe ou tant que le module n'est pas activé pour l'école. *@
+                    <span x-show="boardingBadgeLabel()" x-cloak
+                          class="status-badge-primary" x-text="boardingBadgeLabel()"></span>
                 </div>
             </div>
         </div>
