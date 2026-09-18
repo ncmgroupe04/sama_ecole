@@ -62,6 +62,17 @@ function passwordPolicyErrors(password, personalTerms) {
 (() => {
     const API_BASE = '/api/v1';
 
+    /**
+     * Message affichable quand la réponse n'a pas le format normalisé (ex. échec de model-binding
+     * ASP.NET Core avant même le validateur applicatif) — sans traduction, la famille qui s'inscrit en
+     * ligne verrait littéralement « Erreur HTTP 400 ».
+     */
+    function httpFallbackMessage(status) {
+        if (status === 400 || status === 422) return "Le formulaire d'inscription contient une information invalide. Vérifiez les champs saisis puis réessayez.";
+        if (status >= 500) return 'Le service rencontre une difficulté technique. Réessayez dans quelques instants.';
+        return "Votre demande n'a pas pu être envoyée. Réessayez, et contactez l'établissement si le problème persiste.";
+    }
+
     /** Traduit une réponse d'erreur en Error exploitable (corps JSON normalisé, ou vide). */
     async function toError(response) {
         const payload = await response.json().catch(() => null);
@@ -74,7 +85,7 @@ function passwordPolicyErrors(password, personalTerms) {
             return error;
         }
 
-        const fallback = new Error(`Erreur HTTP ${response.status}`);
+        const fallback = new Error(httpFallbackMessage(response.status));
         fallback.status = response.status;
         return fallback;
     }

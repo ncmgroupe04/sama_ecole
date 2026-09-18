@@ -9,6 +9,13 @@
 
     const API_BASE = '/api/v1';
 
+    /** Sans traduction, la personne qui suit sa demande verrait littéralement « Erreur HTTP 404 ». */
+    function httpFallbackMessage(status) {
+        if (status === 404) return "Aucune demande ne correspond à cette référence. Vérifiez la référence saisie.";
+        if (status >= 500) return 'Le service rencontre une difficulté technique. Réessayez dans quelques instants.';
+        return 'Impossible de récupérer le statut de la demande pour le moment. Réessayez.';
+    }
+
     async function toError(response) {
         const payload = await response.json().catch(() => null);
 
@@ -19,7 +26,7 @@
             return error;
         }
 
-        const fallback = new Error(`Erreur HTTP ${response.status}`);
+        const fallback = new Error(httpFallbackMessage(response.status));
         fallback.status = response.status;
         return fallback;
     }

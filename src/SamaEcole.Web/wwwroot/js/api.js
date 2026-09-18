@@ -243,6 +243,27 @@ window.api = {
         return (error && error.message) || fallbackMessage;
     },
 
+    /**
+     * Message affichable quand l'API répond en dehors du format normalisé (docs/Volume_4_API_Design.md
+     * §0.4) — typiquement une réponse 400 automatique d'ASP.NET Core pour un échec de model-binding
+     * JSON (ex. une chaîne vide envoyée pour un champ Guid/décimal), qui survient AVANT que le
+     * validateur applicatif n'ait la main et ne renvoie donc jamais de `message` exploitable. Sans
+     * cette traduction, l'utilisateur voit littéralement « Erreur HTTP 400 » — vrai pour un
+     * développeur, incompréhensible pour un(e) Secrétariat ou Directeur d'école.
+     */
+    httpFallbackMessage(status) {
+        switch (status) {
+            case 400: return "La demande n'a pas pu être traitée : un champ du formulaire contient une valeur inattendue. Vérifiez votre saisie puis réessayez.";
+            case 403: return "Vous n'avez pas les droits nécessaires pour effectuer cette action.";
+            case 404: return "Cet élément est introuvable — il a peut-être été supprimé ou déplacé entretemps.";
+            case 409: return 'Cette donnée vient d\'être modifiée par quelqu\'un d\'autre. Rafraîchissez la page puis réessayez.';
+            case 422: return 'Certaines informations saisies ne sont pas valides. Vérifiez le formulaire puis réessayez.';
+            default: return status >= 500
+                ? 'Le service rencontre une difficulté technique. Réessayez dans quelques instants.'
+                : 'Une erreur inattendue est survenue. Réessayez, et contactez le support si le problème persiste.';
+        }
+    },
+
     /** Format d'erreur normalisé (docs/Volume_4_API_Design.md §0.4), ou corps vide pour un 401 du middleware JWT. */
     async toError(response) {
         const payload = await response.json().catch(() => null);
@@ -268,7 +289,7 @@ window.api = {
             return error;
         }
 
-        const fallback = new Error(`Erreur HTTP ${response.status}`);
+        const fallback = new Error(this.httpFallbackMessage(response.status));
         fallback.status = response.status;
         return fallback;
     },

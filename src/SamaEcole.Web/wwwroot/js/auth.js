@@ -50,6 +50,18 @@
     /** Repli pour les navigateurs sans Web Locks : au moins un seul renouvellement en vol par onglet. */
     let inFlightRefresh = null;
 
+    /**
+     * Message affichable quand la réponse n'a pas le format normalisé — un 401 du middleware JWT n'a
+     * aucun corps, et un échec de model-binding renvoie l'erreur automatique d'ASP.NET Core, jamais un
+     * `message` exploitable. Sans traduction, l'utilisateur verrait littéralement « Erreur HTTP 400 ».
+     */
+    function httpFallbackMessage(status) {
+        if (status === 401) return 'Identifiants incorrects, ou session expirée. Reconnectez-vous.';
+        if (status === 403) return "Vous n'avez pas les droits nécessaires pour effectuer cette action.";
+        if (status >= 500) return 'Le service rencontre une difficulté technique. Réessayez dans quelques instants.';
+        return 'Une erreur inattendue est survenue. Réessayez, et contactez le support si le problème persiste.';
+    }
+
     /** Traduit une réponse d'erreur en Error exploitable, que le corps soit du JSON normalisé ou vide. */
     async function toError(response) {
         // Un 401 émis par le middleware JWT (jeton absent/expiré) n'a pas de corps : il ne passe pas
@@ -64,7 +76,7 @@
             return error;
         }
 
-        const fallback = new Error(`Erreur HTTP ${response.status}`);
+        const fallback = new Error(httpFallbackMessage(response.status));
         fallback.status = response.status;
         return fallback;
     }
