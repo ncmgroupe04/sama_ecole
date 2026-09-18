@@ -5,12 +5,14 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 30/08/2026** (Module M « Intégration étatique / Passerelle SIMEN » —
-**livré : back-end, persistance, migrations RLS, écrans et documentation**, voir §2 ; JGK-F09 —
-contrôle du comptage physique et écarts de caisse à la clôture le 29/08/2026, voir §5 ; câblage de la
-session de caisse sur `/caisse` le 27/08/2026 — JGK-F02 était inutilisable en production faute d'écran
-d'ouverture/clôture ; écran `/examens` livré le 26/08/2026 — backend Module J déjà complet ; module
-Inventaire — API, migration RLS, PDF, tests et écran `/inventaire` livrés).
+**Dernière mise à jour : 18/09/2026** (Module Internat — **livré : back-end, persistance, migration
+RLS, écran `/internat` avec modale d'affectation, badge fiche élève, formulaire d'inscription**, voir
+§2 ; Module M « Intégration étatique / Passerelle SIMEN » — **livré : back-end, persistance,
+migrations RLS, écrans et documentation**, voir §2 ; JGK-F09 — contrôle du comptage physique et écarts
+de caisse à la clôture le 29/08/2026, voir §5 ; câblage de la session de caisse sur `/caisse` le
+27/08/2026 — JGK-F02 était inutilisable en production faute d'écran d'ouverture/clôture ; écran
+`/examens` livré le 26/08/2026 — backend Module J déjà complet ; module Inventaire — API, migration
+RLS, PDF, tests et écran `/inventaire` livrés).
 
 ---
 
@@ -62,6 +64,7 @@ Livrés, câblés à l'IHM, et couverts par la suite de tests :
 | **Inventaire** | `/inventaire` | API `/api/v1/inventory` — catalogue, journal de stock, prêts, 2 PDF |
 | **Examens officiels** | `/examens` | API `/api/v1/exams` — sessions, dossiers CFEE/BFEM/BAC, audit, attribution centre/table, transmission, résultats, statistiques, export ministériel, convocations |
 | **Intégration étatique** | `/integration-etatique` + fiche élève + `/verifier/mutation/{token}` | API `/api/v1/state-integration` — IEN, export Planète (CSV/JSON), rapport STATEDUC (PDF + Excel), certificat de mutation avec QR + registre + révocation, livret de compétences, vérification publique du certificat |
+| **Internat** | `/internat` + fiche élève + formulaire d'inscription | API `/api/v1/internat` — tableau de bord par chambre, recherche d'élève, affectation/transfert/libération ; module désactivé par défaut |
 
 Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bulletins, Frais,
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
@@ -93,6 +96,47 @@ dans cet environnement — à valider en local avant mise en production.
    numéro d'immatriculation posé sur le bien par la mairie ou l'État.
 
 Export `.xlsx` de l'inventaire : **écarté pour ce lot** (PDF seul), à arbitrer si le besoin remonte.
+
+### Module Internat (18/09/2026) — livré
+
+Régime d'hébergement (Externe / Demi-pensionnaire / Interne) et affectation de chambre, module
+désactivable par école (`SchoolSettings.IsInternatEnabled`, **désactivé par défaut** — à l'inverse de
+Pédagogie/Finance). Migration `AddInternatBoarding` (`Enrollment.BoardingStatus`/`RoomId`,
+`RoomType.Dortoir`, `FeeCategory.IsBoardingFee`), `InternatController` (`/api/v1/internat` — tableau
+de bord, recherche d'élève, affectation), écran `/internat` (tableau de bord par chambre + modale
+d'affectation rapide : recherche, transfert, libération), badge d'hébergement sur la fiche élève,
+section « Régime & Hébergement » sur le formulaire d'inscription. Rôles : Directeur, Secrétariat,
+Surveillant (même trio que `ParentSummonsController`).
+
+**Cinq arbitrages actés, à ne pas rouvrir sans raison :**
+
+1. **Aucune entité `Bed` distincte.** L'hébergement réutilise `Building`/`Room` (module
+   Infrastructures) avec `RoomType.Dortoir` ; la capacité se compte au niveau de la chambre
+   (`Room.Capacity` vs occupants actifs), jamais lit par lit.
+2. **`BoardingStatus` est porté par `Enrollment`, pas par `Student`** — portée ANNUELLE, comme
+   `IsRepeating` : une réinscription reconfirme ou change le régime, jamais un report automatique
+   d'une année sur l'autre. `RoomId` n'est significatif que si `BoardingStatus != Externe`.
+3. **Comptage de capacité simple** : occupants actifs (inscription non annulée, année active) vs
+   `Room.Capacity`. Pas de distinction de lit ni de réservation anticipée.
+4. **La pension (`FeeCategory.IsBoardingFee`) n'est jamais retirée à la libération.** Sortir un élève
+   de l'Internat (retour à Externe, ou changement de chambre) ne retranche pas la ligne de pension
+   déjà posée sur son compte financier — une correction suit la règle Finance habituelle
+   (AGENTS.md règle #4 : jamais un retrait silencieux, toujours une correction tracée par
+   Secrétariat/Admin si le montant facturé doit changer).
+5. **Confort d'affichage, jamais une mesure de sécurité** : le masquage du menu/des sections quand le
+   module est désactivé (`internatEnabled` côté client) n'est qu'ergonomique — la garde réelle est
+   `[RequireModule(SchoolModule.Internat)]` côté serveur (403 `MODULE_DISABLED`), et
+   `CreateEnrollmentCommandHandler`/`ChangeBoardingAssignmentCommandHandler` revérifient
+   indépendamment (422 si le module n'est pas activé).
+
+**Vérifié de bout en bout (18/09/2026, `dotnet build` 0 erreur + parcours réel sur PostgreSQL, skill
+`run`)** : activation du module → création d'un pavillon + deux dortoirs → inscription d'un élève en
+régime Interne avec pension (reçu : ligne « Pension » correcte) → transfert de chambre via la modale
+d'affectation (occupation reflétée sur le tableau de bord, xmin renouvelé) → libération (retour à
+Externe) → **ligne de pension toujours présente** sur le compte financier après libération (vérifié en
+base) → refus 422 explicite d'une écriture Interne/chambre quand le module est désactivé pour l'école.
+Données de vérification créées sur une école jetable dédiée, entièrement nettoyées après coup (base de
+développement partagée).
 
 ### Intégration étatique / Passerelle SIMEN (30/08/2026) — livré (back-end + écrans)
 
