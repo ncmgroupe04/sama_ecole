@@ -1,4 +1,5 @@
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -29,6 +30,13 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         // Classe redoublée (feature F) : défaut false en base pour que toute inscription existante
         // (créée avant cette colonne) soit non-redoublante, jamais NULL.
         builder.Property(e => e.IsRepeating).IsRequired().HasDefaultValue(false);
+        // Régime d'hébergement (module Internat) : défaut base 'Externe' pour que toute inscription
+        // existante (créée avant cette colonne) reste Externe, jamais NULL — même contrat qu'IsRepeating.
+        builder.Property(e => e.BoardingStatus)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(BoardingStatus.Externe);
         builder.Property(e => e.TotalDue).IsRequired().HasPrecision(12, 2);
         // Cumul des encaissements (JGK-F02) : par défaut 0, incrémenté sous le verrou xmin de cette table.
         builder.Property(e => e.AmountPaid).IsRequired().HasPrecision(12, 2).HasDefaultValue(0m);
@@ -78,5 +86,17 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
             .HasForeignKey(e => new { e.SchoolId, e.SchoolYearId })
             .HasPrincipalKey(y => new { y.SchoolId, y.Id })
             .OnDelete(DeleteBehavior.Restrict);
+
+        // FK COMPOSITE (SchoolId, RoomId) → Room, même défense anti cross-tenant que Student/Classroom/
+        // SchoolYear ci-dessus. Nullable : une chambre non affectée (régime posé, logement pas encore
+        // choisi) ou un élève Externe.
+        builder.HasOne<Room>()
+            .WithMany()
+            .HasForeignKey(e => new { e.SchoolId, e.RoomId })
+            .HasPrincipalKey(r => new { r.SchoolId, r.Id })
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+
+        builder.HasIndex(e => new { e.SchoolId, e.RoomId });
     }
 }

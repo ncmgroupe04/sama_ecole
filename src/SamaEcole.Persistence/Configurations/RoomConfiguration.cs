@@ -32,6 +32,11 @@ public class RoomConfiguration : IEntityTypeConfiguration<Room>
             .IsRequired()
             .HasDefaultValue(RoomType.SalleDeClasse);
 
+        // Clé alternative (SchoolId, Id) : cible de la FK COMPOSITE d'enrollments.room_id (module
+        // Internat), même raisonnement que FeeCategoryConfiguration — sans elle, une inscription
+        // pourrait pointer une chambre d'une AUTRE école (la RLS masque, mais n'empêche pas d'exister).
+        builder.HasAlternateKey(r => new { r.SchoolId, r.Id });
+
         // Deux salles ne peuvent pas porter le même nom DANS LE MÊME BÂTIMENT — mais « Salle 1 » peut
         // exister dans deux bâtiments différents de la même école.
         builder.HasIndex(r => new { r.SchoolId, r.BuildingId, r.Name, r.IsDeleted }).IsUnique();
