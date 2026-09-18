@@ -9,6 +9,7 @@ document.addEventListener('alpine:init', () => {
         SalleDeClasse: 'Salle de classe',
         Laboratoire: 'Laboratoire',
         Bureau: 'Bureau',
+        Dortoir: 'Dortoir',
         Autre: 'Autre'
     };
 
@@ -79,6 +80,17 @@ document.addEventListener('alpine:init', () => {
 
         roomTypeLabel(type) {
             return ROOM_TYPE_LABELS[type] || type;
+        },
+
+        // Dortoir (module Internat) partage cette même modale de suppression que les salles
+        // ordinaires : un directeur qui supprime un dortoir doit lire « dortoir », pas « salle ».
+        deleteRoomWording() {
+            const isDorm = !!(this.deletingRoom && this.deletingRoom.type === 'Dortoir');
+            return {
+                title: isDorm ? 'Supprimer le dortoir' : 'Supprimer la salle',
+                demonstrative: isDorm ? 'ce dortoir' : 'cette salle',
+                archived: isDorm ? 'archivé' : 'archivée',
+            };
         },
 
         async loadBuildings() {
@@ -262,7 +274,7 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------ Salles : suppression
 
         openDeleteRoom(room) {
-            this.deletingRoom = { id: room.id, name: room.name, rowVersion: room.rowVersion };
+            this.deletingRoom = { id: room.id, name: room.name, type: room.type, rowVersion: room.rowVersion };
             this.deleteRoomError = null;
         },
 

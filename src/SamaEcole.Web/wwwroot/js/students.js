@@ -47,6 +47,13 @@ document.addEventListener('alpine:init', () => {
         // inscrit pour … ». Confort d'affichage, chargé à part : jamais bloquant s'il manque.
         activeYearLabel: '',
 
+        // Module Internat (Paramètres › Modules) — même confort d'affichage que sidebarNav
+        // (auth.js) : désactivé par défaut, donc caché tant que la réponse n'est pas arrivée ou en
+        // cas d'erreur réseau. Gouverne uniquement le badge d'hébergement de la fiche élève ; la
+        // donnée elle-même (identity.boardingStatus) reste servie par l'API que le module soit
+        // actif ou non, RequireModule ne portant que sur les écritures d'InternatController.
+        internatEnabled: false,
+
         // Élèves de l'annuaire (aux filtres de classe/genre courants) SANS inscription pour l'année
         // active : ceux que le basculement sur « Tous les élèves » ferait apparaître. Déduit côté
         // client de deux comptages, uniquement en vue « Inscrits cette année » et hors recherche texte.
@@ -248,6 +255,7 @@ document.addEventListener('alpine:init', () => {
             }
             this.loadClassrooms();
             this.loadActiveYear();
+            this.loadInternatEnabled();
             this.loadStudents();
         },
 
@@ -261,6 +269,18 @@ document.addEventListener('alpine:init', () => {
                 // change ni la liste, ni les filtres, ni aucune action possible — interrompre
                 // l'écran pour ça serait disproportionné.
                 this.activeYearLabel = '';
+            }
+        },
+
+        async loadInternatEnabled() {
+            try {
+                const s = await window.api.get('/schools/current/settings');
+                this.internatEnabled = !!s && s.isInternatEnabled === true;
+            } catch (err) {
+                // silence-volontaire: confort d'affichage d'un seul badge (voir le commentaire sur
+                // internatEnabled ci-dessus) — sûr par défaut = caché, rien à afficher pour un module
+                // réservé/inerte en cas d'erreur réseau ; le reste de la fiche élève reste utilisable.
+                this.internatEnabled = false;
             }
         },
 
@@ -876,6 +896,22 @@ document.addEventListener('alpine:init', () => {
             return !history.some((h) => h.isActiveYear && h.status !== 'Cancelled');
         },
 
+        /**
+         * Badge « Interne » / « Demi-pensionnaire » en tête de fiche (Task 14, module Internat).
+         * Masqué tant que le module est désactivé pour l'école (internatEnabled) — confort
+         * d'affichage seulement, la donnée elle-même reste servie par l'API quel que soit l'état du
+         * module — et pour le régime par défaut Externe, qui ne mérite pas de pastille (comme
+         * « Inscrit » n'est pas doublé d'un badge « Non-redoublant »).
+         */
+        boardingBadgeLabel() {
+            const identity = this.studentDetail && this.studentDetail.identity;
+            if (!this.internatEnabled || !identity || identity.boardingStatus === 'Externe') return '';
+            if (identity.boardingStatus === 'Interne') {
+                return identity.roomName ? `Interne — ${identity.roomName}` : 'Interne';
+            }
+            return 'Demi-pensionnaire';
+        },
+
         /** Phrase « pas encore inscrit … » de la confirmation d'ajout, avec l'année active si connue. */
         addedNotEnrolledHint() {
             return this.activeYearLabel
@@ -1100,6 +1136,15 @@ document.addEventListener('alpine:init', () => {
          */
         get activeEnrollmentId() {
             return this.studentDetail?.academicHistory?.find(e => e.isActiveYear)?.enrollmentId || null;
+        },
+
+        /**
+         * Module Internat : entrée d'historique de l'inscription ACTIVE (régime d'hébergement + chambre),
+         * pour le badge « Hébergement » de la fiche — jamais la première entrée d'historique : un élève
+         * avec plusieurs années doit afficher le logement de l'année EN COURS, pas d'une année passée.
+         */
+        activeEnrollment() {
+            return this.studentDetail?.academicHistory?.find(h => h.isActiveYear) ?? null;
         },
 
         /**

@@ -30,6 +30,15 @@ document.addEventListener('alpine:init', () => {
         tuitionMonths: 9,
         activeYear: null,
 
+        // Module Internat (Task 17) — confort d'affichage, comme partout ailleurs dans le produit :
+        // la vraie garde est CreateEnrollmentCommandHandler (422 si le module n'est pas activé). Lu sur
+        // la même réponse /schools/current/settings que tuitionMonths (loadReferenceData) — pas d'appel
+        // dédié, pour ne pas dupliquer la requête déjà faite sur cet écran.
+        internatEnabled: false,
+        // Chambres avec au moins une place libre, pour le <select> du régime Interne/Demi-pensionnaire.
+        // Rechargé à chaque changement de régime (l'occupation évolue au fil des inscriptions).
+        availableRooms: [],
+
         // Élèves pour la réinscription (chargés à la demande)
         students: [],
         studentsLoaded: false,
@@ -46,7 +55,15 @@ document.addEventListener('alpine:init', () => {
             gender: 'M',
             guardianName: '',
             guardianPhone: '',
-            studentId: ''
+            studentId: '',
+
+            // --- Régime & Hébergement (module Internat, Task 17) ---
+            boardingStatus: 'Externe',
+            roomId: null,
+            // Vrai par défaut : quand l'école a une catégorie de frais IsBoardingFee sur la classe
+            // choisie, on l'ajoute par défaut à la fiche financière — décocher est l'exception,
+            // pas la règle (voir BoardingFeeLineBuilder, sans effet si aucune catégorie ne correspond).
+            includeBoardingFee: true
         },
         formErrors: {},
         isSubmitting: false,
@@ -153,6 +170,9 @@ document.addEventListener('alpine:init', () => {
                 this.tuitionMonths = settings.tuitionMonthsPerYear;
                 this.activeYear = years.find((y) => y.isActive) || null;
 
+                this.internatEnabled = !!settings && settings.isInternatEnabled === true;
+                if (this.internatEnabled) await this.loadAvailableRooms();
+
                 this.recurringByCategory = {};
                 categories.forEach((c) => { this.recurringByCategory[c.id] = c.isRecurring; });
 
@@ -169,6 +189,25 @@ document.addEventListener('alpine:init', () => {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des données d\'inscription.');
             } finally {
                 this.isLoading = false;
+            }
+        },
+
+        /**
+         * Chambres avec au moins une place libre — réutilise le tableau de bord Internat (Task 15)
+         * plutôt qu'une route dédiée : l'écran /internat en a déjà besoin, une seconde requête aussi
+         * légère n'apporterait rien. Échec silencieux (module désactivé entretemps, RequireModule
+         * ayant déjà tranché le sort de l'écran, ou 403 transitoire) : le sélecteur reste vide plutôt
+         * que de bloquer l'inscription — le champ garde son astérisque required, l'utilisateur verra
+         * l'absence d'option.
+         */
+        async loadAvailableRooms() {
+            try {
+                const dashboard = await window.api.get('/internat/dashboard');
+                this.availableRooms = (dashboard.rooms || []).filter((r) => r.occupantsCount < r.capacity);
+            } catch {
+                // silence-volontaire: module désactivé entretemps ou aucune chambre — le sélecteur
+                // reste simplement vide (champ toujours `required`), pas d'incident à signaler.
+                this.availableRooms = [];
             }
         },
 
@@ -263,6 +302,21 @@ document.addEventListener('alpine:init', () => {
             return this.mode === 'ReEnrollment' ? !!this.form.studentId : !!this.form.fullName;
         },
 
+        /**
+         * Champs Régime & Hébergement communs aux deux branches du payload — un élève Externe ne
+         * transmet ni chambre ni pension, même si le formulaire en gardait une valeur résiduelle
+         * (ex. régime rebasculé sur Externe après avoir choisi une chambre) : CreateEnrollmentCommandValidator
+         * rejette un RoomId sur un régime Externe (règle miroir, voir sa validation).
+         */
+        boardingPayload() {
+            const isBoarder = this.form.boardingStatus !== 'Externe';
+            return {
+                boardingStatus: this.form.boardingStatus,
+                roomId: isBoarder ? this.form.roomId : null,
+                includeBoardingFee: isBoarder ? this.form.includeBoardingFee : false
+            };
+        },
+
         async submit() {
             this.formErrors = {};
             this.isSubmitting = true;
@@ -274,7 +328,8 @@ document.addEventListener('alpine:init', () => {
                     type: 'ReEnrollment',
                     classroomId: this.form.classroomId,
                     isRepeating: this.form.isRepeating,
-                    studentId: this.form.studentId
+                    studentId: this.form.studentId,
+                    ...this.boardingPayload()
                 }
                 : {
                     type: 'NewEnrollment',
@@ -285,7 +340,8 @@ document.addEventListener('alpine:init', () => {
                     birthPlace: this.form.birthPlace || null,
                     gender: this.form.gender,
                     guardianName: this.form.guardianName || null,
-                    guardianPhone: this.form.guardianPhone || null
+                    guardianPhone: this.form.guardianPhone || null,
+                    ...this.boardingPayload()
                 };
 
             try {
@@ -349,7 +405,10 @@ document.addEventListener('alpine:init', () => {
                 gender: 'M',
                 guardianName: '',
                 guardianPhone: '',
-                studentId: ''
+                studentId: '',
+                boardingStatus: 'Externe',
+                roomId: null,
+                includeBoardingFee: true
             };
             this.studentSearch = '';
             this.formErrors = {};

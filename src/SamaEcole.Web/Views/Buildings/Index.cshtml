@@ -268,7 +268,7 @@
    <div>
     <label class="form-label form-label-required">Type de salle</label>
     <select-field model="newRoom.type" required="true" aria-label="Type de salle"
-     options-expr="[{value:'SalleDeClasse', label:'Salle de classe'},{value:'Laboratoire', label:'Laboratoire'},{value:'Bureau', label:'Bureau'},{value:'Autre', label:'Autre'}]" />
+     options-expr="[{value:'SalleDeClasse', label:'Salle de classe'},{value:'Laboratoire', label:'Laboratoire'},{value:'Bureau', label:'Bureau'},{value:'Dortoir', label:'Dortoir'},{value:'Autre', label:'Autre'}]" />
     <p x-show="createRoomErrors.type" x-text="createRoomErrors.type" class="field-error"></p>
    </div>
    <div>
@@ -300,7 +300,7 @@
    <div>
     <label class="form-label form-label-required">Type de salle</label>
     <select-field model="editingRoom.type" required="true" aria-label="Type de salle"
-     options-expr="[{value:'SalleDeClasse', label:'Salle de classe'},{value:'Laboratoire', label:'Laboratoire'},{value:'Bureau', label:'Bureau'},{value:'Autre', label:'Autre'}]" />
+     options-expr="[{value:'SalleDeClasse', label:'Salle de classe'},{value:'Laboratoire', label:'Laboratoire'},{value:'Bureau', label:'Bureau'},{value:'Dortoir', label:'Dortoir'},{value:'Autre', label:'Autre'}]" />
     <p x-show="editRoomErrors.type" x-cloak x-text="editRoomErrors.type" class="field-error"></p>
    </div>
    <div>
@@ -318,17 +318,24 @@
   </template>
  </modal-shell>
 
+ @* Dortoir (module Internat, room.type === 'Dortoir') partage cette modale avec les salles
+    ordinaires : deleteRoomWording() (buildings.js) accorde titre, question et participe au
+    type réel plutôt que de renvoyer systématiquement « salle ». Question directe plutôt que
+    l'ancienne phrase déclarative — c'est une suppression, elle doit se lire comme telle. *@
  <modal-shell open="deletingRoom" on-close="closeDeleteRoom()" size="md">
-  <modal-title>Supprimer la salle</modal-title>
+  <modal-title><span x-text="deleteRoomWording().title"></span></modal-title>
   <modal-subtitle>
+   Voulez-vous vraiment supprimer
    <span class="font-semibold text-slate-900" x-text="deletingRoom ? deletingRoom.name : ''"></span>
-   sera archivée et n'apparaîtra plus dans la liste.
+   ?
+   <span x-text="deletingRoom ? deleteRoomWording().demonstrative[0].toUpperCase() + deleteRoomWording().demonstrative.slice(1) : ''"></span>
+   sera <span x-text="deleteRoomWording().archived"></span> et n'apparaîtra plus dans la liste.
   </modal-subtitle>
   <div x-show="deleteRoomError" x-cloak class="form-error-banner" x-text="deleteRoomError"></div>
   <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
    <button type="button" x-on:click="closeDeleteRoom()" class="btn-modal-secondary group">Annuler</button>
    <button type="button" x-on:click="confirmDeleteRoom()" :disabled="isDeletingRoom" class="btn-modal-danger">
-    <span x-text="isDeletingRoom ? 'Suppression...' : 'Supprimer la salle'"></span>
+    <span x-text="isDeletingRoom ? 'Suppression...' : deleteRoomWording().title"></span>
    </button>
   </div>
  </modal-shell>

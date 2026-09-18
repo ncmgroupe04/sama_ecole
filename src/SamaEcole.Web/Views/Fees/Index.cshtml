@@ -178,6 +178,13 @@
  <span class="block text-xs text-slate-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
  </label>
  </div>
+ <div class="flex items-start gap-2">
+ <input id="cat-boarding" type="checkbox" x-model="newCategory.isBoardingFee" class="checkbox-field mt-1">
+ <label for="cat-boarding" class="text-sm text-slate-700">
+ Frais d'internat (module Internat)
+ <span class="block text-xs text-slate-400">Proposable automatiquement à l'inscription d'un élève Interne/Demi-pensionnaire (écran Internat, Inscriptions).</span>
+ </label>
+ </div>
  <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
  <button type="button" x-on:click="isCategoryOpen = false" class="btn-modal-secondary group">Annuler</button>
  <button type="submit" :disabled="isSavingCategory" class="btn-modal-primary group">

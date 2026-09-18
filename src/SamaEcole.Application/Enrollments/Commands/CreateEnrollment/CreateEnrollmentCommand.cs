@@ -44,4 +44,19 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     public string? Gender { get; init; }
     public string? GuardianName { get; init; }
     public string? GuardianPhone { get; init; }
+
+    // --- Régime & Hébergement (module Internat) ---
+
+    /// <summary>Défaut Externe : un élève qui ne loge pas dans l'établissement.</summary>
+    public BoardingStatus BoardingStatus { get; init; } = BoardingStatus.Externe;
+
+    /// <summary>Chambre affectée — requis si <see cref="BoardingStatus"/> ≠ Externe (voir le Validator).</summary>
+    public Guid? RoomId { get; init; }
+
+    /// <summary>
+    /// Si vrai ET qu'une catégorie FeeCategory.IsBoardingFee a un ClassFee sur la classe choisie,
+    /// ajoute la ligne de pension au compte financier de l'inscription (voir BoardingFeeLineBuilder).
+    /// Sans effet pour un élève Externe.
+    /// </summary>
+    public bool IncludeBoardingFee { get; init; }
 }

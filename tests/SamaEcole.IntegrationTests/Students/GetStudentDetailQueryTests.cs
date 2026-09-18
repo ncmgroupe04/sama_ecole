@@ -51,6 +51,13 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
     // École B : le seul élève dont l'École A ne doit JAMAIS voir la fiche.
     private static readonly Guid EleveEcoleB = Guid.Parse("22222222-0000-0000-0000-0000000000b1");
 
+    // Module Internat : un élève Interne affecté à une chambre, pour vérifier BoardingStatus/RoomLabel
+    // sur l'entrée d'historique de SON inscription.
+    private static readonly Guid BatimentA = Guid.Parse("11111111-0000-0000-0000-0000000000c1");
+    private static readonly Guid ChambreA = Guid.Parse("11111111-0000-0000-0000-0000000000c2");
+    private static readonly Guid EleveInterne = Guid.Parse("11111111-0000-0000-0000-0000000000c3");
+    private static readonly Guid InscriptionInterne = Guid.Parse("11111111-0000-0000-0000-0000000000c4");
+
     public async Task InitializeAsync()
     {
         await _db.InitializeAsync();
@@ -95,6 +102,11 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
             {
                 Id = EleveEcoleB, SchoolId = EcoleB, Matricule = "ELEV-2026-0001", FullName = "Modou Diop",
                 BirthDate = new DateOnly(2014, 8, 2), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseB
+            },
+            new Student
+            {
+                Id = EleveInterne, SchoolId = EcoleA, Matricule = "ELEV-2026-0003", FullName = "Bineta Ba",
+                BirthDate = new DateOnly(2015, 5, 20), BirthPlace = "Dakar", Gender = "F", ClassroomId = ClasseA
             });
 
         owner.Enrollments.Add(new Enrollment
@@ -103,6 +115,22 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
             ClassroomId = ClasseA, Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed,
             TotalDue = 100_000m, AmountPaid = 30_000m, ReceiptNumber = "REC-2026-0001",
             EnrolledAt = DateTimeOffset.UtcNow
+        });
+
+        // Module Internat : bâtiment + chambre, et l'inscription Interne affectée à cette chambre.
+        owner.Buildings.Add(new Building { Id = BatimentA, SchoolId = EcoleA, Name = "Pavillon A" });
+        owner.Rooms.Add(new Room
+        {
+            Id = ChambreA, SchoolId = EcoleA, BuildingId = BatimentA, Name = "Chambre 102",
+            Type = RoomType.Dortoir, Capacity = 4
+        });
+        owner.Enrollments.Add(new Enrollment
+        {
+            Id = InscriptionInterne, SchoolId = EcoleA, StudentId = EleveInterne, SchoolYearId = AnneeA,
+            ClassroomId = ClasseA, Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed,
+            TotalDue = 0m, AmountPaid = 0m, ReceiptNumber = "REC-2026-0003",
+            EnrolledAt = DateTimeOffset.UtcNow,
+            BoardingStatus = BoardingStatus.Interne, RoomId = ChambreA
         });
 
         owner.Grades.Add(new Grade
@@ -173,6 +201,10 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         detail.Identity.Matricule.Should().Be("ELEV-2026-0002");
         detail.Identity.ClassroomName.Should().Be("CM2");
 
+        // Aucune inscription pour l'année active : régime par défaut, jamais une exception (Task 14).
+        detail.Identity.BoardingStatus.Should().Be(nameof(BoardingStatus.Externe));
+        detail.Identity.RoomName.Should().BeNull();
+
         detail.AcademicHistory.Should().BeEmpty("aucune inscription n'a été saisie pour cet élève");
         detail.Grades.Should().BeEmpty("aucune note n'a été saisie pour cet élève");
 
@@ -197,9 +229,20 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveComplet), CancellationToken.None);
 
+        // Régime par défaut (Externe) au niveau identité aussi bien que sur l'inscription — le cas
+        // Interne + chambre est couvert séparément par Handle_Populates_BoardingStatus_And_RoomLabel_
+        // For_An_Interne_Student (Task 14 + module Internat), sur sa propre fixture dédiée.
+        detail.Identity.BoardingStatus.Should().Be(nameof(BoardingStatus.Externe));
+        detail.Identity.RoomName.Should().BeNull();
+
         detail.AcademicHistory.Should().ContainSingle();
         detail.AcademicHistory[0].SchoolYearLabel.Should().Be("2026-2027");
         detail.AcademicHistory[0].Status.Should().Be(nameof(EnrollmentStatus.Confirmed));
+
+        // Module Internat : cet élève n'a jamais reçu de régime explicite — Externe par défaut, sans
+        // chambre (AGENTS.md règle sur les valeurs par défaut : jamais de fuite d'un champ non renseigné).
+        detail.AcademicHistory[0].BoardingStatus.Should().Be(nameof(BoardingStatus.Externe));
+        detail.AcademicHistory[0].RoomLabel.Should().BeNull();
 
         detail.Grades.Should().ContainSingle();
         detail.Grades[0].Subjects.Should().ContainSingle(s => s.SubjectName == "Mathématiques" && s.Devoir1 == 14);
@@ -209,6 +252,31 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         detail.Payments.TotalDue.Should().Be(100_000m);
         detail.Payments.TotalPaid.Should().Be(30_000m);
         detail.Payments.RemainingBalance.Should().Be(70_000m);
+    }
+
+    // ------------------------------------------------------------------
+    // 4) Module Internat : régime d'hébergement + chambre sur l'historique
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public async Task Handle_Populates_BoardingStatus_And_RoomLabel_For_An_Interne_Student()
+    {
+        await using var db = _db.NewAppContext(EcoleA);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
+
+        var detail = await handler.Handle(new GetStudentDetailQuery(EleveInterne), CancellationToken.None);
+
+        // Niveau identité (Task 14, badge de la fiche élève) : même inscription Interne que ci-dessous,
+        // les deux lectures doivent s'accorder — RoomName n'inclut pas le bâtiment, contrairement au
+        // RoomLabel de l'historique.
+        detail.Identity.BoardingStatus.Should().Be(nameof(BoardingStatus.Interne));
+        detail.Identity.RoomName.Should().Be("Chambre 102");
+
+        detail.AcademicHistory.Should().ContainSingle();
+        detail.AcademicHistory[0].BoardingStatus.Should().Be(nameof(BoardingStatus.Interne));
+        detail.AcademicHistory[0].RoomLabel.Should().Be(
+            "Chambre 102 — Pavillon A",
+            "le format attendu par la fiche élève est \"<Salle> — <Bâtiment>\"");
     }
 
     // ------------------------------------------------------------------
