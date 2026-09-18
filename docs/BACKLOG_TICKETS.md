@@ -400,6 +400,47 @@ destiné à la famille).
 
 ---
 
+## Module P — Cahier de texte & Vie pédagogique
+
+> Numérotation volontairement discontinue après M (N/O réservés à d'autres chantiers non encore
+> rédigés). Ce module ne porte pour l'instant que JGK-P04 ; il n'y a pas de P01-P03 à chercher
+> ailleurs.
+
+**JGK-P04** [M] — Cahier de texte / Journal de classe
+Journal pédagogique tenu par matière et par classe : chaque séance donne lieu à une entrée
+(date, titre, contenu résumé, devoirs éventuels + date de rendu) saisie par l'Enseignant qui a
+effectivement assuré le cours. Table tenant `class_journal_entries` (`SchoolId`, `ClassroomId`,
+`SubjectId`, `TeacherId`, `SessionDate`, `Topic`, `Content`, `Homework` nullable, `HomeworkDueDate`
+nullable, `RowVersion`/`xmin`, soft delete). CQRS : `CreateClassJournalEntryCommand`,
+`UpdateClassJournalEntryCommand`, `DeleteClassJournalEntryCommand` (soft delete), `GetClassJournalQuery`
+(paginé, filtrable par classe/matière/période).
+
+*Rôles* : écriture réservée à l'Enseignant **titulaire du créneau** (vérifié contre `ScheduleSlot` —
+un enseignant ne peut journaliser une séance qu'il n'a pas au planning) ; Directeur/Secrétariat/
+Surveillant en lecture seule sur toutes les entrées de l'école (contrôle pédagogique, même trio
+d'oversight que `ParentSummonsController`) ; **aucun accès Parent/Élève** (module Portails hors
+périmètre V1, AGENTS.md — ne pas ajouter de route de consultation ouverte à un tiers non-personnel).
+
+*Règle métier* : une entrée n'est modifiable **librement par son auteur** que dans les 15 jours
+suivant `SessionDate` ; passé ce délai, seul Directeur/Secrétariat peut corriger, et la correction est
+historisée (même esprit que la règle #4 Finance : on ne réécrit pas silencieusement un historique
+pédagogique). Refus : `403` (rôle non concerné), `409` (créneau non planifié pour cet enseignant à
+cette date/classe/matière), `422` (`SessionDate` future — on journalise ce qui a été fait, jamais un
+programme prévisionnel).
+
+*Dépend de* : JGK-C02 (Classes), JGK-C03 (Matières), module Emploi du temps existant (`ScheduleSlot`,
+livré — voir `ACTIVE_CONTEXT.md` §Pédagogie). *Critères* : un Enseignant sans créneau sur
+(classe, matière, date) ne peut pas créer d'entrée (409, message nommant le créneau attendu) ; une
+entrée passée à J+16 est refusée en écriture pour son auteur (403) mais reste modifiable par le
+Directeur, avec trace de correction ; le Global Query Filter + la RLS isolent `class_journal_entries`
+par école (test `MultiTenant`, table ajoutée à `TenantTables`) ; aucune route n'est accessible sans
+authentification, et aucun rôle Parent/Élève n'existe dans l'énumération des rôles autorisés.
+
+*Hors périmètre de ce ticket* (à traiter séparément si besoin futur) : export PDF du cahier de texte
+pour l'inspection, rappel automatique si aucune entrée n'a été saisie pour un créneau planifié.
+
+---
+
 ## Correctifs
 
 **JGK-T01** [H] — Retrait de matière enseignant (privilège SQL vs soft-delete)
@@ -462,4 +503,5 @@ F02 → L01
 D01 → M05 → M01 → { M02 → M03, M06 }
 { C01, D03, Infrastructures } → M04
 Grille APC (EvaluationStructure) → M07
+{ C02, C03, ScheduleSlot } → P04
 ```
