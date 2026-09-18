@@ -2,6 +2,7 @@ using SamaEcole.Application.Attendance.Commands.SubmitAttendanceSheet;
 using SamaEcole.Application.Attendance.Queries.GetAttendanceSheet;
 using SamaEcole.Application.Attendance.Queries.InitializeAttendanceSheet;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/attendance")]
 [Authorize]
+[RequireModule(SchoolModule.Pedagogy)]
 public class AttendanceController(ISender mediator) : ControllerBase
 {
     public record SubmitAttendanceRequest(

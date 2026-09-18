@@ -146,7 +146,6 @@ service a donc besoin de sa base PostgreSQL et de sa configuration complète, ex
 | `Auth__PublicBaseUrl`, `PayDunya__PublicBaseUrl` | requises en production | URL publique du service — sert à construire les liens envoyés par e-mail et les retours PayDunya |
 | `Sms__*`, `WhatsApp__*`, `PayDunya__*` | optionnelles | Avertissement au démarrage, canal inactif (§3bis) |
 | `ConnectionStrings__Migrations` | **à NE PAS poser** | Rôle propriétaire, exempté de RLS. Il n'appartient qu'au travail de migration (AGENTS.md règle #2) |
-| `SAMA_RETOUR_MODE_TEST_AUTORISE` | **à NE PAS poser en production** | `Program.cs` refuse explicitement `true` en `Production` |
 
 `ConnectionStrings__Default` doit porter le rôle **applicatif** (`sama_ecole_app`). Sur une base gérée
 joignable par Internet, gardez `SslMode=Require`. `RlsGuard` vérifie au démarrage que ce rôle ne

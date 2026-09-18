@@ -300,4 +300,67 @@ public class ReportCardDocumentTests
 
         pages.Should().Be(1);
     }
+
+    /// <summary>
+    /// Module Coran/Franco-Arabe : titre, noms de matières, décision du conseil et mention
+    /// disciplinaire gagnent chacun leur équivalent arabe SANS faire déborder le bulletin — même cas le
+    /// plus chargé (12 matières) que le reste de la suite. Le contenu exact n'est pas vérifiable ici
+    /// sans extraction de texte PDF (même limite que A_Report_Card_With_A_Council_Decision_Fits_On_One_Page) ;
+    /// l'inspection visuelle réelle se fait via le PDF généré manuellement (voir plan de vérification).
+    /// </summary>
+    [Fact]
+    public void A_Bilingual_Report_Card_With_Twelve_Subjects_Fits_On_One_Page()
+    {
+        var subjects = BuildReportCard(12).Subjects;
+        var subjectNamesAr = subjects.ToDictionary(s => s.SubjectId, s => (string?)"الرياضيات");
+
+        var reportCard = BuildReportCard(12) with
+        {
+            IsBilingualArabic = true,
+            SubjectNamesAr = subjectNamesAr,
+            DisciplinaryMention = SamaEcole.Domain.Enums.DisciplinaryMention.Felicitations,
+            CouncilDecision = SamaEcole.Domain.Enums.CouncilDecision.Admitted
+        };
+
+        var pages = new ReportCardDocument(reportCard, logo: null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1, "le module Coran/Franco-Arabe ne doit pas faire déborder le bulletin sur une seconde page A5");
+    }
+
+    /// <summary>
+    /// Une école qui active le module (IsBilingualArabic) sans avoir encore saisi de nom arabe pour ses
+    /// matières (SubjectNamesAr null ou vide) obtient un bulletin sans second nom — jamais une exception,
+    /// jamais une valeur inventée. Seul le titre et les libellés fixes (décision, mention) sont arabes.
+    /// </summary>
+    [Fact]
+    public void A_Bilingual_Report_Card_Without_Any_Arabic_Subject_Name_Still_Renders()
+    {
+        var reportCard = BuildReportCard(8) with { IsBilingualArabic = true, SubjectNamesAr = null };
+
+        var bytes = new ReportCardDocument(reportCard, logo: null).GeneratePdf();
+
+        bytes.Should().NotBeEmpty();
+    }
+
+    /// <summary>
+    /// Le rendu NON bilingue (SchoolSettings.IsCoranModuleEnabled à faux, l'immense majorité des écoles)
+    /// ne doit strictement rien changer : IsBilingualArabic à faux (son défaut) laisse SubjectNamesAr
+    /// hors-jeu même s'il est renseigné par erreur, et aucune ligne arabe ne doit apparaître — non
+    /// vérifiable ici au caractère près (voir la limite déjà notée sur ComposeDecisionDuConseil), mais
+    /// le document ne doit ni lever ni déborder.
+    /// </summary>
+    [Fact]
+    public void A_Non_Bilingual_Report_Card_Ignores_Arabic_Subject_Names()
+    {
+        var subjects = BuildReportCard(12).Subjects;
+        var subjectNamesAr = subjects.ToDictionary(s => s.SubjectId, s => (string?)"الرياضيات");
+
+        var reportCard = BuildReportCard(12) with { SubjectNamesAr = subjectNamesAr };
+
+        var pages = new ReportCardDocument(reportCard, logo: null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1);
+    }
 }

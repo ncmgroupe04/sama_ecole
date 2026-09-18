@@ -185,6 +185,11 @@ public static class DependencyInjection
             services.AddHostedService<SubscriptionLifecycleHostedService>();
         }
 
+        // Police arabe (module Coran/Franco-Arabe) — enregistrée UNE SEULE FOIS ici, avant tout PDF,
+        // plutôt que répliquée dans le constructeur statique de chaque *PdfGenerator.cs comme
+        // QuestPDF.Settings.License l'est aujourd'hui (voir PdfFonts pour le raisonnement complet).
+        SamaEcole.Infrastructure.Documents.PdfFonts.EnsureRegistered();
+
         // Génération PDF des reçus (inscription JGK-E02, paiement JGK-F02) et certificat d'inscription (Axe 2). Sans état : des singletons suffisent.
         services.AddSingleton<IReceiptPdfGenerator, ReceiptPdfGenerator>();
         services.AddSingleton<IPaymentReceiptPdfGenerator, PaymentReceiptPdfGenerator>();

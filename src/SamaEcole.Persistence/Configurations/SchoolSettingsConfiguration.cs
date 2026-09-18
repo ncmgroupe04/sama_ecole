@@ -34,6 +34,23 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .IsRequired()
             .HasDefaultValue(SamaEcole.Domain.Entities.SchoolSettingsDefaults.DebtorReminderThresholdDays);
 
+        // Défaut en base = true pour Pédagogie/Finance (socle métier existant, activé par défaut) et
+        // false pour Internat/Coran (aucun module derrière ces deux réglages pour l'instant) — sans
+        // ce HasDefaultValue explicite, EF Core scaffolderait le défaut CLR (false) pour les quatre,
+        // ce qui fermerait Pédagogie/Finance pour toute école déjà en base au moment de la migration.
+        builder.Property(s => s.IsPedagogyEnabled)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.IsPedagogyEnabled);
+        builder.Property(s => s.IsFinanceEnabled)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.IsFinanceEnabled);
+        builder.Property(s => s.IsInternatEnabled)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.IsInternatEnabled);
+        builder.Property(s => s.IsCoranModuleEnabled)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.IsCoranModuleEnabled);
+
         builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
         builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);
         builder.Property(s => s.CashierSignatureUrl).HasMaxLength(500);

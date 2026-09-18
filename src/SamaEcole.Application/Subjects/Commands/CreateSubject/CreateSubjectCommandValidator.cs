@@ -9,6 +9,9 @@ public class CreateSubjectCommandValidator : AbstractValidator<CreateSubjectComm
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(80).NoHtml();
 
+        // Module Coran/Franco-Arabe : optionnel, texte libre (aucune traduction automatique).
+        RuleFor(x => x.NameAr).MaximumLength(80).NoHtml();
+
         // Niveau LIBRE, comme pour les classes (openapi.yaml) : primaire, collège et lycée ne
         // découpent pas leur scolarité de la même façon. Imposer une énumération exclurait des écoles.
         RuleFor(x => x.Level).NotEmpty().MaximumLength(50).NoHtml();

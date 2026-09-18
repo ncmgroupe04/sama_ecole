@@ -48,6 +48,7 @@ namespace SamaEcole.Web.Controllers;
 // (c'était la cause de l'« Erreur HTTP 403 » à l'ouverture de l'écran). Les actions de gestion
 // reposent leur garde explicitement ci-dessous (ManageRoles). Même correctif que StateIntegrationController.
 [Authorize(Roles = ReadRoles)]
+[RequireModule(SchoolModule.Pedagogy)]
 public class ExamsController(ISender mediator) : ControllerBase
 {
     /// <summary>Gestion du module : sessions, écriture des dossiers, transmission, résultats, documents, export.</summary>

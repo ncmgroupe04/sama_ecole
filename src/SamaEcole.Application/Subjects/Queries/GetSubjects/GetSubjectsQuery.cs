@@ -32,4 +32,7 @@ public record SubjectDto(
     decimal? MaxScore = null,
     int DisplayOrder = 0,
     string? Column1Header = null,
-    string? Column2Header = null);
+    string? Column2Header = null,
+
+    /// <summary>Nom en arabe (module Coran/Franco-Arabe) — null tant que non saisi.</summary>
+    string? NameAr = null);

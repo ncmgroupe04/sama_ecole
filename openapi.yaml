@@ -993,8 +993,6 @@ paths:
       description: >-
         Lecture LÉGÈRE, ouverte à tout rôle de l'école. Alimente la pastille « Mode test » de la
         barre supérieure et les deux régimes de la « Zone de danger » de l'écran Paramètres.
-        `revertToTestAvailable` est un drapeau d'ENVIRONNEMENT (Development ou
-        `SAMA_RETOUR_MODE_TEST_AUTORISE=true`) — toujours `false` en vraie production.
       responses:
         '200':
           description: État courant
@@ -1002,11 +1000,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [isLive, revertToTestAvailable]
+                required: [isLive, hasEverGoneLive]
                 properties:
                   isLive: { type: boolean }
                   wentLiveAt: { type: string, format: date-time, nullable: true }
-                  revertToTestAvailable: { type: boolean }
+                  hasEverGoneLive:
+                    type: boolean
+                    description: >-
+                      Verrou PERMANENT : reste vrai après un retour en mode test (isLive redevient
+                      alors faux). L'écran s'en sert pour ne jamais proposer « Réinitialiser l'école »
+                      dans ce cas — la purge serait de toute façon refusée (409
+                      RESET_UNAVAILABLE_LIVE_MODE).
 
   /schools/current/go-live:
     post:
@@ -1015,11 +1019,11 @@ paths:
       description: >-
         Bascule DÉLIBÉRÉE du mode test (bac à sable) vers le mode réel (exploitation). Jamais un
         effet de bord d'une autre opération. Conséquence : `POST /schools/current/reset-data`
-        devient indisponible (409 `RESET_UNAVAILABLE_LIVE_MODE`). Non rejouable : un second appel
-        renvoie 409 `ALREADY_LIVE`. En vraie production, la bascule est DÉFINITIVE — la seule porte
-        de sortie, `POST /schools/current/dev/revert-to-test`, n'est montée que sur un environnement
-        jetable. `confirmation` doit valoir exactement `CONFIRMER` (casse comprise) ou le nom de
-        l'établissement (casse indifférente).
+        devient indisponible POUR TOUJOURS (409 `RESET_UNAVAILABLE_LIVE_MODE`), même après un retour
+        en mode test (`POST /schools/current/revert-to-test`, disponible à tout moment) — voir
+        `School.HasEverGoneLive`. Non rejouable tel quel : un second appel renvoie 409
+        `ALREADY_LIVE`. `confirmation` doit valoir exactement `CONFIRMER` (casse comprise) ou le nom
+        de l'établissement (casse indifférente).
       requestBody:
         required: true
         content:
@@ -1050,15 +1054,30 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
-  /schools/current/dev/revert-to-test:
+  /schools/current/revert-to-test:
     post:
       tags: [Schools]
-      summary: Repasser l'établissement en mode test (recette — Directeur uniquement)
+      summary: Repasser l'établissement en mode test (Directeur uniquement)
       description: >-
-        Porte de SORTIE réservée aux environnements jetables : annule le passage en mode réel pour
-        pouvoir le rejouer. **Cet endpoint n'est monté que si** l'environnement est Development ou
-        `SAMA_RETOUR_MODE_TEST_AUTORISE=true` ; ailleurs (vraie production), une requête directe
-        reçoit un 404 du routeur. Aucune entrée, aucune confirmation — c'est un outil de recette.
+        Bascule DÉLIBÉRÉE du mode réel vers le mode test, disponible À TOUT MOMENT (aucun drapeau
+        d'environnement) pour que le Directeur garde le contrôle de son environnement. Ne rouvre
+        JAMAIS `POST /schools/current/reset-data` : `School.HasEverGoneLive`, posé une fois pour
+        toutes au premier passage réel, n'est jamais effacé ici — seul `wentLiveAt` (l'horodatage
+        COURANT) l'est, ce qui permet de rejouer `POST /schools/current/go-live`. `confirmation`
+        doit valoir exactement `TEST` (casse comprise) ou le nom de l'établissement (casse
+        indifférente).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation:
+                  type: string
+                  description: "`TEST` ou le nom exact de l'établissement."
+                  example: TEST
       responses:
         '200':
           description: Établissement repassé en mode test
@@ -1072,7 +1091,7 @@ paths:
                     type: boolean
                     description: Vrai si l'établissement était effectivement en mode réel avant l'appel.
         '403': { description: Réservé au Directeur }
-        '404': { description: Endpoint non monté sur cet environnement (production) }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /schools/current/settings:
     get:

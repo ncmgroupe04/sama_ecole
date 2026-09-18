@@ -171,7 +171,19 @@ public record ReportCardDto(
     // raison de langage et non de conception : un paramètre à valeur par défaut ne peut pas précéder
     // un paramètre obligatoire dans un record positionnel. Le défaut null (traité comme vide) est ce
     // qui laisse compiler les sites d'appel qui l'ignorent, à commencer par les tests des documents.
-    IReadOnlyDictionary<Guid, bool>? SubjectHonors = null);
+    IReadOnlyDictionary<Guid, bool>? SubjectHonors = null,
+
+    // Module Coran/Franco-Arabe (SchoolSettings.IsCoranModuleEnabled) : bulletin bilingue quand vrai.
+    // Faux par défaut — le rendu non-bilingue de toutes les écoles existantes ne bouge pas d'un point
+    // (AGENTS.md règle #12).
+    bool IsBilingualArabic = false,
+
+    // Nom en arabe de chaque matière (Subject.NameAr), même convention que SubjectHonors/SubjectAppreciations
+    // ci-dessus : un dictionnaire à part plutôt qu'un champ sur SubjectGradeDto, partagé avec la saisie
+    // de notes qui n'a rien à voir avec le bulletin bilingue. Null/absent → aucune ligne n'imprime de
+    // second nom, jamais une valeur inventée. Résolu UNIQUEMENT si IsBilingualArabic (évite une requête
+    // inutile pour l'immense majorité des écoles).
+    IReadOnlyDictionary<Guid, string?>? SubjectNamesAr = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -355,6 +367,18 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             .Select(e => e.IsRepeating)
             .FirstOrDefaultAsync(cancellationToken);
 
+        // Module Coran/Franco-Arabe : la requête des noms arabes n'a lieu QUE si le module est activé
+        // pour l'école — inutile pour l'immense majorité des établissements.
+        var isBilingualArabic = settings?.IsCoranModuleEnabled ?? false;
+        IReadOnlyDictionary<Guid, string?>? subjectNamesAr = null;
+        if (isBilingualArabic)
+        {
+            var subjectIds = summary.Subjects.Select(s => s.SubjectId).ToList();
+            subjectNamesAr = await dbContext.Subjects.AsNoTracking()
+                .Where(s => subjectIds.Contains(s.Id))
+                .ToDictionaryAsync(s => s.Id, s => s.NameAr, cancellationToken);
+        }
+
         var dto = new ReportCardDto(
             school.Name,
             school.LogoUrl,
@@ -400,7 +424,9 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             ClassroomPromotion.ValidatedLevels(classroom, remark?.CouncilDecision),
 
             evaluationStructure,
-            subjectHonors);
+            subjectHonors,
+            isBilingualArabic,
+            subjectNamesAr);
 
         return dto;
     }

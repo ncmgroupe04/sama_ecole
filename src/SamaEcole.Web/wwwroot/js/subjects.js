@@ -103,7 +103,7 @@ document.addEventListener('alpine:init', () => {
 
         isCreateOpen: false,
         isSubmitting: false,
-        newSubject: { name: '', level: '', coefficient: 1, parentSubjectId: '', maxScore: '', displayOrder: 0 },
+        newSubject: { name: '', nameAr: '', level: '', coefficient: 1, parentSubjectId: '', maxScore: '', displayOrder: 0 },
         createErrors: {},
 
         // ── Structure d'évaluation (grilles APC du primaire) ──
@@ -301,6 +301,7 @@ document.addEventListener('alpine:init', () => {
             const siblings = (this.structureGroups.find((g) => g.root.id === root.id) || {}).children || [];
             this.newSubject = {
                 name: '',
+                nameAr: '',
                 level: root.level,
                 coefficient: root.coefficient,
                 parentSubjectId: root.id,
@@ -317,6 +318,7 @@ document.addEventListener('alpine:init', () => {
         openCreateGroup() {
             this.newSubject = {
                 name: '',
+                nameAr: '',
                 level: this.structureLevel,
                 coefficient: 1,
                 parentSubjectId: '',
@@ -443,6 +445,7 @@ document.addEventListener('alpine:init', () => {
         saveSubject(subject, patch) {
             const payload = {
                 name: subject.name,
+                nameAr: subject.nameAr,
                 level: subject.level,
                 coefficient: subject.coefficient,
                 rowVersion: subject.rowVersion,
@@ -487,7 +490,7 @@ document.addEventListener('alpine:init', () => {
             // la suite. Repartir d'un champ vide à chaque fois ferait retaper « Primaire » dix fois.
             const lastLevel = this.subjects.length ? this.subjects[this.subjects.length - 1].level : '';
             this.newSubject = {
-                name: '', level: lastLevel, coefficient: 1,
+                name: '', nameAr: '', level: lastLevel, coefficient: 1,
                 parentSubjectId: '', maxScore: '', displayOrder: 0
             };
             this.createErrors = {};
@@ -540,7 +543,8 @@ document.addEventListener('alpine:init', () => {
                 maxScore: subject.maxScore ?? null,
                 displayOrder: subject.displayOrder ?? 0,
                 column1Header: subject.column1Header ?? null,
-                column2Header: subject.column2Header ?? null
+                column2Header: subject.column2Header ?? null,
+                nameAr: subject.nameAr ?? ''
             };
             this.editErrors = {};
         },

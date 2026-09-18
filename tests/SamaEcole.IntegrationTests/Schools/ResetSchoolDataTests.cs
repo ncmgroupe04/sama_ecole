@@ -677,13 +677,14 @@ public class ResetSchoolDataTests : IAsyncLifetime
             "un double clic, ou un Directeur qui recommence, ne doit produire ni erreur ni effet de bord");
     }
 
-    /// <summary>Passe une école en mode réel, comme le ferait GoLiveCommand.</summary>
+    /// <summary>Passe une école en mode réel, comme le ferait GoLiveCommand — verrou permanent inclus.</summary>
     private async Task MarkAsLiveAsync(Guid schoolId)
     {
         await using var owner = _db.NewOwnerContext();
 
         var school = await owner.Schools.IgnoreQueryFilters().SingleAsync(s => s.Id == schoolId);
         school.WentLiveAt = new DateTimeOffset(2027, 1, 15, 9, 0, 0, TimeSpan.Zero);
+        school.HasEverGoneLive = true;
 
         await owner.SaveChangesAsync(CancellationToken.None);
     }
@@ -735,12 +736,13 @@ public class ResetSchoolDataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Reverting_To_Test_Mode_Must_Make_The_Purge_Possible_Again()
+    public async Task Reverting_To_Test_Mode_Must_Not_Reopen_The_Purge()
     {
-        // Le garde lit l'état COURANT de l'école, il ne se souvient de rien : repasser en mode test
-        // (RevertToTestCommand, réservé aux environnements jetables) rouvre réellement la purge. Sans
-        // ce test, un garde qui bloquerait définitivement après un premier passage en mode réel
-        // passerait inaperçu — la recette ne pourrait plus se remettre à neuf.
+        // Le garde lit désormais HasEverGoneLive (verrou PERMANENT), pas WentLiveAt (l'affichage
+        // courant, que RevertToTestCommand remet à null pour rejouer la bascule vers le mode réel).
+        // Sans ce test, un garde qui reviendrait sur WentLiveAt passerait inaperçu — et un Directeur
+        // pourrait rouvrir la purge de données devenues comptables en repassant en mode test
+        // (AGENTS.md règle #6), exactement ce que ce verrou existe pour empêcher.
         await MarkAsLiveAsync(EcoleA);
 
         await using (var owner = _db.NewOwnerContext())
@@ -752,9 +754,16 @@ public class ResetSchoolDataTests : IAsyncLifetime
 
         await using var appA = _db.NewAppContext(EcoleA);
 
-        var summary = await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleA, CancellationToken.None);
+        var act = async () => await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleA, CancellationToken.None);
 
-        summary.Entries.Should().Contain(e => e.Label == "Élèves" && e.RowsDeleted == 2);
+        var thrown = await act.Should().ThrowAsync<PostgresException>()
+            .Where(e => e.SqlState == PostgresErrorCodes.RaiseException);
+
+        thrown.Which.MessageText.Should().Contain("RESET_UNAVAILABLE_LIVE_MODE");
+
+        await using var owner2 = _db.NewOwnerContext();
+        (await owner2.Students.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(2,
+            "rien n'a dû être effacé : le retour en mode test ne rouvre pas la purge");
     }
 
     /// <summary>

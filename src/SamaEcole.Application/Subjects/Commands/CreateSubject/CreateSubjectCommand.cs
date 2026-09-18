@@ -10,6 +10,10 @@ namespace SamaEcole.Application.Subjects.Commands.CreateSubject;
 public record CreateSubjectCommand : IRequest<SubjectResult>
 {
     public required string Name { get; init; }
+
+    /// <summary>Nom en arabe (module Coran/Franco-Arabe), saisi librement — null si non renseigné, jamais une traduction automatique.</summary>
+    public string? NameAr { get; init; }
+
     public required string Level { get; init; }
     public decimal Coefficient { get; init; }
 
@@ -43,4 +47,5 @@ public record SubjectResult(
     decimal Coefficient,
     Guid? ParentSubjectId = null,
     decimal? MaxScore = null,
-    int DisplayOrder = 0);
+    int DisplayOrder = 0,
+    string? NameAr = null);

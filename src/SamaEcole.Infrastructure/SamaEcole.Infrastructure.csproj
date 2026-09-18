@@ -28,6 +28,17 @@
     <ProjectReference Include="..\SamaEcole.Application\SamaEcole.Application.csproj" />
   </ItemGroup>
 
+  <!-- Police arabe (Noto Naskh Arabic, licence SIL OFL — voir Fonts/NotoNaskhArabic-OFL.txt) embarquée
+       dans l'assembly plutôt que déposée dans wwwroot : Infrastructure est une bibliothèque de classes
+       sans site web propre, et l'embarquement voyage avec le DLL quelle que soit la disposition du
+       système de fichiers du conteneur — voir PdfFonts.EnsureRegistered(), qui la lit via
+       Assembly.GetManifestResourceStream et l'enregistre auprès de QuestPDF au démarrage. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Fonts\NotoNaskhArabic.ttf" />
+  </ItemGroup>
+
+
+
   <!-- ReportCardDocument expose son formatage décimal (FormatGrade/FormatOptionalGrade) en `internal`
        pour être testé directement (Volume 1 §8.5), sans en faire une API publique. -->
   <ItemGroup>

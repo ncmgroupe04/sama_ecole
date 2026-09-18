@@ -11,14 +11,10 @@ using SamaEcole.Infrastructure.Notifications;
 using SamaEcole.Persistence;
 using SamaEcole.Persistence.Seed;
 using SamaEcole.Web.Authorization;
-using SamaEcole.Web.Configuration;
 using SamaEcole.Web.Filters;
 using SamaEcole.Web.HealthChecks;
 using SamaEcole.Web.Middleware;
 using SamaEcole.Web.RateLimiting;
-using SamaEcole.Application.Schools.Commands.RevertToTest;
-using SamaEcole.Domain.Enums;
-using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
@@ -66,38 +62,6 @@ builder.Services.AddPersistence(builder.Configuration);
 // Paramètres d'authentification (verrouillage, durée du refresh token) — ticket JGK-A04.
 builder.Services.AddSingleton(
     builder.Configuration.GetSection("Auth").Get<AuthSettings>() ?? new AuthSettings());
-
-// --- Bac à sable / mode réel : drapeau « le retour au mode test est-il autorisé ici ? » ---
-// true en Development, OU si SAMA_RETOUR_MODE_TEST_AUTORISE=true (posé sur les seuls environnements
-// jetables — dev, recette, staging). false partout ailleurs, donc en vraie production : le passage
-// en mode réel y est DÉFINITIF et l'endpoint /schools/current/dev/revert-to-test n'est pas monté.
-// Volontairement pas conditionné à ASPNETCORE_ENVIRONMENT : la recette tourne avec l'image de prod.
-var revertToTestRequested = builder.Configuration.GetValue<bool>("SAMA_RETOUR_MODE_TEST_AUTORISE");
-
-// Garde de démarrage — même idiome que RlsGuard (rôle PostgreSQL), la clé JWT sentinelle et
-// EmailSenderGuard : sur une configuration dangereuse, on REFUSE DE DÉMARRER plutôt que de tourner
-// en silence avec une porte ouverte.
-//
-// Ce drapeau commande la capacité la plus destructrice du produit : repasser l'établissement en mode
-// test rend la « Zone de danger » de nouveau disponible, donc la purge de données devenues
-// comptables (AGENTS.md règle #6). Toute la chaîne en aval est correctement gardée — route montée
-// conditionnellement, RequireRole(Directeur), double contrôle dans le Handler — mais rien
-// n'empêchait ce commutateur RACINE d'être posé par erreur sur la production, où il aurait ouvert
-// l'effacement définitif de la comptabilité d'une école.
-//
-// La recette garde sa porte de sortie : elle tourne avec l'image de production mais sous
-// ASPNETCORE_ENVIRONMENT=Staging, que ce garde laisse passer. Seul Production est refusé.
-if (revertToTestRequested && builder.Environment.IsProduction())
-{
-    throw new InvalidOperationException(
-        "SAMA_RETOUR_MODE_TEST_AUTORISE=true est refusé en Production : ce drapeau rouvre la purge " +
-        "des données d'un établissement passé en mode réel (« Zone de danger »), alors que ces " +
-        "données sont comptables et inaltérables (AGENTS.md règle #6). Réservez-le aux " +
-        "environnements jetables (Development, Staging/recette).");
-}
-
-var revertToTestEnabled = builder.Environment.IsDevelopment() || revertToTestRequested;
-builder.Services.AddSingleton<ISandboxModeProvider>(new SandboxModeProvider(revertToTestEnabled));
 
 // --- Authentification JWT (AGENTS.md — Décision D-07) ---
 var jwtSection = builder.Configuration.GetSection("Jwt");
@@ -185,8 +149,13 @@ builder.Services.AddScoped<IAuthorizationHandler, SchoolResourceAuthorizationHan
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, FeaturePolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
 
-// Donne au refus « hors formule » le format d'erreur normalisé (code FEATURE_NOT_IN_PLAN) au lieu
-// d'un 403 au corps vide, pour que l'interface puisse proposer la montée en gamme.
+// Contrôle d'accès par module ([RequireModule]) — même fournisseur de politiques que ci-dessus
+// (FeaturePolicyProvider résout aussi bien « Feature:… » que « Module:… »), seul le handler diffère :
+// il lit SchoolSettings (choix du Directeur), pas Subscriptions.Plan (formule payante).
+builder.Services.AddScoped<IAuthorizationHandler, ModuleAuthorizationHandler>();
+
+// Donne au refus « hors formule »/« module désactivé » le format d'erreur normalisé
+// (FEATURE_NOT_IN_PLAN / MODULE_DISABLED) au lieu d'un 403 au corps vide.
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, FeatureAuthorizationResultHandler>();
 
 builder.Services
@@ -587,19 +556,6 @@ app.MapControllers();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}"); // Vues Razor — voir docs/BACKLOG_TICKETS.md
-
-// Porte de SORTIE « repasser en mode test » — montée UNIQUEMENT sur les environnements jetables
-// (revertToTestEnabled, voir plus haut). En vraie production, la route n'existe pas : une requête
-// directe reçoit un 404 du routeur, avant tout code métier. Le Handler la revérifie malgré tout
-// (double garde). Minimal API plutôt qu'une action de contrôleur : c'est justement pour que le
-// mapping soit CONDITIONNEL, ce qu'un [HttpPost] sur un contrôleur ne permet pas proprement.
-if (revertToTestEnabled)
-{
-    app.MapPost("/api/v1/schools/current/dev/revert-to-test",
-            async (ISender mediator, CancellationToken cancellationToken) =>
-                Results.Ok(await mediator.Send(new RevertToTestCommand(), cancellationToken)))
-        .RequireAuthorization(policy => policy.RequireRole(nameof(Role.Directeur)));
-}
 
 // Sondes de santé, publiques et hors /api/ (donc jamais filtrées par SubscriptionAwaitingPaymentMiddleware,
 // jamais soumises à un limiteur de débit) — corps minimal, aucune donnée sensible.

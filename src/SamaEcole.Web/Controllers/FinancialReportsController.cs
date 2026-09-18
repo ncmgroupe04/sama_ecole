@@ -26,6 +26,7 @@ namespace SamaEcole.Web.Controllers;
 [Route("api/v1/finance/reports")]
 [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Finance)}")]
 [RequireFeature(Feature.AdvancedFinancialReports)]
+[RequireModule(SchoolModule.Finance)]
 public class FinancialReportsController(ISender mediator) : ControllerBase
 {
     [HttpGet("revenue")]

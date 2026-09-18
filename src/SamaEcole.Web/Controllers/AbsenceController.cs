@@ -5,6 +5,7 @@ using SamaEcole.Application.Absences.Queries.GetAbsenceJustifications;
 using SamaEcole.Application.Absences.Queries.GetEarlyDepartures;
 using SamaEcole.Application.Absences.Queries.GetLateArrivals;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
@@ -14,6 +15,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/absences")]
 [Authorize(Roles = $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Surveillant)}")]
+[RequireModule(SchoolModule.Pedagogy)]
 public class AbsenceController(IMediator _mediator) : ControllerBase
 {
     [HttpGet("justifications")]

@@ -256,6 +256,11 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                     t.Span("Année Scolaire : ").Bold().FontSize(8.5f);
                     t.Span(reportCard.SchoolYearLabel).FontSize(8.5f);
                 });
+                if (reportCard.IsBilingualArabic)
+                {
+                    right.Item().AlignRight().Element(c => Bilingual.ArabicBlock(
+                        c, $"{BulletinArabicLabels.SchoolYear} : {reportCard.SchoolYearLabel}", fontSize: 8.5f, bold: true));
+                }
                 right.Item().AlignRight().Text(reportCard.TermLabel).Bold().FontSize(8.5f);
             });
         });
@@ -270,13 +275,21 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
             });
     }
 
-    /// <summary>Titre centré entre DEUX doubles filets horizontaux, comme sur la référence.</summary>
-    private static void ComposeTitle(IContainer container)
+    /// <summary>
+    /// Titre centré entre DEUX doubles filets horizontaux, comme sur la référence. Module Coran/Franco-
+    /// Arabe (<see cref="ReportCardDto.IsBilingualArabic"/>) : titre arabe empilé en dessous, additif
+    /// uniquement — le rendu non-bilingue ne bouge pas d'un point (AGENTS.md règle #12).
+    /// </summary>
+    private void ComposeTitle(IContainer container)
     {
         container.Column(column =>
         {
             column.Item().Element(DoubleRule);
             column.Item().PaddingVertical(2).AlignCenter().Text("BULLETIN DE NOTES").Bold().FontSize(12);
+            if (reportCard.IsBilingualArabic)
+            {
+                column.Item().AlignCenter().Element(c => Bilingual.ArabicBlock(c, BulletinArabicLabels.BulletinTitle, fontSize: 11, bold: true));
+            }
             column.Item().Element(DoubleRule);
         });
 
@@ -412,7 +425,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
 
             foreach (var subject in reportCard.Subjects)
             {
-                table.Cell().Element(BodyCell).Text(subject.SubjectName);
+                table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, subject.SubjectId, subject.SubjectName));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
@@ -495,7 +508,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
 
             foreach (var subject in reportCard.Subjects)
             {
-                table.Cell().Element(BodyCell).Text(subject.SubjectName);
+                table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, subject.SubjectId, subject.SubjectName));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
@@ -671,10 +684,26 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                     cell = cell.Background(Colors.Grey.Lighten3);
                 }
 
-                var text = cell.PaddingVertical(2).AlignCenter().Text($"[{(isChecked ? "X" : " ")}] {label}").FontSize(6.5f);
-                if (isChecked)
+                // Arabe SEULEMENT sur la ligne cochée (module Coran/Franco-Arabe) : les 5 cases sont déjà
+                // à 6,5 pt sans marge, un second libellé sur les 5 ferait déborder — la ligne cochée est
+                // la seule qui compte pour le lecteur.
+                var padded = cell.PaddingVertical(2).AlignCenter();
+                if (isChecked && reportCard.IsBilingualArabic)
                 {
-                    text.Bold();
+                    padded.Column(column =>
+                    {
+                        column.Item().AlignCenter().Text($"[X] {label}").FontSize(6.5f).Bold();
+                        column.Item().AlignCenter().Element(c => Bilingual.ArabicBlock(
+                            c, BulletinArabicLabels.DisciplinaryMentions.GetValueOrDefault(value), fontSize: 6.5f, bold: true));
+                    });
+                }
+                else
+                {
+                    var text = padded.Text($"[{(isChecked ? "X" : " ")}] {label}").FontSize(6.5f);
+                    if (isChecked)
+                    {
+                        text.Bold();
+                    }
                 }
             }
         });
@@ -715,7 +744,15 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
 
                 column.Item().BorderTop(0.5f).BorderColor(Colors.Black).Row(row =>
                 {
-                    row.RelativeItem().PaddingVertical(2.5f).PaddingHorizontal(3).Text(label);
+                    row.RelativeItem().PaddingVertical(2.5f).PaddingHorizontal(3).Column(labelColumn =>
+                    {
+                        labelColumn.Item().Text(label);
+                        if (reportCard.IsBilingualArabic)
+                        {
+                            labelColumn.Item().Element(c => Bilingual.ArabicBlock(
+                                c, BulletinArabicLabels.CouncilDecisions.GetValueOrDefault(value), fontSize: 7.5f));
+                        }
+                    });
 
                     // Petit carré à droite — grisé et coché [X] en gras pour la ligne retenue, vide sinon.
                     var box = row.ConstantItem(18).BorderLeft(0.5f).BorderColor(Colors.Black).PaddingVertical(2.5f);
@@ -830,6 +867,32 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     /// construit sans cette donnée, ce que font plusieurs tests de mise en page — vaut « aucune matière
     /// distinguée », jamais une exception.
     /// </summary>
+    /// <summary>
+    /// Cellule « Disciplines » d'une ligne du tableau : le nom français comme toujours, plus — module
+    /// Coran/Franco-Arabe, quand <see cref="Subject.NameAr"/> a été saisi pour cette matière — son nom
+    /// arabe empilé en dessous (bloc RTL complet, voir <see cref="Bilingual"/>). Aucune ligne
+    /// supplémentaire pour une école non bilingue ou une matière sans nom arabe renseigné : la cellule
+    /// reste alors identique à avant, au caractère près.
+    /// </summary>
+    private void ComposeSubjectNameCell(IContainer container, Guid subjectId, string subjectName)
+    {
+        var nameAr = reportCard.IsBilingualArabic
+            ? reportCard.SubjectNamesAr?.GetValueOrDefault(subjectId)
+            : null;
+
+        if (string.IsNullOrWhiteSpace(nameAr))
+        {
+            container.Text(subjectName);
+            return;
+        }
+
+        container.Column(column =>
+        {
+            column.Item().Text(subjectName);
+            column.Item().Element(c => Bilingual.ArabicBlock(c, nameAr));
+        });
+    }
+
     private string HonorsFor(Guid subjectId) =>
         reportCard.SubjectHonors?.GetValueOrDefault(subjectId) == true ? "TH" : "";
 

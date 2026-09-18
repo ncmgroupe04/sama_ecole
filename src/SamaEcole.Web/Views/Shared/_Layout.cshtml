@@ -175,7 +175,7 @@
  @* Le Secrétariat tient sa propre caisse (ouvre une session, encaisse à l'inscription ou ici,
     clôture). Directeur/Finance y accèdent via le pôle Comptabilité — ce raccourci ne s'affiche
     donc que pour le Secrétariat, pour éviter un doublon. *@
- <a href="/caisse" x-show="canView(['Secretariat'])" class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
+ <a href="/caisse" x-show="canView(['Secretariat']) && financeEnabled" class="@(path.StartsWith("/caisse") ? LinkActive : LinkIdle)">
  <icon name="payment" class="w-5 h-5" />
  <span class="text-sm font-medium">Caisse (Encaissements)</span>
  </a>
@@ -191,7 +191,7 @@
  <icon name="archive" class="w-5 h-5" />
  <span class="text-sm font-medium">Inventaire</span>
  </a>
- <a href="/matieres" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
+ <a href="/matieres" x-show="canView(['Directeur', 'Secretariat', 'Enseignant']) && pedagogyEnabled" class="@(path.StartsWith("/matieres") ? LinkActive : LinkIdle)">
  <icon name="layers" class="w-5 h-5" />
  <span class="text-sm font-medium">Matières</span>
  </a>
@@ -199,19 +199,19 @@
  <icon name="users" class="w-5 h-5" />
  <span class="text-sm font-medium">Enseignants</span>
  </a>
- <a href="/notes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
+ <a href="/notes" x-show="canView(['Directeur', 'Secretariat', 'Enseignant']) && pedagogyEnabled" class="@(path.StartsWith("/notes") ? LinkActive : LinkIdle)">
  <icon name="document" class="w-5 h-5" />
  <span class="text-sm font-medium">Notes et bulletins</span>
  </a>
- <a href="/examens" x-show="canView(['Directeur', 'Secretariat', 'Enseignant'])" class="@(path.StartsWith("/examens") ? LinkActive : LinkIdle)">
+ <a href="/examens" x-show="canView(['Directeur', 'Secretariat', 'Enseignant']) && pedagogyEnabled" class="@(path.StartsWith("/examens") ? LinkActive : LinkIdle)">
  <icon name="document-text" class="w-5 h-5" />
  <span class="text-sm font-medium">Examens officiels</span>
  </a>
- <a href="/integration-etatique" x-show="canView(['Directeur', 'Secretariat'])" class="@(path.StartsWith("/integration-etatique") ? LinkActive : LinkIdle)">
+ <a href="/integration-etatique" x-show="canView(['Directeur', 'Secretariat']) && pedagogyEnabled" class="@(path.StartsWith("/integration-etatique") ? LinkActive : LinkIdle)">
  <icon name="globe" class="w-5 h-5" />
  <span class="text-sm font-medium">Intégration étatique</span>
  </a>
- <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat'])" class="@(path.StartsWith("/rapports/assiduite") ? LinkActive : LinkIdle)">
+ <a href="/rapports/assiduite" x-show="canView(['SuperAdmin', 'Directeur', 'Secretariat']) && pedagogyEnabled" class="@(path.StartsWith("/rapports/assiduite") ? LinkActive : LinkIdle)">
  <icon name="chart-multiple" class="w-5 h-5" />
  <span class="text-sm font-medium">Rapports</span>
  </a>
@@ -223,7 +223,7 @@
  Convocations, Pointage Profs) — même raisonnement que Gestion Scolaire ci-dessus. Le Super
  Admin n'a accès à aucun de ces sous-menus (console plateforme, pas d'établissement) : le
  pôle lui reste donc masqué, comme au Surveillant pour Gestion Scolaire. -->
- <div class="sidebar-pole relative space-y-1" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Finance', 'Surveillant'])" x-cloak>
+ <div class="sidebar-pole relative space-y-1" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Finance', 'Surveillant']) && pedagogyEnabled" x-cloak>
  <button type="button" title="Surveillance" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-primary-600" aria-expanded="@(surveillanceOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="shield" class="w-6 h-6 shrink-0" />
@@ -260,7 +260,7 @@
  Rapports financiers) : tous réservés à Directeur/Finance côté API (FinanceController), donc
  aucune union supplémentaire à calculer ici — seul x-cloak manquait, ajouté pour éviter le
  flash d'affichage avant l'hydratation d'Alpine (même garde que les autres pôles). -->
- <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool" x-cloak class="sidebar-pole relative space-y-1">
+ <div x-show="canView(['Directeur', 'Finance']) && !isPublicSchool && financeEnabled" x-cloak class="sidebar-pole relative space-y-1">
  <button type="button" title="Comptabilité" class="sidebar-link-main w-full flex items-center justify-between gap-3 px-3 py-2 rounded-2xl transition-all duration-200 text-slate-500 hover:bg-slate-100 hover:text-primary-600" aria-expanded="@(comptabiliteOpen ? "true" : "false")">
  <div class="flex items-center gap-3">
  <icon name="wallet" class="w-6 h-6 shrink-0" />

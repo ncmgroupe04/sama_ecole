@@ -2,6 +2,8 @@ using SamaEcole.Application.Subjects.Commands.CreateSubject;
 using SamaEcole.Application.Subjects.Commands.DeleteSubject;
 using SamaEcole.Application.Subjects.Commands.UpdateSubject;
 using SamaEcole.Application.Subjects.Queries.GetSubjects;
+using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +17,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/subjects")]
 [Authorize]
+[RequireModule(SchoolModule.Pedagogy)]
 public class SubjectsController(ISender mediator) : ControllerBase
 {
     /// <summary>
@@ -31,7 +34,8 @@ public class SubjectsController(ISender mediator) : ControllerBase
         decimal? MaxScore = null,
         int DisplayOrder = 0,
         string? Column1Header = null,
-        string? Column2Header = null);
+        string? Column2Header = null,
+        string? NameAr = null);
 
     /// <summary>
     /// ÉCRITURE : Directeur, Secrétariat et Enseignant — accès inconditionnel, sans le garde-fou par
@@ -76,7 +80,7 @@ public class SubjectsController(ISender mediator) : ControllerBase
             new UpdateSubjectCommand(
                 id, request.Name, request.Level, request.Coefficient, request.RowVersion,
                 request.ParentSubjectId, request.MaxScore, request.DisplayOrder,
-                request.Column1Header, request.Column2Header),
+                request.Column1Header, request.Column2Header, request.NameAr),
             cancellationToken));
 
     /// <summary>

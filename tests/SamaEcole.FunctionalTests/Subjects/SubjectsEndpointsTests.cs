@@ -26,8 +26,8 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     public Task DisposeAsync() => Task.CompletedTask;
 
     private record Tokens(string AccessToken, int ExpiresIn);
-    private record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion);
-    private record SubjectUpdateResult(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion);
+    private record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion, string? NameAr = null);
+    private record SubjectUpdateResult(Guid Id, string Name, string Level, decimal Coefficient, uint RowVersion, string? NameAr = null);
 
     private async Task<string> AccessTokenAsync(string email, string password)
     {
@@ -377,5 +377,76 @@ public class SubjectsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await _factory.GetSubjectAsync(created.Id))!.IsDeleted
             .Should().BeFalse("le conflit ne doit jamais entraîner une suppression silencieuse");
+    }
+
+    // ---------------------------------------------------------------- Module Coran/Franco-Arabe (NameAr)
+
+    [Fact]
+    public async Task A_Subject_Can_Be_Created_With_An_Arabic_Name()
+    {
+        var token = await DirecteurTokenAsync();
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/subjects", token,
+            new { name = "Mathématiques", nameAr = "الرياضيات", level = "Primaire", coefficient = 4 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = (await response.Content.ReadFromJsonAsync<SubjectDto>())!;
+        created.NameAr.Should().Be("الرياضيات");
+    }
+
+    [Fact]
+    public async Task A_Subject_Created_Without_An_Arabic_Name_Should_Have_It_Null()
+    {
+        var token = await DirecteurTokenAsync();
+
+        var created = await CreateSubjectAsync(token, "Physique", "Collège", 3);
+
+        created.NameAr.Should().BeNull("aucune traduction automatique — null tant que rien n'est saisi");
+    }
+
+    [Fact]
+    public async Task A_Directeur_Can_Set_The_Arabic_Name_On_An_Existing_Subject()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var created = await CreateSubjectAsync(directeur, "Géographie", "Collège", 2);
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{subject.Id}", directeur, new
+        {
+            name = "Géographie",
+            nameAr = "الجغرافيا",
+            level = "Collège",
+            coefficient = 2,
+            rowVersion = subject.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = (await response.Content.ReadFromJsonAsync<SubjectUpdateResult>())!;
+        updated.NameAr.Should().Be("الجغرافيا");
+
+        // Relu depuis la base, pas seulement renvoyé par le PUT.
+        (await FetchSubjectAsync(directeur, created.Id)).NameAr.Should().Be("الجغرافيا");
+    }
+
+    [Fact]
+    public async Task Clearing_The_Arabic_Name_Should_Store_Null_Not_An_Empty_String()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var response1 = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeur,
+            new { name = "Chimie", nameAr = "الكيمياء", level = "Collège", coefficient = 3 });
+        var created = (await response1.Content.ReadFromJsonAsync<SubjectDto>())!;
+        var subject = await FetchSubjectAsync(directeur, created.Id);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/subjects/{subject.Id}", directeur, new
+        {
+            name = "Chimie",
+            nameAr = "",
+            level = "Collège",
+            coefficient = 3,
+            rowVersion = subject.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await FetchSubjectAsync(directeur, created.Id)).NameAr.Should().BeNull();
     }
 }

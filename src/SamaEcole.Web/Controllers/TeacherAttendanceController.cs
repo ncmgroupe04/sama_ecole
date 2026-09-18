@@ -1,6 +1,7 @@
 using SamaEcole.Application.Attendance.Commands.CreateTeacherAttendance;
 using SamaEcole.Application.Attendance.Queries.GetTeacherAttendances;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
@@ -10,6 +11,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/teacher-attendance")]
 [Authorize(Roles = $"{nameof(Role.SuperAdmin)},{nameof(Role.Directeur)},{nameof(Role.Surveillant)}")]
+[RequireModule(SchoolModule.Pedagogy)]
 public class TeacherAttendanceController(IMediator _mediator) : ControllerBase
 {
     [HttpGet]

@@ -23,12 +23,24 @@ public class School : AuditableEntity
     /// partie de la comptabilité — invariant d'immuabilité, AGENTS.md règle #6).
     ///
     /// Jamais posé par un effet de bord (première clôture, première inscription…) : c'est une action
-    /// délibérée du Directeur, pour qu'en phase de recette on puisse tout nettoyer sans être bloqué
-    /// par une opération de test. En vraie production le passage est DÉFINITIF ; un retour au mode
-    /// test n'existe que sur les environnements jetables, derrière le drapeau
-    /// <c>SAMA_RETOUR_MODE_TEST_AUTORISE</c> (voir ISandboxModeProvider).
+    /// délibérée du Directeur. <c>RevertToTestCommand</c> — disponible à tout moment, pour que le
+    /// Directeur garde le contrôle de son environnement — remet ce champ à <c>null</c> pour rejouer la
+    /// bascule. Ce n'est PAS ce champ, mais <see cref="HasEverGoneLive"/>, qui verrouille la purge :
+    /// sans cette distinction, un retour en mode test rouvrirait la « Zone de danger » sur des données
+    /// réelles.
     /// </summary>
     public DateTimeOffset? WentLiveAt { get; set; }
+
+    /// <summary>
+    /// Verrou PERMANENT : posé une seule fois, au premier passage en mode réel
+    /// (<c>GoLiveCommandHandler</c>), et plus jamais effacé — y compris par
+    /// <c>RevertToTestCommand</c>. C'est ce champ, et non <see cref="WentLiveAt"/> (qui redevient
+    /// <c>null</c> après un retour en mode test), que <c>ResetSchoolDataCommandHandler</c> ET la
+    /// fonction PostgreSQL <c>reset_school_data</c> interrogent pour interdire la purge : une fois
+    /// qu'une école a enregistré des données réelles, elles restent inaltérables pour toujours, quel
+    /// que soit le régime d'affichage ultérieur (AGENTS.md règle #6).
+    /// </summary>
+    public bool HasEverGoneLive { get; set; }
 
     /// <summary>Adresse e-mail de contact de l'établissement, imprimée dans l'en-tête du reçu.</summary>
     public string? Email { get; set; }

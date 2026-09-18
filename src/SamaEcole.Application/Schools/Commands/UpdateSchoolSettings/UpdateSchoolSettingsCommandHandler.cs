@@ -65,6 +65,11 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.SmsOnPaymentReceipt = request.SmsOnPaymentReceipt;
         settings.DebtorReminderThresholdDays = request.DebtorReminderThresholdDays;
 
+        settings.IsPedagogyEnabled = request.IsPedagogyEnabled;
+        settings.IsFinanceEnabled = request.IsFinanceEnabled;
+        settings.IsInternatEnabled = request.IsInternatEnabled;
+        settings.IsCoranModuleEnabled = request.IsCoranModuleEnabled;
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("Paramètres de l'établissement {SchoolId} mis à jour.", schoolId);
@@ -89,6 +94,10 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.SmsOnDuesReminder,
             settings.SmsOnPaymentReceipt,
             settings.SmsCreditBalance,
-            settings.DebtorReminderThresholdDays);
+            settings.DebtorReminderThresholdDays,
+            settings.IsPedagogyEnabled,
+            settings.IsFinanceEnabled,
+            settings.IsInternatEnabled,
+            settings.IsCoranModuleEnabled);
     }
 }

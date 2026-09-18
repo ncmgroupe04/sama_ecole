@@ -84,11 +84,6 @@ services:
       Jwt__Audience: "sama-ecole-clients"
       Jwt__SigningKey: "${JWT_SIGNING_KEY:-DEV_ONLY_INSECURE_KEY_CHANGE_ME_MINIMUM_32_CHARS}"
       Redis__ConnectionString: "redis:6379"
-      # Retour au mode test : redondant ici (ASPNETCORE_ENVIRONMENT=Development l'autorise déjà). Sur
-      # un environnement de RECETTE tournant avec l'image de PROD, poser "true" sur le service API et
-      # redéployer pour faire apparaître le bouton « Repasser en mode test ». JAMAIS sur -prod : le
-      # passage en mode réel y est définitif. Voir .env.example (SAMA_RETOUR_MODE_TEST_AUTORISE).
-      SAMA_RETOUR_MODE_TEST_AUTORISE: "false"
     ports:
       - "5000:8080"
 

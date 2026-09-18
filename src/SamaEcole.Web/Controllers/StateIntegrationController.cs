@@ -12,6 +12,7 @@ using SamaEcole.Application.StateIntegration.Queries.GetSkillsBookletPdf;
 using SamaEcole.Application.StateIntegration.Queries.GetStateducReport;
 using SamaEcole.Application.StateIntegration.Queries.VerifyMutationCertificate;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Web.Authorization;
 using SamaEcole.Web.Infrastructure;
 using SamaEcole.Web.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
@@ -35,6 +36,7 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/state-integration")]
 [Authorize(Roles = DirectorAndSecretariat)]
+[RequireModule(SchoolModule.Pedagogy)]
 public class StateIntegrationController(ISender mediator, ISimenBridgeService simenBridge) : ControllerBase
 {
     private const string DirectorOnly = "Directeur";

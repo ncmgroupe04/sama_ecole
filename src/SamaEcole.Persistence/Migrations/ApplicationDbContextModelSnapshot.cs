@@ -1900,10 +1900,8 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("Condition")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Bon");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -3032,6 +3030,9 @@ namespace SamaEcole.Persistence.Migrations
                         .HasPrecision(9, 6)
                         .HasColumnType("numeric(9,6)");
 
+                    b.Property<bool>("HasEverGoneLive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("InspectionAcademie")
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
@@ -3270,8 +3271,28 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<int>("GradingScale")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsCoranModuleEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFinanceEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsInternatEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsPedagogyEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("OfficialStampUrl")
                         .HasMaxLength(500)
@@ -3877,6 +3898,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("NameAr")
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
 

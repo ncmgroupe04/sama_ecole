@@ -58,6 +58,8 @@
  <nav class="mt-6 tab-nav-scroll" role="tablist" aria-label="Sections des paramètres">
  <button type="button" role="tab" x-on:click="goToTab('profil')" :aria-selected="tab === 'profil'"
  class="tab-btn" :class="tabClass('profil')">Profil de l'établissement</button>
+ <button type="button" role="tab" x-on:click="goToTab('modules')" :aria-selected="tab === 'modules'"
+ class="tab-btn" :class="tabClass('modules')">Modules &amp; fonctionnalités</button>
  <button type="button" role="tab" x-on:click="goToTab('integration-etatique')" :aria-selected="tab === 'integration-etatique'"
  class="tab-btn" :class="tabClass('integration-etatique')">Intégration étatique (SIMEN)</button>
  <button type="button" role="tab" x-on:click="goToTab('formats-signatures')" :aria-selected="tab === 'formats-signatures'"
@@ -258,6 +260,101 @@
  </button>
  </div>
  </form>
+ </div>
+ </div>
+
+ <!-- ============================= SPOKE : MODULES & FONCTIONNALITÉS ============================= -->
+ @* Second axe, distinct des badges « Premium » (formule d'abonnement, featureGate ci-dessus) :
+ ici le Directeur choisit ce que SON établissement utilise opérationnellement, quelle que soit
+ sa formule (ex. une école 100% Comptabilité qui n'a pas l'usage de la Pédagogie). Lu par
+ ModuleAuthorizationHandler côté API ([RequireModule], 403 MODULE_DISABLED) et par la sidebar
+ (sidebarNav() dans auth.js) — masquer un interrupteur ici ne suffirait jamais à couper l'accès.
+ saveConfig(false) : même requête PUT /schools/current/settings que les autres délégations,
+ appliquée immédiatement au clic plutôt qu'à la soumission du formulaire.
+ Visible de tout rôle (pas seulement le Directeur, contrairement aux délégations Photoshop) :
+ un Secrétariat/Enseignant qui ne voit plus certaines entrées de menu doit pouvoir comprendre
+ pourquoi ici, en lecture seule — les interrupteurs restent simplement désactivés pour lui. *@
+ <div x-show="!isLoading && !loadError && tab === 'modules'" x-cloak>
+ <div class="card p-6 w-full max-w-2xl space-y-6">
+ <div>
+ <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Modules activés</h2>
+ <p class="text-xs text-slate-400 mt-0.5">
+ Adaptez l'application à l'usage réel de votre établissement : masquez un module dont vous
+ ne vous servez pas, sans perdre les données déjà saisies.
+ </p>
+ </div>
+
+ <div class="flex flex-col gap-4">
+ <div class="flex items-start justify-between gap-4">
+ <div>
+ <span id="module-switch-pedagogy-label" class="text-sm font-medium text-slate-700">Pédagogie</span>
+ <p class="text-xs text-slate-400 mt-0.5">Matières, Notes &amp; bulletins, Examens officiels, Intégration étatique, Surveillance générale.</p>
+ </div>
+ <button type="button" role="switch" aria-labelledby="module-switch-pedagogy-label"
+ :aria-checked="config.isPedagogyEnabled.toString()"
+ x-on:click="config.isPedagogyEnabled = !config.isPedagogyEnabled; saveConfig(false)"
+ :disabled="configSaving || !isDirecteur"
+ :class="config.isPedagogyEnabled ? 'bg-primary' : 'bg-slate-300'"
+ class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 mt-0.5">
+ <span aria-hidden="true" :class="config.isPedagogyEnabled ? 'translate-x-6' : 'translate-x-1'"
+ class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
+ </button>
+ </div>
+
+ <div class="flex items-start justify-between gap-4">
+ <div>
+ <span id="module-switch-finance-label" class="text-sm font-medium text-slate-700">Comptabilité &amp; Finance</span>
+ <p class="text-xs text-slate-400 mt-0.5">Caisse, Frais scolaires, Paie, Fiscalité, Trésorerie, Rapports financiers.</p>
+ </div>
+ <button type="button" role="switch" aria-labelledby="module-switch-finance-label"
+ :aria-checked="config.isFinanceEnabled.toString()"
+ x-on:click="config.isFinanceEnabled = !config.isFinanceEnabled; saveConfig(false)"
+ :disabled="configSaving || !isDirecteur"
+ :class="config.isFinanceEnabled ? 'bg-primary' : 'bg-slate-300'"
+ class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 mt-0.5">
+ <span aria-hidden="true" :class="config.isFinanceEnabled ? 'translate-x-6' : 'translate-x-1'"
+ class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
+ </button>
+ </div>
+
+ <div class="border-t border-slate-100 pt-4">
+ <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Réservé — à venir</h3>
+ <p class="text-xs text-slate-400 mb-3">
+ Aucun module n'est encore rattaché à ces deux réglages : les activer n'ouvre rien
+ aujourd'hui — c'est un réglage anticipé pour le jour où ces modules existeront.
+ </p>
+ <div class="flex flex-col gap-4">
+ <div class="flex items-start justify-between gap-4">
+ <div>
+ <span id="module-switch-internat-label" class="text-sm font-medium text-slate-700">Internat</span>
+ </div>
+ <button type="button" role="switch" aria-labelledby="module-switch-internat-label"
+ :aria-checked="config.isInternatEnabled.toString()"
+ x-on:click="config.isInternatEnabled = !config.isInternatEnabled; saveConfig(false)"
+ :disabled="configSaving || !isDirecteur"
+ :class="config.isInternatEnabled ? 'bg-primary' : 'bg-slate-300'"
+ class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 mt-0.5">
+ <span aria-hidden="true" :class="config.isInternatEnabled ? 'translate-x-6' : 'translate-x-1'"
+ class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
+ </button>
+ </div>
+ <div class="flex items-start justify-between gap-4">
+ <div>
+ <span id="module-switch-coran-label" class="text-sm font-medium text-slate-700">Filière Coranique / Franco-Arabe</span>
+ </div>
+ <button type="button" role="switch" aria-labelledby="module-switch-coran-label"
+ :aria-checked="config.isCoranModuleEnabled.toString()"
+ x-on:click="config.isCoranModuleEnabled = !config.isCoranModuleEnabled; saveConfig(false)"
+ :disabled="configSaving || !isDirecteur"
+ :class="config.isCoranModuleEnabled ? 'bg-primary' : 'bg-slate-300'"
+ class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 mt-0.5">
+ <span aria-hidden="true" :class="config.isCoranModuleEnabled ? 'translate-x-6' : 'translate-x-1'"
+ class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
+ </button>
+ </div>
+ </div>
+ </div>
+ </div>
  </div>
  </div>
 
@@ -904,7 +1001,10 @@
  <h2 class="text-sm font-semibold uppercase tracking-wider text-red-700">Zone de danger</h2>
  </div>
 
- <div class="mt-4 flex flex-col gap-4 rounded-xl border border-red-200 bg-white p-5 lg:flex-row lg:items-center lg:justify-between">
+ @* Masquée dès que hasEverGoneLive est vrai — même après un retour en mode test : la purge y serait
+ de toute façon refusée (409 RESET_UNAVAILABLE_LIVE_MODE), et un bouton qui échoue après la saisie
+ d'un mot de confirmation est précisément la surprise que ce drapeau permet d'éviter. *@
+ <div x-show="!hasEverGoneLive" x-cloak class="mt-4 flex flex-col gap-4 rounded-xl border border-red-200 bg-white p-5 lg:flex-row lg:items-center lg:justify-between">
  <div class="max-w-2xl">
  <p class="text-sm font-medium text-slate-900">Réinitialiser les données de l'établissement</p>
  <p class="mt-1 text-sm text-slate-500">
@@ -926,6 +1026,15 @@
  </button>
  </div>
 
+ <div x-show="hasEverGoneLive" x-cloak class="mt-4 flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-5">
+ <icon name="lock-closed" class="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+ <p class="text-sm text-slate-500">
+ La réinitialisation des données n'est plus proposée : cet établissement est déjà passé en mode
+ réel par le passé. Les données enregistrées à ce moment-là font partie de la comptabilité et
+ restent inaltérables, même après un retour en mode test.
+ </p>
+ </div>
+
  <div class="my-5 border-t border-red-200"></div>
 
  <div class="flex flex-col gap-4 rounded-xl border border-primary-200 bg-white p-5 lg:flex-row lg:items-center lg:justify-between">
@@ -935,9 +1044,10 @@
  Passer en mode réel
  </p>
  <p class="mt-1 text-sm text-slate-500">
- Fait passer l'établissement en exploitation réelle. Les données enregistrées deviennent
- définitives et la réinitialisation ci-dessus n'est plus proposée.
- <span class="font-medium text-slate-700">Cette bascule est définitive.</span>
+ Fait passer l'établissement en exploitation réelle : les données enregistrées deviennent
+ définitives et la réinitialisation ci-dessus n'est plus jamais proposée, même en cas de retour
+ ultérieur en mode test.
+ <span class="font-medium text-slate-700">Ce verrou sur les données est définitif.</span>
  </p>
  </div>
  <button type="button" x-on:click="openGoLive()"
@@ -948,9 +1058,9 @@
  </div>
  </div>
 
- @* ── Régime MODE RÉEL : lecture seule. La purge n'existe plus. Seule reste, sur un
- environnement jetable (revertToTestAvailable, issu de l'API — jamais process.env), la porte
- de recette « Repasser en mode test ». *@
+ @* ── Régime MODE RÉEL : la purge n'existe plus, pour toujours (School.HasEverGoneLive). Le
+ Directeur garde le contrôle de son environnement : « Repasser en mode test » reste disponible
+ À TOUT MOMENT, protégé par le rôle et une confirmation — jamais par un drapeau d'environnement. *@
  <div x-show="isDirecteur && isLiveMode" x-cloak class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-6">
  <div class="flex items-start gap-3">
  <icon name="lock-closed" class="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
@@ -964,25 +1074,16 @@
  </div>
  </div>
 
- @* Le retour au mode test est TOUJOURS visible ici (demande du 15/09/2026) : un bouton qui
- disparaît laisse croire que la fonction n'existe pas, là où la vraie raison est
- l'environnement. Il n'est ACTIF que là où le retour est autorisé (revertToTestAvailable,
- issu de l'API — jamais d'un process.env) ; en production il reste affiché, désactivé, et
- la phrase dit pourquoi. Le serveur ne monte même pas la route ailleurs : ce bouton grisé
- ne cache aucun pouvoir, il explique une absence. *@
  <div class="mt-5 border-t border-dashed border-slate-300 pt-5">
  <p class="text-xs">
  <span class="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 font-semibold uppercase tracking-wider text-amber-800">Bac à sable</span>
- <span x-show="revertToTestAvailable" x-cloak class="ml-2 text-slate-500">— repasser l'établissement en mode test pour rejouer la bascule. Indisponible en production.</span>
- <span x-show="!revertToTestAvailable" x-cloak class="ml-2 text-slate-500">— indisponible sur cet environnement : les données enregistrées en mode réel sont comptables et ne peuvent plus être effacées. Contactez le support Sama Ecole si la bascule a été faite par erreur.</span>
+ <span class="ml-2 text-slate-500">— repasser l'entreprise en mode test pour continuer à vous familiariser ou faire des essais. N'efface aucune donnée.</span>
  </p>
- <button type="button" x-on:click="revertToTest()" :disabled="!revertToTestAvailable || isRevertingToTest"
- :title="revertToTestAvailable ? 'Repasser cet établissement en mode test' : 'Indisponible en production'"
- class="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
+ <button type="button" x-on:click="openRevertToTest()"
+ class="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400">
  <icon name="arrow-down" class="w-4 h-4" />
- <span x-text="isRevertingToTest ? 'Retour…' : 'Repasser en mode test'"></span>
+ Repasser en mode test
  </button>
- <div x-show="revertToTestError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="revertToTestError"></div>
  </div>
  </div>
  </div>
@@ -1199,6 +1300,52 @@
  :disabled="!goLiveConfirmationMatches || isGoingLive"
  class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2">
  <span x-text="isGoingLive ? 'Bascule…' : 'Confirmer le passage en mode réel'"></span>
+ </button>
+ </div>
+ </modal-shell>
+
+ @* ================== Confirmation du retour en mode test ==================
+ Même patron que GoLive/Reset : un mot à recopier (« TEST » ou le nom de l'école) déverrouille
+ le bouton. Le serveur revérifie la garde (RevertToTestCommandHandler). Explique clairement que
+ cette bascule N'EFFACE AUCUNE DONNÉE, et que la « Zone de danger » (purge) reste verrouillée
+ pour toujours : School.HasEverGoneLive, posé au premier passage réel, n'est jamais effacé par
+ ce retour, contrairement à WentLiveAt. *@
+ <modal-shell open="isRevertToTestOpen" size="lg" on-close="closeRevertToTest()" title="Repasser en mode test">
+ <div class="rounded-xl border-l-4 border-primary-500 bg-primary-50 p-4">
+ <div class="flex items-start gap-3">
+ <icon name="arrow-down" class="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
+ <div class="text-sm text-primary-800">
+ <p class="font-semibold">Aucune donnée ne sera effacée.</p>
+ <p class="mt-1">
+ <span class="font-semibold" x-text="profile.name || 'Votre établissement'"></span>
+ repassera en mode test : vous pourrez continuer à vous familiariser avec la plateforme ou
+ refaire des essais. La réinitialisation des données (« Zone de danger ») reste et restera
+ indisponible pour toujours, car cet établissement a déjà enregistré des données réelles.
+ </p>
+ </div>
+ </div>
+ </div>
+
+ <p class="mt-4 text-sm text-slate-600">
+ Pour confirmer, saisissez <span class="font-mono font-semibold text-slate-900">TEST</span>
+ ou le nom exact de votre établissement.
+ </p>
+
+ <div class="mt-3">
+ <label for="revert-to-test-confirmation" class="sr-only">Mot de confirmation</label>
+ <input id="revert-to-test-confirmation" type="text" x-model="revertToTestConfirmation" autocomplete="off"
+ placeholder="TEST" class="input-field" :class="revertToTestError && 'input-field-error'"
+ x-on:keydown.enter.prevent="revertToTestConfirmationMatches && confirmRevertToTest()">
+ </div>
+
+ <div x-show="revertToTestError" x-cloak class="mt-3 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="revertToTestError"></div>
+
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeRevertToTest()" class="btn-modal-secondary group">Annuler</button>
+ <button type="button" x-on:click="confirmRevertToTest()"
+ :disabled="!revertToTestConfirmationMatches || isRevertingToTest"
+ class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2">
+ <span x-text="isRevertingToTest ? 'Retour…' : 'Confirmer le retour en mode test'"></span>
  </button>
  </div>
  </modal-shell>

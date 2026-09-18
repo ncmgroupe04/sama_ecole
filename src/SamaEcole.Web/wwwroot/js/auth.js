@@ -455,15 +455,29 @@ document.addEventListener('alpine:init', () => {
          */
         isPublicSchool: false,
 
+        /**
+         * Modules Pédagogie/Finance activés par le Directeur (Paramètres › Modules) — CONFORT
+         * D'AFFICHAGE UNIQUEMENT, comme isPublicSchool ci-dessus : la vraie protection est
+         * [RequireModule] côté serveur (403 MODULE_DISABLED). Chargés dans le même appel que
+         * isPublicSchool ; par défaut à `true` (menu complet) tant que la réponse n'est pas arrivée
+         * ou en cas d'erreur réseau — Pédagogie/Finance sont le socle métier, sûr par défaut.
+         */
+        pedagogyEnabled: true,
+        financeEnabled: true,
+
         async init() {
-            // Super Admin plateforme : pas d'école, pas de settings. On laisse false.
+            // Super Admin plateforme : pas d'école, pas de settings. On laisse les valeurs par défaut.
             if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') return;
             try {
                 const s = await window.api.get('/schools/current/settings');
                 this.isPublicSchool = (s && s.typeEtablissement === 'Public');
+                this.pedagogyEnabled = !s || s.isPedagogyEnabled !== false;
+                this.financeEnabled = !s || s.isFinanceEnabled !== false;
             } catch {
                 // Non bloquant : en cas d'erreur réseau, la sidebar reste complète (sûr par défaut).
                 this.isPublicSchool = false;
+                this.pedagogyEnabled = true;
+                this.financeEnabled = true;
             }
         },
 
