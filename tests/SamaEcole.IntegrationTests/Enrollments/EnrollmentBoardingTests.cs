@@ -7,6 +7,7 @@ using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using SamaEcole.IntegrationTests.Common;
 using SamaEcole.Persistence;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -20,6 +21,18 @@ file sealed class NoOpKpiCacheService : IKpiCacheService
         factory(cancellationToken);
 
     public void Invalidate(string key) { }
+}
+
+/// <summary>
+/// Ticket JGK-E03 (notification e-mail à l'inscription) : ces tests portent sur le module Internat,
+/// pas sur la publication d'événements — couverte séparément par EnrollmentTests.cs (RecordingPublisher)
+/// et NotifyAdminOnStudentEnrolledEventHandlerTests. Un no-op suffit ici pour satisfaire le constructeur.
+/// </summary>
+file sealed class NoOpPublisher : IPublisher
+{
+    public Task Publish(object notification, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
+        where TNotification : INotification => Task.CompletedTask;
 }
 
 /// <summary>
@@ -65,7 +78,7 @@ public class EnrollmentBoardingTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db) =>
-        new(db, new StubTenantProvider(EcoleA), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService());
+        new(db, new StubTenantProvider(EcoleA), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(), new NoOpPublisher());
 
     private static CreateEnrollmentCommand NewCommand(BoardingStatus status, Guid? roomId, bool includeFee) => new()
     {

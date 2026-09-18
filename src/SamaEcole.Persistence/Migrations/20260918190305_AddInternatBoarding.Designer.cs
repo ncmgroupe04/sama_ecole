@@ -12,7 +12,7 @@ using SamaEcole.Persistence;
 namespace SamaEcole.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260918013610_AddInternatBoarding")]
+    [Migration("20260918190305_AddInternatBoarding")]
     partial class AddInternatBoarding
     {
         /// <inheritdoc />
@@ -196,7 +196,7 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -1775,7 +1775,7 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<int>("TotalCount")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.ToTable((string)null);
@@ -1920,10 +1920,8 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("Condition")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Bon");
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -3052,6 +3050,9 @@ namespace SamaEcole.Persistence.Migrations
                         .HasPrecision(9, 6)
                         .HasColumnType("numeric(9,6)");
 
+                    b.Property<bool>("HasEverGoneLive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("InspectionAcademie")
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
@@ -3948,10 +3949,11 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId");
 
-                    b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name")
+                        .IsUnique()
+                        .HasFilter("NOT \"IsDeleted\"");
 
-                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name", "IsDeleted"), false);
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SchoolId", "Level", "ParentSubjectId", "Name"), false);
 
                     b.ToTable("subjects", (string)null);
                 });
@@ -4813,8 +4815,7 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasOne("SamaEcole.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.Building", b =>
