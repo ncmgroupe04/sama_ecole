@@ -373,7 +373,7 @@
         <div>
             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Hébergement</p>
             <template x-if="activeEnrollment() && activeEnrollment().boardingStatus !== 'Externe'">
-                <badge variant="info" x-text="activeEnrollment().boardingStatus === 'Interne' ? ('Interne' + (activeEnrollment().roomLabel ? ' — ' + activeEnrollment().roomLabel : '')) : 'Demi-pensionnaire'"></badge>
+                <badge variant="primary" x-text="activeEnrollment().boardingStatus === 'Interne' ? ('Interne' + (activeEnrollment().roomLabel ? ' — ' + activeEnrollment().roomLabel : '')) : 'Demi-pensionnaire'"></badge>
             </template>
             <template x-if="!activeEnrollment() || activeEnrollment().boardingStatus === 'Externe'">
                 <span class="text-sm text-slate-400">Externe</span>
