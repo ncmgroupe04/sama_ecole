@@ -133,6 +133,30 @@ public class CreateEnrollmentCommandValidatorTests
     }
 
     [Fact]
+    public void An_Externe_Enrollment_With_A_RoomId_Should_Fail()
+    {
+        // Module Internat — symétrique de la règle "RoomId requis si non-Externe" : un RoomId sur un
+        // régime Externe contournerait la garde IsInternatEnabled et fausserait le compte d'occupation
+        // d'une chambre (voir CreateEnrollmentCommandValidator).
+        var command = new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.NewEnrollment,
+            ClassroomId = Guid.NewGuid(),
+            FullName = "Awa Ndiaye",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
+            Gender = "F",
+            BoardingStatus = BoardingStatus.Externe,
+            RoomId = Guid.NewGuid()
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.RoomId));
+    }
+
+    [Fact]
     public void An_Enrollment_Without_A_Classroom_Should_Fail()
     {
         var command = new CreateEnrollmentCommand

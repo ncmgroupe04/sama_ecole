@@ -26,6 +26,15 @@ public class CreateEnrollmentCommandValidator : AbstractValidator<CreateEnrollme
             .When(x => x.BoardingStatus != BoardingStatus.Externe)
             .WithMessage("Une chambre est requise pour un régime Interne ou Demi-pensionnaire.");
 
+        // Symétrique de la règle ci-dessus : un RoomId sur un régime Externe contournerait la garde du
+        // module (le Handler n'entre dans la vérification IsInternatEnabled que si BoardingStatus !=
+        // Externe) et fausserait le compte d'occupation d'une chambre (un Externe affecté consommerait
+        // un lit dans le calcul de capacité alors qu'il n'est pas interne).
+        RuleFor(x => x.RoomId)
+            .Null()
+            .When(x => x.BoardingStatus == BoardingStatus.Externe)
+            .WithMessage("Un élève Externe ne peut pas être affecté à une chambre.");
+
         When(x => x.Type == EnrollmentType.ReEnrollment, () =>
         {
             RuleFor(x => x.StudentId)

@@ -110,12 +110,16 @@ public class CreateEnrollmentCommandHandler(
                 ]);
             }
 
-            // Capacité revérifiée DANS la transaction (spec §5.1) : deux inscriptions concurrentes sur
-            // le dernier lit d'une chambre ne doivent jamais toutes les deux réussir.
+            // Capacité revérifiée DANS la transaction (spec §5.1) : réduit la fenêtre de course sans
+            // l'éliminer — un COUNT non verrouillé sous READ COMMITTED n'empêche pas deux transactions
+            // strictement concurrentes de passer toutes les deux. Un verrou de ligne dédié (SELECT ...
+            // FOR UPDATE) a été explicitement écarté pour cette V1 afin de ne pas introduire de nouvelle
+            // mécanique de verrouillage ; à revoir si des dépassements de capacité réels remontent en
+            // production.
             if (request.RoomId is { } roomId)
             {
                 var room = await dbContext.Rooms.AsNoTracking()
-                    .FirstOrDefaultAsync(r => r.Id == roomId, ct)
+                    .FirstOrDefaultAsync(r => r.Id == roomId && r.Type == RoomType.Dortoir, ct)
                     ?? throw new ValidationException([
                         new ValidationFailure(nameof(request.RoomId), "La chambre indiquée n'existe pas dans votre établissement.")
                     ]);
