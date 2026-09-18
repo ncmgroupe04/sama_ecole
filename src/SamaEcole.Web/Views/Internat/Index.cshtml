@@ -67,7 +67,17 @@
                             <p class="font-semibold text-slate-800 truncate" x-text="room.roomName"></p>
                             <p class="text-xs text-slate-400 truncate" x-text="room.buildingName"></p>
                         </div>
-                        <badge :variant="room.occupantsCount >= room.capacity ? 'danger' : (room.occupantsCount === 0 ? 'neutral' : 'success')">
+                        @* Task 15 rendait ceci via <badge :variant="..."> — un binding Alpine inerte (BadgeTagHelper
+                           lit Variant comme une propriété C# statique au rendu serveur) qui affichait toujours la
+                           variante neutre par défaut. Trois badges statiques, chacun sa propre condition x-show,
+                           comme la pastille de statut de la modale d'affectation ci-dessous (Correction Task 16). *@
+                        <badge x-show="room.occupantsCount >= room.capacity" variant="danger">
+                            <span x-text="room.occupantsCount + ' / ' + room.capacity"></span>
+                        </badge>
+                        <badge x-show="room.occupantsCount === 0" variant="neutral">
+                            <span x-text="room.occupantsCount + ' / ' + room.capacity"></span>
+                        </badge>
+                        <badge x-show="room.occupantsCount > 0 && room.occupantsCount < room.capacity" variant="success">
                             <span x-text="room.occupantsCount + ' / ' + room.capacity"></span>
                         </badge>
                     </div>
@@ -89,9 +99,18 @@
                                     <p class="text-sm font-medium text-slate-700 truncate" x-text="occupant.fullName"></p>
                                     <p class="text-xs text-slate-400 truncate" x-text="occupant.classroomName + (occupant.guardianPhone ? ' · ' + occupant.guardianPhone : '')"></p>
                                 </div>
-                                <badge :variant="occupant.boardingStatus === 'Interne' ? 'primary' : 'neutral'">
-                                    <span x-text="occupant.boardingStatus === 'Interne' ? 'Interne' : 'Demi-pensionnaire'"></span>
-                                </badge>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <badge x-show="occupant.boardingStatus === 'Interne'" variant="primary">
+                                        <span>Interne</span>
+                                    </badge>
+                                    <badge x-show="occupant.boardingStatus !== 'Interne'" variant="neutral">
+                                        <span>Demi-pensionnaire</span>
+                                    </badge>
+                                    <button type="button" class="text-xs text-rose-600 hover:text-rose-700 whitespace-nowrap"
+                                            x-on:click="openChangeOccupantModal(room, occupant)">
+                                        Changer / Libérer
+                                    </button>
+                                </div>
                             </li>
                         </template>
                     </ul>
@@ -107,4 +126,76 @@
             </template>
         </div>
     </div>
+
+    <!-- Modale d'affectation rapide (Task 16) : recherche d'élève, statut actuel, avertissement de
+         transfert, choix du régime (dont Externe = libération), pension, confirmation. -->
+    <modal-shell open="assignModal.open" on-close="closeAssignModal()" size="md" title="Affecter un élève">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-500">
+                Chambre : <strong x-text="assignModal.room?.roomName"></strong>
+                (<span x-text="assignModal.room?.buildingName"></span>)
+            </p>
+
+            <div class="relative">
+                <label class="form-label">Élève</label>
+                <input type="text" x-model="assignModal.searchTerm" x-on:input="onSearchInput()"
+                       placeholder="Nom, prénom ou matricule" class="input-field mt-1" autocomplete="off" />
+                <ul x-show="assignModal.results.length > 0" x-cloak
+                    class="absolute z-10 w-full bg-white border border-slate-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-auto">
+                    <template x-for="student in assignModal.results" :key="student.enrollmentId">
+                        <li class="px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm" x-on:click="selectStudent(student)">
+                            <span x-text="student.fullName"></span>
+                            <span class="text-xs text-slate-400" x-text="' — ' + student.classroomName"></span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            <template x-if="assignModal.selected">
+                <div class="space-y-3">
+                    <div>
+                        <badge x-show="assignModal.selected.boardingStatus === 'Externe'" variant="neutral">
+                            <span>Externe</span>
+                        </badge>
+                        <badge x-show="assignModal.selected.boardingStatus === 'DemiPensionnaire'" variant="primary">
+                            <span x-text="'Demi-pensionnaire' + (assignModal.selected.currentRoomName ? ' — ' + assignModal.selected.currentRoomName : '')"></span>
+                        </badge>
+                        <badge x-show="assignModal.selected.boardingStatus === 'Interne'" variant="primary">
+                            <span x-text="'Interne' + (assignModal.selected.currentRoomName ? ' — ' + assignModal.selected.currentRoomName : '')"></span>
+                        </badge>
+                    </div>
+
+                    <p x-show="isTransfer()" x-cloak
+                       class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <span x-text="assignModal.selected.fullName"></span> sera transféré depuis
+                        <strong x-text="assignModal.selected.currentRoomName"></strong> vers cette chambre.
+                    </p>
+
+                    <div>
+                        <label class="form-label">Régime</label>
+                        <select-field model="assignModal.boardingStatus"
+                                      options-expr="[{value:'Interne', label:'Interne'},{value:'DemiPensionnaire', label:'Demi-pensionnaire'},{value:'Externe', label:'Externe (libérer)'}]" />
+                    </div>
+
+                    <div class="flex items-start gap-2" x-show="!isReleasing()" x-cloak>
+                        <input id="assign-boarding-fee" type="checkbox" x-model="assignModal.includeBoardingFee" class="checkbox-field mt-1">
+                        <label for="assign-boarding-fee" class="text-sm text-slate-700">
+                            Ajouter le frais de pension au dossier de l'élève (sans doublon s'il existe déjà)
+                        </label>
+                    </div>
+                </div>
+            </template>
+
+            <p x-show="assignModal.error" x-cloak class="field-error" x-text="assignModal.error"></p>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeAssignModal()">Annuler</button>
+                <button type="button" class="btn-modal-primary group"
+                        :disabled="!assignModal.selected || assignModal.saving"
+                        x-on:click="confirmAssignment()">
+                    <span x-text="assignModal.saving ? 'Enregistrement…' : (isReleasing() ? 'Confirmer la libération' : 'Confirmer l\'affectation')"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
 </div>
