@@ -5262,6 +5262,11 @@ components:
         id: { type: string, format: uuid }
         name: { type: string, example: "Mensualité" }
         isRecurring: { type: boolean }
+        isBoardingFee:
+          type: boolean
+          description: >-
+            Module Internat : catégorie incluable automatiquement sur l'inscription d'un élève
+            Interne/Demi-pensionnaire, en plus du barème ordinaire.
 
     ClassFee:
       type: object
