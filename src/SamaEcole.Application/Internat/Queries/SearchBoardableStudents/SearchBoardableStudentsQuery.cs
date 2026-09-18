@@ -13,6 +13,12 @@ namespace SamaEcole.Application.Internat.Queries.SearchBoardableStudents;
 /// </summary>
 public record SearchBoardableStudentsQuery(string SearchTerm) : IRequest<IReadOnlyList<BoardableStudentDto>>;
 
+/// <summary>
+/// <see cref="RowVersion"/> est le jeton xmin RÉEL de l'inscription (AGENTS.md règle #5), lu comme
+/// <c>AcademicHistoryEntryDto.RowVersion</c> (GetStudentDetailQuery) — nécessaire à la modale
+/// d'affectation (Task 16) pour poser SetOriginalConcurrencyToken sur ChangeBoardingAssignmentCommand
+/// sans provoquer un 409 systématique dès qu'une inscription a déjà été modifiée une fois.
+/// </summary>
 public record BoardableStudentDto(
     Guid StudentId,
     Guid EnrollmentId,
@@ -21,7 +27,8 @@ public record BoardableStudentDto(
     string ClassroomName,
     string BoardingStatus,
     Guid? CurrentRoomId,
-    string? CurrentRoomName);
+    string? CurrentRoomName,
+    uint RowVersion);
 
 public class SearchBoardableStudentsQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<SearchBoardableStudentsQuery, IReadOnlyList<BoardableStudentDto>>
@@ -59,7 +66,8 @@ public class SearchBoardableStudentsQueryHandler(IApplicationDbContext dbContext
                 s.FullName,
                 ClassroomName = c.Name,
                 e.BoardingStatus,
-                e.RoomId
+                e.RoomId,
+                RowVersion = EF.Property<uint>(e, "xmin")
             })
             .OrderBy(r => r.FullName)
             .Take(20)
@@ -75,7 +83,7 @@ public class SearchBoardableStudentsQueryHandler(IApplicationDbContext dbContext
         return results
             .Select(r => new BoardableStudentDto(
                 r.Id, r.EnrollmentId, r.Matricule, r.FullName, r.ClassroomName, r.BoardingStatus.ToString(),
-                r.RoomId, r.RoomId is { } id ? roomNames.GetValueOrDefault(id) : null))
+                r.RoomId, r.RoomId is { } id ? roomNames.GetValueOrDefault(id) : null, r.RowVersion))
             .ToList();
     }
 }

@@ -61,6 +61,10 @@ public class SearchBoardableStudentsQueryTests : IAsyncLifetime
         result[0].FullName.Should().Be("Awa Fall");
         result[0].BoardingStatus.Should().Be("Interne");
         result[0].CurrentRoomName.Should().Be("Chambre 1");
+        // Jeton xmin réel de l'inscription (AGENTS.md règle #5) : la modale d'affectation (Task 16) en
+        // a besoin pour poser SetOriginalConcurrencyToken sur un second appel sans provoquer un 409
+        // systématique — jamais un placeholder à 0.
+        result[0].RowVersion.Should().NotBe((uint)0);
     }
 
     [Fact]
