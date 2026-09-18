@@ -81,3 +81,50 @@ public class GetInternatDashboardQueryTests : IAsyncLifetime
         free.Occupants.Should().BeEmpty();
     }
 }
+
+/// <summary>
+/// Cas de dégradation gracieuse : aucune SchoolYear active. CreateEnrollmentCommandHandler exige déjà
+/// une année active pour affecter un élève, donc le dashboard ne doit jamais lever d'exception dans ce
+/// cas — il doit rester consultable (dortoirs visibles, tous vides) pour préparer l'année en amont.
+/// Classe séparée (fixture dédiée) pour ne pas perturber le seed « année active » du test ci-dessus.
+/// </summary>
+[Trait("Category", "MultiTenant")]
+public class GetInternatDashboardQueryWithoutActiveYearTests : IAsyncLifetime
+{
+    private readonly RlsTestDatabase _db = new();
+
+    private static readonly Guid EcoleB = Guid.Parse("55555555-1111-1111-1111-111111111111");
+    private static readonly Guid Batiment = Guid.Parse("55555555-0000-0000-0000-00000000000a");
+    private static readonly Guid Chambre = Guid.Parse("55555555-0000-0000-0000-00000000000b");
+
+    public async Task InitializeAsync()
+    {
+        await _db.InitializeAsync();
+        await using var owner = _db.NewOwnerContext();
+
+        owner.Schools.Add(new School { Id = EcoleB, Name = "École B", Phone = "77 987 65 43" });
+        owner.Buildings.Add(new Building { Id = Batiment, SchoolId = EcoleB, Name = "Pavillon B" });
+        owner.Rooms.Add(new Room { Id = Chambre, SchoolId = EcoleB, BuildingId = Batiment, Name = "Chambre 1", Type = RoomType.Dortoir, Capacity = 4 });
+        // Volontairement : aucune SchoolYear créée -> activeYearId résout à null dans le Handler.
+
+        await owner.SaveChangesAsync(CancellationToken.None);
+    }
+
+    public Task DisposeAsync() => _db.DisposeAsync().AsTask();
+
+    [Fact]
+    public async Task Returns_Empty_Rooms_Without_Throwing_When_No_Active_School_Year()
+    {
+        await using var db = _db.NewAppContext(EcoleB);
+        var handler = new GetInternatDashboardQueryHandler(db);
+
+        var result = await handler.Handle(new GetInternatDashboardQuery(), CancellationToken.None);
+
+        result.Rooms.Should().ContainSingle(r => r.RoomId == Chambre);
+        result.Rooms.Single().OccupantsCount.Should().Be(0);
+        result.Rooms.Single().Occupants.Should().BeEmpty();
+        result.TotalOccupied.Should().Be(0);
+        result.InterneCount.Should().Be(0);
+        result.DemiPensionnaireCount.Should().Be(0);
+    }
+}
