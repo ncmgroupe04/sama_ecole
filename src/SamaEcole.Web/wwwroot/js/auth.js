@@ -477,6 +477,14 @@ document.addEventListener('alpine:init', () => {
         pedagogyEnabled: true,
         financeEnabled: true,
 
+        /**
+         * Module Internat (Paramètres › Modules) — INVERSE de pedagogyEnabled/financeEnabled :
+         * désactivé par défaut (SchoolSettingsDefaults.IsInternatEnabled = false), donc masqué tant
+         * que la réponse n'est pas arrivée ou en cas d'erreur réseau (sûr par défaut = caché, pas
+         * affiché, puisque le module est réservé/inerte tant que le Directeur ne l'a pas activé).
+         */
+        internatEnabled: false,
+
         async init() {
             // Super Admin plateforme : pas d'école, pas de settings. On laisse les valeurs par défaut.
             if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') return;
@@ -485,11 +493,15 @@ document.addEventListener('alpine:init', () => {
                 this.isPublicSchool = (s && s.typeEtablissement === 'Public');
                 this.pedagogyEnabled = !s || s.isPedagogyEnabled !== false;
                 this.financeEnabled = !s || s.isFinanceEnabled !== false;
+                this.internatEnabled = !!s && s.isInternatEnabled === true;
             } catch {
-                // Non bloquant : en cas d'erreur réseau, la sidebar reste complète (sûr par défaut).
+                // Non bloquant : en cas d'erreur réseau, la sidebar reste complète pour
+                // Pédagogie/Finance (socle métier, sûr par défaut) mais Internat reste masqué —
+                // il n'y a rien de "sûr par défaut" à afficher pour un module réservé/inerte.
                 this.isPublicSchool = false;
                 this.pedagogyEnabled = true;
                 this.financeEnabled = true;
+                this.internatEnabled = false;
             }
         },
 
