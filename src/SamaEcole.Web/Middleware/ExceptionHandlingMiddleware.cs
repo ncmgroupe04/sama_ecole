@@ -144,6 +144,16 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 paymentEx.Message,
                 null),
 
+            // Envoi manuel d'un bulletin par WhatsApp refusé par Meta (jeton expiré, fenêtre de 24 h,
+            // modèle non approuvé, /media absent…). 502, même logique que l'agrégateur de paiement :
+            // le serveur passerelle a reçu une réponse invalide de Meta. Le message est déjà rédigé
+            // pour l'utilisateur et sans secret (voir WhatsAppDeliveryException).
+            WhatsAppDeliveryException whatsAppEx => (
+                HttpStatusCode.BadGateway,
+                "WHATSAPP_DELIVERY_ERROR",
+                whatsAppEx.Message,
+                null),
+
             // Ticket JGK-I06, docs/Volume_7_Security.md §12bis : signature de webhook absente/invalide.
             InvalidWebhookSignatureException webhookEx => (
                 HttpStatusCode.Unauthorized,

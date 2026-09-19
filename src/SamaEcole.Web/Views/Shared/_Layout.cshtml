@@ -210,6 +210,13 @@
  <icon name="document" class="w-5 h-5" />
  <span class="text-sm font-medium">Notes et bulletins</span>
  </a>
+ @* Cahier de texte / journal de classe (ticket JGK-P04) : écriture Enseignant seul (sa propre
+ séance planifiée, ClassJournalScopeAuthorizer), lecture ouverte en plus à Directeur/
+ Secrétariat/Surveillant — même trio d'oversight que ParentSummonsController. *@
+ <a href="/cahier-de-texte" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Surveillant']) && pedagogyEnabled" class="@(path.StartsWith("/cahier-de-texte") ? LinkActive : LinkIdle)">
+ <icon name="calendar" class="w-5 h-5" />
+ <span class="text-sm font-medium">Cahier de texte</span>
+ </a>
  <a href="/examens" x-show="canView(['Directeur', 'Secretariat', 'Enseignant']) && pedagogyEnabled" class="@(path.StartsWith("/examens") ? LinkActive : LinkIdle)">
  <icon name="document-text" class="w-5 h-5" />
  <span class="text-sm font-medium">Examens officiels</span>
@@ -383,12 +390,19 @@
  <div class="flex-1 flex flex-col h-full min-w-0">
  
  <!-- Barre supérieure -->
+ @* Deux rangées : la 1re (hauteur fixe h-16, en bleu royal — voir ci-dessous) porte le titre et
+    les indicateurs de contexte ; la 2e ajoute la barre de navigation rapide entre modules
+    (_QuickNav.cshtml), qui GARDE le fond clair d'origine (bg-white de <header>). <header> est un
+    conteneur flex-colonne — un simple frère flex de <main> dans la colonne (voir plus bas),
+    agrandir sa hauteur ne perturbe donc pas le calcul de .sticky-sub-header (qui dépend du
+    padding de <main>, pas de la hauteur de <header>). *@
+ <header class="bg-white border-b border-slate-200 shadow-sm z-10 flex flex-col">
  @* Fond bleu royal identique à .sidebar-user-card (bg-primary-600) : décision produit du 19/09/2026
- reliant visuellement le header à la carte de profil du Directeur. Les pastilles (horloge, mode,
+ reliant visuellement cette rangée à la carte de profil du Directeur. Les pastilles (horloge, mode,
  année scolaire, démarrage, salutation) GARDENT leur fond clair d'origine (bg-slate-100 etc.) —
  elles ressortent déjà naturellement sur le bleu, inutile de les repeindre. Seuls les éléments posés
  directement sur le bleu (titre, boutons icône sans pastille) passent en blanc. *@
- <header class="bg-primary-600 h-16 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
+ <div class="bg-primary-600 h-16 flex items-center justify-between px-4 lg:px-8">
  <div class="flex items-center gap-4">
  <!-- Bouton Menu Mobile : ouvre le tiroir superposé de la barre latérale -->
  <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl">
@@ -651,6 +665,16 @@
  <span x-text="emoji" aria-hidden="true"></span>
  <span x-text="label"></span>
  </div>
+ </div>
+ </div>
+
+ @* Barre de navigation rapide entre modules — rangée dédiée, sous les indicateurs ci-dessus.
+    `relative` ancre le panneau `absolute` du dropdown mobile « Saut rapide » à cette rangée,
+    pas à <header> ni <body>. Modèle = `path`, déjà calculé plus haut dans ce fichier
+    (Context.Request.Path.Value) : une partial ne hérite pas des variables locales de
+    l'appelant, on le passe donc explicitement plutôt que de le recalculer. *@
+ <div class="relative border-t border-slate-100 px-4 lg:px-8 py-2">
+ @await Html.PartialAsync("_QuickNav", path)
  </div>
  </header>
 

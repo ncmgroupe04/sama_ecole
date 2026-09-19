@@ -133,6 +133,15 @@
             return claims ? claims.role || '' : '';
         },
 
+        /**
+         * Commodité d'affichage réutilisable depuis N'IMPORTE QUEL sous-arbre du DOM (header,
+         * sidebar…) sans dépendre de la portée Alpine d'un composant particulier — comme tout
+         * `x-show` basé sur le rôle, ce n'est jamais une mesure de sécurité, seule l'API protège.
+         */
+        canView(roles) {
+            return roles.includes(this.role);
+        },
+
         /** Ticket JGK-I05 : l'écran de paiement d'abonnement en a besoin pour construire l'URL /subscriptions/{schoolId}/payments. */
         get schoolId() {
             const claims = readClaims(this.accessToken);
@@ -425,6 +434,16 @@ document.addEventListener('alpine:init', () => {
     }));
 
     /**
+     * Ouverture/fermeture du dropdown « Saut rapide » de la barre de navigation rapide
+     * (_QuickNav.cshtml), visible sous `lg:`. La liste des modules, les gardes de rôle/formule et
+     * l'état actif sont rendus côté serveur (Razor) — ce composant ne porte que le booléen
+     * d'ouverture, même précédent que sessionMenu ci-dessus.
+     */
+    Alpine.data('quickNavMenu', () => ({
+        isOpen: false
+    }));
+
+    /**
      * Bandeau d'impersonation (_Layout.cshtml) : visible uniquement quand la session courante vient du
      * bouton « Infiltrer » de la console Super Admin (claim impersonatedBy, voir auth.js isImpersonating).
      * Évalué une fois au chargement de la page — une impersonation ne démarre/finit jamais SANS
@@ -446,24 +465,21 @@ document.addEventListener('alpine:init', () => {
     }));
 
     /**
-     * Visibilité du menu latéral par rôle (JGK-D05, Volume 5 §3.2) : masquer un onglet est une
-     * commodité d'ergonomie, jamais une mesure de sécurité — chaque route reste protégée côté API
-     * indépendamment de l'affichage (voir le commentaire de PagesController). Les listes de rôles
-     * reprennent la colonne « Voir » de la matrice détaillée (Volume 7 §15), module par module.
-     *
-     * Matières, Présences et Rapports sont absents de la matrice détaillée : leurs listes de rôles
-     * viennent d'une confirmation produit directe plutôt que du Volume 7 §15. Administration est
-     * réservée au Super Admin sur mention explicite du Volume 5 §3.2, bien qu'aucune route ne soit
-     * encore livrée (Module B du backlog).
+     * Configuration d'établissement partagée (isPublicSchool, modules Pédagogie/Finance/Internat) —
+     * AVANT sidebarNav ci-dessous, qui délègue désormais à ce store plutôt que de refaire son
+     * propre GET /schools/current/settings. Sans ce store, chaque nouveau composant qui a besoin
+     * de ces flags (sidebar, barre de navigation rapide…) rajouterait un appel réseau redondant à
+     * chaque chargement de page — coûteux sur une connexion instable (voir Résilience réseau,
+     * Centre d'aide). Un seul fetch, mutualisé, réentrant sans second appel.
      */
-    Alpine.data('sidebarNav', () => ({
-        role: window.auth.role,
+    Alpine.store('schoolConfig', {
+        loaded: false,
 
         /**
          * Vrai pour les établissements publics sénégalais : Caisse, Finance et Dashboard financier
          * sont masqués dans la navigation (l'API reste accessible, c'est une contrainte d'affichage).
-         * Chargé en `init` via GET /schools/current/settings — non bloquant : en cas d'erreur
-         * réseau, la valeur reste false (mode Privé par défaut, accès complet Finance conservé).
+         * Chargé via GET /schools/current/settings — non bloquant : en cas d'erreur réseau, la
+         * valeur reste false (mode Privé par défaut, accès complet Finance conservé).
          */
         isPublicSchool: false,
 
@@ -485,9 +501,21 @@ document.addEventListener('alpine:init', () => {
          */
         internatEnabled: false,
 
-        async init() {
+        // Réentrance : plusieurs composants (sidebar, barre de navigation rapide) appellent init()
+        // sur le même store au boot — un seul fetch doit réellement partir.
+        _initPromise: null,
+
+        init() {
+            if (!this._initPromise) this._initPromise = this._load();
+            return this._initPromise;
+        },
+
+        async _load() {
             // Super Admin plateforme : pas d'école, pas de settings. On laisse les valeurs par défaut.
-            if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') return;
+            if (!window.auth.isAuthenticated() || window.auth.role === 'SuperAdmin') {
+                this.loaded = true;
+                return;
+            }
             try {
                 const s = await window.api.get('/schools/current/settings');
                 this.isPublicSchool = (s && s.typeEtablissement === 'Public');
@@ -495,14 +523,45 @@ document.addEventListener('alpine:init', () => {
                 this.financeEnabled = !s || s.isFinanceEnabled !== false;
                 this.internatEnabled = !!s && s.isInternatEnabled === true;
             } catch {
-                // Non bloquant : en cas d'erreur réseau, la sidebar reste complète pour
+                // Non bloquant : en cas d'erreur réseau, la navigation reste complète pour
                 // Pédagogie/Finance (socle métier, sûr par défaut) mais Internat reste masqué —
                 // il n'y a rien de "sûr par défaut" à afficher pour un module réservé/inerte.
                 this.isPublicSchool = false;
                 this.pedagogyEnabled = true;
                 this.financeEnabled = true;
                 this.internatEnabled = false;
+            } finally {
+                this.loaded = true;
             }
+        }
+    });
+
+    /**
+     * Visibilité du menu latéral par rôle (JGK-D05, Volume 5 §3.2) : masquer un onglet est une
+     * commodité d'ergonomie, jamais une mesure de sécurité — chaque route reste protégée côté API
+     * indépendamment de l'affichage (voir le commentaire de PagesController). Les listes de rôles
+     * reprennent la colonne « Voir » de la matrice détaillée (Volume 7 §15), module par module.
+     *
+     * Matières, Présences et Rapports sont absents de la matrice détaillée : leurs listes de rôles
+     * viennent d'une confirmation produit directe plutôt que du Volume 7 §15. Administration est
+     * réservée au Super Admin sur mention explicite du Volume 5 §3.2, bien qu'aucune route ne soit
+     * encore livrée (Module B du backlog).
+     *
+     * isPublicSchool/pedagogyEnabled/financeEnabled/internatEnabled délèguent désormais au store
+     * partagé `schoolConfig` (ci-dessus) plutôt que de les charger eux-mêmes : le balisage Razor de
+     * la sidebar (x-show="... && pedagogyEnabled" etc.) continue de fonctionner à l'identique, ces
+     * getters ne changent rien d'observable.
+     */
+    Alpine.data('sidebarNav', () => ({
+        role: window.auth.role,
+
+        get isPublicSchool() { return Alpine.store('schoolConfig').isPublicSchool; },
+        get pedagogyEnabled() { return Alpine.store('schoolConfig').pedagogyEnabled; },
+        get financeEnabled() { return Alpine.store('schoolConfig').financeEnabled; },
+        get internatEnabled() { return Alpine.store('schoolConfig').internatEnabled; },
+
+        init() {
+            return Alpine.store('schoolConfig').init();
         },
 
         canView(roles) { return roles.includes(this.role); }

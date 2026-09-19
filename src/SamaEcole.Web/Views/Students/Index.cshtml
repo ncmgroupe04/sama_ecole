@@ -544,6 +544,12 @@
  class="form-error-banner"
  x-text="reportCardError"></div>
 
+ <!-- Avertissement NON bloquant : WhatsApp en mode simulation (section 'WhatsApp' non configurée).
+      Le bulletin a été journalisé côté serveur, pas transmis — bandeau orange, pas rouge. -->
+ <div x-show="reportCardNotice" x-cloak
+ class="form-warning-banner"
+ x-text="reportCardNotice"></div>
+
  <div class="space-y-6">
  <template x-for="term in (studentDetail ? studentDetail.grades : [])" :key="term.termId">
  <div>

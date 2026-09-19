@@ -82,6 +82,9 @@ document.addEventListener('alpine:init', () => {
         downloadingTermId: null,
         sendingTermId: null,
         reportCardError: null,
+        // Avertissement NON bloquant de l'envoi : WhatsApp en mode simulation (section 'WhatsApp' non
+        // configurée) — le bulletin a été journalisé côté serveur, pas transmis. Bandeau ambre, pas rouge.
+        reportCardNotice: null,
 
         // Observations du conseil (distinction + texte), imprimées sur le bulletin — mêmes rôles que
         // le téléchargement du PDF (ReportCardsController.ReportCardWriterRoles).
@@ -396,6 +399,9 @@ document.addEventListener('alpine:init', () => {
             this.detailStudent = student;
             this.studentDetail = null;
             this.detailError = null;
+            // Bandeaux de l'onglet « Notes & bulletins » : ne pas laisser l'état d'un élève sur le suivant.
+            this.reportCardError = null;
+            this.reportCardNotice = null;
             this.detailTab = 'history';
             this.isLoadingDetails = true;
             try {
@@ -511,9 +517,20 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /**
+         * Envoi du bulletin au tuteur. `channel` : 0 = e-mail, 1 = WhatsApp (voir CommunicationChannel).
+         *
+         * Trois issues, plus l'ancien « toujours succès » :
+         *  - 2xx `{ status: 'sent' }`      → toast de confirmation ;
+         *  - 2xx `{ status: 'simulated' }` → WhatsApp non configuré, bulletin JOURNALISÉ et non transmis :
+         *    bandeau ambre persistant (problème de configuration, pas une erreur ponctuelle) ;
+         *  - 4xx/5xx → le serveur EXPLIQUE (422 tuteur sans contact, 502 rejet de Meta : jeton expiré,
+         *    fenêtre de 24 h, modèle non approuvé…) : bandeau rouge + toast avec le message tel quel.
+         */
         async sendReportCard(term, channel) {
             if (!this.detailStudent) return;
             this.reportCardError = null;
+            this.reportCardNotice = null;
             this.sendingTermId = term.termId;
             try {
                 if (window.auth.isAuthenticated() && window.auth.isAccessTokenStale()) {
@@ -530,17 +547,21 @@ document.addEventListener('alpine:init', () => {
                     body: JSON.stringify({ studentId: this.detailStudent.id, termId: term.termId, channel: channel })
                 });
 
+                const data = await response.json().catch(() => ({}));
+
                 if (!response.ok) {
-                    const err = await response.json().catch(() => ({ message: 'Envoi du bulletin impossible.' }));
-                    throw new Error(err.message);
+                    throw new Error(data.message || 'Envoi du bulletin impossible.');
                 }
 
-                // Show success notification or rely on a global toast if one exists, else alert
-                alert('Bulletin envoyé avec succès.');
-
+                if (data.status === 'simulated') {
+                    this.reportCardNotice = data.message
+                        || 'Service WhatsApp non configuré (Mode Simulation / Log activé) — le bulletin n\'a pas été transmis par WhatsApp.';
+                } else {
+                    toast.success(data.message || 'Bulletin envoyé avec succès.');
+                }
             } catch (err) {
                 this.reportCardError = window.api.toMessage(err, 'Envoi du bulletin impossible.');
-                alert(this.reportCardError);
+                toast.error(this.reportCardError);
             } finally {
                 this.sendingTermId = null;
             }
