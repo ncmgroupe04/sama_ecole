@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ namespace SamaEcole.Application.ClassJournal.Queries.GetClassJournal;
 public class GetClassJournalQueryHandler(
     IApplicationDbContext dbContext,
     ClassJournalScopeAuthorizer scopeAuthorizer,
+    ICurrentUserService currentUser,
     TimeProvider timeProvider)
     : IRequestHandler<GetClassJournalQuery, PaginatedClassJournalEntries>
 {
@@ -43,10 +45,19 @@ public class GetClassJournalQueryHandler(
         // Résolu UNE FOIS pour toute la page, pas par ligne : ownTeacherId ne dépend que du compte
         // courant, jamais de l'entrée regardée (ClassJournalScopeAuthorizer.CanCorrect ci-dessous).
         var ownTeacherId = await scopeAuthorizer.GetOwnTeacherIdOrNullAsync(cancellationToken);
+
+        // GetOwnTeacherIdOrNullAsync renvoie null pour TOUT rôle non-Enseignant — Directeur et
+        // Secrétariat (correction libre après 15 jours) MAIS AUSSI Surveillant, qui n'a lui qu'un
+        // accès en lecture (ClassJournalController.CorrectRoles ne le liste pas). Sans cette
+        // distinction explicite, ClassJournalEditWindow.CanCorrect traiterait ownTeacherId=null
+        // comme « rôle non borné » pour le Surveillant aussi, et l'écran afficherait des boutons
+        // Modifier/Supprimer qui échoueraient en 403 au clic.
+        var isUnrestrictedCorrector = currentUser.Role is Role.Directeur or Role.Secretariat;
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
         var rows = await query
             .OrderByDescending(e => e.SessionDate)
+            .ThenBy(e => e.Id)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(e => new
@@ -82,7 +93,9 @@ public class GetClassJournalQueryHandler(
                 r.Id, r.ClassroomId, r.ClassroomName, r.SubjectId, r.SubjectName,
                 r.TeacherId, r.TeacherName, r.SessionDate, r.Topic, r.Content,
                 r.Homework, r.HomeworkDueDate, r.RowVersion,
-                ClassJournalEditWindow.CanCorrect(r.TeacherId, r.SessionDate, ownTeacherId, today)))
+                isUnrestrictedCorrector
+                    || (ownTeacherId is { } teacherId
+                        && ClassJournalEditWindow.CanCorrect(r.TeacherId, r.SessionDate, teacherId, today))))
             .ToList();
 
         return new PaginatedClassJournalEntries(items, totalCount, request.Page, request.PageSize);
