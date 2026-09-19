@@ -1204,15 +1204,18 @@
                         "Ouvrez Gestion Scolaire › Rapports et choisissez la période à analyser.",
                         "Sélectionnez, si besoin, une classe précise pour affiner la lecture.",
                         "Consultez le taux de présence par classe et la liste des élèves les plus concernés par l'absentéisme.",
+                        "Sur toute ligne présentant au moins un retard ou une absence sur la période affichée, cliquez sur « Convoquer » (Directeur et SuperAdmin uniquement) : la convocation s'ouvre avec un motif DÉJÀ PRÉ-REMPLI des chiffres réellement comptés — retard(s), absence(s) — sans ressaisie, et reste modifiable avant validation.",
                         "Exportez le détail pour le transmettre au conseil de classe ou l'annexer à un dossier de convocation."
                     ],
                     impacts: [
                         "Appel en classe : ce rapport ne fait que consolider les appels déjà soumis — un créneau non appelé n'y figure pas.",
-                        "Convocations : un élève identifié ici comme fortement absentéiste est un candidat naturel à une convocation de parent."
+                        "Convocations : le bouton « Convoquer » ouvre directement l'avis PDF depuis le bilan, sans passer par l'écran Convocations parent ; il n'apparaît qu'au croisement des rôles autorisés sur les deux écrans (Directeur, SuperAdmin) — le Secrétariat, qui a accès à ce rapport mais pas à l'écran Convocations parent, ne voit pas cette action.",
+                        "Aucun seuil automatique : le rapport propose la donnée chiffrée, mais c'est toujours un agent qui décide de convoquer — aucune convocation n'est jamais générée par lot ni déclenchée d'elle-même."
                     ],
                     recommandations: [
                         "Consultez ce rapport à échéance régulière — chaque fin de mois, par exemple — plutôt qu'au moment du conseil de classe uniquement, où il est déjà tard pour agir.",
-                        "Un taux de présence anormalement bas sur UNE seule classe trahit parfois un problème d'appel non fait, plus qu'un absentéisme réel — vérifiez avant d'alerter."
+                        "Un taux de présence anormalement bas sur UNE seule classe trahit parfois un problème d'appel non fait, plus qu'un absentéisme réel — vérifiez avant d'alerter.",
+                        "Relisez le motif pré-rempli avant de valider la convocation : les chiffres portent sur la période affichée à l'écran, pas sur l'année entière — ajustez la période avant de convoquer si le motif doit couvrir tout l'exercice."
                     ]
                 },
                 {
@@ -2123,7 +2126,9 @@
                         "pour un motif LIBRE — discipline, assiduité, résultats, tout autre sujet — et " +
                         "n'est donc pas restreinte aux seuls faits disciplinaires. C'est un entretien " +
                         "programmé, distinct d'une sanction déjà prononcée. Un avis de convocation est " +
-                        "imprimable au format PDF pour remise à la famille.",
+                        "imprimable au format PDF pour remise à la famille. Une fois l'entretien tenu — ou " +
+                        "manqué —, la convocation reçoit une SUITE, posée une seule fois : Honorée, Non " +
+                        "honorée ou Reportée, avec un compte rendu obligatoire pour les deux derniers cas.",
                     objectif:
                         "Formaliser la prise de contact avec la famille sur un sujet qui le justifie, et en " +
                         "garder une trace datée — utile aussi bien pour suivre un élève en difficulté que " +
@@ -2134,22 +2139,24 @@
                         "situation — un manque qui se révèle a posteriori, lors d'une contestation ou d'un " +
                         "conseil de discipline.",
                     procedure: [
-                        "Ouvrez Surveillance › Convocations parent et créez une nouvelle convocation.",
+                        "Ouvrez Surveillance › Convocations parent et créez une nouvelle convocation, ou utilisez le bouton « Convoquer » du bilan d'assiduité (Gestion Scolaire › Rapports), qui pré-remplit le motif à partir des chiffres de la période.",
                         "Sélectionnez l'élève, précisez le motif de l'entretien et la date proposée.",
                         "Validez. L'avis de convocation est généré au format PDF, à remettre à la famille par le canal habituel de l'établissement.",
-                        "À l'issue de l'entretien, consignez le résultat ou la décision prise, si l'usage de l'établissement le prévoit."
+                        "À l'issue de l'entretien, ouvrez la convocation et posez sa SUITE : Honorée (l'entretien a eu lieu, le compte rendu reste facultatif), Non honorée ou Reportée (le compte rendu devient alors OBLIGATOIRE).",
+                        "Une suite ne se pose qu'UNE SEULE FOIS, et seulement depuis l'état Planifiée : une convocation déjà close ne peut pas être rouverte ni recevoir une seconde suite — c'est refusé plutôt qu'écrasé silencieusement."
                     ],
                     impacts: [
                         "Registre de discipline : une convocation née d'une sanction grave reste liée, dans le dossier de l'élève, au fait qui l'a motivée, même si les deux registres ne se confondent pas.",
-                        "Appel en classe : un absentéisme répété visible dans l'historique de présence est un motif fréquent de convocation.",
-                        "Dossier de l'élève : l'historique des convocations reste consultable, daté et motivé.",
-                        "Signalement « en retard » : une convocation Planifiée dont la date est dépassée sans qu'aucune suite n'ait été consignée est repérée comme telle sur l'écran et peut être isolée par un filtre — un calcul d'affichage, aucun statut supplémentaire n'est écrit en base."
+                        "Appel en classe : un absentéisme répété visible dans l'historique de présence est un motif fréquent de convocation, et peut désormais convoquer directement depuis le bilan (voir « Rapport d'assiduité détaillé »).",
+                        "Dossier de l'élève : l'historique des convocations reste consultable, daté, motivé et assorti de sa suite le cas échéant.",
+                        "Registre : les convocations encore SANS SUITE remontent en tête de liste, quelle que soit leur date — une convocation planifiée puis oubliée reste donc visible en premier plutôt que de se noyer chronologiquement parmi les entretiens déjà tenus.",
+                        "Avis PDF : il n'est JAMAIS réédité avec la suite — c'est la pièce remise AVANT l'entretien, elle ne peut pas porter un résultat qui n'existait pas encore au moment de son impression."
                     ],
                     recommandations: [
                         "N'attendez pas qu'une situation s'aggrave pour convoquer : une convocation précoce, sur un motif d'assiduité par exemple, prévient souvent une sanction disciplinaire ultérieure.",
                         "Formulez le motif clairement sur l'avis remis à la famille : un parent convoqué sans savoir pourquoi arrive à l'entretien sur la défensive.",
-                        "Conservez systématiquement une trace de la tenue effective de l'entretien, même informelle — c'est ce qui distingue une démarche accomplie d'une convocation restée lettre morte.",
-                        "Traitez en priorité les convocations signalées « en retard » : une convocation planifiée puis oubliée n'est pas neutre — c'est une démarche promise à la famille et jamais tenue."
+                        "Posez la suite le jour même de l'entretien — ou du rendez-vous manqué : une convocation sans suite reste en tête du registre et signale un dossier resté ouvert.",
+                        "Rédigez un compte rendu factuel pour une convocation non honorée ou reportée, même bref : c'est la seule pièce qui montre, en cas de contestation ultérieure, que l'établissement a réellement cherché à rencontrer la famille."
                     ]
                 }
             ]
@@ -2244,8 +2251,157 @@
         },
         // ═══════════════════════════════════════════════════════════════════════════════════
         {
-            id: 'reperes-interface',
+            id: 'internat',
             number: 15,
+            title: "Internat — Régime d'hébergement et affectation de chambre",
+            icon: 'bed',
+            summary: "Le régime d'hébergement de chaque élève (externe, demi-pensionnaire, interne), l'affectation aux dortoirs et le tableau de bord d'occupation.",
+            concept:
+                "Le régime d'hébergement d'un élève — Externe, Demi-pensionnaire ou Interne — se décide à l'inscription et se " +
+                "reconfirme CHAQUE année, exactement comme le redoublement : c'est une information portée par l'INSCRIPTION, " +
+                "pas par la fiche permanente de l'élève, parce qu'un interne une année peut redevenir externe la suivante " +
+                "sans que rien n'efface son passé. L'Internat ne crée AUCUNE nouvelle notion de local : il réutilise les " +
+                "bâtiments et salles déjà déclarés dans Infrastructures, en leur donnant le type « Dortoir », et compte la " +
+                "capacité au niveau de la CHAMBRE — jamais lit par lit, aucune entité « Lit » distincte n'existe. Le module " +
+                "est désactivé PAR DÉFAUT, à l'inverse de Pédagogie et Finance : seul un établissement qui héberge " +
+                "réellement des élèves l'active depuis Paramètres. Une fois actif, chaque régime Interne facturé porte une " +
+                "ligne de pension distincte, qui suit la même règle que tout montant issu d'une inscription — elle ne se " +
+                "retire jamais silencieusement, même quand l'élève quitte l'internat en cours d'année.",
+            articles: [
+                {
+                    id: 'activation-dortoirs',
+                    title: 'Activer le module et déclarer les dortoirs',
+                    location: 'Paramètres › Modules & fonctionnalités, puis Bâtiments & Salles',
+                    href: '/parametres?tab=modules',
+                    roles: ['Directeur'],
+                    definition:
+                        "Section « Internat » de Paramètres › Modules & fonctionnalités : un interrupteur, désactivé par " +
+                        "défaut, qui rend le module visible ou invisible pour tout le personnel de l'établissement. Une " +
+                        "fois activé, les DORTOIRS se déclarent comme des salles ordinaires depuis Bâtiments & Salles, " +
+                        "avec le type « Dortoir » et une capacité en nombre de places — exactement le même écran que pour " +
+                        "une salle de classe ou un bureau, aucun écran séparé.",
+                    objectif:
+                        "Réserver le module aux établissements qui hébergent réellement des élèves, sans imposer à tous " +
+                        "les autres un menu et un vocabulaire — pension, dortoir, régime — qui ne les concernent pas ; et " +
+                        "réutiliser l'inventaire des locaux déjà tenu par Infrastructures plutôt que de faire ressaisir " +
+                        "une seconde cartographie des bâtiments.",
+                    probleme:
+                        "Un module actif par défaut pour toutes les écoles ferait apparaître un menu « Internat » et une " +
+                        "section « Régime & Hébergement » sur le formulaire d'inscription même pour un externat pur — une " +
+                        "complexité et une question posée à chaque famille qui n'a simplement pas lieu d'être. À " +
+                        "l'inverse, sans réutiliser les salles déjà déclarées, un établissement qui héberge des élèves " +
+                        "devrait tenir deux inventaires de locaux en parallèle, l'un pour les classes, l'autre pour les " +
+                        "dortoirs, aussitôt sujets à diverger.",
+                    procedure: [
+                        "Ouvrez Paramètres › Modules & fonctionnalités et activez l'interrupteur « Internat », réservé au Directeur.",
+                        "Ouvrez ensuite Gestion Scolaire › Bâtiments & Salles et créez, si besoin, un bâtiment dédié à l'hébergement (« Pavillon Garçons », « Pavillon Filles »).",
+                        "Ajoutez ses salles comme d'habitude, mais choisissez le type « Dortoir » et renseignez une capacité SINCÈRE — le nombre de lits réellement disponibles dans la chambre.",
+                        "Aucune autre déclaration n'est nécessaire : dès qu'au moins un dortoir existe, l'écran Internat et la section « Régime & Hébergement » de l'inscription s'ouvrent d'eux-mêmes.",
+                        "Désactiver le module par la suite masque le menu et bloque toute nouvelle affectation (l'API la refuse en 422), mais ne supprime ni les dortoirs ni l'historique des élèves déjà hébergés."
+                    ],
+                    impacts: [
+                        "Bâtiments & Salles : un dortoir reste une salle comme les autres — il compte dans le total de capacité de l'établissement et peut être archivé comme n'importe quelle salle devenue inutilisable.",
+                        "Menu et formulaire d'inscription : la visibilité du lien « Internat » et de la section « Régime & Hébergement » suit l'interrupteur côté client, par confort d'affichage — la garde réelle est posée côté serveur et vaut pour tous les rôles, y compris un accès direct par adresse.",
+                        "Capacité : elle se compte au niveau de la CHAMBRE (occupants actifs comparés à la capacité de la salle), jamais lit par lit — aucune réservation nominative d'un lit précis n'existe."
+                    ],
+                    recommandations: [
+                        "Activez le module et déclarez vos dortoirs AVANT la campagne d'inscription : une section « Régime & Hébergement » qui apparaît en cours de campagne oblige à revenir sur des dossiers déjà saisis.",
+                        "Ne créez pas un dortoir par lit : la granularité du module est la chambre, pas la place individuelle — un suivi plus fin resterait à tenir hors de l'application.",
+                        "Distinguez clairement, dans le nom du bâtiment ou de la salle, un dortoir d'une salle de classe ordinaire : c'est ce nom qui apparaît sur le tableau de bord Internat et sur la fiche de l'élève."
+                    ]
+                },
+                {
+                    id: 'regime-hebergement-inscription',
+                    title: "Régime d'hébergement à l'inscription et pension",
+                    location: 'Gestion Scolaire › Inscriptions — section Régime & Hébergement',
+                    href: '/inscriptions',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Le formulaire d'inscription — et de réinscription — porte une section « Régime & Hébergement », " +
+                        "visible dès qu'au moins un dortoir existe : Externe, Demi-pensionnaire ou Interne. Choisir " +
+                        "Interne ouvre un sélecteur de chambre parmi les dortoirs ayant encore de la place ; le régime " +
+                        "est enregistré sur l'INSCRIPTION de l'année, jamais sur la fiche permanente de l'élève. Un " +
+                        "élève en régime Interne se voit ajouter automatiquement une ligne de PENSION à son échéancier, " +
+                        "dès lors qu'une catégorie de frais est marquée comme frais de pension dans le barème de la " +
+                        "classe.",
+                    objectif:
+                        "Capturer le régime d'hébergement au même geste que l'inscription elle-même, pour que la pension " +
+                        "soit facturée sans oubli dès le premier jour et que le tableau de bord Internat reflète, dès la " +
+                        "rentrée, l'occupation réelle des dortoirs — sans dépendre d'une déclaration séparée, faite à un " +
+                        "autre moment par un autre service.",
+                    probleme:
+                        "Un régime d'hébergement suivi à part — un cahier tenu par le surveillant général, une case " +
+                        "cochée sur un formulaire papier — se désynchronise inévitablement de la facturation : un élève " +
+                        "devenu interne en cours d'année continue d'être facturé en externe, ou l'inverse, jusqu'à ce " +
+                        "qu'une famille s'étonne du montant réclamé.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Inscriptions (première inscription ou réinscription) et sélectionnez la classe comme d'habitude.",
+                        "Dans la section « Régime & Hébergement », choisissez Externe, Demi-pensionnaire ou Interne.",
+                        "Pour Interne, choisissez le dortoir dans la liste : seuls les dortoirs ayant encore de la place s'y proposent, avec leur occupation courante.",
+                        "Validez l'inscription : si une catégorie de frais de pension existe dans le barème de la classe, sa ligne s'ajoute d'elle-même au montant dû — rien à cocher séparément.",
+                        "CHAQUE ANNÉE, à la réinscription, reconfirmez le régime : il n'est JAMAIS reconduit automatiquement d'un exercice sur l'autre, au même titre que le redoublement.",
+                        "Un changement de régime ou de chambre EN COURS D'ANNÉE se fait depuis le tableau de bord Internat, pas en rouvrant le formulaire d'inscription (voir la fiche « Tableau de bord par chambre, affectation, transfert et libération »)."
+                    ],
+                    impacts: [
+                        "Échéancier : la ligne de pension suit exactement la règle des autres lignes de frais — figée à la validation, jamais modifiée en silence ; une correction relève du Secrétariat ou de la Direction et reste historisée.",
+                        "Fiche élève : un badge d'hébergement rappelle le régime en cours et, pour un Interne, sa chambre.",
+                        "Libération : faire repasser un élève en Externe, ou le changer de chambre, ne retire JAMAIS la ligne de pension déjà facturée — elle correspond à une période réellement vécue à l'internat.",
+                        "Capacité : un dortoir déjà complet n'apparaît plus dans la liste des chambres disponibles proposée par ce formulaire."
+                    ],
+                    recommandations: [
+                        "Ne laissez jamais un élève en régime Interne sans dortoir attribué : le formulaire l'exige, mais vérifiez la cohérence si un dortoir a été archivé après le choix initial.",
+                        "Vérifiez le barème de la classe AVANT la campagne d'inscription : sans catégorie de frais marquée « pension », un régime Interne validé n'ajoute aucun montant, ce qui n'est visible qu'après coup.",
+                        "Un changement de régime en cours d'année se traite depuis le tableau de bord Internat, jamais en modifiant l'inscription d'origine.",
+                        "Rappelez-vous que la reconduction n'est jamais automatique : une famille qui pensait son enfant reconduit en Interne peut se retrouver, faute de reconfirmation, en Externe à la rentrée suivante."
+                    ]
+                },
+                {
+                    id: 'tableau-bord-affectation-internat',
+                    title: 'Tableau de bord par chambre, affectation, transfert et libération',
+                    location: 'Internat',
+                    href: '/internat',
+                    roles: ['Directeur', 'Secrétariat', 'Surveillant'],
+                    definition:
+                        "Écran Internat : un tableau de bord qui liste chaque dortoir avec son occupation courante " +
+                        "(élèves actifs comparés à sa capacité), une recherche d'élève par nom ou matricule, et une " +
+                        "modale d'affectation rapide qui traite en un seul geste l'affectation, le TRANSFERT vers un " +
+                        "autre dortoir, et la LIBÉRATION (retour au régime Externe).",
+                    objectif:
+                        "Donner au personnel de l'internat — Directeur, Secrétariat, Surveillant — un point unique pour " +
+                        "savoir qui loge où à l'instant présent, et pour agir sur une affectation sans devoir rouvrir le " +
+                        "dossier d'inscription complet de l'élève à chaque mouvement de chambre.",
+                    probleme:
+                        "Sans tableau de bord dédié, l'occupation réelle des dortoirs ne vit que dans la mémoire du " +
+                        "surveillant général : un transfert décidé oralement ne se retrouve nulle part, une chambre " +
+                        "présentée comme complète peut en réalité avoir de la place, et un dépassement de capacité ne se " +
+                        "découvre qu'au moment où un lit manque physiquement.",
+                    procedure: [
+                        "Ouvrez Internat : chaque dortoir apparaît avec son nom, sa capacité et son occupation courante.",
+                        "Recherchez un élève par nom ou par matricule pour retrouver sa chambre actuelle, ou pour l'affecter s'il est encore en régime Externe ou Demi-pensionnaire.",
+                        "Ouvrez la modale d'affectation rapide : elle propose selon le cas d'AFFECTER l'élève à un dortoir, de le TRANSFÉRER vers un autre, ou de le LIBÉRER (retour à Externe).",
+                        "Un dortoir déjà complet n'accepte aucune nouvelle affectation : le message l'indique explicitement plutôt que de laisser dépasser la capacité déclarée.",
+                        "Validez : l'occupation du ou des dortoirs concernés se met à jour immédiatement sur le tableau de bord.",
+                        "Si deux agents modifient la même affectation au même instant, le second à valider reçoit un refus explicite plutôt qu'un écrasement silencieux du premier — rouvrez simplement la fiche pour repartir de l'état à jour."
+                    ],
+                    impacts: [
+                        "Fiche élève : le badge d'hébergement et la chambre affichée se mettent à jour au même instant que le tableau de bord.",
+                        "Comptabilité : la libération d'un élève (retour à Externe) ne retire JAMAIS la ligne de pension déjà facturée sur son échéancier — voir la fiche « Régime d'hébergement à l'inscription et pension ».",
+                        "Module désactivé : si le Directeur désactive l'Internat depuis Paramètres, toute tentative d'affectation ou de transfert est refusée par le serveur, quel que soit l'écran d'où elle provient — la garde ne dépend jamais du seul masquage du menu.",
+                        "Rôles : ce tableau de bord est ouvert au même trio que les convocations de parent — Directeur, Secrétariat, Surveillant — un Enseignant ou un compte Finance n'y a pas accès."
+                    ],
+                    recommandations: [
+                        "Traitez tout mouvement de chambre — même décidé oralement dans l'urgence — depuis cette modale le jour même : c'est elle, et elle seule, qui fait foi de l'occupation réelle.",
+                        "Ne tenez pas de registre papier parallèle une fois le module actif : les deux sources finiraient par diverger, et c'est le tableau de bord qui doit rester la référence unique.",
+                        "Un dortoir affiché complet qui ne devrait pas l'être signale presque toujours une libération oubliée plutôt qu'une erreur de capacité — vérifiez les occupants avant de revoir la capacité déclarée à la hausse.",
+                        "En cas de refus lors d'une modification concurrente, ne réessayez pas mécaniquement : rouvrez la fiche de l'élève pour voir qui a modifié l'affectation entretemps."
+                    ]
+                }
+            ]
+        },
+        // ═══════════════════════════════════════════════════════════════════════════════════
+        {
+            id: 'reperes-interface',
+            number: 16,
             title: "Repères d'interface — onglets, filtres par année et sélecteurs",
             icon: 'menu',
             summary: "Les repères communs à tous les écrans : la barre d'onglets défilante, le filtrage par année active et les listes déroulantes dynamiques.",
