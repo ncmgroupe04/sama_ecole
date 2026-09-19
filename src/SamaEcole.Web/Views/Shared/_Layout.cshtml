@@ -383,17 +383,22 @@
  <div class="flex-1 flex flex-col h-full min-w-0">
  
  <!-- Barre supérieure -->
- @* Deux rangées désormais : la 1re (hauteur fixe h-16, inchangée pixel pour pixel) porte le
-    titre et les indicateurs de contexte déjà en place ; la 2e ajoute la barre de navigation
-    rapide entre modules (_QuickNav.cshtml). <header> devient un conteneur flex-colonne — un
-    simple frère flex de <main> dans la colonne (voir plus bas), agrandir sa hauteur ne
-    perturbe donc pas le calcul de .sticky-sub-header (qui dépend du padding de <main>, pas de
-    la hauteur de <header>). *@
+ @* Deux rangées : la 1re (hauteur fixe h-16, en bleu royal — voir ci-dessous) porte le titre et
+    les indicateurs de contexte ; la 2e ajoute la barre de navigation rapide entre modules
+    (_QuickNav.cshtml), qui GARDE le fond clair d'origine (bg-white de <header>). <header> est un
+    conteneur flex-colonne — un simple frère flex de <main> dans la colonne (voir plus bas),
+    agrandir sa hauteur ne perturbe donc pas le calcul de .sticky-sub-header (qui dépend du
+    padding de <main>, pas de la hauteur de <header>). *@
  <header class="bg-white border-b border-slate-200 shadow-sm z-10 flex flex-col">
- <div class="h-16 flex items-center justify-between px-4 lg:px-8">
+ @* Fond bleu royal identique à .sidebar-user-card (bg-primary-600) : décision produit du 19/09/2026
+ reliant visuellement cette rangée à la carte de profil du Directeur. Les pastilles (horloge, mode,
+ année scolaire, démarrage, salutation) GARDENT leur fond clair d'origine (bg-slate-100 etc.) —
+ elles ressortent déjà naturellement sur le bleu, inutile de les repeindre. Seuls les éléments posés
+ directement sur le bleu (titre, boutons icône sans pastille) passent en blanc. *@
+ <div class="bg-primary-600 h-16 flex items-center justify-between px-4 lg:px-8">
  <div class="flex items-center gap-4">
  <!-- Bouton Menu Mobile : ouvre le tiroir superposé de la barre latérale -->
- <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 rounded-xl">
+ <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl">
  <icon name="menu" class="w-6 h-6" />
  </button>
 
@@ -407,7 +412,7 @@
  :aria-label="sidebarCollapsed ? 'Déplier le menu' : 'Réduire le menu'"
  @* focus-visible et non focus : un clic souris ne doit laisser aucun halo, seule la navigation
  clavier (Tab) en a besoin pour rester accessible. *@
- class="hidden lg:inline-flex p-2 -ml-2 text-slate-500 hover:text-slate-900 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all duration-200 active:scale-95">
+ class="hidden lg:inline-flex p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all duration-200 active:scale-95">
  <icon name="menu" class="w-6 h-6" />
  </button>
 
@@ -419,7 +424,7 @@
  c'est la seule chose qui répond à « où suis-je ? ». Ramené au gabarit du reste de la
  barre (text-sm), en slate-700 : le bleu marque l'entrée ACTIVE du menu latéral, une
  deuxième zone bleue dans le bandeau diluait ce repère. *@
- <h2 class="hidden sm:block text-sm font-semibold tracking-tight text-slate-700">@ViewData["Title"]</h2>
+ <h2 class="hidden sm:block text-sm font-semibold tracking-tight text-white">@ViewData["Title"]</h2>
  </div>
 
  <div class="flex items-center gap-4">
