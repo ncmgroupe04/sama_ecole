@@ -345,6 +345,47 @@
                         "Réservez la correction d'un matricule aux vrais cas — erreur de reprise, alignement sur un dossier administratif : ce n'est pas un champ d'édition ordinaire, et chaque correction laisse une trace.",
                         "Ne cherchez pas à « rattraper » un trou de numérotation en corrigeant des matricules un par un : un trou est sans conséquence, la cohérence de la série l'est davantage."
                     ]
+                },
+                {
+                    id: 'activer-desactiver-module',
+                    title: 'Activer ou désactiver un module de l’application',
+                    location: 'Paramètres › Modules & fonctionnalités',
+                    href: '/parametres?tab=modules',
+                    roles: ['Directeur'],
+                    definition:
+                        "Chaque grand pôle de l'application — Pédagogie, Comptabilité & Finance, Internat, et la filière " +
+                        "Coranique/Franco-Arabe — se masque ou se révèle d'un interrupteur, indépendamment de la formule " +
+                        "d'abonnement (Primaire/Standard/Premium). PÉDAGOGIE recouvre Matières, Notes & bulletins, Cahier " +
+                        "de texte, Examens officiels, Intégration étatique et toute la Surveillance générale (appel, " +
+                        "billets, discipline, convocations, pointage). FINANCE recouvre Caisse, Frais, Paie, Fiscalité, " +
+                        "Trésorerie et Rapports financiers.",
+                    objectif:
+                        "Adapter le menu et le vocabulaire de l'application à ce que l'établissement utilise réellement, " +
+                        "sans imposer à un établissement purement administratif un module Pédagogie qu'il ne remplira " +
+                        "jamais, ni l'inverse à une école qui n'encaisse rien elle-même.",
+                    probleme:
+                        "Une application qui affiche vingt entrées de menu, dont la moitié ne concerne jamais " +
+                        "l'établissement, noie l'utilisateur — et surtout NOUVEAU, qui ne sait plus distinguer ce qu'il " +
+                        "doit remplir de ce qui ne le concerne pas.",
+                    procedure: [
+                        "Ouvrez Paramètres › Modules & fonctionnalités.",
+                        "Basculez l'interrupteur du module voulu. L'enregistrement est immédiat, sans bouton « Valider » séparé.",
+                        "Un module désactivé disparaît de la barre latérale et de la barre de navigation rapide pour TOUS les comptes de l'établissement, quel que soit leur rôle — pas seulement pour vous.",
+                        "Pédagogie et Finance sont activés PAR DÉFAUT : un établissement qui n'y touche jamais conserve le comportement historique de l'application, tous modules ouverts.",
+                        "Internat, lui, est désactivé par défaut : l'activer ouvre réellement l'écran /internat et ses règles d'hébergement — ce n'est pas un réglage anticipé comme Pédagogie/Finance."
+                    ],
+                    impacts: [
+                        "Aucune perte de données : désactiver un module le masque, il ne supprime ni n'archive rien. Le réactiver restitue l'accès à l'identique.",
+                        "API : la garde réelle est posée sur chaque contrôleur concerné ([RequireModule]) — masquer un lien dans le menu est un confort d'affichage, la protection véritable répond par 403 même en visant l'adresse directement.",
+                        "Filière Coranique/Franco-Arabe : au-delà de son propre menu, ce réglage déclenche aussi le bulletin bilingue Français/Arabe sur TOUTES les matières où un nom arabe est renseigné (voir « Bulletin bilingue »).",
+                        "Barre de navigation rapide (QuickNav) : un module désactivé y disparaît exactement comme dans la barre latérale, les deux lisant le même réglage."
+                    ],
+                    recommandations: [
+                        "Ne désactivez jamais un module en cours d'exercice sans en avertir le personnel concerné : un enseignant qui perd soudainement l'accès aux Notes en pleine saisie de trimestre s'inquiète à raison.",
+                        "Un établissement 100 % administratif (pas de pédagogie propre, ex. une structure de coordination) peut désactiver Pédagogie sans risque : rien n'y dépend d'un effectif d'élèves suivi ailleurs.",
+                        "N'activez Internat que si l'établissement héberge réellement des élèves : le module ajoute un vocabulaire (dortoir, pension, régime) qui n'a pas sa place ailleurs.",
+                        "Si un module reste invisible après activation, faites d'abord contrôler votre propre rôle : la garde par module se combine avec la garde par rôle, les deux doivent être satisfaites."
+                    ]
                 }
             ]
         },
@@ -558,6 +599,47 @@
                         "Ne comptez pas sur l'emploi du temps pour la paie : c'est le pointage des heures qui fait foi sur ce qui est dû, la grille n'est qu'une prévision.",
                         "Un numéro de salle sur un créneau ne réserve pas la salle : si l'établissement veut éviter les doubles occupations, il lui faut une convention de nommage stricte et un contrôle humain, la grille ne l'impose pas."
                     ]
+                },
+                {
+                    id: 'cahier-de-texte',
+                    title: 'Cahier de texte — journal de classe',
+                    location: 'Gestion Scolaire › Cahier de texte',
+                    href: '/cahier-de-texte',
+                    roles: ['Directeur', 'Secrétariat', 'Surveillant', 'Enseignant'],
+                    definition:
+                        "Une entrée par séance RÉELLEMENT tenue — jamais un programme prévisionnel — pour une classe et " +
+                        "une matière données : le sujet traité, le contenu résumé, et les devoirs éventuellement donnés " +
+                        "avec leur date de rendu. C'est un document pédagogique PARTAGÉ, consultable par toute la chaîne " +
+                        "d'encadrement, et non un carnet privé propre à chaque enseignant.",
+                    objectif:
+                        "Assurer la continuité pédagogique — un remplaçant sait exactement où reprendre — et donner à la " +
+                        "direction une preuve datée de ce qui a réellement été enseigné, classe par classe et matière par " +
+                        "matière, sans dépendre d'un cahier papier qui reste dans le sac de l'enseignant.",
+                    probleme:
+                        "Un cahier de texte tenu sur papier ne voyage qu'avec son auteur : en cas d'absence imprévue, le " +
+                        "remplaçant improvise faute de savoir ce qui a été vu, et la direction n'a aucun moyen de vérifier " +
+                        "qu'un programme annoncé a effectivement été suivi — seul le bulletin de fin de trimestre le " +
+                        "révèle, bien trop tard pour agir.",
+                    procedure: [
+                        "CONSULTATION (tous rôles) : ouvrez Gestion Scolaire › Cahier de texte. Filtrez par classe, par matière et par plage de dates ; la liste se pagine et reste stable d'une page à l'autre.",
+                        "SAISIE (Enseignant uniquement) : cliquez sur « Journaliser une séance », choisissez la classe et la matière, la date de la séance — jamais future —, puis renseignez le sujet et le contenu.",
+                        "L'application n'accepte la saisie que pour une classe et une matière où VOUS êtes affecté cette année, ET où un créneau existe ce jour de la semaine dans votre emploi du temps : sinon, un message explicite renvoie vers le Directeur ou le Secrétariat.",
+                        "DEVOIRS (facultatif) : si un devoir est donné, renseignez-le et fixez sa date de rendu — elle ne peut pas précéder la date de la séance, et un champ sans devoir associé est refusé.",
+                        "CORRECTION : l'auteur corrige librement sa propre entrée pendant 15 jours après la séance. Passé ce délai, seuls le Directeur et le Secrétariat peuvent encore la corriger — jamais l'auteur lui-même.",
+                        "La classe, la matière et la date de séance ne se corrigent JAMAIS après coup, par personne : seules les entrées « Sujet », « Contenu » et « Devoirs » restent modifiables — une séance mal datée se supprime et se ressaisit, elle ne se déplace pas."
+                    ],
+                    impacts: [
+                        "Emploi du temps et affectations : la saisie s'appuie exactement sur les mêmes créneaux et les mêmes affectations classe/matière que l'écran Emploi du temps — aucun double paramétrage.",
+                        "Surveillance : le Surveillant lit le journal en consultation seule ; les actions de correction et de suppression n'apparaissent jamais dans son interface, quel que soit le délai des 15 jours.",
+                        "Module Pédagogie : le Cahier de texte disparaît de la barre latérale, comme Notes et Examens, si le Directeur désactive le module Pédagogie dans Paramètres › Modules & fonctionnalités.",
+                        "Réinitialisation en mode bac à sable : les entrées du cahier de texte font partie des données effacées, comme les notes et les bulletins."
+                    ],
+                    recommandations: [
+                        "Journalisez la séance le jour même : au-delà de quelques jours, les détails s'estompent et le journal perd sa valeur de continuité.",
+                        "Ne confondez pas ce journal avec l'Appel en classe (Surveillance) : l'un dit CE QUI a été enseigné, l'autre QUI était présent — deux registres distincts, jamais fusionnés.",
+                        "Si une séance manque après le délai de 15 jours, ne demandez pas à l'enseignant de la recréer : seuls le Directeur ou le Secrétariat peuvent encore corriger l'entrée existante.",
+                        "N'attendez pas une absence imprévue pour découvrir qu'un enseignant n'a rien journalisé depuis des semaines : consultez le journal par classe à échéance régulière, c'est un indicateur discret de suivi pédagogique."
+                    ]
                 }
             ]
         },
@@ -623,6 +705,40 @@
                         "Une erreur d'état civil se corrige par la fiche élève, et la correction est historisée. Ne créez jamais un second élève pour rectifier le premier.",
                         "Le secrétariat n'encaisse rien : après l'inscription, la famille se présente à la Caisse, qui constate le versement et délivre le reçu portant la mention réglementaire invitant à le conserver.",
                         "Contrôlez le numéro de téléphone du tuteur au moment de la saisie : un numéro erroné rend inopérante toute la chaîne de relance."
+                    ]
+                },
+                {
+                    id: 'notification-inscription-directeur',
+                    title: 'Notification automatique du Directeur à chaque inscription',
+                    location: 'Boîte e-mail du Directeur — aucun écran dédié',
+                    href: '/eleves',
+                    roles: ['Directeur'],
+                    definition:
+                        "À chaque inscription validée, un e-mail automatique part vers TOUS les comptes Directeur actifs " +
+                        "de l'établissement — jamais vers l'adresse générique de l'école. Aucun réglage ne l'active ou ne " +
+                        "le désactive : c'est un comportement permanent du module Inscriptions.",
+                    objectif:
+                        "Tenir la direction informée du rythme réel des inscriptions sans qu'elle ait à ouvrir " +
+                        "l'application pour le constater — utile en particulier pour un Directeur qui partage la " +
+                        "supervision avec un adjoint, les deux recevant le même e-mail.",
+                    probleme:
+                        "Sans notification, une inscription saisie par le secrétariat un jour d'affluence pouvait passer " +
+                        "totalement inaperçue de la direction jusqu'à la consultation d'un rapport, des semaines plus " +
+                        "tard.",
+                    procedure: [
+                        "Rien à activer ni à configurer : la notification part d'elle-même dès qu'une inscription est validée.",
+                        "Consultez simplement votre boîte e-mail : chaque compte Directeur actif de l'établissement reçoit son propre message.",
+                        "Si aucun Directeur actif n'existe dans l'établissement au moment de l'inscription, l'e-mail n'est simplement envoyé à personne — l'inscription elle-même n'est jamais bloquée pour autant."
+                    ],
+                    impacts: [
+                        "Inscription : l'envoi se déclenche APRÈS que l'inscription est réellement enregistrée — un e-mail reçu garantit donc que l'inscription a bien abouti.",
+                        "Fiabilité : un échec d'envoi isolé (panne du serveur de messagerie) est journalisé côté serveur et n'empêche ni l'inscription, ni la notification des autres Directeurs.",
+                        "Comptes suspendus : un compte Directeur suspendu ou d'une autre école ne reçoit jamais cette notification."
+                    ],
+                    recommandations: [
+                        "Vérifiez que l'adresse e-mail de chaque compte Directeur est correcte et surveillée : c'est le seul canal de cette notification, il n'existe pas de rappel dans l'application elle-même.",
+                        "Si les e-mails n'arrivent jamais, vérifiez d'abord les courriers indésirables avant de conclure à une panne : c'est la cause la plus fréquente.",
+                        "Ne comptez pas sur cet e-mail comme preuve comptable de l'inscription : le reçu et l'attestation PDF, remis à la famille, restent les pièces officielles."
                     ]
                 },
                 {
@@ -913,6 +1029,43 @@
                         "Vérifiez le logo et la dénomination de l'établissement dans les Paramètres avant la première édition de l'année.",
                         "Conservez le PDF de chaque trimestre : il constitue la preuve de ce qui a été effectivement remis à la famille.",
                         "N'annotez jamais un bulletin à la main : la correction se fait dans l'application, puis le document est réédité."
+                    ]
+                },
+                {
+                    id: 'bulletin-bilingue-arabe',
+                    title: 'Bulletin bilingue Français / Arabe (filière Coranique / Franco-Arabe)',
+                    location: 'Paramètres › Modules & fonctionnalités, puis Gestion Scolaire › Matières',
+                    href: '/matieres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Une fois la filière Coranique/Franco-Arabe activée, le bulletin imprime AUTOMATIQUEMENT, sous " +
+                        "chaque nom de matière, son intitulé en arabe si l'établissement l'a renseigné — un bloc arabe " +
+                        "complet, écrit de droite à gauche, jamais un mélange mot à mot avec le français sur une même " +
+                        "ligne. Aucune traduction automatique : le nom arabe est saisi tel quel par l'établissement.",
+                    objectif:
+                        "Servir les établissements franco-arabes ou coraniques dans les deux langues de leur " +
+                        "enseignement, sur le même document officiel que les autres écoles, sans dupliquer le bulletin " +
+                        "en deux versions distinctes à concilier.",
+                    probleme:
+                        "Un établissement franco-arabe qui ne peut imprimer ses matières qu'en français doit recopier un " +
+                        "second bulletin à la main pour les familles qui lisent l'arabe — une double saisie, source " +
+                        "d'écarts entre les deux versions.",
+                    procedure: [
+                        "Activez la filière Coranique/Franco-Arabe dans Paramètres › Modules & fonctionnalités (voir « Activer ou désactiver un module »).",
+                        "Ouvrez Gestion Scolaire › Matières et, pour chaque matière concernée, renseignez son nom en arabe.",
+                        "Une matière sans nom arabe imprime le bulletin sans son second nom, jamais une valeur inventée ou une case vide qui prendrait la place.",
+                        "Générez le bulletin normalement (Gestion Scolaire › Notes et bulletins) : le bilinguisme s'applique automatiquement, sans case à cocher supplémentaire à l'édition.",
+                        "Prévisualisez un bulletin témoin après la première saisie de noms arabes, pour vérifier l'alignement des deux blocs avant impression d'une classe entière."
+                    ],
+                    impacts: [
+                        "Matières : le nom arabe est un champ de la fiche matière, au même titre que le nom français — il se corrige au même endroit.",
+                        "Bulletin PDF : seul le document change ; la saisie des notes, les moyennes et les mentions restent identiques, quelle que soit la langue d'affichage des matières.",
+                        "Module Pédagogie : le bilinguisme dépend du module Coran, pas de Pédagogie — désactiver Pédagogie masque Notes et Matières, mais ne désactive pas le bilinguisme si Coran reste actif."
+                    ],
+                    recommandations: [
+                        "Renseignez les noms arabes en une seule fois pour tout le niveau plutôt que matière par matière au fil de l'eau : un bulletin à moitié bilingue paraît inachevé.",
+                        "Faites relire l'orthographe arabe par une personne compétente avant la première édition de masse : l'application ne corrige ni ne traduit rien.",
+                        "N'activez ce module que si l'établissement enseigne réellement en arabe : l'activer sans jamais renseigner de nom arabe n'apporte rien et encombre la fiche matière d'un champ vide."
                     ]
                 },
                 {
@@ -2547,12 +2700,15 @@
                     href: '/parametres',
                     roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
                     definition:
-                        "Trois protections s'appliquent au compte de chaque utilisateur, indépendamment de son rôle. Le " +
+                        "Quatre protections s'appliquent au compte de chaque utilisateur, indépendamment de son rôle. Le " +
                         "CHANGEMENT DE MOT DE PASSE en libre-service se fait depuis le menu profil, sans passer par un " +
-                        "administrateur. Le VERROUILLAGE PROGRESSIF bloque temporairement les tentatives de connexion " +
-                        "après plusieurs échecs de mot de passe rapprochés, le délai s'allongeant à chaque nouvel échec. " +
-                        "La DÉCONNEXION AUTOMATIQUE ferme la session après une période d'inactivité, dont la durée est " +
-                        "réglée par le Directeur dans les Paramètres système.",
+                        "administrateur. Le CHANGEMENT D'E-MAIL, depuis la carte de profil de la barre latérale, exige de " +
+                        "reconfirmer le mot de passe actuel et révoque TOUTES les sessions ouvertes, y compris celle en " +
+                        "cours — l'e-mail étant l'identifiant de connexion, le changer mérite la même preuve d'identité " +
+                        "qu'un changement de mot de passe. Le VERROUILLAGE PROGRESSIF bloque temporairement les tentatives " +
+                        "de connexion après plusieurs échecs de mot de passe rapprochés, le délai s'allongeant à chaque " +
+                        "nouvel échec. La DÉCONNEXION AUTOMATIQUE ferme la session après une période d'inactivité, dont la " +
+                        "durée est réglée par le Directeur dans les Paramètres système.",
                     objectif:
                         "Protéger les données de l'établissement contre un poste laissé ouvert sans surveillance et contre " +
                         "les tentatives répétées de deviner un mot de passe, tout en laissant chaque utilisateur maître de " +
@@ -2563,6 +2719,7 @@
                         "connecté pendant la pause de midi expose élèves, notes et caisse à qui passe devant.",
                     procedure: [
                         "CHANGER SON MOT DE PASSE : ouvrez le menu profil, choisissez « Changer mon mot de passe », saisissez l'actuel puis le nouveau — la robustesse du nouveau est vérifiée à la saisie.",
+                        "CHANGER SON E-MAIL : depuis la carte de profil de la barre latérale, choisissez « Changer mon e-mail », saisissez le nouvel e-mail et votre mot de passe ACTUEL pour confirmer. Vous serez déconnecté de toutes vos sessions, y compris celle-ci : reconnectez-vous avec la nouvelle adresse.",
                         "APRÈS PLUSIEURS ÉCHECS DE CONNEXION : patientez le temps indiqué par l'écran de connexion ; réessayer plus tôt ne fait que rallonger le délai. En cas de doute réel sur le mot de passe, demandez une réinitialisation.",
                         "DÉCONNEXION AUTOMATIQUE : si l'application vous a déconnecté après une absence, reconnectez-vous simplement — aucune donnée validée avant l'inactivité n'est perdue, seule une saisie en cours non enregistrée l'est.",
                         "RÉGLER LE DÉLAI (Directeur) : Paramètres › Paramètres système, champ « délai de déconnexion automatique »."
@@ -2570,13 +2727,49 @@
                     impacts: [
                         "Paramètres système : le délai d'inactivité y est réglé par le Directeur et s'applique à tous les comptes de l'établissement.",
                         "Saisies en cours : la déconnexion automatique, comme une coupure réseau, laisse une saisie non validée à l'écran ou la perd selon l'écran — elle ne valide jamais rien à votre place (voir « Résilience réseau »).",
-                        "Comptes du personnel : la réinitialisation d'un mot de passe oublié par un membre du personnel reste, elle, du ressort du Directeur depuis Paramètres › Utilisateurs & rôles."
+                        "Comptes du personnel : la réinitialisation d'un mot de passe oublié par un membre du personnel reste, elle, du ressort du Directeur depuis Paramètres › Utilisateurs & rôles.",
+                        "Unicité : un e-mail déjà utilisé par un autre compte de la plateforme est refusé — deux comptes ne peuvent jamais partager la même adresse de connexion."
                     ],
                     recommandations: [
                         "Changez votre mot de passe à la première connexion si un administrateur vous en a communiqué un : tant que vous utilisez le sien, il connaît votre accès.",
                         "Ne réduisez pas le délai de déconnexion automatique au point de gêner le travail réel : un agent sans cesse déconnecté finit par contourner la sécurité autrement.",
                         "Un verrouillage qui se déclenche alors que vous êtes sûr du mot de passe peut signaler une tentative d'intrusion sur votre compte : signalez-le, et changez le mot de passe une fois l'accès rétabli.",
-                        "Verrouillez ou fermez votre session en quittant votre poste plutôt que de compter sur la déconnexion automatique : le délai, aussi court soit-il, laisse une fenêtre."
+                        "Verrouillez ou fermez votre session en quittant votre poste plutôt que de compter sur la déconnexion automatique : le délai, aussi court soit-il, laisse une fenêtre.",
+                        "Après un changement d'e-mail, notez-le immédiatement quelque part de sûr avant de vous déconnecter : la session en cours se ferme dans l'instant, sans confirmation supplémentaire."
+                    ]
+                },
+                {
+                    id: 'navigation-rapide-quicknav',
+                    title: 'Barre de navigation rapide entre modules',
+                    location: 'Sous la barre supérieure, sur tout écran',
+                    href: '/tableau-de-bord',
+                    roles: ['Directeur', 'Secrétariat', 'Finance', 'Enseignant', 'Surveillant'],
+                    definition:
+                        "Une rangée de raccourcis vers les modules les plus fréquentés — Élèves, Classes, Enseignants, " +
+                        "Notes, Caisse, Internat — affichée sous la barre supérieure de CHAQUE écran, pas seulement " +
+                        "depuis la barre latérale. Sous une largeur d'écran réduite, elle se replie en un bouton unique " +
+                        "« Saut rapide ».",
+                    objectif:
+                        "Épargner l'aller-retour par la barre latérale pour passer d'un module courant à un autre, en " +
+                        "particulier sur les écrans où la barre latérale est repliée ou peu visible.",
+                    probleme:
+                        "Naviguer entre deux modules consultés en alternance — Élèves puis Caisse, par exemple — " +
+                        "obligeait à revenir chaque fois vers la barre latérale, un aller-retour répété plusieurs fois " +
+                        "par heure pour un poste de secrétariat ou de caisse.",
+                    procedure: [
+                        "Sur un écran large, repérez la rangée d'onglets sous la barre supérieure : cliquez directement sur le module voulu.",
+                        "Sur un écran étroit (mobile, fenêtre réduite), ouvrez le bouton « Saut rapide » et choisissez le module dans la liste déroulante.",
+                        "L'onglet du module actuellement ouvert est mis en surbrillance, pour se repérer sans lire chaque libellé.",
+                        "La barre ne s'affiche que si au moins DEUX modules vous sont accessibles : un rôle qui n'en voit qu'un (le Surveillant, par exemple, limité à Internat) ne voit pas cette barre, redondante avec la barre latérale dans ce cas."
+                    ],
+                    impacts: [
+                        "Rôles et formules : chaque raccourci suit exactement les mêmes règles de visibilité que son équivalent dans la barre latérale — rien n'y apparaît qu'un rôle donné ne pourrait de toute façon pas ouvrir.",
+                        "Modules désactivés : un module masqué par Paramètres › Modules & fonctionnalités (Pédagogie, Finance, Internat) disparaît de cette barre exactement comme de la barre latérale.",
+                        "Barre latérale : les deux navigations restent INDÉPENDANTES et coexistent ; utiliser l'une n'affecte jamais l'état repliée/dépliée de l'autre."
+                    ],
+                    recommandations: [
+                        "Sur un poste dédié à une seule tâche (un poste de caisse, par exemple), cette barre n'apporte rien de plus que la barre latérale — ignorez-la sans hésiter.",
+                        "Sur un poste partagé entre plusieurs tâches dans la même journée, c'est le raccourci le plus rapide d'un module à l'autre : préférez-le à la barre latérale une fois l'habitude prise."
                     ]
                 }
             ]
