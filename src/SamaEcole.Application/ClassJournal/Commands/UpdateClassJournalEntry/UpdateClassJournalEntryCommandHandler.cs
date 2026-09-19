@@ -22,16 +22,20 @@ public class UpdateClassJournalEntryCommandHandler(
             .FirstOrDefaultAsync(e => e.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Entrée de journal {request.Id} introuvable.");
 
+        // Autorisation (403) AVANT validation métier (422) : un enseignant qui n'a pas le droit de
+        // toucher cette entrée doit se voir refuser l'accès sans que le contenu de sa requête ne
+        // lui révèle quoi que ce soit sur les règles de cohérence des données — l'ordre inverse
+        // fuiterait une 422 avant même de vérifier qu'il a le droit d'écrire ici.
+        var ownTeacherId = await scopeAuthorizer.GetOwnTeacherIdOrNullAsync(cancellationToken);
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        ClassJournalEditWindow.EnsureCanCorrect(entry, ownTeacherId, today);
+
         if (request.HomeworkDueDate is { } dueDate && dueDate < entry.SessionDate)
         {
             throw new ValidationException([
                 new ValidationFailure(nameof(request.HomeworkDueDate), "La date de rendu ne peut pas précéder la date de la séance.")
             ]);
         }
-
-        var ownTeacherId = await scopeAuthorizer.GetOwnTeacherIdOrNullAsync(cancellationToken);
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
-        ClassJournalEditWindow.EnsureCanCorrect(entry, ownTeacherId, today);
 
         // Verrou optimiste (AGENTS.md règle #5) : une entrée modifiée en base depuis sa lecture fait
         // échouer SaveChangesAsync en 409, jamais un écrasement silencieux.
