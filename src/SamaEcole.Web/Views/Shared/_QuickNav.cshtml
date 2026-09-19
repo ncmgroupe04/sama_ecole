@@ -31,6 +31,11 @@
   if (item.Flag is not null) expr += $" && $store.schoolConfig.{item.Flag}";
   return expr;
  }
+
+ // Nombre de modules effectivement visibles pour l'utilisateur courant (rôle + formule) : sous 2,
+ // la barre n'apporte rien (un seul bouton, redondant avec la sidebar) — cas du Surveillant, qui
+ // ne voit qu'Internat. Même expressions ShowExpr que les items, agrégées en un tableau JS.
+ var visibleCountExpr = $"[{string.Join(", ", items.Select(ShowExpr))}].filter(Boolean).length";
 }
 
 @* ═══════════════════════════════════════════════════════════════════════════
@@ -39,7 +44,8 @@
    Paie… (Styles/input.css) ; tab-nav-scroll.js l'auto-améliore (défilement/fondu) sans
    enregistrement JS supplémentaire, ce nouvel élément étant détecté par son MutationObserver.
    ═══════════════════════════════════════════════════════════════════════════ *@
-<nav class="hidden lg:flex tab-nav-scroll" role="tablist" aria-label="Navigation rapide entre modules">
+<nav class="hidden lg:flex tab-nav-scroll" role="tablist" aria-label="Navigation rapide entre modules"
+ x-show="@visibleCountExpr > 1" x-cloak>
  @foreach (var item in items)
  {
   var active = path.StartsWith(item.Href, StringComparison.OrdinalIgnoreCase);
@@ -58,7 +64,7 @@
    ModalShellTagHelper.cs). Même tableau `items` que la rangée ci-dessus — un module masqué par
    rôle/formule disparaît des DEUX rendus, puisqu'ils lisent la même expression par item.
    ═══════════════════════════════════════════════════════════════════════════ *@
-<div class="lg:hidden relative" x-data="quickNavMenu()">
+<div class="lg:hidden relative" x-data="quickNavMenu()" x-show="@visibleCountExpr > 1" x-cloak>
  <button type="button" x-on:click="isOpen = !isOpen" aria-haspopup="true" :aria-expanded="isOpen.toString()"
   class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
   <icon name="menu" class="w-4 h-4" />
