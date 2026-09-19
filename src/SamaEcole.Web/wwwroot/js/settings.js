@@ -235,7 +235,7 @@ document.addEventListener('alpine:init', () => {
             const legacyRedirect = { etablissement: 'profil', configuration: 'pedagogie' };
             const validTabs = [
                 'profil', 'integration-etatique', 'formats-signatures', 'annees-scolaires',
-                'pedagogie',
+                'pedagogie', 'modules',
                 'finance', 'facturation',
                 'securite', 'utilisateurs', 'journal-audit', 'sms'
             ];
