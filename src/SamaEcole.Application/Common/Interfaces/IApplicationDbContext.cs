@@ -119,6 +119,9 @@ public interface IApplicationDbContext
     /// <summary>Fiches d'appel : un appel par (classe, matière, date, créneau) (ticket JGK-D06).</summary>
     DbSet<AttendanceSheet> AttendanceSheets { get; }
 
+    /// <summary>Cahier de texte : une entrée de journal par séance réellement tenue (ticket JGK-P04).</summary>
+    DbSet<ClassJournalEntry> ClassJournalEntries { get; }
+
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 
