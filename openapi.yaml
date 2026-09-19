@@ -43,6 +43,7 @@ tags:
   - name: Exams
   - name: VieScolaire
   - name: StateIntegration
+  - name: ClassJournal
 
 paths:
   /state-integration/planete/export:
@@ -4188,6 +4189,120 @@ paths:
               schema: { type: string, format: binary }
         '404': { description: Convocation introuvable, ou PDF généré vide }
 
+  /class-journal:
+    get:
+      tags: [ClassJournal]
+      summary: Cahier de texte — liste paginée des entrées de journal (Directeur, Secrétariat, Surveillant, Enseignant) — ticket JGK-P04
+      description: >-
+        Document pédagogique PARTAGÉ, pas un carnet privé par enseignant : lecture ouverte sans
+        restriction de périmètre à tout rôle listé, y compris l'Enseignant, qui voit les entrées de
+        ses collègues. `canEdit` (par ligne) est calculé côté serveur (GetClassJournalQueryHandler) —
+        l'écran s'en sert pour masquer Modifier/Supprimer, la vraie garde restant PUT/DELETE.
+      parameters:
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+        - name: classroomId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: subjectId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: periodStart
+          in: query
+          schema: { type: string, format: date }
+        - name: periodEnd
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Page d'entrées
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaginatedClassJournalEntries' }
+    post:
+      tags: [ClassJournal]
+      summary: Journaliser une séance (Enseignant seul, sur son propre créneau) — ticket JGK-P04
+      description: >-
+        L'auteur (`teacherId`) vient du compte courant, jamais du corps de la requête. Refusée en 409
+        (code `SCHEDULE_SLOT_NOT_PLANNED`) si l'enseignant n'est pas affecté à cette classe/matière
+        pour l'année active, OU si aucun `ScheduleSlot` n'existe pour ce jour de la semaine — les DEUX
+        conditions sont vérifiées, `ScheduleSlot` ne portant aucune année scolaire (créneau
+        hebdomadaire récurrent, jamais daté). `sessionDate` dans le futur est refusée en 422 : on
+        journalise ce qui a été fait, jamais un programme prévisionnel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClassJournalEntryCreateRequest' }
+      responses:
+        '201':
+          description: Entrée créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassJournalEntry' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: Aucune affectation ou aucun créneau planifié pour cette classe/matière/date (code `SCHEDULE_SLOT_NOT_PLANNED`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /class-journal/{id}:
+    put:
+      tags: [ClassJournal]
+      summary: Corriger une entrée — sujet/contenu/devoirs seulement (Enseignant, Directeur, Secrétariat) — ticket JGK-P04
+      description: >-
+        La classe, la matière et la date de séance ne sont jamais modifiables (une erreur sur ces
+        champs se corrige en supprimant l'entrée puis en en créant une nouvelle). Librement
+        modifiable par son auteur pendant 15 jours après `sessionDate` ; passé ce délai, seuls
+        Directeur et Secrétariat peuvent corriger (403 sinon pour l'auteur, même esprit que la règle
+        #4 Finance — AGENTS.md). La correction est HISTORISÉE (journal d'audit), qu'elle vienne de
+        l'auteur ou d'un rôle élevé.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClassJournalEntryUpdateRequest' }
+      responses:
+        '200':
+          description: Entrée corrigée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassJournalEntry' }
+        '403':
+          description: >-
+            Le délai de 15 jours est dépassé pour l'auteur, ou l'appelant n'est pas l'auteur de cette
+            entrée.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: RowVersion périmé (la fiche a été modifiée entre-temps) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [ClassJournal]
+      summary: Archiver une entrée (soft delete) — même garde des 15 jours qu'en modification — ticket JGK-P04
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rowVersion
+          in: query
+          required: true
+          schema: { type: integer }
+      responses:
+        '204': { description: Entrée archivée }
+        '403': { description: Délai de 15 jours dépassé, ou entrée d'un autre enseignant }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: RowVersion périmé }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6740,3 +6855,65 @@ components:
         status: { $ref: '#/components/schemas/ParentSummonsStatus' }
         outcomeNotes: { type: string, nullable: true }
         closedAt: { type: string, format: date-time }
+
+    ClassJournalEntry:
+      type: object
+      description: Ligne du cahier de texte — ticket JGK-P04.
+      properties:
+        id: { type: string, format: uuid }
+        classroomId: { type: string, format: uuid }
+        classroomName: { type: string }
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        teacherId: { type: string, format: uuid }
+        teacherName: { type: string }
+        sessionDate: { type: string, format: date }
+        topic: { type: string }
+        content: { type: string }
+        homework: { type: string, nullable: true }
+        homeworkDueDate: { type: string, format: date, nullable: true }
+        rowVersion: { type: integer }
+        canEdit:
+          type: boolean
+          description: >-
+            Calculé serveur (ClassJournalEditWindow.CanCorrect) : vrai pour Directeur/Secrétariat,
+            ou pour l'auteur dans les 15 jours suivant sessionDate. Confort d'affichage — la vraie
+            garde reste PUT/DELETE /class-journal/{id} (403 sinon).
+
+    ClassJournalEntryCreateRequest:
+      type: object
+      required: [classroomId, subjectId, sessionDate, topic, content]
+      properties:
+        classroomId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        sessionDate:
+          type: string
+          format: date
+          description: Doit être aujourd'hui ou une date passée (422 sinon).
+        topic: { type: string, maxLength: 200 }
+        content: { type: string, maxLength: 4000 }
+        homework: { type: string, maxLength: 2000, nullable: true }
+        homeworkDueDate:
+          type: string
+          format: date
+          nullable: true
+          description: N'a de sens que si `homework` est renseigné ; ne peut précéder `sessionDate`.
+
+    ClassJournalEntryUpdateRequest:
+      type: object
+      description: Corps de PUT /class-journal/{id} — classe, matière et date de séance ne se corrigent jamais ici.
+      required: [topic, content, rowVersion]
+      properties:
+        topic: { type: string, maxLength: 200 }
+        content: { type: string, maxLength: 4000 }
+        homework: { type: string, maxLength: 2000, nullable: true }
+        homeworkDueDate: { type: string, format: date, nullable: true }
+        rowVersion: { type: integer }
+
+    PaginatedClassJournalEntries:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ClassJournalEntry' } }
+        totalCount: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }

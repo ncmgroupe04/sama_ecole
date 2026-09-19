@@ -4,7 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.ClassJournal.Queries.GetClassJournal;
 
-public class GetClassJournalQueryHandler(IApplicationDbContext dbContext)
+public class GetClassJournalQueryHandler(
+    IApplicationDbContext dbContext,
+    ClassJournalScopeAuthorizer scopeAuthorizer,
+    TimeProvider timeProvider)
     : IRequestHandler<GetClassJournalQuery, PaginatedClassJournalEntries>
 {
     public async Task<PaginatedClassJournalEntries> Handle(
@@ -36,6 +39,11 @@ public class GetClassJournalQueryHandler(IApplicationDbContext dbContext)
 
         // Compté AVANT la pagination : le total de la recherche, pas le nombre de lignes renvoyées.
         var totalCount = await query.CountAsync(cancellationToken);
+
+        // Résolu UNE FOIS pour toute la page, pas par ligne : ownTeacherId ne dépend que du compte
+        // courant, jamais de l'entrée regardée (ClassJournalScopeAuthorizer.CanCorrect ci-dessous).
+        var ownTeacherId = await scopeAuthorizer.GetOwnTeacherIdOrNullAsync(cancellationToken);
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
         var rows = await query
             .OrderByDescending(e => e.SessionDate)
@@ -73,7 +81,8 @@ public class GetClassJournalQueryHandler(IApplicationDbContext dbContext)
             .Select(r => new ClassJournalEntryListItem(
                 r.Id, r.ClassroomId, r.ClassroomName, r.SubjectId, r.SubjectName,
                 r.TeacherId, r.TeacherName, r.SessionDate, r.Topic, r.Content,
-                r.Homework, r.HomeworkDueDate, r.RowVersion))
+                r.Homework, r.HomeworkDueDate, r.RowVersion,
+                ClassJournalEditWindow.CanCorrect(r.TeacherId, r.SessionDate, ownTeacherId, today)))
             .ToList();
 
         return new PaginatedClassJournalEntries(items, totalCount, request.Page, request.PageSize);

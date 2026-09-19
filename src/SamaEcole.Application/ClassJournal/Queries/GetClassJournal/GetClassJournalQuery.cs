@@ -35,7 +35,14 @@ public record ClassJournalEntryListItem(
     string Content,
     string? Homework,
     DateOnly? HomeworkDueDate,
-    uint RowVersion);
+    uint RowVersion,
+
+    /// <summary>
+    /// Calculé serveur (ClassJournalEditWindow.CanCorrect) : l'écran s'en sert pour masquer
+    /// Modifier/Supprimer, la vraie garde restant côté Update/Delete (403 sinon). Évite à l'écran
+    /// de deviner l'heure serveur ou, pour l'Enseignant, sa propre fiche enseignant.
+    /// </summary>
+    bool CanEdit);
 
 public record PaginatedClassJournalEntries(
     IReadOnlyList<ClassJournalEntryListItem> Items,

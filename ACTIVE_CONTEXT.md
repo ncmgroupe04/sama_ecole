@@ -5,14 +5,17 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 18/09/2026** (Module Internat — **livré : back-end, persistance, migration
-RLS, écran `/internat` avec modale d'affectation, badge fiche élève, formulaire d'inscription**, voir
-§2 ; Module M « Intégration étatique / Passerelle SIMEN » — **livré : back-end, persistance,
-migrations RLS, écrans et documentation**, voir §2 ; JGK-F09 — contrôle du comptage physique et écarts
-de caisse à la clôture le 29/08/2026, voir §5 ; câblage de la session de caisse sur `/caisse` le
-27/08/2026 — JGK-F02 était inutilisable en production faute d'écran d'ouverture/clôture ; écran
-`/examens` livré le 26/08/2026 — backend Module J déjà complet ; module Inventaire — API, migration
-RLS, PDF, tests et écran `/inventaire` livrés).
+**Dernière mise à jour : 19/09/2026** (Module Cahier de texte / Journal de classe (JGK-P04) —
+**livré : entité + migration RLS, `ClassJournalScopeAuthorizer` (TeacherAssignment + ScheduleSlot),
+règle des 15 jours, CQRS complet, contrôleur, écran `/cahier-de-texte`, tests unitaires et
+d'intégration**, voir §2 ; Module Internat — **livré : back-end, persistance, migration RLS, écran
+`/internat` avec modale d'affectation, badge fiche élève, formulaire d'inscription**, voir §2 ;
+Module M « Intégration étatique / Passerelle SIMEN » — **livré : back-end, persistance, migrations
+RLS, écrans et documentation**, voir §2 ; JGK-F09 — contrôle du comptage physique et écarts de caisse
+à la clôture le 29/08/2026, voir §5 ; câblage de la session de caisse sur `/caisse` le 27/08/2026 —
+JGK-F02 était inutilisable en production faute d'écran d'ouverture/clôture ; écran `/examens` livré
+le 26/08/2026 — backend Module J déjà complet ; module Inventaire — API, migration RLS, PDF, tests et
+écran `/inventaire` livrés).
 
 ---
 
@@ -65,6 +68,7 @@ Livrés, câblés à l'IHM, et couverts par la suite de tests :
 | **Examens officiels** | `/examens` | API `/api/v1/exams` — sessions, dossiers CFEE/BFEM/BAC, audit, attribution centre/table, transmission, résultats, statistiques, export ministériel, convocations |
 | **Intégration étatique** | `/integration-etatique` + fiche élève + `/verifier/mutation/{token}` | API `/api/v1/state-integration` — IEN, export Planète (CSV/JSON), rapport STATEDUC (PDF + Excel), certificat de mutation avec QR + registre + révocation, livret de compétences, vérification publique du certificat |
 | **Internat** | `/internat` + fiche élève + formulaire d'inscription | API `/api/v1/internat` — tableau de bord par chambre, recherche d'élève, affectation/transfert/libération ; module désactivé par défaut |
+| **Cahier de texte** | `/cahier-de-texte` | API `/api/v1/class-journal` — journal de classe paginé/filtrable, écriture Enseignant sur son propre créneau (`ClassJournalScopeAuthorizer`), correction 15 jours puis Directeur/Secrétariat |
 
 Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bulletins, Frais,
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
@@ -96,6 +100,41 @@ dans cet environnement — à valider en local avant mise en production.
    numéro d'immatriculation posé sur le bien par la mairie ou l'État.
 
 Export `.xlsx` de l'inventaire : **écarté pour ce lot** (PDF seul), à arbitrer si le besoin remonte.
+
+### Module Cahier de texte / Journal de classe (19/09/2026) — livré
+
+Ticket JGK-P04 (Module P). Une entrée de journal par séance réellement tenue (classe, matière, date,
+sujet, contenu, devoirs éventuels), saisie par l'Enseignant qui l'a effectivement assurée —
+traçabilité pédagogique pour le contrôle administratif et la continuité en cas de remplacement.
+Table `class_journal_entries` (migration `AddClassJournal`), `ClassJournalController`
+(`/api/v1/class-journal` — liste paginée/filtrable, création, correction, archivage), écran
+`/cahier-de-texte` (filtres classe/matière/période, modales création/détail/édition/suppression).
+Rôles : écriture Enseignant seul (sa propre séance) ; lecture Directeur, Secrétariat, Surveillant,
+Enseignant — document pédagogique partagé, pas un carnet privé.
+
+**Deux arbitrages actés, à ne pas rouvrir sans raison :**
+
+1. **La garde d'écriture combine DEUX signaux, jamais un seul.** `ScheduleSlot` (créneau
+   hebdomadaire récurrent : jour de la semaine + horaire) ne porte aucune `SchoolYearId` — un
+   contrôle isolé matcherait donc aussi un créneau d'une année scolaire révolue. `ClassJournalScopeAuthorizer`
+   vérifie donc `TeacherAssignment` (l'enseignant enseigne bien cette classe/matière CETTE année)
+   **et** `ScheduleSlot` (un créneau existe bien ce jour-là), refus 409 (`SCHEDULE_SLOT_NOT_PLANNED`)
+   si l'un des deux manque — jamais 403, qui est réservé au refus de rôle/propriété.
+2. **La règle des 15 jours (`ClassJournalEditWindow`) est symétrique Update/Delete**, avec une
+   version pure (`CanCorrect`, sans exception) réutilisée par `GetClassJournalQueryHandler` pour
+   poser `canEdit` sur chaque ligne de la liste (confort d'affichage côté écran — masquer
+   Modifier/Supprimer — la vraie garde restant les Handlers d'écriture, 403 sinon). Passé le délai,
+   seuls Directeur et Secrétariat corrigent, et `UpdateClassJournalEntryCommand` porte
+   `IAuditableRequest` : la correction est toujours historisée, qu'elle vienne de l'auteur ou d'un
+   rôle élevé (même esprit que la règle #4 Finance).
+
+**Vérifié** : `dotnet build` 0 erreur ; 18 tests unitaires (validateurs + `ClassJournalEditWindow`,
+logique pure) ; 14 tests d'intégration sur PostgreSQL réel (Testcontainers) — portée d'écriture
+(succès, 409 sans affectation, 409 sans créneau ce jour-là, 403 rôle non concerné, 403 fiche
+enseignant manquante), fenêtre des 15 jours (auteur dans le délai, auteur hors délai, Directeur hors
+délai, collègue jamais), et isolation RLS dédiée (`class_journal_entries` ajoutée à `TenantTables`,
+lecture/écriture croisée refusées, `DELETE` refusé par privilège — append via soft delete
+uniquement, règle #6).
 
 ### Module Internat (18/09/2026) — livré
 

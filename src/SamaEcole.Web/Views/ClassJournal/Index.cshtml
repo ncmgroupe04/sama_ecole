@@ -1,0 +1,268 @@
+@{
+    ViewData["Title"] = "Cahier de texte";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/class-journal.js" asp-append-version="true"></script>
+}
+
+<div x-data="classJournalView()">
+
+    <div>
+        <h1 class="page-title">Cahier de texte</h1>
+        <p class="page-subtitle">Journal de classe : une entrée par séance réellement tenue, saisie par l'enseignant titulaire du créneau.</p>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    @* Réservé à l'Enseignant — lui seul journalise, et seulement sa propre séance (409 sinon, voir
+       ClassJournalScopeAuthorizer). Directeur/Secrétariat/Surveillant lisent tout, sans ce bouton. *@
+    <div class="mt-6 flex flex-wrap items-center gap-3">
+        <div class="relative w-full sm:w-64 flex items-center">
+            <span aria-hidden="true" class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <icon name="search" class="w-4 h-4 text-slate-400" />
+            </span>
+            <select-field model="filters.classroomId" on-change="applyFilters()" aria-label="Filtrer par classe"
+                          class="mt-0 w-48" placeholder="Toutes les classes"
+                          options-expr="[{value:'',label:'Toutes les classes'}].concat(classroomOptions)" />
+        </div>
+        <select-field model="filters.subjectId" on-change="applyFilters()" aria-label="Filtrer par matière"
+                      class="mt-0 w-48" placeholder="Toutes les matières"
+                      options-expr="[{value:'',label:'Toutes les matières'}].concat(subjectOptions)" />
+        <date-field model="filters.periodStart" on-change="applyFilters()" aria-label="Du" class="mt-0" placeholder="Du" />
+        <date-field model="filters.periodEnd" on-change="applyFilters()" aria-label="Au" class="mt-0" placeholder="Au" />
+        <button type="button" x-on:click="resetFilters()" class="text-sm font-medium text-slate-500 hover:text-slate-900">
+            Réinitialiser
+        </button>
+
+        <button type="button" x-show="isEnseignant" x-cloak x-on:click="openCreate()" class="btn-modal-primary group ml-auto whitespace-nowrap">
+            <icon name="plus" class="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+            Journaliser une séance
+        </button>
+    </div>
+
+    <div class="card mt-4">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-head">
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Classe</th>
+                        <th class="py-3 px-4">Matière</th>
+                        <th class="py-3 px-4">Sujet</th>
+                        <th class="py-3 px-4">Enseignant</th>
+                        <th class="py-3 px-4">Devoirs</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <template x-if="isLoading">
+                        <template x-for="i in 6" :key="i">
+                            <tr><td colspan="7" class="py-3 px-4"><div class="skeleton h-4 w-full"></div></td></tr>
+                        </template>
+                    </template>
+
+                    <tr x-show="!isLoading && entries.length === 0" x-cloak>
+                        <td colspan="7">
+                            <empty-state icon="calendar" title="Aucune entrée ne correspond à ces filtres."
+                                         hint="Journalisez une séance depuis le bouton ci-dessus, ou ajustez les filtres." />
+                        </td>
+                    </tr>
+
+                    <template x-for="entry in entries" :key="entry.id">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3 px-4 text-slate-600" x-text="formatDate(entry.sessionDate)"></td>
+                            <td class="py-3 px-4 text-slate-600" x-text="entry.classroomName"></td>
+                            <td class="py-3 px-4 text-slate-600" x-text="entry.subjectName"></td>
+                            <td class="py-3 px-4">
+                                <button type="button" x-on:click="openDetail(entry)" class="font-medium text-slate-900 hover:text-indigo-600 text-left transition-colors">
+                                    <span x-text="entry.topic"></span>
+                                </button>
+                            </td>
+                            <td class="py-3 px-4 text-slate-600" x-text="entry.teacherName"></td>
+                            <td class="py-3 px-4">
+                                <badge variant="neutral" x-show="entry.homework" x-cloak>Devoirs</badge>
+                                <span x-show="!entry.homework" x-cloak class="text-slate-300">—</span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <row-actions>
+                                    <row-action icon="eye" label="Voir le détail" on-click="openDetail(entry)" />
+                                    <row-action icon="pencil" label="Modifier" on-click="openEdit(entry)" show="canEditEntry(entry)" />
+                                    <row-action icon="trash-2" label="Supprimer" on-click="openDelete(entry)" show="canEditEntry(entry)" />
+                                </row-actions>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <pagination page="page" page-size="pageSize" total="totalCount" on-change="load()" />
+    </div>
+
+    @* ═══════════════════════════════════════════════════════════════════════════
+       MODALES — Création / Détail / Édition / Suppression
+       ═══════════════════════════════════════════════════════════════════════════ *@
+
+    <modal-shell size="lg" open="isCreateOpen" on-close="closeCreate()" title="Journaliser une séance">
+        <modal-subtitle>Une entrée par séance réellement tenue — jamais une date future.</modal-subtitle>
+        <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
+
+        <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="form-label form-label-required">Classe</label>
+                    <select-field model="newEntry.classroomId" required="true" placeholder="Sélectionner une classe"
+                                  aria-label="Classe" options-expr="classroomOptions" />
+                    <p x-show="createErrors.classroomid" x-text="createErrors.classroomid" class="field-error"></p>
+                </div>
+                <div>
+                    <label class="form-label form-label-required">Matière</label>
+                    <select-field model="newEntry.subjectId" required="true" placeholder="Sélectionner une matière"
+                                  aria-label="Matière" options-expr="subjectOptions" />
+                    <p x-show="createErrors.subjectid" x-text="createErrors.subjectid" class="field-error"></p>
+                </div>
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Date de la séance</label>
+                <date-field model="newEntry.sessionDate" required="true" aria-label="Date de la séance" />
+                <p class="mt-1 text-xs text-slate-400">La séance doit avoir réellement eu lieu — une date future est refusée.</p>
+                <p x-show="createErrors.sessiondate" x-text="createErrors.sessiondate" class="field-error"></p>
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Sujet</label>
+                <input type="text" x-model="newEntry.topic" required maxlength="200" placeholder="ex : Le théorème de Pythagore"
+                       class="input-field" :class="createErrors.topic && 'input-field-error'">
+                <p x-show="createErrors.topic" x-text="createErrors.topic" class="field-error"></p>
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Contenu</label>
+                <textarea x-model="newEntry.content" required maxlength="4000" rows="4"
+                          placeholder="Résumé de ce qui a été fait en classe…"
+                          class="input-field" :class="createErrors.content && 'input-field-error'"></textarea>
+                <p x-show="createErrors.content" x-text="createErrors.content" class="field-error"></p>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Devoirs (facultatif)</p>
+                <div>
+                    <label class="form-label">Devoirs donnés</label>
+                    <textarea x-model="newEntry.homework" maxlength="2000" rows="2"
+                              placeholder="Laisser vide si aucun devoir n'a été donné"
+                              class="input-field" :class="createErrors.homework && 'input-field-error'"></textarea>
+                    <p x-show="createErrors.homework" x-text="createErrors.homework" class="field-error"></p>
+                </div>
+                <div x-show="newEntry.homework" x-cloak>
+                    <label class="form-label">Date de rendu</label>
+                    <date-field model="newEntry.homeworkDueDate" aria-label="Date de rendu des devoirs" />
+                    <p x-show="createErrors.homeworkduedate" x-text="createErrors.homeworkduedate" class="field-error"></p>
+                </div>
+            </div>
+
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeCreate()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSaving" class="btn-modal-primary group">
+                    <span x-text="isSaving ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+    </modal-shell>
+
+    @* Détail — lecture seule, ouverte à tous les rôles autorisés sur cet écran. *@
+    <modal-shell open="detailEntry" on-close="closeDetail()" size="lg">
+        <modal-title><span x-text="detailEntry ? detailEntry.topic : ''"></span></modal-title>
+        <modal-subtitle>
+            <span x-text="detailEntry ? (detailEntry.classroomName + ' — ' + detailEntry.subjectName + ' — ' + formatDate(detailEntry.sessionDate)) : ''"></span>
+        </modal-subtitle>
+
+        <template x-if="detailEntry">
+            <div class="space-y-4">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Contenu de la séance</p>
+                    <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="detailEntry.content"></p>
+                </div>
+                <div x-show="detailEntry.homework" x-cloak class="rounded-xl border border-slate-100 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Devoirs</p>
+                    <p class="text-sm text-slate-700 whitespace-pre-wrap" x-text="detailEntry.homework"></p>
+                    <p x-show="detailEntry.homeworkDueDate" x-cloak class="text-xs text-slate-400 mt-2">
+                        À rendre pour le <span x-text="formatDate(detailEntry.homeworkDueDate)"></span>
+                    </p>
+                </div>
+                <p class="text-xs text-slate-400">Saisi par <span x-text="detailEntry.teacherName"></span></p>
+            </div>
+        </template>
+    </modal-shell>
+
+    <modal-shell size="lg" open="editingEntry" on-close="closeEdit()" title="Modifier l'entrée">
+        <modal-subtitle>
+            La classe, la matière et la date de séance ne sont jamais modifiables — une erreur sur ces
+            champs se corrige en supprimant l'entrée puis en en créant une nouvelle.
+        </modal-subtitle>
+        <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
+
+        @* Formulaire MONTÉ seulement quand editingEntry n'est pas null : x-model ne peut pas s'écrire
+           avec un accès optionnel — même garantie d'animation que les autres écrans du dépôt. *@
+        <template x-if="editingEntry">
+        <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
+            <div>
+                <label class="form-label form-label-required">Sujet</label>
+                <input type="text" x-model="editingEntry.topic" required maxlength="200" class="input-field"
+                       :class="editErrors.topic && 'input-field-error'">
+                <p x-show="editErrors.topic" x-text="editErrors.topic" class="field-error"></p>
+            </div>
+
+            <div>
+                <label class="form-label form-label-required">Contenu</label>
+                <textarea x-model="editingEntry.content" required maxlength="4000" rows="4" class="input-field"
+                          :class="editErrors.content && 'input-field-error'"></textarea>
+                <p x-show="editErrors.content" x-text="editErrors.content" class="field-error"></p>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Devoirs (facultatif)</p>
+                <div>
+                    <label class="form-label">Devoirs donnés</label>
+                    <textarea x-model="editingEntry.homework" maxlength="2000" rows="2" class="input-field"
+                              :class="editErrors.homework && 'input-field-error'"></textarea>
+                    <p x-show="editErrors.homework" x-text="editErrors.homework" class="field-error"></p>
+                </div>
+                <div x-show="editingEntry.homework" x-cloak>
+                    <label class="form-label">Date de rendu</label>
+                    <date-field model="editingEntry.homeworkDueDate" aria-label="Date de rendu des devoirs" />
+                    <p x-show="editErrors.homeworkduedate" x-text="editErrors.homeworkduedate" class="field-error"></p>
+                </div>
+            </div>
+
+            <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+                <button type="button" x-on:click="closeEdit()" class="btn-modal-secondary group">Annuler</button>
+                <button type="submit" :disabled="isSavingEdit" class="btn-modal-primary group">
+                    <span x-text="isSavingEdit ? 'Enregistrement...' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </form>
+        </template>
+    </modal-shell>
+
+    @* Confirmation de suppression : mêmes conventions que Subjects/Buildings (modal-title + modal-subtitle,
+       texte d'avertissement, bouton danger). *@
+    <modal-shell open="deletingEntry" on-close="closeDelete()" size="md">
+        <modal-title>Supprimer l'entrée</modal-title>
+        <modal-subtitle>
+            <span class="font-semibold text-slate-900" x-text="deletingEntry ? deletingEntry.topic : ''"></span>
+            sera archivée et n'apparaîtra plus dans le journal.
+        </modal-subtitle>
+
+        <div x-show="deleteError" x-cloak class="form-error-banner" x-text="deleteError"></div>
+
+        <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+            <button type="button" x-on:click="closeDelete()" class="btn-modal-secondary group">Annuler</button>
+            <button type="button" x-on:click="confirmDelete()" :disabled="isDeleting" class="btn-modal-danger">
+                <span x-text="isDeleting ? 'Suppression...' : 'Supprimer l\'entrée'"></span>
+            </button>
+        </div>
+    </modal-shell>
+</div>
