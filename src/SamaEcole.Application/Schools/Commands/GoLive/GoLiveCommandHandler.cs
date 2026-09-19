@@ -14,6 +14,10 @@ namespace SamaEcole.Application.Schools.Commands.GoLive;
 /// Handler ne fait que garder la porte — résoudre le tenant, vérifier le rôle, exiger le mot de
 /// confirmation, refuser un second passage — puis pose l'horodatage sur <c>schools</c>.
 ///
+/// Bascule PLEINEMENT réversible (voir <c>RevertToTestCommand</c>) : elle ne verrouille plus jamais la
+/// « Zone de danger » par effet de bord. Seul <c>LockProductionCommand</c>, une action manuelle
+/// distincte, pose ce verrou (School.IsProductionLocked).
+///
 /// <c>schools</c> échappe à la RLS (elle DÉFINIT le tenant) : c'est le filtre applicatif sur l'Id du
 /// JWT qui tient lieu d'isolation ici, jamais une école désignée par le client (règle #10).
 /// </summary>
@@ -55,9 +59,9 @@ public class GoLiveCommandHandler(
         var wentLiveAt = timeProvider.GetUtcNow();
         school.WentLiveAt = wentLiveAt;
 
-        // Verrou permanent : jamais effacé, même par un futur RevertToTestCommand (voir School.HasEverGoneLive).
-        school.HasEverGoneLive = true;
-
+        // Bascule PLEINEMENT réversible depuis le 19/09/2026 : elle ne pose plus aucun verrou sur la
+        // « Zone de danger ». Seul LockProductionCommand, une action manuelle et distincte, verrouille
+        // désormais la purge de façon définitive (School.IsProductionLocked).
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // LogWarning et non LogInformation : une bascule définitive doit ressortir dans les journaux

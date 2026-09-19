@@ -9,16 +9,21 @@ using Xunit;
 namespace SamaEcole.FunctionalTests.Schools;
 
 /// <summary>
-/// Bascule « bac à sable → mode réel » et son retour.
+/// Bascule « bac à sable → mode réel » et son retour, et verrouillage définitif de la purge.
 ///
 /// Contrats prouvés de bout en bout (HTTP → MediatR → PostgreSQL réel) :
 ///   * mode test par défaut ; la « Zone de danger » (reset-data) fonctionne ;
 ///   * « Passer en mode réel » est réservé au Directeur, confirmé par « CONFIRMER », non rejouable
 ///     tel quel (409 ALREADY_LIVE) ;
-///   * une fois en mode réel, reset-data est refusé (409 RESET_UNAVAILABLE_LIVE_MODE) ;
+///   * une fois en mode réel, reset-data est refusé (409 RESET_UNAVAILABLE_LIVE_MODE) — mais cette
+///     bascule est PLEINEMENT réversible depuis le 19/09/2026 : elle ne verrouille plus rien de façon
+///     permanente ;
 ///   * « Repasser en mode test » est réservé au Directeur, confirmé par « TEST », disponible À TOUT
-///     MOMENT (aucun drapeau d'environnement) — il rejoue « Passer en mode réel », mais NE ROUVRE
-///     JAMAIS reset-data (School.HasEverGoneLive, verrou permanent).
+///     MOMENT (aucun drapeau d'environnement) — il rejoue « Passer en mode réel » ET rouvre reset-data,
+///     sauf verrouillage définitif ;
+///   * « Verrouiller définitivement » (lock-production) est une action EXPLICITE et distincte,
+///     confirmée par « VERROUILLER », non rejouable en sens inverse (409 ALREADY_LOCKED au second
+///     appel) — c'est la SEULE façon de fermer reset-data pour toujours (School.IsProductionLocked).
 /// </summary>
 public class SchoolModeEndpointsTests(AuthApiFactory factory) : IClassFixture<AuthApiFactory>, IAsyncLifetime
 {
@@ -34,16 +39,18 @@ public class SchoolModeEndpointsTests(AuthApiFactory factory) : IClassFixture<Au
         {
             var school = await db.Schools.FirstAsync(s => s.Id == AuthApiFactory.EcoleId);
             school.WentLiveAt = null;
-            school.HasEverGoneLive = false;
+            school.IsProductionLocked = false;
+            school.ProductionLockedAt = null;
         });
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
 
     private record Tokens(string AccessToken, string RefreshToken, int ExpiresIn);
-    private record ModeDto(bool IsLive, DateTimeOffset? WentLiveAt, bool HasEverGoneLive);
+    private record ModeDto(bool IsLive, DateTimeOffset? WentLiveAt, bool IsProductionLocked, DateTimeOffset? ProductionLockedAt);
     private record GoLiveResult(DateTimeOffset WentLiveAt);
     private record RevertResult(bool WasLive);
+    private record LockProductionResult(DateTimeOffset LockedAt);
     private record ApiError(string Code, string Message);
 
     private async Task<Tokens> LoginAsync(string email, string password)
@@ -78,6 +85,9 @@ public class SchoolModeEndpointsTests(AuthApiFactory factory) : IClassFixture<Au
 
     private Task<HttpResponseMessage> RevertToTestAsync(string token, string confirmation) =>
         SendAsync(HttpMethod.Post, "/api/v1/schools/current/revert-to-test", token, new { confirmation });
+
+    private Task<HttpResponseMessage> LockProductionAsync(string token, string confirmation) =>
+        SendAsync(HttpMethod.Post, "/api/v1/schools/current/lock-production", token, new { confirmation });
 
     [Fact]
     public async Task A_Fresh_School_Is_In_Test_Mode()
@@ -189,7 +199,7 @@ public class SchoolModeEndpointsTests(AuthApiFactory factory) : IClassFixture<Au
     }
 
     [Fact]
-    public async Task Reverting_To_Test_Reopens_The_Switch_To_Live_But_Not_The_Purge()
+    public async Task Reverting_To_Test_Reopens_Both_The_Switch_To_Live_And_The_Purge()
     {
         var directeur = await LoginAsDirecteurAsync();
 
@@ -201,18 +211,17 @@ public class SchoolModeEndpointsTests(AuthApiFactory factory) : IClassFixture<Au
 
         var mode = (await (await GetModeAsync(directeur.AccessToken)).Content.ReadFromJsonAsync<ModeDto>())!;
         mode.IsLive.Should().BeFalse();
-        mode.HasEverGoneLive.Should().BeTrue(
-            "le verrou reste posé même quand isLive redevient faux — l'écran s'en sert pour masquer " +
-            "« Réinitialiser l'école » plutôt que de le proposer pour rien");
+        mode.IsProductionLocked.Should().BeFalse(
+            "depuis le 19/09/2026, le passage en mode réel ne pose plus aucun verrou permanent — " +
+            "seule une action manuelle et distincte (lock-production) le ferait");
 
         // La bascule « Passer en mode réel » est de nouveau jouable...
         (await GoLiveAsync(directeur.AccessToken, "CONFIRMER")).StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // ... mais la purge, elle, reste verrouillée pour toujours (School.HasEverGoneLive) : ce
-        // n'est PAS le même test que « repasser en mode test avant le premier passage réel ».
-        var refused = await ResetDataAsync(directeur.AccessToken, "PURGER");
-        refused.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await refused.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("RESET_UNAVAILABLE_LIVE_MODE");
+        // ... et la purge, elle, reste disponible dès qu'on repasse en mode test : le mode test/réel
+        // et le verrouillage définitif sont deux dimensions INDÉPENDANTES.
+        (await RevertToTestAsync(directeur.AccessToken, "TEST")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ResetDataAsync(directeur.AccessToken, "PURGER")).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -227,9 +236,88 @@ public class SchoolModeEndpointsTests(AuthApiFactory factory) : IClassFixture<Au
         (await revert.Content.ReadFromJsonAsync<RevertResult>())!.WasLive.Should().BeFalse();
 
         var mode = (await (await GetModeAsync(directeur.AccessToken)).Content.ReadFromJsonAsync<ModeDto>())!;
-        mode.HasEverGoneLive.Should().BeFalse();
+        mode.IsProductionLocked.Should().BeFalse();
 
         (await ResetDataAsync(directeur.AccessToken, "PURGER")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task The_Directeur_Can_Reset_Data_As_Many_Times_As_Wanted_In_Test_Mode()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        // Exigence produit du 19/09/2026 : en mode test, la purge n'a AUCUNE limite de rejeu.
+        (await ResetDataAsync(directeur.AccessToken, "PURGER")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ResetDataAsync(directeur.AccessToken, "PURGER")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ResetDataAsync(directeur.AccessToken, "PURGER")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task The_Directeur_Can_Lock_Production_Definitively()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        var response = await LockProductionAsync(directeur.AccessToken, "VERROUILLER");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var result = (await response.Content.ReadFromJsonAsync<LockProductionResult>())!;
+        result.LockedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromMinutes(2));
+
+        var mode = (await (await GetModeAsync(directeur.AccessToken)).Content.ReadFromJsonAsync<ModeDto>())!;
+        mode.IsProductionLocked.Should().BeTrue();
+        mode.ProductionLockedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Locking_Production_Makes_Reset_Unavailable_Forever_Even_After_Reverting_To_Test()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        (await LockProductionAsync(directeur.AccessToken, "VERROUILLER")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var refused = await ResetDataAsync(directeur.AccessToken, "PURGER");
+        refused.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await refused.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("RESET_UNAVAILABLE_PRODUCTION_LOCKED");
+
+        // Aller-retour test → réel → test : le verrou définitif n'en est jamais affecté.
+        (await GoLiveAsync(directeur.AccessToken, "CONFIRMER")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await RevertToTestAsync(directeur.AccessToken, "TEST")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var stillRefused = await ResetDataAsync(directeur.AccessToken, "PURGER");
+        stillRefused.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await stillRefused.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("RESET_UNAVAILABLE_PRODUCTION_LOCKED");
+    }
+
+    [Fact]
+    public async Task Locking_Production_Twice_Is_Refused_As_Already_Locked()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        (await LockProductionAsync(directeur.AccessToken, "VERROUILLER")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var second = await LockProductionAsync(directeur.AccessToken, "VERROUILLER");
+        second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await second.Content.ReadFromJsonAsync<ApiError>())!.Code.Should().Be("ALREADY_LOCKED");
+    }
+
+    [Fact]
+    public async Task Only_The_Directeur_Can_Lock_Production()
+    {
+        var secretaire = await LoginAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
+
+        var response = await LockProductionAsync(secretaire.AccessToken, "VERROUILLER");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Locking_Production_With_A_Wrong_Word_Is_Rejected()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        var response = await LockProductionAsync(directeur.AccessToken, "n'importe quoi");
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     [Fact]

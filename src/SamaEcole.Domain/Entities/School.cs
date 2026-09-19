@@ -17,30 +17,32 @@ public class School : AuditableEntity
     public EntityStatus Status { get; set; } = EntityStatus.Active;
 
     /// <summary>
-    /// Bascule « bac à sable → exploitation réelle ». <c>null</c> = mode TEST : le Directeur peut
-    /// réinitialiser (purger) autant de fois qu'il veut pour refaire des essais. DATÉ = mode RÉEL :
-    /// horodatage du passage EXPLICITE, la purge devient indisponible (les données enregistrées font
-    /// partie de la comptabilité — invariant d'immuabilité, AGENTS.md règle #6).
-    ///
-    /// Jamais posé par un effet de bord (première clôture, première inscription…) : c'est une action
-    /// délibérée du Directeur. <c>RevertToTestCommand</c> — disponible à tout moment, pour que le
-    /// Directeur garde le contrôle de son environnement — remet ce champ à <c>null</c> pour rejouer la
-    /// bascule. Ce n'est PAS ce champ, mais <see cref="HasEverGoneLive"/>, qui verrouille la purge :
-    /// sans cette distinction, un retour en mode test rouvrirait la « Zone de danger » sur des données
-    /// réelles.
+    /// Bascule « bac à sable → exploitation réelle ». <c>null</c> = mode TEST, DATÉ = mode RÉEL :
+    /// horodatage du passage. Ce basculement est PLEINEMENT réversible : <c>GoLiveCommand</c> le pose,
+    /// <c>RevertToTestCommand</c> — disponible à tout moment, pour que le Directeur garde le contrôle
+    /// de son environnement — le remet à <c>null</c>. Aucun des deux sens ne touche à
+    /// <see cref="IsProductionLocked"/> : depuis la refonte du 19/09/2026, le mode réel/test et le
+    /// verrouillage de la purge sont deux décisions INDÉPENDANTES du Directeur.
     /// </summary>
     public DateTimeOffset? WentLiveAt { get; set; }
 
     /// <summary>
-    /// Verrou PERMANENT : posé une seule fois, au premier passage en mode réel
-    /// (<c>GoLiveCommandHandler</c>), et plus jamais effacé — y compris par
-    /// <c>RevertToTestCommand</c>. C'est ce champ, et non <see cref="WentLiveAt"/> (qui redevient
-    /// <c>null</c> après un retour en mode test), que <c>ResetSchoolDataCommandHandler</c> ET la
-    /// fonction PostgreSQL <c>reset_school_data</c> interrogent pour interdire la purge : une fois
-    /// qu'une école a enregistré des données réelles, elles restent inaltérables pour toujours, quel
-    /// que soit le régime d'affichage ultérieur (AGENTS.md règle #6).
+    /// Verrou PERMANENT de la « Zone de danger », posé UNIQUEMENT par une action manuelle et explicite
+    /// du Directeur (<c>LockProductionCommand</c>, confirmée par le mot-clé « VERROUILLER » ou le nom
+    /// de l'école) — plus jamais par un effet de bord du passage en mode réel. Une fois vrai, plus
+    /// jamais effacé : aucune commande ne le remet à <c>false</c>.
+    ///
+    /// C'est ce champ, et lui seul, que <c>ResetSchoolDataCommandHandler</c> ET la fonction PostgreSQL
+    /// <c>reset_school_data</c> interrogent pour interdire la purge DE FAÇON DÉFINITIVE. Tant qu'il est
+    /// faux, la purge reste disponible en mode test, y compris après un ou plusieurs allers-retours
+    /// test ↔ réel (<see cref="WentLiveAt"/>) : voir <c>LockProductionCommand</c> pour l'historique de
+    /// cette décision (avant le 19/09/2026, c'était le premier passage en mode réel qui posait ce
+    /// verrou automatiquement — comportement abandonné pour rendre le contrôle au Directeur).
     /// </summary>
-    public bool HasEverGoneLive { get; set; }
+    public bool IsProductionLocked { get; set; }
+
+    /// <summary>Horodatage du verrouillage définitif — <c>null</c> tant que <see cref="IsProductionLocked"/> est faux.</summary>
+    public DateTimeOffset? ProductionLockedAt { get; set; }
 
     /// <summary>Adresse e-mail de contact de l'établissement, imprimée dans l'en-tête du reçu.</summary>
     public string? Email { get; set; }

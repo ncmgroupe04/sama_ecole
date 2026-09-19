@@ -18,16 +18,21 @@ namespace SamaEcole.Application.Schools.Queries.GetSchoolMode;
 /// </summary>
 public record GetSchoolModeQuery : IRequest<SchoolModeDto>;
 
-/// <param name="IsLive">Vrai dès que l'établissement est passé en mode réel.</param>
-/// <param name="WentLiveAt">Horodatage du passage, ou <c>null</c> en mode test.</param>
-/// <param name="HasEverGoneLive">
-/// Verrou PERMANENT (School.HasEverGoneLive) : vrai si l'établissement est DÉJÀ passé en mode réel
-/// une fois, même s'il est repassé en mode test depuis (<c>IsLive</c> serait alors faux). L'écran
+/// <param name="IsLive">Vrai dès que l'établissement est passé en mode réel. Réversible à tout moment.</param>
+/// <param name="WentLiveAt">Horodatage du passage COURANT, ou <c>null</c> en mode test.</param>
+/// <param name="IsProductionLocked">
+/// Verrou PERMANENT (School.IsProductionLocked), posé UNIQUEMENT par une action manuelle et explicite
+/// du Directeur (<c>LockProductionCommand</c>) — jamais par le passage en mode réel. L'écran
 /// Paramètres s'en sert pour ne jamais proposer « Réinitialiser l'école » dans ce cas — la purge y
-/// serait de toute façon refusée (409 RESET_UNAVAILABLE_LIVE_MODE), et un bouton qui échoue après
-/// une confirmation saisie est précisément la surprise que ce champ évite.
+/// serait de toute façon refusée (409 RESET_UNAVAILABLE_PRODUCTION_LOCKED), et un bouton qui échoue
+/// après une confirmation saisie est précisément la surprise que ce champ évite.
 /// </param>
-public sealed record SchoolModeDto(bool IsLive, DateTimeOffset? WentLiveAt, bool HasEverGoneLive);
+/// <param name="ProductionLockedAt">Horodatage du verrouillage définitif, ou <c>null</c> tant qu'il n'a pas eu lieu.</param>
+public sealed record SchoolModeDto(
+    bool IsLive,
+    DateTimeOffset? WentLiveAt,
+    bool IsProductionLocked,
+    DateTimeOffset? ProductionLockedAt);
 
 public class GetSchoolModeQueryHandler(
     IApplicationDbContext dbContext,
@@ -42,12 +47,13 @@ public class GetSchoolModeQueryHandler(
         var school = await dbContext.Schools
             .AsNoTracking()
             .Where(s => s.Id == schoolId)
-            .Select(s => new { s.WentLiveAt, s.HasEverGoneLive })
+            .Select(s => new { s.WentLiveAt, s.IsProductionLocked, s.ProductionLockedAt })
             .FirstOrDefaultAsync(cancellationToken);
 
         return new SchoolModeDto(
             IsLive: school?.WentLiveAt is not null,
             WentLiveAt: school?.WentLiveAt,
-            HasEverGoneLive: school?.HasEverGoneLive ?? false);
+            IsProductionLocked: school?.IsProductionLocked ?? false,
+            ProductionLockedAt: school?.ProductionLockedAt);
     }
 }

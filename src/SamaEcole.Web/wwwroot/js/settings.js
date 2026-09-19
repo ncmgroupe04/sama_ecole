@@ -174,17 +174,19 @@ document.addEventListener('alpine:init', () => {
         resetSummary: null,
 
         // --- Bac à sable / mode réel ---
-        // isLiveMode pilote les DEUX régimes de la Zone de danger : test (purge + « Passer en mode
-        // réel ») ou réel (lecture seule + « Repasser en mode test », toujours disponible au
-        // Directeur). Chargé dans load() depuis GET /schools/current/mode ; le serveur revérifie tout
-        // (GoLiveCommandHandler, ResetSchoolDataCommandHandler, RevertToTestCommandHandler), cet état
-        // n'est qu'un confort d'affichage.
+        // isLiveMode pilote les DEUX régimes de bascule de la Zone de danger (test ↔ réel). Depuis le
+        // 19/09/2026, cette bascule est PLEINEMENT réversible et ne verrouille plus rien toute seule —
+        // voir isProductionLocked ci-dessous, une dimension INDÉPENDANTE. Chargé dans load() depuis
+        // GET /schools/current/mode ; le serveur revérifie tout (GoLiveCommandHandler,
+        // ResetSchoolDataCommandHandler, RevertToTestCommandHandler, LockProductionCommandHandler),
+        // cet état n'est qu'un confort d'affichage.
         isLiveMode: false,
         wentLiveAt: null,
-        // Verrou PERMANENT (School.HasEverGoneLive) : reste vrai après un retour en mode test. Sert à
-        // masquer « Réinitialiser l'école » dans ce cas précis — sans quoi le bouton resterait affiché
-        // en mode test tout en étant systématiquement refusé (409) après la confirmation.
-        hasEverGoneLive: false,
+        // Verrou PERMANENT (School.IsProductionLocked), posé UNIQUEMENT par l'action manuelle
+        // « Verrouiller définitivement » (LockProductionCommand) — plus jamais par le passage en mode
+        // réel. Sert à masquer « Réinitialiser l'école » dans ce cas précis, quel que soit le mode.
+        isProductionLocked: false,
+        productionLockedAt: null,
         isGoLiveOpen: false,
         goLiveConfirmation: '',
         goLiveError: null,
@@ -193,12 +195,16 @@ document.addEventListener('alpine:init', () => {
         revertToTestConfirmation: '',
         isRevertingToTest: false,
         revertToTestError: null,
+        isLockProductionOpen: false,
+        lockProductionConfirmation: '',
+        lockProductionError: null,
+        isLockingProduction: false,
 
-        // Garde partagée par les trois actions critiques de l'établissement (Réinitialiser / Passer en
-        // mode réel / Repasser en mode test) : mot-clé comparé À LA CASSE — miroir exact de
-        // TypedConfirmationGuard.Matches côté serveur — ou nom de l'école, lui toléré en casse et en
-        // espaces de bord. Centralisée ici pour que les trois getters ci-dessous ne dérivent jamais
-        // l'un de l'autre (même risque que côté C#, voir TypedConfirmationGuard).
+        // Garde partagée par les quatre actions critiques de l'établissement (Réinitialiser / Passer en
+        // mode réel / Repasser en mode test / Verrouiller définitivement) : mot-clé comparé À LA
+        // CASSE — miroir exact de TypedConfirmationGuard.Matches côté serveur — ou nom de l'école, lui
+        // toléré en casse et en espaces de bord. Centralisée ici pour que les getters ci-dessous ne
+        // dérivent jamais l'un de l'autre (même risque que côté C#, voir TypedConfirmationGuard).
         confirmationMatches(typed, keyword) {
             const value = (typed || '').trim();
             if (!value) return false;
@@ -218,6 +224,10 @@ document.addEventListener('alpine:init', () => {
 
         get revertToTestConfirmationMatches() {
             return this.confirmationMatches(this.revertToTestConfirmation, 'TEST');
+        },
+
+        get lockProductionConfirmationMatches() {
+            return this.confirmationMatches(this.lockProductionConfirmation, 'VERROUILLER');
         },
 
         // Le compte rendu du serveur liste TOUTES les tables, y compris celles à 0 ligne (utile au
@@ -262,7 +272,8 @@ document.addEventListener('alpine:init', () => {
 
                 this.isLiveMode = !!(mode && mode.isLive);
                 this.wentLiveAt = mode ? mode.wentLiveAt : null;
-                this.hasEverGoneLive = !!(mode && mode.hasEverGoneLive);
+                this.isProductionLocked = !!(mode && mode.isProductionLocked);
+                this.productionLockedAt = mode ? mode.productionLockedAt : null;
 
                 this.profile = this.toProfileState(profile);
                 this.config = {
@@ -925,6 +936,40 @@ document.addEventListener('alpine:init', () => {
             } catch (err) {
                 this.revertToTestError = window.api.toMessage(err, "Le retour en mode test a échoué. Aucun changement n'a été enregistré.");
                 this.isRevertingToTest = false;
+            }
+        },
+
+        // ------------------------------------------- Verrouillage définitif (indépendant du mode)
+
+        openLockProduction() {
+            this.lockProductionConfirmation = '';
+            this.lockProductionError = null;
+            this.isLockProductionOpen = true;
+        },
+
+        closeLockProduction() {
+            // Ne se ferme pas pendant l'appel : le rechargement de page qui suit un succès s'en charge.
+            if (this.isLockingProduction) return;
+            this.isLockProductionOpen = false;
+            this.lockProductionConfirmation = '';
+            this.lockProductionError = null;
+        },
+
+        async confirmLockProduction() {
+            if (!this.lockProductionConfirmationMatches || this.isLockingProduction) return;
+
+            this.isLockingProduction = true;
+            this.lockProductionError = null;
+            try {
+                await window.api.post('/schools/current/lock-production', {
+                    confirmation: this.lockProductionConfirmation.trim()
+                });
+
+                // Rechargement COMPLET : la Zone de danger doit refléter le nouveau verrou partout.
+                window.location.reload();
+            } catch (err) {
+                this.lockProductionError = window.api.toMessage(err, "Le verrouillage définitif a échoué. Aucun changement n'a été enregistré.");
+                this.isLockingProduction = false;
             }
         },
 
