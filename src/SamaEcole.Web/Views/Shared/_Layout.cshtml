@@ -383,7 +383,14 @@
  <div class="flex-1 flex flex-col h-full min-w-0">
  
  <!-- Barre supérieure -->
- <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 lg:px-8 shadow-sm z-10">
+ @* Deux rangées désormais : la 1re (hauteur fixe h-16, inchangée pixel pour pixel) porte le
+    titre et les indicateurs de contexte déjà en place ; la 2e ajoute la barre de navigation
+    rapide entre modules (_QuickNav.cshtml). <header> devient un conteneur flex-colonne — un
+    simple frère flex de <main> dans la colonne (voir plus bas), agrandir sa hauteur ne
+    perturbe donc pas le calcul de .sticky-sub-header (qui dépend du padding de <main>, pas de
+    la hauteur de <header>). *@
+ <header class="bg-white border-b border-slate-200 shadow-sm z-10 flex flex-col">
+ <div class="h-16 flex items-center justify-between px-4 lg:px-8">
  <div class="flex items-center gap-4">
  <!-- Bouton Menu Mobile : ouvre le tiroir superposé de la barre latérale -->
  <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-slate-500 hover:text-slate-900 rounded-xl">
@@ -646,6 +653,16 @@
  <span x-text="emoji" aria-hidden="true"></span>
  <span x-text="label"></span>
  </div>
+ </div>
+ </div>
+
+ @* Barre de navigation rapide entre modules — rangée dédiée, sous les indicateurs ci-dessus.
+    `relative` ancre le panneau `absolute` du dropdown mobile « Saut rapide » à cette rangée,
+    pas à <header> ni <body>. Modèle = `path`, déjà calculé plus haut dans ce fichier
+    (Context.Request.Path.Value) : une partial ne hérite pas des variables locales de
+    l'appelant, on le passe donc explicitement plutôt que de le recalculer. *@
+ <div class="relative border-t border-slate-100 px-4 lg:px-8 py-2">
+ @await Html.PartialAsync("_QuickNav", path)
  </div>
  </header>
 

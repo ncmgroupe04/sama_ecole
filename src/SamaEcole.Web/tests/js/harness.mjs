@@ -93,7 +93,13 @@ export function loadScripts(files, options = {}) {
         URLSearchParams,
         // `new URL(window.location.href)` : la façon dont les écrans synchronisent l'onglet ouvert
         // avec l'URL (history.replaceState — settings.js, subjects.js).
-        URL
+        URL,
+        // auth.js décode les claims d'un JWT (readClaims) avec atob()/TextDecoder — nécessaires
+        // uniquement aux tests qui posent une vraie session via window.auth.saveSession() puis
+        // lisent window.auth.role/canView(...). Repris tels quels des globals Node (WHATWG), sans
+        // doublure : ce ne sont pas des API réseau/horloge à maîtriser pour les scénarios réseau.
+        atob,
+        TextDecoder
     };
 
     sandbox.globalThis = sandbox;
