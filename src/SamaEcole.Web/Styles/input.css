@@ -203,6 +203,13 @@
     @apply mb-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm leading-relaxed text-danger;
   }
 
+  /* Même bandeau, ton AVERTISSEMENT (orange) : l'action a abouti mais avec une réserve à corriger —
+     p. ex. envoi d'un bulletin accepté côté serveur mais WhatsApp en mode simulation (non configuré),
+     donc rien n'est parti sur ce canal. Ni un succès (vert), ni un échec (rouge). */
+  .form-warning-banner {
+    @apply mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm leading-relaxed text-warning;
+  }
+
   /* Case à cocher / bouton radio : mêmes bordure et halo que `input-field`, sans la hauteur ni la
      largeur pleine, qui n'ont pas de sens pour une case. */
   .checkbox-field {

@@ -73,24 +73,37 @@ public class ReportCardsController(ISender mediator, ILogger<ReportCardsControll
         }
     }
 
+    /// <summary>
+    /// Envoie le bulletin d'un trimestre au tuteur (WhatsApp et/ou e-mail), + un SMS d'avis.
+    ///
+    /// Contrôleur mince, sans <c>catch</c> fourre-tout : ExceptionHandlingMiddleware traduit les cas
+    /// métier (422 tuteur sans contact, 404 élève/trimestre inconnu, 502 rejet de Meta). L'ancien
+    /// <c>catch (Exception)</c> masquait TOUT en « Une erreur est survenue » — un tuteur sans numéro
+    /// et un jeton WhatsApp expiré rendaient le même 500 opaque.
+    ///
+    /// Réponse 200 : <c>{ status, message }</c>. <c>status = "simulated"</c> quand le canal WhatsApp
+    /// n'est pas configuré (bulletin JOURNALISÉ, pas transmis) — le client l'affiche en avertissement,
+    /// jamais en confirmation.
+    /// </summary>
     [HttpPost("send")]
     [Authorize(Roles = ReportCardDownloadRoles)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status502BadGateway)]
     public async Task<IActionResult> SendReportCard([FromBody] SendReportCardRequest request, CancellationToken cancellationToken)
     {
-        try
+        var result = await mediator.Send(
+            new SamaEcole.Application.ReportCards.Commands.SendReportCard.SendReportCardCommand(
+                request.StudentId, request.TermId, request.Channel),
+            cancellationToken);
+
+        return Ok(new
         {
-            await mediator.Send(new SamaEcole.Application.ReportCards.Commands.SendReportCard.SendReportCardCommand(request.StudentId, request.TermId, request.Channel), cancellationToken);
-            return Ok(new { message = "Bulletin envoyé avec succès." });
-        }
-        catch (FluentValidation.ValidationException ex)
-        {
-            return BadRequest(new { message = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Données invalides." });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Erreur lors de l'envoi du bulletin (StudentId: {StudentId})", request.StudentId);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Une erreur est survenue lors de l'envoi du bulletin." });
-        }
+            status = result.WhatsAppSimulated ? "simulated" : "sent",
+            message = result.Message,
+        });
     }
 
 
