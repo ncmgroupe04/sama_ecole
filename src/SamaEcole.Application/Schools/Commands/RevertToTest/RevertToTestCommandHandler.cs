@@ -11,11 +11,11 @@ namespace SamaEcole.Application.Schools.Commands.RevertToTest;
 
 /// <summary>
 /// Repasse l'établissement courant en mode test (<c>WentLiveAt = null</c>), rendant la bascule
-/// « Passer en mode réel » de nouveau jouable. Réservé au Directeur, confirmé par « TEST » (ou le nom
-/// de l'école) — même garde que GoLiveCommandHandler.
+/// « Passer en mode réel » ET la « Zone de danger » (purge) de nouveau jouables. Réservé au Directeur,
+/// confirmé par « TEST » (ou le nom de l'école) — même garde que GoLiveCommandHandler.
 ///
-/// Ne touche JAMAIS à <c>School.HasEverGoneLive</c> : la « Zone de danger » (purge) reste verrouillée
-/// pour toujours dès qu'une école a un jour été réelle (AGENTS.md règle #6) — voir
+/// Ne touche JAMAIS à <c>School.IsProductionLocked</c> : seul <c>LockProductionCommand</c>, une action
+/// manuelle et distincte, verrouille la purge de façon définitive — voir
 /// ResetSchoolDataCommandHandler et la fonction PostgreSQL reset_school_data.
 /// </summary>
 public class RevertToTestCommandHandler(

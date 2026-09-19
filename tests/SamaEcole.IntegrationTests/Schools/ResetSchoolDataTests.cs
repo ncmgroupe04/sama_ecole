@@ -677,14 +677,28 @@ public class ResetSchoolDataTests : IAsyncLifetime
             "un double clic, ou un Directeur qui recommence, ne doit produire ni erreur ni effet de bord");
     }
 
-    /// <summary>Passe une école en mode réel, comme le ferait GoLiveCommand — verrou permanent inclus.</summary>
+    /// <summary>
+    /// Passe une école en mode réel COURANT, comme le ferait GoLiveCommand depuis le 19/09/2026 : plus
+    /// aucun verrou permanent posé par effet de bord (voir <see cref="LockProductionAsync"/> pour ça).
+    /// </summary>
     private async Task MarkAsLiveAsync(Guid schoolId)
     {
         await using var owner = _db.NewOwnerContext();
 
         var school = await owner.Schools.IgnoreQueryFilters().SingleAsync(s => s.Id == schoolId);
         school.WentLiveAt = new DateTimeOffset(2027, 1, 15, 9, 0, 0, TimeSpan.Zero);
-        school.HasEverGoneLive = true;
+
+        await owner.SaveChangesAsync(CancellationToken.None);
+    }
+
+    /// <summary>Verrouille DÉFINITIVEMENT une école, comme le ferait LockProductionCommand.</summary>
+    private async Task LockProductionAsync(Guid schoolId)
+    {
+        await using var owner = _db.NewOwnerContext();
+
+        var school = await owner.Schools.IgnoreQueryFilters().SingleAsync(s => s.Id == schoolId);
+        school.IsProductionLocked = true;
+        school.ProductionLockedAt = new DateTimeOffset(2027, 2, 1, 9, 0, 0, TimeSpan.Zero);
 
         await owner.SaveChangesAsync(CancellationToken.None);
     }
@@ -717,6 +731,28 @@ public class ResetSchoolDataTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Purging_A_Production_Locked_School_Must_Be_Refused_By_The_Database_Itself()
+    {
+        // Le verrou définitif (LockProductionCommand) bloque la purge MÊME en mode test — contrairement
+        // au mode réel COURANT, qui n'est qu'un garde-fou réversible.
+        await LockProductionAsync(EcoleA);
+
+        await using var appA = _db.NewAppContext(EcoleA);
+
+        var act = async () => await _db.NewResetSchoolDataService(appA).ResetAsync(EcoleA, CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<PostgresException>()
+            .Where(e => e.SqlState == PostgresErrorCodes.RaiseException);
+
+        thrown.Which.MessageText.Should().Contain("RESET_UNAVAILABLE_PRODUCTION_LOCKED",
+            "le jeton d'erreur doit être le MÊME des deux côtés — c'est celui que l'API renvoie déjà au client");
+
+        await using var owner = _db.NewOwnerContext();
+        (await owner.Students.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(2,
+            "pas une ligne effacée : la fonction échoue AVANT sa boucle de suppression");
+    }
+
+    [Fact]
     public async Task The_Tenant_Guard_Must_Take_Precedence_Over_The_Live_Mode_Guard()
     {
         // Ordre des gardes dans la fonction : tenant D'ABORD, état métier ENSUITE. Sans cet ordre, une
@@ -736,14 +772,34 @@ public class ResetSchoolDataTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Reverting_To_Test_Mode_Must_Not_Reopen_The_Purge()
+    public async Task Reverting_To_Test_Mode_Must_Reopen_The_Purge_When_Not_Locked()
     {
-        // Le garde lit désormais HasEverGoneLive (verrou PERMANENT), pas WentLiveAt (l'affichage
-        // courant, que RevertToTestCommand remet à null pour rejouer la bascule vers le mode réel).
-        // Sans ce test, un garde qui reviendrait sur WentLiveAt passerait inaperçu — et un Directeur
-        // pourrait rouvrir la purge de données devenues comptables en repassant en mode test
-        // (AGENTS.md règle #6), exactement ce que ce verrou existe pour empêcher.
+        // Depuis le 19/09/2026, le mode test/réel est PLEINEMENT réversible et ne verrouille plus la
+        // purge par effet de bord : un aller-retour test → réel → test doit la retrouver disponible,
+        // tant qu'aucun verrouillage définitif n'a été posé.
         await MarkAsLiveAsync(EcoleA);
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            var school = await owner.Schools.IgnoreQueryFilters().SingleAsync(s => s.Id == EcoleA);
+            school.WentLiveAt = null;
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await PurgeEcoleAAsync();
+
+        await using var owner2 = _db.NewOwnerContext();
+        (await owner2.Students.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(0,
+            "un retour en mode test rouvre la purge — aucun verrou permanent n'a été posé");
+    }
+
+    [Fact]
+    public async Task Reverting_To_Test_Mode_Must_Not_Reopen_The_Purge_When_Production_Is_Locked()
+    {
+        // À l'inverse : le verrou définitif (LockProductionCommand), lui, ne se laisse jamais rouvrir
+        // par un retour en mode test — c'est précisément ce que ce champ existe pour garantir.
+        await MarkAsLiveAsync(EcoleA);
+        await LockProductionAsync(EcoleA);
 
         await using (var owner = _db.NewOwnerContext())
         {
@@ -759,11 +815,11 @@ public class ResetSchoolDataTests : IAsyncLifetime
         var thrown = await act.Should().ThrowAsync<PostgresException>()
             .Where(e => e.SqlState == PostgresErrorCodes.RaiseException);
 
-        thrown.Which.MessageText.Should().Contain("RESET_UNAVAILABLE_LIVE_MODE");
+        thrown.Which.MessageText.Should().Contain("RESET_UNAVAILABLE_PRODUCTION_LOCKED");
 
         await using var owner2 = _db.NewOwnerContext();
         (await owner2.Students.IgnoreQueryFilters().CountAsync(s => s.SchoolId == EcoleA)).Should().Be(2,
-            "rien n'a dû être effacé : le retour en mode test ne rouvre pas la purge");
+            "rien n'a dû être effacé : le verrou définitif ne se laisse jamais rouvrir par un retour en mode test");
     }
 
     /// <summary>

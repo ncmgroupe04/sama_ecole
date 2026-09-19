@@ -2,6 +2,7 @@ using System.IO;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
 using SamaEcole.Application.Schools.Commands.GoLive;
+using SamaEcole.Application.Schools.Commands.LockProduction;
 using SamaEcole.Application.Schools.Commands.ResetSchoolData;
 using SamaEcole.Application.Schools.Commands.RevertToTest;
 using SamaEcole.Application.Schools.Commands.UpdateCurrentSchool;
@@ -40,6 +41,9 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
 
     /// <summary>Garde du retour en mode test : le mot-clé TEST, ou le nom de l'établissement.</summary>
     public record RevertToTestRequest(string Confirmation);
+
+    /// <summary>Garde du verrouillage définitif : le mot-clé VERROUILLER, ou le nom de l'établissement.</summary>
+    public record LockProductionRequest(string Confirmation);
 
     public record UpdateSchoolProfileRequest(
         string Name,
@@ -129,10 +133,11 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
     /// <summary>
     /// Fait passer l'établissement COURANT du mode test (bac à sable) au mode réel (exploitation).
     /// Action DÉLIBÉRÉE, réservée au Directeur, confirmée par saisie de « CONFIRMER » (ou du nom de
-    /// l'école). Conséquence : POST reset-data devient indisponible POUR TOUJOURS (409
-    /// RESET_UNAVAILABLE_LIVE_MODE, School.HasEverGoneLive), même après un retour en mode test. Non
-    /// rejouable tel quel : un second appel renvoie 409 ALREADY_LIVE — il faut d'abord repasser en
-    /// mode test (POST /schools/current/revert-to-test).
+    /// l'école). Conséquence, UNIQUEMENT le temps du mode réel : POST reset-data devient indisponible
+    /// (409 RESET_UNAVAILABLE_LIVE_MODE) — un retour en mode test la rouvre, sauf verrouillage
+    /// définitif (POST lock-production, School.IsProductionLocked). Non rejouable tel quel : un second
+    /// appel renvoie 409 ALREADY_LIVE — il faut d'abord repasser en mode test
+    /// (POST /schools/current/revert-to-test).
     /// </summary>
     [HttpPost("go-live")]
     [Authorize(Roles = nameof(Role.Directeur))]
@@ -147,8 +152,8 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
     /// <summary>
     /// Fait repasser l'établissement COURANT du mode réel au mode test, pour que le Directeur garde le
     /// contrôle de son environnement (familiarisation, simulation). Réservé au Directeur, confirmé par
-    /// saisie de « TEST » (ou du nom de l'école) — même patron que GoLive. Ne rouvre JAMAIS la « Zone
-    /// de danger » : voir School.HasEverGoneLive et RevertToTestCommand.
+    /// saisie de « TEST » (ou du nom de l'école) — même patron que GoLive. Rouvre la « Zone de
+    /// danger », sauf verrouillage définitif : voir School.IsProductionLocked et LockProductionCommand.
     /// </summary>
     [HttpPost("revert-to-test")]
     [Authorize(Roles = nameof(Role.Directeur))]
@@ -158,6 +163,24 @@ public class CurrentSchoolController(ISender mediator) : ControllerBase
     public async Task<IActionResult> RevertToTest(
         [FromBody] RevertToTestRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new RevertToTestCommand(request.Confirmation), cancellationToken));
+
+    /// <summary>
+    /// Verrouille DÉFINITIVEMENT la « Zone de danger » de l'établissement COURANT
+    /// (School.IsProductionLocked) : POST reset-data devient indisponible POUR TOUJOURS (409
+    /// RESET_UNAVAILABLE_PRODUCTION_LOCKED), quel que soit le régime test/réel ultérieur. Action
+    /// EXPLICITE et distincte de GoLive, réservée au Directeur, confirmée par saisie de « VERROUILLER »
+    /// (ou du nom de l'école). Non rejouable en sens inverse : un second appel renvoie 409
+    /// ALREADY_LOCKED, et aucune commande ne remet ce verrou à faux.
+    /// </summary>
+    [HttpPost("lock-production")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<LockProductionResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> LockProduction(
+        [FromBody] LockProductionRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new LockProductionCommand(request.Confirmation), cancellationToken));
 
     /// <summary>Upload local d'un fichier image (logo) par le Directeur.</summary>
     [HttpPost("logo")]

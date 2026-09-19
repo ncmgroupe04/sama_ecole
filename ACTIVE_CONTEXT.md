@@ -432,6 +432,29 @@ l'onglet **Paramètres → Configuration**, en bas d'écran. `POST /schools/curr
   `SAMA_RETOUR_MODE_TEST_AUTORISE=true` en Production. La pastille de la barre supérieure, elle, affiche
   désormais les **deux** régimes (« Mode test » / « Mode réel ») et mène, pour le Directeur, à
   Paramètres › Sécurité.
+- **Refonte du verrou (19/09/2026) : mode et verrouillage définitif sont désormais deux décisions
+  INDÉPENDANTES du Directeur** (migration `DecoupleProductionLockFromLiveMode`), sur arbitrage produit
+  explicite — abandon de l'ancien comportement ci-dessus.
+  - Le passage test ↔ réel (`GoLiveCommand` / `RevertToTestCommand`) est désormais **pleinement
+    réversible** et **ne pose plus aucun verrou par effet de bord**. En mode test, la purge reste
+    disponible **sans limite de rejeu**, y compris après un ou plusieurs allers-retours en mode réel.
+  - `School.HasEverGoneLive` est **renommée** `IsProductionLocked` (+ `ProductionLockedAt`, horodatage) :
+    même colonne, mêmes invariants de garde (Handler C# **et** fonction PostgreSQL
+    `reset_school_data`, défense en profondeur inchangée), mais posée **UNIQUEMENT** par une nouvelle
+    action manuelle et explicite : `POST /schools/current/lock-production` (« Verrouiller
+    définitivement l'établissement », confirmation `VERROUILLER` ou nom de l'école, Directeur seul, non
+    rejouable — 409 `ALREADY_LOCKED` au second appel). Aucune commande ne défait ce verrou une fois posé.
+  - `reset-data` distingue maintenant deux refus à codes différents : 409
+    `RESET_UNAVAILABLE_LIVE_MODE` (mode réel COURANT — réversible, un retour en mode test rouvre la
+    purge) et 409 `RESET_UNAVAILABLE_PRODUCTION_LOCKED` (verrou définitif — irréversible, quel que soit
+    le mode ultérieur).
+  - **Backfill de migration, arbitrage EXPLICITE et délibéré** : `IsProductionLocked` est forcé à
+    `false` pour **toutes** les écoles existantes, y compris celles déjà passées en mode réel avant
+    cette migration (donc déjà verrouillées sous l'ancien régime automatique). Elles retrouvent la
+    « Zone de danger » tant qu'un Directeur ne clique pas explicitement sur le nouveau bouton — décision
+    du produit pour rendre la main aux écoles déjà en exploitation plutôt que de reconduire un verrou
+    qu'elles n'ont jamais posé elles-mêmes. Toute école qui a besoin de la protection doit désormais
+    verrouiller manuellement.
 
 ### Suppression d'une année scolaire (15/09/2026)
 

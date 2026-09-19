@@ -42,19 +42,25 @@ public class ResetSchoolDataCommandHandler(
             .FirstOrDefaultAsync(s => s.Id == schoolId, cancellationToken)
             ?? throw new NotFoundException("École", schoolId);
 
-        // Verrou PERMANENT : une fois qu'une école est passée en mode réel une seule fois, la purge
-        // reste interdite pour toujours (AGENTS.md règle #6) — même après un retour en mode test
-        // (RevertToTestCommand, disponible à tout moment), qui remet WentLiveAt à null mais jamais
-        // HasEverGoneLive. On échoue AVANT même de regarder le mot de confirmation. La fonction
-        // PostgreSQL reset_school_data porte la MÊME garde, en défense de profondeur (migration
-        // GuardResetSchoolDataAgainstLiveMode / AddHasEverGoneLiveLock).
-        if (school.HasEverGoneLive)
+        // Verrou PERMANENT : posé UNIQUEMENT par une action manuelle et explicite du Directeur
+        // (LockProductionCommand), plus jamais par un effet de bord du passage en mode réel depuis le
+        // 19/09/2026. On échoue AVANT même de regarder le mot de confirmation. La fonction PostgreSQL
+        // reset_school_data porte la MÊME garde, en défense de profondeur.
+        if (school.IsProductionLocked)
         {
-            var message = school.WentLiveAt is { } wentLiveAt
-                ? $"La réinitialisation n'est possible qu'en mode test. Cet établissement est passé en mode réel le {wentLiveAt:dd/MM/yyyy} : les données enregistrées ne peuvent plus être effacées."
-                : "La réinitialisation n'est plus possible : cet établissement est déjà passé en mode réel par le passé. Les données enregistrées à ce moment-là font partie de la comptabilité et restent inaltérables, même après un retour en mode test.";
+            throw new BusinessRuleException(
+                "La réinitialisation des données n'est plus proposée : cet établissement a été verrouillé définitivement par un Directeur. Cette décision est irréversible.",
+                "RESET_UNAVAILABLE_PRODUCTION_LOCKED");
+        }
 
-            throw new BusinessRuleException(message, "RESET_UNAVAILABLE_LIVE_MODE");
+        // Garde du mode COURANT, réversible : la purge n'a pas sa place en exploitation réelle, mais un
+        // retour en mode test (RevertToTestCommand, disponible à tout moment) la rouvre aussitôt — sauf
+        // verrou ci-dessus.
+        if (school.WentLiveAt is { } wentLiveAt)
+        {
+            throw new BusinessRuleException(
+                $"La réinitialisation n'est possible qu'en mode test. Repassez en mode test pour la retrouver (établissement en mode réel depuis le {wentLiveAt:dd/MM/yyyy}).",
+                "RESET_UNAVAILABLE_LIVE_MODE");
         }
 
         EnsureConfirmed(request.Confirmation, school.Name);

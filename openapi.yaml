@@ -959,8 +959,12 @@ paths:
         classes, matières, mentions, enseignants, le barème des frais et le journal d'audit.
         `confirmation` doit valoir exactement `PURGER` (casse comprise) ou le nom de l'établissement
         (casse indifférente) ; toute autre valeur est refusée en 422 sans rien effacer.
-        Indisponible en **mode réel** (voir `POST /schools/current/go-live`) : l'appel est alors
-        refusé en 409 `RESET_UNAVAILABLE_LIVE_MODE`, avant même de regarder `confirmation`.
+        Indisponible en **mode réel** (voir `POST /schools/current/go-live`) — refusé en 409
+        `RESET_UNAVAILABLE_LIVE_MODE`, mais un retour en mode test (`POST
+        /schools/current/revert-to-test`) la rouvre. Indisponible DE FAÇON DÉFINITIVE si
+        l'établissement a été verrouillé (`POST /schools/current/lock-production`) — refusé en 409
+        `RESET_UNAVAILABLE_PRODUCTION_LOCKED`, quel que soit le mode. Les deux gardes sont vérifiées
+        avant même de regarder `confirmation`.
       requestBody:
         required: true
         content:
@@ -981,7 +985,9 @@ paths:
               schema: { $ref: '#/components/schemas/SchoolDataResetSummary' }
         '403': { description: Réservé au Directeur }
         '409':
-          description: L'établissement est en mode réel — code `RESET_UNAVAILABLE_LIVE_MODE`
+          description: >-
+            Réinitialisation indisponible — code `RESET_UNAVAILABLE_LIVE_MODE` (mode réel, réversible)
+            ou `RESET_UNAVAILABLE_PRODUCTION_LOCKED` (verrouillage définitif, irréversible)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -993,7 +999,9 @@ paths:
       summary: État « bac à sable / mode réel » de l'établissement courant
       description: >-
         Lecture LÉGÈRE, ouverte à tout rôle de l'école. Alimente la pastille « Mode test » de la
-        barre supérieure et les deux régimes de la « Zone de danger » de l'écran Paramètres.
+        barre supérieure et les régimes de la « Zone de danger » de l'écran Paramètres. Mode
+        (isLive/wentLiveAt) et verrouillage définitif (isProductionLocked/productionLockedAt) sont
+        deux dimensions INDÉPENDANTES depuis le 19/09/2026.
       responses:
         '200':
           description: État courant
@@ -1001,30 +1009,32 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [isLive, hasEverGoneLive]
+                required: [isLive, isProductionLocked]
                 properties:
                   isLive: { type: boolean }
                   wentLiveAt: { type: string, format: date-time, nullable: true }
-                  hasEverGoneLive:
+                  isProductionLocked:
                     type: boolean
                     description: >-
-                      Verrou PERMANENT : reste vrai après un retour en mode test (isLive redevient
-                      alors faux). L'écran s'en sert pour ne jamais proposer « Réinitialiser l'école »
-                      dans ce cas — la purge serait de toute façon refusée (409
-                      RESET_UNAVAILABLE_LIVE_MODE).
+                      Verrou PERMANENT, posé UNIQUEMENT par `POST /schools/current/lock-production`
+                      (jamais par le passage en mode réel). L'écran s'en sert pour ne jamais proposer
+                      « Réinitialiser l'école » dans ce cas — la purge serait de toute façon refusée
+                      (409 RESET_UNAVAILABLE_PRODUCTION_LOCKED).
+                  productionLockedAt: { type: string, format: date-time, nullable: true }
 
   /schools/current/go-live:
     post:
       tags: [Schools]
       summary: Passer l'établissement en mode réel (Directeur uniquement)
       description: >-
-        Bascule DÉLIBÉRÉE du mode test (bac à sable) vers le mode réel (exploitation). Jamais un
-        effet de bord d'une autre opération. Conséquence : `POST /schools/current/reset-data`
-        devient indisponible POUR TOUJOURS (409 `RESET_UNAVAILABLE_LIVE_MODE`), même après un retour
-        en mode test (`POST /schools/current/revert-to-test`, disponible à tout moment) — voir
-        `School.HasEverGoneLive`. Non rejouable tel quel : un second appel renvoie 409
-        `ALREADY_LIVE`. `confirmation` doit valoir exactement `CONFIRMER` (casse comprise) ou le nom
-        de l'établissement (casse indifférente).
+        Bascule DÉLIBÉRÉE et PLEINEMENT RÉVERSIBLE du mode test (bac à sable) vers le mode réel
+        (exploitation). Jamais un effet de bord d'une autre opération, et depuis le 19/09/2026 elle ne
+        pose plus aucun verrou permanent. Conséquence, UNIQUEMENT le temps du mode réel : `POST
+        /schools/current/reset-data` devient indisponible (409 `RESET_UNAVAILABLE_LIVE_MODE`) — un
+        retour en mode test (`POST /schools/current/revert-to-test`, disponible à tout moment) la
+        rouvre, sauf verrouillage définitif (`POST /schools/current/lock-production`). Non rejouable
+        tel quel : un second appel renvoie 409 `ALREADY_LIVE`. `confirmation` doit valoir exactement
+        `CONFIRMER` (casse comprise) ou le nom de l'établissement (casse indifférente).
       requestBody:
         required: true
         content:
@@ -1061,12 +1071,12 @@ paths:
       summary: Repasser l'établissement en mode test (Directeur uniquement)
       description: >-
         Bascule DÉLIBÉRÉE du mode réel vers le mode test, disponible À TOUT MOMENT (aucun drapeau
-        d'environnement) pour que le Directeur garde le contrôle de son environnement. Ne rouvre
-        JAMAIS `POST /schools/current/reset-data` : `School.HasEverGoneLive`, posé une fois pour
-        toutes au premier passage réel, n'est jamais effacé ici — seul `wentLiveAt` (l'horodatage
-        COURANT) l'est, ce qui permet de rejouer `POST /schools/current/go-live`. `confirmation`
-        doit valoir exactement `TEST` (casse comprise) ou le nom de l'établissement (casse
-        indifférente).
+        d'environnement) pour que le Directeur garde le contrôle de son environnement. Rouvre `POST
+        /schools/current/reset-data`, sauf verrouillage définitif : ne touche JAMAIS à
+        `School.IsProductionLocked` (posé uniquement par `POST /schools/current/lock-production`).
+        Seul `wentLiveAt` (l'horodatage COURANT) est effacé, ce qui permet de rejouer `POST
+        /schools/current/go-live`. `confirmation` doit valoir exactement `TEST` (casse comprise) ou
+        le nom de l'établissement (casse indifférente).
       requestBody:
         required: true
         content:
@@ -1092,6 +1102,46 @@ paths:
                     type: boolean
                     description: Vrai si l'établissement était effectivement en mode réel avant l'appel.
         '403': { description: Réservé au Directeur }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /schools/current/lock-production:
+    post:
+      tags: [Schools]
+      summary: Verrouiller définitivement la purge de l'établissement (Directeur uniquement)
+      description: >-
+        Action EXPLICITE et distincte de `POST /schools/current/go-live` : verrouille DE FAÇON
+        DÉFINITIVE `POST /schools/current/reset-data` (`School.IsProductionLocked`), quel que soit le
+        régime test/réel ultérieur. Non rejouable en sens inverse : aucune route ne remet ce verrou à
+        faux. `confirmation` doit valoir exactement `VERROUILLER` (casse comprise) ou le nom de
+        l'établissement (casse indifférente).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmation]
+              properties:
+                confirmation:
+                  type: string
+                  description: "`VERROUILLER` ou le nom exact de l'établissement."
+                  example: VERROUILLER
+      responses:
+        '200':
+          description: Établissement verrouillé définitivement
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lockedAt]
+                properties:
+                  lockedAt: { type: string, format: date-time }
+        '403': { description: Réservé au Directeur }
+        '409':
+          description: Déjà verrouillé — code `ALREADY_LOCKED`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /schools/current/settings:
