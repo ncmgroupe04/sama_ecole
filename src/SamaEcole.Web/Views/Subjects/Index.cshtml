@@ -48,6 +48,47 @@
      </div>
     </div>
 
+    @* ── Filtre par CYCLE ────────────────────────────────────────────────────────────────────
+       Second axe de lecture de la grille : les domaines (Lettres & Langues, Sciences…)
+       traversent tous les cycles, si bien que l'Anglais du Lycée et la « Langue et
+       Communication » du Primaire se lisaient dans la même colonne. L'onglet dit QUEL CYCLE on
+       regarde, le badge de chaque matière rappelle SON niveau exact — Préscolaire couvre deux
+       niveaux (Crèche, Maternelle), le badge reste donc nécessaire.
+
+       Sa place est ICI, entre les tuiles et l'action principale : elle occupe l'espace que la
+       ligne du haut laissait vide (l'action principale part en `ml-auto`), plutôt que de
+       pousser la ligne du bas au-delà de ce qu'elle a réellement à montrer (mode de lecture +
+       recherche).
+
+       Barre masquée quand l'école ne couvre qu'un seul cycle : un filtre à un seul choix n'est
+       pas un filtre. Composant partagé .tab-nav-scroll / .tab-btn / .tab-btn-active (input.css),
+       comme Paramètres, Paie, Frais et Inventaire.
+
+       `min-w-0` : sans lui, .tab-nav-scroll ne peut pas rétrécir sous sa largeur intrinsèque et
+       pousserait la ligne au lieu de faire défiler ses onglets. ─────────────────────────── *@
+    <div x-show="viewMode === 'categories' && cycleTabs.length > 1" x-cloak class="min-w-0">
+     <nav class="tab-nav-scroll" role="tablist" aria-label="Cycle d'enseignement">
+      <button type="button" role="tab" :aria-selected="(cycle === 'all').toString()"
+       x-on:click="selectCycle('all')" class="tab-btn" :class="cycleTabClass('all')">
+       Tous les cycles
+       @* bg-white + anneau : un badge neutre (bg-gray-100) disparaîtrait sur la piste slate-100 ;
+          blanc, il reste lisible aussi bien sur la pastille active bleue que sur la piste. *@
+       <badge variant="neutral" class="bg-white text-[10px] tabular-nums text-slate-600 ring-1 ring-inset ring-slate-200">
+        <span x-text="searchedSubjects.length"></span>
+       </badge>
+      </button>
+      <template x-for="tab in cycleTabs" :key="tab.key">
+       <button type="button" role="tab" :aria-selected="(cycle === tab.key).toString()"
+        x-on:click="selectCycle(tab.key)" class="tab-btn" :class="cycleTabClass(tab.key)">
+        <span x-text="tab.label"></span>
+        <badge variant="neutral" class="bg-white text-[10px] tabular-nums text-slate-600 ring-1 ring-inset ring-slate-200">
+         <span x-text="tab.count"></span>
+        </badge>
+       </button>
+      </template>
+     </nav>
+    </div>
+
     @* Action principale alignée à droite, sur la même ligne que les tuiles : elle occupe une
        hauteur déjà payée par les tuiles, au lieu d'en réclamer une à elle. *@
     <button x-show="canCreateSubject" x-cloak x-on:click="openCreate()"
@@ -82,45 +123,6 @@
      <input type="search" x-model="search" placeholder="Rechercher une matière ou un niveau…"
       aria-label="Rechercher une matière"
       class="input-field !my-0 pl-9 pr-3 w-full" />
-    </div>
-
-    @* ── Filtre par CYCLE ────────────────────────────────────────────────────────────────────
-       Second axe de lecture de la grille : les domaines (Lettres & Langues, Sciences…)
-       traversent tous les cycles, si bien que l'Anglais du Lycée et la « Langue et
-       Communication » du Primaire se lisaient dans la même colonne. L'onglet dit QUEL CYCLE on
-       regarde, le badge de chaque matière rappelle SON niveau exact — Préscolaire couvre deux
-       niveaux (Crèche, Maternelle), le badge reste donc nécessaire.
-
-       Sa place est ICI, à la suite du mode de lecture et de la recherche : les trois commandes
-       restreignent ce que la grille montre, et se lisent donc ensemble.
-
-       Barre masquée quand l'école ne couvre qu'un seul cycle : un filtre à un seul choix n'est
-       pas un filtre. Composant partagé .tab-nav-scroll / .tab-btn / .tab-btn-active (input.css),
-       comme Paramètres, Paie, Frais et Inventaire.
-
-       `min-w-0` : sans lui, .tab-nav-scroll ne peut pas rétrécir sous sa largeur intrinsèque et
-       pousserait la ligne au lieu de faire défiler ses onglets. ─────────────────────────── *@
-    <div x-show="viewMode === 'categories' && cycleTabs.length > 1" x-cloak class="min-w-0">
-     <nav class="tab-nav-scroll" role="tablist" aria-label="Cycle d'enseignement">
-      <button type="button" role="tab" :aria-selected="(cycle === 'all').toString()"
-       x-on:click="selectCycle('all')" class="tab-btn" :class="cycleTabClass('all')">
-       Tous les cycles
-       @* bg-white + anneau : un badge neutre (bg-gray-100) disparaîtrait sur la piste slate-100 ;
-          blanc, il reste lisible aussi bien sur la pastille active bleue que sur la piste. *@
-       <badge variant="neutral" class="bg-white text-[10px] tabular-nums text-slate-600 ring-1 ring-inset ring-slate-200">
-        <span x-text="searchedSubjects.length"></span>
-       </badge>
-      </button>
-      <template x-for="tab in cycleTabs" :key="tab.key">
-       <button type="button" role="tab" :aria-selected="(cycle === tab.key).toString()"
-        x-on:click="selectCycle(tab.key)" class="tab-btn" :class="cycleTabClass(tab.key)">
-        <span x-text="tab.label"></span>
-        <badge variant="neutral" class="bg-white text-[10px] tabular-nums text-slate-600 ring-1 ring-inset ring-slate-200">
-         <span x-text="tab.count"></span>
-        </badge>
-       </button>
-      </template>
-     </nav>
     </div>
    </div>
   </div>

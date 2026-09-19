@@ -210,6 +210,13 @@
  <icon name="document" class="w-5 h-5" />
  <span class="text-sm font-medium">Notes et bulletins</span>
  </a>
+ @* Cahier de texte / journal de classe (ticket JGK-P04) : écriture Enseignant seul (sa propre
+ séance planifiée, ClassJournalScopeAuthorizer), lecture ouverte en plus à Directeur/
+ Secrétariat/Surveillant — même trio d'oversight que ParentSummonsController. *@
+ <a href="/cahier-de-texte" x-show="canView(['Directeur', 'Secretariat', 'Enseignant', 'Surveillant']) && pedagogyEnabled" class="@(path.StartsWith("/cahier-de-texte") ? LinkActive : LinkIdle)">
+ <icon name="calendar" class="w-5 h-5" />
+ <span class="text-sm font-medium">Cahier de texte</span>
+ </a>
  <a href="/examens" x-show="canView(['Directeur', 'Secretariat', 'Enseignant']) && pedagogyEnabled" class="@(path.StartsWith("/examens") ? LinkActive : LinkIdle)">
  <icon name="document-text" class="w-5 h-5" />
  <span class="text-sm font-medium">Examens officiels</span>

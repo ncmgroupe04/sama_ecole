@@ -735,4 +735,60 @@ recours en cas de fuite.
 
 ---
 
+## 24. API Cahier de texte / Journal de classe
+
+Base : `/api/v1/class-journal`. Spécification fonctionnelle : `docs/BACKLOG_TICKETS.md` (Module P).
+Ticket : JGK-P04. Dépend de JGK-C02 (Classes), JGK-C03 (Matières) et du module Emploi du temps
+existant (`ScheduleSlot`).
+
+**Matrice de droits.** Écriture (création) réservée à l'**Enseignant**, et seulement pour son propre
+créneau planifié — vérifié contre `TeacherAssignment` (année active) **et** `ScheduleSlot` (jour de
+la semaine). Correction (modification/suppression) ouverte au niveau du rôle à Enseignant, Directeur
+et Secrétariat, mais bornée dans le Handler à « l'auteur dans les 15 jours suivant la séance, ou un
+rôle élevé au-delà » (`403` sinon). **Lecture ouverte sans restriction de périmètre** à Directeur,
+Secrétariat, Surveillant et Enseignant — un journal de classe est un document pédagogique partagé,
+pas un carnet privé par enseignant. Aucun rôle Parent/Élève (portails hors périmètre V1, AGENTS.md).
+
+| Méthode | Route | Rôles | Effet |
+|---|---|---|---|
+| `GET` | `/?page=&pageSize=&classroomId=&subjectId=&periodStart=&periodEnd=` | Directeur, Secrétariat, Surveillant, Enseignant | Liste paginée, filtrable |
+| `POST` | `/` | Enseignant | Journalise une séance (409/422 selon la garde ci-dessous) |
+| `PUT` | `/{id}` | Enseignant, Directeur, Secrétariat | Corrige sujet/contenu/devoirs (403 hors délai/propriété) |
+| `DELETE` | `/{id}?rowVersion=` | Enseignant, Directeur, Secrétariat | Archive (soft delete), même garde que `PUT` |
+
+### 24.1 Points d'attention du contrat
+
+**`POST /` refuse en `409` (code `SCHEDULE_SLOT_NOT_PLANNED`) sur DEUX conditions distinctes, jamais
+confondues.** `ScheduleSlot` est un créneau HEBDOMADAIRE récurrent (jour de la semaine + horaire) —
+il ne porte aucune `SchoolYearId`. Un contrôle isolé matcherait donc aussi un créneau d'une année
+scolaire révolue, encore présent en base. La garde vérifie donc successivement : (1) une
+`TeacherAssignment` existe pour cet enseignant, cette classe, cette matière, sur l'année ACTIVE ; (2)
+un `ScheduleSlot` existe pour ce même triplet, au jour de la semaine de `sessionDate`. L'absence de
+l'une ou l'autre renvoie `409`, jamais `403` — c'est l'état de l'affectation/du planning qui bloque,
+pas le rôle (qui est déjà correct à ce stade).
+
+**`sessionDate` dans le futur est refusée en `422`.** On journalise ce qui a été fait, jamais un
+programme prévisionnel — même esprit que `SubmitAttendanceSheetCommand` pour l'appel.
+
+**`PUT /{id}` ne porte ni `classroomId`, ni `subjectId`, ni `sessionDate`.** Ce sont les coordonnées
+de la séance journalisée, pas son compte-rendu : les changer reviendrait à créer une autre entrée. Une
+erreur sur ces champs se corrige en supprimant l'entrée puis en en créant une nouvelle.
+
+**La règle des 15 jours est symétrique entre `PUT` et `DELETE`.** Librement modifiable/archivable par
+son auteur pendant 15 jours après `sessionDate` ; passé ce délai, `403` pour l'auteur — seuls
+Directeur et Secrétariat peuvent encore agir, sans limite de délai. Le message distingue explicitement
+« délai dépassé » de « ce n'est pas votre entrée » (règle #10, action corrective nommée).
+
+**`GET /` renvoie `canEdit` par ligne, calculé côté serveur.** Confort d'affichage — l'écran l'utilise
+pour masquer Modifier/Supprimer plutôt que de recalculer la règle des 15 jours côté client (qui n'a ni
+l'heure serveur ni, pour l'Enseignant, un moyen fiable de connaître sa propre fiche). La vraie garde
+reste `PUT`/`DELETE`, qui refusent indépendamment.
+
+**Audit (JGK-H01).** `PUT /{id}` est journalisé, qu'il vienne de l'auteur dans le délai ou d'un rôle
+élevé après — même esprit que la correction de notes (`UpdateGradeCommand`) et que la règle #4
+Finance : une correction reste toujours tracée, jamais un écrasement silencieux de l'historique
+pédagogique.
+
+---
+
 **Fin du Volume 4.**

@@ -88,6 +88,12 @@ public class PagesController : Controller
     [HttpGet("/notes")]
     public IActionResult Grades() => View("~/Views/Grades/Index.cshtml");
 
+    // Module Cahier de texte / Journal de classe (ticket JGK-P04) — ClassJournalController garde
+    // l'accès (écriture Enseignant sur sa propre séance planifiée, lecture ouverte en plus à
+    // Directeur/Secrétariat/Surveillant) et la RLS isole.
+    [HttpGet("/cahier-de-texte")]
+    public IActionResult ClassJournal() => View("~/Views/ClassJournal/Index.cshtml");
+
     [HttpGet("/frais")]
     public IActionResult Fees() => View("~/Views/Fees/Index.cshtml");
 
