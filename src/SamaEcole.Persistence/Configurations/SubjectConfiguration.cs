@@ -28,6 +28,8 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
         builder.Property(s => s.NameAr).HasMaxLength(80);
         builder.Property(s => s.Level).IsRequired().HasMaxLength(50);
 
+        builder.Property(s => s.SectionType).HasConversion<string>().HasMaxLength(20).IsRequired();
+
         // decimal(4,2) : de 0,01 à 99,99. Un coefficient n'a aucune raison de dépasser cette borne,
         // et le type fixe évite qu'un float ne fasse dériver « total des points ÷ total des
         // coefficients » d'un centième au moment du calcul de la moyenne.

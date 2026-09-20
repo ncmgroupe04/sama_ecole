@@ -1,4 +1,5 @@
 using SamaEcole.Domain.Common;
+using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Domain.Entities;
 
@@ -83,4 +84,12 @@ public class Subject : AuditableEntity, ITenantEntity
     /// <see cref="Column1Header"/>.
     /// </summary>
     public string? Column2Header { get; set; }
+
+    /// <summary>
+    /// Regroupement pédagogique (module Coran/Franco-Arabe, docs/superpowers/specs/
+    /// 2026-09-20-franco-arabic-core-design.md §3.1) — purement descriptif, ne modifie ni
+    /// <see cref="Coefficient"/> ni le calcul du bulletin. Défaut <see cref="Enums.SectionType.French"/> :
+    /// toute matière existante reste tacitement française sans changement de comportement.
+    /// </summary>
+    public SectionType SectionType { get; set; } = SectionType.French;
 }
