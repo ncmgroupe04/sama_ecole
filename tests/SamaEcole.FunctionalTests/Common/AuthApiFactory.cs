@@ -112,70 +112,81 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         var hasher = new IdentityPasswordHasher();
 
         owner.Schools.Add(new School { Id = EcoleId, Name = "École de test" });
-
-        owner.Users.AddRange(
-            new User
-            {
-                Id = DirecteurId,
-                SchoolId = EcoleId,
-                Email = DirecteurEmail,
-                PasswordHash = hasher.Hash(DirecteurPassword),
-                FullName = "Directeur de test",
-                Role = Role.Directeur,
-                Status = EntityStatus.Active
-            },
-            // Cible des suspensions (ticket JGK-A05) : un Directeur ne peut pas modifier son PROPRE
-            // statut, il faut donc un second compte dans la même école.
-            new User
-            {
-                Id = SecretaireId,
-                SchoolId = EcoleId,
-                Email = SecretaireEmail,
-                PasswordHash = hasher.Hash(SecretairePassword),
-                FullName = "Secrétaire de test",
-                Role = Role.Secretariat,
-                Status = EntityStatus.Active
-            },
-            // Rôle Finance : encaisse, mais ne compose JAMAIS un montant dû à l'inscription (règle #4).
-            // Sert au test d'autorisation négatif obligatoire de JGK-E01 (POST /enrollments → 403).
-            new User
-            {
-                Id = FinanceId,
-                SchoolId = EcoleId,
-                Email = FinanceEmail,
-                PasswordHash = hasher.Hash(FinancePassword),
-                FullName = "Comptable de test",
-                Role = Role.Finance,
-                Status = EntityStatus.Active
-            },
-            // Rôle Enseignant (ticket JGK-G01) : saisit les notes, mais ne fixe ni les frais ni les
-            // inscriptions.
-            new User
-            {
-                Id = EnseignantId,
-                SchoolId = EcoleId,
-                Email = EnseignantEmail,
-                PasswordHash = hasher.Hash(EnseignantPassword),
-                FullName = "Enseignant de test",
-                Role = Role.Enseignant,
-                Status = EntityStatus.Active
-            },
-            // Aucun SchoolId : sa session n'a pas de tenant, la RLS lui ferme donc toutes les tables
-            // d'école. C'est précisément pourquoi la création d'un Directeur exige une fonction
-            // SECURITY DEFINER (ticket JGK-B01).
-            new User
-            {
-                Id = SuperAdminId,
-                SchoolId = null,
-                Email = SuperAdminEmail,
-                PasswordHash = hasher.Hash(SuperAdminPassword),
-                FullName = "Super Admin de test",
-                Role = Role.SuperAdmin,
-                Status = EntityStatus.Active
-            });
+        owner.Users.AddRange(SeedUsers(hasher));
 
         await owner.SaveChangesAsync(CancellationToken.None);
     }
+
+    /// <summary>
+    /// Les 5 comptes de test, dans leur forme canonique — semés une fois par <see
+    /// cref="InitializeAsync"/>, et RÉINSÉRÉS par <see cref="ResetTestUsersAsync"/> quand un test les a
+    /// fait disparaître (voir son commentaire : depuis le 19/09/2026, <c>reset-data</c> supprime
+    /// PHYSIQUEMENT les comptes du personnel — <c>DELETE FROM users WHERE "Id" = ANY(v_staff)</c>,
+    /// migration <c>DecoupleProductionLockFromLiveMode</c>). Extrait pour que les deux méthodes
+    /// décrivent le MÊME jeu de comptes, jamais deux copies qui divergent.
+    /// </summary>
+    private static IReadOnlyList<User> SeedUsers(IdentityPasswordHasher hasher) =>
+    [
+        new User
+        {
+            Id = DirecteurId,
+            SchoolId = EcoleId,
+            Email = DirecteurEmail,
+            PasswordHash = hasher.Hash(DirecteurPassword),
+            FullName = "Directeur de test",
+            Role = Role.Directeur,
+            Status = EntityStatus.Active
+        },
+        // Cible des suspensions (ticket JGK-A05) : un Directeur ne peut pas modifier son PROPRE
+        // statut, il faut donc un second compte dans la même école.
+        new User
+        {
+            Id = SecretaireId,
+            SchoolId = EcoleId,
+            Email = SecretaireEmail,
+            PasswordHash = hasher.Hash(SecretairePassword),
+            FullName = "Secrétaire de test",
+            Role = Role.Secretariat,
+            Status = EntityStatus.Active
+        },
+        // Rôle Finance : encaisse, mais ne compose JAMAIS un montant dû à l'inscription (règle #4).
+        // Sert au test d'autorisation négatif obligatoire de JGK-E01 (POST /enrollments → 403).
+        new User
+        {
+            Id = FinanceId,
+            SchoolId = EcoleId,
+            Email = FinanceEmail,
+            PasswordHash = hasher.Hash(FinancePassword),
+            FullName = "Comptable de test",
+            Role = Role.Finance,
+            Status = EntityStatus.Active
+        },
+        // Rôle Enseignant (ticket JGK-G01) : saisit les notes, mais ne fixe ni les frais ni les
+        // inscriptions.
+        new User
+        {
+            Id = EnseignantId,
+            SchoolId = EcoleId,
+            Email = EnseignantEmail,
+            PasswordHash = hasher.Hash(EnseignantPassword),
+            FullName = "Enseignant de test",
+            Role = Role.Enseignant,
+            Status = EntityStatus.Active
+        },
+        // Aucun SchoolId : sa session n'a pas de tenant, la RLS lui ferme donc toutes les tables
+        // d'école. C'est précisément pourquoi la création d'un Directeur exige une fonction
+        // SECURITY DEFINER (ticket JGK-B01).
+        new User
+        {
+            Id = SuperAdminId,
+            SchoolId = null,
+            Email = SuperAdminEmail,
+            PasswordHash = hasher.Hash(SuperAdminPassword),
+            FullName = "Super Admin de test",
+            Role = Role.SuperAdmin,
+            Status = EntityStatus.Active
+        }
+    ];
 
     public new async Task DisposeAsync()
     {
@@ -319,6 +330,13 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     ///
     /// Exécuté par le PROPRIÉTAIRE : le rôle applicatif n'a volontairement pas le droit de purger
     /// user_status_history (journal append-only).
+    ///
+    /// RÉINSÈRE aussi un compte disparu, pas seulement « à neuf » : depuis le 19/09/2026,
+    /// reset-data supprime PHYSIQUEMENT les comptes du personnel (Secrétariat/Finance/Enseignant,
+    /// migration DecoupleProductionLockFromLiveMode). Un simple UPDATE ne touche alors plus aucune
+    /// ligne — constaté sur SchoolModeEndpointsTests, dont plusieurs [Fact] appellent reset-data et
+    /// faisaient donc échouer en 401 « e-mail inconnu » tout test suivant de la même classe qui se
+    /// connectait en Secrétariat.
     /// </summary>
     public async Task ResetTestUsersAsync()
     {
@@ -334,16 +352,31 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM school_registration_requests;");
 
         var hasher = new IdentityPasswordHasher();
-        await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(DirecteurPassword)}, "Email" = {DirecteurEmail} WHERE "Id" = {DirecteurId};""");
-        await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SecretairePassword)}, "Email" = {SecretaireEmail} WHERE "Id" = {SecretaireId};""");
-        await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(FinancePassword)}, "Email" = {FinanceEmail} WHERE "Id" = {FinanceId};""");
-        await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(EnseignantPassword)}, "Email" = {EnseignantEmail} WHERE "Id" = {EnseignantId};""");
-        await owner.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE users SET "PasswordHash" = {hasher.Hash(SuperAdminPassword)}, "Email" = {SuperAdminEmail} WHERE "Id" = {SuperAdminId};""");
+
+        // IgnoreQueryFilters : défense en profondeur, User n'a de toute façon aucun filtre de tenant
+        // (voir son commentaire de classe) — juste pour ne jamais dépendre d'un futur filtre global.
+        var existingIds = (await owner.Users.IgnoreQueryFilters().Select(u => u.Id).ToListAsync())
+            .ToHashSet();
+
+        foreach (var seedUser in SeedUsers(hasher))
+        {
+            if (existingIds.Contains(seedUser.Id))
+            {
+                await owner.Database.ExecuteSqlInterpolatedAsync(
+                    $"""UPDATE users SET "PasswordHash" = {seedUser.PasswordHash}, "Email" = {seedUser.Email} WHERE "Id" = {seedUser.Id};""");
+            }
+            else
+            {
+                // reset-data (depuis le 19/09/2026, migration DecoupleProductionLockFromLiveMode)
+                // supprime PHYSIQUEMENT les comptes du personnel : un test de la classe qui l'appelle
+                // fait donc disparaître ce compte pour de vrai. Sans cette branche, tout test suivant
+                // qui s'y connecte échoue en 401 « e-mail inconnu » — jamais rejoué par un simple
+                // UPDATE, qui ne touche aucune ligne quand la clé n'existe plus.
+                owner.Users.Add(seedUser);
+            }
+        }
+
+        await owner.SaveChangesAsync(CancellationToken.None);
 
         // Paie (Volume 1 §14) : fiche_paies et employee_contract_histories référencent employee_contracts
         // en Restrict, donc AVANT elle — et employee_contracts référence teachers/users en Restrict,
