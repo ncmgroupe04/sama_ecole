@@ -130,6 +130,41 @@
                     ]
                 },
                 {
+                    id: 'corriger-profil-utilisateur',
+                    title: 'Corriger le profil d’un compte utilisateur',
+                    location: 'Paramètres › Utilisateurs & rôles',
+                    href: '/parametres?tab=utilisateurs',
+                    roles: ['Directeur'],
+                    definition:
+                        "Le Directeur peut corriger le nom complet et/ou l'e-mail d'un compte qu'il a lui-même créé — " +
+                        "Secrétariat, Finance, Enseignant, Surveillant — directement depuis la liste des utilisateurs, " +
+                        "sans passer par la voie en libre-service réservée au titulaire du compte, et sans jamais " +
+                        "pouvoir cibler sa PROPRE fiche par cette voie.",
+                    objectif:
+                        "Corriger une faute de frappe repérée après coup sur un prénom ou un e-mail saisi à la création " +
+                        "d'un compte, sans devoir demander à la personne concernée de le faire elle-même — utile en " +
+                        "particulier si elle n'a pas encore sa propre session ouverte.",
+                    probleme:
+                        "Une adresse e-mail mal saisie à la création d'un compte de secrétariat ou d'enseignant " +
+                        "bloquait la personne concernée (aucune notification, aucune réinitialisation de mot de passe " +
+                        "possible), sans que le Directeur ait de recours simple pour la corriger.",
+                    procedure: [
+                        "Ouvrez Paramètres › Utilisateurs & rôles.",
+                        "Repérez le compte à corriger et ouvrez « Modifier le profil ».",
+                        "Corrigez le nom complet et/ou l'e-mail, puis enregistrez.",
+                        "Aucun mot de passe n'est demandé : c'est le Directeur qui corrige la fiche d'autrui, pas le titulaire qui change ses propres accès."
+                    ],
+                    impacts: [
+                        "Compte visé : le nouvel e-mail devient immédiatement l'identifiant de connexion de ce compte.",
+                        "Votre propre fiche : cette voie est refusée si le compte visé est le VÔTRE — un Directeur corrige son propre e-mail par « Changer mon e-mail » (voir « Sécurité de votre compte »), jamais par ici.",
+                        "Unicité : un e-mail déjà utilisé par un autre compte de l'établissement est refusé."
+                    ],
+                    recommandations: [
+                        "Prévenez la personne concernée après une correction d'e-mail : c'est sa nouvelle adresse de connexion, elle doit la connaître avant sa prochaine tentative.",
+                        "Réservez cette voie aux erreurs de saisie : un changement d'e-mail voulu par la personne elle-même passe par sa propre voie en libre-service, quand son rôle y a accès."
+                    ]
+                },
+                {
                     id: 'annee-scolaire',
                     title: "Ouverture et clôture d'une année académique",
                     location: 'Paramètres › Années scolaires',
@@ -220,46 +255,45 @@
                 },
                 {
                     id: 'mode-sandbox-golive',
-                    title: 'Mode bac à sable et passage en exploitation réelle',
+                    title: 'Mode bac à sable, passage en mode réel et verrouillage définitif',
                     location: 'Paramètres › Paramètres système — Zone de danger',
                     href: '/parametres?tab=securite',
                     roles: ['Directeur'],
                     definition:
-                        "Un établissement démarre en MODE BAC À SABLE : tout ce qui y est saisi — " +
-                        "élèves, notes, encaissements — peut être effacé d'un geste pour repartir d'une " +
-                        "base vierge, aussi souvent que nécessaire le temps de la prise en main. Le " +
-                        "PASSAGE EN MODE RÉEL est une bascule DÉFINITIVE, déclenchée par le Directeur : " +
-                        "au-delà, la réinitialisation disparaît de l'écran et tout ce qui est enregistré " +
-                        "devient de la comptabilité véritable.",
+                        "Un établissement démarre en MODE BAC À SABLE : tout ce qui y est saisi peut être effacé d'un " +
+                        "geste pour repartir d'une base vierge. Le PASSAGE EN MODE RÉEL et le retour en mode test sont " +
+                        "deux bascules PLEINEMENT RÉVERSIBLES, aussi souvent que voulu — aucune des deux ne verrouille " +
+                        "quoi que ce soit par elle-même. Seul le VERROUILLAGE DÉFINITIF, une action manuelle distincte " +
+                        "des deux précédentes, ferme la réinitialisation pour toujours, quel que soit le régime " +
+                        "ultérieur.",
                     objectif:
-                        "Laisser l'établissement s'exercer sans crainte de « salir » ses données " +
-                        "définitives — tester une inscription, une grille tarifaire, un encaissement, " +
-                        "puis tout effacer et recommencer — jusqu'au jour, choisi par le Directeur, où " +
-                        "l'application prend le relais du fonctionnement réel de l'école.",
+                        "Laisser l'établissement s'exercer sans crainte de « salir » ses données définitives — tester, " +
+                        "réinitialiser, refaire des essais, basculer en réel puis revenir tester encore — jusqu'au jour " +
+                        "où le Directeur choisit lui-même de fermer définitivement cette porte de secours.",
                     probleme:
-                        "Sans distinction entre essai et réel, un établissement qui teste l'application " +
-                        "avec de vraies données de test se retrouve avec des élèves fictifs mélangés aux " +
-                        "vrais, ou renonce purement à essayer de peur de devoir tout nettoyer à la main " +
-                        "avant l'ouverture officielle.",
+                        "Sans distinction entre essai et réel, un établissement qui teste l'application avec de vraies " +
+                        "données se retrouve avec des élèves fictifs mélangés aux vrais. Et une bascule test/réel qui " +
+                        "fermerait la purge à la première tentative punirait un Directeur qui hésite encore, ou qui a " +
+                        "besoin de refaire un essai après avoir déjà basculé une fois.",
                     procedure: [
                         "La pastille de la barre supérieure indique en permanence le régime en cours : « Mode test » (orange) ou « Mode réel ». Pour le Directeur, elle mène directement à Paramètres › Sécurité, tout en bas de la section.",
-                        "« Réinitialiser l'école » efface tout ce que vous avez saisi ET paramétré pendant vos essais : élèves, inscriptions, notes, bulletins, transactions, mais aussi classes, matières, enseignants, barème des frais, inventaire, paie, et les comptes de votre personnel.",
-                        "Sont CONSERVÉS : votre compte Directeur, la fiche et les réglages de l'établissement (formats, signatures, SMS), votre abonnement, les années scolaires et leurs trimestres, les mentions, les bâtiments et salles, et le journal d'audit.",
-                        "Le jour où l'établissement est prêt, cliquez sur « Passer en mode réel ».",
-                        "Une modale rappelle que la bascule est définitive et que la réinitialisation ne sera plus disponible ensuite.",
-                        "Saisissez « CONFIRMER », ou le nom exact de l'établissement, pour débloquer le bouton de confirmation — la vérification réelle est refaite côté serveur, la saisie côté écran n'est qu'un confort.",
-                        "Une fois en mode réel, l'écran devient un rappel en lecture seule : la date de bascule y est affichée. Le bouton « Repasser en mode test » y reste visible mais GRISÉ — il n'est actif que sur les environnements de démonstration, jamais en production."
+                        "« Réinitialiser l'école » (disponible en mode test, tant qu'aucun verrouillage définitif n'a été posé) efface tout ce que vous avez saisi ET paramétré : élèves, inscriptions, notes, bulletins, transactions, classes, matières, enseignants, barème des frais, inventaire, paie, comptes du personnel.",
+                        "Sont CONSERVÉS par une réinitialisation : votre compte Directeur, la fiche et les réglages de l'établissement, votre abonnement, les années scolaires et leurs trimestres, les mentions, les bâtiments et salles, et le journal d'audit.",
+                        "« Passer en mode réel » : saisissez « CONFIRMER » ou le nom exact de l'établissement. La réinitialisation devient alors indisponible, mais UNIQUEMENT le temps du mode réel.",
+                        "« Repasser en mode test » (visible et ACTIF une fois en mode réel) : saisissez « TEST » ou le nom de l'établissement. Cette bascule n'efface aucune donnée et rouvre aussitôt la réinitialisation — sauf si le verrouillage définitif a été posé entre-temps.",
+                        "« Verrouiller définitivement l'établissement » : une action séparée, à son propre encart de la Zone de danger. Saisissez « VERROUILLER » ou le nom de l'établissement. Au-delà, la réinitialisation disparaît pour toujours, quel que soit le régime test/réel dans lequel l'établissement se trouvera ensuite."
                     ],
                     impacts: [
-                        "Tous les modules : chaque écran de l'application continue de fonctionner à l'identique avant et après la bascule — seule la possibilité de tout réinitialiser disparaît.",
-                        "Journal d'audit : il n'est JAMAIS effacé, même par une réinitialisation. Les actions des comptes supprimés y restent, sous la mention « Compte supprimé ».",
-                        "Comptes du personnel : ils sont supprimés par une réinitialisation ; il faudra les recréer. Seul votre compte Directeur survit, pour que vous puissiez vous reconnecter.",
-                        "Groupe scolaire : un compte qui a aussi accès à un AUTRE de vos établissements n'est pas supprimé — il perd seulement son accès à l'école réinitialisée, pour ne rien retirer à l'autre école."
+                        "Tous les modules : chaque écran continue de fonctionner à l'identique quel que soit le régime — seule la disponibilité de la réinitialisation en dépend.",
+                        "Journal d'audit : jamais effacé, y compris par une réinitialisation ; chaque bascule (mode réel, retour en test, verrouillage) y est elle-même consignée.",
+                        "Comptes du personnel : supprimés par une réinitialisation ; il faudra les recréer. Seul votre compte Directeur survit.",
+                        "Groupe scolaire : un compte ayant aussi accès à un autre établissement n'est pas supprimé — il perd seulement son accès à l'école réinitialisée."
                     ],
                     recommandations: [
-                        "Ne passez en mode réel qu'après avoir testé au moins une fois la chaîne complète — inscription, encaissement, saisie de notes — pour vérifier que tout est correctement paramétré : la bascule ne se défait pas.",
-                        "Réinitialisez librement pendant la phase de test, sans économiser les essais : c'est précisément à cela que sert le mode bac à sable.",
-                        "Une fois en mode réel, une donnée erronée se corrige au cas par cas dans son module d'origine — jamais par une tentative de retour au mode test, qui n'existe plus pour un établissement en production."
+                        "N'utilisez PAS le verrouillage définitif comme un réflexe précoce : tant qu'il n'est pas posé, vous gardez le droit à l'erreur — le passage en mode réel, lui, ne ferme plus rien tout seul depuis le 19/09/2026.",
+                        "Posez le verrouillage définitif une fois vos données réelles installées et vérifiées, si vous voulez exclure tout risque de purge accidentelle par la suite — c'est la seule étape réellement irréversible de tout ce dispositif.",
+                        "Réinitialisez librement pendant la phase de test, y compris après un ou plusieurs allers-retours en mode réel : rien ne consomme ce droit tant que le verrouillage définitif n'est pas posé.",
+                        "Une fois verrouillé définitivement, une donnée erronée se corrige au cas par cas dans son module d'origine : aucune commande ne remet ce verrou à faux."
                     ]
                 },
                 {
@@ -554,6 +588,42 @@
                         "La fiche enseignant et le compte utilisateur sont deux objets distincts : le premier décrit une personne, le second ouvre un accès. Les deux sont nécessaires.",
                         "Maintenez le numéro de téléphone à jour : il constitue le canal de rappel le plus rapide en cas d'absence imprévue.",
                         "Vérifiez la spécialité déclarée avant toute affectation : elle vous prémunit contre l'attribution d'une matière à un professeur qui ne la traite pas."
+                    ]
+                },
+                {
+                    id: 'rattacher-compte-enseignant',
+                    title: 'Rattacher ou changer le compte de connexion d’un enseignant',
+                    location: 'Gestion Scolaire › Enseignants — fiche détaillée',
+                    href: '/enseignants',
+                    roles: ['Directeur'],
+                    definition:
+                        "Le rattachement d'un compte de connexion (rôle Enseignant) à une fiche enseignant n'est plus " +
+                        "figé à la création : le Directeur peut l'ajouter après coup, le changer, ou le retirer, depuis " +
+                        "la fiche détaillée elle-même — un bouton distinct à côté du matricule et du statut.",
+                    objectif:
+                        "Coller au fonctionnement réel des établissements : la fiche RH d'un enseignant existe souvent " +
+                        "de longue date avant qu'un compte de connexion ne lui soit ouvert, et un compte créé par erreur " +
+                        "doit pouvoir être corrigé sans recréer la fiche entière.",
+                    probleme:
+                        "Auparavant, le compte de connexion ne pouvait être posé qu'À LA CRÉATION de la fiche — ce qui " +
+                        "imposait de créer le compte AVANT la fiche enseignant, dans le mauvais ordre pour la plupart " +
+                        "des établissements, ou de vivre avec un mauvais rattachement fait par erreur.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Enseignants et ouvrez la fiche détaillée de l'enseignant concerné.",
+                        "À côté du matricule, cliquez sur l'icône de rattachement : « Rattacher un compte » si aucun compte n'est encore lié, « Changer le compte rattaché » sinon.",
+                        "Choisissez le compte dans la liste — seuls les comptes de rôle Enseignant de votre établissement, pas déjà rattachés à une autre fiche, sont proposés.",
+                        "Enregistrez. Pour retirer un rattachement sans en poser un autre, choisissez « Aucun » dans la même liste.",
+                        "Aucun mot de passe n'est demandé pour cette opération : c'est le Directeur qui agit sur la fiche, pas le titulaire du compte qui prouve son identité."
+                    ],
+                    impacts: [
+                        "Emploi du temps et Cahier de texte : c'est ce rattachement qui détermine quel compte peut consulter son propre emploi du temps et journaliser ses propres séances.",
+                        "Un compte déjà rattaché à une autre fiche enseignant est refusé : un compte ne peut être lié qu'à UNE seule fiche à la fois.",
+                        "Fiche enseignant : le rattachement est une opération SÉCURISÉE, distincte de la correction des champs administratifs (état civil, contact) — elle ne se fait jamais depuis la modale « Modifier la fiche »."
+                    ],
+                    recommandations: [
+                        "Vérifiez l'identité du compte avant de le rattacher : une fois lié, ce compte hérite de tout ce que la fiche enseignant autorise (appel, notes, cahier de texte).",
+                        "Si un enseignant quitte l'établissement, retirez le rattachement (« Aucun ») avant d'archiver ou de réutiliser le compte pour quelqu'un d'autre.",
+                        "Un compte introuvable dans la liste est presque toujours un compte du mauvais rôle ou déjà rattaché ailleurs — vérifiez d'abord Paramètres › Utilisateurs & rôles plutôt que de conclure à un bug."
                     ]
                 },
                 {
@@ -2702,11 +2772,13 @@
                     definition:
                         "Quatre protections s'appliquent au compte de chaque utilisateur, indépendamment de son rôle. Le " +
                         "CHANGEMENT DE MOT DE PASSE en libre-service se fait depuis le menu profil, sans passer par un " +
-                        "administrateur. Le CHANGEMENT D'E-MAIL, depuis la carte de profil de la barre latérale, exige de " +
-                        "reconfirmer le mot de passe actuel et révoque TOUTES les sessions ouvertes, y compris celle en " +
-                        "cours — l'e-mail étant l'identifiant de connexion, le changer mérite la même preuve d'identité " +
-                        "qu'un changement de mot de passe. Le VERROUILLAGE PROGRESSIF bloque temporairement les tentatives " +
-                        "de connexion après plusieurs échecs de mot de passe rapprochés, le délai s'allongeant à chaque " +
+                        "administrateur — pour tous les rôles. Le CHANGEMENT D'E-MAIL, depuis la carte de profil de la " +
+                        "barre latérale, est réservé au DIRECTEUR ET AU SUPER ADMIN : un compte créé par le Directeur " +
+                        "(Secrétariat, Finance, Enseignant, Surveillant) n'a que le mot de passe en libre-service, jamais " +
+                        "son propre e-mail. Quand il est proposé, le changement d'e-mail exige de reconfirmer le mot de " +
+                        "passe actuel et révoque TOUTES les sessions ouvertes, y compris celle en cours. Le VERROUILLAGE " +
+                        "PROGRESSIF bloque temporairement les tentatives de connexion après plusieurs échecs de mot de " +
+                        "passe rapprochés, le délai s'allongeant à chaque " +
                         "nouvel échec. La DÉCONNEXION AUTOMATIQUE ferme la session après une période d'inactivité, dont la " +
                         "durée est réglée par le Directeur dans les Paramètres système.",
                     objectif:
@@ -2719,7 +2791,8 @@
                         "connecté pendant la pause de midi expose élèves, notes et caisse à qui passe devant.",
                     procedure: [
                         "CHANGER SON MOT DE PASSE : ouvrez le menu profil, choisissez « Changer mon mot de passe », saisissez l'actuel puis le nouveau — la robustesse du nouveau est vérifiée à la saisie.",
-                        "CHANGER SON E-MAIL : depuis la carte de profil de la barre latérale, choisissez « Changer mon e-mail », saisissez le nouvel e-mail et votre mot de passe ACTUEL pour confirmer. Vous serez déconnecté de toutes vos sessions, y compris celle-ci : reconnectez-vous avec la nouvelle adresse.",
+                        "CHANGER SON E-MAIL (Directeur et Super Admin uniquement) : depuis la carte de profil de la barre latérale, choisissez « Changer mon e-mail », saisissez le nouvel e-mail et votre mot de passe ACTUEL pour confirmer. Vous serez déconnecté de toutes vos sessions, y compris celle-ci : reconnectez-vous avec la nouvelle adresse.",
+                        "SI VOUS ÊTES Secrétariat, Finance, Enseignant ou Surveillant : cette option n'apparaît pas sur votre carte de profil. Un e-mail erroné se corrige en demandant au Directeur d'utiliser « Corriger le profil d'un compte » (Paramètres › Utilisateurs & rôles).",
                         "APRÈS PLUSIEURS ÉCHECS DE CONNEXION : patientez le temps indiqué par l'écran de connexion ; réessayer plus tôt ne fait que rallonger le délai. En cas de doute réel sur le mot de passe, demandez une réinitialisation.",
                         "DÉCONNEXION AUTOMATIQUE : si l'application vous a déconnecté après une absence, reconnectez-vous simplement — aucune donnée validée avant l'inactivité n'est perdue, seule une saisie en cours non enregistrée l'est.",
                         "RÉGLER LE DÉLAI (Directeur) : Paramètres › Paramètres système, champ « délai de déconnexion automatique »."
