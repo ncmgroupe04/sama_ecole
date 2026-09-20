@@ -77,6 +77,7 @@ public class ApplicationDbContext(
 
     // ------------------------------------------------------------------ Module Coran/Franco-Arabe (socle)
     public DbSet<QuranProgress> QuranProgresses => Set<QuranProgress>();
+    public DbSet<QuranEvaluation> QuranEvaluations => Set<QuranEvaluation>();
 
     // Module Inventaire (patrimoine, stock, prêts de matériel).
     public DbSet<InventoryCategory> InventoryCategories => Set<InventoryCategory>();

@@ -161,6 +161,9 @@ public interface IApplicationDbContext
     /// <summary>Suivi individuel de mémorisation coranique (module Coran/Franco-Arabe). Verrou optimiste xmin.</summary>
     DbSet<QuranProgress> QuranProgresses { get; }
 
+    /// <summary>Notes d'examen oral de récitation coranique (module Coran/Franco-Arabe). Verrou optimiste xmin.</summary>
+    DbSet<QuranEvaluation> QuranEvaluations { get; }
+
     // ------------------------------------------------------------------ Module Inventaire
 
     /// <summary>Familles de biens (Mobilier, Manuels scolaires, Informatique…), propres à chaque école.</summary>
