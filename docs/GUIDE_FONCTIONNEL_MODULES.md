@@ -335,21 +335,21 @@ Super Admin, Directeur, Secrétariat.
 - **Rattachement d'un compte de connexion** (Directeur uniquement, optionnel) : lie la fiche RH à un
   compte de rôle Enseignant existant, pour que ce dernier puisse faire l'appel de ses classes assignées
   — c'est ce lien qui borne la saisie de présence et d'emploi du temps à ses propres classes/matières.
-  Il ne peut se poser **qu'à la création** de la fiche, jamais après coup depuis le formulaire de
-  modification (rattachement rétroactif non construit — voir la note ci-dessous).
+  Possible **à la création** de la fiche, mais aussi **après coup** depuis la fiche détaillée
+  (`PUT /teachers/{id}/user-account`, ticket JGK-D06bis, 20/09/2026) : le flux réel de l'école est
+  souvent l'inverse — la fiche RH existe depuis longtemps, le compte de connexion s'ouvre plus tard.
+  Le rattachement vérifie que le compte appartient à la même école, porte le rôle Enseignant et n'est
+  pas déjà lié à une autre fiche ; il peut aussi être changé ou retiré, jamais seulement posé une fois.
 - Retirer une matière à un enseignant est une opération physique sur la table de liaison (aucune valeur
   d'audit à conserver), contrairement aux tables à donnée métier historisée.
 - Champs STATEDUC repliés et facultatifs (genre, diplôme académique, diplôme professionnel, statut
   administratif, matricule de solde, date de première prise de service) — alimentent le rapport
   annuel STATEDUC (§13 de ce guide) sans jamais bloquer la création d'une fiche.
 
-> **Point de vigilance connu** : si une fiche enseignant a été créée **sans** rattacher de compte, il
-> n'existe aujourd'hui aucun bouton pour l'y rattacher après coup — seule la recréation, ou une future
-> action dédiée, permet de corriger ce cas.
-
 ### Flux d'utilisation typique
 1. Le Secrétariat ou le Directeur crée la fiche enseignant, sélectionne ses matières qualifiées.
-2. Le Directeur, s'il le souhaite, rattache dès la création un compte « Enseignant » existant.
+2. Le Directeur rattache un compte « Enseignant » existant — dès la création, ou plus tard depuis la
+   fiche détaillée si le compte n'existait pas encore à ce moment-là.
 3. L'enseignant ainsi rattaché peut se connecter et n'agit que sur ses propres classes/matières/créneaux
    (Notes, Présences, Cahier de texte, Emploi du temps).
 
@@ -892,7 +892,15 @@ lui-même (voir ci-dessous).
   bord ; seul un « Verrouiller définitivement » explicite, non rejouable, ferme la purge pour toujours.
 - **Utilisateurs & rôles** : création de comptes du personnel, blocage/suspension/réactivation (motif
   obligatoire), réinitialisation de mot de passe, historique des changements de statut — réservé au
-  Directeur.
+  Directeur. **Correction de profil** (`PATCH /users/{id}/profile`, 20/09/2026) : le Directeur peut
+  aussi corriger le nom complet et/ou l'e-mail d'un compte géré — typiquement une faute de frappe
+  repérée après la création — sans passer par le changement d'e-mail en libre-service et sans jamais
+  pouvoir cibler sa propre fiche par cette voie.
+- **Changer mon e-mail** (menu de session, libre-service, `POST /auth/change-email`) est réservé au
+  **Directeur et au Super Admin** depuis le 20/09/2026 — les comptes que le Directeur crée
+  (Secrétariat, Finance, Enseignant, Surveillant) n'ont plus cette option, disparue de leur menu, et
+  gardent uniquement « Changer mon mot de passe » : la correction de leur e-mail passe désormais par le
+  Directeur (point précédent), pour ne pas le solliciter à chaque demande évitable.
 
 ### Flux d'utilisation typique
 1. À la création de l'école, le Directeur renseigne l'identité de l'établissement, ses formats et son
