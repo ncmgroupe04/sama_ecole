@@ -143,7 +143,8 @@ service a donc besoin de sa base PostgreSQL et de sa configuration complète, ex
 | `Smtp__Host`, `Smtp__User`, `Smtp__Password`, `Smtp__FromAddress` | **requises** | `EmailSenderGuard` refuse de démarrer (voir la sortie de secours ci-dessous) |
 | `ForwardedHeaders__Enabled=true` | **requise** | Le frontal Cloud Run termine TLS : sans cela l'application voit l'IP du frontal pour toutes les requêtes (les limiteurs par IP s'effondrent sur une partition unique) et `Request.Scheme` reste `http` |
 | `ASPNETCORE_ENVIRONMENT=Production` | recommandée | Défaut de l'image ; à poser explicitement pour lever toute ambiguïté (`Staging` sur la recette) |
-| `Auth__PublicBaseUrl`, `PayDunya__PublicBaseUrl` | requises en production | URL publique du service — sert à construire les liens envoyés par e-mail et les retours PayDunya |
+| `Auth__PublicBaseUrl`, `PayDunya__PublicBaseUrl`, `Registration__PublicBaseUrl` | requises en production | URL publique du service — sert à construire les liens envoyés par e-mail (réinitialisation, retours PayDunya, lien de connexion post-approbation et lien `/admin/inscriptions` de l'alerte Super Admin) |
+| `Registration__AdminNotificationEmail` | optionnelle | Sans elle, aucune alerte e-mail à la soumission d'une demande d'inscription — le Super Admin continue de la découvrir sur `/admin/inscriptions` |
 | `Sms__*`, `WhatsApp__*`, `PayDunya__*` | optionnelles | Avertissement au démarrage, canal inactif (§3bis) |
 | `ConnectionStrings__Migrations` | **à NE PAS poser** | Rôle propriétaire, exempté de RLS. Il n'appartient qu'au travail de migration (AGENTS.md règle #2) |
 

@@ -171,6 +171,8 @@ Application automatique de la notation /10 ou /20 selon le niveau ; mentions per
 `GET /admin/registration-requests`, `POST /admin/registration-requests/{id}/approve`, `POST /admin/registration-requests/{id}/reject`. L'approbation crée, dans une seule transaction : `School` (Active), `User` Directeur (Active, mot de passe déjà défini), `Subscription` (`AwaitingPayment`).
 *Dépend de* : JGK-I01, JGK-B01. *Critères* : un test vérifie l'atomicité (si la création de l'un des trois échoue, aucun des trois n'est créé) ; un rejet n'a aucun effet sur `Schools`/`Users`.
 
+**Complément (20/09/2026)** : `SubmitRegistrationRequestHandler` envoie désormais, en plus de la confirmation au demandeur, une alerte à `Registration__AdminNotificationEmail` (optionnelle — vide par défaut, aucune alerte alors) avec le détail de la demande et un lien vers `/admin/inscriptions`. L'e-mail d'approbation (`ApproveRegistrationRequestHandler`) porte désormais un lien de connexion direct (`Registration__PublicBaseUrl` + `/login`). Nouveau réglage `RegistrationSettings` (`SamaEcole.Application.Registration`), même idiome que `AuthSettings`/`StateIntegrationSettings` — voir `.env.example` et Volume 9 §Variables à poser sur le service.
+
 **JGK-I04** [C] — Restriction d'accès `AwaitingPayment`
 Middleware d'autorisation bloquant tout endpoint hors `/subscriptions/{schoolId}/payments` et profil utilisateur tant que `Subscriptions.Status = AwaitingPayment`, réutilisant la logique de mode restreint existante (JGK-B03).
 *Dépend de* : JGK-I03. *Critères* : un token JWT valide émis avant paiement ne donne accès à aucun autre module tant que le paiement n'est pas confirmé — vérifié même si le token n'a pas expiré.

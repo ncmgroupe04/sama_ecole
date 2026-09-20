@@ -24,6 +24,7 @@ public class SubmitRegistrationRequestHandler(
     IRegistrationReferenceGenerator referenceGenerator,
     ISchoolProvisioningStore provisioningStore,
     IEmailSender emailSender,
+    RegistrationSettings registrationSettings,
     ILogger<SubmitRegistrationRequestHandler> logger)
     : IRequestHandler<SubmitRegistrationRequestCommand, SubmitRegistrationRequestResult>
 {
@@ -99,6 +100,24 @@ public class SubmitRegistrationRequestHandler(
                 trackingReference);
         }
 
+        // Alerte Super Admin — confort additionnel, pas un mécanisme dont la Revue (Volume 1 §11.5)
+        // dépend : le Super Admin voit de toute façon la demande sur /admin/inscriptions. Isolée dans
+        // son propre try/catch pour qu'un échec ici ne masque jamais l'échec (ou le succès) de la
+        // confirmation envoyée au demandeur ci-dessus — deux effets de bord indépendants.
+        if (!string.IsNullOrWhiteSpace(registrationSettings.AdminNotificationEmail))
+        {
+            try
+            {
+                await SendAdminAlertAsync(registrationRequest, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Demande d'inscription {TrackingReference} enregistrée, mais l'alerte Super Admin n'a pas pu être envoyée.",
+                    trackingReference);
+            }
+        }
+
         // Aucun mot de passe ici — seulement des identifiants non sensibles.
         logger.LogInformation(
             "Demande d'inscription {TrackingReference} enregistrée pour l'établissement « {SchoolName} ».",
@@ -153,6 +172,41 @@ public class SubmitRegistrationRequestHandler(
 
         await emailSender.SendAsync(
             new EmailMessage(email, "Votre demande d'inscription Unikol", body),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Ne transmet ni mot de passe ni hash — seulement les champs déjà visibles depuis
+    /// <c>GET /admin/registration-requests</c> (même règle que la confirmation ci-dessus).
+    /// </summary>
+    private async Task SendAdminAlertAsync(
+        SchoolRegistrationRequest registrationRequest, CancellationToken cancellationToken)
+    {
+        var reviewUrl = $"{registrationSettings.PublicBaseUrl.TrimEnd('/')}/admin/inscriptions";
+
+        var body =
+            $"""
+             Nouvelle demande d'inscription reçue sur Unikol.
+
+             Établissement : {registrationRequest.SchoolName}
+             Ville / région : {registrationRequest.City ?? "—"} / {registrationRequest.Region ?? "—"}
+             Effectif estimé : {registrationRequest.EstimatedStudentCount?.ToString() ?? "—"}
+             Plan souhaité : {registrationRequest.RequestedPlan}
+
+             Directeur : {registrationRequest.DirectorFullName}
+             E-mail : {registrationRequest.DirectorEmail}
+             Téléphone : {registrationRequest.DirectorPhone}
+
+             Référence de suivi : {registrationRequest.TrackingReference}
+
+             Approuver ou rejeter la demande : {reviewUrl}
+             """;
+
+        await emailSender.SendAsync(
+            new EmailMessage(
+                registrationSettings.AdminNotificationEmail!,
+                $"Nouvelle demande d'inscription — {registrationRequest.SchoolName}",
+                body),
             cancellationToken);
     }
 }

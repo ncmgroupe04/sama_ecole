@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Registration;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
@@ -32,6 +33,7 @@ public class ApproveRegistrationRequestHandler(
     IAuditLogStore auditLogStore,
     ICurrentUserService currentUser,
     IEmailSender emailSender,
+    RegistrationSettings registrationSettings,
     TimeProvider timeProvider,
     ILogger<ApproveRegistrationRequestHandler> logger)
     : IRequestHandler<ApproveRegistrationRequestCommand, ApproveRegistrationRequestResult>
@@ -170,6 +172,8 @@ public class ApproveRegistrationRequestHandler(
     private async Task SendApprovalEmailAsync(
         string email, string fullName, string schoolName, CancellationToken cancellationToken)
     {
+        var loginUrl = $"{registrationSettings.PublicBaseUrl.TrimEnd('/')}/login";
+
         var body =
             $"""
              Bonjour {fullName},
@@ -178,7 +182,7 @@ public class ApproveRegistrationRequestHandler(
              a été validée.
 
              Vous pouvez dès à présent vous connecter avec l'adresse e-mail de votre demande et le mot de
-             passe que vous avez choisi lors de votre inscription.
+             passe que vous avez choisi lors de votre inscription : {loginUrl}
 
              Une dernière étape vous attend : l'activation de votre abonnement par un premier paiement,
              directement depuis votre espace.

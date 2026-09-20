@@ -3,6 +3,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Finance.Common;
 using SamaEcole.Application.Finance.Queries.GetDailyCashRegisterPdf;
 using SamaEcole.Application.Notifications;
+using SamaEcole.Application.Registration;
 using SamaEcole.Application.StateIntegration;
 using SamaEcole.Application.Subscriptions;
 using SamaEcole.Infrastructure.Caching;
@@ -71,6 +72,13 @@ public static class DependencyInjection
 
         // Référence de suivi d'une demande d'inscription self-service (ticket JGK-I01).
         services.AddSingleton<IRegistrationReferenceGenerator, RegistrationReferenceGenerator>();
+
+        // Réglages du flux d'inscription self-service (section « Registration » — lien de connexion,
+        // alerte Super Admin). Même idiome que StateIntegrationSettings plus bas.
+        var registrationSettings = configuration
+            .GetSection("Registration")
+            .Get<RegistrationSettings>() ?? new RegistrationSettings();
+        services.AddSingleton(registrationSettings);
 
         services.AddSingleton<IQrCodeService, SamaEcole.Infrastructure.Services.QrCodeService>();
 
