@@ -165,10 +165,11 @@
                         </badge>
                     </div>
 
-                    <p x-show="isTransfer()" x-cloak
+                    <p x-show="isTransfer() && !isReleasing()" x-cloak
                        class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                         <span x-text="assignModal.selected.fullName"></span> sera transféré depuis
-                        <strong x-text="assignModal.selected.currentRoomName"></strong> vers cette chambre.
+                        <strong x-text="assignModal.selected.currentRoomName"></strong> vers
+                        <strong x-text="assignModal.room?.roomName"></strong>.
                     </p>
 
                     <div>

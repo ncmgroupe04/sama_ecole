@@ -66,11 +66,19 @@ document.addEventListener('alpine:init', () => {
         },
 
         closeAssignModal() {
+            clearTimeout(this.searchDebounce);
             this.assignModal.open = false;
         },
 
-        /** Debounce 300 ms : évite une requête à chaque frappe pendant la saisie du nom/matricule. */
+        /** Debounce 300 ms : évite une requête à chaque frappe pendant la saisie du nom/matricule.
+         *  Invalide aussi une sélection périmée : si l'élève sélectionné ne correspond plus au texte
+         *  affiché (l'utilisateur a modifié la recherche après avoir cliqué un résultat), on efface
+         *  `selected` — sinon le bouton Confirmer resterait actif et soumettrait le PREMIER élève
+         *  choisi alors que la case affiche un tout autre nom (Correction Task 16, finding Important 1). */
         onSearchInput() {
+            if (this.assignModal.selected && this.assignModal.searchTerm !== this.assignModal.selected.fullName) {
+                this.assignModal.selected = null;
+            }
             clearTimeout(this.searchDebounce);
             this.searchDebounce = setTimeout(() => this.searchStudents(), 300);
         },
@@ -89,6 +97,11 @@ document.addEventListener('alpine:init', () => {
             this.assignModal.selected = student;
             this.assignModal.results = [];
             this.assignModal.searchTerm = student.fullName;
+            // Le régime par défaut suit le statut ACTUEL de l'élève choisi (Interne ou
+            // DemiPensionnaire) — sinon confirmer sans toucher le select convertirait
+            // silencieusement le régime d'un occupant déjà logé (Correction Task 16, finding
+            // Important 2). Seul un élève Externe (nouvelle affectation) retombe sur 'Interne'.
+            this.assignModal.boardingStatus = student.boardingStatus === 'Externe' ? 'Interne' : student.boardingStatus;
         },
 
         /** Un transfert est un changement de chambre pour un élève DÉJÀ logé ailleurs — pas une simple
