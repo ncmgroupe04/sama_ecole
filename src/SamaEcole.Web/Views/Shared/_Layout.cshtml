@@ -372,7 +372,8 @@
  <icon name="key" class="w-4 h-4 shrink-0 text-white/70" />
  Changer mon mot de passe
  </button>
- <button type="button" x-on:click="isOpen = false; $store.changeEmailModal.open()"
+ @* Directeur/Super Admin seulement — voir sessionMenu() (auth.js) et AuthController.ChangeEmail. *@
+ <button type="button" x-show="canChangeEmail" x-cloak x-on:click="isOpen = false; $store.changeEmailModal.open()"
  class="mt-1.5 w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition-colors">
  <icon name="envelope" class="w-4 h-4 shrink-0 text-white/70" />
  Changer mon e-mail

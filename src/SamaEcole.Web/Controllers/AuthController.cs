@@ -9,6 +9,7 @@ using SamaEcole.Application.Auth.Commands.ResetPassword;
 using SamaEcole.Application.Auth.Commands.SwitchSchool;
 using SamaEcole.Application.Auth.Queries.GetMySchools;
 using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Auth;
 using SamaEcole.Web.Contracts;
 using SamaEcole.Web.RateLimiting;
@@ -157,16 +158,22 @@ public class AuthController(
     /// <summary>
     /// Change l'e-mail de connexion du compte AUTHENTIFIÉ courant, qui doit prouver connaître son mot
     /// de passe actuel — même exigence que /change-password : l'e-mail EST l'identifiant de login (JWT
-    /// `sub`), une session volée ne doit pas suffire à en prendre le contrôle en le changeant. Ouvert
-    /// à tout rôle : Super Admin compris (ChangeUserEmailCommandHandler passe par IAuthStore, jamais
-    /// par IApplicationDbContext — `users` est sous RLS et un Super Admin n'a aucun SchoolId de session).
+    /// `sub`), une session volée ne doit pas suffire à en prendre le contrôle en le changeant.
     ///
-    /// Toutes les sessions viennent d'être coupées (voir AuthStore.ChangeEmailAsync), y compris celle
-    /// du navigateur courant : le cookie de refresh part avec elles, comme sur /change-password.
+    /// Réservé au Directeur (et au Super Admin, qui change aussi son propre e-mail par cette route —
+    /// ChangeUserEmailCommandHandler passe par IAuthStore, jamais par IApplicationDbContext : `users`
+    /// est sous RLS et un Super Admin n'a aucun SchoolId de session pour satisfaire la policy). Les
+    /// comptes que LE DIRECTEUR crée (Secrétariat, Finance, Enseignant, Surveillant) n'ont pas cette
+    /// option — l'e-mail de connexion de ces comptes est fixé par le Directeur à la création et ne se
+    /// corrige que par lui (PATCH /users/{id} n'existe pas encore pour l'e-mail ; en pratique une
+    /// nouvelle fiche). Décision produit du 20/09/2026 : demander un changement d'e-mail à chaque
+    /// Secrétariat/Caissier/Surveillant aurait fait remonter au Directeur des sollicitations qu'un
+    /// changement de mot de passe (ouvert à tous, /change-password) couvre déjà pour leur usage réel.
     /// </summary>
     [HttpPost("change-email")]
-    [Authorize]
+    [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.SuperAdmin)}")]
     [ProducesResponseType<ChangeUserEmailResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> ChangeEmail(

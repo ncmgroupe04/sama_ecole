@@ -429,6 +429,11 @@ document.addEventListener('alpine:init', () => {
         email: window.auth.email,
         name: window.auth.name,
         role: window.auth.role,
+        // « Changer mon e-mail » (POST /auth/change-email) est réservé au Directeur et au Super Admin
+        // (AuthController.ChangeEmail) — décision produit du 20/09/2026 : un compte que le Directeur
+        // crée lui-même (Secrétariat, Finance, Enseignant, Surveillant) n'a pas à le solliciter pour
+        // corriger son e-mail de connexion, seulement pour son mot de passe (ouvert à tous, ci-dessous).
+        canChangeEmail: window.auth.role === 'Directeur' || window.auth.role === 'SuperAdmin',
         isOpen: false,
         logout: () => window.auth.logout()
     }));

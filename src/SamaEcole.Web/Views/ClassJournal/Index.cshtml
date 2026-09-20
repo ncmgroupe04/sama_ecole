@@ -107,7 +107,14 @@
 
     <modal-shell size="lg" open="isCreateOpen" on-close="closeCreate()" title="Journaliser une séance">
         <modal-subtitle>Une entrée par séance réellement tenue — jamais une date future.</modal-subtitle>
-        <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
+
+        @* Ancre toujours présente dans le DOM : submitCreate() y ramène la modale (scrollIntoView)
+           pour que le retour d'erreur reste visible même quand les champs fautifs (Classe, Matière,
+           Date) sont au-dessus de la ligne de flottaison où l'utilisateur a défilé pour saisir Sujet/
+           Contenu — même bug et même correctif que Students/Index.cshtml (createStudentError). *@
+        <div x-ref="createEntryError">
+            <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
+        </div>
 
         <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -202,7 +209,9 @@
             La classe, la matière et la date de séance ne sont jamais modifiables — une erreur sur ces
             champs se corrige en supprimant l'entrée puis en en créant une nouvelle.
         </modal-subtitle>
-        <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
+        <div x-ref="editEntryError">
+            <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
+        </div>
 
         @* Formulaire MONTÉ seulement quand editingEntry n'est pas null : x-model ne peut pas s'écrire
            avec un accès optionnel — même garantie d'animation que les autres écrans du dépôt. *@

@@ -39,35 +39,11 @@ public class CreateTeacherCommandHandler(
         // Lien vers un compte de connexion (ticket JGK-D06) : facultatif, mais s'il est fourni il doit
         // désigner un Enseignant de CETTE école, pas encore rattaché à une autre fiche. On refuse en
         // 422 sur le bon champ plutôt que de laisser une FK/contrainte d'unicité remonter en 500/409.
+        // Garde partagée avec LinkTeacherUserAccountCommandHandler (rattachement a posteriori).
         if (request.UserId is { } userId)
         {
-            // AsNoTracking : ce compte est seulement inspecté (rôle, unicité du rattachement) ici,
-            // jamais modifié — la fiche enseignant créée plus bas référence son Id, pas l'entité même.
-            var user = await dbContext.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == userId && u.SchoolId == schoolId, cancellationToken);
-
-            if (user is null)
-            {
-                throw new ValidationException([
-                    new ValidationFailure(nameof(request.UserId), "Le compte indiqué n'existe pas dans votre établissement.")
-                ]);
-            }
-
-            if (user.Role != Role.Enseignant)
-            {
-                throw new ValidationException([
-                    new ValidationFailure(nameof(request.UserId), "Seul un compte de rôle Enseignant peut être rattaché à une fiche enseignant.")
-                ]);
-            }
-
-            var alreadyLinked = await dbContext.Teachers.AnyAsync(t => t.UserId == userId, cancellationToken);
-            if (alreadyLinked)
-            {
-                throw new ValidationException([
-                    new ValidationFailure(nameof(request.UserId), "Ce compte est déjà rattaché à une autre fiche enseignant.")
-                ]);
-            }
+            await TeacherUserAccountLink.EnsureLinkableAsync(
+                dbContext, schoolId, userId, excludeTeacherId: null, cancellationToken);
         }
 
         // Génération du matricule ET insertion dans une seule transaction (AGENTS.md règle #3) :

@@ -40,6 +40,15 @@ public class GetTeacherByIdQueryHandler(IApplicationDbContext dbContext)
             select new TeacherAssignmentDto(a.Id, c.Name, s.Name, y.Id, y.Label, y.IsActive))
             .ToListAsync(cancellationToken);
 
+        // Compte de connexion rattaché (ticket JGK-D06) : nom/e-mail affichés en confort sur la fiche,
+        // sans obliger l'écran à recharger GET /users (réservé au Directeur) juste pour ce libellé.
+        var linkedUser = teacher.Entity.UserId is { } linkedUserId
+            ? await dbContext.Users.AsNoTracking()
+                .Where(u => u.Id == linkedUserId)
+                .Select(u => new { u.FullName, u.Email })
+                .FirstOrDefaultAsync(cancellationToken)
+            : null;
+
         return new TeacherProfileDto(
             teacher.Entity.Id,
             teacher.Entity.Matricule,
@@ -55,6 +64,9 @@ public class GetTeacherByIdQueryHandler(IApplicationDbContext dbContext)
             subjects,
             assignments,
             teacher.RowVersion,
+            teacher.Entity.UserId,
+            linkedUser?.FullName,
+            linkedUser?.Email,
             teacher.Entity.Gender,
             teacher.Entity.AcademicQualification,
             teacher.Entity.ProfessionalQualification,

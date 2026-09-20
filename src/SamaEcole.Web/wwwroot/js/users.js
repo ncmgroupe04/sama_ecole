@@ -35,6 +35,16 @@ document.addEventListener('alpine:init', () => {
         showStatusChangedDialog: false,
         statusChangedSummary: { fullName: '', newStatus: '' },
 
+        // --- Correction du profil (nom complet / e-mail) : faute de frappe repérée après la création.
+        // Distinct de /auth/change-email (libre-service, réservé au titulaire du compte) — voir
+        // UpdateUserProfileCommand. Jamais proposé sur user.isSelf (voir <row-actions> ci-dessous et
+        // la garde serveur équivalente dans le Handler).
+        editProfileTarget: null, // { id }
+        editProfileForm: { fullName: '', email: '' },
+        isSavingProfile: false,
+        editProfileErrors: {},
+        showProfileEditedDialog: false,
+
         // --- Réinitialisation de mot de passe (saisie directe par le Directeur) ---
         passwordTarget: null, // { id, fullName }
         newPassword: '',
@@ -146,6 +156,35 @@ document.addEventListener('alpine:init', () => {
                 this.statusErrors = window.api.toFieldErrors(err, 'Erreur lors du changement de statut.');
             } finally {
                 this.isChangingStatus = false;
+            }
+        },
+
+        // ------------------------------------------------------------ Profil (nom / e-mail)
+
+        openEditProfile(user) {
+            this.editProfileTarget = { id: user.id };
+            this.editProfileForm = { fullName: user.fullName, email: user.email };
+            this.editProfileErrors = {};
+        },
+
+        closeEditProfile() {
+            this.editProfileTarget = null;
+        },
+
+        async submitEditProfile() {
+            if (!this.editProfileTarget) return;
+
+            this.isSavingProfile = true;
+            this.editProfileErrors = {};
+            try {
+                await window.api.patch(`/users/${this.editProfileTarget.id}/profile`, this.editProfileForm);
+                this.closeEditProfile();
+                await this.load();
+                this.showProfileEditedDialog = true;
+            } catch (err) {
+                this.editProfileErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification du profil.');
+            } finally {
+                this.isSavingProfile = false;
             }
         },
 

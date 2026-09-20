@@ -81,6 +81,7 @@
  <row-action icon="block" label="Bloquer" on-click="openStatusChange(user, 'Blocked')" show="user.status !== 'Blocked'" variant="danger" />
  <row-action icon="pause" label="Suspendre" on-click="openStatusChange(user, 'Suspended')" show="user.status === 'Active'" />
  <row-action icon="checkmark-circle" label="Réactiver" on-click="openStatusChange(user, 'Active')" show="user.status !== 'Active'" />
+ <row-action icon="pencil" label="Modifier le profil" on-click="openEditProfile(user)" />
  <row-action icon="key" label="Mot de passe" on-click="openResetPassword(user)" />
  <row-action icon="clock" label="Historique" on-click="openHistory(user)" />
  </row-actions>
@@ -146,6 +147,44 @@
  <span class="block"><span class="text-slate-500">E-mail :</span> <span class="font-mono text-slate-900" x-text="addedUser.email"></span></span>
  <span class="block"><span class="text-slate-500">Mot de passe :</span> <span class="font-mono text-slate-900" x-text="addedUser.password"></span></span>
  </span>
+ </confirm-dialog-body>
+ </modal-shell>
+
+ <!-- Correction du profil (nom complet / e-mail) — faute de frappe repérée après la création.
+ Distinct de « Changer mon e-mail » (menu de session, libre-service, réservé au titulaire). -->
+ <modal-shell open="editProfileTarget" on-close="closeEditProfile()" size="md" title="Modifier le profil">
+ <modal-subtitle>Corrige le nom ou l'e-mail saisi à la création — sans lien avec le mot de passe.</modal-subtitle>
+
+ <div x-show="editProfileErrors.global" x-cloak class="form-error-banner" x-text="editProfileErrors.global"></div>
+
+ <form x-on:submit.prevent="submitEditProfile()" novalidate class="space-y-4">
+ <div>
+ <label for="edit-profile-fullname" class="form-label form-label-required">Nom complet</label>
+ <input id="edit-profile-fullname" type="text" x-model="editProfileForm.fullName" required maxlength="200"
+ class="input-field" :class="editProfileErrors.fullname && 'input-field-error'">
+ <p x-show="editProfileErrors.fullname" x-cloak x-text="editProfileErrors.fullname" class="field-error"></p>
+ </div>
+
+ <div>
+ <label for="edit-profile-email" class="form-label form-label-required">E-mail</label>
+ <input id="edit-profile-email" type="email" x-model="editProfileForm.email" required maxlength="256"
+ class="input-field" :class="editProfileErrors.email && 'input-field-error'">
+ <p x-show="editProfileErrors.email" x-cloak x-text="editProfileErrors.email" class="field-error"></p>
+ </div>
+
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeEditProfile()" class="btn-modal-secondary group">Annuler</button>
+ <button type="submit" :disabled="isSavingProfile" class="btn-modal-primary group">
+ <span x-text="isSavingProfile ? 'Enregistrement...' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ </form>
+ </modal-shell>
+
+ <!-- Confirmation : profil modifié -->
+ <modal-shell open="showProfileEditedDialog" size="md" on-close="showProfileEditedDialog = false" title="Profil modifié">
+ <confirm-dialog-body close-action="showProfileEditedDialog = false">
+ Le profil a bien été mis à jour.
  </confirm-dialog-body>
  </modal-shell>
 
