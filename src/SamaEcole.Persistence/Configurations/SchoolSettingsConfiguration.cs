@@ -51,6 +51,15 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .IsRequired()
             .HasDefaultValue(SchoolSettingsDefaults.IsCoranModuleEnabled);
 
+        // Contrairement à TypeEtablissement (stocké en int, choix antérieur à la convention actuelle),
+        // SchoolType suit la convention devenue systématique du projet : string, jamais un entier qui
+        // se briserait silencieusement si l'ordre des membres de l'enum changeait un jour.
+        builder.Property(s => s.SchoolType)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.SchoolType);
+
         builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
         builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);
         builder.Property(s => s.CashierSignatureUrl).HasMaxLength(500);

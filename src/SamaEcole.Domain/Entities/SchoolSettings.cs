@@ -130,6 +130,15 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     public bool IsInternatEnabled { get; set; } = SchoolSettingsDefaults.IsInternatEnabled;
 
     public bool IsCoranModuleEnabled { get; set; } = SchoolSettingsDefaults.IsCoranModuleEnabled;
+
+    /// <summary>
+    /// Classification d'établissement (module Coran/Franco-Arabe, spec §3.2) — PUREMENT
+    /// INFORMATIF. N'active rien : <see cref="IsCoranModuleEnabled"/> reste le seul interrupteur
+    /// consommé par ModuleAuthorizationHandler. Défaut <see cref="Enums.SchoolType.Standard"/>,
+    /// comme <see cref="TypeEtablissement"/> reste à <see cref="Enums.TypeEtablissement.Prive"/>
+    /// pour toute école existante.
+    /// </summary>
+    public SchoolType SchoolType { get; set; } = SchoolSettingsDefaults.SchoolType;
 }
 
 /// <summary>
@@ -166,6 +175,12 @@ public static class SchoolSettingsDefaults
 
     /// <summary>Type d'établissement par défaut : Privé, pour garantir la rétrocompatibilité des écoles existantes.</summary>
     public const TypeEtablissement TypeEtablissement = Enums.TypeEtablissement.Prive;
+
+    /// <summary>
+    /// Classification par défaut : Standard. Franco-Arabe et Daara restent un choix explicite du
+    /// Directeur, jamais déduit — même philosophie que TypeEtablissement.
+    /// </summary>
+    public const SchoolType SchoolType = Enums.SchoolType.Standard;
 
     /// <summary>
     /// Aucun crédit à l'ouverture : les SMS s'achètent. Un solde initial offert serait une décision
