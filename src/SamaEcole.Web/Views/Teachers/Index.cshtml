@@ -207,6 +207,35 @@
  <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Adresse de résidence</dt>
  <dd class="mt-1 text-base font-medium text-slate-900" x-text="detail.address || '—'"></dd>
  </div>
+
+ @* Compte de connexion rattaché (ticket JGK-D06bis) : lecture pour tous les rôles autorisés sur la
+ fiche, rattachement/changement réservé au Directeur — même mini-formulaire en ligne que la
+ correction de matricule ci-dessus. Voir teachers.js. *@
+ <div class="sm:col-span-2 lg:col-span-4">
+ <dt class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Compte de connexion</dt>
+ <dd class="mt-1 flex items-center gap-2" x-show="!accountLink.open">
+ <span class="text-base font-medium text-slate-900"
+ x-text="detail.userId ? (detail.userFullName + ' (' + detail.userEmail + ')') : 'Aucun compte rattaché'"></span>
+ <button type="button" x-show="isDirecteur" x-cloak x-on:click="openAccountLink()"
+ :title="detail.userId ? 'Changer le compte rattaché' : 'Rattacher un compte'"
+ class="text-slate-400 hover:text-primary-700 transition-colors">
+ <icon name="pencil" class="w-3.5 h-3.5" />
+ </button>
+ </dd>
+ <div x-show="accountLink.open" x-cloak class="mt-1 space-y-1.5 max-w-sm">
+ <select-field model="accountLink.userId" placeholder="Aucun"
+ options-expr="[{value:'', label:'Aucun'}].concat(eligibleAccounts.map(u => ({value: u.id, label: u.fullName + ' (' + u.email + ')'})))" />
+ <div class="flex items-center gap-2">
+ <button type="button" x-on:click="submitAccountLink()" :disabled="accountLink.saving"
+ class="btn-modal-primary text-xs px-3 py-1 disabled:opacity-50">
+ <span x-text="accountLink.saving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ </button>
+ <button type="button" x-on:click="closeAccountLink()" :disabled="accountLink.saving"
+ class="btn-modal-secondary text-xs px-3 py-1 disabled:opacity-50">Annuler</button>
+ </div>
+ <p x-show="accountLink.error" x-cloak x-text="accountLink.error" class="field-error"></p>
+ </div>
+ </div>
  </dl>
 
  <div class="mt-6">

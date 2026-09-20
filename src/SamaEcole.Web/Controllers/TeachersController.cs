@@ -5,6 +5,7 @@ using SamaEcole.Application.Teachers.Commands.UnassignTeacher;
 using SamaEcole.Application.Teachers.Commands.CreateTeacher;
 using SamaEcole.Application.Teachers.Commands.DeleteTeacher;
 using SamaEcole.Application.Teachers.Commands.ImportTeachers;
+using SamaEcole.Application.Teachers.Commands.LinkTeacherUserAccount;
 using SamaEcole.Application.Teachers.Commands.SetTeacherPhoto;
 using SamaEcole.Application.Teachers.Commands.UpdateTeacher;
 using SamaEcole.Application.Teachers.Queries.GetTeacherById;
@@ -39,6 +40,8 @@ public class TeachersController(ISender mediator) : ControllerBase
     public record SetTeacherPhotoRequest(string? PhotoData, uint RowVersion);
 
     public record CorrectMatriculeRequest(string NewMatricule, uint RowVersion);
+
+    public record LinkUserAccountRequest(Guid? UserId, uint RowVersion);
 
     public record UpdateTeacherRequest(
         string FullName,
@@ -236,6 +239,26 @@ public class TeachersController(ISender mediator) : ControllerBase
         Guid id, [FromBody] CorrectMatriculeRequest request, CancellationToken cancellationToken)
         => Ok(await mediator.Send(
             new CorrectTeacherMatriculeCommand(id, request.NewMatricule, request.RowVersion), cancellationToken));
+
+    /// <summary>
+    /// Rattache, change ou retire (<c>userId</c> null) le compte de connexion (rôle Enseignant) d'une
+    /// fiche déjà créée (ticket JGK-D06bis). Endpoint DÉDIÉ, réservé au DIRECTEUR seul — même
+    /// raisonnement que CorrectMatricule : c'est une opération sécurisée, pas une correction de fiche
+    /// administrative ordinaire (voir LinkTeacherUserAccountCommand). 422 si le compte n'existe pas
+    /// dans l'établissement, n'a pas le rôle Enseignant, ou est déjà rattaché à une autre fiche ; 409
+    /// si la fiche a changé entre-temps.
+    /// </summary>
+    [HttpPut("{id:guid}/user-account")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<LinkTeacherUserAccountResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> LinkUserAccount(
+        Guid id, [FromBody] LinkUserAccountRequest request, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(
+            new LinkTeacherUserAccountCommand(id, request.UserId, request.RowVersion), cancellationToken));
 
     /// <summary>
     /// Feature B — dépose, remplace ou retire (PhotoData null) la photo téléversée d'une fiche déjà

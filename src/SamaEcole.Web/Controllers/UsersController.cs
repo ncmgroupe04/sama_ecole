@@ -1,6 +1,7 @@
 using SamaEcole.Application.Users.Commands.ChangeUserStatus;
 using SamaEcole.Application.Users.Commands.CreateUser;
 using SamaEcole.Application.Users.Commands.ResetUserPassword;
+using SamaEcole.Application.Users.Commands.UpdateUserProfile;
 using SamaEcole.Application.Users.Queries.GetUsers;
 using SamaEcole.Application.Users.Queries.GetUserStatusHistory;
 using SamaEcole.Domain.Enums;
@@ -25,6 +26,7 @@ public class UsersController(ISender mediator) : ControllerBase
 {
     public record ChangeStatusRequest(EntityStatus Status, string Reason);
     public record ResetPasswordRequest(string NewPassword);
+    public record UpdateProfileRequest(string FullName, string Email);
 
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<UserListItem>>(StatusCodes.Status200OK)]
@@ -56,6 +58,28 @@ public class UsersController(ISender mediator) : ControllerBase
         // L'id vient de la route, jamais du corps : il ne doit pas pouvoir diverger.
         var result = await mediator.Send(
             new ChangeUserStatusCommand(userId, request.Status, request.Reason), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Corrige le nom complet et/ou l'e-mail d'un compte que le Directeur gère (Secrétariat, Finance,
+    /// Enseignant, Surveillant) — typiquement une faute de frappe repérée après la création (POST
+    /// /users). Distinct de POST /auth/change-email, réservé au changement EN LIBRE-SERVICE de son
+    /// propre compte (voir UpdateUserProfileCommand) : 422 si ciblé sur sa propre fiche.
+    /// </summary>
+    [HttpPatch("{userId:guid}/profile")]
+    [ProducesResponseType<UpdateUserProfileResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateProfile(
+        Guid userId,
+        [FromBody] UpdateProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new UpdateUserProfileCommand(userId, request.FullName, request.Email), cancellationToken);
 
         return Ok(result);
     }

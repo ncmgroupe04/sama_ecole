@@ -42,6 +42,11 @@ public record TeacherProfileDto(
     IReadOnlyList<TeacherAssignmentDto> Assignments,
     uint RowVersion,
 
+    /// <summary>Compte de connexion rattaché (ticket JGK-D06) — null si la fiche n'en a pas encore.</summary>
+    Guid? UserId,
+    string? UserFullName,
+    string? UserEmail,
+
     // Champs STATEDUC (JGK-M05) — round-trip pour l'édition + affichage sur la fiche. Les enums
     // sérialisent en chaîne (JsonStringEnumConverter global) : « NonRenseigne » tant que rien n'est saisi.
     string? Gender = null,

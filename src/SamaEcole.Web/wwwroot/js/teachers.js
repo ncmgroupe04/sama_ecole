@@ -489,6 +489,48 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        // ------------------------------------------------------------ Rattacher un compte de connexion (JGK-D06bis)
+        // DIRECTEUR seul, endpoint dédié PUT /teachers/{id}/user-account — même mini-formulaire en ligne
+        // que la correction de matricule ci-dessus. Permet de rattacher un compte APRÈS la création de
+        // la fiche (flux réel de l'école : la fiche RH existe avant le compte de connexion), ou de le
+        // changer si la mauvaise fiche a été liée par erreur.
+        accountLink: { open: false, userId: '', saving: false, error: null },
+
+        openAccountLink() {
+            if (!this.detail) return;
+            this.accountLink = { open: true, userId: this.detail.userId || '', saving: false, error: null };
+        },
+
+        closeAccountLink() {
+            this.accountLink = { open: false, userId: '', saving: false, error: null };
+        },
+
+        async submitAccountLink() {
+            if (!this.detail) return;
+
+            this.accountLink.saving = true;
+            this.accountLink.error = null;
+            try {
+                await window.api.put(`/teachers/${this.detail.id}/user-account`, {
+                    userId: this.accountLink.userId || null,
+                    rowVersion: this.detail.rowVersion
+                });
+                await this.refreshTeacherDetail();
+                this.closeAccountLink();
+                // Le compte tout juste rattaché ne doit plus être proposé pour une AUTRE fiche.
+                await this.loadEligibleAccounts();
+            } catch (err) {
+                if (err.code === 'CONCURRENCY_CONFLICT') {
+                    this.accountLink.error = 'Cette fiche vient d\'être modifiée par un autre utilisateur. Elle a été rafraîchie — réessayez.';
+                    await this.refreshTeacherDetail();
+                } else {
+                    this.accountLink.error = window.api.toMessage(err, "Le compte n'a pas pu être rattaché.");
+                }
+            } finally {
+                this.accountLink.saving = false;
+            }
+        },
+
         // ------------------------------------------------------------ Modifier la fiche
 
         openEditTeacher() {

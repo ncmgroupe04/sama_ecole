@@ -106,7 +106,9 @@
  <icon name="key" class="w-4 h-4 shrink-0 text-zinc-500" />
  Changer mon mot de passe
  </button>
- <button type="button" x-on:click="isOpen = false; $store.changeEmailModal.open()"
+ @* Toujours vrai ici (console Super Admin) — canChangeEmail (sessionMenu, auth.js) reste testé pour
+ rester symétrique avec _Layout, où il masque ce bouton pour Secrétariat/Finance/Enseignant/Surveillant. *@
+ <button type="button" x-show="canChangeEmail" x-cloak x-on:click="isOpen = false; $store.changeEmailModal.open()"
  class="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
  <icon name="envelope" class="w-4 h-4 shrink-0 text-zinc-500" />
  Changer mon e-mail

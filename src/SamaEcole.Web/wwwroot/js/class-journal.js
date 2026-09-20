@@ -141,7 +141,21 @@ document.addEventListener('alpine:init', () => {
                     this.createErrors = { global: err.message };
                 } else {
                     this.createErrors = window.api.toFieldErrors(err, 'Erreur lors de la journalisation de la séance.');
+
+                    // toFieldErrors ne pose PAS de clé `global` quand il a réussi à ventiler les
+                    // erreurs par champ (400/422) — or Classe/Matière/Date sont EN HAUT du formulaire,
+                    // au-dessus de la ligne de flottaison une fois que l'utilisateur a défilé jusqu'à
+                    // Sujet/Contenu/Devoirs : sans résumé ni défilement, « Enregistrer » ne produisait
+                    // aucun retour visible (même bug que Students.submitCreate, même correctif).
+                    if (!this.createErrors.global) {
+                        this.createErrors.global = Object.keys(this.createErrors).length > 0
+                            ? 'Certains champs doivent être corrigés — voir les indications en rouge ci-dessous.'
+                            : 'Erreur lors de la journalisation de la séance.';
+                    }
                 }
+                this.$nextTick(() => {
+                    this.$refs.createEntryError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
             } finally {
                 this.isSaving = false;
             }
@@ -185,7 +199,16 @@ document.addEventListener('alpine:init', () => {
                     await this.load();
                 } else {
                     this.editErrors = window.api.toFieldErrors(err, 'Erreur lors de la modification.');
+
+                    if (!this.editErrors.global) {
+                        this.editErrors.global = Object.keys(this.editErrors).length > 0
+                            ? 'Certains champs doivent être corrigés — voir les indications en rouge ci-dessous.'
+                            : 'Erreur lors de la modification.';
+                    }
                 }
+                this.$nextTick(() => {
+                    this.$refs.editEntryError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
             } finally {
                 this.isSavingEdit = false;
             }
