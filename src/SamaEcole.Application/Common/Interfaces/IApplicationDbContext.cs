@@ -156,6 +156,11 @@ public interface IApplicationDbContext
     /// <summary>Débiteurs candidats d'un DebtorReminderBatch, avec leur ancienneté de retard au moment de la génération.</summary>
     DbSet<DebtorReminderBatchItem> DebtorReminderBatchItems { get; }
 
+    // ------------------------------------------------------------------ Module Coran/Franco-Arabe (socle)
+
+    /// <summary>Suivi individuel de mémorisation coranique (module Coran/Franco-Arabe). Verrou optimiste xmin.</summary>
+    DbSet<QuranProgress> QuranProgresses { get; }
+
     // ------------------------------------------------------------------ Module Inventaire
 
     /// <summary>Familles de biens (Mobilier, Manuels scolaires, Informatique…), propres à chaque école.</summary>

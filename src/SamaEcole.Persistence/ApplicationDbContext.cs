@@ -75,6 +75,9 @@ public class ApplicationDbContext(
     public DbSet<DebtorReminderBatch> DebtorReminderBatches => Set<DebtorReminderBatch>();
     public DbSet<DebtorReminderBatchItem> DebtorReminderBatchItems => Set<DebtorReminderBatchItem>();
 
+    // ------------------------------------------------------------------ Module Coran/Franco-Arabe (socle)
+    public DbSet<QuranProgress> QuranProgresses => Set<QuranProgress>();
+
     // Module Inventaire (patrimoine, stock, prêts de matériel).
     public DbSet<InventoryCategory> InventoryCategories => Set<InventoryCategory>();
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
