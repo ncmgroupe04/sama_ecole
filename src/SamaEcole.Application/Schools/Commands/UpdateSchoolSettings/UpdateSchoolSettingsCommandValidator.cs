@@ -45,6 +45,13 @@ public class UpdateSchoolSettingsCommandValidator : AbstractValidator<UpdateScho
                 SchoolSettingsDefaults.MaxDebtorReminderThresholdDays)
             .WithMessage(
                 $"Le seuil de retard doit être compris entre {SchoolSettingsDefaults.MinDebtorReminderThresholdDays} et {SchoolSettingsDefaults.MaxDebtorReminderThresholdDays} jours.");
+
+        RuleFor(c => c.GradeEditWindowDays)
+            .InclusiveBetween(
+                SchoolSettingsDefaults.MinGradeEditWindowDays,
+                SchoolSettingsDefaults.MaxGradeEditWindowDays)
+            .WithMessage(
+                $"Le délai de correction des notes doit être compris entre {SchoolSettingsDefaults.MinGradeEditWindowDays} et {SchoolSettingsDefaults.MaxGradeEditWindowDays} jours.");
     }
 
     private static int ParseScale(string? scale) =>

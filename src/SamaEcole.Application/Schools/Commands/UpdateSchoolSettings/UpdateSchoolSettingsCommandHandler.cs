@@ -69,6 +69,7 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.IsFinanceEnabled = request.IsFinanceEnabled;
         settings.IsInternatEnabled = request.IsInternatEnabled;
         settings.IsCoranModuleEnabled = request.IsCoranModuleEnabled;
+        settings.GradeEditWindowDays = request.GradeEditWindowDays;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -98,6 +99,7 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.IsPedagogyEnabled,
             settings.IsFinanceEnabled,
             settings.IsInternatEnabled,
-            settings.IsCoranModuleEnabled);
+            settings.IsCoranModuleEnabled,
+            settings.GradeEditWindowDays);
     }
 }

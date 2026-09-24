@@ -42,4 +42,7 @@ public record SchoolSettingsDto(
     bool IsPedagogyEnabled = true,
     bool IsFinanceEnabled = true,
     bool IsInternatEnabled = false,
-    bool IsCoranModuleEnabled = false);
+    bool IsCoranModuleEnabled = false,
+
+    /// <summary>Fenêtre de correction des notes par l'Enseignant, en jours (Directeur/Secrétariat : illimitée).</summary>
+    int GradeEditWindowDays = 7);

@@ -48,5 +48,8 @@ public record UpdateSchoolSettingsCommand(
     bool IsPedagogyEnabled = true,
     bool IsFinanceEnabled = true,
     bool IsInternatEnabled = false,
-    bool IsCoranModuleEnabled = false) : IRequest<SchoolSettingsDto>;
+    bool IsCoranModuleEnabled = false,
+
+    /// <summary>Fenêtre de correction des notes par l'Enseignant, en jours (bornes : SchoolSettingsDefaults).</summary>
+    int GradeEditWindowDays = 7) : IRequest<SchoolSettingsDto>;
 

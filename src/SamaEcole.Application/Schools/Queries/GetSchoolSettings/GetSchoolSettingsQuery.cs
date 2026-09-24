@@ -57,7 +57,8 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         settings.IsPedagogyEnabled,
         settings.IsFinanceEnabled,
         settings.IsInternatEnabled,
-        settings.IsCoranModuleEnabled);
+        settings.IsCoranModuleEnabled,
+        settings.GradeEditWindowDays);
 
     private static SchoolSettingsDto Defaults() => new(
         SchoolSettingsDefaults.GradingScale.ToString(),
@@ -83,5 +84,6 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         SchoolSettingsDefaults.IsPedagogyEnabled,
         SchoolSettingsDefaults.IsFinanceEnabled,
         SchoolSettingsDefaults.IsInternatEnabled,
-        SchoolSettingsDefaults.IsCoranModuleEnabled);
+        SchoolSettingsDefaults.IsCoranModuleEnabled,
+        SchoolSettingsDefaults.GradeEditWindowDays);
 }

@@ -52,7 +52,8 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         bool IsPedagogyEnabled = true,
         bool IsFinanceEnabled = true,
         bool IsInternatEnabled = false,
-        bool IsCoranModuleEnabled = false);
+        bool IsCoranModuleEnabled = false,
+        int GradeEditWindowDays = 7);
 
     public record UpdateGradingScaleRequest(string GradingScale);
 
@@ -103,7 +104,8 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
                 request.IsPedagogyEnabled,
                 request.IsFinanceEnabled,
                 request.IsInternatEnabled,
-                request.IsCoranModuleEnabled),
+                request.IsCoranModuleEnabled,
+                request.GradeEditWindowDays),
             cancellationToken);
 
         return Ok(result);

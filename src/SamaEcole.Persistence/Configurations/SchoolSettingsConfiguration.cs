@@ -34,6 +34,12 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .IsRequired()
             .HasDefaultValue(SamaEcole.Domain.Entities.SchoolSettingsDefaults.DebtorReminderThresholdDays);
 
+        // Défaut en base = 7 : les écoles déjà existantes reçoivent la même fenêtre qu'une école neuve,
+        // jamais 0 (qui verrouillerait toute correction Enseignant dès la migration).
+        builder.Property(s => s.GradeEditWindowDays)
+            .IsRequired()
+            .HasDefaultValue(SamaEcole.Domain.Entities.SchoolSettingsDefaults.GradeEditWindowDays);
+
         // Défaut en base = true pour Pédagogie/Finance (socle métier existant, activé par défaut) et
         // false pour Internat/Coran (aucun module derrière ces deux réglages pour l'instant) — sans
         // ce HasDefaultValue explicite, EF Core scaffolderait le défaut CLR (false) pour les quatre,

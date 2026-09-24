@@ -139,6 +139,13 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// pour toute école existante.
     /// </summary>
     public SchoolType SchoolType { get; set; } = SchoolSettingsDefaults.SchoolType;
+
+    /// <summary>
+    /// Fenêtre de correction des notes par l'ENSEIGNANT, en jours : passé ce délai après la saisie
+    /// (<c>Grade.CreatedAt</c>), il ne peut plus corriger sa note — seuls le Directeur et le Secrétariat
+    /// le peuvent, sans limite de délai. Lue par GradeCorrectionAuthorizer ; réglée par le Directeur.
+    /// </summary>
+    public int GradeEditWindowDays { get; set; } = SchoolSettingsDefaults.GradeEditWindowDays;
 }
 
 /// <summary>
@@ -201,6 +208,13 @@ public static class SchoolSettingsDefaults
     /// <summary>Bornes du seuil de retard : au moins 1 jour, au plus une année scolaire complète.</summary>
     public const int MinDebtorReminderThresholdDays = 1;
     public const int MaxDebtorReminderThresholdDays = 365;
+
+    /// <summary>Une semaine pour qu'un Enseignant corrige sa propre saisie, puis la note est verrouillée pour lui.</summary>
+    public const int GradeEditWindowDays = 7;
+
+    /// <summary>Bornes de la fenêtre : au moins 1 jour, au plus une année scolaire complète.</summary>
+    public const int MinGradeEditWindowDays = 1;
+    public const int MaxGradeEditWindowDays = 365;
 
     /// <summary>
     /// Modules activés à la création d'une école : Pédagogie et Finance forment le socle métier
