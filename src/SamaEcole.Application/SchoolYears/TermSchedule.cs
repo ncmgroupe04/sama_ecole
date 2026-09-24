@@ -13,7 +13,7 @@ namespace SamaEcole.Application.SchoolYears;
 /// Dupliquer ce calcul ferait diverger les deux chemins au premier ajustement : une année modifiée
 /// n'aurait alors plus le même découpage qu'une année créée avec les mêmes dates.
 /// </summary>
-internal static class TermSchedule
+public static class TermSchedule
 {
     /// <summary>Le système sénégalais standard compte trois trimestres — aucun écran ne les configure.</summary>
     public const int TermCount = 3;
