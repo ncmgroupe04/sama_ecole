@@ -74,6 +74,28 @@ public class ReportCardDocumentTests
             CouncilObservations: null);
     }
 
+    /// <summary>
+    /// Évolution N°2 — un bulletin d'école semestrielle (2 périodes) ou personnalisée (jusqu'à 6) garde une
+    /// page A5 : le titre suit le libellé de la période (« BULLETIN DE LA 4E PÉRIODE » est le plus long) et
+    /// le récapitulatif annuel compte autant de lignes que de périodes.
+    /// </summary>
+    [Theory]
+    [InlineData("1er semestre", 2)]
+    [InlineData("2e trimestre", 3)]
+    [InlineData("4e période", 6)]
+    public void A_Report_Card_Whatever_The_Period_Split_Fits_On_A_Single_A5_Page(string termLabel, int periodCount)
+    {
+        var recaps = Enumerable.Range(1, periodCount)
+            .Select(i => new ReportCardTermRecap($"{i}e période", i, i == 1 ? 13.27m : null))
+            .ToList();
+        var reportCard = BuildReportCard(12) with { TermLabel = termLabel, TermRecaps = recaps };
+
+        var pages = new ReportCardDocument(reportCard, logo: null)
+            .GenerateImages(ImageGenerationSettings.Default).Count();
+
+        pages.Should().Be(1);
+    }
+
     [Fact]
     public void A_Twelve_Subject_Report_Card_Fits_On_A_Single_A5_Page()
     {

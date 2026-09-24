@@ -49,7 +49,7 @@ public class SendReportCardCommandHandler(
         var termLabel = await dbContext.Terms.AsNoTracking()
             .Where(t => t.Id == request.TermId)
             .Select(t => t.Label)
-            .FirstOrDefaultAsync(cancellationToken) ?? "ce trimestre";
+            .FirstOrDefaultAsync(cancellationToken) ?? "cette période";
 
         var pdfResult = await mediator.Send(new GetReportCardPdfQuery(request.StudentId, request.TermId), cancellationToken);
 

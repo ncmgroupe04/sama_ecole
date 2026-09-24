@@ -285,7 +285,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
         container.Column(column =>
         {
             column.Item().Element(DoubleRule);
-            column.Item().PaddingVertical(2).AlignCenter().Text("BULLETIN DE NOTES").Bold().FontSize(12);
+            column.Item().PaddingVertical(2).AlignCenter().Text(BulletinTitle.For(reportCard.TermLabel)).Bold().FontSize(12);
             if (reportCard.IsBilingualArabic)
             {
                 column.Item().AlignCenter().Element(c => Bilingual.ArabicBlock(c, BulletinArabicLabels.BulletinTitle, fontSize: 11, bold: true));

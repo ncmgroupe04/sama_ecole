@@ -52,6 +52,17 @@ public class GradeSheetPdfTests
 
     // --------------------------------------------------------------------------- Rendu
 
+    [Theory]
+    [InlineData("1er semestre")]
+    [InlineData("4e période")]
+    public void A_Sheet_Of_A_Non_Trimester_Period_Renders_As_A_Pdf(string termLabel)
+    {
+        // Évolution N°2 : la ligne d'en-tête s'intitule « Période » et accepte tout libellé de période.
+        var sheet = Sheet(30) with { TermLabel = termLabel };
+
+        IsPdf(_generator.Generate(sheet, logo: null)).Should().BeTrue();
+    }
+
     [Fact]
     public void A_Class_Renders_As_A_Pdf()
     {

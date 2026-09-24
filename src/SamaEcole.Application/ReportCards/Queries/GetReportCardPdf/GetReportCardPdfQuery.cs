@@ -221,7 +221,7 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
 
         var term = await dbContext.Terms.AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == termId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Trimestre {termId} introuvable dans votre établissement.");
+            ?? throw new KeyNotFoundException($"Période {termId} introuvable dans votre établissement.");
 
         var classroom = await dbContext.Classrooms.AsNoTracking().FirstAsync(c => c.Id == student.ClassroomId, cancellationToken);
         var school = await dbContext.Schools.AsNoTracking().FirstAsync(s => s.Id == student.SchoolId, cancellationToken);

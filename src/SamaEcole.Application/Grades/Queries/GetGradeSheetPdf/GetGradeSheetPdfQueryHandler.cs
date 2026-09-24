@@ -39,7 +39,7 @@ public class GetGradeSheetPdfQueryHandler(
 
         var term = await dbContext.Terms.AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == request.TermId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Trimestre {request.TermId} introuvable dans votre établissement.");
+            ?? throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
 
         // Un DOMAINE d'une grille APC n'est qu'un regroupement : il ne porte jamais de note (voir
         // CreateGradeCommandHandler) — lui imprimer une fiche de saisie n'aurait aucun sens.

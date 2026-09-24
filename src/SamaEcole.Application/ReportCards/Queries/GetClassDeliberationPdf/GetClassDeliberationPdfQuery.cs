@@ -28,7 +28,7 @@ public class GetClassDeliberationPdfQueryHandler(
 
         var term = await dbContext.Terms.AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == request.TermId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Trimestre {request.TermId} introuvable dans votre établissement.");
+            ?? throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
 
         var studentIds = await dbContext.Students.AsNoTracking()
             .Where(s => s.ClassroomId == request.ClassroomId)

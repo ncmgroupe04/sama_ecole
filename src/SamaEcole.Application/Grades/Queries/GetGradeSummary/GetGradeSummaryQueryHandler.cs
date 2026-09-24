@@ -19,7 +19,7 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
 
         if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
         {
-            throw new KeyNotFoundException($"Trimestre {request.TermId} introuvable dans votre établissement.");
+            throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
         }
 
         // Cycle de la classe de l'élève : Maternelle & Primaire calculent une moyenne SIMPLE sur /10,

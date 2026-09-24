@@ -85,7 +85,7 @@ public class GradeSheetDocument(GradeSheetPdfDto sheet, byte[]? logo) : IDocumen
                 });
                 row.RelativeItem().Column(right =>
                 {
-                    InfoRow(right, "Trimestre", sheet.TermLabel);
+                    InfoRow(right, "Période", sheet.TermLabel);
                     InfoRow(right, "Année scolaire", sheet.SchoolYearLabel);
                     InfoRow(right, "Barème", $"sur {FormatScale(sheet.MaxScore)}");
                 });

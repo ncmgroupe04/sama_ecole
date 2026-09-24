@@ -130,7 +130,7 @@ public class SendReportCardCommandTests : IAsyncLifetime
         template.Should().NotBeNull();
         template!.BodyParameters.Should().HaveCount(2);
         template.BodyParameters[0].Should().Be("Awa Fall", "{{1}} = nom de l'élève");
-        template.BodyParameters[1].Should().Be("ce trimestre", "{{2}} = période, repli quand le trimestre est introuvable");
+        template.BodyParameters[1].Should().Be("cette période", "{{2}} = période, repli quand la période est introuvable");
         template.HeaderDocument.Should().NotBeNull();
         template.HeaderDocument!.ContentType.Should().Be("application/pdf");
     }

@@ -25,7 +25,7 @@ public class GetClassGradesQueryHandler(IApplicationDbContext dbContext, GradeCo
 
         if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
         {
-            throw new KeyNotFoundException($"Trimestre {request.TermId} introuvable dans votre établissement.");
+            throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
         }
 
         var students = await dbContext.Students.AsNoTracking()
