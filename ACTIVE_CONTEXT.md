@@ -144,6 +144,39 @@ informatif** — `IsCoranModuleEnabled` reste le seul interrupteur lu par `Modul
 **Reste à faire :** écran(s) Coran (lot séparé, comme l'Internat) et intégration de `SectionType` au bulletin
 (aucun effet sur `Coefficient` ni sur le calcul des moyennes tant que ce lot n'existe pas).
 
+### Périodes d'évaluation dynamiques (24/09/2026) — livré (Évolution N°2)
+
+Le découpage de l'année n'est plus « 3 trimestres » en dur. Branche `feature/evaluation-periods`. Plan :
+`docs/superpowers/plans/2026-09-24-evaluation-periods.md`.
+
+- **Réglage.** `SchoolSettings.EvaluationPeriodType` (`Trimester` défaut / `Semester` / `Custom`) et
+  `CustomPeriodCount` (2 à 6, lu seulement pour `Custom`), migration `AddEvaluationPeriodType`, réglés par le
+  Directeur dans Paramètres › Pédagogie. `PeriodSchedule` (Application) remplace `TermSchedule` : nombre,
+  libellés (« 1er trimestre », « 1er semestre », « 1re période ») et dates à parts égales, la dernière période
+  absorbant le reste — l'ancien découpage trimestriel est reproduit à l'identique (test figé).
+- **Génération.** `CreateSchoolYearCommandHandler` lit le réglage (une école sans ligne garde les trimestres).
+  Les sélecteurs de notes, moyennes et bulletins listaient déjà `GET /school-years/{id}/terms` : ils suivent sans
+  autre code. Reste du vocabulaire « Trimestre » remplacé par « Période » dans l'interface et l'aide.
+- **Documents.** Titre du bulletin dérivé du libellé (`BulletinTitle` : « BULLETIN DU 1ER SEMESTRE », « … DE LA 1RE
+  PÉRIODE »), repli « BULLETIN DE NOTES » sans libellé ; ligne « Période » de la fiche de saisie papier.
+  `docs/design-references/README.md` §2 mis à jour (règle #12).
+
+**Quatre arbitrages actés (24/09/2026), à ne pas rouvrir sans raison :**
+
+1. **« Personnalisé » = un nombre de périodes de 2 à 6**, à parts égales. Libellés et dates éditables période par
+   période : hors périmètre.
+2. **Le titre du bulletin s'adapte dynamiquement** — dérogation assumée au titre fixe de la référence visuelle,
+   consignée dans `design-references/README.md`.
+3. **Le réglage n'agit que sur les années créées ensuite.** Une année déjà créée **garde son nombre de périodes**
+   quand ses dates changent (`UpdateSchoolYearCommandHandler` recale les `Term` existants, jamais le réglage).
+   `POST /school-years/{id}/apply-evaluation-periods` rejoue le découpage sur une année existante, en **blocage
+   strict** : refusé (422) dès qu'UNE note ou UNE appréciation de bulletin existe sur l'année, et sur une année
+   terminée. Les anciennes périodes sont archivées (suppression logique), pas effacées.
+4. **Libellés complets à l'écran** (« 1er semestre »), aucun code court « S1/T1 ».
+
+**Piège de la migration en local :** un serveur de dev lancé verrouille les DLL du dossier `Debug` ; pour générer
+une migration sans l'arrêter, `dotnet ef migrations add … --configuration Release`.
+
 ### Inventaire (26/08/2026) — API et écran livrés
 
 Suivi du patrimoine, commun aux écoles publiques (tables-bancs, manuels d'État, consommables) et

@@ -250,6 +250,13 @@ Suivi des dépenses par catégorie, avec justificatif attaché (upload de docume
 - **Référence exacte à reproduire** : `docs/design-references/bulletin-reference.png` (description détaillée dans `docs/design-references/README.md` §2) — colonnes, en-têtes, blocs de synthèse et mentions dans l'ordre exact de cette référence.
 - Format **A5 Portrait**, avec ajustement automatique des largeurs de colonnes pour éviter tout débordement sur une seconde page.
 - Colonnes Matière / Moyenne / Mention optimisées pour l'impression.
+- **Périodes d'évaluation paramétrables** (Évolution N°2) : le Directeur choisit dans Paramètres › Pédagogie
+  le découpage de l'année — trimestriel (défaut, 3 trimestres), semestriel (2 semestres) ou personnalisé
+  (2 à 6 périodes réparties à parts égales). Il s'applique aux années créées ensuite ; sur l'année en cours
+  il se rejoue à la demande, et **seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie**.
+  Les sélecteurs de période (saisie des notes, moyennes, bulletins) et les documents PDF suivent ce découpage ;
+  le titre du bulletin en découle (« BULLETIN DU 1ER SEMESTRE », « BULLETIN DU 2E TRIMESTRE », « BULLETIN DE LA
+  1RE PÉRIODE »).
 
 ### 8.2 Système de notation
 

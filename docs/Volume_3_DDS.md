@@ -135,6 +135,11 @@ Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas 
 
 `SchoolSettings`, `GradingSettings`, `ReportSettings`, `EnrollmentSettings`, `FeeSettings`.
 
+`school_settings` porte, entre autres, le découpage de l'année en périodes d'évaluation (Évolution N°2) :
+`EvaluationPeriodType` (`varchar(20)`, `Trimester` par défaut / `Semester` / `Custom`) et `CustomPeriodCount`
+(`integer`, 3 par défaut, 2 à 6 utilisé seulement pour `Custom`). Les périodes elles-mêmes restent des lignes
+de `terms` (`Label`, `Order`) : ces deux colonnes ne pilotent que leur GÉNÉRATION à la création d'une année.
+
 ### 4.4 Domaine Pédagogique
 
 `SchoolYears`, `Terms`, `Levels`, `ClassRooms`, `Subjects`, `Teachers`, `TeacherAssignments`, `Students`, `Guardians`, `StudentGuardians`, `Enrollments`, `EnrollmentDocuments`, `WaitingListEntries`, `StudentTransfers`, `Attendances`, `Grades`, `GradeDetails`, `ReportCards`, `ReportCardDetails`, `ScheduleSlots` (créneaux d'emploi du temps, Volume 1 §21), `TeacherAttendances` (pointage des enseignants, Volume 1 §21.3).

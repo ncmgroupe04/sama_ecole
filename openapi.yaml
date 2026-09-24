@@ -1487,6 +1487,38 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+  /school-years/{id}/apply-evaluation-periods:
+    post:
+      tags: [SchoolYears]
+      summary: Rejouer sur cette année le découpage en périodes choisi dans les réglages (Directeur)
+      description: >-
+        Remplace les périodes de l'année par celles du réglage courant `evaluationPeriodType` (voir
+        SchoolSettings) : trimestres, semestres ou périodes personnalisées. Les anciennes périodes sont
+        archivées (suppression logique), jamais effacées. Refusé (422) dès qu'UNE note ou UNE appréciation
+        de bulletin est rattachée à l'une des périodes de l'année — blocage strict — et sur une année
+        terminée. Idempotent : un découpage déjà conforme ne change rien.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Les périodes de l'année après application, dans l'ordre
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Term' }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Année scolaire introuvable dans cet établissement }
+        '422':
+          description: >-
+            Année terminée (lecture seule), ou notes / appréciations de bulletin déjà saisies sur l'année.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /school-years/{id}/export:
     get:
       tags: [SchoolYears]
@@ -1515,11 +1547,13 @@ paths:
   /school-years/{id}/terms:
     get:
       tags: [SchoolYears]
-      summary: Lister les trimestres d'une année scolaire (générés automatiquement)
+      summary: Lister les périodes d'évaluation d'une année scolaire (générées automatiquement)
       description: >-
-        Trois trimestres sont générés automatiquement à la création de l'année scolaire, leurs dates
-        divisant la période en trois tranches consécutives — aucun endpoint ne les crée directement.
-        Lecture ouverte à tous les rôles : l'écran de saisie de notes en a besoin.
+        Les périodes sont générées automatiquement à la création de l'année scolaire selon le réglage
+        `evaluationPeriodType` de l'école — trois trimestres par défaut, deux semestres, ou 2 à 6 périodes
+        personnalisées —, leurs dates divisant la période en tranches consécutives à parts égales.
+        Aucun endpoint ne les crée directement (voir `POST /school-years/{id}/apply-evaluation-periods`
+        pour rejouer un découpage). Lecture ouverte à tous les rôles : l'écran de saisie de notes en a besoin.
       parameters:
         - name: id
           in: path
@@ -4973,6 +5007,20 @@ components:
           description: >-
             Fenêtre de correction des notes par l'Enseignant, en jours depuis la saisie. Passé ce délai,
             seuls le Directeur et le Secrétariat corrigent (sans limite). Réglée par le Directeur seul.
+        evaluationPeriodType:
+          type: string
+          enum: [Trimester, Semester, Custom]
+          default: Trimester
+          description: >-
+            Découpage de l'année en périodes d'évaluation : 3 trimestres (défaut), 2 semestres, ou un
+            nombre choisi (`customPeriodCount`). N'agit que sur les années créées ensuite ou rejouées via
+            `POST /school-years/{id}/apply-evaluation-periods` — jamais sur une année déjà notée.
+        customPeriodCount:
+          type: integer
+          minimum: 2
+          maximum: 6
+          default: 3
+          description: Nombre de périodes quand `evaluationPeriodType` vaut `Custom` ; ignoré sinon.
 
     SchoolYearCreateRequest:
       type: object
@@ -5622,7 +5670,7 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
-        label: { type: string, example: "1er trimestre" }
+        label: { type: string, example: "1er trimestre", description: "« 1er trimestre », « 1er semestre » ou « 1re période » selon le découpage de l'école ; imprimé tel quel sur les documents." }
         order: { type: integer, example: 1 }
         startDate: { type: string, format: date }
         endDate: { type: string, format: date }
