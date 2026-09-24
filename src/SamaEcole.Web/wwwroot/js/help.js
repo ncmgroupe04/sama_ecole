@@ -528,6 +528,47 @@
                         "Achevez la structure de la grille AVANT d'ouvrir la saisie aux enseignants : la remanier une fois les notes saisies impose de contrôler chaque moyenne.",
                         "Une même matière porte légitimement des coefficients différents selon le niveau — « Mathématiques » vaut 4 au primaire et 6 en série scientifique. Ce n'est pas un doublon, c'est le cas normal."
                     ]
+                },
+                {
+                    id: 'coefficients-par-serie',
+                    title: 'Coefficients par série et surcharge du Directeur',
+                    location: 'Gestion Scolaire › Matières › onglet Coefficients',
+                    href: '/matieres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Au lycée, une même matière ne pèse pas pareil selon la série : les Mathématiques comptent bien plus " +
+                        "en S1 qu'en L2. Chaque classe de lycée porte une SÉRIE (L1, L2, S1, S2 ou Techniques) et l'onglet " +
+                        "Coefficients permet de régler le coefficient d'une matière pour une série entière, ou pour une classe " +
+                        "précise. Le coefficient utilisé dans les moyennes et les bulletins est, dans l'ordre : celui de la " +
+                        "classe s'il existe, sinon celui de la série, sinon celui de la matière.",
+                    objectif:
+                        "Obtenir des moyennes et des bulletins conformes à la pondération officielle de chaque série, sans créer " +
+                        "une matière distincte par série et sans jamais retoucher matière par matière ce qui se règle une fois " +
+                        "pour toute la série.",
+                    probleme:
+                        "Sans cela, l'école devait dupliquer chaque matière (« Maths Terminale S1 », « Maths Terminale L2 »…) pour " +
+                        "obtenir des coefficients différents, ou saisir les moyennes à la main.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Classes : créez ou modifiez chaque classe de lycée et choisissez sa série. Une classe sans série (Seconde commune) garde les coefficients de ses matières.",
+                        "Ouvrez Gestion Scolaire › Matières › Coefficients et choisissez la portée « Série ».",
+                        "Cliquez sur « Appliquer le modèle » pour préremplir la série avec les coefficients nationaux : les valeurs apparaissent dans la grille et restent modifiables. Les matières que le modèle ne reconnaît pas sont listées dans le rapport.",
+                        "Corrigez une valeur en saisissant le coefficient dans la colonne « Surcharge » puis « Enregistrer ». La colonne « Origine » indique si la valeur effective vient de la Matière, de la Série ou de la Classe.",
+                        "Pour un cas particulier, choisissez la portée « Classe » : la valeur posée ne concerne alors que cette classe.",
+                        "« Rétablir » supprime la surcharge : la valeur héritée (série, puis matière) reprend la main.",
+                        "À la rentrée suivante, la nouvelle année démarre sans surcharge : utilisez « Reprendre l'année précédente » pour recopier les coefficients sans écraser ceux déjà posés."
+                    ],
+                    impacts: [
+                        "Moyennes et bulletins : modifier un coefficient recalcule les moyennes, les rangs et les bulletins de cette année pour les classes concernées — y compris ceux déjà imprimés si vous les réimprimez.",
+                        "Coefficient de la matière : jamais modifié par une surcharge ni par « Appliquer le modèle ». Sans surcharge, le calcul est exactement celui d'avant.",
+                        "Primaire et Maternelle : aucun coefficient (toujours 1), leurs classes ne sont pas proposées.",
+                        "Écriture réservée au Directeur ; le Secrétariat consulte la grille sans pouvoir la modifier. Chaque changement est journalisé."
+                    ],
+                    recommandations: [
+                        "Affectez d'abord la série à toutes les classes de lycée, puis appliquez le modèle : dans l'ordre inverse, la grille d'une série sans classe n'a rien à montrer.",
+                        "Vérifiez la grille avec le texte officiel en vigueur avant d'ouvrir la saisie des notes : un coefficient erroné fausse silencieusement tous les bulletins de la série.",
+                        "Évitez de changer un coefficient en cours d'année sans nécessité : l'avertissement affiché rappelle que les bulletins déjà remis à la famille ne correspondront plus.",
+                        "Réservez la portée « Classe » aux exceptions ; une valeur posée sur la série est plus simple à contrôler et à reconduire."
+                    ]
                 }
             ]
         },
