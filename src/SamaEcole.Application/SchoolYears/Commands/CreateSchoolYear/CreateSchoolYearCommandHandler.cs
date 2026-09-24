@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -61,11 +62,16 @@ public class CreateSchoolYearCommandHandler(
 
         dbContext.SchoolYears.Add(schoolYear);
 
-        // Trois trimestres générés automatiquement (ticket JGK-G01) : aucun ticket du backlog ne
-        // prévoit d'écran de configuration dédié, et le système sénégalais standard en compte trois.
-        // Les dates découpent la période de l'année en trois tranches consécutives, sans trou ni
-        // chevauchement — la dernière absorbe le reste de la division entière.
-        foreach (var term in BuildTerms(schoolYear.Id, schoolId, request.StartDate, request.EndDate))
+        // Périodes d'évaluation générées selon SchoolSettings.EvaluationPeriodType (trimestres par
+        // défaut, ticket JGK-G01 ; semestres ou périodes personnalisées au choix du Directeur). Une
+        // école sans ligne de réglages (antérieure à JGK-B02) garde les défauts. Les dates découpent
+        // la période de l'année en tranches consécutives, sans trou ni chevauchement — la dernière
+        // absorbe le reste de la division entière.
+        var settings = await dbContext.SchoolSettings.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        var periodType = settings?.EvaluationPeriodType ?? SchoolSettingsDefaults.EvaluationPeriodType;
+        var customCount = settings?.CustomPeriodCount ?? SchoolSettingsDefaults.CustomPeriodCount;
+
+        foreach (var term in BuildTerms(schoolYear.Id, schoolId, request.StartDate, request.EndDate, periodType, customCount))
         {
             dbContext.Terms.Add(term);
         }
@@ -88,11 +94,13 @@ public class CreateSchoolYearCommandHandler(
     private static bool IsClosed(CreateSchoolYearCommand request, DateOnly today) => request.EndDate < today;
 
     /// <summary>
-    /// Le découpage lui-même vit dans TermSchedule, partagé avec la modification des dates : une année
+    /// Le découpage lui-même vit dans PeriodSchedule, partagé avec la modification des dates : une année
     /// modifiée doit retomber exactement sur le même découpage qu'une année créée avec ces dates-là.
     /// </summary>
-    private static IEnumerable<Term> BuildTerms(Guid schoolYearId, Guid schoolId, DateOnly start, DateOnly end) =>
-        TermSchedule.Split(start, end).Select((t, index) => new Term
+    private static IEnumerable<Term> BuildTerms(
+        Guid schoolYearId, Guid schoolId, DateOnly start, DateOnly end,
+        EvaluationPeriodType periodType, int customCount) =>
+        PeriodSchedule.Split(start, end, periodType, customCount).Select((t, index) => new Term
         {
             SchoolId = schoolId,
             SchoolYearId = schoolYearId,

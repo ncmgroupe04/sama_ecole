@@ -80,13 +80,15 @@ public class UpdateSchoolYearCommandHandler(
     }
 
     /// <summary>
-    /// RECALE les trimestres existants sur la nouvelle période — sans jamais en créer ni en supprimer.
-    /// Les notes pointent un TermId : supprimer puis recréer les trimestres les orphelinerait (et la FK
-    /// Restrict le refuserait). Un trimestre garde donc son identité et ses notes, seules ses bornes
+    /// RECALE les périodes existantes sur la nouvelle période — sans jamais en créer ni en supprimer.
+    /// Les notes pointent un TermId : supprimer puis recréer les périodes les orphelinerait (et la FK
+    /// Restrict le refuserait). Une période garde donc son identité et ses notes, seules ses bornes
     /// bougent — c'est ce qui permet de prolonger une année sans toucher aux notes déjà saisies.
     ///
-    /// L'appariement se fait par <c>Order</c> (1, 2, 3), le rang porté par le bulletin : c'est la clé
-    /// métier stable du trimestre, là où une position dans une liste dépendrait de l'ordre de lecture.
+    /// Les périodes sont prises dans l'ordre de <c>Order</c>, le rang porté par le bulletin. Leur
+    /// NOMBRE est celui de l'année (ses <c>Term</c> existants), jamais celui du réglage actuel de
+    /// l'école : une année créée en Semestriel reste à deux périodes même si l'école est repassée en
+    /// Trimestriel. Les libellés ne bougent pas — seules les bornes se recalent.
     /// </summary>
     private async Task RescheduleTermsAsync(UpdateSchoolYearCommand request, CancellationToken cancellationToken)
     {
@@ -94,18 +96,14 @@ public class UpdateSchoolYearCommandHandler(
             .Where(t => t.SchoolYearId == request.Id)
             .ToListAsync(cancellationToken);
 
-        var schedule = TermSchedule.Split(request.StartDate, request.EndDate);
+        var ordered = terms.OrderBy(t => t.Order).ToList();
+        if (ordered.Count == 0) return;
 
-        for (var index = 0; index < schedule.Count; index++)
+        var schedule = PeriodSchedule.SplitDates(request.StartDate, request.EndDate, ordered.Count);
+        for (var index = 0; index < ordered.Count; index++)
         {
-            // Découpage inattendu (année héritée d'un autre nombre de trimestres) : on recale ce qui
-            // existe et on ne fabrique jamais un trimestre au passage — ce n'est pas le rôle de cette
-            // commande, et un trimestre surgi ici n'aurait ni notes ni bulletin cohérents.
-            var term = terms.Find(t => t.Order == index + 1);
-            if (term is null) continue;
-
-            term.StartDate = schedule[index].Start;
-            term.EndDate = schedule[index].End;
+            ordered[index].StartDate = schedule[index].Start;
+            ordered[index].EndDate = schedule[index].End;
         }
     }
 }

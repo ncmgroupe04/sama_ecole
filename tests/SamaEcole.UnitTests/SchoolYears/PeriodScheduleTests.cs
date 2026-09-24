@@ -59,14 +59,16 @@ public class PeriodScheduleTests
     }
 
     [Fact]
-    public void Trimester_Dates_Are_Identical_To_The_Historical_TermSchedule()
+    public void Trimester_Dates_Match_The_Historical_Split_Of_A_Standard_Year()
     {
-        // Non-régression : les années déjà créées avec l'ancien découpage doivent retomber sur les
-        // mêmes bornes quand leurs dates sont modifiées (UpdateSchoolYear).
-        var legacy = TermSchedule.Split(Start, End);
-        var current = PeriodSchedule.Split(Start, End, EvaluationPeriodType.Trimester, 3);
+        // Non-régression figée de l'ancien TermSchedule (273 jours, 3 tranches de 91) : les années
+        // déjà créées retombent sur les mêmes bornes quand leurs dates sont modifiées (UpdateSchoolYear).
+        var periods = PeriodSchedule.Split(Start, End, EvaluationPeriodType.Trimester, 3);
 
-        current.Select(p => (p.Start, p.End)).Should().Equal(legacy.Select(p => (p.Start, p.End)));
+        periods.Select(p => (p.Start, p.End)).Should().Equal(
+            (new DateOnly(2026, 10, 1), new DateOnly(2026, 12, 30)),
+            (new DateOnly(2026, 12, 31), new DateOnly(2027, 3, 31)),
+            (new DateOnly(2027, 4, 1), new DateOnly(2027, 6, 30)));
     }
 
     [Fact]
