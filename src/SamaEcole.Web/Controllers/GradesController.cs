@@ -8,6 +8,7 @@ using SamaEcole.Application.Grades.Commands.DeleteGrade;
 using SamaEcole.Application.Grades.Commands.ImportGradeSheet;
 using SamaEcole.Application.Grades.Queries.GetClassGrades;
 using SamaEcole.Application.Grades.Queries.GetGradeSheetExcel;
+using SamaEcole.Application.Grades.Queries.GetGradeSheetPdf;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.Grades.Queries.GetMentions;
 using SamaEcole.Application.Grades.Commands.UpdateGrade;
@@ -129,6 +130,35 @@ public class GradesController(ISender mediator) : ControllerBase
             result.Content,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             result.FileName);
+    }
+
+    /// <summary>
+    /// Fiche de saisie PAPIER (PDF vierge) : les élèves de la classe par ordre alphabétique, avec des
+    /// cases « Note » et « Appréciation » vides à remplir au stylo, pour une classe, une matière, un
+    /// trimestre et UNE évaluation. Distincte de l'export Excel (pré-rempli, fait pour être réimporté).
+    /// Même permission de lecture que la grille de saisie. <c>evaluationType</c> est obligatoire : un
+    /// oubli ne doit jamais imprimer silencieusement une fiche « Devoir 1 ».
+    /// </summary>
+    [HttpGet("sheet/print")]
+    [Authorize(Roles = ViewGradesRoles)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> PrintSheet(
+        [FromQuery] Guid classroomId, [FromQuery] Guid subjectId, [FromQuery] Guid termId,
+        [FromQuery] EvaluationType? evaluationType, CancellationToken cancellationToken)
+    {
+        if (evaluationType is null)
+        {
+            throw new ValidationException([new ValidationFailure(nameof(evaluationType), "Le type d'évaluation est obligatoire.")]);
+        }
+
+        var result = await mediator.Send(
+            new GetGradeSheetPdfQuery(classroomId, subjectId, termId, evaluationType.Value), cancellationToken);
+
+        return File(result.Content, "application/pdf", result.FileName);
     }
 
     /// <summary>

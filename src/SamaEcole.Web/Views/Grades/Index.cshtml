@@ -47,7 +47,7 @@
  <!-- Actions : TOUJOURS sous les sélecteurs, jamais à leur droite — à côté des trois listes,
  ces boutons chevauchaient les libellés « Classe / Matière / Trimestre » (capture d'écran).
  Collées aux sélecteurs (gap-3 du parent, pas de filet ni de pt-5) : mêmes filtres, même bloc. -->
- <div x-show="(canDownloadReportCard && hasClassAndTerm) || (canEnterGrades && hasSelection)" x-cloak
+ <div x-show="(canDownloadReportCard && hasClassAndTerm) || hasSelection" x-cloak
  class="flex flex-wrap items-center gap-2">
  <!-- Bulletins de toute la classe (JGK-G03) : classe + trimestre suffisent, indépendant de la
  matière sélectionnée pour la saisie — ouvert au Directeur, à l'Enseignant et au Secrétariat. -->
@@ -66,6 +66,22 @@
  class="btn-modal-secondary whitespace-nowrap text-sm group" title="PV de délibération du conseil de classe pour ce trimestre">
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingClassDeliberation ? 'Génération…' : 'PV Délibération'"></span>
+ </button>
+ </div>
+
+ <!-- Fiche de saisie papier (PDF vierge) : lecture ouverte comme la grille elle-même. -->
+ <div x-show="hasSelection" x-cloak class="flex items-center gap-2">
+ <select x-model="sheetEvaluation" aria-label="Évaluation de la fiche papier"
+ class="input-field mt-0 w-auto py-2 text-sm">
+ <option value="Devoir1">Devoir 1</option>
+ <option value="Devoir2">Devoir 2</option>
+ <option value="Composition">Composition</option>
+ </select>
+ <button type="button" x-on:click="printPaperSheet()" :disabled="printingSheet"
+ class="btn-modal-secondary whitespace-nowrap text-sm group"
+ title="Grille vierge à imprimer : élèves par ordre alphabétique, cases Note et Appréciation à remplir au stylo">
+ <icon name="print" class="w-4 h-4" />
+ <span x-text="printingSheet ? 'Génération…' : 'Fiche papier'"></span>
  </button>
  </div>
 

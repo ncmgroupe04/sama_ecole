@@ -54,6 +54,10 @@ document.addEventListener('alpine:init', () => {
         // sans cette déclaration Alpine évalue "error" comme une référence indéfinie à chaque rendu.
         error: null,
 
+        // Fiche de saisie PAPIER (PDF vierge, GET /grades/sheet/print) : une évaluation à la fois, choisie ici.
+        sheetEvaluation: 'Devoir1',
+        printingSheet: false,
+
         downloadingClassBulletins: false,
         downloadingClassDeliberation: false,
         classBulletinsError: null,
@@ -296,6 +300,32 @@ document.addEventListener('alpine:init', () => {
         classNameFor(classroomId) {
             const classroom = this.classrooms.find(c => c.id === classroomId);
             return classroom ? classroom.name : 'classe';
+        },
+
+        /**
+         * Fiche de saisie papier : une grille VIERGE (élèves par ordre alphabétique, cases Note et
+         * Appréciation vides) à imprimer et remplir au stylo dans la salle, avant de reporter les notes
+         * à l'écran. Aperçu dans la modale partagée — l'enseignant l'imprime depuis l'en-tête. Une seule
+         * évaluation par fiche (choix `sheetEvaluation`), jamais un « Devoir 1 » par défaut silencieux :
+         * le type est toujours envoyé explicitement.
+         */
+        async printPaperSheet() {
+            if (!this.hasSelection) return;
+            this.classBulletinsError = null;
+            this.printingSheet = true;
+            try {
+                const className = this.classNameFor(this.selectedClassroomId);
+                const label = { Devoir1: 'Devoir 1', Devoir2: 'Devoir 2', Composition: 'Composition' }[this.sheetEvaluation];
+                await this.openPdfPreview(
+                    `/api/v1/grades/sheet/print?classroomId=${this.selectedClassroomId}&subjectId=${this.selectedSubjectId}&termId=${this.selectedTermId}&evaluationType=${this.sheetEvaluation}`,
+                    `Fiche de saisie — ${className} — ${label}`,
+                    `Fiche_Notes_${className}_${label.replace(' ', '')}.pdf`
+                );
+            } catch (err) {
+                this.classBulletinsError = (err && err.message) || 'Génération de la fiche de saisie impossible.';
+            } finally {
+                this.printingSheet = false;
+            }
         },
 
         async downloadClassBulletinsZip() {

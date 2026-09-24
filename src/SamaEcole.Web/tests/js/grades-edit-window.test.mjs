@@ -60,3 +60,63 @@ test('l\'infobulle d\'une cellule verrouillée renvoie vers le Directeur ou le S
     assert.match(hint, /Directeur ou au Secrétariat/);
     assert.match(hint, /délai/);
 });
+
+// ------------------------------------------------------------------ Fiche de saisie papier
+
+function viewWithSelection(role = 'Enseignant') {
+    const view = gradesView(role);
+    view.classrooms = [{ id: 'c-1', name: '6e A' }];
+    view.selectedClassroomId = 'c-1';
+    view.selectedSubjectId = 's-1';
+    view.selectedTermId = 't-1';
+    return view;
+}
+
+test('la fiche papier envoie toujours le type d\'évaluation choisi, jamais un défaut implicite', async () => {
+    const view = viewWithSelection();
+    const calls = [];
+    view.openPdfPreview = async (url, title, fileName) => { calls.push({ url, title, fileName }); };
+
+    view.sheetEvaluation = 'Composition';
+    await view.printPaperSheet();
+
+    assert.equal(calls.length, 1);
+    assert.equal(
+        calls[0].url,
+        '/api/v1/grades/sheet/print?classroomId=c-1&subjectId=s-1&termId=t-1&evaluationType=Composition');
+    assert.match(calls[0].title, /6e A/);
+    assert.match(calls[0].title, /Composition/);
+    assert.equal(calls[0].fileName, 'Fiche_Notes_6e A_Composition.pdf');
+});
+
+test('la fiche papier est ouverte à tout rôle qui voit la grille', async () => {
+    for (const role of ['Directeur', 'Secretariat', 'Enseignant']) {
+        const view = viewWithSelection(role);
+        let opened = 0;
+        view.openPdfPreview = async () => { opened++; };
+
+        await view.printPaperSheet();
+
+        assert.equal(opened, 1, role);
+    }
+});
+
+test('sans classe, matière et trimestre, rien n\'est imprimé', async () => {
+    const view = gradesView('Directeur');
+    let opened = 0;
+    view.openPdfPreview = async () => { opened++; };
+
+    await view.printPaperSheet();
+
+    assert.equal(opened, 0);
+});
+
+test('un échec de génération est affiché, et le bouton se libère', async () => {
+    const view = viewWithSelection();
+    view.openPdfPreview = async () => { throw new Error('Serveur indisponible'); };
+
+    await view.printPaperSheet();
+
+    assert.equal(view.classBulletinsError, 'Serveur indisponible');
+    assert.equal(view.printingSheet, false);
+});
