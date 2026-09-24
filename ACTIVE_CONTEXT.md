@@ -107,11 +107,42 @@ Trois changements sur `/grades` et l'écran `/notes`. Spécification : `docs/Vol
 3. **`CanEdit` est un confort d'affichage, jamais une garde.** La cellule grisée suit le serveur ; la vraie
    garde reste `PUT /grades/{id}` (403).
 
-**Écart connu, hors périmètre de cette évolution :** `settings.js` (Paramètres › Configuration) envoie un
-`PUT /schools/current/settings` construit champ par champ, qui **omet** les alertes SMS et
-`debtorReminderThresholdDays` — chaque enregistrement depuis cet écran les ramène à leurs valeurs par défaut
-(l'écran SMS, lui, relit puis réétale : `...current`). `gradeEditWindowDays` a été ajouté aux deux
-constructions, donc lui n'est pas concerné.
+**Écart corrigé (24/09/2026) :** `settings.js` (Paramètres › Configuration) envoyait un
+`PUT /schools/current/settings` construit champ par champ, qui **omettait** les alertes SMS et
+`debtorReminderThresholdDays` — chaque enregistrement depuis cet écran les ramenait à leurs valeurs par défaut.
+`saveConfig()` relit désormais `GET /schools/current/settings` juste avant le PUT et étale cet état sous les
+champs qu'il pilote (`{ ...current, …champs de l'écran }`), comme `sms-settings.js`. Deux effets : aucune
+omission possible, y compris pour un champ ajouté plus tard ; et aucune valeur **périmée** (un enregistrement de
+l'écran SMS survenu depuis le chargement de la page n'est plus écrasé). Le PUT reste un remplacement complet
+côté serveur : **tout nouvel écran qui écrit ces réglages doit relire avant d'écrire.** Verrouillé par
+`tests/js/settings-save-preserves-fields.test.mjs`.
+
+### Module Coran / Franco-Arabe — Phases 1 et 2 (20/09 → 24/09/2026) — API livrée, aucun écran
+
+Branche `feature/franco-arabic-core`. Spécifications : `docs/superpowers/specs/2026-09-20-franco-arabic-core-design.md`
+(Phase 1) et `…-franco-arabic-cqrs-api-design.md` (Phase 2) ; plans jumeaux dans `docs/superpowers/plans/`.
+Routes : `openapi.yaml` (préfixe `/api/v1/quran`). **Aucun écran ni JavaScript à ce stade** — l'API seule.
+
+- **Phase 1 — socle de données.** Enums `SectionType` (Français / Arabe / Études islamiques), `SchoolType`
+  (Standard / FrancoArabic / Daara) et `QuranMemorizationStatus` (InProcess / Memorized / Revised) ;
+  `Subject.SectionType` (défaut French) et `SchoolSettings.SchoolType` (défaut Standard) ; entités `QuranProgress`
+  (Juz, Hizb, Sourate, statut) et `QuranEvaluation` (erreurs mémoire/tajwid, hésitations, note finale), toutes deux
+  sous verrou `xmin` ; migrations `AddQuranCoreModule` (RLS incluse) et `AddQuranModuleToResetSchoolData`
+  (`quran_progress`/`quran_evaluations` ajoutées à `reset_school_data`). Tests : valeurs par défaut, verrou
+  optimiste, isolation RLS.
+- **Phase 2 — CQRS et API.** 4 commandes (création/correction de progression et d'évaluation, avec verrou
+  `RowVersion` → 409, journal d'audit `IAuditableRequest`), 4 requêtes (par élève et par classe, pour chaque
+  entité), validateurs FluentValidation, `QuranController` (`[RequireModule(SchoolModule.Coran)]`).
+  Écriture : Directeur + Enseignant ; lecture : + Secrétariat. Tests unitaires (validateurs, enums, entités) et
+  d'intégration (une classe par commande/requête + isolation multi-tenant).
+
+**Arbitrages actés (spec Phase 2 §2), à ne pas rouvrir sans raison :** aucune garde fine par affectation (comme
+`CreateGradeCommandHandler`) ; `FinalScore` sans plafond (seule la borne `≥ 0` — aucun barème spécifié pour
+l'oral coranique) ; `Juz`/`Hizb`/`Sourate`/`Élève` immuables en correction ; **`SchoolType` est purement
+informatif** — `IsCoranModuleEnabled` reste le seul interrupteur lu par `ModuleAuthorizationHandler`.
+
+**Reste à faire :** écran(s) Coran (lot séparé, comme l'Internat) et intégration de `SectionType` au bulletin
+(aucun effet sur `Coefficient` ni sur le calcul des moyennes tant que ce lot n'existe pas).
 
 ### Inventaire (26/08/2026) — API et écran livrés
 
