@@ -65,6 +65,19 @@ public class CoefficientsController(ISender mediator) : ControllerBase
         return NoContent();
     }
 
+    /// <summary>
+    /// « Appliquer le modèle » d'une série : crée les surcharges de série de l'année active à partir du modèle
+    /// national. Ne touche jamais les coefficients des matières ; 422 pour une série sans modèle (TECH).
+    /// </summary>
+    [HttpPost("apply-template")]
+    [Authorize(Roles = WriteRole)]
+    [ProducesResponseType<ApplyTemplateResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ApplyTemplate(
+        [FromBody] ApplySeriesTemplateCommand command, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(command, cancellationToken));
+
     /// <summary>Recopie les surcharges d'une autre année vers l'année active, sans rien écraser.</summary>
     [HttpPost("carry-over")]
     [Authorize(Roles = WriteRole)]

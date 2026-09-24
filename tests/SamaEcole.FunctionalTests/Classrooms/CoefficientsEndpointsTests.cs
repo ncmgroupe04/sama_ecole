@@ -176,6 +176,30 @@ public class CoefficientsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
     }
 
     [Fact]
+    public async Task Apply_Template_Is_Director_Only_And_Materialises_The_Validated_National_Values()
+    {
+        var directeur = await DirecteurAsync();
+        var (_, maths, francais) = await SeedAsync(directeur);
+
+        var secretaire = await SecretaireAsync();
+        (await SendAsync(HttpMethod.Post, "/api/v1/coefficients/apply-template", secretaire, new { series = "S2" }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // TECH : aucune valeur nationale fournie — refusé clairement, rien d'inventé.
+        (await SendAsync(HttpMethod.Post, "/api/v1/coefficients/apply-template", directeur, new { series = "TECH" }))
+            .StatusCode.Should().Be((HttpStatusCode)422);
+
+        var applied = await SendAsync(HttpMethod.Post, "/api/v1/coefficients/apply-template", directeur, new { series = "S2" });
+        applied.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var grid = (await (await SendAsync(HttpMethod.Get, "/api/v1/coefficients?series=S2", directeur))
+            .Content.ReadFromJsonAsync<Grid>())!;
+        grid.Rows.Single(r => r.SubjectId == maths).EffectiveCoefficient.Should().Be(5m, "Maths = 5 en S2");
+        grid.Rows.Single(r => r.SubjectId == francais).EffectiveCoefficient.Should().Be(2m, "Français = 2 en S2");
+        grid.Rows.Should().OnlyContain(r => r.BaseCoefficient > 0);
+    }
+
+    [Fact]
     public async Task The_Catalogue_Lists_The_Five_Series()
     {
         var directeur = await DirecteurAsync();

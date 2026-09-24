@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<AttendanceScopeAuthorizer>();
         services.AddScoped<Schools.WorkingDayGuard>();
         services.AddScoped<Coefficients.CoefficientOverrideLoader>();
+        services.AddSingleton<Coefficients.Commands.ISeriesTemplateProvider, Coefficients.Commands.NationalSeriesTemplateProvider>();
 
         // Contrôle de propriété des créneaux d'emploi du temps : partagé par la création, la
         // modification et la suppression. Scoped — il lit le compte de la requête courante.
