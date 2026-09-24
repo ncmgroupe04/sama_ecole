@@ -106,7 +106,7 @@
                         "Profil de l'établissement : nom, adresse, ville, logo, mentions légales, description, et publication dans l'annuaire public.",
                         "Intégration étatique (SIMEN) : nom de l'établissement sur le bulletin, code établissement national, coordonnées GPS, rattachement IA/IEF — indispensables aux exports Planète et STATEDUC.",
                         "Formats & signatures officielles : gabarits de matricule, signatures numérisées (Directeur, Secrétariat, Caissier, Surveillant Général) et cachet officiel apposés sur les PDF.",
-                        "Années scolaires : création, activation et clôture des exercices, découpage en trimestres (fiche dédiée « Ouverture et clôture d'une année académique »).",
+                        "Années scolaires : création, activation et clôture des exercices, découpage en périodes — trimestres par défaut, semestres ou personnalisé (fiche dédiée « Ouverture et clôture d'une année académique »).",
                         "Notation & mentions : rappel du barème automatique par cycle, seuils de mention du bulletin, et délégation « le Secrétariat gère la configuration des notes ».",
                         "Mensualités & autorisations de caisse : nombre de mensualités par an, et deux interrupteurs réservés au Directeur — « la Finance peut modifier les montants de frais », « la Finance peut supprimer des frais ».",
                         "Facturation & historique : formule d'abonnement Unikol de l'établissement et historique des paiements d'abonnement (Directeur).",
@@ -172,7 +172,7 @@
                     roles: ['Directeur'],
                     definition:
                         "L'année scolaire est l'exercice académique déclaré par l'établissement : un libellé (« 2026-2027 »), " +
-                        "une date d'ouverture, une date de clôture et les trimestres qui la découpent. Une seule année peut être " +
+                        "une date d'ouverture, une date de clôture et les périodes (trimestres par défaut) qui la découpent. Une seule année peut être " +
                         "ACTIVE à un instant donné, et cette unicité est garantie par la base de données elle-même, non par une " +
                         "simple précaution d'affichage.",
                     objectif:
@@ -187,25 +187,25 @@
                     procedure: [
                         "Ouvrez Paramètres, puis l'onglet « Années scolaires ».",
                         "Cliquez sur « Nouvelle année scolaire » et renseignez le libellé (« 2026-2027 »), la date de début et la date de fin de l'exercice.",
-                        "Déclarez les trimestres de l'année : leur découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
+                        "Les périodes de l'année sont générées automatiquement à partir de ses dates, selon le découpage choisi dans Paramètres › Pédagogie (trimestriel par défaut, semestriel ou personnalisé de 2 à 6 périodes) : ce découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
                         "Vérifiez attentivement les dates saisies, puis enregistrez. L'année est créée à l'état « à venir » et n'a encore aucun effet sur l'application.",
                         "Le jour de la rentrée, cliquez sur « Activer » en regard de l'année concernée. Par mesure de sécurité, la bascule exige la confirmation du mot de passe du Directeur.",
                         "L'année précédente passe automatiquement en lecture seule : ses données demeurent intégralement consultables, mais ne sont plus modifiables.",
-                        "Si le calendrier se décale en cours d'exercice, une année en cours ou à venir reste corrigeable : prolonger la période recale les trimestres sans jamais altérer les notes déjà saisies.",
+                        "Si le calendrier se décale en cours d'exercice, une année en cours ou à venir reste corrigeable : prolonger la période recale les périodes sans jamais altérer les notes déjà saisies.",
                         "SUPPRIMER UNE ANNÉE (icône corbeille) : réservé au Directeur, et il faut recopier le libellé exact de l'année — « 2025-2026 » — pour débloquer le bouton. En mode bac à sable, l'année et toutes ses données sont effacées ; en mode réel, seule une année qui n'a JAMAIS servi peut être retirée (elle est alors archivée), et l'application refuse en expliquant ce qui la retient dès qu'une inscription, une note ou un appel y est rattaché.",
                         "Si l'année supprimée était l'année active, l'établissement rebascule tout seul sur l'année ouverte la plus proche. S'il n'en reste aucune, l'écran vous demande d'en activer ou d'en créer une : sans année active, aucune inscription ni aucune note ne peut être saisie."
                     ],
                     impacts: [
                         "Inscriptions : toute nouvelle inscription est rattachée d'office à l'année active. Un élève ne peut détenir qu'une seule inscription active par année.",
                         "Frais scolaires : les barèmes sont paramétrés par année. Une nouvelle année suppose de reconduire ou de réviser la grille tarifaire.",
-                        "Notes et bulletins : les trimestres déclarés ici alimentent directement les écrans de saisie et l'en-tête des bulletins.",
+                        "Notes et bulletins : les périodes de l'année alimentent directement les écrans de saisie et l'en-tête des bulletins.",
                         "Comptabilité : les rapports financiers et les statistiques de la direction s'établissent sur le périmètre de l'exercice actif.",
                         "Barre supérieure : l'année active est rappelée en permanence dans l'en-tête de l'application, afin que nul ne travaille par inadvertance sur le mauvais exercice."
                     ],
                     recommandations: [
                         "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
                         "N'activez jamais une année en cours de journée comptable : clôturez d'abord la caisse de l'exercice précédent.",
-                        "Contrôlez le découpage des trimestres avant la première saisie de notes ; le corriger après coup impose de vérifier chaque bulletin déjà édité.",
+                        "Choisissez le découpage (Paramètres › Pédagogie) avant de créer l'année et de saisir la première note : « Appliquer le découpage », dans Années scolaires, rejoue un nouveau découpage sur une année existante, mais seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie.",
                         "Une année révolue est volontairement verrouillée. Une donnée qui s'y révèle erronée fait l'objet d'une régularisation historisée sur l'exercice courant, jamais d'une réécriture du passé.",
                         "Avant de supprimer une année en mode bac à sable, exportez-la si elle contient des saisies que vous souhaitez relire : l'effacement est définitif et l'export ZIP (icône de téléchargement) reste la seule copie."
                     ]
@@ -1016,7 +1016,7 @@
                     href: '/notes',
                     roles: ['Directeur', 'Secrétariat', 'Enseignant'],
                     definition:
-                        "Écran de notation qui présente, pour un triplet classe + matière + trimestre, la liste nominative " +
+                        "Écran de notation qui présente, pour un triplet classe + matière + période, la liste nominative " +
                         "des élèves inscrits et permet d'y porter les notes de devoir et de composition. La saisie est " +
                         "protégée par un verrou optimiste : si deux personnes modifient la même note simultanément, la " +
                         "seconde est avertie du conflit plutôt que d'écraser silencieusement la première.",
@@ -1033,7 +1033,7 @@
                         "généralement lorsque les parents ont déjà le bulletin en main.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Notes et bulletins.",
-                        "Sélectionnez successivement la classe, la matière et le trimestre. Un enseignant ne se voit proposer que ses propres affectations.",
+                        "Sélectionnez successivement la classe, la matière et la période. Un enseignant ne se voit proposer que ses propres affectations.",
                         "La liste nominative s'affiche, accompagnée du barème applicable — celui de la ligne d'évaluation lorsqu'il est défini, celui du cycle à défaut.",
                         "Saisissez les notes. Toute valeur excédant le barème est refusée à la saisie, et non découverte au moment du bulletin.",
                         "Renseignez, selon la grille en vigueur, la note de devoir et la note de composition.",
@@ -1082,7 +1082,7 @@
                     procedure: [
                         "Assurez-vous au préalable que toutes les notes du trimestre sont saisies et contrôlées.",
                         "Complétez, le cas échéant, les appréciations et les décisions du conseil des professeurs pour chaque élève.",
-                        "Ouvrez Gestion Scolaire › Notes et bulletins, puis sélectionnez la classe et le trimestre.",
+                        "Ouvrez Gestion Scolaire › Notes et bulletins, puis sélectionnez la classe et la période.",
                         "BULLETIN INDIVIDUEL : depuis la ligne de l'élève, demandez l'aperçu. Le document s'affiche à l'écran avant toute impression.",
                         "BULLETINS DE CLASSE : demandez l'édition groupée. Un unique document PDF réunit l'ensemble des bulletins de la classe, prêt pour l'impression en série.",
                         "PROCÈS-VERBAL DE DÉLIBÉRATION : éditez, pour le conseil de classe, le tableau récapitulatif des moyennes et des rangs.",

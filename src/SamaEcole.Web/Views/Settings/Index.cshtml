@@ -817,6 +817,38 @@
  <p x-show="configErrors.gradeeditwindowdays" x-cloak x-text="configErrors.gradeeditwindowdays" class="field-error"></p>
  </form>
 
+ @* Découpage de l'année en périodes d'évaluation (Évolution N°2) : réglé par le Directeur SEUL, même
+ PUT /schools/current/settings que le reste. Il n'agit que sur les années CRÉÉES ensuite — l'année
+ en cours se met à jour à la demande (Années scolaires › « Appliquer le découpage »), et seulement
+ tant qu'aucune note n'y est saisie. *@
+ <form x-show="isDirecteur" x-cloak x-on:submit.prevent="saveConfig()" novalidate class="pt-4 border-t border-slate-100">
+ <label for="cfg-period-type" class="form-label">Découpage de l'année scolaire</label>
+ <p class="text-xs text-slate-400 mt-0.5">
+ Trimestres, semestres ou nombre de périodes au choix. Il s'applique aux années scolaires créées ensuite.
+ Pour l'année en cours, utilisez « Appliquer le découpage » dans Années scolaires — possible tant
+ qu'aucune note ni appréciation de bulletin n'y est saisie.
+ </p>
+ <div class="mt-3 flex flex-wrap items-end gap-3 max-w-lg">
+ <div class="flex-1 min-w-[12rem]">
+ <select id="cfg-period-type" x-model="config.evaluationPeriodType" class="input-field">
+ <option value="Trimester">Trimestriel (3 trimestres)</option>
+ <option value="Semester">Semestriel (2 semestres)</option>
+ <option value="Custom">Personnalisé</option>
+ </select>
+ </div>
+ <div x-show="config.evaluationPeriodType === 'Custom'" x-cloak class="w-32">
+ <label for="cfg-period-count" class="sr-only">Nombre de périodes</label>
+ <input id="cfg-period-count" type="number" min="2" max="6" x-model.number="config.customPeriodCount"
+ class="input-field" placeholder="2 à 6" title="Nombre de périodes (2 à 6)">
+ </div>
+ <button type="submit" :disabled="configSaving" class="btn-modal-primary group">
+ <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ <p x-show="configErrors.evaluationperiodtype" x-cloak x-text="configErrors.evaluationperiodtype" class="field-error"></p>
+ <p x-show="configErrors.customperiodcount" x-cloak x-text="configErrors.customperiodcount" class="field-error"></p>
+ </form>
+
  <!-- Mentions du bulletin — ressource séparée (GradesController /grades/mentions). -->
  <div class="pt-2">
  <div class="flex items-start justify-between gap-4">

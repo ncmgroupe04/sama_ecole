@@ -99,6 +99,11 @@ document.addEventListener('alpine:init', () => {
             isCoranModuleEnabled: false,
             // Délai (jours) pendant lequel l'Enseignant peut corriger une note qu'il a saisie.
             gradeEditWindowDays: 7,
+            // Découpage de l'année en périodes d'évaluation (Trimester | Semester | Custom) et, pour
+            // Custom, le nombre de périodes (2 à 6). N'agit que sur les années créées ensuite ou
+            // rejouées via « Appliquer le découpage » (Années scolaires).
+            evaluationPeriodType: 'Trimester',
+            customPeriodCount: 3,
             directorSignatureUrl: '',
             secretarySignatureUrl: '',
             cashierSignatureUrl: '',
@@ -293,6 +298,8 @@ document.addEventListener('alpine:init', () => {
                     isInternatEnabled: config.isInternatEnabled,
                     isCoranModuleEnabled: config.isCoranModuleEnabled,
                     gradeEditWindowDays: config.gradeEditWindowDays,
+                    evaluationPeriodType: config.evaluationPeriodType || 'Trimester',
+                    customPeriodCount: config.customPeriodCount || 3,
                     directorSignatureUrl: config.directorSignatureUrl || '',
                     secretarySignatureUrl: config.secretarySignatureUrl || '',
                     cashierSignatureUrl: config.cashierSignatureUrl || '',
@@ -701,6 +708,8 @@ document.addEventListener('alpine:init', () => {
                     isInternatEnabled: this.config.isInternatEnabled,
                     isCoranModuleEnabled: this.config.isCoranModuleEnabled,
                     gradeEditWindowDays: Number(this.config.gradeEditWindowDays),
+                    evaluationPeriodType: this.config.evaluationPeriodType || 'Trimester',
+                    customPeriodCount: Number(this.config.customPeriodCount),
                     directorSignatureUrl: this.config.directorSignatureUrl || null,
                     secretarySignatureUrl: this.config.secretarySignatureUrl || null,
                     cashierSignatureUrl: this.config.cashierSignatureUrl || null,
@@ -723,6 +732,8 @@ document.addEventListener('alpine:init', () => {
                     isInternatEnabled: saved.isInternatEnabled,
                     isCoranModuleEnabled: saved.isCoranModuleEnabled,
                     gradeEditWindowDays: saved.gradeEditWindowDays,
+                    evaluationPeriodType: saved.evaluationPeriodType || 'Trimester',
+                    customPeriodCount: saved.customPeriodCount || 3,
                     directorSignatureUrl: saved.directorSignatureUrl || '',
                     secretarySignatureUrl: saved.secretarySignatureUrl || '',
                     cashierSignatureUrl: saved.cashierSignatureUrl || '',

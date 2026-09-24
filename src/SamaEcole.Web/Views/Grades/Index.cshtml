@@ -12,7 +12,7 @@
  <div>
  <h1 class="page-title">Notes et bulletins</h1>
  <p class="page-subtitle">
- Sélectionnez une classe, une matière et un trimestre pour saisir ou corriger les notes.
+ Sélectionnez une classe, une matière et une période pour saisir ou corriger les notes.
  </p>
  </div>
 
@@ -37,15 +37,15 @@
  options-expr="[{value:'', label:'Sélectionnez une matière…'}].concat(gradableSubjects.map(s => ({value: s.id, label: subjectLabel(s)})))" />
  </div>
  <div>
- <label for="grades-term" class="form-label">Trimestre</label>
+ <label for="grades-term" class="form-label">Période</label>
  <select-field id="grades-term" model="selectedTermId" on-change="reload()" disabled="terms.length === 0"
- placeholder="Sélectionnez un trimestre…"
- options-expr="[{value:'', label:'Sélectionnez un trimestre…'}].concat(terms.map(t => ({value: t.id, label: t.label})))" />
+ placeholder="Sélectionnez une période…"
+ options-expr="[{value:'', label:'Sélectionnez une période…'}].concat(terms.map(t => ({value: t.id, label: t.label})))" />
  </div>
  </div>
 
  <!-- Actions : TOUJOURS sous les sélecteurs, jamais à leur droite — à côté des trois listes,
- ces boutons chevauchaient les libellés « Classe / Matière / Trimestre » (capture d'écran).
+ ces boutons chevauchaient les libellés « Classe / Matière / Période » (capture d'écran).
  Collées aux sélecteurs (gap-3 du parent, pas de filet ni de pt-5) : mêmes filtres, même bloc. -->
  <div x-show="(canDownloadReportCard && hasClassAndTerm) || hasSelection" x-cloak
  class="flex flex-wrap items-center gap-2">
@@ -63,7 +63,7 @@
  <span x-text="downloadingClassBulletins ? 'Génération…' : 'Bulletins (ZIP)'"></span>
  </button>
  <button type="button" x-on:click="downloadClassDeliberationPdf()" :disabled="downloadingClassDeliberation"
- class="btn-modal-secondary whitespace-nowrap text-sm group" title="PV de délibération du conseil de classe pour ce trimestre">
+ class="btn-modal-secondary whitespace-nowrap text-sm group" title="PV de délibération du conseil de classe pour cette période">
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingClassDeliberation ? 'Génération…' : 'PV Délibération'"></span>
  </button>
@@ -99,7 +99,7 @@
 
  <!-- Aucune année active : rien à proposer comme trimestre -->
  <div x-show="!isLoadingContext && terms.length === 0" x-cloak class="mt-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning">
- Aucune année scolaire active n'a de trimestre disponible. Configurez une année active dans
+ Aucune année scolaire active n'a de période disponible. Configurez une année active dans
  <a href="/parametres" class="underline font-medium">Paramètres</a>.
  </div>
  </div>
@@ -117,7 +117,7 @@
 
  <!-- Aucune sélection complète -->
  <div x-show="!hasSelection" x-cloak class="card mt-6">
- <empty-state icon="book" title="Choisissez une classe, une matière et un trimestre."
+ <empty-state icon="book" title="Choisissez une classe, une matière et une période."
  hint="Le tableau de saisie apparaît une fois les trois sélections faites." />
  </div>
 
@@ -240,7 +240,7 @@
  <div class="space-y-4">
  <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 flex items-center justify-between gap-3">
  <p class="text-xs text-slate-600">
- La feuille reprend les matricules et notes déjà saisies de cette classe/matière/trimestre — les
+ La feuille reprend les matricules et notes déjà saisies de cette classe/matière/période — les
  colonnes Matricule et Nom &amp; Prénom sont verrouillées, seules les notes se modifient.
  </p>
  <button type="button" x-on:click="downloadGradeSheet()" :disabled="downloadingGradeSheet"

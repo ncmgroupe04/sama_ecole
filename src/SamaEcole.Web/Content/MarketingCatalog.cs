@@ -108,7 +108,7 @@ public static class MarketingCatalog
             Features:
             [
                 "Ouverture et clôture d'une année académique",
-                "Découpage en trimestres, base de toutes les saisies de notes",
+                "Découpage en périodes (trimestres ou semestres), base de toutes les saisies de notes",
                 "Bascule d'année confirmée par le mot de passe du Directeur",
                 "Exercice précédent archivé en lecture seule, jamais effacé",
                 "Bâtiments, salles, types et capacités d'accueil"
@@ -201,7 +201,7 @@ public static class MarketingCatalog
             Features:
             [
                 "Saisie sécurisée des notes par classe et par matière",
-                "Devoirs et compositions, trimestre par trimestre",
+                "Devoirs et compositions, période par période",
                 "Moyennes, rangs, mentions et appréciations calculés",
                 "Barèmes hétérogènes ramenés à une échelle commune",
                 "Bulletins officiels générés au format PDF",
@@ -550,7 +550,7 @@ public static class MarketingCatalog
     public static readonly IReadOnlyList<Step> Steps =
     [
         new("01", "Configurez votre établissement",
-            "Année scolaire et trimestres, cycles, niveaux, classes, matières, bâtiments et barème de " +
+            "Année scolaire et périodes, cycles, niveaux, classes, matières, bâtiments et barème de " +
             "frais. Ce socle se paramètre une seule fois ; tout ce qui suit s'y rattache."),
         new("02", "Importez vos données",
             "Les élèves s'importent depuis un modèle Excel téléchargeable ; les notes disposent du même " +

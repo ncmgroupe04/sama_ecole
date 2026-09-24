@@ -536,7 +536,7 @@
  <div x-show="detailTab === 'grades'" role="tabpanel" class="py-5">
  <template x-if="studentDetail && studentDetail.grades.length === 0">
  <empty-state icon="book" title="Aucune note enregistrée."
- hint="Les notes saisies pour cet élève apparaîtront ici, regroupées par trimestre." />
+ hint="Les notes saisies pour cet élève apparaîtront ici, regroupées par période." />
  </template>
 
  <!-- Erreur de génération/téléchargement du bulletin (JGK-G03), partagée par tous les trimestres. -->
@@ -812,7 +812,7 @@
  <!-- Distinction du conseil (Blâme… Félicitations) et observations, imprimées sur le bulletin
  (ReportCardDocument). Réservée au Directeur/Enseignant côté serveur, comme le bouton Bulletin. -->
  <modal-shell size="lg" open="editingReportCardRemark" on-close="closeReportCardRemark()" title="Observations du conseil">
- <modal-subtitle>Distinction et observations du conseil des professeurs pour ce trimestre — imprimées sur le bulletin.</modal-subtitle>
+ <modal-subtitle>Distinction et observations du conseil des professeurs pour cette période — imprimées sur le bulletin.</modal-subtitle>
 
  <div x-show="reportCardRemarkErrors.global" x-cloak class="form-error-banner" x-text="reportCardRemarkErrors.global"></div>
 
@@ -851,7 +851,7 @@
  <div>
  <label class="form-label">Observations du conseil des professeurs</label>
  <textarea x-model="editingReportCardRemark.observations" maxlength="300" rows="4"
- placeholder="ex : Bon trimestre, poursuivez vos efforts."
+ placeholder="ex : Bon travail, poursuivez vos efforts."
  class="input-field"></textarea>
  <p x-show="reportCardRemarkErrors.observations" x-cloak x-text="reportCardRemarkErrors.observations" class="field-error"></p>
  </div>

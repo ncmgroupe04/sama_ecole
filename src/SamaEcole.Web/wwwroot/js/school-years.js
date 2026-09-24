@@ -53,6 +53,15 @@ document.addEventListener('alpine:init', () => {
         // --- Export (ZIP élèves/paiements/classes) ---
         exportingYearId: null,
 
+        // « Appliquer le découpage » : rejoue sur UNE année le découpage choisi dans Paramètres
+        // (trimestres / semestres / périodes). Le serveur refuse (422) dès qu'une note ou une
+        // appréciation de bulletin existe — applyPeriodsError garde SA phrase, qui dit quoi faire.
+        yearToApplyPeriods: null,
+        isApplyingPeriods: false,
+        applyPeriodsError: null,
+        showPeriodsAppliedDialog: false,
+        appliedPeriodsYearLabel: '',
+
         // --- Suppression (DELETE /school-years/{id}) ---
         //
         // isLiveMode change le RÉCIT, jamais la règle : en mode test l'année et ses données sont
@@ -140,6 +149,42 @@ document.addEventListener('alpine:init', () => {
          */
         canEdit(year) {
             return this.isDirecteur && !year.isClosed;
+        },
+
+        /** Comme Modifier : Directeur seul, jamais sur une année terminée (le serveur refuse en 422 de toute façon). */
+        canApplyPeriods(year) {
+            return this.isDirecteur && !year.isClosed;
+        },
+
+        openApplyPeriods(year) {
+            this.yearToApplyPeriods = year;
+            this.applyPeriodsError = null;
+        },
+
+        closeApplyPeriods() {
+            // Ne se ferme pas pendant l'appel : le remplacement des périodes est déjà parti côté serveur.
+            if (this.isApplyingPeriods) return;
+            this.yearToApplyPeriods = null;
+            this.applyPeriodsError = null;
+        },
+
+        async submitApplyPeriods() {
+            if (!this.yearToApplyPeriods || this.isApplyingPeriods) return;
+
+            this.isApplyingPeriods = true;
+            this.applyPeriodsError = null;
+            try {
+                await window.api.post(`/school-years/${this.yearToApplyPeriods.id}/apply-evaluation-periods`, {});
+
+                this.appliedPeriodsYearLabel = this.yearToApplyPeriods.label;
+                this.yearToApplyPeriods = null;
+                await this.loadYears();
+                this.showPeriodsAppliedDialog = true;
+            } catch (err) {
+                this.applyPeriodsError = window.api.toMessage(err, "Le découpage n'a pas pu être appliqué. Aucun changement n'a été enregistré.");
+            } finally {
+                this.isApplyingPeriods = false;
+            }
         },
 
         /**

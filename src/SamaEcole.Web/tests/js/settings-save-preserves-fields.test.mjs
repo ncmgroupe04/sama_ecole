@@ -31,7 +31,9 @@ const SERVER_SETTINGS = () => ({
     isFinanceEnabled: true,
     isInternatEnabled: false,
     isCoranModuleEnabled: false,
-    gradeEditWindowDays: 7
+    gradeEditWindowDays: 7,
+    evaluationPeriodType: 'Semester',
+    customPeriodCount: 3
 });
 
 /**
@@ -103,4 +105,23 @@ test('les champs pilotés par cet écran priment sur l\'état serveur', async ()
 
     assert.equal(puts[0].allowFinanceToModifyFees, true);
     assert.equal(puts[0].gradeEditWindowDays, 14);
+});
+
+test('le découpage de l\'année est chargé, envoyé une fois modifié, et conservé sinon', async () => {
+    const { view, puts } = await settingsView(SERVER_SETTINGS);
+
+    assert.equal(view.config.evaluationPeriodType, 'Semester', 'chargé depuis le serveur');
+    assert.equal(view.config.customPeriodCount, 3);
+
+    // Enregistrer un autre champ ne doit pas ramener le découpage à son défaut.
+    view.config.autoLogoutMinutes = 20;
+    await view.saveConfig();
+    assert.equal(puts[0].evaluationPeriodType, 'Semester');
+
+    view.config.evaluationPeriodType = 'Custom';
+    view.config.customPeriodCount = 4;
+    await view.saveConfig();
+
+    assert.equal(puts[1].evaluationPeriodType, 'Custom');
+    assert.equal(puts[1].customPeriodCount, 4);
 });
