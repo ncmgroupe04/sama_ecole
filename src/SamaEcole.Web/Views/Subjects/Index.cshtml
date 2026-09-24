@@ -9,6 +9,7 @@
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
  <script src="~/js/subjects.js" asp-append-version="true"></script>
+ <script src="~/js/coefficients.js" asp-append-version="true"></script>
 }
 
 <div x-data="subjectsView()">
@@ -113,6 +114,14 @@
       class="tab-btn" :class="viewMode === 'structure' ? 'tab-btn-active' : ''">
       <icon name="layers" class="w-3.5 h-3.5" />
       Structure d'évaluation
+     </button>
+     @* Coefficients par série / par classe (Évolution N°4) : lecture Directeur + Secrétariat, écriture
+        Directeur seul — l'onglet est masqué aux autres rôles, que le serveur refuserait de toute façon. *@
+     <button type="button" x-show="canViewCoefficients" x-cloak x-on:click="showCoefficients()"
+      :aria-pressed="viewMode === 'coefficients'"
+      class="tab-btn" :class="viewMode === 'coefficients' ? 'tab-btn-active' : ''">
+      <icon name="layers" class="w-3.5 h-3.5" />
+      Coefficients
      </button>
     </div>
 
@@ -334,6 +343,16 @@
     entêtes de colonnes, ordre des lignes, colonne « Sur ». Rien n'est codé
     en dur — trois écoles obtiennent trois bulletins différents.
     ═══════════════════════════════════════════════════════════════════════════ *@
+ @* ═══════════════════════════════════════════════════════════════════════════
+    ONGLET COEFFICIENTS — monté à la première ouverture (x-if), rechargé à chaque retour sur l'onglet
+    pour ne jamais montrer une grille périmée après un changement de série ou d'année.
+    ═══════════════════════════════════════════════════════════════════════════ *@
+ <template x-if="viewMode === 'coefficients' && canViewCoefficients">
+  <div class="mt-8">
+   <partial name="_CoefficientsTab" />
+  </div>
+ </template>
+
  <div x-show="viewMode === 'structure'" x-cloak class="mt-8 space-y-6">
 
   <div x-show="structureError" x-cloak class="form-error-banner" x-text="structureError"></div>
