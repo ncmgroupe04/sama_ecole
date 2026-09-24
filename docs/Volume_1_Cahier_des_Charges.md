@@ -279,6 +279,31 @@ Suppression des décimales inutiles : `17.0 → 17`, `15.0 → 15`, mais `15.5` 
 
 Affichage de la date de naissance selon le format choisi par l'établissement (voir §12).
 
+### 8.7 Coefficients par série et surcharge du Directeur (Évolution N°4)
+
+Au lycée, une même matière ne pèse pas pareil selon la série. Le coefficient utilisé dans les moyennes, les
+rangs, la fiche élève et les bulletins (colonne « Coefficient » du §8.1, mise en page inchangée) est, dans
+l'ordre de priorité :
+
+1. la **surcharge de la classe**, si le Directeur en a posé une ;
+2. sinon la **surcharge de la série** de la classe ;
+3. sinon le **coefficient de la matière** (comportement historique, inchangé).
+
+- **Séries.** Catalogue fermé : `L1`, `L2`, `S1`, `S2`, `TECH` (séries techniques). La série se renseigne sur la
+  **classe** (Paramètres › Classes, réservée au cycle Lycée) ; une classe sans série (Seconde commune, collège…)
+  garde les coefficients de ses matières.
+- **Modèles nationaux.** « Appliquer le modèle » (onglet Coefficients de l'écran Matières) matérialise en
+  surcharges de série les coefficients nationaux de L1, L2, S1 et S2 ; elles sont ensuite visibles et
+  modifiables. `TECH` n'a pas de modèle (aucune valeur officielle fournie). Le modèle ne modifie jamais le
+  coefficient d'une matière et n'écrase pas une valeur déjà posée sans demande explicite.
+- **Surcharge.** Écriture réservée au **Directeur** ; le Secrétariat consulte la grille. Portée : une série
+  (lycée) ou une classe précise (collège et lycée). Primaire et Maternelle : coefficient toujours égal à 1,
+  non surchargeable. Chaque écriture est journalisée et protégée contre l'écrasement concurrent (409).
+- **Par année scolaire.** Les surcharges appartiennent à l'année ; une nouvelle année démarre sans surcharge et
+  le Directeur les reprend explicitement (« Reprendre l'année précédente », sans écraser l'existant).
+- **Effet rétroactif.** Modifier un coefficient recalcule les moyennes et les bulletins de l'année en cours pour
+  les classes concernées ; l'écran l'annonce dès que des notes existent.
+
 ---
 
 ## 9. Rôles et permissions

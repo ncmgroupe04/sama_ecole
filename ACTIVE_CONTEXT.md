@@ -211,6 +211,40 @@ Branche `feature/working-days`, empilée sur `feature/evaluation-periods` (à fu
 calendaires), donc un jour de repos sans appel n'entre dans aucun dénominateur ; des tests
 (`AttendanceRateWorkingDaysTests`) figent ce comportement contre une future refonte du dénominateur.
 
+### Coefficients par série et surcharge du Directeur (24/09/2026) — livré (Évolution N°4)
+
+Un lycée règle le coefficient d'une matière par série (L1, L2, S1, S2, TECH) ou par classe. Branche
+`feature/series-coefficients`, empilée sur `feature/working-days`. Plan :
+`docs/superpowers/plans/2026-09-24-series-coefficients.md`. Spécification fonctionnelle :
+`docs/Volume_1_Cahier_des_Charges.md` §8.7.
+
+- **Données.** `Classroom.Series` (nullable, Lycée seulement) et table `subject_coefficient_overrides`
+  (portée série ou classe, par année scolaire) : `SchoolId`, Global Query Filter **et** policy RLS, `xmin`
+  (409), suppression logique, ajoutée à `reset_school_data` et aux purges d'année.
+- **Calcul.** `SubjectCoefficients.Resolve` (pur) : **classe › série › matière**, appelé par les deux seuls
+  lecteurs de coefficient (`GetGradeSummaryQueryHandler`, `GetStudentDetailQueryHandler`) — bulletins PDF,
+  bulletins de classe, délibération et fiche élève suivent. Primaire/Maternelle : 1, inchangé.
+- **API.** `/api/v1/coefficients` : catalogue, grille, `PUT` (upsert), `DELETE` (« Rétablir »), `carry-over`,
+  `apply-template`. Lecture Directeur + Secrétariat, écriture **Directeur seul**, module `Pedagogy` requis.
+- **Modèles nationaux.** `SeriesCoefficientTemplates` (une seule table de données) : L1, L2, S1, S2 validés
+  par la direction le 24/09/2026 ; **TECH sans modèle** (aucune valeur fournie, `apply-template` répond 422).
+  Matérialisés en surcharges de série par « Appliquer le modèle », jamais utilisés comme repli au calcul.
+- **Écrans.** Classes : champ « Série » (lycée) + pastille. Matières › onglet **Coefficients** : grille
+  Base · Surcharge · Effectif · Origine, « Rétablir », « Appliquer le modèle », « Reprendre l'année
+  précédente », avertissement rétroactif. Fiche d'aide « Coefficients par série » (`help.js`).
+
+**Invariant : sans surcharge, le calcul est strictement celui d'avant.** Un lycée qui n'a rien paramétré (ou
+qui contourne encore par « une matière par niveau texte ») voit ses bulletins inchangés le jour du déploiement.
+
+**Points de vigilance connus :**
+1. Les modèles ne distinguent pas Première et Terminale : la table valait pour la série ; un bulletin réel de
+   1re S2 (Maths 5, Sc. physiques 6, SVT 6…) peut différer du modèle S2 — à confronter au texte officiel.
+2. Effacer la série d'une classe change des coefficients : l'écran Classes renvoie toujours la série au `PUT`,
+   mais un ancien client qui l'omet l'effacerait.
+3. Le cycle de notation (barème /10 ou /20) d'un élève reste celui de sa classe actuelle, y compris pour les
+   années passées ; seuls les coefficients suivent l'inscription de l'année.
+4. Le niveau d'une matière est un texte libre : la grille liste « toutes les matières hors primaire/maternelle ».
+
 ### Inventaire (26/08/2026) — API et écran livrés
 
 Suivi du patrimoine, commun aux écoles publiques (tables-bancs, manuels d'État, consommables) et
