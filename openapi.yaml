@@ -1985,6 +1985,7 @@ paths:
         Génère la liste des élèves de la classe pour la saisie de l'appel. L'Enseignant n'y a accès que
         pour ses classes/matières assignées (403 sinon) ; Directeur et Secrétariat sans restriction. Si
         une fiche existe déjà pour cette clé, les statuts déjà saisis sont renvoyés (alreadySubmitted=true).
+        Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
       parameters:
         - name: classroomId
           in: query
@@ -2018,6 +2019,7 @@ paths:
       description: >-
         Ni schoolId ni schoolYearId dans le corps : l'année ACTIVE est résolue serveur (même règle que
         POST /enrollments). Une seconde saisie de la même clé (classe, matière, date, créneau) est refusée en 409.
+        Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
       requestBody:
         required: true
         content:
@@ -5021,6 +5023,15 @@ components:
           maximum: 6
           default: 3
           description: Nombre de périodes quand `evaluationPeriodType` vaut `Custom` ; ignoré sinon.
+        workingDays:
+          type: array
+          items: { type: string, enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday] }
+          minItems: 1
+          description: >-
+            Jours OUVRÉS de l'établissement, dans l'ordre d'affichage (la semaine commence le lendemain du
+            bloc de repos). Défaut : lundi → samedi. Absent ou `null` en PUT = inchangé. Les autres jours sont
+            des jours de repos : appel des élèves, pointage des enseignants et créneaux d'emploi du temps y
+            sont refusés (422) ; les données déjà enregistrées ne sont pas modifiées.
 
     SchoolYearCreateRequest:
       type: object

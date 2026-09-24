@@ -671,6 +671,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - L'emploi du temps est construit par **créneaux** : jour, heure de début, heure de fin, enseignant, classe, matière, salle.
 - Il se consulte **par enseignant** et **par classe**.
 - **Détection de chevauchement** à la création comme à la modification : un créneau est refusé s'il recouvre un créneau existant pour le même enseignant ou pour la même classe. Le message précise laquelle des deux contraintes est violée.
+- **Jours ouvrés configurables** (Évolution N°3) : le Directeur définit dans Paramètres › Notation & mentions les jours ouvrés de l'établissement (par défaut du lundi au samedi ; par exemple du samedi au mercredi pour une école franco-arabe ou un daara au repos le jeudi et le vendredi). La grille n'affiche que ces jours, dans l'ordre de la semaine de l'école, et un créneau ne peut être créé ni déplacé sur un jour de repos. Un créneau déjà posé sur un jour devenu repos reste visible (colonne marquée « repos ») et peut être supprimé, mais plus modifié.
 
 ### 21.2 Qui peut faire quoi
 
@@ -684,6 +685,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 - Le Surveillant général ou le Directeur enregistre la **présence des enseignants** par date.
 - Le pointage alimente le suivi d'assiduité du personnel et, pour les vacataires, recoupe la fiche de suivi des heures (§14.3) — sans s'y substituer.
+- **Jours de repos** (Évolution N°3) : ni le pointage des enseignants, ni l'**appel des élèves** (ouverture de la feuille comme soumission) ne s'enregistrent un jour de repos de l'établissement. Le verrou ne joue que sur les saisies **nouvelles** : les appels déjà enregistrés un jour devenu repos restent comptés. Aucun calcul de taux de présence n'a changé — ils portent sur les appels réellement saisis, jamais sur des jours calendaires — donc un jour de repos sans appel n'entre dans aucun dénominateur. Les billets d'entrée et de sortie, les justificatifs d'absence, le journal de classe et les heures de paie ne sont pas verrouillés.
 
 ---
 

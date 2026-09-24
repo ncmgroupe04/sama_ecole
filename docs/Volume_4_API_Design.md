@@ -287,7 +287,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/attendance` | Enregistrer une absence |
+| `POST` | `/api/v1/attendance` | Enregistrer une absence. `422` si la date est un jour de repos de l'établissement (`workingDays`, Évolution N°3) |
 | `GET` | `/api/v1/attendance/report` | Rapport d'absences |
 
 ## 11. API Paramètres
@@ -516,11 +516,11 @@ Construction de l'emploi du temps hebdomadaire et pointage des présences enseig
 |---|---|---|
 | `GET` | `/api/v1/schedules/teacher/{teacherId}` | Emploi du temps d'un enseignant |
 | `GET` | `/api/v1/schedules/classroom/{classroomId}` | Emploi du temps d'une classe |
-| `POST` | `/api/v1/schedules` | Créer un créneau |
-| `PUT` | `/api/v1/schedules/{id}` | Modifier un créneau |
+| `POST` | `/api/v1/schedules` | Créer un créneau. `422` si le jour est un jour de repos de l'établissement (`workingDays`) |
+| `PUT` | `/api/v1/schedules/{id}` | Modifier un créneau. `422` si le jour écrit est un jour de repos — y compris pour un créneau hérité d'un jour devenu repos, qui reste lisible et supprimable mais plus modifiable |
 | `DELETE` | `/api/v1/schedules/{id}` | Supprimer un créneau |
 | `GET` | `/api/v1/teacher-attendance?date=` | Pointage des enseignants pour une date |
-| `POST` | `/api/v1/teacher-attendance` | Enregistrer un pointage |
+| `POST` | `/api/v1/teacher-attendance` | Enregistrer un pointage. `422` si la date est un jour de repos de l'établissement (`workingDays`) |
 
 **Règles :**
 - **Contrôle de propriété (règle #10).** Un `Enseignant` ne peut créer ou modifier un créneau que pour **lui-même** : le `TeacherId` reçu dans le corps de la requête est rapproché de sa propre fiche via `Teacher.UserId`, jamais accepté sur parole. Une tentative pour un autre enseignant est rejetée (`403`). Le JWT ne porte que l'identifiant du **compte** — d'où la remontée compte → fiche. `Directeur`/`Secretariat`/`SuperAdmin` construisent l'emploi du temps de tout l'établissement et ne sont pas bornés.

@@ -177,6 +177,40 @@ Le découpage de l'année n'est plus « 3 trimestres » en dur. Branche `feature
 **Piège de la migration en local :** un serveur de dev lancé verrouille les DLL du dossier `Debug` ; pour générer
 une migration sans l'arrêter, `dotnet ef migrations add … --configuration Release`.
 
+### Jours ouvrés et week-ends configurables (24/09/2026) — livré (Évolution N°3)
+
+Chaque école définit ses jours ouvrés (ex. repos jeudi et vendredi pour une école franco-arabe ou un daara).
+Branche `feature/working-days`, empilée sur `feature/evaluation-periods` (à fusionner après elle). Plan :
+`docs/superpowers/plans/2026-09-24-working-days.md`.
+
+- **Réglage.** `SchoolSettings.WorkingDays` (texte « Monday,Tuesday,… », défaut base lundi → samedi), migration
+  `AddSchoolWorkingDays`, réglé par le Directeur dans Paramètres › Notation & mentions (préréglages « Lundi →
+  Vendredi », « Lundi → Samedi », « Samedi → Mercredi »). `PUT` : `workingDays` absent ou `null` = **inchangé**
+  (ce réglage verrouille des écritures, un ancien client ne doit pas le réinitialiser).
+- **Logique.** `SchoolWeek` (Application, pur, testé sans base) : analyse, forme canonique, ordre d'affichage,
+  noms français. `WorkingDayGuard` lit le réglage de l'école COURANTE (RLS) et lève un 422 lisible.
+- **Verrous.** Appel des élèves (soumission **et** ouverture de la feuille), pointage des enseignants, création et
+  déplacement de créneaux. Côté écran : la grille suit la semaine de l'école, le sélecteur « Jour » n'offre que
+  les jours ouvrés, l'écran d'appel affiche un bandeau et n'envoie aucune requête un jour de repos.
+
+**Six arbitrages actés (24/09/2026), validés sans modification :**
+
+1. **D1 — défaut lundi → samedi** (la grille historique) : aucune école existante ne perd de jour ; seul le
+   dimanche devient jour de repos par défaut.
+2. **D2 — appels déjà saisis un jour devenu repos : conservés dans les taux.** Le verrou ne joue que sur les
+   saisies nouvelles ; rien n'est réécrit rétroactivement.
+3. **D3 — créneaux hérités : approche souple.** Le réglage se change librement ; la grille garde la colonne
+   marquée « repos » ; on peut y lire et supprimer, pas créer ni modifier (même pour changer seulement la salle).
+4. **D4 — périmètre du verrou.** Verrouillés : appel élèves, pointage enseignants, créneaux. NON verrouillés, à
+   dessein : billets d'entrée/sortie et retards, justificatifs, journal de classe, heures de paie.
+5. **D5 — ordre d'affichage.** La semaine commence le lendemain du bloc de repos (repos jeudi/vendredi → samedi,
+   dimanche, lundi, mardi, mercredi) ; repos non contigus : lundi → dimanche. Calculé une fois, côté serveur.
+6. **D6 — aucun calendrier de jours fériés ni de vacances.**
+
+**Invariant : aucun calcul de taux n'a changé.** Ils portent sur les appels réellement saisis (jamais des jours
+calendaires), donc un jour de repos sans appel n'entre dans aucun dénominateur ; des tests
+(`AttendanceRateWorkingDaysTests`) figent ce comportement contre une future refonte du dénominateur.
+
 ### Inventaire (26/08/2026) — API et écran livrés
 
 Suivi du patrimoine, commun aux écoles publiques (tables-bancs, manuels d'État, consommables) et
