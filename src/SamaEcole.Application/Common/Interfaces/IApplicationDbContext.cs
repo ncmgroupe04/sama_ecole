@@ -122,6 +122,9 @@ public interface IApplicationDbContext
     /// <summary>Cahier de texte : une entrée de journal par séance réellement tenue (ticket JGK-P04).</summary>
     DbSet<ClassJournalEntry> ClassJournalEntries { get; }
 
+    /// <summary>Surcharges de coefficient par série ou par classe (Évolution N°4).</summary>
+    DbSet<SubjectCoefficientOverride> SubjectCoefficientOverrides { get; }
+
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 
@@ -155,6 +158,14 @@ public interface IApplicationDbContext
 
     /// <summary>Débiteurs candidats d'un DebtorReminderBatch, avec leur ancienneté de retard au moment de la génération.</summary>
     DbSet<DebtorReminderBatchItem> DebtorReminderBatchItems { get; }
+
+    // ------------------------------------------------------------------ Module Coran/Franco-Arabe (socle)
+
+    /// <summary>Suivi individuel de mémorisation coranique (module Coran/Franco-Arabe). Verrou optimiste xmin.</summary>
+    DbSet<QuranProgress> QuranProgresses { get; }
+
+    /// <summary>Notes d'examen oral de récitation coranique (module Coran/Franco-Arabe). Verrou optimiste xmin.</summary>
+    DbSet<QuranEvaluation> QuranEvaluations { get; }
 
     // ------------------------------------------------------------------ Module Inventaire
 

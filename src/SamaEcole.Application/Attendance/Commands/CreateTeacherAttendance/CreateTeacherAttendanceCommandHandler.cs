@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Schools;
 using SamaEcole.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,8 @@ namespace SamaEcole.Application.Attendance.Commands.CreateTeacherAttendance;
 
 public class CreateTeacherAttendanceCommandHandler(
     IApplicationDbContext _context,
-    ITenantProvider _tenantProvider)
+    ITenantProvider _tenantProvider,
+    WorkingDayGuard _workingDayGuard)
     : IRequestHandler<CreateTeacherAttendanceCommand, Guid>
 {
     public async Task<Guid> Handle(CreateTeacherAttendanceCommand request, CancellationToken cancellationToken)
@@ -18,6 +20,9 @@ public class CreateTeacherAttendanceCommandHandler(
         var teacherExists = await _context.Teachers.FindAsync(new object[] { request.TeacherId }, cancellationToken);
         if (teacherExists == null)
             throw new NotFoundException(nameof(Teacher), request.TeacherId.ToString());
+
+        // Jour de repos de l'établissement (Évolution N°3) : aucun pointage enseignant ne s'y saisit.
+        await _workingDayGuard.EnsureWorkingDayAsync(DateOnly.FromDateTime(request.Date), nameof(request.Date), cancellationToken);
 
         var existingRecord = await _context.TeacherAttendances
             .FirstOrDefaultAsync(t => t.TeacherId == request.TeacherId && t.Date.Date == request.Date.Date, cancellationToken);

@@ -56,6 +56,7 @@ public class ApplicationDbContext(
     public DbSet<TeacherAssignment> TeacherAssignments => Set<TeacherAssignment>();
     public DbSet<AttendanceSheet> AttendanceSheets => Set<AttendanceSheet>();
     public DbSet<ClassJournalEntry> ClassJournalEntries => Set<ClassJournalEntry>();
+    public DbSet<SubjectCoefficientOverride> SubjectCoefficientOverrides => Set<SubjectCoefficientOverride>();
     public DbSet<StudentAttendance> StudentAttendances => Set<StudentAttendance>();
     public DbSet<ReportCardRemark> ReportCardRemarks => Set<ReportCardRemark>();
     public DbSet<DisciplineRecord> DisciplineRecords => Set<DisciplineRecord>();
@@ -74,6 +75,10 @@ public class ApplicationDbContext(
     public DbSet<FeeInstallment> FeeInstallments => Set<FeeInstallment>();
     public DbSet<DebtorReminderBatch> DebtorReminderBatches => Set<DebtorReminderBatch>();
     public DbSet<DebtorReminderBatchItem> DebtorReminderBatchItems => Set<DebtorReminderBatchItem>();
+
+    // ------------------------------------------------------------------ Module Coran/Franco-Arabe (socle)
+    public DbSet<QuranProgress> QuranProgresses => Set<QuranProgress>();
+    public DbSet<QuranEvaluation> QuranEvaluations => Set<QuranEvaluation>();
 
     // Module Inventaire (patrimoine, stock, prêts de matériel).
     public DbSet<InventoryCategory> InventoryCategories => Set<InventoryCategory>();

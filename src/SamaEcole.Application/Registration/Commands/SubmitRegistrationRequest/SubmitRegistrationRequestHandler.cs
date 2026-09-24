@@ -16,7 +16,8 @@ namespace SamaEcole.Application.Registration.Commands.SubmitRegistrationRequest;
 ///
 /// Le mot de passe est haché AVANT toute écriture et n'est JAMAIS journalisé (docs/Volume_7_Security.md
 /// §Paiements) : aucun log de ce Handler ne référence <c>request.DirectorPassword</c>. L'e-mail de
-/// confirmation ne transmet que la référence de suivi — jamais d'écho du mot de passe choisi.
+/// confirmation ne transmet que la référence de suivi ; le Super Admin est alerté séparément. La demande
+/// reste <c>Pending</c> (aucun compte n'existe) jusqu'à sa décision.
 /// </summary>
 public class SubmitRegistrationRequestHandler(
     IApplicationDbContext dbContext,
@@ -24,6 +25,7 @@ public class SubmitRegistrationRequestHandler(
     IRegistrationReferenceGenerator referenceGenerator,
     ISchoolProvisioningStore provisioningStore,
     IEmailSender emailSender,
+    RegistrationSettings registrationSettings,
     ILogger<SubmitRegistrationRequestHandler> logger)
     : IRequestHandler<SubmitRegistrationRequestCommand, SubmitRegistrationRequestResult>
 {
@@ -77,6 +79,10 @@ public class SubmitRegistrationRequestHandler(
         dbContext.SchoolRegistrationRequests.Add(registrationRequest);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        // Deux e-mails, indépendants : la confirmation au DEMANDEUR (sa référence de suivi, à ne pas
+        // perdre — décision produit du 24/09/2026, rétablie) et l'alerte au SUPER ADMIN. Aucun e-mail
+        // n'est adressé au personnel d'un établissement existant.
+        //
         // Après le commit : un e-mail parti ne se rembobine pas. L'envoyer avant risquerait d'annoncer une
         // référence de suivi qui n'existerait finalement pas si l'écriture échouait.
         //
@@ -97,6 +103,33 @@ public class SubmitRegistrationRequestHandler(
             logger.LogWarning(ex,
                 "Demande d'inscription {TrackingReference} enregistrée, mais l'e-mail de confirmation n'a pas pu être envoyé.",
                 trackingReference);
+        }
+
+        // Alerte Super Admin, isolée dans son propre try/catch : un échec ici ne masque jamais le
+        // résultat de la confirmation ci-dessus. Sans adresse configurée
+        // (Registration__AdminNotificationEmail), on le dit franchement dans les journaux plutôt que de
+        // laisser croire qu'une alerte est partie.
+        if (string.IsNullOrWhiteSpace(registrationSettings.AdminNotificationEmail))
+        {
+            logger.LogWarning(
+                "Demande d'inscription {TrackingReference} enregistrée, mais Registration:AdminNotificationEmail " +
+                "n'est pas configuré : le Super Admin n'a reçu aucune alerte.",
+                trackingReference);
+        }
+        else
+        {
+            try
+            {
+                await SendAdminAlertAsync(registrationRequest, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Warning, pas Error : SmtpEmailSender/UnconfiguredEmailSender ont déjà journalisé l'échec
+                // en Error côté envoi — ici, l'opération elle-même a réussi, seul un effet secondaire a raté.
+                logger.LogWarning(ex,
+                    "Demande d'inscription {TrackingReference} enregistrée, mais l'alerte Super Admin n'a pas pu être envoyée.",
+                    trackingReference);
+            }
         }
 
         // Aucun mot de passe ici — seulement des identifiants non sensibles.
@@ -136,6 +169,10 @@ public class SubmitRegistrationRequestHandler(
             "Impossible de générer une référence de suivi unique après plusieurs tentatives.");
     }
 
+    /// <summary>
+    /// Ne transmet que la référence de suivi — jamais d'écho du mot de passe choisi. C'est le moyen
+    /// de ne pas perdre cette référence, seul accès du demandeur à sa demande avant qu'un compte existe.
+    /// </summary>
     private async Task SendConfirmationAsync(
         string email, string fullName, string schoolName, string trackingReference, CancellationToken cancellationToken)
     {
@@ -143,16 +180,55 @@ public class SubmitRegistrationRequestHandler(
             $"""
              Bonjour {fullName},
 
-             Votre demande d'inscription de l'établissement « {schoolName} » sur Unikol a bien été reçue.
+             Votre demande d'ouverture et d'activation de compte pour l'établissement « {schoolName} » sur
+             Unikol a bien été reçue.
 
              Votre référence de suivi est : {trackingReference}
 
              Conservez-la : elle vous permet de suivre l'état de votre demande à tout moment, sans avoir à
-             vous connecter. Notre équipe examine votre dossier et vous recontactera après validation.
+             vous connecter. Notre équipe examine votre dossier ; vous recevrez un nouvel e-mail dès que
+             votre compte sera validé.
              """;
 
         await emailSender.SendAsync(
             new EmailMessage(email, "Votre demande d'inscription Unikol", body),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Ne transmet ni mot de passe ni hash — seulement les champs déjà visibles depuis
+    /// <c>GET /admin/registration-requests</c>. Le lien mène au tableau de bord Super Admin
+    /// (authentifié) : jamais un lien d'approbation à usage unique, qui ferait d'un simple GET depuis
+    /// une messagerie une action d'écriture.
+    /// </summary>
+    private async Task SendAdminAlertAsync(
+        SchoolRegistrationRequest registrationRequest, CancellationToken cancellationToken)
+    {
+        var reviewUrl = $"{registrationSettings.PublicBaseUrl.TrimEnd('/')}/admin/inscriptions";
+
+        var body =
+            $"""
+             Nouvelle demande d'inscription reçue sur Unikol.
+
+             Établissement : {registrationRequest.SchoolName}
+             Ville / région : {registrationRequest.City ?? "—"} / {registrationRequest.Region ?? "—"}
+             Effectif estimé : {registrationRequest.EstimatedStudentCount?.ToString() ?? "—"}
+             Plan souhaité : {registrationRequest.RequestedPlan}
+
+             Directeur : {registrationRequest.DirectorFullName}
+             E-mail : {registrationRequest.DirectorEmail}
+             Téléphone : {registrationRequest.DirectorPhone}
+
+             Référence de suivi : {registrationRequest.TrackingReference}
+
+             Approuver ou rejeter la demande : {reviewUrl}
+             """;
+
+        await emailSender.SendAsync(
+            new EmailMessage(
+                registrationSettings.AdminNotificationEmail!,
+                $"Nouvelle demande d'inscription — {registrationRequest.SchoolName}",
+                body),
             cancellationToken);
     }
 }

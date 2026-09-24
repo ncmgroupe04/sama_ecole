@@ -86,14 +86,26 @@ document.addEventListener('alpine:init', () => {
         deletingScheduleSlot: null,
         isDeletingSchedule: false,
         
-        daysOfWeek: [
-            { value: 1, label: 'Lundi' },
-            { value: 2, label: 'Mardi' },
-            { value: 3, label: 'Mercredi' },
-            { value: 4, label: 'Jeudi' },
-            { value: 5, label: 'Vendredi' },
-            { value: 6, label: 'Samedi' }
-        ],
+        /**
+         * Colonnes de la grille : les jours OUVRÉS de l'établissement (ordre calculé par le serveur,
+         * Paramètres › Pédagogie), plus toute colonne portant encore un créneau hérité d'un jour devenu
+         * repos — marquée `isRest` : on peut la lire et supprimer ses créneaux, pas en créer (arbitrage D3).
+         */
+        get daysOfWeek() {
+            const labels = { 0: 'Dimanche', 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi' };
+            const working = Alpine.store('schoolConfig').workingDays;
+            const columns = working.map((value) => ({ value, label: labels[value], isRest: false }));
+
+            const legacy = [...new Set(this.scheduleSlots.map((s) => s.dayOfWeek))]
+                .filter((value) => !working.includes(value))
+                .sort((a, b) => a - b);
+            return columns.concat(legacy.map((value) => ({ value, label: labels[value], isRest: true })));
+        },
+
+        /** Options du sélecteur « Jour » du formulaire : jours ouvrés uniquement. */
+        get workingDayOptions() {
+            return this.daysOfWeek.filter((d) => !d.isRest).map((d) => ({ value: d.value, label: d.label }));
+        },
 
         timeSlots: [
             { label: '08h00 - 09h00', start: '08:00', end: '09:00', isPause: false },
@@ -168,6 +180,8 @@ document.addEventListener('alpine:init', () => {
         showTeacherDeletedDialog: false,
 
         init() {
+            // Jours ouvrés de l'établissement (grille + formulaire) : store partagé, un seul fetch.
+            Alpine.store('schoolConfig').init();
             this.loadSubjects();
             this.loadTeachers();
             if (this.canLinkAccount) this.loadEligibleAccounts();
@@ -796,7 +810,7 @@ document.addEventListener('alpine:init', () => {
                 teacherId: needsTeacher ? this.selectedScheduleTeacherId : '',
                 classroomId: needsTeacher ? '' : this.selectedScheduleClassroomId,
                 subjectId: '',
-                dayOfWeek: 1,
+                dayOfWeek: this.workingDayOptions[0]?.value ?? 1,
                 startTime: '08:00',
                 endTime: '09:00',
                 roomNumber: ''

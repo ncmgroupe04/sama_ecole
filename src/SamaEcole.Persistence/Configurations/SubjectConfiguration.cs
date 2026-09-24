@@ -1,4 +1,5 @@
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -27,6 +28,15 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
         builder.Property(s => s.Name).IsRequired().HasMaxLength(80);
         builder.Property(s => s.NameAr).HasMaxLength(80);
         builder.Property(s => s.Level).IsRequired().HasMaxLength(50);
+
+        // Défaut explicite en base (pas seulement le défaut CLR) — même précaution que
+        // SchoolSettingsConfiguration.SchoolType, pour ne jamais dépendre d'un défaut deviné par
+        // l'outil de scaffolding EF (voir l'incident ParentSummonsStatus, ACTIVE_CONTEXT.md 02/09/2026).
+        builder.Property(s => s.SectionType)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(SectionType.French);
 
         // decimal(4,2) : de 0,01 à 99,99. Un coefficient n'a aucune raison de dépasser cette borne,
         // et le type fixe évite qu'un float ne fasse dériver « total des points ÷ total des

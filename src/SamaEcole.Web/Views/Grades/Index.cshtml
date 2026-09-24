@@ -12,7 +12,7 @@
  <div>
  <h1 class="page-title">Notes et bulletins</h1>
  <p class="page-subtitle">
- Sélectionnez une classe, une matière et un trimestre pour saisir ou corriger les notes.
+ Sélectionnez une classe, une matière et une période pour saisir ou corriger les notes.
  </p>
  </div>
 
@@ -37,17 +37,17 @@
  options-expr="[{value:'', label:'Sélectionnez une matière…'}].concat(gradableSubjects.map(s => ({value: s.id, label: subjectLabel(s)})))" />
  </div>
  <div>
- <label for="grades-term" class="form-label">Trimestre</label>
+ <label for="grades-term" class="form-label">Période</label>
  <select-field id="grades-term" model="selectedTermId" on-change="reload()" disabled="terms.length === 0"
- placeholder="Sélectionnez un trimestre…"
- options-expr="[{value:'', label:'Sélectionnez un trimestre…'}].concat(terms.map(t => ({value: t.id, label: t.label})))" />
+ placeholder="Sélectionnez une période…"
+ options-expr="[{value:'', label:'Sélectionnez une période…'}].concat(terms.map(t => ({value: t.id, label: t.label})))" />
  </div>
  </div>
 
  <!-- Actions : TOUJOURS sous les sélecteurs, jamais à leur droite — à côté des trois listes,
- ces boutons chevauchaient les libellés « Classe / Matière / Trimestre » (capture d'écran).
+ ces boutons chevauchaient les libellés « Classe / Matière / Période » (capture d'écran).
  Collées aux sélecteurs (gap-3 du parent, pas de filet ni de pt-5) : mêmes filtres, même bloc. -->
- <div x-show="(canDownloadReportCard && hasClassAndTerm) || (canEnterGrades && hasSelection)" x-cloak
+ <div x-show="(canDownloadReportCard && hasClassAndTerm) || hasSelection" x-cloak
  class="flex flex-wrap items-center gap-2">
  <!-- Bulletins de toute la classe (JGK-G03) : classe + trimestre suffisent, indépendant de la
  matière sélectionnée pour la saisie — ouvert au Directeur, à l'Enseignant et au Secrétariat. -->
@@ -63,9 +63,25 @@
  <span x-text="downloadingClassBulletins ? 'Génération…' : 'Bulletins (ZIP)'"></span>
  </button>
  <button type="button" x-on:click="downloadClassDeliberationPdf()" :disabled="downloadingClassDeliberation"
- class="btn-modal-secondary whitespace-nowrap text-sm group" title="PV de délibération du conseil de classe pour ce trimestre">
+ class="btn-modal-secondary whitespace-nowrap text-sm group" title="PV de délibération du conseil de classe pour cette période">
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingClassDeliberation ? 'Génération…' : 'PV Délibération'"></span>
+ </button>
+ </div>
+
+ <!-- Fiche de saisie papier (PDF vierge) : lecture ouverte comme la grille elle-même. -->
+ <div x-show="hasSelection" x-cloak class="flex items-center gap-2">
+ <select x-model="sheetEvaluation" aria-label="Évaluation de la fiche papier"
+ class="input-field mt-0 w-auto py-2 text-sm">
+ <option value="Devoir1">Devoir 1</option>
+ <option value="Devoir2">Devoir 2</option>
+ <option value="Composition">Composition</option>
+ </select>
+ <button type="button" x-on:click="printPaperSheet()" :disabled="printingSheet"
+ class="btn-modal-secondary whitespace-nowrap text-sm group"
+ title="Grille vierge à imprimer : élèves par ordre alphabétique, cases Note et Appréciation à remplir au stylo">
+ <icon name="print" class="w-4 h-4" />
+ <span x-text="printingSheet ? 'Génération…' : 'Fiche papier'"></span>
  </button>
  </div>
 
@@ -83,14 +99,14 @@
 
  <!-- Aucune année active : rien à proposer comme trimestre -->
  <div x-show="!isLoadingContext && terms.length === 0" x-cloak class="mt-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning">
- Aucune année scolaire active n'a de trimestre disponible. Configurez une année active dans
+ Aucune année scolaire active n'a de période disponible. Configurez une année active dans
  <a href="/parametres" class="underline font-medium">Paramètres</a>.
  </div>
  </div>
 
- <!-- Rôle Secrétariat : rappel que seule la correction (pas la saisie) leur est ouverte -->
- <div x-show="!canEnterGrades && hasSelection" x-cloak class="mt-4 rounded-xl border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
- Vous pouvez corriger une note déjà saisie, mais vous ne pouvez pas saisir de nouvelle note.
+ <!-- Enseignant : la correction d'une note est limitée dans le temps (Paramètres › délai de correction) -->
+ <div x-show="isTeacher && hasSelection" x-cloak class="mt-4 rounded-xl border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
+ Vous pouvez corriger vos notes, ou celles de votre matière et de votre classe, pendant le délai fixé par le Directeur. Passé ce délai, la note est verrouillée (champ grisé) : demandez au Directeur ou au Secrétariat de la corriger.
  </div>
 
  <!-- Conflit de concurrence (AGENTS.md règle #5) -->
@@ -101,7 +117,7 @@
 
  <!-- Aucune sélection complète -->
  <div x-show="!hasSelection" x-cloak class="card mt-6">
- <empty-state icon="book" title="Choisissez une classe, une matière et un trimestre."
+ <empty-state icon="book" title="Choisissez une classe, une matière et une période."
  hint="Le tableau de saisie apparaît une fois les trois sélections faites." />
  </div>
 
@@ -142,8 +158,8 @@
  class="input-field mt-0 w-20 text-center"
  :class="row.devoir1.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="devoir1"
- :disabled="row.devoir1.status === 'saving' || (row.devoir1.id ? !canCorrectGrades : !canEnterGrades)"
- :title="row.devoir1.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
+ :disabled="row.devoir1.status === 'saving' || (row.devoir1.id ? !row.devoir1.canEdit : !canEnterGrades)"
+ :title="row.devoir1.id && !row.devoir1.canEdit ? lockedHint : ''"
  x-model="row.devoir1.value"
  x-on:blur="saveCell(index, 'devoir1')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'devoir1')" />
@@ -160,8 +176,8 @@
  class="input-field mt-0 w-20 text-center"
  :class="row.devoir2.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="devoir2"
- :disabled="row.devoir2.status === 'saving' || (row.devoir2.id ? !canCorrectGrades : !canEnterGrades)"
- :title="row.devoir2.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
+ :disabled="row.devoir2.status === 'saving' || (row.devoir2.id ? !row.devoir2.canEdit : !canEnterGrades)"
+ :title="row.devoir2.id && !row.devoir2.canEdit ? lockedHint : ''"
  x-model="row.devoir2.value"
  x-on:blur="saveCell(index, 'devoir2')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'devoir2')" />
@@ -178,8 +194,8 @@
  class="input-field mt-0 w-20 text-center"
  :class="row.composition.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="composition"
- :disabled="row.composition.status === 'saving' || (row.composition.id ? !canCorrectGrades : !canEnterGrades)"
- :title="row.composition.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
+ :disabled="row.composition.status === 'saving' || (row.composition.id ? !row.composition.canEdit : !canEnterGrades)"
+ :title="row.composition.id && !row.composition.canEdit ? lockedHint : ''"
  x-model="row.composition.value"
  x-on:blur="saveCell(index, 'composition')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'composition')" />
@@ -224,7 +240,7 @@
  <div class="space-y-4">
  <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 flex items-center justify-between gap-3">
  <p class="text-xs text-slate-600">
- La feuille reprend les matricules et notes déjà saisies de cette classe/matière/trimestre — les
+ La feuille reprend les matricules et notes déjà saisies de cette classe/matière/période — les
  colonnes Matricule et Nom &amp; Prénom sont verrouillées, seules les notes se modifient.
  </p>
  <button type="button" x-on:click="downloadGradeSheet()" :disabled="downloadingGradeSheet"

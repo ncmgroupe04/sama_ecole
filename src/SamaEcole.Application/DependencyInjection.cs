@@ -25,6 +25,9 @@ public static class DependencyInjection
         // Portée de saisie de l'appel (ticket JGK-D06) : partagée par l'initialisation et la
         // soumission d'une fiche de présence. Scoped — elle lit le tenant/compte de la requête courante.
         services.AddScoped<AttendanceScopeAuthorizer>();
+        services.AddScoped<Schools.WorkingDayGuard>();
+        services.AddScoped<Coefficients.CoefficientOverrideLoader>();
+        services.AddSingleton<Coefficients.Commands.ISeriesTemplateProvider, Coefficients.Commands.NationalSeriesTemplateProvider>();
 
         // Contrôle de propriété des créneaux d'emploi du temps : partagé par la création, la
         // modification et la suppression. Scoped — il lit le compte de la requête courante.
@@ -34,6 +37,7 @@ public static class DependencyInjection
         // modification et la suppression d'entrées de journal. Scoped — elle lit le compte de la
         // requête courante.
         services.AddScoped<ClassJournalScopeAuthorizer>();
+        services.AddScoped<Grades.GradeCorrectionAuthorizer>();
 
         // Portée de lecture des dossiers d'examen (ticket JGK-J08) : partagée par la liste et la fiche
         // détaillée. Scoped — elle lit le compte de la requête courante.

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
@@ -133,7 +134,7 @@ public class ApcEvaluationStructureTests : IAsyncLifetime
     public async Task Graded_Lines_Carry_Their_Score_And_Ungraded_Ones_Stay_Empty()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
 
         // 32/40 en Ressources (80 %) ; rien ailleurs.
         await createGrade.Handle(
@@ -162,7 +163,7 @@ public class ApcEvaluationStructureTests : IAsyncLifetime
     public async Task A_Score_Above_The_Cycle_Scale_Is_Accepted_When_The_Subject_Allows_It()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
 
         var act = async () => await createGrade.Handle(
             new CreateGradeCommand(Eleve, FrancaisCompetences, Trimestre, EvaluationType.Composition, 55),
@@ -176,7 +177,7 @@ public class ApcEvaluationStructureTests : IAsyncLifetime
     public async Task A_Score_Above_The_Subject_Max_Score_Is_Still_Refused()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
 
         var act = async () => await createGrade.Handle(
             new CreateGradeCommand(Eleve, FrancaisRessources, Trimestre, EvaluationType.Composition, 41),
@@ -193,7 +194,7 @@ public class ApcEvaluationStructureTests : IAsyncLifetime
     public async Task Grading_A_Domain_Is_Refused()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
 
         var act = async () => await createGrade.Handle(
             new CreateGradeCommand(Eleve, Francais, Trimestre, EvaluationType.Composition, 15),
@@ -211,13 +212,13 @@ public class ApcEvaluationStructureTests : IAsyncLifetime
     public async Task The_General_Average_Rebases_Lines_Of_Different_Scales_Before_Averaging()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
 
         // 32/40 et 48/60 : 80 % dans les deux cas → 8/10 sur le barème du cycle primaire.
         await createGrade.Handle(new CreateGradeCommand(Eleve, FrancaisRessources, Trimestre, EvaluationType.Composition, 32), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(Eleve, FrancaisCompetences, Trimestre, EvaluationType.Composition, 48), CancellationToken.None);
 
-        var summary = await new GetGradeSummaryQueryHandler(db)
+        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db))
             .Handle(new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);
 
         summary.GeneralAverage.Should().Be(8m);
@@ -240,7 +241,7 @@ public class ApcEvaluationStructureTests : IAsyncLifetime
         {
             if (request is GetGradeSummaryQuery query)
             {
-                return (Task<TResponse>)(object)new GetGradeSummaryQueryHandler(dbContext).Handle(query, cancellationToken);
+                return (Task<TResponse>)(object)new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext)).Handle(query, cancellationToken);
             }
 
             throw new NotSupportedException($"FakeSummaryMediator ne sait pas router {request.GetType().Name}.");

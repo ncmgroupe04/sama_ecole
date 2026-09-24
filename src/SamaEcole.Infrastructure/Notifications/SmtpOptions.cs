@@ -21,7 +21,7 @@ public class SmtpOptions
     /// des signaux que les filtres anti-spam associent à un expéditeur légitime plutôt qu'automatisé.
     /// N'affecte ni Host/User/Password/FromAddress ni IsConfigured — reste optionnel côté configuration.
     /// </summary>
-    public string FromName { get; set; } = "Unikol";
+    public string FromName { get; set; } = "UNIKOL - Sama École";
 
     /// <summary>
     /// Renonciation EXPLICITE à la garde de démarrage (EmailSenderGuard), pour un déploiement qui doit

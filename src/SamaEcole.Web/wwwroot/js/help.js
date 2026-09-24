@@ -106,7 +106,7 @@
                         "Profil de l'établissement : nom, adresse, ville, logo, mentions légales, description, et publication dans l'annuaire public.",
                         "Intégration étatique (SIMEN) : nom de l'établissement sur le bulletin, code établissement national, coordonnées GPS, rattachement IA/IEF — indispensables aux exports Planète et STATEDUC.",
                         "Formats & signatures officielles : gabarits de matricule, signatures numérisées (Directeur, Secrétariat, Caissier, Surveillant Général) et cachet officiel apposés sur les PDF.",
-                        "Années scolaires : création, activation et clôture des exercices, découpage en trimestres (fiche dédiée « Ouverture et clôture d'une année académique »).",
+                        "Années scolaires : création, activation et clôture des exercices, découpage en périodes — trimestres par défaut, semestres ou personnalisé (fiche dédiée « Ouverture et clôture d'une année académique »).",
                         "Notation & mentions : rappel du barème automatique par cycle, seuils de mention du bulletin, et délégation « le Secrétariat gère la configuration des notes ».",
                         "Mensualités & autorisations de caisse : nombre de mensualités par an, et deux interrupteurs réservés au Directeur — « la Finance peut modifier les montants de frais », « la Finance peut supprimer des frais ».",
                         "Facturation & historique : formule d'abonnement Unikol de l'établissement et historique des paiements d'abonnement (Directeur).",
@@ -172,7 +172,7 @@
                     roles: ['Directeur'],
                     definition:
                         "L'année scolaire est l'exercice académique déclaré par l'établissement : un libellé (« 2026-2027 »), " +
-                        "une date d'ouverture, une date de clôture et les trimestres qui la découpent. Une seule année peut être " +
+                        "une date d'ouverture, une date de clôture et les périodes (trimestres par défaut) qui la découpent. Une seule année peut être " +
                         "ACTIVE à un instant donné, et cette unicité est garantie par la base de données elle-même, non par une " +
                         "simple précaution d'affichage.",
                     objectif:
@@ -187,25 +187,25 @@
                     procedure: [
                         "Ouvrez Paramètres, puis l'onglet « Années scolaires ».",
                         "Cliquez sur « Nouvelle année scolaire » et renseignez le libellé (« 2026-2027 »), la date de début et la date de fin de l'exercice.",
-                        "Déclarez les trimestres de l'année : leur découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
+                        "Les périodes de l'année sont générées automatiquement à partir de ses dates, selon le découpage choisi dans Paramètres › Pédagogie (trimestriel par défaut, semestriel ou personnalisé de 2 à 6 périodes) : ce découpage conditionne l'ensemble des saisies de notes et l'édition des bulletins.",
                         "Vérifiez attentivement les dates saisies, puis enregistrez. L'année est créée à l'état « à venir » et n'a encore aucun effet sur l'application.",
                         "Le jour de la rentrée, cliquez sur « Activer » en regard de l'année concernée. Par mesure de sécurité, la bascule exige la confirmation du mot de passe du Directeur.",
                         "L'année précédente passe automatiquement en lecture seule : ses données demeurent intégralement consultables, mais ne sont plus modifiables.",
-                        "Si le calendrier se décale en cours d'exercice, une année en cours ou à venir reste corrigeable : prolonger la période recale les trimestres sans jamais altérer les notes déjà saisies.",
+                        "Si le calendrier se décale en cours d'exercice, une année en cours ou à venir reste corrigeable : prolonger la période recale les périodes sans jamais altérer les notes déjà saisies.",
                         "SUPPRIMER UNE ANNÉE (icône corbeille) : réservé au Directeur, et il faut recopier le libellé exact de l'année — « 2025-2026 » — pour débloquer le bouton. En mode bac à sable, l'année et toutes ses données sont effacées ; en mode réel, seule une année qui n'a JAMAIS servi peut être retirée (elle est alors archivée), et l'application refuse en expliquant ce qui la retient dès qu'une inscription, une note ou un appel y est rattaché.",
                         "Si l'année supprimée était l'année active, l'établissement rebascule tout seul sur l'année ouverte la plus proche. S'il n'en reste aucune, l'écran vous demande d'en activer ou d'en créer une : sans année active, aucune inscription ni aucune note ne peut être saisie."
                     ],
                     impacts: [
                         "Inscriptions : toute nouvelle inscription est rattachée d'office à l'année active. Un élève ne peut détenir qu'une seule inscription active par année.",
                         "Frais scolaires : les barèmes sont paramétrés par année. Une nouvelle année suppose de reconduire ou de réviser la grille tarifaire.",
-                        "Notes et bulletins : les trimestres déclarés ici alimentent directement les écrans de saisie et l'en-tête des bulletins.",
+                        "Notes et bulletins : les périodes de l'année alimentent directement les écrans de saisie et l'en-tête des bulletins.",
                         "Comptabilité : les rapports financiers et les statistiques de la direction s'établissent sur le périmètre de l'exercice actif.",
                         "Barre supérieure : l'année active est rappelée en permanence dans l'en-tête de l'application, afin que nul ne travaille par inadvertance sur le mauvais exercice."
                     ],
                     recommandations: [
                         "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
                         "N'activez jamais une année en cours de journée comptable : clôturez d'abord la caisse de l'exercice précédent.",
-                        "Contrôlez le découpage des trimestres avant la première saisie de notes ; le corriger après coup impose de vérifier chaque bulletin déjà édité.",
+                        "Choisissez le découpage (Paramètres › Pédagogie) avant de créer l'année et de saisir la première note : « Appliquer le découpage », dans Années scolaires, rejoue un nouveau découpage sur une année existante, mais seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie.",
                         "Une année révolue est volontairement verrouillée. Une donnée qui s'y révèle erronée fait l'objet d'une régularisation historisée sur l'exercice courant, jamais d'une réécriture du passé.",
                         "Avant de supprimer une année en mode bac à sable, exportez-la si elle contient des saisies que vous souhaitez relire : l'effacement est définitif et l'export ZIP (icône de téléchargement) reste la seule copie."
                     ]
@@ -528,6 +528,47 @@
                         "Achevez la structure de la grille AVANT d'ouvrir la saisie aux enseignants : la remanier une fois les notes saisies impose de contrôler chaque moyenne.",
                         "Une même matière porte légitimement des coefficients différents selon le niveau — « Mathématiques » vaut 4 au primaire et 6 en série scientifique. Ce n'est pas un doublon, c'est le cas normal."
                     ]
+                },
+                {
+                    id: 'coefficients-par-serie',
+                    title: 'Coefficients par série et surcharge du Directeur',
+                    location: 'Gestion Scolaire › Matières › onglet Coefficients',
+                    href: '/matieres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Au lycée, une même matière ne pèse pas pareil selon la série : les Mathématiques comptent bien plus " +
+                        "en S1 qu'en L2. Chaque classe de lycée porte une SÉRIE (L1, L2, S1, S2 ou Techniques) et l'onglet " +
+                        "Coefficients permet de régler le coefficient d'une matière pour une série entière, ou pour une classe " +
+                        "précise. Le coefficient utilisé dans les moyennes et les bulletins est, dans l'ordre : celui de la " +
+                        "classe s'il existe, sinon celui de la série, sinon celui de la matière.",
+                    objectif:
+                        "Obtenir des moyennes et des bulletins conformes à la pondération officielle de chaque série, sans créer " +
+                        "une matière distincte par série et sans jamais retoucher matière par matière ce qui se règle une fois " +
+                        "pour toute la série.",
+                    probleme:
+                        "Sans cela, l'école devait dupliquer chaque matière (« Maths Terminale S1 », « Maths Terminale L2 »…) pour " +
+                        "obtenir des coefficients différents, ou saisir les moyennes à la main.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Classes : créez ou modifiez chaque classe de lycée et choisissez sa série. Une classe sans série (Seconde commune) garde les coefficients de ses matières.",
+                        "Ouvrez Gestion Scolaire › Matières › Coefficients et choisissez la portée « Série ».",
+                        "Cliquez sur « Appliquer le modèle » pour préremplir la série avec les coefficients nationaux : les valeurs apparaissent dans la grille et restent modifiables. Les matières que le modèle ne reconnaît pas sont listées dans le rapport.",
+                        "Corrigez une valeur en saisissant le coefficient dans la colonne « Surcharge » puis « Enregistrer ». La colonne « Origine » indique si la valeur effective vient de la Matière, de la Série ou de la Classe.",
+                        "Pour un cas particulier, choisissez la portée « Classe » : la valeur posée ne concerne alors que cette classe.",
+                        "« Rétablir » supprime la surcharge : la valeur héritée (série, puis matière) reprend la main.",
+                        "À la rentrée suivante, la nouvelle année démarre sans surcharge : utilisez « Reprendre l'année précédente » pour recopier les coefficients sans écraser ceux déjà posés."
+                    ],
+                    impacts: [
+                        "Moyennes et bulletins : modifier un coefficient recalcule les moyennes, les rangs et les bulletins de cette année pour les classes concernées — y compris ceux déjà imprimés si vous les réimprimez.",
+                        "Coefficient de la matière : jamais modifié par une surcharge ni par « Appliquer le modèle ». Sans surcharge, le calcul est exactement celui d'avant.",
+                        "Primaire et Maternelle : aucun coefficient (toujours 1), leurs classes ne sont pas proposées.",
+                        "Écriture réservée au Directeur ; le Secrétariat consulte la grille sans pouvoir la modifier. Chaque changement est journalisé."
+                    ],
+                    recommandations: [
+                        "Affectez d'abord la série à toutes les classes de lycée, puis appliquez le modèle : dans l'ordre inverse, la grille d'une série sans classe n'a rien à montrer.",
+                        "Vérifiez la grille avec le texte officiel en vigueur avant d'ouvrir la saisie des notes : un coefficient erroné fausse silencieusement tous les bulletins de la série.",
+                        "Évitez de changer un coefficient en cours d'année sans nécessité : l'avertissement affiché rappelle que les bulletins déjà remis à la famille ne correspondront plus.",
+                        "Réservez la portée « Classe » aux exceptions ; une valeur posée sur la série est plus simple à contrôler et à reconduire."
+                    ]
                 }
             ]
         },
@@ -661,7 +702,8 @@
                         "Affectations : un créneau s'appuie sur les couples matière + classe déjà déclarés sur la fiche de l'enseignant — une matière qu'il n'enseigne pas ne lui est pas proposée.",
                         "Salles : le numéro de salle est un simple libellé indicatif porté par le créneau ; le module Infrastructures reste la référence de la capacité et de l'existence réelle des locaux.",
                         "Pointage des heures : les heures effectivement faites se saisissent séparément (Comptabilité › Paie, Pointage Profs) et ne se déduisent pas automatiquement de la grille — l'emploi du temps est un prévisionnel, le pointage un constat.",
-                        "Navigation : depuis un créneau, la matière, la classe ou l'enseignant sont cliquables et ouvrent l'écran correspondant, filtré sur l'élément visé."
+                        "Navigation : depuis un créneau, la matière, la classe ou l'enseignant sont cliquables et ouvrent l'écran correspondant, filtré sur l'élément visé.",
+                        "Jours de repos : la grille n'affiche que les jours ouvrés de l'établissement (par exemple du samedi au mercredi si le repos tombe le jeudi et le vendredi) et refuse tout créneau un jour de repos. Ces jours se règlent dans Paramètres › Notation & mentions ; un créneau déjà posé sur un jour devenu repos reste visible, marqué « repos », et peut être supprimé mais plus modifié."
                     ],
                     recommandations: [
                         "Renseignez les affectations de chaque enseignant AVANT de bâtir sa semaine : sans elles, aucune matière ne peut être placée.",
@@ -775,40 +817,6 @@
                         "Une erreur d'état civil se corrige par la fiche élève, et la correction est historisée. Ne créez jamais un second élève pour rectifier le premier.",
                         "Le secrétariat n'encaisse rien : après l'inscription, la famille se présente à la Caisse, qui constate le versement et délivre le reçu portant la mention réglementaire invitant à le conserver.",
                         "Contrôlez le numéro de téléphone du tuteur au moment de la saisie : un numéro erroné rend inopérante toute la chaîne de relance."
-                    ]
-                },
-                {
-                    id: 'notification-inscription-directeur',
-                    title: 'Notification automatique du Directeur à chaque inscription',
-                    location: 'Boîte e-mail du Directeur — aucun écran dédié',
-                    href: '/eleves',
-                    roles: ['Directeur'],
-                    definition:
-                        "À chaque inscription validée, un e-mail automatique part vers TOUS les comptes Directeur actifs " +
-                        "de l'établissement — jamais vers l'adresse générique de l'école. Aucun réglage ne l'active ou ne " +
-                        "le désactive : c'est un comportement permanent du module Inscriptions.",
-                    objectif:
-                        "Tenir la direction informée du rythme réel des inscriptions sans qu'elle ait à ouvrir " +
-                        "l'application pour le constater — utile en particulier pour un Directeur qui partage la " +
-                        "supervision avec un adjoint, les deux recevant le même e-mail.",
-                    probleme:
-                        "Sans notification, une inscription saisie par le secrétariat un jour d'affluence pouvait passer " +
-                        "totalement inaperçue de la direction jusqu'à la consultation d'un rapport, des semaines plus " +
-                        "tard.",
-                    procedure: [
-                        "Rien à activer ni à configurer : la notification part d'elle-même dès qu'une inscription est validée.",
-                        "Consultez simplement votre boîte e-mail : chaque compte Directeur actif de l'établissement reçoit son propre message.",
-                        "Si aucun Directeur actif n'existe dans l'établissement au moment de l'inscription, l'e-mail n'est simplement envoyé à personne — l'inscription elle-même n'est jamais bloquée pour autant."
-                    ],
-                    impacts: [
-                        "Inscription : l'envoi se déclenche APRÈS que l'inscription est réellement enregistrée — un e-mail reçu garantit donc que l'inscription a bien abouti.",
-                        "Fiabilité : un échec d'envoi isolé (panne du serveur de messagerie) est journalisé côté serveur et n'empêche ni l'inscription, ni la notification des autres Directeurs.",
-                        "Comptes suspendus : un compte Directeur suspendu ou d'une autre école ne reçoit jamais cette notification."
-                    ],
-                    recommandations: [
-                        "Vérifiez que l'adresse e-mail de chaque compte Directeur est correcte et surveillée : c'est le seul canal de cette notification, il n'existe pas de rappel dans l'application elle-même.",
-                        "Si les e-mails n'arrivent jamais, vérifiez d'abord les courriers indésirables avant de conclure à une panne : c'est la cause la plus fréquente.",
-                        "Ne comptez pas sur cet e-mail comme preuve comptable de l'inscription : le reçu et l'attestation PDF, remis à la famille, restent les pièces officielles."
                     ]
                 },
                 {
@@ -1016,7 +1024,7 @@
                     href: '/notes',
                     roles: ['Directeur', 'Secrétariat', 'Enseignant'],
                     definition:
-                        "Écran de notation qui présente, pour un triplet classe + matière + trimestre, la liste nominative " +
+                        "Écran de notation qui présente, pour un triplet classe + matière + période, la liste nominative " +
                         "des élèves inscrits et permet d'y porter les notes de devoir et de composition. La saisie est " +
                         "protégée par un verrou optimiste : si deux personnes modifient la même note simultanément, la " +
                         "seconde est avertie du conflit plutôt que d'écraser silencieusement la première.",
@@ -1033,13 +1041,14 @@
                         "généralement lorsque les parents ont déjà le bulletin en main.",
                     procedure: [
                         "Ouvrez Gestion Scolaire › Notes et bulletins.",
-                        "Sélectionnez successivement la classe, la matière et le trimestre. Un enseignant ne se voit proposer que ses propres affectations.",
+                        "Sélectionnez successivement la classe, la matière et la période. Un enseignant ne se voit proposer que ses propres affectations.",
                         "La liste nominative s'affiche, accompagnée du barème applicable — celui de la ligne d'évaluation lorsqu'il est défini, celui du cycle à défaut.",
                         "Saisissez les notes. Toute valeur excédant le barème est refusée à la saisie, et non découverte au moment du bulletin.",
                         "Renseignez, selon la grille en vigueur, la note de devoir et la note de composition.",
                         "IMPORT EN MASSE : téléchargez le modèle Excel de la classe, complétez-le hors ligne, puis réimportez-le. Les valeurs y sont contrôlées une à une avant intégration.",
+                        "FICHE PAPIER : pour noter dans la salle, choisissez l'évaluation (Devoir 1, Devoir 2 ou Composition) puis cliquez sur « Fiche papier ». Le PDF obtenu est une grille vierge — élèves par ordre alphabétique, cases Note et Appréciation à remplir au stylo — que vous imprimez depuis l'aperçu, puis reportez à l'écran.",
                         "Enregistrez. Chaque saisie est horodatée et attribuée à son auteur.",
-                        "Une note erronée se corrige sur ce même écran ; la modification est consignée dans le journal d'audit."
+                        "Une note erronée se corrige sur ce même écran ; la modification est consignée dans le journal d'audit. Un enseignant corrige ses notes, ou celles de sa matière et de sa classe, pendant le délai fixé par le Directeur (7 jours par défaut, réglable dans Paramètres › Notation & mentions). Passé ce délai, la cellule est grisée : le Directeur ou le Secrétariat peuvent alors la corriger, sans limite de délai."
                     ],
                     impacts: [
                         "Moyennes : chaque note est ramenée au barème de référence puis pondérée par le coefficient de la matière.",
@@ -1052,6 +1061,7 @@
                         "Saisissez les notes matière par matière et menez chaque matière à son terme : une grille partiellement renseignée produit une moyenne trompeuse.",
                         "Vérifiez le barème affiché avant de commencer : une grille APC mêle légitimement des maxima de 60, 40, 24 et 16.",
                         "En cas de conflit signalé, rechargez l'écran et reprenez votre saisie : un collègue a modifié la même note entre-temps. Ne forcez jamais.",
+                        "Relisez vos notes dans le délai de correction : une fois celui-ci écoulé, seule la direction ou le Secrétariat peut les modifier.",
                         "L'import Excel est le mode le plus sûr pour une classe nombreuse, mais contrôlez le rapport d'import avant de valider.",
                         "N'éditez les bulletins qu'une fois TOUTES les matières saisies et contrôlées."
                     ]
@@ -1080,7 +1090,7 @@
                     procedure: [
                         "Assurez-vous au préalable que toutes les notes du trimestre sont saisies et contrôlées.",
                         "Complétez, le cas échéant, les appréciations et les décisions du conseil des professeurs pour chaque élève.",
-                        "Ouvrez Gestion Scolaire › Notes et bulletins, puis sélectionnez la classe et le trimestre.",
+                        "Ouvrez Gestion Scolaire › Notes et bulletins, puis sélectionnez la classe et la période.",
                         "BULLETIN INDIVIDUEL : depuis la ligne de l'élève, demandez l'aperçu. Le document s'affiche à l'écran avant toute impression.",
                         "BULLETINS DE CLASSE : demandez l'édition groupée. Un unique document PDF réunit l'ensemble des bulletins de la classe, prêt pour l'impression en série.",
                         "PROCÈS-VERBAL DE DÉLIBÉRATION : éditez, pour le conseil de classe, le tableau récapitulatif des moyennes et des rangs.",
@@ -2255,7 +2265,8 @@
                     impacts: [
                         "Billets : un retard constaté à l'appel peut donner lieu à un billet d'entrée, produit séparément par la Surveillance.",
                         "Rapport d'assiduité : chaque appel soumis alimente directement le rapport détaillé par classe et par élève.",
-                        "Convocations : un absentéisme répété visible sur plusieurs appels motive fréquemment une convocation de parent."
+                        "Convocations : un absentéisme répété visible sur plusieurs appels motive fréquemment une convocation de parent.",
+                        "Jours de repos : aucun appel ne s'enregistre un jour de repos de l'établissement (Paramètres › Notation & mentions) ; ces jours ne comptent donc jamais dans les taux de présence. Les appels déjà saisis avant un changement de réglage restent comptés."
                     ],
                     recommandations: [
                         "Faites l'appel à chaque séance, sans exception : un rapport d'assiduité troué de créneaux non appelés ne dit rien de fiable sur l'élève qu'il est censé décrire.",

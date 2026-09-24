@@ -135,6 +135,19 @@ Redis est prévu dès la V1 (Volume_6_Dev_Guide.md, « Cache ») mais n'est pas 
 
 `SchoolSettings`, `GradingSettings`, `ReportSettings`, `EnrollmentSettings`, `FeeSettings`.
 
+`school_settings` porte, entre autres, le découpage de l'année en périodes d'évaluation (Évolution N°2) :
+`EvaluationPeriodType` (`varchar(20)`, `Trimester` par défaut / `Semester` / `Custom`) et `CustomPeriodCount`
+(`integer`, 3 par défaut, 2 à 6 utilisé seulement pour `Custom`). Les périodes elles-mêmes restent des lignes
+de `terms` (`Label`, `Order`) : ces deux colonnes ne pilotent que leur GÉNÉRATION à la création d'une année.
+
+`school_settings.WorkingDays` (Évolution N°3, `varchar(80)`, `NOT NULL`, défaut en base
+`'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'`) liste les jours OUVRÉS de l'établissement : noms de
+`DayOfWeek` séparés par des virgules, forme canonique lundi → dimanche (texte, jamais un entier qui se briserait si
+l'enum changeait). Une valeur vide ou illisible retombe sur le défaut. Les jours absents sont des jours de repos :
+l'appel des élèves, le pointage des enseignants et les créneaux d'emploi du temps y sont refusés par
+`WorkingDayGuard` (Application). Le défaut en base couvre les écoles existantes et la fonction
+`provision_school_director`, qui n'énumère pas toutes les colonnes de `school_settings`.
+
 ### 4.4 Domaine Pédagogique
 
 `SchoolYears`, `Terms`, `Levels`, `ClassRooms`, `Subjects`, `Teachers`, `TeacherAssignments`, `Students`, `Guardians`, `StudentGuardians`, `Enrollments`, `EnrollmentDocuments`, `WaitingListEntries`, `StudentTransfers`, `Attendances`, `Grades`, `GradeDetails`, `ReportCards`, `ReportCardDetails`, `ScheduleSlots` (créneaux d'emploi du temps, Volume 1 §21), `TeacherAttendances` (pointage des enseignants, Volume 1 §21.3).

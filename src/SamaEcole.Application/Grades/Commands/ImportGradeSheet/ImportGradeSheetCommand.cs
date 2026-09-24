@@ -16,8 +16,10 @@ namespace SamaEcole.Application.Grades.Commands.ImportGradeSheet;
 /// transaction. Une seule ligne invalide rejette l'import ENTIER (422, détail ligne par ligne) — jamais
 /// un import partiel.
 ///
-/// Réservé à l'Enseignant, même permission que la saisie unitaire (Volume_7_Security.md « Notes » :
-/// Saisir = Enseignant seul) — c'est la même action de saisie, pas une action distincte.
+/// Ouvert aux mêmes rôles que la saisie unitaire (Directeur, Secrétariat, Enseignant) — c'est la même
+/// action de saisie, pas une action distincte. L'import MODIFIE aussi des notes existantes : il applique
+/// donc la même règle de correction que PUT /grades/{id} (GradeEditPolicy), sans quoi un Enseignant hors
+/// fenêtre corrigerait par fichier ce que l'API lui refuse — 403 sur le fichier entier.
 ///
 /// IAuditableRequest (JGK-H01) : la saisie de notes est une écriture sensible explicitement journalisée,
 /// que ce soit cellule par cellule ou par lot.

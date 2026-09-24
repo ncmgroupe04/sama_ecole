@@ -11,10 +11,10 @@ namespace SamaEcole.FunctionalTests.Grades;
 /// <summary>
 /// Ticket JGK-G01 — /grades contre un vrai PostgreSQL, à travers la vraie pile HTTP.
 ///
-/// POST (Saisir) est réservé à l'Enseignant. PUT (Corriger) et DELETE (Annuler) sont réservés au
-/// Directeur et au Secrétariat — contrôle strict et non révocable de la matrice d'autorisation
-/// "Photoshop" : une fois une note enregistrée, l'Enseignant ne peut plus jamais la modifier, même la
-/// sienne (voir GradesController.UpdateGradeRoles).
+/// POST (Saisir) est ouvert au Directeur, au Secrétariat et à l'Enseignant. PUT (Corriger) l'est aussi,
+/// l'Enseignant étant borné dans le Handler par la fenêtre GradeEditWindowDays et par la propriété de
+/// la note (Évolution N°1, GradeEditPolicy — le détail du délai est testé en intégration avec une
+/// horloge simulée). DELETE (Annuler) reste réservé au Directeur et au Secrétariat.
 /// </summary>
 public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetime
 {
@@ -147,13 +147,26 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
     }
 
     [Fact]
-    public async Task A_Secretary_Must_Not_Enter_Grades()
+    public async Task A_Secretary_Can_Enter_Grades_For_Any_Class()
     {
+        // Évolution N°1 : le Secrétariat saisit, sans périmètre par classe.
         var directeur = await DirecteurTokenAsync();
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var secretaire = await SecretaireTokenAsync();
 
         var response = await CreateGradeAsync(secretaire, studentId, subjectId, termId, "Devoir1", 13);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task A_Finance_User_Must_Not_Enter_Grades()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
+        var finance = await AccessTokenAsync(AuthApiFactory.FinanceEmail, AuthApiFactory.FinancePassword);
+
+        var response = await CreateGradeAsync(finance, studentId, subjectId, termId, "Devoir1", 13);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
@@ -254,16 +267,34 @@ public class GradesEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifetim
     }
 
     [Fact]
-    public async Task An_Enseignant_Must_Not_Correct_A_Grade_Even_Their_Own()
+    public async Task An_Enseignant_Can_Correct_His_Own_Grade_Inside_The_Default_Window()
     {
-        // Contrôle strict de la matrice d'autorisation "Photoshop" : une fois enregistrée, MÊME
-        // l'auteur de la saisie ne peut plus la modifier. Une erreur de saisie exige le Directeur ou
-        // le Secrétariat (voir GradesController.UpdateGradeRoles).
+        // Évolution N°1 : l'auteur corrige sa note pendant GradeEditWindowDays (7 jours par défaut).
+        // Le refus hors fenêtre et le refus « ni auteur ni affecté » sont testés en intégration
+        // (GradeCorrectionTests), où l'horloge est simulée.
         var directeur = await DirecteurTokenAsync();
         var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
         var enseignant = await EnseignantTokenAsync();
 
         var created = await CreateGradeAsync(enseignant, studentId, subjectId, termId, "Devoir1", 12);
+        var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
+
+        var corrected = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", enseignant,
+            new { value = 14, rowVersion = grade.RowVersion });
+
+        corrected.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await corrected.Content.ReadFromJsonAsync<GradeDto>())!.Value.Should().Be(14);
+    }
+
+    [Fact]
+    public async Task An_Enseignant_Cannot_Correct_A_Grade_Entered_By_The_Directeur_When_Not_Assigned()
+    {
+        // Ni auteur (la note est celle du Directeur), ni affecté à la classe/matière : 403.
+        var directeur = await DirecteurTokenAsync();
+        var (studentId, subjectId, termId) = await SeedGradingContextAsync(directeur);
+        var enseignant = await EnseignantTokenAsync();
+
+        var created = await CreateGradeAsync(directeur, studentId, subjectId, termId, "Devoir1", 12);
         var grade = (await created.Content.ReadFromJsonAsync<GradeDto>())!;
 
         var corrected = await SendAsync(HttpMethod.Put, $"/api/v1/grades/{grade.Id}", enseignant,

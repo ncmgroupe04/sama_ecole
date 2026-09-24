@@ -48,5 +48,17 @@ public record UpdateSchoolSettingsCommand(
     bool IsPedagogyEnabled = true,
     bool IsFinanceEnabled = true,
     bool IsInternatEnabled = false,
-    bool IsCoranModuleEnabled = false) : IRequest<SchoolSettingsDto>;
+    bool IsCoranModuleEnabled = false,
+
+    /// <summary>Fenêtre de correction des notes par l'Enseignant, en jours (bornes : SchoolSettingsDefaults).</summary>
+    int GradeEditWindowDays = 7,
+
+    /// <summary>« Trimester » / « Semester » / « Custom » — ne s'applique qu'aux années créées ensuite (voir SchoolSettings).</summary>
+    string EvaluationPeriodType = "Trimester",
+
+    /// <summary>Nombre de périodes si « Custom » (bornes : PeriodSchedule) ; ignoré sinon.</summary>
+    int CustomPeriodCount = 3,
+
+    /// <summary>Jours ouvrés (« Monday » … « Sunday »). Absent ou null = inchangé, jamais « remettre le défaut ».</summary>
+    IReadOnlyList<string>? WorkingDays = null) : IRequest<SchoolSettingsDto>;
 

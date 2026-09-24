@@ -82,7 +82,7 @@ Fichiers : `receipt-reference.png`, `bulletin-reference.png`, `dashboard-referen
 **Disposition, de haut en bas :**
 
 1. En-tête à gauche : hiérarchie administrative sénégalaise sur 3 lignes (Inspection d'Académie, Inspection départementale, nom de l'établissement). En-tête à droite : année scolaire + semestre/trimestre.
-2. Titre centré, gras, souligné : **"BULLETIN DE NOTES"**.
+2. Titre centré, gras, souligné : **"BULLETIN DU {période}"** (ex. « BULLETIN DU 1ER SEMESTRE », « BULLETIN DU 2E TRIMESTRE », « BULLETIN DE LA 1RE PÉRIODE »), le libellé suivant le découpage choisi par l'école ; « BULLETIN DE NOTES » uniquement si la période n'a pas de libellé.
 3. Ligne d'identité : Prénoms / Nom, puis Né(e) le / à, puis Classe.
 4. Ligne : Matricule, Nombre d'élèves de la classe, case "Classe redoublée" (à cocher si applicable).
 5. **Tableau des notes**, colonnes exactement dans cet ordre : **Disciplines | Devoir | Composition | Moyenne/20 | Coefficient | Moyenne × Coefficient | T.H | Rang | Appréciation** — une ligne par matière, puis une ligne **TOTAL** (somme des coefficients, somme des moyennes pondérées) et une case Absences.

@@ -164,6 +164,10 @@
          <span x-show="classroom.isAccelerated" x-cloak
           class="shrink-0 px-1.5 py-0.5 rounded-md bg-amber-50 text-[10px] font-semibold text-amber-700 uppercase tracking-wide"
           :title="'Cursus Accéléré Passerelle' + (classroom.targetLevel ? ' — second niveau validé : ' + classroom.targetLevel : '')">Passerelle</span>
+         @* Série de lycée (L1, L2, S1, S2, TECH) : c'est elle qui décide des coefficients de la classe. *@
+         <span x-show="classroom.series" x-cloak x-text="classroom.series"
+          class="shrink-0 px-1.5 py-0.5 rounded-md bg-primary-50 text-[10px] font-semibold text-primary-700 tracking-wide"
+          title="Série de la classe (détermine les coefficients)"></span>
         </div>
 
         @* Jauge de remplissage *@
@@ -237,6 +241,10 @@
          <span x-show="classroom.isAccelerated" x-cloak
           class="shrink-0 px-1.5 py-0.5 rounded-md bg-amber-50 text-[10px] font-semibold text-amber-700 uppercase tracking-wide"
           :title="'Cursus Accéléré Passerelle' + (classroom.targetLevel ? ' — second niveau validé : ' + classroom.targetLevel : '')">Passerelle</span>
+         @* Série de lycée (L1, L2, S1, S2, TECH) : c'est elle qui décide des coefficients de la classe. *@
+         <span x-show="classroom.series" x-cloak x-text="classroom.series"
+          class="shrink-0 px-1.5 py-0.5 rounded-md bg-primary-50 text-[10px] font-semibold text-primary-700 tracking-wide"
+          title="Série de la classe (détermine les coefficients)"></span>
         </div>
         <div class="mt-1.5 flex items-center gap-2">
          <div class="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -308,6 +316,15 @@
     <p x-show="createErrors.capacity" x-text="createErrors.capacity" class="field-error"></p>
    </div>
 
+   @* Série (lycée seulement) : facultative — une Seconde commune n'en a pas. Elle détermine les
+      coefficients appliqués (onglet Coefficients de l'écran Matières). *@
+   <div x-show="showSeriesField(newClassroom)" x-cloak>
+    <label class="form-label">Série</label>
+    <select-field model="newClassroom.series" aria-label="Série de la classe" placeholder="Aucune série"
+     options-expr="seriesOptions" />
+    <p x-show="createErrors.series" x-cloak x-text="createErrors.series" class="field-error"></p>
+   </div>
+
    @* ── Classe passerelle / accélérée (option) ─────────────────────────────────────────────
       La liste du second niveau ne se déplie QUE si la case est cochée : la très grande majorité
       des classes ne sont pas des passerelles, et le formulaire ne doit pas s'allonger pour tout
@@ -376,6 +393,15 @@
     <label class="form-label form-label-required">Capacité d'accueil</label>
     <input type="number" x-model.number="editing.capacity" required min="1" max="200" class="input-field" :class="editErrors.capacity && 'input-field-error'">
     <p x-show="editErrors.capacity" x-cloak x-text="editErrors.capacity" class="field-error"></p>
+   </div>
+
+   @* Série (lycée seulement) — même champ qu'à la création. Le PUT remplace la classe en entier :
+      la série est toujours renvoyée, sans quoi elle serait effacée. *@
+   <div x-show="showSeriesField(editing)" x-cloak>
+    <label class="form-label">Série</label>
+    <select-field model="editing.series" aria-label="Série de la classe" placeholder="Aucune série"
+     options-expr="seriesOptions" />
+    <p x-show="editErrors.series" x-cloak x-text="editErrors.series" class="field-error"></p>
    </div>
 
    @* Classe passerelle / accélérée — même bloc qu'à la création. Décocher la case efface le second

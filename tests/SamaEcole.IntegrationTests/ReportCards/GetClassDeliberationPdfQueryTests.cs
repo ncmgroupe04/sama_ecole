@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
@@ -80,7 +81,7 @@ public class GetClassDeliberationPdfQueryTests : IAsyncLifetime
     public async Task Students_Are_Sorted_By_Merit_Rank_Not_Alphabetically()
     {
         await using var db = _db.NewAppContext(EcoleA);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(EcoleA));
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(EcoleA), new TestCurrentUser());
         await createGrade.Handle(new CreateGradeCommand(Zorro, Matiere, Trimestre1, EvaluationType.Devoir1, 18), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(Awa, Matiere, Trimestre1, EvaluationType.Devoir1, 8), CancellationToken.None);
         // Moussa : aucune note saisie.
@@ -184,7 +185,7 @@ public class GetClassDeliberationPdfQueryTests : IAsyncLifetime
         {
             if (request is GetGradeSummaryQuery query)
             {
-                var handler = new GetGradeSummaryQueryHandler(dbContext);
+                var handler = new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext));
                 return (Task<TResponse>)(object)handler.Handle(query, cancellationToken);
             }
 

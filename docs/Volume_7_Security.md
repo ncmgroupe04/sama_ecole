@@ -243,15 +243,32 @@ s'enregistre sans versement et les frais s'encaissent ensuite depuis la Caisse.
 | Action | Directeur | Secrétariat | Enseignant |
 |---|---|---|---|
 | Voir | ✔ | ✔ | ✔ |
-| Saisir | ✔ | ✖ | ✔ |
-| Modifier / Annuler une note déjà saisie | ✔ | ✔ | ✖ |
+| Saisir (dont import Excel) | ✔ | ✔ | ✔ |
+| Modifier une note déjà saisie | ✔ | ✔ | ✔ (sous conditions, voir ci-dessous) |
+| Annuler une note déjà saisie | ✔ | ✔ | ✖ |
+| Imprimer la fiche de saisie papier (PDF vierge) | ✔ | ✔ | ✔ |
 | Valider / Publier | ✔ | ✖ | ✖ |
 
-Le Secrétariat peut corriger ou annuler une note déjà enregistrée, au même titre que le Directeur.
-L'Enseignant, y compris auteur de la saisie initiale, ne peut en revanche plus la modifier une fois
-enregistrée — contrôle strict et non révocable, dit modèle « Photoshop » (`GradesController.UpdateGradeRoles`
-= `Directeur,Secretariat`, distinct de `GradesController.GradingRoles` = `Directeur,Enseignant`, réservé à
-la saisie initiale). Une erreur de saisie se corrige donc exclusivement via le Directeur ou le Secrétariat.
+**Correction par l'Enseignant (Évolution N°1, 24/09/2026 — remplace l'ancien modèle « Photoshop »).**
+Le Directeur et le Secrétariat corrigent une note à tout moment, sans limite de délai. L'Enseignant ne
+la corrige que si les DEUX conditions suivantes sont réunies (`GradeEditPolicy`, appliquée par
+`UpdateGradeCommandHandler`, par l'import Excel et par le champ `canEdit` de la grille de saisie) :
+
+1. le délai écoulé depuis la saisie (`Grade.CreatedAt`) ne dépasse pas `SchoolSettings.GradeEditWindowDays`
+   — 7 jours par défaut, réglable de 1 à 365 par le Directeur seul, borne incluse ;
+2. il est l'auteur de la note (`Grade.CreatedBy` = son compte) **ou** il est affecté à la classe et à la
+   matière concernées pour l'année du trimestre (`TeacherAssignment`). Il ne peut donc pas retoucher la
+   note qu'un collègue a posée dans une autre matière.
+
+Sinon : `403 Forbidden` (jamais 409), avec un message qui dit si c'est le délai ou la propriété qui bloque.
+`GradesController` : `GradingRoles` (saisie, import) = `Directeur,Secretariat,Enseignant` ;
+`UpdateGradeRoles` (correction) = les mêmes, la borne fine de l'Enseignant étant portée par le Handler ;
+`DeleteGradeRoles` (annulation) = `Directeur,Secretariat` ; `SummaryRoles` (moyennes) = `Directeur,Enseignant`,
+inchangé — l'extension de la saisie au Secrétariat ne lui ouvre pas la consultation des moyennes.
+
+`Grade.CreatedBy` n'était renseigné par aucun code avant cette évolution : il l'est désormais à la
+création (saisie unitaire et import). Les notes antérieures n'ont pas d'auteur connu — l'Enseignant ne peut
+les corriger que par le critère d'affectation.
 
 **Bulletins**
 

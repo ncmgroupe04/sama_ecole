@@ -17,10 +17,11 @@
 5. CQRS
 6. Gestion des erreurs
 7. Validation
-8. Gestion des migrations de base de données
-9. Gestion des branches Git
-10. Standards de qualité
-11. Définition de terminé (Definition of Done)
+8. Frontend — composants JavaScript partagés
+9. Gestion des migrations de base de données
+10. Gestion des branches Git
+11. Standards de qualité
+12. Définition de terminé (Definition of Done)
 
 ---
 
@@ -132,13 +133,41 @@ Toutes les validations passent par **FluentValidation**. Les contrôleurs ne con
 
 ---
 
-## 8. Gestion des migrations de base de données
+## 8. Frontend — composants JavaScript partagés
+
+Une logique d'interface consommée à l'identique par plusieurs écrans (modale, moteur de rendu, gestion d'état complexe) est factorisée en **un seul composant JS partagé** sous `wwwroot/js/`, jamais recopiée dans chaque vue. Le composant expose une fabrique d'état (`window.<nom>.state()`) que chaque composant Alpine étale dans le sien :
+
+```js
+Alpine.data('students', () => ({
+    ...window.pdfPreview.state(),
+    openReceipt(id) { this.openPdfPreview(`/api/v1/.../${id}/pdf`, 'Reçu', 'Recu.pdf'); }
+}));
+```
+
+La vue inclut le balisage correspondant une seule fois via une partial partagée (ex. `@await Html.PartialAsync("_PdfPreviewModal")`), jamais dupliquée par écran.
+
+### Exemple de référence : `pdf-preview.js`
+
+Moteur unique de toutes les modales de prévisualisation PDF (reçus, bulletins, attestations, billets, sommations…), consommé par une quinzaine d'écrans (Dashboard, Caisse, Inscriptions, Élèves, Enseignants, Examens, Paie, Discipline, Inventaire, etc.). Partial associée : `Views/Shared/_PdfPreviewModal.cshtml`.
+
+- **Rendu par `<canvas>` via PDF.js, jamais par `<iframe src="blob:…">`.** L'approche iframe, utilisée initialement, échoue de façon silencieuse et non reproductible selon le navigateur (extension bloquant le viewer PDF interne, mode « télécharger au lieu d'afficher », absence de plugin PDF sur mobile) : l'écran restait blanc sans que l'erreur réelle (jeton expiré, 404, document vide) ne remonte. Un composant Alpine qui a besoin d'un aperçu PDF doit passer par ce moteur, pas réimplémenter un montage iframe.
+- **Chargement à la demande** : PDF.js (`~1,8 Mo` module + worker) n'est importé dynamiquement qu'au premier aperçu déclenché, pour ne pas alourdir chaque page sur une connexion mobile (Volume 5 §1).
+- **Auto-hébergé** (`wwwroot/js/vendor/`), jamais un CDN : la CSP (`script-src 'self'`, ticket JGK-F01) l'exige.
+- **Repli sans PDF.js** : si le module ne se charge pas, la modale reste utilisable (nouvel onglet, téléchargement) au lieu de se bloquer.
+- **Rendu progressif et annulable** : la page 1 s'affiche dès qu'elle est prête, les suivantes en arrière-plan ; rouvrir un autre document ou changer le zoom pendant un rendu annule le rendu précédent au lieu de superposer deux séries de pages.
+- **Erreurs distinctes par cause** (réseau, HTTP non 2xx, contenu non-PDF, PDF invalide, document protégé) plutôt qu'un message générique — chaque cas correspond à une panne réellement observée en production.
+
+Tout nouveau composant JS partagé suit le même principe : une fabrique d'état documentée en tête de fichier (pourquoi le composant existe, quel problème il évite de reproduire), consommée par étalement (`...window.<nom>.state()`) plutôt que par copier-coller entre écrans.
+
+---
+
+## 9. Gestion des migrations de base de données
 
 Un seul moteur, un seul environnement de référence : **PostgreSQL**, du poste de développement à la production (Volume 0 §0.8, Volume 3 §8). Toutes les migrations sont gérées via `dotnet ef migrations`. Aucune requête SQL brute spécifique à un moteur n'est nécessaire, ce qui simplifie considérablement ce chapitre par rapport à la version 1.0 de ce document, qui devait gérer trois moteurs différents.
 
 ---
 
-## 9. Gestion des branches Git
+## 10. Gestion des branches Git
 
 Stratégie officielle : **Git Flow**.
 
@@ -152,13 +181,13 @@ Stratégie officielle : **Git Flow**.
 
 ---
 
-## 10. Standards de qualité
+## 11. Standards de qualité
 
 Aucun code n'est fusionné dans `develop` sans respecter : architecture conforme (Volume 2), tests unitaires associés, validation métier, gestion des erreurs, journalisation, respect des permissions (Volume 7), performances vérifiées.
 
 ---
 
-## 11. Définition de terminé (Definition of Done)
+## 12. Définition de terminé (Definition of Done)
 
 Une fonctionnalité est terminée uniquement si :
 

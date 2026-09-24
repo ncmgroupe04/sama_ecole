@@ -1,3 +1,4 @@
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades;
@@ -165,7 +166,10 @@ public record PaymentEntryDto(
     string Status,
     DateTimeOffset PaidAt);
 
-public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser)
+public class GetStudentDetailQueryHandler(
+    IApplicationDbContext dbContext,
+    ICurrentUserService currentUser,
+    CoefficientOverrideLoader overrideLoader)
     : IRequestHandler<GetStudentDetailQuery, StudentDetailDto>
 {
     public async Task<StudentDetailDto> Handle(GetStudentDetailQuery request, CancellationToken cancellationToken)
@@ -402,6 +406,18 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
         // même principe de « valeurs par défaut si rien en base » que GetSchoolSettingsQueryHandler.
         var mentions = await ResolveMentionsAsync(gradingScale, cancellationToken);
 
+        // Surcharges de coefficient (Évolution N°4) : une lecture par ANNÉE (elles y sont rattachées), avant
+        // le LINQ synchrone ci-dessous. Même règle que GetGradeSummaryQueryHandler — la fiche ne contredit
+        // jamais le bulletin. Inutile au primaire (coefficient neutralisé à 1).
+        var overridesByYear = new Dictionary<Guid, CoefficientOverrides>();
+        if (!isPrimaire)
+        {
+            foreach (var yearId in gradeRows.Select(r => r.SchoolYearId).Distinct())
+            {
+                overridesByYear[yearId] = await overrideLoader.LoadAsync(studentId, yearId, cancellationToken);
+            }
+        }
+
         var termReports = gradeRows
             .GroupBy(r => new { r.TermId, r.TermLabel, r.TermOrder, r.SchoolYearId, r.SchoolYearLabel })
             .Select(term =>
@@ -430,7 +446,9 @@ public class GetStudentDetailQueryHandler(IApplicationDbContext dbContext, ICurr
                         // Primaire : coefficient neutralisé à 1 → la moyenne générale (ligne ci-dessous,
                         // via WeightedGeneralAverage) devient une moyenne simple. Le coefficient réel de
                         // la matière est ignoré (le primaire n'a pas de système de coefficients).
-                        var coefficient = isPrimaire ? 1m : subject.Key.Coefficient;
+                        var coefficient = isPrimaire
+                            ? 1m
+                            : overridesByYear[term.Key.SchoolYearId].Effective(subject.Key.SubjectId, subject.Key.Coefficient);
 
                         // Barème PROPRE à la matière (grilles par compétences : /40, /60, /24…), à défaut
                         // celui du cycle. La moyenne affichée reste BRUTE, sur ce barème — c'est la note

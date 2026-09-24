@@ -130,6 +130,39 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     public bool IsInternatEnabled { get; set; } = SchoolSettingsDefaults.IsInternatEnabled;
 
     public bool IsCoranModuleEnabled { get; set; } = SchoolSettingsDefaults.IsCoranModuleEnabled;
+
+    /// <summary>
+    /// Classification d'établissement (module Coran/Franco-Arabe, spec §3.2) — PUREMENT
+    /// INFORMATIF. N'active rien : <see cref="IsCoranModuleEnabled"/> reste le seul interrupteur
+    /// consommé par ModuleAuthorizationHandler. Défaut <see cref="Enums.SchoolType.Standard"/>,
+    /// comme <see cref="TypeEtablissement"/> reste à <see cref="Enums.TypeEtablissement.Prive"/>
+    /// pour toute école existante.
+    /// </summary>
+    public SchoolType SchoolType { get; set; } = SchoolSettingsDefaults.SchoolType;
+
+    /// <summary>
+    /// Fenêtre de correction des notes par l'ENSEIGNANT, en jours : passé ce délai après la saisie
+    /// (<c>Grade.CreatedAt</c>), il ne peut plus corriger sa note — seuls le Directeur et le Secrétariat
+    /// le peuvent, sans limite de délai. Lue par GradeCorrectionAuthorizer ; réglée par le Directeur.
+    /// </summary>
+    public int GradeEditWindowDays { get; set; } = SchoolSettingsDefaults.GradeEditWindowDays;
+
+    /// <summary>
+    /// Découpage de l'année en périodes d'évaluation. N'agit que sur les années CRÉÉES ensuite ou
+    /// explicitement rejouées (ApplyEvaluationPeriodsCommand) : jamais sur une année déjà notée.
+    /// </summary>
+    public EvaluationPeriodType EvaluationPeriodType { get; set; } = SchoolSettingsDefaults.EvaluationPeriodType;
+
+    /// <summary>Nombre de périodes quand <see cref="EvaluationPeriodType"/> vaut Custom (2 à 6) ; ignoré sinon.</summary>
+    public int CustomPeriodCount { get; set; } = SchoolSettingsDefaults.CustomPeriodCount;
+
+    /// <summary>
+    /// Jours OUVRÉS de l'établissement (Évolution N°3), noms de <see cref="DayOfWeek"/> séparés par des
+    /// virgules, forme canonique lundi → dimanche (SchoolWeek.Serialize). Les autres jours sont des jours
+    /// de repos : ni appel, ni pointage enseignant, ni créneau d'emploi du temps n'y sont saisis. Défaut
+    /// lundi → samedi : la grille historique, donc aucune école existante ne perd de jour.
+    /// </summary>
+    public string WorkingDays { get; set; } = SchoolSettingsDefaults.WorkingDays;
 }
 
 /// <summary>
@@ -168,6 +201,12 @@ public static class SchoolSettingsDefaults
     public const TypeEtablissement TypeEtablissement = Enums.TypeEtablissement.Prive;
 
     /// <summary>
+    /// Classification par défaut : Standard. Franco-Arabe et Daara restent un choix explicite du
+    /// Directeur, jamais déduit — même philosophie que TypeEtablissement.
+    /// </summary>
+    public const SchoolType SchoolType = Enums.SchoolType.Standard;
+
+    /// <summary>
     /// Aucun crédit à l'ouverture : les SMS s'achètent. Un solde initial offert serait une décision
     /// commerciale, pas une valeur par défaut technique — le Super Admin crédite explicitement.
     /// </summary>
@@ -186,6 +225,21 @@ public static class SchoolSettingsDefaults
     /// <summary>Bornes du seuil de retard : au moins 1 jour, au plus une année scolaire complète.</summary>
     public const int MinDebtorReminderThresholdDays = 1;
     public const int MaxDebtorReminderThresholdDays = 365;
+
+    /// <summary>Une semaine pour qu'un Enseignant corrige sa propre saisie, puis la note est verrouillée pour lui.</summary>
+    public const int GradeEditWindowDays = 7;
+
+    /// <summary>Bornes de la fenêtre : au moins 1 jour, au plus une année scolaire complète.</summary>
+    public const int MinGradeEditWindowDays = 1;
+    public const int MaxGradeEditWindowDays = 365;
+
+    /// <summary>Trimestriel : le système sénégalais standard, et le comportement de toutes les écoles existantes.</summary>
+    public const EvaluationPeriodType EvaluationPeriodType = Enums.EvaluationPeriodType.Trimester;
+
+    public const int CustomPeriodCount = 3;
+
+    /// <summary>Lundi → Samedi : la grille historique (à garder identique à SchoolWeek.DefaultStored).</summary>
+    public const string WorkingDays = "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday";
 
     /// <summary>
     /// Modules activés à la création d'une école : Pédagogie et Finance forment le socle métier

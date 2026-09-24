@@ -1,6 +1,7 @@
 using FluentAssertions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Features.Schedules;
+using SamaEcole.Application.Schools;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using SamaEcole.IntegrationTests.Common;
@@ -192,7 +193,7 @@ public class ScheduleOwnershipTests : IAsyncLifetime
         SamaEcole.Persistence.ApplicationDbContext context, ICurrentUserService user, Guid teacherId)
     {
         var handler = new CreateScheduleSlotCommandHandler(
-            context, new StubTenantProvider(Ecole), user, Authorizer(context, user));
+            context, new StubTenantProvider(Ecole), user, Authorizer(context, user), new WorkingDayGuard(context));
 
         return await handler.Handle(
             new CreateScheduleSlotCommand(
@@ -204,7 +205,7 @@ public class ScheduleOwnershipTests : IAsyncLifetime
     private static async Task UpdateAsync(
         SamaEcole.Persistence.ApplicationDbContext context, ICurrentUserService user, Guid id, Guid teacherId)
     {
-        var handler = new UpdateScheduleSlotCommandHandler(context, user, Authorizer(context, user));
+        var handler = new UpdateScheduleSlotCommandHandler(context, user, Authorizer(context, user), new WorkingDayGuard(context));
 
         await handler.Handle(
             new UpdateScheduleSlotCommand(

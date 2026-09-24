@@ -1,6 +1,7 @@
 using SamaEcole.Application.Attendance;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Schools;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
@@ -14,6 +15,7 @@ public class SubmitAttendanceSheetCommandHandler(
     ITenantProvider tenantProvider,
     ICurrentUserService currentUser,
     AttendanceScopeAuthorizer scopeAuthorizer,
+    WorkingDayGuard workingDayGuard,
     IPublisher publisher,
     IKpiCacheService kpiCache)
     : IRequestHandler<SubmitAttendanceSheetCommand, SubmitAttendanceSheetResult>
@@ -51,6 +53,9 @@ public class SubmitAttendanceSheetCommandHandler(
 
         // Portée : un Enseignant ne peut faire l'appel que pour ses classes/matières assignées (403).
         await scopeAuthorizer.EnsureCanTakeAttendanceAsync(request.ClassroomId, request.SubjectId, activeYear.Id, cancellationToken);
+
+        // Jour de repos de l'établissement (Évolution N°3) : aucun appel ne s'y saisit.
+        await workingDayGuard.EnsureWorkingDayAsync(request.Date, nameof(request.Date), cancellationToken);
 
         // Tous les élèves de l'appel doivent appartenir à CETTE classe : un statut posé sur un élève
         // d'une autre classe (ou d'une autre école, déjà masqué par la RLS) est une erreur de saisie.

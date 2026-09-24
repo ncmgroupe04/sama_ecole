@@ -5,7 +5,8 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 19/09/2026** (Module Cahier de texte / Journal de classe (JGK-P04) —
+**Dernière mise à jour : 24/09/2026** (Notes — fenêtre de correction de l'Enseignant, saisie par le
+Secrétariat et fiche de saisie papier PDF, voir §2 ; Module Cahier de texte / Journal de classe (JGK-P04) —
 **livré : entité + migration RLS, `ClassJournalScopeAuthorizer` (TeacherAssignment + ScheduleSlot),
 règle des 15 jours, CQRS complet, contrôleur, écran `/cahier-de-texte`, tests unitaires et
 d'intégration**, voir §2 ; Module Internat — **livré : back-end, persistance, migration RLS, écran
@@ -73,6 +74,176 @@ Livrés, câblés à l'IHM, et couverts par la suite de tests :
 Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bulletins, Frais,
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
 les sprints précédents.
+
+### Notes — fenêtre de correction, Secrétariat et fiche papier (24/09/2026) — livré (Évolution N°1)
+
+Trois changements sur `/grades` et l'écran `/notes`. Spécification : `docs/Volume_7_Security.md` « Notes »,
+`docs/Volume_4_API_Design.md` §8, `openapi.yaml`.
+
+- **Fenêtre de correction de l'Enseignant.** `SchoolSettings.GradeEditWindowDays` (7 par défaut, 1–365,
+  migration `AddGradeEditWindowDays`, réglée par le Directeur dans Paramètres › Notation & mentions).
+  `PUT /grades/{id}` s'ouvre à l'Enseignant, mais `GradeEditPolicy` le borne : délai depuis la saisie ≤ fenêtre
+  (borne incluse) **et** auteur de la note **ou** affecté à la classe/matière (`TeacherAssignment`, année du
+  trimestre) — 403 sinon, jamais 409. Directeur et Secrétariat corrigent sans limite. Cela **remplace** le
+  modèle « Photoshop » (correction réservée au Directeur et au Secrétariat).
+- **Secrétariat.** Il saisit désormais (`POST /grades`, import Excel), pour toutes les classes. `DELETE` reste
+  Directeur/Secrétariat ; `GET /grades/calculate` reste Directeur/Enseignant (`SummaryRoles`) : l'extension de
+  la saisie ne lui ouvre pas la consultation des moyennes.
+- **Fiche de saisie papier.** `GET /grades/sheet/print` : PDF vierge (QuestPDF, `GradeSheetDocument`) — élèves
+  par ordre alphabétique **français** (tri en mémoire, pas la collation de la base), cases Note et
+  Appréciation vides, barème de la matière ou du cycle. Bouton « Fiche papier » sur l'écran de saisie.
+
+**Trois arbitrages actés, à ne pas rouvrir sans raison :**
+
+1. **La règle vit à un seul endroit.** `GradeEditPolicy` (pure) + `GradeCorrectionAuthorizer` servent la
+   correction unitaire, l'**import Excel** et le champ `canEdit` de chaque cellule de la grille. L'import
+   modifie aussi des notes existantes : sans ce contrôle, un Enseignant hors fenêtre corrigeait par fichier ce
+   que l'API lui refuse (contournement qui existait déjà sous l'ancien modèle).
+2. **`Grade.CreatedBy` est désormais renseigné.** Aucun code ne le posait avant cette évolution
+   (`SaveChangesAsync` ne stampe que `CreatedAt`/`UpdatedAt`), donc le critère « auteur » n'avait aucune donnée
+   à lire. Il est posé explicitement à la création (saisie unitaire et import) — pas globalement dans le
+   contexte, pour ne pas changer le comportement de toutes les entités. Les notes **antérieures** n'ont pas
+   d'auteur connu : l'Enseignant ne les corrige que par l'affectation.
+3. **`CanEdit` est un confort d'affichage, jamais une garde.** La cellule grisée suit le serveur ; la vraie
+   garde reste `PUT /grades/{id}` (403).
+
+**Écart corrigé (24/09/2026) :** `settings.js` (Paramètres › Configuration) envoyait un
+`PUT /schools/current/settings` construit champ par champ, qui **omettait** les alertes SMS et
+`debtorReminderThresholdDays` — chaque enregistrement depuis cet écran les ramenait à leurs valeurs par défaut.
+`saveConfig()` relit désormais `GET /schools/current/settings` juste avant le PUT et étale cet état sous les
+champs qu'il pilote (`{ ...current, …champs de l'écran }`), comme `sms-settings.js`. Deux effets : aucune
+omission possible, y compris pour un champ ajouté plus tard ; et aucune valeur **périmée** (un enregistrement de
+l'écran SMS survenu depuis le chargement de la page n'est plus écrasé). Le PUT reste un remplacement complet
+côté serveur : **tout nouvel écran qui écrit ces réglages doit relire avant d'écrire.** Verrouillé par
+`tests/js/settings-save-preserves-fields.test.mjs`.
+
+### Module Coran / Franco-Arabe — Phases 1 et 2 (20/09 → 24/09/2026) — API livrée, aucun écran
+
+Branche `feature/franco-arabic-core`. Spécifications : `docs/superpowers/specs/2026-09-20-franco-arabic-core-design.md`
+(Phase 1) et `…-franco-arabic-cqrs-api-design.md` (Phase 2) ; plans jumeaux dans `docs/superpowers/plans/`.
+Routes : `openapi.yaml` (préfixe `/api/v1/quran`). **Aucun écran ni JavaScript à ce stade** — l'API seule.
+
+- **Phase 1 — socle de données.** Enums `SectionType` (Français / Arabe / Études islamiques), `SchoolType`
+  (Standard / FrancoArabic / Daara) et `QuranMemorizationStatus` (InProcess / Memorized / Revised) ;
+  `Subject.SectionType` (défaut French) et `SchoolSettings.SchoolType` (défaut Standard) ; entités `QuranProgress`
+  (Juz, Hizb, Sourate, statut) et `QuranEvaluation` (erreurs mémoire/tajwid, hésitations, note finale), toutes deux
+  sous verrou `xmin` ; migrations `AddQuranCoreModule` (RLS incluse) et `AddQuranModuleToResetSchoolData`
+  (`quran_progress`/`quran_evaluations` ajoutées à `reset_school_data`). Tests : valeurs par défaut, verrou
+  optimiste, isolation RLS.
+- **Phase 2 — CQRS et API.** 4 commandes (création/correction de progression et d'évaluation, avec verrou
+  `RowVersion` → 409, journal d'audit `IAuditableRequest`), 4 requêtes (par élève et par classe, pour chaque
+  entité), validateurs FluentValidation, `QuranController` (`[RequireModule(SchoolModule.Coran)]`).
+  Écriture : Directeur + Enseignant ; lecture : + Secrétariat. Tests unitaires (validateurs, enums, entités) et
+  d'intégration (une classe par commande/requête + isolation multi-tenant).
+
+**Arbitrages actés (spec Phase 2 §2), à ne pas rouvrir sans raison :** aucune garde fine par affectation (comme
+`CreateGradeCommandHandler`) ; `FinalScore` sans plafond (seule la borne `≥ 0` — aucun barème spécifié pour
+l'oral coranique) ; `Juz`/`Hizb`/`Sourate`/`Élève` immuables en correction ; **`SchoolType` est purement
+informatif** — `IsCoranModuleEnabled` reste le seul interrupteur lu par `ModuleAuthorizationHandler`.
+
+**Reste à faire :** écran(s) Coran (lot séparé, comme l'Internat) et intégration de `SectionType` au bulletin
+(aucun effet sur `Coefficient` ni sur le calcul des moyennes tant que ce lot n'existe pas).
+
+### Périodes d'évaluation dynamiques (24/09/2026) — livré (Évolution N°2)
+
+Le découpage de l'année n'est plus « 3 trimestres » en dur. Branche `feature/evaluation-periods`. Plan :
+`docs/superpowers/plans/2026-09-24-evaluation-periods.md`.
+
+- **Réglage.** `SchoolSettings.EvaluationPeriodType` (`Trimester` défaut / `Semester` / `Custom`) et
+  `CustomPeriodCount` (2 à 6, lu seulement pour `Custom`), migration `AddEvaluationPeriodType`, réglés par le
+  Directeur dans Paramètres › Pédagogie. `PeriodSchedule` (Application) remplace `TermSchedule` : nombre,
+  libellés (« 1er trimestre », « 1er semestre », « 1re période ») et dates à parts égales, la dernière période
+  absorbant le reste — l'ancien découpage trimestriel est reproduit à l'identique (test figé).
+- **Génération.** `CreateSchoolYearCommandHandler` lit le réglage (une école sans ligne garde les trimestres).
+  Les sélecteurs de notes, moyennes et bulletins listaient déjà `GET /school-years/{id}/terms` : ils suivent sans
+  autre code. Reste du vocabulaire « Trimestre » remplacé par « Période » dans l'interface et l'aide.
+- **Documents.** Titre du bulletin dérivé du libellé (`BulletinTitle` : « BULLETIN DU 1ER SEMESTRE », « … DE LA 1RE
+  PÉRIODE »), repli « BULLETIN DE NOTES » sans libellé ; ligne « Période » de la fiche de saisie papier.
+  `docs/design-references/README.md` §2 mis à jour (règle #12).
+
+**Quatre arbitrages actés (24/09/2026), à ne pas rouvrir sans raison :**
+
+1. **« Personnalisé » = un nombre de périodes de 2 à 6**, à parts égales. Libellés et dates éditables période par
+   période : hors périmètre.
+2. **Le titre du bulletin s'adapte dynamiquement** — dérogation assumée au titre fixe de la référence visuelle,
+   consignée dans `design-references/README.md`.
+3. **Le réglage n'agit que sur les années créées ensuite.** Une année déjà créée **garde son nombre de périodes**
+   quand ses dates changent (`UpdateSchoolYearCommandHandler` recale les `Term` existants, jamais le réglage).
+   `POST /school-years/{id}/apply-evaluation-periods` rejoue le découpage sur une année existante, en **blocage
+   strict** : refusé (422) dès qu'UNE note ou UNE appréciation de bulletin existe sur l'année, et sur une année
+   terminée. Les anciennes périodes sont archivées (suppression logique), pas effacées.
+4. **Libellés complets à l'écran** (« 1er semestre »), aucun code court « S1/T1 ».
+
+**Piège de la migration en local :** un serveur de dev lancé verrouille les DLL du dossier `Debug` ; pour générer
+une migration sans l'arrêter, `dotnet ef migrations add … --configuration Release`.
+
+### Jours ouvrés et week-ends configurables (24/09/2026) — livré (Évolution N°3)
+
+Chaque école définit ses jours ouvrés (ex. repos jeudi et vendredi pour une école franco-arabe ou un daara).
+Branche `feature/working-days`, empilée sur `feature/evaluation-periods` (à fusionner après elle). Plan :
+`docs/superpowers/plans/2026-09-24-working-days.md`.
+
+- **Réglage.** `SchoolSettings.WorkingDays` (texte « Monday,Tuesday,… », défaut base lundi → samedi), migration
+  `AddSchoolWorkingDays`, réglé par le Directeur dans Paramètres › Notation & mentions (préréglages « Lundi →
+  Vendredi », « Lundi → Samedi », « Samedi → Mercredi »). `PUT` : `workingDays` absent ou `null` = **inchangé**
+  (ce réglage verrouille des écritures, un ancien client ne doit pas le réinitialiser).
+- **Logique.** `SchoolWeek` (Application, pur, testé sans base) : analyse, forme canonique, ordre d'affichage,
+  noms français. `WorkingDayGuard` lit le réglage de l'école COURANTE (RLS) et lève un 422 lisible.
+- **Verrous.** Appel des élèves (soumission **et** ouverture de la feuille), pointage des enseignants, création et
+  déplacement de créneaux. Côté écran : la grille suit la semaine de l'école, le sélecteur « Jour » n'offre que
+  les jours ouvrés, l'écran d'appel affiche un bandeau et n'envoie aucune requête un jour de repos.
+
+**Six arbitrages actés (24/09/2026), validés sans modification :**
+
+1. **D1 — défaut lundi → samedi** (la grille historique) : aucune école existante ne perd de jour ; seul le
+   dimanche devient jour de repos par défaut.
+2. **D2 — appels déjà saisis un jour devenu repos : conservés dans les taux.** Le verrou ne joue que sur les
+   saisies nouvelles ; rien n'est réécrit rétroactivement.
+3. **D3 — créneaux hérités : approche souple.** Le réglage se change librement ; la grille garde la colonne
+   marquée « repos » ; on peut y lire et supprimer, pas créer ni modifier (même pour changer seulement la salle).
+4. **D4 — périmètre du verrou.** Verrouillés : appel élèves, pointage enseignants, créneaux. NON verrouillés, à
+   dessein : billets d'entrée/sortie et retards, justificatifs, journal de classe, heures de paie.
+5. **D5 — ordre d'affichage.** La semaine commence le lendemain du bloc de repos (repos jeudi/vendredi → samedi,
+   dimanche, lundi, mardi, mercredi) ; repos non contigus : lundi → dimanche. Calculé une fois, côté serveur.
+6. **D6 — aucun calendrier de jours fériés ni de vacances.**
+
+**Invariant : aucun calcul de taux n'a changé.** Ils portent sur les appels réellement saisis (jamais des jours
+calendaires), donc un jour de repos sans appel n'entre dans aucun dénominateur ; des tests
+(`AttendanceRateWorkingDaysTests`) figent ce comportement contre une future refonte du dénominateur.
+
+### Coefficients par série et surcharge du Directeur (24/09/2026) — livré (Évolution N°4)
+
+Un lycée règle le coefficient d'une matière par série (L1, L2, S1, S2, TECH) ou par classe. Branche
+`feature/series-coefficients`, empilée sur `feature/working-days`. Plan :
+`docs/superpowers/plans/2026-09-24-series-coefficients.md`. Spécification fonctionnelle :
+`docs/Volume_1_Cahier_des_Charges.md` §8.7.
+
+- **Données.** `Classroom.Series` (nullable, Lycée seulement) et table `subject_coefficient_overrides`
+  (portée série ou classe, par année scolaire) : `SchoolId`, Global Query Filter **et** policy RLS, `xmin`
+  (409), suppression logique, ajoutée à `reset_school_data` et aux purges d'année.
+- **Calcul.** `SubjectCoefficients.Resolve` (pur) : **classe › série › matière**, appelé par les deux seuls
+  lecteurs de coefficient (`GetGradeSummaryQueryHandler`, `GetStudentDetailQueryHandler`) — bulletins PDF,
+  bulletins de classe, délibération et fiche élève suivent. Primaire/Maternelle : 1, inchangé.
+- **API.** `/api/v1/coefficients` : catalogue, grille, `PUT` (upsert), `DELETE` (« Rétablir »), `carry-over`,
+  `apply-template`. Lecture Directeur + Secrétariat, écriture **Directeur seul**, module `Pedagogy` requis.
+- **Modèles nationaux.** `SeriesCoefficientTemplates` (une seule table de données) : L1, L2, S1, S2 validés
+  par la direction le 24/09/2026 ; **TECH sans modèle** (aucune valeur fournie, `apply-template` répond 422).
+  Matérialisés en surcharges de série par « Appliquer le modèle », jamais utilisés comme repli au calcul.
+- **Écrans.** Classes : champ « Série » (lycée) + pastille. Matières › onglet **Coefficients** : grille
+  Base · Surcharge · Effectif · Origine, « Rétablir », « Appliquer le modèle », « Reprendre l'année
+  précédente », avertissement rétroactif. Fiche d'aide « Coefficients par série » (`help.js`).
+
+**Invariant : sans surcharge, le calcul est strictement celui d'avant.** Un lycée qui n'a rien paramétré (ou
+qui contourne encore par « une matière par niveau texte ») voit ses bulletins inchangés le jour du déploiement.
+
+**Points de vigilance connus :**
+1. Les modèles ne distinguent pas Première et Terminale : la table valait pour la série ; un bulletin réel de
+   1re S2 (Maths 5, Sc. physiques 6, SVT 6…) peut différer du modèle S2 — à confronter au texte officiel.
+2. Effacer la série d'une classe change des coefficients : l'écran Classes renvoie toujours la série au `PUT`,
+   mais un ancien client qui l'omet l'effacerait.
+3. Le cycle de notation (barème /10 ou /20) d'un élève reste celui de sa classe actuelle, y compris pour les
+   années passées ; seuls les coefficients suivent l'inscription de l'année.
+4. Le niveau d'une matière est un texte libre : la grille liste « toutes les matières hors primaire/maternelle ».
 
 ### Inventaire (26/08/2026) — API et écran livrés
 

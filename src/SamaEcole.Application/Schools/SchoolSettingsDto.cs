@@ -42,4 +42,16 @@ public record SchoolSettingsDto(
     bool IsPedagogyEnabled = true,
     bool IsFinanceEnabled = true,
     bool IsInternatEnabled = false,
-    bool IsCoranModuleEnabled = false);
+    bool IsCoranModuleEnabled = false,
+
+    /// <summary>Fenêtre de correction des notes par l'Enseignant, en jours (Directeur/Secrétariat : illimitée).</summary>
+    int GradeEditWindowDays = 7,
+
+    /// <summary>Découpage de l'année : « Trimester » / « Semester » / « Custom » (SchoolSettings.EvaluationPeriodType).</summary>
+    string EvaluationPeriodType = "Trimester",
+
+    /// <summary>Nombre de périodes si le découpage est « Custom » (2 à 6) ; ignoré sinon.</summary>
+    int CustomPeriodCount = 3,
+
+    /// <summary>Jours ouvrés (noms « Monday » … « Sunday »), dans l'ordre d'affichage de la semaine de l'école.</summary>
+    IReadOnlyList<string>? WorkingDays = null);

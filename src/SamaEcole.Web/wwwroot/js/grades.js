@@ -7,14 +7,15 @@
  * PUT /grades/{id} pour la corriger — sans bouton « Enregistrer » global : sur une classe de quarante
  * élèves, un enregistrement groupé forcerait à tout ressaisir après une seule erreur de saisie.
  *
- * Matrice d'autorisation "Photoshop" — contrôle strict et NON révocable (GradesController) : SAISIR
- * (POST) une note qui n'existe pas encore reste réservé à l'Enseignant (canEnterGrades) ; CORRIGER
- * (PUT) ou ANNULER (DELETE) une note déjà enregistrée est réservé au Directeur et au Secrétariat
- * (canCorrectGrades) — l'Enseignant en perd le droit dès l'enregistrement initial, même sur sa propre
- * saisie. D'où deux conditions distinctes par cellule : vide → gouvernée par canEnterGrades ;
- * déjà notée → gouvernée par canCorrectGrades.
+ * Droits (GradesController, Évolution N°1) : SAISIR une note (POST) est ouvert au Directeur, au
+ * Secrétariat et à l'Enseignant (canEnterGrades). CORRIGER une note déjà enregistrée (PUT) est ouvert
+ * aux trois, mais l'Enseignant est borné côté serveur — fenêtre de correction de l'école, ET auteur de
+ * la note ou affecté à la classe/matière. Le serveur dit cellule par cellule si la correction est
+ * possible (champ canEdit) : l'écran grise la cellule sur cette base, sans recalculer une règle qui
+ * exige l'heure serveur et l'affectation de l'enseignant. Confort d'affichage — la vraie garde reste
+ * PUT /grades/{id} (403). ANNULER (DELETE) reste réservé au Directeur et au Secrétariat.
  *
- * Import Excel : mode de saisie ALTERNATIF, réservé lui aussi à l'Enseignant — une feuille large (une
+ * Import Excel : mode de saisie ALTERNATIF, ouvert aux mêmes rôles que la saisie — une feuille large (une
  * ligne par élève, une colonne par épreuve : Matricule, Devoir 1, Devoir 2, Composition, dans un ordre
  * libre) remplit les trois colonnes de la classe en une fois (POST /grades/sheet/import). L'élève est
  * identifié par son matricule, l'épreuve par le NOM de sa colonne — jamais par la position — pour
@@ -34,8 +35,11 @@ document.addEventListener('alpine:init', () => {
         // openPdfPreview (ouvre le PDF dans un nouvel onglet, visionneuse native du navigateur).
         ...window.pdfPreview.state(),
 
-        canEnterGrades: window.auth.role === 'Enseignant' || window.auth.role === 'Directeur',
-        canCorrectGrades: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+        canEnterGrades: window.auth.role === 'Enseignant' || window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+        isTeacher: window.auth.role === 'Enseignant',
+
+        // Infobulle d'une cellule dont la correction est verrouillée (canEdit faux, voir toCell).
+        lockedHint: "Correction verrouillée : le délai est dépassé, ou cette note n'est ni la vôtre ni celle d'une matière et d'une classe qui vous sont affectées. Demandez au Directeur ou au Secrétariat.",
 
         // Télécharger les bulletins de la classe (ZIP ou PDF fusionné) est ouvert au Directeur, à
         // l'Enseignant ET au Secrétariat côté serveur (ReportCardsController.ReportCardDownloadRoles,
@@ -49,6 +53,10 @@ document.addEventListener('alpine:init', () => {
         // pratique aujourd'hui (chaque échec réseau a déjà son propre traitement ci-dessous), mais
         // sans cette déclaration Alpine évalue "error" comme une référence indéfinie à chaque rendu.
         error: null,
+
+        // Fiche de saisie PAPIER (PDF vierge, GET /grades/sheet/print) : une évaluation à la fois, choisie ici.
+        sheetEvaluation: 'Devoir1',
+        printingSheet: false,
 
         downloadingClassBulletins: false,
         downloadingClassDeliberation: false,
@@ -180,6 +188,9 @@ document.addEventListener('alpine:init', () => {
                 rowVersion: cell ? cell.rowVersion : null,
                 value: cell ? cell.value : '',
                 original: cell ? cell.value : '',
+                // Une cellule vide se saisit toujours (POST) ; une note existante se corrige seulement si le
+                // serveur l'autorise (fenêtre de correction, auteur ou affectation — voir GradeEditPolicy).
+                canEdit: cell ? cell.canEdit : true,
                 status: 'idle',
                 error: null
             };
@@ -289,6 +300,32 @@ document.addEventListener('alpine:init', () => {
         classNameFor(classroomId) {
             const classroom = this.classrooms.find(c => c.id === classroomId);
             return classroom ? classroom.name : 'classe';
+        },
+
+        /**
+         * Fiche de saisie papier : une grille VIERGE (élèves par ordre alphabétique, cases Note et
+         * Appréciation vides) à imprimer et remplir au stylo dans la salle, avant de reporter les notes
+         * à l'écran. Aperçu dans la modale partagée — l'enseignant l'imprime depuis l'en-tête. Une seule
+         * évaluation par fiche (choix `sheetEvaluation`), jamais un « Devoir 1 » par défaut silencieux :
+         * le type est toujours envoyé explicitement.
+         */
+        async printPaperSheet() {
+            if (!this.hasSelection) return;
+            this.classBulletinsError = null;
+            this.printingSheet = true;
+            try {
+                const className = this.classNameFor(this.selectedClassroomId);
+                const label = { Devoir1: 'Devoir 1', Devoir2: 'Devoir 2', Composition: 'Composition' }[this.sheetEvaluation];
+                await this.openPdfPreview(
+                    `/api/v1/grades/sheet/print?classroomId=${this.selectedClassroomId}&subjectId=${this.selectedSubjectId}&termId=${this.selectedTermId}&evaluationType=${this.sheetEvaluation}`,
+                    `Fiche de saisie — ${className} — ${label}`,
+                    `Fiche_Notes_${className}_${label.replace(' ', '')}.pdf`
+                );
+            } catch (err) {
+                this.classBulletinsError = (err && err.message) || 'Génération de la fiche de saisie impossible.';
+            } finally {
+                this.printingSheet = false;
+            }
         },
 
         async downloadClassBulletinsZip() {

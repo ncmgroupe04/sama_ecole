@@ -269,7 +269,9 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/grades` | Saisir une note (validation de plage selon `GradingSettings`) |
+| `POST` | `/api/v1/grades` | Saisir une note (validation de plage selon `GradingSettings`) — Directeur, Secrétariat, Enseignant |
+| `PUT` | `/api/v1/grades/{id}` | Corriger une note (`rowVersion` obligatoire). Enseignant : dans la fenêtre `gradeEditWindowDays` ET auteur ou affecté, `403` sinon ; Directeur/Secrétariat : sans limite |
+| `GET` | `/api/v1/grades/sheet/print` | Fiche de saisie papier, PDF vierge (`classroomId`, `subjectId`, `termId`, `evaluationType` obligatoires) — élèves par ordre alphabétique, cases Note et Appréciation vides |
 | `POST` | `/api/v1/grades/publish` | Publier/verrouiller la saisie pour la période |
 | `GET` | `/api/v1/grades/calculate` | Recalcul des moyennes/totaux |
 
@@ -285,7 +287,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/attendance` | Enregistrer une absence |
+| `POST` | `/api/v1/attendance` | Enregistrer une absence. `422` si la date est un jour de repos de l'établissement (`workingDays`, Évolution N°3) |
 | `GET` | `/api/v1/attendance/report` | Rapport d'absences |
 
 ## 11. API Paramètres
@@ -300,6 +302,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `POST` | `/api/v1/schools/current/go-live` | Bascule en mode réel (Directeur, mot « CONFIRMER » ou nom de l'école) — définitive |
 | `POST` | `/api/v1/schools/current/reset-data` | « Zone de danger » : remise à neuf en mode test (Directeur, mot « PURGER » ou nom de l'école) |
 | `DELETE` | `/api/v1/school-years/{id}` | Suppression d'une année scolaire (Directeur, **libellé exact** à recopier) |
+| `POST` | `/api/v1/school-years/{id}/apply-evaluation-periods` | Rejoue sur l'année le découpage en périodes choisi dans les réglages (`evaluationPeriodType` : `Trimester` / `Semester` / `Custom` de 2 à 6). Directeur ; `422` dès qu'une note ou une appréciation de bulletin existe sur l'année, ou si elle est terminée |
 
 > **Mode bac à sable, purge et suppression d'année — les trois gardes.** `reset_school_data` et
 > `delete_school_year` sont les **seules** exceptions à la règle #6 (aucune suppression physique), et
@@ -513,11 +516,11 @@ Construction de l'emploi du temps hebdomadaire et pointage des présences enseig
 |---|---|---|
 | `GET` | `/api/v1/schedules/teacher/{teacherId}` | Emploi du temps d'un enseignant |
 | `GET` | `/api/v1/schedules/classroom/{classroomId}` | Emploi du temps d'une classe |
-| `POST` | `/api/v1/schedules` | Créer un créneau |
-| `PUT` | `/api/v1/schedules/{id}` | Modifier un créneau |
+| `POST` | `/api/v1/schedules` | Créer un créneau. `422` si le jour est un jour de repos de l'établissement (`workingDays`) |
+| `PUT` | `/api/v1/schedules/{id}` | Modifier un créneau. `422` si le jour écrit est un jour de repos — y compris pour un créneau hérité d'un jour devenu repos, qui reste lisible et supprimable mais plus modifiable |
 | `DELETE` | `/api/v1/schedules/{id}` | Supprimer un créneau |
 | `GET` | `/api/v1/teacher-attendance?date=` | Pointage des enseignants pour une date |
-| `POST` | `/api/v1/teacher-attendance` | Enregistrer un pointage |
+| `POST` | `/api/v1/teacher-attendance` | Enregistrer un pointage. `422` si la date est un jour de repos de l'établissement (`workingDays`) |
 
 **Règles :**
 - **Contrôle de propriété (règle #10).** Un `Enseignant` ne peut créer ou modifier un créneau que pour **lui-même** : le `TeacherId` reçu dans le corps de la requête est rapproché de sa propre fiche via `Teacher.UserId`, jamais accepté sur parole. Une tentative pour un autre enseignant est rejetée (`403`). Le JWT ne porte que l'identifiant du **compte** — d'où la remontée compte → fiche. `Directeur`/`Secretariat`/`SuperAdmin` construisent l'emploi du temps de tout l'établissement et ne sont pas bornés.

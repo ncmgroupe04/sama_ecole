@@ -92,6 +92,16 @@
  Modifier
  </button>
 
+ @* Rejoue sur cette année le découpage choisi dans Paramètres › Pédagogie (trimestres,
+ semestres, périodes). Refusé par le serveur dès qu'une note ou une appréciation de
+ bulletin existe : la modale affiche alors le motif. *@
+ <button x-show="canApplyPeriods(year)" x-cloak
+ x-on:click="openApplyPeriods(year)"
+ title="Appliquer le découpage en périodes choisi dans Paramètres"
+ class="ml-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
+ Appliquer le découpage
+ </button>
+
  @* Une année terminée est en lecture seule (ticket JGK-C01) : on le DIT,
  au lieu d'afficher un bouton grisé dont personne ne devine la raison. *@
  <span x-show="year.isClosed" x-cloak
@@ -186,7 +196,7 @@
  aucune donnée d'un exercice à l'autre, c'est l'activation qui engage l'établissement.
  *@
  <modal-shell size="lg" open="isEditOpen" on-close="closeEdit()" title="Modifier l'année scolaire">
- <modal-subtitle>Les trimestres sont recalés sur la nouvelle période. Les notes déjà saisies restent attachées à leur trimestre.</modal-subtitle>
+ <modal-subtitle>Les périodes (trimestres, semestres…) sont recalées sur la nouvelle période. Les notes déjà saisies restent attachées à leur période.</modal-subtitle>
 
  <!-- Erreur non rattachable à un champ : année terminée, libellé en doublon, réseau… -->
  <div x-show="editErrors.global || editErrors.id" x-cloak class="form-error-banner"
@@ -220,6 +230,42 @@
  </button>
  </div>
  </form>
+ </modal-shell>
+
+ @*
+ Appliquer le découpage en périodes à une année existante. Centrée (comme l'activation) : c'est un
+ remplacement, pas une saisie. Le motif d'un refus serveur (notes déjà saisies) reste affiché dans
+ la modale pour être lu, jamais escamoté par un toast.
+ *@
+ <modal-shell open="yearToApplyPeriods" on-close="closeApplyPeriods()" title="Appliquer le découpage en périodes" size="md">
+ <template x-if="yearToApplyPeriods">
+ <div>
+ <p class="text-sm text-slate-600">
+ Les périodes de l'année <span class="font-semibold text-slate-900" x-text="yearToApplyPeriods?.label"></span>
+ seront remplacées par le découpage choisi dans Paramètres › Pédagogie (trimestres, semestres ou périodes
+ personnalisées).
+ </p>
+ <p class="mt-2 text-sm text-slate-600">
+ Possible uniquement tant qu'aucune note ni appréciation de bulletin n'est saisie sur cette année.
+ </p>
+
+ <div x-show="applyPeriodsError" x-cloak class="mt-4 form-error-banner" x-text="applyPeriodsError"></div>
+
+ <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
+ <button type="button" x-on:click="closeApplyPeriods()" class="btn-modal-secondary group">Annuler</button>
+ <button type="button" x-on:click="submitApplyPeriods()" :disabled="isApplyingPeriods" class="btn-modal-primary group">
+ <span x-text="isApplyingPeriods ? 'Application...' : 'Appliquer le découpage'"></span>
+ </button>
+ </div>
+ </div>
+ </template>
+ </modal-shell>
+
+ <!-- Confirmation : découpage appliqué -->
+ <modal-shell open="showPeriodsAppliedDialog" size="md" on-close="showPeriodsAppliedDialog = false" title="Découpage appliqué">
+ <confirm-dialog-body close-action="showPeriodsAppliedDialog = false">
+ Les périodes de l'année <span class="font-medium text-slate-900" x-text="appliedPeriodsYearLabel"></span> ont été mises à jour.
+ </confirm-dialog-body>
  </modal-shell>
 
  <!-- Confirmation : année scolaire modifiée -->

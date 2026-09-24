@@ -1,0 +1,144 @@
+@* ═══════════════════════════════════════════════════════════════════════════
+   Onglet « Coefficients » — Évolution N°4 (coefficients par série et surcharge du Directeur).
+   Composant `coefficientsView` (wwwroot/js/coefficients.js) : aucune règle métier ici, la grille
+   montre le coefficient EFFECTIF et son ORIGINE tels que le serveur les calcule.
+   Précédence : classe › série › coefficient de la matière. Écriture : Directeur seul.
+   ═══════════════════════════════════════════════════════════════════════════ *@
+<div x-data="coefficientsView()" class="space-y-5">
+
+ <div x-show="error" x-cloak class="form-error-banner" x-text="error"></div>
+
+ <div x-show="notice" x-cloak role="status"
+  class="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+  <icon name="check-circle" class="w-4 h-4 mt-0.5 shrink-0" />
+  <span x-text="notice"></span>
+ </div>
+
+ @* Avertissement rétroactif (arbitrage A7) : affiché dès que l'année compte des notes. *@
+ <div x-show="yearHasGrades" x-cloak role="note"
+  class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+  <icon name="alert-circle" class="w-4 h-4 mt-0.5 shrink-0" />
+  <span>Modifier un coefficient recalcule les moyennes et les bulletins de cette année pour les classes concernées.</span>
+ </div>
+
+ @* ── Portée : une série, ou une classe précise ─────────────────────────────────────────── *@
+ <div class="flex flex-wrap items-end gap-4">
+  <div>
+   <span class="block text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-1">Portée</span>
+   <div role="group" aria-label="Portée du coefficient" class="tab-nav">
+    <button type="button" x-on:click="setScope('series')" :aria-pressed="isSeriesScope"
+     class="tab-btn" :class="isSeriesScope ? 'tab-btn-active' : ''">Série</button>
+    <button type="button" x-on:click="setScope('classroom')" :aria-pressed="!isSeriesScope"
+     class="tab-btn" :class="!isSeriesScope ? 'tab-btn-active' : ''">Classe</button>
+   </div>
+  </div>
+
+  <div x-show="isSeriesScope" class="w-full sm:w-64">
+   <label class="form-label">Série</label>
+   <select-field model="series" aria-label="Série" placeholder="Choisir une série"
+    options-expr="seriesChoices" on-change="selectSeries(series)" />
+  </div>
+
+  <div x-show="!isSeriesScope" x-cloak class="w-full sm:w-64">
+   <label class="form-label">Classe</label>
+   <select-field model="classroomId" aria-label="Classe" placeholder="Choisir une classe"
+    options-expr="classroomChoices" on-change="selectClassroom(classroomId)" />
+  </div>
+
+  @* Actions du Directeur : masquées pour le Secrétariat (lecture seule), et « Appliquer le modèle »
+     désactivé pour une classe — un modèle national décrit une série. *@
+  <div x-show="canEdit" x-cloak class="flex flex-wrap items-center gap-2 sm:ml-auto">
+   <button type="button" x-on:click="applyTemplate(false)" :disabled="!canApplyTemplate"
+    :title="isSeriesScope ? 'Crée les coefficients de la série à partir du modèle national' : 'Le modèle national ne s\'applique qu\'à une série'"
+    class="btn-modal-secondary group disabled:opacity-40 disabled:cursor-not-allowed">
+    <span x-text="isApplyingTemplate ? 'Application…' : 'Appliquer le modèle'"></span>
+   </button>
+   <button type="button" x-on:click="carryOver()" :disabled="!canCarryOver"
+    :title="previousYear ? 'Recopie les coefficients de ' + previousYear.label + ' sans écraser l\'existant' : 'Aucune année précédente'"
+    class="btn-modal-secondary group disabled:opacity-40 disabled:cursor-not-allowed">
+    <span x-text="isCarryingOver ? 'Reprise…' : 'Reprendre l\'année précédente'"></span>
+   </button>
+  </div>
+ </div>
+
+ @* Rapport d'« Appliquer le modèle » : dit ce qui a été fait ET ce qui n'a pas été trouvé. *@
+ <div x-show="templateReport" x-cloak class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 space-y-2">
+  <p>
+   Modèle appliqué :
+   <span class="font-semibold" x-text="templateReport && templateReport.applied"></span> créé(s),
+   <span class="font-semibold" x-text="templateReport && templateReport.updated"></span> remplacé(s),
+   <span class="font-semibold" x-text="templateReport && templateReport.skippedExisting"></span> déjà présent(s) conservé(s).
+  </p>
+  <p x-show="templateReport && templateReport.skippedExisting > 0 && canEdit" x-cloak>
+   <button type="button" x-on:click="applyTemplate(true)" class="text-primary-600 hover:underline text-sm font-medium">
+    Remplacer aussi les valeurs déjà posées par celles du modèle
+   </button>
+  </p>
+  <p x-show="templateReport && templateReport.unmatched.length > 0" x-cloak class="text-amber-700">
+   Sans matière correspondante dans votre école : <span x-text="templateReport && templateReport.unmatched.join(', ')"></span>.
+  </p>
+  <p x-show="templateReport && templateReport.uncovered.length > 0" x-cloak class="text-slate-500">
+   Matières non couvertes par le modèle (coefficient inchangé) : <span x-text="templateReport && templateReport.uncovered.join(', ')"></span>.
+  </p>
+ </div>
+
+ <p class="text-xs text-slate-400">
+  Année scolaire <span class="font-medium text-slate-600" x-text="yearLabel || '—'"></span>.
+  L'ordre de priorité est : coefficient de la classe, puis de la série, puis celui de la matière.
+  Primaire et Maternelle ne sont pas concernés (coefficient toujours égal à 1).
+ </p>
+
+ @* ── Grille ─────────────────────────────────────────────────────────────────────────────── *@
+ <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden">
+  <div class="overflow-x-auto">
+   <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+     <tr>
+      <th scope="col" class="px-4 py-3 text-left">Matière</th>
+      <th scope="col" class="px-4 py-3 text-left">Niveau</th>
+      <th scope="col" class="px-4 py-3 text-right">Base</th>
+      <th scope="col" class="px-4 py-3 text-left">Surcharge</th>
+      <th scope="col" class="px-4 py-3 text-right">Effectif</th>
+      <th scope="col" class="px-4 py-3 text-left">Origine</th>
+      <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+     </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+     <template x-for="row in rows" :key="row.subjectId">
+      <tr class="hover:bg-slate-50/60">
+       <td class="px-4 py-2.5 font-medium text-slate-800" x-text="row.name"></td>
+       <td class="px-4 py-2.5 text-slate-500" x-text="row.level"></td>
+       <td class="px-4 py-2.5 text-right tabular-nums text-slate-500" x-text="formatCoefficient(row.base)"></td>
+       <td class="px-4 py-2.5">
+        <div class="flex items-center gap-2">
+         <input type="text" inputmode="decimal" x-model="row.draft" :disabled="!canEdit || row.isSaving"
+          x-on:keydown.enter.prevent="canSave(row) && save(row)"
+          :aria-label="'Coefficient de ' + row.name" placeholder="—"
+          class="input-field !my-0 w-20 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-500">
+         <button type="button" x-show="canEdit" x-on:click="save(row)" :disabled="!canSave(row)"
+          class="btn-modal-primary !h-8 !px-3 text-xs disabled:opacity-40 disabled:cursor-not-allowed">
+          <span x-text="row.isSaving ? '…' : 'Enregistrer'"></span>
+         </button>
+        </div>
+        <p x-show="row.error" x-cloak x-text="row.error" class="field-error"></p>
+       </td>
+       <td class="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-900" x-text="formatCoefficient(row.effective)"></td>
+       <td class="px-4 py-2.5">
+        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset"
+         :class="sourceClass(row.source)" x-text="sourceLabel(row.source)"></span>
+       </td>
+       <td class="px-4 py-2.5 text-right">
+        <button type="button" x-show="canEdit && row.overrideId" x-cloak x-on:click="restore(row)" :disabled="row.isSaving"
+         :title="'Supprimer la surcharge de ' + row.name"
+         class="text-xs font-medium text-slate-500 hover:text-rose-600 transition-colors">Rétablir</button>
+       </td>
+      </tr>
+     </template>
+    </tbody>
+   </table>
+  </div>
+
+  <p x-show="!isLoading && rows.length === 0" x-cloak class="px-4 py-10 text-center text-sm text-slate-400"
+   x-text="isSeriesScope || classroomId ? 'Aucune matière à afficher.' : 'Choisissez une classe pour voir ses coefficients.'"></p>
+ </div>
+</div>

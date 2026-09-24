@@ -23,7 +23,9 @@ namespace SamaEcole.Application.Grades.Commands.ImportGradeSheet;
 public class ImportGradeSheetCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
-    IGradeSheetImportParser fileParser)
+    IGradeSheetImportParser fileParser,
+    ICurrentUserService currentUser,
+    GradeCorrectionAuthorizer correctionAuthorizer)
     : IRequestHandler<ImportGradeSheetCommand, ImportGradeSheetResult>
 {
     private static readonly (EvaluationType Type, string Label)[] Evaluations =
@@ -160,6 +162,21 @@ public class ImportGradeSheetCommandHandler(
 
         var studentsMatched = seenMatricules.Count;
 
+        // L'import MODIFIE aussi des notes existantes (compteur « corrigées ») : il ne doit pas
+        // contourner la règle de correction — sans ce contrôle, un Enseignant hors fenêtre corrigerait
+        // par fichier ce que l'API lui refuse. Refus du fichier ENTIER en 403, aperçu compris, pour
+        // que l'utilisateur le sache avant de confirmer. Les créations, elles, restent libres.
+        var correctionScope = await correctionAuthorizer.ResolveAsync(
+            request.ClassroomId, request.SubjectId, request.TermId, cancellationToken);
+
+        foreach (var (studentId, type, value) in resolved)
+        {
+            if (existingByKey.TryGetValue((studentId, type), out var existing) && existing.Value != value)
+            {
+                correctionScope.EnsureCanCorrect(existing);
+            }
+        }
+
         if (request.DryRun)
         {
             // Aperçu : compte ce qui SERAIT créé/corrigé/inchangé, RIEN n'est écrit.
@@ -184,7 +201,8 @@ public class ImportGradeSheetCommandHandler(
                         SubjectId = request.SubjectId,
                         TermId = request.TermId,
                         EvaluationType = type,
-                        Value = value
+                        Value = value,
+                        CreatedBy = currentUser.UserId?.ToString()
                     });
                 }
             }

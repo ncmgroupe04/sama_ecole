@@ -27,7 +27,8 @@ public class GetClassroomsQueryHandler(IApplicationDbContext dbContext)
                 c.Cycle,
                 EF.Property<uint>(c, "xmin"),
                 c.IsAccelerated,
-                c.TargetLevel))
+                c.TargetLevel,
+                c.Series))
             .ToListAsync(cancellationToken);
     }
 }

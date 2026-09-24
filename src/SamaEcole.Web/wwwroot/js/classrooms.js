@@ -82,6 +82,15 @@ document.addEventListener('alpine:init', () => {
             .some((token) => new RegExp(`^${escapeRegex(token)}(\\s|$)`, 'i').test(label)));
     }
 
+    /**
+     * Vrai si le niveau saisi est un lycée — mêmes synonymes que le serveur (ClassroomCycle.ByLevel :
+     * « Lycée », « Secondaire »), casse et accents ignorés. La série n'est proposée que pour eux ;
+     * le serveur reste juge (ClassroomSeriesRules : 422 pour une série sur une autre classe).
+     */
+    function isLyceeLevel(level) {
+        return ['lycee', 'secondaire'].includes(stripAccents(String(level || '').trim()).toLowerCase());
+    }
+
     function byGradeThenName(level) {
         return (a, b) => {
             const ra = gradeRank(level, a.name);
@@ -122,9 +131,15 @@ document.addEventListener('alpine:init', () => {
             level: DEFAULT_LEVEL,
             capacity: DEFAULT_CAPACITY,
             isAccelerated: false,
-            targetLevel: ''
+            targetLevel: '',
+            series: ''
         },
         createErrors: {},
+
+        // Catalogue fermé des séries de lycée (L1, L2, S1, S2, TECH), servi par l'API : jamais recopié
+        // ici. Vide tant qu'il n'est pas chargé — ou si l'appel échoue : le champ « Série » reste alors
+        // masqué et la classe s'enregistre sans série (elle est facultative).
+        seriesCatalog: [],
 
         // Confirmation « Classe ajoutée » affichée après un enregistrement réussi.
         showAddedDialog: false,
@@ -137,7 +152,7 @@ document.addEventListener('alpine:init', () => {
 
         // Édition (modale)
         isEditOpen: false,
-        editing: { id: '', name: '', level: '', capacity: 0, rowVersion: 0, isAccelerated: false, targetLevel: '' },
+        editing: { id: '', name: '', level: '', capacity: 0, rowVersion: 0, isAccelerated: false, targetLevel: '', series: '' },
         isSavingEdit: false,
         editErrors: {},
         showEditedDialog: false,
@@ -158,6 +173,33 @@ document.addEventListener('alpine:init', () => {
             const q = new URLSearchParams(window.location.search).get('q');
             if (q) this.search = q;
             this.loadClassrooms();
+            this.loadSeriesCatalog();
+        },
+
+        /** La série n'intéresse que ceux qui modifient une classe (Directeur, Secrétariat) : les autres rôles n'appellent pas l'API. */
+        async loadSeriesCatalog() {
+            if (!this.canManage) return;
+            try {
+                this.seriesCatalog = await window.api.get('/coefficients/catalog') || [];
+            } catch {
+                // silence-volontaire : la série est facultative ; sans catalogue le champ reste masqué et la
+                // classe s'enregistre normalement — un bandeau d'erreur ici bloquerait un écran qui marche.
+                this.seriesCatalog = [];
+            }
+        },
+
+        get seriesOptions() {
+            return [{ value: '', label: 'Aucune série' }, ...this.seriesCatalog.map((s) => ({ value: s.code, label: s.label }))];
+        },
+
+        /** Le champ « Série » n'apparaît que pour un lycée, et seulement si le catalogue est connu. */
+        showSeriesField(form) {
+            return isLyceeLevel(form && form.level) && this.seriesCatalog.length > 0;
+        },
+
+        /** Valeur envoyée à l'API : null (jamais '') hors lycée ou sans choix — '' ne se lit pas comme « aucune série ». */
+        seriesPayload(form) {
+            return isLyceeLevel(form.level) && form.series ? form.series : null;
         },
 
         /**
@@ -240,7 +282,8 @@ document.addEventListener('alpine:init', () => {
                 // La passerelle ne se reporte JAMAIS d'une classe à la suivante, même en enchaînant :
                 // c'est un cas particulier, l'oublier coché produirait des classes accélérées par accident.
                 isAccelerated: false,
-                targetLevel: ''
+                targetLevel: '',
+                series: ''
             };
             this.createErrors = {};
         },
@@ -259,7 +302,7 @@ document.addEventListener('alpine:init', () => {
             this.isSubmitting = true;
             this.createErrors = {};
             try {
-                await window.api.post('/classrooms', this.newClassroom);
+                await window.api.post('/classrooms', { ...this.newClassroom, series: this.seriesPayload(this.newClassroom) });
 
                 localStorage.setItem('classrooms_lastLevel', this.newClassroom.level);
                 
@@ -291,7 +334,8 @@ document.addEventListener('alpine:init', () => {
                 capacity: classroom.capacity,
                 rowVersion: classroom.rowVersion,
                 isAccelerated: classroom.isAccelerated || false,
-                targetLevel: classroom.targetLevel || ''
+                targetLevel: classroom.targetLevel || '',
+                series: classroom.series || ''
             };
             this.editErrors = {};
             this.isEditOpen = true;
@@ -313,7 +357,9 @@ document.addEventListener('alpine:init', () => {
                     capacity: this.editing.capacity,
                     rowVersion: this.editing.rowVersion,
                     isAccelerated: this.editing.isAccelerated,
-                    targetLevel: this.editing.isAccelerated ? this.editing.targetLevel : null
+                    targetLevel: this.editing.isAccelerated ? this.editing.targetLevel : null,
+                    // Toujours envoyée : le PUT est un remplacement complet, une série omise serait effacée.
+                    series: this.seriesPayload(this.editing)
                 });
                 this.editedClassroomName = this.editing.name;
                 this.closeEdit();
@@ -416,7 +462,11 @@ document.addEventListener('alpine:init', () => {
          * l'utilisateur voie d'où vient le refus.
          */
         onLevelChanged(form) {
-            if (form) form.targetLevel = '';
+            if (!form) return;
+            form.targetLevel = '';
+            // La série n'existe qu'au lycée : passer à un autre cycle l'efface, sans quoi une série
+            // invisible partirait avec la classe (422 « série réservée au Lycée »).
+            if (!isLyceeLevel(form.level)) form.series = '';
         },
 
         // Utilities

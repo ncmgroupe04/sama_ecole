@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using SamaEcole.Application.Coefficients;
 using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
@@ -72,7 +73,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
     public async Task The_Zip_Contains_One_Pdf_Per_Student_Sorted_Alphabetically()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
         await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 12), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir1, 16), CancellationToken.None);
 
@@ -95,7 +96,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
     public async Task The_Merged_Pdf_Contains_One_ReportCard_Per_Student_Sorted_Alphabetically()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole));
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
         await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 12), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir1, 16), CancellationToken.None);
 
@@ -184,7 +185,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
         {
             if (request is GetGradeSummaryQuery query)
             {
-                var handler = new GetGradeSummaryQueryHandler(dbContext);
+                var handler = new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext));
                 return (Task<TResponse>)(object)handler.Handle(query, cancellationToken);
             }
 

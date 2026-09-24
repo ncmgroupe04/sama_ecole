@@ -139,6 +139,16 @@ document.addEventListener('alpine:init', () => {
             return ['Directeur', 'Secretariat', 'Enseignant'].includes(window.auth.role);
         },
 
+        // Onglet « Coefficients » (Évolution N°4) : lecture Directeur + Secrétariat, écriture Directeur seul
+        // (CoefficientsController). L'Enseignant, qui gère les matières, n'a pas accès à cette grille.
+        get canViewCoefficients() {
+            return ['Directeur', 'Secretariat'].includes(window.auth.role);
+        },
+
+        showCoefficients() {
+            this.viewMode = 'coefficients';
+        },
+
         // Corriger/archiver une matière déjà créée partage EXACTEMENT la même permission que la
         // création côté serveur : un seul getter suffit.
         get canManageSubject() {

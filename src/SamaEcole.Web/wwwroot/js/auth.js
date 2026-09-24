@@ -19,6 +19,14 @@
     const LOGIN_PATH = '/login';
     const DEFAULT_LANDING = '/eleves';
 
+    const DAY_INDEX = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
+
+    /** Noms de jours de l'API → index DayOfWeek, ordre conservé ; défaut lundi → samedi si absent/vide. */
+    window.dayIndexes = (names) => {
+        const list = Array.isArray(names) ? names.map((n) => DAY_INDEX[n]).filter((i) => i !== undefined) : [];
+        return list.length > 0 ? list : [1, 2, 3, 4, 5, 6];
+    };
+
     // Le Super Admin n'a AUCUN établissement : /eleves (comme tout écran tenant) est vide pour lui,
     // la RLS lui fermant toutes les tables d'école. Son point d'entrée est la console plateforme
     // (tableau de bord global) — la revue des demandes d'inscription (JGK-I03) reste accessible
@@ -506,6 +514,19 @@ document.addEventListener('alpine:init', () => {
          */
         internatEnabled: false,
 
+        /**
+         * Jours OUVRÉS de l'établissement (DayOfWeek : dimanche = 0), dans l'ordre d'AFFICHAGE calculé par
+         * le serveur (SchoolWeek.DisplayOrder). Défaut lundi → samedi tant que la réponse n'est pas
+         * arrivée : la grille historique. CONFORT d'affichage — le vrai verrou est WorkingDayGuard (422).
+         */
+        workingDays: [1, 2, 3, 4, 5, 6],
+
+        isWorkingDay(isoDate) {
+            const [y, m, d] = String(isoDate).split('-').map(Number);
+            if (!y || !m || !d) return true; // date illisible : on ne bloque pas, le serveur juge
+            return this.workingDays.includes(new Date(y, m - 1, d).getDay());
+        },
+
         // Réentrance : plusieurs composants (sidebar, barre de navigation rapide) appellent init()
         // sur le même store au boot — un seul fetch doit réellement partir.
         _initPromise: null,
@@ -527,6 +548,7 @@ document.addEventListener('alpine:init', () => {
                 this.pedagogyEnabled = !s || s.isPedagogyEnabled !== false;
                 this.financeEnabled = !s || s.isFinanceEnabled !== false;
                 this.internatEnabled = !!s && s.isInternatEnabled === true;
+                this.workingDays = window.dayIndexes(s && s.workingDays);
             } catch {
                 // Non bloquant : en cas d'erreur réseau, la navigation reste complète pour
                 // Pédagogie/Finance (socle métier, sûr par défaut) mais Internat reste masqué —
@@ -535,6 +557,7 @@ document.addEventListener('alpine:init', () => {
                 this.pedagogyEnabled = true;
                 this.financeEnabled = true;
                 this.internatEnabled = false;
+                this.workingDays = [1, 2, 3, 4, 5, 6];
             } finally {
                 this.loaded = true;
             }

@@ -34,6 +34,12 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .IsRequired()
             .HasDefaultValue(SamaEcole.Domain.Entities.SchoolSettingsDefaults.DebtorReminderThresholdDays);
 
+        // Défaut en base = 7 : les écoles déjà existantes reçoivent la même fenêtre qu'une école neuve,
+        // jamais 0 (qui verrouillerait toute correction Enseignant dès la migration).
+        builder.Property(s => s.GradeEditWindowDays)
+            .IsRequired()
+            .HasDefaultValue(SamaEcole.Domain.Entities.SchoolSettingsDefaults.GradeEditWindowDays);
+
         // Défaut en base = true pour Pédagogie/Finance (socle métier existant, activé par défaut) et
         // false pour Internat/Coran (aucun module derrière ces deux réglages pour l'instant) — sans
         // ce HasDefaultValue explicite, EF Core scaffolderait le défaut CLR (false) pour les quatre,
@@ -50,6 +56,30 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
         builder.Property(s => s.IsCoranModuleEnabled)
             .IsRequired()
             .HasDefaultValue(SchoolSettingsDefaults.IsCoranModuleEnabled);
+
+        // Contrairement à TypeEtablissement (stocké en int, choix antérieur à la convention actuelle),
+        // SchoolType suit la convention devenue systématique du projet : string, jamais un entier qui
+        // se briserait silencieusement si l'ordre des membres de l'enum changeait un jour.
+        builder.Property(s => s.SchoolType)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.SchoolType);
+
+        builder.Property(s => s.EvaluationPeriodType)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.EvaluationPeriodType);
+
+        builder.Property(s => s.CustomPeriodCount)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.CustomPeriodCount);
+
+        builder.Property(s => s.WorkingDays)
+            .HasMaxLength(80)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.WorkingDays);
 
         builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
         builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);

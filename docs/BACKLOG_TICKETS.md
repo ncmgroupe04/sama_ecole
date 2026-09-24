@@ -100,9 +100,8 @@ Construire le gabarit générique de listing (barre latérale, barre supérieure
 Génération PDF via QuestPDF. **Le reçu reproduit exactement `docs/design-references/receipt-reference.png`** (Volume 1 §7.3bis), y compris la mention obligatoire *"Il est demandé aux parents de garder minutieusement leur reçu après le paiement."*
 *Dépend de* : JGK-E01. *Critères* : comparaison visuelle avec la référence (mise en page, ordre des champs, tableau des frais, mention obligatoire présente).
 
-**JGK-E03** [H] — Notification e-mail du Directeur à chaque inscription
-Un audit a confirmé qu'aucune notification n'est déclenchée lors de l'inscription d'un élève. `CreateEnrollmentCommandHandler` publie un événement de domaine MediatR `StudentEnrolledEvent` (nom de l'élève, matricule, date/heure — pas l'entité complète) après le `SaveChangesAsync` de la transaction d'inscription, jamais avant. Un `INotificationHandler` dédié envoie un e-mail via `IEmailSender` à tous les utilisateurs `Role.Directeur` actifs de l'école (`SchoolId` de l'événement) — jamais à `School.Email`, adresse de contact imprimée sur le reçu et pas forcément surveillée. Un échec d'envoi (SMTP transitoire) est journalisé et n'interrompt ni les autres destinataires ni l'inscription elle-même : `SmtpEmailSender.SendAsync` relance l'exception SMTP, le handler doit l'absorber pour chaque destinataire pris isolément. Aucun Directeur actif trouvé -> avertissement journalisé, aucune exception.
-*Dépend de* : JGK-E01. *Critères* : un Directeur actif reçoit l'e-mail à l'inscription ; aucun Directeur actif ne produit ni exception ni e-mail ; l'échec d'envoi à un destinataire n'empêche pas l'envoi aux autres et ne remonte jamais jusqu'à l'appelant (test dédié obligatoire, comme pour `NotifyParentOnAttendanceEventHandler`).
+**JGK-E03** [ANNULÉ 24/09/2026] — ~~Notification e-mail du Directeur à chaque inscription~~
+Décision produit : un Directeur ou un Secrétariat ne reçoit **jamais** d'e-mail lorsqu'il enregistre un élève. `StudentEnrolledEvent`, `NotifyAdminOnStudentEnrolledEventHandler` et la fiche d'aide correspondante sont retirés ; `CreateEnrollmentCommandHandler` ne publie plus aucun événement. Les seules notifications e-mail du périmètre « inscriptions » concernent l'ouverture d'un **établissement** (Module I : alerte Super Admin, puis confirmation au Directeur après validation).
 
 ---
 
@@ -160,7 +159,7 @@ Application automatique de la notation /10 ou /20 selon le niveau ; mentions per
 ## Module I — Inscription self-service & Paiement des abonnements
 
 **JGK-I01** [C] — Formulaire public d'inscription
-`POST /registration-requests` (sans authentification). Hache le mot de passe immédiatement, génère une `trackingReference` unique, envoie un email de confirmation. Anti-spam (captcha ou honeypot) obligatoire.
+`POST /registration-requests` (sans authentification). Hache le mot de passe immédiatement, génère une `trackingReference` unique, envoie un e-mail de confirmation au demandeur (référence de suivi, jamais le mot de passe) et alerte le Super Admin par un e-mail distinct. Anti-spam (captcha ou honeypot) obligatoire.
 *Critères* : le mot de passe en clair n'apparaît dans aucun log ; deux soumissions avec le même email sont autorisées (une école peut retenter) mais chaque `trackingReference` est unique.
 
 **JGK-I02** [C] — Suivi public d'une demande
@@ -170,6 +169,8 @@ Application automatique de la notation /10 ou /20 selon le niveau ; mentions per
 **JGK-I03** [C] — Revue et approbation par le Super Admin
 `GET /admin/registration-requests`, `POST /admin/registration-requests/{id}/approve`, `POST /admin/registration-requests/{id}/reject`. L'approbation crée, dans une seule transaction : `School` (Active), `User` Directeur (Active, mot de passe déjà défini), `Subscription` (`AwaitingPayment`).
 *Dépend de* : JGK-I01, JGK-B01. *Critères* : un test vérifie l'atomicité (si la création de l'un des trois échoue, aucun des trois n'est créé) ; un rejet n'a aucun effet sur `Schools`/`Users`.
+
+**Complément (20/09/2026)** : `SubmitRegistrationRequestHandler` envoie, en plus de la confirmation au demandeur (conservée — c'est son meilleur moyen de ne pas perdre sa référence de suivi, décision du 24/09/2026), une alerte au Super Admin (`Registration__AdminNotificationEmail` ; sans adresse configurée, un avertissement est journalisé) avec le détail de la demande et un lien vers `/admin/inscriptions`. L'e-mail d'approbation (`ApproveRegistrationRequestHandler`) porte désormais un lien de connexion direct (`Registration__PublicBaseUrl` + `/login`). Nouveau réglage `RegistrationSettings` (`SamaEcole.Application.Registration`), même idiome que `AuthSettings`/`StateIntegrationSettings` — voir `.env.example` et Volume 9 §Variables à poser sur le service.
 
 **JGK-I04** [C] — Restriction d'accès `AwaitingPayment`
 Middleware d'autorisation bloquant tout endpoint hors `/subscriptions/{schoolId}/payments` et profil utilisateur tant que `Subscriptions.Status = AwaitingPayment`, réutilisant la logique de mode restreint existante (JGK-B03).

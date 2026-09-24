@@ -250,6 +250,13 @@ Suivi des dépenses par catégorie, avec justificatif attaché (upload de docume
 - **Référence exacte à reproduire** : `docs/design-references/bulletin-reference.png` (description détaillée dans `docs/design-references/README.md` §2) — colonnes, en-têtes, blocs de synthèse et mentions dans l'ordre exact de cette référence.
 - Format **A5 Portrait**, avec ajustement automatique des largeurs de colonnes pour éviter tout débordement sur une seconde page.
 - Colonnes Matière / Moyenne / Mention optimisées pour l'impression.
+- **Périodes d'évaluation paramétrables** (Évolution N°2) : le Directeur choisit dans Paramètres › Pédagogie
+  le découpage de l'année — trimestriel (défaut, 3 trimestres), semestriel (2 semestres) ou personnalisé
+  (2 à 6 périodes réparties à parts égales). Il s'applique aux années créées ensuite ; sur l'année en cours
+  il se rejoue à la demande, et **seulement tant qu'aucune note ni appréciation de bulletin n'y est saisie**.
+  Les sélecteurs de période (saisie des notes, moyennes, bulletins) et les documents PDF suivent ce découpage ;
+  le titre du bulletin en découle (« BULLETIN DU 1ER SEMESTRE », « BULLETIN DU 2E TRIMESTRE », « BULLETIN DE LA
+  1RE PÉRIODE »).
 
 ### 8.2 Système de notation
 
@@ -271,6 +278,31 @@ Suppression des décimales inutiles : `17.0 → 17`, `15.0 → 15`, mais `15.5` 
 ### 8.6 Format de date
 
 Affichage de la date de naissance selon le format choisi par l'établissement (voir §12).
+
+### 8.7 Coefficients par série et surcharge du Directeur (Évolution N°4)
+
+Au lycée, une même matière ne pèse pas pareil selon la série. Le coefficient utilisé dans les moyennes, les
+rangs, la fiche élève et les bulletins (colonne « Coefficient » du §8.1, mise en page inchangée) est, dans
+l'ordre de priorité :
+
+1. la **surcharge de la classe**, si le Directeur en a posé une ;
+2. sinon la **surcharge de la série** de la classe ;
+3. sinon le **coefficient de la matière** (comportement historique, inchangé).
+
+- **Séries.** Catalogue fermé : `L1`, `L2`, `S1`, `S2`, `TECH` (séries techniques). La série se renseigne sur la
+  **classe** (Paramètres › Classes, réservée au cycle Lycée) ; une classe sans série (Seconde commune, collège…)
+  garde les coefficients de ses matières.
+- **Modèles nationaux.** « Appliquer le modèle » (onglet Coefficients de l'écran Matières) matérialise en
+  surcharges de série les coefficients nationaux de L1, L2, S1 et S2 ; elles sont ensuite visibles et
+  modifiables. `TECH` n'a pas de modèle (aucune valeur officielle fournie). Le modèle ne modifie jamais le
+  coefficient d'une matière et n'écrase pas une valeur déjà posée sans demande explicite.
+- **Surcharge.** Écriture réservée au **Directeur** ; le Secrétariat consulte la grille. Portée : une série
+  (lycée) ou une classe précise (collège et lycée). Primaire et Maternelle : coefficient toujours égal à 1,
+  non surchargeable. Chaque écriture est journalisée et protégée contre l'écrasement concurrent (409).
+- **Par année scolaire.** Les surcharges appartiennent à l'année ; une nouvelle année démarre sans surcharge et
+  le Directeur les reprend explicitement (« Reprendre l'année précédente », sans écraser l'existant).
+- **Effet rétroactif.** Modifier un coefficient recalcule les moyennes et les bulletins de l'année en cours pour
+  les classes concernées ; l'écran l'annonce dès que des notes existent.
 
 ---
 
@@ -339,13 +371,13 @@ Un Directeur intéressé accède, via le site public, à un formulaire détaill�
 - Le plan souhaité (§11.1).
 - Le moyen de paiement prévu (§11.6) — simple préférence déclarée à ce stade, aucun paiement n'est demandé avant validation.
 
-À la soumission, une **demande d'inscription** est créée (statut `Pending`) et une **référence de suivi** est communiquée au Directeur par email. **Aucun compte, aucun établissement, aucun abonnement n'existe encore** à ce stade — le Directeur n'a accès qu'à une page de suivi de sa demande (via la référence + email), rien d'autre.
+À la soumission, une **demande d'inscription** est créée (statut `Pending`) et une **référence de suivi** est affichée au Directeur à l'écran **et lui est envoyée par e-mail** (pour qu'il ne la perde pas). Le **Super Admin** est alerté par un e-mail distinct (adresse `Registration__AdminNotificationEmail`, avec le détail de la demande et un lien vers le tableau de bord de revue). Aucun e-mail n'est jamais adressé au personnel d'un établissement existant. **Aucun compte, aucun établissement, aucun abonnement n'existe encore** à ce stade — le Directeur n'a accès qu'à une page de suivi de sa demande (via la référence + email), rien d'autre.
 
 **Étape 2 — Revue par le Super Admin**
 Le Super Admin consulte la liste des demandes en attente, et peut : **Approuver**, **Rejeter** (avec motif), ou demander des précisions par email en dehors de la plateforme.
 
 **Étape 3 — Activation après approbation**
-Dès l'approbation, le système crée automatiquement, dans la même transaction : l'établissement (`School`, actif), le compte Directeur (`User`, actif, mot de passe déjà défini à l'étape 1), et l'abonnement (`Subscription`, statut `AwaitingPayment`, aucune date d'expiration tant que le premier paiement n'est pas confirmé). Le Directeur reçoit un email de confirmation et peut se connecter.
+Dès l'approbation, le système crée automatiquement, dans la même transaction : l'établissement (`School`, actif), le compte Directeur (`User`, actif, mot de passe déjà défini à l'étape 1), et l'abonnement (`Subscription`, statut `AwaitingPayment`, aucune date d'expiration tant que le premier paiement n'est pas confirmé). Le Directeur reçoit alors un e-mail de confirmation avec le lien de connexion et peut se connecter (en cas de rejet, un e-mail lui transmet le motif).
 
 **Étape 4 — Premier accès du Directeur**
 Tant que l'abonnement est en statut `AwaitingPayment`, le Directeur n'a accès qu'à l'écran de paiement (§11.6, mode restreint défini en §11.3) — aucun autre module (élèves, classes, notes...) n'est accessible avant confirmation du premier paiement.
@@ -664,6 +696,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - L'emploi du temps est construit par **créneaux** : jour, heure de début, heure de fin, enseignant, classe, matière, salle.
 - Il se consulte **par enseignant** et **par classe**.
 - **Détection de chevauchement** à la création comme à la modification : un créneau est refusé s'il recouvre un créneau existant pour le même enseignant ou pour la même classe. Le message précise laquelle des deux contraintes est violée.
+- **Jours ouvrés configurables** (Évolution N°3) : le Directeur définit dans Paramètres › Notation & mentions les jours ouvrés de l'établissement (par défaut du lundi au samedi ; par exemple du samedi au mercredi pour une école franco-arabe ou un daara au repos le jeudi et le vendredi). La grille n'affiche que ces jours, dans l'ordre de la semaine de l'école, et un créneau ne peut être créé ni déplacé sur un jour de repos. Un créneau déjà posé sur un jour devenu repos reste visible (colonne marquée « repos ») et peut être supprimé, mais plus modifié.
 
 ### 21.2 Qui peut faire quoi
 
@@ -677,6 +710,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 - Le Surveillant général ou le Directeur enregistre la **présence des enseignants** par date.
 - Le pointage alimente le suivi d'assiduité du personnel et, pour les vacataires, recoupe la fiche de suivi des heures (§14.3) — sans s'y substituer.
+- **Jours de repos** (Évolution N°3) : ni le pointage des enseignants, ni l'**appel des élèves** (ouverture de la feuille comme soumission) ne s'enregistrent un jour de repos de l'établissement. Le verrou ne joue que sur les saisies **nouvelles** : les appels déjà enregistrés un jour devenu repos restent comptés. Aucun calcul de taux de présence n'a changé — ils portent sur les appels réellement saisis, jamais sur des jours calendaires — donc un jour de repos sans appel n'entre dans aucun dénominateur. Les billets d'entrée et de sortie, les justificatifs d'absence, le journal de classe et les heures de paie ne sont pas verrouillés.
 
 ---
 

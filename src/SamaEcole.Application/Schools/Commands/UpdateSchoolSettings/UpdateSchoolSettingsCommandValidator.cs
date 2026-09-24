@@ -1,5 +1,7 @@
+using SamaEcole.Application.SchoolYears;
 using SamaEcole.Domain.Common;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using FluentValidation;
 
 namespace SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
@@ -45,6 +47,29 @@ public class UpdateSchoolSettingsCommandValidator : AbstractValidator<UpdateScho
                 SchoolSettingsDefaults.MaxDebtorReminderThresholdDays)
             .WithMessage(
                 $"Le seuil de retard doit être compris entre {SchoolSettingsDefaults.MinDebtorReminderThresholdDays} et {SchoolSettingsDefaults.MaxDebtorReminderThresholdDays} jours.");
+
+        RuleFor(c => c.GradeEditWindowDays)
+            .InclusiveBetween(
+                SchoolSettingsDefaults.MinGradeEditWindowDays,
+                SchoolSettingsDefaults.MaxGradeEditWindowDays)
+            .WithMessage(
+                $"Le délai de correction des notes doit être compris entre {SchoolSettingsDefaults.MinGradeEditWindowDays} et {SchoolSettingsDefaults.MaxGradeEditWindowDays} jours.");
+
+        RuleFor(c => c.EvaluationPeriodType)
+            .Must(value => Enum.TryParse<EvaluationPeriodType>(value, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+            .WithMessage("Découpage de l'année inconnu : « Trimester », « Semester » ou « Custom ».");
+
+        // Le nombre de périodes n'a de sens que pour « Custom » : ailleurs il est ignoré, pas contrôlé.
+        RuleFor(c => c.CustomPeriodCount)
+            .InclusiveBetween(PeriodSchedule.MinCustomCount, PeriodSchedule.MaxCustomCount)
+            .When(c => string.Equals(c.EvaluationPeriodType, nameof(EvaluationPeriodType.Custom), StringComparison.OrdinalIgnoreCase))
+            .WithMessage($"Le nombre de périodes doit être compris entre {PeriodSchedule.MinCustomCount} et {PeriodSchedule.MaxCustomCount}.");
+
+        // Semaine de travail (Évolution N°3) : au moins un jour, sans doublon ni nom inconnu. null = inchangé.
+        RuleFor(c => c.WorkingDays)
+            .Must(days => SchoolWeek.TryParse(days) is not null)
+            .When(c => c.WorkingDays is not null)
+            .WithMessage("Les jours ouvrés doivent compter au moins un jour, sans doublon (Monday … Sunday).");
     }
 
     private static int ParseScale(string? scale) =>

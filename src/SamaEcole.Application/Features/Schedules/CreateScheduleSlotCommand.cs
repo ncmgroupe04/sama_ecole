@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Schools;
 
 using SamaEcole.Domain.Entities;
 
@@ -35,7 +36,8 @@ public class CreateScheduleSlotCommandHandler(
     IApplicationDbContext context,
     ITenantProvider tenantProvider,
     ICurrentUserService currentUserService,
-    ScheduleOwnershipAuthorizer ownershipAuthorizer) : IRequestHandler<CreateScheduleSlotCommand, Guid>
+    ScheduleOwnershipAuthorizer ownershipAuthorizer,
+    WorkingDayGuard workingDayGuard) : IRequestHandler<CreateScheduleSlotCommand, Guid>
 {
     public async Task<Guid> Handle(CreateScheduleSlotCommand request, CancellationToken cancellationToken)
     {
@@ -46,6 +48,9 @@ public class CreateScheduleSlotCommandHandler(
         // création, d'où le null. Voir ScheduleOwnershipAuthorizer.
         var teacherId = await ownershipAuthorizer.EnsureOwnsAsync(
             request.TeacherId, currentSlotTeacherId: null, cancellationToken);
+
+        // Jour de repos de l'établissement (Évolution N°3) : aucun créneau n'y est placé.
+        await workingDayGuard.EnsureWorkingDayAsync(request.DayOfWeek, nameof(request.DayOfWeek), cancellationToken);
 
         var overlappingSlot = await context.ScheduleSlots
             .Where(s => s.DayOfWeek == request.DayOfWeek 

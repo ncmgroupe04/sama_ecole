@@ -97,6 +97,16 @@ document.addEventListener('alpine:init', () => {
             isFinanceEnabled: true,
             isInternatEnabled: false,
             isCoranModuleEnabled: false,
+            // Délai (jours) pendant lequel l'Enseignant peut corriger une note qu'il a saisie.
+            gradeEditWindowDays: 7,
+            // Découpage de l'année en périodes d'évaluation (Trimester | Semester | Custom) et, pour
+            // Custom, le nombre de périodes (2 à 6). N'agit que sur les années créées ensuite ou
+            // rejouées via « Appliquer le découpage » (Années scolaires).
+            evaluationPeriodType: 'Trimester',
+            customPeriodCount: 3,
+            // Jours OUVRÉS (noms de l'API). Les autres sont des jours de repos : ni appel, ni pointage
+            // enseignant, ni créneau d'emploi du temps n'y sont saisis. Défaut lundi → samedi.
+            workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
             directorSignatureUrl: '',
             secretarySignatureUrl: '',
             cashierSignatureUrl: '',
@@ -290,6 +300,10 @@ document.addEventListener('alpine:init', () => {
                     isFinanceEnabled: config.isFinanceEnabled,
                     isInternatEnabled: config.isInternatEnabled,
                     isCoranModuleEnabled: config.isCoranModuleEnabled,
+                    gradeEditWindowDays: config.gradeEditWindowDays,
+                    evaluationPeriodType: config.evaluationPeriodType || 'Trimester',
+                    customPeriodCount: config.customPeriodCount || 3,
+                    workingDays: config.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
                     directorSignatureUrl: config.directorSignatureUrl || '',
                     secretarySignatureUrl: config.secretarySignatureUrl || '',
                     cashierSignatureUrl: config.cashierSignatureUrl || '',
@@ -693,7 +707,16 @@ document.addEventListener('alpine:init', () => {
             this.configSaved = false;
             this.configSaving = true;
             try {
+                // PUT = remplacement COMPLET des réglages côté serveur (UpdateSchoolSettingsCommand : tout
+                // champ omis retombe à sa valeur par défaut). Cet écran ne pilote qu'une partie des champs ;
+                // les autres (alertes SMS, seuil de relance des impayés — écran SMS, sms-settings.js — et
+                // tout champ ajouté plus tard) appartiennent à d'autres écrans. On relit donc l'état serveur
+                // JUSTE avant d'écrire et on l'étale sous nos champs, exactement comme sms-settings.js :
+                // ni omission silencieuse, ni valeur périmée (l'écran SMS a pu enregistrer depuis le
+                // chargement de cette page). Voir ACTIVE_CONTEXT.md §2 « Notes ».
+                const current = await window.api.get('/schools/current/settings');
                 const saved = await window.api.put('/schools/current/settings', {
+                    ...current,
                     gradingScale: this.config.gradingScale,
                     studentMatriculeFormat: this.config.studentMatriculeFormat,
                     teacherMatriculeFormat: this.config.teacherMatriculeFormat,
@@ -707,6 +730,10 @@ document.addEventListener('alpine:init', () => {
                     isFinanceEnabled: this.config.isFinanceEnabled,
                     isInternatEnabled: this.config.isInternatEnabled,
                     isCoranModuleEnabled: this.config.isCoranModuleEnabled,
+                    gradeEditWindowDays: Number(this.config.gradeEditWindowDays),
+                    evaluationPeriodType: this.config.evaluationPeriodType || 'Trimester',
+                    customPeriodCount: Number(this.config.customPeriodCount),
+                    workingDays: this.config.workingDays,
                     directorSignatureUrl: this.config.directorSignatureUrl || null,
                     secretarySignatureUrl: this.config.secretarySignatureUrl || null,
                     cashierSignatureUrl: this.config.cashierSignatureUrl || null,
@@ -728,6 +755,10 @@ document.addEventListener('alpine:init', () => {
                     isFinanceEnabled: saved.isFinanceEnabled,
                     isInternatEnabled: saved.isInternatEnabled,
                     isCoranModuleEnabled: saved.isCoranModuleEnabled,
+                    gradeEditWindowDays: saved.gradeEditWindowDays,
+                    evaluationPeriodType: saved.evaluationPeriodType || 'Trimester',
+                    customPeriodCount: saved.customPeriodCount || 3,
+                    workingDays: saved.workingDays || this.config.workingDays,
                     directorSignatureUrl: saved.directorSignatureUrl || '',
                     secretarySignatureUrl: saved.secretarySignatureUrl || '',
                     cashierSignatureUrl: saved.cashierSignatureUrl || '',
@@ -741,6 +772,27 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.configSaving = false;
             }
+        },
+
+        // ---------------------------------------------------------------- Jours ouvrés (Évolution N°3)
+
+        weekPresets: {
+            'mon-fri': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            'mon-sat': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+            'sat-wed': ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday']   // repos jeudi/vendredi
+        },
+
+        applyWeekPreset(key) {
+            this.config.workingDays = [...this.weekPresets[key]];
+        },
+
+        toggleWorkingDay(name) {
+            const has = this.config.workingDays.includes(name);
+            // Un établissement sans aucun jour ouvré ne pourrait plus rien saisir : le dernier jour reste.
+            if (has && this.config.workingDays.length === 1) return;
+            this.config.workingDays = has
+                ? this.config.workingDays.filter((d) => d !== name)
+                : [...this.config.workingDays, name];
         },
 
         // ---------------------------------------------------------------- Mentions du bulletin

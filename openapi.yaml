@@ -44,6 +44,7 @@ tags:
   - name: VieScolaire
   - name: StateIntegration
   - name: ClassJournal
+  - name: Quran
 
 paths:
   /state-integration/planete/export:
@@ -1486,6 +1487,38 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
+  /school-years/{id}/apply-evaluation-periods:
+    post:
+      tags: [SchoolYears]
+      summary: Rejouer sur cette année le découpage en périodes choisi dans les réglages (Directeur)
+      description: >-
+        Remplace les périodes de l'année par celles du réglage courant `evaluationPeriodType` (voir
+        SchoolSettings) : trimestres, semestres ou périodes personnalisées. Les anciennes périodes sont
+        archivées (suppression logique), jamais effacées. Refusé (422) dès qu'UNE note ou UNE appréciation
+        de bulletin est rattachée à l'une des périodes de l'année — blocage strict — et sur une année
+        terminée. Idempotent : un découpage déjà conforme ne change rien.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Les périodes de l'année après application, dans l'ordre
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Term' }
+        '403': { description: Réservé au Directeur }
+        '404': { description: Année scolaire introuvable dans cet établissement }
+        '422':
+          description: >-
+            Année terminée (lecture seule), ou notes / appréciations de bulletin déjà saisies sur l'année.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /school-years/{id}/export:
     get:
       tags: [SchoolYears]
@@ -1514,11 +1547,13 @@ paths:
   /school-years/{id}/terms:
     get:
       tags: [SchoolYears]
-      summary: Lister les trimestres d'une année scolaire (générés automatiquement)
+      summary: Lister les périodes d'évaluation d'une année scolaire (générées automatiquement)
       description: >-
-        Trois trimestres sont générés automatiquement à la création de l'année scolaire, leurs dates
-        divisant la période en trois tranches consécutives — aucun endpoint ne les crée directement.
-        Lecture ouverte à tous les rôles : l'écran de saisie de notes en a besoin.
+        Les périodes sont générées automatiquement à la création de l'année scolaire selon le réglage
+        `evaluationPeriodType` de l'école — trois trimestres par défaut, deux semestres, ou 2 à 6 périodes
+        personnalisées —, leurs dates divisant la période en tranches consécutives à parts égales.
+        Aucun endpoint ne les crée directement (voir `POST /school-years/{id}/apply-evaluation-periods`
+        pour rejouer un découpage). Lecture ouverte à tous les rôles : l'écran de saisie de notes en a besoin.
       parameters:
         - name: id
           in: path
@@ -1950,6 +1985,7 @@ paths:
         Génère la liste des élèves de la classe pour la saisie de l'appel. L'Enseignant n'y a accès que
         pour ses classes/matières assignées (403 sinon) ; Directeur et Secrétariat sans restriction. Si
         une fiche existe déjà pour cette clé, les statuts déjà saisis sont renvoyés (alreadySubmitted=true).
+        Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
       parameters:
         - name: classroomId
           in: query
@@ -1983,6 +2019,7 @@ paths:
       description: >-
         Ni schoolId ni schoolYearId dans le corps : l'année ACTIVE est résolue serveur (même règle que
         POST /enrollments). Une seconde saisie de la même clé (classe, matière, date, créneau) est refusée en 409.
+        Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
       requestBody:
         required: true
         content:
@@ -2118,12 +2155,43 @@ paths:
         '404': { description: Inscription introuvable dans l'établissement courant }
 
   /grades:
+    get:
+      tags: [Grades]
+      summary: Grille de saisie d'une classe/matière/trimestre (Directeur, Secrétariat, Enseignant)
+      description: >-
+        Les élèves de la classe avec leurs notes déjà saisies (Devoir 1, Devoir 2, Composition).
+        Chaque note porte `canEdit` : l'appelant peut-il la corriger ? Calculé côté serveur par la même
+        règle que PUT /grades/{id} (fenêtre de correction de l'école, auteur ou affectation pour
+        l'Enseignant ; toujours vrai pour le Directeur et le Secrétariat). L'écran grise la cellule sur
+        cette base — confort d'affichage, la vraie garde reste le PUT (403).
+      parameters:
+        - name: classroomId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: subjectId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: termId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Une ligne par élève
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/StudentGradeRow' } }
+        '403': { description: Réservé au Directeur, au Secrétariat et à l'Enseignant }
+        '404': { description: Classe, matière ou trimestre introuvable dans l'établissement courant }
     post:
       tags: [Grades]
-      summary: Saisir une nouvelle note (Enseignant uniquement)
+      summary: Saisir une nouvelle note (Directeur, Secrétariat, Enseignant)
       description: >-
-        docs/Volume_7_Security.md « Notes » : Saisir est réservé à l'Enseignant (le Directeur ne peut
-        que corriger, PUT /grades/{id}). Aucune note ne doit déjà exister pour la clé
+        docs/Volume_7_Security.md « Notes » : Saisir est ouvert au Directeur, au Secrétariat (toutes
+        classes) et à l'Enseignant. L'auteur est consigné (`CreatedBy`) : c'est lui que la règle de
+        correction autorise. Aucune note ne doit déjà exister pour la clé
         élève/matière/trimestre/type d'évaluation : une création concurrente sur la même clé est
         refusée en 409, jamais un doublon silencieux.
       requestBody:
@@ -2137,7 +2205,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/GradeSaved' }
-        '403': { description: Réservé à l'Enseignant }
+        '403': { description: Réservé au Directeur, au Secrétariat et à l'Enseignant }
         '409':
           description: Une note existe déjà pour cette clé
           content:
@@ -2176,12 +2244,55 @@ paths:
         '403': { description: Réservé au Directeur, au Secrétariat et à l'Enseignant }
         '404': { description: Classe, matière ou trimestre introuvable dans l'établissement courant }
 
+  /grades/sheet/print:
+    get:
+      tags: [Grades]
+      summary: Fiche de saisie papier (PDF vierge) d'une classe/matière/trimestre/évaluation
+      description: >-
+        Grille à imprimer et remplir au stylo dans la salle, avant de reporter les notes à l'écran : en-tête
+        (établissement, classe, matière, évaluation, trimestre, année, barème « sur N »), puis les élèves
+        de la classe par ordre alphabétique (français : « Élodie » avant « Emma »), avec des cases Note et
+        Appréciation VIDES et une ligne de signature. Le barème est celui de la matière (grilles APC : /40,
+        /60…) et, à défaut, celui du cycle de la classe. Distincte de GET /grades/sheet/export, dont la
+        feuille Excel est pré-remplie et sert à réimporter. `evaluationType` est obligatoire : un oubli
+        n'imprime jamais silencieusement une fiche « Devoir 1 ». Un domaine d'évaluation APC, qui ne porte
+        jamais de note, est refusé en 422.
+      parameters:
+        - name: classroomId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: subjectId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: termId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: evaluationType
+          in: query
+          required: true
+          schema: { type: string, enum: [Devoir1, Devoir2, Composition] }
+      responses:
+        '200':
+          description: Fiche de saisie au format PDF (A4)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { description: Réservé au Directeur, au Secrétariat et à l'Enseignant }
+        '404': { description: Classe, matière ou trimestre introuvable dans l'établissement courant }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /grades/sheet/import:
     post:
       tags: [Grades]
-      summary: Importer les trois épreuves d'une classe/matière/trimestre depuis un fichier Excel (Enseignant uniquement)
+      summary: Importer les trois épreuves d'une classe/matière/trimestre depuis un fichier Excel (Directeur, Secrétariat, Enseignant)
       description: >-
-        Mode de saisie alternatif à POST /grades, même permission (Saisir = Enseignant seul). Format
+        Mode de saisie alternatif à POST /grades, mêmes rôles. L'import MODIFIE aussi des notes existantes :
+        il applique la même règle de correction que PUT /grades/{id} (fenêtre de l'Enseignant, auteur ou
+        affectation) — un Enseignant hors fenêtre qui réécrit une note existante est refusé en 403 sur le
+        fichier entier, aperçu compris ; les créations et les valeurs inchangées restent libres. Format
         LARGE : une ligne par élève, une colonne par épreuve (Matricule, Devoir 1, Devoir 2,
         Composition), colonnes reconnues par le NOM de leur en-tête — jamais par leur position — pour
         exclure toute inversion. `dryRun=true` valide tout le fichier sans rien écrire (aperçu) ;
@@ -2215,7 +2326,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/GradeImportResult' }
-        '403': { description: Réservé à l'Enseignant }
+        '403': { description: Rôle non autorisé, ou (Enseignant) correction d'une note existante hors fenêtre / hors propriété }
         '422':
           description: >-
             Fichier illisible/vide/mal formé (en-tête absent, colonnes ambiguës), ou au moins une ligne
@@ -2227,10 +2338,13 @@ paths:
   /grades/{id}:
     put:
       tags: [Grades]
-      summary: Corriger une note déjà saisie (Directeur, Enseignant) — verrouillage optimiste
+      summary: Corriger une note déjà saisie (Directeur, Secrétariat, Enseignant sous conditions) — verrouillage optimiste
       description: >-
-        docs/Volume_7_Security.md « Notes » : Modifier est ouvert au Directeur ET à l'Enseignant,
-        contrairement à la saisie. `rowVersion` est le jeton xmin lu à la dernière consultation — un
+        docs/Volume_7_Security.md « Notes ». Directeur et Secrétariat corrigent sans limite de délai.
+        L'Enseignant ne corrige que dans la fenêtre `gradeEditWindowDays` de l'école (7 jours par défaut)
+        depuis la saisie, ET s'il est l'auteur de la note ou affecté à sa classe et à sa matière : 403
+        sinon, avec un message qui distingue le délai dépassé de la propriété. La correction est
+        historisée (journal d'audit). `rowVersion` est le jeton xmin lu à la dernière consultation — un
         jeton périmé (la note a changé entre-temps) est refusé en 409, jamais un écrasement silencieux.
       parameters:
         - name: id
@@ -2248,7 +2362,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/GradeSaved' }
-        '403': { description: Réservé au Directeur et à l'Enseignant }
+        '403': { description: Rôle non autorisé, ou (Enseignant) délai de correction dépassé / note ni saisie par lui ni de sa matière et sa classe }
         '404': { description: Note introuvable dans l'établissement courant }
         '409':
           description: Conflit de concurrence — la note a été modifiée entre-temps
@@ -4353,6 +4467,169 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: RowVersion périmé }
 
+  /quran/progress:
+    get:
+      tags: [Quran]
+      summary: Historique de suivi de mémorisation d'un élève (Directeur, Enseignant, Secrétariat)
+      description: >-
+        Module Coran/Franco-Arabe — désactivé par défaut (403 `MODULE_DISABLED` tant que le Directeur
+        n'a pas activé `isCoranModuleEnabled`).
+      parameters:
+        - name: studentId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Liste des observations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/QuranProgress' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Quran]
+      summary: Créer une observation de suivi coranique (Directeur, Enseignant)
+      description: >-
+        Aucune contrainte d'unicité : plusieurs observations pour le même élève/sourate sont
+        légitimes au fil du temps. La commande est HISTORISÉE (journal d'audit).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuranProgressCreateRequest' }
+      responses:
+        '201':
+          description: Observation créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuranProgress' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /quran/progress/classroom/{classroomId}:
+    get:
+      tags: [Quran]
+      summary: Suivi coranique de tous les élèves d'une classe (Directeur, Enseignant, Secrétariat)
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Une ligne par élève, avec la liste de ses observations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ClassQuranProgressRow' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /quran/progress/{id}:
+    put:
+      tags: [Quran]
+      summary: Corriger une observation — statut/date/notes seulement (Directeur, Enseignant)
+      description: >-
+        Juz, Hizb, sourate et élève ne sont jamais modifiables (identité de la ligne, immuable).
+        Correction HISTORISÉE (journal d'audit).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuranProgressUpdateRequest' }
+      responses:
+        '200':
+          description: Observation corrigée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuranProgress' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: RowVersion périmé (la ligne a été modifiée entre-temps) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /quran/evaluations:
+    get:
+      tags: [Quran]
+      summary: Historique des évaluations orales d'un élève (Directeur, Enseignant, Secrétariat)
+      parameters:
+        - name: studentId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Liste des évaluations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/QuranEvaluation' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Quran]
+      summary: Enregistrer une évaluation orale de récitation (Directeur, Enseignant)
+      description: Commande HISTORISÉE (journal d'audit), comme la saisie de notes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuranEvaluationCreateRequest' }
+      responses:
+        '201':
+          description: Évaluation créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuranEvaluation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /quran/evaluations/classroom/{classroomId}:
+    get:
+      tags: [Quran]
+      summary: Évaluations orales de tous les élèves d'une classe (Directeur, Enseignant, Secrétariat)
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Une ligne par élève, avec la liste de ses évaluations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ClassQuranEvaluationRow' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /quran/evaluations/{id}:
+    put:
+      tags: [Quran]
+      summary: Corriger une évaluation orale déjà saisie (Directeur, Enseignant)
+      description: L'élève n'est jamais modifiable. Correction HISTORISÉE (journal d'audit).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuranEvaluationUpdateRequest' }
+      responses:
+        '200':
+          description: Évaluation corrigée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuranEvaluation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: RowVersion périmé (la ligne a été modifiée entre-temps) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -4724,6 +5001,37 @@ components:
           type: integer
           default: 7
           description: Ancienneté minimale (jours) d'une créance avant qu'elle ne devienne relançable.
+        gradeEditWindowDays:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 7
+          description: >-
+            Fenêtre de correction des notes par l'Enseignant, en jours depuis la saisie. Passé ce délai,
+            seuls le Directeur et le Secrétariat corrigent (sans limite). Réglée par le Directeur seul.
+        evaluationPeriodType:
+          type: string
+          enum: [Trimester, Semester, Custom]
+          default: Trimester
+          description: >-
+            Découpage de l'année en périodes d'évaluation : 3 trimestres (défaut), 2 semestres, ou un
+            nombre choisi (`customPeriodCount`). N'agit que sur les années créées ensuite ou rejouées via
+            `POST /school-years/{id}/apply-evaluation-periods` — jamais sur une année déjà notée.
+        customPeriodCount:
+          type: integer
+          minimum: 2
+          maximum: 6
+          default: 3
+          description: Nombre de périodes quand `evaluationPeriodType` vaut `Custom` ; ignoré sinon.
+        workingDays:
+          type: array
+          items: { type: string, enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday] }
+          minItems: 1
+          description: >-
+            Jours OUVRÉS de l'établissement, dans l'ordre d'affichage (la semaine commence le lendemain du
+            bloc de repos). Défaut : lundi → samedi. Absent ou `null` en PUT = inchangé. Les autres jours sont
+            des jours de repos : appel des élèves, pointage des enseignants et créneaux d'emploi du temps y
+            sont refusés (422) ; les données déjà enregistrées ne sont pas modifiées.
 
     SchoolYearCreateRequest:
       type: object
@@ -5330,6 +5638,27 @@ components:
           format: int64
           description: Jeton xmin renvoyé par la dernière lecture — verrouillage optimiste.
 
+    GradeCell:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        value: { type: number }
+        rowVersion: { type: integer }
+        canEdit:
+          type: boolean
+          description: L'appelant peut-il corriger cette note ? (voir GET /grades) — vrai pour Directeur et Secrétariat.
+
+    StudentGradeRow:
+      type: object
+      description: Une ligne de la grille ; une épreuve sans note vaut null.
+      properties:
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        devoir1: { $ref: '#/components/schemas/GradeCell', nullable: true }
+        devoir2: { $ref: '#/components/schemas/GradeCell', nullable: true }
+        composition: { $ref: '#/components/schemas/GradeCell', nullable: true }
+
     GradeSaved:
       type: object
       properties:
@@ -5352,7 +5681,7 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
-        label: { type: string, example: "1er trimestre" }
+        label: { type: string, example: "1er trimestre", description: "« 1er trimestre », « 1er semestre » ou « 1re période » selon le découpage de l'école ; imprimé tel quel sur les documents." }
         order: { type: integer, example: 1 }
         startDate: { type: string, format: date }
         endDate: { type: string, format: date }
@@ -6967,3 +7296,89 @@ components:
         totalCount: { type: integer }
         page: { type: integer }
         pageSize: { type: integer }
+
+    QuranProgress:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        juzNumber: { type: integer, minimum: 1, maximum: 30 }
+        hizbNumber: { type: integer, minimum: 1, maximum: 60 }
+        surahNumber: { type: integer, minimum: 1, maximum: 114 }
+        status: { type: string, enum: [InProcess, Memorized, Revised] }
+        evaluationDate: { type: string, format: date, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+        rowVersion: { type: integer }
+
+    QuranProgressCreateRequest:
+      type: object
+      required: [studentId, juzNumber, hizbNumber, surahNumber, status]
+      properties:
+        studentId: { type: string, format: uuid }
+        juzNumber: { type: integer, minimum: 1, maximum: 30 }
+        hizbNumber: { type: integer, minimum: 1, maximum: 60 }
+        surahNumber: { type: integer, minimum: 1, maximum: 114 }
+        status: { type: string, enum: [InProcess, Memorized, Revised] }
+        evaluationDate: { type: string, format: date, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+
+    QuranProgressUpdateRequest:
+      type: object
+      description: Corps de PUT /quran/progress/{id} — Juz, Hizb, sourate et élève ne se corrigent jamais ici.
+      required: [status, rowVersion]
+      properties:
+        status: { type: string, enum: [InProcess, Memorized, Revised] }
+        evaluationDate: { type: string, format: date, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+        rowVersion: { type: integer }
+
+    ClassQuranProgressRow:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        entries: { type: array, items: { $ref: '#/components/schemas/QuranProgress' } }
+
+    QuranEvaluation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        evaluationDate: { type: string, format: date }
+        memoryMistakes: { type: integer, minimum: 0 }
+        tajwidMistakes: { type: integer, minimum: 0 }
+        hesitations: { type: integer, minimum: 0 }
+        finalScore: { type: number, minimum: 0 }
+        rowVersion: { type: integer }
+
+    QuranEvaluationCreateRequest:
+      type: object
+      required: [studentId, evaluationDate, memoryMistakes, tajwidMistakes, hesitations, finalScore]
+      properties:
+        studentId: { type: string, format: uuid }
+        evaluationDate: { type: string, format: date, description: Ne peut pas être future. }
+        memoryMistakes: { type: integer, minimum: 0 }
+        tajwidMistakes: { type: integer, minimum: 0 }
+        hesitations: { type: integer, minimum: 0 }
+        finalScore: { type: number, minimum: 0, description: Aucun plafond métier — aucun barème n'est spécifié pour l'examen oral. }
+
+    QuranEvaluationUpdateRequest:
+      type: object
+      description: Corps de PUT /quran/evaluations/{id} — l'élève ne se corrige jamais ici.
+      required: [evaluationDate, memoryMistakes, tajwidMistakes, hesitations, finalScore, rowVersion]
+      properties:
+        evaluationDate: { type: string, format: date }
+        memoryMistakes: { type: integer, minimum: 0 }
+        tajwidMistakes: { type: integer, minimum: 0 }
+        hesitations: { type: integer, minimum: 0 }
+        finalScore: { type: number, minimum: 0 }
+        rowVersion: { type: integer }
+
+    ClassQuranEvaluationRow:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        entries: { type: array, items: { $ref: '#/components/schemas/QuranEvaluation' } }
