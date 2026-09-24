@@ -44,6 +44,7 @@ tags:
   - name: VieScolaire
   - name: StateIntegration
   - name: ClassJournal
+  - name: Quran
 
 paths:
   /state-integration/planete/export:
@@ -4353,6 +4354,169 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: RowVersion périmé }
 
+  /quran/progress:
+    get:
+      tags: [Quran]
+      summary: Historique de suivi de mémorisation d'un élève (Directeur, Enseignant, Secrétariat)
+      description: >-
+        Module Coran/Franco-Arabe — désactivé par défaut (403 `MODULE_DISABLED` tant que le Directeur
+        n'a pas activé `isCoranModuleEnabled`).
+      parameters:
+        - name: studentId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Liste des observations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/QuranProgress' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Quran]
+      summary: Créer une observation de suivi coranique (Directeur, Enseignant)
+      description: >-
+        Aucune contrainte d'unicité : plusieurs observations pour le même élève/sourate sont
+        légitimes au fil du temps. La commande est HISTORISÉE (journal d'audit).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuranProgressCreateRequest' }
+      responses:
+        '201':
+          description: Observation créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuranProgress' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /quran/progress/classroom/{classroomId}:
+    get:
+      tags: [Quran]
+      summary: Suivi coranique de tous les élèves d'une classe (Directeur, Enseignant, Secrétariat)
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Une ligne par élève, avec la liste de ses observations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ClassQuranProgressRow' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /quran/progress/{id}:
+    put:
+      tags: [Quran]
+      summary: Corriger une observation — statut/date/notes seulement (Directeur, Enseignant)
+      description: >-
+        Juz, Hizb, sourate et élève ne sont jamais modifiables (identité de la ligne, immuable).
+        Correction HISTORISÉE (journal d'audit).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuranProgressUpdateRequest' }
+      responses:
+        '200':
+          description: Observation corrigée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuranProgress' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: RowVersion périmé (la ligne a été modifiée entre-temps) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /quran/evaluations:
+    get:
+      tags: [Quran]
+      summary: Historique des évaluations orales d'un élève (Directeur, Enseignant, Secrétariat)
+      parameters:
+        - name: studentId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Liste des évaluations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/QuranEvaluation' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Quran]
+      summary: Enregistrer une évaluation orale de récitation (Directeur, Enseignant)
+      description: Commande HISTORISÉE (journal d'audit), comme la saisie de notes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuranEvaluationCreateRequest' }
+      responses:
+        '201':
+          description: Évaluation créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuranEvaluation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /quran/evaluations/classroom/{classroomId}:
+    get:
+      tags: [Quran]
+      summary: Évaluations orales de tous les élèves d'une classe (Directeur, Enseignant, Secrétariat)
+      parameters:
+        - name: classroomId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Une ligne par élève, avec la liste de ses évaluations
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/ClassQuranEvaluationRow' } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /quran/evaluations/{id}:
+    put:
+      tags: [Quran]
+      summary: Corriger une évaluation orale déjà saisie (Directeur, Enseignant)
+      description: L'élève n'est jamais modifiable. Correction HISTORISÉE (journal d'audit).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuranEvaluationUpdateRequest' }
+      responses:
+        '200':
+          description: Évaluation corrigée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuranEvaluation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: RowVersion périmé (la ligne a été modifiée entre-temps) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -6967,3 +7131,89 @@ components:
         totalCount: { type: integer }
         page: { type: integer }
         pageSize: { type: integer }
+
+    QuranProgress:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        juzNumber: { type: integer, minimum: 1, maximum: 30 }
+        hizbNumber: { type: integer, minimum: 1, maximum: 60 }
+        surahNumber: { type: integer, minimum: 1, maximum: 114 }
+        status: { type: string, enum: [InProcess, Memorized, Revised] }
+        evaluationDate: { type: string, format: date, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+        rowVersion: { type: integer }
+
+    QuranProgressCreateRequest:
+      type: object
+      required: [studentId, juzNumber, hizbNumber, surahNumber, status]
+      properties:
+        studentId: { type: string, format: uuid }
+        juzNumber: { type: integer, minimum: 1, maximum: 30 }
+        hizbNumber: { type: integer, minimum: 1, maximum: 60 }
+        surahNumber: { type: integer, minimum: 1, maximum: 114 }
+        status: { type: string, enum: [InProcess, Memorized, Revised] }
+        evaluationDate: { type: string, format: date, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+
+    QuranProgressUpdateRequest:
+      type: object
+      description: Corps de PUT /quran/progress/{id} — Juz, Hizb, sourate et élève ne se corrigent jamais ici.
+      required: [status, rowVersion]
+      properties:
+        status: { type: string, enum: [InProcess, Memorized, Revised] }
+        evaluationDate: { type: string, format: date, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+        rowVersion: { type: integer }
+
+    ClassQuranProgressRow:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        entries: { type: array, items: { $ref: '#/components/schemas/QuranProgress' } }
+
+    QuranEvaluation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        studentId: { type: string, format: uuid }
+        evaluationDate: { type: string, format: date }
+        memoryMistakes: { type: integer, minimum: 0 }
+        tajwidMistakes: { type: integer, minimum: 0 }
+        hesitations: { type: integer, minimum: 0 }
+        finalScore: { type: number, minimum: 0 }
+        rowVersion: { type: integer }
+
+    QuranEvaluationCreateRequest:
+      type: object
+      required: [studentId, evaluationDate, memoryMistakes, tajwidMistakes, hesitations, finalScore]
+      properties:
+        studentId: { type: string, format: uuid }
+        evaluationDate: { type: string, format: date, description: Ne peut pas être future. }
+        memoryMistakes: { type: integer, minimum: 0 }
+        tajwidMistakes: { type: integer, minimum: 0 }
+        hesitations: { type: integer, minimum: 0 }
+        finalScore: { type: number, minimum: 0, description: Aucun plafond métier — aucun barème n'est spécifié pour l'examen oral. }
+
+    QuranEvaluationUpdateRequest:
+      type: object
+      description: Corps de PUT /quran/evaluations/{id} — l'élève ne se corrige jamais ici.
+      required: [evaluationDate, memoryMistakes, tajwidMistakes, hesitations, finalScore, rowVersion]
+      properties:
+        evaluationDate: { type: string, format: date }
+        memoryMistakes: { type: integer, minimum: 0 }
+        tajwidMistakes: { type: integer, minimum: 0 }
+        hesitations: { type: integer, minimum: 0 }
+        finalScore: { type: number, minimum: 0 }
+        rowVersion: { type: integer }
+
+    ClassQuranEvaluationRow:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        matricule: { type: string }
+        fullName: { type: string }
+        entries: { type: array, items: { $ref: '#/components/schemas/QuranEvaluation' } }
