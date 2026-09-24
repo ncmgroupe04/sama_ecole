@@ -346,13 +346,13 @@ Un Directeur intéressé accède, via le site public, à un formulaire détaill�
 - Le plan souhaité (§11.1).
 - Le moyen de paiement prévu (§11.6) — simple préférence déclarée à ce stade, aucun paiement n'est demandé avant validation.
 
-À la soumission, une **demande d'inscription** est créée (statut `Pending`) et une **référence de suivi** est communiquée au Directeur par email. **Aucun compte, aucun établissement, aucun abonnement n'existe encore** à ce stade — le Directeur n'a accès qu'à une page de suivi de sa demande (via la référence + email), rien d'autre.
+À la soumission, une **demande d'inscription** est créée (statut `Pending`) et une **référence de suivi** est affichée au Directeur à l'écran **et lui est envoyée par e-mail** (pour qu'il ne la perde pas). Le **Super Admin** est alerté par un e-mail distinct (adresse `Registration__AdminNotificationEmail`, avec le détail de la demande et un lien vers le tableau de bord de revue). Aucun e-mail n'est jamais adressé au personnel d'un établissement existant. **Aucun compte, aucun établissement, aucun abonnement n'existe encore** à ce stade — le Directeur n'a accès qu'à une page de suivi de sa demande (via la référence + email), rien d'autre.
 
 **Étape 2 — Revue par le Super Admin**
 Le Super Admin consulte la liste des demandes en attente, et peut : **Approuver**, **Rejeter** (avec motif), ou demander des précisions par email en dehors de la plateforme.
 
 **Étape 3 — Activation après approbation**
-Dès l'approbation, le système crée automatiquement, dans la même transaction : l'établissement (`School`, actif), le compte Directeur (`User`, actif, mot de passe déjà défini à l'étape 1), et l'abonnement (`Subscription`, statut `AwaitingPayment`, aucune date d'expiration tant que le premier paiement n'est pas confirmé). Le Directeur reçoit un email de confirmation et peut se connecter.
+Dès l'approbation, le système crée automatiquement, dans la même transaction : l'établissement (`School`, actif), le compte Directeur (`User`, actif, mot de passe déjà défini à l'étape 1), et l'abonnement (`Subscription`, statut `AwaitingPayment`, aucune date d'expiration tant que le premier paiement n'est pas confirmé). Le Directeur reçoit alors un e-mail de confirmation avec le lien de connexion et peut se connecter (en cas de rejet, un e-mail lui transmet le motif).
 
 **Étape 4 — Premier accès du Directeur**
 Tant que l'abonnement est en statut `AwaitingPayment`, le Directeur n'a accès qu'à l'écran de paiement (§11.6, mode restreint défini en §11.3) — aucun autre module (élèves, classes, notes...) n'est accessible avant confirmation du premier paiement.

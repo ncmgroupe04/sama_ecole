@@ -820,40 +820,6 @@
                     ]
                 },
                 {
-                    id: 'notification-inscription-directeur',
-                    title: 'Notification automatique du Directeur à chaque inscription',
-                    location: 'Boîte e-mail du Directeur — aucun écran dédié',
-                    href: '/eleves',
-                    roles: ['Directeur'],
-                    definition:
-                        "À chaque inscription validée, un e-mail automatique part vers TOUS les comptes Directeur actifs " +
-                        "de l'établissement — jamais vers l'adresse générique de l'école. Aucun réglage ne l'active ou ne " +
-                        "le désactive : c'est un comportement permanent du module Inscriptions.",
-                    objectif:
-                        "Tenir la direction informée du rythme réel des inscriptions sans qu'elle ait à ouvrir " +
-                        "l'application pour le constater — utile en particulier pour un Directeur qui partage la " +
-                        "supervision avec un adjoint, les deux recevant le même e-mail.",
-                    probleme:
-                        "Sans notification, une inscription saisie par le secrétariat un jour d'affluence pouvait passer " +
-                        "totalement inaperçue de la direction jusqu'à la consultation d'un rapport, des semaines plus " +
-                        "tard.",
-                    procedure: [
-                        "Rien à activer ni à configurer : la notification part d'elle-même dès qu'une inscription est validée.",
-                        "Consultez simplement votre boîte e-mail : chaque compte Directeur actif de l'établissement reçoit son propre message.",
-                        "Si aucun Directeur actif n'existe dans l'établissement au moment de l'inscription, l'e-mail n'est simplement envoyé à personne — l'inscription elle-même n'est jamais bloquée pour autant."
-                    ],
-                    impacts: [
-                        "Inscription : l'envoi se déclenche APRÈS que l'inscription est réellement enregistrée — un e-mail reçu garantit donc que l'inscription a bien abouti.",
-                        "Fiabilité : un échec d'envoi isolé (panne du serveur de messagerie) est journalisé côté serveur et n'empêche ni l'inscription, ni la notification des autres Directeurs.",
-                        "Comptes suspendus : un compte Directeur suspendu ou d'une autre école ne reçoit jamais cette notification."
-                    ],
-                    recommandations: [
-                        "Vérifiez que l'adresse e-mail de chaque compte Directeur est correcte et surveillée : c'est le seul canal de cette notification, il n'existe pas de rappel dans l'application elle-même.",
-                        "Si les e-mails n'arrivent jamais, vérifiez d'abord les courriers indésirables avant de conclure à une panne : c'est la cause la plus fréquente.",
-                        "Ne comptez pas sur cet e-mail comme preuve comptable de l'inscription : le reçu et l'attestation PDF, remis à la famille, restent les pièces officielles."
-                    ]
-                },
-                {
                     id: 'inscription-differee',
                     title: 'Inscription différée : « Plus tard », vue « Non inscrits » et « Inscrire cette année »',
                     location: 'Gestion Scolaire › Élèves — vue « Non inscrits » et fiche élève',

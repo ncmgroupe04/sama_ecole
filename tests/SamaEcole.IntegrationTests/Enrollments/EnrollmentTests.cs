@@ -2,7 +2,6 @@ using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
-using SamaEcole.Application.Enrollments.Events;
 using SamaEcole.Domain.Common;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -85,19 +84,8 @@ public class EnrollmentTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db, Guid schoolId) =>
-        NewHandler(db, schoolId, out _);
-
-    /// <summary>
-    /// Ticket JGK-E03 : variante exposant le publisher MediatR, pour vérifier que
-    /// <see cref="StudentEnrolledEvent"/> part bien après le succès de l'inscription — sans exercer le
-    /// handler d'e-mail réel (couvert séparément par NotifyAdminOnStudentEnrolledEventHandlerTests).
-    /// </summary>
-    private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db, Guid schoolId, out RecordingPublisher publisher)
-    {
-        publisher = new RecordingPublisher();
-        return new(db, new StubTenantProvider(schoolId),
-            _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(), publisher);
-    }
+        new(db, new StubTenantProvider(schoolId),
+            _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService());
 
     private static CreateEnrollmentCommand NewStudentCommand(string fullName) => new()
     {
@@ -284,65 +272,6 @@ public class EnrollmentTests : IAsyncLifetime
 
         var visibleToB = (long)(await command.ExecuteScalarAsync())!;
         visibleToB.Should().Be(0, "une inscription d'une autre école ne doit jamais être visible (règle #2)");
-    }
-
-    [Fact]
-    public async Task A_Successful_Enrollment_Publishes_StudentEnrolledEvent_After_The_Transaction()
-    {
-        // Ticket JGK-E03 : l'événement ne doit partir qu'une fois l'inscription réellement enregistrée.
-        await using var db = _db.NewAppContext(EcoleA);
-        var handler = NewHandler(db, EcoleA, out var publisher);
-
-        var receipt = await handler.Handle(NewStudentCommand("Notifiée Sarr"), CancellationToken.None);
-
-        publisher.Published.Should().ContainSingle();
-        var evt = publisher.Published.Single().Should().BeOfType<StudentEnrolledEvent>().Subject;
-        evt.SchoolId.Should().Be(EcoleA);
-        evt.EnrollmentId.Should().Be(receipt.EnrollmentId);
-        evt.Matricule.Should().Be(receipt.Matricule);
-        evt.StudentFullName.Should().Be(receipt.StudentFullName);
-    }
-
-    [Fact]
-    public async Task A_Failed_Enrollment_Never_Publishes_StudentEnrolledEvent()
-    {
-        // Une réinscription en doublon échoue AVANT tout SaveChangesAsync utile : l'événement ne doit
-        // jamais partir pour une inscription qui n'a en réalité jamais eu lieu.
-        await using var db = _db.NewAppContext(EcoleA);
-        var receipt = await NewHandler(db, EcoleA).Handle(NewStudentCommand("Doublon Ba"), CancellationToken.None);
-        var studentId = await db.Students.Where(s => s.Matricule == receipt.Matricule).Select(s => s.Id).FirstAsync();
-
-        await using var db2 = _db.NewAppContext(EcoleA);
-        var handler = NewHandler(db2, EcoleA, out var publisher);
-
-        var act = async () => await handler.Handle(new CreateEnrollmentCommand
-        {
-            Type = EnrollmentType.ReEnrollment,
-            ClassroomId = ClasseA,
-            StudentId = studentId
-        }, CancellationToken.None);
-
-        await act.Should().ThrowAsync<ValidationException>();
-        publisher.Published.Should().BeEmpty();
-    }
-
-    /// <summary>Enregistre chaque notification publiée, sans exécuter aucun handler réel.</summary>
-    private sealed class RecordingPublisher : IPublisher
-    {
-        public List<object> Published { get; } = [];
-
-        public Task Publish(object notification, CancellationToken cancellationToken = default)
-        {
-            Published.Add(notification);
-            return Task.CompletedTask;
-        }
-
-        public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
-            where TNotification : INotification
-        {
-            Published.Add(notification!);
-            return Task.CompletedTask;
-        }
     }
 
     private sealed class StubTenantProvider(Guid? schoolId) : ITenantProvider

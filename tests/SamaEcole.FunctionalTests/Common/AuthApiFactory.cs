@@ -298,7 +298,13 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // assertion précédente plutôt que l'état réel après une mutation. _kpiCacheEnabled n'est mis à
         // true que par la fabrique dédiée qui prouve le comportement du Super Admin CACHE ACTIF.
         Environment.SetEnvironmentVariable("Kpi__Cache__Enabled", KpiCacheEnabled ? "true" : "false");
+
+        // Destinataire de l'alerte « nouvelle demande d'inscription » (Super Admin) — les tests
+        // Registration vérifient qu'elle part, et que le demandeur, lui, ne reçoit rien à la soumission.
+        Environment.SetEnvironmentVariable("Registration__AdminNotificationEmail", SuperAdminAlertEmail);
     }
+
+    public const string SuperAdminAlertEmail = "alertes-superadmin@unikol.test";
 
     private static void ClearEnvironment()
     {
@@ -314,7 +320,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                      "RateLimiting__Webhooks__PermitLimit", "RateLimiting__Webhooks__WindowMinutes",
                      "Sms__Queue__Enabled",
                      "Finance__DebtorAging__Enabled", "Subscriptions__Lifecycle__Enabled",
-                     "Kpi__Cache__Enabled"
+                     "Kpi__Cache__Enabled", "Registration__AdminNotificationEmail"
                  })
         {
             Environment.SetEnvironmentVariable(key, null);
