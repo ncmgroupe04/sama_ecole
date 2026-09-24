@@ -677,7 +677,16 @@ document.addEventListener('alpine:init', () => {
             this.configSaved = false;
             this.configSaving = true;
             try {
+                // PUT = remplacement COMPLET des réglages côté serveur (UpdateSchoolSettingsCommand : tout
+                // champ omis retombe à sa valeur par défaut). Cet écran ne pilote qu'une partie des champs ;
+                // les autres (alertes SMS, seuil de relance des impayés — écran SMS, sms-settings.js — et
+                // tout champ ajouté plus tard) appartiennent à d'autres écrans. On relit donc l'état serveur
+                // JUSTE avant d'écrire et on l'étale sous nos champs, exactement comme sms-settings.js :
+                // ni omission silencieuse, ni valeur périmée (l'écran SMS a pu enregistrer depuis le
+                // chargement de cette page). Voir ACTIVE_CONTEXT.md §2 « Notes ».
+                const current = await window.api.get('/schools/current/settings');
                 const saved = await window.api.put('/schools/current/settings', {
+                    ...current,
                     gradingScale: this.config.gradingScale,
                     studentMatriculeFormat: this.config.studentMatriculeFormat,
                     teacherMatriculeFormat: this.config.teacherMatriculeFormat,
