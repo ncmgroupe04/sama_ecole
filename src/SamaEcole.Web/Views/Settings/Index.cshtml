@@ -795,6 +795,28 @@
  </button>
  </div>
 
+ @* Délai de correction des notes par l'Enseignant (Évolution N°1) : réglé par le Directeur SEUL.
+ Passé ce délai après la saisie, l'Enseignant ne peut plus corriger sa note — le Directeur et le
+ Secrétariat corrigent sans limite. Même PUT /schools/current/settings que le reste. *@
+ <form x-show="isDirecteur" x-cloak x-on:submit.prevent="saveConfig()" novalidate class="pt-4 border-t border-slate-100">
+ <label for="cfg-grade-edit-window" class="form-label">Délai de correction des notes par l'Enseignant</label>
+ <p class="text-xs text-slate-400 mt-0.5">
+ Nombre de jours après la saisie pendant lesquels un Enseignant peut corriger une note. Passé ce délai,
+ seuls le Directeur et le Secrétariat peuvent la corriger.
+ </p>
+ <div class="mt-3 flex items-end gap-3 max-w-xs">
+ <div class="flex-1">
+ <input id="cfg-grade-edit-window" type="number" min="1" max="365" x-model.number="config.gradeEditWindowDays"
+ class="input-field">
+ </div>
+ <span class="pb-2.5 text-sm text-slate-500">jours</span>
+ <button type="submit" :disabled="configSaving" class="btn-modal-primary group">
+ <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ <p x-show="configErrors.gradeeditwindowdays" x-cloak x-text="configErrors.gradeeditwindowdays" class="field-error"></p>
+ </form>
+
  <!-- Mentions du bulletin — ressource séparée (GradesController /grades/mentions). -->
  <div class="pt-2">
  <div class="flex items-start justify-between gap-4">

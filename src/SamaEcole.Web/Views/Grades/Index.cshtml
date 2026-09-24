@@ -88,9 +88,9 @@
  </div>
  </div>
 
- <!-- Rôle Secrétariat : rappel que seule la correction (pas la saisie) leur est ouverte -->
- <div x-show="!canEnterGrades && hasSelection" x-cloak class="mt-4 rounded-xl border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
- Vous pouvez corriger une note déjà saisie, mais vous ne pouvez pas saisir de nouvelle note.
+ <!-- Enseignant : la correction d'une note est limitée dans le temps (Paramètres › délai de correction) -->
+ <div x-show="isTeacher && hasSelection" x-cloak class="mt-4 rounded-xl border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
+ Vous pouvez corriger vos notes, ou celles de votre matière et de votre classe, pendant le délai fixé par le Directeur. Passé ce délai, la note est verrouillée (champ grisé) : demandez au Directeur ou au Secrétariat de la corriger.
  </div>
 
  <!-- Conflit de concurrence (AGENTS.md règle #5) -->
@@ -142,8 +142,8 @@
  class="input-field mt-0 w-20 text-center"
  :class="row.devoir1.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="devoir1"
- :disabled="row.devoir1.status === 'saving' || (row.devoir1.id ? !canCorrectGrades : !canEnterGrades)"
- :title="row.devoir1.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
+ :disabled="row.devoir1.status === 'saving' || (row.devoir1.id ? !row.devoir1.canEdit : !canEnterGrades)"
+ :title="row.devoir1.id && !row.devoir1.canEdit ? lockedHint : ''"
  x-model="row.devoir1.value"
  x-on:blur="saveCell(index, 'devoir1')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'devoir1')" />
@@ -160,8 +160,8 @@
  class="input-field mt-0 w-20 text-center"
  :class="row.devoir2.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="devoir2"
- :disabled="row.devoir2.status === 'saving' || (row.devoir2.id ? !canCorrectGrades : !canEnterGrades)"
- :title="row.devoir2.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
+ :disabled="row.devoir2.status === 'saving' || (row.devoir2.id ? !row.devoir2.canEdit : !canEnterGrades)"
+ :title="row.devoir2.id && !row.devoir2.canEdit ? lockedHint : ''"
  x-model="row.devoir2.value"
  x-on:blur="saveCell(index, 'devoir2')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'devoir2')" />
@@ -178,8 +178,8 @@
  class="input-field mt-0 w-20 text-center"
  :class="row.composition.status === 'error' ? 'border-danger' : ''"
  :data-row="index" data-field="composition"
- :disabled="row.composition.status === 'saving' || (row.composition.id ? !canCorrectGrades : !canEnterGrades)"
- :title="row.composition.id ? (!canCorrectGrades ? 'Réservé au Directeur et au Secrétariat' : '') : (!canEnterGrades ? 'Réservé à l\'enseignant' : '')"
+ :disabled="row.composition.status === 'saving' || (row.composition.id ? !row.composition.canEdit : !canEnterGrades)"
+ :title="row.composition.id && !row.composition.canEdit ? lockedHint : ''"
  x-model="row.composition.value"
  x-on:blur="saveCell(index, 'composition')"
  x-on:keydown.enter.prevent="focusNextRow(index, 'composition')" />
