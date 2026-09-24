@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
@@ -217,7 +218,7 @@ public class ApcEvaluationStructureTests : IAsyncLifetime
         await createGrade.Handle(new CreateGradeCommand(Eleve, FrancaisRessources, Trimestre, EvaluationType.Composition, 32), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(Eleve, FrancaisCompetences, Trimestre, EvaluationType.Composition, 48), CancellationToken.None);
 
-        var summary = await new GetGradeSummaryQueryHandler(db)
+        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db))
             .Handle(new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);
 
         summary.GeneralAverage.Should().Be(8m);
@@ -240,7 +241,7 @@ public class ApcEvaluationStructureTests : IAsyncLifetime
         {
             if (request is GetGradeSummaryQuery query)
             {
-                return (Task<TResponse>)(object)new GetGradeSummaryQueryHandler(dbContext).Handle(query, cancellationToken);
+                return (Task<TResponse>)(object)new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext)).Handle(query, cancellationToken);
             }
 
             throw new NotSupportedException($"FakeSummaryMediator ne sait pas router {request.GetType().Name}.");

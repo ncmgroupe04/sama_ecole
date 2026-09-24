@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
@@ -184,7 +185,7 @@ public class GetClassDeliberationPdfQueryTests : IAsyncLifetime
         {
             if (request is GetGradeSummaryQuery query)
             {
-                var handler = new GetGradeSummaryQueryHandler(dbContext);
+                var handler = new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext));
                 return (Task<TResponse>)(object)handler.Handle(query, cancellationToken);
             }
 

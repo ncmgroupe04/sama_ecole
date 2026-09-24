@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using SamaEcole.Application.Coefficients;
 using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
@@ -184,7 +185,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
         {
             if (request is GetGradeSummaryQuery query)
             {
-                var handler = new GetGradeSummaryQueryHandler(dbContext);
+                var handler = new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext));
                 return (Task<TResponse>)(object)handler.Handle(query, cancellationToken);
             }
 
