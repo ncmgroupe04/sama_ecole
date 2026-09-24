@@ -104,6 +104,9 @@ document.addEventListener('alpine:init', () => {
             // rejouées via « Appliquer le découpage » (Années scolaires).
             evaluationPeriodType: 'Trimester',
             customPeriodCount: 3,
+            // Jours OUVRÉS (noms de l'API). Les autres sont des jours de repos : ni appel, ni pointage
+            // enseignant, ni créneau d'emploi du temps n'y sont saisis. Défaut lundi → samedi.
+            workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
             directorSignatureUrl: '',
             secretarySignatureUrl: '',
             cashierSignatureUrl: '',
@@ -300,6 +303,7 @@ document.addEventListener('alpine:init', () => {
                     gradeEditWindowDays: config.gradeEditWindowDays,
                     evaluationPeriodType: config.evaluationPeriodType || 'Trimester',
                     customPeriodCount: config.customPeriodCount || 3,
+                    workingDays: config.workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
                     directorSignatureUrl: config.directorSignatureUrl || '',
                     secretarySignatureUrl: config.secretarySignatureUrl || '',
                     cashierSignatureUrl: config.cashierSignatureUrl || '',
@@ -710,6 +714,7 @@ document.addEventListener('alpine:init', () => {
                     gradeEditWindowDays: Number(this.config.gradeEditWindowDays),
                     evaluationPeriodType: this.config.evaluationPeriodType || 'Trimester',
                     customPeriodCount: Number(this.config.customPeriodCount),
+                    workingDays: this.config.workingDays,
                     directorSignatureUrl: this.config.directorSignatureUrl || null,
                     secretarySignatureUrl: this.config.secretarySignatureUrl || null,
                     cashierSignatureUrl: this.config.cashierSignatureUrl || null,
@@ -734,6 +739,7 @@ document.addEventListener('alpine:init', () => {
                     gradeEditWindowDays: saved.gradeEditWindowDays,
                     evaluationPeriodType: saved.evaluationPeriodType || 'Trimester',
                     customPeriodCount: saved.customPeriodCount || 3,
+                    workingDays: saved.workingDays || this.config.workingDays,
                     directorSignatureUrl: saved.directorSignatureUrl || '',
                     secretarySignatureUrl: saved.secretarySignatureUrl || '',
                     cashierSignatureUrl: saved.cashierSignatureUrl || '',
@@ -747,6 +753,27 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.configSaving = false;
             }
+        },
+
+        // ---------------------------------------------------------------- Jours ouvrés (Évolution N°3)
+
+        weekPresets: {
+            'mon-fri': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            'mon-sat': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+            'sat-wed': ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday']   // repos jeudi/vendredi
+        },
+
+        applyWeekPreset(key) {
+            this.config.workingDays = [...this.weekPresets[key]];
+        },
+
+        toggleWorkingDay(name) {
+            const has = this.config.workingDays.includes(name);
+            // Un établissement sans aucun jour ouvré ne pourrait plus rien saisir : le dernier jour reste.
+            if (has && this.config.workingDays.length === 1) return;
+            this.config.workingDays = has
+                ? this.config.workingDays.filter((d) => d !== name)
+                : [...this.config.workingDays, name];
         },
 
         // ---------------------------------------------------------------- Mentions du bulletin

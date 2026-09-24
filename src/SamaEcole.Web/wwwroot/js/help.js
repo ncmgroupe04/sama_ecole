@@ -661,7 +661,8 @@
                         "Affectations : un créneau s'appuie sur les couples matière + classe déjà déclarés sur la fiche de l'enseignant — une matière qu'il n'enseigne pas ne lui est pas proposée.",
                         "Salles : le numéro de salle est un simple libellé indicatif porté par le créneau ; le module Infrastructures reste la référence de la capacité et de l'existence réelle des locaux.",
                         "Pointage des heures : les heures effectivement faites se saisissent séparément (Comptabilité › Paie, Pointage Profs) et ne se déduisent pas automatiquement de la grille — l'emploi du temps est un prévisionnel, le pointage un constat.",
-                        "Navigation : depuis un créneau, la matière, la classe ou l'enseignant sont cliquables et ouvrent l'écran correspondant, filtré sur l'élément visé."
+                        "Navigation : depuis un créneau, la matière, la classe ou l'enseignant sont cliquables et ouvrent l'écran correspondant, filtré sur l'élément visé.",
+                        "Jours de repos : la grille n'affiche que les jours ouvrés de l'établissement (par exemple du samedi au mercredi si le repos tombe le jeudi et le vendredi) et refuse tout créneau un jour de repos. Ces jours se règlent dans Paramètres › Notation & mentions ; un créneau déjà posé sur un jour devenu repos reste visible, marqué « repos », et peut être supprimé mais plus modifié."
                     ],
                     recommandations: [
                         "Renseignez les affectations de chaque enseignant AVANT de bâtir sa semaine : sans elles, aucune matière ne peut être placée.",
@@ -2257,7 +2258,8 @@
                     impacts: [
                         "Billets : un retard constaté à l'appel peut donner lieu à un billet d'entrée, produit séparément par la Surveillance.",
                         "Rapport d'assiduité : chaque appel soumis alimente directement le rapport détaillé par classe et par élève.",
-                        "Convocations : un absentéisme répété visible sur plusieurs appels motive fréquemment une convocation de parent."
+                        "Convocations : un absentéisme répété visible sur plusieurs appels motive fréquemment une convocation de parent.",
+                        "Jours de repos : aucun appel ne s'enregistre un jour de repos de l'établissement (Paramètres › Notation & mentions) ; ces jours ne comptent donc jamais dans les taux de présence. Les appels déjà saisis avant un changement de réglage restent comptés."
                     ],
                     recommandations: [
                         "Faites l'appel à chaque séance, sans exception : un rapport d'assiduité troué de créneaux non appelés ne dit rien de fiable sur l'élève qu'il est censé décrire.",

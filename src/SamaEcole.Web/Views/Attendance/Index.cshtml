@@ -47,6 +47,12 @@
  <span x-text="isLoading ? 'Chargement…' : 'Charger l\'appel'"></span>
  </button>
  </div>
+
+ @* Jour de repos de l'établissement (Évolution N°3) : confort d'affichage, le serveur refuse de toute façon (422). *@
+ <div x-show="isRestDay" x-cloak class="mt-4 rounded-xl border-l-4 border-primary bg-primary-50 p-3 text-sm text-primary-700" role="status">
+ Ce jour est un jour de repos de l'établissement : aucun appel n'y est enregistré. Choisissez un jour ouvré,
+ ou ajustez les jours ouvrés dans Paramètres › Notation &amp; mentions.
+ </div>
  </div>
 
  <!-- Grille d'appel -->

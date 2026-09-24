@@ -796,13 +796,16 @@
                     <tr class="bg-slate-50/50">
                         <th class="py-3 px-4 w-32 border-b border-r border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Heure \ Jour</th>
                         <template x-for="day in daysOfWeek" :key="day.value">
-                            <th class="py-3 px-4 text-center border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider" x-text="day.label"></th>
+                            <th class="py-3 px-4 text-center border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <span x-text="day.label"></span>
+                                <span x-show="day.isRest" x-cloak class="status-badge-neutral ml-1 normal-case tracking-normal" title="Jour de repos de l'établissement : les créneaux hérités restent lisibles et supprimables, mais plus modifiables.">repos</span>
+                            </th>
                         </template>
                     </tr>
                 </thead>
                 <tbody>
                     <tr x-show="scheduleSlots.length === 0">
-                        <td colspan="7">
+                        <td :colspan="daysOfWeek.length + 1">
                             <empty-state icon="calendar" title="Aucun créneau programmé."
                                 hint="Cliquez sur « Nouveau Créneau » pour remplir la grille." />
                         </td>
@@ -810,7 +813,7 @@
                     <template x-for="time in timeSlots" :key="time.start">
                         <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 group">
                             <!-- PAUSE -->
-                            <td x-show="time.isPause" colspan="7" class="py-3 px-4 text-center font-bold text-slate-400 bg-slate-50 uppercase tracking-widest text-sm" x-text="time.label"></td>
+                            <td x-show="time.isPause" :colspan="daysOfWeek.length + 1" class="py-3 px-4 text-center font-bold text-slate-400 bg-slate-50 uppercase tracking-widest text-sm" x-text="time.label"></td>
                             
                             <!-- Ligne Normale - Heure -->
                             <td x-show="!time.isPause" class="py-3 px-4 border-r border-slate-200 font-mono text-sm text-slate-500 whitespace-nowrap bg-white" x-text="time.label"></td>
@@ -887,7 +890,7 @@
                     </div>
                     <div>
                         <label class="form-label" for="sched_day">Jour</label>
-                        <select-field id="sched_day" model="scheduleForm.dayOfWeek" required="true" options-expr="[{value:1, label:'Lundi'}, {value:2, label:'Mardi'}, {value:3, label:'Mercredi'}, {value:4, label:'Jeudi'}, {value:5, label:'Vendredi'}, {value:6, label:'Samedi'}]" />
+                        <select-field id="sched_day" model="scheduleForm.dayOfWeek" required="true" options-expr="workingDayOptions" />
                     </div>
                     <div class="flex gap-4">
                         <div class="flex-1">

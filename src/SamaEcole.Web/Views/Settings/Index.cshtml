@@ -849,6 +849,36 @@
  <p x-show="configErrors.customperiodcount" x-cloak x-text="configErrors.customperiodcount" class="field-error"></p>
  </form>
 
+ @* Jours ouvrés de l'établissement (Évolution N°3) : réglé par le Directeur SEUL, même PUT
+ /schools/current/settings que le reste. Les jours non cochés sont des jours de repos : le serveur
+ refuse (422) tout appel, pointage enseignant ou créneau d'emploi du temps ce jour-là. *@
+ <form x-show="isDirecteur" x-cloak x-on:submit.prevent="saveConfig()" novalidate class="pt-4 border-t border-slate-100">
+ <h2 class="form-label">Jours ouvrés de l'établissement</h2>
+ <p class="text-xs text-slate-400 mt-0.5">
+ Les jours non cochés sont des jours de repos : l'appel, le pointage des enseignants et l'emploi du temps
+ n'y acceptent aucune saisie. Les données déjà enregistrées ne sont pas modifiées.
+ </p>
+ <div class="mt-3 flex flex-wrap gap-x-5 gap-y-2" role="group" aria-label="Jours ouvrés">
+ <template x-for="day in [['Monday','Lundi'],['Tuesday','Mardi'],['Wednesday','Mercredi'],['Thursday','Jeudi'],['Friday','Vendredi'],['Saturday','Samedi'],['Sunday','Dimanche']]" :key="day[0]">
+ <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+ <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary"
+ :checked="config.workingDays.includes(day[0])"
+ x-on:change="toggleWorkingDay(day[0]); $el.checked = config.workingDays.includes(day[0])">
+ <span x-text="day[1]"></span>
+ </label>
+ </template>
+ </div>
+ <div class="mt-3 flex flex-wrap items-center gap-2">
+ <button type="button" x-on:click="applyWeekPreset('mon-fri')" class="btn-modal-secondary text-xs">Lundi → Vendredi</button>
+ <button type="button" x-on:click="applyWeekPreset('mon-sat')" class="btn-modal-secondary text-xs">Lundi → Samedi</button>
+ <button type="button" x-on:click="applyWeekPreset('sat-wed')" class="btn-modal-secondary text-xs">Samedi → Mercredi (repos jeudi et vendredi)</button>
+ <button type="submit" :disabled="configSaving" class="btn-modal-primary group ml-auto">
+ <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ </button>
+ </div>
+ <p x-show="configErrors.workingdays" x-cloak x-text="configErrors.workingdays" class="field-error"></p>
+ </form>
+
  <!-- Mentions du bulletin — ressource séparée (GradesController /grades/mentions). -->
  <div class="pt-2">
  <div class="flex items-start justify-between gap-4">

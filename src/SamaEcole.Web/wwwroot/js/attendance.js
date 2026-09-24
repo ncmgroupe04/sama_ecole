@@ -37,6 +37,8 @@ document.addEventListener('alpine:init', () => {
         submitSuccess: false,
 
         init() {
+            // Jours ouvrés de l'établissement (bandeau « jour de repos ») : store partagé, un seul fetch.
+            Alpine.store('schoolConfig').init();
             this.filters.date = this.toIsoDate(new Date());
             this.loadClassrooms();
             this.loadSubjects();
@@ -87,8 +89,14 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /** Vrai quand la date choisie est un jour de repos de l'établissement (confort : le serveur refuse en 422). */
+        get isRestDay() {
+            return Boolean(this.filters.date) && !Alpine.store('schoolConfig').isWorkingDay(this.filters.date);
+        },
+
         get canLoad() {
-            return this.filters.classroomId && this.filters.subjectId && this.filters.date && this.filters.period.trim();
+            return this.filters.classroomId && this.filters.subjectId && this.filters.date && this.filters.period.trim()
+                && !this.isRestDay;
         },
 
         async loadRoster() {

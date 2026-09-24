@@ -34,7 +34,7 @@ public class WorkingDayGuard(IApplicationDbContext dbContext)
             new ValidationFailure(field,
                 $"Le {SchoolWeek.FrenchName(date.DayOfWeek)} {date:dd/MM/yyyy} est un jour de repos de l'établissement "
                 + $"({SchoolWeek.RestDaysLabel(days)}) : aucune saisie n'y est possible. "
-                + "Les jours ouvrés se règlent dans Paramètres › Pédagogie.")
+                + "Les jours ouvrés se règlent dans Paramètres › Notation & mentions.")
         ]);
     }
 
