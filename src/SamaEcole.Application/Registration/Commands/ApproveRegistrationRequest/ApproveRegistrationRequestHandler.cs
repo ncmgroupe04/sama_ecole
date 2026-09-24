@@ -181,8 +181,10 @@ public class ApproveRegistrationRequestHandler(
              Bonne nouvelle : la demande d'inscription de l'établissement « {schoolName} » sur Unikol
              a été validée.
 
-             Vous pouvez dès à présent vous connecter avec l'adresse e-mail de votre demande et le mot de
-             passe que vous avez choisi lors de votre inscription : {loginUrl}
+             Vous pouvez dès à présent vous connecter avec le mot de passe que vous avez choisi lors de
+             votre inscription : {loginUrl}
+
+             Identifiant de connexion : {email}
 
              Une dernière étape vous attend : l'activation de votre abonnement par un premier paiement,
              directement depuis votre espace.
