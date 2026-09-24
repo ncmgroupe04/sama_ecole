@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Schools;
 
 using SamaEcole.Domain.Entities;
 
@@ -37,7 +38,8 @@ public class UpdateScheduleSlotCommandValidator : AbstractValidator<UpdateSchedu
 public class UpdateScheduleSlotCommandHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService,
-    ScheduleOwnershipAuthorizer ownershipAuthorizer) : IRequestHandler<UpdateScheduleSlotCommand>
+    ScheduleOwnershipAuthorizer ownershipAuthorizer,
+    WorkingDayGuard workingDayGuard) : IRequestHandler<UpdateScheduleSlotCommand>
 {
     public async Task Handle(UpdateScheduleSlotCommand request, CancellationToken cancellationToken)
     {
@@ -52,6 +54,10 @@ public class UpdateScheduleSlotCommandHandler(
         // contournable en deux appels — créer pour soi, puis réattribuer.
         var teacherId = await ownershipAuthorizer.EnsureOwnsAsync(
             request.TeacherId, currentSlotTeacherId: slot.TeacherId, cancellationToken);
+
+        // Jour de repos de l'établissement (Évolution N°3) : on juge le jour du créneau ÉCRIT. Un créneau
+        // hérité d'un jour devenu repos reste lisible et supprimable, mais pas modifiable (arbitrage D3).
+        await workingDayGuard.EnsureWorkingDayAsync(request.DayOfWeek, nameof(request.DayOfWeek), cancellationToken);
 
         var overlappingSlot = await context.ScheduleSlots
             .Where(s => s.Id != request.Id) // Exclude current slot

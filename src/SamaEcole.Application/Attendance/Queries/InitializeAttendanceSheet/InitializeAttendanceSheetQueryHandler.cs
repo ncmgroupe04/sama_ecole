@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Schools;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
 using MediatR;
@@ -9,7 +10,8 @@ namespace SamaEcole.Application.Attendance.Queries.InitializeAttendanceSheet;
 
 public class InitializeAttendanceSheetQueryHandler(
     IApplicationDbContext dbContext,
-    AttendanceScopeAuthorizer scopeAuthorizer)
+    AttendanceScopeAuthorizer scopeAuthorizer,
+    WorkingDayGuard workingDayGuard)
     : IRequestHandler<InitializeAttendanceSheetQuery, AttendanceRosterDto>
 {
     public async Task<AttendanceRosterDto> Handle(InitializeAttendanceSheetQuery request, CancellationToken cancellationToken)
@@ -43,6 +45,9 @@ public class InitializeAttendanceSheetQueryHandler(
         // Portée : un Enseignant ne peut ouvrir la grille que pour ses classes/matières assignées
         // (403 sinon). Directeur/Secrétariat non bornés.
         await scopeAuthorizer.EnsureCanTakeAttendanceAsync(request.ClassroomId, request.SubjectId, activeYear.Id, cancellationToken);
+
+        // Jour de repos de l'établissement (Évolution N°3) : pas de feuille d'appel à ouvrir ce jour-là.
+        await workingDayGuard.EnsureWorkingDayAsync(request.Date, nameof(request.Date), cancellationToken);
 
         // Un élève en abandon ou transféré sur l'année ACTIVE sort des futures listes de présence :
         // sa scolarité dans cette classe s'est arrêtée, même si sa fiche pointe encore la classe
