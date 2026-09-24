@@ -1038,8 +1038,9 @@
                         "Saisissez les notes. Toute valeur excédant le barème est refusée à la saisie, et non découverte au moment du bulletin.",
                         "Renseignez, selon la grille en vigueur, la note de devoir et la note de composition.",
                         "IMPORT EN MASSE : téléchargez le modèle Excel de la classe, complétez-le hors ligne, puis réimportez-le. Les valeurs y sont contrôlées une à une avant intégration.",
+                        "FICHE PAPIER : pour noter dans la salle, choisissez l'évaluation (Devoir 1, Devoir 2 ou Composition) puis cliquez sur « Fiche papier ». Le PDF obtenu est une grille vierge — élèves par ordre alphabétique, cases Note et Appréciation à remplir au stylo — que vous imprimez depuis l'aperçu, puis reportez à l'écran.",
                         "Enregistrez. Chaque saisie est horodatée et attribuée à son auteur.",
-                        "Une note erronée se corrige sur ce même écran ; la modification est consignée dans le journal d'audit."
+                        "Une note erronée se corrige sur ce même écran ; la modification est consignée dans le journal d'audit. Un enseignant corrige ses notes, ou celles de sa matière et de sa classe, pendant le délai fixé par le Directeur (7 jours par défaut, réglable dans Paramètres › Notation & mentions). Passé ce délai, la cellule est grisée : le Directeur ou le Secrétariat peuvent alors la corriger, sans limite de délai."
                     ],
                     impacts: [
                         "Moyennes : chaque note est ramenée au barème de référence puis pondérée par le coefficient de la matière.",
@@ -1052,6 +1053,7 @@
                         "Saisissez les notes matière par matière et menez chaque matière à son terme : une grille partiellement renseignée produit une moyenne trompeuse.",
                         "Vérifiez le barème affiché avant de commencer : une grille APC mêle légitimement des maxima de 60, 40, 24 et 16.",
                         "En cas de conflit signalé, rechargez l'écran et reprenez votre saisie : un collègue a modifié la même note entre-temps. Ne forcez jamais.",
+                        "Relisez vos notes dans le délai de correction : une fois celui-ci écoulé, seule la direction ou le Secrétariat peut les modifier.",
                         "L'import Excel est le mode le plus sûr pour une classe nombreuse, mais contrôlez le rapport d'import avant de valider.",
                         "N'éditez les bulletins qu'une fois TOUTES les matières saisies et contrôlées."
                     ]

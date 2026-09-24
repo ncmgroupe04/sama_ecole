@@ -5,7 +5,8 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 19/09/2026** (Module Cahier de texte / Journal de classe (JGK-P04) —
+**Dernière mise à jour : 24/09/2026** (Notes — fenêtre de correction de l'Enseignant, saisie par le
+Secrétariat et fiche de saisie papier PDF, voir §2 ; Module Cahier de texte / Journal de classe (JGK-P04) —
 **livré : entité + migration RLS, `ClassJournalScopeAuthorizer` (TeacherAssignment + ScheduleSlot),
 règle des 15 jours, CQRS complet, contrôleur, écran `/cahier-de-texte`, tests unitaires et
 d'intégration**, voir §2 ; Module Internat — **livré : back-end, persistance, migration RLS, écran
@@ -73,6 +74,44 @@ Livrés, câblés à l'IHM, et couverts par la suite de tests :
 Le socle V1 (Élèves, Inscriptions, Classes, Matières, Enseignants, Notes & Bulletins, Frais,
 Présences, Surveillance générale, Abonnements & Facturation, Console Super Admin) est livré depuis
 les sprints précédents.
+
+### Notes — fenêtre de correction, Secrétariat et fiche papier (24/09/2026) — livré (Évolution N°1)
+
+Trois changements sur `/grades` et l'écran `/notes`. Spécification : `docs/Volume_7_Security.md` « Notes »,
+`docs/Volume_4_API_Design.md` §8, `openapi.yaml`.
+
+- **Fenêtre de correction de l'Enseignant.** `SchoolSettings.GradeEditWindowDays` (7 par défaut, 1–365,
+  migration `AddGradeEditWindowDays`, réglée par le Directeur dans Paramètres › Notation & mentions).
+  `PUT /grades/{id}` s'ouvre à l'Enseignant, mais `GradeEditPolicy` le borne : délai depuis la saisie ≤ fenêtre
+  (borne incluse) **et** auteur de la note **ou** affecté à la classe/matière (`TeacherAssignment`, année du
+  trimestre) — 403 sinon, jamais 409. Directeur et Secrétariat corrigent sans limite. Cela **remplace** le
+  modèle « Photoshop » (correction réservée au Directeur et au Secrétariat).
+- **Secrétariat.** Il saisit désormais (`POST /grades`, import Excel), pour toutes les classes. `DELETE` reste
+  Directeur/Secrétariat ; `GET /grades/calculate` reste Directeur/Enseignant (`SummaryRoles`) : l'extension de
+  la saisie ne lui ouvre pas la consultation des moyennes.
+- **Fiche de saisie papier.** `GET /grades/sheet/print` : PDF vierge (QuestPDF, `GradeSheetDocument`) — élèves
+  par ordre alphabétique **français** (tri en mémoire, pas la collation de la base), cases Note et
+  Appréciation vides, barème de la matière ou du cycle. Bouton « Fiche papier » sur l'écran de saisie.
+
+**Trois arbitrages actés, à ne pas rouvrir sans raison :**
+
+1. **La règle vit à un seul endroit.** `GradeEditPolicy` (pure) + `GradeCorrectionAuthorizer` servent la
+   correction unitaire, l'**import Excel** et le champ `canEdit` de chaque cellule de la grille. L'import
+   modifie aussi des notes existantes : sans ce contrôle, un Enseignant hors fenêtre corrigeait par fichier ce
+   que l'API lui refuse (contournement qui existait déjà sous l'ancien modèle).
+2. **`Grade.CreatedBy` est désormais renseigné.** Aucun code ne le posait avant cette évolution
+   (`SaveChangesAsync` ne stampe que `CreatedAt`/`UpdatedAt`), donc le critère « auteur » n'avait aucune donnée
+   à lire. Il est posé explicitement à la création (saisie unitaire et import) — pas globalement dans le
+   contexte, pour ne pas changer le comportement de toutes les entités. Les notes **antérieures** n'ont pas
+   d'auteur connu : l'Enseignant ne les corrige que par l'affectation.
+3. **`CanEdit` est un confort d'affichage, jamais une garde.** La cellule grisée suit le serveur ; la vraie
+   garde reste `PUT /grades/{id}` (403).
+
+**Écart connu, hors périmètre de cette évolution :** `settings.js` (Paramètres › Configuration) envoie un
+`PUT /schools/current/settings` construit champ par champ, qui **omet** les alertes SMS et
+`debtorReminderThresholdDays` — chaque enregistrement depuis cet écran les ramène à leurs valeurs par défaut
+(l'écran SMS, lui, relit puis réétale : `...current`). `gradeEditWindowDays` a été ajouté aux deux
+constructions, donc lui n'est pas concerné.
 
 ### Inventaire (26/08/2026) — API et écran livrés
 

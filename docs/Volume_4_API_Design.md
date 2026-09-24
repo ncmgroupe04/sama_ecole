@@ -269,7 +269,9 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/grades` | Saisir une note (validation de plage selon `GradingSettings`) |
+| `POST` | `/api/v1/grades` | Saisir une note (validation de plage selon `GradingSettings`) — Directeur, Secrétariat, Enseignant |
+| `PUT` | `/api/v1/grades/{id}` | Corriger une note (`rowVersion` obligatoire). Enseignant : dans la fenêtre `gradeEditWindowDays` ET auteur ou affecté, `403` sinon ; Directeur/Secrétariat : sans limite |
+| `GET` | `/api/v1/grades/sheet/print` | Fiche de saisie papier, PDF vierge (`classroomId`, `subjectId`, `termId`, `evaluationType` obligatoires) — élèves par ordre alphabétique, cases Note et Appréciation vides |
 | `POST` | `/api/v1/grades/publish` | Publier/verrouiller la saisie pour la période |
 | `GET` | `/api/v1/grades/calculate` | Recalcul des moyennes/totaux |
 

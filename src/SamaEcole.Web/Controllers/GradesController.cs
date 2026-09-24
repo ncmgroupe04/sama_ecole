@@ -57,9 +57,9 @@ public class GradesController(ISender mediator) : ControllerBase
     private const string SummaryRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
 
     /// <summary>
-    /// Écran de saisie/correction : LECTURE ouverte au Directeur, au Secrétariat (qui peut désormais
-    /// corriger/annuler) et à l'Enseignant (qui saisit). Distincte de GradingRoles, qui reste la
-    /// permission d'ÉCRITURE de la saisie initiale (Enseignant seul).
+    /// Écran de saisie/correction : LECTURE ouverte au Directeur, au Secrétariat et à l'Enseignant —
+    /// les mêmes rôles que GradingRoles (saisie initiale) et UpdateGradeRoles (correction), qui restent
+    /// des constantes distinctes car leurs règles fines divergent (fenêtre de l'Enseignant, annulation).
     /// </summary>
     private const string ViewGradesRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Enseignant)}";
 
