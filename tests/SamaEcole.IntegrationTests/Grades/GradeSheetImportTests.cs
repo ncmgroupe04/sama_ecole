@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Commands.ImportGradeSheet;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -78,8 +79,15 @@ public class GradeSheetImportTests : IAsyncLifetime
 
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
-    private static ImportGradeSheetCommandHandler NewHandler(IApplicationDbContext db) =>
-        new(db, new StubTenantProvider(Ecole), new GradeSheetImportParser());
+    private static ImportGradeSheetCommandHandler NewHandler(IApplicationDbContext db)
+    {
+        // Un Directeur : ces tests portent sur le format et la validation du fichier, pas sur la règle
+        // de correction (GradeEditPolicy, testée à part) — il corrige sans limite de délai.
+        var director = new TestCurrentUser(Guid.NewGuid(), Role.Directeur);
+
+        return new(db, new StubTenantProvider(Ecole), new GradeSheetImportParser(), director,
+            new GradeCorrectionAuthorizer(db, director, TimeProvider.System));
+    }
 
     private static byte[] BuildXlsx(string[] headers, IEnumerable<string?[]> rows)
     {

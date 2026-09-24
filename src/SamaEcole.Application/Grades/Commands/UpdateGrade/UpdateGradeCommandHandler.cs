@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Grades.Commands.UpdateGrade;
 
-public class UpdateGradeCommandHandler(IApplicationDbContext dbContext)
+public class UpdateGradeCommandHandler(IApplicationDbContext dbContext, GradeCorrectionAuthorizer authorizer)
     : IRequestHandler<UpdateGradeCommand, GradeResult>
 {
     public async Task<GradeResult> Handle(UpdateGradeCommand request, CancellationToken cancellationToken)
@@ -14,6 +14,12 @@ public class UpdateGradeCommandHandler(IApplicationDbContext dbContext)
         var grade = await dbContext.Grades
             .FirstOrDefaultAsync(g => g.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Note {request.Id} introuvable.");
+
+        // Autorisation (403) AVANT toute validation métier (422) : un appelant qui n'a pas le droit de
+        // corriger cette note ne doit rien apprendre des règles de barème par la forme de la réponse.
+        // Directeur/Secrétariat passent toujours ; l'Enseignant est borné par la fenêtre de correction
+        // de l'école ET par la propriété de la note (voir GradeEditPolicy).
+        (await authorizer.ResolveForGradeAsync(grade, cancellationToken)).EnsureCanCorrect(grade);
 
         // Barème de la LIGNE d'évaluation : celui fixé sur la matière (grilles APC : /40, /60, /24, /16…)
         // et, à défaut, celui du CYCLE de la classe de l'élève (Primaire /10, Collège & Lycée /20) —

@@ -60,7 +60,7 @@ public class GradeSummaryTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     private static CreateGradeCommandHandler NewCreateGradeHandler(IApplicationDbContext db) =>
-        new(db, new StubTenantProvider(Ecole));
+        new(db, new StubTenantProvider(Ecole), new TestCurrentUser());
 
     private static CreateMentionCommandHandler NewCreateMentionHandler(IApplicationDbContext db) =>
         new(db, new StubTenantProvider(Ecole));

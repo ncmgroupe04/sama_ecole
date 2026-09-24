@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Grades.Commands.CreateGrade;
 
-public class CreateGradeCommandHandler(IApplicationDbContext dbContext, ITenantProvider tenantProvider)
+public class CreateGradeCommandHandler(
+    IApplicationDbContext dbContext, ITenantProvider tenantProvider, ICurrentUserService currentUser)
     : IRequestHandler<CreateGradeCommand, GradeResult>
 {
     public async Task<GradeResult> Handle(CreateGradeCommand request, CancellationToken cancellationToken)
@@ -71,7 +72,10 @@ public class CreateGradeCommandHandler(IApplicationDbContext dbContext, ITenantP
             SubjectId = request.SubjectId,
             TermId = request.TermId,
             EvaluationType = request.EvaluationType,
-            Value = request.Value
+            Value = request.Value,
+            // L'AUTEUR de la saisie : c'est lui que GradeEditPolicy autorise à corriger dans la fenêtre.
+            // Jamais renseigné automatiquement par SaveChangesAsync (qui ne pose que CreatedAt).
+            CreatedBy = currentUser.UserId?.ToString()
         };
 
         dbContext.Grades.Add(grade);

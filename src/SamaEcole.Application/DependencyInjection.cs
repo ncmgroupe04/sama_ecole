@@ -34,6 +34,7 @@ public static class DependencyInjection
         // modification et la suppression d'entrées de journal. Scoped — elle lit le compte de la
         // requête courante.
         services.AddScoped<ClassJournalScopeAuthorizer>();
+        services.AddScoped<Grades.GradeCorrectionAuthorizer>();
 
         // Portée de lecture des dossiers d'examen (ticket JGK-J08) : partagée par la liste et la fiche
         // détaillée. Scoped — elle lit le compte de la requête courante.

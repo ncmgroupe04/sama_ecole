@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Grades.Queries.GetClassGrades;
 
-public class GetClassGradesQueryHandler(IApplicationDbContext dbContext)
+public class GetClassGradesQueryHandler(IApplicationDbContext dbContext, GradeCorrectionAuthorizer correctionAuthorizer)
     : IRequestHandler<GetClassGradesQuery, IReadOnlyList<StudentGradeRowDto>>
 {
     public async Task<IReadOnlyList<StudentGradeRowDto>> Handle(
@@ -44,9 +44,16 @@ public class GetClassGradesQueryHandler(IApplicationDbContext dbContext)
                 g.StudentId,
                 g.EvaluationType,
                 g.Value,
+                g.CreatedAt,
+                g.CreatedBy,
                 RowVersion = EF.Property<uint>(g, "xmin")
             })
             .ToListAsync(cancellationToken);
+
+        // Une seule résolution pour toute la grille : classe, matière et trimestre sont les mêmes
+        // pour chaque cellule, donc l'affectation de l'enseignant aussi.
+        var scope = await correctionAuthorizer.ResolveAsync(
+            request.ClassroomId, request.SubjectId, request.TermId, cancellationToken);
 
         var byStudent = grades.ToLookup(g => g.StudentId);
 
@@ -61,9 +68,9 @@ public class GetClassGradesQueryHandler(IApplicationDbContext dbContext)
                     s.Id,
                     s.Matricule,
                     s.FullName,
-                    devoir1 is null ? null : new GradeCellDto(devoir1.Id, devoir1.Value, devoir1.RowVersion),
-                    devoir2 is null ? null : new GradeCellDto(devoir2.Id, devoir2.Value, devoir2.RowVersion),
-                    composition is null ? null : new GradeCellDto(composition.Id, composition.Value, composition.RowVersion));
+                    devoir1 is null ? null : new GradeCellDto(devoir1.Id, devoir1.Value, devoir1.RowVersion, scope.CanCorrect(devoir1.CreatedAt, devoir1.CreatedBy)),
+                    devoir2 is null ? null : new GradeCellDto(devoir2.Id, devoir2.Value, devoir2.RowVersion, scope.CanCorrect(devoir2.CreatedAt, devoir2.CreatedBy)),
+                    composition is null ? null : new GradeCellDto(composition.Id, composition.Value, composition.RowVersion, scope.CanCorrect(composition.CreatedAt, composition.CreatedBy)));
             })
             .ToList();
     }

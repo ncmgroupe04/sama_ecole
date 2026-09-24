@@ -16,8 +16,13 @@ public record GetClassGradesQuery(Guid ClassroomId, Guid SubjectId, Guid TermId)
 /// <summary>
 /// Une note déjà saisie. <see cref="RowVersion"/> est le jeton xmin nécessaire à UpdateGradeCommand
 /// (AGENTS.md règle #5) : l'écran le transmet tel quel à la correction, sans jamais le relire à part.
+///
+/// <see cref="CanEdit"/> : l'appelant peut-il corriger CETTE note ? Calculé côté serveur par
+/// GradeEditPolicy (fenêtre de correction de l'école, auteur ou affectation pour l'Enseignant) — l'écran
+/// désactive la cellule sur cette base plutôt que de recalculer la règle, qui exige l'heure serveur et
+/// l'affectation de l'enseignant. Confort d'affichage : la vraie garde reste PUT /grades/{id} (403).
 /// </summary>
-public record GradeCellDto(Guid Id, decimal Value, uint RowVersion);
+public record GradeCellDto(Guid Id, decimal Value, uint RowVersion, bool CanEdit);
 
 /// <summary>Une ligne du tableau de saisie. Devoir1/Devoir2/Composition sont null tant qu'aucune note n'a été saisie.</summary>
 public record StudentGradeRowDto(

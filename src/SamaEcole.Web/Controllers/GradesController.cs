@@ -23,13 +23,13 @@ namespace SamaEcole.Web.Controllers;
 /// <summary>
 /// Tickets JGK-G01/G02 — /grades. Contrôleur mince : aucune logique métier ici (AGENTS.md règle #8).
 ///
-/// SAISIR une nouvelle note est ouvert au Directeur et à l'Enseignant (Volume_7_Security.md §14,
-/// table « Notes »). CORRIGER ou ANNULER une note déjà saisie en base est réservé au Directeur et au
-/// Secrétariat — matrice d'autorisation "Photoshop", contrôle strict et NON révocable (contrairement
-/// à la délégation du barème/matières/mentions, qui repose sur SchoolSettings.AllowSecretaryToManageGrading) :
-/// l'Enseignant ne peut plus jamais modifier une note une fois enregistrée, une erreur de saisie se
-/// corrige exclusivement via ces deux rôles. Un seul endpoint « upsert » aurait mélangé ces permissions
-/// désormais distinctes.
+/// SAISIR une nouvelle note est ouvert au Directeur, au Secrétariat (toutes classes) et à l'Enseignant
+/// (Volume_7_Security.md §14, table « Notes »). CORRIGER une note déjà saisie (PUT) est ouvert aux trois
+/// rôles, mais l'Enseignant est BORNÉ dans le Handler (GradeEditPolicy) : fenêtre de correction de
+/// l'école (SchoolSettings.GradeEditWindowDays), ET il doit être l'auteur de la note ou affecté à la
+/// classe/matière — 403 sinon. Directeur et Secrétariat corrigent sans limite de délai. ANNULER une
+/// note (DELETE) reste réservé au Directeur et au Secrétariat, jamais à l'Enseignant. Un seul endpoint
+/// « upsert » aurait mélangé ces permissions distinctes.
 /// </summary>
 [ApiController]
 [Route("api/v1/grades")]
@@ -43,8 +43,17 @@ public class GradesController(ISender mediator) : ControllerBase
     public record ImportGradeSheetRequest(
         Guid ClassroomId, Guid SubjectId, Guid TermId, bool DryRun, IFormFile? File);
 
-    /// <summary>SAISIR une note (POST) et le calcul des moyennes (GET calculate) : inchangés par la matrice "Photoshop".</summary>
-    private const string GradingRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
+    /// <summary>
+    /// SAISIR une note (POST) et l'import Excel (autre mode de saisie) : Directeur, Secrétariat (toutes
+    /// classes — aucun périmètre par classe n'existe pour la saisie) et Enseignant.
+    /// </summary>
+    private const string GradingRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Enseignant)}";
+
+    /// <summary>
+    /// Calcul des moyennes (GET calculate) : Directeur et Enseignant, inchangés (Volume_7_Security « Notes »,
+    /// Voir). L'extension de la saisie au Secrétariat ne lui ouvre pas la consultation des moyennes.
+    /// </summary>
+    private const string SummaryRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)}";
 
     /// <summary>
     /// Écran de saisie/correction : LECTURE ouverte au Directeur, au Secrétariat (qui peut désormais
@@ -54,11 +63,17 @@ public class GradesController(ISender mediator) : ControllerBase
     private const string ViewGradesRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Enseignant)}";
 
     /// <summary>
-    /// CORRIGER ou ANNULER une note déjà enregistrée (PUT, DELETE) : Directeur et Secrétariat
-    /// uniquement, JAMAIS l'Enseignant — même l'auteur de la saisie initiale. Contrôle strict et non
-    /// révocable (matrice d'autorisation "Photoshop"), pas une délégation optionnelle.
+    /// CORRIGER une note déjà enregistrée (PUT) : Directeur, Secrétariat et Enseignant au niveau du
+    /// rôle. L'Enseignant est ensuite borné par GradeEditPolicy dans UpdateGradeCommandHandler
+    /// (fenêtre de correction + auteur ou affectation, 403 sinon).
     /// </summary>
-    private const string UpdateGradeRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}";
+    private const string UpdateGradeRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Enseignant)}";
+
+    /// <summary>
+    /// ANNULER une note (DELETE) : Directeur et Secrétariat uniquement, JAMAIS l'Enseignant — même
+    /// l'auteur de la saisie initiale, même dans la fenêtre de correction.
+    /// </summary>
+    private const string DeleteGradeRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}";
 
     /// <summary>
     /// Lecture des mentions uniquement (docs/Volume_7_Security.md « Notes » : Voir = Directeur +
@@ -149,9 +164,9 @@ public class GradesController(ISender mediator) : ControllerBase
     }
 
     /// <summary>
-    /// Corrige une note déjà saisie. Réservé au Directeur et au Secrétariat — l'Enseignant, même
-    /// auteur de la saisie initiale, ne peut plus la modifier une fois enregistrée (contrôle strict,
-    /// matrice d'autorisation "Photoshop").
+    /// Corrige une note déjà saisie. Directeur et Secrétariat : sans limite de délai. Enseignant :
+    /// seulement dans la fenêtre GradeEditWindowDays de l'école, et s'il est l'auteur de la note ou
+    /// affecté à sa classe/matière (403 sinon, voir GradeEditPolicy).
     /// </summary>
     [HttpPut("{id:guid}")]
     [Authorize(Roles = UpdateGradeRoles)]
@@ -170,7 +185,7 @@ public class GradesController(ISender mediator) : ControllerBase
     /// DELETE /finance/fees/{id} : une suppression n'a pas de corps de requête à transporter.
     /// </summary>
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = UpdateGradeRoles)]
+    [Authorize(Roles = DeleteGradeRoles)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -188,7 +203,7 @@ public class GradesController(ISender mediator) : ControllerBase
     /// au Directeur et à l'Enseignant, comme la consultation des notes (Volume_7_Security « Voir »).
     /// </summary>
     [HttpGet("calculate")]
-    [Authorize(Roles = GradingRoles)]
+    [Authorize(Roles = SummaryRoles)]
     [ProducesResponseType<GradeSummaryDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
