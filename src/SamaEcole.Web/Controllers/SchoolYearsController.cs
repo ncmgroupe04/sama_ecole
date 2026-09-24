@@ -1,5 +1,6 @@
 using SamaEcole.Application.SchoolYears;
 using SamaEcole.Application.SchoolYears.Commands.ActivateSchoolYear;
+using SamaEcole.Application.SchoolYears.Commands.ApplyEvaluationPeriods;
 using SamaEcole.Application.SchoolYears.Commands.CreateSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.DeleteSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.UpdateSchoolYear;
@@ -130,7 +131,22 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(new DeleteSchoolYearCommand(id, request.Confirmation), cancellationToken));
 
     /// <summary>
-    /// Trimestres générés automatiquement à la création de l'année (ticket JGK-G01) — LECTURE ouverte
+    /// Rejoue sur cette année le découpage choisi dans Paramètres (Trimestriel / Semestriel /
+    /// Personnalisé). Directeur seul ; 422 si l'année est terminée ou si des notes ou appréciations
+    /// de bulletin existent déjà sur l'une de ses périodes (voir ApplyEvaluationPeriodsCommand).
+    /// </summary>
+    [HttpPost("{id:guid}/apply-evaluation-periods")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<IReadOnlyList<TermDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ApplyEvaluationPeriods(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new ApplyEvaluationPeriodsCommand(id), cancellationToken));
+
+    /// <summary>
+    /// Périodes d'évaluation de l'année (trimestres par défaut, ticket JGK-G01 ; semestres ou
+    /// périodes personnalisées selon le réglage de l'école) — LECTURE ouverte
     /// à tout utilisateur de l'école, comme la liste des années : l'écran de saisie de notes en a
     /// besoin, quel que soit le rôle.
     /// </summary>
