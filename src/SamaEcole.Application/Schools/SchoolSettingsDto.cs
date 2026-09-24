@@ -51,4 +51,7 @@ public record SchoolSettingsDto(
     string EvaluationPeriodType = "Trimester",
 
     /// <summary>Nombre de périodes si le découpage est « Custom » (2 à 6) ; ignoré sinon.</summary>
-    int CustomPeriodCount = 3);
+    int CustomPeriodCount = 3,
+
+    /// <summary>Jours ouvrés (noms « Monday » … « Sunday »), dans l'ordre d'affichage de la semaine de l'école.</summary>
+    IReadOnlyList<string>? WorkingDays = null);

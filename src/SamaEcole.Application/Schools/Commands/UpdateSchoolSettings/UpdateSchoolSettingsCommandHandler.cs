@@ -75,6 +75,13 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.EvaluationPeriodType = Enum.Parse<EvaluationPeriodType>(request.EvaluationPeriodType, ignoreCase: true);
         settings.CustomPeriodCount = request.CustomPeriodCount;
 
+        // null = « inchangé » : c'est ce réglage qui verrouille des saisies, un ancien client qui ne
+        // l'envoie pas ne doit pas le réinitialiser. Valeur invalide : refusée en amont par le validateur.
+        if (request.WorkingDays is not null)
+        {
+            settings.WorkingDays = SchoolWeek.Serialize(SchoolWeek.TryParse(request.WorkingDays)!);
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("Paramètres de l'établissement {SchoolId} mis à jour.", schoolId);
@@ -106,6 +113,7 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.IsCoranModuleEnabled,
             settings.GradeEditWindowDays,
             settings.EvaluationPeriodType.ToString(),
-            settings.CustomPeriodCount);
+            settings.CustomPeriodCount,
+            SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)));
     }
 }

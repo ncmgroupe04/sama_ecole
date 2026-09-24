@@ -76,6 +76,11 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .IsRequired()
             .HasDefaultValue(SchoolSettingsDefaults.CustomPeriodCount);
 
+        builder.Property(s => s.WorkingDays)
+            .HasMaxLength(80)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.WorkingDays);
+
         builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
         builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);
         builder.Property(s => s.CashierSignatureUrl).HasMaxLength(500);

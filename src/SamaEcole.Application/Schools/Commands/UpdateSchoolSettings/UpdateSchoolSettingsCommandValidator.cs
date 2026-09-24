@@ -64,6 +64,12 @@ public class UpdateSchoolSettingsCommandValidator : AbstractValidator<UpdateScho
             .InclusiveBetween(PeriodSchedule.MinCustomCount, PeriodSchedule.MaxCustomCount)
             .When(c => string.Equals(c.EvaluationPeriodType, nameof(EvaluationPeriodType.Custom), StringComparison.OrdinalIgnoreCase))
             .WithMessage($"Le nombre de périodes doit être compris entre {PeriodSchedule.MinCustomCount} et {PeriodSchedule.MaxCustomCount}.");
+
+        // Semaine de travail (Évolution N°3) : au moins un jour, sans doublon ni nom inconnu. null = inchangé.
+        RuleFor(c => c.WorkingDays)
+            .Must(days => SchoolWeek.TryParse(days) is not null)
+            .When(c => c.WorkingDays is not null)
+            .WithMessage("Les jours ouvrés doivent compter au moins un jour, sans doublon (Monday … Sunday).");
     }
 
     private static int ParseScale(string? scale) =>

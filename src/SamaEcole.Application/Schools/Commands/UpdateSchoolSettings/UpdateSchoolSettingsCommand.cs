@@ -57,5 +57,8 @@ public record UpdateSchoolSettingsCommand(
     string EvaluationPeriodType = "Trimester",
 
     /// <summary>Nombre de périodes si « Custom » (bornes : PeriodSchedule) ; ignoré sinon.</summary>
-    int CustomPeriodCount = 3) : IRequest<SchoolSettingsDto>;
+    int CustomPeriodCount = 3,
+
+    /// <summary>Jours ouvrés (« Monday » … « Sunday »). Absent ou null = inchangé, jamais « remettre le défaut ».</summary>
+    IReadOnlyList<string>? WorkingDays = null) : IRequest<SchoolSettingsDto>;
 

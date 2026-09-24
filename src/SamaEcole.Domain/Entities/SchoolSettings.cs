@@ -155,6 +155,14 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
 
     /// <summary>Nombre de périodes quand <see cref="EvaluationPeriodType"/> vaut Custom (2 à 6) ; ignoré sinon.</summary>
     public int CustomPeriodCount { get; set; } = SchoolSettingsDefaults.CustomPeriodCount;
+
+    /// <summary>
+    /// Jours OUVRÉS de l'établissement (Évolution N°3), noms de <see cref="DayOfWeek"/> séparés par des
+    /// virgules, forme canonique lundi → dimanche (SchoolWeek.Serialize). Les autres jours sont des jours
+    /// de repos : ni appel, ni pointage enseignant, ni créneau d'emploi du temps n'y sont saisis. Défaut
+    /// lundi → samedi : la grille historique, donc aucune école existante ne perd de jour.
+    /// </summary>
+    public string WorkingDays { get; set; } = SchoolSettingsDefaults.WorkingDays;
 }
 
 /// <summary>
@@ -229,6 +237,9 @@ public static class SchoolSettingsDefaults
     public const EvaluationPeriodType EvaluationPeriodType = Enums.EvaluationPeriodType.Trimester;
 
     public const int CustomPeriodCount = 3;
+
+    /// <summary>Lundi → Samedi : la grille historique (à garder identique à SchoolWeek.DefaultStored).</summary>
+    public const string WorkingDays = "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday";
 
     /// <summary>
     /// Modules activés à la création d'une école : Pédagogie et Finance forment le socle métier
