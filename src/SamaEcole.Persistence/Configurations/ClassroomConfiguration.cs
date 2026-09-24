@@ -58,6 +58,10 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
         // n'a pas de second niveau.
         builder.Property(c => c.TargetLevel).HasMaxLength(50);
 
+        // Série du lycée (code du catalogue fermé LyceeSeries, ≤ 4 caractères aujourd'hui) : nullable,
+        // sans valeur par défaut — null = classe sans série, c'est aussi l'état de toutes les classes existantes.
+        builder.Property(c => c.Series).HasMaxLength(10);
+
         // Deux classes ne peuvent pas porter le même nom dans la même école — mais « CM2 A » peut
         // évidemment exister dans deux écoles différentes. Le soft delete fait partie de la clé :
         // sans lui, on ne pourrait jamais recréer une classe portant le nom d'une classe archivée.

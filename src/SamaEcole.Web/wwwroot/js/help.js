@@ -528,6 +528,47 @@
                         "Achevez la structure de la grille AVANT d'ouvrir la saisie aux enseignants : la remanier une fois les notes saisies impose de contrôler chaque moyenne.",
                         "Une même matière porte légitimement des coefficients différents selon le niveau — « Mathématiques » vaut 4 au primaire et 6 en série scientifique. Ce n'est pas un doublon, c'est le cas normal."
                     ]
+                },
+                {
+                    id: 'coefficients-par-serie',
+                    title: 'Coefficients par série et surcharge du Directeur',
+                    location: 'Gestion Scolaire › Matières › onglet Coefficients',
+                    href: '/matieres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Au lycée, une même matière ne pèse pas pareil selon la série : les Mathématiques comptent bien plus " +
+                        "en S1 qu'en L2. Chaque classe de lycée porte une SÉRIE (L1, L2, S1, S2 ou Techniques) et l'onglet " +
+                        "Coefficients permet de régler le coefficient d'une matière pour une série entière, ou pour une classe " +
+                        "précise. Le coefficient utilisé dans les moyennes et les bulletins est, dans l'ordre : celui de la " +
+                        "classe s'il existe, sinon celui de la série, sinon celui de la matière.",
+                    objectif:
+                        "Obtenir des moyennes et des bulletins conformes à la pondération officielle de chaque série, sans créer " +
+                        "une matière distincte par série et sans jamais retoucher matière par matière ce qui se règle une fois " +
+                        "pour toute la série.",
+                    probleme:
+                        "Sans cela, l'école devait dupliquer chaque matière (« Maths Terminale S1 », « Maths Terminale L2 »…) pour " +
+                        "obtenir des coefficients différents, ou saisir les moyennes à la main.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Classes : créez ou modifiez chaque classe de lycée et choisissez sa série. Une classe sans série (Seconde commune) garde les coefficients de ses matières.",
+                        "Ouvrez Gestion Scolaire › Matières › Coefficients et choisissez la portée « Série ».",
+                        "Cliquez sur « Appliquer le modèle » pour préremplir la série avec les coefficients nationaux : les valeurs apparaissent dans la grille et restent modifiables. Les matières que le modèle ne reconnaît pas sont listées dans le rapport.",
+                        "Corrigez une valeur en saisissant le coefficient dans la colonne « Surcharge » puis « Enregistrer ». La colonne « Origine » indique si la valeur effective vient de la Matière, de la Série ou de la Classe.",
+                        "Pour un cas particulier, choisissez la portée « Classe » : la valeur posée ne concerne alors que cette classe.",
+                        "« Rétablir » supprime la surcharge : la valeur héritée (série, puis matière) reprend la main.",
+                        "À la rentrée suivante, la nouvelle année démarre sans surcharge : utilisez « Reprendre l'année précédente » pour recopier les coefficients sans écraser ceux déjà posés."
+                    ],
+                    impacts: [
+                        "Moyennes et bulletins : modifier un coefficient recalcule les moyennes, les rangs et les bulletins de cette année pour les classes concernées — y compris ceux déjà imprimés si vous les réimprimez.",
+                        "Coefficient de la matière : jamais modifié par une surcharge ni par « Appliquer le modèle ». Sans surcharge, le calcul est exactement celui d'avant.",
+                        "Primaire et Maternelle : aucun coefficient (toujours 1), leurs classes ne sont pas proposées.",
+                        "Écriture réservée au Directeur ; le Secrétariat consulte la grille sans pouvoir la modifier. Chaque changement est journalisé."
+                    ],
+                    recommandations: [
+                        "Affectez d'abord la série à toutes les classes de lycée, puis appliquez le modèle : dans l'ordre inverse, la grille d'une série sans classe n'a rien à montrer.",
+                        "Vérifiez la grille avec le texte officiel en vigueur avant d'ouvrir la saisie des notes : un coefficient erroné fausse silencieusement tous les bulletins de la série.",
+                        "Évitez de changer un coefficient en cours d'année sans nécessité : l'avertissement affiché rappelle que les bulletins déjà remis à la famille ne correspondront plus.",
+                        "Réservez la portée « Classe » aux exceptions ; une valeur posée sur la série est plus simple à contrôler et à reconduire."
+                    ]
                 }
             ]
         },
@@ -776,40 +817,6 @@
                         "Une erreur d'état civil se corrige par la fiche élève, et la correction est historisée. Ne créez jamais un second élève pour rectifier le premier.",
                         "Le secrétariat n'encaisse rien : après l'inscription, la famille se présente à la Caisse, qui constate le versement et délivre le reçu portant la mention réglementaire invitant à le conserver.",
                         "Contrôlez le numéro de téléphone du tuteur au moment de la saisie : un numéro erroné rend inopérante toute la chaîne de relance."
-                    ]
-                },
-                {
-                    id: 'notification-inscription-directeur',
-                    title: 'Notification automatique du Directeur à chaque inscription',
-                    location: 'Boîte e-mail du Directeur — aucun écran dédié',
-                    href: '/eleves',
-                    roles: ['Directeur'],
-                    definition:
-                        "À chaque inscription validée, un e-mail automatique part vers TOUS les comptes Directeur actifs " +
-                        "de l'établissement — jamais vers l'adresse générique de l'école. Aucun réglage ne l'active ou ne " +
-                        "le désactive : c'est un comportement permanent du module Inscriptions.",
-                    objectif:
-                        "Tenir la direction informée du rythme réel des inscriptions sans qu'elle ait à ouvrir " +
-                        "l'application pour le constater — utile en particulier pour un Directeur qui partage la " +
-                        "supervision avec un adjoint, les deux recevant le même e-mail.",
-                    probleme:
-                        "Sans notification, une inscription saisie par le secrétariat un jour d'affluence pouvait passer " +
-                        "totalement inaperçue de la direction jusqu'à la consultation d'un rapport, des semaines plus " +
-                        "tard.",
-                    procedure: [
-                        "Rien à activer ni à configurer : la notification part d'elle-même dès qu'une inscription est validée.",
-                        "Consultez simplement votre boîte e-mail : chaque compte Directeur actif de l'établissement reçoit son propre message.",
-                        "Si aucun Directeur actif n'existe dans l'établissement au moment de l'inscription, l'e-mail n'est simplement envoyé à personne — l'inscription elle-même n'est jamais bloquée pour autant."
-                    ],
-                    impacts: [
-                        "Inscription : l'envoi se déclenche APRÈS que l'inscription est réellement enregistrée — un e-mail reçu garantit donc que l'inscription a bien abouti.",
-                        "Fiabilité : un échec d'envoi isolé (panne du serveur de messagerie) est journalisé côté serveur et n'empêche ni l'inscription, ni la notification des autres Directeurs.",
-                        "Comptes suspendus : un compte Directeur suspendu ou d'une autre école ne reçoit jamais cette notification."
-                    ],
-                    recommandations: [
-                        "Vérifiez que l'adresse e-mail de chaque compte Directeur est correcte et surveillée : c'est le seul canal de cette notification, il n'existe pas de rappel dans l'application elle-même.",
-                        "Si les e-mails n'arrivent jamais, vérifiez d'abord les courriers indésirables avant de conclure à une panne : c'est la cause la plus fréquente.",
-                        "Ne comptez pas sur cet e-mail comme preuve comptable de l'inscription : le reçu et l'attestation PDF, remis à la famille, restent les pièces officielles."
                     ]
                 },
                 {

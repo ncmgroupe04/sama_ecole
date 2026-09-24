@@ -1,4 +1,5 @@
 using FluentAssertions;
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Students.Queries.GetStudentDetail;
 using SamaEcole.Domain.Entities;
@@ -161,7 +162,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         // Un utilisateur de l'École A (contexte applicatif borné à EcoleA — Global Query Filter +
         // RLS, exactement comme au runtime) tente d'ouvrir la fiche d'un élève de l'École B.
         await using var db = _db.NewAppContext(EcoleA);
-        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db));
 
         var act = async () => await handler.Handle(new GetStudentDetailQuery(EleveEcoleB), CancellationToken.None);
 
@@ -176,7 +177,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         // Contre-épreuve : sans elle, le test ci-dessus pourrait être vert pour une mauvaise raison
         // (un Handler cassé qui échoue pour TOUT le monde, pas seulement pour le mauvais tenant).
         await using var db = _db.NewAppContext(EcoleB);
-        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveEcoleB), CancellationToken.None);
 
@@ -192,7 +193,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
     public async Task Handle_Returns_Empty_Sections_And_Zeroed_Totals_For_A_Student_With_No_History()
     {
         await using var db = _db.NewAppContext(EcoleA);
-        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveSansHistorique), CancellationToken.None);
 
@@ -225,7 +226,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         // Contre-épreuve du cas vide : sans elle, des sections « toujours vides » (un bug qui
         // ignorerait les jointures) rendraient le test précédent vert pour une mauvaise raison.
         await using var db = _db.NewAppContext(EcoleA);
-        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveComplet), CancellationToken.None);
 
@@ -262,7 +263,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
     public async Task Handle_Populates_BoardingStatus_And_RoomLabel_For_An_Interne_Student()
     {
         await using var db = _db.NewAppContext(EcoleA);
-        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur));
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveInterne), CancellationToken.None);
 
@@ -290,7 +291,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
         // accès » à la Finance) : Payments doit être ABSENT de la réponse, pas seulement masqué côté
         // UI — un accès direct à l'URL ne doit rien exposer.
         await using var db = _db.NewAppContext(EcoleA);
-        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Enseignant));
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Enseignant), new CoefficientOverrideLoader(db));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveComplet), CancellationToken.None);
 

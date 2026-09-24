@@ -31,7 +31,7 @@ public class ClassroomsController(ISender mediator) : ControllerBase
     /// </summary>
     public record UpdateClassroomRequest(
         string Name, string Level, int Capacity, uint RowVersion,
-        bool IsAccelerated = false, string? TargetLevel = null);
+        bool IsAccelerated = false, string? TargetLevel = null, string? Series = null);
 
     private const string ManageRoles = "Directeur,Secretariat";
 
@@ -66,7 +66,7 @@ public class ClassroomsController(ISender mediator) : ControllerBase
         => Ok(await mediator.Send(
             new UpdateClassroomCommand(
                 id, request.Name, request.Level, request.Capacity, request.RowVersion,
-                request.IsAccelerated, request.TargetLevel),
+                request.IsAccelerated, request.TargetLevel, request.Series),
             cancellationToken));
 
     /// <summary>

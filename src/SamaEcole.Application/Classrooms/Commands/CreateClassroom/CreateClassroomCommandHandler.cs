@@ -1,3 +1,4 @@
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using MediatR;
@@ -31,7 +32,11 @@ public class CreateClassroomCommandHandler(
             // Classe passerelle / accélérée (option). Le second niveau n'est retenu que si la case est
             // cochée — voir ClassroomPromotion.NormalizeTargetLevel : jamais de niveau cible orphelin.
             IsAccelerated = request.IsAccelerated,
-            TargetLevel = ClassroomPromotion.NormalizeTargetLevel(request.IsAccelerated, request.TargetLevel)
+            TargetLevel = ClassroomPromotion.NormalizeTargetLevel(request.IsAccelerated, request.TargetLevel),
+
+            // Série du lycée : normalisée (« s2 » → « S2 »), null si absente. Le validateur a déjà refusé
+            // toute série hors lycée ou hors catalogue.
+            Series = LyceeSeries.Normalize(request.Series)
         };
 
         dbContext.Classrooms.Add(classroom);
@@ -47,6 +52,6 @@ public class CreateClassroomCommandHandler(
 
         return new CreateClassroomResult(
             classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle,
-            classroom.IsAccelerated, classroom.TargetLevel);
+            classroom.IsAccelerated, classroom.TargetLevel, classroom.Series);
     }
 }

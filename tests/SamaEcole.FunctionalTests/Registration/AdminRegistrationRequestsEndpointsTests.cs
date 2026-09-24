@@ -163,6 +163,24 @@ public class AdminRegistrationRequestsEndpointsTests(AuthApiFactory factory) : I
     }
 
     [Fact]
+    public async Task The_Approval_Email_Should_State_The_Login_Identifier_And_Never_Contain_The_Password()
+    {
+        // Le Directeur a choisi son mot de passe à la soumission : l'e-mail d'approbation lui rappelle son
+        // IDENTIFIANT (l'adresse de la demande) mais ne transporte jamais de mot de passe.
+        const string email = "identifiant@revue.sn";
+        var id = await SubmitAndGetIdAsync("École Identifiant", email);
+        var superAdmin = await LoginAsSuperAdminAsync();
+
+        await ApproveAsync(superAdmin.AccessToken, id);
+
+        var approval = factory.Emails.LastTo(email);
+        approval.Should().NotBeNull();
+        approval!.Subject.Should().Be("Votre inscription Unikol est validée");
+        approval.Body.Should().Contain($"Identifiant de connexion : {email}");
+        approval.Body.Should().NotContain(DirectorPassword);
+    }
+
+    [Fact]
     public async Task Approving_An_Already_Processed_Request_Should_Be_Rejected()
     {
         var id = await SubmitAndGetIdAsync("École Double Approbation", "double@revue.sn");

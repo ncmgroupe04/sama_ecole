@@ -56,6 +56,7 @@ public class ApplicationDbContext(
     public DbSet<TeacherAssignment> TeacherAssignments => Set<TeacherAssignment>();
     public DbSet<AttendanceSheet> AttendanceSheets => Set<AttendanceSheet>();
     public DbSet<ClassJournalEntry> ClassJournalEntries => Set<ClassJournalEntry>();
+    public DbSet<SubjectCoefficientOverride> SubjectCoefficientOverrides => Set<SubjectCoefficientOverride>();
     public DbSet<StudentAttendance> StudentAttendances => Set<StudentAttendance>();
     public DbSet<ReportCardRemark> ReportCardRemarks => Set<ReportCardRemark>();
     public DbSet<DisciplineRecord> DisciplineRecords => Set<DisciplineRecord>();

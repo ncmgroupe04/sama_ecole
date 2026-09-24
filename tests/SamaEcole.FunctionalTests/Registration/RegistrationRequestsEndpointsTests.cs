@@ -79,7 +79,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
     }
 
     [Fact]
-    public async Task The_Confirmation_Email_Should_Contain_The_Tracking_Reference_But_Never_The_Password()
+    public async Task The_Requester_Gets_The_Tracking_Reference_By_Email_But_Never_The_Password()
     {
         const string password = "Correct-Horse-9";
         const string email = "directeur@confirmation.sn";
@@ -93,6 +93,24 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
         sentEmail.Should().NotBeNull("une référence de suivi doit être communiquée par e-mail (Volume 1 §11.5)");
         sentEmail!.Body.Should().Contain(result.TrackingReference);
         sentEmail.Body.Should().NotContain(password);
+    }
+
+    [Fact]
+    public async Task The_Super_Admin_Is_Alerted_By_Email_And_The_Alert_Never_Contains_The_Password()
+    {
+        const string password = "Correct-Horse-9";
+        const string email = "directeur@alerte.sn";
+
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/registration-requests", ValidPayload("École Alerte", email));
+
+        var result = (await response.Content.ReadFromJsonAsync<RegistrationResult>())!;
+
+        var alert = factory.Emails.LastTo(AuthApiFactory.SuperAdminAlertEmail);
+        alert.Should().NotBeNull("le Super Admin doit être alerté d'une nouvelle demande");
+        alert!.Subject.Should().Contain("École Alerte");
+        alert.Body.Should().Contain(result.TrackingReference).And.Contain(email).And.Contain("/admin/inscriptions");
+        alert.Body.Should().NotContain(password);
     }
 
     [Fact]

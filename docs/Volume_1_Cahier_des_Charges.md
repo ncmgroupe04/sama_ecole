@@ -279,6 +279,31 @@ Suppression des décimales inutiles : `17.0 → 17`, `15.0 → 15`, mais `15.5` 
 
 Affichage de la date de naissance selon le format choisi par l'établissement (voir §12).
 
+### 8.7 Coefficients par série et surcharge du Directeur (Évolution N°4)
+
+Au lycée, une même matière ne pèse pas pareil selon la série. Le coefficient utilisé dans les moyennes, les
+rangs, la fiche élève et les bulletins (colonne « Coefficient » du §8.1, mise en page inchangée) est, dans
+l'ordre de priorité :
+
+1. la **surcharge de la classe**, si le Directeur en a posé une ;
+2. sinon la **surcharge de la série** de la classe ;
+3. sinon le **coefficient de la matière** (comportement historique, inchangé).
+
+- **Séries.** Catalogue fermé : `L1`, `L2`, `S1`, `S2`, `TECH` (séries techniques). La série se renseigne sur la
+  **classe** (Paramètres › Classes, réservée au cycle Lycée) ; une classe sans série (Seconde commune, collège…)
+  garde les coefficients de ses matières.
+- **Modèles nationaux.** « Appliquer le modèle » (onglet Coefficients de l'écran Matières) matérialise en
+  surcharges de série les coefficients nationaux de L1, L2, S1 et S2 ; elles sont ensuite visibles et
+  modifiables. `TECH` n'a pas de modèle (aucune valeur officielle fournie). Le modèle ne modifie jamais le
+  coefficient d'une matière et n'écrase pas une valeur déjà posée sans demande explicite.
+- **Surcharge.** Écriture réservée au **Directeur** ; le Secrétariat consulte la grille. Portée : une série
+  (lycée) ou une classe précise (collège et lycée). Primaire et Maternelle : coefficient toujours égal à 1,
+  non surchargeable. Chaque écriture est journalisée et protégée contre l'écrasement concurrent (409).
+- **Par année scolaire.** Les surcharges appartiennent à l'année ; une nouvelle année démarre sans surcharge et
+  le Directeur les reprend explicitement (« Reprendre l'année précédente », sans écraser l'existant).
+- **Effet rétroactif.** Modifier un coefficient recalcule les moyennes et les bulletins de l'année en cours pour
+  les classes concernées ; l'écran l'annonce dès que des notes existent.
+
 ---
 
 ## 9. Rôles et permissions
@@ -346,13 +371,13 @@ Un Directeur intéressé accède, via le site public, à un formulaire détaill�
 - Le plan souhaité (§11.1).
 - Le moyen de paiement prévu (§11.6) — simple préférence déclarée à ce stade, aucun paiement n'est demandé avant validation.
 
-À la soumission, une **demande d'inscription** est créée (statut `Pending`) et une **référence de suivi** est communiquée au Directeur par email. **Aucun compte, aucun établissement, aucun abonnement n'existe encore** à ce stade — le Directeur n'a accès qu'à une page de suivi de sa demande (via la référence + email), rien d'autre.
+À la soumission, une **demande d'inscription** est créée (statut `Pending`) et une **référence de suivi** est affichée au Directeur à l'écran **et lui est envoyée par e-mail** (pour qu'il ne la perde pas). Le **Super Admin** est alerté par un e-mail distinct (adresse `Registration__AdminNotificationEmail`, avec le détail de la demande et un lien vers le tableau de bord de revue). Aucun e-mail n'est jamais adressé au personnel d'un établissement existant. **Aucun compte, aucun établissement, aucun abonnement n'existe encore** à ce stade — le Directeur n'a accès qu'à une page de suivi de sa demande (via la référence + email), rien d'autre.
 
 **Étape 2 — Revue par le Super Admin**
 Le Super Admin consulte la liste des demandes en attente, et peut : **Approuver**, **Rejeter** (avec motif), ou demander des précisions par email en dehors de la plateforme.
 
 **Étape 3 — Activation après approbation**
-Dès l'approbation, le système crée automatiquement, dans la même transaction : l'établissement (`School`, actif), le compte Directeur (`User`, actif, mot de passe déjà défini à l'étape 1), et l'abonnement (`Subscription`, statut `AwaitingPayment`, aucune date d'expiration tant que le premier paiement n'est pas confirmé). Le Directeur reçoit un email de confirmation et peut se connecter.
+Dès l'approbation, le système crée automatiquement, dans la même transaction : l'établissement (`School`, actif), le compte Directeur (`User`, actif, mot de passe déjà défini à l'étape 1), et l'abonnement (`Subscription`, statut `AwaitingPayment`, aucune date d'expiration tant que le premier paiement n'est pas confirmé). Le Directeur reçoit alors un e-mail de confirmation avec le lien de connexion et peut se connecter (en cas de rejet, un e-mail lui transmet le motif).
 
 **Étape 4 — Premier accès du Directeur**
 Tant que l'abonnement est en statut `AwaitingPayment`, le Directeur n'a accès qu'à l'écran de paiement (§11.6, mode restreint défini en §11.3) — aucun autre module (élèves, classes, notes...) n'est accessible avant confirmation du premier paiement.

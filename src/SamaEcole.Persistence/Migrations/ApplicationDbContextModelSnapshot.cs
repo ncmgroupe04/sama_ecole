@@ -523,6 +523,10 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Series")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<string>("TargetLevel")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -4203,6 +4207,85 @@ namespace SamaEcole.Persistence.Migrations
                     b.ToTable("subjects", (string)null);
                 });
 
+            modelBuilder.Entity("SamaEcole.Domain.Entities.SubjectCoefficientOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ClassroomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Coefficient")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("numeric(4,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Series")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId");
+
+                    b.HasIndex("SchoolId", "ClassroomId");
+
+                    b.HasIndex("SchoolId", "SchoolYearId");
+
+                    b.HasIndex("SchoolId", "SubjectId");
+
+                    b.HasIndex("SchoolYearId", "SubjectId", "ClassroomId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_subject_coefficient_overrides_classroom")
+                        .HasFilter("\"ClassroomId\" IS NOT NULL AND NOT \"IsDeleted\"");
+
+                    b.HasIndex("SchoolYearId", "SubjectId", "Series")
+                        .IsUnique()
+                        .HasDatabaseName("UX_subject_coefficient_overrides_series")
+                        .HasFilter("\"Series\" IS NOT NULL AND NOT \"IsDeleted\"");
+
+                    b.ToTable("subject_coefficient_overrides", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_subject_coefficient_overrides_one_scope", "num_nonnulls(\"ClassroomId\", \"Series\") = 1");
+                        });
+                });
+
             modelBuilder.Entity("SamaEcole.Domain.Entities.Subscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5869,6 +5952,35 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasOne("SamaEcole.Domain.Entities.School", null)
                         .WithMany()
                         .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.SubjectCoefficientOverride", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Classroom", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "ClassroomId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SamaEcole.Domain.Entities.SchoolYear", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "SchoolYearId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "SubjectId")
+                        .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -1,3 +1,4 @@
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -5,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Grades.Queries.GetGradeSummary;
 
-public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
+public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext, CoefficientOverrideLoader overrideLoader)
     : IRequestHandler<GetGradeSummaryQuery, GradeSummaryDto>
 {
     public async Task<GradeSummaryDto> Handle(GetGradeSummaryQuery request, CancellationToken cancellationToken)
@@ -17,10 +18,13 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
             throw new KeyNotFoundException($"Élève {request.StudentId} introuvable dans votre établissement.");
         }
 
-        if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
-        {
-            throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
-        }
+        // L'année de la période : les surcharges de coefficient sont rattachées à l'année scolaire
+        // (Évolution N°4, arbitrage A6), jamais à l'établissement en général.
+        var schoolYearId = await dbContext.Terms.AsNoTracking()
+            .Where(t => t.Id == request.TermId)
+            .Select(t => (Guid?)t.SchoolYearId)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
 
         // Cycle de la classe de l'élève : Maternelle & Primaire calculent une moyenne SIMPLE sur /10,
         // sans coefficients ni mention (ceux-ci n'appartiennent qu'au secondaire) ; Collège & Lycée
@@ -37,6 +41,12 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
         // aux grilles APC) ET de barème d'expression de la moyenne générale, vers lequel chaque ligne
         // est ramenée avant pondération.
         var cycleScale = GradingScaleGuard.ScaleForCycle(cycle);
+
+        // Surcharges de coefficient (Évolution N°4) : classe, puis série, puis matière. Inutile de les
+        // charger au primaire, qui neutralise le coefficient à 1 quoi qu'il arrive.
+        var overrides = isPrimaire
+            ? CoefficientOverrides.None
+            : await overrideLoader.LoadAsync(request.StudentId, schoolYearId, cancellationToken);
 
         var rows = await (
             from g in dbContext.Grades.AsNoTracking()
@@ -76,8 +86,9 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext)
 
                 // Primaire : coefficient neutralisé à 1 → la moyenne générale devient une moyenne simple
                 // des matières. Le coefficient réel de la matière est volontairement ignoré (le primaire
-                // n'a pas de système de coefficients). Secondaire : le coefficient stocké s'applique.
-                var coefficient = isPrimaire ? 1m : g.Key.Coefficient;
+                // n'a pas de système de coefficients). Secondaire : le coefficient EFFECTIF s'applique —
+                // surcharge de classe, sinon de série, sinon celui de la matière (SubjectCoefficients).
+                var coefficient = isPrimaire ? 1m : overrides.Effective(g.Key.SubjectId, g.Key.Coefficient);
 
                 // Barème PROPRE à la ligne (grilles APC : /40, /60, /24, /16…), à défaut celui du cycle.
                 var maxScore = GradeCalculator.EffectiveMaxScore(g.Key.MaxScore, cycleScale);
