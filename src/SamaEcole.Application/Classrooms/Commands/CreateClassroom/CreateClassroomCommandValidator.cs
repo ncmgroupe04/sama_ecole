@@ -19,5 +19,6 @@ public class CreateClassroomCommandValidator : AbstractValidator<CreateClassroom
             .LessThanOrEqualTo(200).WithMessage("La capacité annoncée semble irréaliste (maximum 200).");
 
         this.MustDeclareACoherentAcceleratedPath(x => x.IsAccelerated, x => x.TargetLevel, x => x.Name, x => x.Level);
+        this.MustDeclareAValidSeries(x => x.Series, x => x.Level);
     }
 }

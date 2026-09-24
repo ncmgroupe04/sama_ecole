@@ -1,3 +1,4 @@
+using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,11 @@ public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext, IKpi
         classroom.IsAccelerated = request.IsAccelerated;
         classroom.TargetLevel = ClassroomPromotion.NormalizeTargetLevel(request.IsAccelerated, request.TargetLevel);
 
+        // Série du lycée (Évolution N°4). Remplacement : une série absente efface la précédente. Le
+        // validateur refuse toute série hors lycée — et corriger une classe VERS un autre cycle en
+        // gardant une série est donc refusé, jamais une série orpheline.
+        classroom.Series = LyceeSeries.Normalize(request.Series);
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // Voir DeleteClassroomCommandHandler : le taux d'occupation du dashboard Directeur reste sinon
@@ -48,6 +54,6 @@ public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext, IKpi
 
         return new ClassroomResult(
             classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle, newRowVersion,
-            classroom.IsAccelerated, classroom.TargetLevel);
+            classroom.IsAccelerated, classroom.TargetLevel, classroom.Series);
     }
 }

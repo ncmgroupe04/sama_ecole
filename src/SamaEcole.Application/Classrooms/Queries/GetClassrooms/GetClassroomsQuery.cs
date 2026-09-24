@@ -31,4 +31,4 @@ public record GetClassroomsQuery : IRequest<IReadOnlyList<ClassroomDto>>;
 /// </summary>
 public record ClassroomDto(
     Guid Id, string Name, string Level, int Capacity, int StudentCount, CycleType Cycle, uint RowVersion,
-    bool IsAccelerated = false, string? TargetLevel = null);
+    bool IsAccelerated = false, string? TargetLevel = null, string? Series = null);

@@ -22,6 +22,12 @@ public record CreateClassroomCommand : IRequest<CreateClassroomResult>
 
     /// <summary>Second niveau validé, obligatoire quand — et seulement quand — <see cref="IsAccelerated"/>.</summary>
     public string? TargetLevel { get; init; }
+
+    /// <summary>
+    /// Série du lycée (L1, L2, S1, S2, TECH) — Évolution N°4. Optionnelle ; refusée hors lycée. Absente du
+    /// corps d'un client existant → aucune série, exactement le comportement d'avant.
+    /// </summary>
+    public string? Series { get; init; }
 }
 
 /// <summary>
@@ -31,4 +37,4 @@ public record CreateClassroomCommand : IRequest<CreateClassroomResult>
 /// </summary>
 public record CreateClassroomResult(
     Guid Id, string Name, string Level, int Capacity, CycleType Cycle,
-    bool IsAccelerated = false, string? TargetLevel = null);
+    bool IsAccelerated = false, string? TargetLevel = null, string? Series = null);
