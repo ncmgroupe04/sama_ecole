@@ -81,6 +81,10 @@ internal static class UniqueConstraintCatalog
             "Une matière porte déjà ce nom pour ce niveau. Choisissez un autre nom, ou modifiez la "
             + "matière existante au lieu d'en créer une nouvelle.",
 
+        ["subject_coefficient_overrides"] =
+            "Un coefficient est déjà réglé pour cette matière, cette année et cette portée (série ou classe). "
+            + "Rechargez la grille : la valeur existante s'y trouve, modifiez-la au lieu d'en créer une seconde.",
+
         ["buildings"] =
             "Un bâtiment porte déjà ce nom dans votre établissement. Choisissez un nom différent.",
 
