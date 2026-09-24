@@ -146,6 +146,15 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// le peuvent, sans limite de délai. Lue par GradeCorrectionAuthorizer ; réglée par le Directeur.
     /// </summary>
     public int GradeEditWindowDays { get; set; } = SchoolSettingsDefaults.GradeEditWindowDays;
+
+    /// <summary>
+    /// Découpage de l'année en périodes d'évaluation. N'agit que sur les années CRÉÉES ensuite ou
+    /// explicitement rejouées (ApplyEvaluationPeriodsCommand) : jamais sur une année déjà notée.
+    /// </summary>
+    public EvaluationPeriodType EvaluationPeriodType { get; set; } = SchoolSettingsDefaults.EvaluationPeriodType;
+
+    /// <summary>Nombre de périodes quand <see cref="EvaluationPeriodType"/> vaut Custom (2 à 6) ; ignoré sinon.</summary>
+    public int CustomPeriodCount { get; set; } = SchoolSettingsDefaults.CustomPeriodCount;
 }
 
 /// <summary>
@@ -215,6 +224,11 @@ public static class SchoolSettingsDefaults
     /// <summary>Bornes de la fenêtre : au moins 1 jour, au plus une année scolaire complète.</summary>
     public const int MinGradeEditWindowDays = 1;
     public const int MaxGradeEditWindowDays = 365;
+
+    /// <summary>Trimestriel : le système sénégalais standard, et le comportement de toutes les écoles existantes.</summary>
+    public const EvaluationPeriodType EvaluationPeriodType = Enums.EvaluationPeriodType.Trimester;
+
+    public const int CustomPeriodCount = 3;
 
     /// <summary>
     /// Modules activés à la création d'une école : Pédagogie et Finance forment le socle métier

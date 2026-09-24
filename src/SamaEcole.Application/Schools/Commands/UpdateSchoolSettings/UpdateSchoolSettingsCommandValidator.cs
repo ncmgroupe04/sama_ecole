@@ -1,5 +1,7 @@
+using SamaEcole.Application.SchoolYears;
 using SamaEcole.Domain.Common;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using FluentValidation;
 
 namespace SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
@@ -52,6 +54,16 @@ public class UpdateSchoolSettingsCommandValidator : AbstractValidator<UpdateScho
                 SchoolSettingsDefaults.MaxGradeEditWindowDays)
             .WithMessage(
                 $"Le délai de correction des notes doit être compris entre {SchoolSettingsDefaults.MinGradeEditWindowDays} et {SchoolSettingsDefaults.MaxGradeEditWindowDays} jours.");
+
+        RuleFor(c => c.EvaluationPeriodType)
+            .Must(value => Enum.TryParse<EvaluationPeriodType>(value, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+            .WithMessage("Découpage de l'année inconnu : « Trimester », « Semester » ou « Custom ».");
+
+        // Le nombre de périodes n'a de sens que pour « Custom » : ailleurs il est ignoré, pas contrôlé.
+        RuleFor(c => c.CustomPeriodCount)
+            .InclusiveBetween(PeriodSchedule.MinCustomCount, PeriodSchedule.MaxCustomCount)
+            .When(c => string.Equals(c.EvaluationPeriodType, nameof(EvaluationPeriodType.Custom), StringComparison.OrdinalIgnoreCase))
+            .WithMessage($"Le nombre de périodes doit être compris entre {PeriodSchedule.MinCustomCount} et {PeriodSchedule.MaxCustomCount}.");
     }
 
     private static int ParseScale(string? scale) =>

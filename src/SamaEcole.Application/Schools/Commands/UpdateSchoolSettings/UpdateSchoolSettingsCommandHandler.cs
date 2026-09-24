@@ -71,6 +71,10 @@ public class UpdateSchoolSettingsCommandHandler(
         settings.IsCoranModuleEnabled = request.IsCoranModuleEnabled;
         settings.GradeEditWindowDays = request.GradeEditWindowDays;
 
+        // Valeur inconnue : refusée en amont par le validateur ; le parse ne sert donc que de conversion.
+        settings.EvaluationPeriodType = Enum.Parse<EvaluationPeriodType>(request.EvaluationPeriodType, ignoreCase: true);
+        settings.CustomPeriodCount = request.CustomPeriodCount;
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation("Paramètres de l'établissement {SchoolId} mis à jour.", schoolId);
@@ -100,6 +104,8 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.IsFinanceEnabled,
             settings.IsInternatEnabled,
             settings.IsCoranModuleEnabled,
-            settings.GradeEditWindowDays);
+            settings.GradeEditWindowDays,
+            settings.EvaluationPeriodType.ToString(),
+            settings.CustomPeriodCount);
     }
 }

@@ -66,6 +66,16 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .IsRequired()
             .HasDefaultValue(SchoolSettingsDefaults.SchoolType);
 
+        builder.Property(s => s.EvaluationPeriodType)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.EvaluationPeriodType);
+
+        builder.Property(s => s.CustomPeriodCount)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.CustomPeriodCount);
+
         builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
         builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);
         builder.Property(s => s.CashierSignatureUrl).HasMaxLength(500);

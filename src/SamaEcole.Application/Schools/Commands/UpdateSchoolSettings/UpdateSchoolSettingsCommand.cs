@@ -51,5 +51,11 @@ public record UpdateSchoolSettingsCommand(
     bool IsCoranModuleEnabled = false,
 
     /// <summary>Fenêtre de correction des notes par l'Enseignant, en jours (bornes : SchoolSettingsDefaults).</summary>
-    int GradeEditWindowDays = 7) : IRequest<SchoolSettingsDto>;
+    int GradeEditWindowDays = 7,
+
+    /// <summary>« Trimester » / « Semester » / « Custom » — ne s'applique qu'aux années créées ensuite (voir SchoolSettings).</summary>
+    string EvaluationPeriodType = "Trimester",
+
+    /// <summary>Nombre de périodes si « Custom » (bornes : PeriodSchedule) ; ignoré sinon.</summary>
+    int CustomPeriodCount = 3) : IRequest<SchoolSettingsDto>;
 

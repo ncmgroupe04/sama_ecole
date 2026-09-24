@@ -45,4 +45,10 @@ public record SchoolSettingsDto(
     bool IsCoranModuleEnabled = false,
 
     /// <summary>Fenêtre de correction des notes par l'Enseignant, en jours (Directeur/Secrétariat : illimitée).</summary>
-    int GradeEditWindowDays = 7);
+    int GradeEditWindowDays = 7,
+
+    /// <summary>Découpage de l'année : « Trimester » / « Semester » / « Custom » (SchoolSettings.EvaluationPeriodType).</summary>
+    string EvaluationPeriodType = "Trimester",
+
+    /// <summary>Nombre de périodes si le découpage est « Custom » (2 à 6) ; ignoré sinon.</summary>
+    int CustomPeriodCount = 3);
