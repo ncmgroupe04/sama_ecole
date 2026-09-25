@@ -2929,6 +2929,92 @@ paths:
         '403': { description: Réservé au Directeur et à l'Enseignant }
         '404': { description: Élève ou trimestre introuvable dans l'établissement courant }
 
+
+  /report-cards/class-deliberation/annual/pdf:
+    get:
+      tags: [ReportCards]
+      summary: PV ANNUEL du conseil de classe (Évolution N°7) — Directeur, Enseignant, Secrétariat
+      description: >-
+        Moyenne et rang annuels de chaque élève (ordre de mérite), tableau récapitulatif Filles / Garçons / Total
+        (effectif, présents, classés, moyenne ≥ moitié du barème, taux de réussite), décompte des décisions, et la
+        décision de fin d'année — saisie par le conseil, à défaut PROPOSÉE (« Proposé : … ») d'après les seuils de
+        l'école. Bâti sur la dernière période de l'année. 409 pour une classe sans élève ou une année sans période.
+      parameters:
+        - { name: classroomId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: schoolYearId, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: PV annuel (A4 portrait)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Classe sans élève, ou année sans période }
+
+  /report-cards/council-decisions/apply-proposals:
+    post:
+      tags: [ReportCards]
+      summary: Enregistrer les décisions de fin d'année proposées (Directeur, Secrétariat)
+      description: >-
+        Pour chaque élève de la classe SANS décision sur la période, enregistre la décision proposée d'après sa
+        moyenne annuelle (Admis en classe supérieure, Autorisé à redoubler, Exclu). Ne remplace jamais une
+        décision déjà prise ; un élève sans moyenne annuelle reste sans décision. Idempotente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classroomId, termId]
+              properties:
+                classroomId: { type: string, format: uuid }
+                termId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Bilan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applied: { type: integer }
+                  alreadyDecided: { type: integer }
+                  withoutAverage: { type: integer }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /report-cards/council-rules:
+    get:
+      tags: [ReportCards]
+      summary: Seuils du conseil de classe de l'école (défauts MEN à défaut de réglage)
+      responses:
+        '200':
+          description: Les seuils, sur /20
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CouncilRules' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [ReportCards]
+      summary: Régler les seuils du conseil de classe (Directeur seul)
+      description: >-
+        Tous sur /20. 422 si un seuil sort de [0 ; 20], si les Félicitations exigent moins que le Tableau d'honneur
+        ou les Encouragements, ou si le seuil de redoublement dépasse celui de passage. Recalcule les PROPOSITIONS
+        (distinctions du bulletin, décisions du PV annuel), jamais une décision déjà prise. Journalisé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CouncilRules' }
+      responses:
+        '200':
+          description: Les seuils enregistrés
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CouncilRules' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /finance/fee-categories:
     get:
       tags: [Finance]
@@ -5647,6 +5733,18 @@ components:
             Série du lycée (Évolution N°4), casse ignorée (`s2` devient `S2`). Refusée en 422 hors d'une classe
             de Lycée ou hors du catalogue. REMPLACEMENT COMPLET en PUT : une série absente est EFFACÉE — renvoyez
             la classe entière.
+
+    CouncilRules:
+      type: object
+      description: >-
+        Seuils du conseil de classe (Évolution N°7), sur /20, transposés au barème de la classe. Défauts : règles MEN.
+      properties:
+        felicitationsMin: { type: number, example: 14 }
+        honorRollMin: { type: number, example: 12, description: "Tableau d'honneur — sans aucune note éliminatoire" }
+        encouragementsMin: { type: number, example: 12 }
+        eliminatoryGrade: { type: number, example: 5, description: Une moyenne de matière strictement inférieure est éliminatoire }
+        promotionMin: { type: number, example: 10, description: Moyenne annuelle minimale proposée « Admis en classe supérieure » }
+        repeatMin: { type: number, example: 8.5, description: Moyenne annuelle minimale proposée « Autorisé à redoubler » ; en dessous « Exclu » }
 
     SeriesItem:
       type: object

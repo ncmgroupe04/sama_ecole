@@ -67,6 +67,17 @@
  <icon name="download" class="w-4 h-4" />
  <span x-text="downloadingClassDeliberation ? 'Génération…' : 'PV Délibération'"></span>
  </button>
+ @* Conseil de classe de fin d'année (Évolution N°7) : PV annuel, et décisions proposées d'après les seuils
+    de l'école (Paramètres › Notation & mentions) — une décision déjà prise n'est jamais remplacée. *@
+ <button type="button" x-on:click="downloadAnnualDeliberationPdf()" :disabled="downloadingClassDeliberation || !activeYearId"
+ class="btn-modal-secondary whitespace-nowrap text-sm group" title="PV de fin d'année : moyennes annuelles et décisions du conseil">
+ <icon name="download" class="w-4 h-4" />
+ PV annuel
+ </button>
+ <button type="button" x-show="canApplyDecisions" x-cloak x-on:click="applyDecisionProposals()" :disabled="applyingDecisions"
+ class="btn-modal-secondary whitespace-nowrap text-sm group" title="Enregistre la décision proposée (Admis, Autorisé à redoubler, Exclu) pour les élèves sans décision sur cette période">
+ <span x-text="applyingDecisions ? 'Application…' : 'Appliquer les décisions proposées'"></span>
+ </button>
  </div>
 
  <!-- Fiche de saisie papier (PDF vierge) : lecture ouverte comme la grille elle-même. -->
@@ -96,6 +107,7 @@
 
  <!-- Erreur de génération/téléchargement des bulletins de classe (JGK-G03). -->
  <div x-show="classBulletinsError" x-cloak class="mt-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="classBulletinsError"></div>
+ <div x-show="councilNotice" x-cloak role="status" class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800" x-text="councilNotice"></div>
 
  <!-- Aucune année active : rien à proposer comme trimestre -->
  <div x-show="!isLoadingContext && terms.length === 0" x-cloak class="mt-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning">

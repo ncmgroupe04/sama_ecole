@@ -1,3 +1,4 @@
+using SamaEcole.Application.ReportCards;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 
 namespace SamaEcole.Application.Common.Interfaces;
@@ -15,4 +16,11 @@ public interface IClassDeliberationPdfGenerator
     /// <param name="schoolLogo">Le logo de l'établissement, s'il existe.</param>
     /// <returns>Le contenu du PDF sous forme de tableau d'octets.</returns>
     byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? schoolLogo);
+
+    /// <summary>
+    /// PV d'une période OU PV annuel (Évolution N°7). L'implémentation par défaut ignore la portée — elle ne sert
+    /// qu'aux doublures de test antérieures ; le générateur réel la redéfinit.
+    /// </summary>
+    byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? schoolLogo, DeliberationScope scope)
+        => Generate(reportCards, schoolLogo);
 }

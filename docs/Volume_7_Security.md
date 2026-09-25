@@ -290,6 +290,8 @@ Le Secrétariat compose, télécharge et saisit les observations du conseil (`Re
 | **Coefficients par série ou par classe** (surcharges, « Appliquer le modèle », reconduction — Évolution N°4) : ÉCRITURE réservée, sans délégation | ✔ | lecture seule | ✖ |
 | **Programme d'une classe** (matières par classe, groupes d'options, « Réinitialiser aux coefficients officiels » — Évolution N°6) : ÉCRITURE réservée, sans délégation | ✔ | lecture seule | ✖ |
 | **Options d'un élève** (inscription, fiche élève, « Affecter l'option par défaut » — Évolution N°6) | ✔ | ✔ | ✖ |
+| **Seuils du conseil de classe** (distinctions, note éliminatoire, passage, redoublement — Évolution N°7) : ÉCRITURE réservée | ✔ | lecture seule | lecture seule |
+| **Appliquer les décisions proposées** (fin d'année — Évolution N°7) | ✔ | ✔ | ✖ |
 | Export de données (remplace « Sauvegardes/Restaurations » de la v1.0, désormais automatisées côté infrastructure — Volume 9) | ✔ | ✖ | ✖ |
 
 Le barème est exposé par un endpoint dédié (`PUT /schools/current/settings/grading-scale`), distinct du reste des réglages d'établissement (`PUT /schools/current/settings`) : ouvrir ce dernier au Secrétariat lui aurait aussi donné la main sur les formats de matricule, la déconnexion automatique et les mensualités, hors du périmètre de la délégation voulue.

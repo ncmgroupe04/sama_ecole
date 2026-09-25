@@ -365,6 +365,27 @@ choix appartient à l'**année scolaire** ; le changer archive l'ancien (suppres
   des matières non suivies sont **masquées** (PDF A5, bulletins de classe, délibération, fiche élève) — jamais une
   ligne vide.
 
+### 8.9 Conseil de classe : procès-verbaux, distinctions et décisions (Évolution N°7)
+
+**Seuils de l'école** (Paramètres › Notation & mentions, Directeur ; sur /20, transposés au barème de la classe).
+Défauts, règles du Ministère : Félicitations ≥ 14 ; Tableau d'honneur ≥ 12 **sans note éliminatoire** ;
+Encouragements ≥ 12 ; note éliminatoire = moyenne de matière < 5 (jugée sur le barème propre de la matière) ;
+Admis en classe supérieure ≥ 10 de moyenne annuelle ; Autorisé à redoubler ≥ 8,5 ; en dessous, Exclu. Le serveur
+refuse des seuils incohérents (422).
+
+- **Distinctions.** Proposées automatiquement sur le bulletin (moitié haute seulement — jamais Blâme ni
+  Avertissement), dans l'ordre Félicitations, Tableau d'honneur, Encouragements ; une saisie du conseil l'emporte
+  toujours (§8, `DisciplinaryMention`). Les anciens seuils 16/14/12 sont remplacés par les règles ci-dessus.
+- **Décisions de fin d'année.** Proposées d'après la moyenne annuelle ; « Appliquer les décisions proposées »
+  (écran Notes, Directeur/Secrétariat) les enregistre pour les seuls élèves sans décision — une décision du conseil
+  n'est jamais remplacée. Le bulletin n'imprime que les décisions enregistrées (gabarit inchangé, règle #12).
+- **PV de période et PV annuel** (A4). En-tête : République du Sénégal, Ministère de l'Éducation nationale, IA,
+  IEF, établissement. Tableau récapitulatif **Filles / Garçons / Total** : effectif, présents (ont composé ;
+  au PV annuel : ont au moins une moyenne de période), classés (ont une moyenne), moyenne ≥ 10/20, taux de
+  réussite (% des classés). Moyenne de la classe, plus forte, plus faible ; décompte des distinctions (période) ou
+  des décisions (annuel). Liste par ordre de mérite avec sexe, moyenne, rang, distinction, décision — au PV annuel,
+  une décision non prise imprime la proposition (« Proposé : … », en italique).
+
 ---
 
 ## 9. Rôles et permissions

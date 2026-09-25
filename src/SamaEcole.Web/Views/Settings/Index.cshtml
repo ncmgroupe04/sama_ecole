@@ -15,6 +15,7 @@
  champs entre sections. *@
 @section Scripts {
  <script src="~/js/settings.js" asp-append-version="true"></script>
+ <script src="~/js/council-rules.js" asp-append-version="true"></script>
  <script src="~/js/school-years.js" asp-append-version="true"></script>
  <script src="~/js/users.js" asp-append-version="true"></script>
  <script src="~/js/audit-log.js" asp-append-version="true"></script>
@@ -774,6 +775,9 @@
  </p>
  </div>
  </div>
+
+ @* Seuils du conseil de classe (Évolution N°7) : distinctions et décisions de fin d'année. *@
+ <partial name="_CouncilRulesPanel" />
 
  @* Réservée au Directeur (docs/Volume_7_Security.md, JGK-G02, matrice d'autorisation
  "Photoshop") : visible de lui SEUL, pas juste désactivée pour les autres, car le rôle qui EN

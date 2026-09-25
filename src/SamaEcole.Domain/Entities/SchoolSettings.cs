@@ -163,6 +163,26 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     /// lundi → samedi : la grille historique, donc aucune école existante ne perd de jour.
     /// </summary>
     public string WorkingDays { get; set; } = SchoolSettingsDefaults.WorkingDays;
+
+    // ── Conseil de classe (Évolution N°7) : seuils sur la RÉFÉRENCE /20, transposés au barème du bulletin ──
+
+    /// <summary>Moyenne générale minimale des Félicitations.</summary>
+    public decimal CouncilFelicitationsMin { get; set; } = SchoolSettingsDefaults.CouncilFelicitationsMin;
+
+    /// <summary>Moyenne générale minimale du Tableau d'Honneur — à condition de n'avoir AUCUNE note éliminatoire.</summary>
+    public decimal CouncilHonorRollMin { get; set; } = SchoolSettingsDefaults.CouncilHonorRollMin;
+
+    /// <summary>Moyenne générale minimale des Encouragements.</summary>
+    public decimal CouncilEncouragementsMin { get; set; } = SchoolSettingsDefaults.CouncilEncouragementsMin;
+
+    /// <summary>Une moyenne de matière STRICTEMENT inférieure à ce seuil est éliminatoire pour le Tableau d'Honneur.</summary>
+    public decimal CouncilEliminatoryGrade { get; set; } = SchoolSettingsDefaults.CouncilEliminatoryGrade;
+
+    /// <summary>Moyenne annuelle minimale proposée « Admis en classe supérieure ».</summary>
+    public decimal CouncilPromotionMin { get; set; } = SchoolSettingsDefaults.CouncilPromotionMin;
+
+    /// <summary>Moyenne annuelle minimale proposée « Autorisé à redoubler » ; en dessous : « Exclus ».</summary>
+    public decimal CouncilRepeatMin { get; set; } = SchoolSettingsDefaults.CouncilRepeatMin;
 }
 
 /// <summary>
@@ -257,4 +277,12 @@ public static class SchoolSettingsDefaults
     public const bool IsInternatEnabled = false;
 
     public const bool IsCoranModuleEnabled = false;
+
+    // Conseil de classe (Évolution N°7) — règles de la spécification MEN transmise le 25/09/2026.
+    public const decimal CouncilFelicitationsMin = 14m;
+    public const decimal CouncilHonorRollMin = 12m;
+    public const decimal CouncilEncouragementsMin = 12m;
+    public const decimal CouncilEliminatoryGrade = 5m;
+    public const decimal CouncilPromotionMin = 10m;
+    public const decimal CouncilRepeatMin = 8.5m;
 }

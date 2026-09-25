@@ -91,5 +91,14 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .WithMany()
             .HasForeignKey(s => s.SchoolId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Seuils du conseil de classe (Évolution N°7) : numeric(4,2) sur /20, défaut explicite en base pour que
+        // les lignes existantes reçoivent les valeurs de la spécification (jamais 0, qui accorderait tout).
+        builder.Property(s => s.CouncilFelicitationsMin).HasPrecision(4, 2).HasDefaultValue(SchoolSettingsDefaults.CouncilFelicitationsMin);
+        builder.Property(s => s.CouncilHonorRollMin).HasPrecision(4, 2).HasDefaultValue(SchoolSettingsDefaults.CouncilHonorRollMin);
+        builder.Property(s => s.CouncilEncouragementsMin).HasPrecision(4, 2).HasDefaultValue(SchoolSettingsDefaults.CouncilEncouragementsMin);
+        builder.Property(s => s.CouncilEliminatoryGrade).HasPrecision(4, 2).HasDefaultValue(SchoolSettingsDefaults.CouncilEliminatoryGrade);
+        builder.Property(s => s.CouncilPromotionMin).HasPrecision(4, 2).HasDefaultValue(SchoolSettingsDefaults.CouncilPromotionMin);
+        builder.Property(s => s.CouncilRepeatMin).HasPrecision(4, 2).HasDefaultValue(SchoolSettingsDefaults.CouncilRepeatMin);
     }
 }

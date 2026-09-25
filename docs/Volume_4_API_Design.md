@@ -295,6 +295,10 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `POST` | `/api/v1/report-cards/generate` | Générer un bulletin (A5, QuestPDF) |
 | `GET` | `/api/v1/report-cards/{id}/print` | Impression |
 | `POST` | `/api/v1/report-cards/{id}/publish` | Publier le bulletin |
+| `GET` | `/api/v1/report-cards/class-deliberation/pdf?classroomId=&termId=` | PV du conseil de classe d'une PÉRIODE : en-tête institutionnel, tableau Filles/Garçons/Total (effectif, présents, classés, admis, taux de réussite), distinctions, décisions (Directeur, Enseignant, Secrétariat) |
+| `GET` | `/api/v1/report-cards/class-deliberation/annual/pdf?classroomId=&schoolYearId=` | PV ANNUEL (Évolution N°7) : moyennes/rangs annuels, décisions saisies ou « Proposé : … » (Directeur, Enseignant, Secrétariat) |
+| `POST` | `/api/v1/report-cards/council-decisions/apply-proposals` | Enregistre la décision proposée pour les élèves sans décision sur la période (`classroomId`, `termId`) ; jamais d'écrasement (Directeur, Secrétariat) |
+| `GET` / `PUT` | `/api/v1/report-cards/council-rules` | Seuils du conseil sur /20 : Félicitations, Tableau d'honneur, Encouragements, note éliminatoire, passage, redoublement. Lecture Directeur/Enseignant/Secrétariat, écriture Directeur ; `422` si incohérents |
 
 ## 10. API Présences
 

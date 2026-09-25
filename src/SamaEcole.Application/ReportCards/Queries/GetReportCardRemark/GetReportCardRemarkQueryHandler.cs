@@ -34,7 +34,9 @@ public class GetReportCardRemarkQueryHandler(IApplicationDbContext dbContext, IS
             {
                 generalAverage = summary.GeneralAverage;
                 var scale = await GradingScaleGuard.ResolveScaleForStudentAsync(dbContext, request.StudentId, cancellationToken);
-                suggested = DisciplinaryMentionPolicy.Suggest(summary.GeneralAverage, scale, hasGrades: true);
+                var rules = await CouncilRules.ResolveAsync(dbContext, cancellationToken);
+                suggested = DisciplinaryMentionPolicy.Suggest(
+                    summary.GeneralAverage, scale, hasGrades: true, rules, rules.HasEliminatoryGrade(summary.Subjects));
             }
         }
         catch (KeyNotFoundException)

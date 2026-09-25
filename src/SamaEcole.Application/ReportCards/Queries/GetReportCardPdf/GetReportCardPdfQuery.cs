@@ -183,7 +183,16 @@ public record ReportCardDto(
     // de notes qui n'a rien à voir avec le bulletin bilingue. Null/absent → aucune ligne n'imprime de
     // second nom, jamais une valeur inventée. Résolu UNIQUEMENT si IsBilingualArabic (évite une requête
     // inutile pour l'immense majorité des écoles).
-    IReadOnlyDictionary<Guid, string?>? SubjectNamesAr = null);
+    IReadOnlyDictionary<Guid, string?>? SubjectNamesAr = null,
+
+    // Conseil de classe (Évolution N°7) — lus par le PV, jamais imprimés sur le bulletin (gabarit inchangé,
+    // règle #12) : le sexe de l'élève (« M » | « F ») pour la ventilation Filles/Garçons, et la décision de fin
+    // d'année PROPOSÉE d'après la moyenne annuelle et les seuils de l'école (CouncilRules.SuggestDecision).
+    string? StudentGender = null,
+    CouncilDecision? ProposedCouncilDecision = null,
+
+    // Vrai si l'élève a une note de composition sur la période : « présent » au sens du PV.
+    bool SatComposition = false);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -349,12 +358,16 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         //    excellent bulletin ;
         //  • rien de saisi (null) : la proposition déduite de la moyenne, et seulement dans sa moitié
         //    haute — DisciplinaryMentionPolicy ne propose jamais Blâme ni Avertissement.
+        // Règles du conseil de l'école (Évolution N°7) : seuils des distinctions, note éliminatoire, décisions.
+        var councilRules = CouncilRules.From(settings);
+
         var disciplinaryMention = remark?.DisciplinaryMention switch
         {
             DisciplinaryMention.None => (DisciplinaryMention?)null,
             { } chosen => chosen,
             null => DisciplinaryMentionPolicy.Suggest(
-                summary.GeneralAverage, gradingScale, hasGrades: summary.TotalCoefficients > 0)
+                summary.GeneralAverage, gradingScale, hasGrades: summary.TotalCoefficients > 0,
+                councilRules, councilRules.HasEliminatoryGrade(summary.Subjects))
         };
 
         // Redoublement (feature F) : lu sur l'inscription NON annulée de l'élève pour l'exercice du
@@ -426,7 +439,10 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             evaluationStructure,
             subjectHonors,
             isBilingualArabic,
-            subjectNamesAr);
+            subjectNamesAr,
+            student.Gender,
+            councilRules.SuggestDecision(annualAverage, gradingScale),
+            summary.Subjects.Any(s => s.Composition is not null));
 
         return dto;
     }

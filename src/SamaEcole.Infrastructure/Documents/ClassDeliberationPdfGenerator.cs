@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.ReportCards;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -19,9 +20,12 @@ public class ClassDeliberationPdfGenerator(ILogger<ClassDeliberationPdfGenerator
     }
 
     public byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo) =>
+        Generate(reportCards, logo, DeliberationScope.Period);
+
+    public byte[] Generate(IReadOnlyList<ReportCardDto> reportCards, byte[]? logo, DeliberationScope scope) =>
         PdfRenderGuard.Render(
             logger,
-            $"PV de délibération ({reportCards.Count} élève(s), classe {(reportCards.Count > 0 ? reportCards[0].ClassroomName : "—")}, {(reportCards.Count > 0 ? reportCards[0].TermLabel : "—")})",
-            () => new ClassDeliberationDocument(reportCards, logo).GeneratePdf(),
-            logo is not null ? () => new ClassDeliberationDocument(reportCards, null).GeneratePdf() : null);
+            $"PV de délibération {scope} ({reportCards.Count} élève(s), classe {(reportCards.Count > 0 ? reportCards[0].ClassroomName : "—")}, {(reportCards.Count > 0 ? reportCards[0].TermLabel : "—")})",
+            () => new ClassDeliberationDocument(reportCards, logo, scope).GeneratePdf(),
+            logo is not null ? () => new ClassDeliberationDocument(reportCards, null, scope).GeneratePdf() : null);
 }
