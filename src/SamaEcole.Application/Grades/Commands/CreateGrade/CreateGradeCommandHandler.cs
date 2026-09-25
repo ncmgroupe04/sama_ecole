@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Entities;
 using FluentValidation.Results;
 using MediatR;
@@ -46,10 +47,22 @@ public class CreateGradeCommandHandler(
             ]);
         }
 
-        if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
+        var schoolYearId = await dbContext.Terms.AsNoTracking()
+            .Where(t => t.Id == request.TermId)
+            .Select(t => (Guid?)t.SchoolYearId)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new ValidationException([
+                new ValidationFailure(nameof(request.TermId), "Le trimestre indiqué n'existe pas dans votre établissement.")
+            ]);
+
+        // Matières optionnelles : une note saisie pour un élève dispensé serait invisible sur le bulletin et
+        // dans les moyennes. Filet de sécurité serveur — l'écran ne la propose déjà pas (spec §4.2).
+        var exempt = await SubjectExemptions.ForStudentAsync(dbContext, request.StudentId, schoolYearId, cancellationToken);
+        if (exempt.Contains(request.SubjectId))
         {
             throw new ValidationException([
-                new ValidationFailure(nameof(request.TermId), "Le trimestre indiqué n'existe pas dans votre établissement.")
+                new ValidationFailure(nameof(request.SubjectId),
+                    "Cet élève est dispensé de cette matière : aucune note ne peut y être saisie.")
             ]);
         }
 

@@ -1,6 +1,7 @@
 using System.Globalization;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
@@ -54,12 +55,13 @@ public class ImportGradeSheetCommandHandler(
             ]);
         }
 
-        if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
-        {
-            throw new ValidationException([
+        var schoolYearId = await dbContext.Terms.AsNoTracking()
+            .Where(t => t.Id == request.TermId)
+            .Select(t => (Guid?)t.SchoolYearId)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new ValidationException([
                 new ValidationFailure(nameof(request.TermId), "Le trimestre indiqué n'existe pas dans votre établissement.")
             ]);
-        }
 
         // Barème de la MATIÈRE importée (grilles APC : /40, /60, /24…) et, à défaut, celui du CYCLE de la
         // classe visée (Primaire /10, Collège & Lycée /20) — exactement la résolution de la saisie
@@ -77,6 +79,10 @@ public class ImportGradeSheetCommandHandler(
             .Where(s => s.ClassroomId == request.ClassroomId)
             .Select(s => new { s.Id, s.Matricule })
             .ToListAsync(cancellationToken);
+
+        // Matières optionnelles : élèves de l'année dispensés de cette matière (option non suivie ou dispense).
+        var exempt = await SubjectExemptions.StudentsExemptFromAsync(
+            dbContext, request.SubjectId, schoolYearId, cancellationToken);
 
         var byMatricule = roster.ToDictionary(s => s.Matricule.Trim(), s => s.Id, StringComparer.OrdinalIgnoreCase);
 
@@ -115,6 +121,16 @@ public class ImportGradeSheetCommandHandler(
                 errors.Add(new ValidationFailure(
                     field,
                     $"Matricule « {matricule} » introuvable parmi les élèves de cette classe : vérifiez le matricule et la classe sélectionnée."));
+                continue;
+            }
+
+            // Matières optionnelles : une note pour un élève dispensé serait invisible partout. On refuse la
+            // ligne (plutôt que de l'ignorer) : l'utilisateur doit savoir qu'elle n'est pas enregistrée.
+            if (exempt.Contains(studentId))
+            {
+                errors.Add(new ValidationFailure(
+                    field,
+                    $"Matricule « {matricule} » : cet élève est dispensé de cette matière, aucune note ne peut y être saisie."));
                 continue;
             }
 

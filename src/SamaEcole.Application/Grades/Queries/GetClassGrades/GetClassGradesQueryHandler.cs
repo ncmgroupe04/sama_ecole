@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -23,16 +24,22 @@ public class GetClassGradesQueryHandler(IApplicationDbContext dbContext, GradeCo
             throw new KeyNotFoundException($"Matière {request.SubjectId} introuvable dans votre établissement.");
         }
 
-        if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
-        {
-            throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
-        }
+        var schoolYearId = await dbContext.Terms.AsNoTracking()
+            .Where(t => t.Id == request.TermId)
+            .Select(t => (Guid?)t.SchoolYearId)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
 
         var students = await dbContext.Students.AsNoTracking()
             .Where(s => s.ClassroomId == request.ClassroomId)
             .OrderBy(s => s.FullName)
             .Select(s => new { s.Id, s.Matricule, s.FullName })
             .ToListAsync(cancellationToken);
+
+        // Matières optionnelles : l'élève dispensé n'apparaît pas dans la liste de saisie de cette matière.
+        var exempt = await SubjectExemptions.StudentsExemptFromAsync(
+            dbContext, request.SubjectId, schoolYearId, cancellationToken);
+        students = students.Where(s => !exempt.Contains(s.Id)).ToList();
 
         // xmin est une colonne système : EF.Property doit s'appliquer à Grade directement, jamais à un
         // type anonyme projeté (même contrainte que GetClassFeesQueryHandler).

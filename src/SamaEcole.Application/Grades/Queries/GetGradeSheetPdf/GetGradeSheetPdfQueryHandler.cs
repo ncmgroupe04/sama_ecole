@@ -1,6 +1,7 @@
 using System.Globalization;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
 using MediatR;
@@ -59,10 +60,16 @@ public class GetGradeSheetPdfQueryHandler(
             .Select(y => y.Label)
             .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
 
+        // Matières optionnelles : la fiche imprimée ne liste pas les élèves dispensés de cette matière.
+        var exempt = await SubjectExemptions.StudentsExemptFromAsync(
+            dbContext, request.SubjectId, term.SchoolYearId, cancellationToken);
+
         var students = (await dbContext.Students.AsNoTracking()
                 .Where(s => s.ClassroomId == request.ClassroomId)
-                .Select(s => new GradeSheetPdfStudent(s.Matricule, s.FullName))
+                .Select(s => new { s.Id, s.Matricule, s.FullName })
                 .ToListAsync(cancellationToken))
+            .Where(s => !exempt.Contains(s.Id))
+            .Select(s => new GradeSheetPdfStudent(s.Matricule, s.FullName))
             .OrderBy(s => s.FullName, FrenchOrder)
             .ThenBy(s => s.Matricule, StringComparer.Ordinal)
             .ToList();
