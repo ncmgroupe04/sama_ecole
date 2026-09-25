@@ -628,7 +628,7 @@ Jeu `ExemptionQueriesTests` (préfixe d'identifiants `b`) : école A (année act
 
         var subjects = await ExemptionQueries.DispensableAsync(db, ClasseSansProgramme, default);
 
-        subjects.Select(s => s.Name).Should().Equal("Espagnol", "EPS", "Latin", "Mathématiques");
+        subjects.Select(s => s.Name).Should().Equal("EPS", "Espagnol", "Latin", "Mathématiques");
         subjects.Select(s => s.Name).Should().NotContain(["Lang & Com.", "Vocabulaire"], "un domaine et une activité ne se dispensent pas");
     }
 
