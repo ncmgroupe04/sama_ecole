@@ -85,6 +85,13 @@ internal static class UniqueConstraintCatalog
             "Un coefficient est déjà réglé pour cette matière, cette année et cette portée (série ou classe). "
             + "Rechargez la grille : la valeur existante s'y trouve, modifiez-la au lieu d'en créer une seconde.",
 
+        ["class_subjects"] =
+            "Cette matière figure déjà au programme de cette classe. Rechargez la liste : réactivez-la ou "
+            + "modifiez-la au lieu de l'ajouter une seconde fois.",
+
+        ["student_subject_enrollments"] =
+            "Cette option est déjà enregistrée pour cet élève cette année. Rechargez la fiche avant de réessayer.",
+
         ["LateArrivals"] =
             "Un billet d'entrée est déjà actif pour cet élève, ce cours et ce jour. Il n'en faut pas un second : "
             + "retrouvez le billet dans la liste, ou annulez-le d'abord s'il a été émis par erreur.",

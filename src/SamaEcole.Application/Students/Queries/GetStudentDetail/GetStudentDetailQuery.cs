@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Interfaces;
@@ -169,7 +170,8 @@ public record PaymentEntryDto(
 public class GetStudentDetailQueryHandler(
     IApplicationDbContext dbContext,
     ICurrentUserService currentUser,
-    CoefficientOverrideLoader overrideLoader)
+    CoefficientOverrideLoader overrideLoader,
+    SubjectFollowScope followScope)
     : IRequestHandler<GetStudentDetailQuery, StudentDetailDto>
 {
     public async Task<StudentDetailDto> Handle(GetStudentDetailQuery request, CancellationToken cancellationToken)
@@ -389,6 +391,17 @@ public class GetStudentDetailQueryHandler(
                 g.Value
             })
             .ToListAsync(cancellationToken);
+
+        // Matières non suivies (Évolution N°6), année par année : même exclusion que GetGradeSummaryQueryHandler —
+        // la fiche ne montre jamais une option que le bulletin masque.
+        foreach (var yearId in gradeRows.Select(r => r.SchoolYearId).Distinct().ToList())
+        {
+            var excluded = await followScope.ExcludedSubjectsAsync(studentId, yearId, cancellationToken);
+            if (excluded.Count > 0)
+            {
+                gradeRows = gradeRows.Where(r => r.SchoolYearId != yearId || !excluded.Contains(r.SubjectId)).ToList();
+            }
+        }
 
         // Aucune note : liste vide, l'onglet Notes affichera son empty-state. Pas d'objet fantôme.
         if (gradeRows.Count == 0)

@@ -69,6 +69,13 @@ document.addEventListener('alpine:init', () => {
         detailError: null,
         detailTab: 'history',
 
+        // Matières optionnelles de l'élève pour l'année active (Évolution N°6) : groupes de sa classe et choix.
+        studentOptionGroups: [],
+        optionSelection: {},
+        isSavingOptions: false,
+        optionsError: null,
+        optionsNotice: null,
+
         // Identifiant National de l'Élève (module Intégration étatique, JGK-M01). Géré depuis la
         // fiche : soit on saisit le numéro OFFICIEL reçu de l'IEF, soit on demande un numéro
         // PROVISOIRE de secours (préfixé « P », sans valeur officielle). La garde réelle est
@@ -404,12 +411,56 @@ document.addEventListener('alpine:init', () => {
             this.reportCardNotice = null;
             this.detailTab = 'history';
             this.isLoadingDetails = true;
+            this.studentOptionGroups = [];
+            this.optionsError = null;
+            this.optionsNotice = null;
+            this.loadStudentOptions(student.id);
             try {
                 this.studentDetail = await window.api.get(`/students/${student.id}`);
             } catch (err) {
                 this.detailError = window.api.toMessage(err, "Impossible de charger la fiche complète de l'élève.");
             } finally {
                 this.isLoadingDetails = false;
+            }
+        },
+
+        /**
+         * Section « Matières optionnelles » de la fiche (Évolution N°6) : les groupes d'options de la classe de
+         * l'élève et ses choix pour l'année active. Réservée à ceux qui gèrent les inscriptions.
+         */
+        async loadStudentOptions(studentId) {
+            if (!this.canManageStudent) return;
+            try {
+                const result = await window.api.get(`/class-subjects/options?studentId=${encodeURIComponent(studentId)}`);
+                if (!this.detailStudent || this.detailStudent.id !== studentId) return; // fiche changée entre-temps
+                this.studentOptionGroups = (result && result.groups) || [];
+                this.optionSelection = Object.fromEntries(
+                    this.studentOptionGroups.map((g) => [g.name, g.selectedClassSubjectId || '']));
+            } catch {
+                // silence-volontaire : sans module Pédagogie (403) ou sans année active, la section reste masquée.
+                this.studentOptionGroups = [];
+            }
+        },
+
+        /** Groupe sans option retenue : l'élève n'apparaît dans aucune grille de saisie de ce groupe. */
+        hasMissingOption() {
+            return this.studentOptionGroups.some((g) => !this.optionSelection[g.name]);
+        },
+
+        async saveStudentOptions() {
+            if (!this.detailStudent) return;
+            this.isSavingOptions = true;
+            this.optionsError = null;
+            this.optionsNotice = null;
+            try {
+                const classSubjectIds = this.studentOptionGroups.map((g) => this.optionSelection[g.name]).filter(Boolean);
+                await window.api.put(`/class-subjects/students/${this.detailStudent.id}/options`, { classSubjectIds });
+                await this.loadStudentOptions(this.detailStudent.id);
+                this.optionsNotice = 'Options enregistrées.';
+            } catch (err) {
+                this.optionsError = window.api.toMessage(err, "Erreur lors de l'enregistrement des options.");
+            } finally {
+                this.isSavingOptions = false;
             }
         },
 

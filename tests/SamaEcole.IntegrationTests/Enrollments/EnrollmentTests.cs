@@ -85,7 +85,7 @@ public class EnrollmentTests : IAsyncLifetime
 
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db, Guid schoolId) =>
         new(db, new StubTenantProvider(schoolId),
-            _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService());
+            _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(), new TestCurrentUser());
 
     private static CreateEnrollmentCommand NewStudentCommand(string fullName) => new()
     {

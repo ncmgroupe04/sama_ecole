@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -8,7 +9,8 @@ namespace SamaEcole.Application.Classrooms.Commands.CreateClassroom;
 public class CreateClassroomCommandHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
-    IKpiCacheService kpiCache)
+    IKpiCacheService kpiCache,
+    ClassSubjectTemplateInjector templateInjector)
     : IRequestHandler<CreateClassroomCommand, CreateClassroomResult>
 {
     public async Task<CreateClassroomResult> Handle(CreateClassroomCommand request, CancellationToken cancellationToken)
@@ -41,6 +43,11 @@ public class CreateClassroomCommandHandler(
 
         dbContext.Classrooms.Add(classroom);
 
+        // Série avec modèle national (Évolution N°6, étape A) : son programme — matières, groupes d'options,
+        // coefficients officiels — est recopié dans la classe, dans le MÊME SaveChanges que la classe : jamais une
+        // classe créée sans son programme, ni un programme orphelin. Sans série (Général / Collège) : rien.
+        var template = await templateInjector.ApplyAsync(classroom, enforceOfficial: false, cancellationToken);
+
         // Deux classes de même nom dans la même école violent l'index unique : SaveChangesAsync
         // traduit la violation en ConcurrencyConflictException → 409, jamais un écrasement
         // silencieux ni un 500 (AGENTS.md règle #5).
@@ -52,6 +59,6 @@ public class CreateClassroomCommandHandler(
 
         return new CreateClassroomResult(
             classroom.Id, classroom.Name, classroom.Level, classroom.Capacity, classroom.Cycle,
-            classroom.IsAccelerated, classroom.TargetLevel, classroom.Series);
+            classroom.IsAccelerated, classroom.TargetLevel, classroom.Series, template);
     }
 }

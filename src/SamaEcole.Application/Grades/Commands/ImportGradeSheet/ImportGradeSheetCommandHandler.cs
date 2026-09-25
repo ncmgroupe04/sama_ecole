@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -25,7 +26,8 @@ public class ImportGradeSheetCommandHandler(
     ITenantProvider tenantProvider,
     IGradeSheetImportParser fileParser,
     ICurrentUserService currentUser,
-    GradeCorrectionAuthorizer correctionAuthorizer)
+    GradeCorrectionAuthorizer correctionAuthorizer,
+    SubjectFollowScope followScope)
     : IRequestHandler<ImportGradeSheetCommand, ImportGradeSheetResult>
 {
     private static readonly (EvaluationType Type, string Label)[] Evaluations =
@@ -54,12 +56,15 @@ public class ImportGradeSheetCommandHandler(
             ]);
         }
 
-        if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
-        {
-            throw new ValidationException([
+        var schoolYearId = await followScope.SchoolYearOfTermAsync(request.TermId, cancellationToken)
+            ?? throw new ValidationException([
                 new ValidationFailure(nameof(request.TermId), "Le trimestre indiqué n'existe pas dans votre établissement.")
             ]);
-        }
+
+        // Matière optionnelle ou désactivée (Évolution N°6) : seuls les élèves qui la suivent peuvent recevoir une
+        // note — exactement la grille de saisie (GetClassGradesQueryHandler). null : toute la classe.
+        var allowedStudents = await followScope.RestrictedStudentsAsync(
+            request.ClassroomId, request.SubjectId, schoolYearId, cancellationToken);
 
         // Barème de la MATIÈRE importée (grilles APC : /40, /60, /24…) et, à défaut, celui du CYCLE de la
         // classe visée (Primaire /10, Collège & Lycée /20) — exactement la résolution de la saisie
@@ -119,6 +124,18 @@ public class ImportGradeSheetCommandHandler(
             }
 
             var rawByType = new[] { row.Devoir1Raw, row.Devoir2Raw, row.CompositionRaw };
+
+            // Une ligne VIDE pour un élève qui ne suit pas la matière est sans effet ; une note, elle, est refusée.
+            if (allowedStudents is not null && !allowedStudents.Contains(studentId))
+            {
+                if (rawByType.Any(raw => !string.IsNullOrWhiteSpace(raw)))
+                {
+                    errors.Add(new ValidationFailure(
+                        field,
+                        $"Matricule « {matricule} » : cet élève ne suit pas cette matière (option non choisie ou matière désactivée pour la classe)."));
+                }
+                continue;
+            }
 
             for (var i = 0; i < Evaluations.Length; i++)
             {

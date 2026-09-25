@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Coefficients;
@@ -198,7 +199,7 @@ public class EffectiveCoefficientTests : IAsyncLifetime
 
         var summary = await SummaryAsync(db, EleveS2, Trimestre1);
         var detail = await new GetStudentDetailQueryHandler(
-                db, new TestCurrentUser(role: Role.Directeur), new CoefficientOverrideLoader(db))
+                db, new TestCurrentUser(role: Role.Directeur), new CoefficientOverrideLoader(db), new SubjectFollowScope(db))
             .Handle(new GetStudentDetailQuery(EleveS2), default);
 
         var term = detail.Grades.Single(t => t.TermId == Trimestre1);
@@ -222,7 +223,7 @@ public class EffectiveCoefficientTests : IAsyncLifetime
     }
 
     private static Task<GradeSummaryDto> SummaryAsync(SamaEcole.Persistence.ApplicationDbContext db, Guid student, Guid term)
-        => new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db))
+        => new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db), new SubjectFollowScope(db))
             .Handle(new GetGradeSummaryQuery(student, term), default);
 
     private async Task AddOverrideAsync(

@@ -288,6 +288,8 @@ Le Secrétariat compose, télécharge et saisit les observations du conseil (`Re
 | **Barème de notation (/10 ou /20), mentions du bulletin** (ticket JGK-G02 : délégation en cas d'absence du Directeur) | ✔ | ✔ (si délégation activée) | ✖ |
 | **Matières / coefficients** — accès inconditionnel, sans réglage de délégation | ✔ | ✔ | ✔ |
 | **Coefficients par série ou par classe** (surcharges, « Appliquer le modèle », reconduction — Évolution N°4) : ÉCRITURE réservée, sans délégation | ✔ | lecture seule | ✖ |
+| **Programme d'une classe** (matières par classe, groupes d'options, « Réinitialiser aux coefficients officiels » — Évolution N°6) : ÉCRITURE réservée, sans délégation | ✔ | lecture seule | ✖ |
+| **Options d'un élève** (inscription, fiche élève, « Affecter l'option par défaut » — Évolution N°6) | ✔ | ✔ | ✖ |
 | Export de données (remplace « Sauvegardes/Restaurations » de la v1.0, désormais automatisées côté infrastructure — Volume 9) | ✔ | ✖ | ✖ |
 
 Le barème est exposé par un endpoint dédié (`PUT /schools/current/settings/grading-scale`), distinct du reste des réglages d'établissement (`PUT /schools/current/settings`) : ouvrir ce dernier au Secrétariat lui aurait aussi donné la main sur les formats de matricule, la déconnexion automatique et les mensualités, hors du périmètre de la délégation voulue.

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Interfaces;
-using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.Coefficients;
 
@@ -35,16 +34,7 @@ public class CoefficientOverrideLoader(IApplicationDbContext dbContext)
     private async Task<CoefficientOverrides> ResolveAsync(
         Guid studentId, Guid schoolYearId, CancellationToken cancellationToken)
     {
-        var classroomId = await dbContext.Enrollments.AsNoTracking()
-            .Where(e => e.StudentId == studentId
-                        && e.SchoolYearId == schoolYearId
-                        && e.Status != EnrollmentStatus.Cancelled)
-            .Select(e => (Guid?)e.ClassroomId)
-            .FirstOrDefaultAsync(cancellationToken)
-            ?? await dbContext.Students.AsNoTracking()
-                .Where(s => s.Id == studentId)
-                .Select(s => (Guid?)s.ClassroomId)
-                .FirstOrDefaultAsync(cancellationToken);
+        var classroomId = await StudentYearClassroom.ResolveAsync(dbContext, studentId, schoolYearId, cancellationToken);
 
         if (classroomId is null)
         {

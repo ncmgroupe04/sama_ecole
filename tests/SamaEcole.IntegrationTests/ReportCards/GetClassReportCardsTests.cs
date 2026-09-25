@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using System.IO.Compression;
 using SamaEcole.Application.Coefficients;
 using FluentAssertions;
@@ -73,7 +74,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
     public async Task The_Zip_Contains_One_Pdf_Per_Student_Sorted_Alphabetically()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser(), new SubjectFollowScope(db));
         await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 12), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir1, 16), CancellationToken.None);
 
@@ -96,7 +97,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
     public async Task The_Merged_Pdf_Contains_One_ReportCard_Per_Student_Sorted_Alphabetically()
     {
         await using var db = _db.NewAppContext(Ecole);
-        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser());
+        var createGrade = new CreateGradeCommandHandler(db, new StubTenantProvider(Ecole), new TestCurrentUser(), new SubjectFollowScope(db));
         await createGrade.Handle(new CreateGradeCommand(EleveA, Matiere, Trimestre1, EvaluationType.Devoir1, 12), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(EleveB, Matiere, Trimestre1, EvaluationType.Devoir1, 16), CancellationToken.None);
 
@@ -185,7 +186,7 @@ public class GetClassReportCardsTests : IAsyncLifetime
         {
             if (request is GetGradeSummaryQuery query)
             {
-                var handler = new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext));
+                var handler = new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext), new SubjectFollowScope(dbContext));
                 return (Task<TResponse>)(object)handler.Handle(query, cancellationToken);
             }
 

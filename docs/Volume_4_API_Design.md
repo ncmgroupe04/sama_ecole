@@ -238,7 +238,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/classrooms` | Créer une classe (aucune liste figée, Volume 1 §5.1). `series` optionnelle (L1, L2, S1, S2, TECH) : Lycée seulement, `422` sinon (Évolution N°4) |
+| `POST` | `/api/v1/classrooms` | Créer une classe (aucune liste figée, Volume 1 §5.1). `series` optionnelle (catalogue `GET /coefficients/catalog` : séries du Baccalauréat, anciens codes L1/TECH acceptés) — une série avec modèle national reçoit son programme (`class_subjects`) et ses coefficients officiels, rapportés dans `template` : Lycée seulement, `422` sinon (Évolution N°4) |
 | `GET` | `/api/v1/classrooms` | Lister avec effectifs (total, garçons, filles) |
 | `POST` | `/api/v1/subjects` | Créer une matière |
 | `GET` | `/api/v1/coefficients/catalog` | Catalogue fermé des séries de lycée (Directeur, Secrétariat) |
@@ -247,12 +247,19 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `DELETE` | `/api/v1/coefficients/{id}?rowVersion=` | « Rétablir » : suppression logique de la surcharge (Directeur seul) |
 | `POST` | `/api/v1/coefficients/apply-template` | « Appliquer le modèle » national d'une série (`overwrite` facultatif). `422` pour une série sans modèle (TECH). Ne modifie jamais `Subject.Coefficient` (Directeur seul) |
 | `POST` | `/api/v1/coefficients/carry-over` | « Reprendre l'année précédente » : recopie les surcharges d'une autre année vers l'année active sans rien écraser (Directeur seul) |
+| `GET` | `/api/v1/class-subjects?classroomId=` | Programme d'une classe (Évolution N°6) : matières, coefficient effectif de l'année active et origine, valeur officielle de la série, groupe d'options, nombre d'élèves par option, élèves sans option par groupe (Directeur, Secrétariat) |
+| `POST` | `/api/v1/class-subjects` | Ajouter une matière propre à l'établissement : `subjectId` OU `newSubjectName`, `coefficient` et `optionGroup` facultatifs. `422` au primaire/maternelle ou si la matière figure déjà au programme (Directeur seul) |
+| `PUT` | `/api/v1/class-subjects/{id}` | `isActive`, `optionGroup`, `rowVersion` (xmin) — `409` si périmé (Directeur seul) |
+| `POST` | `/api/v1/class-subjects/reset` | « Réinitialiser aux coefficients officiels du Sénégal » (`classroomId`) : programme et coefficients de classe du modèle, année active. `422` sans série ou sans modèle (Directeur seul) |
+| `POST` | `/api/v1/class-subjects/assign-default-options` | Donne l'option par défaut aux élèves de la classe sans choix, année active (Directeur, Secrétariat) |
+| `GET` | `/api/v1/class-subjects/options?classroomId=` ou `?studentId=` | Groupes d'options d'une classe (inscription) ou de la classe d'un élève avec ses choix (fiche) ; option par défaut = la plus fréquente de l'établissement (Directeur, Secrétariat) |
+| `PUT` | `/api/v1/class-subjects/students/{studentId}/options` | Options de l'élève pour l'année active (`classSubjectIds` : liste complète, une par groupe au plus). `422` pour une option hors classe ou deux options d'un même groupe (Directeur, Secrétariat) |
 
 ## 6. API Inscriptions
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/enrollments` | Créer une inscription/pré-inscription |
+| `POST` | `/api/v1/enrollments` | Créer une inscription/pré-inscription. `subjectOptionIds` facultatif (Évolution N°6) : options retenues, une par groupe ; un groupe sans choix reçoit l'option par défaut. Enregistrées dans la même transaction |
 | `POST` | `/api/v1/enrollments/{id}/confirm` | Confirmer → émet `EnrollmentConfirmed` (Volume 2 §5.1) |
 | `GET` | `/api/v1/enrollments/{id}/receipt` | Reçu d'inscription (PDF) |
 | `GET` | `/api/v1/classrooms/{id}/availability` | Places disponibles |

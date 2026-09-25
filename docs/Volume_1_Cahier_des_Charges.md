@@ -289,7 +289,8 @@ l'ordre de priorité :
 2. sinon la **surcharge de la série** de la classe ;
 3. sinon le **coefficient de la matière** (comportement historique, inchangé).
 
-- **Séries.** Catalogue fermé : `L1`, `L2`, `S1`, `S2`, `TECH` (séries techniques). La série se renseigne sur la
+- **Séries.** Catalogue fermé, étendu au référentiel du Baccalauréat par l'Évolution N°6 (§8.8) ; `L1` et `TECH`
+  restent valides pour les classes qui les portent (ancienne nomenclature). La série se renseigne sur la
   **classe** (Paramètres › Classes, réservée au cycle Lycée) ; une classe sans série (Seconde commune, collège…)
   garde les coefficients de ses matières.
 - **Modèles nationaux.** « Appliquer le modèle » (onglet Coefficients de l'écran Matières) matérialise en
@@ -303,6 +304,66 @@ l'ordre de priorité :
   le Directeur les reprend explicitement (« Reprendre l'année précédente », sans écraser l'existant).
 - **Effet rétroactif.** Modifier un coefficient recalcule les moyennes et les bulletins de l'année en cours pour
   les classes concernées ; l'écran l'annonce dès que des notes existent.
+
+### 8.8 Séries du Baccalauréat, matières par classe et options (Évolution N°6)
+
+Référentiel des séries de l'Office du Baccalauréat du Sénégal, programme de chaque classe et matières au choix
+de chaque élève.
+
+**Référentiel (données de référence, `SeriesCoefficientTemplates`).** Une ligne par matière ; `A | B` désigne un
+**groupe d'options** (l'élève en suit une, au même coefficient).
+
+| Série | Matières et coefficients |
+|---|---|
+| L1a / L1b | Français 5, Philosophie 5, Latin \| Grec 4, Anglais (LV1) 3, Histoire-Géographie 3, LV2 2, Mathématiques 1, EPS 1 |
+| L'1 | Français 5, Philosophie 5, Anglais 4, LV2 4, Histoire-Géographie 3, LV3 / Option 2, Mathématiques 1, EPS 1 |
+| L2 | Français 5, Philosophie 5, Histoire-Géographie 5, Anglais 3, LV2 2, Mathématiques 2, SVT \| Physique-Chimie 2, EPS 1 |
+| S1 | Mathématiques 8, Physique-Chimie 8, Français 3, Philosophie 2, SVT 2, Anglais 2, Histoire-Géographie 2, EPS 1 |
+| S2 | SVT 6, Physique-Chimie 5, Mathématiques 5, Français 3, Philosophie 2, Anglais 2, Histoire-Géographie 2, EPS 1 |
+| S3 | Mathématiques 6, Physique-Chimie 6, Construction / Dessin 5, Français 3, Philosophie 2, Anglais 2, Histoire-Géographie 2, EPS 1 |
+| S4 / S5 | Biologie / Agronomie 6, Physique-Chimie 5, Mathématiques 4, Français 3, Philosophie 2, Anglais 2, Histoire-Géographie 2, EPS 1 |
+| STEG | Comptabilité et Gestion 6, Économie et Organisation 4, Mathématiques appliquées 4, Droit 3, Français 3, Anglais 3, Philosophie 2, Histoire-Géographie 2, EPS 1 |
+| T1 / T2 / STIDD | Matières technologiques 8, Mathématiques 5, Physique-Chimie 5, Français 3, Philosophie 2, Anglais 2, EPS 1 |
+| LA | Arabe 6, Théologie 4, Français 4, Philosophie 4, Histoire-Géographie 3, LV2 2 (Anglais \| Espagnol \| Allemand \| Italien), Mathématiques 1, EPS 1 |
+| S1A | Mathématiques 8, Physique-Chimie 6, Arabe 4, Français 3, Philosophie \| Théologie 2, Histoire-Géographie 2, EPS 1 |
+| S2A | SVT 7, Physique-Chimie 6, Arabe 4, Français 3, Philosophie \| Théologie 2, Histoire-Géographie 2, EPS 1 |
+
+LV2 = Espagnol \| Allemand \| Arabe \| Italien (sauf en LA). Lectures retenues là où le référentiel donne une
+fourchette ou un regroupement : « Maths (5-6) » en T1/T2/STIDD → 5 ; « Matières scientifiques (7-8) » →
+Mathématiques 8 en S1A, SVT 7 en S2A ; « Latin/Grec » et « Théologie/Philo » → groupes d'options. Le Directeur
+ajuste par classe ; ces valeurs sont à confronter au texte officiel en vigueur.
+
+**A. Série de la classe.** Écran Classes : champ **Série / Filière** (lycée) — les séries ci-dessus, ou
+« Général / Collège » (aucune série). À l'enregistrement, le programme de la série est **recopié dans la classe**
+(une ligne par matière, groupes d'options compris) ; une matière absente de l'établissement est créée au niveau
+de la classe. Le coefficient officiel est posé en surcharge de **classe** pour l'année active là où la valeur
+héritée diffère — sauf si le Directeur a déjà réglé la série (§8.7), dont le réglage l'emporte. Ni le coefficient
+d'une matière, ni une surcharge de série, ni les autres classes ne changent. Une classe qui reçoit une série
+plus tard reçoit son programme si elle n'en a pas encore.
+
+**B. Onglet « Matières par classe »** (Gestion Scolaire › Matières). Filtre par classe ; tableau : matière,
+coefficient effectif (éditable), valeur officielle, origine, groupe d'options (badge « Option obligatoire »).
+Actions du **Directeur** : modifier un coefficient (surcharge de classe, §8.7), ajouter une matière propre à
+l'établissement (Informatique, Conduite…), désactiver/réactiver une matière, régler le groupe d'options, et
+**« 🔄 Réinitialiser aux coefficients officiels du Sénégal »** — programme et coefficients de la classe redeviennent
+ceux du modèle pour l'année active ; les matières ajoutées par l'établissement sont conservées. Le Secrétariat
+consulte, et peut **affecter l'option par défaut** aux élèves de la classe qui n'en ont pas.
+
+**C. Options de l'élève.** Inscription (et fiche élève) : si la classe a des groupes d'options, la section
+« Matières optionnelles » s'affiche ; une option par groupe, **l'option la plus fréquente de l'établissement
+pré-cochée** (à défaut, la première du groupe). Un client qui n'envoie rien reçoit les options par défaut. Le
+choix appartient à l'**année scolaire** ; le changer archive l'ancien (suppression logique).
+
+**Règles de calcul.**
+- Un élève **suit** toute matière de sa classe, sauf une matière **désactivée** et une matière d'un groupe
+  d'options qu'il n'a **pas choisie**. Une matière notée hors programme reste suivie : une classe jamais
+  configurée garde exactement le calcul d'avant.
+- **Saisie.** La grille (et la fiche papier, le modèle Excel, l'import) d'une matière optionnelle ne liste que
+  les élèves qui l'ont choisie ; une note sur une matière non suivie est refusée (422).
+- **Bulletin.** Total des coefficients = Σ coefficients des matières **effectivement suivies** ; Total des points
+  = Σ (moyenne matière × coefficient) ; Moyenne générale = Total des points ÷ Total des coefficients. Les lignes
+  des matières non suivies sont **masquées** (PDF A5, bulletins de classe, délibération, fiche élève) — jamais une
+  ligne vide.
 
 ---
 

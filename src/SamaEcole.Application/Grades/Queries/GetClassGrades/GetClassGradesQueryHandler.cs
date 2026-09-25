@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -5,7 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Grades.Queries.GetClassGrades;
 
-public class GetClassGradesQueryHandler(IApplicationDbContext dbContext, GradeCorrectionAuthorizer correctionAuthorizer)
+public class GetClassGradesQueryHandler(
+    IApplicationDbContext dbContext, GradeCorrectionAuthorizer correctionAuthorizer, SubjectFollowScope followScope)
     : IRequestHandler<GetClassGradesQuery, IReadOnlyList<StudentGradeRowDto>>
 {
     public async Task<IReadOnlyList<StudentGradeRowDto>> Handle(
@@ -23,16 +25,23 @@ public class GetClassGradesQueryHandler(IApplicationDbContext dbContext, GradeCo
             throw new KeyNotFoundException($"Matière {request.SubjectId} introuvable dans votre établissement.");
         }
 
-        if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
-        {
-            throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
-        }
+        var schoolYearId = await followScope.SchoolYearOfTermAsync(request.TermId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
 
         var students = await dbContext.Students.AsNoTracking()
             .Where(s => s.ClassroomId == request.ClassroomId)
             .OrderBy(s => s.FullName)
             .Select(s => new { s.Id, s.Matricule, s.FullName })
             .ToListAsync(cancellationToken);
+
+        // Matière optionnelle (Évolution N°6) : la grille ne liste que les élèves qui l'ont choisie — le professeur
+        // de Physique-Chimie d'une L2 ne voit pas les élèves de l'option SVT. Matière désactivée : grille vide.
+        var allowed = await followScope.RestrictedStudentsAsync(
+            request.ClassroomId, request.SubjectId, schoolYearId, cancellationToken);
+        if (allowed is not null)
+        {
+            students = students.Where(s => allowed.Contains(s.Id)).ToList();
+        }
 
         // xmin est une colonne système : EF.Property doit s'appliquer à Grade directement, jamais à un
         // type anonyme projeté (même contrainte que GetClassFeesQueryHandler).

@@ -30,7 +30,7 @@ public static class ClassroomSeriesRules
             .Must((command, _) => ClassroomCycle.CycleFor(level(command)) == CycleType.Lycee)
                 .WithMessage("La série n'est possible que pour une classe de Lycée.")
             .Must(value => LyceeSeries.IsValid(LyceeSeries.Normalize(value)))
-                .WithMessage("Série inconnue : choisissez parmi L1, L2, S1, S2 ou TECH.")
+                .WithMessage(LyceeSeries.UnknownMessage)
             .When(command => LyceeSeries.Normalize(read(command)) is not null);
     }
 }

@@ -136,7 +136,7 @@ document.addEventListener('alpine:init', () => {
         },
         createErrors: {},
 
-        // Catalogue fermé des séries de lycée (L1, L2, S1, S2, TECH), servi par l'API : jamais recopié
+        // Catalogue fermé des séries de lycée (référentiel du Baccalauréat), servi par l'API : jamais recopié
         // ici. Vide tant qu'il n'est pas chargé — ou si l'appel échoue : le champ « Série » reste alors
         // masqué et la classe s'enregistre sans série (elle est facultative).
         seriesCatalog: [],
@@ -188,8 +188,25 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        get seriesOptions() {
-            return [{ value: '', label: 'Aucune série' }, ...this.seriesCatalog.map((s) => ({ value: s.code, label: s.label }))];
+        /**
+         * Séries proposées (Évolution N°6) : « Général / Collège » (aucune série), puis le référentiel du
+         * Baccalauréat par famille. Un ancien code (L1, TECH) n'est proposé qu'à la classe qui le porte déjà —
+         * jamais pour une nouvelle classe.
+         */
+        seriesOptionsFor(form) {
+            const current = form && form.series;
+            return [
+                { value: '', label: 'Général / Collège (aucune série)' },
+                ...this.seriesCatalog
+                    .filter((s) => !s.isLegacy || s.code === current)
+                    .map((s) => ({ value: s.code, label: s.category ? `${s.label} · ${s.category}` : s.label }))
+            ];
+        },
+
+        /** Vrai si la série choisie a un modèle national : ses matières et coefficients seront recopiés dans la classe. */
+        seriesHasTemplate(form) {
+            const series = this.seriesCatalog.find((s) => s.code === (form && form.series));
+            return !!series && !!series.hasTemplate;
         },
 
         /** Le champ « Série » n'apparaît que pour un lycée, et seulement si le catalogue est connu. */

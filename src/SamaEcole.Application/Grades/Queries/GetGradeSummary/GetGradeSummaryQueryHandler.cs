@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
@@ -6,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Grades.Queries.GetGradeSummary;
 
-public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext, CoefficientOverrideLoader overrideLoader)
+public class GetGradeSummaryQueryHandler(
+    IApplicationDbContext dbContext, CoefficientOverrideLoader overrideLoader, SubjectFollowScope followScope)
     : IRequestHandler<GetGradeSummaryQuery, GradeSummaryDto>
 {
     public async Task<GradeSummaryDto> Handle(GetGradeSummaryQuery request, CancellationToken cancellationToken)
@@ -66,6 +68,15 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext, Coeffi
                 g.EvaluationType,
                 g.Value
             }).ToListAsync(cancellationToken);
+
+        // Matières que l'élève ne suit pas (Évolution N°6) : option d'un groupe qu'il n'a pas choisie, matière
+        // désactivée pour sa classe. Elles sortent du bulletin — ni ligne vide, ni coefficient au total : le total
+        // des coefficients est celui des matières EFFECTIVEMENT suivies. Classe non configurée : rien n'est exclu.
+        var excluded = await followScope.ExcludedSubjectsAsync(request.StudentId, schoolYearId, cancellationToken);
+        if (excluded.Count > 0)
+        {
+            rows = rows.Where(r => !excluded.Contains(r.SubjectId)).ToList();
+        }
 
         // Moyenne d'une matière : sur ce qui a été saisi (Devoir seul, Composition seule, ou les deux) —
         // la saisie progresse au fil du trimestre, exiger les deux figerait l'écran tant qu'il manque

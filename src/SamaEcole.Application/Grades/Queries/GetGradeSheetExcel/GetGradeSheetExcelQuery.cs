@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -16,7 +17,7 @@ public record GetGradeSheetExcelQuery(Guid ClassroomId, Guid SubjectId, Guid Ter
 public record GradeSheetExcelResult(byte[] Content, string FileName);
 
 public class GetGradeSheetExcelQueryHandler(
-    IApplicationDbContext dbContext, IGradeSheetExcelGenerator generator)
+    IApplicationDbContext dbContext, IGradeSheetExcelGenerator generator, SubjectFollowScope followScope)
     : IRequestHandler<GetGradeSheetExcelQuery, GradeSheetExcelResult>
 {
     public async Task<GradeSheetExcelResult> Handle(GetGradeSheetExcelQuery request, CancellationToken cancellationToken)
@@ -30,16 +31,22 @@ public class GetGradeSheetExcelQueryHandler(
             throw new KeyNotFoundException($"Matière {request.SubjectId} introuvable dans votre établissement.");
         }
 
-        if (!await dbContext.Terms.AnyAsync(t => t.Id == request.TermId, cancellationToken))
-        {
-            throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
-        }
+        var schoolYearId = await followScope.SchoolYearOfTermAsync(request.TermId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Période {request.TermId} introuvable dans votre établissement.");
 
         var students = await dbContext.Students.AsNoTracking()
             .Where(s => s.ClassroomId == request.ClassroomId)
             .OrderBy(s => s.FullName)
             .Select(s => new { s.Id, s.Matricule, s.FullName })
             .ToListAsync(cancellationToken);
+
+        // Matière optionnelle (Évolution N°6) : le modèle Excel liste les mêmes élèves que la grille de saisie.
+        var allowed = await followScope.RestrictedStudentsAsync(
+            request.ClassroomId, request.SubjectId, schoolYearId, cancellationToken);
+        if (allowed is not null)
+        {
+            students = students.Where(s => allowed.Contains(s.Id)).ToList();
+        }
 
         var grades = await dbContext.Grades.AsNoTracking()
             .Where(g => g.SubjectId == request.SubjectId && g.TermId == request.TermId)

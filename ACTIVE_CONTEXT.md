@@ -5,7 +5,8 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 25/09/2026** (Appel par cours de l'emploi du temps et billets d'entrée visant
+**Dernière mise à jour : 25/09/2026** (Séries du Baccalauréat, matières par classe et options — Évolution N°6,
+voir §2 ; Appel par cours de l'emploi du temps et billets d'entrée visant
 un cours — Évolution N°5, voir §2 ; Notes — fenêtre de correction de l'Enseignant, saisie par le
 Secrétariat et fiche de saisie papier PDF, voir §2 ; Module Cahier de texte / Journal de classe (JGK-P04) —
 **livré : entité + migration RLS, `ClassJournalScopeAuthorizer` (TeacherAssignment + ScheduleSlot),
@@ -302,6 +303,53 @@ tableau de bord. Sans `scheduleSlotId` ni cours visé, tout se comporte exacteme
    à revoir pour un déploiement dans un autre fuseau.
 5. Le billet de sortie reste un registre à part, sans lien avec le cours ; la justification des séances manquées
    (Tâche 9) n'est pas construite.
+
+### Séries du Baccalauréat, matières par classe et options (25/09/2026) — livré (Évolution N°6)
+
+Référentiel des séries de l'Office du Baccalauréat, programme de chaque classe et matières au choix de chaque
+élève. Branche `claude/senegal-series-subjects-coefficients-ndqwkq`. Spécification fonctionnelle :
+`docs/Volume_1_Cahier_des_Charges.md` §8.8.
+
+- **Référentiel.** `LyceeSeries` étendu : L1a, L1b, L'1, L2, S1 à S5, STEG, T1, T2, STIDD, LA, S1A, S2A (+ anciens
+  codes L1, TECH, toujours valides mais plus proposés). `SeriesCoefficientTemplates` porte leurs modèles, avec les
+  **groupes d'options** (LV2, Langue ancienne, Option scientifique, Philosophie ou Théologie). **L2, S1 et S2 prennent
+  les valeurs du référentiel** (elles remplacent la table du 24/09) ; le modèle L1 est inchangé. Données en code
+  (arbitrage A10 de l'Évolution N°4), pas en table : pas de table globale hors tenant à maintenir.
+- **Données.** `class_subjects` (programme d'une classe : matière, groupe d'options, `IsCustom`, `IsActive`) et
+  `student_subject_enrollments` (option d'un élève pour une année). RLS + Global Query Filter, `xmin`, suppression
+  logique, purges. Migration `AddClassSubjectsAndOptions`. **Aucun coefficient dans ces tables** : le coefficient
+  d'une classe reste la surcharge de classe de l'Évolution N°4 (par année), une seule vérité.
+- **Création de classe.** Une série avec modèle recopie son programme dans la classe (`ClassSubjectTemplateInjector`),
+  crée les matières absentes, et pose le coefficient officiel en surcharge de classe là où l'hérité diffère — sauf si
+  le Directeur a déjà réglé la série. Ne modifie ni `Subject.Coefficient`, ni une surcharge de série, ni une autre classe.
+- **Options.** Inscription (`subjectOptionIds`, même transaction) et fiche élève ; option la plus fréquente de
+  l'établissement par défaut. `SubjectFollowScope` est le seul point d'entrée : grille de saisie, fiche papier, modèle
+  Excel, import, garde de `CreateGrade`, résumé de notes (bulletins, délibération) et fiche élève.
+- **API.** `/api/v1/class-subjects` (programme, ajout, activation/groupe, `reset`, `assign-default-options`, `options`,
+  options d'un élève). Programme : lecture Directeur + Secrétariat, écriture Directeur ; options : Directeur +
+  Secrétariat. Module `Pedagogy` requis.
+- **Écrans.** Classes : « Série / Filière » (« Général / Collège » = aucune série). Matières › onglet **Matières par
+  classe** (badge « Option obligatoire », colonne « Officiel », « 🔄 Réinitialiser aux coefficients officiels du
+  Sénégal », « Affecter l'option par défaut »). Inscriptions et fiche élève : section « Matières optionnelles ».
+  Fiche d'aide `matieres-par-classe-options`.
+
+**Invariant : une classe sans programme garde exactement le calcul d'avant** — toute matière notée figure au
+bulletin. Une matière notée hors programme reste suivie ; seules une matière désactivée et une option non choisie
+sortent de la grille et du bulletin.
+
+**Points de vigilance connus :**
+1. Le référentiel reçu est parfois ambigu ; lectures retenues : Maths (5-6) → 5 en T1/T2/STIDD ; « Matières
+   scientifiques (7-8) » → Mathématiques 8 en S1A, SVT 7 en S2A ; « Latin/Grec » et « Théologie/Philo » → groupes
+   d'options ; « Construction/Dessin » et « Biologie/Agro » → une matière. À confronter au texte officiel.
+2. Changer L2/S1/S2 ne touche pas les surcharges de série déjà posées avec l'ancienne table : « Appliquer le modèle »
+   avec remplacement les aligne, et « Réinitialiser » aligne une classe.
+3. Un élève **sans choix** dans un groupe n'apparaît dans aucune grille du groupe et une note antérieure sur une option
+   non choisie sort du bulletin (elle reste en base). L'écran signale les élèves sans option ; « Affecter l'option par
+   défaut » les complète.
+4. Le programme d'une classe n'est pas rattaché à l'année (les choix d'options et les coefficients le sont) : désactiver
+   une matière en cours d'année la retire aussi des bulletins déjà calculés de l'année.
+5. L'écran de saisie des notes propose toujours toutes les matières de l'école ; seule la liste des élèves suit les
+   options.
 
 ### Inventaire (26/08/2026) — API et écran livrés
 

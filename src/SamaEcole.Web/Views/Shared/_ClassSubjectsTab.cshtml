@@ -1,0 +1,200 @@
+@* ═══════════════════════════════════════════════════════════════════════════
+   Onglet « Matières par classe » — Évolution N°6 (séries du Baccalauréat sénégalais, options).
+   Composant `classSubjectsView` (wwwroot/js/class-subjects.js) : aucune règle métier ici — coefficient
+   effectif, origine et valeur officielle sont calculés par le serveur. Écriture : Directeur seul ;
+   « Affecter les options par défaut » : Directeur et Secrétariat.
+   ═══════════════════════════════════════════════════════════════════════════ *@
+<div x-data="classSubjectsView()" class="space-y-5">
+
+ <div x-show="error" x-cloak class="form-error-banner" x-text="error"></div>
+
+ <div x-show="notice" x-cloak role="status"
+  class="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+  <icon name="check" class="w-4 h-4 mt-0.5 shrink-0" />
+  <span x-text="notice"></span>
+ </div>
+
+ @* ── Filtre par classe + actions ─────────────────────────────────────────────────────────── *@
+ <div class="flex flex-wrap items-end gap-4">
+  <div class="w-full sm:w-72">
+   <label class="form-label">Classe</label>
+   <select-field model="classroomId" aria-label="Classe" placeholder="Choisir une classe"
+    options-expr="classroomChoices" on-change="selectClassroom(classroomId)" />
+  </div>
+
+  <div x-show="data" x-cloak class="text-sm text-slate-500">
+   <span class="font-medium text-slate-700" x-text="data && (data.seriesLabel || 'Général / Collège (aucune série)')"></span>
+   <span x-show="data && data.schoolYearLabel" x-cloak> · année <span x-text="data && data.schoolYearLabel"></span></span>
+  </div>
+
+  <div x-show="data" x-cloak class="flex flex-wrap items-center gap-2 sm:ml-auto">
+   <button type="button" x-show="canEdit" x-cloak x-on:click="openAdd()" class="btn-modal-secondary group">
+    <icon name="plus" class="w-4 h-4" />
+    Ajouter une matière
+   </button>
+   <button type="button" x-show="canEdit && data && data.hasTemplate" x-cloak x-on:click="confirmReset = true"
+    :disabled="!canReset" class="btn-modal-secondary group disabled:opacity-40 disabled:cursor-not-allowed">
+    🔄 Réinitialiser aux coefficients officiels du Sénégal
+   </button>
+  </div>
+ </div>
+
+ @* Confirmation en deux temps : la réinitialisation remplace les coefficients propres à la classe. *@
+ <div x-show="confirmReset" x-cloak role="alertdialog" aria-label="Confirmer la réinitialisation"
+  class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 space-y-3">
+  <p>
+   Le programme et les coefficients de <span class="font-semibold" x-text="data && data.classroomName"></span> redeviennent
+   ceux du modèle officiel de la <span x-text="data && data.seriesLabel"></span> pour l'année en cours. Les matières
+   ajoutées par l'établissement sont conservées. Les bulletins de cette classe seront recalculés.
+  </p>
+  <div class="flex gap-2">
+   <button type="button" x-on:click="reset()" :disabled="isResetting" class="btn-modal-primary !h-9 !px-4 text-sm">
+    <span x-text="isResetting ? 'Réinitialisation…' : 'Confirmer'"></span>
+   </button>
+   <button type="button" x-on:click="confirmReset = false" class="btn-modal-secondary !h-9 !px-4 text-sm">Annuler</button>
+  </div>
+ </div>
+
+ @* ── Ajout d'une matière propre à l'établissement ────────────────────────────────────────── *@
+ <div x-show="isAddOpen" x-cloak class="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+  <div role="group" aria-label="Type de matière" class="tab-nav w-fit">
+   <button type="button" x-on:click="addForm.mode = 'existing'" :aria-pressed="addForm.mode === 'existing'"
+    class="tab-btn" :class="addForm.mode === 'existing' ? 'tab-btn-active' : ''">Matière existante</button>
+   <button type="button" x-on:click="addForm.mode = 'new'" :aria-pressed="addForm.mode === 'new'"
+    class="tab-btn" :class="addForm.mode === 'new' ? 'tab-btn-active' : ''">Nouvelle matière</button>
+  </div>
+  <div class="grid gap-3 sm:grid-cols-3">
+   <div x-show="addForm.mode === 'existing'">
+    <label class="form-label">Matière</label>
+    <select-field model="addForm.subjectId" aria-label="Matière existante" placeholder="Choisir une matière"
+     options-expr="addableSubjects" />
+   </div>
+   <div x-show="addForm.mode === 'new'" x-cloak>
+    <label class="form-label" for="class-subject-new-name">Nom de la matière</label>
+    <input id="class-subject-new-name" type="text" x-model="addForm.newSubjectName" maxlength="80"
+     placeholder="Informatique, Conduite…" class="input-field">
+   </div>
+   <div>
+    <label class="form-label" for="class-subject-coefficient">Coefficient</label>
+    <input id="class-subject-coefficient" type="text" inputmode="decimal" x-model="addForm.coefficient"
+     placeholder="1" class="input-field tabular-nums">
+   </div>
+   <div>
+    <label class="form-label" for="class-subject-group">Groupe d'options <span class="text-slate-400">(facultatif)</span></label>
+    <input id="class-subject-group" type="text" x-model="addForm.optionGroup" maxlength="40"
+     placeholder="LV2, Option scientifique…" class="input-field">
+   </div>
+  </div>
+  <p x-show="addError" x-cloak x-text="addError" class="field-error"></p>
+  <div class="flex gap-2">
+   <button type="button" x-on:click="submitAdd()" :disabled="isAdding" class="btn-modal-primary !h-9 !px-4 text-sm">
+    <span x-text="isAdding ? 'Ajout…' : 'Ajouter'"></span>
+   </button>
+   <button type="button" x-on:click="isAddOpen = false" class="btn-modal-secondary !h-9 !px-4 text-sm">Annuler</button>
+  </div>
+ </div>
+
+ @* ── Groupes d'options : option par défaut et élèves sans choix ──────────────────────────── *@
+ <div x-show="groups.length > 0" x-cloak class="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 space-y-2">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+   <p class="font-medium text-slate-800">Matières optionnelles</p>
+   <button type="button" x-show="canAssign && studentsWithoutOption > 0" x-cloak x-on:click="assignDefaults()"
+    :disabled="isAssigning" class="text-primary-600 hover:underline text-sm font-medium disabled:opacity-40">
+    <span x-text="isAssigning ? 'Affectation…' : 'Affecter l\'option par défaut aux élèves sans choix'"></span>
+   </button>
+  </div>
+  <template x-for="group in groups" :key="group.name">
+   <p>
+    <span class="font-semibold" x-text="group.name"></span> — option par défaut :
+    <span x-text="defaultOptionName(group)"></span>
+    <span x-show="group.studentsWithoutChoice > 0" x-cloak class="text-amber-700">
+     · <span x-text="group.studentsWithoutChoice"></span> élève(s) sans option (absents des grilles de saisie du groupe)
+    </span>
+   </p>
+  </template>
+ </div>
+
+ @* ── Tableau du programme ────────────────────────────────────────────────────────────────── *@
+ <div class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden">
+  <div class="overflow-x-auto">
+   <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+     <tr>
+      <th scope="col" class="px-4 py-3 text-left">Matière</th>
+      <th scope="col" class="px-4 py-3 text-left">Coefficient</th>
+      <th scope="col" class="px-4 py-3 text-right">Officiel</th>
+      <th scope="col" class="px-4 py-3 text-left">Origine</th>
+      <th scope="col" class="px-4 py-3 text-left">Groupe d'options</th>
+      <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+     </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+     <template x-for="row in rows" :key="row.id">
+      <tr class="hover:bg-slate-50/60" :class="row.isActive ? '' : 'opacity-50'">
+       <td class="px-4 py-2.5">
+        <div class="flex flex-wrap items-center gap-1.5">
+         <span class="font-medium text-slate-800" x-text="row.subjectName"></span>
+         <span x-show="row.optionGroup" x-cloak
+          class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200"
+          :title="'Au choix dans le groupe ' + row.optionGroup + ' : l\'élève en suit une seule'">Option obligatoire · <span x-text="row.optionGroup"></span></span>
+         <span x-show="row.isCustom" x-cloak
+          class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200">Établissement</span>
+         <span x-show="!row.isActive" x-cloak class="text-[11px] text-slate-500">(désactivée)</span>
+        </div>
+        <p x-show="row.optionGroup && row.enrolledStudents !== null" x-cloak class="text-[11px] text-slate-400">
+         <span x-text="row.enrolledStudents"></span> élève(s) inscrit(s) à cette option
+        </p>
+       </td>
+       <td class="px-4 py-2.5">
+        <div class="flex items-center gap-2">
+         <input type="text" inputmode="decimal" x-model="row.draft" :disabled="!canEdit || row.isSaving"
+          x-on:keydown.enter.prevent="canSaveCoefficient(row) && saveCoefficient(row)"
+          :aria-label="'Coefficient de ' + row.subjectName"
+          class="input-field !my-0 w-20 text-right tabular-nums disabled:bg-slate-50 disabled:text-slate-500">
+         <button type="button" x-show="canEdit" x-on:click="saveCoefficient(row)" :disabled="!canSaveCoefficient(row)"
+          class="btn-modal-primary !h-8 !px-3 text-xs disabled:opacity-40 disabled:cursor-not-allowed">
+          <span x-text="row.isSaving ? '…' : 'Enregistrer'"></span>
+         </button>
+        </div>
+        <p x-show="row.error" x-cloak x-text="row.error" class="field-error"></p>
+       </td>
+       <td class="px-4 py-2.5 text-right tabular-nums"
+        :class="differsFromOfficial(row) ? 'text-amber-700 font-semibold' : 'text-slate-500'"
+        :title="differsFromOfficial(row) ? 'Le coefficient de la classe diffère de la valeur officielle' : ''"
+        x-text="row.officialCoefficient === null ? '—' : formatCoefficient(row.officialCoefficient)"></td>
+       <td class="px-4 py-2.5">
+        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset"
+         :class="sourceClass(row.source)" x-text="sourceLabel(row.source)"></span>
+       </td>
+       <td class="px-4 py-2.5">
+        <input type="text" x-model="row.groupDraft" :disabled="!canEdit || row.isSaving" maxlength="40"
+         x-on:keydown.enter.prevent="saveGroup(row)" x-on:blur="canEdit && saveGroup(row)"
+         :aria-label="'Groupe d\'options de ' + row.subjectName" placeholder="—"
+         class="input-field !my-0 w-40 disabled:bg-slate-50 disabled:text-slate-500">
+       </td>
+       <td class="px-4 py-2.5 text-right whitespace-nowrap">
+        <button type="button" x-show="canEdit && row.overrideId" x-cloak x-on:click="restoreCoefficient(row)" :disabled="row.isSaving"
+         :title="'Retirer le coefficient propre à la classe pour ' + row.subjectName"
+         class="text-xs font-medium text-slate-500 hover:text-primary-600 transition-colors mr-3">Rétablir</button>
+        <button type="button" x-show="canEdit" x-cloak x-on:click="toggleActive(row)" :disabled="row.isSaving"
+         class="text-xs font-medium transition-colors"
+         :class="row.isActive ? 'text-slate-500 hover:text-rose-600' : 'text-primary-600 hover:underline'"
+         x-text="row.isActive ? 'Désactiver' : 'Réactiver'"></button>
+       </td>
+      </tr>
+     </template>
+    </tbody>
+   </table>
+  </div>
+
+  <p x-show="!isLoading && rows.length === 0" x-cloak class="px-4 py-10 text-center text-sm text-slate-400"
+   x-text="classroomId
+     ? 'Aucun programme pour cette classe : toutes les matières notées figurent au bulletin. Donnez-lui une série (écran Classes) ou ajoutez des matières.'
+     : 'Choisissez une classe pour voir son programme.'"></p>
+ </div>
+
+ <p class="text-xs text-slate-400">
+  Une matière d'un groupe d'options n'est suivie que par les élèves qui l'ont choisie (inscription ou fiche élève) :
+  elle n'apparaît que dans leur grille de saisie et leur bulletin, et son coefficient ne compte que pour eux.
+ </p>
+</div>

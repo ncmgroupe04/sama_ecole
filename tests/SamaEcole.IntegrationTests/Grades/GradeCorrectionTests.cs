@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
@@ -122,7 +123,7 @@ public class GradeCorrectionTests : IAsyncLifetime
         Guid author, Role role, Guid? studentId = null, EvaluationType type = EvaluationType.Devoir1, decimal value = 5)
     {
         await using var ctx = _db.NewAppContext(Ecole);
-        return await new CreateGradeCommandHandler(ctx, new StubTenantProvider(Ecole), new TestCurrentUser(author, role))
+        return await new CreateGradeCommandHandler(ctx, new StubTenantProvider(Ecole), new TestCurrentUser(author, role), new SubjectFollowScope(ctx))
             .Handle(new CreateGradeCommand(studentId ?? Eleve, Maths, Trimestre, type, value), CancellationToken.None);
     }
 
@@ -244,7 +245,8 @@ public class GradeCorrectionTests : IAsyncLifetime
             await using var ctx = _db.NewAppContext(Ecole);
             var user = new TestCurrentUser(actor, role);
             var handler = new GetClassGradesQueryHandler(
-                ctx, new GradeCorrectionAuthorizer(ctx, user, new FixedTimeProvider(DateTimeOffset.UtcNow + after)));
+                ctx, new GradeCorrectionAuthorizer(ctx, user, new FixedTimeProvider(DateTimeOffset.UtcNow + after)),
+                new SubjectFollowScope(ctx));
 
             var rows = await handler.Handle(new GetClassGradesQuery(Classe, Maths, Trimestre), CancellationToken.None);
 
@@ -265,7 +267,7 @@ public class GradeCorrectionTests : IAsyncLifetime
         var clock = new FixedTimeProvider(DateTimeOffset.UtcNow + after);
 
         return new ImportGradeSheetCommandHandler(
-            ctx, new StubTenantProvider(Ecole), new StubParser(rows), user, new GradeCorrectionAuthorizer(ctx, user, clock));
+            ctx, new StubTenantProvider(Ecole), new StubParser(rows), user, new GradeCorrectionAuthorizer(ctx, user, clock), new SubjectFollowScope(ctx));
     }
 
     private static ImportGradeSheetCommand Import(bool dryRun) =>

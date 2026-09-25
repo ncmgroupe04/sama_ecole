@@ -125,6 +125,12 @@ public interface IApplicationDbContext
     /// <summary>Surcharges de coefficient par série ou par classe (Évolution N°4).</summary>
     DbSet<SubjectCoefficientOverride> SubjectCoefficientOverrides { get; }
 
+    /// <summary>Matières au programme d'une classe, avec leur groupe d'options (Évolution N°6).</summary>
+    DbSet<ClassSubject> ClassSubjects { get; }
+
+    /// <summary>Choix d'option d'un élève pour une année scolaire (Évolution N°6).</summary>
+    DbSet<StudentSubjectEnrollment> StudentSubjectEnrollments { get; }
+
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 

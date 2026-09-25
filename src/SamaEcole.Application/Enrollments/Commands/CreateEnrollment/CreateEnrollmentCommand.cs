@@ -59,4 +59,14 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     /// Sans effet pour un élève Externe.
     /// </summary>
     public bool IncludeBoardingFee { get; init; }
+
+    // --- Matières optionnelles (Évolution N°6) ---
+
+    /// <summary>
+    /// Options retenues pour l'année (identifiants de matières de classe, au plus une par groupe : sa LV2, son
+    /// option scientifique…). Un groupe sans choix reçoit l'option par défaut — la plus fréquente de
+    /// l'établissement. Absent du corps d'un client existant → toutes les options par défaut ; sans effet pour une
+    /// classe sans groupe d'options.
+    /// </summary>
+    public IReadOnlyList<Guid>? SubjectOptionIds { get; init; }
 }

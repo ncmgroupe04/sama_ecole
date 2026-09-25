@@ -66,7 +66,7 @@ public class EnrollmentBoardingTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     private CreateEnrollmentCommandHandler NewHandler(ApplicationDbContext db) =>
-        new(db, new StubTenantProvider(EcoleA), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService());
+        new(db, new StubTenantProvider(EcoleA), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService(), new TestCurrentUser());
 
     private static CreateEnrollmentCommand NewCommand(BoardingStatus status, Guid? roomId, bool includeFee) => new()
     {

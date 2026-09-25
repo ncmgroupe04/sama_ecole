@@ -9,7 +9,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadScripts, flush, plain } from './harness.mjs';
 
-const CATALOG = [{ code: 'S1', label: 'Série S1' }, { code: 'S2', label: 'Série S2' }];
+const CATALOG = [
+    { code: 'S1', label: 'Série S1', category: 'Scientifique', isLegacy: false, hasTemplate: true },
+    { code: 'S2', label: 'Série S2', category: 'Scientifique', isLegacy: false, hasTemplate: true },
+    { code: 'TECH', label: 'Séries techniques (ancienne nomenclature)', category: 'Technique', isLegacy: true, hasTemplate: false }
+];
 
 async function classroomsView({ role = 'Directeur', catalogFails = false } = {}) {
     const calls = [];
@@ -48,7 +52,23 @@ test('le catalogue des séries vient de l\'API, pas d\'une copie locale', async 
     const { view, calls } = await classroomsView();
 
     assert.ok(calls.some((c) => c.endpoint === '/coefficients/catalog'));
-    assert.deepEqual(plain(view.seriesOptions.map((o) => o.value)), ['', 'S1', 'S2']);
+    assert.deepEqual(plain(view.seriesOptionsFor({ series: '' }).map((o) => o.value)), ['', 'S1', 'S2']);
+    assert.equal(view.seriesOptionsFor({ series: '' })[0].label, 'Général / Collège (aucune série)');
+});
+
+test('un ancien code (TECH) n\'est proposé qu\'à la classe qui le porte déjà', async () => {
+    const { view } = await classroomsView();
+
+    assert.equal(view.seriesOptionsFor({ series: '' }).some((o) => o.value === 'TECH'), false);
+    assert.equal(view.seriesOptionsFor({ series: 'TECH' }).some((o) => o.value === 'TECH'), true);
+});
+
+test('une série avec modèle national annonce l\'injection de son programme', async () => {
+    const { view } = await classroomsView();
+
+    assert.equal(view.seriesHasTemplate({ series: 'S2' }), true);
+    assert.equal(view.seriesHasTemplate({ series: 'TECH' }), false);
+    assert.equal(view.seriesHasTemplate({ series: '' }), false);
 });
 
 test('le champ « Série » n\'apparaît que pour un lycée, et seulement si le catalogue est connu', async () => {

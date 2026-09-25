@@ -149,6 +149,11 @@ document.addEventListener('alpine:init', () => {
             this.viewMode = 'coefficients';
         },
 
+        /** Onglet « Matières par classe » (Évolution N°6) : mêmes rôles que les coefficients. */
+        showClassSubjects() {
+            this.viewMode = 'class-subjects';
+        },
+
         // Corriger/archiver une matière déjà créée partage EXACTEMENT la même permission que la
         // création côté serveur : un seul getter suffit.
         get canManageSubject() {
