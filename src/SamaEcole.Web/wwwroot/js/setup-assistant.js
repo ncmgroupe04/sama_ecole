@@ -178,6 +178,7 @@ document.addEventListener('alpine:init', () => {
 
             this.loaded = true;
             this.checking = false;
+            this.publishProgress();
 
             // Déplie l'étape courante (première étape applicable non faite et déverrouillée).
             const current = this.firstActionableIndex;
@@ -207,6 +208,25 @@ document.addEventListener('alpine:init', () => {
 
         get allDone() {
             return this.loaded && this.percent === 100;
+        },
+
+        /**
+         * « Paramétrage de base terminé » : les étapes qui PRÉCÈDENT la première inscription (année,
+         * pédagogie, frais, enseignants), les non applicables comptant comme faites. Volontairement
+         * sans « inscription » ni « simen » : l'inscription est justement ce que le garde-fou du mode
+         * test protège (school-mode-guard.js) — l'exiger ferait avertir APRÈS la première saisie.
+         */
+        get baseComplete() {
+            const base = ['annee', 'pedagogie', 'frais', 'enseignants'];
+            return this.loaded
+                && this.steps.filter((s) => base.includes(s.key)).every((s) => s.state === 'done' || s.state === 'na');
+        },
+
+        /** Publie l'état de base pour school-mode-guard.js (valeur lisible + événement pour qui attend). */
+        publishProgress() {
+            const baseComplete = this.baseComplete;
+            window.setupProgress = { baseComplete };
+            window.dispatchEvent(new CustomEvent('setup-progress', { detail: { baseComplete } }));
         },
 
         /**

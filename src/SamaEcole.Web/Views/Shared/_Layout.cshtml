@@ -38,6 +38,10 @@
  @* Assistant de Premier Paramétrage (bouton de la barre supérieure) — dépend d'auth.js et api.js,
  enregistre un écouteur alpine:init, donc script classique chargé avant Alpine (différé). *@
  <script src="~/js/setup-assistant.js" asp-append-version="true"></script>
+ @* Garde-fou « Mode test » : lecture partagée du mode (window.schoolMode, aussi utilisée par la
+    pastille de régime de auth.js) + modale d'avertissement. Après setup-assistant.js, dont il lit
+    l'événement `setup-progress`. *@
+ <script src="~/js/school-mode-guard.js" asp-append-version="true"></script>
  @* Formatage d'affichage partagé (magics Alpine $phone et $money) — script classique, donc exécuté avant
  Alpine (différé) : l'écouteur alpine:init est enregistré à temps. *@
  <script src="~/js/formatters.js" asp-append-version="true"></script>
@@ -486,26 +490,36 @@
  spécifié par le Volume 5 §3.3/§9 pour cette information — elle seule la porte désormais. *@
 
  @* Pastille de RÉGIME (bac à sable / exploitation réelle) : affichée dans les DEUX sens depuis le
- 15/09/2026 — le régime est le contexte de travail de l'établissement, pas seulement un
- avertissement de phase d'essai. Pour le Directeur, c'est un raccourci vers Paramètres ›
- Sécurité, où le retour au mode test reste visible en permanence ; pour les autres rôles, un
- simple rappel. Source : GET /schools/current/mode, voir sandboxModeBadge(). N'active rien. *@
- <div x-data="sandboxModeBadge()" x-show="loaded" x-cloak class="hidden sm:block">
- <a x-show="isDirecteur" x-cloak href="/parametres?tab=securite"
- :title="isLive ? 'Mode réel — les données enregistrées sont définitives (Paramètres › Sécurité)' : 'Mode test — les données saisies sont des essais et peuvent être réinitialisées (Paramètres › Sécurité)'"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium ring-1 transition-all duration-200 active:scale-95"
- :class="isLive ? 'bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200' : 'bg-amber-50 text-amber-700 ring-amber-200 hover:bg-amber-100'">
- <icon name="lightbulb" class="w-4 h-4" x-show="!isLive" x-cloak />
+ 15/09/2026 — le régime est le contexte de travail de l'établissement.
+ - MODE RÉEL : pastille grise discrète « Mode réel ».
+ - MODE TEST : AVERTISSEMENT orange plein « MODE TEST : Cliquez ici pour passer en Mode Réel »,
+ visible sur tous les écrans (mobile compris) tant que l'établissement est en bac à sable — le
+ risque est que le Directeur y saisisse de vraies données. Pour le Directeur elle mène droit à la
+ bascule (Paramètres › Paramètres système › Passer en mode réel, ancre #mode-reel) ; pour les
+ autres rôles, qui ne peuvent pas agir, c'est le même signal, non cliquable.
+ Source : GET /schools/current/mode, voir sandboxModeBadge(). N'active rien. *@
+ <div x-data="sandboxModeBadge()" x-show="loaded" x-cloak :class="isLive ? 'hidden sm:block' : ''">
+ <a x-show="isDirecteur" x-cloak href="/parametres?tab=securite#mode-reel"
+ :title="isLive ? 'Mode réel — les données enregistrées sont définitives (Paramètres › Paramètres système)' : 'Mode test — les données saisies sont des essais. Cliquez pour passer en Mode Réel (Paramètres › Paramètres système › Passer en mode réel)'"
+ class="inline-flex items-center gap-2 rounded-full text-sm ring-1 transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+ :class="isLive ? 'px-3.5 py-2 font-medium bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200 focus-visible:ring-slate-400' : 'px-3 py-2 font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700 shadow-sm hover:bg-orange-800 focus-visible:ring-orange-700'">
+ <icon name="alert-circle" class="w-4 h-4 shrink-0" x-show="!isLive" x-cloak />
  <icon name="shield" class="w-4 h-4" x-show="isLive" x-cloak />
- <span x-text="isLive ? 'Mode réel' : 'Mode test'"></span>
+ <span x-show="isLive" x-cloak>Mode réel</span>
+ <span x-show="!isLive" x-cloak>
+ <span class="uppercase">Mode test</span><span class="hidden lg:inline"> : Cliquez ici pour passer en Mode Réel</span>
+ </span>
  </a>
  <span x-show="!isDirecteur" x-cloak
- :title="isLive ? 'Mode réel — les données enregistrées sont définitives' : 'Mode test — les données saisies sont des essais'"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium ring-1"
- :class="isLive ? 'bg-slate-100 text-slate-600 ring-slate-200' : 'bg-amber-50 text-amber-700 ring-amber-200'">
- <icon name="lightbulb" class="w-4 h-4" x-show="!isLive" x-cloak />
+ :title="isLive ? 'Mode réel — les données enregistrées sont définitives' : 'Mode test — les données saisies sont des essais : n\'y enregistrez pas de données réelles. Seul le Directeur peut passer en Mode Réel.'"
+ class="inline-flex items-center gap-2 rounded-full text-sm ring-1"
+ :class="isLive ? 'px-3.5 py-2 font-medium bg-slate-100 text-slate-600 ring-slate-200' : 'px-3 py-2 font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700 shadow-sm'">
+ <icon name="alert-circle" class="w-4 h-4 shrink-0" x-show="!isLive" x-cloak />
  <icon name="shield" class="w-4 h-4" x-show="isLive" x-cloak />
- <span x-text="isLive ? 'Mode réel' : 'Mode test'"></span>
+ <span x-show="isLive" x-cloak>Mode réel</span>
+ <span x-show="!isLive" x-cloak>
+ <span class="uppercase">Mode test</span><span class="hidden lg:inline"> : données d'essai uniquement</span>
+ </span>
  </span>
  </div>
 
@@ -753,6 +767,11 @@
     Ouverte par window.guide('Titre', 'Message') quand un bouton d'action a un pré-requis manquant :
     remplace le bandeau rouge « erreur système » par un message d'étape à suivre. *@
  @await Html.PartialAsync("_GuidanceModal")
+
+ @* Modale d'AVERTISSEMENT « Établissement en Mode Test » — s'ouvre une fois par session à l'arrivée
+    sur Inscriptions, Caisse ou Notes tant que l'école est en bac à sable et son paramétrage de
+    base terminé (liveModeGuard, wwwroot/js/school-mode-guard.js). *@
+ @await Html.PartialAsync("_LiveModeWarningModal")
 
  @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -670,8 +670,9 @@ document.addEventListener('alpine:init', () => {
      * Pastille de RÉGIME de la barre supérieure — « Mode test » ou « Mode réel ». Elle ne disparaît
      * plus au passage en mode réel (demande du 15/09/2026) : le régime est le contexte de travail de
      * l'établissement, et il doit se lire d'un coup d'œil sur chaque écran, dans les deux sens. En
-     * mode test, elle rappelle à tout le personnel que les données saisies sont des essais, purgeables
-     * depuis Paramètres › Sécurité.
+     * mode test, elle devient un AVERTISSEMENT orange (« MODE TEST : Cliquez ici pour passer en Mode
+     * Réel ») : les données saisies sont des essais, et le Directeur est mené droit à la bascule
+     * (Paramètres › Paramètres système › Passer en mode réel).
      *
      * Source unique : GET /schools/current/mode (isLive). N'ACTIVE rien — la bascule reste un acte
      * confirmé du Directeur. Non bloquante : en cas d'échec réseau on retombe sur `isLive`, le défaut
@@ -692,7 +693,8 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
             try {
-                const mode = await window.api.get('/schools/current/mode');
+                // Lecture partagée avec la modale d'avertissement (school-mode-guard.js) : une requête.
+                const mode = await window.schoolMode.get();
                 this.isLive = !!(mode && mode.isLive);
             } catch {
                 this.isLive = true;

@@ -31,7 +31,7 @@ public class ConfirmDialogBodyTagHelper : TagHelper
 
     /// <summary>
     /// Libellé du bouton de fermeture. Non renseigné : « Retour » pour <c>success</c>, « Compris »
-    /// pour <c>info</c> (une modale de guidage se ferme sur un accusé de lecture, pas un retour arrière).
+    /// pour <c>info</c> et <c>warning</c> (une modale de guidage se ferme sur un accusé de lecture, pas un retour arrière).
     /// </summary>
     public string? CloseLabel { get; set; }
 
@@ -39,6 +39,8 @@ public class ConfirmDialogBodyTagHelper : TagHelper
     /// <c>success</c> (défaut) : coche verte animée, pour confirmer une action réussie.
     /// <c>info</c> : pastille d'information bleu Unikol, pour une modale de GUIDAGE (un pré-requis
     /// manque, on explique l'étape à faire) — surtout PAS un rendu d'erreur système.
+    /// <c>warning</c> : triangle d'alerte orange, plus grand, pour un AVERTISSEMENT à fort impact
+    /// (ex. « établissement en mode test ») — l'utilisateur doit s'arrêter, pas seulement être informé.
     /// </summary>
     public string Variant { get; set; } = "success";
 
@@ -67,7 +69,8 @@ public class ConfirmDialogBodyTagHelper : TagHelper
         output.TagName = null;
 
         var isInfo = string.Equals(Variant, "info", StringComparison.OrdinalIgnoreCase);
-        var closeLabel = CloseLabel ?? (isInfo ? "Compris" : "Retour");
+        var isWarning = string.Equals(Variant, "warning", StringComparison.OrdinalIgnoreCase);
+        var closeLabel = CloseLabel ?? (isInfo || isWarning ? "Compris" : "Retour");
 
         // Titre optionnel rendu DANS le bloc centré (voir TitleExpr) : `x-show` sur la même
         // expression pour qu'un titre vide ne laisse pas d'espace mort au-dessus du message.
@@ -88,7 +91,17 @@ public class ConfirmDialogBodyTagHelper : TagHelper
         // Pastille + glyphe selon le variant. `info` : cercle « i » bleu Unikol, statique (rien à
         // animer — ce n'est pas une récompense, juste un repère). Même contrainte que la coche :
         // <icon> ne se compile pas dans une chaîne HTML brute, d'où le SVG en clair.
-        var iconBlock = isInfo
+        var iconBlock = isWarning
+            ? """
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-warning-bg ring-4 ring-warning/20">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-9 w-9 text-warning">
+                        <path d="M12 3.5 21.5 20h-19L12 3.5Z" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" />
+                        <path d="M12 10v4.5" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" />
+                        <circle cx="12" cy="17.25" r="1.1" fill="currentColor" />
+                    </svg>
+                </div>
+                """
+            : isInfo
             ? """
                 <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-50">
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="h-7 w-7 text-primary-600">

@@ -330,7 +330,30 @@ document.addEventListener('alpine:init', () => {
                 this.loadError = window.api.toMessage(err, 'Erreur lors du chargement des paramètres.');
             } finally {
                 this.isLoading = false;
+                this.focusModeSection();
             }
+        },
+
+        /**
+         * Lien profond `/parametres?tab=securite#mode-reel` (badge « MODE TEST » de la barre supérieure,
+         * modale d'avertissement) : fait défiler jusqu'au bloc « Passer en mode réel » de la Zone de
+         * danger et le met brièvement en évidence. À appeler APRÈS load() : avant, l'écran est encore
+         * masqué (isLoading) et l'ancre n'a ni position ni hauteur. Sans effet hors de cette ancre.
+         */
+        focusModeSection() {
+            if (window.location.hash !== '#mode-reel' || this.tab !== 'securite') return;
+
+            const reveal = () => {
+                const target = document.getElementById('mode-reel');
+                if (!target) return;
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const highlight = ['ring-4', 'ring-orange-500/40'];
+                target.classList.add(...highlight);
+                setTimeout(() => target.classList.remove(...highlight), 3500);
+            };
+            // $nextTick : les sections dépendantes de isLoading doivent d'abord être rendues.
+            if (typeof this.$nextTick === 'function') this.$nextTick(reveal);
+            else reveal();
         },
 
         /** Charge les mentions du bulletin — séparé de load() (voir son commentaire d'appel). */
