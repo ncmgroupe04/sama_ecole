@@ -25,6 +25,15 @@ document.addEventListener('alpine:init', () => {
         // Filtres de l'appel.
         filters: { classroomId: '', subjectId: '', date: '', period: 'Matin' },
 
+        // Appel par CRÉNEAU d'emploi du temps (Évolution N°5). `mode` est le choix de l'utilisateur ; l'appel n'est
+        // réellement « par créneau » (`slotMode`) que si la classe a des cours ce jour-là — sinon, ou sur choix,
+        // c'est l'appel LIBRE (demi-journée, période saisie) d'avant. Confort d'affichage : le serveur revérifie
+        // tout (cours de la classe et de la matière, jour, titulaire, jour de repos).
+        mode: 'slot', // 'slot' | 'free'
+        slots: [],
+        selectedSlotId: '',
+        ticketNotice: null,
+
         // Roster chargé + saisie.
         entries: [],
         rosterLoaded: false,
@@ -42,6 +51,66 @@ document.addEventListener('alpine:init', () => {
             this.filters.date = this.toIsoDate(new Date());
             this.loadClassrooms();
             this.loadSubjects();
+
+            // Les cours du jour dépendent de la classe et de la date — et de la config d'établissement (jour de
+            // repos), qui arrive de façon asynchrone. $watch n'existe pas hors d'Alpine (tests) : les méthodes
+            // restent appelables directement.
+            if (typeof this.$watch === 'function') {
+                this.$watch('filters.classroomId', () => this.onSlotScopeChanged());
+                this.$watch('filters.date', () => this.onSlotScopeChanged());
+            }
+            Promise.resolve(Alpine.store('schoolConfig').init()).then(() => this.onSlotScopeChanged());
+        },
+
+        /** Le créneau à afficher : celui du cours choisi, ou la période saisie en appel libre. */
+        get periodLabel() {
+            if (!this.slotMode) return this.filters.period;
+            const slot = this.slots.find((s) => s.slotId === this.selectedSlotId);
+            return slot ? slot.label : '';
+        },
+
+        /** Vrai quand l'appel se fait sur un cours de l'emploi du temps (et non en mode libre). */
+        get slotMode() {
+            return this.mode === 'slot' && this.slots.length > 0;
+        },
+
+        setMode(mode) {
+            this.mode = mode;
+            this.selectedSlotId = '';
+            this.rosterLoaded = false;
+            this.ticketNotice = null;
+        },
+
+        onSlotScopeChanged() {
+            this.rosterLoaded = false;
+            this.ticketNotice = null;
+            return this.loadSlots();
+        },
+
+        /** Les cours de la classe pour la date choisie — vides un jour de repos, où l'appel est de toute façon refusé. */
+        async loadSlots() {
+            this.slots = [];
+            this.selectedSlotId = '';
+            if (!this.filters.classroomId || !this.filters.date || this.isRestDay) return;
+
+            try {
+                const params = new URLSearchParams({ classroomId: this.filters.classroomId, date: this.filters.date });
+                const data = await window.api.get(`/attendance/slots?${params.toString()}`);
+                this.slots = Array.isArray(data) ? data : [];
+            } catch (err) {
+                // Non bloquant : sans liste de cours, l'appel libre reste possible — mais l'utilisateur est prévenu,
+                // une liste vide ne devant jamais se confondre avec « aucun cours » (garde-fou des chargements muets).
+                console.error('Erreur chargement des cours du jour:', err);
+                this.slots = [];
+                toast.error(window.api.toMessage(err, 'Erreur lors du chargement des cours du jour.'));
+            }
+        },
+
+        /** Choisir un cours fixe la matière (celle du cours) et ouvre directement sa feuille d'appel. */
+        async selectSlot(slot) {
+            this.selectedSlotId = slot.slotId;
+            this.filters.subjectId = slot.subjectId;
+            await this.loadRoster();
         },
 
         toIsoDate(d) {
@@ -95,8 +164,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         get canLoad() {
-            return this.filters.classroomId && this.filters.subjectId && this.filters.date && this.filters.period.trim()
-                && !this.isRestDay;
+            if (this.isRestDay || !this.filters.classroomId || !this.filters.date) return false;
+
+            // Par créneau : il suffit d'avoir choisi un cours (la matière en découle, la période est dérivée).
+            if (this.slotMode) return !!this.selectedSlotId;
+
+            return !!(this.filters.subjectId && this.filters.period.trim());
         },
 
         async loadRoster() {
@@ -111,9 +184,11 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({
                     classroomId: this.filters.classroomId,
                     subjectId: this.filters.subjectId,
-                    date: this.filters.date,
-                    period: this.filters.period.trim()
+                    date: this.filters.date
                 });
+                // Par créneau : le serveur dérive la période du cours — on n'en envoie aucune.
+                if (this.slotMode) params.set('scheduleSlotId', this.selectedSlotId);
+                else params.set('period', this.filters.period.trim());
                 const roster = await window.api.get(`/attendance/roster?${params.toString()}`);
 
                 // Statut par défaut « Présent » pour une grille vierge ; sinon on reprend l'appel déjà saisi.
@@ -122,7 +197,11 @@ document.addEventListener('alpine:init', () => {
                     matricule: s.matricule,
                     fullName: s.fullName,
                     status: s.status || 'Present',
-                    lateMinutes: s.lateMinutes || 0
+                    lateMinutes: s.lateMinutes || 0,
+                    // Billet d'entrée visant ce cours (Évolution N°5) : présélectionne le retard côté serveur.
+                    entryTicketId: s.entryTicketId ?? null,
+                    entryTicketNumber: s.entryTicketNumber ?? null,
+                    entryTicketStatus: s.entryTicketStatus ?? null
                 }));
                 this.alreadySubmitted = roster.alreadySubmitted;
                 this.rosterLoaded = true;
@@ -166,17 +245,21 @@ document.addEventListener('alpine:init', () => {
                 // submitWithRetry ne rejoue QUE sur une coupure réseau, jamais sur une réponse HTTP —
                 // SubmitAttendanceSheetCommand est déjà idempotent par construction (contrainte
                 // d'unicité classe/matière/date/créneau, AGENTS.md JGK-L01), inutile d'y ajouter une clé.
-                await window.api.postWithRetry('/attendance', {
+                const payload = {
                     classroomId: this.filters.classroomId,
                     subjectId: this.filters.subjectId,
                     date: this.filters.date,
-                    period: this.filters.period.trim(),
                     entries: this.entries.map((e) => ({
                         studentId: e.studentId,
                         status: e.status,
                         lateMinutes: e.status === 'Late' ? Number(e.lateMinutes) || 0 : 0
                     }))
-                }, {
+                };
+                // Par créneau : le serveur dérive la période du cours ; en mode libre, c'est celle qui est saisie.
+                if (this.slotMode) payload.scheduleSlotId = this.selectedSlotId;
+                else payload.period = this.filters.period.trim();
+
+                await window.api.postWithRetry('/attendance', payload, {
                     onStateChange: (state, attempt) => {
                         this.sendState = state;
                         lastAttempt = attempt;
@@ -207,6 +290,42 @@ document.addEventListener('alpine:init', () => {
                 case 'retrying': return 'Connexion instable — nouvelle tentative en cours, en attente d\'envoi…';
                 case 'failed': return 'Échec après plusieurs tentatives — la saisie est conservée, réessayez.';
                 default: return '';
+            }
+        },
+
+        // ------------------------------------------------------------ Billets d'entrée (Évolution N°5)
+
+        ticketStatusLabel(status) {
+            switch (status) {
+                case 'Issued': return 'en attente d\'acceptation';
+                case 'Accepted': return 'accepté';
+                case 'Cancelled': return 'annulé';
+                default: return '';
+            }
+        },
+
+        /**
+         * « Accepter » : l'enseignant du cours (le serveur ne lui montre que SES cours) ou le Directeur, tant que le
+         * billet est en attente. Confort d'affichage — le serveur refuse (403) tout autre compte.
+         */
+        canAcceptTicket(entry) {
+            return !!entry.entryTicketId
+                && entry.entryTicketStatus === 'Issued'
+                && (window.auth.role === 'Enseignant' || window.auth.role === 'Directeur');
+        },
+
+        async acceptTicket(entry) {
+            if (!this.canAcceptTicket(entry)) return;
+
+            this.ticketNotice = null;
+            this.error = null;
+            try {
+                await window.api.post(`/billets/${entry.entryTicketId}/accept`, {});
+                // Le serveur a pu repasser la ligne à « Retard » : on relit la feuille plutôt que de deviner.
+                await this.loadRoster();
+                this.ticketNotice = `Billet ${entry.entryTicketNumber || ''} accepté : ${entry.fullName} est admis(e) en classe.`.replace('  ', ' ');
+            } catch (err) {
+                this.error = window.api.toMessage(err, "Erreur lors de l'acceptation du billet.");
             }
         },
 
