@@ -610,6 +610,44 @@
                         "Vérifiez qu'aucun groupe n'affiche d'« élèves sans option » avant d'ouvrir la saisie des notes : ces élèves n'apparaîtraient dans aucune grille du groupe.",
                         "Comparez la colonne « Officiel » au texte de l'Office du Baccalauréat en vigueur ; les fourchettes du référentiel (Maths 5-6 en T1/T2/STIDD) sont réglées sur la borne basse."
                     ]
+                },
+                {
+                    id: 'dispenses-matieres',
+                    title: "Dispenser un élève d'une matière obligatoire",
+                    location: 'Gestion Scolaire › Élèves › Fiche élève › Dispenses',
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Une dispense libère un élève d'une matière OBLIGATOIRE de sa classe pour l'année en cours — l'EPS pour " +
+                        "raison médicale, par exemple. Elle s'accompagne d'un MOTIF obligatoire. Ce n'est pas un choix d'option : " +
+                        "un élève qui ne prend pas une LV2 ne la suit simplement pas, sans dispense.",
+                    objectif:
+                        "Que l'élève ne soit ni noté ni pénalisé dans une matière qu'il ne peut pas suivre, sans fausser sa " +
+                        "moyenne, et que son bulletin le dise clairement.",
+                    probleme:
+                        "Sans dispense, un élève inapte en EPS restait dans la grille de saisie, une note à zéro ou une case vide " +
+                        "tirait sa moyenne vers le bas, et le bulletin ne distinguait pas une absence de note d'une dispense.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Élèves puis la fiche de l'élève : la section « Dispenses » liste les matières obligatoires de sa classe. Elle n'apparaît pas si la classe n'en a aucune.",
+                        "Cochez la matière dont l'élève est dispensé.",
+                        "Saisissez le MOTIF (obligatoire, 200 caractères au plus), par exemple « Inaptitude médicale, certificat du 12/09/2026 ».",
+                        "Si des notes existent déjà pour cette matière, l'écran annonce combien seront masquées des moyennes (elles sont conservées).",
+                        "Cliquez « Enregistrer les dispenses » : le bouton reste grisé tant qu'un motif manque.",
+                        "Vérifiez : la matière a disparu de la grille de saisie de l'élève, et son bulletin porte « Dispensé(e) » sur sa ligne.",
+                        "Pour lever une dispense, décochez la matière puis enregistrez."
+                    ],
+                    impacts: [
+                        "Moyennes : la matière sort du calcul ; le total des coefficients est celui des matières suivies.",
+                        "Saisie : l'élève n'apparaît plus dans la grille, la fiche papier ni le modèle Excel de la matière ; une note saisie ou importée pour lui est refusée.",
+                        "Bulletin : la ligne reste, marquée « Dispensé(e) », coefficient barré, hors totaux ; le motif n'y figure jamais.",
+                        "Les notes déjà saisies sont conservées et reviennent si la dispense est retirée.",
+                        "La dispense vaut pour l'année active seulement : une nouvelle année démarre sans dispense."
+                    ],
+                    recommandations: [
+                        "Rédigez un motif sobre : il reste dans le dossier, n'est jamais imprimé, et seuls le Directeur et le Secrétariat peuvent le lire.",
+                        "Retirez la dispense avant de saisir une note pour cet élève dans la matière : la saisie est refusée tant qu'elle existe.",
+                        "En cas de changement de classe en cours d'année, vérifiez ses dispenses depuis la fiche : elles restent enregistrées mais peuvent ne plus correspondre à la nouvelle classe."
+                    ]
                 }
             ]
         },

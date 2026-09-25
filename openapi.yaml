@@ -2303,6 +2303,64 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /class-subjects/students/{studentId}/exemptions:
+    get:
+      tags: [ClassSubjects]
+      summary: "Dispenses d'un élève pour l'année active, motif compris (Directeur, Secrétariat)"
+      description: >-
+        Matières obligatoires que l'on peut dispenser dans la classe de l'élève, l'éventuelle dispense de l'année
+        active avec son motif, et le nombre de notes de l'année qu'une dispense masquerait. Le motif peut être
+        médical, la route est donc réservée au Directeur et au Secrétariat (403 pour tout autre rôle).
+      parameters:
+        - { name: studentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: "Les matières dispensables (liste vide si la classe n'en a aucune)"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudentExemptions' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [ClassSubjects]
+      summary: "Remplacer les dispenses d'un élève pour l'année active (Directeur, Secrétariat)"
+      description: >-
+        `exemptions` est la liste COMPLÈTE des dispenses de l'élève pour l'année active ; une liste vide retire
+        toutes les dispenses. Tout est validé avant la moindre écriture, en une transaction : retrait par
+        suppression logique, motif modifié mis à jour, nouvelles dispenses ajoutées. 422 sur la clé `Exemptions`
+        pour un motif vide ou de plus de 200 caractères, une matière non dispensable (option, domaine, matière
+        d'une autre classe) ou un doublon. 422 sur la clé `StudentId` pour un élève sans classe. 409 pour deux
+        enregistrements simultanés. Le message d'erreur nomme la matière, jamais le motif.
+      parameters:
+        - { name: studentId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [exemptions]
+              properties:
+                exemptions:
+                  type: array
+                  items:
+                    type: object
+                    required: [subjectId, reason]
+                    properties:
+                      subjectId: { type: string, format: uuid }
+                      reason:
+                        type: string
+                        maxLength: 200
+                        description: "Motif obligatoire (200 caractères au plus) : donnée sensible, jamais imprimée."
+      responses:
+        '204':
+          description: "Dispenses enregistrées"
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: "Deux enregistrements simultanés se sont heurtés à l'index unique : recharger puis recommencer"
+        '422': { $ref: '#/components/responses/ValidationError' }
   /students:
     get:
       tags: [Students]
@@ -6088,6 +6146,22 @@ components:
                     classSubjectId: { type: string, format: uuid }
                     subjectId: { type: string, format: uuid }
                     subjectName: { type: string }
+
+    StudentExemptions:
+      type: object
+      properties:
+        studentId: { type: string, format: uuid }
+        schoolYearId: { type: string, format: uuid, description: "Année active" }
+        subjects:
+          type: array
+          items:
+            type: object
+            properties:
+              subjectId: { type: string, format: uuid }
+              name: { type: string, example: "EPS" }
+              isExempt: { type: boolean }
+              reason: { type: string, nullable: true, description: "Motif de la dispense : donnée sensible, null si la matière n'est pas dispensée" }
+              gradeCount: { type: integer, description: "Notes de l'année sur cette matière : celles qu'une dispense masquerait, conservées en base" }
 
     CoefficientGrid:
       type: object
