@@ -131,6 +131,9 @@ public interface IApplicationDbContext
     /// <summary>Choix d'option d'un élève pour une année scolaire (Évolution N°6).</summary>
     DbSet<StudentSubjectEnrollment> StudentSubjectEnrollments { get; }
 
+    /// <summary>Tranches d'âge par niveau propres à l'école (Évolution N°7, cartographie IEF).</summary>
+    DbSet<GradeAgeNorm> GradeAgeNorms { get; }
+
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 

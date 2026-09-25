@@ -92,6 +92,9 @@ internal static class UniqueConstraintCatalog
         ["student_subject_enrollments"] =
             "Cette option est déjà enregistrée pour cet élève cette année. Rechargez la fiche avant de réessayer.",
 
+        ["grade_age_norms"] =
+            "Une tranche d'âge est déjà réglée pour ce niveau. Rechargez la liste et modifiez-la au lieu d'en créer une seconde.",
+
         ["LateArrivals"] =
             "Un billet d'entrée est déjà actif pour cet élève, ce cours et ce jour. Il n'en faut pas un second : "
             + "retrouvez le billet dans la liste, ou annulez-le d'abord s'il a été émis par erreur.",

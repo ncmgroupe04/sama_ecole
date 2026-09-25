@@ -43,6 +43,16 @@ public class Enrollment : AuditableEntity, ITenantEntity
     /// </summary>
     public bool IsRepeating { get; set; }
 
+    /// <summary>
+    /// Élève TRANSFÉRÉ d'un autre établissement pour cette année (Évolution N°7, cartographie IEF). Avec
+    /// <see cref="IsRepeating"/>, il donne le statut de l'élève au rapport de rentrée : Redoublant, sinon
+    /// Transféré, sinon Nouveau. Faux par défaut : toute inscription existante reste « Nouveau ».
+    /// </summary>
+    public bool IsTransferredIn { get; set; }
+
+    /// <summary>Établissement d'origine d'un élève transféré, en texte libre ; null sinon.</summary>
+    public string? PreviousSchoolName { get; set; }
+
     public EnrollmentStatus Status { get; set; } = EnrollmentStatus.Confirmed;
 
     /// <summary>Montant total dû, en FCFA. Calculé à partir du barème de la classe, jamais négatif.</summary>

@@ -184,6 +184,13 @@
  </p>
  </div>
 
+ @* Âge hors de la tranche du niveau (Évolution N°7) : signalé, jamais bloquant — l'élève s'inscrit, et le rapport
+    de rentrée IEF le compte « en avance » ou « en retard ». *@
+ <div x-show="ageWarning" x-cloak role="note" class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+  <icon name="alert-circle" class="w-4 h-4 mt-0.5 shrink-0" />
+  <span x-text="ageWarning"></span>
+ </div>
+
  <!-- Classe redoublée (feature F) : coche portée par l'inscription, cochée [X] sur le
  bulletin (Enrollment.IsRepeating). Vaut pour une nouvelle inscription comme pour une
  réinscription — un élève peut redoubler qu'il soit nouveau dans l'école ou non. -->
@@ -195,6 +202,21 @@
  <span class="block text-xs text-slate-400">L'élève redouble cette classe — la case sera cochée sur son bulletin.</span>
  </span>
  </label>
+
+ @* Élève transféré d'un autre établissement (Évolution N°7) : statut « Transféré » du rapport de rentrée IEF
+    (Redoublant l'emporte si la classe est aussi redoublée). *@
+ <label class="flex items-start gap-2.5 cursor-pointer select-none">
+  <input type="checkbox" x-model="form.isTransferredIn" class="checkbox-field mt-0.5">
+  <span class="text-sm text-slate-700">
+   Élève transféré d'un autre établissement
+   <span class="block text-xs text-slate-400">Compté « Transféré » au rapport de rentrée de l'IEF.</span>
+  </span>
+ </label>
+ <div x-show="form.isTransferredIn" x-cloak>
+  <label for="enr-previous-school" class="form-label">Établissement d'origine</label>
+  <input id="enr-previous-school" type="text" x-model="form.previousSchoolName" maxlength="150" placeholder="ex : CEM Liberté 6, Dakar" class="input-field">
+  <p x-show="formErrors.previousschoolname" x-cloak x-text="formErrors.previousschoolname" class="field-error"></p>
+ </div>
 
  @* Matières optionnelles (Évolution N°6) : affichée seulement si la classe choisie a des groupes d'options
     (LV2, option scientifique de la L2…). L'option la plus fréquente de l'établissement est pré-cochée ; le

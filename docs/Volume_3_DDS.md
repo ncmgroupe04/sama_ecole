@@ -465,6 +465,21 @@ Trois tables tenant, snake_case (convention des modules les plus récents, §4.5
 
 ---
 
+### 5.12 Cartographie IEF (Évolution N°7) — `grade_age_norms` + colonnes d'inscription
+
+- `enrollments.IsTransferredIn` (`boolean`, défaut `false`) et `enrollments.PreviousSchoolName` (`varchar(150)`,
+  nullable) : statut « Transféré » du rapport de rentrée ; les inscriptions existantes restent « Nouveau ».
+- `grade_age_norms` — table tenant de **paramétrage** : `Id`, `SchoolId`, `GradeLevel` (`varchar(20)`, libellé de
+  `ClassroomGradeLevels`), `MinAge`, `MaxAge`, audit, suppression logique, `xmin`. `CHECK (MinAge >= 0 AND MaxAge >=
+  MinAge AND MaxAge <= 30)`, index unique partiel `(SchoolId, GradeLevel) WHERE NOT IsDeleted`. RLS + Global Query
+  Filter, `GRANT SELECT, INSERT, UPDATE`. N'existe que pour un niveau réglé par l'école : sans ligne, le modèle
+  national (`AgeNormTemplates`, en code) s'applique. Comme `school_settings`, elle survit à « Réinitialiser les
+  données » (aucune FK vers une table purgée).
+
+Seuils du conseil de classe (Évolution N°7) : six colonnes `numeric(4,2)` sur `school_settings`
+(`CouncilFelicitationsMin` 14, `CouncilHonorRollMin` 12, `CouncilEncouragementsMin` 12, `CouncilEliminatoryGrade` 5,
+`CouncilPromotionMin` 10, `CouncilRepeatMin` 8,5 — défauts en base).
+
 ## 6. Dictionnaire des énumérations
 
 | Énumération | Valeurs |

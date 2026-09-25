@@ -155,6 +155,11 @@ public class CreateEnrollmentCommandHandler(
                 ClassroomId = request.ClassroomId,
                 Type = request.Type,
                 IsRepeating = request.IsRepeating,
+                // Statut IEF (Évolution N°7) : l'établissement d'origine n'est retenu que pour un élève transféré.
+                IsTransferredIn = request.IsTransferredIn,
+                PreviousSchoolName = request.IsTransferredIn && !string.IsNullOrWhiteSpace(request.PreviousSchoolName)
+                    ? request.PreviousSchoolName.Trim()
+                    : null,
                 BoardingStatus = request.BoardingStatus,
                 RoomId = request.RoomId,
                 Status = EnrollmentStatus.Confirmed,

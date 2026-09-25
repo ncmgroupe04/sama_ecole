@@ -136,6 +136,11 @@ public class PagesController : Controller
     // JGK-F05 : consolidation des revenus + export comptable .xlsx. Même gabarit anonyme que
     // ci-dessus — l'accès réel est gardé par FinancialReportsController, qui cumule
     // [Authorize(Directeur, Finance)] ET [RequireFeature(AdvancedFinancialReports)].
+    // Évolution N°7 : rapports institutionnels (rapport de rentrée IEF, normes d'âge). InstitutionalController
+    // garde l'accès (Directeur/Secrétariat) et la RLS isole — gabarit anonyme comme le reste.
+    [HttpGet("/rapports/institutionnels")]
+    public IActionResult InstitutionalReports() => View("~/Views/Reports/Institutional.cshtml");
+
     [HttpGet("/rapports/financiers")]
     public IActionResult FinancialReport() => View("~/Views/Reports/Financial.cshtml");
 

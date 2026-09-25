@@ -1,0 +1,177 @@
+@{
+ ViewData["Title"] = "Rapports institutionnels";
+}
+
+@* Évolution N°7 — cartographie statistique et export de rentrée IEF. auth.js, api.js et pdf-preview.js sont
+   chargés par _Layout ; InstitutionalController garde l'accès (Directeur, Secrétariat) et la RLS isole. *@
+@section Scripts {
+ <script src="~/js/institutional-reports.js" asp-append-version="true"></script>
+}
+
+<div x-data="institutionalReportsView()" class="space-y-6">
+ <div>
+  <h1 class="page-title">Rapports institutionnels</h1>
+  <p class="page-subtitle">Rapport de rentrée destiné à l'Inspection de l'Éducation et de la Formation (IEF), et normes d'âge par niveau.</p>
+ </div>
+
+ <div x-show="error" x-cloak class="form-error-banner" x-text="error"></div>
+ <div x-show="notice" x-cloak role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800" x-text="notice"></div>
+
+ <div role="tablist" class="tab-nav w-fit">
+  <button type="button" role="tab" x-on:click="tab = 'ief'" :aria-selected="(tab === 'ief').toString()" class="tab-btn" :class="tab === 'ief' ? 'tab-btn-active' : ''">Rapport de rentrée IEF</button>
+  <button type="button" role="tab" x-on:click="tab = 'norms'" :aria-selected="(tab === 'norms').toString()" class="tab-btn" :class="tab === 'norms' ? 'tab-btn-active' : ''">Normes d'âge</button>
+ </div>
+
+ @* ── Rapport de rentrée IEF ─────────────────────────────────────────────────────────────── *@
+ <section x-show="tab === 'ief'" class="space-y-5">
+  <div class="flex flex-wrap items-end gap-4">
+   <div class="w-full sm:w-64">
+    <label class="form-label">Année scolaire</label>
+    <select-field model="schoolYearId" aria-label="Année scolaire" options-expr="yearOptions" on-change="load()" />
+   </div>
+   <div>
+    <label class="form-label" for="ief-ref-date">Âges au <span class="text-slate-400">(défaut : 31 décembre)</span></label>
+    <input id="ief-ref-date" type="date" x-model="ageReferenceDate" x-on:change="load()" class="input-field">
+   </div>
+   <div class="flex gap-2 sm:ml-auto">
+    <button type="button" x-on:click="exportReport('pdf')" :disabled="!schoolYearId || !!downloading" class="btn-modal-secondary group">
+     <icon name="print" class="w-4 h-4" />
+     <span x-text="downloading === 'pdf' ? 'Génération…' : 'Export PDF'"></span>
+    </button>
+    <button type="button" x-on:click="exportReport('excel')" :disabled="!schoolYearId || !!downloading" class="btn-modal-primary group">
+     <icon name="download" class="w-4 h-4" />
+     <span x-text="downloading === 'excel' ? 'Génération…' : 'Export Excel'"></span>
+    </button>
+   </div>
+  </div>
+
+  <template x-if="report">
+   <div class="space-y-6">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+     <stat-card label="Effectif" icon="users" accent="primary"><span x-text="report.totalStudents"></span></stat-card>
+     <stat-card label="Filles" icon="users" accent="primary"><span x-text="report.totalGirls"></span></stat-card>
+     <stat-card label="Garçons" icon="users" accent="primary"><span x-text="report.totalBoys"></span></stat-card>
+     <stat-card label="Redoublants" icon="document" accent="warning"><span x-text="report.totalRepeaters"></span></stat-card>
+     <stat-card label="Hors norme d'âge" icon="alert-circle" accent="warning"><span x-text="report.totalOutOfNorm"></span></stat-card>
+    </div>
+
+    <div class="card overflow-x-auto">
+     <p class="px-4 pt-4 text-sm font-semibold text-slate-800">1. Effectifs par classe, par tranche d'âge et par sexe</p>
+     <table class="min-w-full text-xs mt-2">
+      <thead class="bg-slate-50 text-slate-500">
+       <tr>
+        <th class="px-2 py-2 text-left" rowspan="2">Classe</th>
+        <th class="px-2 py-2" rowspan="2">Âge normal</th>
+        <template x-for="bucket in report.ageColumns" :key="bucket.label"><th class="px-2 py-1 text-center" colspan="2" x-text="bucket.label"></th></template>
+        <th class="px-2 py-2" rowspan="2">F</th><th class="px-2 py-2" rowspan="2">G</th><th class="px-2 py-2" rowspan="2">Total</th>
+        <th class="px-2 py-2" rowspan="2">Nouv.</th><th class="px-2 py-2" rowspan="2">Redoubl.</th><th class="px-2 py-2" rowspan="2">Transf.</th>
+        <th class="px-2 py-2" rowspan="2">En avance</th><th class="px-2 py-2" rowspan="2">En retard</th>
+       </tr>
+       <tr>
+        <template x-for="bucket in report.ageColumns" :key="bucket.label + '-fg'">
+         <th class="px-1 py-1 font-normal text-center" colspan="2">F · G</th>
+        </template>
+       </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+       <template x-for="row in report.classes" :key="row.classroomName">
+        <tr>
+         <td class="px-2 py-1.5 font-medium text-slate-800" x-text="row.classroomName"></td>
+         <td class="px-2 py-1.5 text-center text-slate-500" x-text="row.normLabel || '—'"></td>
+         <template x-for="(cell, i) in row.cells" :key="i">
+          <td class="px-1 py-1.5 text-center tabular-nums" colspan="2"><span x-text="blank(cell.girls)"></span> · <span x-text="blank(cell.boys)"></span></td>
+         </template>
+         <td class="px-2 py-1.5 text-center tabular-nums" x-text="row.girls"></td>
+         <td class="px-2 py-1.5 text-center tabular-nums" x-text="row.boys"></td>
+         <td class="px-2 py-1.5 text-center tabular-nums font-semibold" x-text="row.total"></td>
+         <td class="px-2 py-1.5 text-center tabular-nums" x-text="row.new"></td>
+         <td class="px-2 py-1.5 text-center tabular-nums" x-text="row.repeaters"></td>
+         <td class="px-2 py-1.5 text-center tabular-nums" x-text="row.transferred"></td>
+         <td class="px-2 py-1.5 text-center tabular-nums" :class="row.early ? 'text-amber-700 font-semibold' : ''" x-text="row.early"></td>
+         <td class="px-2 py-1.5 text-center tabular-nums" :class="row.late ? 'text-amber-700 font-semibold' : ''" x-text="row.late"></td>
+        </tr>
+       </template>
+      </tbody>
+     </table>
+     <p x-show="report.classes.length === 0" class="px-4 py-8 text-center text-sm text-slate-400">Aucune inscription sur cette année.</p>
+    </div>
+
+    <div class="card overflow-x-auto">
+     <p class="px-4 pt-4 text-sm font-semibold text-slate-800">2. Taux de redoublement par niveau</p>
+     <table class="min-w-full text-sm mt-2">
+      <thead class="bg-slate-50 text-xs text-slate-500"><tr>
+       <th class="px-3 py-2 text-left">Niveau</th><th class="px-3 py-2">Effectif</th><th class="px-3 py-2">Redoublants</th>
+       <th class="px-3 py-2">dont F</th><th class="px-3 py-2">dont G</th><th class="px-3 py-2">Taux</th>
+      </tr></thead>
+      <tbody class="divide-y divide-slate-100">
+       <template x-for="row in report.repetitionByLevel" :key="row.level">
+        <tr>
+         <td class="px-3 py-1.5 font-medium" x-text="row.level"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums" x-text="row.enrolled"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums" x-text="row.repeaters"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums" x-text="row.repeaterGirls"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums" x-text="row.repeaterBoys"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums font-semibold" x-text="pct(row.repetitionRate)"></td>
+        </tr>
+       </template>
+      </tbody>
+     </table>
+    </div>
+
+    <div class="card overflow-x-auto">
+     <p class="px-4 pt-4 text-sm font-semibold text-slate-800">3. Corps professoral par discipline et volume horaire</p>
+     <table class="min-w-full text-sm mt-2">
+      <thead class="bg-slate-50 text-xs text-slate-500"><tr>
+       <th class="px-3 py-2 text-left">Discipline</th><th class="px-3 py-2">Enseignants</th><th class="px-3 py-2">Hommes</th>
+       <th class="px-3 py-2">Femmes</th><th class="px-3 py-2">Heures / semaine</th>
+      </tr></thead>
+      <tbody class="divide-y divide-slate-100">
+       <template x-for="row in report.teachersByDiscipline" :key="row.discipline">
+        <tr>
+         <td class="px-3 py-1.5 font-medium" x-text="row.discipline"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums" x-text="row.teachers"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums" x-text="row.men"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums" x-text="row.women"></td>
+         <td class="px-3 py-1.5 text-center tabular-nums" x-text="hours(row.weeklyHours)"></td>
+        </tr>
+       </template>
+      </tbody>
+     </table>
+     <p class="px-4 py-3 text-xs text-slate-400">Disciplines et heures lues sur l'emploi du temps. Le détail par diplôme et la liste nominative figurent dans les exports PDF et Excel.</p>
+    </div>
+   </div>
+  </template>
+  <div x-show="isLoading" x-cloak class="card p-6 skeleton h-40"></div>
+ </section>
+
+ @* ── Normes d'âge ──────────────────────────────────────────────────────────────────────── *@
+ <section x-show="tab === 'norms'" x-cloak class="card overflow-x-auto">
+  <p class="px-4 pt-4 text-sm text-slate-500">
+   Âges révolus au 31 décembre de l'année de rentrée. Le modèle national retient l'âge normal du niveau, un an d'avance
+   et deux ans de retard. Un élève hors tranche est signalé à l'inscription et compté au rapport IEF, jamais refusé.
+  </p>
+  <table class="min-w-full text-sm mt-3">
+   <thead class="bg-slate-50 text-xs text-slate-500"><tr>
+    <th class="px-3 py-2 text-left">Niveau</th><th class="px-3 py-2">Modèle national</th>
+    <th class="px-3 py-2">Âge minimal</th><th class="px-3 py-2">Âge maximal</th><th class="px-3 py-2"><span class="sr-only">Actions</span></th>
+   </tr></thead>
+   <tbody class="divide-y divide-slate-100">
+    <template x-for="row in norms" :key="row.gradeLevel">
+     <tr>
+      <td class="px-3 py-1.5 font-medium" x-text="row.gradeLevel"></td>
+      <td class="px-3 py-1.5 text-center text-slate-500" x-text="`${row.templateMinAge} – ${row.templateMaxAge} ans`"></td>
+      <td class="px-3 py-1.5 text-center"><input type="number" min="0" max="30" x-model="row.draftMin" :disabled="!canEditNorms || row.saving" class="input-field !my-0 w-20 text-center" :aria-label="'Âge minimal ' + row.gradeLevel"></td>
+      <td class="px-3 py-1.5 text-center"><input type="number" min="0" max="30" x-model="row.draftMax" :disabled="!canEditNorms || row.saving" class="input-field !my-0 w-20 text-center" :aria-label="'Âge maximal ' + row.gradeLevel"></td>
+      <td class="px-3 py-1.5 text-right whitespace-nowrap">
+       <button type="button" x-show="canEditNorms && normDirty(row)" x-cloak x-on:click="saveNorm(row)" :disabled="row.saving" class="btn-modal-primary !h-8 !px-3 text-xs">Enregistrer</button>
+       <button type="button" x-show="canEditNorms && row.isCustom" x-cloak x-on:click="resetNorm(row)" :disabled="row.saving" class="text-xs font-medium text-slate-500 hover:text-primary-600 ml-2">Revenir au modèle</button>
+       <p x-show="row.error" x-cloak class="field-error" x-text="row.error"></p>
+      </td>
+     </tr>
+    </template>
+   </tbody>
+  </table>
+ </section>
+
+ @await Html.PartialAsync("_PdfPreviewModal")
+</div>

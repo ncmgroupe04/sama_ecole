@@ -1040,6 +1040,27 @@ l'école d'accueil lors d'une mutation, aux côtés du certificat.
 > **Une case vide signifie « non évaluée », et rien d'autre.** Imprimer « NA » à la place porterait un
 > jugement d'échec que personne n'a formulé — sur le document qui suit l'élève d'école en école.
 
+### 23.7 Cartographie statistique et rapport de rentrée IEF (Évolution N°7)
+
+Écran **Rapports institutionnels** (`/rapports/institutionnels`, Directeur et Secrétariat).
+
+- **Normes d'âge par niveau.** Modèle national en code : âge normal du niveau (CI 6 ans … CM2 11 ans, 6e 12 ans
+  … 3e 15 ans, Seconde 16 ans … Terminale 18 ans, maternelle TPS 2 à GS 5), tolérance d'**un an d'avance et deux
+  ans de retard** (CI : 5 à 8 ans). Âges **révolus au 31 décembre** de l'année de rentrée. Le Directeur peut
+  régler un niveau pour son école (onglet « Normes d'âge ») ou revenir au modèle. Le niveau d'une classe se lit sur
+  son nom (« 6e B » → Sixième) ; un nom qui ne le dit pas n'est pas contrôlé.
+- **Inscription.** Un âge hors tranche affiche un **avertissement, jamais un blocage**. Case « Élève transféré
+  d'un autre établissement » (+ établissement d'origine). Statut de l'élève : **Redoublant** (classe redoublée),
+  sinon **Transféré**, sinon **Nouveau**.
+- **Rapport de rentrée** (aperçu, **Export PDF** A4 paysage, **Export Excel**) — comptages sur les inscriptions
+  non annulées de l'année :
+  1. effectifs **par classe, par âge et par sexe** (F/G), statuts Nouveau/Redoublant/Transféré, élèves en avance
+     et en retard sur la norme, âge inconnu ; les âges extrêmes sont regroupés (« ≤ x », « ≥ y ») pour tenir sur
+     une page ;
+  2. **taux de redoublement par niveau** (dont filles, dont garçons) ;
+  3. **corps professoral** par discipline (enseignants H/F, heures hebdomadaires), par diplôme (académique ×
+     professionnel), et liste nominative avec volume horaire — disciplines et heures lues sur l'emploi du temps.
+
 ---
 
 **Fin du Volume 1.**

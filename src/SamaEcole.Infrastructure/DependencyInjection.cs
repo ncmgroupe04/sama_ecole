@@ -279,6 +279,8 @@ public static class DependencyInjection
         services.AddSingleton<IPlaneteExportSerializer, PlaneteExportSerializer>();
         services.AddSingleton<IStateducReportPdfGenerator, StateducReportPdfGenerator>();
         services.AddSingleton<IStateducReportExcelGenerator, StateducReportExcelGenerator>();
+        services.AddSingleton<IIefReportPdfGenerator, IefReportPdfGenerator>();
+        services.AddSingleton<IIefReportExcelGenerator, IefReportExcelGenerator>();
         services.AddSingleton<IStudentMutationCertificatePdfGenerator, StudentMutationCertificatePdfGenerator>();
         services.AddSingleton<ISkillsBookletPdfGenerator, SkillsBookletPdfGenerator>();
 

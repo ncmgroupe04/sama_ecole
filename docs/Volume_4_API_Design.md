@@ -821,6 +821,21 @@ reste `PUT`/`DELETE`, qui refusent indépendamment.
 Finance : une correction reste toujours tracée, jamais un écrasement silencieux de l'historique
 pédagogique.
 
+## 25. API Rapports institutionnels (Évolution N°7)
+
+Contrôleur `InstitutionalController`, module Pédagogie requis. Lecture : Directeur, Secrétariat.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/institutional/ief-report?schoolYearId=&ageReferenceDate=` | Rapport de rentrée IEF (JSON) : classes × âges × sexe, statuts, hors norme, redoublement par niveau, corps professoral. `ageReferenceDate` facultatif (défaut 31 décembre de l'année de rentrée) |
+| `GET` | `/api/v1/institutional/ief-report/pdf` · `/excel` | Même agrégat, en PDF (A4 paysage, `inline`) ou `.xlsx` |
+| `GET` | `/api/v1/institutional/age-norms` | Tranche d'âge de chaque niveau : modèle national et réglage de l'école |
+| `PUT` | `/api/v1/institutional/age-norms/{gradeLevel}` | `{ minAge, maxAge }` — règle un niveau (Directeur seul) ; `422` niveau inconnu ou bornes incohérentes |
+| `DELETE` | `/api/v1/institutional/age-norms/{gradeLevel}` | « Revenir au modèle » : archive le réglage (Directeur seul) |
+| `GET` | `/api/v1/institutional/age-check?classroomId=&birthDate=` | Contrôle d'âge à l'inscription : niveau, âge au 31/12, tranche, statut (`Early`/`Normal`/`Late`/`Unknown`), message — un avertissement, jamais un refus |
+
+`POST /api/v1/enrollments` accepte en plus `isTransferredIn` et `previousSchoolName` (≤ 150).
+
 ---
 
 **Fin du Volume 4.**

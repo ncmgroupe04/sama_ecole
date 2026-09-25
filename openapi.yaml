@@ -27,6 +27,7 @@ tags:
   - name: Subjects
   - name: Coefficients
   - name: ClassSubjects
+  - name: Institutional
   - name: Students
   - name: Teachers
   - name: Attendance
@@ -107,6 +108,99 @@ paths:
                 properties:
                   isConfigured: { type: boolean }
                   message: { type: string }
+
+  /institutional/ief-report:
+    get:
+      tags: [Institutional]
+      summary: Rapport de rentrée IEF (Évolution N°7) — Directeur, Secrétariat
+      description: >-
+        Comptages sur les inscriptions non annulées de l'année : effectifs par classe, âge (révolu à la date de
+        référence, défaut 31 décembre de l'année de rentrée) et sexe, statuts Nouveau/Redoublant/Transféré, élèves hors
+        tranche d'âge ; taux de redoublement par niveau ; corps professoral par discipline, diplôme et volume horaire
+        (emploi du temps). Mêmes chiffres que les exports /pdf et /excel.
+      parameters:
+        - { name: schoolYearId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: ageReferenceDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Le rapport (IefReportDto) }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /institutional/ief-report/pdf:
+    get:
+      tags: [Institutional]
+      summary: Rapport de rentrée IEF en PDF (A4 paysage, inline)
+      parameters:
+        - { name: schoolYearId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: ageReferenceDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  /institutional/ief-report/excel:
+    get:
+      tags: [Institutional]
+      summary: Rapport de rentrée IEF en classeur .xlsx (une feuille par tableau)
+      parameters:
+        - { name: schoolYearId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: ageReferenceDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Classeur
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+
+  /institutional/age-norms:
+    get:
+      tags: [Institutional]
+      summary: Tranches d'âge par niveau (modèle national et réglage de l'école)
+      responses:
+        '200': { description: Une ligne par niveau (gradeLevel, cycle, templateMinAge, templateMaxAge, minAge, maxAge, isCustom) }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /institutional/age-norms/{gradeLevel}:
+    put:
+      tags: [Institutional]
+      summary: Régler la tranche d'âge d'un niveau (Directeur seul)
+      parameters:
+        - { name: gradeLevel, in: path, required: true, schema: { type: string, example: "Sixième" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [minAge, maxAge]
+              properties:
+                minAge: { type: integer, minimum: 0, maximum: 30 }
+                maxAge: { type: integer, minimum: 0, maximum: 30 }
+      responses:
+        '204': { description: Enregistrée }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Institutional]
+      summary: Revenir au modèle national pour un niveau (Directeur seul)
+      parameters:
+        - { name: gradeLevel, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Réglage archivé }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /institutional/age-check:
+    get:
+      tags: [Institutional]
+      summary: Contrôle de la tranche d'âge à l'inscription — avertissement, jamais un refus
+      parameters:
+        - { name: classroomId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: birthDate, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200': { description: 'gradeLevel, age, minAge, maxAge, status (Unknown | Early | Normal | Late), referenceDate, message' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /state-integration/stateduc:
     get:
@@ -6356,6 +6450,10 @@ components:
         gender: { type: string, enum: [M, F], description: NewEnrollment uniquement }
         guardianName: { type: string }
         guardianPhone: { type: string }
+        isTransferredIn:
+          type: boolean
+          description: Élève transféré d'un autre établissement (statut « Transféré » du rapport de rentrée IEF — Évolution N°7).
+        previousSchoolName: { type: string, maxLength: 150, nullable: true, description: Établissement d'origine d'un élève transféré }
         subjectOptionIds:
           type: array
           nullable: true
