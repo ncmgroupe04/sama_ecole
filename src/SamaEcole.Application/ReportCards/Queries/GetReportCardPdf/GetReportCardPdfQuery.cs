@@ -196,7 +196,13 @@ public record ReportCardDto(
     CouncilDecision? ProposedCouncilDecision = null,
 
     // Vrai si l'élève a une note de composition sur la période : « présent » au sens du PV.
-    bool SatComposition = false);
+    bool SatComposition = false,
+
+    // Matières OBLIGATOIRES dont l'élève est dispensé (avec motif) : la ligne reste sur le bulletin, marquée
+    // « Dispensé(e) », coefficient barré, hors totaux (spécification §4.4 — écart assumé et validé à la règle
+    // n°12, consigné dans docs/design-references/README.md). Le motif n'est jamais porté ici. Null/vide — le
+    // cas de tout élève sans dispense — : le bulletin est strictement celui d'avant.
+    IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -397,7 +403,7 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         IReadOnlyDictionary<Guid, string?>? subjectNamesAr = null;
         if (isBilingualArabic)
         {
-            var subjectIds = summary.Subjects.Select(s => s.SubjectId).ToList();
+            var subjectIds = summary.Subjects.Select(s => s.SubjectId).Concat(summary.ExemptSubjects?.Select(s => s.SubjectId) ?? []).ToList();
             subjectNamesAr = await dbContext.Subjects.AsNoTracking()
                 .Where(s => subjectIds.Contains(s.Id))
                 .ToDictionaryAsync(s => s.Id, s => s.NameAr, cancellationToken);
@@ -453,7 +459,8 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             subjectNamesAr,
             student.Gender,
             councilRules.SuggestDecision(annualAverage, gradingScale),
-            summary.Subjects.Any(s => s.Composition is not null));
+            summary.Subjects.Any(s => s.Composition is not null),
+            ExemptSubjects: summary.ExemptSubjects);
 
         return dto;
     }
