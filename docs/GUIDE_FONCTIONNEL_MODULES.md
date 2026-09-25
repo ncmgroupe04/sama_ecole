@@ -894,8 +894,10 @@ lui-même (voir ci-dessous).
   obligatoire), réinitialisation de mot de passe, historique des changements de statut — réservé au
   Directeur. **Correction de profil** (`PATCH /users/{id}/profile`, 20/09/2026) : le Directeur peut
   aussi corriger le nom complet et/ou l'e-mail d'un compte géré — typiquement une faute de frappe
-  repérée après la création — sans passer par le changement d'e-mail en libre-service et sans jamais
-  pouvoir cibler sa propre fiche par cette voie.
+  repérée après la création — sans passer par le changement d'e-mail en libre-service. Sur **sa propre
+  ligne** (badge « Vous », crayon seul affiché), le Directeur ne peut corriger que son nom : son e-mail
+  reste changeable uniquement via « Changer mon e-mail » (mot de passe requis, sessions révoquées) ;
+  blocage, suspension, mot de passe et historique restent réservés aux autres comptes.
 - **Changer mon e-mail** (menu de session, libre-service, `POST /auth/change-email`) est réservé au
   **Directeur et au Super Admin** depuis le 20/09/2026 — les comptes que le Directeur crée
   (Secrétariat, Finance, Enseignant, Surveillant) n'ont plus cette option, disparue de leur menu, et

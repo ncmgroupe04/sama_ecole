@@ -66,7 +66,8 @@ public class UsersController(ISender mediator) : ControllerBase
     /// Corrige le nom complet et/ou l'e-mail d'un compte que le Directeur gère (Secrétariat, Finance,
     /// Enseignant, Surveillant) — typiquement une faute de frappe repérée après la création (POST
     /// /users). Distinct de POST /auth/change-email, réservé au changement EN LIBRE-SERVICE de son
-    /// propre compte (voir UpdateUserProfileCommand) : 422 si ciblé sur sa propre fiche.
+    /// propre compte (voir UpdateUserProfileCommand) : sur sa propre fiche, seul le nom est modifiable
+    /// (422 si l'e-mail diffère de l'actuel).
     /// </summary>
     [HttpPatch("{userId:guid}/profile")]
     [ProducesResponseType<UpdateUserProfileResult>(StatusCodes.Status200OK)]

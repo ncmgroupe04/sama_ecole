@@ -86,7 +86,13 @@
  <row-action icon="clock" label="Historique" on-click="openHistory(user)" />
  </row-actions>
  </template>
- <span x-show="user.isSelf" x-cloak class="text-xs text-slate-400 italic">—</span>
+ <!-- Sa propre ligne : uniquement la modification du profil (nom). Blocage, suspension, mot de
+ passe et historique restent réservés aux autres comptes (gardes serveur équivalentes). -->
+ <template x-if="user.isSelf">
+ <row-actions>
+ <row-action icon="pencil" label="Modifier mon profil" on-click="openEditProfile(user)" />
+ </row-actions>
+ </template>
  </td>
  </tr>
  </template>
@@ -153,7 +159,10 @@
  <!-- Correction du profil (nom complet / e-mail) — faute de frappe repérée après la création.
  Distinct de « Changer mon e-mail » (menu de session, libre-service, réservé au titulaire). -->
  <modal-shell open="editProfileTarget" on-close="closeEditProfile()" size="md" title="Modifier le profil">
- <modal-subtitle>Corrige le nom ou l'e-mail saisi à la création — sans lien avec le mot de passe.</modal-subtitle>
+ <modal-subtitle>
+ <span x-show="!(editProfileTarget && editProfileTarget.isSelf)">Corrige le nom ou l'e-mail saisi à la création — sans lien avec le mot de passe.</span>
+ <span x-show="editProfileTarget && editProfileTarget.isSelf" x-cloak>Met à jour votre nom. Votre rôle et votre statut ne sont pas modifiables ici.</span>
+ </modal-subtitle>
 
  <div x-show="editProfileErrors.global" x-cloak class="form-error-banner" x-text="editProfileErrors.global"></div>
 
@@ -168,7 +177,11 @@
  <div>
  <label for="edit-profile-email" class="form-label form-label-required">E-mail</label>
  <input id="edit-profile-email" type="email" x-model="editProfileForm.email" required maxlength="256"
+ :disabled="editProfileTarget && editProfileTarget.isSelf"
  class="input-field" :class="editProfileErrors.email && 'input-field-error'">
+ <p x-show="editProfileTarget && editProfileTarget.isSelf" x-cloak class="mt-1 text-xs text-slate-400">
+ Votre e-mail se change via « Changer mon e-mail » (menu de session) : votre mot de passe est demandé.
+ </p>
  <p x-show="editProfileErrors.email" x-cloak x-text="editProfileErrors.email" class="field-error"></p>
  </div>
 
