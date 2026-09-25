@@ -5294,8 +5294,8 @@ components:
         displayOrder: { type: integer, example: 0 }
         column1Header: { type: string, nullable: true }
         column2Header: { type: string, nullable: true }
-        isOptional: { type: boolean, description: Matière au choix (LV2, option scientifique) }
-        optionGroup: { type: string, nullable: true, example: "LV2", description: Groupe d'exclusion des options }
+        isOptional: { type: boolean, description: "Matière au choix (LV2, option scientifique)" }
+        optionGroup: { type: string, nullable: true, example: "LV2", description: "Groupe d'exclusion des options" }
 
     SubjectUpdateRequest:
       allOf:
@@ -5622,7 +5622,7 @@ components:
       type: object
       required: [subjectId, reason]
       properties:
-        subjectId: { type: string, format: uuid, description: Matière obligatoire du niveau de la classe courante }
+        subjectId: { type: string, format: uuid, description: "Matière obligatoire du niveau de la classe courante" }
         reason:
           type: string
           maxLength: 200
@@ -5647,7 +5647,7 @@ components:
     OptionGroupDto:
       type: object
       properties:
-        group: { type: string, nullable: true, example: "LV2", description: Null pour une option sans groupe (cumulable), une entrée par matière }
+        group: { type: string, nullable: true, example: "LV2", description: "Null pour une option sans groupe (cumulable), une entrée par matière" }
         subjects:
           type: array
           items: { $ref: '#/components/schemas/OptionSubjectDto' }
@@ -5658,7 +5658,7 @@ components:
         subjectId: { type: string, format: uuid }
         name: { type: string, example: "Espagnol" }
         isFollowed: { type: boolean }
-        gradeCount: { type: integer, description: Notes de l'année qu'une dispense masquerait }
+        gradeCount: { type: integer, description: "Notes de l'année qu'une dispense masquerait" }
 
     MandatorySubjectDto:
       type: object
@@ -5666,8 +5666,8 @@ components:
         subjectId: { type: string, format: uuid }
         name: { type: string, example: "EPS" }
         isExempt: { type: boolean }
-        reason: { type: string, nullable: true, description: Motif de la dispense (donnée sensible) ; null si non dispensé }
-        gradeCount: { type: integer, description: Notes de l'année qu'une dispense masquerait }
+        reason: { type: string, nullable: true, description: "Motif de la dispense (donnée sensible) ; null si non dispensé" }
+        gradeCount: { type: integer, description: "Notes de l'année qu'une dispense masquerait" }
 
     EnrollmentReceipt:
       type: object
