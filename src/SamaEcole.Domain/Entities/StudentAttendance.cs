@@ -21,4 +21,10 @@ public class StudentAttendance : AuditableEntity, ITenantEntity
 
     /// <summary>Minutes de retard, strictement positives si <see cref="Status"/> vaut Late, sinon zéro.</summary>
     public int LateMinutes { get; set; }
+
+    /// <summary>
+    /// Billet d'entrée (<see cref="LateArrival"/>) rattaché à cette ligne (Évolution N°5) : l'élève est en
+    /// retard parce que la Vie Scolaire l'a autorisé à entrer. Null pour toute ligne sans billet.
+    /// </summary>
+    public Guid? EntryTicketId { get; set; }
 }
