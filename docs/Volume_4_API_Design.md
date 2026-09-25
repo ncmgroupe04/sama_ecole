@@ -794,4 +794,39 @@ pédagogique.
 
 ---
 
+## 25. API Matières optionnelles et dispenses
+
+Base : `/api/v1/enrollments/{id}/options`. Spécification fonctionnelle : Volume 1 §8.8 ; tables : Volume 3 §5.12.
+Le module `Pedagogy` est requis sur les deux routes `options`.
+
+| Méthode | Route | Rôles | Effet |
+|---|---|---|---|
+| `GET` | `/api/v1/enrollments/{id}/options` | tout rôle de l'école | Options du niveau de la classe courante de l'élève et matières obligatoires du niveau, avec l'état de chacune |
+| `PUT` | `/api/v1/enrollments/{id}/options` | Directeur, Secrétariat | Enregistre les options suivies et/ou les dispenses de matières obligatoires |
+
+**`GET`** → `200` + `EnrollmentOptionsDto` : `enrollmentId`, `hasExplicitChoice`, `groups` (`[{ group, subjects: [{ subjectId, name, isFollowed, gradeCount }] }]` ; `group` est `null` pour une option sans groupe, une entrée par matière) et `mandatorySubjects` (`[{ subjectId, name, isExempt, reason, gradeCount }]`). `gradeCount` est le nombre de notes de l'année qu'une dispense masquerait. `hasExplicitChoice` est vrai si **au moins une option** a une dispense. `404` si l'inscription n'existe pas dans l'école courante.
+
+**`PUT`** — corps `{ "subjectIds": [...], "exemptions": [{ "subjectId", "reason" }] }`. Les deux moitiés sont **indépendantes** et facultatives : `null` (ou champ omis) = ne pas toucher à cette moitié ; une liste, même vide, la **remplace**. Réponses : `204` ; `403` (rôle) ; `404` (inscription introuvable, ou d'une autre école) ; `409` (deux enregistrements simultanés se heurtent à l'index unique) ; `422` dans les cas suivants :
+
+- une matière de `subjectIds` n'est pas une option du niveau de la classe courante de l'élève ;
+- deux matières d'un même groupe d'options ;
+- une matière de `exemptions` n'est pas une matière obligatoire du niveau, ou est dispensée deux fois ;
+- un `reason` manquant (vide) ou de plus de 200 caractères ;
+- inscription annulée, ou qui n'est pas celle de l'année scolaire active.
+
+**Champs ajoutés aux routes existantes.**
+
+- `POST /api/v1/enrollments` accepte `optionSubjectIds` : les options que l'élève **suit**. `null`/omis = aucun choix (il suit toutes les options) ; liste vide = aucune option suivie. Les dispenses sont écrites dans la **même transaction** que l'inscription (règle #3). La dispense d'une matière obligatoire ne se saisit pas ici (elle exige un motif : `PUT .../options`).
+- `GET|POST|PUT /api/v1/subjects` : `isOptional` et `optionGroup`. Réservé aux matières autonomes : `422` pour une activité de domaine ou un domaine qui porte des activités ; `optionGroup` (50 caractères, sans HTML) exige `isOptional`.
+
+### 25.1 Points d'attention du contrat
+
+**`PUT .../options` est un remplacement, pas un patch.** Chaque moitié reçue remplace l'ensemble existant (retrait par suppression logique, ajout des manquantes, mise à jour d'un motif modifié) dans une transaction. Tout client doit donc renvoyer l'**état complet** de la moitié qu'il modifie — comme `PUT /subjects/{id}`.
+
+**Le motif d'une dispense n'est renvoyé que par `GET .../options`.** Il n'apparaît dans aucun autre DTO (`ExemptSubjectDto`, bulletin, fiche élève, PDF) et n'est pas journalisé : le journal d'audit ne retient que l'action et son auteur.
+
+**Effets sur les autres routes.** Les matières dispensées sont exclues du sommaire de notes, de la fiche élève, de la feuille de saisie, de l'export Excel et de la fiche PDF de la matière. `POST /grades` refuse (`422`, erreur sur `subjectId`) une note pour un élève dispensé ; l'import Excel rejette sa ligne avec un message dédié. Les notes déjà saisies sont conservées.
+
+---
+
 **Fin du Volume 4.**

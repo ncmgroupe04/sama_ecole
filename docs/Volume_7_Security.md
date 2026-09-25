@@ -197,12 +197,16 @@ quotidien, aucune raison pour que les locaux physiques suivent une règle diffé
 | Nouvelle inscription / Réinscription | ✔ | ✔ | ✖ |
 | Annulation | ✔ | ✔ | ✖ |
 | Impression | ✔ | ✔ | ✔ |
+| Voir les options et dispenses d'une inscription | ✔ | ✔ | ✔ |
+| Modifier les options et dispenses d'une inscription | ✔ | ✔ | ✖ |
 
 La lecture des documents (reçu d'inscription, certificat de scolarité, exeat) est en réalité ouverte à
 tout rôle authentifié de l'école, Enseignant compris : l'établissement d'appartenance vient du JWT, un
 document d'une autre école reste introuvable (404 — `EnrollmentsController.Receipt`/`Certificate`/`Exeat`,
 commentaire « lecture ouverte comme le certificat de scolarité »). Seule l'ÉCRITURE (nouvelle inscription,
 réinscription, annulation) reste réservée à Directeur et Secrétariat (`EnrollmentWriters`).
+
+**Options et dispenses d'une inscription** (`GET`/`PUT /api/v1/enrollments/{id}/options`, Volume 4 §25). Écriture réservée à Directeur et Secrétariat (`EnrollmentWriters`), lecture ouverte à tout rôle de l'école, Enseignant compris ; module `Pedagogy` requis. Le **motif** d'une dispense de matière obligatoire est une **donnée sensible** (il peut être médical) : il n'est renvoyé que par le `GET .../options`, jamais imprimé sur un document (bulletin, fiche, feuille de notes), jamais repris dans un DTO de notes ni écrit en clair dans le journal d'audit.
 
 **Finance**
 

@@ -599,4 +599,38 @@ Table **tenant**, snake_case, protégée par la double barrière §2.2 (Global Q
 2. accorder `SELECT, INSERT, UPDATE` au rôle `sama_ecole_app` (pas de `DELETE` — règle #6) ;
 3. créer les deux index uniques **partiels** ci-dessus, que le scaffolding EF n'écrit pas seul.
 
+### 5.12 Domaine Matières optionnelles et dispenses — `enrollment_subject_exemptions` + colonnes `subjects.IsOptional/OptionGroup`
+
+Spécification fonctionnelle : Volume 1 §8.8. Une table nouvelle, deux colonnes ajoutées à `subjects`. Migrations `AddOptionalSubjects` (colonnes, table, RLS) et `AddOptionalSubjectsToPurges` (fonctions de purge).
+
+#### Colonnes ajoutées
+
+**`subjects`**
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `IsOptional` | `boolean` | NOT NULL, DEFAULT `false` — matière au choix (LV2, option scientifique) |
+| `OptionGroup` | `varchar(50)` | NULL — groupe d'exclusion (« LV2 ») ; sans effet si `IsOptional` est faux |
+
+#### Table `enrollment_subject_exemptions`
+
+Une ligne = « cet élève, pour l'année de cette inscription, ne suit pas cette matière ». Deux sortes de lignes, **déduites** (aucune colonne « type ») : une **option non suivie** (matière optionnelle, `Reason` NULL) ou la **dispense d'une matière obligatoire** (matière obligatoire, `Reason` renseigné, imposé par la commande). Aucune ligne = l'élève suit tout.
+
+| Colonne | Type | Contraintes |
+|---|---|---|
+| `Id` | `uuid` | PK |
+| `SchoolId` | `uuid` | NOT NULL, FK → `schools` |
+| `EnrollmentId` | `uuid` | NOT NULL, FK composite `(SchoolId, EnrollmentId)` → `enrollments` |
+| `SubjectId` | `uuid` | NOT NULL, FK composite `(SchoolId, SubjectId)` → `subjects` |
+| `Reason` | `varchar(200)` | NULL — motif d'une dispense de matière obligatoire ; peut être médical |
+| `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`, `IsDeleted`, `DeletedAt`, `DeletedBy` | — | audit + soft delete standard (règle #6) |
+
+- **Règle « ligne active ».** Une ligne compte quand la matière est encore `IsOptional` **ou** quand la ligne porte un `Reason`. Repasser une matière en « obligatoire » rend donc inertes ses lignes d'option (sans motif) : la matière revient à tous les élèves, sans purge. Cette règle est tenue à un seul endroit (`SubjectExemptions`).
+- **Unicité.** `CREATE UNIQUE INDEX UX_enrollment_subject_exemptions_key ON enrollment_subject_exemptions ("SchoolId", "EnrollmentId", "SubjectId") WHERE NOT "IsDeleted"` — index **partiel** : « refaire son choix » retire logiquement une ligne, la clé redevient libre. Un second index `("SchoolId", "SubjectId")` sert la question « quels élèves sont dispensés de cette matière ? » (feuilles de notes).
+- **FK composites** `(SchoolId, EnrollmentId)` et `(SchoolId, SubjectId)` en `RESTRICT` : un croisement de tenants est structurellement impossible, et la table ne s'efface pas en cascade.
+- **RLS** : policy `enrollment_subject_exemptions_tenant_isolation` (`USING` et `WITH CHECK` sur `SchoolId = current_setting('app.current_school_id')`), table ajoutée à `TenantTables` (règle #2), avec le Global Query Filter EF Core.
+- **Droits** : `GRANT SELECT, INSERT, UPDATE` au rôle `sama_ecole_app` — jamais de `DELETE` (le soft delete n'émet pas de SQL `DELETE`).
+- **Purges** : la table figure dans `reset_school_data` (« Réinitialiser les données ») et dans `delete_school_year` (suppression d'une année), avant les inscriptions.
+- **Pas de `xmin`.** Le choix d'options n'est pas une donnée sensible au sens de la règle #5 ; l'écriture est un remplacement idempotent. Deux écrans ouverts en même temps : le dernier enregistrement gagne (une violation de l'index unique reste, elle, un `409`).
+
 **Fin du Volume 3.**

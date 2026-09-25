@@ -97,6 +97,8 @@ Fichiers : `receipt-reference.png`, `bulletin-reference.png`, `dashboard-referen
 8. Deux blocs côte à côte : à gauche "Décision du Conseil" (Admis(e) en classe supérieure / Autorisé(e) à redoubler / Exclusion, à cocher) ; à droite le récapitulatif des moyennes par semestre + moyenne annuelle + rang annuel.
 9. Bas de page : zone "Observations du conseil des professeurs" avec ligne de signature, et à droite "Le Chef d'établissement" avec emplacement de cachet officiel.
 
+> **Écart validé à la référence (25/09/2026) : la mention « Dispensé(e) »** — une matière obligatoire dont l'élève est dispensé (avec motif) reste sur le bulletin, à sa place, avec « Dispensé(e) » dans la zone des notes, le coefficient barré et aucune moyenne ni point ; les totaux l'ignorent. Aucun autre élément du bulletin ne change (règle #12). Une option non suivie, elle, n'apparaît pas. Le motif de la dispense n'est jamais imprimé.
+
 **Format d'impression** : **A5 portrait, une seule page, sans débordement — contrainte stricte, sous test de non-régression** (`ReportCardDocumentTests` : un bulletin à 12 disciplines, une grille APC à 18 lignes, un bulletin primaire /10, une classe passerelle, tous en une page). Cohérent avec la règle déjà posée au Volume 1 §8 (ajustement automatique de l'interligne puis du corps entre 3 et 20 lignes, suppression des décimales inutiles). Corps du tableau des disciplines : **8,5 pt** dans le cas courant (≤ 12 disciplines), plancher à 88 % (~7,5 pt) au-delà.
 
 ## 3. Dashboard (`dashboard-reference.jpg`) — écran "Vue d'ensemble des élèves"

@@ -2120,6 +2120,69 @@ paths:
         '409': { description: 'Jeton de concurrence périmé, ou l''inscription est déjà dans un statut terminal' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /enrollments/{id}/options:
+    get:
+      tags: [Enrollments]
+      summary: Options et dispenses d'une inscription (matières optionnelles du niveau + matières obligatoires)
+      description: >-
+        Lecture ouverte à tout rôle de l'école ; module `Pedagogy` requis. Renvoie les matières
+        optionnelles du niveau de la classe COURANTE de l'élève, groupées (`groups`), avec l'état de
+        chacune (suivie ou non), et les matières obligatoires du niveau (`mandatorySubjects`) avec leur
+        éventuelle dispense et son MOTIF — seule route qui renvoie ce motif (donnée potentiellement
+        médicale, jamais imprimée). `hasExplicitChoice` est vrai si au moins une OPTION a une dispense ;
+        faux = l'élève suit toutes les options.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Options et matières obligatoires du niveau, avec l'état de chacune
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnrollmentOptionsDto' }
+        '404': { description: Inscription introuvable dans l'établissement courant }
+    put:
+      tags: [Enrollments]
+      summary: Enregistrer les options suivies et/ou les dispenses de matières obligatoires
+      description: >-
+        Réservé au Directeur et au Secrétariat ; module `Pedagogy` requis. Les deux moitiés du corps sont
+        INDÉPENDANTES et facultatives : `null` ou champ omis = ne pas toucher à cette moitié ; une liste
+        (même vide) la REMPLACE dans une transaction (suppression logique des lignes en trop). Le client
+        renvoie donc l'état complet de la moitié qu'il modifie. Idempotent.
+
+        `subjectIds` : les options que l'élève SUIT ; ses dispenses d'options deviennent toutes les autres
+        options du niveau de sa classe courante (sans motif). `exemptions` : les matières OBLIGATOIRES
+        dont il est dispensé, chacune avec un motif obligatoire (200 caractères au plus).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetEnrollmentOptionsRequest' }
+      responses:
+        '204': { description: Options enregistrées }
+        '403': { description: Réservé au Directeur et au Secrétariat }
+        '404': { description: Inscription introuvable dans l'établissement courant }
+        '409':
+          description: Deux enregistrements simultanés se sont heurtés à l'unicité (inscription, matière)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: >-
+            Matière hors niveau ou non optionnelle ; deux matières d'un même groupe ; matière dispensée
+            qui n'est pas une matière obligatoire du niveau, ou dispensée deux fois ; motif manquant ou
+            de plus de 200 caractères ; inscription annulée ou qui n'est pas celle de l'année active.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
   /enrollments/{id}/receipt:
     get:
       tags: [Enrollments]
@@ -5202,6 +5265,21 @@ components:
           nullable: true
           example: "Activités"
           description: Entête de la 2e colonne. Même portée que `column1Header`. Null → « Activités ».
+        isOptional:
+          type: boolean
+          default: false
+          description: >-
+            Matière au choix (LV2, option scientifique) : un élève peut en être dispensé (voir
+            PUT /enrollments/{id}/options). Réservé aux matières de premier niveau : refusé (422) sur une
+            activité de domaine ou sur un domaine qui porte des activités.
+        optionGroup:
+          type: string
+          maxLength: 50
+          nullable: true
+          example: "LV2"
+          description: >-
+            Groupe d'exclusion des options : un élève suit au plus une matière par groupe ; vide = option
+            cumulable. Exige `isOptional` (422 sinon).
 
     Subject:
       type: object
@@ -5216,6 +5294,8 @@ components:
         displayOrder: { type: integer, example: 0 }
         column1Header: { type: string, nullable: true }
         column2Header: { type: string, nullable: true }
+        isOptional: { type: boolean, description: Matière au choix (LV2, option scientifique) }
+        optionGroup: { type: string, nullable: true, example: "LV2", description: Groupe d'exclusion des options }
 
     SubjectUpdateRequest:
       allOf:
@@ -5510,6 +5590,84 @@ components:
         gender: { type: string, enum: [M, F], description: NewEnrollment uniquement }
         guardianName: { type: string }
         guardianPhone: { type: string }
+        optionSubjectIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: >-
+            Options (LV2, option scientifique) que l'élève SUIT. Null/omis = aucun choix : il suit toutes
+            les options. Liste vide = aucune option suivie. Les dispenses sont écrites dans la même
+            transaction que l'inscription. La dispense d'une matière obligatoire (motif requis) se saisit
+            par PUT /enrollments/{id}/options.
+
+    SetEnrollmentOptionsRequest:
+      type: object
+      description: >-
+        Deux moitiés indépendantes : `null`/omis = inchangée, liste (même vide) = remplace l'ensemble existant.
+      properties:
+        subjectIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: >-
+            Options que l'élève SUIT (au plus une par groupe d'options). Les autres options du niveau
+            deviennent ses dispenses.
+        exemptions:
+          type: array
+          nullable: true
+          items: { $ref: '#/components/schemas/MandatoryExemption' }
+          description: Matières OBLIGATOIRES dont l'élève est dispensé, avec motif.
+
+    MandatoryExemption:
+      type: object
+      required: [subjectId, reason]
+      properties:
+        subjectId: { type: string, format: uuid, description: Matière obligatoire du niveau de la classe courante }
+        reason:
+          type: string
+          maxLength: 200
+          description: >-
+            Motif obligatoire, sans HTML. Donnée sensible (peut être médicale) : jamais imprimé, renvoyé
+            seulement par GET /enrollments/{id}/options.
+
+    EnrollmentOptionsDto:
+      type: object
+      properties:
+        enrollmentId: { type: string, format: uuid }
+        hasExplicitChoice:
+          type: boolean
+          description: Vrai si au moins une OPTION a une dispense ; faux = l'élève suit toutes les options.
+        groups:
+          type: array
+          items: { $ref: '#/components/schemas/OptionGroupDto' }
+        mandatorySubjects:
+          type: array
+          items: { $ref: '#/components/schemas/MandatorySubjectDto' }
+
+    OptionGroupDto:
+      type: object
+      properties:
+        group: { type: string, nullable: true, example: "LV2", description: Null pour une option sans groupe (cumulable), une entrée par matière }
+        subjects:
+          type: array
+          items: { $ref: '#/components/schemas/OptionSubjectDto' }
+
+    OptionSubjectDto:
+      type: object
+      properties:
+        subjectId: { type: string, format: uuid }
+        name: { type: string, example: "Espagnol" }
+        isFollowed: { type: boolean }
+        gradeCount: { type: integer, description: Notes de l'année qu'une dispense masquerait }
+
+    MandatorySubjectDto:
+      type: object
+      properties:
+        subjectId: { type: string, format: uuid }
+        name: { type: string, example: "EPS" }
+        isExempt: { type: boolean }
+        reason: { type: string, nullable: true, description: Motif de la dispense (donnée sensible) ; null si non dispensé }
+        gradeCount: { type: integer, description: Notes de l'année qu'une dispense masquerait }
 
     EnrollmentReceipt:
       type: object

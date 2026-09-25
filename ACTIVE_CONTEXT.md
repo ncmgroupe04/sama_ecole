@@ -245,6 +245,54 @@ qui contourne encore par « une matière par niveau texte ») voit ses bulletins
    années passées ; seuls les coefficients suivent l'inscription de l'année.
 4. Le niveau d'une matière est un texte libre : la grille liste « toutes les matières hors primaire/maternelle ».
 
+### Matières optionnelles et dispenses (25/09/2026) — livré
+
+Un élève peut ne pas suivre toutes les matières de sa classe : une option non suivie (LV2, option scientifique)
+ou la dispense d'une matière obligatoire (EPS pour raison médicale, avec motif). Branche
+`feature/optional-subjects` (issue de `main`). Spécification : `docs/superpowers/specs/2026-09-25-optional-subjects-design.md`
+(commits `bfedc99`, `f6ad16e`). Plan : `docs/superpowers/plans/2026-09-25-optional-subjects.md`. Spécification
+fonctionnelle : `docs/Volume_1_Cahier_des_Charges.md` §8.8 ; tables `docs/Volume_3_DDS.md` §5.12 ; routes
+`docs/Volume_4_API_Design.md` §25.
+
+- **Données.** Colonnes `subjects.IsOptional` / `OptionGroup` et table `enrollment_subject_exemptions`
+  (`SchoolId`, Global Query Filter **et** policy RLS, `Reason` varchar(200) nullable, index unique partiel,
+  FK composites, suppression logique, **pas de `xmin`**), ajoutée à `reset_school_data` et aux purges d'année.
+  Une ligne est **active** si la matière est encore optionnelle **ou** si la ligne porte un motif.
+- **Calcul.** Classe statique `SubjectExemptions` (`ForStudentAsync` → `StudentExemptions` : `Mandatory` et
+  `HiddenIds` ; `StudentsExemptFromAsync`), lue par les lecteurs filtrés : sommaire de notes, fiche élève,
+  structure APC, feuilles de saisie/Excel/PDF, import et saisie (rejet 422). `GradeSummaryDto.ExemptSubjects`
+  (`ExemptSubjectDto` : coefficient effectif, jamais le motif) alimente le bulletin.
+- **API.** `GET`/`PUT /api/v1/enrollments/{id}/options` (Directeur + Secrétariat en écriture, module `Pedagogy`) ;
+  `optionSubjectIds` sur `POST /enrollments` ; `isOptional`/`optionGroup` sur `/subjects`.
+- **Écrans.** Matières (case « Matière optionnelle / au choix » + groupe d'options), Inscription (bloc
+  « Langues & options »), fiche élève › onglet « Options & dispenses ». Fiche d'aide « Matières optionnelles
+  et dispenses » (`help.js`). La ligne « N élève(s) dispensé(s) » sur la saisie des notes a été **retirée du
+  périmètre** (décision du propriétaire) : le rejet 422 à la saisie suffit.
+- **Bulletin.** Option non suivie : aucune ligne. Matière obligatoire dispensée : la ligne reste, « Dispensé(e) »
+  dans la zone des notes, coefficient barré, hors totaux. **Écart validé à la règle #12** (25/09/2026), consigné
+  dans `docs/design-references/README.md` : c'est le seul point où le bulletin s'écarte de la référence.
+
+**Invariant : sans dispense, le calcul et le bulletin sont strictement ceux d'avant.** Tant qu'aucun choix n'est
+enregistré, l'élève suit toutes les options (aucune ligne = tout suivi).
+
+**Points de vigilance connus :**
+1. Une matière ajoutée à un groupe d'options **déjà réparti** n'a de dispense pour personne : les élèves qui
+   avaient déjà choisi la suivent aussi, en plus de leur choix, jusqu'à ce que le secrétariat réenregistre
+   leur choix (l'enregistrement ajoute alors la dispense).
+2. Le secrétariat doit renseigner les choix **après** avoir marqué une matière comme optionnelle : jusque-là
+   tous les élèves la suivent (et elle reste dans leurs moyennes).
+3. Un choix qui ne dispense de rien est indiscernable de « aucun choix » : `hasExplicitChoice` reste faux,
+   sans effet sur le calcul.
+4. `PUT /subjects/{id}` et `PUT /enrollments/{id}/options` sont des **remplacements** : tout client renvoie
+   l'état complet de ce qu'il modifie (pour les options, de chaque moitié qu'il envoie).
+5. Le livret de compétences (`GetSkillsBookletPdf`) ignore `IsExempt` : il imprime la ligne d'une matière
+   dispensée comme avant.
+6. Le **motif** d'une dispense est une donnée sensible (médicale possible) : jamais imprimé, jamais dans un DTO
+   autre que le `GET .../options`.
+7. Changement de classe : les dispenses restent attachées à l'inscription ; les options proposées suivent le
+   niveau de la classe courante, et les dispenses d'un autre niveau sont retirées à la prochaine
+   sauvegarde de la moitié concernée.
+
 ### Inventaire (26/08/2026) — API et écran livrés
 
 Suivi du patrimoine, commun aux écoles publiques (tables-bancs, manuels d'État, consommables) et

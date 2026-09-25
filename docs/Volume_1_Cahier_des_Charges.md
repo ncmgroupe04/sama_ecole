@@ -304,6 +304,36 @@ l'ordre de priorité :
 - **Effet rétroactif.** Modifier un coefficient recalcule les moyennes et les bulletins de l'année en cours pour
   les classes concernées ; l'écran l'annonce dès que des notes existent.
 
+### 8.8 Matières optionnelles et dispenses
+
+Un élève peut ne pas suivre toutes les matières de sa classe, de deux façons :
+
+- **Option non suivie** — certaines matières sont **au choix** (LV2 : Espagnol, Arabe, Allemand ; option
+  scientifique : PC ou SVT). Dans Matières, la case « Matière optionnelle / au choix » les marque, et un
+  **groupe d'options** (« LV2 ») indique lesquelles s'excluent : un élève suit **au plus une matière par
+  groupe** ; une option sans groupe est cumulable.
+- **Dispense** — l'élève est exempté d'une matière **obligatoire** (ex. EPS pour raison médicale). Un
+  **motif** est obligatoire ; il n'est jamais imprimé.
+
+- **Saisie.** À l'inscription (bloc « Langues & options ») ou sur la fiche élève (onglet « Options &
+  dispenses »), le Secrétariat ou le Directeur enregistre les options suivies ; les autres options du niveau
+  deviennent des dispenses de l'inscription, donc de l'année. Les dispenses de matières obligatoires se saisissent
+  sur la fiche élève. Les options proposées sont celles du niveau de la **classe courante** de l'élève.
+- **Tant qu'aucun choix n'est enregistré**, l'élève suit toutes les options : rien ne change au déploiement ni
+  à l'activation d'une option.
+- **Saisie des notes.** L'élève dispensé (des deux sortes) ne figure ni dans la feuille de saisie, ni dans
+  l'export Excel, ni sur la fiche imprimée de la matière ; une note ne peut pas lui être saisie (rejet 422, et
+  ligne rejetée à l'import Excel).
+- **Moyennes.** La matière n'entre plus dans les moyennes ; le total des coefficients s'adapte (ex. 22 au lieu
+  de 25). Les notes déjà saisies sont **conservées** mais masquées.
+- **Bulletin.** Une option non suivie **n'apparaît pas**. Une matière obligatoire dispensée **reste**, à sa place :
+  la zone des notes porte « Dispensé(e) », le coefficient est barré, aucune moyenne ni point, et les totaux
+  l'ignorent.
+- **Portée.** Réservé aux matières autonomes (ni domaine d'évaluation, ni activité). Repasser une matière en
+  « obligatoire » rend ses options non suivies à tous. Une réinscription repart sans dispense.
+- **Rang.** Le classement compare les moyennes générales ; deux élèves aux options différentes sont comparés
+  sur la moyenne, non sur le total de points.
+
 ---
 
 ## 9. Rôles et permissions

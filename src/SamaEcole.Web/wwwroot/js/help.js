@@ -569,6 +569,48 @@
                         "Évitez de changer un coefficient en cours d'année sans nécessité : l'avertissement affiché rappelle que les bulletins déjà remis à la famille ne correspondront plus.",
                         "Réservez la portée « Classe » aux exceptions ; une valeur posée sur la série est plus simple à contrôler et à reconduire."
                     ]
+                },
+                {
+                    id: 'matieres-optionnelles',
+                    title: 'Matières optionnelles et dispenses',
+                    location: 'Gestion Scolaire › Matières, Inscriptions, fiche élève › Options & dispenses',
+                    href: '/matieres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Un élève peut ne pas suivre toutes les matières de sa classe. Une matière OPTIONNELLE est une matière au " +
+                        "choix — la seconde langue (Espagnol, Arabe, Allemand) ou l'option scientifique (PC ou SVT) : chaque élève " +
+                        "ne suit que celles qu'il a choisies. Une DISPENSE exempte un élève d'une matière obligatoire (l'EPS pour " +
+                        "raison médicale, par exemple), avec un motif. Dans les deux cas la matière n'entre plus dans sa moyenne " +
+                        "et n'apparaît plus dans la saisie des notes.",
+                    objectif:
+                        "Éditer des bulletins et des moyennes exacts pour chaque élève, sans le coefficient d'une matière qu'il " +
+                        "ne suit pas ou dont il est dispensé.",
+                    probleme:
+                        "Sans cela, une matière rattachée au niveau apparaissait pour toute la classe : il fallait laisser des " +
+                        "lignes vides, et la moyenne pouvait être faussée par une note d'une option abandonnée.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Matières, modifiez la matière (ex. Espagnol) et cochez « Matière optionnelle / au choix ».",
+                        "Renseignez le « Groupe d'options » (ex. LV2) : un élève ne pourra suivre qu'une seule matière de ce groupe. Laissez vide pour une option cumulable.",
+                        "À l'inscription ou à la réinscription, le bloc « Langues & options » apparaît : choisissez la matière suivie dans chaque groupe.",
+                        "Pour un élève déjà inscrit, ouvrez sa fiche › onglet « Options & dispenses », ajustez le choix et cliquez sur « Enregistrer ».",
+                        "Pour dispenser un élève d'une matière obligatoire, cochez la matière dans la section « Dispenses » et renseignez le motif (obligatoire).",
+                        "Vérifiez la saisie des notes : l'élève dispensé n'est plus listé pour la matière concernée."
+                    ],
+                    impacts: [
+                        "Tant qu'aucun choix n'est enregistré, l'élève suit toutes les options : rien ne change pour les élèves existants.",
+                        "Moyennes : la matière disparaît du calcul et le total des coefficients s'adapte.",
+                        "Bulletin : une option non suivie n'apparaît pas ; une matière obligatoire dispensée reste, marquée « Dispensé(e) », coefficient barré, hors totaux. Le motif n'est jamais imprimé.",
+                        "Les notes déjà saisies dans une matière abandonnée ou dispensée sont conservées, mais masquées ; l'écran indique combien.",
+                        "Le choix vaut pour l'année : à la réinscription, il faut le refaire.",
+                        "Repasser une matière en « obligatoire » rend ses options non suivies à tous les élèves."
+                    ],
+                    recommandations: [
+                        "Créez les groupes d'options avant l'ouverture des inscriptions, pour que le choix soit fait dès l'inscription.",
+                        "Renseignez le choix de chaque élève avant la première saisie de notes : sinon l'élève apparaît dans toutes les listes d'options.",
+                        "Utilisez le même nom de groupe pour toutes les langues d'un même niveau (« LV2 ») : c'est ce nom qui les rend exclusives.",
+                        "Rédigez le motif d'une dispense de façon sobre : il est conservé au dossier, mais il n'est jamais imprimé.",
+                        "Ne marquez pas comme optionnelle une matière que toute la classe suit : elle n'y gagne rien."
+                    ]
                 }
             ]
         },
