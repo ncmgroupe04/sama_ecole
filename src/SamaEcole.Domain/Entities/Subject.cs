@@ -92,4 +92,19 @@ public class Subject : AuditableEntity, ITenantEntity
     /// toute matière existante reste tacitement française sans changement de comportement.
     /// </summary>
     public SectionType SectionType { get; set; } = SectionType.French;
+
+    /// <summary>
+    /// Matière AU CHOIX (LV2, option scientifique) : un élève peut en être DISPENSÉ par son inscription
+    /// (<see cref="EnrollmentSubjectExemption"/>). Faux — la valeur de toutes les matières existantes —
+    /// signifie « suivie par tous », exactement le comportement d'avant. Réservé aux matières autonomes
+    /// (ni domaine parent, ni activité APC) : la validation Create/Update le tient.
+    /// </summary>
+    public bool IsOptional { get; set; }
+
+    /// <summary>
+    /// Groupe d'exclusion des options (« LV2 », « Option scientifique »), texte libre. Un élève suit AU
+    /// PLUS une matière par groupe ; une option sans groupe est cumulable. Comparé sans tenir compte de la
+    /// casse ni des espaces de bord. Sans effet si <see cref="IsOptional"/> est faux.
+    /// </summary>
+    public string? OptionGroup { get; set; }
 }

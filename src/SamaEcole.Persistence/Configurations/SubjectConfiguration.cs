@@ -51,6 +51,11 @@ public class SubjectConfiguration : IEntityTypeConfiguration<Subject>
         builder.Property(s => s.Column1Header).HasMaxLength(40);
         builder.Property(s => s.Column2Header).HasMaxLength(40);
 
+        // Pas de HasDefaultValue(false) : EF avertit qu'un défaut base sur un bool « écraserait » false à l'insertion.
+        // La migration générée pose de toute façon `defaultValue: false` sur la colonne NOT NULL ajoutée.
+        builder.Property(s => s.IsOptional).IsRequired();
+        builder.Property(s => s.OptionGroup).HasMaxLength(50);
+
         // Une matière est unique par (niveau, DOMAINE PARENT, nom) au sein de l'école — pas par nom seul :
         // « Maths » existe légitimement au primaire ET en terminale, avec des coefficients distincts, et
         // « Ressources » existe sous « Français » ET sous « Maths » dans la même grille APC. Sans

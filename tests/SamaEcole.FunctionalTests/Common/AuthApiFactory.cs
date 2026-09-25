@@ -421,6 +421,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Inscriptions (ticket JGK-E01), AVANT les tables qu'elles référencent en Restrict (élèves,
         // classes, années, catégories de frais). Les lignes de frais d'abord : elles pointent l'inscription.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM enrollment_fee_lines;");
+        // Dispenses de matières optionnelles : FK Restrict vers enrollments ET subjects, donc AVANT les deux.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM enrollment_subject_exemptions;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM enrollments;");
 
         // Avant les écoles : school_settings les référence en Restrict, et un PUT de test aurait

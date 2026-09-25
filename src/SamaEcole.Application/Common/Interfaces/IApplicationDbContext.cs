@@ -125,6 +125,9 @@ public interface IApplicationDbContext
     /// <summary>Surcharges de coefficient par série ou par classe (Évolution N°4).</summary>
     DbSet<SubjectCoefficientOverride> SubjectCoefficientOverrides { get; }
 
+    /// <summary>Dispenses d'un élève pour les matières optionnelles, portées par son inscription.</summary>
+    DbSet<EnrollmentSubjectExemption> EnrollmentSubjectExemptions { get; }
+
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 
