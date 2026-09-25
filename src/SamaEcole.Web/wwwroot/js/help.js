@@ -1425,7 +1425,9 @@
                     definition:
                         "Consolidation, sur une période choisie, de tous les appels soumis par les " +
                         "enseignants : taux de présence par classe, liste des élèves les plus absents, " +
-                        "et détail exportable par élève.",
+                        "détail exportable par élève, et vue par matière. Chaque élève est aussi décrit " +
+                        "en jours d'absence COMPLÈTE (tous les cours de la journée manqués) et PARTIELLE " +
+                        "(au moins un cours manqué, mais présent à un autre).",
                     objectif:
                         "Détecter un décrochage naissant AVANT qu'il ne devienne irréversible, en rendant " +
                         "visible, classe par classe, ce qui reste invisible dans un cahier d'appel " +
@@ -1438,11 +1440,13 @@
                         "Ouvrez Gestion Scolaire › Rapports et choisissez la période à analyser.",
                         "Sélectionnez, si besoin, une classe précise pour affiner la lecture.",
                         "Consultez le taux de présence par classe et la liste des élèves les plus concernés par l'absentéisme.",
+                        "Distinguez les jours d'absence complète des jours d'absence partielle : passer la souris sur ces colonnes indique le nombre de séances appelées sur lesquelles le chiffre repose.",
+                        "L'onglet « Par matière » donne, pour la même période et la même classe, les séances appelées et la répartition des statuts matière par matière — utile pour repérer un cours systématiquement déserté.",
                         "Sur toute ligne présentant au moins un retard ou une absence sur la période affichée, cliquez sur « Convoquer » (Directeur et SuperAdmin uniquement) : la convocation s'ouvre avec un motif DÉJÀ PRÉ-REMPLI des chiffres réellement comptés — retard(s), absence(s) — sans ressaisie, et reste modifiable avant validation.",
                         "Exportez le détail pour le transmettre au conseil de classe ou l'annexer à un dossier de convocation."
                     ],
                     impacts: [
-                        "Appel en classe : ce rapport ne fait que consolider les appels déjà soumis — un créneau non appelé n'y figure pas.",
+                        "Appel en classe : ce rapport ne fait que consolider les appels déjà soumis — un cours non appelé n'y figure pas. Le taux de présence reste (présents + retards) / lignes d'appel : les jours d'absence complète ou partielle sont un éclairage, pas un second taux.",
                         "Convocations : le bouton « Convoquer » ouvre directement l'avis PDF depuis le bilan, sans passer par l'écran Convocations parent ; il n'apparaît qu'au croisement des rôles autorisés sur les deux écrans (Directeur, SuperAdmin) — le Secrétariat, qui a accès à ce rapport mais pas à l'écran Convocations parent, ne voit pas cette action.",
                         "Aucun seuil automatique : le rapport propose la donnée chiffrée, mais c'est toujours un agent qui décide de convoquer — aucune convocation n'est jamais générée par lot ni déclenchée d'elle-même."
                     ],
@@ -2243,10 +2247,11 @@
                     href: '/presences',
                     roles: ['Enseignant', 'Directeur', 'Secrétariat'],
                     definition:
-                        "L'appel constate, pour une classe, une matière et un créneau donnés, le statut de " +
+                        "L'appel constate, pour une classe et un COURS de son emploi du temps, le statut de " +
                         "chaque élève inscrit : Présent, Absence justifiée, Absence injustifiée, ou Retard " +
-                        "— ce dernier accompagné du nombre de minutes. Un enseignant ne voit et ne renseigne " +
-                        "que les classes et matières pour lesquelles il est affecté.",
+                        "— ce dernier accompagné du nombre de minutes. La journée d'un élève se compose ainsi " +
+                        "de plusieurs appels, un par cours. Un enseignant ne voit et ne renseigne que ses " +
+                        "propres cours ; sans emploi du temps ce jour-là, l'appel libre par demi-journée reste possible.",
                     objectif:
                         "Constituer, séance après séance, l'historique d'assiduité qui fonde le rapport " +
                         "d'assiduité de la direction et, le cas échéant, l'alerte auprès de la famille d'un " +
@@ -2257,15 +2262,18 @@
                         "fait, au lieu d'être détecté dès les premières semaines où une intervention " +
                         "aurait encore un effet.",
                     procedure: [
-                        "Ouvrez Surveillance › Appel en classe et sélectionnez la classe, la matière et le créneau.",
-                        "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent.",
+                        "Ouvrez Surveillance › Appel en classe, choisissez la classe et la date : les cours de la journée s'affichent, tirés de l'emploi du temps.",
+                        "Cliquez sur le cours à appeler : la matière et l'horaire (08:00-10:00) sont repris du cours, rien à saisir. Un cours déjà appelé est signalé « Appel fait ».",
+                        "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent. Un élève muni d'un billet d'entrée pour CE cours apparaît déjà en Retard, avec la mention du billet.",
                         "Modifiez le statut de chaque élève concerné : Absence justifiée, Absence injustifiée, ou Retard — en précisant alors le nombre de minutes.",
+                        "Si un élève présente un billet d'entrée en attente, cliquez sur « Accepter » : l'enseignant du cours constate ainsi que l'élève est bien entré en classe.",
                         "Validez l'appel. La fiche est enregistrée avec son auteur et son horodatage.",
-                        "Un appel déjà soumis reste consultable par la Direction et le Secrétariat, mais ne se ressaisit pas au même créneau : une correction passe par le rapport d'assiduité, non par un second appel."
+                        "Un appel déjà soumis reste consultable par la Direction et le Secrétariat, mais ne se ressaisit pas pour le même cours : une correction passe par le rapport d'assiduité, non par un second appel.",
+                        "Sans emploi du temps ce jour-là, ou pour une demi-journée, choisissez « Faire un appel libre » et renseignez matière et créneau à la main."
                     ],
                     impacts: [
-                        "Billets : un retard constaté à l'appel peut donner lieu à un billet d'entrée, produit séparément par la Surveillance.",
-                        "Rapport d'assiduité : chaque appel soumis alimente directement le rapport détaillé par classe et par élève.",
+                        "Billets : le billet d'entrée vise un cours précis ; à l'appel de ce cours, l'élève est présélectionné en Retard et l'enseignant accepte le billet. Un billet annulé par la Vie Scolaire rend à l'élève son statut d'avant.",
+                        "Rapport d'assiduité : chaque appel soumis alimente directement le rapport détaillé par classe, par élève et par matière. Une journée où l'élève a manqué tous les cours compte en absence complète, une journée où il n'en a manqué qu'une partie en absence partielle.",
                         "Convocations : un absentéisme répété visible sur plusieurs appels motive fréquemment une convocation de parent.",
                         "Jours de repos : aucun appel ne s'enregistre un jour de repos de l'établissement (Paramètres › Notation & mentions) ; ces jours ne comptent donc jamais dans les taux de présence. Les appels déjà saisis avant un changement de réglage restent comptés."
                     ],
@@ -2283,7 +2291,8 @@
                     roles: ['Directeur', 'Surveillant'],
                     definition:
                         "Le billet documente un mouvement individuel d'élève en dehors des horaires " +
-                        "normaux. Une ENTRÉE TARDIVE motive le retard et l'autorise ; une SORTIE ANTICIPÉE " +
+                        "normaux. Une ENTRÉE TARDIVE motive le retard, vise le COURS que l'élève rejoint et " +
+                        "l'autorise — l'enseignant de ce cours l'accepte en classe ; une SORTIE ANTICIPÉE " +
                         "précise, en plus, qui est venu chercher l'élève — exigence de sécurité courante " +
                         "des établissements sénégalais — sauf autorisation écrite permettant une sortie " +
                         "seul. Chaque billet est imprimable au format A5.",
@@ -2298,13 +2307,15 @@
                         "il est arrivé.",
                     procedure: [
                         "Ouvrez Surveillance › Billets d'entrée.",
-                        "ENTRÉE TARDIVE : sélectionnez l'élève, renseignez le motif du retard, puis validez.",
+                        "ENTRÉE TARDIVE : sélectionnez l'élève, puis le cours visé — le cours en cours (à défaut le prochain) est proposé d'office, « Sans cours précis » reste possible —, renseignez le motif du retard, puis validez.",
+                        "Le billet imprimé porte le cours visé (matière, horaire, enseignant) et son statut : En attente d'acceptation, Accepté en classe ou Annulé.",
+                        "Un billet En attente peut être annulé (bouton « Annuler ») par la Vie Scolaire ou le Directeur, tant que l'enseignant ne l'a pas accepté ; l'appel reprend alors son état d'avant. Un billet accepté ne s'annule plus.",
                         "SORTIE ANTICIPÉE : sélectionnez l'élève, le motif, et la personne venue le chercher — ou l'autorisation écrite couvrant une sortie seul.",
                         "Imprimez le billet A5 généré et remettez-le à l'élève ou à la personne qui l'accompagne, selon l'usage de l'établissement.",
                         "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur."
                     ],
                     impacts: [
-                        "Appel en classe : un élève entré tardivement doit être recompté Présent, non Absent, sur le créneau qu'il a rejoint.",
+                        "Appel en classe : un élève entré tardivement est marqué en Retard, non Absent, sur le cours que vise son billet ; sa ligne d'appel est mise à jour dès l'émission du billet, même si l'appel de ce cours est déjà fait.",
                         "Registre de discipline : des retards ou sorties répétés et injustifiés peuvent motiver un examen disciplinaire.",
                         "Convocations : un billet à motif inhabituel ou répété est souvent le premier signal qui déclenche une convocation de parent."
                     ],

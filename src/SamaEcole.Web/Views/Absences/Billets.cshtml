@@ -46,6 +46,7 @@
                         <th class="py-3.5 px-4">Date</th>
                         <th class="py-3.5 px-4">Élève</th>
                         <th class="py-3.5 px-4">Retard</th>
+                        <th class="py-3.5 px-4">Statut</th>
                         <th class="py-3.5 px-4">Motif</th>
                         <th class="py-3.5 px-4 text-right">Billet</th>
                     </tr>
@@ -53,14 +54,14 @@
                 <tbody class="divide-y divide-slate-100">
                     <template x-if="isLoading">
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                            <td colspan="6" class="px-4 py-8 text-center text-slate-500">
                                 Chargement des retards...
                             </td>
                         </tr>
                     </template>
                     <template x-if="!isLoading && lateArrivals.length === 0">
                         <tr>
-                            <td colspan="5">
+                            <td colspan="6">
                                 <empty-state icon="clock" title="Aucun retard enregistré."
                                     hint="Les retards saisis par la Surveillance apparaîtront ici." />
                             </td>
@@ -76,8 +77,15 @@
                             <td class="px-4 py-4 whitespace-nowrap">
                                 <span class="status-badge-warning" x-text="item.minutes + ' min'"></span>
                             </td>
+                            @* Statut du billet (Évolution N°5) : vide pour un retard sans cours visé (tout l'historique). *@
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <span x-show="item.status" x-cloak :class="ticketStatusBadge(item.status)" x-text="ticketStatusLabel(item.status)"></span>
+                                <span x-show="!item.status" class="text-slate-400">—</span>
+                            </td>
                             <td class="px-4 py-4 text-slate-600 truncate max-w-xs" x-text="item.reason" :title="item.reason"></td>
                             <td class="px-4 py-4 whitespace-nowrap text-right">
+                                <button x-show="canCancelTicket(item)" x-cloak @@click="askCancelTicket(item)"
+                                        class="btn-modal-secondary mr-2 text-danger">Annuler</button>
                                 <button @@click="printBillet(item.id)" :disabled="printingId === item.id"
                                         class="btn-modal-secondary inline-flex items-center gap-2 disabled:opacity-60 group">
                                     <icon name="print" class="w-4 h-4" x-show="printingId !== item.id" />
@@ -113,6 +121,21 @@
                 <p x-show="createErrors.date" x-text="createErrors.date" class="field-error"></p>
             </div>
 
+            @* Cours que l'élève rejoint (Évolution N°5) : l'enseignant de ce cours accepte le billet en classe. *@
+            <div x-show="form.studentId" x-cloak>
+                <label class="form-label">Cours visé</label>
+                <select x-model="form.targetScheduleSlotId" :disabled="isLoadingSlots" class="input-field" aria-label="Cours visé">
+                    <option value="">Sans cours précis</option>
+                    <template x-for="slot in todaySlots" :key="slot.slotId">
+                        <option :value="slot.slotId" x-text="slotOptionLabel(slot)"></option>
+                    </template>
+                </select>
+                <p x-show="!isLoadingSlots && todaySlots.length === 0" class="mt-1 text-xs text-slate-500">
+                    Aucun cours à l'emploi du temps de sa classe ce jour-là : le billet sera émis sans cours précis.
+                </p>
+                <p x-show="createErrors.targetscheduleslotid" x-text="createErrors.targetscheduleslotid" class="field-error"></p>
+            </div>
+
             <div>
                 <label class="form-label form-label-required">Minutes de retard</label>
                 <input type="number" min="1" x-model.number="form.minutes" required
@@ -141,6 +164,21 @@
                 </button>
             </div>
         </form>
+    </modal-shell>
+
+    @* Annulation d'un billet en attente : l'appel de la classe reprend son état d'avant (Évolution N°5). *@
+    <modal-shell open="ticketToCancel !== null" size="md" on-close="closeCancel()" title="Annuler ce billet ?">
+        <p class="text-base font-medium text-slate-800">
+            Le billet de <span x-text="ticketToCancel ? ticketToCancel.studentFullName : ''"></span> ne l'autorisera plus à rejoindre sa classe.
+            Sa ligne dans l'appel reprendra son statut d'avant le billet.
+        </p>
+        <div x-show="cancelError" x-cloak class="form-error-banner mt-3" x-text="cancelError"></div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button type="button" @@click="closeCancel()" class="btn-modal-secondary group">Garder le billet</button>
+            <button type="button" @@click="confirmCancelTicket()" :disabled="isCancelling" class="btn-modal-primary group">
+                <span x-text="isCancelling ? 'Annulation...' : 'Annuler le billet'"></span>
+            </button>
+        </div>
     </modal-shell>
 
     @* Confirmation : retard enregistré *@

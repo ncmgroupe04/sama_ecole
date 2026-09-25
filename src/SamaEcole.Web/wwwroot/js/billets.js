@@ -40,8 +40,20 @@ document.addEventListener('alpine:init', () => {
             date: new Date().toISOString().split('T')[0],
             minutes: 5,
             reason: '',
-            observations: ''
+            observations: '',
+            targetScheduleSlotId: ''
         },
+
+        // Cours visé par le billet (Évolution N°5) : les cours du jour de la classe de l'élève. Le cours en cours
+        // (à défaut le prochain) est présélectionné ; « Sans cours précis » reste possible et produit un billet
+        // comme avant. Confort d'affichage : le serveur revérifie que le cours est bien celui de la classe, ce jour-là.
+        todaySlots: [],
+        isLoadingSlots: false,
+
+        // Annulation d'un billet en attente (Vie Scolaire / Directeur) — jamais sans confirmation.
+        ticketToCancel: null,
+        isCancelling: false,
+        cancelError: '',
 
         // ---------------------------------------------------------------- Billets de sortie (EarlyDeparture)
         earlyDepartures: [],
@@ -64,6 +76,94 @@ document.addEventListener('alpine:init', () => {
             this.loadLateArrivals();
             this.loadEarlyDepartures();
             this.loadStudents();
+
+            // $watch n'existe pas hors d'Alpine (tests) : loadTodaySlots reste appelable directement.
+            if (typeof this.$watch === 'function') {
+                this.$watch('form.studentId', () => this.loadTodaySlots());
+                this.$watch('form.date', () => this.loadTodaySlots());
+            }
+        },
+
+        /** Les cours de la classe de l'élève à la date du retard ; présélectionne le cours en cours, sinon le prochain. */
+        async loadTodaySlots() {
+            this.todaySlots = [];
+            this.form.targetScheduleSlotId = '';
+            if (!this.form.studentId || !this.form.date) return;
+
+            this.isLoadingSlots = true;
+            try {
+                const params = new URLSearchParams({ studentId: this.form.studentId, date: this.form.date });
+                const data = await api.get(`/absences/today-slots?${params.toString()}`);
+                this.todaySlots = Array.isArray(data) ? data : [];
+                const preselected = this.todaySlots.find((s) => s.isCurrent) || this.todaySlots.find((s) => s.isNext);
+                this.form.targetScheduleSlotId = preselected ? preselected.slotId : '';
+            } catch (error) {
+                console.error('Today slots fetch error:', error);
+                this.todaySlots = [];
+                toast.error(window.api.toMessage(error, 'Erreur lors du chargement des cours du jour.'));
+            } finally {
+                this.isLoadingSlots = false;
+            }
+        },
+
+        /** Libellé d'un cours dans le sélecteur : « 08:00-10:00 · Mathématiques (Awa Sow) ». */
+        slotOptionLabel(slot) {
+            const marker = slot.isCurrent ? ' — en cours' : (slot.isNext ? ' — prochain' : '');
+            const taken = slot.ticketStatus ? ' — billet déjà émis' : '';
+            return `${slot.label} · ${slot.subjectName} (${slot.teacherName})${marker}${taken}`;
+        },
+
+        // ---------------------------------------------------------------- Statut et annulation du billet d'entrée
+
+        ticketStatusLabel(status) {
+            switch (status) {
+                case 'Issued': return 'En attente d\'acceptation';
+                case 'Accepted': return 'Accepté en classe';
+                case 'Cancelled': return 'Annulé';
+                default: return '';
+            }
+        },
+
+        ticketStatusBadge(status) {
+            switch (status) {
+                case 'Issued': return 'status-badge-warning';
+                case 'Accepted': return 'status-badge-success';
+                case 'Cancelled': return 'status-badge-danger';
+                default: return 'status-badge-neutral';
+            }
+        },
+
+        /** Annulable tant qu'il est en attente ; le serveur refuse un billet déjà accepté (422) et tout autre rôle (403). */
+        canCancelTicket(item) {
+            return this.canManageBillets && item.status === 'Issued';
+        },
+
+        askCancelTicket(item) {
+            this.cancelError = '';
+            this.ticketToCancel = item;
+        },
+
+        closeCancel() {
+            this.ticketToCancel = null;
+            this.cancelError = '';
+        },
+
+        async confirmCancelTicket() {
+            if (!this.ticketToCancel) return;
+
+            this.isCancelling = true;
+            this.cancelError = '';
+            try {
+                await api.post(`/billets/${this.ticketToCancel.id}/cancel`, {});
+                this.ticketToCancel = null;
+                await this.loadLateArrivals();
+                toast.success('Billet annulé.');
+            } catch (error) {
+                console.error('Ticket cancel error:', error);
+                this.cancelError = window.api.toMessage(error, "Erreur lors de l'annulation du billet.");
+            } finally {
+                this.isCancelling = false;
+            }
         },
 
         async loadLateArrivals() {
@@ -112,7 +212,9 @@ document.addEventListener('alpine:init', () => {
                     date: this.form.date,
                     minutes: Number(this.form.minutes),
                     reason: this.form.reason,
-                    observations: this.form.observations
+                    observations: this.form.observations,
+                    // Cours visé (Évolution N°5) : null = billet sans cours précis, comme avant.
+                    targetScheduleSlotId: this.form.targetScheduleSlotId || null
                 });
 
                 this.isCreateOpen = false;
@@ -156,8 +258,10 @@ document.addEventListener('alpine:init', () => {
                 date: new Date().toISOString().split('T')[0],
                 minutes: 5,
                 reason: '',
-                observations: ''
+                observations: '',
+                targetScheduleSlotId: ''
             };
+            this.todaySlots = [];
             this.createErrors = {};
         },
 
