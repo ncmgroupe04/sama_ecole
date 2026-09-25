@@ -4814,6 +4814,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 - [ ] **Step 1: Préciser la spécification** (`2026-09-25-optional-subjects-design.md`, telle qu'amendée par le commit `f6ad16e`)
 
 - **Statut** : « Validé, amendé le 25/09/2026 (volet dispense d'une matière obligatoire) ; plan d'implémentation : `docs/superpowers/plans/2026-09-25-optional-subjects.md`. »
+- **§6.4** : retirer « Saisie des notes : aucun changement, hors une ligne « N élève(s) dispensé(s) de cette matière » » au profit de « Saisie des notes : aucun changement d'écran » (décision du propriétaire du 25/09/2026 : hors périmètre, le rejet 422 à la saisie suffit).
 - **§1** : remplacer « Aujourd'hui, un élève qui ne suit pas l'Arabe voit donc sa ligne « Arabe » (vide) sur le bulletin, et apparaît dans la feuille de saisie de cette matière. » par : « Le bulletin secondaire n'imprime que les matières ayant une note ; la grille APC, elle, imprime toutes les lignes du niveau. Aujourd'hui, un élève qui ne suit pas l'Arabe apparaît dans la feuille de saisie de cette matière, sa note éventuelle entre dans sa moyenne, et (grille APC) sa ligne est imprimée vide. »
 - **§3.2** : ajouter « Une ligne est **active** quand la matière est encore `IsOptional` **ou** quand la ligne porte un `Reason` : repasser une matière en « obligatoire » rend ses lignes d'option, sans motif, inertes (la matière revient à tous, sans purge). »
 - **§4.1** : remplacer `SubjectExemptionLoader` par la classe **statique** `SubjectExemptions` : `ForStudentAsync` renvoie un `StudentExemptions` (les deux sortes de dispenses, dont `Mandatory` — les matières obligatoires dispensées, avec nom et coefficient — et `HiddenIds` — les options non suivies) et `StudentsExemptFromAsync` les élèves dispensés d'une matière ; retirer la phrase sur la variante par classe.
@@ -4965,7 +4966,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 | §5.2 `GET`/`PUT options`, `Exemptions`, `optionSubjectIds` | 6 (écart E5 : `null` = inchangée) |
 | §6.1 Matières, §6.2 Inscription | 7, 8 |
 | §6.3 fiche élève › « Options & dispenses » | 8 |
-| §6.4 ligne « N élève(s) dispensé(s) » sur la saisie | **Non planifié — décision à prendre** : l'écran de saisie (`grades.js`) n'a pas été lu ; cette ligne demande que `GetClassGrades` renvoie le nombre d'exemptés (changement de forme de la réponse). À trancher avec la validation du plan ; sinon retirée de la spécification. |
+| §6.4 ligne « N élève(s) dispensé(s) » sur la saisie | **Retirée (décision du propriétaire, 25/09/2026)** : hors périmètre, le rejet 422 à la saisie suffit. Retirée de la spécification en Tâche 9. |
 | §6.5 aide | 9 |
 | §7 tests (dont motif, bulletin) | chaque tâche |
 | §8 documentation | 9 |
