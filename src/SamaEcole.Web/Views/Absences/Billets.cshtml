@@ -75,7 +75,7 @@
                                 <div class="text-xs text-slate-500" x-text="'Matricule : ' + item.studentMatricule"></div>
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
-                                <span class="status-badge-warning" x-text="item.minutes + ' min'"></span>
+                                <span class="status-badge-warning" x-text="lateCellText(item)"></span>
                             </td>
                             @* Statut du billet (Évolution N°5) : vide pour un retard sans cours visé (tout l'historique). *@
                             <td class="px-4 py-4 whitespace-nowrap">
@@ -121,25 +121,50 @@
                 <p x-show="createErrors.date" x-text="createErrors.date" class="field-error"></p>
             </div>
 
-            @* Cours que l'élève rejoint (Évolution N°5) : l'enseignant de ce cours accepte le billet en classe. *@
-            <div x-show="form.studentId" x-cloak>
-                <label class="form-label">Cours visé</label>
-                <select x-model="form.targetScheduleSlotId" :disabled="isLoadingSlots" class="input-field" aria-label="Cours visé">
-                    <option value="">Sans cours précis</option>
-                    <template x-for="slot in todaySlots" :key="slot.slotId">
-                        <option :value="slot.slotId" x-text="slotOptionLabel(slot)"></option>
-                    </template>
-                </select>
-                <p x-show="!isLoadingSlots && todaySlots.length === 0" class="mt-1 text-xs text-slate-500">
-                    Aucun cours à l'emploi du temps de sa classe ce jour-là : le billet sera émis sans cours précis.
+            @* Heure d'arrivée (Complément N°5 bis) : quand la classe de l'élève a des cours ce jour-là, on ne saisit que
+               l'heure réelle d'arrivée. Le serveur en déduit les cours manqués (justifiés par le billet), le retard sur
+               le cours en cours, le cours que l'enseignant acceptera et la durée totale — l'aperçu ci-dessous est SON calcul. *@
+            <div x-show="hasSlots" x-cloak>
+                <label class="form-label form-label-required">Heure d'arrivée</label>
+                <input type="time" x-model="form.arrivalTime" :required="hasSlots"
+                       class="input-field" :class="(arrivalError || createErrors.arrivaltime) && 'input-field-error'"
+                       aria-label="Heure d'arrivée" />
+                <p class="mt-1 text-xs text-slate-500">
+                    L'heure réelle à laquelle l'élève rejoint l'école : les cours manqués, le retard et la durée se calculent
+                    d'après l'emploi du temps de sa classe.
                 </p>
-                <p x-show="createErrors.targetscheduleslotid" x-text="createErrors.targetscheduleslotid" class="field-error"></p>
+                <p x-show="arrivalError" x-cloak x-text="arrivalError" class="field-error"></p>
+                <p x-show="createErrors.arrivaltime" x-cloak x-text="createErrors.arrivaltime" class="field-error"></p>
+                <p x-show="isLoadingPreview" x-cloak class="mt-2 text-xs text-slate-400">Calcul en cours…</p>
+
+                <template x-if="arrivalPreview">
+                    <div role="status" class="mt-3 space-y-1 rounded-xl border border-primary/20 bg-primary-50 p-3 text-sm text-slate-700">
+                        <template x-for="slot in arrivalPreview.missedSlots" :key="slot.slotId">
+                            <p>
+                                Cours manqué : <span class="font-semibold text-slate-900" x-text="slot.subjectName"></span>
+                                <span x-text="slot.label + ' (' + formatDuration(slot.minutes) + ')'"></span>
+                            </p>
+                        </template>
+                        <p x-show="arrivalPreview.inProgress" x-cloak>
+                            En retard de <span class="font-semibold text-slate-900" x-text="arrivalPreview.inProgress ? formatDuration(arrivalPreview.inProgress.lateMinutes) : ''"></span>
+                            à <span class="font-semibold text-slate-900" x-text="arrivalPreview.inProgress ? arrivalPreview.inProgress.subjectName : ''"></span>
+                            <span x-text="arrivalPreview.inProgress ? arrivalPreview.inProgress.label : ''"></span>
+                        </p>
+                        <p class="font-semibold text-slate-900">
+                            Durée totale : <span x-text="formatDuration(arrivalPreview.totalMinutes)"></span>
+                        </p>
+                    </div>
+                </template>
             </div>
 
-            <div>
+            @* Sans cours ce jour-là (jour de repos, classe sans emploi du temps) : les minutes se saisissent comme avant. *@
+            <div x-show="!hasSlots" x-cloak>
                 <label class="form-label form-label-required">Minutes de retard</label>
-                <input type="number" min="1" x-model.number="form.minutes" required
+                <input type="number" min="1" x-model.number="form.minutes" :required="!hasSlots"
                        class="input-field" :class="createErrors.minutes && 'input-field-error'" />
+                <p x-show="form.studentId && !isLoadingSlots" class="mt-1 text-xs text-slate-500">
+                    Aucun cours à l'emploi du temps de sa classe ce jour-là : le billet est émis sans cours précis.
+                </p>
                 <p x-show="createErrors.minutes" x-text="createErrors.minutes" class="field-error"></p>
             </div>
 
@@ -159,7 +184,7 @@
 
             <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">
                 <button type="button" @@click="closeCreate()" class="btn-modal-secondary group">Annuler</button>
-                <button type="submit" :disabled="isCreating" class="btn-modal-primary group">
+                <button type="submit" :disabled="!canSubmitCreate" class="btn-modal-primary group">
                     <span x-text="isCreating ? 'Enregistrement...' : 'Enregistrer'"></span>
                 </button>
             </div>

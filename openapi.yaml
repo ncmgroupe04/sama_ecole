@@ -2694,11 +2694,55 @@ paths:
         '403': { description: Rôle non autorisé }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /absences/arrival-preview:
+    get:
+      tags: [Attendance]
+      summary: Aperçu d'un billet d'entrée par heure d'arrivée — cours manqués, retard, durée (Complément N°5 bis)
+      description: >-
+        Ce que le billet va régulariser pour une heure d'arrivée : les cours **manqués** (terminés avant l'arrivée), le
+        cours **en cours** (retard = arrivée − début), le cours visé et la durée totale. C'est le calcul de l'ÉMISSION
+        (`ArrivalPlanner`) : l'écran n'affiche que ce que le serveur calcule. Les cours déjà couverts par un billet
+        actif de l'élève ce jour-là sont écartés. **422** : jour de repos, classe sans cours ce jour-là, arrivée avant
+        le premier cours, rien à régulariser (arrivée pile à l'heure du premier cours), tous les cours déjà couverts,
+        retard supérieur à 240 minutes sur un même cours. Lecture seule ; réservé au SuperAdmin, au Directeur et à la
+        Vie Scolaire.
+      parameters:
+        - name: studentId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: false
+          description: Aujourd'hui (UTC) par défaut.
+          schema: { type: string, format: date }
+        - name: arrivalTime
+          in: query
+          required: true
+          schema: { type: string, format: time, example: "10:20:00" }
+      responses:
+        '200':
+          description: Aperçu du billet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArrivalPreview' }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Élève introuvable dans l'établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /absences/late-arrivals:
     post:
       tags: [Attendance]
-      summary: Enregistrer un retard — et, avec `targetScheduleSlotId`, émettre un billet d'entrée visant un cours (Évolution N°5)
+      summary: Enregistrer un retard — avec `arrivalTime`, émettre un billet d'entrée par heure d'arrivée ; avec `targetScheduleSlotId`, viser un cours (Évolutions N°5 et N°5 bis)
       description: >-
+        **Avec `arrivalTime` (Complément N°5 bis)** : le serveur charge les cours de la classe de l'élève pour `date`
+        et DÉDUIT tout le reste — cours manqués, retard sur le cours en cours (`minutes`), cours visé, durée totale ;
+        les `minutes` et `targetScheduleSlotId` du client sont **ignorés**. Les cours manqués dont la fiche existe
+        passent de `UnjustifiedAbsence` à `JustifiedAbsence` (jamais depuis `Present`/`Late`, jamais l'inverse ;
+        statut d'avant conservé sur la ligne pour l'annulation) ; le cours en cours passe en `Late` (ou, à 0 minute de
+        retard, la ligne est seulement rattachée au billet). Une seule notification à la famille (cours en cours).
+        422 : jour de repos, classe sans cours, arrivée avant le premier cours, rien à régulariser (voir
+        `/absences/arrival-preview`). Sans `arrivalTime`, ce qui suit s'applique.
         Sans `targetScheduleSlotId`, le comportement d'avant : un retard sans cours visé, sans statut de billet.
         Avec `targetScheduleSlotId`, le billet naît `Issued` et vise ce cours : le cours doit appartenir à la classe
         de l'élève et tomber le jour de `date` (422 sinon), `minutes` est plafonné à 240, le jour ne doit pas être un
@@ -2706,7 +2750,8 @@ paths:
         Si la fiche d'appel de ce cours existe déjà, la ligne de l'élève passe en `Late` dans la MÊME transaction
         (son statut d'avant est conservé pour une éventuelle annulation) ; une absence rectifiée en retard publie
         l'événement d'assiduité. Le retard de la liste (`GET /absences/late-arrivals`) porte `targetScheduleSlotId` et
-        `status` (null pour tout l'historique sans cours visé). Réservé au SuperAdmin, au Directeur et à la Vie Scolaire.
+        `status` (null pour tout l'historique sans cours visé), et, pour un billet par heure d'arrivée, `arrivalTime` et
+        `totalMinutes`. Réservé au SuperAdmin, au Directeur et à la Vie Scolaire.
       requestBody:
         required: true
         content:
@@ -2781,6 +2826,11 @@ paths:
         est ignoré ; les billets d'entrée actifs visant ce cours sont rattachés aux
         lignes des élèves concernés.
         Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
+        **Complément N°5 bis — le retard ne se saisit plus à l'appel.** Une ligne `status: Late` n'est acceptée que si
+        un billet d'entrée actif de l'élève touche ce cours (la feuille est alors présélectionnée par le billet et
+        renvoyée telle quelle) ; sinon **422** « Le retard s'enregistre par un billet d'entrée ». En appel libre (sans
+        `scheduleSlotId`) aucun billet ne peut être rattaché : tout `Late` y est refusé. Changement d'API assumé —
+        les lignes `Late` déjà en base et le taux de présence sont inchangés.
       requestBody:
         required: true
         content:
@@ -6565,13 +6615,53 @@ components:
           enum: [Issued, Accepted]
           description: Billet actif déjà émis pour cet élève et ce cours ce jour-là.
 
+    ArrivalPreview:
+      type: object
+      properties:
+        missedSlots:
+          type: array
+          description: Cours entièrement manqués avant l'arrivée, dans l'ordre de la journée.
+          items:
+            type: object
+            properties:
+              slotId: { type: string, format: uuid }
+              label: { type: string, example: "08:00-10:00" }
+              subjectName: { type: string }
+              minutes: { type: integer, description: Durée du cours manqué. }
+        inProgress:
+          type: object
+          nullable: true
+          description: Cours en cours à l'arrivée ; null si l'élève arrive entre deux cours ou pile à l'heure.
+          properties:
+            slotId: { type: string, format: uuid }
+            label: { type: string }
+            subjectName: { type: string }
+            lateMinutes: { type: integer }
+        targetSlotId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Cours que l'enseignant acceptera — en cours, sinon prochain, sinon dernier manqué.
+        missedMinutes: { type: integer }
+        lateMinutes: { type: integer }
+        totalMinutes: { type: integer, description: Cours manqués + retard. }
+
     LateArrivalCreateRequest:
       type: object
-      required: [studentId, date, minutes, reason]
+      required: [studentId, date, reason]
+      description: >-
+        `minutes` est obligatoire (≥ 1) SANS `arrivalTime` ; avec `arrivalTime`, il est ignoré.
       properties:
         studentId: { type: string, format: uuid }
         date: { type: string, format: date-time }
-        minutes: { type: integer, minimum: 1, description: "Plafonné à 240 quand un cours est visé." }
+        arrivalTime:
+          type: string
+          format: time
+          nullable: true
+          example: "10:20:00"
+          description: >-
+            Heure d'arrivée réelle (Complément N°5 bis). Le serveur en déduit cours manqués, retard, cours visé et durée.
+        minutes: { type: integer, minimum: 1, description: "Requis sans arrivalTime. Plafonné à 240 quand un cours est visé." }
         reason: { type: string }
         observations: { type: string, nullable: true }
         targetScheduleSlotId:

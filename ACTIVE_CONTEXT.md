@@ -302,8 +302,37 @@ tableau de bord. Sans `scheduleSlotId` ni cours visé, tout se comporte exacteme
    journée entière — d'où l'infobulle « N séances appelées » qui donne le dénominateur.
 4. `isCurrent` / `isNext` se calculent sur l'heure **UTC** du serveur (`TimeProvider`) : exact au Sénégal (UTC+0),
    à revoir pour un déploiement dans un autre fuseau.
-5. Le billet de sortie reste un registre à part, sans lien avec le cours ; la justification des séances manquées
-   (Tâche 9) n'est pas construite.
+5. Le billet de sortie reste un registre à part, sans lien avec le cours. (La justification des séances manquées,
+   « Tâche 9 », est **remplacée** par le Complément N°5 bis ci-dessous, sans table de journal.)
+
+#### Complément N°5 bis (25/09/2026) — appel à trois statuts et billet par heure d'arrivée
+
+Plan et arbitrages C1 à C9 : `docs/superpowers/plans/2026-09-24-attendance-slots-tickets.md` (fin du document).
+Branche `feature/attendance-arrival-time`, empilée sur `feature/attendance-slots`.
+
+- **Appel.** La grille ne propose que **Présent / Absent (justifié) / Absent (non justifié)** ; plus de colonne
+  « Retard (min) ». Une ligne issue d'un billet, et tout retard historique, est en **lecture seule**. **Changement
+  d'API assumé (C9)** : `POST /attendance` refuse (422) une ligne `Late` sans billet actif sur (élève, cours,
+  date), y compris en appel libre. Lignes `Late` existantes et **taux de présence inchangés**.
+- **Billet.** Le surveillant saisit l'**heure d'arrivée** (C1, validé) ; `ArrivalCoverage` (pur) et `ArrivalPlanner`
+  en déduisent cours manqués, retard, cours visé (en cours, sinon prochain, sinon dernier manqué) et durée totale.
+  `GET /absences/arrival-preview` = le même calcul, pour l'écran. Minutes et cours visé du client sont **ignorés**
+  dans ce mode ; sans cours ce jour-là, saisie des minutes comme avant.
+- **Registre (C5, validé).** Les cours manqués dont la fiche existe passent `UnjustifiedAbsence` → `JustifiedAbsence`
+  — jamais depuis `Present`/`Late`, jamais l'inverse, aucune ligne créée. **B7 est levé.** Statut d'avant gardé
+  **sur la ligne** (`student_attendances.PreviousStatus`) : annulation ligne par ligne, **aucune table de journal**
+  (C6). Le cours en cours passe en `Late` (à 0 minute : ligne seulement rattachée). Un seul message famille (C7).
+- **Données.** Migration `AddArrivalTimeToEntryTickets`, colonnes nullables seulement : `LateArrivals.ArrivalTime`,
+  `TotalMinutes`, `MissedScheduleSlotIds` (`uuid[]`), `student_attendances.PreviousStatus`/`PreviousLateMinutes`.
+  À appliquer avec `dotnet ef database update` avant de relancer l'app en local (sinon « Une erreur inattendue »).
+- **Billet imprimé.** Heure d'arrivée, durée, cours manqué (nommé s'il est seul, résumé sinon) — toujours une page A5.
+  La création d'un billet devient une requête **auditée** (`IAuditableRequest`).
+
+**Points de vigilance du complément :** (1) le passage « non justifié → justifié » n'avertit pas la famille ;
+(2) une arrivée pendant une pause vise le cours **suivant** — seul `ArrivalCoverage` change si l'école préfère le
+dernier manqué ; (3) le mode « Libre » n'a plus de retard manuel ; (4) un billet ne peut plus être émis « sans cours
+précis » depuis l'écran quand la classe a des cours ce jour-là (l'API, elle, l'accepte encore) ; (5) un billet émis
+pendant la soumission d'une fiche peut ne pas être rattaché : l'acceptation reste le point de réconciliation.
 
 ### Conformité pédagogique et institutionnelle (25/09/2026) — livré (Évolution N°7)
 

@@ -345,7 +345,7 @@ Trois choix appellent une justification :
 |---|---|---|---|---|---|
 | Faire l'appel d'un cours | ✔ (tout cours) | ✔ (tout cours) | ✔ (tout cours) | ✔ (**ses** cours seulement) | ✖ |
 | Lister les cours d'une classe pour l'appel | ✔ | ✔ | ✔ | ✔ (**ses** cours) | ✖ |
-| Émettre un billet d'entrée (avec ou sans cours visé) | ✔ | ✖ | ✔ | ✖ | ✖ |
+| Émettre un billet d'entrée (avec ou sans cours visé, avec ou sans heure d'arrivée) et en lire l'aperçu | ✔ | ✖ | ✔ | ✖ | ✖ |
 | Imprimer le billet d'entrée | ✔ | ✔ | ✔ | ✖ | ✖ |
 | Accepter un billet en classe | ✔ | ✖ | ✖ | ✔ (**titulaire** du cours visé) | ✖ |
 | Annuler un billet non accepté | ✔ | ✖ | ✔ | ✖ | ✖ |

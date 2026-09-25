@@ -174,6 +174,13 @@ Les deux tables : RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE` seul
 - `LateArrivals` — devient le **billet d'entrée** : `TargetScheduleSlotId` (`uuid`, nullable, le cours visé), `Status` (`varchar`, nullable : `Issued` / `Accepted` / `Cancelled` ; **null = retard sans cours visé**, donc tout l'historique existant), `AcceptedByUserId` / `AcceptedAt`, `CancelledByUserId` / `CancelledAt`, `PreviousStatus` / `PreviousLateMinutes` (le statut de la ligne d'appel avant le billet, pour l'annulation). La date du billet est `LateArrivals.Date`, déjà une colonne `date`.
 - Index unique **partiel** `UX_LateArrivals_ActiveTicket` sur `(StudentId, TargetScheduleSlotId, Date)` `WHERE "Status" IN ('Issued', 'Accepted') AND NOT "IsDeleted"` : au plus un billet actif par élève, cours et jour ; un billet annulé libère la clé.
 
+**Billet par heure d'arrivée (Complément N°5 bis).** Colonnes nullables seulement, **aucune table nouvelle** (migration `AddArrivalTimeToEntryTickets`) :
+
+- `LateArrivals.ArrivalTime` — `time`, nullable. L'heure d'arrivée saisie ; null pour un billet saisi à l'ancienne.
+- `LateArrivals.TotalMinutes` — `integer`, nullable. Durée régularisée (cours manqués + retard), **instantané pris à l'émission** : modifier l'emploi du temps plus tard ne réécrit pas un billet imprimé.
+- `LateArrivals.MissedScheduleSlotIds` — `uuid[]`, nullable, sans FK. Les cours entièrement manqués (instantané) ; `Minutes` ne vaut plus que le retard sur le cours visé (**0 possible**), et `TargetScheduleSlotId` le cours en cours, sinon le prochain, sinon le dernier manqué.
+- `student_attendances.PreviousStatus` / `PreviousLateMinutes` — nullables. Le statut de la ligne **avant** qu'un billet ne la justifie : chaque ligne garde le sien, ce qui rend l'annulation possible ligne par ligne **sans table de journal** (une ligne ↔ un billet). Les colonnes `LateArrivals.Previous*` restent celles de la ligne du cours visé.
+
 Les FK composites, la RLS et le Global Query Filter des trois tables sont inchangés (elles portent déjà `SchoolId`). Aucun statut d'appel n'est ajouté : l'absence complète ou partielle d'une journée est un **calcul** (`DayAttendanceClassifier`), jamais une colonne.
 
 ### 4.5 Domaine Finance

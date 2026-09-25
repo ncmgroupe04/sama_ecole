@@ -15,6 +15,9 @@ namespace SamaEcole.Application.Absences.Queries.GetEntryTicket;
 /// </summary>
 public record GetEntryTicketQuery(Guid LateArrivalId) : IRequest<EntryTicketDto>;
 
+/// <summary>Un cours manqué avant l'arrivée, tel qu'il s'imprime sur le billet (Complément N°5 bis).</summary>
+public record EntryTicketMissedSlot(string SubjectName, string TimeRange, int Minutes);
+
 public record EntryTicketDto(
     Guid LateArrivalId,
     string TicketNumber,
@@ -46,7 +49,16 @@ public record EntryTicketDto(
     /// <summary>Enseignant titulaire du cours — celui qui accepte le billet en classe.</summary>
     string? TargetTeacherName = null,
     /// <summary>« Issued », « Accepted » ou « Cancelled » ; null sans cours visé.</summary>
-    string? Status = null);
+    string? Status = null,
+
+    // Billet par heure d'arrivée (Complément N°5 bis). Nuls pour un billet saisi à l'ancienne : il s'imprime alors
+    // exactement comme avant (« RETARD DE X MIN »).
+    /// <summary>Heure d'arrivée réelle de l'élève.</summary>
+    TimeOnly? ArrivalTime = null,
+    /// <summary>Durée régularisée (cours manqués + retard), calculée à l'émission.</summary>
+    int? TotalMinutes = null,
+    /// <summary>Cours entièrement manqués avant l'arrivée, dans l'ordre de la journée.</summary>
+    IReadOnlyList<EntryTicketMissedSlot>? MissedSlots = null);
 
 public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetEntryTicketQuery, EntryTicketDto>
@@ -73,6 +85,9 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
                 l.Observations,
                 l.TargetScheduleSlotId,
                 l.Status,
+                l.ArrivalTime,
+                l.TotalMinutes,
+                l.MissedScheduleSlotIds,
                 SchoolName = sch.Name,
                 SchoolAddress = sch.Address,
                 SchoolPhone = sch.Phone,
@@ -98,6 +113,20 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
                 targetTimeRange = SlotPeriod.Label(slot.StartTime, slot.EndTime);
                 targetTeacher = slot.TeacherName;
             }
+        }
+
+        // Cours manqués (instantané pris à l'émission) : matière et horaires, dans l'ordre de la journée.
+        List<EntryTicketMissedSlot>? missedSlots = null;
+        if (row.MissedScheduleSlotIds is { Length: > 0 } missedIds)
+        {
+            missedSlots = (await dbContext.ScheduleSlots.AsNoTracking()
+                    .Where(s => missedIds.Contains(s.Id))
+                    .OrderBy(s => s.StartTime)
+                    .Select(s => new { SubjectName = s.Subject.Name, s.StartTime, s.EndTime })
+                    .ToListAsync(cancellationToken))
+                .Select(s => new EntryTicketMissedSlot(
+                    s.SubjectName, SlotPeriod.Label(s.StartTime, s.EndTime), (int)(s.EndTime - s.StartTime).TotalMinutes))
+                .ToList();
         }
 
         // Global Query Filter + RLS bornent déjà cette lecture à l'école courante (même tenant que
@@ -130,6 +159,9 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
             targetSubject,
             targetTimeRange,
             targetTeacher,
-            row.Status?.ToString());
+            row.Status?.ToString(),
+            row.ArrivalTime,
+            row.TotalMinutes,
+            missedSlots);
     }
 }

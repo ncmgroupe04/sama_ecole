@@ -2479,8 +2479,9 @@
                     roles: ['Directeur', 'Surveillant'],
                     definition:
                         "Le billet documente un mouvement individuel d'élève en dehors des horaires " +
-                        "normaux. Une ENTRÉE TARDIVE motive le retard, vise le COURS que l'élève rejoint et " +
-                        "l'autorise — l'enseignant de ce cours l'accepte en classe ; une SORTIE ANTICIPÉE " +
+                        "normaux. Une ENTRÉE TARDIVE part de l'HEURE D'ARRIVÉE réelle de l'élève : le système en déduit " +
+                         "les cours manqués, le retard sur le cours en cours et la durée totale, puis " +
+                        "l'autorise — l'enseignant du cours qu'il rejoint l'accepte en classe ; une SORTIE ANTICIPÉE " +
                         "précise, en plus, qui est venu chercher l'élève — exigence de sécurité courante " +
                         "des établissements sénégalais — sauf autorisation écrite permettant une sortie " +
                         "seul. Chaque billet est imprimable au format A5.",
@@ -2495,15 +2496,16 @@
                         "il est arrivé.",
                     procedure: [
                         "Ouvrez Surveillance › Billets d'entrée.",
-                        "ENTRÉE TARDIVE : sélectionnez l'élève, puis le cours visé — le cours en cours (à défaut le prochain) est proposé d'office, « Sans cours précis » reste possible —, renseignez le motif du retard, puis validez.",
-                        "Le billet imprimé porte le cours visé (matière, horaire, enseignant) et son statut : En attente d'acceptation, Accepté en classe ou Annulé.",
+                        "ENTRÉE TARDIVE : sélectionnez l'élève et la date, puis saisissez l'heure d'arrivée réelle. Un aperçu calculé d'après l'emploi du temps de sa classe annonce les cours manqués (par exemple 08h-10h), le retard sur le cours en cours (par exemple 20 min) et la durée totale ; renseignez le motif, puis validez.",
+                        "Sans cours ce jour-là (jour de repos, classe sans emploi du temps), le champ « Minutes de retard » remplace l'heure d'arrivée : le billet est alors émis sans cours précis.",
+                        "Le billet imprimé porte l'heure d'arrivée, la durée régularisée, le cours manqué (ou leur nombre), le cours visé (matière, horaire, enseignant) et son statut : En attente d'acceptation, Accepté en classe ou Annulé.",
                         "Un billet En attente peut être annulé (bouton « Annuler ») par la Vie Scolaire ou le Directeur, tant que l'enseignant ne l'a pas accepté ; l'appel reprend alors son état d'avant. Un billet accepté ne s'annule plus.",
                         "SORTIE ANTICIPÉE : sélectionnez l'élève, le motif, et la personne venue le chercher — ou l'autorisation écrite couvrant une sortie seul.",
                         "Imprimez le billet A5 généré et remettez-le à l'élève ou à la personne qui l'accompagne, selon l'usage de l'établissement.",
                         "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur."
                     ],
                     impacts: [
-                        "Appel en classe : un élève entré tardivement est marqué en Retard, non Absent, sur le cours que vise son billet ; sa ligne d'appel est mise à jour dès l'émission du billet, même si l'appel de ce cours est déjà fait.",
+                        "Appel en classe : un élève entré tardivement est marqué en Retard, non Absent, sur le cours en cours que vise son billet ; les cours entièrement manqués avant son arrivée passent de « Absent (non justifié) » à « Absent (justifié) ». Les lignes sont mises à jour dès l'émission du billet, même si l'appel de ces cours est déjà fait ; un « Présent » n'est jamais modifié.",
                         "Registre de discipline : des retards ou sorties répétés et injustifiés peuvent motiver un examen disciplinaire.",
                         "Convocations : un billet à motif inhabituel ou répété est souvent le premier signal qui déclenche une convocation de parent."
                     ],

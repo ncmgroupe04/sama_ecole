@@ -41,14 +41,21 @@ document.addEventListener('alpine:init', () => {
             minutes: 5,
             reason: '',
             observations: '',
-            targetScheduleSlotId: ''
+            arrivalTime: ''
         },
 
-        // Cours visé par le billet (Évolution N°5) : les cours du jour de la classe de l'élève. Le cours en cours
-        // (à défaut le prochain) est présélectionné ; « Sans cours précis » reste possible et produit un billet
-        // comme avant. Confort d'affichage : le serveur revérifie que le cours est bien celui de la classe, ce jour-là.
+        // Billet par HEURE D'ARRIVÉE (Complément N°5 bis). Quand la classe de l'élève a des cours ce jour-là, la
+        // Surveillance ne saisit que l'heure d'arrivée réelle : le SERVEUR en déduit les cours manqués, le retard sur
+        // le cours en cours, le cours visé et la durée totale. L'écran n'affiche que l'aperçu que le serveur calcule
+        // (GET /absences/arrival-preview) — aucune règle de calcul n'est recopiée ici. Sans cours ce jour-là (repos,
+        // pas d'emploi du temps), l'ancien champ « Minutes de retard » reste seul.
         todaySlots: [],
         isLoadingSlots: false,
+        arrivalPreview: null,
+        arrivalError: '',
+        isLoadingPreview: false,
+        previewSeq: 0,
+        previewTimer: null,
 
         // Annulation d'un billet en attente (Vie Scolaire / Directeur) — jamais sans confirmation.
         ticketToCancel: null,
@@ -81,13 +88,27 @@ document.addEventListener('alpine:init', () => {
             if (typeof this.$watch === 'function') {
                 this.$watch('form.studentId', () => this.loadTodaySlots());
                 this.$watch('form.date', () => this.loadTodaySlots());
+                this.$watch('form.arrivalTime', () => this.scheduleArrivalPreview());
             }
         },
 
-        /** Les cours de la classe de l'élève à la date du retard ; présélectionne le cours en cours, sinon le prochain. */
+        /** Vrai quand la classe de l'élève a des cours à la date choisie : l'heure d'arrivée remplace les minutes. */
+        get hasSlots() {
+            return this.todaySlots.length > 0;
+        },
+
+        /** « Enregistrer » : avec des cours, il faut une heure d'arrivée dont l'aperçu serveur est valide. */
+        get canSubmitCreate() {
+            if (this.isCreating) return false;
+            if (!this.hasSlots) return true;
+            return !!this.arrivalPreview && !this.arrivalError && !this.isLoadingPreview;
+        },
+
+        /** Les cours de la classe de l'élève à la date du retard : de quoi savoir quel champ proposer. */
         async loadTodaySlots() {
             this.todaySlots = [];
-            this.form.targetScheduleSlotId = '';
+            this.resetPreview();
+            this.form.arrivalTime = '';
             if (!this.form.studentId || !this.form.date) return;
 
             this.isLoadingSlots = true;
@@ -95,8 +116,6 @@ document.addEventListener('alpine:init', () => {
                 const params = new URLSearchParams({ studentId: this.form.studentId, date: this.form.date });
                 const data = await api.get(`/absences/today-slots?${params.toString()}`);
                 this.todaySlots = Array.isArray(data) ? data : [];
-                const preselected = this.todaySlots.find((s) => s.isCurrent) || this.todaySlots.find((s) => s.isNext);
-                this.form.targetScheduleSlotId = preselected ? preselected.slotId : '';
             } catch (error) {
                 console.error('Today slots fetch error:', error);
                 this.todaySlots = [];
@@ -106,11 +125,70 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        /** Libellé d'un cours dans le sélecteur : « 08:00-10:00 · Mathématiques (Awa Sow) ». */
-        slotOptionLabel(slot) {
-            const marker = slot.isCurrent ? ' — en cours' : (slot.isNext ? ' — prochain' : '');
-            const taken = slot.ticketStatus ? ' — billet déjà émis' : '';
-            return `${slot.label} · ${slot.subjectName} (${slot.teacherName})${marker}${taken}`;
+        resetPreview() {
+            clearTimeout(this.previewTimer);
+            this.previewSeq += 1; // toute réponse encore en vol devient périmée
+            this.arrivalPreview = null;
+            this.arrivalError = '';
+            this.isLoadingPreview = false;
+        },
+
+        /** Laisse finir la frappe avant d'interroger le serveur. */
+        scheduleArrivalPreview() {
+            clearTimeout(this.previewTimer);
+            this.arrivalPreview = null;
+            this.arrivalError = '';
+            if (!this.hasSlots || !this.form.arrivalTime) return;
+
+            this.previewTimer = setTimeout(() => this.loadArrivalPreview(), 300);
+        },
+
+        /** Ce que le billet va régulariser pour cette heure d'arrivée — calculé par le serveur, comme à l'émission. */
+        async loadArrivalPreview() {
+            clearTimeout(this.previewTimer);
+            this.arrivalPreview = null;
+            this.arrivalError = '';
+            if (!this.hasSlots || !this.form.studentId || !this.form.date || !this.form.arrivalTime) return;
+
+            const seq = ++this.previewSeq;
+            this.isLoadingPreview = true;
+            try {
+                const params = new URLSearchParams({
+                    studentId: this.form.studentId,
+                    date: this.form.date,
+                    arrivalTime: this.serverTime(this.form.arrivalTime)
+                });
+                const data = await api.get(`/absences/arrival-preview?${params.toString()}`);
+                if (seq === this.previewSeq) this.arrivalPreview = data;
+            } catch (error) {
+                if (seq !== this.previewSeq) return;
+                // 422 : arrivée avant le premier cours, rien à régulariser, cours déjà couverts, jour de repos…
+                const fallback = "Impossible de calculer le billet pour cette heure d'arrivée.";
+                const fields = window.api.toFieldErrors(error, fallback);
+                this.arrivalError = fields.arrivaltime || fields.date || fields.global || fallback;
+            } finally {
+                if (seq === this.previewSeq) this.isLoadingPreview = false;
+            }
+        },
+
+        /** « 10:20 » (champ heure) → « 10:20:00 » : le format qu'attend l'API (comme l'emploi du temps). */
+        serverTime(hhmm) {
+            return /^\d{2}:\d{2}$/.test(hhmm) ? `${hhmm}:00` : hhmm;
+        },
+
+        /** 140 → « 2 h 20 » ; 45 → « 45 min » : mise en forme d'un nombre DÉJÀ calculé par le serveur. */
+        formatDuration(minutes) {
+            const m = Number(minutes) || 0;
+            if (m < 60) return `${m} min`;
+            const rest = m % 60;
+            return rest === 0 ? `${Math.floor(m / 60)} h` : `${Math.floor(m / 60)} h ${String(rest).padStart(2, '0')}`;
+        },
+
+        /** Colonne « Retard » de la liste : l'arrivée et la durée régularisée pour un billet par heure d'arrivée. */
+        lateCellText(item) {
+            if (!item.arrivalTime) return `${item.minutes} min`;
+            const hhmm = String(item.arrivalTime).slice(0, 5);
+            return `Arrivé à ${hhmm} · ${this.formatDuration(item.totalMinutes)}`;
         },
 
         // ---------------------------------------------------------------- Statut et annulation du billet d'entrée
@@ -207,15 +285,18 @@ document.addEventListener('alpine:init', () => {
             this.createErrors = {};
             try {
                 const student = this.students.find(s => s.id === this.form.studentId);
-                await api.post('/absences/late-arrivals', {
+                const payload = {
                     studentId: this.form.studentId,
                     date: this.form.date,
-                    minutes: Number(this.form.minutes),
                     reason: this.form.reason,
-                    observations: this.form.observations,
-                    // Cours visé (Évolution N°5) : null = billet sans cours précis, comme avant.
-                    targetScheduleSlotId: this.form.targetScheduleSlotId || null
-                });
+                    observations: this.form.observations
+                };
+                // Avec des cours ce jour-là : l'heure d'arrivée SEULE — minutes et cours visé sont déduits (et, de
+                // toute façon, ignorés) par le serveur. Sans cours : les minutes saisies, comme avant.
+                if (this.hasSlots) payload.arrivalTime = this.serverTime(this.form.arrivalTime);
+                else payload.minutes = Number(this.form.minutes);
+
+                await api.post('/absences/late-arrivals', payload);
 
                 this.isCreateOpen = false;
                 this.addedLateArrivalName = student ? student.fullName : '';
@@ -259,9 +340,10 @@ document.addEventListener('alpine:init', () => {
                 minutes: 5,
                 reason: '',
                 observations: '',
-                targetScheduleSlotId: ''
+                arrivalTime: ''
             };
             this.todaySlots = [];
+            this.resetPreview();
             this.createErrors = {};
         },
 

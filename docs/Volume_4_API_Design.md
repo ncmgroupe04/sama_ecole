@@ -313,10 +313,15 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 | `GET` | `/api/v1/attendance/roster` | Feuille d'appel. `scheduleSlotId` facultatif (Évolution N°5) ; sans lui, `period` reste obligatoire (appel libre). Un billet d'entrée actif présélectionne l'élève en `Late` |
 | `GET` | `/api/v1/attendance/slots?classroomId&date` | Cours de la classe ce jour-là (Évolution N°5). Un Enseignant ne reçoit que **ses** cours ; jour de repos → liste vide |
 | `GET` | `/api/v1/absences/today-slots?studentId&date` | Cours du jour de la classe d'un élève, cours en cours / suivant signalés — sélecteur du cours visé par un billet d'entrée (SuperAdmin, Directeur, Surveillant) |
-| `POST` | `/api/v1/absences/late-arrivals` | Retard. `targetScheduleSlotId` facultatif : émet un billet d'entrée visant ce cours (`Issued`). `409` si un billet actif existe déjà pour (élève, cours, jour) ; minutes ≤ 240 avec un cours visé |
+| `GET` | `/api/v1/absences/arrival-preview?studentId&date&arrivalTime` | Aperçu d'un billet par **heure d'arrivée** (Complément N°5 bis) : cours manqués, retard sur le cours en cours, cours visé, durée totale — le calcul de l'émission, pour l'écran. `422` : jour de repos, aucun cours, arrivée avant le premier cours, rien à régulariser (SuperAdmin, Directeur, Surveillant) |
+| `POST` | `/api/v1/absences/late-arrivals` | Retard. **`arrivalTime` facultatif** (Complément N°5 bis) : le serveur déduit cours manqués (→ `JustifiedAbsence`), retard, cours visé et durée ; `minutes`/`targetScheduleSlotId` du client ignorés. Sinon `targetScheduleSlotId` facultatif : émet un billet d'entrée visant ce cours (`Issued`). `409` si un billet actif existe déjà pour (élève, cours, jour) ; minutes ≤ 240 avec un cours visé |
 | `POST` | `/api/v1/billets/{id}/accept` | L'enseignant **titulaire** du cours visé, ou le Directeur, accepte l'élève en classe. Idempotent ; `403` autre enseignant ; `422` billet annulé ou sans cours visé |
 | `POST` | `/api/v1/billets/{id}/cancel` | Surveillant ou Directeur annule un billet non accepté ; la ligne d'appel retrouve son statut d'avant. `422` si déjà accepté |
 | `GET` | `/api/v1/reports/attendance/by-subject` | Rapport d'assiduité par matière : séances appelées et répartition des statuts (Directeur, Secrétariat, SuperAdmin) |
+
+> **Complément N°5 bis — changement d'API assumé.** `POST /attendance` refuse (`422`) une ligne `Late` sans billet
+> d'entrée actif sur (élève, cours, date) — y compris en appel libre. Le retard ne se saisit plus qu'à la Surveillance
+> (`POST /absences/late-arrivals`). Les lignes `Late` déjà en base, leur lecture et le taux de présence sont inchangés.
 
 > **Évolution N°5 — ce qui n'a pas changé.** Sans `scheduleSlotId`, `POST /attendance` et la feuille d'appel se
 > comportent exactement comme avant (appel libre). Le rapport `GET /reports/attendance` gagne, en fin de ligne,
