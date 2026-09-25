@@ -186,7 +186,13 @@ public record ReportCardDto(
     // de notes qui n'a rien à voir avec le bulletin bilingue. Null/absent → aucune ligne n'imprime de
     // second nom, jamais une valeur inventée. Résolu UNIQUEMENT si IsBilingualArabic (évite une requête
     // inutile pour l'immense majorité des écoles).
-    IReadOnlyDictionary<Guid, string?>? SubjectNamesAr = null);
+    IReadOnlyDictionary<Guid, string?>? SubjectNamesAr = null,
+
+    // Matières OBLIGATOIRES dont l'élève est dispensé (avec motif) : la ligne reste sur le bulletin, marquée
+    // « Dispensé(e) », coefficient barré, hors totaux (spécification §4.4 — écart assumé et validé à la règle
+    // n°12, consigné dans docs/design-references/README.md). Le motif n'est jamais porté ici. Null/vide — le
+    // cas de tout élève sans dispense — : le bulletin est strictement celui d'avant.
+    IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -381,7 +387,7 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         IReadOnlyDictionary<Guid, string?>? subjectNamesAr = null;
         if (isBilingualArabic)
         {
-            var subjectIds = summary.Subjects.Select(s => s.SubjectId).ToList();
+            var subjectIds = summary.Subjects.Select(s => s.SubjectId).Concat(summary.ExemptSubjects?.Select(s => s.SubjectId) ?? []).ToList();
             subjectNamesAr = await dbContext.Subjects.AsNoTracking()
                 .Where(s => subjectIds.Contains(s.Id))
                 .ToDictionaryAsync(s => s.Id, s => s.NameAr, cancellationToken);
@@ -434,7 +440,8 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             evaluationStructure,
             subjectHonors,
             isBilingualArabic,
-            subjectNamesAr);
+            subjectNamesAr,
+            ExemptSubjects: summary.ExemptSubjects);
 
         return dto;
     }
