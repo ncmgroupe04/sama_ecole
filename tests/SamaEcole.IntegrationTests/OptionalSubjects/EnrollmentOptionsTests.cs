@@ -328,6 +328,45 @@ public class EnrollmentOptionsTests : IAsyncLifetime
         (await ExemptedAsync()).Should().BeEquivalentTo([Arabe, Allemand, Svt]);
     }
 
+    // ---- Une matière qui change de moitié entre deux enregistrements (option <-> obligatoire) --------------------
+
+    private async Task SetIsOptionalAsync(Guid subjectId, bool isOptional)
+    {
+        await using var owner = _db.NewOwnerContext();
+        var subject = await owner.Subjects.IgnoreQueryFilters().SingleAsync(s => s.Id == subjectId);
+        subject.IsOptional = isOptional;
+        if (!isOptional)
+        {
+            subject.OptionGroup = null;
+        }
+
+        await owner.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task A_Subject_Turned_Mandatory_Gets_A_Fresh_Reasoned_Row_When_Both_Halves_Are_Sent_Together()
+    {
+        await SetAsync(Espagnol, Pc, Dessin); // ligne SANS motif pour Arabe (option non suivie)
+        await SetIsOptionalAsync(Arabe, isOptional: false); // Arabe devient une matière obligatoire
+
+        await SendAsync(Inscription, [], [new MandatoryExemption(Arabe, "Certificat")]);
+
+        (await RowsAsync()).Where(r => r.SubjectId == Arabe).Should().Equal([(Arabe, (string?)"Certificat")],
+            "la ligne d'option retirée ne doit pas absorber la dispense obligatoire : elle serait perdue");
+    }
+
+    [Fact]
+    public async Task A_Subject_Turned_Optional_Gets_A_Fresh_Reasonless_Row_When_Both_Halves_Are_Sent_Together()
+    {
+        await SetExemptionsAsync(new MandatoryExemption(Eps, "Certificat")); // ligne AVEC motif pour EPS
+        await SetIsOptionalAsync(Eps, isOptional: true); // EPS devient une option
+
+        await SendAsync(Inscription, [], []);
+
+        (await RowsAsync()).Where(r => r.SubjectId == Eps).Should().Equal([(Eps, (string?)null)],
+            "l'option non suivie doit exister une fois la dispense obligatoire retirée, sans motif");
+    }
+
     // ---- Garde-fous ---------------------------------------------------------------------------------------
 
     [Fact]

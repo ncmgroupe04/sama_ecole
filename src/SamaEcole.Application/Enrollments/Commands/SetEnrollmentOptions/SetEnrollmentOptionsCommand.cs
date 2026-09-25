@@ -91,18 +91,36 @@ public class SetEnrollmentOptionsCommandHandler(
         var existing = await dbContext.EnrollmentSubjectExemptions
             .Where(x => x.EnrollmentId == enrollment.Id)
             .ToListAsync(cancellationToken);
-        var bySubject = existing.ToDictionary(x => x.SubjectId);
         var actor = actorId.ToString();
+        var wanted = mandatoryTargets?.ToDictionary(x => x.SubjectId, x => x.Reason!);
 
+        // Phase 1 — RETRAIT des deux moitiés, décidé sur l'état d'origine. Moitié « options » = lignes SANS
+        // motif absentes du choix (choix changé, matière d'un ancien niveau, matière devenue obligatoire) ;
+        // moitié « matières obligatoires » = lignes AVEC motif absentes de la liste. Suppression logique.
         if (optionTargets is not null)
         {
-            // Moitié « options » = lignes SANS motif. Lignes en trop (choix changé, matière d'un ancien niveau,
-            // matière devenue obligatoire) : retirées logiquement ; lignes manquantes : ajoutées.
             foreach (var stale in existing.Where(x => x.Reason is null && !optionTargets.Contains(x.SubjectId)))
             {
                 stale.SoftDelete(actor);
             }
+        }
 
+        if (wanted is not null)
+        {
+            foreach (var stale in existing.Where(x => x.Reason is not null && !wanted.ContainsKey(x.SubjectId)))
+            {
+                stale.SoftDelete(actor);
+            }
+        }
+
+        // Phase 2 — AJOUT / mise à jour contre les lignes qui SURVIVENT. Une ligne retirée à la phase 1 (même
+        // appel) compte comme absente : une matière qui change de moitié (option devenue obligatoire, ou
+        // l'inverse) reçoit une ligne NEUVE au bon motif au lieu d'hériter d'une ligne supprimée, ce qui
+        // perdrait silencieusement la dispense.
+        var bySubject = existing.Where(x => !x.IsDeleted).ToDictionary(x => x.SubjectId);
+
+        if (optionTargets is not null)
+        {
             foreach (var subjectId in optionTargets.Where(id => !bySubject.ContainsKey(id)))
             {
                 dbContext.EnrollmentSubjectExemptions.Add(new EnrollmentSubjectExemption
@@ -112,17 +130,8 @@ public class SetEnrollmentOptionsCommandHandler(
             }
         }
 
-        if (mandatoryTargets is not null)
+        if (wanted is not null)
         {
-            // Moitié « matières obligatoires » = lignes AVEC motif : retirées si absentes de la liste,
-            // motif mis à jour s'il a changé, ajoutées sinon.
-            var wanted = mandatoryTargets.ToDictionary(x => x.SubjectId, x => x.Reason!);
-
-            foreach (var stale in existing.Where(x => x.Reason is not null && !wanted.ContainsKey(x.SubjectId)))
-            {
-                stale.SoftDelete(actor);
-            }
-
             foreach (var (subjectId, reason) in wanted)
             {
                 if (bySubject.TryGetValue(subjectId, out var row))
