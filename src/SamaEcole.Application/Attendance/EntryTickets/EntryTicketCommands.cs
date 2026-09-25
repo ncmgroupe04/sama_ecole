@@ -157,7 +157,7 @@ public class CancelEntryTicketCommandHandler(
             .FirstOrDefaultAsync(l => l.Id == request.TicketId, cancellationToken)
             ?? throw new NotFoundException(nameof(LateArrival), request.TicketId.ToString());
 
-        if (ticket.TargetScheduleSlotId is not { } slotId || ticket.Status is null)
+        if (ticket.TargetScheduleSlotId is null || ticket.Status is null)
         {
             throw Refuse("Ce billet ne vise aucun cours : il n'y a rien à annuler dans le registre d'appel.");
         }
@@ -174,17 +174,13 @@ public class CancelEntryTicketCommandHandler(
             return new EntryTicketActionResult(ticket.Id, EntryTicketStatus.Cancelled, null);
         }
 
-        var slot = await dbContext.ScheduleSlots.AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == slotId, cancellationToken);
-
         ticket.Status = EntryTicketStatus.Cancelled;
         ticket.CancelledByUserId = userId;
         ticket.CancelledAt = timeProvider.GetUtcNow();
 
-        if (slot is not null)
-        {
-            await register.RestoreAsync(ticket, slot, DateOnly.FromDateTime(ticket.Date), cancellationToken);
-        }
+        // Le cours visé a pu être supprimé depuis : la restauration ne dépend plus de lui, elle suit les lignes
+        // rattachées au billet (cours visé ET cours manqués).
+        await register.RestoreAsync(ticket, DateOnly.FromDateTime(ticket.Date), cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

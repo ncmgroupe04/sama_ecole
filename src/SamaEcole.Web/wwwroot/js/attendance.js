@@ -10,9 +10,11 @@
  * Directeur et Secrétariat ne sont pas bornés.
  */
 document.addEventListener('alpine:init', () => {
+    // Complément N°5 bis : l'enseignant ne pointe que la présence ou l'absence sur le créneau. Un RETARD n'a plus
+    // d'autre source qu'un billet d'entrée (Surveillance › Billets d'entrée) — le serveur refuse tout « Retard »
+    // sans billet (422). Les lignes issues d'un billet, et les retards historiques, s'affichent donc en lecture seule.
     const STATUS_OPTIONS = [
         { value: 'Present', label: 'Présent' },
-        { value: 'Late', label: 'Retard' },
         { value: 'JustifiedAbsence', label: 'Absent (justifié)' },
         { value: 'UnjustifiedAbsence', label: 'Absent (non justifié)' }
     ];
@@ -198,6 +200,9 @@ document.addEventListener('alpine:init', () => {
                     fullName: s.fullName,
                     status: s.status || 'Present',
                     lateMinutes: s.lateMinutes || 0,
+                    // Verrouillée : la ligne vient d'un billet d'entrée, ou c'est un retard historique — aucune option
+                    // de la liste ne la porte plus, elle repart telle quelle.
+                    locked: !!s.entryTicketId || s.status === 'Late',
                     // Billet d'entrée visant ce cours (Évolution N°5) : présélectionne le retard côté serveur.
                     entryTicketId: s.entryTicketId ?? null,
                     entryTicketNumber: s.entryTicketNumber ?? null,
@@ -215,15 +220,22 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        onStatusChange(entry) {
-            // Les minutes de retard n'ont de sens que pour « Retard » — on les remet à zéro sinon
-            // (même invariant que côté serveur).
-            if (entry.status !== 'Late') entry.lateMinutes = 0;
-        },
-
-        /** Compteur d'en-tête : combien de présents/retards/absents dans la saisie courante. */
+        /** Compteur d'en-tête : combien de lignes ont ce statut dans la saisie courante. */
         countBy(status) {
             return this.entries.filter((e) => e.status === status).length;
+        },
+
+        /** Présents = présents + arrivés en retard (billet) : même règle que le taux de présence. */
+        get presentCount() {
+            return this.countBy('Present') + this.countBy('Late');
+        },
+
+        /** Texte de la pastille d'une ligne verrouillée : le statut ET son origine. */
+        rowStatusLabel(entry) {
+            const fromTicket = entry.entryTicketId ? ' — billet' : '';
+            if (entry.status === 'Late') return `Retard (${Number(entry.lateMinutes) || 0} min)${fromTicket}`;
+            const option = STATUS_OPTIONS.find((o) => o.value === entry.status);
+            return `${option ? option.label : entry.status}${fromTicket}`;
         },
 
         // 'sending' | 'retrying' | 'done' | 'failed' — piloté par onStateChange (ticket JGK-L03).

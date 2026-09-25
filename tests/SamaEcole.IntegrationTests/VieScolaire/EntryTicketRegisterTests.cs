@@ -310,7 +310,7 @@ public class EntryTicketRegisterTests : IAsyncLifetime
 
         // L'élève de B vise le créneau de A : introuvable dans B, jamais accepté.
         var act = async () => await new CreateLateArrivalCommandHandler(
-                autre, new StubTenant(EcoleB), new RecordingPublisher(), new EntryTicketRegister(autre), new WorkingDayGuard(autre))
+                autre, new StubTenant(EcoleB), new RecordingPublisher(), new EntryTicketRegister(autre), new WorkingDayGuard(autre), new ArrivalPlanner(autre, new WorkingDayGuard(autre)))
             .Handle(new CreateLateArrivalCommand
             {
                 StudentId = EleveB, Date = Samedi.ToDateTime(TimeOnly.MinValue), Minutes = 10, Reason = "Transport",
@@ -328,7 +328,7 @@ public class EntryTicketRegisterTests : IAsyncLifetime
     private static Task<Guid> IssueAsync(
         ApplicationDbContext db, IPublisher publisher, Guid student, DateOnly date, int minutes, Guid? slot)
         => new CreateLateArrivalCommandHandler(
-                db, new StubTenant(EcoleA), publisher, new EntryTicketRegister(db), new WorkingDayGuard(db))
+                db, new StubTenant(EcoleA), publisher, new EntryTicketRegister(db), new WorkingDayGuard(db), new ArrivalPlanner(db, new WorkingDayGuard(db)))
             .Handle(new CreateLateArrivalCommand
             {
                 StudentId = student,

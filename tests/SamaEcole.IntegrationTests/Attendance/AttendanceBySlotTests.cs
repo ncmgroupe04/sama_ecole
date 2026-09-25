@@ -226,6 +226,51 @@ public class AttendanceBySlotTests : IAsyncLifetime
         sheet.Period.Should().Be("Matin");
     }
 
+    // Complément N°5 bis (C8/C9) — un retard n'a plus d'autre source qu'un billet d'entrée.
+    [Fact]
+    public async Task A_Late_Line_Without_An_Entry_Ticket_Is_Refused_And_Nothing_Is_Written()
+    {
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var act = async () => await SubmitAsync(db, Directeur, Maths, Samedi, slot: CreneauMaths, status: AttendanceStatus.Late, lateMinutes: 10);
+
+        (await act.Should().ThrowAsync<ValidationException>()).Which.Errors[nameof(SubmitAttendanceSheetCommand.Entries)]
+            .Single().Should().Contain("billet d'entrée");
+
+        await using var relecture = _db.NewAppContext(EcoleA);
+        (await relecture.AttendanceSheets.CountAsync()).Should().Be(0);
+        (await relecture.StudentAttendances.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task A_Late_Line_Is_Also_Refused_In_Free_Mode_Where_No_Ticket_Can_Be_Attached()
+    {
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var act = async () => await SubmitAsync(db, Directeur, Maths, Samedi, slot: null, period: "Matin", status: AttendanceStatus.Late, lateMinutes: 10);
+
+        await act.Should().ThrowAsync<ValidationException>();
+    }
+
+    [Fact]
+    public async Task The_Three_Remaining_Statuses_Are_Still_Accepted_Without_Any_Ticket()
+    {
+        foreach (var (status, day) in new[]
+                 {
+                     (AttendanceStatus.Present, Samedi),
+                     (AttendanceStatus.JustifiedAbsence, Samedi.AddDays(-7)),
+                     (AttendanceStatus.UnjustifiedAbsence, Samedi.AddDays(-14))
+                 })
+        {
+            await using var db = _db.NewAppContext(EcoleA);
+            await SubmitAsync(db, Directeur, Maths, day, slot: CreneauMaths, status: status);
+        }
+
+        await using var relecture = _db.NewAppContext(EcoleA);
+        (await relecture.StudentAttendances.Select(sa => sa.Status).ToListAsync()).Should().BeEquivalentTo(
+            [AttendanceStatus.Present, AttendanceStatus.JustifiedAbsence, AttendanceStatus.UnjustifiedAbsence]);
+    }
+
     // 6 — la liste des cours du jour.
     [Fact]
     public async Task The_Slots_Of_The_Day_Follow_The_Working_Week_And_The_Caller()
@@ -312,7 +357,8 @@ public class AttendanceBySlotTests : IAsyncLifetime
         };
 
     private static Task<SubmitAttendanceSheetResult> SubmitAsync(
-        ApplicationDbContext db, ICurrentUserService user, Guid subject, DateOnly date, Guid? slot, string period = "Matin")
+        ApplicationDbContext db, ICurrentUserService user, Guid subject, DateOnly date, Guid? slot, string period = "Matin",
+        AttendanceStatus status = AttendanceStatus.Present, int lateMinutes = 0)
     {
         var handler = new SubmitAttendanceSheetCommandHandler(
             db, new StubTenant(EcoleA), user, new AttendanceScopeAuthorizer(db, user),
@@ -326,7 +372,7 @@ public class AttendanceBySlotTests : IAsyncLifetime
                 Date = date,
                 Period = period,
                 ScheduleSlotId = slot,
-                Entries = [new AttendanceEntry(Eleve, AttendanceStatus.Present, 0)]
+                Entries = [new AttendanceEntry(Eleve, status, lateMinutes)]
             },
             default);
     }

@@ -85,9 +85,9 @@
     la classe, on les veut lisibles d'un coup d'œil — d'où `text-base`, plus de hauteur (`py-2`),
     graisse et anneau renforcé (`ring-2`) par-dessus la pastille `.status-badge-*`. *@
  <div class="flex items-center flex-wrap gap-3 text-base">
- <span class="status-badge-success gap-2 px-4 py-2 text-base font-semibold ring-2"><span class="status-dot" aria-hidden="true"></span>Présents : <span class="font-bold" x-text="countBy('Present')"></span>
+ <span class="status-badge-success gap-2 px-4 py-2 text-base font-semibold ring-2"><span class="status-dot" aria-hidden="true"></span>Présents : <span class="font-bold" x-text="presentCount"></span>
  </span>
- <span class="status-badge-warning gap-2 px-4 py-2 text-base font-semibold ring-2"><span class="status-dot" aria-hidden="true"></span>Retards : <span class="font-bold" x-text="countBy('Late')"></span>
+ <span class="status-badge-neutral gap-2 px-4 py-2 text-base font-semibold ring-2"><span class="status-dot" aria-hidden="true"></span>Absents justifiés : <span class="font-bold" x-text="countBy('JustifiedAbsence')"></span>
  </span>
  <span class="status-badge-danger gap-2 px-4 py-2 text-base font-semibold ring-2"><span class="status-dot" aria-hidden="true"></span>Absents non justifiés : <span class="font-bold" x-text="countBy('UnjustifiedAbsence')"></span>
  </span>
@@ -111,13 +111,12 @@
  <thead>
  <tr class="table-head">
  <th class="py-3 px-4">Élève</th>
- <th class="py-3 px-4 w-56">Statut</th>
- <th class="py-3 px-4 w-40">Retard (min)</th>
+ <th class="py-3 px-4 w-72">Statut</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
  <tr class="hover:bg-slate-50 transition-colors duration-150" x-show="entries.length === 0">
- <td colspan="3">
+ <td colspan="2">
  <empty-state icon="users" title="Aucun élève dans cette classe."
  hint="Vérifiez que des élèves sont inscrits dans la classe choisie." />
  </td>
@@ -141,15 +140,16 @@
  </div>
  </td>
  <td class="py-3 px-4">
- <select-field model="entry.status" on-change="onStatusChange(entry)" disabled="alreadySubmitted"
+ @* Ligne issue d'un billet d'entrée (ou retard historique) : lecture seule — le retard ne se saisit plus
+ ici, il vient de la Surveillance (Complément N°5 bis). *@
+ <template x-if="entry.locked">
+ <span :class="statusBadgeClass(entry.status)" class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"
+ x-text="rowStatusLabel(entry)"></span>
+ </template>
+ <template x-if="!entry.locked">
+ <select-field model="entry.status" disabled="alreadySubmitted"
  class="mt-0 text-sm" options-expr="statusOptions" />
- </td>
- <td class="py-3 px-4">
- <input type="number" min="1" max="240" x-model.number="entry.lateMinutes"
- x-show="entry.status === 'Late'"
- :disabled="alreadySubmitted"
- class="input-field mt-0 w-28 text-sm py-1.5" placeholder="min" />
- <span x-show="entry.status !== 'Late'" class="text-slate-300">—</span>
+ </template>
  </td>
  </tr>
  </template>
@@ -174,8 +174,8 @@
  en <span class="font-medium text-slate-900" x-text="selectedSubjectLabel"></span>
  du <span class="font-medium text-slate-900" x-text="formatDate(filters.date)"></span>
  (<span x-text="periodLabel"></span>) a bien été enregistré :
- <span class="font-medium text-slate-900" x-text="countBy('Present')"></span> présent(s),
- <span class="font-medium text-slate-900" x-text="countBy('Late')"></span> retard(s),
+ <span class="font-medium text-slate-900" x-text="presentCount"></span> présent(s)
+ (dont <span class="font-medium text-slate-900" x-text="countBy('Late')"></span> en retard, par billet),
  <span class="font-medium text-slate-900" x-text="countBy('UnjustifiedAbsence') + countBy('JustifiedAbsence')"></span> absent(s).
  </confirm-dialog-body>
  </modal-shell>

@@ -3,6 +3,7 @@ using SamaEcole.Application.Absences.Commands.CreateEarlyDeparture;
 using SamaEcole.Application.Absences.Commands.CreateLateArrival;
 using SamaEcole.Application.Absences.Queries.GetAbsenceJustifications;
 using SamaEcole.Application.Absences.Queries.GetEarlyDepartures;
+using SamaEcole.Application.Absences.Queries.GetArrivalPreview;
 using SamaEcole.Application.Absences.Queries.GetLateArrivals;
 using SamaEcole.Application.Absences.Queries.GetTodaySlotsForStudent;
 using SamaEcole.Domain.Enums;
@@ -47,6 +48,18 @@ public class AbsenceController(IMediator _mediator) : ControllerBase
         [FromQuery] Guid studentId, [FromQuery] DateOnly? date)
     {
         return Ok(await _mediator.Send(new GetTodaySlotsForStudentQuery(studentId, date)));
+    }
+
+    /// <summary>
+    /// Aperçu du billet d'entrée par heure d'arrivée (Complément N°5 bis) : cours manqués, retard sur le cours en
+    /// cours, cours visé et durée totale — calculés par le serveur, comme à l'émission. Un jour de repos, une classe
+    /// sans cours ou une arrivée avant le premier cours renvoient 422 avec la raison.
+    /// </summary>
+    [HttpGet("arrival-preview")]
+    public async Task<ActionResult<ArrivalPreviewDto>> GetArrivalPreview(
+        [FromQuery] Guid studentId, [FromQuery] DateOnly? date, [FromQuery] TimeOnly arrivalTime)
+    {
+        return Ok(await _mediator.Send(new GetArrivalPreviewQuery(studentId, date, arrivalTime)));
     }
 
     [HttpPost("late-arrivals")]

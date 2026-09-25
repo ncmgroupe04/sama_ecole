@@ -69,13 +69,16 @@ public class SubmitAttendanceSheetCommandHandler(
         if (resolved.SlotId is { } ticketSlotId)
         {
             var day = request.Date.ToDateTime(TimeOnly.MinValue);
+            // Complément N°5 bis : un billet touche ce cours soit qu'il le VISE, soit qu'il l'ait fait MANQUER.
             ticketByStudent = (await dbContext.LateArrivals.AsNoTracking()
-                    .Where(l => l.TargetScheduleSlotId == ticketSlotId
-                                && l.Date == day
-                                && (l.Status == EntryTicketStatus.Issued || l.Status == EntryTicketStatus.Accepted))
-                    .Select(l => new { l.StudentId, l.Id })
+                    .Where(l => l.Date == day
+                                && (l.Status == EntryTicketStatus.Issued || l.Status == EntryTicketStatus.Accepted)
+                                && (l.TargetScheduleSlotId == ticketSlotId
+                                    || (l.MissedScheduleSlotIds != null && l.MissedScheduleSlotIds.Contains(ticketSlotId))))
+                    .Select(l => new { l.StudentId, l.Id, Missed = l.TargetScheduleSlotId != ticketSlotId })
                     .ToListAsync(cancellationToken))
-                .ToDictionary(t => t.StudentId, t => t.Id);
+                .GroupBy(t => t.StudentId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(t => t.Missed).First().Id);
         }
 
         // Tous les élèves de l'appel doivent appartenir à CETTE classe : un statut posé sur un élève
@@ -91,6 +94,18 @@ public class SubmitAttendanceSheetCommandHandler(
         {
             throw new ValidationException([
                 new ValidationFailure(nameof(request.Entries), "Un ou plusieurs élèves n'appartiennent pas à cette classe.")
+            ]);
+        }
+
+        // Complément N°5 bis (C8/C9) : un retard n'a plus d'autre source qu'un BILLET D'ENTRÉE. L'enseignant pointe
+        // présence ou absence ; une ligne « Retard » n'est acceptée que si un billet actif la porte (feuille
+        // présélectionnée par le billet, renvoyée telle quelle). En mode libre aucun billet ne peut être rattaché :
+        // tout « Retard » y est donc refusé. Les retards déjà en base (historique) ne passent pas par ici.
+        if (request.Entries.Any(e => e.Status == AttendanceStatus.Late && !ticketByStudent.ContainsKey(e.StudentId)))
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(request.Entries),
+                    "Le retard s'enregistre par un billet d'entrée (Surveillance › Billets d'entrée) : marquez l'élève présent ou absent.")
             ]);
         }
 

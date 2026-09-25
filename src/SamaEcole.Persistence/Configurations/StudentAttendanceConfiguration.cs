@@ -20,6 +20,10 @@ public class StudentAttendanceConfiguration : IEntityTypeConfiguration<StudentAt
 
         // Billet d'entrée rattaché à la ligne (Évolution N°5) : nullable, Restrict (règle #6).
         builder.HasIndex(sa => sa.EntryTicketId);
+
+        // Statut d'avant un billet (Complément N°5 bis) : texte nullable, comme LateArrival.PreviousStatus.
+        builder.Property(sa => sa.PreviousStatus).HasConversion<string>().HasMaxLength(20);
+
         builder.HasOne<LateArrival>()
             .WithMany()
             .HasForeignKey(sa => sa.EntryTicketId)

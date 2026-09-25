@@ -51,8 +51,17 @@ public class EntryTicketRegister(IApplicationDbContext dbContext)
 
         var wasAbsence = false;
 
+        // Billet par heure d'arrivée pile à l'heure de début du cours visé (0 minute de retard) : il n'y a rien à
+        // passer en « Retard » — le billet se contente d'être RATTACHÉ à la ligne, que l'enseignant du cours accepte.
+        var noLate = ticket.Minutes <= 0;
+
         if (line is null)
         {
+            if (noLate)
+            {
+                return null;
+            }
+
             // L'élève ne figurait pas sur la fiche (arrivé après la saisie) : le billet crée sa ligne.
             dbContext.StudentAttendances.Add(new StudentAttendance
             {
@@ -67,8 +76,14 @@ public class EntryTicketRegister(IApplicationDbContext dbContext)
         else
         {
             // Déjà appliqué (émission puis acceptation, ou acceptation rejouée) : rien à changer.
-            if (line.EntryTicketId == ticket.Id && line.Status == AttendanceStatus.Late)
+            if (line.EntryTicketId == ticket.Id && (line.Status == AttendanceStatus.Late || noLate))
             {
+                return null;
+            }
+
+            if (noLate)
+            {
+                line.EntryTicketId = ticket.Id;
                 return null;
             }
 
@@ -90,33 +105,76 @@ public class EntryTicketRegister(IApplicationDbContext dbContext)
     }
 
     /// <summary>
-    /// Annulation d'un billet NON accepté : la ligne d'appel retrouve le statut qu'elle avait avant lui et se
-    /// détache du billet. Aucune notification — la famille n'est pas prévenue d'une annulation.
-    ///
-    /// Si le billet n'a conservé aucun statut d'avant (la fiche n'existait pas à l'émission, la ligne a été créée
-    /// ou saisie plus tard), la ligne garde ce qui a été constaté en classe et se détache seulement : le
-    /// registre appartient à l'enseignant qui a fait l'appel, pas au billet.
+    /// Complément N°5 bis (arbitrage C5) : pour chaque cours MANQUÉ avant l'arrivée dont la fiche existe déjà, la ligne
+    /// de l'élève passe de « Absent (non justifié) » à « Absent (justifié) » — le billet justifie ce cours. JAMAIS
+    /// depuis « Présent », « Retard » ou une absence déjà justifiée (on ne réécrit que ce que le billet régularise),
+    /// jamais l'inverse, et aucune ligne n'est créée pour un élève absent de la fiche. Le statut d'avant est gardé SUR
+    /// LA LIGNE (PreviousStatus) : c'est ce qui permet à l'annulation de la restaurer. Fiche absente : rien à faire, la
+    /// feuille d'appel présélectionne l'absence justifiée (InitializeAttendanceSheetQueryHandler). Aucune notification
+    /// (arbitrage C7). Ne sauvegarde jamais : l'appelant fait UN SEUL SaveChanges.
     /// </summary>
-    public async Task RestoreAsync(
-        LateArrival ticket, ScheduleSlot slot, DateOnly date, CancellationToken cancellationToken)
+    public async Task ApplyMissedAsync(LateArrival ticket, DateOnly date, CancellationToken cancellationToken)
     {
-        var line = await (
-            from sa in dbContext.StudentAttendances
-            join sheet in dbContext.AttendanceSheets on sa.AttendanceSheetId equals sheet.Id
-            where sheet.ScheduleSlotId == slot.Id && sheet.Date == date && sa.EntryTicketId == ticket.Id
-            select sa).FirstOrDefaultAsync(cancellationToken);
-
-        if (line is null)
+        if (ticket.MissedScheduleSlotIds is not { Length: > 0 } missed)
         {
             return;
         }
 
-        if (ticket.PreviousStatus is { } previous)
-        {
-            line.Status = previous;
-            line.LateMinutes = ticket.PreviousLateMinutes ?? 0;
-        }
+        var lines = await (
+            from sa in dbContext.StudentAttendances
+            join sheet in dbContext.AttendanceSheets on sa.AttendanceSheetId equals sheet.Id
+            where sa.StudentId == ticket.StudentId
+                  && sheet.Date == date
+                  && sheet.ScheduleSlotId != null
+                  && missed.Contains(sheet.ScheduleSlotId.Value)
+            select sa).ToListAsync(cancellationToken);
 
-        line.EntryTicketId = null;
+        foreach (var line in lines.Where(l => l.Status == AttendanceStatus.UnjustifiedAbsence))
+        {
+            line.PreviousStatus = line.Status;
+            line.PreviousLateMinutes = line.LateMinutes;
+            line.Status = AttendanceStatus.JustifiedAbsence;
+            line.LateMinutes = 0;
+            line.EntryTicketId = ticket.Id;
+        }
+    }
+
+    /// <summary>
+    /// Annulation d'un billet NON accepté : chaque ligne d'appel rattachée au billet retrouve le statut qu'elle avait
+    /// avant lui et s'en détache. Aucune notification — la famille n'est pas prévenue d'une annulation.
+    ///
+    /// Deux sources de « statut d'avant » : la LIGNE elle-même (cours manqués justifiés par le billet, Complément
+    /// N°5 bis) ou, pour la ligne du cours VISÉ, le billet (PreviousStatus, Évolution N°5). Sans statut d'avant
+    /// (la fiche n'existait pas à l'émission, la ligne a été créée ou saisie plus tard), la ligne garde ce qui a
+    /// été constaté en classe et se détache seulement : le registre appartient à l'enseignant qui a fait l'appel,
+    /// pas au billet.
+    /// </summary>
+    public async Task RestoreAsync(LateArrival ticket, DateOnly date, CancellationToken cancellationToken)
+    {
+        var rows = await (
+            from sa in dbContext.StudentAttendances
+            join sheet in dbContext.AttendanceSheets on sa.AttendanceSheetId equals sheet.Id
+            where sheet.Date == date && sa.EntryTicketId == ticket.Id
+            select new { Line = sa, sheet.ScheduleSlotId }).ToListAsync(cancellationToken);
+
+        foreach (var row in rows)
+        {
+            var line = row.Line;
+
+            if (line.PreviousStatus is { } lineBefore)
+            {
+                line.Status = lineBefore;
+                line.LateMinutes = line.PreviousLateMinutes ?? 0;
+                line.PreviousStatus = null;
+                line.PreviousLateMinutes = null;
+            }
+            else if (row.ScheduleSlotId == ticket.TargetScheduleSlotId && ticket.PreviousStatus is { } ticketBefore)
+            {
+                line.Status = ticketBefore;
+                line.LateMinutes = ticket.PreviousLateMinutes ?? 0;
+            }
+
+            line.EntryTicketId = null;
+        }
     }
 }
