@@ -169,6 +169,81 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         sheet.SchoolYearLabel.Should().Be("2026-2027");
     }
 
+    private record SlotDto(Guid SlotId, Guid SubjectId, string SubjectName, Guid TeacherId, string TeacherName, string Start, string End, string Label, Guid? SheetId);
+
+    /// <summary>
+    /// Évolution N°5 — appel par créneau de bout en bout : la liste des cours du jour, l'appel sans période
+    /// saisie (dérivée du cours), un créneau qui ne convient pas refusé en 422, et la vue restreinte d'un Enseignant.
+    /// </summary>
+    [Fact]
+    public async Task An_Attendance_Sheet_Can_Be_Taken_On_A_Schedule_Slot_And_Derives_Its_Period()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (subjectId, classroomId, s1, _) = await SeedClassAsync(directeur);
+
+        // Un jour ouvré de la semaine par défaut (lundi → samedi) : le dimanche, on prend la veille.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var date = today.DayOfWeek == DayOfWeek.Sunday ? today.AddDays(-1) : today;
+
+        var teacherResponse = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
+        {
+            fullName = "Enseignant de test", email = "prof.creneau@sama-ecole.sn", birthDate = "1985-04-12",
+            subjectIds = new[] { subjectId }, userId = AuthApiFactory.EnseignantId
+        });
+        teacherResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var teacherId = (await teacherResponse.Content.ReadFromJsonAsync<TeacherResult>())!.Id;
+        (await SendAsync(HttpMethod.Post, $"/api/v1/teachers/{teacherId}/assignments", directeur, new { classroomId, subjectId }))
+            .StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var slotResponse = await SendAsync(HttpMethod.Post, "/api/v1/schedules", directeur, new
+        {
+            teacherId, classroomId, subjectId, dayOfWeek = (int)date.DayOfWeek, startTime = "08:00:00", endTime = "10:00:00"
+        });
+        slotResponse.EnsureSuccessStatusCode();
+
+        // 1. Les cours du jour.
+        var slots = (await (await SendAsync(HttpMethod.Get, $"/api/v1/attendance/slots?classroomId={classroomId}&date={date:yyyy-MM-dd}", directeur))
+            .Content.ReadFromJsonAsync<List<SlotDto>>())!;
+        var slot = slots.Should().ContainSingle().Subject;
+        slot.Label.Should().Be("08:00-10:00");
+        slot.SheetId.Should().BeNull();
+
+        // 2. Un créneau qui ne convient pas (mauvaise matière) : 422, rien d'écrit.
+        var otherSubject = await CreateSubjectAsync(directeur, "Français");
+        (await SendAsync(HttpMethod.Post, "/api/v1/attendance", directeur, new
+        {
+            classroomId, subjectId = otherSubject, date = date.ToString("yyyy-MM-dd"), scheduleSlotId = slot.SlotId,
+            entries = new[] { Entry(s1, "Present") }
+        })).StatusCode.Should().Be((HttpStatusCode)422);
+
+        // 3. L'appel SANS période : elle est dérivée du cours.
+        var submit = await SendAsync(HttpMethod.Post, "/api/v1/attendance", directeur, new
+        {
+            classroomId, subjectId, date = date.ToString("yyyy-MM-dd"), scheduleSlotId = slot.SlotId,
+            entries = new[] { Entry(s1, "Present") }
+        });
+        submit.StatusCode.Should().Be(HttpStatusCode.Created);
+        var sheetId = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.Id;
+        (await (await SendAsync(HttpMethod.Get, $"/api/v1/attendance/{sheetId}", directeur))
+            .Content.ReadFromJsonAsync<SheetDto>())!.Period.Should().Be("08:00-10:00");
+
+        // 4. Le cours porte désormais sa fiche ; le même créneau ne se ressaisit pas (409).
+        var after = (await (await SendAsync(HttpMethod.Get, $"/api/v1/attendance/slots?classroomId={classroomId}&date={date:yyyy-MM-dd}", directeur))
+            .Content.ReadFromJsonAsync<List<SlotDto>>())!;
+        after.Single().SheetId.Should().Be(sheetId);
+        (await SendAsync(HttpMethod.Post, "/api/v1/attendance", directeur, new
+        {
+            classroomId, subjectId, date = date.ToString("yyyy-MM-dd"), scheduleSlotId = slot.SlotId,
+            entries = new[] { Entry(s1, "Present") }
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        // 5. L'Enseignant titulaire voit son cours.
+        var enseignant = await EnseignantTokenAsync();
+        var mine = (await (await SendAsync(HttpMethod.Get, $"/api/v1/attendance/slots?classroomId={classroomId}&date={date:yyyy-MM-dd}", enseignant))
+            .Content.ReadFromJsonAsync<List<SlotDto>>())!;
+        mine.Should().ContainSingle();
+    }
+
     [Fact]
     public async Task Roster_Should_Reflect_An_Already_Submitted_Sheet()
     {

@@ -8,6 +8,7 @@ public class InitializeAttendanceSheetQueryValidator : AbstractValidator<Initial
     {
         RuleFor(x => x.ClassroomId).NotEmpty();
         RuleFor(x => x.SubjectId).NotEmpty();
-        RuleFor(x => x.Period).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.Period).NotEmpty().When(x => x.ScheduleSlotId is null);
+        RuleFor(x => x.Period).MaximumLength(50);
     }
 }

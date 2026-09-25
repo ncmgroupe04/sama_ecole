@@ -16,7 +16,18 @@ public record SubmitAttendanceSheetCommand : IRequest<SubmitAttendanceSheetResul
     public required Guid ClassroomId { get; init; }
     public required Guid SubjectId { get; init; }
     public required DateOnly Date { get; init; }
-    public required string Period { get; init; }
+
+    /// <summary>
+    /// Créneau en texte libre (« Matin », « 1re heure »…) — mode LIBRE. Ignoré (et non exigé) quand
+    /// <see cref="ScheduleSlotId"/> est fourni : le serveur le dérive alors des horaires du cours.
+    /// </summary>
+    public string Period { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Cours d'emploi du temps sur lequel l'appel est fait (Évolution N°5). Optionnel : absent, l'appel est
+    /// « libre » et se comporte exactement comme avant.
+    /// </summary>
+    public Guid? ScheduleSlotId { get; init; }
 
     public required IReadOnlyList<AttendanceEntry> Entries { get; init; }
 }

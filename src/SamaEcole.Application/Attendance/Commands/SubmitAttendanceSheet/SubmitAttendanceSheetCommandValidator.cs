@@ -13,7 +13,9 @@ public class SubmitAttendanceSheetCommandValidator : AbstractValidator<SubmitAtt
     {
         RuleFor(x => x.ClassroomId).NotEmpty();
         RuleFor(x => x.SubjectId).NotEmpty();
-        RuleFor(x => x.Period).NotEmpty().MaximumLength(50).NoHtml();
+        // Exigée en mode LIBRE seulement : avec un créneau d'emploi du temps, le serveur la dérive du cours.
+        RuleFor(x => x.Period).NotEmpty().When(x => x.ScheduleSlotId is null);
+        RuleFor(x => x.Period).MaximumLength(50).NoHtml();
 
         RuleFor(x => x.Date)
             .LessThanOrEqualTo(_ => DateOnly.FromDateTime(DateTime.UtcNow))

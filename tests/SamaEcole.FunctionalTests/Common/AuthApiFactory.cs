@@ -452,6 +452,12 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // school_years en Restrict, donc AVANT chacune d'entre elles.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM teacher_assignments;");
 
+        // Appel par créneau (Évolution N°5) : attendance_sheets (déjà purgée plus haut) et LateArrivals portent une
+        // FK Restrict vers ScheduleSlots, donc les billets d'abord, puis les créneaux — AVANT les enseignants, classes
+        // et matières qu'ils référencent. student_attendances (porteuse du lien vers un billet) est déjà partie.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM \"LateArrivals\";");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM \"ScheduleSlots\";");
+
         // Surcharges de coefficient (Évolution N°4) : FK Restrict vers school_years, subjects ET classrooms,
         // donc AVANT les trois. Sans cette purge, une surcharge laissée par un test bloquerait celui d'après
         // en 23503 dès la suppression des années scolaires ci-dessous.

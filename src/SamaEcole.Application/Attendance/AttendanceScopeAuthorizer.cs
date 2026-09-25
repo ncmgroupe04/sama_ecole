@@ -1,7 +1,10 @@
+using FluentValidation.Results;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+
+using ValidationException = SamaEcole.Application.Common.Exceptions.ValidationException;
 
 namespace SamaEcole.Application.Attendance;
 
@@ -19,6 +22,68 @@ public class AttendanceScopeAuthorizer(
     IApplicationDbContext dbContext,
     ICurrentUserService currentUser)
 {
+    /// <summary>
+    /// Résout le créneau d'un appel (Évolution N°5). SANS créneau demandé : le mode libre, inchangé — la période
+    /// est celle que le client a saisie. AVEC un créneau : il doit exister dans l'école (422), convenir à la
+    /// classe, la matière et le jour de la date (<see cref="SlotPeriod.Mismatch"/>, 422) et, pour un Enseignant,
+    /// être LE SIEN (403) ; la période est alors DÉRIVÉE de ses horaires, jamais celle du client — l'index
+    /// unique, les rapports et les notifications lisent tous <c>Period</c> et restent ainsi inchangés.
+    /// </summary>
+    public async Task<ResolvedPeriod> ResolveSlotAsync(
+        Guid? scheduleSlotId, Guid classroomId, Guid subjectId, DateOnly date, string requestedPeriod,
+        CancellationToken cancellationToken)
+    {
+        if (scheduleSlotId is not { } slotId)
+        {
+            return new ResolvedPeriod(null, requestedPeriod.Trim());
+        }
+
+        const string field = "ScheduleSlotId";
+
+        var slot = await dbContext.ScheduleSlots.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == slotId, cancellationToken)
+            ?? throw new ValidationException([
+                new ValidationFailure(field, "Ce créneau n'existe pas dans votre établissement.")
+            ]);
+
+        var mismatch = SlotPeriod.Mismatch(slot, classroomId, subjectId, date);
+        if (mismatch is not null)
+        {
+            throw new ValidationException([new ValidationFailure(field, mismatch)]);
+        }
+
+        await EnsureOwnsSlotAsync(slot, cancellationToken);
+
+        return new ResolvedPeriod(slot.Id, SlotPeriod.Label(slot.StartTime, slot.EndTime));
+    }
+
+    /// <summary>
+    /// Directeur, Secrétariat et Surveillant font l'appel de n'importe quel créneau — c'est le cas du
+    /// REMPLAÇANT. Un Enseignant n'en fait que les siens : il doit être le titulaire du créneau (en plus d'être
+    /// affecté à la classe et à la matière, contrôle fait par <see cref="EnsureCanTakeAttendanceAsync"/>).
+    /// </summary>
+    public async Task EnsureOwnsSlotAsync(Domain.Entities.ScheduleSlot slot, CancellationToken cancellationToken)
+    {
+        if (currentUser.Role != Role.Enseignant)
+        {
+            return;
+        }
+
+        var userId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Aucun compte associé à la session courante.");
+
+        var teacherId = await dbContext.Teachers.AsNoTracking()
+            .Where(t => t.UserId == userId)
+            .Select(t => (Guid?)t.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (teacherId != slot.TeacherId)
+        {
+            throw new ForbiddenException(
+                "Ce cours est assuré par un autre enseignant : demandez à la Vie Scolaire de faire l'appel à sa place.");
+        }
+    }
+
     public async Task EnsureCanTakeAttendanceAsync(
         Guid classroomId, Guid subjectId, Guid schoolYearId, CancellationToken cancellationToken)
     {
@@ -67,3 +132,9 @@ public class AttendanceScopeAuthorizer(
         }
     }
 }
+
+/// <summary>
+/// Créneau résolu d'un appel (Évolution N°5) : le cours visé (null en mode libre) et la période à enregistrer —
+/// dérivée des horaires du cours, ou celle que le client a saisie en mode libre.
+/// </summary>
+public sealed record ResolvedPeriod(Guid? SlotId, string Period);

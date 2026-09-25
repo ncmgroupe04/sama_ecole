@@ -46,6 +46,10 @@ public class InitializeAttendanceSheetQueryHandler(
         // (403 sinon). Directeur/Secrétariat non bornés.
         await scopeAuthorizer.EnsureCanTakeAttendanceAsync(request.ClassroomId, request.SubjectId, activeYear.Id, cancellationToken);
 
+        // Créneau d'emploi du temps (Évolution N°5) : mêmes contrôles que la soumission.
+        var resolved = await scopeAuthorizer.ResolveSlotAsync(
+            request.ScheduleSlotId, request.ClassroomId, request.SubjectId, request.Date, request.Period, cancellationToken);
+
         // Jour de repos de l'établissement (Évolution N°3) : pas de feuille d'appel à ouvrir ce jour-là.
         await workingDayGuard.EnsureWorkingDayAsync(request.Date, nameof(request.Date), cancellationToken);
 
@@ -71,7 +75,7 @@ public class InitializeAttendanceSheetQueryHandler(
             .Where(a => a.ClassroomId == request.ClassroomId
                         && a.SubjectId == request.SubjectId
                         && a.Date == request.Date
-                        && a.Period == request.Period)
+                        && a.Period == resolved.Period)
             .Select(a => (Guid?)a.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -100,7 +104,7 @@ public class InitializeAttendanceSheetQueryHandler(
             subject.Id,
             subject.Name,
             request.Date,
-            request.Period,
+            resolved.Period,
             existingSheetId is not null,
             rows);
     }

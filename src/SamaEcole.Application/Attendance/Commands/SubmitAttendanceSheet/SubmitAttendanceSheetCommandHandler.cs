@@ -54,6 +54,11 @@ public class SubmitAttendanceSheetCommandHandler(
         // Portée : un Enseignant ne peut faire l'appel que pour ses classes/matières assignées (403).
         await scopeAuthorizer.EnsureCanTakeAttendanceAsync(request.ClassroomId, request.SubjectId, activeYear.Id, cancellationToken);
 
+        // Créneau d'emploi du temps (Évolution N°5) : vérifié, et le libellé du créneau en est DÉRIVÉ. Sans
+        // créneau, le mode libre — la période saisie par le client — est strictement celui d'avant.
+        var resolved = await scopeAuthorizer.ResolveSlotAsync(
+            request.ScheduleSlotId, request.ClassroomId, request.SubjectId, request.Date, request.Period, cancellationToken);
+
         // Jour de repos de l'établissement (Évolution N°3) : aucun appel ne s'y saisit.
         await workingDayGuard.EnsureWorkingDayAsync(request.Date, nameof(request.Date), cancellationToken);
 
@@ -85,7 +90,8 @@ public class SubmitAttendanceSheetCommandHandler(
                 SubjectId = request.SubjectId,
                 SchoolYearId = activeYear.Id,
                 Date = request.Date,
-                Period = request.Period.Trim(),
+                Period = resolved.Period,
+                ScheduleSlotId = resolved.SlotId,
                 TakenByUserId = takenByUserId
             };
 
@@ -116,7 +122,7 @@ public class SubmitAttendanceSheetCommandHandler(
                     request.ClassroomId,
                     request.SubjectId,
                     request.Date,
-                    request.Period.Trim(),
+                    resolved.Period,
                     entry.Status,
                     entry.Status == AttendanceStatus.Late ? entry.LateMinutes : 0
                 ), ct);
