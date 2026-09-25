@@ -15,12 +15,23 @@ public static class DayAttendanceClassifier
     public static DayAttendanceKind Classify(IEnumerable<AttendanceStatus> sessionStatuses)
     {
         var statuses = sessionStatuses.ToList();
-        var absences = statuses.Count(IsAbsence);
 
-        if (statuses.Count == 0) return DayAttendanceKind.Present;
-        if (absences == statuses.Count) return DayAttendanceKind.FullAbsence;
+        return Classify(
+            statuses.Count,
+            statuses.Count(IsAbsence),
+            statuses.Count(s => s == AttendanceStatus.Late));
+    }
+
+    /// <summary>
+    /// Même règle sur des COMPTEURS : c'est la forme qu'utilise le rapport, qui agrège par jour côté base plutôt
+    /// que de ramener toutes les lignes d'appel en mémoire.
+    /// </summary>
+    public static DayAttendanceKind Classify(int sessions, int absences, int lates)
+    {
+        if (sessions == 0) return DayAttendanceKind.Present;
+        if (absences == sessions) return DayAttendanceKind.FullAbsence;
         if (absences > 0) return DayAttendanceKind.PartialAbsence;
-        return statuses.Contains(AttendanceStatus.Late) ? DayAttendanceKind.Late : DayAttendanceKind.Present;
+        return lates > 0 ? DayAttendanceKind.Late : DayAttendanceKind.Present;
     }
 
     private static bool IsAbsence(AttendanceStatus s)

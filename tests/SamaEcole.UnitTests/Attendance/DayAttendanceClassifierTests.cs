@@ -34,6 +34,17 @@ public class DayAttendanceClassifierTests
     public void No_Recorded_Session_Is_Not_An_Absence()
         => DayAttendanceClassifier.Classify([]).Should().Be(DayAttendanceKind.Present);
 
+    // La forme par COMPTEURS (celle du rapport, agrégée côté base) suit exactement la même règle.
+    [Theory]
+    [InlineData(0, 0, 0, DayAttendanceKind.Present)]
+    [InlineData(3, 3, 0, DayAttendanceKind.FullAbsence)]
+    [InlineData(3, 1, 0, DayAttendanceKind.PartialAbsence)]
+    [InlineData(2, 1, 1, DayAttendanceKind.PartialAbsence)]
+    [InlineData(3, 0, 1, DayAttendanceKind.Late)]
+    [InlineData(3, 0, 0, DayAttendanceKind.Present)]
+    public void The_Counter_Form_Follows_The_Same_Rule(int sessions, int absences, int lates, DayAttendanceKind expected)
+        => DayAttendanceClassifier.Classify(sessions, absences, lates).Should().Be(expected);
+
     [Fact]
     public void A_Single_Late_Session_Is_A_Late_Not_An_Absence()
         => DayAttendanceClassifier.Classify([S.Late]).Should().Be(DayAttendanceKind.Late);

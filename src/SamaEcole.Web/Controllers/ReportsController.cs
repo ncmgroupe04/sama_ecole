@@ -1,3 +1,4 @@
+using SamaEcole.Application.Reports.Queries.GetAttendanceBySubjectReport;
 using SamaEcole.Application.Reports.Queries.GetAttendanceExport;
 using SamaEcole.Application.Reports.Queries.GetAttendanceReport;
 using SamaEcole.Application.Reports.Queries.GetDirectorDashboard;
@@ -43,6 +44,20 @@ public class ReportsController(ISender mediator) : ControllerBase
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Attendance(
         [FromQuery] GetAttendanceReportQuery query, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(query, cancellationToken));
+
+    /// <summary>
+    /// Évolution N°5 — vue « par matière » du rapport d'assiduité : séances appelées et répartition des statuts,
+    /// matière par matière. Mêmes filtres, garde de classe et permissions que le rapport par élève.
+    /// </summary>
+    [HttpGet("attendance/by-subject")]
+    [Authorize(Roles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.SuperAdmin)}")]
+    [RequireModule(SchoolModule.Pedagogy)]
+    [ProducesResponseType<IReadOnlyList<SubjectAttendanceReportRow>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> AttendanceBySubject(
+        [FromQuery] GetAttendanceBySubjectReportQuery query, CancellationToken cancellationToken)
         => Ok(await mediator.Send(query, cancellationToken));
 
     /// <summary>

@@ -31,7 +31,8 @@ public static class AttendanceReportCsv
         sb.Append(string.Join(Separator, new[]
         {
             "Matricule", "Nom", "Classe", "Appels", "Présents", "Retards",
-            "Minutes de retard", "Absences justifiées", "Absences non justifiées", "Taux de présence (%)"
+            "Minutes de retard", "Absences justifiées", "Absences non justifiées", "Taux de présence (%)",
+            "Jours d'absence complète", "Jours d'absence partielle"
         })).Append('\n');
 
         foreach (var s in model.Students)
@@ -47,7 +48,9 @@ public static class AttendanceReportCsv
                 s.TotalLateMinutes.ToString(CultureInfo.InvariantCulture),
                 s.JustifiedAbsences.ToString(CultureInfo.InvariantCulture),
                 s.UnjustifiedAbsences.ToString(CultureInfo.InvariantCulture),
-                FormatPercent(s.AttendanceRate)
+                FormatPercent(s.AttendanceRate),
+                s.FullAbsenceDays.ToString(CultureInfo.InvariantCulture),
+                s.PartialAbsenceDays.ToString(CultureInfo.InvariantCulture)
             })).Append('\n');
         }
 
