@@ -200,7 +200,7 @@ public class CoefficientsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
     }
 
     [Fact]
-    public async Task The_Catalogue_Lists_The_Five_Series()
+    public async Task The_Catalogue_Lists_The_Baccalaureate_Series_Then_The_Legacy_Codes()
     {
         var directeur = await DirecteurAsync();
 
@@ -208,6 +208,8 @@ public class CoefficientsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.Content.ReadFromJsonAsync<List<SeriesItem>>())!.Select(s => s.Code)
-            .Should().Equal("L1", "L2", "S1", "S2", "TECH");
+            .Should().Equal(
+                "L1A", "L1B", "L'1", "L2", "S1", "S2", "S3", "S4", "S5", "STEG", "T1", "T2", "STIDD", "LA", "S1A", "S2A",
+                "L1", "TECH");
     }
 }
