@@ -247,6 +247,7 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
     private record TicketRow(Guid StudentId, string? Status, int LateMinutes, Guid? EntryTicketId, string? EntryTicketStatus);
     private record TicketRoster(bool AlreadySubmitted, List<TicketRow> Students);
     private record TodaySlot(Guid SlotId, string Label, bool IsCurrent, bool IsNext, string? TicketStatus);
+    private record TicketAction(Guid TicketId, string Status, DateTimeOffset? AcceptedAt);
 
     /// <summary>
     /// Évolution N°5 — billet d'entrée visant un cours, de bout en bout : la Vie Scolaire voit les cours de la classe
@@ -265,7 +266,7 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         var teacherResponse = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
         {
             fullName = "Enseignant de test", email = "prof.billet@sama-ecole.sn", birthDate = "1985-04-12",
-            subjectIds = new[] { subjectId }
+            subjectIds = new[] { subjectId }, userId = AuthApiFactory.EnseignantId
         });
         teacherResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var teacherId = (await teacherResponse.Content.ReadFromJsonAsync<TeacherResult>())!.Id;
@@ -313,10 +314,34 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         })).StatusCode.Should().Be((HttpStatusCode)422);
 
         // 5. L'Enseignant n'émet pas de billet (réservé à la Vie Scolaire).
-        (await SendAsync(HttpMethod.Post, "/api/v1/absences/late-arrivals", await EnseignantTokenAsync(), new
+        var enseignant = await EnseignantTokenAsync();
+        (await SendAsync(HttpMethod.Post, "/api/v1/absences/late-arrivals", enseignant, new
         {
             studentId = s1, date = day, minutes = 5, reason = "Transport"
         })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // 6. Le Secrétariat n'accepte pas ; l'Enseignant TITULAIRE du cours accepte, et rejouer ne change rien.
+        var secretaire = await AccessTokenAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
+        (await SendAsync(HttpMethod.Post, $"/api/v1/billets/{ticketId}/accept", secretaire))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var accepted = await SendAsync(HttpMethod.Post, $"/api/v1/billets/{ticketId}/accept", enseignant);
+        accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await accepted.Content.ReadFromJsonAsync<TicketAction>())!.Status.Should().Be("Accepted");
+        (await SendAsync(HttpMethod.Post, $"/api/v1/billets/{ticketId}/accept", enseignant))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 7. Accepté, le billet ne s'annule plus (422) ; la feuille le montre accepté.
+        (await SendAsync(HttpMethod.Post, $"/api/v1/billets/{ticketId}/cancel", directeur))
+            .StatusCode.Should().Be((HttpStatusCode)422);
+        var after = (await (await SendAsync(HttpMethod.Get,
+                $"/api/v1/attendance/roster?classroomId={classroomId}&subjectId={subjectId}&date={day}&scheduleSlotId={slot.SlotId}", directeur))
+            .Content.ReadFromJsonAsync<TicketRoster>())!;
+        after.Students.Single(r => r.StudentId == s1).EntryTicketStatus.Should().Be("Accepted");
+
+        // 8. Un billet inconnu : 404.
+        (await SendAsync(HttpMethod.Post, $"/api/v1/billets/{Guid.NewGuid()}/accept", directeur))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
