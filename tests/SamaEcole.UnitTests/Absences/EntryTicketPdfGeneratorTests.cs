@@ -24,7 +24,9 @@ public class EntryTicketPdfGeneratorTests
         string? phone = "+221 77 123 45 67",
         string? city = "Dakar",
         string? legalMentions = "SN-DKR-2020-B-1234",
-        string? observations = null) => new(
+        string? observations = null,
+        string? subject = null,
+        string? status = null) => new(
         LateArrivalId: Guid.NewGuid(),
         TicketNumber: "BILLET-1A2B3C4D",
         IssuedAt: new DateTimeOffset(2026, 10, 1, 8, 15, 0, TimeSpan.Zero),
@@ -44,7 +46,11 @@ public class EntryTicketPdfGeneratorTests
         SchoolNinea: legalMentions,
         SchoolRegistreCommerce: legalMentions,
         SchoolLogoUrl: "https://exemple.sn/logo.png",
-        SurveillantSignatureUrl: null);
+        SurveillantSignatureUrl: null,
+        TargetSubjectName: subject,
+        TargetTimeRange: subject is null ? null : "08:00-10:00",
+        TargetTeacherName: subject is null ? null : "Mme Awa Sow",
+        Status: status);
 
     private static void ShouldBeAValidPdf(byte[] pdf)
     {
@@ -59,6 +65,33 @@ public class EntryTicketPdfGeneratorTests
 
         ShouldBeAValidPdf(pdf);
         pdf.Length.Should().BeGreaterThan(1000, "un billet complet n'est pas un fichier vide");
+    }
+
+    // Évolution N°5 : le billet d'un cours visé porte le cours et son statut, et reste UNE page A5.
+    [Theory]
+    [InlineData("Issued")]
+    [InlineData("Accepted")]
+    [InlineData("Cancelled")]
+    public void Generate_Prints_A_Targeted_Ticket_In_Every_Status_On_A_Single_Page(string status)
+    {
+        var pdf = new EntryTicketPdfGenerator().Generate(
+            Ticket(subject: "Mathématiques", status: status), logo: null, surveillantSignature: null);
+
+        ShouldBeAValidPdf(pdf);
+        Encoding.ASCII.GetString(pdf).Should().Contain("/Count 1", "le billet A5 ne doit jamais déborder sur une deuxième page");
+    }
+
+    [Fact]
+    public void Generate_Stays_On_A_Single_Page_With_A_Long_Subject_And_Long_Observations()
+    {
+        var pdf = new EntryTicketPdfGenerator().Generate(
+            Ticket(
+                observations: "Élève accompagné de son tuteur, retard dû à une panne de transport en commun sur la corniche ouest.",
+                subject: "Sciences de la vie et de la terre — travaux pratiques et expérimentation en laboratoire",
+                status: "Issued"),
+            logo: null, surveillantSignature: null);
+
+        Encoding.ASCII.GetString(pdf).Should().Contain("/Count 1");
     }
 
     [Fact]

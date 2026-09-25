@@ -1,3 +1,5 @@
+using SamaEcole.Application.Attendance;
+using SamaEcole.Application.Attendance.EntryTickets;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Enrollments;
 using MediatR;
@@ -33,7 +35,18 @@ public record EntryTicketDto(
     string? SchoolNinea,
     string? SchoolRegistreCommerce,
     string? SchoolLogoUrl,
-    string? SurveillantSignatureUrl);
+    string? SurveillantSignatureUrl,
+
+    // Cours visé et statut (Évolution N°5). Tous nuls pour un billet SANS cours visé : il s'imprime alors
+    // exactement comme avant. Les défauts gardent compatible toute construction existante du billet.
+    /// <summary>Matière du cours que l'élève rejoint.</summary>
+    string? TargetSubjectName = null,
+    /// <summary>Horaires du cours, « 08:00-10:00 ».</summary>
+    string? TargetTimeRange = null,
+    /// <summary>Enseignant titulaire du cours — celui qui accepte le billet en classe.</summary>
+    string? TargetTeacherName = null,
+    /// <summary>« Issued », « Accepted » ou « Cancelled » ; null sans cours visé.</summary>
+    string? Status = null);
 
 public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetEntryTicketQuery, EntryTicketDto>
@@ -58,6 +71,8 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
                 l.Minutes,
                 l.Reason,
                 l.Observations,
+                l.TargetScheduleSlotId,
+                l.Status,
                 SchoolName = sch.Name,
                 SchoolAddress = sch.Address,
                 SchoolPhone = sch.Phone,
@@ -68,6 +83,23 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
             }).FirstOrDefaultAsync(cancellationToken)
             ?? throw new KeyNotFoundException($"Retard introuvable : {request.LateArrivalId}");
 
+        // Cours visé (Évolution N°5) : matière, horaires et titulaire, lus seulement si le billet en vise un.
+        string? targetSubject = null, targetTimeRange = null, targetTeacher = null;
+        if (row.TargetScheduleSlotId is { } slotId)
+        {
+            var slot = await dbContext.ScheduleSlots.AsNoTracking()
+                .Where(s => s.Id == slotId)
+                .Select(s => new { SubjectName = s.Subject.Name, TeacherName = s.Teacher.FullName, s.StartTime, s.EndTime })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (slot is not null)
+            {
+                targetSubject = slot.SubjectName;
+                targetTimeRange = SlotPeriod.Label(slot.StartTime, slot.EndTime);
+                targetTeacher = slot.TeacherName;
+            }
+        }
+
         // Global Query Filter + RLS bornent déjà cette lecture à l'école courante (même tenant que
         // LateArrivals ci-dessus) : au plus une ligne de réglages par école (JGK-B02).
         var surveillantSignatureUrl = await dbContext.SchoolSettings.AsNoTracking()
@@ -76,7 +108,7 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
 
         return new EntryTicketDto(
             row.Id,
-            $"BILLET-{row.Id.ToString()[..8].ToUpperInvariant()}",
+            EntryTicketNumber.For(row.Id),
             row.CreatedAt,
             row.StudentFullName,
             row.Matricule,
@@ -94,6 +126,10 @@ public class GetEntryTicketQueryHandler(IApplicationDbContext dbContext)
             row.Ninea,
             row.RegistreCommerce,
             row.LogoUrl,
-            surveillantSignatureUrl);
+            surveillantSignatureUrl,
+            targetSubject,
+            targetTimeRange,
+            targetTeacher,
+            row.Status?.ToString());
     }
 }
