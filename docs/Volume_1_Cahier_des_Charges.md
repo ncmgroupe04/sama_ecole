@@ -386,6 +386,35 @@ refuse des seuils incohérents (422).
   des décisions (annuel). Liste par ordre de mérite avec sexe, moyenne, rang, distinction, décision — au PV annuel,
   une décision non prise imprime la proposition (« Proposé : … », en italique).
 
+### 8.10 Dispense d'une matière obligatoire
+
+Un élève peut être **dispensé d'une matière obligatoire** de sa classe pour l'année active — l'EPS pour raison
+médicale, par exemple. Les **options** (LV2, option scientifique) relèvent du §8.8 : un élève qui ne choisit pas une
+option n'est pas « dispensé », il ne la suit simplement pas.
+
+**Qui, où, quoi.** Le Directeur et le Secrétariat, depuis la **fiche élève › section « Dispenses »** : une case par
+matière dispensable et un **motif obligatoire** (200 caractères au plus) pour chaque matière cochée. Sont dispensables
+les matières **obligatoires et autonomes** de la classe de l'élève : celles du programme de la classe si elle en a un
+(matières actives, hors groupe d'options), sinon celles du niveau de la classe ; jamais un domaine ni une activité. La
+dispense vaut pour **l'année active** : une nouvelle année démarre sans aucune dispense.
+
+**Effets.**
+- **Moyennes :** la matière sort du calcul ; le total des coefficients et le total des points sont ceux des matières
+  suivies (Moyenne générale = Total des points ÷ Total des coefficients, comme au §8.3). Elle sort aussi du classement
+  de la matière pour les camarades.
+- **Saisie :** l'élève n'apparaît plus dans la grille de saisie, la fiche papier ni le modèle Excel de la matière ;
+  une note saisie ou importée pour lui sur cette matière est refusée (« Cet élève est dispensé de cette matière »).
+- **Bulletin :** la matière **reste** sur le bulletin, à sa place : « Dispensé(e) » remplace les notes, le
+  coefficient est **barré**, il n'y a ni « Moy x », ni T.H, ni appréciation, et le rang est « — ». Elle est hors des
+  totaux. L'écart au bulletin de référence est validé et consigné dans `docs/design-references/README.md`.
+- **Notes déjà saisies :** conservées en base (aucune suppression), simplement masquées des moyennes. Retirer la
+  dispense les fait revenir. L'écran annonce le nombre de notes qui seront masquées.
+
+**Confidentialité du motif.** Le motif peut être médical. Il n'est lu et écrit que par le Directeur et le Secrétariat,
+et il ne figure sur **aucun** document, bulletin, journal ni message d'erreur.
+
+**Sans dispense, tout est strictement comme avant.**
+
 ---
 
 ## 9. Rôles et permissions

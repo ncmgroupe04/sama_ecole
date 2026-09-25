@@ -389,6 +389,40 @@ sortent de la grille et du bulletin.
 5. L'écran de saisie des notes propose toujours toutes les matières de l'école ; seule la liste des élèves suit les
    options.
 
+### Dispense d'une matière obligatoire (25/09/2026) — livré
+
+Un élève peut être dispensé d'une matière **obligatoire** de sa classe pour l'année active, avec un **motif**
+obligatoire. Branche `feature/optional-subjects` (nom conservé), construite sur `main` après l'Évolution N°6 ;
+spécification `docs/superpowers/specs/2026-09-25-subject-exemptions-design.md` (v2) et plan
+`docs/superpowers/plans/2026-09-25-subject-exemptions.md`. La v1 (options + dispenses par inscription, redondante avec
+l'Évolution N°6) reste consultable sur `backup/optional-subjects-v1`. Spécification fonctionnelle :
+`docs/Volume_1_Cahier_des_Charges.md` §8.10.
+
+- **Données.** `student_subject_exemptions` (élève, matière, année, `Reason` non nul ≤ 200) : RLS + Global Query Filter,
+  index unique partiel, pas de `xmin`, purges (`reset_school_data`, `delete_school_year`). Migrations
+  `AddStudentSubjectExemptions` et `AddStudentSubjectExemptionsToPurges`, scripts `docs/migrations/`.
+- **Calcul.** `SamaEcole.Application.Exemptions` (`ExemptionRules`, `ExemptionQueries`, statiques). `SubjectFollowScope`
+  réunit les dispenses aux exclusions du programme : résumé de notes, bulletins, délibération, fiche élève, grille,
+  import, feuilles PDF/Excel et garde de `CreateGrade` en héritent sans nouveau paramètre de constructeur.
+- **API.** `GET`/`PUT /api/v1/class-subjects/students/{studentId}/exemptions` (`StaffRoles`, module `Pedagogy`).
+- **Écran.** Fiche élève › section « Dispenses » (`subject-exemptions.js`, `students.js`). Fiche d'aide `dispenses-matieres`.
+- **Bulletin.** « Dispensé(e) » (secondaire, primaire, grille APC) : **écart validé à la règle #12**, consigné dans
+  `docs/design-references/README.md`. Aucun autre changement de mise en page.
+
+**Invariant : sans dispense, résumé, bulletin, grilles et imports sont strictement ceux de `main`.**
+
+**Points de vigilance connus :**
+1. « Dispensé(e) » est le seul écart au bulletin de référence ; tout autre ajout est à arbitrer séparément.
+2. Le motif est une donnée sensible : jamais imprimé ni journalisé, lu et écrit par le Directeur et le Secrétariat
+   seulement.
+3. `SubjectFollowScope` a désormais **deux sources d'exclusion** (programme/options et dispenses) : tout nouveau lecteur
+   doit passer par lui, jamais recalculer.
+4. Une dispense devient **inerte** (sans être supprimée) si le programme change — matière désactivée ou devenue
+   option — ou si l'élève change de classe : elle exclut toujours la matière tant qu'elle existe ; à nettoyer depuis la fiche.
+5. Le **livret de compétences** ignore le marquage « Dispensé(e) ».
+6. `PUT`/`DELETE` d'une note existante sur une matière dispensée ne sont pas bloqués (invisible dans les moyennes).
+7. Le parcours navigateur de la section « Dispenses » et le rendu du bulletin bilingue arabe n'ont pas été vérifiés à l'œil.
+
 ### Inventaire (26/08/2026) — API et écran livrés
 
 Suivi du patrimoine, commun aux écoles publiques (tables-bancs, manuels d'État, consommables) et

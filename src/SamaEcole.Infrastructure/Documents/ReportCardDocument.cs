@@ -1,5 +1,6 @@
 using System.Globalization;
 using SamaEcole.Application.Common;
+using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 using SamaEcole.Domain.Enums;
 using QuestPDF.Fluent;
@@ -157,6 +158,28 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     /// Le prédicat vit sur CycleTypeExtensions, partagé avec GradingScaleGuard et GetGradeSummary.
     /// </summary>
     private bool IsPrimaire => reportCard.Cycle.UsesSimplifiedGrading();
+
+    /// <summary>Le libellé imprimé dans la zone des notes d'une matière dont l'élève est dispensé.</summary>
+    internal const string ExemptLabel = "Dispensé(e)";
+
+    /// <summary>Une ligne du tableau : soit une matière notée, soit une matière obligatoire dispensée.</summary>
+    internal readonly record struct GradeRow(Guid SubjectId, string Name, SubjectGradeDto? Graded, ExemptSubjectDto? Exempt);
+
+    /// <summary>
+    /// Les lignes du tableau des notes dans l'ordre IMPRIMÉ : matières notées et matières dispensées fusionnées
+    /// par nom, avec la comparaison que le résumé applique déjà aux notées (<c>OrderBy(SubjectName)</c>) — la
+    /// ligne dispensée garde ainsi le rang qu'elle aurait eu si elle avait été notée. Sans dispense, exactement
+    /// <see cref="ReportCardDto.Subjects"/>, dans son ordre.
+    /// </summary>
+    internal IReadOnlyList<GradeRow> GradeRows()
+    {
+        var graded = reportCard.Subjects.Select(s => new GradeRow(s.SubjectId, s.SubjectName, s, null));
+        var exempt = (reportCard.ExemptSubjects ?? []).Select(s => new GradeRow(s.SubjectId, s.SubjectName, null, s));
+
+        return reportCard.ExemptSubjects is { Count: > 0 }
+            ? graded.Concat(exempt).OrderBy(r => r.Name).ToList()
+            : graded.ToList();
+    }
 
     public DocumentMetadata GetMetadata() => new()
     {
@@ -393,7 +416,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
         // Interligne ET corps, calculés d'un seul barème partagé par les trois tableaux : le bulletin
         // porte jusqu'à MaxRowCapacity disciplines sur une page A5 (voir RowMetricsFor). Jusqu'à 12
         // matières — le cas de JGK-G03 et de la quasi-totalité des bulletins — le rendu est inchangé.
-        var (fontSize, rowPadding) = RowMetricsFor(reportCard.Subjects.Count);
+        var (fontSize, rowPadding) = RowMetricsFor(reportCard.Subjects.Count + (reportCard.ExemptSubjects?.Count ?? 0));
 
         container.DefaultTextStyle(text => text.FontSize(fontSize)).Table(table =>
         {
@@ -423,17 +446,32 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 header.Cell().Element(HeaderCell).Text("Appréciations").Bold();
             });
 
-            foreach (var subject in reportCard.Subjects)
+            foreach (var row in GradeRows())
             {
-                table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, subject.SubjectId, subject.SubjectName));
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Coefficient));
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.WeightedPoints));
-                table.Cell().Element(BodyCell).AlignCenter().Text(HonorsFor(subject.SubjectId)).Bold();
-                table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
-                table.Cell().Element(BodyCell).Text(reportCard.SubjectAppreciations.GetValueOrDefault(subject.SubjectId) ?? "");
+                if (row.Graded is { } subject)
+                {
+                    table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, subject.SubjectId, subject.SubjectName));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Coefficient));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.WeightedPoints));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(HonorsFor(subject.SubjectId)).Bold();
+                    table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
+                    table.Cell().Element(BodyCell).Text(reportCard.SubjectAppreciations.GetValueOrDefault(subject.SubjectId) ?? "");
+                    continue;
+                }
+
+                // Matière obligatoire dispensée : « Dispensé(e) » sur la zone des notes (Devoir, Comp, Moy),
+                // coefficient BARRÉ, ni « Moy x coef » ni T.H ni appréciation, rang « — ». Hors des totaux.
+                var exempt = row.Exempt!;
+                table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, exempt.SubjectId, exempt.SubjectName));
+                table.Cell().ColumnSpan(3).Element(BodyCell).AlignCenter().Text(ExemptLabel).Italic();
+                table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(exempt.Coefficient)).Strikethrough();
+                table.Cell().Element(BodyCell).AlignCenter().Text("");
+                table.Cell().Element(BodyCell).AlignCenter().Text("");
+                table.Cell().Element(BodyCell).AlignCenter().Text("—");
+                table.Cell().Element(BodyCell).Text("");
             }
 
             // Ligne TOTAL de la référence : totaux Coef et Moy x, puis la case « Absences » à droite.
@@ -482,7 +520,7 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
     {
         // Même barème d'interligne et de corps que le secondaire — une seule source de vérité pour
         // « combien de lignes tiennent sur une page » (voir RowMetricsFor).
-        var (fontSize, rowPadding) = RowMetricsFor(reportCard.Subjects.Count);
+        var (fontSize, rowPadding) = RowMetricsFor(reportCard.Subjects.Count + (reportCard.ExemptSubjects?.Count ?? 0));
 
         container.DefaultTextStyle(text => text.FontSize(fontSize)).Table(table =>
         {
@@ -506,14 +544,25 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Rang").Bold();
             });
 
-            foreach (var subject in reportCard.Subjects)
+            foreach (var row in GradeRows())
             {
-                table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, subject.SubjectId, subject.SubjectName));
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
-                table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
-                table.Cell().Element(BodyCell).AlignCenter().Text(HonorsFor(subject.SubjectId)).Bold();
-                table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
+                if (row.Graded is { } subject)
+                {
+                    table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, subject.SubjectId, subject.SubjectName));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(HonorsFor(subject.SubjectId)).Bold();
+                    table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
+                    continue;
+                }
+
+                // Le primaire n'a pas de coefficients : « Dispensé(e) » couvre Devoir, Comp et Moy.
+                var exempt = row.Exempt!;
+                table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, exempt.SubjectId, exempt.SubjectName));
+                table.Cell().ColumnSpan(3).Element(BodyCell).AlignCenter().Text(ExemptLabel).Italic();
+                table.Cell().Element(BodyCell).AlignCenter().Text("");
+                table.Cell().Element(BodyCell).AlignCenter().Text("—");
             }
 
             // Rangée moyenne générale + rang : pas de totaux de coefficients (le primaire n'en a pas).
@@ -611,6 +660,14 @@ public class ReportCardDocument(ReportCardDto reportCard, byte[]? logo, byte[]? 
                         // Lignes suivantes : QuestPDF place automatiquement la cellule après la zone
                         // occupée par le RowSpan ci-dessus — rien à réserver pour la première colonne.
                         table.Cell().Element(BodyCell).Text(line.Label);
+                    }
+
+                    if (line.IsExempt)
+                    {
+                        // Matière dispensée : « Dispensé(e) » sur Notes + Sur, pas d'appréciation.
+                        table.Cell().ColumnSpan(2).Element(BodyCell).AlignCenter().Text(ExemptLabel).Italic();
+                        table.Cell().Element(BodyCell).Text("");
+                        continue;
                     }
 
                     table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(line.Score));

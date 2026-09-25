@@ -131,6 +131,9 @@ public interface IApplicationDbContext
     /// <summary>Choix d'option d'un élève pour une année scolaire (Évolution N°6).</summary>
     DbSet<StudentSubjectEnrollment> StudentSubjectEnrollments { get; }
 
+    /// <summary>Dispenses d'un élève pour une matière obligatoire, par année scolaire (motif sensible).</summary>
+    DbSet<StudentSubjectExemption> StudentSubjectExemptions { get; }
+
     /// <summary>Tranches d'âge par niveau propres à l'école (Évolution N°7, cartographie IEF).</summary>
     DbSet<GradeAgeNorm> GradeAgeNorms { get; }
 

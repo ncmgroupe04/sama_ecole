@@ -2,6 +2,7 @@ using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Exemptions;
 using ValidationException = SamaEcole.Application.Common.Exceptions.ValidationException;
 
 namespace SamaEcole.Application.ClassSubjects;
@@ -20,6 +21,25 @@ public class SubjectFollowScope(IApplicationDbContext dbContext)
     private static readonly IReadOnlySet<Guid> NoExclusion = new HashSet<Guid>();
 
     private readonly Dictionary<(Guid Student, Guid Year), IReadOnlySet<Guid>> _excluded = [];
+    private readonly Dictionary<(Guid Student, Guid Year), IReadOnlyList<ExemptSubject>> _exemptions = [];
+
+    /// <summary>
+    /// Matières dont l'élève est DISPENSÉ cette année (dispense d'une matière obligatoire, avec motif). Elles sortent
+    /// des moyennes et de la saisie comme une option non suivie ; le bulletin, lui, les garde, marquées. Mémoïsé.
+    /// Le motif n'est jamais porté ici : c'est une donnée sensible.
+    /// </summary>
+    public async Task<IReadOnlyList<ExemptSubject>> ExemptionsAsync(
+        Guid studentId, Guid schoolYearId, CancellationToken cancellationToken)
+    {
+        if (_exemptions.TryGetValue((studentId, schoolYearId), out var cached))
+        {
+            return cached;
+        }
+
+        var result = await ExemptionQueries.ForStudentAsync(dbContext, studentId, schoolYearId, cancellationToken);
+        _exemptions[(studentId, schoolYearId)] = result;
+        return result;
+    }
 
     /// <summary>Matières que l'élève ne suit pas cette année-là (vide pour une classe non configurée).</summary>
     public async Task<IReadOnlySet<Guid>> ExcludedSubjectsAsync(
@@ -31,6 +51,15 @@ public class SubjectFollowScope(IApplicationDbContext dbContext)
         }
 
         var result = await ResolveExcludedAsync(studentId, schoolYearId, cancellationToken);
+
+        // Dispenses d'une matière obligatoire : une SECONDE source d'exclusion, réunie ici pour que tous les lecteurs
+        // (résumé, fiche, bulletins, saisie) l'appliquent sans la connaître.
+        var exemptions = await ExemptionsAsync(studentId, schoolYearId, cancellationToken);
+        if (exemptions.Count > 0)
+        {
+            result = result.Union(exemptions.Select(e => e.SubjectId)).ToHashSet();
+        }
+
         _excluded[(studentId, schoolYearId)] = result;
         return result;
     }
@@ -69,6 +98,32 @@ public class SubjectFollowScope(IApplicationDbContext dbContext)
     /// matière optionnelle, et un ensemble vide pour une matière désactivée.
     /// </summary>
     public async Task<IReadOnlySet<Guid>?> RestrictedStudentsAsync(
+        Guid classroomId, Guid subjectId, Guid schoolYearId, CancellationToken cancellationToken)
+    {
+        var restricted = await ResolveRestrictedAsync(classroomId, subjectId, schoolYearId, cancellationToken);
+
+        // Élèves dispensés de la matière : ils sortent de la grille, de l'import et des fiches. Sans dispense,
+        // le résultat est celui d'avant (null = toute la classe).
+        var exempt = await ExemptionQueries.StudentsAsync(dbContext, subjectId, schoolYearId, cancellationToken);
+        if (exempt.Count == 0 || restricted is { Count: 0 })
+        {
+            return restricted;
+        }
+
+        if (restricted is not null)
+        {
+            return restricted.Where(id => !exempt.Contains(id)).ToHashSet();
+        }
+
+        var classStudents = await dbContext.Students.AsNoTracking()
+            .Where(s => s.ClassroomId == classroomId)
+            .Select(s => s.Id)
+            .ToListAsync(cancellationToken);
+
+        return classStudents.Where(id => !exempt.Contains(id)).ToHashSet();
+    }
+
+    private async Task<IReadOnlySet<Guid>?> ResolveRestrictedAsync(
         Guid classroomId, Guid subjectId, Guid schoolYearId, CancellationToken cancellationToken)
     {
         var classSubject = await dbContext.ClassSubjects.AsNoTracking()
@@ -116,6 +171,16 @@ public class SubjectFollowScope(IApplicationDbContext dbContext)
         if (yearId is null)
         {
             return;
+        }
+
+        var exemptions = await ExemptionsAsync(studentId, yearId.Value, cancellationToken);
+        if (exemptions.Any(e => e.SubjectId == subjectId))
+        {
+            throw new ValidationException([
+                new ValidationFailure(field,
+                    "Cet élève est dispensé de cette matière : aucune note ne peut y être saisie. "
+                    + "Retirez la dispense sur sa fiche pour saisir une note.")
+            ]);
         }
 
         var excluded = await ExcludedSubjectsAsync(studentId, yearId.Value, cancellationToken);

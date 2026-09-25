@@ -22,4 +22,10 @@
     <ProjectReference Include="..\SamaEcole.Domain\SamaEcole.Domain.csproj" />
   </ItemGroup>
 
+  <!-- EvaluationStructureBuilder est `internal` : les tests d'intégration l'exercent directement
+       (dispenses, grille APC). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SamaEcole.IntegrationTests" />
+  </ItemGroup>
+
 </Project>
