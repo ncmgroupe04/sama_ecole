@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Domain.Enums;
 using MediatR;
 
@@ -24,7 +25,7 @@ public record CreateClassroomCommand : IRequest<CreateClassroomResult>
     public string? TargetLevel { get; init; }
 
     /// <summary>
-    /// Série du lycée (L1, L2, S1, S2, TECH) — Évolution N°4. Optionnelle ; refusée hors lycée. Absente du
+    /// Série du lycée (S1, S2, L1a, L2, STEG, LA… — voir LyceeSeries) — Évolution N°4. Optionnelle ; refusée hors lycée. Absente du
     /// corps d'un client existant → aucune série, exactement le comportement d'avant.
     /// </summary>
     public string? Series { get; init; }
@@ -34,7 +35,9 @@ public record CreateClassroomCommand : IRequest<CreateClassroomResult>
 /// <see cref="Cycle"/> est DÉRIVÉ du niveau par le handler (ClassroomCycle), jamais envoyé par le
 /// client : il est renvoyé ici pour que l'appelant sache immédiatement quel barème et quel en-tête de
 /// bulletin sa classe vient de recevoir — il n'a aucun moyen de le déduire lui-même.
+/// <see cref="Template"/> dit ce que l'injection du modèle de la série a posé (Évolution N°6).
 /// </summary>
 public record CreateClassroomResult(
     Guid Id, string Name, string Level, int Capacity, CycleType Cycle,
-    bool IsAccelerated = false, string? TargetLevel = null, string? Series = null);
+    bool IsAccelerated = false, string? TargetLevel = null, string? Series = null,
+    ClassTemplateReport? Template = null);

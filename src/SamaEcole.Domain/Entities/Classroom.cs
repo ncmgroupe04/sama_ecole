@@ -52,7 +52,7 @@ public class Classroom : AuditableEntity, ITenantEntity
     public string? TargetLevel { get; set; }
 
     /// <summary>
-    /// Série du lycée (Évolution N°4) : code du catalogue fermé <c>LyceeSeries</c> (L1, L2, S1, S2, TECH).
+    /// Série du lycée (Évolution N°4) : code du catalogue fermé <c>LyceeSeries</c> (S1, S2, L1a, L2, STEG, LA… — voir LyceeSeries).
     /// Null pour toute classe sans série — Seconde commune, et TOUTE classe hors lycée, où la série n'a
     /// pas de sens (refusée à l'écriture). L'élève hérite la série de sa classe (arbitrage A1) : c'est la
     /// clé des coefficients par série (SubjectCoefficientOverride).

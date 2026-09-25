@@ -10,6 +10,7 @@
 @section Scripts {
  <script src="~/js/subjects.js" asp-append-version="true"></script>
  <script src="~/js/coefficients.js" asp-append-version="true"></script>
+ <script src="~/js/class-subjects.js" asp-append-version="true"></script>
 }
 
 <div x-data="subjectsView()">
@@ -122,6 +123,13 @@
       class="tab-btn" :class="viewMode === 'coefficients' ? 'tab-btn-active' : ''">
       <icon name="layers" class="w-3.5 h-3.5" />
       Coefficients
+     </button>
+     @* Programme d'une classe de série — matières, options, coefficients officiels (Évolution N°6). *@
+     <button type="button" x-show="canViewCoefficients" x-cloak x-on:click="showClassSubjects()"
+      :aria-pressed="viewMode === 'class-subjects'"
+      class="tab-btn" :class="viewMode === 'class-subjects' ? 'tab-btn-active' : ''">
+      <icon name="book" class="w-3.5 h-3.5" />
+      Matières par classe
      </button>
     </div>
 
@@ -350,6 +358,16 @@
  <template x-if="viewMode === 'coefficients' && canViewCoefficients">
   <div class="mt-8">
    <partial name="_CoefficientsTab" />
+  </div>
+ </template>
+
+ @* ═══════════════════════════════════════════════════════════════════════════
+    ONGLET MATIÈRES PAR CLASSE — Évolution N°6 (séries du Baccalauréat, options). Même montage à la
+    demande que l'onglet Coefficients.
+    ═══════════════════════════════════════════════════════════════════════════ *@
+ <template x-if="viewMode === 'class-subjects' && canViewCoefficients">
+  <div class="mt-8">
+   <partial name="_ClassSubjectsTab" />
   </div>
  </template>
 

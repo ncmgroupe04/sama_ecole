@@ -52,7 +52,7 @@ public class ApplySeriesTemplateCommandValidator : AbstractValidator<ApplySeries
     public ApplySeriesTemplateCommandValidator()
         => RuleFor(x => x.Series)
             .Must(s => LyceeSeries.IsValid(LyceeSeries.Normalize(s)))
-            .WithMessage("Série inconnue : choisissez parmi L1, L2, S1, S2 ou TECH.");
+            .WithMessage(LyceeSeries.UnknownMessage);
 }
 
 public class ApplySeriesTemplateCommandHandler(

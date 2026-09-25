@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
@@ -102,7 +103,7 @@ public class GetGradeSheetPdfQueryTests : IAsyncLifetime
     {
         await using var ctx = _db.NewAppContext(EcoleA);
         var spy = new SpyGenerator();
-        var handler = new GetGradeSheetPdfQueryHandler(ctx, new StubTenantProvider(EcoleA), spy, new FixedLogoProvider(logo));
+        var handler = new GetGradeSheetPdfQueryHandler(ctx, new StubTenantProvider(EcoleA), spy, new FixedLogoProvider(logo), new SubjectFollowScope(ctx));
 
         var result = await handler.Handle(
             new GetGradeSheetPdfQuery(classroomId, subjectId, TrimestreA, type), CancellationToken.None);

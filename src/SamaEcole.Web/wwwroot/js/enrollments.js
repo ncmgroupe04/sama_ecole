@@ -63,9 +63,15 @@ document.addEventListener('alpine:init', () => {
             // Vrai par défaut : quand l'école a une catégorie de frais IsBoardingFee sur la classe
             // choisie, on l'ajoute par défaut à la fiche financière — décocher est l'exception,
             // pas la règle (voir BoardingFeeLineBuilder, sans effet si aucune catégorie ne correspond).
-            includeBoardingFee: true
+            includeBoardingFee: true,
+
+            // --- Matières optionnelles (Évolution N°6) : { nom du groupe: id de la matière de classe retenue } ---
+            subjectOptions: {}
         },
         formErrors: {},
+
+        // Groupes d'options de la classe choisie (LV2, option scientifique…) — vide : la section est masquée.
+        optionGroups: [],
         isSubmitting: false,
 
         /**
@@ -95,6 +101,8 @@ document.addEventListener('alpine:init', () => {
             if (window.formDraft && window.formDraft.has('enrollment_form')) {
                 this.hasDraft = true;
             }
+            // Classe changée (saisie ou brouillon restauré) : ses groupes d'options remplacent les précédents.
+            this.$watch('form.classroomId', (id) => this.loadSubjectOptions(id));
             this.$watch('form', (val) => {
                 if (window.formDraft && (val.fullName || val.studentId || val.classroomId)) {
                     window.formDraft.save('enrollment_form', {
@@ -317,6 +325,44 @@ document.addEventListener('alpine:init', () => {
             };
         },
 
+        /**
+         * Section « Matières optionnelles » (Évolution N°6) : les groupes d'options de la classe, l'option la
+         * plus fréquente de l'établissement pré-cochée. Un choix déjà fait (brouillon restauré) est conservé s'il
+         * appartient encore à la classe. Sans module Pédagogie ou sans groupe : la section reste masquée.
+         */
+        async loadSubjectOptions(classroomId) {
+            if (!classroomId) {
+                this.optionGroups = [];
+                this.form.subjectOptions = {};
+                return;
+            }
+            let groups = [];
+            try {
+                const result = await window.api.get(`/class-subjects/options?classroomId=${encodeURIComponent(classroomId)}`);
+                groups = (result && result.groups) || [];
+            } catch {
+                // silence-volontaire : sans module Pédagogie (403) ou sans groupe, l'inscription se fait sans
+                // options — le serveur attribue alors lui-même l'option par défaut de chaque groupe.
+                groups = [];
+            }
+            if (this.form.classroomId !== classroomId) return; // réponse périmée : la classe a changé entre-temps
+
+            const previous = this.form.subjectOptions || {};
+            const selection = {};
+            for (const group of groups) {
+                const kept = group.options.some((o) => o.classSubjectId === previous[group.name]);
+                selection[group.name] = kept ? previous[group.name] : group.defaultClassSubjectId;
+            }
+            this.optionGroups = groups;
+            this.form.subjectOptions = selection;
+        },
+
+        /** Options transmises : une par groupe affiché ; absent si la classe n'a aucun groupe. */
+        subjectOptionsPayload() {
+            if (this.optionGroups.length === 0) return {};
+            return { subjectOptionIds: this.optionGroups.map((g) => this.form.subjectOptions[g.name]).filter(Boolean) };
+        },
+
         async submit() {
             this.formErrors = {};
             this.isSubmitting = true;
@@ -329,7 +375,8 @@ document.addEventListener('alpine:init', () => {
                     classroomId: this.form.classroomId,
                     isRepeating: this.form.isRepeating,
                     studentId: this.form.studentId,
-                    ...this.boardingPayload()
+                    ...this.boardingPayload(),
+                    ...this.subjectOptionsPayload()
                 }
                 : {
                     type: 'NewEnrollment',
@@ -341,7 +388,8 @@ document.addEventListener('alpine:init', () => {
                     gender: this.form.gender,
                     guardianName: this.form.guardianName || null,
                     guardianPhone: this.form.guardianPhone || null,
-                    ...this.boardingPayload()
+                    ...this.boardingPayload(),
+                    ...this.subjectOptionsPayload()
                 };
 
             try {
@@ -408,8 +456,10 @@ document.addEventListener('alpine:init', () => {
                 studentId: '',
                 boardingStatus: 'Externe',
                 roomId: null,
-                includeBoardingFee: true
+                includeBoardingFee: true,
+                subjectOptions: {}
             };
+            this.optionGroups = [];
             this.studentSearch = '';
             this.formErrors = {};
             this.mode = 'NewEnrollment';

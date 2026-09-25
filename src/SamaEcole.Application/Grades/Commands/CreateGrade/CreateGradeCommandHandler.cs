@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -8,7 +9,10 @@ using Microsoft.EntityFrameworkCore;
 namespace SamaEcole.Application.Grades.Commands.CreateGrade;
 
 public class CreateGradeCommandHandler(
-    IApplicationDbContext dbContext, ITenantProvider tenantProvider, ICurrentUserService currentUser)
+    IApplicationDbContext dbContext,
+    ITenantProvider tenantProvider,
+    ICurrentUserService currentUser,
+    SubjectFollowScope followScope)
     : IRequestHandler<CreateGradeCommand, GradeResult>
 {
     public async Task<GradeResult> Handle(CreateGradeCommand request, CancellationToken cancellationToken)
@@ -52,6 +56,11 @@ public class CreateGradeCommandHandler(
                 new ValidationFailure(nameof(request.TermId), "Le trimestre indiqué n'existe pas dans votre établissement.")
             ]);
         }
+
+        // L'élève doit SUIVRE la matière (Évolution N°6) : une note sur une option qu'il n'a pas choisie, ou sur
+        // une matière désactivée pour sa classe, serait invisible sur son bulletin.
+        await followScope.EnsureFollowsAsync(
+            request.StudentId, request.SubjectId, request.TermId, nameof(request.SubjectId), cancellationToken);
 
         // Barème de la LIGNE d'évaluation : celui que l'école a fixé sur la matière (grilles APC : /40,
         // /60, /24, /16…) et, à défaut — le cas de toute matière antérieure à cette option — celui du

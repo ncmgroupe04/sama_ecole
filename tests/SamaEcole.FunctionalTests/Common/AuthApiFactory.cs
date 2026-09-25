@@ -461,6 +461,10 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Surcharges de coefficient (Évolution N°4) : FK Restrict vers school_years, subjects ET classrooms,
         // donc AVANT les trois. Sans cette purge, une surcharge laissée par un test bloquerait celui d'après
         // en 23503 dès la suppression des années scolaires ci-dessous.
+        // Programme des classes et options des élèves (Évolution N°6) : FK Restrict vers students,
+        // school_years, subjects ET classrooms — les choix d'options d'abord (ils référencent le programme).
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM student_subject_enrollments;");
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM class_subjects;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM subject_coefficient_overrides;");
 
         // Idem pour les années scolaires (ticket JGK-C01) — et il ne s'agit pas seulement des écoles

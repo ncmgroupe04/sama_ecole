@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using System.Globalization;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
@@ -12,7 +13,8 @@ public class GetGradeSheetPdfQueryHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
     IGradeSheetPdfGenerator pdfGenerator,
-    ISchoolLogoProvider logoProvider)
+    ISchoolLogoProvider logoProvider,
+    SubjectFollowScope followScope)
     : IRequestHandler<GetGradeSheetPdfQuery, GradeSheetPdfResult>
 {
     /// <summary>
@@ -59,10 +61,16 @@ public class GetGradeSheetPdfQueryHandler(
             .Select(y => y.Label)
             .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
 
+        // Matière optionnelle (Évolution N°6) : la fiche papier liste les mêmes élèves que la grille de saisie.
+        var allowed = await followScope.RestrictedStudentsAsync(
+            request.ClassroomId, request.SubjectId, term.SchoolYearId, cancellationToken);
+
         var students = (await dbContext.Students.AsNoTracking()
                 .Where(s => s.ClassroomId == request.ClassroomId)
-                .Select(s => new GradeSheetPdfStudent(s.Matricule, s.FullName))
+                .Select(s => new { s.Id, Row = new GradeSheetPdfStudent(s.Matricule, s.FullName) })
                 .ToListAsync(cancellationToken))
+            .Where(s => allowed is null || allowed.Contains(s.Id))
+            .Select(s => s.Row)
             .OrderBy(s => s.FullName, FrenchOrder)
             .ThenBy(s => s.Matricule, StringComparer.Ordinal)
             .ToList();

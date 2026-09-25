@@ -26,6 +26,7 @@ tags:
   - name: Classrooms
   - name: Subjects
   - name: Coefficients
+  - name: ClassSubjects
   - name: Students
   - name: Teachers
   - name: Attendance
@@ -1776,7 +1777,7 @@ paths:
         Exactement UNE portée : `series` OU `classroomId`, sinon 422. Une classe de primaire/maternelle est
         refusée en 422.
       parameters:
-        - { name: series, in: query, schema: { type: string, enum: [L1, L2, S1, S2, TECH] } }
+        - { name: series, in: query, schema: { type: string, enum: [L1A, L1B, "L'1", L2, S1, S2, S3, S4, S5, STEG, T1, T2, STIDD, LA, S1A, S2A, L1, TECH] } }
         - { name: classroomId, in: query, schema: { type: string, format: uuid } }
         - name: schoolYearId
           in: query
@@ -1882,6 +1883,180 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+
+  /class-subjects:
+    get:
+      tags: [ClassSubjects]
+      summary: Programme d'une classe — matières, coefficients, options (Évolution N°6)
+      description: >-
+        Directeur et Secrétariat. Coefficient EFFECTIF de l'année active (classe, puis série, puis matière),
+        valeur officielle du modèle de la série, groupe d'options et nombre d'élèves par option.
+      parameters:
+        - { name: classroomId, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Le programme
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassSubjects' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [ClassSubjects]
+      summary: Ajouter une matière propre à l'établissement au programme d'une classe (Directeur seul)
+      description: >-
+        Exactement UN de `subjectId` (matière existante) ou `newSubjectName` (créée au niveau de la classe).
+        `coefficient` facultatif : s'il diffère du coefficient hérité, il devient la surcharge de classe de
+        l'année active. 422 au primaire/maternelle ou si la matière figure déjà au programme.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classroomId]
+              properties:
+                classroomId: { type: string, format: uuid }
+                subjectId: { type: string, format: uuid, nullable: true }
+                newSubjectName: { type: string, maxLength: 80, nullable: true }
+                coefficient: { type: number, minimum: 0, exclusiveMinimum: true, maximum: 20, nullable: true }
+                optionGroup: { type: string, maxLength: 40, nullable: true }
+      responses:
+        '201': { description: "Matière ajoutée — corps `{ id }`" }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: Matière ajoutée entre-temps par un autre utilisateur (index unique) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /class-subjects/{id}:
+    put:
+      tags: [ClassSubjects]
+      summary: Activer/désactiver une matière de classe et régler son groupe d'options (Directeur seul)
+      description: >-
+        Le coefficient se règle par PUT /coefficients (portée classe). Une matière désactivée sort des grilles
+        de saisie et des bulletins de la classe, sans effacer ses notes. 409 si `rowVersion` est périmé.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive, rowVersion]
+              properties:
+                isActive: { type: boolean }
+                optionGroup: { type: string, maxLength: 40, nullable: true, description: Vide ou null — matière suivie par toute la classe }
+                rowVersion: { type: integer, format: int64 }
+      responses:
+        '200': { description: '`{ id, rowVersion }`' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Jeton de concurrence périmé — rechargez la ligne }
+
+  /class-subjects/reset:
+    post:
+      tags: [ClassSubjects]
+      summary: « Réinitialiser aux coefficients officiels du Sénégal » (Directeur seul)
+      description: >-
+        Le programme et les coefficients de CLASSE redeviennent ceux du modèle national de la série, pour
+        l'année active. Les matières ajoutées par l'établissement restent ; une matière d'un ancien modèle est
+        désactivée. Ne modifie ni le coefficient d'une matière ni une surcharge de série. 422 sans série ou
+        pour une série sans modèle.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classroomId]
+              properties:
+                classroomId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Rapport de réinitialisation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClassTemplateReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /class-subjects/assign-default-options:
+    post:
+      tags: [ClassSubjects]
+      summary: Donner l'option par défaut aux élèves sans choix (Directeur, Secrétariat)
+      description: Année active. Ne modifie jamais un choix existant ; idempotente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classroomId]
+              properties:
+                classroomId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Élèves complétés et options attribuées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  studentsUpdated: { type: integer }
+                  optionsAssigned: { type: integer }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /class-subjects/options:
+    get:
+      tags: [ClassSubjects]
+      summary: Groupes d'options d'une classe, ou de la classe d'un élève avec ses choix (Directeur, Secrétariat)
+      description: Exactement UN de `classroomId` (formulaire d'inscription) ou `studentId` (fiche élève), sinon 422.
+      parameters:
+        - { name: classroomId, in: query, schema: { type: string, format: uuid } }
+        - { name: studentId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Les groupes (liste vide si la classe n'en a aucun)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubjectOptions' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /class-subjects/students/{studentId}/options:
+    put:
+      tags: [ClassSubjects]
+      summary: Enregistrer les options d'un élève pour l'année active (Directeur, Secrétariat)
+      description: >-
+        `classSubjectIds` est la liste COMPLÈTE des options retenues (au plus une par groupe) ; un groupe absent
+        reste sans option. L'ancien choix est archivé (suppression logique). 422 pour une option hors de la classe
+        de l'élève ou deux options d'un même groupe.
+      parameters:
+        - { name: studentId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classSubjectIds]
+              properties:
+                classSubjectIds:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Les options retenues
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string, format: uuid }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /students:
     get:
       tags: [Students]
@@ -5424,7 +5599,7 @@ components:
         series:
           type: string
           nullable: true
-          enum: [L1, L2, S1, S2, TECH]
+          enum: [L1A, L1B, "L'1", L2, S1, S2, S3, S4, S5, STEG, T1, T2, STIDD, LA, S1A, S2A, L1, TECH]
           example: "S2"
           description: >-
             Série du LYCÉE (Évolution N°4) — catalogue fermé, voir `GET /coefficients/catalog`. Null pour toute
@@ -5467,7 +5642,7 @@ components:
         series:
           type: string
           nullable: true
-          enum: [L1, L2, S1, S2, TECH]
+          enum: [L1A, L1B, "L'1", L2, S1, S2, S3, S4, S5, STEG, T1, T2, STIDD, LA, S1A, S2A, L1, TECH]
           description: >-
             Série du lycée (Évolution N°4), casse ignorée (`s2` devient `S2`). Refusée en 422 hors d'une classe
             de Lycée ou hors du catalogue. REMPLACEMENT COMPLET en PUT : une série absente est EFFACÉE — renvoyez
@@ -5476,8 +5651,99 @@ components:
     SeriesItem:
       type: object
       properties:
-        code: { type: string, enum: [L1, L2, S1, S2, TECH] }
+        code: { type: string, enum: [L1A, L1B, "L'1", L2, S1, S2, S3, S4, S5, STEG, T1, T2, STIDD, LA, S1A, S2A, L1, TECH] }
         label: { type: string, example: "Série S2" }
+        category:
+          type: string
+          enum: [Littéraire, Scientifique, Technique, Franco-Arabe]
+          description: Famille de la série (Évolution N°6) — regroupe la liste déroulante.
+        isLegacy:
+          type: boolean
+          description: Ancien code (L1, TECH) — accepté pour une classe qui le porte, jamais proposé pour une nouvelle classe.
+        hasTemplate:
+          type: boolean
+          description: Un modèle national existe — la classe reçoit alors son programme et ses coefficients officiels à la création.
+
+    ClassTemplateReport:
+      type: object
+      description: Ce que l'injection du modèle national d'une série a posé dans une classe (Évolution N°6).
+      properties:
+        series: { type: string, nullable: true }
+        subjectsCreated: { type: integer, description: Matières créées dans l'établissement faute de correspondance }
+        subjectsAdded: { type: integer }
+        subjectsRestored: { type: integer }
+        subjectsDeactivated: { type: integer }
+        coefficientsSet: { type: integer, description: Surcharges de classe posées ou corrigées pour l'année active }
+        coefficientsCleared: { type: integer }
+        noActiveYear: { type: boolean, description: Aucune année active — programme posé, coefficients non posés }
+
+    ClassSubjectRow:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string, example: "Physique-Chimie" }
+        level: { type: string }
+        optionGroup: { type: string, nullable: true, example: "Option scientifique" }
+        isCustom: { type: boolean }
+        isActive: { type: boolean }
+        displayOrder: { type: integer }
+        rowVersion: { type: integer, format: int64, description: Jeton xmin de la ligne de programme }
+        baseCoefficient: { type: number }
+        effectiveCoefficient: { type: number }
+        source: { type: string, enum: [Subject, Series, Classroom] }
+        overrideId: { type: string, format: uuid, nullable: true, description: Surcharge de CLASSE de l'année active (à corriger via PUT /coefficients) }
+        overrideCoefficient: { type: number, nullable: true }
+        overrideRowVersion: { type: integer, format: int64, nullable: true }
+        officialCoefficient: { type: number, nullable: true, description: Valeur du modèle national de la série ; null hors modèle }
+        enrolledStudents: { type: integer, nullable: true, description: Matière optionnelle — élèves l'ayant choisie cette année }
+
+    ClassSubjects:
+      type: object
+      properties:
+        classroomId: { type: string, format: uuid }
+        classroomName: { type: string }
+        series: { type: string, nullable: true }
+        seriesLabel: { type: string, nullable: true }
+        hasTemplate: { type: boolean }
+        schoolYearId: { type: string, format: uuid, nullable: true }
+        schoolYearLabel: { type: string, nullable: true }
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/ClassSubjectRow' }
+        optionGroups:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              defaultClassSubjectId: { type: string, format: uuid }
+              studentsWithoutChoice: { type: integer }
+
+    SubjectOptions:
+      type: object
+      properties:
+        classroomId: { type: string, format: uuid, nullable: true }
+        schoolYearId: { type: string, format: uuid, nullable: true }
+        groups:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string, example: "LV2" }
+              defaultClassSubjectId:
+                type: string
+                format: uuid
+                description: Option pré-cochée — la plus choisie dans l'établissement cette année, à défaut la première du groupe.
+              selectedClassSubjectId: { type: string, format: uuid, nullable: true }
+              options:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    classSubjectId: { type: string, format: uuid }
+                    subjectId: { type: string, format: uuid }
+                    subjectName: { type: string }
 
     CoefficientGrid:
       type: object
@@ -5517,7 +5783,7 @@ components:
       properties:
         subjectId: { type: string, format: uuid }
         coefficient: { type: number, exclusiveMinimum: 0, maximum: 20, example: 6 }
-        series: { type: string, enum: [L1, L2, S1, S2, TECH], nullable: true }
+        series: { type: string, enum: [L1A, L1B, "L'1", L2, S1, S2, S3, S4, S5, STEG, T1, T2, STIDD, LA, S1A, S2A, L1, TECH], nullable: true }
         classroomId: { type: string, format: uuid, nullable: true }
         rowVersion: { type: integer, format: int64, nullable: true, description: Obligatoire pour corriger une ligne existante }
 
@@ -5535,7 +5801,7 @@ components:
       type: object
       required: [series]
       properties:
-        series: { type: string, enum: [L1, L2, S1, S2, TECH] }
+        series: { type: string, enum: [L1A, L1B, "L'1", L2, S1, S2, S3, S4, S5, STEG, T1, T2, STIDD, LA, S1A, S2A, L1, TECH] }
         overwrite: { type: boolean, default: false }
 
     ApplyTemplateResult:
@@ -5992,6 +6258,15 @@ components:
         gender: { type: string, enum: [M, F], description: NewEnrollment uniquement }
         guardianName: { type: string }
         guardianPhone: { type: string }
+        subjectOptionIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: >-
+            Évolution N°6 — options retenues (matières de classe d'un groupe d'options, au plus une par groupe).
+            Un groupe sans choix reçoit l'option par défaut (la plus fréquente de l'établissement) ; absent :
+            toutes les options par défaut. Enregistrées dans la même transaction ; 422 pour une option hors
+            classe ou deux options d'un même groupe.
 
     EnrollmentReceipt:
       type: object

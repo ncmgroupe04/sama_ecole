@@ -28,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<Schools.WorkingDayGuard>();
         services.AddScoped<Attendance.EntryTickets.EntryTicketRegister>();
         services.AddScoped<Coefficients.CoefficientOverrideLoader>();
+        services.AddScoped<ClassSubjects.SubjectFollowScope>();
+        services.AddScoped<ClassSubjects.ClassSubjectTemplateInjector>();
         services.AddSingleton<Coefficients.Commands.ISeriesTemplateProvider, Coefficients.Commands.NationalSeriesTemplateProvider>();
 
         // Contrôle de propriété des créneaux d'emploi du temps : partagé par la création, la

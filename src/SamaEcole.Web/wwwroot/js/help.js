@@ -538,7 +538,8 @@
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
                         "Au lycée, une même matière ne pèse pas pareil selon la série : les Mathématiques comptent bien plus " +
-                        "en S1 qu'en L2. Chaque classe de lycée porte une SÉRIE (L1, L2, S1, S2 ou Techniques) et l'onglet " +
+                        "en S1 qu'en L2. Chaque classe de lycée porte une SÉRIE du Baccalauréat (L1a, L1b, L'1, L2, S1 à S5, STEG, " +
+                        "T1, T2, STIDD, LA, S1A, S2A) et l'onglet " +
                         "Coefficients permet de régler le coefficient d'une matière pour une série entière, ou pour une classe " +
                         "précise. Le coefficient utilisé dans les moyennes et les bulletins est, dans l'ordre : celui de la " +
                         "classe s'il existe, sinon celui de la série, sinon celui de la matière.",
@@ -569,6 +570,45 @@
                         "Vérifiez la grille avec le texte officiel en vigueur avant d'ouvrir la saisie des notes : un coefficient erroné fausse silencieusement tous les bulletins de la série.",
                         "Évitez de changer un coefficient en cours d'année sans nécessité : l'avertissement affiché rappelle que les bulletins déjà remis à la famille ne correspondront plus.",
                         "Réservez la portée « Classe » aux exceptions ; une valeur posée sur la série est plus simple à contrôler et à reconduire."
+                    ]
+                },
+                {
+                    id: 'matieres-par-classe-options',
+                    title: 'Matières par classe et matières optionnelles',
+                    location: 'Gestion Scolaire › Matières › onglet Matières par classe',
+                    href: '/matieres',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Une classe de lycée créée avec une série du Baccalauréat reçoit automatiquement son PROGRAMME officiel : " +
+                        "les matières de la série, leurs coefficients, et les matières AU CHOIX regroupées en groupes d'options " +
+                        "(LV2 : Espagnol, Allemand, Arabe ou Italien ; en L2, l'option scientifique SVT ou Physique-Chimie ; en " +
+                        "L1a/L1b, Latin ou Grec…). Chaque élève choisit une matière par groupe à son inscription.",
+                    objectif:
+                        "Que chaque élève ne soit noté, et que son bulletin ne compte, que les matières qu'il suit réellement : " +
+                        "le total des coefficients est celui de SES matières, et les matières non choisies disparaissent de son " +
+                        "bulletin, sans ligne vide.",
+                    probleme:
+                        "Sans cela, une LV2 non suivie apparaissait vide sur le bulletin, et l'enseignant de Physique-Chimie d'une " +
+                        "L2 voyait toute la classe dans sa grille, y compris les élèves de l'option SVT.",
+                    procedure: [
+                        "Écran Classes : choisissez la « Série / Filière » de la classe (« Général / Collège » pour une Seconde commune). À l'enregistrement, ses matières et coefficients officiels sont ajoutés.",
+                        "Écran Matières › Matières par classe : choisissez la classe. Le badge « Option obligatoire » signale les matières au choix ; la colonne « Officiel » rappelle la valeur nationale.",
+                        "Modifiez un coefficient, ajoutez une matière propre à l'établissement (Informatique, Conduite…), ou désactivez une matière que la classe ne suit pas.",
+                        "Inscriptions : la section « Matières optionnelles » apparaît pour une classe à options. L'option la plus choisie dans l'établissement est pré-cochée ; changez-la si l'élève en a choisi une autre.",
+                        "Fiche élève : la même section permet de corriger une option en cours d'année.",
+                        "Classe déjà peuplée au moment de créer ses options : cliquez « Affecter l'option par défaut aux élèves sans choix ».",
+                        "« Réinitialiser aux coefficients officiels du Sénégal » rétablit le programme et les coefficients du modèle pour l'année en cours ; les matières ajoutées par l'établissement sont conservées."
+                    ],
+                    impacts: [
+                        "Saisie des notes : la grille d'une matière optionnelle ne liste que les élèves qui l'ont choisie ; une note sur une option non choisie est refusée.",
+                        "Bulletins : Total des coefficients = somme des coefficients des matières suivies ; Moyenne générale = Total des points ÷ Total des coefficients.",
+                        "Une classe sans programme (aucune série, aucune matière ajoutée) garde exactement le calcul d'avant : toute matière notée figure au bulletin.",
+                        "Une matière désactivée sort des grilles et des bulletins de la classe ; ses notes restent en base et reviennent si elle est réactivée."
+                    ],
+                    recommandations: [
+                        "Choisissez la série AVANT d'inscrire les élèves : leurs options sont alors enregistrées dès l'inscription.",
+                        "Vérifiez qu'aucun groupe n'affiche d'« élèves sans option » avant d'ouvrir la saisie des notes : ces élèves n'apparaîtraient dans aucune grille du groupe.",
+                        "Comparez la colonne « Officiel » au texte de l'Office du Baccalauréat en vigueur ; les fourchettes du référentiel (Maths 5-6 en T1/T2/STIDD) sont réglées sur la borne basse."
                     ]
                 }
             ]

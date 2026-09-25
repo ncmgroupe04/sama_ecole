@@ -49,7 +49,7 @@ public class GetCoefficientGridQueryValidator : AbstractValidator<GetCoefficient
         RuleFor(x => x.Series)
             .Must(s => LyceeSeries.IsValid(LyceeSeries.Normalize(s)))
             .When(x => LyceeSeries.Normalize(x.Series) is not null)
-            .WithMessage("Série inconnue : choisissez parmi L1, L2, S1, S2 ou TECH.");
+            .WithMessage(LyceeSeries.UnknownMessage);
     }
 }
 

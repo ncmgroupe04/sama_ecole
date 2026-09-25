@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
 using MediatR;
@@ -5,7 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
 
-public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext, IKpiCacheService kpiCache)
+public class UpdateClassroomCommandHandler(
+    IApplicationDbContext dbContext, IKpiCacheService kpiCache, ClassSubjectTemplateInjector templateInjector)
     : IRequestHandler<UpdateClassroomCommand, ClassroomResult>
 {
     public async Task<ClassroomResult> Handle(UpdateClassroomCommand request, CancellationToken cancellationToken)
@@ -39,7 +41,19 @@ public class UpdateClassroomCommandHandler(IApplicationDbContext dbContext, IKpi
         // Série du lycée (Évolution N°4). Remplacement : une série absente efface la précédente. Le
         // validateur refuse toute série hors lycée — et corriger une classe VERS un autre cycle en
         // gardant une série est donc refusé, jamais une série orpheline.
+        var previousSeries = classroom.Series;
         classroom.Series = LyceeSeries.Normalize(request.Series);
+
+        // Une classe qui reçoit une série (ou en change) alors qu'elle n'a encore AUCUN programme reçoit celui du
+        // modèle, comme à la création (Évolution N°6). Une classe déjà configurée garde le sien : l'écraser
+        // effacerait les réglages du Directeur sans qu'il l'ait demandé — « Réinitialiser aux coefficients
+        // officiels » est là pour ça.
+        if (classroom.Series is not null
+            && classroom.Series != previousSeries
+            && !await dbContext.ClassSubjects.AnyAsync(c => c.ClassroomId == classroom.Id, cancellationToken))
+        {
+            await templateInjector.ApplyAsync(classroom, enforceOfficial: false, cancellationToken);
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

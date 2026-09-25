@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using FluentAssertions;
 using SamaEcole.Application.Coefficients;
 using MediatR;
@@ -44,7 +45,7 @@ file sealed class GradeSummaryOnlyMediator(ApplicationDbContext dbContext) : ISe
     {
         if (request is GetGradeSummaryQuery query)
         {
-            return (Task<TResponse>)(object)new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext)).Handle(query, cancellationToken);
+            return (Task<TResponse>)(object)new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext), new SubjectFollowScope(dbContext)).Handle(query, cancellationToken);
         }
 
         throw new NotSupportedException($"Mediator de test : {request.GetType().Name} non routé.");

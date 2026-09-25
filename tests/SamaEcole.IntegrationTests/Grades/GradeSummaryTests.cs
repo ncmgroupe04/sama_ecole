@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using FluentAssertions;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
@@ -61,7 +62,7 @@ public class GradeSummaryTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     private static CreateGradeCommandHandler NewCreateGradeHandler(IApplicationDbContext db) =>
-        new(db, new StubTenantProvider(Ecole), new TestCurrentUser());
+        new(db, new StubTenantProvider(Ecole), new TestCurrentUser(), new SubjectFollowScope(db));
 
     private static CreateMentionCommandHandler NewCreateMentionHandler(IApplicationDbContext db) =>
         new(db, new StubTenantProvider(Ecole));
@@ -79,7 +80,7 @@ public class GradeSummaryTests : IAsyncLifetime
         // Français (coeff 2) : Devoir 16 seul (Composition pas encore saisie) -> moyenne 16.
         await createGrade.Handle(new CreateGradeCommand(Eleve, Francais, Trimestre, EvaluationType.Devoir1, 16), CancellationToken.None);
 
-        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db)).Handle(
+        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db), new SubjectFollowScope(db)).Handle(
             new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);
 
         summary.Subjects.Should().HaveCount(2);
@@ -136,7 +137,7 @@ public class GradeSummaryTests : IAsyncLifetime
         await createGrade.Handle(new CreateGradeCommand(primaireEleve, Maths, Trimestre, EvaluationType.Devoir1, 8), CancellationToken.None);
         await createGrade.Handle(new CreateGradeCommand(primaireEleve, Francais, Trimestre, EvaluationType.Devoir1, 6), CancellationToken.None);
 
-        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db)).Handle(
+        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db), new SubjectFollowScope(db)).Handle(
             new GetGradeSummaryQuery(primaireEleve, Trimestre), CancellationToken.None);
 
         summary.Subjects.Should().OnlyContain(s => s.Coefficient == 1m, "le primaire neutralise les coefficients à 1");
@@ -149,7 +150,7 @@ public class GradeSummaryTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(Ecole);
 
-        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db)).Handle(
+        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db), new SubjectFollowScope(db)).Handle(
             new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);
 
         summary.Subjects.Should().BeEmpty();
@@ -178,7 +179,7 @@ public class GradeSummaryTests : IAsyncLifetime
         await NewCreateGradeHandler(db).Handle(
             new CreateGradeCommand(Eleve, soloSubjectId, Trimestre, EvaluationType.Devoir1, average), CancellationToken.None);
 
-        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db)).Handle(
+        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db), new SubjectFollowScope(db)).Handle(
             new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);
 
         summary.GeneralAverage.Should().Be(average);
@@ -196,7 +197,7 @@ public class GradeSummaryTests : IAsyncLifetime
         await NewCreateGradeHandler(db).Handle(
             new CreateGradeCommand(Eleve, Maths, Trimestre, EvaluationType.Devoir1, 6), CancellationToken.None);
 
-        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db)).Handle(
+        var summary = await new GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db), new SubjectFollowScope(db)).Handle(
             new GetGradeSummaryQuery(Eleve, Trimestre), CancellationToken.None);
 
         summary.Mention.Should().Be("Mention Maison");

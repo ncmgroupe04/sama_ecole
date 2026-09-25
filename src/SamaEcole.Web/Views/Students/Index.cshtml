@@ -411,6 +411,36 @@
         </div>
     </div>
 
+    @* Matières optionnelles (Évolution N°6) : les options de l'élève pour l'année active (LV2, option
+       scientifique…). Elles décident de ses grilles de saisie et de son bulletin. Masquée si sa classe n'a
+       aucun groupe d'options ; modifiable par ceux qui gèrent les inscriptions (Directeur, Secrétariat). *@
+    <div x-show="studentOptionGroups.length > 0" x-cloak class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Matières optionnelles</h3>
+        <template x-for="group in studentOptionGroups" :key="group.name">
+            <fieldset>
+                <legend class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1" x-text="group.name"></legend>
+                <div class="flex flex-wrap gap-x-4 gap-y-2">
+                    <template x-for="option in group.options" :key="option.classSubjectId">
+                        <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
+                            <input type="radio" class="checkbox-field" :name="'student-option-' + group.name"
+                                   :value="option.classSubjectId" x-model="optionSelection[group.name]" :disabled="!canManageStudent">
+                            <span x-text="option.subjectName"></span>
+                        </label>
+                    </template>
+                </div>
+            </fieldset>
+        </template>
+        <p x-show="hasMissingOption()" x-cloak class="text-xs text-amber-700">
+            Un groupe sans option : l'élève n'apparaît dans aucune grille de saisie de ce groupe.
+        </p>
+        <p x-show="optionsError" x-cloak x-text="optionsError" class="field-error"></p>
+        <p x-show="optionsNotice" x-cloak x-text="optionsNotice" class="text-xs text-emerald-700"></p>
+        <button type="button" x-show="canManageStudent" x-on:click="saveStudentOptions()" :disabled="isSavingOptions"
+                class="btn-modal-secondary !h-9 !px-4 text-sm">
+            <span x-text="isSavingOptions ? 'Enregistrement…' : 'Enregistrer les options'"></span>
+        </button>
+    </div>
+
  <!-- Onglets de la fiche élève : barre d'onglets partagée (.tab-nav-scroll / .tab-btn /
      .tab-btn-active, Styles/input.css). `flex-1` répartit les trois sections à largeur égale ;
      les icônes héritent de la couleur du texte (blanches sur la pastille active bleue). -->

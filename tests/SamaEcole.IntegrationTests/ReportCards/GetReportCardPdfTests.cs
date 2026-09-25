@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using FluentAssertions;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
@@ -73,7 +74,7 @@ public class GetReportCardPdfTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     private static CreateGradeCommandHandler NewCreateGradeHandler(IApplicationDbContext db) =>
-        new(db, new StubTenantProvider(Ecole), new TestCurrentUser());
+        new(db, new StubTenantProvider(Ecole), new TestCurrentUser(), new SubjectFollowScope(db));
 
     private static NoOpSchoolLogoProvider Logo => new();
 
@@ -276,7 +277,7 @@ public class GetReportCardPdfTests : IAsyncLifetime
         {
             if (request is GetGradeSummaryQuery query)
             {
-                var handler = new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext));
+                var handler = new GetGradeSummaryQueryHandler(dbContext, new CoefficientOverrideLoader(dbContext), new SubjectFollowScope(dbContext));
                 return (Task<TResponse>)(object)handler.Handle(query, cancellationToken);
             }
 

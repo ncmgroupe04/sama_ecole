@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
@@ -30,7 +31,8 @@ public class CreateEnrollmentCommandHandler(
     ITenantProvider tenantProvider,
     IMatriculeGenerator matriculeGenerator,
     TimeProvider timeProvider,
-    IKpiCacheService kpiCache)
+    IKpiCacheService kpiCache,
+    ICurrentUserService currentUser)
     : IRequestHandler<CreateEnrollmentCommand, EnrollmentReceiptDto>
 {
     public async Task<EnrollmentReceiptDto> Handle(CreateEnrollmentCommand request, CancellationToken cancellationToken)
@@ -171,6 +173,12 @@ public class CreateEnrollmentCommandHandler(
                 line.EnrollmentId = enrollment.Id;
                 dbContext.EnrollmentFeeLines.Add(line);
             }
+
+            // Matières optionnelles (Évolution N°6) : dans la MÊME transaction que l'inscription — jamais un élève
+            // inscrit sans ses options, ni des options sans inscription. Option invalide → 422, tout est annulé.
+            await StudentOptionWriter.SetAsync(
+                dbContext, schoolId, currentUser.UserId?.ToString() ?? "system", student.Id, request.ClassroomId,
+                activeYear.Id, request.SubjectOptionIds, fillDefaults: true, ct, nameof(request.SubjectOptionIds));
 
             await dbContext.SaveChangesAsync(ct);
 

@@ -1,3 +1,4 @@
+using SamaEcole.Application.ClassSubjects;
 using ClosedXML.Excel;
 using FluentAssertions;
 using SamaEcole.Application.Common.Exceptions;
@@ -86,7 +87,7 @@ public class GradeSheetImportTests : IAsyncLifetime
         var director = new TestCurrentUser(Guid.NewGuid(), Role.Directeur);
 
         return new(db, new StubTenantProvider(Ecole), new GradeSheetImportParser(), director,
-            new GradeCorrectionAuthorizer(db, director, TimeProvider.System));
+            new GradeCorrectionAuthorizer(db, director, TimeProvider.System), new SubjectFollowScope(db));
     }
 
     private static byte[] BuildXlsx(string[] headers, IEnumerable<string?[]> rows)

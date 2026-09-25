@@ -24,7 +24,7 @@ public class SubjectCoefficientOverride : AuditableEntity, ITenantEntity
     /// <summary>Portée « classe » : la classe visée. Null pour une surcharge de série.</summary>
     public Guid? ClassroomId { get; set; }
 
-    /// <summary>Portée « série » : code du catalogue fermé LyceeSeries (L1, L2, S1, S2, TECH). Null pour une surcharge de classe.</summary>
+    /// <summary>Portée « série » : code du catalogue fermé LyceeSeries (S1, S2, L1a, L2, STEG, LA… — voir LyceeSeries). Null pour une surcharge de classe.</summary>
     public string? Series { get; set; }
 
     /// <summary>Mêmes bornes que <see cref="Subject.Coefficient"/> : strictement positif, numeric(4,2).</summary>
