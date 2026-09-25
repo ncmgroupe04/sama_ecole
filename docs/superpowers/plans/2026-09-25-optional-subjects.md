@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal :** Un élève peut être dispensé d'une matière optionnelle (LV2, option scientifique) : elle disparaît de la saisie des notes, du bulletin et des moyennes, et le total des coefficients s'adapte. Sans dispense enregistrée, tout est strictement comme avant.
+**Goal :** Un élève peut ne pas suivre toutes les matières de sa classe, de deux façons : une **option non suivie** (LV2, option scientifique) ou la **dispense d'une matière obligatoire** (avec motif). Dans les deux cas la matière sort de ses moyennes et de la saisie des notes, et le total des coefficients s'adapte ; le bulletin l'ignore (option) ou la marque « Dispensé(e) » (matière obligatoire). Sans dispense enregistrée, tout — calcul et bulletin — est strictement comme avant.
 
-**Architecture :** `Subject` gagne `IsOptional` + `OptionGroup`. Une table tenant `enrollment_subject_exemptions` (RLS + Global Query Filter) porte les **dispenses** d'une inscription (« aucune ligne » = « suit tout »). Une classe statique `SubjectExemptions` (requêtes, sans état) est appelée par les six lecteurs de la spécification §4.2 ; une règle pure `OptionSelectionRules` valide un choix (au plus une matière par groupe) et en déduit les dispenses. Le choix s'écrit soit à l'inscription (`optionSubjectIds`, même transaction), soit par `PUT /api/v1/enrollments/{id}/options`.
+**Architecture :** `Subject` gagne `IsOptional` + `OptionGroup`. Une table tenant `enrollment_subject_exemptions` (RLS + Global Query Filter) porte les **dispenses** d'une inscription, avec un `Reason` (« aucune ligne » = « suit tout » ; le type de dispense se déduit de `Subject.IsOptional`). Une classe statique `SubjectExemptions` (requêtes, sans état) renvoie un `StudentExemptions` lu par les lecteurs de la spécification §4.2 ; une règle pure `OptionSelectionRules` valide un choix d'options (au plus une matière par groupe) et une dispense (motif obligatoire) et en déduit les lignes à écrire. Le résumé de notes expose les matières obligatoires dispensées (`GradeSummaryDto.ExemptSubjects`) pour que `ReportCardDocument` les imprime. Le choix s'écrit soit à l'inscription (`optionSubjectIds`, même transaction), soit par `PUT /api/v1/enrollments/{id}/options`, dont chaque moitié (options, dispenses) est indépendante.
 
-**Tech Stack :** ASP.NET Core 9, EF Core/Npgsql (RLS, Global Query Filter), MediatR + FluentValidation, Alpine.js, xUnit + FluentAssertions (Testcontainers Postgres), `node --test`.
+**Tech Stack :** ASP.NET Core 9, EF Core/Npgsql (RLS, Global Query Filter), MediatR + FluentValidation, QuestPDF, Alpine.js, xUnit + FluentAssertions (Testcontainers Postgres), `node --test`.
 
-**Spec :** `docs/superpowers/specs/2026-09-25-optional-subjects-design.md` (commit `bfedc99`). Ce plan la **précise** sur quatre points — voir « Écarts assumés par rapport à la spécification », à valider en même temps que le plan.
+**Spec :** `docs/superpowers/specs/2026-09-25-optional-subjects-design.md` (commits `bfedc99`, puis `f6ad16e` — volet « dispense d'une matière obligatoire », décisions 8 à 10). Ce plan la **précise** sur six points — voir « Écarts assumés par rapport à la spécification », à valider en même temps que le plan.
 
 ## Global Constraints
 
@@ -17,12 +17,13 @@
 - Aucune suppression physique (`IsDeleted`, `DeletedAt`, `DeletedBy` via `SoftDelete(actor)`). — règle #6.
 - CQRS MediatR ; aucune logique métier dans un contrôleur ni une entité. Erreurs au format normalisé (`ValidationException` → 422, `KeyNotFoundException` → 404). — règles #7 à #9.
 - `schoolId` jamais lu depuis un paramètre client (JWT / `ITenantProvider`). — règle #10.
-- **Invariant :** sans dispense, le résultat de chaque lecteur est strictement celui d'avant. Les constructeurs des handlers existants **ne changent pas** (aucun paramètre ajouté) : les tests existants restent compilables tels quels.
-- Le bulletin ne change pas de mise en page (règle #12) : seules les lignes affichées changent.
-- Pas de `SubjectExemptionLoader` scopé ni de cache : la classe statique interroge la base à chaque appel (voir écart E1).
+- **Invariant :** sans dispense, le résultat de chaque lecteur — et le bulletin — est strictement celui d'avant. Les constructeurs des handlers existants **ne changent pas** (aucun paramètre ajouté) : les tests existants restent compilables tels quels. Les DTO existants ne gagnent que des membres **facultatifs, en dernier**.
+- **Règle #12 (bulletin = `docs/design-references/`)** : la seule entorse est la mention « Dispensé(e) » d'une matière obligatoire dispensée, **validée par le propriétaire** (spec décision 10) et consignée dans `docs/design-references/README.md` (Tâche 9). Aucun autre élément du bulletin ne change.
+- **Le motif d'une dispense est une donnée sensible** (raison médicale possible) : il n'est jamais imprimé, jamais porté par un DTO de bulletin (`ExemptSubjectDto` n'a pas de `Reason`).
+- Pas de service scopé ni de cache pour les dispenses : la classe statique interroge la base à chaque appel (voir écart E1).
 - Le propriétaire lance lui-même la suite complète `dotnet test` (consigne du 17/09/2026) ; ce plan n'exécute que des tests **ciblés** (`--filter`). `dotnet build` et `node --test` restent libres.
 - Les tests d'intégration exigent Docker (Testcontainers, `RlsTestDatabase`). Base de développement : conteneur `sama-ecole-postgres`, base `sama_ecole_dev`, utilisateur `sama_ecole`.
-- Après génération d'une migration : appliquer `dotnet ef database update` sur la base de dev **avant** de relancer l'app (sinon « Une erreur inattendue » partout). Les colonnes ajoutées ont un défaut : l'ancien code continue de fonctionner sur cette base.
+- Après génération d'une migration : appliquer `dotnet ef database update` sur la base de dev **avant** de relancer l'app (sinon « Une erreur inattendue » partout). Les colonnes ajoutées ont un défaut ou sont nullables : l'ancien code continue de fonctionner sur cette base.
 - Code de production et tests de Notes/isolation tenant : jamais l'un sans l'autre (`AGENTS.md`).
 - Conventional Commits, un commit par tâche, terminé par `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`. Staging **explicite** (jamais `git add .`). Branche : `feature/optional-subjects`, worktree `C:\Users\NCM\Documents\antigravity\sama_ecole-optional-subjects` (toutes les commandes s'y exécutent).
 
@@ -30,12 +31,14 @@
 
 | # | Spécification | Plan | Pourquoi |
 |---|---|---|---|
-| E1 | §4.1 : `SubjectExemptionLoader` (service scopé, paramètre de constructeur) | Classe **statique** `SubjectExemptions` (deux méthodes) | Ajouter un paramètre de constructeur aux 8 handlers concernés casserait ~30 constructions directes dans les tests existants. Le loader des coefficients ne mémoïse qu'à l'intérieur d'un même (élève, année) : le gain est nul d'un élève à l'autre. |
+| E1 | §4.1 : `SubjectExemptionLoader` (service scopé, paramètre de constructeur) | Classe **statique** `SubjectExemptions` (deux méthodes ; `ForStudentAsync` renvoie un objet `StudentExemptions`) | Ajouter un paramètre de constructeur aux handlers concernés casserait ~30 constructions directes dans les tests existants. Le loader des coefficients ne mémoïse qu'à l'intérieur d'un même (élève, année) : le gain est nul d'un élève à l'autre. |
 | E2 | §4.2 : import — ligne d'un élève dispensé « signalée comme ignorée » | **Erreur de validation** (422) sur la ligne, avec un message dédié | Ignorer silencieusement une note d'un fichier serait pire que refuser : l'utilisateur ne saurait pas qu'elle est perdue. |
-| E3 | §3.1 : `IsOptional` autonome seulement | Idem, **et** une dispense ne joue que si la matière est **encore optionnelle** (`Subject.IsOptional`) au moment de la lecture | Repasser une matière en « obligatoire » doit la rendre immédiatement à tous, sans avoir à purger des lignes. |
-| E4 | §5.2 / §10.4 : niveau des options tiré de la classe de l'inscription | Niveau tiré de la classe **courante de l'élève** (`Student.ClassroomId`) ; `PUT` refusé (422) si l'inscription est annulée ou n'est pas celle de l'année **active** | `UpdateStudentCommand` change `Student.ClassroomId` sans toucher l'inscription : c'est la classe courante que voient les feuilles de notes. Les dispenses restent rattachées à l'inscription ; celles d'un autre niveau sont supprimées logiquement au prochain `PUT`. |
+| E3 | §3.1 : « une dispense ne joue que si la matière est encore `IsOptional` » (première version) | Une ligne est **active** quand la matière est optionnelle **ou** quand la ligne porte un **motif** | La spec amendée admet la dispense d'une matière obligatoire (avec motif) : la règle d'origine l'aurait ignorée. Repasser une matière en « obligatoire » rend toujours ses lignes d'option — sans motif — inertes, sans purge. |
+| E4 | §5.2 / §10.4 : niveau des options tiré de la classe de l'inscription | Niveau tiré de la classe **courante de l'élève** (`Student.ClassroomId`) ; `PUT` refusé (422) si l'inscription est annulée ou n'est pas celle de l'année **active** | `UpdateStudentCommand` change `Student.ClassroomId` sans toucher l'inscription : c'est la classe courante que voient les feuilles de notes. Les dispenses restent rattachées à l'inscription ; celles d'un autre niveau sont supprimées logiquement au prochain `PUT` de la moitié concernée. |
+| E5 | §5.2 : `Exemptions` « omise = aucune dispense de matière obligatoire » | `SubjectIds` **et** `Exemptions` : `null` = **inchangée** ; une liste (même vide) remplace la moitié | L'écran enregistre parfois **une seule** moitié. Avec « omise = aucune », ajouter une dispense d'EPS sans avoir touché aux options écraserait le choix d'options — et un choix vide veut dire « aucune option suivie » : l'élève serait dispensé de **toutes** ses options. Pour une inscription neuve, « inchangée » et « aucune » sont identiques. |
+| E6 | §4.2 : `ExemptSubjects` (`SubjectId`, `SubjectName`) « câblage à confirmer au plan » | `ExemptSubjectDto(SubjectId, SubjectName, Coefficient)` ; le **coefficient effectif** (surcharges appliquées) s'ajoute, le **motif** n'y figure jamais | Le bulletin imprime le coefficient **barré** : sans sa valeur il ne pourrait pas le faire. Câblage : `GetGradeSummaryQueryHandler` → `ReportCardDataService` → `ReportCardDto.ExemptSubjects` → `ReportCardDocument.GradeRows()`. |
 
-Constat correctif sur la spécification §1 : le bulletin **secondaire** n'imprime aujourd'hui que les matières ayant une note (`GetGradeSummaryQueryHandler` part des lignes de `Grades`) ; l'effet visible est donc la **feuille de saisie** (l'élève n'y figure plus), le **masquage des notes d'une option abandonnée** et la grille **APC** (`EvaluationStructureBuilder` imprime toutes les lignes du niveau, notées ou non). Le §1 est corrigé dans la Tâche 9.
+Constat correctif sur la spécification §1 : le bulletin **secondaire** n'imprime aujourd'hui que les matières ayant une note (`GetGradeSummaryQueryHandler` part des lignes de `Grades`) ; l'effet visible d'une option non suivie est donc la **feuille de saisie** (l'élève n'y figure plus), le **masquage des notes** d'une option abandonnée et la grille **APC** (`EvaluationStructureBuilder` imprime toutes les lignes du niveau, notées ou non). Le §1 est corrigé dans la Tâche 9.
 
 ## Constat sur le code (à connaître avant de commencer)
 
@@ -44,25 +47,28 @@ Constat correctif sur la spécification §1 : le bulletin **secondaire** n'impri
 - L'**année** d'un trimestre : `Term.SchoolYearId`. `GetClassGrades`, `GetGradeSheetExcel`, `ImportGradeSheet` et `CreateGrade` ne chargent aujourd'hui le trimestre que par `AnyAsync` : ils doivent en lire l'année.
 - `UpdateSubjectCommand` est un **PUT complet** : un client qui omet `isOptional`/`optionGroup` les remet à `false`/`null`. `subjects.js` → `saveSubject` (réordonner, entêtes) renvoie déjà tous les champs : il faut y ajouter les deux nouveaux, sous peine de perdre le réglage à chaque réordonnancement (piège documenté au commentaire de `saveSubject`).
 - `ReportCardDataService` (14 constructions dans les tests) a `dbContext` : il appelle la classe statique, sans nouveau paramètre.
-- Le bulletin d'un élève dispensé : le rang par matière (`GetReportCardPdfQuery` l. ~259) lit `cs.Subjects.FirstOrDefault(...)?.Average` des camarades — un camarade dispensé donne `null` et sort du classement de cette matière, ce qui est voulu.
+- Le bulletin PDF a **trois** tableaux de notes dans `ReportCardDocument` : secondaire (`ComposeGradesTable`), primaire (`ComposeGradesTablePrimaire`, sans colonne coefficient) et grille APC (`ComposeGradesTableApc`, lignes issues de `EvaluationStructureDto`). La ligne « Dispensé(e) » doit être rendue dans les trois.
+- Les tests de documents ne lisent pas le texte rendu (QuestPDF ne l'expose pas) : ils comptent les pages (`GenerateImages(...).Count()`), d'où `ReportCardDocument.GradeRows()` (`internal`, `InternalsVisibleTo` déjà déclaré) pour tester **ce qui est imprimé**, et une vérification visuelle obligatoire.
+- Le rang par matière (`GetReportCardPdfQuery`) lit `cs.Subjects.FirstOrDefault(...)?.Average` des camarades — un camarade dispensé donne `null` et sort du classement de cette matière, ce qui est voulu.
 
 ## File Structure
 
 | Fichier | Rôle |
 |---|---|
 | `src/SamaEcole.Domain/Entities/Subject.cs` (modifier) | `IsOptional`, `OptionGroup`. |
-| `src/SamaEcole.Domain/Entities/EnrollmentSubjectExemption.cs` (créer) | Dispense : (inscription, matière). |
+| `src/SamaEcole.Domain/Entities/EnrollmentSubjectExemption.cs` (créer) | Dispense : (inscription, matière, motif). |
 | `src/SamaEcole.Persistence/Configurations/EnrollmentSubjectExemptionConfiguration.cs` (créer), `SubjectConfiguration.cs` (modifier), `ApplicationDbContext.cs` (modifier), `Migrations/*` | Table, colonnes, RLS, purges. |
 | `src/SamaEcole.Application/Common/Interfaces/IApplicationDbContext.cs` (modifier) | `DbSet<EnrollmentSubjectExemption>`. |
-| `src/SamaEcole.Application/OptionalSubjects/OptionSelectionRules.cs` (créer) | Règle pure : validation d'un choix, dispenses déduites. |
-| `src/SamaEcole.Application/OptionalSubjects/SubjectExemptions.cs` (créer) | Requêtes statiques lues par les six lecteurs. |
-| `src/SamaEcole.Application/OptionalSubjects/EnrollmentOptionsPlanner.cs` (créer) | Options d'un niveau + plan de dispenses (partagé Create/Set). |
-| `src/SamaEcole.Application/Enrollments/Commands/SetEnrollmentOptions/*`, `Queries/GetEnrollmentOptions/*` (créer) | Écriture et lecture du choix. |
-| `src/SamaEcole.Application/Subjects/*`, `Grades/*`, `ReportCards/*`, `Students/*`, `Enrollments/Commands/CreateEnrollment/*` (modifier) | Drapeau sur la matière ; lecteurs filtrés ; choix à l'inscription. |
+| `src/SamaEcole.Application/OptionalSubjects/OptionSelectionRules.cs` (créer) | Règles pures : validation d'un choix d'options et d'une dispense (motif), dispenses déduites. |
+| `src/SamaEcole.Application/OptionalSubjects/SubjectExemptions.cs` (créer) | `StudentExemptions` + requêtes statiques lues par les lecteurs. |
+| `src/SamaEcole.Application/OptionalSubjects/EnrollmentOptionsPlanner.cs` (créer) | Matières d'un niveau (options, obligatoires) + plan de dispenses (partagé Create/Set). |
+| `src/SamaEcole.Application/Enrollments/Commands/SetEnrollmentOptions/*`, `Queries/GetEnrollmentOptions/*` (créer) | Écriture et lecture des options et dispenses. |
+| `src/SamaEcole.Application/Subjects/*`, `Grades/*`, `ReportCards/*`, `Students/*`, `StateIntegration/*`, `Enrollments/Commands/CreateEnrollment/*` (modifier) | Drapeau sur la matière ; lecteurs filtrés ; résumé et structure porteurs des dispenses ; choix à l'inscription. |
+| `src/SamaEcole.Infrastructure/Documents/ReportCardDocument.cs` (modifier) | Ligne « Dispensé(e) » dans les trois tableaux, `GradeRows()`. |
 | `src/SamaEcole.Web/Controllers/{Subjects,Enrollments}Controller.cs` (modifier) | Champs de la matière ; routes `options`. |
-| `src/SamaEcole.Web/wwwroot/js/subject-options.js` (créer) | Logique pure des groupes/choix (testable sous `node --test`). |
+| `src/SamaEcole.Web/wwwroot/js/subject-options.js` (créer) | Logique pure des groupes, choix et dispenses (testable sous `node --test`). |
 | `src/SamaEcole.Web/wwwroot/js/{subjects,enrollments,students,help}.js`, `Views/{Subjects,Enrollments,Students}/Index.cshtml` (modifier) | Écrans. |
-| `tests/SamaEcole.IntegrationTests/OptionalSubjects/*`, `tests/SamaEcole.UnitTests/OptionalSubjects/*`, `src/SamaEcole.Web/tests/js/*` (créer) | Tests. |
+| `tests/SamaEcole.IntegrationTests/OptionalSubjects/*`, `tests/SamaEcole.UnitTests/{OptionalSubjects,ReportCards}/*`, `src/SamaEcole.Web/tests/js/*` (créer) | Tests. |
 
 ---
 
@@ -79,7 +85,7 @@ Constat correctif sur la spécification §1 : le bulletin **secondaire** n'impri
 - Test: `tests/SamaEcole.IntegrationTests/OptionalSubjects/EnrollmentExemptionIsolationTests.cs`
 
 **Interfaces:**
-- Produces: `Subject.IsOptional : bool`, `Subject.OptionGroup : string?` ; `EnrollmentSubjectExemption { Guid Id, Guid SchoolId, Guid EnrollmentId, Guid SubjectId }` (+ `AuditableEntity`) ; `IApplicationDbContext.EnrollmentSubjectExemptions : DbSet<EnrollmentSubjectExemption>` ; table `enrollment_subject_exemptions`.
+- Produces: `Subject.IsOptional : bool`, `Subject.OptionGroup : string?` ; `EnrollmentSubjectExemption { Guid Id, Guid SchoolId, Guid EnrollmentId, Guid SubjectId, string? Reason }` (+ `AuditableEntity`) ; `IApplicationDbContext.EnrollmentSubjectExemptions : DbSet<EnrollmentSubjectExemption>` ; table `enrollment_subject_exemptions`.
 
 - [ ] **Step 1: Écrire le test d'isolation (SQL brut, rôle applicatif)**
 
@@ -241,20 +247,33 @@ public class EnrollmentExemptionIsolationTests : IAsyncLifetime
         (await CountAsync(EcoleA)).Should().Be(0);
     }
 
-    private async Task<Guid> InsertAsync(Guid sessionSchool, Guid schoolId, Guid enrollmentId, Guid subjectId)
+    // 7 — le motif est borné À LA BASE (varchar(200)) : un client qui oublierait la validation ne l'élargit pas.
+    [Fact]
+    public async Task A_Reason_Is_Stored_Up_To_Two_Hundred_Characters_And_Longer_Is_Rejected_By_The_Database()
+    {
+        await InsertAsync(EcoleA, EcoleA, InscriptionA1, ArabeA, reason: new string('x', 200));
+
+        var tooLong = async () => await InsertAsync(EcoleA, EcoleA, InscriptionA2, ArabeA, reason: new string('x', 201));
+
+        await tooLong.Should().ThrowAsync<PostgresException>()
+            .Where(e => e.SqlState == PostgresErrorCodes.StringDataRightTruncation);
+    }
+
+    private async Task<Guid> InsertAsync(Guid sessionSchool, Guid schoolId, Guid enrollmentId, Guid subjectId, string? reason = null)
     {
         await using var connection = await _db.OpenRawAppConnectionAsync(sessionSchool);
         await using var command = connection.CreateCommand();
         command.CommandText = """
             INSERT INTO enrollment_subject_exemptions
-                ("Id", "SchoolId", "EnrollmentId", "SubjectId", "CreatedAt", "IsDeleted")
-            VALUES (@id, @schoolId, @enrollmentId, @subjectId, NOW(), FALSE);
+                ("Id", "SchoolId", "EnrollmentId", "SubjectId", "Reason", "CreatedAt", "IsDeleted")
+            VALUES (@id, @schoolId, @enrollmentId, @subjectId, @reason, NOW(), FALSE);
             """;
         var id = Guid.NewGuid();
         command.Parameters.AddWithValue("id", id);
         command.Parameters.AddWithValue("schoolId", schoolId);
         command.Parameters.AddWithValue("enrollmentId", enrollmentId);
         command.Parameters.AddWithValue("subjectId", subjectId);
+        command.Parameters.AddWithValue("reason", (object?)reason ?? DBNull.Value);
         await command.ExecuteNonQueryAsync();
         return id;
     }
@@ -325,10 +344,15 @@ using SamaEcole.Domain.Common;
 namespace SamaEcole.Domain.Entities;
 
 /// <summary>
-/// Dispense d'un élève pour une matière optionnelle, portée par son INSCRIPTION (donc par l'année
-/// scolaire). « Aucune ligne » signifie « l'élève suit toutes les matières » : c'est ce qui garantit que
-/// rien ne change tant que personne n'a enregistré de choix. Une dispense ne joue que si la matière est
-/// encore <see cref="Subject.IsOptional"/> au moment de la lecture (SubjectExemptions).
+/// Dispense d'un élève pour une matière, portée par son INSCRIPTION (donc par l'année scolaire). Deux
+/// sortes, déduites de <see cref="Subject.IsOptional"/> et de <see cref="Reason"/> — pas de colonne « type » :
+/// — une OPTION non suivie : matière optionnelle, sans motif ;
+/// — la dispense d'une matière OBLIGATOIRE : matière obligatoire, AVEC motif (imposé par la commande).
+///
+/// « Aucune ligne » signifie « l'élève suit toutes les matières » : c'est ce qui garantit que rien ne change
+/// tant que personne n'a enregistré de choix. Une ligne est ACTIVE quand la matière est encore optionnelle OU
+/// quand elle porte un motif (SubjectExemptions) : repasser une matière en « obligatoire » rend ses lignes
+/// d'option, sans motif, inertes.
 ///
 /// Suppression logique uniquement (règle #6) : « refaire son choix » retire les lignes en trop et la clé
 /// redevient libre grâce à l'index unique partiel. Pas de verrou xmin : ce n'est pas une donnée sensible
@@ -341,6 +365,12 @@ public class EnrollmentSubjectExemption : AuditableEntity, ITenantEntity
     public Guid EnrollmentId { get; set; }
 
     public Guid SubjectId { get; set; }
+
+    /// <summary>
+    /// Motif de la dispense (200 caractères au plus) : obligatoire pour une matière OBLIGATOIRE, vide pour une
+    /// option non suivie. Peut être médical : il n'est jamais imprimé sur un document.
+    /// </summary>
+    public string? Reason { get; set; }
 }
 ```
 
@@ -377,6 +407,9 @@ public class EnrollmentSubjectExemptionConfiguration : IEntityTypeConfiguration<
 
         builder.HasKey(e => e.Id);
         builder.Property(e => e.SchoolId).IsRequired();
+
+        // Motif d'une dispense de matière obligatoire — même borne que OptionSelectionRules.MaxReasonLength.
+        builder.Property(e => e.Reason).HasMaxLength(200);
 
         // Une dispense par (inscription, matière). Index PARTIEL (« NOT IsDeleted ») — même convention que
         // SubjectCoefficientOverrideConfiguration : refaire son choix ne doit pas se heurter à la ligne archivée.
@@ -429,7 +462,7 @@ Run:
 ```
 dotnet ef migrations add AddOptionalSubjects -p src/SamaEcole.Persistence -s src/SamaEcole.Web
 ```
-Expected: 2 fichiers `..._AddOptionalSubjects.cs` et `.Designer.cs`, plus le snapshot mis à jour. Le `Up` doit contenir `AddColumn IsOptional` (défaut `false`), `AddColumn OptionGroup` et `CreateTable enrollment_subject_exemptions`. Si le serveur de dev tourne et verrouille les DLL : ajouter `--configuration Release`.
+Expected: 2 fichiers `..._AddOptionalSubjects.cs` et `.Designer.cs`, plus le snapshot mis à jour. Le `Up` doit contenir `AddColumn IsOptional` (défaut `false`), `AddColumn OptionGroup` et `CreateTable enrollment_subject_exemptions` (dont `Reason` : `character varying(200)`, nullable). Si le serveur de dev tourne et verrouille les DLL : ajouter `--configuration Release`.
 
 Éditer la migration générée : ajouter en tête de la classe
 ```csharp
@@ -557,7 +590,7 @@ Run:
 dotnet ef database update -p src/SamaEcole.Persistence -s src/SamaEcole.Web
 dotnet test tests/SamaEcole.IntegrationTests --filter "FullyQualifiedName~EnrollmentExemptionIsolationTests|FullyQualifiedName~RlsCoverageTests|FullyQualifiedName~ResetSchoolDataTests|FullyQualifiedName~DeleteSchoolYearTests"
 ```
-Expected: PASS (6 tests d'isolation ; `RlsCoverageTests` et `Every_Restrict_Foreign_Key_Into_A_Purged_Table_Must_Come_From_A_Purged_Table_Too` détectent seuls la nouvelle table).
+Expected: PASS (7 tests d'isolation ; `RlsCoverageTests` et `Every_Restrict_Foreign_Key_Into_A_Purged_Table_Must_Come_From_A_Purged_Table_Too` détectent seuls la nouvelle table).
 
 - [ ] **Step 9: Commit**
 
@@ -878,16 +911,18 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Produces:
-  - `public sealed record OptionSubject(Guid Id, string Name, string? Group)`
-  - `OptionSelectionRules.LevelMatches(string a, string b) : bool`
-  - `OptionSelectionRules.Validate(IReadOnlyList<OptionSubject> levelOptions, IReadOnlyCollection<Guid> chosen) : string?` — `null` si valide, sinon le message français
-  - `OptionSelectionRules.ExemptedSubjectIds(IReadOnlyList<OptionSubject> levelOptions, IReadOnlyCollection<Guid> chosen) : IReadOnlySet<Guid>`
-  - `SubjectExemptions.ForStudentAsync(IApplicationDbContext db, Guid studentId, Guid schoolYearId, CancellationToken ct) : Task<IReadOnlySet<Guid>>` — matières dont l'élève est dispensé
-  - `SubjectExemptions.StudentsExemptFromAsync(IApplicationDbContext db, Guid subjectId, Guid schoolYearId, CancellationToken ct) : Task<IReadOnlySet<Guid>>` — élèves dispensés d'une matière
-  - `EnrollmentOptionsPlanner.LoadLevelOptionsAsync(IApplicationDbContext db, string level, CancellationToken ct) : Task<IReadOnlyList<OptionSubject>>`
-  - `EnrollmentOptionsPlanner.PlanExemptionsAsync(IApplicationDbContext db, string level, IReadOnlyCollection<Guid> chosen, string field, CancellationToken ct) : Task<IReadOnlySet<Guid>>` — lève `ValidationException` (422) sur `field`
+  - `public sealed record LevelSubject(Guid Id, string Name, string? Group)` — une matière d'un niveau (option ou obligatoire)
+  - `public sealed record MandatoryExemption(Guid SubjectId, string? Reason)` — dispense d'une matière obligatoire (entrée de la commande)
+  - `OptionSelectionRules.MaxReasonLength = 200`, `.LevelMatches(string, string) : bool`, `.Validate(IReadOnlyList<LevelSubject> levelOptions, IReadOnlyCollection<Guid> chosen) : string?`, `.ExemptedSubjectIds(levelOptions, chosen) : IReadOnlySet<Guid>`, `.ValidateReason(string?) : string?`, `.ValidateMandatoryExemptions(IReadOnlyList<LevelSubject> levelMandatory, IReadOnlyCollection<MandatoryExemption>) : string?` — chaque `string?` vaut `null` si valide, sinon le message français à renvoyer en 422
+  - `public sealed record ExemptSubject(Guid SubjectId, string Name, decimal Coefficient, bool IsMandatory)`
+  - `public sealed class StudentExemptions` : `static None`, `Subjects : IReadOnlyList<ExemptSubject>`, `Mandatory : IReadOnlyList<ExemptSubject>` (matières obligatoires dispensées — le bulletin les garde, marquées), `HiddenIds : IReadOnlySet<Guid>` (options non suivies — le bulletin ne les imprime pas), `MandatoryIds : IReadOnlySet<Guid>`, `Contains(Guid) : bool` (les deux sortes), `IsEmpty : bool`
+  - `SubjectExemptions.ForStudentAsync(IApplicationDbContext db, Guid studentId, Guid schoolYearId, CancellationToken ct) : Task<StudentExemptions>`
+  - `SubjectExemptions.StudentsExemptFromAsync(IApplicationDbContext db, Guid subjectId, Guid schoolYearId, CancellationToken ct) : Task<IReadOnlySet<Guid>>` — les élèves dispensés d'une matière (les deux sortes)
+  - `EnrollmentOptionsPlanner.LoadLevelOptionsAsync(db, string level, ct) : Task<IReadOnlyList<LevelSubject>>`, `.LoadLevelMandatoryAsync(db, string level, ct) : Task<IReadOnlyList<LevelSubject>>` (matières obligatoires **autonomes** : ni activité, ni domaine), `.PlanExemptionsAsync(db, string level, IReadOnlyCollection<Guid> chosen, string field, ct) : Task<IReadOnlySet<Guid>>`, `.PlanMandatoryExemptionsAsync(db, string level, IReadOnlyList<MandatoryExemption> exemptions, string field, ct) : Task<IReadOnlyList<MandatoryExemption>>` (motifs nettoyés) — les deux `Plan…` lèvent `ValidationException` (422) sur `field`
 
-- [ ] **Step 1: Écrire les tests de la règle pure**
+**Règle « ligne active » (remplace l'écart E3).** Une ligne de dispense joue quand la matière est **optionnelle** (option non suivie) **ou** quand elle porte un **motif** (matière obligatoire dispensée — le motif est imposé à l'écriture). Une ligne sans motif sur une matière repassée en « obligatoire » est donc inerte : la matière revient à tous, sans purge.
+
+- [ ] **Step 1: Écrire les tests des règles pures**
 
 ```csharp
 using FluentAssertions;
@@ -905,7 +940,7 @@ public class OptionSelectionRulesTests
     private static readonly Guid Svt = Guid.NewGuid();
     private static readonly Guid Dessin = Guid.NewGuid();
 
-    private static readonly IReadOnlyList<OptionSubject> Options =
+    private static readonly IReadOnlyList<LevelSubject> Options =
     [
         new(Espagnol, "Espagnol", "LV2"),
         new(Arabe, "Arabe", " lv2 "),
@@ -943,11 +978,7 @@ public class OptionSelectionRulesTests
 
     [Fact]
     public void A_Subject_Outside_The_Level_Options_Is_Refused()
-    {
-        var stranger = Guid.NewGuid();
-
-        OptionSelectionRules.Validate(Options, [stranger]).Should().NotBeNull();
-    }
+        => OptionSelectionRules.Validate(Options, [Guid.NewGuid()]).Should().NotBeNull();
 
     [Fact]
     public void A_Duplicate_Id_Is_Not_Counted_Twice()
@@ -959,13 +990,58 @@ public class OptionSelectionRulesTests
     [InlineData("Collège", "Lycée", false)]
     public void Levels_Match_Ignoring_Case_And_Edge_Spaces(string a, string b, bool expected)
         => OptionSelectionRules.LevelMatches(a, b).Should().Be(expected);
+
+    // ---- Dispense d'une matière obligatoire : le motif est imposé -------------------------------------
+
+    private static readonly Guid Eps = Guid.NewGuid();
+    private static readonly Guid Maths = Guid.NewGuid();
+    private static readonly IReadOnlyList<LevelSubject> Mandatory = [new(Eps, "EPS", null), new(Maths, "Maths", null)];
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void A_Blank_Reason_Is_Refused(string? reason)
+        => OptionSelectionRules.ValidateReason(reason).Should().NotBeNull();
+
+    [Fact]
+    public void A_Reason_Is_Valid_Up_To_Two_Hundred_Characters_After_Trimming()
+    {
+        OptionSelectionRules.ValidateReason("  Inaptitude médicale  ").Should().BeNull();
+        OptionSelectionRules.ValidateReason(new string('x', 200)).Should().BeNull();
+        OptionSelectionRules.ValidateReason(new string('x', 201)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public void A_Mandatory_Exemption_With_A_Reason_Is_Valid()
+        => OptionSelectionRules.ValidateMandatoryExemptions(Mandatory, [new(Eps, "Inaptitude médicale")]).Should().BeNull();
+
+    [Fact]
+    public void A_Mandatory_Exemption_Without_A_Reason_Is_Refused_And_Names_The_Subject()
+    {
+        var message = OptionSelectionRules.ValidateMandatoryExemptions(Mandatory, [new(Eps, null)]);
+
+        message.Should().NotBeNull().And.Contain("EPS");
+    }
+
+    [Fact]
+    public void An_Option_Cannot_Be_Passed_As_A_Mandatory_Exemption()
+        => OptionSelectionRules.ValidateMandatoryExemptions(Mandatory, [new(Espagnol, "Raison")]).Should().NotBeNull();
+
+    [Fact]
+    public void The_Same_Subject_Cannot_Be_Exempted_Twice()
+        => OptionSelectionRules.ValidateMandatoryExemptions(Mandatory, [new(Eps, "A"), new(Eps, "B")]).Should().NotBeNull();
+
+    [Fact]
+    public void No_Mandatory_Exemption_At_All_Is_Valid()
+        => OptionSelectionRules.ValidateMandatoryExemptions(Mandatory, []).Should().BeNull();
 }
 ```
 
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `dotnet test tests/SamaEcole.UnitTests --filter "FullyQualifiedName~OptionSelectionRulesTests"`
-Expected: FAIL à la compilation (`OptionSubject`, `Validate`… absents).
+Expected: FAIL à la compilation (`LevelSubject`, `Validate`, `ValidateReason`… absents).
 
 - [ ] **Step 3: Compléter `OptionSelectionRules.cs`**
 
@@ -974,19 +1050,26 @@ Remplacer le fichier par :
 ```csharp
 namespace SamaEcole.Application.OptionalSubjects;
 
-/// <summary>Une matière optionnelle d'un niveau, telle que la règle la voit (aucune dépendance EF).</summary>
-public sealed record OptionSubject(Guid Id, string Name, string? Group);
+/// <summary>Une matière d'un niveau, telle que les règles la voient (aucune dépendance EF) : option ou obligatoire.</summary>
+public sealed record LevelSubject(Guid Id, string Name, string? Group);
+
+/// <summary>Dispense d'une matière OBLIGATOIRE : la matière et son motif (obligatoire, imposé par les règles).</summary>
+public sealed record MandatoryExemption(Guid SubjectId, string? Reason);
 
 /// <summary>
-/// Règles PURES (aucun accès base) des matières optionnelles : normalisation d'un groupe, appariement de
-/// niveau, validation d'un choix et dispenses qui en découlent (spécification §4.3, §5.2).
+/// Règles PURES (aucun accès base) des matières optionnelles et des dispenses : normalisation d'un groupe,
+/// appariement de niveau, validation d'un choix d'options et d'une dispense de matière obligatoire
+/// (spécification §4.3, §5.2).
 ///
-/// Un « choix » est l'ensemble des options que l'élève SUIT. Ses dispenses sont toutes les autres options
-/// du niveau. Un choix vide dispense donc de toutes les options — c'est le cas d'un élève qui n'en suit
-/// aucune, distinct de « aucun choix enregistré » (aucune ligne de dispense : il suit tout).
+/// Un « choix » d'options est l'ensemble des options que l'élève SUIT. Ses dispenses d'options sont toutes
+/// les autres options du niveau. Un choix vide dispense donc de toutes les options — c'est le cas d'un élève
+/// qui n'en suit aucune, distinct de « aucun choix enregistré » (aucune ligne : il suit tout).
 /// </summary>
 public static class OptionSelectionRules
 {
+    /// <summary>Longueur maximale du motif d'une dispense (colonne <c>Reason</c>, varchar(200)).</summary>
+    public const int MaxReasonLength = 200;
+
     /// <summary>Groupe nettoyé : blanc → null, espaces de bord retirés.</summary>
     public static string? NormalizeGroup(string? group) =>
         string.IsNullOrWhiteSpace(group) ? null : group.Trim();
@@ -998,8 +1081,8 @@ public static class OptionSelectionRules
     public static bool LevelMatches(string a, string b) =>
         string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Null si le choix est valide, sinon le message (français) à renvoyer en 422.</summary>
-    public static string? Validate(IReadOnlyList<OptionSubject> levelOptions, IReadOnlyCollection<Guid> chosen)
+    /// <summary>Null si le choix d'options est valide, sinon le message (français) à renvoyer en 422.</summary>
+    public static string? Validate(IReadOnlyList<LevelSubject> levelOptions, IReadOnlyCollection<Guid> chosen)
     {
         var byId = levelOptions.ToDictionary(o => o.Id);
         var distinct = chosen.Distinct().ToList();
@@ -1022,20 +1105,64 @@ public static class OptionSelectionRules
               + $"({string.Join(", ", tooMany.Select(o => o.Name))}).";
     }
 
-    /// <summary>Les options du niveau que l'élève ne suit pas : ce sont ses dispenses.</summary>
+    /// <summary>Les options du niveau que l'élève ne suit pas : ce sont ses dispenses d'options.</summary>
     public static IReadOnlySet<Guid> ExemptedSubjectIds(
-        IReadOnlyList<OptionSubject> levelOptions, IReadOnlyCollection<Guid> chosen)
+        IReadOnlyList<LevelSubject> levelOptions, IReadOnlyCollection<Guid> chosen)
     {
         var followed = chosen.ToHashSet();
         return levelOptions.Where(o => !followed.Contains(o.Id)).Select(o => o.Id).ToHashSet();
     }
+
+    /// <summary>Le motif d'une dispense de matière obligatoire est obligatoire (non vide) et borné.</summary>
+    public static string? ValidateReason(string? reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return "Le motif de la dispense est obligatoire pour une matière obligatoire.";
+        }
+
+        return reason.Trim().Length > MaxReasonLength
+            ? $"Le motif ne peut pas dépasser {MaxReasonLength} caractères."
+            : null;
+    }
+
+    /// <summary>
+    /// Null si les dispenses de matières OBLIGATOIRES sont valides : chaque matière est une matière
+    /// obligatoire du niveau (jamais une option, jamais une matière d'un autre niveau), n'est dispensée
+    /// qu'une fois, et porte un motif.
+    /// </summary>
+    public static string? ValidateMandatoryExemptions(
+        IReadOnlyList<LevelSubject> levelMandatory, IReadOnlyCollection<MandatoryExemption> exemptions)
+    {
+        var byId = levelMandatory.ToDictionary(s => s.Id);
+
+        if (exemptions.Any(e => !byId.ContainsKey(e.SubjectId)))
+        {
+            return "Une des matières dispensées n'est pas une matière obligatoire du niveau de cette classe.";
+        }
+
+        if (exemptions.GroupBy(e => e.SubjectId).Any(g => g.Count() > 1))
+        {
+            return "Une matière ne peut être dispensée qu'une seule fois.";
+        }
+
+        foreach (var exemption in exemptions)
+        {
+            if (ValidateReason(exemption.Reason) is { } message)
+            {
+                return $"{byId[exemption.SubjectId].Name} : {message}";
+            }
+        }
+
+        return null;
+    }
 }
 ```
 
-- [ ] **Step 4: Vérifier que la règle passe**
+- [ ] **Step 4: Vérifier que les règles passent**
 
 Run: `dotnet test tests/SamaEcole.UnitTests --filter "FullyQualifiedName~OptionSelectionRulesTests"`
-Expected: PASS (7 cas).
+Expected: PASS (17 cas).
 
 - [ ] **Step 5: Écrire les tests des requêtes de dispenses**
 
@@ -1051,7 +1178,10 @@ using Xunit;
 
 namespace SamaEcole.IntegrationTests.OptionalSubjects;
 
-/// <summary>Quelles matières un élève ne suit pas (et quels élèves ne suivent pas une matière) ?</summary>
+/// <summary>
+/// Quelles matières un élève ne suit pas (et quels élèves ne suivent pas une matière) ? Deux sortes de
+/// dispenses : une OPTION non suivie (sans motif) et une matière OBLIGATOIRE dispensée (avec motif).
+/// </summary>
 [Trait("Category", "MultiTenant")]
 public class SubjectExemptionsTests : IAsyncLifetime
 {
@@ -1065,11 +1195,14 @@ public class SubjectExemptionsTests : IAsyncLifetime
     private static readonly Guid Classe = Guid.Parse("94444444-0000-0000-0000-0000000000c1");
     private static readonly Guid ClasseAutre = Guid.Parse("95555555-0000-0000-0000-0000000000c1");
     private static readonly Guid Arabe = Guid.Parse("94444444-0000-0000-0000-0000000000a1");
+    private static readonly Guid Eps = Guid.Parse("94444444-0000-0000-0000-0000000000a2");
     private static readonly Guid ArabeAutre = Guid.Parse("95555555-0000-0000-0000-0000000000a1");
 
     private static readonly Guid EleveDispense = Guid.Parse("94444444-0000-0000-0000-0000000000e1");
     private static readonly Guid EleveAnnule = Guid.Parse("94444444-0000-0000-0000-0000000000e2");
     private static readonly Guid EleveLibre = Guid.Parse("94444444-0000-0000-0000-0000000000e3");
+    private static readonly Guid EleveEps = Guid.Parse("94444444-0000-0000-0000-0000000000e4");
+    private static readonly Guid EleveEpsSansMotif = Guid.Parse("94444444-0000-0000-0000-0000000000e5");
     private static readonly Guid EleveAutre = Guid.Parse("95555555-0000-0000-0000-0000000000e1");
 
     public async Task InitializeAsync()
@@ -1087,20 +1220,27 @@ public class SubjectExemptionsTests : IAsyncLifetime
             new Classroom { Id = ClasseAutre, SchoolId = Autre, Name = "4ème A", Level = "Collège", Cycle = CycleType.College, Capacity = 40 });
         owner.Subjects.AddRange(
             new Subject { Id = Arabe, SchoolId = Ecole, Name = "Arabe", Level = "Collège", Coefficient = 2, IsOptional = true, OptionGroup = "LV2" },
+            new Subject { Id = Eps, SchoolId = Ecole, Name = "EPS", Level = "Collège", Coefficient = 1 },
             new Subject { Id = ArabeAutre, SchoolId = Autre, Name = "Arabe", Level = "Collège", Coefficient = 2, IsOptional = true, OptionGroup = "LV2" });
         owner.Students.AddRange(
             Student(EleveDispense, Ecole, "E1", Classe), Student(EleveAnnule, Ecole, "E2", Classe),
-            Student(EleveLibre, Ecole, "E3", Classe), Student(EleveAutre, Autre, "E4", ClasseAutre));
+            Student(EleveLibre, Ecole, "E3", Classe), Student(EleveEps, Ecole, "E4", Classe),
+            Student(EleveEpsSansMotif, Ecole, "E5", Classe), Student(EleveAutre, Autre, "E6", ClasseAutre));
 
         var inscriptionDispense = Enrollment(EleveDispense, Ecole, Annee1, Classe, EnrollmentStatus.Confirmed, "R1");
         var inscriptionAnnulee = Enrollment(EleveAnnule, Ecole, Annee1, Classe, EnrollmentStatus.Cancelled, "R2");
         var inscriptionLibre = Enrollment(EleveLibre, Ecole, Annee1, Classe, EnrollmentStatus.Confirmed, "R3");
-        var inscriptionAutre = Enrollment(EleveAutre, Autre, AnneeAutre, ClasseAutre, EnrollmentStatus.Confirmed, "R4");
-        owner.Enrollments.AddRange(inscriptionDispense, inscriptionAnnulee, inscriptionLibre, inscriptionAutre);
+        var inscriptionEps = Enrollment(EleveEps, Ecole, Annee1, Classe, EnrollmentStatus.Confirmed, "R4");
+        var inscriptionEpsSansMotif = Enrollment(EleveEpsSansMotif, Ecole, Annee1, Classe, EnrollmentStatus.Confirmed, "R5");
+        var inscriptionAutre = Enrollment(EleveAutre, Autre, AnneeAutre, ClasseAutre, EnrollmentStatus.Confirmed, "R6");
+        owner.Enrollments.AddRange(
+            inscriptionDispense, inscriptionAnnulee, inscriptionLibre, inscriptionEps, inscriptionEpsSansMotif, inscriptionAutre);
 
         owner.EnrollmentSubjectExemptions.AddRange(
             new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionDispense.Id, SubjectId = Arabe },
             new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionAnnulee.Id, SubjectId = Arabe },
+            new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionEps.Id, SubjectId = Eps, Reason = "Inaptitude médicale" },
+            new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionEpsSansMotif.Id, SubjectId = Eps },
             new EnrollmentSubjectExemption { SchoolId = Autre, EnrollmentId = inscriptionAutre.Id, SubjectId = ArabeAutre });
 
         await owner.SaveChangesAsync();
@@ -1109,11 +1249,39 @@ public class SubjectExemptionsTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     [Fact]
-    public async Task An_Exempted_Student_Is_Reported_For_The_Year_Of_His_Enrollment()
+    public async Task An_Option_Not_Followed_Is_Reported_As_Hidden_For_The_Year_Of_His_Enrollment()
     {
         await using var db = _db.NewAppContext(Ecole);
 
-        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee1, default)).Should().BeEquivalentTo([Arabe]);
+        var exemptions = await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee1, default);
+
+        exemptions.Subjects.Select(s => s.SubjectId).Should().BeEquivalentTo([Arabe]);
+        exemptions.HiddenIds.Should().BeEquivalentTo([Arabe]);
+        exemptions.Mandatory.Should().BeEmpty("une option non suivie disparaît du bulletin, elle n'y est pas marquée");
+        exemptions.Contains(Arabe).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task A_Mandatory_Subject_With_A_Reason_Is_Reported_As_Mandatory_With_Its_Name_And_Coefficient()
+    {
+        await using var db = _db.NewAppContext(Ecole);
+
+        var exemptions = await SubjectExemptions.ForStudentAsync(db, EleveEps, Annee1, default);
+
+        exemptions.Mandatory.Should().ContainSingle()
+            .Which.Should().Match<ExemptSubject>(s => s.SubjectId == Eps && s.Name == "EPS" && s.Coefficient == 1m && s.IsMandatory);
+        exemptions.HiddenIds.Should().BeEmpty("une matière obligatoire dispensée reste sur le bulletin, marquée");
+        exemptions.Contains(Eps).Should().BeTrue("elle n'entre plus dans les moyennes ni dans la saisie");
+    }
+
+    [Fact]
+    public async Task A_Row_Without_A_Reason_On_A_Mandatory_Subject_Is_Inert()
+    {
+        await using var db = _db.NewAppContext(Ecole);
+
+        var exemptions = await SubjectExemptions.ForStudentAsync(db, EleveEpsSansMotif, Annee1, default);
+
+        exemptions.IsEmpty.Should().BeTrue("sans motif, ce n'est pas une dispense valide d'une matière obligatoire");
     }
 
     [Fact]
@@ -1121,7 +1289,7 @@ public class SubjectExemptionsTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(Ecole);
 
-        (await SubjectExemptions.ForStudentAsync(db, EleveLibre, Annee1, default)).Should().BeEmpty();
+        (await SubjectExemptions.ForStudentAsync(db, EleveLibre, Annee1, default)).IsEmpty.Should().BeTrue();
     }
 
     [Fact]
@@ -1129,7 +1297,7 @@ public class SubjectExemptionsTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(Ecole);
 
-        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee0, default)).Should().BeEmpty();
+        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee0, default)).IsEmpty.Should().BeTrue();
     }
 
     [Fact]
@@ -1137,23 +1305,31 @@ public class SubjectExemptionsTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(Ecole);
 
-        (await SubjectExemptions.ForStudentAsync(db, EleveAnnule, Annee1, default)).Should().BeEmpty();
+        (await SubjectExemptions.ForStudentAsync(db, EleveAnnule, Annee1, default)).IsEmpty.Should().BeTrue();
         (await SubjectExemptions.StudentsExemptFromAsync(db, Arabe, Annee1, default)).Should().BeEquivalentTo([EleveDispense]);
     }
 
     [Fact]
-    public async Task An_Exemption_Is_Ignored_Once_The_Subject_Is_No_Longer_Optional()
+    public async Task Students_Exempt_From_A_Subject_Include_Both_Kinds_And_Skip_The_Inert_Row()
+    {
+        await using var db = _db.NewAppContext(Ecole);
+
+        (await SubjectExemptions.StudentsExemptFromAsync(db, Eps, Annee1, default)).Should().BeEquivalentTo([EleveEps]);
+    }
+
+    [Fact]
+    public async Task An_Option_Row_Is_Ignored_Once_The_Subject_Is_No_Longer_Optional()
     {
         await using (var owner = _db.NewOwnerContext())
         {
-            var subject = await owner.Subjects.FindAsync(Arabe);
-            subject!.IsOptional = false;
+            (await owner.Subjects.FindAsync(Arabe))!.IsOptional = false;
             await owner.SaveChangesAsync();
         }
 
         await using var db = _db.NewAppContext(Ecole);
 
-        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee1, default)).Should().BeEmpty();
+        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee1, default)).IsEmpty.Should().BeTrue(
+            "repasser une matière en « obligatoire » la rend à tous : la ligne, sans motif, devient inerte");
         (await SubjectExemptions.StudentsExemptFromAsync(db, Arabe, Annee1, default)).Should().BeEmpty();
     }
 
@@ -1170,7 +1346,7 @@ public class SubjectExemptionsTests : IAsyncLifetime
 
         await using var db = _db.NewAppContext(Ecole);
 
-        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee1, default)).Should().BeEmpty();
+        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee1, default)).IsEmpty.Should().BeTrue();
     }
 
     [Fact]
@@ -1179,7 +1355,7 @@ public class SubjectExemptionsTests : IAsyncLifetime
         await using var db = _db.NewAppContext(Autre);
 
         (await SubjectExemptions.StudentsExemptFromAsync(db, Arabe, Annee1, default)).Should().BeEmpty();
-        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee1, default)).Should().BeEmpty();
+        (await SubjectExemptions.ForStudentAsync(db, EleveDispense, Annee1, default)).IsEmpty.Should().BeTrue();
         (await SubjectExemptions.StudentsExemptFromAsync(db, ArabeAutre, AnneeAutre, default)).Should().BeEquivalentTo([EleveAutre]);
     }
 
@@ -1200,54 +1376,91 @@ public class SubjectExemptionsTests : IAsyncLifetime
 - [ ] **Step 6: Vérifier l'échec**
 
 Run: `dotnet build tests/SamaEcole.IntegrationTests`
-Expected: FAIL — `SubjectExemptions` n'existe pas.
+Expected: FAIL — `SubjectExemptions`, `StudentExemptions`, `ExemptSubject` n'existent pas.
 
 - [ ] **Step 7: Implémenter `SubjectExemptions.cs`**
 
 ```csharp
-using System.Collections.Frozen;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Enums;
 
 namespace SamaEcole.Application.OptionalSubjects;
 
+/// <summary>Une matière dont un élève est dispensé. <see cref="IsMandatory"/> : la matière est obligatoire (dispense avec motif).</summary>
+public sealed record ExemptSubject(Guid SubjectId, string Name, decimal Coefficient, bool IsMandatory);
+
 /// <summary>
-/// Requêtes de dispenses lues par les six lecteurs de la spécification §4.2 (sommaire de notes, fiche
-/// élève, structure APC, feuilles de notes, import, saisie). Classe STATIQUE et sans état : aucun
-/// paramètre de constructeur à ajouter aux handlers, aucun cache à invalider (spécification, écart E1).
+/// Les dispenses ACTIVES d'un élève pour une année. Deux sortes, traitées pareil par le calcul (la matière
+/// n'entre plus dans les moyennes ni dans la saisie) et différemment par le bulletin (spec §4.4) :
+/// — <see cref="HiddenIds"/> : options NON SUIVIES — la ligne n'est pas imprimée ;
+/// — <see cref="Mandatory"/> : matières OBLIGATOIRES dispensées — la ligne reste, marquée « Dispensé(e) ».
+/// <see cref="Contains"/> répond pour les deux sortes.
+/// </summary>
+public sealed class StudentExemptions
+{
+    public static StudentExemptions None { get; } = new([]);
+
+    private readonly HashSet<Guid> _all;
+
+    public StudentExemptions(IReadOnlyList<ExemptSubject> subjects)
+    {
+        Subjects = subjects;
+        _all = subjects.Select(s => s.SubjectId).ToHashSet();
+    }
+
+    public IReadOnlyList<ExemptSubject> Subjects { get; }
+
+    public bool IsEmpty => Subjects.Count == 0;
+
+    public IReadOnlyList<ExemptSubject> Mandatory => Subjects.Where(s => s.IsMandatory).ToList();
+
+    public IReadOnlySet<Guid> HiddenIds => Subjects.Where(s => !s.IsMandatory).Select(s => s.SubjectId).ToHashSet();
+
+    public IReadOnlySet<Guid> MandatoryIds => Subjects.Where(s => s.IsMandatory).Select(s => s.SubjectId).ToHashSet();
+
+    public bool Contains(Guid subjectId) => _all.Contains(subjectId);
+}
+
+/// <summary>
+/// Requêtes de dispenses lues par les lecteurs de la spécification §4.2 (sommaire de notes, fiche élève,
+/// structure APC, feuilles de notes, import, saisie). Classe STATIQUE et sans état : aucun paramètre de
+/// constructeur à ajouter aux handlers, aucun cache à invalider (écart E1).
 ///
-/// Deux règles tenues ICI, pour qu'aucun lecteur ne les réimplémente :
+/// Règles tenues ICI, pour qu'aucun lecteur ne les réimplémente :
 /// — l'inscription doit être ACTIVE pour l'année (hors <see cref="EnrollmentStatus.Cancelled"/>, même
 ///   convention que <c>CoefficientOverrideLoader</c>) ;
-/// — la matière doit être ENCORE optionnelle : repasser une matière en « obligatoire » la rend
-///   immédiatement à tous, sans purge de lignes (écart E3).
+/// — la ligne est ACTIVE si la matière est encore optionnelle OU si la ligne porte un motif : repasser une
+///   matière en « obligatoire » la rend à tous, sans purge, puisque ses lignes d'option n'ont pas de motif.
 ///
 /// Aucun filtre SchoolId à la main : le Global Query Filter et la policy RLS bornent tout à l'école
 /// courante (règle #2). Une dispense supprimée logiquement est déjà écartée par le filtre.
 /// </summary>
 public static class SubjectExemptions
 {
-    /// <summary>Les matières dont l'élève est dispensé pour cette année. Vide = il suit tout.</summary>
-    public static async Task<IReadOnlySet<Guid>> ForStudentAsync(
+    /// <summary>Les dispenses actives de l'élève pour cette année. Vide = il suit tout.</summary>
+    public static async Task<StudentExemptions> ForStudentAsync(
         IApplicationDbContext dbContext, Guid studentId, Guid schoolYearId, CancellationToken cancellationToken)
     {
-        var ids = await (
+        var rows = await (
             from x in dbContext.EnrollmentSubjectExemptions.AsNoTracking()
             join e in dbContext.Enrollments.AsNoTracking() on x.EnrollmentId equals e.Id
             join s in dbContext.Subjects.AsNoTracking() on x.SubjectId equals s.Id
             where e.StudentId == studentId
                   && e.SchoolYearId == schoolYearId
                   && e.Status != EnrollmentStatus.Cancelled
-                  && s.IsOptional
-            select x.SubjectId)
-            .Distinct()
+                  && (s.IsOptional || x.Reason != null)
+            select new { s.Id, s.Name, s.Coefficient, s.IsOptional })
             .ToListAsync(cancellationToken);
 
-        return ids.Count == 0 ? FrozenSet<Guid>.Empty : ids.ToFrozenSet();
+        return rows.Count == 0
+            ? StudentExemptions.None
+            : new StudentExemptions(rows
+                .Select(r => new ExemptSubject(r.Id, r.Name, r.Coefficient, IsMandatory: !r.IsOptional))
+                .ToList());
     }
 
-    /// <summary>Les élèves dispensés de cette matière pour cette année (feuilles de notes, import, saisie).</summary>
+    /// <summary>Les élèves dispensés de cette matière pour cette année, des deux sortes (feuilles de notes, import, saisie).</summary>
     public static async Task<IReadOnlySet<Guid>> StudentsExemptFromAsync(
         IApplicationDbContext dbContext, Guid subjectId, Guid schoolYearId, CancellationToken cancellationToken)
     {
@@ -1258,12 +1471,12 @@ public static class SubjectExemptions
             where x.SubjectId == subjectId
                   && e.SchoolYearId == schoolYearId
                   && e.Status != EnrollmentStatus.Cancelled
-                  && s.IsOptional
+                  && (s.IsOptional || x.Reason != null)
             select e.StudentId)
             .Distinct()
             .ToListAsync(cancellationToken);
 
-        return ids.Count == 0 ? FrozenSet<Guid>.Empty : ids.ToFrozenSet();
+        return ids.ToHashSet();
     }
 }
 ```
@@ -1279,7 +1492,7 @@ using SamaEcole.Application.Common.Interfaces;
 namespace SamaEcole.Application.OptionalSubjects;
 
 /// <summary>
-/// Passerelle entre la base et <see cref="OptionSelectionRules"/> : charge les options d'un niveau puis
+/// Passerelle entre la base et <see cref="OptionSelectionRules"/> : charge les matières d'un niveau puis
 /// transforme un choix en dispenses, ou refuse (422). Partagée par la création d'inscription et par
 /// <c>SetEnrollmentOptionsCommand</c> pour que les deux entrées appliquent exactement la même règle.
 /// </summary>
@@ -1289,7 +1502,7 @@ public static class EnrollmentOptionsPlanner
     /// Matières optionnelles AUTONOMES du niveau (le niveau est un texte libre, comparé en mémoire sans
     /// casse ni espaces de bord — un WHERE SQL le ferait mal). Triées par groupe puis par nom.
     /// </summary>
-    public static async Task<IReadOnlyList<OptionSubject>> LoadLevelOptionsAsync(
+    public static async Task<IReadOnlyList<LevelSubject>> LoadLevelOptionsAsync(
         IApplicationDbContext dbContext, string level, CancellationToken cancellationToken)
     {
         var rows = await dbContext.Subjects.AsNoTracking()
@@ -1299,13 +1512,34 @@ public static class EnrollmentOptionsPlanner
 
         return rows
             .Where(s => OptionSelectionRules.LevelMatches(s.Level, level))
-            .Select(s => new OptionSubject(s.Id, s.Name, OptionSelectionRules.NormalizeGroup(s.OptionGroup)))
-            .OrderBy(o => o.Group ?? "\uffff", StringComparer.CurrentCultureIgnoreCase)
+            .Select(s => new LevelSubject(s.Id, s.Name, OptionSelectionRules.NormalizeGroup(s.OptionGroup)))
+            .OrderBy(o => o.Group ?? "￿", StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(o => o.Name, StringComparer.CurrentCulture)
             .ToList();
     }
 
-    /// <summary>Les matières à dispenser pour ce choix ; lève <see cref="ValidationException"/> sur <paramref name="field"/> si le choix est invalide.</summary>
+    /// <summary>
+    /// Matières OBLIGATOIRES AUTONOMES du niveau : ni activité d'un domaine, ni domaine (une matière qui
+    /// porte des activités n'est jamais notée, elle ne se dispense donc pas). Triées par nom.
+    /// </summary>
+    public static async Task<IReadOnlyList<LevelSubject>> LoadLevelMandatoryAsync(
+        IApplicationDbContext dbContext, string level, CancellationToken cancellationToken)
+    {
+        var rows = await dbContext.Subjects.AsNoTracking()
+            .Where(s => !s.IsOptional
+                        && s.ParentSubjectId == null
+                        && !dbContext.Subjects.Any(child => child.ParentSubjectId == s.Id))
+            .Select(s => new { s.Id, s.Name, s.Level })
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Where(s => OptionSelectionRules.LevelMatches(s.Level, level))
+            .Select(s => new LevelSubject(s.Id, s.Name, null))
+            .OrderBy(s => s.Name, StringComparer.CurrentCulture)
+            .ToList();
+    }
+
+    /// <summary>Les options à dispenser pour ce choix ; lève <see cref="ValidationException"/> sur <paramref name="field"/> si le choix est invalide.</summary>
     public static async Task<IReadOnlySet<Guid>> PlanExemptionsAsync(
         IApplicationDbContext dbContext, string level, IReadOnlyCollection<Guid> chosen, string field,
         CancellationToken cancellationToken)
@@ -1319,6 +1553,24 @@ public static class EnrollmentOptionsPlanner
 
         return OptionSelectionRules.ExemptedSubjectIds(options, chosen);
     }
+
+    /// <summary>
+    /// Valide les dispenses de matières obligatoires et renvoie celles-ci avec leur motif NETTOYÉ (espaces de
+    /// bord retirés) ; lève <see cref="ValidationException"/> sur <paramref name="field"/> sinon.
+    /// </summary>
+    public static async Task<IReadOnlyList<MandatoryExemption>> PlanMandatoryExemptionsAsync(
+        IApplicationDbContext dbContext, string level, IReadOnlyList<MandatoryExemption> exemptions, string field,
+        CancellationToken cancellationToken)
+    {
+        var mandatory = await LoadLevelMandatoryAsync(dbContext, level, cancellationToken);
+
+        if (OptionSelectionRules.ValidateMandatoryExemptions(mandatory, exemptions) is { } message)
+        {
+            throw new ValidationException([new ValidationFailure(field, message)]);
+        }
+
+        return exemptions.Select(e => new MandatoryExemption(e.SubjectId, e.Reason!.Trim())).ToList();
+    }
 }
 ```
 
@@ -1329,33 +1581,36 @@ Run:
 dotnet test tests/SamaEcole.UnitTests --filter "FullyQualifiedName~OptionSelectionRulesTests"
 dotnet test tests/SamaEcole.IntegrationTests --filter "FullyQualifiedName~SubjectExemptionsTests"
 ```
-Expected: PASS (7 + 7).
+Expected: PASS (17 + 10).
 
 - [ ] **Step 10: Commit**
 
 ```bash
 git add src/SamaEcole.Application/OptionalSubjects tests/SamaEcole.UnitTests/OptionalSubjects \
   tests/SamaEcole.IntegrationTests/OptionalSubjects/SubjectExemptionsTests.cs
-git commit -m "feat(options): règles de choix et requêtes de dispenses
+git commit -m "feat(options): règles de choix, motifs et requêtes de dispenses
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
-
-### Task 4: Moyennes, fiche élève et bulletin
+### Task 4: Moyennes, fiche élève et structure de grille
 
 **Files:**
-- Modify: `src/SamaEcole.Application/Grades/Queries/GetGradeSummary/GetGradeSummaryQueryHandler.cs`
+- Modify: `src/SamaEcole.Application/Grades/Queries/GetGradeSummary/GetGradeSummaryQuery.cs` (`GradeSummaryDto`, nouveau `ExemptSubjectDto`), `GetGradeSummaryQueryHandler.cs`
 - Modify: `src/SamaEcole.Application/Students/Queries/GetStudentDetail/GetStudentDetailQuery.cs` (`BuildTermReportsAsync`, l. ~371-395)
-- Modify: `src/SamaEcole.Application/ReportCards/EvaluationStructureBuilder.cs` (signature l. 40-46, filtre l. 56-58)
-- Modify: `src/SamaEcole.Application/ReportCards/Queries/GetReportCardPdf/GetReportCardPdfQuery.cs` (appel l. ~336)
+- Modify: `src/SamaEcole.Application/ReportCards/EvaluationStructureBuilder.cs` (signature l. 40-46, filtre l. 56-58, `BuildLine`)
+- Modify: `src/SamaEcole.Application/ReportCards/Queries/GetReportCardPdf/GetReportCardPdfQuery.cs` (`EvaluationLineDto`, appel de `BuildAsync` l. ~336)
 - Modify: `src/SamaEcole.Application/StateIntegration/Queries/GetSkillsBookletPdf/GetSkillsBookletPdfQueryHandler.cs` (appel l. ~84)
 - Test: `tests/SamaEcole.IntegrationTests/OptionalSubjects/OptionalSubjectsCalculationTests.cs`
 
 **Interfaces:**
-- Consumes: `SubjectExemptions.ForStudentAsync` (Tâche 3).
-- Produces: `EvaluationStructureBuilder.BuildAsync(IApplicationDbContext dbContext, string classroomLevel, int gradingScale, IReadOnlyList<SubjectGradeDto> gradedSubjects, IReadOnlyList<(string Label, decimal MinAverage)> mentionsOnReferenceScale, IReadOnlySet<Guid> exemptSubjectIds, CancellationToken cancellationToken)` — le paramètre `exemptSubjectIds` est inséré **avant** `cancellationToken`.
+- Consumes: `SubjectExemptions.ForStudentAsync`, `StudentExemptions` (Tâche 3).
+- Produces:
+  - `public record ExemptSubjectDto(Guid SubjectId, string SubjectName, decimal Coefficient)` — matière **obligatoire** dispensée, avec son coefficient **effectif** (surcharges appliquées ; 1 au primaire). Le **motif n'y figure jamais** : il peut être médical et ne doit apparaître sur aucun document.
+  - `GradeSummaryDto(…, string? Mention, IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null)` — dernier membre optionnel : les sites d'appel existants compilent tels quels. `ExemptSubjects` est trié par nom, comme `Subjects`.
+  - `EvaluationLineDto(Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation, bool IsExempt = false)`
+  - `EvaluationStructureBuilder.BuildAsync(IApplicationDbContext dbContext, string classroomLevel, int gradingScale, IReadOnlyList<SubjectGradeDto> gradedSubjects, IReadOnlyList<(string Label, decimal MinAverage)> mentionsOnReferenceScale, StudentExemptions exemptions, CancellationToken cancellationToken)` — `exemptions` est inséré **avant** `cancellationToken`.
 
 - [ ] **Step 1: Écrire les tests de calcul**
 
@@ -1364,6 +1619,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Application.ReportCards;
 using SamaEcole.Application.Students.Queries.GetStudentDetail;
 using SamaEcole.Domain.Entities;
@@ -1374,12 +1630,14 @@ using Xunit;
 namespace SamaEcole.IntegrationTests.OptionalSubjects;
 
 /// <summary>
-/// Matières optionnelles — le sommaire de notes, la fiche élève et la structure APC ignorent les matières
-/// dont l'élève est dispensé, et NE CHANGENT RIEN tant qu'aucune dispense n'existe.
+/// Matières optionnelles et dispenses — le sommaire de notes, la fiche élève et la structure APC ignorent les
+/// matières dont l'élève est dispensé, et NE CHANGENT RIEN tant qu'aucune dispense n'existe.
 ///
-/// Jeu : Maths (coef 4, note 12), Français (2, 16), Espagnol (3, 14, option LV2), Arabe (3, 10, option LV2).
-/// Un élève sans dispense : coefficients 12, points 48+32+42+30 = 152. Dispensé d'Arabe : coefficients 9,
-/// points 48+32+42 = 122 — l'Arabe reste NOTÉ en base mais n'entre plus nulle part.
+/// Jeu : Maths (coef 4, note 12), Français (2, 16), Espagnol (3, 14, option LV2), Arabe (3, 10, option LV2),
+/// EPS (1, obligatoire). Un élève sans dispense : coefficients 12, points 48+32+42+30 = 152. Dispensé d'Arabe :
+/// coefficients 9, points 48+32+42 = 122 — l'Arabe reste NOTÉ en base mais n'entre plus nulle part. Un élève
+/// dispensé d'EPS (motif médical) a 12 en Maths, 16 en Français, 8 en EPS : coefficients 6, points 80 — l'EPS
+/// n'entre plus dans la moyenne mais est remontée dans <c>ExemptSubjects</c> pour que le bulletin la marque.
 /// </summary>
 [Trait("Category", "MultiTenant")]
 public class OptionalSubjectsCalculationTests : IAsyncLifetime
@@ -1397,9 +1655,11 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
     private static readonly Guid Francais = Guid.Parse("96666666-0000-0000-0000-0000000000a2");
     private static readonly Guid Espagnol = Guid.Parse("96666666-0000-0000-0000-0000000000a3");
     private static readonly Guid Arabe = Guid.Parse("96666666-0000-0000-0000-0000000000a4");
+    private static readonly Guid Eps = Guid.Parse("96666666-0000-0000-0000-0000000000a5");
 
     private static readonly Guid EleveLibre = Guid.Parse("96666666-0000-0000-0000-0000000000e1");
     private static readonly Guid EleveDispense = Guid.Parse("96666666-0000-0000-0000-0000000000e2");
+    private static readonly Guid EleveEps = Guid.Parse("96666666-0000-0000-0000-0000000000e3");
 
     public async Task InitializeAsync()
     {
@@ -1418,21 +1678,26 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
             new Subject { Id = Maths, SchoolId = Ecole, Name = "Mathématiques", Level = "Collège", Coefficient = 4 },
             new Subject { Id = Francais, SchoolId = Ecole, Name = "Français", Level = "Collège", Coefficient = 2 },
             new Subject { Id = Espagnol, SchoolId = Ecole, Name = "Espagnol", Level = "Collège", Coefficient = 3, IsOptional = true, OptionGroup = "LV2" },
-            new Subject { Id = Arabe, SchoolId = Ecole, Name = "Arabe", Level = "Collège", Coefficient = 3, IsOptional = true, OptionGroup = "LV2" });
-        owner.Students.AddRange(NewStudent(EleveLibre, "ELEV-0001"), NewStudent(EleveDispense, "ELEV-0002"));
+            new Subject { Id = Arabe, SchoolId = Ecole, Name = "Arabe", Level = "Collège", Coefficient = 3, IsOptional = true, OptionGroup = "LV2" },
+            new Subject { Id = Eps, SchoolId = Ecole, Name = "EPS", Level = "Collège", Coefficient = 1 });
+        owner.Students.AddRange(
+            NewStudent(EleveLibre, "ELEV-0001"), NewStudent(EleveDispense, "ELEV-0002"), NewStudent(EleveEps, "ELEV-0003"));
 
         var inscriptionLibre = NewEnrollment(EleveLibre, Annee1, "R-1");
         var inscriptionDispense = NewEnrollment(EleveDispense, Annee1, "R-2");
-        owner.Enrollments.AddRange(inscriptionLibre, inscriptionDispense, NewEnrollment(EleveDispense, Annee0, "R-0"));
-        owner.EnrollmentSubjectExemptions.Add(
-            new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionDispense.Id, SubjectId = Arabe });
+        var inscriptionEps = NewEnrollment(EleveEps, Annee1, "R-3");
+        owner.Enrollments.AddRange(inscriptionLibre, inscriptionDispense, inscriptionEps, NewEnrollment(EleveDispense, Annee0, "R-0"));
+        owner.EnrollmentSubjectExemptions.AddRange(
+            new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionDispense.Id, SubjectId = Arabe },
+            new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionEps.Id, SubjectId = Eps, Reason = "Inaptitude médicale" });
 
         foreach (var student in new[] { EleveLibre, EleveDispense })
         {
-            AddGrades(owner, student, Trimestre1);
+            AddGrades(owner, student, Trimestre1, (Maths, 12m), (Francais, 16m), (Espagnol, 14m), (Arabe, 10m));
         }
 
-        AddGrades(owner, EleveDispense, Trimestre0);
+        AddGrades(owner, EleveDispense, Trimestre0, (Maths, 12m), (Francais, 16m), (Espagnol, 14m), (Arabe, 10m));
+        AddGrades(owner, EleveEps, Trimestre1, (Maths, 12m), (Francais, 16m), (Eps, 8m));
         await owner.SaveChangesAsync();
     }
 
@@ -1440,7 +1705,7 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
 
     // 1 — L'INVARIANT : sans dispense, le calcul est celui d'avant.
     [Fact]
-    public async Task Without_Any_Exemption_Every_Optional_Subject_Counts_As_Before()
+    public async Task Without_Any_Exemption_Every_Subject_Counts_As_Before()
     {
         await using var db = _db.NewAppContext(Ecole);
 
@@ -1450,11 +1715,12 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
         summary.TotalCoefficients.Should().Be(12m);
         summary.TotalPoints.Should().Be(152m);
         summary.GeneralAverage.Should().Be(152m / 12m);
+        summary.ExemptSubjects.Should().BeNullOrEmpty();
     }
 
-    // 2 — la matière dispensée disparaît, et le total des coefficients s'adapte.
+    // 2 — l'option non suivie disparaît, et le total des coefficients s'adapte.
     [Fact]
-    public async Task An_Exempted_Subject_Leaves_The_Summary_And_The_Coefficient_Total_Adapts()
+    public async Task An_Option_Not_Followed_Leaves_The_Summary_And_The_Coefficient_Total_Adapts()
     {
         await using var db = _db.NewAppContext(Ecole);
 
@@ -1464,18 +1730,55 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
         summary.TotalCoefficients.Should().Be(9m);
         summary.TotalPoints.Should().Be(122m);
         summary.GeneralAverage.Should().Be(122m / 9m);
+        summary.ExemptSubjects.Should().BeNullOrEmpty("une option non suivie n'est pas marquée sur le bulletin, elle en disparaît");
     }
 
-    // 3 — la note n'est jamais supprimée (règle #6) : seulement masquée.
+    // 3 — une matière obligatoire dispensée sort du calcul MAIS reste signalée pour le bulletin.
+    [Fact]
+    public async Task A_Mandatory_Subject_Exemption_Leaves_The_Calculation_But_Is_Reported_For_The_Report_Card()
+    {
+        await using var db = _db.NewAppContext(Ecole);
+
+        var summary = await SummaryAsync(db, EleveEps, Trimestre1);
+
+        summary.Subjects.Select(s => s.SubjectId).Should().BeEquivalentTo([Maths, Francais]);
+        summary.TotalCoefficients.Should().Be(6m);
+        summary.TotalPoints.Should().Be(80m);
+        summary.ExemptSubjects.Should().ContainSingle()
+            .Which.Should().Be(new ExemptSubjectDto(Eps, "EPS", 1m));
+    }
+
+    // 4 — la dispense reporte le coefficient EFFECTIF (surcharges comprises), pas seulement celui de la matière.
+    [Fact]
+    public async Task The_Reported_Exempt_Coefficient_Is_The_Effective_One()
+    {
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.SubjectCoefficientOverrides.Add(new SubjectCoefficientOverride
+            {
+                SchoolId = Ecole, SchoolYearId = Annee1, SubjectId = Eps, ClassroomId = Classe, Coefficient = 2m
+            });
+            await owner.SaveChangesAsync();
+        }
+
+        await using var db = _db.NewAppContext(Ecole);
+
+        var summary = await SummaryAsync(db, EleveEps, Trimestre1);
+
+        summary.ExemptSubjects!.Single().Coefficient.Should().Be(2m);
+    }
+
+    // 5 — la note n'est jamais supprimée (règle #6) : seulement masquée.
     [Fact]
     public async Task The_Grade_Of_An_Exempted_Subject_Is_Kept_In_The_Database()
     {
         await using var db = _db.NewAppContext(Ecole);
 
         (await db.Grades.CountAsync(g => g.StudentId == EleveDispense && g.SubjectId == Arabe)).Should().Be(2);
+        (await db.Grades.CountAsync(g => g.StudentId == EleveEps && g.SubjectId == Eps)).Should().Be(1);
     }
 
-    // 4 — une dispense posée sur l'inscription d'une année ne touche pas l'autre année.
+    // 6 — une dispense posée sur l'inscription d'une année ne touche pas l'autre année.
     [Fact]
     public async Task An_Exemption_Of_This_Year_Never_Hides_The_Subject_In_Another_Year()
     {
@@ -1487,7 +1790,7 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
         lastYear.TotalCoefficients.Should().Be(12m);
     }
 
-    // 5 — repasser la matière en « obligatoire » la rend immédiatement à tous (écart E3).
+    // 7 — repasser la matière en « obligatoire » la rend immédiatement à tous (règle « ligne active »).
     [Fact]
     public async Task A_Subject_That_Stops_Being_Optional_Comes_Back_For_Everybody()
     {
@@ -1503,49 +1806,65 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
 
         summary.Subjects.Select(s => s.SubjectId).Should().Contain(Arabe);
         summary.TotalCoefficients.Should().Be(12m);
+        summary.ExemptSubjects.Should().BeNullOrEmpty();
     }
 
-    // 6 — la fiche élève ne contredit jamais le bulletin.
+    // 8 — la fiche élève ne contredit jamais le bulletin.
     [Fact]
-    public async Task The_Student_Sheet_Hides_The_Same_Subject_And_Shows_The_Same_Average_As_The_Summary()
+    public async Task The_Student_Sheet_Hides_The_Same_Subjects_And_Shows_The_Same_Average_As_The_Summary()
     {
         await using var db = _db.NewAppContext(Ecole);
 
-        var summary = await SummaryAsync(db, EleveDispense, Trimestre1);
-        var detail = await new GetStudentDetailQueryHandler(
-                db, new TestCurrentUser(role: Role.Directeur), new CoefficientOverrideLoader(db))
-            .Handle(new GetStudentDetailQuery(EleveDispense), default);
+        foreach (var student in new[] { EleveDispense, EleveEps })
+        {
+            var summary = await SummaryAsync(db, student, Trimestre1);
+            var detail = await new GetStudentDetailQueryHandler(
+                    db, new TestCurrentUser(role: Role.Directeur), new CoefficientOverrideLoader(db))
+                .Handle(new GetStudentDetailQuery(student), default);
 
-        var term = detail.Grades.Single(t => t.TermId == Trimestre1);
-        term.Subjects.Select(s => s.SubjectId).Should().BeEquivalentTo([Maths, Francais, Espagnol]);
-        term.GeneralAverage.Should().Be(summary.GeneralAverage, "une seule règle, deux lecteurs");
+            var term = detail.Grades.Single(t => t.TermId == Trimestre1);
+            term.Subjects.Select(s => s.SubjectId).Should().BeEquivalentTo(summary.Subjects.Select(s => s.SubjectId));
+            term.GeneralAverage.Should().Be(summary.GeneralAverage, "une seule règle, deux lecteurs");
+        }
     }
 
-    // 7 — la grille APC n'imprime pas la ligne d'une matière dispensée, même sans note.
+    // 9 — la grille APC : une option non suivie disparaît, une matière obligatoire dispensée reste, marquée.
     [Fact]
-    public async Task The_Evaluation_Structure_Omits_The_Exempted_Line_Even_When_Ungraded()
+    public async Task The_Evaluation_Structure_Drops_An_Unfollowed_Option_And_Marks_An_Exempted_Mandatory_Line()
     {
         var domaine = Guid.NewGuid();
         var activite = Guid.NewGuid();
         var option = Guid.NewGuid();
+        var obligatoire = Guid.NewGuid();
         await using (var owner = _db.NewOwnerContext())
         {
             owner.Subjects.AddRange(
                 new Subject { Id = domaine, SchoolId = Ecole, Name = "Lang & Com.", Level = "CE1", Coefficient = 1 },
                 new Subject { Id = activite, SchoolId = Ecole, Name = "Vocabulaire", Level = "CE1", Coefficient = 1, ParentSubjectId = domaine },
-                new Subject { Id = option, SchoolId = Ecole, Name = "Arabe CE1", Level = "CE1", Coefficient = 1, IsOptional = true });
+                new Subject { Id = option, SchoolId = Ecole, Name = "Arabe CE1", Level = "CE1", Coefficient = 1, IsOptional = true },
+                new Subject { Id = obligatoire, SchoolId = Ecole, Name = "EPS CE1", Level = "CE1", Coefficient = 1 });
             await owner.SaveChangesAsync();
         }
 
         await using var db = _db.NewAppContext(Ecole);
 
-        var all = await EvaluationStructureBuilder.BuildAsync(
-            db, "CE1", 10, [], [], new HashSet<Guid>(), default);
-        var without = await EvaluationStructureBuilder.BuildAsync(
-            db, "CE1", 10, [], [], new HashSet<Guid> { option }, default);
+        var none = await EvaluationStructureBuilder.BuildAsync(db, "CE1", 10, [], [], StudentExemptions.None, default);
+        var exempted = await EvaluationStructureBuilder.BuildAsync(
+            db, "CE1", 10, [], [],
+            new StudentExemptions(
+            [
+                new ExemptSubject(option, "Arabe CE1", 1m, IsMandatory: false),
+                new ExemptSubject(obligatoire, "EPS CE1", 1m, IsMandatory: true)
+            ]),
+            default);
 
-        all!.Groups.Select(g => g.SubjectId).Should().Contain(option);
-        without!.Groups.Select(g => g.SubjectId).Should().NotContain(option).And.Contain(domaine);
+        none!.Groups.SelectMany(g => g.Lines).Should().OnlyContain(l => !l.IsExempt, "sans dispense, aucune ligne n'est marquée");
+        none.Groups.Select(g => g.SubjectId).Should().Contain([option, obligatoire]);
+
+        exempted!.Groups.Select(g => g.SubjectId).Should().NotContain(option, "une option non suivie disparaît de la grille, même sans note");
+        exempted.Groups.Single(g => g.SubjectId == obligatoire).Lines.Should().ContainSingle()
+            .Which.IsExempt.Should().BeTrue();
+        exempted.Groups.Select(g => g.SubjectId).Should().Contain(domaine);
     }
 
     private static Task<GradeSummaryDto> SummaryAsync(SamaEcole.Persistence.ApplicationDbContext db, Guid student, Guid term)
@@ -1564,9 +1883,10 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
         Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, ReceiptNumber = receipt
     };
 
-    private static void AddGrades(SamaEcole.Persistence.ApplicationDbContext owner, Guid student, Guid term)
+    private static void AddGrades(
+        SamaEcole.Persistence.ApplicationDbContext owner, Guid student, Guid term, params (Guid Subject, decimal Value)[] grades)
     {
-        foreach (var (subject, value) in new[] { (Maths, 12m), (Francais, 16m), (Espagnol, 14m), (Arabe, 10m) })
+        foreach (var (subject, value) in grades)
         {
             owner.Grades.Add(new Grade
             {
@@ -1577,45 +1897,77 @@ public class OptionalSubjectsCalculationTests : IAsyncLifetime
     }
 }
 ```
-Note pour l'exécutant : `GetStudentDetailQueryHandler` peut exiger d'autres données de l'élève (classe, école) que `EffectiveCoefficientTests` fournit déjà avec le même jeu minimal ; si le test 6 échoue sur un autre motif que l'assertion, comparer avec `EffectiveCoefficientTests.The_Student_Sheet_Shows_The_Same_Coefficient_And_Average_As_The_Grade_Summary` (même appel, même jeu).
+Note pour l'exécutant : `GetStudentDetailQueryHandler` peut exiger d'autres données de l'élève que ce jeu minimal ; `EffectiveCoefficientTests.The_Student_Sheet_Shows_The_Same_Coefficient_And_Average_As_The_Grade_Summary` fait le même appel avec le même jeu, à comparer si le test 8 échoue sur autre chose que son assertion. La surcharge de coefficient du test 4 est une **surcharge de classe** (`ClassroomId`, `Series` nul) : la contrainte `CK_subject_coefficient_overrides_one_scope` exige exactement l'une des deux portées.
 
 - [ ] **Step 2: Vérifier l'échec**
 
 Run: `dotnet test tests/SamaEcole.IntegrationTests --filter "FullyQualifiedName~OptionalSubjectsCalculationTests"`
-Expected: FAIL à la compilation (`BuildAsync` n'accepte pas `exemptSubjectIds`).
+Expected: FAIL à la compilation (`ExemptSubjects`, `ExemptSubjectDto`, `EvaluationLineDto.IsExempt` et le nouveau paramètre de `BuildAsync` n'existent pas).
 
-- [ ] **Step 3: `GetGradeSummaryQueryHandler`**
+- [ ] **Step 3: Les DTO**
 
-Ajouter `using SamaEcole.Application.OptionalSubjects;`. Après la ligne qui calcule `overrides` (l. ~49) :
+`GetGradeSummaryQuery.cs` — ajouter, à côté de `SubjectGradeDto`/`GradeSummaryDto` :
+
+```csharp
+/// <summary>
+/// Matière OBLIGATOIRE dont l'élève est dispensé (avec motif), portée par le résumé pour que le bulletin la
+/// marque « Dispensé(e) ». Elle n'entre ni dans <see cref="GradeSummaryDto.Subjects"/> ni dans les totaux.
+/// <see cref="Coefficient"/> est le coefficient EFFECTIF (surcharges comprises ; 1 au primaire) : il
+/// s'imprime barré. Le MOTIF n'est volontairement pas ici — il peut être médical et ne figure sur aucun document.
+/// </summary>
+public record ExemptSubjectDto(Guid SubjectId, string SubjectName, decimal Coefficient);
+```
+et étendre `GradeSummaryDto` d'un **dernier** membre optionnel :
+```csharp
+    string? Mention,
+    IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null);
+```
+`GetReportCardPdfQuery.cs` : `EvaluationLineDto(Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation, bool IsExempt = false)` avec ce commentaire XML sur le nouveau membre : « <c>IsExempt</c> : matière obligatoire dont l'élève est dispensé — la ligne reste dans la grille, le document y imprime « Dispensé(e) » au lieu de la note. »
+
+- [ ] **Step 4: `GetGradeSummaryQueryHandler`**
+
+`using SamaEcole.Application.OptionalSubjects;`. Après la ligne qui calcule `overrides` (l. ~49) :
 
 ```csharp
 
-        // Matières optionnelles : les matières dont l'élève est dispensé cette année sortent du calcul. Leurs
-        // notes restent en base (règle #6) mais n'entrent ni dans le total des coefficients ni dans celui des
-        // points — d'où « 22 au lieu de 25 ». Sans dispense l'ensemble est vide : calcul strictement d'avant.
-        var exempt = await SubjectExemptions.ForStudentAsync(
+        // Matières optionnelles et dispenses : les matières dont l'élève est dispensé cette année sortent du
+        // calcul. Leurs notes restent en base (règle #6) mais n'entrent ni dans le total des coefficients ni
+        // dans celui des points — d'où « 22 au lieu de 25 ». Sans dispense l'ensemble est vide : calcul
+        // strictement d'avant.
+        var exemptions = await SubjectExemptions.ForStudentAsync(
             dbContext, request.StudentId, schoolYearId, cancellationToken);
 ```
 puis remplacer `var subjects = rows\n            .GroupBy(` par :
 
 ```csharp
         var subjects = rows
-            .Where(r => !exempt.Contains(r.SubjectId))
+            .Where(r => !exemptions.Contains(r.SubjectId))
             .GroupBy(
 ```
-(le `.GroupBy(r => new { ... })` qui suit est inchangé : ne déplacer que le `.Where` juste avant).
+(le `.GroupBy(r => new { ... })` qui suit est inchangé : ne déplacer que le `.Where` juste avant). Juste avant le `return new GradeSummaryDto(...)` :
 
-- [ ] **Step 4: `GetStudentDetailQueryHandler.BuildTermReportsAsync`**
+```csharp
+        // Les matières OBLIGATOIRES dispensées, pour que le bulletin les marque. Coefficient effectif comme
+        // pour les lignes notées ; neutralisé à 1 au primaire (qui n'a pas de coefficients).
+        var exemptSubjects = exemptions.Mandatory
+            .Select(m => new ExemptSubjectDto(
+                m.SubjectId, m.Name, isPrimaire ? 1m : overrides.Effective(m.SubjectId, m.Coefficient)))
+            .OrderBy(m => m.SubjectName)
+            .ToList();
+```
+et ajouter `exemptSubjects` comme dernier argument du `new GradeSummaryDto(…)`.
 
-Ajouter `using SamaEcole.Application.OptionalSubjects;`. Juste après le `.ToListAsync(cancellationToken);` qui remplit `gradeRows` et **avant** le commentaire « Aucune note : liste vide » :
+- [ ] **Step 5: `GetStudentDetailQueryHandler.BuildTermReportsAsync`**
+
+`using SamaEcole.Application.OptionalSubjects;`. Juste après le `.ToListAsync(cancellationToken);` qui remplit `gradeRows` et **avant** le commentaire « Aucune note : liste vide » :
 
 ```csharp
 
-        // Matières optionnelles : même filtre que GetGradeSummaryQueryHandler, année par année (la dispense
-        // est portée par l'inscription de l'année) — la fiche ne contredit jamais le bulletin. Filtré AVANT
-        // le contrôle « aucune note » ci-dessous : un trimestre dont toutes les notes sont masquées ne doit
-        // pas laisser un bloc fantôme sans matière.
-        var exemptionsByYear = new Dictionary<Guid, IReadOnlySet<Guid>>();
+        // Matières optionnelles et dispenses : même filtre que GetGradeSummaryQueryHandler, année par année
+        // (la dispense est portée par l'inscription de l'année) — la fiche ne contredit jamais le bulletin.
+        // Filtré AVANT le contrôle « aucune note » ci-dessous : un trimestre dont toutes les notes sont masquées
+        // ne doit pas laisser un bloc fantôme sans matière.
+        var exemptionsByYear = new Dictionary<Guid, StudentExemptions>();
         foreach (var yearId in gradeRows.Select(r => r.SchoolYearId).Distinct())
         {
             exemptionsByYear[yearId] = await SubjectExemptions.ForStudentAsync(
@@ -1627,69 +1979,459 @@ Ajouter `using SamaEcole.Application.OptionalSubjects;`. Juste après le `.ToLis
             .ToList();
 ```
 
-- [ ] **Step 5: `EvaluationStructureBuilder`**
+- [ ] **Step 6: `EvaluationStructureBuilder`**
 
-Signature : insérer avant `CancellationToken cancellationToken` le paramètre
-```csharp
-        IReadOnlySet<Guid> exemptSubjectIds,
-```
-et documenter dans le résumé XML : « <paramref name="exemptSubjectIds"/> : matières dont l'élève est dispensé — leur ligne n'est pas imprimée, même sans note (la grille imprime toutes les lignes du niveau). ». Puis remplacer le filtre de `levelSubjects` :
+Signature : insérer avant `CancellationToken cancellationToken` le paramètre `StudentExemptions exemptions,` et documenter dans le résumé XML : « <paramref name="exemptions"/> : une option NON SUIVIE disparaît de la grille (même sans note — la grille imprime toutes les lignes du niveau) ; une matière OBLIGATOIRE dispensée y reste, marquée <see cref="EvaluationLineDto.IsExempt"/>. ». Remplacer le filtre de `levelSubjects` :
 
 ```csharp
+        var hiddenIds = exemptions.HiddenIds;
+        var markedIds = exemptions.MandatoryIds;
+
         var levelSubjects = all
             .Where(s => string.Equals(s.Level.Trim(), classroomLevel.Trim(), StringComparison.OrdinalIgnoreCase)
-                        && !exemptSubjectIds.Contains(s.Id))
+                        && !hiddenIds.Contains(s.Id))
             .ToList();
 ```
+`BuildLine` gagne le paramètre `IReadOnlySet<Guid> markedIds` (avant `gradingScale`) et ses **trois** sites d'appel le reçoivent ; à la fin de `BuildLine`, l'`EvaluationLineDto` construit prend en dernier argument `markedIds.Contains(subject.Id)`. Son score reste `null` : `scoresBySubject` vient de `gradedSubjects`, d'où la matière dispensée est déjà absente.
 
-- [ ] **Step 6: Appelants de `BuildAsync`**
+- [ ] **Step 7: Appelants de `BuildAsync`**
 
 `GetReportCardPdfQuery.cs` (`ReportCardDataService.BuildAsync`, avant l'appel l. ~336) :
 
 ```csharp
-        // Matières optionnelles : la grille APC ne doit pas imprimer la ligne d'une matière dont l'élève est
-        // dispensé cette année (sa note, si elle existe, est déjà retirée du sommaire).
-        var exemptSubjects = await SubjectExemptions.ForStudentAsync(
+        // Matières optionnelles et dispenses : la grille APC n'imprime pas l'option non suivie et marque la
+        // matière obligatoire dispensée (sa note, si elle existe, est déjà retirée du sommaire).
+        var exemptions = await SubjectExemptions.ForStudentAsync(
             dbContext, student.Id, term.SchoolYearId, cancellationToken);
 
         var evaluationStructure = await EvaluationStructureBuilder.BuildAsync(
-            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptSubjects, cancellationToken);
+            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptions, cancellationToken);
 ```
-(ajouter `using SamaEcole.Application.OptionalSubjects;`).
-
-`GetSkillsBookletPdfQueryHandler.cs` (boucle `foreach (var term in terms)`) :
+(ajouter `using SamaEcole.Application.OptionalSubjects;`). `GetSkillsBookletPdfQueryHandler.cs` (boucle `foreach (var term in terms)`) :
 
 ```csharp
-            var exemptSubjects = await SubjectExemptions.ForStudentAsync(
+            var exemptions = await SubjectExemptions.ForStudentAsync(
                 dbContext, student.Id, term.SchoolYearId, cancellationToken);
 
             structurePerTerm.Add(await EvaluationStructureBuilder.BuildAsync(
-                dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptSubjects, cancellationToken));
+                dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptions, cancellationToken));
 ```
-Si `terms` n'est pas une liste d'entités `Term` (pas de `SchoolYearId`), lire la déclaration de `terms` dans ce handler et utiliser l'identifiant de l'année qu'il expose ; le compilateur le signale.
+Si `terms` n'est pas une liste d'entités `Term` (pas de `SchoolYearId`), lire la déclaration de `terms` dans ce handler et utiliser l'identifiant de l'année qu'il expose ; le compilateur le signale. Le livret de compétences ignore le drapeau `IsExempt` (il imprime la ligne comme avant) : voir les points de vigilance.
 
-- [ ] **Step 7: Compiler puis lancer les tests ciblés**
+- [ ] **Step 8: Compiler puis lancer les tests ciblés**
 
 Run:
 ```
 dotnet build
 dotnet test tests/SamaEcole.IntegrationTests --filter "FullyQualifiedName~OptionalSubjectsCalculationTests|FullyQualifiedName~GradeSummaryTests|FullyQualifiedName~EffectiveCoefficientTests|FullyQualifiedName~ApcEvaluationStructureTests|FullyQualifiedName~GetStudentDetailQueryTests"
 ```
-Expected: PASS. Les tests existants n'ont pas changé : aucune signature publique de handler n'a bougé, seul `EvaluationStructureBuilder.BuildAsync` (appelé uniquement par les deux sources ci-dessus) a gagné un paramètre. Si un test existant l'appelle directement, ajouter `new HashSet<Guid>()` avant le `CancellationToken`.
+Expected: PASS. Les tests existants n'ont pas changé : aucun constructeur de handler n'a bougé, et les nouveaux membres de `GradeSummaryDto`/`EvaluationLineDto` sont optionnels. Seul `EvaluationStructureBuilder.BuildAsync` (appelé uniquement par les deux sources ci-dessus) a gagné un paramètre ; si un test existant l'appelle directement, ajouter `StudentExemptions.None` avant le `CancellationToken`.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add src/SamaEcole.Application/Grades/Queries/GetGradeSummary src/SamaEcole.Application/Students/Queries/GetStudentDetail \
   src/SamaEcole.Application/ReportCards src/SamaEcole.Application/StateIntegration/Queries/GetSkillsBookletPdf \
   tests/SamaEcole.IntegrationTests/OptionalSubjects/OptionalSubjectsCalculationTests.cs
-git commit -m "feat(options): moyennes, fiche élève et bulletin ignorent les matières dispensées
+git commit -m "feat(options): moyennes, fiche élève et grille ignorent les matières dispensées
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
 
+### Task 4b: Bulletin PDF — la ligne « Dispensé(e) »
+
+**Files:**
+- Modify: `src/SamaEcole.Application/ReportCards/Queries/GetReportCardPdf/GetReportCardPdfQuery.cs` (`ReportCardDto`, `ReportCardDataService`)
+- Modify: `src/SamaEcole.Infrastructure/Documents/ReportCardDocument.cs` (les trois tableaux)
+- Test: `tests/SamaEcole.UnitTests/ReportCards/ExemptSubjectReportCardTests.cs`, `tests/SamaEcole.IntegrationTests/OptionalSubjects/ExemptSubjectReportCardDataTests.cs`
+
+**Interfaces:**
+- Consumes: `GradeSummaryDto.ExemptSubjects`, `ExemptSubjectDto`, `EvaluationLineDto.IsExempt` (Tâche 4).
+- Produces:
+  - `ReportCardDto(…, IReadOnlyDictionary<Guid, string?>? SubjectNamesAr = null, IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null)` — dernier membre optionnel
+  - `ReportCardDocument.GradeRows() : IReadOnlyList<GradeRow>` (`internal`, exercée par les tests via `InternalsVisibleTo`) et `internal readonly record struct GradeRow(Guid SubjectId, string Name, SubjectGradeDto? Graded, ExemptSubjectDto? Exempt)` — les lignes du tableau dans l'ordre imprimé (notées et dispensées fusionnées par nom)
+  - `ReportCardDocument.ExemptLabel = "Dispensé(e)"` (`internal const`)
+
+**Rendu (spécification §4.4 — écart assumé à la règle n°12, consigné en Tâche 9).** Option non suivie : aucune ligne (déjà l'effet d'une matière sans note). Matière obligatoire dispensée : la ligne garde son rang (tri par nom, comme les lignes notées) et son libellé ; la zone des notes porte « Dispensé(e) » ; le coefficient s'imprime **barré** ; ni « Moy x coef » ni points ; les totaux l'ignorent. Le **motif** n'est jamais imprimé. Aucune autre modification de la mise en page.
+
+- [ ] **Step 1: Écrire les tests du document (unitaires)**
+
+Créer `tests/SamaEcole.UnitTests/ReportCards/ExemptSubjectReportCardTests.cs`. `BuildReportCard` est recopié de `ReportCardDocumentTests` (mêmes valeurs, en privé), et la tenue sur une page se vérifie comme dans ce fichier : `GenerateImages(ImageGenerationSettings.Default).Count()` — une image par page.
+
+```csharp
+using FluentAssertions;
+using SamaEcole.Application.Grades.Queries.GetGradeSummary;
+using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
+using SamaEcole.Domain.Enums;
+using SamaEcole.Infrastructure.Documents;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
+using Xunit;
+
+namespace SamaEcole.UnitTests.ReportCards;
+
+/// <summary>
+/// Bulletin d'un élève dispensé d'une matière OBLIGATOIRE (spec §4.4) : la ligne reste, à sa place, marquée
+/// « Dispensé(e) » ; le bulletin tient toujours sur une page A5, dans les trois variantes de tableau
+/// (secondaire, primaire, grille APC). Les totaux, eux, sont ceux du sommaire : ils sont vérifiés côté
+/// données (ExemptSubjectReportCardDataTests).
+/// </summary>
+public class ExemptSubjectReportCardTests
+{
+    static ExemptSubjectReportCardTests()
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+    }
+
+    private static readonly Guid Eps = Guid.NewGuid();
+
+    private static ReportCardDto BuildReportCard(int subjectCount)
+    {
+        var subjects = Enumerable.Range(1, subjectCount)
+            .Select(i => new SubjectGradeDto(
+                Guid.NewGuid(), $"Matière {i}", Devoir1: 12 + i % 5, Devoir2: null, Composition: 10 + i % 8,
+                DevoirAverage: 12 + i % 5, Average: 11 + i % 6, Coefficient: 1 + i % 4, WeightedPoints: (11 + i % 6) * (1 + i % 4)))
+            .ToList();
+
+        var ranks = subjects.ToDictionary(s => s.SubjectId, s => 1);
+        var appreciations = subjects.ToDictionary(s => s.SubjectId, s => (string?)"Bien");
+
+        return new ReportCardDto(
+            SchoolName: "École de test",
+            SchoolLogoUrl: null,
+            InspectionAcademie: "Thies",
+            InspectionEducationFormation: "Mbour 1",
+            HeadingPrefix: "LYCÉE DE",
+            HeadingName: "Popenguine",
+            StudentFullName: "Élève de Test avec un Nom Assez Long",
+            BirthDate: new DateOnly(2012, 3, 14),
+            BirthPlace: "Saint-Louis",
+            ClassroomName: "3e A",
+            Cycle: CycleType.Lycee,
+            Matricule: "ELEV-2026-0001",
+            ClassSize: 42,
+            IsRepeating: false,
+            SchoolYearLabel: "2026-2027",
+            TermLabel: "1er trimestre",
+            GradingScale: 20,
+            Subjects: subjects,
+            TotalCoefficients: subjects.Sum(s => s.Coefficient),
+            TotalPoints: subjects.Sum(s => s.WeightedPoints),
+            GeneralAverage: 13.27m,
+            GeneralRank: 3,
+            SubjectRanks: ranks,
+            SubjectAppreciations: appreciations,
+            Mention: "Bien",
+            Absences: 1,
+            Retards: 0,
+            TotalAbsences: 2,
+            TermRecaps:
+            [
+                new ReportCardTermRecap("1er trimestre", 1, 13.27m),
+                new ReportCardTermRecap("2e trimestre", 2, null),
+                new ReportCardTermRecap("3e trimestre", 3, null)
+            ],
+            AnnualAverage: 13.27m,
+            AnnualRank: 3,
+            DisciplinaryMention: null,
+            CouncilDecision: null,
+            CouncilObservations: null);
+    }
+
+    private static int PageCount(ReportCardDto card) =>
+        new ReportCardDocument(card, logo: null).GenerateImages(ImageGenerationSettings.Default).Count();
+
+    [Fact]
+    public void Without_Exemption_The_Rows_Are_The_Graded_Subjects_In_Their_Order()
+    {
+        var card = BuildReportCard(5);
+
+        var rows = new ReportCardDocument(card, logo: null).GradeRows();
+
+        rows.Select(r => r.SubjectId).Should().Equal(card.Subjects.Select(s => s.SubjectId));
+        rows.Should().OnlyContain(r => r.Graded != null && r.Exempt == null);
+    }
+
+    [Fact]
+    public void An_Exempted_Subject_Keeps_The_Alphabetical_Rank_It_Would_Have_Had_If_It_Were_Graded()
+    {
+        // « Matière 3 - option » se place entre « Matière 3 » et « Matière 4 » : quatrième ligne du tableau.
+        var card = BuildReportCard(5) with { ExemptSubjects = [new ExemptSubjectDto(Eps, "Matière 3 - option", 1m)] };
+
+        var rows = new ReportCardDocument(card, logo: null).GradeRows();
+
+        rows.Should().HaveCount(6);
+        rows[3].SubjectId.Should().Be(Eps);
+        rows[3].Graded.Should().BeNull();
+        rows[3].Exempt.Should().NotBeNull();
+        rows.Where(r => r.SubjectId != Eps).Should().OnlyContain(r => r.Graded != null);
+    }
+
+    [Fact]
+    public void An_Exempted_Subject_That_Sorts_First_Is_Printed_First()
+    {
+        var card = BuildReportCard(5) with { ExemptSubjects = [new ExemptSubjectDto(Eps, "EPS", 1m)] };
+
+        new ReportCardDocument(card, logo: null).GradeRows()[0].SubjectId.Should().Be(Eps);
+    }
+
+    [Fact]
+    public void The_Exempt_Label_Is_The_Validated_One()
+        => ReportCardDocument.ExemptLabel.Should().Be("Dispensé(e)");
+
+    [Theory]
+    [InlineData(CycleType.College)]
+    [InlineData(CycleType.Lycee)]
+    public void A_Secondary_Report_Card_With_An_Exempted_Subject_Fits_On_One_A5_Page(CycleType cycle)
+    {
+        var card = BuildReportCard(11) with
+        {
+            Cycle = cycle,
+            ExemptSubjects = [new ExemptSubjectDto(Eps, "EPS", 1m)]
+        };
+
+        PageCount(card).Should().Be(1, "douze lignes au total : la limite que le ticket JGK-G03 impose à tout bulletin");
+        new ReportCardDocument(card, logo: null).GeneratePdf().Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void A_Primary_Report_Card_With_An_Exempted_Subject_Fits_On_One_A5_Page()
+    {
+        var card = BuildReportCard(7) with
+        {
+            Cycle = CycleType.Primaire,
+            GradingScale = 10,
+            ExemptSubjects = [new ExemptSubjectDto(Eps, "EPS", 1m)]
+        };
+
+        PageCount(card).Should().Be(1);
+        new ReportCardDocument(card, logo: null).GeneratePdf().Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void An_Evaluation_Grid_With_An_Exempted_Line_Fits_On_One_A5_Page()
+    {
+        var structure = new EvaluationStructureDto("Activités", "Contrôles",
+        [
+            new EvaluationGroupDto(Guid.NewGuid(), "Français",
+            [
+                new EvaluationLineDto(Guid.NewGuid(), "Ressources", 32m, 40m, "Bien"),
+                new EvaluationLineDto(Guid.NewGuid(), "Compétences", 48m, 60m, "Bien")
+            ]),
+            // Matière simple dispensée : une seule ligne, sans libellé de seconde colonne.
+            new EvaluationGroupDto(Eps, "EPS", [new EvaluationLineDto(Eps, null, null, 20m, null, IsExempt: true)])
+        ]);
+        var card = BuildReportCard(0) with
+        {
+            Cycle = CycleType.Primaire,
+            GradingScale = 10,
+            EvaluationStructure = structure
+        };
+
+        PageCount(card).Should().Be(1);
+        new ReportCardDocument(card, logo: null).GeneratePdf().Should().NotBeEmpty();
+    }
+}
+```
+Note pour l'exécutant : `ReportCardDocument.GradeRows()` et `GradeRow` sont `internal` ; le projet de tests les voit par `InternalsVisibleTo` (déjà déclaré, cf. le commentaire de `FormatGrade`). Le compte de pages ne prouve pas le **contenu** d'une case — QuestPDF n'expose pas le texte rendu —, c'est pourquoi l'ordre et la nature des lignes sont testés sur `GradeRows()` (la donnée que le document imprime) et le rendu par la vérification visuelle de l'étape 11.
+
+- [ ] **Step 2: Vérifier l'échec**
+
+Run: `dotnet build tests/SamaEcole.UnitTests`
+Expected: FAIL — `ReportCardDto.ExemptSubjects`, `ReportCardDocument.GradeRows` et `ReportCardDocument.GradeRow` n'existent pas.
+
+- [ ] **Step 3: `ReportCardDto`**
+
+Ajouter le dernier membre, avec ce commentaire XML :
+
+```csharp
+    // Matières OBLIGATOIRES dont l'élève est dispensé (avec motif) : la ligne reste sur le bulletin, marquée
+    // « Dispensé(e) », coefficient barré, hors totaux (spécification §4.4 — écart assumé et validé à la règle
+    // n°12, consigné dans docs/design-references/README.md). Le motif n'est jamais porté ici. Null/vide — le
+    // cas de tout élève sans dispense — : le bulletin est strictement celui d'avant.
+    IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null);
+```
+(en remplaçant le `);` final du record par ce nouveau membre, `SubjectNamesAr` cessant d'être le dernier).
+
+- [ ] **Step 4: `ReportCardDataService`**
+
+Dans `BuildAsync` : (1) le dictionnaire des noms arabes `subjectNamesAr` (l. ~376) doit aussi résoudre les matières dispensées — remplacer `var subjectIds = summary.Subjects.Select(s => s.SubjectId).ToList();` par `var subjectIds = summary.Subjects.Select(s => s.SubjectId).Concat(summary.ExemptSubjects?.Select(s => s.SubjectId) ?? []).ToList();` ; (2) le `new ReportCardDto(...)` reçoit en dernier argument `ExemptSubjects: summary.ExemptSubjects` (argument nommé : `SubjectNamesAr` n'est plus le dernier). Les dictionnaires `subjectRanks`, `subjectAppreciations` et `subjectHonors` restent construits sur `summary.Subjects` : une ligne dispensée n'a ni rang, ni appréciation, ni T.H.
+
+- [ ] **Step 5: `ReportCardDocument` — les lignes, dans l'ordre imprimé**
+
+Ajouter, dans la classe :
+
+```csharp
+    /// <summary>Le libellé imprimé dans la zone des notes d'une matière dont l'élève est dispensé.</summary>
+    internal const string ExemptLabel = "Dispensé(e)";
+
+    /// <summary>Une ligne du tableau : soit une matière notée, soit une matière obligatoire dispensée.</summary>
+    internal readonly record struct GradeRow(Guid SubjectId, string Name, SubjectGradeDto? Graded, ExemptSubjectDto? Exempt);
+
+    /// <summary>
+    /// Les lignes du tableau des notes dans l'ordre IMPRIMÉ : matières notées et matières dispensées fusionnées
+    /// par nom, avec la comparaison que le résumé applique déjà aux notées (<c>OrderBy(SubjectName)</c>) — la
+    /// ligne dispensée garde ainsi le rang qu'elle aurait eu si elle avait été notée. Sans dispense, exactement
+    /// <see cref="ReportCardDto.Subjects"/>, dans son ordre.
+    /// </summary>
+    internal IReadOnlyList<GradeRow> GradeRows()
+    {
+        var graded = reportCard.Subjects.Select(s => new GradeRow(s.SubjectId, s.SubjectName, s, null));
+        var exempt = (reportCard.ExemptSubjects ?? []).Select(s => new GradeRow(s.SubjectId, s.SubjectName, null, s));
+
+        return reportCard.ExemptSubjects is { Count: > 0 }
+            ? graded.Concat(exempt).OrderBy(r => r.Name).ToList()
+            : graded.ToList();
+    }
+```
+`RowMetricsFor(reportCard.Subjects.Count)` (dans `ComposeGradesTable` et `ComposeGradesTablePrimaire`) devient `RowMetricsFor(reportCard.Subjects.Count + (reportCard.ExemptSubjects?.Count ?? 0))` : la page A5 doit compter les lignes dispensées.
+
+- [ ] **Step 6: `ReportCardDocument` — le tableau secondaire (Collège/Lycée)**
+
+Dans `ComposeGradesTable`, remplacer `foreach (var subject in reportCard.Subjects) { … }` par :
+
+```csharp
+            foreach (var row in GradeRows())
+            {
+                if (row.Graded is { } subject)
+                {
+                    table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, subject.SubjectId, subject.SubjectName));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Coefficient));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.WeightedPoints));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(HonorsFor(subject.SubjectId)).Bold();
+                    table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
+                    table.Cell().Element(BodyCell).Text(reportCard.SubjectAppreciations.GetValueOrDefault(subject.SubjectId) ?? "");
+                    continue;
+                }
+
+                // Matière obligatoire dispensée : « Dispensé(e) » sur la zone des notes (Devoir, Comp, Moy),
+                // coefficient BARRÉ, ni « Moy x coef » ni T.H ni appréciation, rang « — ». Hors des totaux.
+                var exempt = row.Exempt!;
+                table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, exempt.SubjectId, exempt.SubjectName));
+                table.Cell().ColumnSpan(3).Element(BodyCell).AlignCenter().Text(ExemptLabel).Italic();
+                table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(exempt.Coefficient)).Strikethrough();
+                table.Cell().Element(BodyCell).AlignCenter().Text("");
+                table.Cell().Element(BodyCell).AlignCenter().Text("");
+                table.Cell().Element(BodyCell).AlignCenter().Text("—");
+                table.Cell().Element(BodyCell).Text("");
+            }
+```
+
+- [ ] **Step 7: `ReportCardDocument` — le tableau primaire**
+
+Dans `ComposeGradesTablePrimaire` (colonnes : Disciplines, Devoir, Comp, Moy, T.H, Rang — pas de coefficient), même remplacement du `foreach` :
+
+```csharp
+            foreach (var row in GradeRows())
+            {
+                if (row.Graded is { } subject)
+                {
+                    table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, subject.SubjectId, subject.SubjectName));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.DevoirAverage));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(subject.Composition));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(subject.Average));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(HonorsFor(subject.SubjectId)).Bold();
+                    table.Cell().Element(BodyCell).AlignCenter().Text(reportCard.SubjectRanks.GetValueOrDefault(subject.SubjectId, 0) is > 0 and var rank ? rank.ToString() : "—");
+                    continue;
+                }
+
+                // Le primaire n'a pas de coefficients : « Dispensé(e) » couvre Devoir, Comp et Moy.
+                var exempt = row.Exempt!;
+                table.Cell().Element(BodyCell).Element(c => ComposeSubjectNameCell(c, exempt.SubjectId, exempt.SubjectName));
+                table.Cell().ColumnSpan(3).Element(BodyCell).AlignCenter().Text(ExemptLabel).Italic();
+                table.Cell().Element(BodyCell).AlignCenter().Text("");
+                table.Cell().Element(BodyCell).AlignCenter().Text("—");
+            }
+```
+
+- [ ] **Step 8: `ReportCardDocument` — la grille APC**
+
+Dans `ComposeGradesTableApc`, remplacer les trois cellules qui suivent le libellé de la ligne (`FormatOptionalGrade(line.Score)`, `FormatGrade(line.MaxScore)`, `line.Appreciation`) par :
+
+```csharp
+                    if (line.IsExempt)
+                    {
+                        // Matière dispensée : « Dispensé(e) » sur Notes + Sur, pas d'appréciation.
+                        table.Cell().ColumnSpan(2).Element(BodyCell).AlignCenter().Text(ExemptLabel).Italic();
+                        table.Cell().Element(BodyCell).Text("");
+                        continue;
+                    }
+
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatOptionalGrade(line.Score));
+                    table.Cell().Element(BodyCell).AlignCenter().Text(FormatGrade(line.MaxScore));
+                    table.Cell().Element(BodyCell).Text(line.Appreciation ?? "");
+```
+(le `continue` est valide : il est dans la boucle `for (var i …)` sur `group.Lines`, après les cellules de libellé déjà posées).
+
+- [ ] **Step 9: Test d'intégration du câblage (données → `ReportCardDto`)**
+
+Créer `tests/SamaEcole.IntegrationTests/OptionalSubjects/ExemptSubjectReportCardDataTests.cs`. Jeu : une école, année active, trimestre, classe « 4ème A » (Collège), un élève inscrit, Maths (coef 4, note 12), Français (coef 2, note 16), EPS (coef 1, note 8, **obligatoire**), l'inscription portant une dispense d'EPS avec motif « Inaptitude médicale ». La doublure `FakeSummaryMediator` est **recopiée** de `ApcEvaluationStructureTests` (classe privée de 5 membres, qui route `GetGradeSummaryQuery` vers `GetGradeSummaryQueryHandler(db, new CoefficientOverrideLoader(db))`) :
+
+```csharp
+    [Fact]
+    public async Task The_Report_Card_Carries_The_Exempted_Subject_Outside_Its_Totals_And_Never_Its_Reason()
+    {
+        await using var db = _db.NewAppContext(Ecole);
+
+        var card = await new ReportCardDataService(new FakeSummaryMediator(db), db)
+            .BuildAsync(Eleve, Trimestre, CancellationToken.None);
+
+        card.Subjects.Select(s => s.SubjectId).Should().BeEquivalentTo([Maths, Francais]);
+        card.TotalCoefficients.Should().Be(6m);
+        card.TotalPoints.Should().Be(80m);
+        card.ExemptSubjects.Should().ContainSingle().Which.Should().Be(new ExemptSubjectDto(Eps, "EPS", 1m));
+        card.SubjectRanks.Keys.Should().NotContain(Eps, "une matière dispensée n'a pas de rang");
+        card.SubjectAppreciations.Keys.Should().NotContain(Eps);
+
+        // Le motif peut être médical : il n'existe sur AUCUN objet de bulletin.
+        typeof(ExemptSubjectDto).GetProperties().Select(p => p.Name).Should().NotContain("Reason");
+    }
+
+    [Fact]
+    public async Task A_Student_Without_Exemption_Gets_A_Report_Card_Without_Exempt_Subjects()
+    {
+        await using var db = _db.NewAppContext(Ecole);
+
+        var card = await new ReportCardDataService(new FakeSummaryMediator(db), db)
+            .BuildAsync(EleveLibre, Trimestre, CancellationToken.None);
+
+        card.ExemptSubjects.Should().BeNullOrEmpty();
+        card.Subjects.Select(s => s.SubjectId).Should().BeEquivalentTo([Maths, Francais, Eps]);
+    }
+```
+(`EleveLibre` : second élève inscrit, sans dispense, mêmes trois notes.)
+
+- [ ] **Step 10: Lancer les tests ciblés**
+
+Run:
+```
+dotnet build
+dotnet test tests/SamaEcole.UnitTests --filter "FullyQualifiedName~ExemptSubjectReportCardTests|FullyQualifiedName~ReportCardDocumentTests|FullyQualifiedName~ApcReportCardDocumentTests"
+dotnet test tests/SamaEcole.IntegrationTests --filter "FullyQualifiedName~ExemptSubjectReportCardDataTests|FullyQualifiedName~GetReportCardPdfTests|FullyQualifiedName~ApcEvaluationStructureTests|FullyQualifiedName~GetClassReportCardsTests"
+```
+Expected: PASS — les tests de documents existants restent verts (sans `ExemptSubjects`, `GradeRows()` renvoie `Subjects` tel quel) et la page A5 tient avec une ligne de plus.
+
+- [ ] **Step 11: Vérification visuelle** (obligatoire : le PDF est un document officiel)
+
+Générer le PDF d'un bulletin pour un élève dispensé d'EPS **de chaque cycle** (Primaire, Collège, Lycée, et une classe APC) depuis l'app (`/api/v1/report-cards/...` ou la fiche élève › Notes & bulletins) et l'ouvrir : la ligne « Dispensé(e) » à sa place alphabétique, coefficient barré (secondaire), aucune valeur dans « Moy x », totaux inchangés, une seule page A5. Noter tout écart de mise en page et le corriger avant le commit ; ne pas conclure sans avoir regardé le PDF.
+
+- [ ] **Step 12: Commit**
+
+```bash
+git add src/SamaEcole.Application/ReportCards/Queries/GetReportCardPdf src/SamaEcole.Infrastructure/Documents/ReportCardDocument.cs \
+  tests/SamaEcole.UnitTests/ReportCards/ExemptSubjectReportCardTests.cs \
+  tests/SamaEcole.IntegrationTests/OptionalSubjects/ExemptSubjectReportCardDataTests.cs
+git commit -m "feat(options): ligne « Dispensé(e) » sur le bulletin pour une matière obligatoire dispensée
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+```
+
+---
 ### Task 5: Feuilles de notes, import et saisie
 
 **Files:**
@@ -1740,6 +2482,7 @@ public class GradeEntryExemptionTests : IAsyncLifetime
     private static readonly Guid Classe = Guid.Parse("97777777-0000-0000-0000-0000000000c1");
     private static readonly Guid Maths = Guid.Parse("97777777-0000-0000-0000-0000000000a1");
     private static readonly Guid Arabe = Guid.Parse("97777777-0000-0000-0000-0000000000a2");
+    private static readonly Guid Eps = Guid.Parse("97777777-0000-0000-0000-0000000000a3");
     private static readonly Guid EleveLibre = Guid.Parse("97777777-0000-0000-0000-0000000000e1");
     private static readonly Guid EleveDispense = Guid.Parse("97777777-0000-0000-0000-0000000000e2");
     private static readonly Guid Directeur = Guid.Parse("97777777-0000-0000-0000-0000000000f1");
@@ -1800,7 +2543,8 @@ public class GradeEntryExemptionTests : IAsyncLifetime
         owner.Classrooms.Add(new Classroom { Id = Classe, SchoolId = Ecole, Name = "4ème A", Level = "Collège", Cycle = CycleType.College, Capacity = 40 });
         owner.Subjects.AddRange(
             new Subject { Id = Maths, SchoolId = Ecole, Name = "Mathématiques", Level = "Collège", Coefficient = 4 },
-            new Subject { Id = Arabe, SchoolId = Ecole, Name = "Arabe", Level = "Collège", Coefficient = 2, IsOptional = true, OptionGroup = "LV2" });
+            new Subject { Id = Arabe, SchoolId = Ecole, Name = "Arabe", Level = "Collège", Coefficient = 2, IsOptional = true, OptionGroup = "LV2" },
+            new Subject { Id = Eps, SchoolId = Ecole, Name = "EPS", Level = "Collège", Coefficient = 1 });
         owner.Students.AddRange(
             new Student { Id = EleveLibre, SchoolId = Ecole, Matricule = "ELEV-0001", FullName = "Awa Fall", BirthDate = new DateOnly(2011, 1, 1), BirthPlace = "Dakar", Gender = "F", ClassroomId = Classe },
             new Student { Id = EleveDispense, SchoolId = Ecole, Matricule = "ELEV-0002", FullName = "Modou Diop", BirthDate = new DateOnly(2011, 1, 1), BirthPlace = "Dakar", Gender = "M", ClassroomId = Classe });
@@ -1816,8 +2560,11 @@ public class GradeEntryExemptionTests : IAsyncLifetime
             Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, ReceiptNumber = "R-2"
         };
         owner.Enrollments.AddRange(inscriptionLibre, inscriptionDispense);
-        owner.EnrollmentSubjectExemptions.Add(
-            new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionDispense.Id, SubjectId = Arabe });
+        owner.EnrollmentSubjectExemptions.AddRange(
+            // Option non suivie (sans motif) ET matière obligatoire dispensée (avec motif) : deux sortes de
+            // dispenses, une même conséquence sur la saisie.
+            new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionDispense.Id, SubjectId = Arabe },
+            new EnrollmentSubjectExemption { SchoolId = Ecole, EnrollmentId = inscriptionDispense.Id, SubjectId = Eps, Reason = "Inaptitude médicale" });
 
         await owner.SaveChangesAsync();
     }
@@ -1927,6 +2674,33 @@ public class GradeEntryExemptionTests : IAsyncLifetime
 
         spy.Rows.Select(r => r.Matricule).Should().Equal("ELEV-0001");
     }
+
+    // ---- Matière OBLIGATOIRE dispensée : même effet sur la saisie que l'option non suivie ----------------
+
+    [Fact]
+    public async Task The_Grade_Grid_Omits_A_Student_Exempted_From_A_Mandatory_Subject()
+    {
+        await using var ctx = _db.NewAppContext(Ecole);
+        var handler = new GetClassGradesQueryHandler(
+            ctx, new GradeCorrectionAuthorizer(ctx, Chef, TimeProvider.System));
+
+        var eps = await handler.Handle(new GetClassGradesQuery(Classe, Eps, Trimestre), default);
+
+        eps.Select(r => r.StudentId).Should().BeEquivalentTo([EleveLibre]);
+    }
+
+    [Fact]
+    public async Task Entering_A_Grade_For_A_Mandatory_Subject_The_Student_Is_Exempted_From_Is_Refused()
+    {
+        await using var ctx = _db.NewAppContext(Ecole);
+        var handler = new CreateGradeCommandHandler(ctx, new StubTenantProvider(Ecole), Chef);
+
+        var act = () => handler.Handle(
+            new CreateGradeCommand(EleveDispense, Eps, Trimestre, EvaluationType.Devoir1, 12m), default);
+
+        (await act.Should().ThrowAsync<ValidationException>())
+            .Which.Errors.Should().Contain(e => e.PropertyName == "SubjectId" && e.ErrorMessage.Contains("dispensé"));
+    }
 }
 ```
 Notes pour l'exécutant : `ValidationException` est ici la classe maison (`SamaEcole.Application.Common.Exceptions`) et expose `Errors` (liste de `ValidationFailure`) ; si le nom de la propriété diffère, lire `Common/Exceptions/ValidationException.cs`. Le `ValidationFailure` de la ligne d'import s'écrit `PropertyName = "Ligne 3"` (le handler formate `$"Ligne {row.RowNumber}"`). `GradeSheetRow`, `IGradeSheetImportParser`, `IGradeSheetPdfGenerator` et `ISchoolLogoProvider` sont importés par les usings ci-dessus — si l'un manque, le compilateur nomme son espace de noms (voir les `using` de `GradeCorrectionTests.cs` et `GetGradeSheetPdfQueryTests.cs`, qui les utilisent tels quels). `IGradeSheetExcelGenerator.Generate` est appelé par le handler avec `(rows, gradingScale)` : si l'interface déclare un autre type de collection (`IEnumerable`, `List`), adapter la signature de `SpyExcel` — l'assertion ne dépend que de la propriété `Matricule` de `GradeSheetStudentRow`.
@@ -2031,7 +2805,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 
 ---
 
-### Task 6: Enregistrer et lire le choix d'options d'une inscription
+### Task 6: Enregistrer et lire les options et dispenses d'une inscription
 
 **Files:**
 - Create: `src/SamaEcole.Application/Enrollments/Commands/SetEnrollmentOptions/SetEnrollmentOptionsCommand.cs`
@@ -2041,17 +2815,19 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 - Test: `tests/SamaEcole.IntegrationTests/OptionalSubjects/EnrollmentOptionsTests.cs`
 
 **Interfaces:**
-- Consumes: `EnrollmentOptionsPlanner.PlanExemptionsAsync`, `.LoadLevelOptionsAsync`, `OptionSelectionRules` (Tâche 3), `EnrollmentSubjectExemption` (Tâche 1).
+- Consumes: `EnrollmentOptionsPlanner.{PlanExemptionsAsync, PlanMandatoryExemptionsAsync, LoadLevelOptionsAsync, LoadLevelMandatoryAsync}`, `MandatoryExemption`, `LevelSubject` (Tâche 3), `EnrollmentSubjectExemption` (Tâche 1).
 - Produces:
-  - `SetEnrollmentOptionsCommand(Guid EnrollmentId, IReadOnlyList<Guid> SubjectIds) : IRequest<Unit>, IAuditableRequest`
+  - `SetEnrollmentOptionsCommand(Guid EnrollmentId, IReadOnlyList<Guid>? SubjectIds, IReadOnlyList<MandatoryExemption>? Exemptions = null) : IRequest<Unit>, IAuditableRequest` — **`null` = « ne pas toucher à cette moitié »**, liste vide = « aucune ». `SubjectIds` : les options SUIVIES ; `Exemptions` : les matières obligatoires dispensées, chacune avec son motif (écart E5).
   - `GetEnrollmentOptionsQuery(Guid EnrollmentId) : IRequest<EnrollmentOptionsDto>`
-  - `EnrollmentOptionsDto(Guid EnrollmentId, bool HasExplicitChoice, IReadOnlyList<OptionGroupDto> Groups)` ; `OptionGroupDto(string? Group, IReadOnlyList<OptionSubjectDto> Subjects)` ; `OptionSubjectDto(Guid SubjectId, string Name, bool IsFollowed, int GradeCount)`
-  - `CreateEnrollmentCommand.OptionSubjectIds : IReadOnlyList<Guid>?` (`null` = aucun choix ; `[]` = aucune option suivie)
-  - routes `GET /api/v1/enrollments/{id}/options`, `PUT /api/v1/enrollments/{id}/options` (corps `{ "subjectIds": [...] }`, 204)
+  - `EnrollmentOptionsDto(Guid EnrollmentId, bool HasExplicitChoice, IReadOnlyList<OptionGroupDto> Groups, IReadOnlyList<MandatorySubjectDto>? MandatorySubjects = null)` ; `OptionGroupDto(string? Group, IReadOnlyList<OptionSubjectDto> Subjects)` ; `OptionSubjectDto(Guid SubjectId, string Name, bool IsFollowed, int GradeCount)` ; `MandatorySubjectDto(Guid SubjectId, string Name, bool IsExempt, string? Reason, int GradeCount)`
+  - `CreateEnrollmentCommand.OptionSubjectIds : IReadOnlyList<Guid>?` (`null` = aucun choix ; `[]` = aucune option suivie) — la dispense d'une matière obligatoire ne se saisit **pas** à l'inscription (spec §6.3 : elle survient après coup et exige un motif).
+  - routes `GET /api/v1/enrollments/{id}/options`, `PUT /api/v1/enrollments/{id}/options` (corps `{ "subjectIds": [...] | null, "exemptions": [{ "subjectId": "...", "reason": "..." }] | null }`, 204)
+
+**Écart E5 (à valider).** La spécification §5.2 dit « `Exemptions` omise = aucune dispense de matière obligatoire ». Le plan lit « omise = **inchangée** », et applique la même règle à `SubjectIds`. Raison : sinon l'écran, qui enregistre parfois **une seule** moitié (ajouter une dispense d'EPS sans avoir touché aux options), écraserait l'autre — dans le pire des cas il dispenserait l'élève de **toutes** ses options (un choix vide veut dire « aucune option suivie »). Un client qui n'envoie que `subjectIds` ne supprime ainsi jamais les dispenses de matières obligatoires. Pour une inscription neuve, « inchangée » et « aucune » sont identiques.
 
 - [ ] **Step 1: Écrire les tests**
 
-Créer `tests/SamaEcole.IntegrationTests/OptionalSubjects/EnrollmentOptionsTests.cs`. Jeu : une école (+ une autre pour l'isolation), une année active et une année passée, la classe « 4ème A » (Collège), un élève inscrit dans les deux années, des matières optionnelles `Espagnol`/`Arabe`/`Allemand` (groupe LV2), `PC`/`SVT` (groupe « Option scientifique »), `Dessin` (sans groupe), `Maths` obligatoire, et une note d'Arabe de l'élève. La fabrique du handler d'inscription est celle d'`EnrollmentTests` (doublure `NoOpKpiCacheService` locale au fichier, `_db.NewGenerator`).
+Créer `tests/SamaEcole.IntegrationTests/OptionalSubjects/EnrollmentOptionsTests.cs`. Jeu : une école (+ une autre pour l'isolation), une année active et une année passée, la classe « 4ème A » (Collège), un élève inscrit dans les deux années, des options `Espagnol`/`Arabe`/`Allemand` (groupe LV2), `PC`/`SVT` (groupe « Option scientifique »), `Dessin` (sans groupe), deux matières obligatoires `Maths` et `EPS`, et des notes d'Arabe et d'EPS. La fabrique du handler d'inscription est celle d'`EnrollmentTests` (doublure `NoOpKpiCacheService` locale au fichier, `_db.NewGenerator`).
 
 ```csharp
 using FluentAssertions;
@@ -2061,6 +2837,7 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
 using SamaEcole.Application.Enrollments.Commands.SetEnrollmentOptions;
 using SamaEcole.Application.Enrollments.Queries.GetEnrollmentOptions;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using SamaEcole.IntegrationTests.Common;
@@ -2079,8 +2856,9 @@ file sealed class NoOpKpiCacheService : IKpiCacheService
 }
 
 /// <summary>
-/// Matières optionnelles — le choix d'options d'une inscription : validation (un choix par groupe),
-/// remplacement idempotent des dispenses, lecture, et écriture dans la même transaction que l'inscription.
+/// Options et dispenses d'une inscription : validation (un choix par groupe, un motif pour une matière
+/// obligatoire), remplacement idempotent de CHAQUE moitié indépendamment, lecture, et écriture des options
+/// dans la même transaction que l'inscription.
 /// </summary>
 [Trait("Category", "MultiTenant")]
 public class EnrollmentOptionsTests : IAsyncLifetime
@@ -2100,6 +2878,7 @@ public class EnrollmentOptionsTests : IAsyncLifetime
     private static readonly Guid Directeur = Guid.Parse("98888888-0000-0000-0000-0000000000d0");
 
     private static readonly Guid Maths = Guid.Parse("98888888-0000-0000-0000-0000000000a0");
+    private static readonly Guid Eps = Guid.Parse("98888888-0000-0000-0000-0000000000a7");
     private static readonly Guid Espagnol = Guid.Parse("98888888-0000-0000-0000-0000000000a1");
     private static readonly Guid Arabe = Guid.Parse("98888888-0000-0000-0000-0000000000a2");
     private static readonly Guid Allemand = Guid.Parse("98888888-0000-0000-0000-0000000000a3");
@@ -2133,6 +2912,7 @@ public class EnrollmentOptionsTests : IAsyncLifetime
 
         owner.Subjects.AddRange(
             new Subject { Id = Maths, SchoolId = Ecole, Name = "Mathématiques", Level = "Collège", Coefficient = 4 },
+            new Subject { Id = Eps, SchoolId = Ecole, Name = "EPS", Level = "Collège", Coefficient = 1 },
             Option(Espagnol, "Espagnol", "LV2"), Option(Arabe, "Arabe", "LV2"), Option(Allemand, "Allemand", "LV2"),
             Option(Pc, "PC", "Option scientifique"), Option(Svt, "SVT", "Option scientifique"),
             Option(Dessin, "Dessin", null));
@@ -2144,11 +2924,9 @@ public class EnrollmentOptionsTests : IAsyncLifetime
         });
         owner.Enrollments.AddRange(
             NewEnrollment(Inscription, Annee, "R-1"), NewEnrollment(InscriptionPassee, AnneePassee, "R-0"));
-        owner.Grades.Add(new Grade
-        {
-            SchoolId = Ecole, StudentId = Eleve, SubjectId = Arabe, TermId = Trimestre,
-            EvaluationType = EvaluationType.Composition, Value = 10
-        });
+        owner.Grades.AddRange(
+            new Grade { SchoolId = Ecole, StudentId = Eleve, SubjectId = Arabe, TermId = Trimestre, EvaluationType = EvaluationType.Composition, Value = 10 },
+            new Grade { SchoolId = Ecole, StudentId = Eleve, SubjectId = Eps, TermId = Trimestre, EvaluationType = EvaluationType.Composition, Value = 8 });
 
         await owner.SaveChangesAsync();
     }
@@ -2166,26 +2944,34 @@ public class EnrollmentOptionsTests : IAsyncLifetime
         Type = EnrollmentType.NewEnrollment, Status = EnrollmentStatus.Confirmed, ReceiptNumber = receipt
     };
 
-    private async Task SetForAsync(Guid enrollmentId, params Guid[] subjectIds)
+    private async Task SendAsync(Guid enrollmentId, IReadOnlyList<Guid>? options, IReadOnlyList<MandatoryExemption>? exemptions)
     {
         await using var ctx = _db.NewAppContext(Ecole);
         var handler = new SetEnrollmentOptionsCommandHandler(
             ctx, new StubTenantProvider(Ecole), new TestCurrentUser(Directeur, Role.Directeur));
 
-        await handler.Handle(new SetEnrollmentOptionsCommand(enrollmentId, subjectIds), default);
+        await handler.Handle(new SetEnrollmentOptionsCommand(enrollmentId, options, exemptions), default);
     }
 
-    private Task SetAsync(params Guid[] subjectIds) => SetForAsync(Inscription, subjectIds);
+    /// <summary>Choix d'options seul (les dispenses de matières obligatoires ne sont pas touchées).</summary>
+    private Task SetAsync(params Guid[] optionIds) => SendAsync(Inscription, optionIds, null);
 
-    private async Task<List<Guid>> ExemptedAsync(Guid? enrollmentId = null)
+    /// <summary>Dispenses de matières obligatoires seules (le choix d'options n'est pas touché).</summary>
+    private Task SetExemptionsAsync(params MandatoryExemption[] exemptions) => SendAsync(Inscription, null, exemptions);
+
+    private async Task<List<(Guid SubjectId, string? Reason)>> RowsAsync(Guid? enrollmentId = null)
     {
         await using var ctx = _db.NewAppContext(Ecole);
         var id = enrollmentId ?? Inscription;
-        return await ctx.EnrollmentSubjectExemptions.AsNoTracking()
+        var rows = await ctx.EnrollmentSubjectExemptions.AsNoTracking()
             .Where(x => x.EnrollmentId == id)
-            .Select(x => x.SubjectId)
+            .Select(x => new { x.SubjectId, x.Reason })
             .ToListAsync();
+        return rows.Select(r => (r.SubjectId, r.Reason)).ToList();
     }
+
+    private async Task<List<Guid>> ExemptedAsync(Guid? enrollmentId = null) =>
+        (await RowsAsync(enrollmentId)).Select(r => r.SubjectId).ToList();
 
     private async Task<EnrollmentOptionsDto> QueryAsync()
     {
@@ -2193,6 +2979,8 @@ public class EnrollmentOptionsTests : IAsyncLifetime
         return await new GetEnrollmentOptionsQueryHandler(ctx)
             .Handle(new GetEnrollmentOptionsQuery(Inscription), default);
     }
+
+    // ---- Options -----------------------------------------------------------------------------------------
 
     [Fact]
     public async Task Choosing_One_Subject_Per_Group_Exempts_The_Others_And_Is_Idempotent()
@@ -2243,6 +3031,92 @@ public class EnrollmentOptionsTests : IAsyncLifetime
         await act.Should().ThrowAsync<ValidationException>();
     }
 
+    // ---- Dispenses de matières obligatoires ---------------------------------------------------------------
+
+    [Fact]
+    public async Task A_Mandatory_Exemption_Is_Recorded_With_Its_Trimmed_Reason()
+    {
+        await SetExemptionsAsync(new MandatoryExemption(Eps, "  Inaptitude médicale  "));
+
+        (await RowsAsync()).Should().Equal([(Eps, (string?)"Inaptitude médicale")]);
+    }
+
+    [Fact]
+    public async Task A_Mandatory_Exemption_Without_A_Reason_Is_Refused_And_Writes_Nothing()
+    {
+        var act = () => SetExemptionsAsync(new MandatoryExemption(Eps, "   "));
+
+        (await act.Should().ThrowAsync<ValidationException>())
+            .Which.Errors.Should().Contain(e => e.ErrorMessage.Contains("motif"));
+        (await RowsAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task An_Option_Cannot_Be_Passed_As_A_Mandatory_Exemption()
+    {
+        var act = () => SetExemptionsAsync(new MandatoryExemption(Arabe, "Raison"));
+
+        await act.Should().ThrowAsync<ValidationException>();
+    }
+
+    [Fact]
+    public async Task Changing_The_Reason_Updates_The_Row_Without_A_Duplicate()
+    {
+        await SetExemptionsAsync(new MandatoryExemption(Eps, "Certificat 2026"));
+        await SetExemptionsAsync(new MandatoryExemption(Eps, "Certificat 2026-2027"));
+
+        (await RowsAsync()).Should().Equal([(Eps, (string?)"Certificat 2026-2027")]);
+    }
+
+    [Fact]
+    public async Task An_Empty_Exemption_List_Removes_The_Mandatory_Exemptions()
+    {
+        await SetExemptionsAsync(new MandatoryExemption(Eps, "Certificat"));
+        await SendAsync(Inscription, null, []);
+
+        (await RowsAsync()).Should().BeEmpty();
+    }
+
+    // ---- Chaque moitié est indépendante (écart E5) --------------------------------------------------------
+
+    [Fact]
+    public async Task Saving_Only_The_Options_Leaves_The_Mandatory_Exemptions_Untouched()
+    {
+        await SetExemptionsAsync(new MandatoryExemption(Eps, "Certificat"));
+
+        await SetAsync(Espagnol, Pc, Dessin);
+
+        (await RowsAsync()).Should().BeEquivalentTo(new (Guid, string?)[]
+        {
+            (Eps, "Certificat"), (Arabe, null), (Allemand, null), (Svt, null)
+        });
+    }
+
+    [Fact]
+    public async Task Saving_Only_The_Exemptions_Leaves_The_Option_Choice_Untouched()
+    {
+        await SetAsync(Espagnol, Pc, Dessin);
+
+        await SetExemptionsAsync(new MandatoryExemption(Eps, "Certificat"));
+
+        (await RowsAsync()).Should().BeEquivalentTo(new (Guid, string?)[]
+        {
+            (Eps, "Certificat"), (Arabe, null), (Allemand, null), (Svt, null)
+        });
+    }
+
+    [Fact]
+    public async Task Sending_Neither_Half_Changes_Nothing()
+    {
+        await SetAsync(Espagnol, Pc, Dessin);
+
+        await SendAsync(Inscription, null, null);
+
+        (await ExemptedAsync()).Should().BeEquivalentTo([Arabe, Allemand, Svt]);
+    }
+
+    // ---- Garde-fous ---------------------------------------------------------------------------------------
+
     [Fact]
     public async Task A_Cancelled_Enrollment_Cannot_Have_Its_Options_Changed()
     {
@@ -2260,7 +3134,7 @@ public class EnrollmentOptionsTests : IAsyncLifetime
     [Fact]
     public async Task Only_The_Enrollment_Of_The_Active_Year_Can_Have_Its_Options_Changed()
     {
-        var act = () => SetForAsync(InscriptionPassee, Espagnol);
+        var act = () => SendAsync(InscriptionPassee, [Espagnol], null);
 
         await act.Should().ThrowAsync<ValidationException>();
     }
@@ -2272,10 +3146,12 @@ public class EnrollmentOptionsTests : IAsyncLifetime
         var handler = new SetEnrollmentOptionsCommandHandler(
             ctx, new StubTenantProvider(Autre), new TestCurrentUser(Guid.NewGuid(), Role.Directeur));
 
-        var act = () => handler.Handle(new SetEnrollmentOptionsCommand(Inscription, [Espagnol]), default);
+        var act = () => handler.Handle(new SetEnrollmentOptionsCommand(Inscription, [Espagnol], null), default);
 
         await act.Should().ThrowAsync<KeyNotFoundException>();
     }
+
+    // ---- Lecture ------------------------------------------------------------------------------------------
 
     [Fact]
     public async Task The_Options_Query_Reports_Groups_State_And_The_Grades_A_Dispense_Would_Hide()
@@ -2294,6 +3170,23 @@ public class EnrollmentOptionsTests : IAsyncLifetime
         lv2.Single(s => s.SubjectId == Arabe).Should().Match<OptionSubjectDto>(s => !s.IsFollowed && s.GradeCount == 1);
         lv2.Single(s => s.SubjectId == Espagnol).IsFollowed.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task The_Options_Query_Lists_The_Mandatory_Subjects_With_Their_Exemption_And_Reason()
+    {
+        await SetExemptionsAsync(new MandatoryExemption(Eps, "Inaptitude médicale"));
+
+        var dto = await QueryAsync();
+
+        dto.MandatorySubjects!.Select(s => s.Name).Should().Equal("EPS", "Mathématiques");
+        dto.MandatorySubjects.Single(s => s.SubjectId == Eps).Should()
+            .Match<MandatorySubjectDto>(s => s.IsExempt && s.Reason == "Inaptitude médicale" && s.GradeCount == 1);
+        dto.MandatorySubjects.Single(s => s.SubjectId == Maths).Should()
+            .Match<MandatorySubjectDto>(s => !s.IsExempt && s.Reason == null);
+        dto.HasExplicitChoice.Should().BeFalse("seule une dispense de matière obligatoire existe : aucune option n'a été choisie");
+    }
+
+    // ---- À l'inscription ----------------------------------------------------------------------------------
 
     private CreateEnrollmentCommandHandler NewCreateHandler(ApplicationDbContext db) =>
         new(db, new StubTenantProvider(Ecole), _db.NewGenerator(db), TimeProvider.System, new NoOpKpiCacheService());
@@ -2351,7 +3244,7 @@ public class EnrollmentOptionsTests : IAsyncLifetime
     }
 }
 ```
-Notes pour l'exécutant : `receipt.EnrollmentId` est le premier champ d'`EnrollmentReceiptDto` (le contrôleur s'en sert pour `CreatedAtAction`). Si `ValidationException.Errors` porte un autre nom, lire `Common/Exceptions/ValidationException.cs`. La première inscription (`Inscription`) est confirmée et l'élève y est déjà inscrit : les tests de création utilisent donc `NewEnrollment` (un **nouvel** élève), jamais `ReEnrollment` de `Eleve`.
+Notes pour l'exécutant : `receipt.EnrollmentId` est le premier champ d'`EnrollmentReceiptDto` (le contrôleur s'en sert pour `CreatedAtAction`). Si `ValidationException.Errors` porte un autre nom, lire `Common/Exceptions/ValidationException.cs`. `Inscription` est confirmée et l'élève y est déjà inscrit : les tests de création utilisent donc `NewEnrollment` (un **nouvel** élève), jamais `ReEnrollment` de `Eleve`. Le test `The_Options_Query_Lists_The_Mandatory_Subjects…` attend l'ordre « EPS », « Mathématiques » : le tri est celui de `LoadLevelMandatoryAsync` (par nom, culture courante).
 
 - [ ] **Step 2: Vérifier l'échec**
 
@@ -2369,17 +3262,27 @@ using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
+using SamaEcole.Application.Common.Validation;
 using ValidationException = SamaEcole.Application.Common.Exceptions.ValidationException;
 
 namespace SamaEcole.Application.Enrollments.Commands.SetEnrollmentOptions;
 
 /// <summary>
-/// PUT /api/v1/enrollments/{id}/options — enregistre les matières optionnelles que l'élève SUIT. Ses
-/// dispenses deviennent toutes les autres options du niveau de sa classe COURANTE (spec §5.2, écart E4) ;
-/// l'ancien ensemble est remplacé dans une transaction (retrait par suppression logique, règle #6).
-/// Idempotent. Refusé (422) sur une inscription annulée ou qui n'est pas celle de l'année active.
+/// PUT /api/v1/enrollments/{id}/options — enregistre, pour l'année de l'inscription, deux choses INDÉPENDANTES :
+/// — <see cref="SubjectIds"/> : les options que l'élève SUIT ; ses dispenses d'options deviennent toutes les
+///   autres options du niveau de sa classe COURANTE (spec §5.2, écart E4) ;
+/// — <see cref="Exemptions"/> : les matières OBLIGATOIRES dont il est dispensé, chacune avec son motif.
+/// <c>null</c> = « ne pas toucher à cette moitié » ; une liste (même vide) la REMPLACE dans une transaction
+/// (retrait par suppression logique, règle #6). Idempotent. Refusé (422) sur une inscription annulée ou qui
+/// n'est pas celle de l'année active.
+///
+/// Les deux moitiés se distinguent par le motif : une ligne SANS motif est une option non suivie, une ligne
+/// AVEC motif une matière obligatoire dispensée.
 /// </summary>
-public record SetEnrollmentOptionsCommand(Guid EnrollmentId, IReadOnlyList<Guid> SubjectIds)
+public record SetEnrollmentOptionsCommand(
+    Guid EnrollmentId,
+    IReadOnlyList<Guid>? SubjectIds,
+    IReadOnlyList<MandatoryExemption>? Exemptions = null)
     : IRequest<Unit>, IAuditableRequest;
 
 public class SetEnrollmentOptionsCommandValidator : AbstractValidator<SetEnrollmentOptionsCommand>
@@ -2387,7 +3290,11 @@ public class SetEnrollmentOptionsCommandValidator : AbstractValidator<SetEnrollm
     public SetEnrollmentOptionsCommandValidator()
     {
         RuleFor(x => x.EnrollmentId).NotEmpty();
-        RuleFor(x => x.SubjectIds).NotNull();
+
+        // Le motif est saisi librement puis affiché : pas de HTML. Sa présence et sa longueur sont vérifiées
+        // par OptionSelectionRules (message par matière), pas ici.
+        RuleForEach(x => x.Exemptions).ChildRules(exemption =>
+            exemption.RuleFor(e => e.Reason).NoHtml());
     }
 }
 
@@ -2424,27 +3331,69 @@ public class SetEnrollmentOptionsCommandHandler(
 
         var level = await CurrentLevelAsync(enrollment.StudentId, cancellationToken);
 
-        var exempted = await EnrollmentOptionsPlanner.PlanExemptionsAsync(
-            dbContext, level, request.SubjectIds, nameof(request.SubjectIds), cancellationToken);
+        // Tout est validé AVANT la moindre écriture : un choix refusé n'écrit rien.
+        var optionTargets = request.SubjectIds is null
+            ? null
+            : await EnrollmentOptionsPlanner.PlanExemptionsAsync(
+                dbContext, level, request.SubjectIds, nameof(request.SubjectIds), cancellationToken);
+
+        var mandatoryTargets = request.Exemptions is null
+            ? null
+            : await EnrollmentOptionsPlanner.PlanMandatoryExemptionsAsync(
+                dbContext, level, request.Exemptions, nameof(request.Exemptions), cancellationToken);
 
         var existing = await dbContext.EnrollmentSubjectExemptions
             .Where(x => x.EnrollmentId == enrollment.Id)
             .ToListAsync(cancellationToken);
+        var bySubject = existing.ToDictionary(x => x.SubjectId);
+        var actor = actorId.ToString();
 
-        // Lignes en trop (choix changé, matière d'un ancien niveau, matière devenue obligatoire) : retirées
-        // logiquement. Lignes manquantes : ajoutées. Le reste ne bouge pas — d'où l'idempotence.
-        foreach (var stale in existing.Where(x => !exempted.Contains(x.SubjectId)))
+        if (optionTargets is not null)
         {
-            stale.SoftDelete(actorId.ToString());
+            // Moitié « options » = lignes SANS motif. Lignes en trop (choix changé, matière d'un ancien niveau,
+            // matière devenue obligatoire) : retirées logiquement ; lignes manquantes : ajoutées.
+            foreach (var stale in existing.Where(x => x.Reason is null && !optionTargets.Contains(x.SubjectId)))
+            {
+                stale.SoftDelete(actor);
+            }
+
+            foreach (var subjectId in optionTargets.Where(id => !bySubject.ContainsKey(id)))
+            {
+                dbContext.EnrollmentSubjectExemptions.Add(new EnrollmentSubjectExemption
+                {
+                    SchoolId = schoolId, EnrollmentId = enrollment.Id, SubjectId = subjectId
+                });
+            }
         }
 
-        var present = existing.Select(x => x.SubjectId).ToHashSet();
-        foreach (var subjectId in exempted.Where(id => !present.Contains(id)))
+        if (mandatoryTargets is not null)
         {
-            dbContext.EnrollmentSubjectExemptions.Add(new EnrollmentSubjectExemption
+            // Moitié « matières obligatoires » = lignes AVEC motif : retirées si absentes de la liste,
+            // motif mis à jour s'il a changé, ajoutées sinon.
+            var wanted = mandatoryTargets.ToDictionary(x => x.SubjectId, x => x.Reason!);
+
+            foreach (var stale in existing.Where(x => x.Reason is not null && !wanted.ContainsKey(x.SubjectId)))
             {
-                SchoolId = schoolId, EnrollmentId = enrollment.Id, SubjectId = subjectId
-            });
+                stale.SoftDelete(actor);
+            }
+
+            foreach (var (subjectId, reason) in wanted)
+            {
+                if (bySubject.TryGetValue(subjectId, out var row))
+                {
+                    if (row.Reason != reason)
+                    {
+                        row.Reason = reason;
+                    }
+                }
+                else
+                {
+                    dbContext.EnrollmentSubjectExemptions.Add(new EnrollmentSubjectExemption
+                    {
+                        SchoolId = schoolId, EnrollmentId = enrollment.Id, SubjectId = subjectId, Reason = reason
+                    });
+                }
+            }
         }
 
         // Une violation de l'index unique (deux secrétaires en même temps) est traduite par
@@ -2466,7 +3415,7 @@ public class SetEnrollmentOptionsCommandHandler(
         new([new ValidationFailure(field, message)]);
 }
 ```
-Vérifier les `using` en compilant : `ValidationException` maison (`SamaEcole.Application.Common.Exceptions`) est en conflit de nom avec celle de FluentValidation — l'alias ci-dessus tranche, comme les autres fichiers de ce dossier le font en n'important pas `FluentValidation` en entier (si le conflit gêne, ne garder de FluentValidation que `AbstractValidator` via `using FluentValidation;` et supprimer l'alias en qualifiant `FluentValidation.Results.ValidationFailure`). `IAuditableRequest` se trouve dans `SamaEcole.Application.Common.Interfaces` (comme dans `DeleteCoefficientOverrideCommand`).
+Vérifier les `using` en compilant : `ValidationException` maison (`SamaEcole.Application.Common.Exceptions`) est en conflit de nom avec celle de FluentValidation — l'alias en tête de fichier tranche. `IAuditableRequest` se trouve dans `SamaEcole.Application.Common.Interfaces` (comme dans `DeleteCoefficientOverrideCommand`) ; `NoHtml()` dans `SamaEcole.Application.Common.Validation` (comme dans `CreateSubjectCommandValidator`).
 
 - [ ] **Step 4: La requête de lecture**
 
@@ -2480,18 +3429,26 @@ namespace SamaEcole.Application.Enrollments.Queries.GetEnrollmentOptions;
 
 /// <summary>
 /// GET /api/v1/enrollments/{id}/options — les matières optionnelles du niveau de la classe courante de
-/// l'élève, groupées, avec l'état de chacune (suivie / dispensée) et le nombre de notes de l'année qu'une
-/// dispense masquerait. <see cref="EnrollmentOptionsDto.HasExplicitChoice"/> est faux tant qu'aucune
-/// dispense n'existe : l'élève suit alors TOUTES les options (comportement d'avant).
+/// l'élève, groupées, avec l'état de chacune (suivie / dispensée), ET les matières obligatoires du niveau
+/// avec leur éventuelle dispense et son motif, plus le nombre de notes de l'année qu'une dispense masquerait.
+/// <see cref="EnrollmentOptionsDto.HasExplicitChoice"/> est faux tant qu'AUCUNE option n'a de dispense :
+/// l'élève suit alors TOUTES les options (comportement d'avant), même s'il est dispensé d'une matière obligatoire.
 /// </summary>
 public record GetEnrollmentOptionsQuery(Guid EnrollmentId) : IRequest<EnrollmentOptionsDto>;
 
-public record EnrollmentOptionsDto(Guid EnrollmentId, bool HasExplicitChoice, IReadOnlyList<OptionGroupDto> Groups);
+public record EnrollmentOptionsDto(
+    Guid EnrollmentId,
+    bool HasExplicitChoice,
+    IReadOnlyList<OptionGroupDto> Groups,
+    IReadOnlyList<MandatorySubjectDto>? MandatorySubjects = null);
 
 /// <summary><see cref="Group"/> est null pour une option sans groupe (cumulable) : une entrée par matière.</summary>
 public record OptionGroupDto(string? Group, IReadOnlyList<OptionSubjectDto> Subjects);
 
 public record OptionSubjectDto(Guid SubjectId, string Name, bool IsFollowed, int GradeCount);
+
+/// <summary>Une matière obligatoire du niveau : dispensée ou non, et son motif si oui.</summary>
+public record MandatorySubjectDto(Guid SubjectId, string Name, bool IsExempt, string? Reason, int GradeCount);
 
 public class GetEnrollmentOptionsQueryHandler(IApplicationDbContext dbContext)
     : IRequestHandler<GetEnrollmentOptionsQuery, EnrollmentOptionsDto>
@@ -2511,26 +3468,27 @@ public class GetEnrollmentOptionsQueryHandler(IApplicationDbContext dbContext)
                     ?? string.Empty;
 
         var options = await EnrollmentOptionsPlanner.LoadLevelOptionsAsync(dbContext, level, cancellationToken);
+        var mandatory = await EnrollmentOptionsPlanner.LoadLevelMandatoryAsync(dbContext, level, cancellationToken);
 
-        var exemptedIds = (await dbContext.EnrollmentSubjectExemptions.AsNoTracking()
+        var rows = (await dbContext.EnrollmentSubjectExemptions.AsNoTracking()
                 .Where(x => x.EnrollmentId == enrollment.Id)
-                .Select(x => x.SubjectId)
+                .Select(x => new { x.SubjectId, x.Reason })
                 .ToListAsync(cancellationToken))
-            .ToHashSet();
+            .ToDictionary(x => x.SubjectId, x => x.Reason);
 
-        var optionIds = options.Select(o => o.Id).ToList();
+        var subjectIds = options.Select(o => o.Id).Concat(mandatory.Select(m => m.Id)).ToList();
         var gradeCounts = await (
             from g in dbContext.Grades.AsNoTracking()
             join t in dbContext.Terms.AsNoTracking() on g.TermId equals t.Id
             where g.StudentId == enrollment.StudentId
                   && t.SchoolYearId == enrollment.SchoolYearId
-                  && optionIds.Contains(g.SubjectId)
+                  && subjectIds.Contains(g.SubjectId)
             group g by g.SubjectId into grouped
             select new { SubjectId = grouped.Key, Count = grouped.Count() })
             .ToDictionaryAsync(x => x.SubjectId, x => x.Count, cancellationToken);
 
-        OptionSubjectDto ToDto(OptionSubject o) =>
-            new(o.Id, o.Name, !exemptedIds.Contains(o.Id), gradeCounts.GetValueOrDefault(o.Id));
+        OptionSubjectDto ToDto(LevelSubject o) =>
+            new(o.Id, o.Name, !rows.ContainsKey(o.Id), gradeCounts.GetValueOrDefault(o.Id));
 
         // Groupes d'abord (déjà triés par LoadLevelOptionsAsync), puis les options sans groupe, une par entrée.
         var groups = options
@@ -2541,11 +3499,22 @@ public class GetEnrollmentOptionsQueryHandler(IApplicationDbContext dbContext)
                 .Select(o => new OptionGroupDto(null, [ToDto(o)])))
             .ToList();
 
-        return new EnrollmentOptionsDto(enrollment.Id, exemptedIds.Count > 0, groups);
+        var mandatorySubjects = mandatory
+            .Select(m =>
+            {
+                var exempt = rows.TryGetValue(m.Id, out var reason) && reason is not null;
+                return new MandatorySubjectDto(m.Id, m.Name, exempt, exempt ? reason : null, gradeCounts.GetValueOrDefault(m.Id));
+            })
+            .ToList();
+
+        // « Choix explicite » : au moins UNE option a une dispense. Une dispense d'EPS seule n'est pas un choix d'options.
+        var hasExplicitChoice = options.Any(o => rows.ContainsKey(o.Id));
+
+        return new EnrollmentOptionsDto(enrollment.Id, hasExplicitChoice, groups, mandatorySubjects);
     }
 }
 ```
-Limite connue, à consigner dans la spec (Tâche 9) : un choix qui ne dispense de rien (toutes les options sans groupe cochées et une seule option par groupe *quand il n'y en a qu'une*) est indiscernable de « aucun choix » — `HasExplicitChoice` reste faux ; sans conséquence sur le calcul.
+Limite connue, consignée dans la spécification (Tâche 9) : un choix qui ne dispense de rien (une seule option par groupe, toutes les options libres cochées) est indiscernable de « aucun choix » — `HasExplicitChoice` reste faux ; sans conséquence sur le calcul.
 
 - [ ] **Step 5: Le choix à l'inscription**
 
@@ -2558,7 +3527,8 @@ Limite connue, à consigner dans la spec (Tâche 9) : un choix qui ne dispense d
     /// <summary>
     /// Les options que l'élève SUIT. <c>null</c> (défaut) : aucun choix enregistré, l'élève suit toutes les
     /// options. Liste vide : aucune option suivie. Les dispenses sont écrites dans la même transaction que
-    /// l'inscription (règle #3, comme le matricule).
+    /// l'inscription (règle #3, comme le matricule). La dispense d'une matière OBLIGATOIRE ne se saisit pas
+    /// ici (elle survient après coup et exige un motif : fiche élève › Options &amp; dispenses).
     /// </summary>
     public IReadOnlyList<Guid>? OptionSubjectIds { get; init; }
 ```
@@ -2568,7 +3538,7 @@ Limite connue, à consigner dans la spec (Tâche 9) : un choix qui ne dispense d
 ```csharp
         // Matières optionnelles : le choix est validé AVANT toute écriture — un choix invalide ne doit ni
         // créer l'élève ni consommer un numéro de reçu. null = aucun choix (l'élève suit tout).
-        var optionExemptions = request.OptionSubjectIds is null
+        IReadOnlySet<Guid> optionExemptions = request.OptionSubjectIds is null
             ? FrozenSet<Guid>.Empty
             : await EnrollmentOptionsPlanner.PlanExemptionsAsync(
                 dbContext, classroom.Level, request.OptionSubjectIds, nameof(request.OptionSubjectIds), cancellationToken);
@@ -2585,21 +3555,23 @@ puis, juste après `dbContext.Enrollments.Add(enrollment);` :
                 });
             }
 ```
-(`FrozenSet<Guid>.Empty` et `IReadOnlySet<Guid>` : les deux branches du ternaire doivent partager un type — si le compilateur proteste, typer explicitement `IReadOnlySet<Guid> optionExemptions`.)
 
 - [ ] **Step 6: Les routes**
 
-`EnrollmentsController.cs` — `using SamaEcole.Application.Enrollments.Commands.SetEnrollmentOptions;`, `using SamaEcole.Application.Enrollments.Queries.GetEnrollmentOptions;`, `using SamaEcole.Web.Authorization;`. Ajouter à côté de `ChangeEnrollmentStatusRequest` :
+`EnrollmentsController.cs` — `using SamaEcole.Application.Enrollments.Commands.SetEnrollmentOptions;`, `using SamaEcole.Application.Enrollments.Queries.GetEnrollmentOptions;`, `using SamaEcole.Application.OptionalSubjects;`, `using SamaEcole.Web.Authorization;`. Ajouter à côté de `ChangeEnrollmentStatusRequest` :
 
 ```csharp
-    public record SetEnrollmentOptionsRequest(IReadOnlyList<Guid> SubjectIds);
+    /// <summary>Les deux moitiés sont indépendantes : `null` = ne pas y toucher, liste (même vide) = la remplacer.</summary>
+    public record SetEnrollmentOptionsRequest(
+        IReadOnlyList<Guid>? SubjectIds, IReadOnlyList<MandatoryExemption>? Exemptions = null);
 ```
 et deux actions à la suite de `Receipt` :
 
 ```csharp
     /// <summary>
-    /// Options (LV2, option scientifique) du niveau de l'élève et état de chacune. Lecture ouverte à tout
-    /// utilisateur de l'école, comme le reçu ; module Pédagogie requis, comme les matières elles-mêmes.
+    /// Options (LV2, option scientifique) et matières obligatoires du niveau de l'élève, avec l'état de chacune
+    /// et son éventuel motif de dispense. Lecture ouverte à tout utilisateur de l'école, comme le reçu ; module
+    /// Pédagogie requis, comme les matières elles-mêmes.
     /// </summary>
     [HttpGet("{id:guid}/options")]
     [RequireModule(SchoolModule.Pedagogy)]
@@ -2608,7 +3580,10 @@ et deux actions à la suite de `Receipt` :
     public async Task<IActionResult> Options(Guid id, CancellationToken cancellationToken)
         => Ok(await mediator.Send(new GetEnrollmentOptionsQuery(id), cancellationToken));
 
-    /// <summary>Enregistre les options que l'élève suit ; les autres options du niveau deviennent ses dispenses.</summary>
+    /// <summary>
+    /// Enregistre les options que l'élève suit (`subjectIds`) et/ou les matières obligatoires dont il est
+    /// dispensé (`exemptions`, motif obligatoire). Chaque moitié omise (`null`) reste inchangée.
+    /// </summary>
     [HttpPut("{id:guid}/options")]
     [Authorize(Roles = EnrollmentWriters)]
     [RequireModule(SchoolModule.Pedagogy)]
@@ -2620,7 +3595,7 @@ et deux actions à la suite de `Receipt` :
     public async Task<IActionResult> SetOptions(
         Guid id, [FromBody] SetEnrollmentOptionsRequest request, CancellationToken cancellationToken)
     {
-        await mediator.Send(new SetEnrollmentOptionsCommand(id, request.SubjectIds ?? []), cancellationToken);
+        await mediator.Send(new SetEnrollmentOptionsCommand(id, request.SubjectIds, request.Exemptions), cancellationToken);
         return NoContent();
     }
 ```
@@ -2636,13 +3611,12 @@ Expected: PASS (les tests d'inscription existants restent verts : `OptionSubject
 ```bash
 git add src/SamaEcole.Application/Enrollments src/SamaEcole.Web/Controllers/EnrollmentsController.cs \
   tests/SamaEcole.IntegrationTests/OptionalSubjects/EnrollmentOptionsTests.cs
-git commit -m "feat(options): choix d'options d'une inscription (API et transaction d'inscription)
+git commit -m "feat(options): options et dispenses d'une inscription (API et transaction d'inscription)
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ---
-
 ### Task 7: Front — logique partagée et écran Matières
 
 **Files:**
@@ -2658,6 +3632,11 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
   - `clearGroup(group, selected) → string[]` — retire les ids du groupe
   - `unchosenGroupLabels(groups, selected) → string[]` — libellés des groupes exclusifs sans choix
   - `hiddenGradeCount(groups, selected) → number` — somme des `gradeCount` des matières non suivies (pour l'alerte de la fiche élève)
+  - **Dispenses de matières obligatoires** (`mandatorySubjects` = `[{ subjectId, name, isExempt, reason, gradeCount }]` du DTO serveur ; `state` = `{ [subjectId]: { checked, reason } }`) :
+    `exemptionStateFrom(mandatorySubjects) → state` (case cochée et motif repris du serveur) ;
+    `exemptionsPayload(state) → [{ subjectId, reason }]` (matières cochées, motif nettoyé) ;
+    `missingReasons(mandatorySubjects, state) → string[]` (noms des matières cochées sans motif) ;
+    `hiddenExemptionGrades(mandatorySubjects, state) → number` (notes des matières cochées).
 
 - [ ] **Step 1: Écrire le test de la logique pure**
 
@@ -2739,6 +3718,43 @@ test('le nombre de notes masquées additionne les matières que le choix ne suit
     assert.equal(lib.hiddenGradeCount(groups, ['esp', 'des']), 4);
     assert.equal(lib.hiddenGradeCount(groups, []), 6);
     assert.equal(lib.hiddenGradeCount(groups, ['ara', 'des']), 0);
+});
+
+const MANDATORY = [
+    { subjectId: 'eps', name: 'EPS', isExempt: true, reason: 'Inaptitude médicale', gradeCount: 2 },
+    { subjectId: 'maths', name: 'Mathématiques', isExempt: false, reason: null, gradeCount: 5 }
+];
+
+test('l\'état des dispenses reprend la case et le motif du serveur, motif vide pour une matière non dispensée', () => {
+    assert.deepEqual(plain(so().exemptionStateFrom(MANDATORY)), {
+        eps: { checked: true, reason: 'Inaptitude médicale' },
+        maths: { checked: false, reason: '' }
+    });
+    assert.deepEqual(plain(so().exemptionStateFrom(undefined)), {});
+});
+
+test('le payload des dispenses ne contient que les matières cochées, motif nettoyé', () => {
+    const lib = so();
+    const state = { eps: { checked: true, reason: '  Certificat  ' }, maths: { checked: false, reason: 'ignoré' } };
+
+    assert.deepEqual(plain(lib.exemptionsPayload(state)), [{ subjectId: 'eps', reason: 'Certificat' }]);
+    assert.deepEqual(plain(lib.exemptionsPayload({})), [], 'aucune case cochée : une liste vide, pas « rien »');
+});
+
+test('une matière cochée sans motif est signalée par son nom ; décochée, elle ne l\'est pas', () => {
+    const lib = so();
+
+    assert.deepEqual(plain(lib.missingReasons(MANDATORY, { eps: { checked: true, reason: '   ' }, maths: { checked: false, reason: '' } })), ['EPS']);
+    assert.deepEqual(plain(lib.missingReasons(MANDATORY, { eps: { checked: true, reason: 'ok' }, maths: { checked: false, reason: '' } })), []);
+    assert.deepEqual(plain(lib.missingReasons(MANDATORY, { eps: { checked: false, reason: '' } })), []);
+});
+
+test('le décompte des notes masquées par les dispenses n\'additionne que les matières cochées', () => {
+    const lib = so();
+
+    assert.equal(lib.hiddenExemptionGrades(MANDATORY, { eps: { checked: true, reason: 'x' }, maths: { checked: true, reason: 'y' } }), 7);
+    assert.equal(lib.hiddenExemptionGrades(MANDATORY, { eps: { checked: true, reason: 'x' } }), 2);
+    assert.equal(lib.hiddenExemptionGrades(MANDATORY, {}), 0);
 });
 ```
 
@@ -2826,14 +3842,49 @@ Expected: FAIL — `subject-options.js` est introuvable (ENOENT).
             .reduce((sum, s) => sum + (s.gradeCount || 0), 0);
     }
 
-    window.subjectOptions = { groupsForLevel, choose, clearGroup, unchosenGroupLabels, hiddenGradeCount };
+    // ---- Dispenses de matières OBLIGATOIRES (motif obligatoire) — logique pure, comme ci-dessus --------
+
+    /** État initial du formulaire de dispenses à partir des matières obligatoires renvoyées par le serveur. */
+    function exemptionStateFrom(mandatorySubjects) {
+        return Object.fromEntries((mandatorySubjects || []).map((s) => [
+            s.subjectId,
+            { checked: !!s.isExempt, reason: s.reason ?? '' }
+        ]));
+    }
+
+    /** Les dispenses à envoyer : uniquement les matières cochées, motif nettoyé. Liste vide si aucune case n'est cochée. */
+    function exemptionsPayload(state) {
+        return Object.entries(state || {})
+            .filter(([, entry]) => entry && entry.checked)
+            .map(([subjectId, entry]) => ({ subjectId, reason: (entry.reason ?? '').trim() }));
+    }
+
+    /** Noms des matières cochées dont le motif est vide : le serveur refuserait l'enregistrement (422). */
+    function missingReasons(mandatorySubjects, state) {
+        return (mandatorySubjects || [])
+            .filter((s) => state && state[s.subjectId] && state[s.subjectId].checked
+                && !(state[s.subjectId].reason ?? '').trim())
+            .map((s) => s.name);
+    }
+
+    /** Notes de l'année que ces dispenses masqueraient : somme de `gradeCount` des matières cochées. */
+    function hiddenExemptionGrades(mandatorySubjects, state) {
+        return (mandatorySubjects || [])
+            .filter((s) => state && state[s.subjectId] && state[s.subjectId].checked)
+            .reduce((sum, s) => sum + (s.gradeCount || 0), 0);
+    }
+
+    window.subjectOptions = {
+        groupsForLevel, choose, clearGroup, unchosenGroupLabels, hiddenGradeCount,
+        exemptionStateFrom, exemptionsPayload, missingReasons, hiddenExemptionGrades
+    };
 })();
 ```
 
 - [ ] **Step 4: Vérifier que la logique passe**
 
 Run: `node --test src/SamaEcole.Web/tests/js/subject-options.test.mjs`
-Expected: PASS (6 tests).
+Expected: PASS (10 tests).
 
 - [ ] **Step 5: Écrire le test de l'écran Matières**
 
@@ -3009,7 +4060,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 
 ---
 
-### Task 8: Front — choix à l'inscription et onglet « Options » de la fiche élève
+### Task 8: Front — choix à l'inscription et onglet « Options & dispenses » de la fiche élève
 
 **Files:**
 - Modify: `src/SamaEcole.Web/wwwroot/js/enrollments.js` (état l. ~62, `loadReferenceData` l. 157-193, `submit` l. 320-350, réinitialisation l. ~392-415)
@@ -3021,7 +4072,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: `window.subjectOptions` (Tâche 7), `GET /subjects`, `GET/PUT /enrollments/{id}/options`, `POST /enrollments` avec `optionSubjectIds`.
 - Produces (composant `enrollmentsView`) : `optionSubjects`, `optionSelection` + `optionSelectionFor` (`null` = non renseigné ; la sélection n'est valable que pour la classe où elle a été composée), `optionGroups`, `effectiveOptionSelection`, `unchosenOptionGroups` (getters), `chooseOption(group, subjectId)`, `clearOptionGroup(group)`, `optionsPayload() → {} | { optionSubjectIds: string[] }`.
-- Produces (composant `studentsView`) : `optionsPanel = { loading, error, enrollmentId, groups, selected, hasExplicitChoice, dirty, saving, saved }`, `canManageOptions`, `activeEnrollmentEntry` (getter), `openOptionsTab()`, `chooseStudentOption(group, id)`, `clearStudentOptionGroup(group)`, `hiddenOptionGrades` (getter), `unchosenOptionGroups` (getter), `saveOptions()`.
+- Produces (composant `studentsView`) : `optionsPanel = { loading, error, enrollmentId, saving, saved, groups, selected, hasExplicitChoice, optionsDirty, mandatorySubjects, exemptions, exemptionsDirty }` (les deux moitiés ont chacune leur état « modifié »), `canManageOptions`, `activeEnrollmentEntry`, `hiddenOptionGrades`, `unchosenOptionGroups`, `missingExemptionReasons`, `canSaveOptions` (getters), `openOptionsTab()`, `chooseStudentOption(group, subjectId)`, `clearStudentOptionGroup(group)`, `toggleExemption(subjectId)`, `setExemptionReason(subjectId, reason)`, `saveOptions()` — n'envoie que la moitié modifiée (`subjectIds` et/ou `exemptions`).
 
 - [ ] **Step 1: Écrire le test de l'inscription**
 
@@ -3280,13 +4331,14 @@ Expected: PASS (8 tests).
 
 - [ ] **Step 6: Écrire le test de la fiche élève**
 
-`students-options.test.mjs`. Même méthode : fabrique instanciée directement, `init()` non exécuté, la fiche chargée est posée à la main. `preload` porte `auth.canView` en plus du rôle (la fabrique de `studentsView` peut le lire à la construction ; retirer ce qui ne sert pas si le composant s'en passe).
+`students-options.test.mjs`. Même méthode que l'inscription : fabrique instanciée directement, `init()` non exécuté, la fiche chargée est posée à la main. `preload` porte `auth.canView` en plus du rôle (la fabrique de `studentsView` peut le lire à la construction ; retirer ce qui ne sert pas si le composant s'en passe).
 
 ```js
 /**
- * Fiche élève › onglet « Options » (matières optionnelles) : cible l'inscription de l'année active,
- * n'invente pas de choix quand aucun n'est enregistré, avertit des notes qu'un choix masquerait, et n'envoie
- * au serveur que les matières réellement suivies.
+ * Fiche élève › onglet « Options & dispenses » : cible l'inscription de l'année active, n'invente pas de choix
+ * quand aucun n'est enregistré, et traite les DEUX moitiés indépendamment — le choix d'options et les dispenses
+ * de matières obligatoires (motif obligatoire). Une moitié non modifiée n'est jamais renvoyée au serveur :
+ * enregistrer une dispense d'EPS ne doit pas écrire un choix d'options que personne n'a fait.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -3297,19 +4349,23 @@ const HISTORY = [
     { enrollmentId: 'e-now', schoolYearId: 'y1', schoolYearLabel: '2026-2027', status: 'Confirmed', isActiveYear: true }
 ];
 
-const options = (hasExplicitChoice, arabeFollowed = true) => ({
+const options = ({ explicit = false, arabeFollowed = true, epsExempt = false } = {}) => ({
     enrollmentId: 'e-now',
-    hasExplicitChoice,
+    hasExplicitChoice: explicit,
     groups: [{
         group: 'LV2',
         subjects: [
             { subjectId: 'esp', name: 'Espagnol', isFollowed: true, gradeCount: 0 },
             { subjectId: 'ara', name: 'Arabe', isFollowed: arabeFollowed, gradeCount: 3 }
         ]
-    }]
+    }],
+    mandatorySubjects: [
+        { subjectId: 'eps', name: 'EPS', isExempt: epsExempt, reason: epsExempt ? 'Inaptitude médicale' : null, gradeCount: 2 },
+        { subjectId: 'maths', name: 'Mathématiques', isExempt: false, reason: null, gradeCount: 5 }
+    ]
 });
 
-function students({ role = 'Secretariat', dto = options(false), history = HISTORY } = {}) {
+function students({ role = 'Secretariat', dto = options(), history = HISTORY } = {}) {
     const calls = { get: [], put: [] };
     const ctx = loadScripts(['subject-options.js', 'students.js'], {
         preload: {
@@ -3334,8 +4390,8 @@ test('l\'onglet cible l\'inscription de l\'année active, jamais une ancienne ni
     assert.equal(students({ history: cancelled }).view.activeEnrollmentEntry, undefined);
 });
 
-test('sans choix enregistré, la sélection démarre vide et le formulaire n\'est pas modifié', async () => {
-    const { view, calls } = students({ dto: options(false) });
+test('sans choix enregistré, la sélection démarre vide et rien n\'est marqué modifié', async () => {
+    const { view, calls } = students({ dto: options({ explicit: false }) });
 
     await view.openOptionsTab();
 
@@ -3343,31 +4399,86 @@ test('sans choix enregistré, la sélection démarre vide et le formulaire n\'es
     assert.equal(view.detailTab, 'options');
     assert.equal(view.optionsPanel.hasExplicitChoice, false);
     assert.deepEqual(plain(view.optionsPanel.selected), []);
-    assert.equal(view.optionsPanel.dirty, false);
+    assert.equal(view.optionsPanel.optionsDirty, false);
+    assert.equal(view.optionsPanel.exemptionsDirty, false);
+    assert.equal(view.canSaveOptions, false);
 });
 
 test('avec un choix enregistré, la sélection reprend les matières suivies', async () => {
-    const { view } = students({ dto: options(true, false) });
+    const { view } = students({ dto: options({ explicit: true, arabeFollowed: false }) });
 
     await view.openOptionsTab();
 
     assert.deepEqual(plain(view.optionsPanel.selected), ['esp']);
 });
 
-test('choisir marque le formulaire modifié et compte les notes qui seraient masquées', async () => {
-    const { view } = students({ dto: options(false) });
+test('les dispenses enregistrées pré-remplissent la case et le motif', async () => {
+    const { view } = students({ dto: options({ epsExempt: true }) });
+
+    await view.openOptionsTab();
+
+    assert.deepEqual(plain(view.optionsPanel.exemptions), {
+        eps: { checked: true, reason: 'Inaptitude médicale' },
+        maths: { checked: false, reason: '' }
+    });
+});
+
+test('choisir une option ne marque QUE les options comme modifiées et compte les notes masquées', async () => {
+    const { view } = students();
     await view.openOptionsTab();
 
     view.chooseStudentOption(view.optionsPanel.groups[0], 'esp');
 
     assert.deepEqual(plain(view.optionsPanel.selected), ['esp']);
-    assert.equal(view.optionsPanel.dirty, true);
+    assert.equal(view.optionsPanel.optionsDirty, true);
+    assert.equal(view.optionsPanel.exemptionsDirty, false);
     assert.equal(view.hiddenOptionGrades, 3, 'l\'Arabe (3 notes) n\'est plus suivi');
     assert.deepEqual(plain(view.unchosenOptionGroups), []);
 });
 
-test('l\'enregistrement envoie exactement les matières suivies puis recharge', async () => {
-    const { view, calls } = students({ dto: options(false) });
+test('cocher une dispense ne marque QUE les dispenses comme modifiées ; le décompte ne compte pas les options intactes', async () => {
+    const { view } = students();
+    await view.openOptionsTab();
+
+    view.toggleExemption('eps');
+
+    assert.equal(view.optionsPanel.exemptions.eps.checked, true);
+    assert.equal(view.optionsPanel.exemptionsDirty, true);
+    assert.equal(view.optionsPanel.optionsDirty, false);
+    assert.equal(view.hiddenOptionGrades, 2, 'seules les 2 notes d\'EPS : les options n\'ont pas été touchées');
+});
+
+test('une dispense sans motif bloque l\'enregistrement et nomme la matière', async () => {
+    const { view, calls } = students();
+    await view.openOptionsTab();
+    view.toggleExemption('eps');
+
+    assert.deepEqual(plain(view.missingExemptionReasons), ['EPS']);
+    assert.equal(view.canSaveOptions, false);
+
+    await view.saveOptions();
+
+    assert.equal(calls.put.length, 0, 'rien n\'est envoyé sans motif');
+    assert.match(view.optionsPanel.error, /EPS/);
+});
+
+test('enregistrer une dispense n\'envoie PAS le choix d\'options', async () => {
+    const { view, calls } = students();
+    await view.openOptionsTab();
+    view.toggleExemption('eps');
+    view.setExemptionReason('eps', '  Inaptitude médicale  ');
+
+    await view.saveOptions();
+
+    assert.deepEqual(plain(calls.put), [{
+        url: '/enrollments/e-now/options',
+        body: { exemptions: [{ subjectId: 'eps', reason: 'Inaptitude médicale' }] }
+    }]);
+    assert.equal('subjectIds' in calls.put[0].body, false);
+});
+
+test('enregistrer un choix d\'options n\'envoie PAS les dispenses', async () => {
+    const { view, calls } = students();
     await view.openOptionsTab();
     view.chooseStudentOption(view.optionsPanel.groups[0], 'esp');
 
@@ -3375,8 +4486,18 @@ test('l\'enregistrement envoie exactement les matières suivies puis recharge', 
 
     assert.deepEqual(plain(calls.put), [{ url: '/enrollments/e-now/options', body: { subjectIds: ['esp'] } }]);
     assert.equal(calls.get.length, 2, 'la fiche recharge l\'état serveur après l\'écriture');
-    assert.equal(view.optionsPanel.dirty, false);
+    assert.equal(view.optionsPanel.optionsDirty, false);
     assert.equal(view.optionsPanel.saved, true);
+});
+
+test('décocher toutes les dispenses envoie une liste vide, pas « rien »', async () => {
+    const { view, calls } = students({ dto: options({ epsExempt: true }) });
+    await view.openOptionsTab();
+    view.toggleExemption('eps');
+
+    await view.saveOptions();
+
+    assert.deepEqual(plain(calls.put[0].body), { exemptions: [] });
 });
 
 test('un rôle sans droit d\'écriture n\'a pas l\'onglet', () => {
@@ -3395,28 +4516,21 @@ Expected: FAIL — `openOptionsTab` n'existe pas.
 À côté de `detailTab: 'history'` :
 
 ```js
-        // Onglet « Options » de la fiche (matières optionnelles) : écriture réservée au Directeur et au
-        // Secrétariat (confort d'affichage — la garde réelle est EnrollmentsController).
+        // Onglet « Options & dispenses » de la fiche (matières optionnelles et dispenses de matières
+        // obligatoires) : écriture réservée au Directeur et au Secrétariat (confort d'affichage — la garde réelle
+        // est EnrollmentsController). Les DEUX moitiés ont leur propre état « modifié » : n'est envoyée au serveur
+        // que celle que l'utilisateur a réellement touchée (écart E5).
         canManageOptions: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
         optionsPanel: {
-            loading: false, error: null, enrollmentId: null, groups: [], selected: [],
-            hasExplicitChoice: false, dirty: false, saving: false, saved: false
+            loading: false, error: null, enrollmentId: null, saving: false, saved: false,
+            groups: [], selected: [], hasExplicitChoice: false, optionsDirty: false,
+            mandatorySubjects: [], exemptions: {}, exemptionsDirty: false
         },
 
         /** L'inscription dont on règle les options : celle de l'année ACTIVE, non annulée. */
         get activeEnrollmentEntry() {
             const history = this.studentDetail ? this.studentDetail.academicHistory : [];
             return history.find((e) => e.isActiveYear && e.status !== 'Cancelled');
-        },
-
-        get hiddenOptionGrades() {
-            return window.subjectOptions.hiddenGradeCount(
-                this.optionsPanel.groups.map((g) => this.optionsGroupView(g)), this.optionsPanel.selected);
-        },
-
-        get unchosenOptionGroups() {
-            return window.subjectOptions.unchosenGroupLabels(
-                this.optionsPanel.groups.map((g) => this.optionsGroupView(g)), this.optionsPanel.selected);
         },
 
         /** Forme attendue par subject-options.js à partir d'un groupe du DTO serveur. */
@@ -3427,6 +4541,37 @@ Expected: FAIL — `openOptionsTab` n'existe pas.
                 exclusive: group.group !== null,
                 subjects: group.subjects.map((s) => ({ id: s.subjectId, name: s.name, gradeCount: s.gradeCount }))
             };
+        },
+
+        /** Notes que l'enregistrement masquerait — seulement pour les moitiés que l'utilisateur a modifiées. */
+        get hiddenOptionGrades() {
+            const panel = this.optionsPanel;
+            const options = panel.optionsDirty
+                ? window.subjectOptions.hiddenGradeCount(panel.groups.map((g) => this.optionsGroupView(g)), panel.selected)
+                : 0;
+            const exemptions = panel.exemptionsDirty
+                ? window.subjectOptions.hiddenExemptionGrades(panel.mandatorySubjects, panel.exemptions)
+                : 0;
+            return options + exemptions;
+        },
+
+        get unchosenOptionGroups() {
+            return this.optionsPanel.optionsDirty
+                ? window.subjectOptions.unchosenGroupLabels(
+                    this.optionsPanel.groups.map((g) => this.optionsGroupView(g)), this.optionsPanel.selected)
+                : [];
+        },
+
+        /** Matières cochées comme dispensées dont le motif est vide : le serveur refuserait l'enregistrement. */
+        get missingExemptionReasons() {
+            return window.subjectOptions.missingReasons(this.optionsPanel.mandatorySubjects, this.optionsPanel.exemptions);
+        },
+
+        get canSaveOptions() {
+            const panel = this.optionsPanel;
+            return (panel.optionsDirty || panel.exemptionsDirty)
+                && this.missingExemptionReasons.length === 0
+                && !panel.saving;
         },
 
         async openOptionsTab() {
@@ -3448,7 +4593,10 @@ Expected: FAIL — `openOptionsTab` n'existe pas.
                 panel.selected = dto.hasExplicitChoice
                     ? dto.groups.flatMap((g) => g.subjects.filter((s) => s.isFollowed).map((s) => s.subjectId))
                     : [];
-                panel.dirty = false;
+                panel.mandatorySubjects = dto.mandatorySubjects || [];
+                panel.exemptions = window.subjectOptions.exemptionStateFrom(panel.mandatorySubjects);
+                panel.optionsDirty = false;
+                panel.exemptionsDirty = false;
             } catch (err) {
                 panel.error = window.api.toMessage(err, "Impossible de charger les options de l'élève.");
             } finally {
@@ -3459,14 +4607,30 @@ Expected: FAIL — `openOptionsTab` n'existe pas.
         chooseStudentOption(group, subjectId) {
             const panel = this.optionsPanel;
             panel.selected = window.subjectOptions.choose(this.optionsGroupView(group), panel.selected, subjectId);
-            panel.dirty = true;
+            panel.optionsDirty = true;
             panel.saved = false;
         },
 
         clearStudentOptionGroup(group) {
             const panel = this.optionsPanel;
             panel.selected = window.subjectOptions.clearGroup(this.optionsGroupView(group), panel.selected);
-            panel.dirty = true;
+            panel.optionsDirty = true;
+            panel.saved = false;
+        },
+
+        toggleExemption(subjectId) {
+            const panel = this.optionsPanel;
+            const current = panel.exemptions[subjectId] || { checked: false, reason: '' };
+            panel.exemptions = { ...panel.exemptions, [subjectId]: { ...current, checked: !current.checked } };
+            panel.exemptionsDirty = true;
+            panel.saved = false;
+        },
+
+        setExemptionReason(subjectId, reason) {
+            const panel = this.optionsPanel;
+            const current = panel.exemptions[subjectId] || { checked: false, reason: '' };
+            panel.exemptions = { ...panel.exemptions, [subjectId]: { ...current, reason } };
+            panel.exemptionsDirty = true;
             panel.saved = false;
         },
 
@@ -3474,10 +4638,21 @@ Expected: FAIL — `openOptionsTab` n'existe pas.
             const panel = this.optionsPanel;
             if (!panel.enrollmentId || panel.saving) return;
 
+            const missing = this.missingExemptionReasons;
+            if (missing.length > 0) {
+                panel.error = `Renseignez le motif de la dispense : ${missing.join(', ')}.`;
+                return;
+            }
+
+            // Une moitié non modifiée n'est PAS envoyée : le serveur la laisse alors inchangée (écart E5).
+            const body = {};
+            if (panel.optionsDirty) body.subjectIds = panel.selected;
+            if (panel.exemptionsDirty) body.exemptions = window.subjectOptions.exemptionsPayload(panel.exemptions);
+
             panel.saving = true;
             panel.error = null;
             try {
-                await window.api.put(`/enrollments/${panel.enrollmentId}/options`, { subjectIds: panel.selected });
+                await window.api.put(`/enrollments/${panel.enrollmentId}/options`, body);
                 await this.openOptionsTab();
                 this.optionsPanel.saved = true;
             } catch (err) {
@@ -3487,7 +4662,15 @@ Expected: FAIL — `openOptionsTab` n'existe pas.
             }
         },
 ```
-`openDetail` : après `this.detailTab = 'history';` ajouter la remise à zéro de l'onglet Options : `this.optionsPanel = { loading: false, error: null, enrollmentId: null, groups: [], selected: [], hasExplicitChoice: false, dirty: false, saving: false, saved: false };` (ne pas laisser l'état d'un élève sur le suivant, comme pour `reportCardError`).
+`openDetail` : après `this.detailTab = 'history';` ajouter la remise à zéro de l'onglet (ne pas laisser l'état d'un élève sur le suivant, comme pour `reportCardError`) :
+
+```js
+            this.optionsPanel = {
+                loading: false, error: null, enrollmentId: null, saving: false, saved: false,
+                groups: [], selected: [], hasExplicitChoice: false, optionsDirty: false,
+                mandatorySubjects: [], exemptions: {}, exemptionsDirty: false
+            };
+```
 
 - [ ] **Step 9: La vue de la fiche élève**
 
@@ -3498,59 +4681,96 @@ Expected: FAIL — `openOptionsTab` n'existe pas.
                 :aria-selected="detailTab === 'options'"
                 class="tab-btn flex-1" :class="detailTab === 'options' ? 'tab-btn-active' : ''">
             <icon name="layers" class="w-4 h-4" />
-            Options
+            Options &amp; dispenses
         </button>
 ```
 et, après le panneau `detailTab === 'payments'`, un panneau :
 
 ```html
- <!-- ONGLET 4 — Options (matières optionnelles) : réservé au Directeur et au Secrétariat. -->
- <div x-show="detailTab === 'options'" x-cloak role="tabpanel" class="py-5 space-y-4">
+ <!-- ONGLET 4 — Options & dispenses : réservé au Directeur et au Secrétariat. Deux sections indépendantes. -->
+ <div x-show="detailTab === 'options'" x-cloak role="tabpanel" class="py-5 space-y-6">
   <div x-show="optionsPanel.loading" x-cloak class="skeleton h-16 w-full"></div>
   <div x-show="optionsPanel.error" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="optionsPanel.error"></div>
 
-  <template x-if="!optionsPanel.loading && optionsPanel.groups.length === 0 && !optionsPanel.error">
-   <p class="text-sm text-slate-500">Le niveau de cette classe ne compte aucune matière optionnelle.</p>
-  </template>
+  <!-- Section 1 — Langues & options (matières au choix). -->
+  <section x-show="optionsPanel.groups.length > 0" x-cloak class="space-y-4">
+   <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Langues &amp; options</h3>
+   <p x-show="!optionsPanel.hasExplicitChoice && !optionsPanel.optionsDirty" x-cloak class="text-sm text-slate-500">
+    Options non renseignées : l'élève suit actuellement toutes les options.
+   </p>
 
-  <p x-show="optionsPanel.groups.length > 0 && !optionsPanel.hasExplicitChoice" x-cloak class="text-sm text-slate-500">
-   Options non renseignées : l'élève suit actuellement toutes les options.
-  </p>
+   <template x-for="group in optionsPanel.groups" :key="optionsGroupView(group).key">
+    <fieldset class="rounded-xl border border-slate-200 p-3">
+     <legend class="px-1 text-sm font-semibold text-slate-700" x-text="group.group ? group.group + ' — une seule matière' : 'Option'"></legend>
+     <div class="flex flex-wrap gap-x-5 gap-y-2">
+      <template x-for="subject in group.subjects" :key="subject.subjectId">
+       <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
+        <input :type="group.group ? 'radio' : 'checkbox'" :name="'stu-opt-' + optionsGroupView(group).key" class="checkbox-field"
+         :checked="optionsPanel.selected.includes(subject.subjectId)"
+         x-on:change="chooseStudentOption(group, subject.subjectId)">
+        <span x-text="subject.name"></span>
+        <span x-show="subject.gradeCount > 0" x-cloak class="text-xs text-slate-400" x-text="'(' + subject.gradeCount + ' note(s))'"></span>
+       </label>
+      </template>
+     </div>
+     <button type="button" x-show="group.group" x-cloak x-on:click="clearStudentOptionGroup(group)"
+      class="mt-2 text-xs text-slate-400 underline">Aucune matière de ce groupe</button>
+    </fieldset>
+   </template>
 
-  <template x-for="group in optionsPanel.groups" :key="optionsGroupView(group).key">
-   <fieldset class="rounded-xl border border-slate-200 p-3">
-    <legend class="px-1 text-sm font-semibold text-slate-700" x-text="group.group ? group.group + ' — une seule matière' : 'Option'"></legend>
-    <div class="flex flex-wrap gap-x-5 gap-y-2">
-     <template x-for="subject in group.subjects" :key="subject.subjectId">
-      <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
-       <input :type="group.group ? 'radio' : 'checkbox'" :name="'stu-opt-' + optionsGroupView(group).key" class="checkbox-field"
-        :checked="optionsPanel.selected.includes(subject.subjectId)"
-        x-on:change="chooseStudentOption(group, subject.subjectId)">
-       <span x-text="subject.name"></span>
-       <span x-show="subject.gradeCount > 0" x-cloak class="text-xs text-slate-400" x-text="'(' + subject.gradeCount + ' note(s))'"></span>
-      </label>
-     </template>
+   <p x-show="unchosenOptionGroups.length > 0" x-cloak class="text-xs text-warning">
+    Aucun choix dans : <span x-text="unchosenOptionGroups.join(', ')"></span> — l'élève ne suivra aucune matière de ce groupe.
+   </p>
+  </section>
+
+  <!-- Section 2 — Dispenses (matières obligatoires) : la dispense survient après coup et exige un motif. -->
+  <section x-show="optionsPanel.mandatorySubjects.length > 0" x-cloak class="space-y-3">
+   <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Dispenses</h3>
+   <p class="text-xs text-slate-400">
+    Une matière dispensée n'entre plus dans les moyennes et n'est plus saisie ; sur le bulletin elle reste, marquée « Dispensé(e) ».
+    Le motif est obligatoire et ne figure sur aucun document.
+   </p>
+
+   <template x-for="subject in optionsPanel.mandatorySubjects" :key="subject.subjectId">
+    <div class="rounded-xl border border-slate-200 p-3 space-y-2">
+     <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
+      <input type="checkbox" class="checkbox-field" :checked="optionsPanel.exemptions[subject.subjectId] && optionsPanel.exemptions[subject.subjectId].checked"
+       x-on:change="toggleExemption(subject.subjectId)">
+      <span class="font-medium" x-text="subject.name"></span>
+      <span x-show="subject.gradeCount > 0" x-cloak class="text-xs text-slate-400" x-text="'(' + subject.gradeCount + ' note(s))'"></span>
+     </label>
+     <div x-show="optionsPanel.exemptions[subject.subjectId] && optionsPanel.exemptions[subject.subjectId].checked" x-cloak>
+      <label :for="'exempt-reason-' + subject.subjectId" class="form-label form-label-required">Motif</label>
+      <input :id="'exempt-reason-' + subject.subjectId" type="text" maxlength="200" class="input-field"
+       placeholder="ex. Inaptitude médicale, certificat du 12/09/2026"
+       :value="optionsPanel.exemptions[subject.subjectId] ? optionsPanel.exemptions[subject.subjectId].reason : ''"
+       x-on:input="setExemptionReason(subject.subjectId, $event.target.value)">
+     </div>
     </div>
-    <button type="button" x-show="group.group" x-cloak x-on:click="clearStudentOptionGroup(group)"
-     class="mt-2 text-xs text-slate-400 underline">Aucune matière de ce groupe</button>
-   </fieldset>
+   </template>
+
+   <p x-show="missingExemptionReasons.length > 0" x-cloak class="text-xs text-warning">
+    Motif manquant : <span x-text="missingExemptionReasons.join(', ')"></span>.
+   </p>
+  </section>
+
+  <template x-if="!optionsPanel.loading && optionsPanel.groups.length === 0 && optionsPanel.mandatorySubjects.length === 0 && !optionsPanel.error">
+   <p class="text-sm text-slate-500">Le niveau de cette classe ne compte aucune matière à régler.</p>
   </template>
 
-  <p x-show="unchosenOptionGroups.length > 0" x-cloak class="text-xs text-warning">
-   Aucun choix dans : <span x-text="unchosenOptionGroups.join(', ')"></span> — l'élève ne suivra aucune matière de ce groupe.
-  </p>
   <p x-show="hiddenOptionGrades > 0" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning">
-   <span x-text="hiddenOptionGrades"></span> note(s) déjà saisie(s) seront masquées du bulletin et des moyennes (elles restent conservées).
+   <span x-text="hiddenOptionGrades"></span> note(s) déjà saisie(s) seront masquées des moyennes (elles restent conservées).
   </p>
 
   <div class="flex items-center gap-3">
-   <button type="button" x-on:click="saveOptions()" :disabled="!optionsPanel.dirty || optionsPanel.saving" class="btn-modal-primary disabled:opacity-50">
-    <span x-text="optionsPanel.saving ? 'Enregistrement…' : 'Enregistrer les options'"></span>
+   <button type="button" x-on:click="saveOptions()" :disabled="!canSaveOptions" class="btn-modal-primary disabled:opacity-50">
+    <span x-text="optionsPanel.saving ? 'Enregistrement…' : 'Enregistrer'"></span>
    </button>
-   <span x-show="optionsPanel.saved" x-cloak class="text-sm text-slate-500">Options enregistrées.</span>
+   <span x-show="optionsPanel.saved" x-cloak class="text-sm text-slate-500">Enregistré.</span>
   </div>
  </div>
 ```
+La saisie du motif écrit à chaque frappe (`x-on:input`) : `setExemptionReason` ne fait que remplacer l'objet d'état, sans appel réseau.
 
 - [ ] **Step 10: Lancer tous les tests JS et compiler le CSS**
 
@@ -3564,7 +4784,7 @@ Expected: PASS ; CSS compilé sans erreur (les classes utilisées — `checkbox-
 
 - [ ] **Step 11: Vérification manuelle dans l'app** (obligatoire pour l'UI ; ne pas conclure sans l'avoir vue)
 
-Run (appliquer d'abord les migrations sur la base de dev) : `dotnet run --project src/SamaEcole.Web`. Parcours : (1) Matières › modifier « Arabe » : cocher « Matière optionnelle », groupe « LV2 » ; idem « Espagnol » ; réordonner une matière et vérifier que la pastille « Option · LV2 » reste. (2) Inscriptions : choisir une classe du niveau → le bloc apparaît ; ne rien toucher → inscrire ; puis inscrire un second élève en choisissant « Espagnol ». (3) Fiche du second élève › Options : « Arabe » décoché. (4) Notes : la feuille d'Arabe ne liste pas le second élève. (5) Une école/classe sans option : aucun bloc, aucun onglet. Noter tout écart et le corriger avant de commit.
+Run (appliquer d'abord les migrations sur la base de dev) : `dotnet run --project src/SamaEcole.Web`. Parcours : (1) Matières › modifier « Arabe » : cocher « Matière optionnelle », groupe « LV2 » ; idem « Espagnol » ; réordonner une matière et vérifier que la pastille « Option · LV2 » reste. (2) Inscriptions : choisir une classe du niveau → le bloc « Langues & options » apparaît ; ne rien toucher → inscrire ; changer de classe après avoir choisi → le choix est abandonné (« Non renseigné ») ; puis inscrire un second élève en choisissant « Espagnol ». (3) Fiche du second élève › « Options & dispenses » : « Arabe » décoché ; enregistrer. (4) Même fiche, section « Dispenses » : cocher « EPS » sans motif → le bouton reste désactivé et « Motif manquant » s'affiche ; saisir un motif → enregistrer ; **recharger** : l'EPS reste cochée avec son motif et le choix d'options est resté celui de l'étape 3. (5) Notes : la feuille d'Arabe et celle d'EPS ne listent pas ce second élève ; la feuille de Maths le liste. (6) Imprimer le bulletin du second élève : pas de ligne « Arabe », ligne « EPS — Dispensé(e) » (voir la Tâche 4b, étape 11). (7) Une école/classe sans option : aucun bloc ; l'onglet reste visible (dispenses possibles). Noter tout écart et le corriger avant de commit.
 
 - [ ] **Step 12: Commit**
 
@@ -3583,7 +4803,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ### Task 9: Documentation, aide et contexte actif
 
 **Files:**
-- Modify: `docs/superpowers/specs/2026-09-25-optional-subjects-design.md` (corrections de la spec — voir « Écarts »)
+- Modify: `docs/superpowers/specs/2026-09-25-optional-subjects-design.md` (précisions issues du plan — voir « Écarts »)
 - Modify: `docs/Volume_1_Cahier_des_Charges.md` (nouveau §8.8 après §8.7, avant le `---` qui précède §9)
 - Modify: `docs/Volume_3_DDS.md` (nouvelle section à la suite de la dernière `### 5.N`), `docs/Volume_4_API_Design.md` (nouvelle section `## N.` à la suite de la dernière), `openapi.yaml`, `docs/Volume_7_Security.md`, `docs/design-references/README.md`
 - Modify: `ACTIVE_CONTEXT.md` (nouvelle sous-section après « Coefficients par série… »), `src/SamaEcole.Web/wwwroot/js/help.js`
@@ -3591,17 +4811,17 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 
 **Interfaces:** aucune (documentation).
 
-- [ ] **Step 1: Corriger la spécification**
+- [ ] **Step 1: Préciser la spécification** (`2026-09-25-optional-subjects-design.md`, telle qu'amendée par le commit `f6ad16e`)
 
-Dans `2026-09-25-optional-subjects-design.md` :
+- **Statut** : « Validé, amendé le 25/09/2026 (volet dispense d'une matière obligatoire) ; plan d'implémentation : `docs/superpowers/plans/2026-09-25-optional-subjects.md`. »
 - **§1** : remplacer « Aujourd'hui, un élève qui ne suit pas l'Arabe voit donc sa ligne « Arabe » (vide) sur le bulletin, et apparaît dans la feuille de saisie de cette matière. » par : « Le bulletin secondaire n'imprime que les matières ayant une note ; la grille APC, elle, imprime toutes les lignes du niveau. Aujourd'hui, un élève qui ne suit pas l'Arabe apparaît dans la feuille de saisie de cette matière, sa note éventuelle entre dans sa moyenne, et (grille APC) sa ligne est imprimée vide. »
-- **§4.1** : remplacer `SubjectExemptionLoader` par la classe statique `SubjectExemptions` (`ForStudentAsync`, `StudentsExemptFromAsync`) et retirer la phrase sur la variante par classe.
-- **§4.2, ligne `ImportGradeSheet`** : « Une ligne d'élève dispensé est rejetée (erreur de ligne, message dédié) — jamais écrite. »
-- **§3.2** : ajouter « Une dispense ne joue que si la matière est encore `IsOptional` à la lecture. »
-- **§5.2** : « niveau de la classe **courante de l'élève** (`Student.ClassroomId`) » ; « `PUT` refusé (422) si l'inscription est annulée ou n'est pas celle de l'année active ».
-- **§10.4** : remplacer par « Changement de classe : `UpdateStudentCommand` change `Student.ClassroomId` sans toucher l'inscription. Les dispenses restent rattachées à l'inscription ; les options proposées sont celles du niveau de la classe courante ; les dispenses d'un autre niveau sont retirées logiquement au prochain enregistrement. »
-- **§10** : ajouter le point 5 : « Un choix qui ne dispense de rien (une seule option par groupe, toutes les options libres cochées) est indiscernable de « aucun choix » : `hasExplicitChoice` reste faux, sans effet sur le calcul. »
-- Statut : « Validé, plan d'implémentation : `docs/superpowers/plans/2026-09-25-optional-subjects.md`. »
+- **§3.2** : ajouter « Une ligne est **active** quand la matière est encore `IsOptional` **ou** quand la ligne porte un `Reason` : repasser une matière en « obligatoire » rend ses lignes d'option, sans motif, inertes (la matière revient à tous, sans purge). »
+- **§4.1** : remplacer `SubjectExemptionLoader` par la classe **statique** `SubjectExemptions` : `ForStudentAsync` renvoie un `StudentExemptions` (les deux sortes de dispenses, dont `Mandatory` — les matières obligatoires dispensées, avec nom et coefficient — et `HiddenIds` — les options non suivies) et `StudentsExemptFromAsync` les élèves dispensés d'une matière ; retirer la phrase sur la variante par classe.
+- **§4.2** : ligne `ImportGradeSheet` → « Une ligne d'élève dispensé est **rejetée** (erreur de ligne, message dédié) — jamais écrite. » ; le paragraphe « Pour que le PDF sache quelle ligne marquer… » → `GradeSummaryDto.ExemptSubjects` est une liste de `ExemptSubjectDto(SubjectId, SubjectName, Coefficient)` (le coefficient **effectif**, pour l'imprimer barré ; le **motif n'y figure jamais**), câblée ainsi : `GetGradeSummaryQueryHandler` → `ReportCardDataService` → `ReportCardDto.ExemptSubjects` → `ReportCardDocument.GradeRows()`.
+- **§4.4** : préciser « primaire : pas de colonne coefficient, « Dispensé(e) » couvre Devoir, Comp et Moy ; grille APC : `EvaluationLineDto.IsExempt`, « Dispensé(e) » couvre Notes et Sur ; la ligne garde le rang alphabétique qu'elle aurait eu si elle avait été notée. »
+- **§5.2** : « niveau de la classe **courante de l'élève** (`Student.ClassroomId`) » ; « `PUT` refusé (422) si l'inscription est annulée ou n'est pas celle de l'année active » ; **remplacer** « `Exemptions` omise = aucune dispense de matière obligatoire » par « `SubjectIds` et `Exemptions` sont **indépendants** : `null` = ne pas toucher à cette moitié, une liste (même vide) la remplace » ; le `GET` renvoie aussi `mandatorySubjects` (matières obligatoires du niveau, avec `isExempt`, `reason`, `gradeCount`) ; `hasExplicitChoice` est vrai si **au moins une option** a une dispense.
+- **§10.4** : remplacer par « Changement de classe : `UpdateStudentCommand` change `Student.ClassroomId` sans toucher l'inscription. Les dispenses restent rattachées à l'inscription ; les options proposées sont celles du niveau de la classe courante ; les dispenses d'un autre niveau sont retirées logiquement au prochain enregistrement de la moitié concernée. »
+- **§10** : ajouter les points 7 à 9 : « (7) Un choix qui ne dispense de rien est indiscernable de « aucun choix » : `hasExplicitChoice` reste faux, sans effet sur le calcul. (8) Le livret de compétences (`GetSkillsBookletPdf`) ignore le drapeau `IsExempt` : il imprime la ligne d'une matière dispensée comme avant. (9) `PUT /enrollments/{id}/options` remplace chaque moitié qu'il reçoit : tout client doit renvoyer l'état complet de la moitié qu'il modifie — comme `PUT /subjects/{id}`. »
 
 - [ ] **Step 2: Cahier des charges §8.8**
 
@@ -3610,22 +4830,30 @@ Insérer après §8.7 :
 ```markdown
 ### 8.8 Matières optionnelles et dispenses
 
-Certaines matières sont **au choix** (LV2 : Espagnol, Arabe, Allemand ; option scientifique : PC ou SVT).
-Dans Matières, la case « Matière optionnelle / au choix » les marque, et un **groupe d'options** (« LV2 »)
-indique lesquelles s'excluent : un élève suit **au plus une matière par groupe** ; une option sans groupe est
-cumulable.
+Un élève peut ne pas suivre toutes les matières de sa classe, de deux façons :
 
-- **Choix de l'élève.** À l'inscription (bloc « Langues & options ») ou sur la fiche élève (onglet Options),
-  le Secrétariat ou le Directeur enregistre les options suivies. Les autres options du niveau deviennent des
-  **dispenses** de l'inscription, donc de l'année.
+- **Option non suivie** — certaines matières sont **au choix** (LV2 : Espagnol, Arabe, Allemand ; option
+  scientifique : PC ou SVT). Dans Matières, la case « Matière optionnelle / au choix » les marque, et un
+  **groupe d'options** (« LV2 ») indique lesquelles s'excluent : un élève suit **au plus une matière par
+  groupe** ; une option sans groupe est cumulable.
+- **Dispense** — l'élève est exempté d'une matière **obligatoire** (ex. EPS pour raison médicale). Un
+  **motif** est obligatoire ; il n'est jamais imprimé.
+
+- **Saisie.** À l'inscription (bloc « Langues & options ») ou sur la fiche élève (onglet « Options &
+  dispenses »), le Secrétariat ou le Directeur enregistre les options suivies ; les autres options du niveau
+  deviennent des dispenses de l'inscription, donc de l'année. Les dispenses de matières obligatoires se saisissent
+  sur la fiche élève.
 - **Tant qu'aucun choix n'est enregistré**, l'élève suit toutes les options : rien ne change au déploiement ni
   à l'activation d'une option.
-- **Saisie des notes.** L'élève dispensé ne figure ni dans la feuille de saisie, ni dans l'export/import Excel,
-  ni sur la fiche imprimée de la matière ; une note ne peut pas lui être saisie.
-- **Bulletin et moyennes.** La matière n'apparaît pas (ni ligne, ni note, ni coefficient) ; le total des
-  coefficients s'adapte (ex. 22 au lieu de 25). Les notes déjà saisies sont **conservées** mais masquées.
+- **Saisie des notes.** L'élève dispensé (des deux sortes) ne figure ni dans la feuille de saisie, ni dans
+  l'export/import Excel, ni sur la fiche imprimée de la matière ; une note ne peut pas lui être saisie.
+- **Moyennes.** La matière n'entre plus dans les moyennes ; le total des coefficients s'adapte (ex. 22 au lieu
+  de 25). Les notes déjà saisies sont **conservées** mais masquées.
+- **Bulletin.** Une option non suivie **n'apparaît pas**. Une matière obligatoire dispensée **reste**, à sa place :
+  la zone des notes porte « Dispensé(e) », le coefficient est barré, aucune moyenne ni point, et les totaux
+  l'ignorent.
 - **Portée.** Réservé aux matières autonomes (ni domaine d'évaluation, ni activité). Repasser une matière en
-  « obligatoire » la rend immédiatement à tous. Une réinscription repart sans dispense.
+  « obligatoire » rend ses options non suivies à tous. Une réinscription repart sans dispense.
 - **Rang.** Le classement compare les moyennes générales ; deux élèves aux options différentes sont comparés
   sur la moyenne, non sur le total de points.
 ```
@@ -3633,11 +4861,11 @@ cumulable.
 - [ ] **Step 3: DDS, API, OpenAPI, sécurité, design**
 
 Repérer les fins de fichier : `grep -n "^### 5\." docs/Volume_3_DDS.md | tail -1` et `grep -n "^## [0-9]*\." docs/Volume_4_API_Design.md | tail -1`.
-- **Volume 3** : section « Matières optionnelles — `enrollment_subject_exemptions` + colonnes `subjects.IsOptional/OptionGroup` » : colonnes, index unique partiel `UX_enrollment_subject_exemptions_key`, FK composites `(SchoolId, EnrollmentId)` et `(SchoolId, SubjectId)` en RESTRICT, RLS `enrollment_subject_exemptions_tenant_isolation`, `GRANT SELECT, INSERT, UPDATE`, présence dans `reset_school_data`/`delete_school_year`, pas de `xmin`.
-- **Volume 4** : section « API Matières optionnelles » : `GET /api/v1/enrollments/{id}/options` (200 + DTO `EnrollmentOptionsDto`, 404), `PUT /api/v1/enrollments/{id}/options` (corps `{subjectIds}`, 204, 403, 404, 409, 422), champ `optionSubjectIds` de `POST /api/v1/enrollments` (null = aucun choix), champs `isOptional`/`optionGroup` de `/api/v1/subjects` ; modules : `Pedagogy` requis sur les deux routes `options`.
-- **`openapi.yaml`** : les deux routes, `EnrollmentOptionsDto`/`OptionGroupDto`/`OptionSubjectDto`, `optionSubjectIds` sur la requête d'inscription, `isOptional`/`optionGroup` sur `Subject`.
-- **Volume 7** : ligne de matrice « Options d'une inscription » : écriture Directeur + Secrétariat, lecture tous rôles de l'école, Finance en lecture seule.
-- **`design-references/README.md`** : une ligne — le bulletin et la fiche de saisie gardent leur mise en page (règle #12) ; seules les lignes d'une matière dispensée disparaissent.
+- **Volume 3** : section « Matières optionnelles et dispenses — `enrollment_subject_exemptions` + colonnes `subjects.IsOptional/OptionGroup` » : colonnes (dont `Reason` varchar(200), nullable), la **règle « ligne active »**, index unique partiel `UX_enrollment_subject_exemptions_key`, FK composites `(SchoolId, EnrollmentId)` et `(SchoolId, SubjectId)` en RESTRICT, RLS `enrollment_subject_exemptions_tenant_isolation`, `GRANT SELECT, INSERT, UPDATE`, présence dans `reset_school_data`/`delete_school_year`, pas de `xmin`.
+- **Volume 4** : section « API Matières optionnelles et dispenses » : `GET /api/v1/enrollments/{id}/options` (200 + `EnrollmentOptionsDto` avec `groups` et `mandatorySubjects`, 404), `PUT /api/v1/enrollments/{id}/options` (corps `{subjectIds, exemptions}`, chaque moitié facultative : `null` = inchangée ; 204, 403, 404, 409, 422 — motif manquant, deux matières d'un même groupe, matière hors niveau), champ `optionSubjectIds` de `POST /api/v1/enrollments` (null = aucun choix), champs `isOptional`/`optionGroup` de `/api/v1/subjects` ; `Pedagogy` requis sur les deux routes `options`.
+- **`openapi.yaml`** : les deux routes, `EnrollmentOptionsDto`/`OptionGroupDto`/`OptionSubjectDto`/`MandatorySubjectDto`/`MandatoryExemption`, `optionSubjectIds` sur la requête d'inscription, `isOptional`/`optionGroup` sur `Subject`.
+- **Volume 7** : ligne de matrice « Options et dispenses d'une inscription » : écriture Directeur + Secrétariat, lecture tous rôles de l'école ; le **motif** d'une dispense est une donnée sensible (médicale possible) : jamais dans un document, jamais dans un journal en clair.
+- **`docs/design-references/README.md`** : une ligne, à la rubrique du bulletin — « **Écart validé à la référence (25/09/2026) : la mention « Dispensé(e) »** — une matière obligatoire dont l'élève est dispensé (avec motif) reste sur le bulletin, à sa place, avec « Dispensé(e) » dans la zone des notes, le coefficient barré et aucune moyenne ni point ; les totaux l'ignorent. Aucun autre élément du bulletin ne change (règle #12). Une option non suivie, elle, n'apparaît pas. »
 
 - [ ] **Step 4: Fiche d'aide**
 
@@ -3647,16 +4875,18 @@ Dans `help.js`, à la suite de l'entrée `coefficients-par-serie` (même objet, 
                 {
                     id: 'matieres-optionnelles',
                     title: 'Matières optionnelles et dispenses',
-                    location: 'Gestion Scolaire › Matières, Inscriptions, fiche élève › Options',
+                    location: 'Gestion Scolaire › Matières, Inscriptions, fiche élève › Options & dispenses',
                     href: '/matieres',
                     roles: ['Directeur', 'Secrétariat'],
                     definition:
-                        "Une matière optionnelle est une matière au choix — la seconde langue (Espagnol, Arabe, Allemand) ou " +
-                        "l'option scientifique (PC ou SVT). Chaque élève ne suit que celles qu'il a choisies : l'autre n'apparaît " +
-                        "ni dans la saisie des notes, ni sur son bulletin, ni dans sa moyenne.",
+                        "Un élève peut ne pas suivre toutes les matières de sa classe. Une matière OPTIONNELLE est une matière au " +
+                        "choix — la seconde langue (Espagnol, Arabe, Allemand) ou l'option scientifique (PC ou SVT) : chaque élève " +
+                        "ne suit que celles qu'il a choisies. Une DISPENSE exempte un élève d'une matière obligatoire (l'EPS pour " +
+                        "raison médicale, par exemple), avec un motif. Dans les deux cas la matière n'entre plus dans sa moyenne " +
+                        "et n'apparaît plus dans la saisie des notes.",
                     objectif:
-                        "Éditer des bulletins et des moyennes exacts pour chaque élève, sans le coefficient ni la ligne d'une " +
-                        "matière qu'il ne suit pas.",
+                        "Éditer des bulletins et des moyennes exacts pour chaque élève, sans le coefficient d'une matière qu'il " +
+                        "ne suit pas ou dont il est dispensé.",
                     probleme:
                         "Sans cela, une matière rattachée au niveau apparaissait pour toute la classe : il fallait laisser des " +
                         "lignes vides, et la moyenne pouvait être faussée par une note d'une option abandonnée.",
@@ -3664,20 +4894,23 @@ Dans `help.js`, à la suite de l'entrée `coefficients-par-serie` (même objet, 
                         "Ouvrez Gestion Scolaire › Matières, modifiez la matière (ex. Espagnol) et cochez « Matière optionnelle / au choix ».",
                         "Renseignez le « Groupe d'options » (ex. LV2) : un élève ne pourra suivre qu'une seule matière de ce groupe. Laissez vide pour une option cumulable.",
                         "À l'inscription ou à la réinscription, le bloc « Langues & options » apparaît : choisissez la matière suivie dans chaque groupe.",
-                        "Pour un élève déjà inscrit, ouvrez sa fiche › onglet Options, ajustez le choix et cliquez sur « Enregistrer les options ».",
-                        "Vérifiez la saisie des notes : l'élève dispensé n'est plus listé pour la matière non suivie."
+                        "Pour un élève déjà inscrit, ouvrez sa fiche › onglet « Options & dispenses », ajustez le choix et cliquez sur « Enregistrer ».",
+                        "Pour dispenser un élève d'une matière obligatoire, cochez la matière dans la section « Dispenses » et renseignez le motif (obligatoire).",
+                        "Vérifiez la saisie des notes : l'élève dispensé n'est plus listé pour la matière concernée."
                     ],
                     impacts: [
                         "Tant qu'aucun choix n'est enregistré, l'élève suit toutes les options : rien ne change pour les élèves existants.",
-                        "Bulletin et moyennes : la matière non suivie disparaît (ligne, note, coefficient) et le total des coefficients s'adapte.",
-                        "Les notes déjà saisies dans une matière abandonnée sont conservées, mais masquées ; l'écran indique combien.",
+                        "Moyennes : la matière disparaît du calcul et le total des coefficients s'adapte.",
+                        "Bulletin : une option non suivie n'apparaît pas ; une matière obligatoire dispensée reste, marquée « Dispensé(e) », coefficient barré, hors totaux. Le motif n'est jamais imprimé.",
+                        "Les notes déjà saisies dans une matière abandonnée ou dispensée sont conservées, mais masquées ; l'écran indique combien.",
                         "Le choix vaut pour l'année : à la réinscription, il faut le refaire.",
-                        "Repasser une matière en « obligatoire » la rend immédiatement à tous les élèves."
+                        "Repasser une matière en « obligatoire » rend ses options non suivies à tous les élèves."
                     ],
                     recommandations: [
                         "Créez les groupes d'options avant l'ouverture des inscriptions, pour que le choix soit fait dès l'inscription.",
                         "Renseignez le choix de chaque élève avant la première saisie de notes : sinon l'élève apparaît dans toutes les listes d'options.",
                         "Utilisez le même nom de groupe pour toutes les langues d'un même niveau (« LV2 ») : c'est ce nom qui les rend exclusives.",
+                        "Rédigez le motif d'une dispense de façon sobre : il est conservé au dossier, mais il n'est jamais imprimé.",
                         "Ne marquez pas comme optionnelle une matière que toute la classe suit : elle n'y gagne rien."
                     ]
                 },
@@ -3685,7 +4918,7 @@ Dans `help.js`, à la suite de l'entrée `coefficients-par-serie` (même objet, 
 
 - [ ] **Step 5: ACTIVE_CONTEXT**
 
-Après la sous-section « Coefficients par série… », ajouter « ### Matières optionnelles et dispenses (25/09/2026) — livré » : branche `feature/optional-subjects` (issue de `main`), spec, plan, données (colonnes + table `enrollment_subject_exemptions`, RLS, purges), calcul (`SubjectExemptions`, six lecteurs), API (`/enrollments/{id}/options`), écrans, l'**invariant** « sans dispense, calcul strictement d'avant », et les points de vigilance : (1) nouvelle matière dans un groupe déjà réparti ; (2) le secrétariat doit renseigner les choix après avoir marqué une option ; (3) un choix qui ne dispense de rien ≡ « aucun choix » ; (4) `PUT /subjects/{id}` est un remplacement complet : tout client doit renvoyer `isOptional`/`optionGroup`.
+Après la sous-section « Coefficients par série… », ajouter « ### Matières optionnelles et dispenses (25/09/2026) — livré » : branche `feature/optional-subjects` (issue de `main`), spec (commits `bfedc99`, `f6ad16e`), plan, données (colonnes + table `enrollment_subject_exemptions` avec `Reason`, RLS, purges), calcul (`SubjectExemptions`/`StudentExemptions`, lecteurs filtrés, `GradeSummaryDto.ExemptSubjects`), API (`/enrollments/{id}/options`), écrans (Matières, Inscription, fiche › Options & dispenses), bulletin (« Dispensé(e) », **écart validé à la règle #12**), l'**invariant** « sans dispense, le calcul et le bulletin sont strictement ceux d'avant », et les points de vigilance : (1) nouvelle matière dans un groupe déjà réparti ; (2) le secrétariat doit renseigner les choix après avoir marqué une option ; (3) un choix qui ne dispense de rien ≡ « aucun choix » ; (4) `PUT /subjects/{id}` et `PUT /enrollments/{id}/options` sont des remplacements : tout client renvoie l'état complet de ce qu'il modifie ; (5) le livret de compétences ignore `IsExempt` ; (6) le motif d'une dispense est une donnée sensible, jamais imprimée.
 
 - [ ] **Step 6: Lancer les tests JS de l'aide**
 
@@ -3709,28 +4942,34 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 
 - [ ] `dotnet build` sans erreur ni avertissement nouveau.
 - [ ] `npm test --prefix src/SamaEcole.Web` : tout vert.
-- [ ] Tests ciblés : `--filter "FullyQualifiedName~OptionalSubjects|FullyQualifiedName~OptionSelectionRules|FullyQualifiedName~OptionalSubjectValidator"` verts.
+- [ ] Tests ciblés : `--filter "FullyQualifiedName~OptionalSubjects|FullyQualifiedName~OptionSelectionRules|FullyQualifiedName~OptionalSubjectValidator|FullyQualifiedName~ExemptSubjectReportCard"` verts, ainsi que les suites voisines citées à chaque tâche.
 - [ ] **À lancer par le propriétaire** (consigne du 17/09/2026) : `dotnet test` complet, dont `--filter Category=MultiTenant`, et les `FunctionalTests` (nettoyage `AuthApiFactory`).
-- [ ] Parcours manuel de la Tâche 8, étape 11, revu de bout en bout.
-- [ ] `git log --oneline main..HEAD` : 9 commits, aucun fichier étranger (`git diff --stat main..HEAD`) — en particulier aucun des fichiers modifiés dans l'autre répertoire de travail (`settings.js`, `help.js` du répertoire d'origine) : `help.js` est modifié ici **et** dans l'autre copie, la fusion peut demander une résolution manuelle (insertion d'une entrée, à un endroit différent).
+- [ ] Parcours manuel de la Tâche 8 (étape 11) **et** vérification visuelle des PDF de la Tâche 4b (étape 11), revus de bout en bout.
+- [ ] `git log --oneline main..HEAD` : les commits de spécification et de plan, puis un commit par tâche (1, 2, 3, 4, 4b, 5, 6, 7, 8, 9) ; `git diff --stat main..HEAD` ne montre aucun fichier étranger — en particulier aucun des fichiers modifiés dans l'autre répertoire de travail (`settings.js`, `help.js` du répertoire d'origine) : `help.js` est modifié ici **et** dans l'autre copie, la fusion peut demander une résolution manuelle (insertion d'une entrée, à un endroit différent).
 
 ## Self-review (spec ↔ plan)
 
-| Exigence de la spécification | Tâche |
+| Exigence de la spécification (amendée) | Tâche |
 |---|---|
 | §2 décisions 1-7 (groupes, sans choix = tout, dispenses, portée, notes conservées, matières autonomes, rôles) | 1, 2, 3, 4, 6 |
+| §2 décision 8 (dispense d'une matière obligatoire, motif obligatoire, type déduit de `IsOptional`) | 1 (`Reason`), 3 (règle « ligne active », validation du motif), 6 (écriture) |
+| §2 décision 9 (bulletin selon le type) et §4.4 | 4 (`ExemptSubjects`, `IsExempt`), 4b (trois tableaux) |
+| §2 décision 10 (écart à la règle #12) | 4b (rendu), 9 (`design-references/README.md`) |
 | §3.1 `IsOptional`/`OptionGroup` + validation | 2 |
-| §3.2 table, RLS, unicité, purges | 1 |
+| §3.2 table, `Reason`, RLS, unicité, purges | 1 |
 | §3.3 migration | 1 |
-| §4.1 résolveur unique | 3 (écart E1) |
-| §4.2 six lecteurs | 4 (sommaire, fiche, structure APC), 5 (feuilles ×3, import, saisie) |
+| §4.1 résolveur unique | 3 (écart E1 : classe statique) |
+| §4.2 lecteurs (sommaire, fiche, structure APC, 3 feuilles, import, saisie) + `ExemptSubjects` | 4, 4b, 5 |
 | §4.3 règles (invariant, rang, primaire) | 4 (test 1), 3 |
 | §5.1 DTO matières | 2 |
-| §5.2 `GET`/`PUT options`, `optionSubjectIds` | 6 |
-| §6 écrans 1-4 | 7 (Matières), 8 (Inscription, fiche, saisie sans changement) |
+| §5.2 `GET`/`PUT options`, `Exemptions`, `optionSubjectIds` | 6 (écart E5 : `null` = inchangée) |
+| §6.1 Matières, §6.2 Inscription | 7, 8 |
+| §6.3 fiche élève › « Options & dispenses » | 8 |
 | §6.4 ligne « N élève(s) dispensé(s) » sur la saisie | **Non planifié — décision à prendre** : l'écran de saisie (`grades.js`) n'a pas été lu ; cette ligne demande que `GetClassGrades` renvoie le nombre d'exemptés (changement de forme de la réponse). À trancher avec la validation du plan ; sinon retirée de la spécification. |
 | §6.5 aide | 9 |
-| §7 tests | chaque tâche |
+| §7 tests (dont motif, bulletin) | chaque tâche |
 | §8 documentation | 9 |
+| §9 hors périmètre (bonus, dispense par période) | rien à faire |
+| §10 vigilance 5-6 (écart règle #12, pas de `xmin`) | 9 (ACTIVE_CONTEXT) |
 
-Cohérence des types : `OptionSubject`, `OptionSelectionRules.{NormalizeGroup, LevelMatches, Validate, ExemptedSubjectIds}`, `SubjectExemptions.{ForStudentAsync, StudentsExemptFromAsync}`, `EnrollmentOptionsPlanner.{LoadLevelOptionsAsync, PlanExemptionsAsync}` sont définis Tâche 2-3 et utilisés à l'identique Tâches 4-6 ; `window.subjectOptions.{groupsForLevel, choose, clearGroup, unchosenGroupLabels, hiddenGradeCount}` définis Tâche 7, utilisés Tâche 8.
+Cohérence des types : `LevelSubject`, `MandatoryExemption`, `OptionSelectionRules.{NormalizeGroup, LevelMatches, Validate, ExemptedSubjectIds, ValidateReason, ValidateMandatoryExemptions}`, `ExemptSubject`, `StudentExemptions`, `SubjectExemptions.{ForStudentAsync, StudentsExemptFromAsync}`, `EnrollmentOptionsPlanner.{LoadLevelOptionsAsync, LoadLevelMandatoryAsync, PlanExemptionsAsync, PlanMandatoryExemptionsAsync}` sont définis Tâches 2-3 et utilisés à l'identique Tâches 4-6 ; `ExemptSubjectDto`, `GradeSummaryDto.ExemptSubjects`, `EvaluationLineDto.IsExempt` (Tâche 4) sont consommés par `ReportCardDto.ExemptSubjects` et `ReportCardDocument.GradeRows()` (Tâche 4b) ; `window.subjectOptions.{groupsForLevel, choose, clearGroup, unchosenGroupLabels, hiddenGradeCount, exemptionStateFrom, exemptionsPayload, missingReasons, hiddenExemptionGrades}` définis Tâche 7, utilisés Tâche 8.
