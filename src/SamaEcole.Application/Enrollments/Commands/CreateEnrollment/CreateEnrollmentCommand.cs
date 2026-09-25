@@ -59,4 +59,14 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     /// Sans effet pour un élève Externe.
     /// </summary>
     public bool IncludeBoardingFee { get; init; }
+
+    // --- Matières optionnelles (Options d'un niveau : LV2, option scientifique) ---
+
+    /// <summary>
+    /// Les options que l'élève SUIT. <c>null</c> (défaut) : aucun choix enregistré, l'élève suit toutes les
+    /// options. Liste vide : aucune option suivie. Les dispenses sont écrites dans la même transaction que
+    /// l'inscription (règle #3, comme le matricule). La dispense d'une matière OBLIGATOIRE ne se saisit pas
+    /// ici (elle survient après coup et exige un motif : fiche élève › Options &amp; dispenses).
+    /// </summary>
+    public IReadOnlyList<Guid>? OptionSubjectIds { get; init; }
 }

@@ -2,11 +2,13 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Extensions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Enrollments;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Frozen;
 
 namespace SamaEcole.Application.Enrollments.Commands.CreateEnrollment;
 
@@ -77,6 +79,13 @@ public class CreateEnrollmentCommandHandler(
                 ]);
             }
         }
+
+        // Matières optionnelles : le choix est validé AVANT toute écriture — un choix invalide ne doit ni
+        // créer l'élève ni consommer un numéro de reçu. null = aucun choix (l'élève suit tout).
+        IReadOnlySet<Guid> optionExemptions = request.OptionSubjectIds is null
+            ? FrozenSet<Guid>.Empty
+            : await EnrollmentOptionsPlanner.PlanExemptionsAsync(
+                dbContext, classroom.Level, request.OptionSubjectIds, nameof(request.OptionSubjectIds), cancellationToken);
 
         var receipt = await dbContext.ExecuteInTransactionAsync(async ct =>
         {
@@ -164,6 +173,14 @@ public class CreateEnrollmentCommandHandler(
             };
 
             dbContext.Enrollments.Add(enrollment);
+
+            foreach (var subjectId in optionExemptions)
+            {
+                dbContext.EnrollmentSubjectExemptions.Add(new EnrollmentSubjectExemption
+                {
+                    SchoolId = schoolId, EnrollmentId = enrollment.Id, SubjectId = subjectId
+                });
+            }
 
             foreach (var line in lines)
             {
