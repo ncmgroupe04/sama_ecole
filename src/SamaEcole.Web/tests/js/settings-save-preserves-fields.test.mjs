@@ -125,3 +125,33 @@ test('le découpage de l\'année est chargé, envoyé une fois modifié, et cons
     assert.equal(puts[1].evaluationPeriodType, 'Custom');
     assert.equal(puts[1].customPeriodCount, 4);
 });
+
+test('un commutateur (saveConfig(false)) ne change pas le libellé des boutons Enregistrer, un vrai enregistrement oui', async () => {
+    let seen = null;
+    const ctx = loadScripts(['settings.js'], {
+        preload: {
+            auth: { role: 'Directeur' },
+            api: {
+                get: async (endpoint) => (endpoint === '/schools/current/settings' ? SERVER_SETTINGS()
+                    : endpoint === '/schools/current/mode' ? { isLive: false }
+                    : endpoint === '/schools/current' ? { name: 'École test' } : []),
+                put: async (_endpoint, body) => { seen = { saving: view.configSaving, label: view.configSavingLabelVisible }; return body; },
+                toMessage: (_e, fallback) => fallback,
+                toFieldErrors: (_e, fallback) => ({ global: fallback })
+            },
+            location: { href: 'https://localhost/parametres', search: '' },
+            history: { replaceState() {} }
+        }
+    });
+    const view = ctx.component('settingsView');
+    await flush();
+
+    await view.saveConfig(false);
+    assert.deepEqual(seen, { saving: true, label: false }, 'boutons désactivés mais libellé (donc largeur) inchangé');
+    assert.equal(view.configSaved, false);
+
+    await view.saveConfig();
+    assert.deepEqual(seen, { saving: true, label: true }, 'le formulaire affiche « Enregistrement… »');
+    assert.equal(view.configSavingLabelVisible, false, 'remis à zéro après coup');
+    assert.equal(view.configSaving, false);
+});

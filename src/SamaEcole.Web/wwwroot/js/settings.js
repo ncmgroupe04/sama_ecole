@@ -117,6 +117,12 @@ document.addEventListener('alpine:init', () => {
         },
         configErrors: {},
         configSaving: false,
+        // Vrai seulement pendant l'enregistrement d'un vrai bouton « Enregistrer » (formulaire). Les
+        // commutateurs de délégation (saveConfig(false)) sauvegardent sans changer le libellé des
+        // boutons : « Enregistrement… » est plus long que « Enregistrer », donc chaque bascule les
+        // étirait tous (jusqu'à 6 à la fois, configSaving étant partagé) puis les ramenait — l'à-coup
+        // de mise en page remonté. Les boutons restent désactivés (configSaving), sans changer de largeur.
+        configSavingLabelVisible: false,
         configSaved: false,
 
         // --- Compteur de départ des matricules (Option 1) — année scolaire en cours ---
@@ -729,6 +735,7 @@ document.addEventListener('alpine:init', () => {
             this.configErrors = {};
             this.configSaved = false;
             this.configSaving = true;
+            this.configSavingLabelVisible = showConfirmation;
             try {
                 // PUT = remplacement COMPLET des réglages côté serveur (UpdateSchoolSettingsCommand : tout
                 // champ omis retombe à sa valeur par défaut). Cet écran ne pilote qu'une partie des champs ;
@@ -794,6 +801,7 @@ document.addEventListener('alpine:init', () => {
                 this.configErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
             } finally {
                 this.configSaving = false;
+                this.configSavingLabelVisible = false;
             }
         },
 
