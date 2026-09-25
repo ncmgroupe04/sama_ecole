@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **STATUT : PLAN POUR VALIDATION — aucun code n'est écrit.** Les arbitrages B1 à B13 ci-dessous doivent être validés avant la Tâche 1.
+> **STATUT : EXÉCUTÉ le 25/09/2026 (Tâches 1 à 8 et 10) — arbitrages B1 à B13 validés à 100 %.** La Tâche 9 (justification des séances manquées) est **hors périmètre**, non construite. Écarts constatés à l'exécution : voir la fin du document.
 
 **Goal :** (1) Faire l'appel par créneau d'emploi du temps, pas seulement par demi-journée, et distinguer absences complètes, retards et absences partielles par matière. (2) Faire du billet d'entrée un vrai circuit : la Vie Scolaire l'émet pour un cours précis, le registre d'appel de ce cours se met à jour, et l'enseignant l'accepte en classe.
 
@@ -437,3 +437,18 @@ public static class SlotPeriod
 | Isolation multi-tenant | 2, 3, 5, 6 (tests `Category=MultiTenant`) |
 
 Points de vigilance connus, non traités par ce plan : (1) **billet de sortie** inchangé (hors périmètre, B10) ; (2) la classification « complète » se fonde sur les séances **appelées** — une école qui ne fait l'appel que sur un cours par jour verra surtout des absences « complètes » ; la couverture affichée est là pour le rappeler, et rendre l'appel obligatoire sur tous les cours serait une autre évolution ; (3) **concurrence** : un billet émis exactement pendant la soumission de la fiche peut ne pas être rattaché à sa ligne ; l'acceptation par l'enseignant est le point de réconciliation (elle applique le retard à la ligne existante), et la feuille rechargée le montre — pas de verrou `xmin` sur `StudentAttendance` dans ce plan ; (4) un billet **accepté** ne s'annule plus (B9) : une erreur se corrige par un nouvel appel sur la ligne ; (5) la Tâche 9 (justification des séances manquées) est la seule qui crée une table — d'où son statut optionnel.
+
+---
+
+## Écarts constatés à l'exécution
+
+Ce que le code livré fait autrement que le plan ci-dessus, et pourquoi :
+
+- **Pas de `TargetDate`.** `LateArrivals.Date` est déjà une colonne `date` : le billet vise (cours, `Date`), aucune colonne ajoutée.
+- **Index de `StudentId` conservé explicitement.** EF supprimait `IX_LateArrivals_StudentId` comme redondant avec l'index unique partiel ; `HasIndex(e => e.StudentId)` est déclaré, la migration régénérée.
+- **Refus.** Un enseignant non titulaire reçoit **403** (`ForbiddenException`), pas `UnauthorizedAccess` ; les refus métier (billet annulé, déjà accepté, sans cours visé) sont des `ValidationException` sur la clé « Ticket » → **422**.
+- **Contrôleur d'acceptation séparé** (`EntryTicketActionsController`, même préfixe `api/v1/billets`) : un attribut de rôle sur une action s'ajoute à celui de la classe au lieu de l'élargir, et `BilletsController` exclut l'enseignant.
+- **`EntryTicketRegister`.** `ApplyAsync` est idempotent (`PreviousStatus ??=`) et `RestoreAsync` ne restaure que si un statut d'avant existe ; le numéro de billet vient d'`EntryTicketNumber.For(id)`, seule source (le PDF et la feuille ne recalculent plus).
+- **Formes de DTO.** `EntryTicketDto` gagne `TargetSubjectName`, `TargetTimeRange`, `TargetTeacherName`, `Status` en fin de record avec défauts ; `StudentAttendanceReportRow` gagne `DaysRecorded`, `FullAbsenceDays`, `PartialAbsenceDays` de la même façon — toute construction existante reste valide.
+- **Rapport.** `AttendanceReportAggregator` calcule par jour en SQL (comptes par groupe) puis classe via `DayAttendanceClassifier` ; le CSV ajoute deux colonnes en fin de ligne, le PDF deux colonnes.
+- **Tests d'infrastructure.** `AuthApiFactory` nettoie aussi `LateArrivals`, `ScheduleSlots` et `subject_coefficient_overrides` (FK) ; le garde de régression JS impose un `toast.error` dans les `catch` des chargeurs, y compris `loadSlots` et `loadTodaySlots`.

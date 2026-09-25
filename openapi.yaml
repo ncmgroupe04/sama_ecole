@@ -2120,6 +2120,13 @@ paths:
         pour ses classes/matières assignées (403 sinon) ; Directeur et Secrétariat sans restriction. Si
         une fiche existe déjà pour cette clé, les statuts déjà saisis sont renvoyés (alreadySubmitted=true).
         Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
+
+        **Appel par créneau (Évolution N°5).** Avec `scheduleSlotId`, l'appel porte sur un cours de l'emploi du
+        temps : la période est DÉRIVÉE du cours (« 08:00-10:00 ») et le paramètre `period` est ignoré. Le cours doit
+        appartenir à la classe et à la matière demandées et tomber le bon jour de semaine (422 sinon) ; un Enseignant
+        n'y accède que s'il en est le titulaire (403 sinon). Sans `scheduleSlotId`, `period` reste obligatoire :
+        c'est l'appel libre d'avant. Un billet d'entrée actif visant ce cours présélectionne l'élève en `Late` et
+        renseigne `entryTicketId`, `entryTicketNumber` et `entryTicketStatus` sur sa ligne.
       parameters:
         - name: classroomId
           in: query
@@ -2135,8 +2142,13 @@ paths:
           schema: { type: string, format: date }
         - name: period
           in: query
-          required: true
+          required: false
+          description: Obligatoire sans `scheduleSlotId` ; ignoré (dérivé du cours) avec.
           schema: { type: string }
+        - name: scheduleSlotId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Grille d'appel
@@ -2146,6 +2158,139 @@ paths:
         '403': { description: Enseignant non assigné à cette classe/matière }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /attendance/slots:
+    get:
+      tags: [Attendance]
+      summary: Cours d'une classe pour une date — de quoi choisir le créneau de l'appel (Évolution N°5)
+      description: >-
+        Les créneaux de l'emploi du temps de la classe le jour de semaine de `date`, triés par heure, avec le
+        libellé de période dérivé (`label`, « 08:00-10:00 ») et, si l'appel a déjà été fait pour ce cours ce
+        jour-là, l'identifiant de la fiche (`sheetId`). Un Enseignant ne reçoit que SES cours. Un jour de repos de
+        l'établissement renvoie une liste vide. Mêmes rôles que `/attendance/roster`.
+      parameters:
+        - name: classroomId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Cours de la journée
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AttendanceSlot' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /absences/today-slots:
+    get:
+      tags: [Attendance]
+      summary: Cours du jour de la classe d'un élève — sélecteur du cours visé par un billet d'entrée (Évolution N°5)
+      description: >-
+        Les cours de la classe de l'élève à `date` (aujourd'hui par défaut). Le cours en cours (`isCurrent`), à
+        défaut le prochain (`isNext`), est signalé ; ces deux indicateurs ne valent que pour la date du jour, sur
+        l'heure UTC du serveur. `ticketStatus` indique un billet actif déjà émis pour cet élève et ce cours. Un jour
+        de repos renvoie une liste vide. Réservé au SuperAdmin, au Directeur et à la Vie Scolaire.
+      parameters:
+        - name: studentId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Cours de la journée
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StudentSlot' }
+        '403': { description: Rôle non autorisé }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /absences/late-arrivals:
+    post:
+      tags: [Attendance]
+      summary: Enregistrer un retard — et, avec `targetScheduleSlotId`, émettre un billet d'entrée visant un cours (Évolution N°5)
+      description: >-
+        Sans `targetScheduleSlotId`, le comportement d'avant : un retard sans cours visé, sans statut de billet.
+        Avec `targetScheduleSlotId`, le billet naît `Issued` et vise ce cours : le cours doit appartenir à la classe
+        de l'élève et tomber le jour de `date` (422 sinon), `minutes` est plafonné à 240, le jour ne doit pas être un
+        jour de repos, et un seul billet actif (`Issued` ou `Accepted`) est admis par élève, cours et jour (409 sinon).
+        Si la fiche d'appel de ce cours existe déjà, la ligne de l'élève passe en `Late` dans la MÊME transaction
+        (son statut d'avant est conservé pour une éventuelle annulation) ; une absence rectifiée en retard publie
+        l'événement d'assiduité. Le retard de la liste (`GET /absences/late-arrivals`) porte `targetScheduleSlotId` et
+        `status` (null pour tout l'historique sans cours visé). Réservé au SuperAdmin, au Directeur et à la Vie Scolaire.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LateArrivalCreateRequest' }
+      responses:
+        '200':
+          description: Identifiant du retard / billet
+          content:
+            application/json:
+              schema: { type: string, format: uuid }
+        '403': { description: Rôle non autorisé }
+        '409': { description: Un billet actif existe déjà pour cet élève, ce cours et ce jour }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /billets/{id}/accept:
+    post:
+      tags: [Attendance]
+      summary: Accepter l'élève en classe — billet d'entrée (Évolution N°5)
+      description: >-
+        L'ENSEIGNANT du cours visé (titulaire du créneau) ou le Directeur constate que l'élève est entré en classe :
+        le billet passe `Accepted`. Idempotent (un second appel renvoie le même résultat, sans nouvel effet). Refus :
+        403 pour un Enseignant qui n'est pas le titulaire du cours ; 404 billet introuvable dans l'établissement ;
+        422 si le billet est annulé ou ne vise aucun cours.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Billet accepté
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntryTicketActionResult' }
+        '403': { description: Enseignant non titulaire du cours, ou rôle non autorisé }
+        '404': { description: Billet introuvable dans l'établissement courant }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /billets/{id}/cancel:
+    post:
+      tags: [Attendance]
+      summary: Annuler un billet d'entrée non accepté (Évolution N°5)
+      description: >-
+        Réservé à la Vie Scolaire (Surveillant) et au Directeur — l'enseignant accepte, il n'annule pas. Le billet
+        passe `Cancelled` et, si la fiche d'appel du cours existe, la ligne de l'élève retrouve son statut d'avant
+        (le billet n'est jamais supprimé : soft delete, jamais physique). Idempotent sur un billet déjà annulé.
+        422 si le billet a déjà été accepté par l'enseignant.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Billet annulé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntryTicketActionResult' }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Billet introuvable dans l'établissement courant }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /attendance:
     post:
       tags: [Attendance]
@@ -2153,6 +2298,9 @@ paths:
       description: >-
         Ni schoolId ni schoolYearId dans le corps : l'année ACTIVE est résolue serveur (même règle que
         POST /enrollments). Une seconde saisie de la même clé (classe, matière, date, créneau) est refusée en 409.
+        Avec `scheduleSlotId` (Évolution N°5), la clé reste (classe, matière, date, période) — la période étant dérivée du cours, `period`
+        est ignoré ; les billets d'entrée actifs visant ce cours sont rattachés aux
+        lignes des élèves concernés.
         Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
       requestBody:
         required: true
@@ -3170,6 +3318,39 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AttendanceReport' }
+        '403': { description: Réservé au Directeur, au Secrétariat et au Super Admin }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /reports/attendance/by-subject:
+    get:
+      tags: [Reports]
+      summary: Rapport d'assiduité par matière (Évolution N°5)
+      description: >-
+        Pour la période, une ligne par matière appelée : séances appelées (`sessions`), lignes d'appel, répartition
+        des statuts et taux de présence ((Présents + Retards) / lignes — la formule du rapport par élève, inchangée).
+        Mêmes filtres, mêmes rôles (Directeur, Secrétariat, Super Admin) et même garde de classe (422 si `classId`
+        n'appartient pas à l'école courante) que `/reports/attendance`. Les agrégats passent sous la policy RLS.
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: classId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Une ligne par matière
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SubjectAttendanceReportRow' }
         '403': { description: Réservé au Directeur, au Secrétariat et au Super Admin }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -5655,6 +5836,72 @@ components:
           nullable: true
           allOf: [{ $ref: '#/components/schemas/AttendanceStatus' }]
         lateMinutes: { type: integer }
+        entryTicketId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Billet d'entrée actif visant CE cours pour cet élève (Évolution N°5), sinon null.
+        entryTicketNumber: { type: string, nullable: true, description: "« BILLET-XXXXXXXX »" }
+        entryTicketStatus:
+          type: string
+          nullable: true
+          enum: [Issued, Accepted]
+          description: Un billet annulé n'apparaît plus sur la feuille.
+
+    AttendanceSlot:
+      type: object
+      description: Un cours de l'emploi du temps proposé pour l'appel (Évolution N°5).
+      properties:
+        slotId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        teacherId: { type: string, format: uuid }
+        teacherName: { type: string }
+        start: { type: string, example: "08:00:00" }
+        end: { type: string, example: "10:00:00" }
+        label: { type: string, example: "08:00-10:00", description: Période dérivée du cours. }
+        sheetId: { type: string, format: uuid, nullable: true, description: "Fiche d'appel déjà faite pour ce cours ce jour-là." }
+
+    StudentSlot:
+      type: object
+      description: Un cours du jour de la classe d'un élève, pour viser un cours depuis un billet d'entrée (Évolution N°5).
+      properties:
+        slotId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        teacherName: { type: string }
+        start: { type: string, example: "08:00:00" }
+        end: { type: string, example: "10:00:00" }
+        label: { type: string, example: "08:00-10:00" }
+        isCurrent: { type: boolean, description: Le cours a lieu maintenant (date du jour uniquement). }
+        isNext: { type: boolean, description: Premier cours à venir, quand aucun n'est en cours. }
+        ticketStatus:
+          type: string
+          nullable: true
+          enum: [Issued, Accepted]
+          description: Billet actif déjà émis pour cet élève et ce cours ce jour-là.
+
+    LateArrivalCreateRequest:
+      type: object
+      required: [studentId, date, minutes, reason]
+      properties:
+        studentId: { type: string, format: uuid }
+        date: { type: string, format: date-time }
+        minutes: { type: integer, minimum: 1, description: "Plafonné à 240 quand un cours est visé." }
+        reason: { type: string }
+        observations: { type: string, nullable: true }
+        targetScheduleSlotId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Cours visé par le billet d'entrée (Évolution N°5). Null = retard sans cours visé, comme avant.
+
+    EntryTicketActionResult:
+      type: object
+      properties:
+        ticketId: { type: string, format: uuid }
+        status: { type: string, enum: [Issued, Accepted, Cancelled] }
+        acceptedAt: { type: string, format: date-time, nullable: true }
 
     AttendanceRoster:
       type: object
@@ -5680,12 +5927,16 @@ components:
 
     AttendanceSubmitRequest:
       type: object
-      required: [classroomId, subjectId, date, period, entries]
+      required: [classroomId, subjectId, date, entries]
+      description: >-
+        `period` est obligatoire sans `scheduleSlotId` (appel libre) ; avec `scheduleSlotId` (Évolution N°5), la
+        période est dérivée du cours et le champ est ignoré.
       properties:
         classroomId: { type: string, format: uuid }
         subjectId: { type: string, format: uuid }
         date: { type: string, format: date }
         period: { type: string }
+        scheduleSlotId: { type: string, format: uuid, nullable: true }
         entries: { type: array, items: { $ref: '#/components/schemas/AttendanceEntry' } }
 
     AttendanceSubmitResult:
@@ -6209,6 +6460,24 @@ components:
         unjustifiedAbsences: { type: integer }
         totalLateMinutes: { type: integer }
         attendanceRate: { type: number, description: "Taux 0-1 = (Présents + Retards) / total de ses appels." }
+        daysRecorded:
+          type: integer
+          description: Jours où au moins une séance a été appelée pour l'élève (Évolution N°5) — le dénominateur des deux nombres suivants.
+        fullAbsenceDays: { type: integer, description: "Jours où l'élève a été absent à TOUTES les séances appelées." }
+        partialAbsenceDays: { type: integer, description: "Jours où il a manqué au moins une séance mais assisté (présent ou en retard) à une autre. Calcul, pas un statut : le taux n'en dépend pas." }
+
+    SubjectAttendanceReportRow:
+      type: object
+      properties:
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        sessions: { type: integer, description: Séances appelées sur la période. }
+        lines: { type: integer, description: Lignes d'appel (élève × séance). }
+        presents: { type: integer }
+        lates: { type: integer }
+        justifiedAbsences: { type: integer }
+        unjustifiedAbsences: { type: integer }
+        attendanceRate: { type: number, description: "Taux 0-1 = (Présents + Retards) / lignes d'appel." }
 
     AttendanceReport:
       type: object

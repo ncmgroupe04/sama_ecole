@@ -293,8 +293,20 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/attendance` | Enregistrer une absence. `422` si la date est un jour de repos de l'établissement (`workingDays`, Évolution N°3) |
+| `POST` | `/api/v1/attendance` | Enregistrer une absence. `422` si la date est un jour de repos de l'établissement (`workingDays`, Évolution N°3). Avec `scheduleSlotId` (Évolution N°5), l'appel porte sur un cours de l'emploi du temps et la période est **dérivée** du cours |
 | `GET` | `/api/v1/attendance/report` | Rapport d'absences |
+| `GET` | `/api/v1/attendance/roster` | Feuille d'appel. `scheduleSlotId` facultatif (Évolution N°5) ; sans lui, `period` reste obligatoire (appel libre). Un billet d'entrée actif présélectionne l'élève en `Late` |
+| `GET` | `/api/v1/attendance/slots?classroomId&date` | Cours de la classe ce jour-là (Évolution N°5). Un Enseignant ne reçoit que **ses** cours ; jour de repos → liste vide |
+| `GET` | `/api/v1/absences/today-slots?studentId&date` | Cours du jour de la classe d'un élève, cours en cours / suivant signalés — sélecteur du cours visé par un billet d'entrée (SuperAdmin, Directeur, Surveillant) |
+| `POST` | `/api/v1/absences/late-arrivals` | Retard. `targetScheduleSlotId` facultatif : émet un billet d'entrée visant ce cours (`Issued`). `409` si un billet actif existe déjà pour (élève, cours, jour) ; minutes ≤ 240 avec un cours visé |
+| `POST` | `/api/v1/billets/{id}/accept` | L'enseignant **titulaire** du cours visé, ou le Directeur, accepte l'élève en classe. Idempotent ; `403` autre enseignant ; `422` billet annulé ou sans cours visé |
+| `POST` | `/api/v1/billets/{id}/cancel` | Surveillant ou Directeur annule un billet non accepté ; la ligne d'appel retrouve son statut d'avant. `422` si déjà accepté |
+| `GET` | `/api/v1/reports/attendance/by-subject` | Rapport d'assiduité par matière : séances appelées et répartition des statuts (Directeur, Secrétariat, SuperAdmin) |
+
+> **Évolution N°5 — ce qui n'a pas changé.** Sans `scheduleSlotId`, `POST /attendance` et la feuille d'appel se
+> comportent exactement comme avant (appel libre). Le rapport `GET /reports/attendance` gagne, en fin de ligne,
+> `daysRecorded`, `fullAbsenceDays` et `partialAbsenceDays` — des **compteurs calculés**, pas de nouveaux statuts —
+> et son taux de présence reste `(Présents + Retards) / lignes d'appel`. Détail des schémas : `openapi.yaml`.
 
 ## 11. API Paramètres
 

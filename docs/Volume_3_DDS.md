@@ -159,6 +159,15 @@ l'appel des élèves, le pointage des enseignants et les créneaux d'emploi du t
 
 Le coefficient EFFECTIF d'une matière pour un élève et une année est : surcharge de la classe de son inscription de l'année, sinon surcharge de la série de cette classe, sinon `Subjects.Coefficient` (`SubjectCoefficients.Resolve`). Primaire et Maternelle : toujours 1, quoi qu'il y ait en base.
 
+**Appel par cours et billets d'entrée (Évolution N°5).** Colonnes ajoutées, aucune table nouvelle, aucune migration de données (migration `AddAttendanceSlotAndEntryTicketWorkflow`) :
+
+- `attendance_sheets.ScheduleSlotId` — `uuid`, nullable, index. Le cours appelé ; null pour un appel libre. `Period` en est **dérivée** (« 08:00-10:00 ») : l'index unique existant `(SchoolId, ClassroomId, SubjectId, Date, Period)` continue de porter l'unicité d'une séance.
+- `student_attendances.EntryTicketId` — `uuid`, nullable, index. Le billet qui a fixé cette ligne en retard.
+- `LateArrivals` — devient le **billet d'entrée** : `TargetScheduleSlotId` (`uuid`, nullable, le cours visé), `Status` (`varchar`, nullable : `Issued` / `Accepted` / `Cancelled` ; **null = retard sans cours visé**, donc tout l'historique existant), `AcceptedByUserId` / `AcceptedAt`, `CancelledByUserId` / `CancelledAt`, `PreviousStatus` / `PreviousLateMinutes` (le statut de la ligne d'appel avant le billet, pour l'annulation). La date du billet est `LateArrivals.Date`, déjà une colonne `date`.
+- Index unique **partiel** `UX_LateArrivals_ActiveTicket` sur `(StudentId, TargetScheduleSlotId, Date)` `WHERE "Status" IN ('Issued', 'Accepted') AND NOT "IsDeleted"` : au plus un billet actif par élève, cours et jour ; un billet annulé libère la clé.
+
+Les FK composites, la RLS et le Global Query Filter des trois tables sont inchangés (elles portent déjà `SchoolId`). Aucun statut d'appel n'est ajouté : l'absence complète ou partielle d'une journée est un **calcul** (`DayAttendanceClassifier`), jamais une colonne.
+
 ### 4.5 Domaine Finance
 
 `FeeCategories`, `SchoolFees`, `FeeChangeHistory`, `Payments`, `PaymentDetails`, `Receipts`, `ExpenseCategories`, `Expenses`, `ExpenseAttachments`, `FinancialReports`, `EmployeeContracts`, `EmployeeContractHistories`, `FichePaies`, `TeacherHourRecords` (contrats, paie et vacations, Volume 1 §14 — *ajout au catalogue, gap corrigé ici : ces tables existent en base depuis les migrations `AddEmployeeContractLifecycle`/`AddPayrollAndTax`/`AddDocumentsModuleEntities` mais n'y figuraient pas*).
