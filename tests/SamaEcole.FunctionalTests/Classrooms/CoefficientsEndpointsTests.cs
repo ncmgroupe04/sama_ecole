@@ -61,14 +61,16 @@ public class CoefficientsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
             new { label = "2026-2027", startDate = "2026-09-01", endDate = "2027-06-30" });
         year.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var classroom = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeur,
-            new { name = "Terminale S2 A", level = "Lycée", capacity = 40, series = "s2" });
-        classroom.StatusCode.Should().Be(HttpStatusCode.Created);
-
+        // Matières AVANT la classe : une classe de série crée les matières de son modèle qui manquent
+        // (Évolution N°6) ; créées d'abord, elles sont reprises telles quelles par la classe.
         var maths = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeur,
             new { name = "Mathématiques", level = "Lycée", coefficient = 4 });
         var francais = await SendAsync(HttpMethod.Post, "/api/v1/subjects", directeur,
             new { name = "Français", level = "Lycée", coefficient = 2 });
+
+        var classroom = await SendAsync(HttpMethod.Post, "/api/v1/classrooms", directeur,
+            new { name = "Terminale S2 A", level = "Lycée", capacity = 40, series = "s2" });
+        classroom.StatusCode.Should().Be(HttpStatusCode.Created);
 
         return (
             (await classroom.Content.ReadFromJsonAsync<ClassroomCreated>())!,
@@ -195,7 +197,7 @@ public class CoefficientsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncL
         var grid = (await (await SendAsync(HttpMethod.Get, "/api/v1/coefficients?series=S2", directeur))
             .Content.ReadFromJsonAsync<Grid>())!;
         grid.Rows.Single(r => r.SubjectId == maths).EffectiveCoefficient.Should().Be(5m, "Maths = 5 en S2");
-        grid.Rows.Single(r => r.SubjectId == francais).EffectiveCoefficient.Should().Be(2m, "Français = 2 en S2");
+        grid.Rows.Single(r => r.SubjectId == francais).EffectiveCoefficient.Should().Be(3m, "Français = 3 en S2 (référentiel du Baccalauréat)");
         grid.Rows.Should().OnlyContain(r => r.BaseCoefficient > 0);
     }
 
