@@ -1,6 +1,7 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 using SamaEcole.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,10 @@ internal static class EvaluationStructureBuilder
     /// <paramref name="gradingScale"/> sert de barème de repli aux lignes qui ne fixent pas le leur, et
     /// <paramref name="mentionsOnReferenceScale"/> porte les mentions de l'école (/20) dont découle
     /// l'appréciation de chaque ligne, calculée sur son pourcentage de réussite.
+    ///
+    /// <paramref name="exemptions"/> : une option NON SUIVIE disparaît de la grille (même sans note — la
+    /// grille imprime toutes les lignes du niveau) ; une matière OBLIGATOIRE dispensée y reste, marquée
+    /// <see cref="EvaluationLineDto.IsExempt"/>.
     /// </summary>
     public static async Task<EvaluationStructureDto?> BuildAsync(
         IApplicationDbContext dbContext,
@@ -43,6 +48,7 @@ internal static class EvaluationStructureBuilder
         int gradingScale,
         IReadOnlyList<SubjectGradeDto> gradedSubjects,
         IReadOnlyList<(string Label, decimal MinAverage)> mentionsOnReferenceScale,
+        StudentExemptions exemptions,
         CancellationToken cancellationToken)
     {
         // Toutes les matières de l'école (quelques dizaines au plus), filtrées EN MÉMOIRE sur le niveau :
@@ -53,8 +59,12 @@ internal static class EvaluationStructureBuilder
                 s.Id, s.Name, s.Level, s.ParentSubjectId, s.MaxScore, s.DisplayOrder, s.Column1Header, s.Column2Header))
             .ToListAsync(cancellationToken);
 
+        var hiddenIds = exemptions.HiddenIds;
+        var markedIds = exemptions.MandatoryIds;
+
         var levelSubjects = all
-            .Where(s => string.Equals(s.Level.Trim(), classroomLevel.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(s => string.Equals(s.Level.Trim(), classroomLevel.Trim(), StringComparison.OrdinalIgnoreCase)
+                        && !hiddenIds.Contains(s.Id))
             .ToList();
 
         // Aucune hiérarchie déclarée à ce niveau : rien à composer, le bulletin garde ses tableaux d'origine.
@@ -82,9 +92,9 @@ internal static class EvaluationStructureBuilder
             // la rétrocompatibilité demandée pour les matières simples d'une grille par ailleurs
             // hiérarchique. Label null signale au document qu'il n'y a pas de seconde colonne à remplir.
             var lines = children is null or { Count: 0 }
-                ? [BuildLine(root, label: null, scoresBySubject, gradingScale, mentionsOnReferenceScale)]
+                ? [BuildLine(root, label: null, scoresBySubject, markedIds, gradingScale, mentionsOnReferenceScale)]
                 : children.ConvertAll(child =>
-                    BuildLine(child, child.Name, scoresBySubject, gradingScale, mentionsOnReferenceScale));
+                    BuildLine(child, child.Name, scoresBySubject, markedIds, gradingScale, mentionsOnReferenceScale));
 
             groups.Add(new EvaluationGroupDto(root.Id, root.Name, lines));
         }
@@ -103,7 +113,7 @@ internal static class EvaluationStructureBuilder
             groups.Add(new EvaluationGroupDto(
                 orphan.Id,
                 orphan.Name,
-                [BuildLine(orphan, label: null, scoresBySubject, gradingScale, mentionsOnReferenceScale)]));
+                [BuildLine(orphan, label: null, scoresBySubject, markedIds, gradingScale, mentionsOnReferenceScale)]));
         }
 
         // Les entêtes qualifient la GRILLE : on retient ceux du premier domaine qui en déclare, dans
@@ -126,6 +136,7 @@ internal static class EvaluationStructureBuilder
         StructureRow subject,
         string? label,
         IReadOnlyDictionary<Guid, decimal> scoresBySubject,
+        IReadOnlySet<Guid> markedIds,
         int gradingScale,
         IReadOnlyList<(string Label, decimal MinAverage)> mentionsOnReferenceScale)
     {
@@ -138,7 +149,8 @@ internal static class EvaluationStructureBuilder
             label,
             score,
             maxScore,
-            GradeCalculator.AppreciationFor(score, maxScore, mentionsOnReferenceScale));
+            GradeCalculator.AppreciationFor(score, maxScore, mentionsOnReferenceScale),
+            markedIds.Contains(subject.Id));
     }
 
     /// <summary>Projection minimale d'une <see cref="Subject"/> — seuls les champs de structure sont lus.</summary>

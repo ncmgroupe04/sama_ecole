@@ -2,6 +2,7 @@ using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -389,6 +390,21 @@ public class GetStudentDetailQueryHandler(
                 g.Value
             })
             .ToListAsync(cancellationToken);
+
+        // Matières optionnelles et dispenses : même filtre que GetGradeSummaryQueryHandler, année par année
+        // (la dispense est portée par l'inscription de l'année) — la fiche ne contredit jamais le bulletin.
+        // Filtré AVANT le contrôle « aucune note » ci-dessous : un trimestre dont toutes les notes sont masquées
+        // ne doit pas laisser un bloc fantôme sans matière.
+        var exemptionsByYear = new Dictionary<Guid, StudentExemptions>();
+        foreach (var yearId in gradeRows.Select(r => r.SchoolYearId).Distinct())
+        {
+            exemptionsByYear[yearId] = await SubjectExemptions.ForStudentAsync(
+                dbContext, studentId, yearId, cancellationToken);
+        }
+
+        gradeRows = gradeRows
+            .Where(r => !exemptionsByYear[r.SchoolYearId].Contains(r.SubjectId))
+            .ToList();
 
         // Aucune note : liste vide, l'onglet Notes affichera son empty-state. Pas d'objet fantôme.
         if (gradeRows.Count == 0)

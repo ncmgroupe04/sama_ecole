@@ -1,5 +1,6 @@
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +49,13 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext, Coeffi
             ? CoefficientOverrides.None
             : await overrideLoader.LoadAsync(request.StudentId, schoolYearId, cancellationToken);
 
+        // Matières optionnelles et dispenses : les matières dont l'élève est dispensé cette année sortent du
+        // calcul. Leurs notes restent en base (règle #6) mais n'entrent ni dans le total des coefficients ni
+        // dans celui des points — d'où « 22 au lieu de 25 ». Sans dispense l'ensemble est vide : calcul
+        // strictement d'avant.
+        var exemptions = await SubjectExemptions.ForStudentAsync(
+            dbContext, request.StudentId, schoolYearId, cancellationToken);
+
         var rows = await (
             from g in dbContext.Grades.AsNoTracking()
             join s in dbContext.Subjects.AsNoTracking() on g.SubjectId equals s.Id
@@ -73,6 +81,7 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext, Coeffi
         // Formule PARTAGÉE avec GetStudentDetailQueryHandler (JGK-D02) via GradeCalculator — une seule
         // source de vérité pour la moyenne d'une matière et la moyenne générale pondérée.
         var subjects = rows
+            .Where(r => !exemptions.Contains(r.SubjectId))
             .GroupBy(r => new { r.SubjectId, r.Name, r.Coefficient, r.MaxScore, r.ParentSubjectId, r.ParentName })
             .Select(g =>
             {
@@ -134,7 +143,16 @@ public class GetGradeSummaryQueryHandler(IApplicationDbContext dbContext, Coeffi
             mention = GradeCalculator.MentionFor(generalAverage, scale);
         }
 
+        // Les matières OBLIGATOIRES dispensées, pour que le bulletin les marque. Coefficient effectif comme
+        // pour les lignes notées ; neutralisé à 1 au primaire (qui n'a pas de coefficients).
+        var exemptSubjects = exemptions.Mandatory
+            .Select(m => new ExemptSubjectDto(
+                m.SubjectId, m.Name, isPrimaire ? 1m : overrides.Effective(m.SubjectId, m.Coefficient)))
+            .OrderBy(m => m.SubjectName)
+            .ToList();
+
         return new GradeSummaryDto(
-            request.StudentId, request.TermId, subjects, totalCoefficients, totalPoints, generalAverage, mention);
+            request.StudentId, request.TermId, subjects, totalCoefficients, totalPoints, generalAverage, mention,
+            exemptSubjects);
     }
 }

@@ -2,6 +2,7 @@ using SamaEcole.Application.Classrooms;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using MediatR;
@@ -35,7 +36,9 @@ public record ReportCardTermRecap(string TermLabel, int Order, decimal? Average)
 /// <see cref="Score"/> est null tant que rien n'est noté — la case s'imprime vide, comme sur les grilles
 /// vierges distribuées aux enseignants, jamais un zéro qui vaudrait échec.
 /// </summary>
-public record EvaluationLineDto(Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation);
+/// <c>IsExempt</c> : matière obligatoire dont l'élève est dispensé — la ligne reste dans la grille, le document y imprime « Dispensé(e) » au lieu de la note.
+public record EvaluationLineDto(
+    Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation, bool IsExempt = false);
 
 /// <summary>
 /// Un DOMAINE et ses lignes : la première colonne du tableau porte <see cref="Name"/> une seule fois,
@@ -333,8 +336,13 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         // bulletin reprend alors ses tableaux d'origine. Les appréciations de ses lignes se calculent
         // sur le POURCENTAGE de réussite, avec les mentions de l'école telles qu'elles sont stockées
         // (/20) — pas les seuils transposés ci-dessus, qui supposent une note déjà sur gradingScale.
+        // Matières optionnelles et dispenses : la grille APC n'imprime pas l'option non suivie et marque la
+        // matière obligatoire dispensée (sa note, si elle existe, est déjà retirée du sommaire).
+        var exemptions = await SubjectExemptions.ForStudentAsync(
+            dbContext, student.Id, term.SchoolYearId, cancellationToken);
+
         var evaluationStructure = await EvaluationStructureBuilder.BuildAsync(
-            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, cancellationToken);
+            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptions, cancellationToken);
 
         var (absences, retards, totalAbsences) = await CountAttendanceAsync(
             student.Id, student.ClassroomId, term, cancellationToken);

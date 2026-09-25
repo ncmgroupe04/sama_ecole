@@ -4,6 +4,7 @@ using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Application.ReportCards;
 using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
 
@@ -59,7 +60,7 @@ public class GetSkillsBookletPdfQueryHandler(
         var terms = await dbContext.Terms.AsNoTracking()
             .Where(t => t.SchoolYearId == request.SchoolYearId)
             .OrderBy(t => t.Order)
-            .Select(t => new { t.Id, t.Label })
+            .Select(t => new { t.Id, t.Label, t.SchoolYearId })
             .ToListAsync(cancellationToken);
 
         if (terms.Count == 0)
@@ -81,8 +82,11 @@ public class GetSkillsBookletPdfQueryHandler(
             var summary = await mediator.Send(
                 new GetGradeSummaryQuery(student.Id, term.Id), cancellationToken);
 
+            var exemptions = await SubjectExemptions.ForStudentAsync(
+                dbContext, student.Id, term.SchoolYearId, cancellationToken);
+
             structurePerTerm.Add(await EvaluationStructureBuilder.BuildAsync(
-                dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, cancellationToken));
+                dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptions, cancellationToken));
         }
 
         var canonical = structurePerTerm.FirstOrDefault(s => s is not null)
