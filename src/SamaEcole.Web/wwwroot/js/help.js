@@ -2248,8 +2248,8 @@
                     roles: ['Enseignant', 'Directeur', 'Secrétariat'],
                     definition:
                         "L'appel constate, pour une classe et un COURS de son emploi du temps, le statut de " +
-                        "chaque élève inscrit : Présent, Absence justifiée, Absence injustifiée, ou Retard " +
-                        "— ce dernier accompagné du nombre de minutes. La journée d'un élève se compose ainsi " +
+                        "chaque élève inscrit : Présent, Absence justifiée, Absence injustifiée. " +
+                        "Le retard ne se saisit pas ici : il vient d'un billet d'entrée émis par la Surveillance. La journée d'un élève se compose ainsi " +
                         "de plusieurs appels, un par cours. Un enseignant ne voit et ne renseigne que ses " +
                         "propres cours ; sans emploi du temps ce jour-là, l'appel libre par demi-journée reste possible.",
                     objectif:
@@ -2264,8 +2264,8 @@
                     procedure: [
                         "Ouvrez Surveillance › Appel en classe, choisissez la classe et la date : les cours de la journée s'affichent, tirés de l'emploi du temps.",
                         "Cliquez sur le cours à appeler : la matière et l'horaire (08:00-10:00) sont repris du cours, rien à saisir. Un cours déjà appelé est signalé « Appel fait ».",
-                        "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent. Un élève muni d'un billet d'entrée pour CE cours apparaît déjà en Retard, avec la mention du billet.",
-                        "Modifiez le statut de chaque élève concerné : Absence justifiée, Absence injustifiée, ou Retard — en précisant alors le nombre de minutes.",
+                        "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent. Un élève muni d'un billet d'entrée pour CE cours apparaît déjà en Retard, en lecture seule, avec la mention du billet.",
+                        "Modifiez le statut de chaque élève concerné : Absence justifiée ou Absence injustifiée. Aucun champ de minutes : un élève arrivé en retard se régularise par un billet d'entrée, pas par l'appel.",
                         "Si un élève présente un billet d'entrée en attente, cliquez sur « Accepter » : l'enseignant du cours constate ainsi que l'élève est bien entré en classe.",
                         "Validez l'appel. La fiche est enregistrée avec son auteur et son horodatage.",
                         "Un appel déjà soumis reste consultable par la Direction et le Secrétariat, mais ne se ressaisit pas pour le même cours : une correction passe par le rapport d'assiduité, non par un second appel.",

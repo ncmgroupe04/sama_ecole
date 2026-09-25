@@ -94,6 +94,18 @@ public class SubmitAttendanceSheetCommandHandler(
             ]);
         }
 
+        // Complément N°5 bis (C8/C9) : un retard n'a plus d'autre source qu'un BILLET D'ENTRÉE. L'enseignant pointe
+        // présence ou absence ; une ligne « Retard » n'est acceptée que si un billet actif la porte (feuille
+        // présélectionnée par le billet, renvoyée telle quelle). En mode libre aucun billet ne peut être rattaché :
+        // tout « Retard » y est donc refusé. Les retards déjà en base (historique) ne passent pas par ici.
+        if (request.Entries.Any(e => e.Status == AttendanceStatus.Late && !ticketByStudent.ContainsKey(e.StudentId)))
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(request.Entries),
+                    "Le retard s'enregistre par un billet d'entrée (Surveillance › Billets d'entrée) : marquez l'élève présent ou absent.")
+            ]);
+        }
+
         // Écriture de la fiche ET des lignes élève dans UNE transaction : soit l'appel entier est
         // enregistré, soit rien. Une violation de l'index unique (classe, matière, date, créneau)
         // remonte en 409 via SaveChangesAsync (AGENTS.md règle #5), jamais un doublon silencieux.
