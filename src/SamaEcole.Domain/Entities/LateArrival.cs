@@ -37,4 +37,22 @@ public class LateArrival : AuditableEntity, ITenantEntity
     /// </summary>
     public AttendanceStatus? PreviousStatus { get; set; }
     public int? PreviousLateMinutes { get; set; }
+
+    // ---- Billet par heure d'arrivée (Complément N°5 bis) ---------------------------------------------------
+    // Nullables : un billet saisi à l'ancienne (minutes à la main) les laisse vides et se comporte comme avant.
+
+    /// <summary>Heure d'arrivée réelle de l'élève, saisie par la Vie Scolaire. Le reste en est DÉDUIT à l'émission.</summary>
+    public TimeOnly? ArrivalTime { get; set; }
+
+    /// <summary>
+    /// Durée totale régularisée (cours manqués + retard), calculée à l'ÉMISSION et conservée : modifier l'emploi du
+    /// temps plus tard ne réécrit pas un billet déjà imprimé.
+    /// </summary>
+    public int? TotalMinutes { get; set; }
+
+    /// <summary>
+    /// Cours entièrement manqués avant l'arrivée (instantané, même raison). Le retard éventuel, lui, porte sur
+    /// <see cref="TargetScheduleSlotId"/> ; <see cref="Minutes"/> vaut alors les seules minutes de retard (0 possible).
+    /// </summary>
+    public Guid[]? MissedScheduleSlotIds { get; set; }
 }

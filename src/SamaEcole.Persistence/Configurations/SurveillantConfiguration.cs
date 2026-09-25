@@ -44,6 +44,10 @@ public class LateArrivalConfiguration : IEntityTypeConfiguration<LateArrival>
         // actifs), EF le jugerait sinon redondant et retirerait l'index de la clé étrangère.
         builder.HasIndex(e => e.StudentId);
 
+        // Billet par heure d'arrivée (Complément N°5 bis) : colonnes nullables uniquement, sans table ni FK —
+        // ce sont des instantanés du calcul d'émission. TimeOnly → time, Guid[] → uuid[] (Npgsql).
+        builder.Property(e => e.ArrivalTime).HasColumnType("time without time zone");
+
         // Statut en TEXTE, nullable et SANS valeur par défaut : null = billet sans cours visé, c'est l'état de
         // tout billet existant (aucune migration de données).
         builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);

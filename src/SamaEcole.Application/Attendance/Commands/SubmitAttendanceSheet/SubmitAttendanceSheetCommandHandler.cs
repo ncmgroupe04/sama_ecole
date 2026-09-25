@@ -69,13 +69,16 @@ public class SubmitAttendanceSheetCommandHandler(
         if (resolved.SlotId is { } ticketSlotId)
         {
             var day = request.Date.ToDateTime(TimeOnly.MinValue);
+            // Complément N°5 bis : un billet touche ce cours soit qu'il le VISE, soit qu'il l'ait fait MANQUER.
             ticketByStudent = (await dbContext.LateArrivals.AsNoTracking()
-                    .Where(l => l.TargetScheduleSlotId == ticketSlotId
-                                && l.Date == day
-                                && (l.Status == EntryTicketStatus.Issued || l.Status == EntryTicketStatus.Accepted))
-                    .Select(l => new { l.StudentId, l.Id })
+                    .Where(l => l.Date == day
+                                && (l.Status == EntryTicketStatus.Issued || l.Status == EntryTicketStatus.Accepted)
+                                && (l.TargetScheduleSlotId == ticketSlotId
+                                    || (l.MissedScheduleSlotIds != null && l.MissedScheduleSlotIds.Contains(ticketSlotId))))
+                    .Select(l => new { l.StudentId, l.Id, Missed = l.TargetScheduleSlotId != ticketSlotId })
                     .ToListAsync(cancellationToken))
-                .ToDictionary(t => t.StudentId, t => t.Id);
+                .GroupBy(t => t.StudentId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(t => t.Missed).First().Id);
         }
 
         // Tous les élèves de l'appel doivent appartenir à CETTE classe : un statut posé sur un élève

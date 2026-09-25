@@ -127,7 +127,7 @@ public class EntryTicketDtoTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(EcoleA);
         return await new CreateLateArrivalCommandHandler(
-                db, new StubTenant(EcoleA), new NoOpPublisher(), new EntryTicketRegister(db), new WorkingDayGuard(db))
+                db, new StubTenant(EcoleA), new NoOpPublisher(), new EntryTicketRegister(db), new WorkingDayGuard(db), new ArrivalPlanner(db, new WorkingDayGuard(db)))
             .Handle(new CreateLateArrivalCommand
             {
                 StudentId = Awa, Date = Samedi.ToDateTime(TimeOnly.MinValue), Minutes = 10, Reason = "Transport",
