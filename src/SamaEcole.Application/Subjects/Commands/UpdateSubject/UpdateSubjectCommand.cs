@@ -30,7 +30,9 @@ public record UpdateSubjectCommand(
     string? Column2Header = null,
 
     /// <summary>Nom en arabe (module Coran/Franco-Arabe), saisi librement — null si non renseigné.</summary>
-    string? NameAr = null)
+    string? NameAr = null,
+    bool IsOptional = false,
+    string? OptionGroup = null)
     : IRequest<UpdateSubjectResult>;
 
 public record UpdateSubjectResult(
@@ -42,4 +44,6 @@ public record UpdateSubjectResult(
     Guid? ParentSubjectId = null,
     decimal? MaxScore = null,
     int DisplayOrder = 0,
-    string? NameAr = null);
+    string? NameAr = null,
+    bool IsOptional = false,
+    string? OptionGroup = null);

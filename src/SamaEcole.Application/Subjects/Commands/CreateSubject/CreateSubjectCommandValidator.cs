@@ -30,5 +30,17 @@ public class CreateSubjectCommandValidator : AbstractValidator<CreateSubjectComm
 
         RuleFor(x => x.Column1Header).MaximumLength(40).NoHtml();
         RuleFor(x => x.Column2Header).MaximumLength(40).NoHtml();
+
+        // Matières optionnelles : forme uniquement. « Ni domaine ni activité » — le refus d'une matière qui
+        // PORTE déjà des activités dépend de la base, donc de UpdateSubjectCommandHandler.
+        RuleFor(x => x.OptionGroup).MaximumLength(50).NoHtml();
+
+        RuleFor(x => x.OptionGroup)
+            .Must((command, group) => command.IsOptional || string.IsNullOrWhiteSpace(group))
+            .WithMessage("Un groupe d'options n'a de sens que pour une matière optionnelle.");
+
+        RuleFor(x => x.IsOptional)
+            .Must((command, isOptional) => !isOptional || command.ParentSubjectId is null)
+            .WithMessage("Une activité d'un domaine d'évaluation ne peut pas être une matière optionnelle.");
     }
 }

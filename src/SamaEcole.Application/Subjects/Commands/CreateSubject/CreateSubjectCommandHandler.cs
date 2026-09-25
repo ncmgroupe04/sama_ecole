@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.OptionalSubjects;
 using SamaEcole.Domain.Entities;
 using MediatR;
 
@@ -29,6 +30,8 @@ public class CreateSubjectCommandHandler(
             ParentSubjectId = request.ParentSubjectId,
             MaxScore = request.MaxScore,
             DisplayOrder = request.DisplayOrder,
+            IsOptional = request.IsOptional,
+            OptionGroup = request.IsOptional ? OptionSelectionRules.NormalizeGroup(request.OptionGroup) : null,
 
             // Les entêtes de colonnes qualifient la GRILLE, pas une ligne : une activité n'en porte
             // aucun, même si le client en envoie — sans quoi deux lignes du même tableau pourraient
@@ -46,7 +49,8 @@ public class CreateSubjectCommandHandler(
 
         return new SubjectResult(
             subject.Id, subject.Name, subject.Level, subject.Coefficient,
-            subject.ParentSubjectId, subject.MaxScore, subject.DisplayOrder, subject.NameAr);
+            subject.ParentSubjectId, subject.MaxScore, subject.DisplayOrder, subject.NameAr,
+            subject.IsOptional, subject.OptionGroup);
     }
 
     /// <summary>Entête vide ou blanche = « pas d'entête personnalisé » (null), jamais une chaîne vide stockée.</summary>

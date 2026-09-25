@@ -38,6 +38,12 @@ public record CreateSubjectCommand : IRequest<SubjectResult>
 
     /// <summary>Entête de la 2e colonne du bulletin (« Activités », « Contrôles »). Domaines parents uniquement.</summary>
     public string? Column2Header { get; init; }
+
+    /// <summary>Matière au choix : un élève peut en être dispensé (LV2, option scientifique). Faux par défaut.</summary>
+    public bool IsOptional { get; init; }
+
+    /// <summary>Groupe d'exclusion des options (« LV2 »). Significatif seulement si <see cref="IsOptional"/>.</summary>
+    public string? OptionGroup { get; init; }
 }
 
 public record SubjectResult(
@@ -48,4 +54,6 @@ public record SubjectResult(
     Guid? ParentSubjectId = null,
     decimal? MaxScore = null,
     int DisplayOrder = 0,
-    string? NameAr = null);
+    string? NameAr = null,
+    bool IsOptional = false,
+    string? OptionGroup = null);

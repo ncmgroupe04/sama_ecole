@@ -35,4 +35,6 @@ public record SubjectDto(
     string? Column2Header = null,
 
     /// <summary>Nom en arabe (module Coran/Franco-Arabe) — null tant que non saisi.</summary>
-    string? NameAr = null);
+    string? NameAr = null,
+    bool IsOptional = false,
+    string? OptionGroup = null);

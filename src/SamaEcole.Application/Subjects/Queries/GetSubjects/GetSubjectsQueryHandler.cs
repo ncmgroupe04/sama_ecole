@@ -20,7 +20,8 @@ public class GetSubjectsQueryHandler(IApplicationDbContext dbContext)
             .OrderBy(s => s.Level).ThenBy(s => s.DisplayOrder).ThenBy(s => s.Name)
             .Select(s => new SubjectDto(
                 s.Id, s.Name, s.Level, s.Coefficient, EF.Property<uint>(s, "xmin"),
-                s.ParentSubjectId, s.MaxScore, s.DisplayOrder, s.Column1Header, s.Column2Header, s.NameAr))
+                s.ParentSubjectId, s.MaxScore, s.DisplayOrder, s.Column1Header, s.Column2Header, s.NameAr,
+                s.IsOptional, s.OptionGroup))
             .ToListAsync(cancellationToken);
     }
 }

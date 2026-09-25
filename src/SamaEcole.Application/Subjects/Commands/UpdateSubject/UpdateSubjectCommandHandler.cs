@@ -1,4 +1,6 @@
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.OptionalSubjects;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +27,16 @@ public class UpdateSubjectCommandHandler(IApplicationDbContext dbContext)
         var level = await SubjectHierarchyGuard.ResolveLevelForParentAsync(
             dbContext, request.ParentSubjectId, subject.Id, request.Level.Trim(), cancellationToken);
 
+        // Une matière qui PORTE des activités est un domaine d'évaluation : jamais optionnelle (le
+        // validateur ne voit que la forme de la requête, pas la base).
+        if (request.IsOptional && await dbContext.Subjects.AnyAsync(s => s.ParentSubjectId == subject.Id, cancellationToken))
+        {
+            throw new ValidationException([
+                new FluentValidation.Results.ValidationFailure(nameof(request.IsOptional),
+                    "Ce domaine d'évaluation porte des activités : il ne peut pas être une matière optionnelle.")
+            ]);
+        }
+
         // Cœur du verrou optimiste (AGENTS.md règle #5). Une violation de l'index unique
         // (SchoolId, Level, ParentSubjectId, Name, IsDeleted) — un même (niveau, domaine, nom) déjà
         // pris — est traduite au même endroit par SaveChangesAsync.
@@ -39,6 +51,8 @@ public class UpdateSubjectCommandHandler(IApplicationDbContext dbContext)
         subject.ParentSubjectId = request.ParentSubjectId;
         subject.MaxScore = request.MaxScore;
         subject.DisplayOrder = request.DisplayOrder;
+        subject.IsOptional = request.IsOptional;
+        subject.OptionGroup = request.IsOptional ? OptionSelectionRules.NormalizeGroup(request.OptionGroup) : null;
 
         // Les entêtes de colonnes qualifient la GRILLE, pas une ligne : une activité n'en porte aucun
         // (même règle qu'à la création).
@@ -70,7 +84,8 @@ public class UpdateSubjectCommandHandler(IApplicationDbContext dbContext)
 
         return new UpdateSubjectResult(
             subject.Id, subject.Name, subject.Level, subject.Coefficient, newRowVersion,
-            subject.ParentSubjectId, subject.MaxScore, subject.DisplayOrder, subject.NameAr);
+            subject.ParentSubjectId, subject.MaxScore, subject.DisplayOrder, subject.NameAr,
+            subject.IsOptional, subject.OptionGroup);
     }
 
     /// <summary>Entête vide ou blanche = « pas d'entête personnalisé » (null), jamais une chaîne vide stockée.</summary>
