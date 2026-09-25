@@ -59,6 +59,7 @@ public class ApplicationDbContext(
     public DbSet<SubjectCoefficientOverride> SubjectCoefficientOverrides => Set<SubjectCoefficientOverride>();
     public DbSet<ClassSubject> ClassSubjects => Set<ClassSubject>();
     public DbSet<StudentSubjectEnrollment> StudentSubjectEnrollments => Set<StudentSubjectEnrollment>();
+    public DbSet<StudentSubjectExemption> StudentSubjectExemptions => Set<StudentSubjectExemption>();
     public DbSet<GradeAgeNorm> GradeAgeNorms => Set<GradeAgeNorm>();
     public DbSet<SyllabusUnit> SyllabusUnits => Set<SyllabusUnit>();
     public DbSet<ClassJournalEntryUnit> ClassJournalEntryUnits => Set<ClassJournalEntryUnit>();
