@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Exemptions;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.ReportCards;
@@ -81,8 +82,16 @@ public class GetSkillsBookletPdfQueryHandler(
             var summary = await mediator.Send(
                 new GetGradeSummaryQuery(student.Id, term.Id), cancellationToken);
 
+            // Le livret ignore le marquage « dispensé » (IsExempt) : la structure est demandée avec l'ensemble des
+            // matières dispensées de l'année pour rester celle du bulletin, sans que le livret l'imprime.
+            var exemptSubjectIds = (await ExemptionQueries.ForStudentAsync(
+                    dbContext, student.Id, request.SchoolYearId, cancellationToken))
+                .Select(e => e.SubjectId)
+                .ToHashSet();
+
             structurePerTerm.Add(await EvaluationStructureBuilder.BuildAsync(
-                dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, cancellationToken));
+                dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptSubjectIds,
+                cancellationToken));
         }
 
         var canonical = structurePerTerm.FirstOrDefault(s => s is not null)

@@ -145,7 +145,16 @@ public class GetGradeSummaryQueryHandler(
             mention = GradeCalculator.MentionFor(generalAverage, scale);
         }
 
+        // Matières obligatoires dispensées : déjà retirées du calcul par SubjectFollowScope ; on les remonte pour que le
+        // bulletin les marque. Coefficient effectif comme pour les lignes notées ; neutralisé à 1 au primaire.
+        var exemptSubjects = (await followScope.ExemptionsAsync(request.StudentId, schoolYearId, cancellationToken))
+            .Select(e => new ExemptSubjectDto(
+                e.SubjectId, e.Name, isPrimaire ? 1m : overrides.Effective(e.SubjectId, e.Coefficient)))
+            .OrderBy(e => e.SubjectName)
+            .ToList();
+
         return new GradeSummaryDto(
-            request.StudentId, request.TermId, subjects, totalCoefficients, totalPoints, generalAverage, mention);
+            request.StudentId, request.TermId, subjects, totalCoefficients, totalPoints, generalAverage, mention,
+            exemptSubjects);
     }
 }

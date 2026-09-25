@@ -1,5 +1,6 @@
 using SamaEcole.Application.Classrooms;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Exemptions;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Domain.Entities;
@@ -34,8 +35,11 @@ public record ReportCardTermRecap(string TermLabel, int Order, decimal? Average)
 /// qui en compte par ailleurs) : son nom occupe alors les DEUX premières colonnes, sans regroupement.
 /// <see cref="Score"/> est null tant que rien n'est noté — la case s'imprime vide, comme sur les grilles
 /// vierges distribuées aux enseignants, jamais un zéro qui vaudrait échec.
+/// <see cref="IsExempt"/> marque la matière dont l'élève est dispensé : la ligne reste dans la grille, le document
+/// y imprime « Dispensé(e) » à la place de la note.
 /// </summary>
-public record EvaluationLineDto(Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation);
+public record EvaluationLineDto(
+    Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation, bool IsExempt = false);
 
 /// <summary>
 /// Un DOMAINE et ses lignes : la première colonne du tableau porte <see cref="Name"/> une seule fois,
@@ -342,8 +346,15 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         // bulletin reprend alors ses tableaux d'origine. Les appréciations de ses lignes se calculent
         // sur le POURCENTAGE de réussite, avec les mentions de l'école telles qu'elles sont stockées
         // (/20) — pas les seuils transposés ci-dessus, qui supposent une note déjà sur gradingScale.
+        // Les matières dispensées gardent leur ligne dans la grille, marquées (jamais retirées : le bulletin imprime
+        // la grille ENTIÈRE).
+        var exemptSubjectIds = (await ExemptionQueries.ForStudentAsync(
+                dbContext, student.Id, term.SchoolYearId, cancellationToken))
+            .Select(e => e.SubjectId)
+            .ToHashSet();
+
         var evaluationStructure = await EvaluationStructureBuilder.BuildAsync(
-            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, cancellationToken);
+            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptSubjectIds, cancellationToken);
 
         var (absences, retards, totalAbsences) = await CountAttendanceAsync(
             student.Id, student.ClassroomId, term, cancellationToken);

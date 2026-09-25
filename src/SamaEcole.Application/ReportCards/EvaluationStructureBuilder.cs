@@ -43,6 +43,7 @@ internal static class EvaluationStructureBuilder
         int gradingScale,
         IReadOnlyList<SubjectGradeDto> gradedSubjects,
         IReadOnlyList<(string Label, decimal MinAverage)> mentionsOnReferenceScale,
+        IReadOnlySet<Guid> exemptSubjectIds,
         CancellationToken cancellationToken)
     {
         // Toutes les matières de l'école (quelques dizaines au plus), filtrées EN MÉMOIRE sur le niveau :
@@ -82,9 +83,9 @@ internal static class EvaluationStructureBuilder
             // la rétrocompatibilité demandée pour les matières simples d'une grille par ailleurs
             // hiérarchique. Label null signale au document qu'il n'y a pas de seconde colonne à remplir.
             var lines = children is null or { Count: 0 }
-                ? [BuildLine(root, label: null, scoresBySubject, gradingScale, mentionsOnReferenceScale)]
+                ? [BuildLine(root, label: null, scoresBySubject, gradingScale, mentionsOnReferenceScale, exemptSubjectIds)]
                 : children.ConvertAll(child =>
-                    BuildLine(child, child.Name, scoresBySubject, gradingScale, mentionsOnReferenceScale));
+                    BuildLine(child, child.Name, scoresBySubject, gradingScale, mentionsOnReferenceScale, exemptSubjectIds));
 
             groups.Add(new EvaluationGroupDto(root.Id, root.Name, lines));
         }
@@ -103,7 +104,7 @@ internal static class EvaluationStructureBuilder
             groups.Add(new EvaluationGroupDto(
                 orphan.Id,
                 orphan.Name,
-                [BuildLine(orphan, label: null, scoresBySubject, gradingScale, mentionsOnReferenceScale)]));
+                [BuildLine(orphan, label: null, scoresBySubject, gradingScale, mentionsOnReferenceScale, exemptSubjectIds)]));
         }
 
         // Les entêtes qualifient la GRILLE : on retient ceux du premier domaine qui en déclare, dans
@@ -127,7 +128,8 @@ internal static class EvaluationStructureBuilder
         string? label,
         IReadOnlyDictionary<Guid, decimal> scoresBySubject,
         int gradingScale,
-        IReadOnlyList<(string Label, decimal MinAverage)> mentionsOnReferenceScale)
+        IReadOnlyList<(string Label, decimal MinAverage)> mentionsOnReferenceScale,
+        IReadOnlySet<Guid> exemptSubjectIds)
     {
         // Pas de note saisie → null, et non zéro : la case reste vide sur le bulletin.
         var score = scoresBySubject.TryGetValue(subject.Id, out var value) ? value : (decimal?)null;
@@ -138,7 +140,8 @@ internal static class EvaluationStructureBuilder
             label,
             score,
             maxScore,
-            GradeCalculator.AppreciationFor(score, maxScore, mentionsOnReferenceScale));
+            GradeCalculator.AppreciationFor(score, maxScore, mentionsOnReferenceScale),
+            exemptSubjectIds.Contains(subject.Id));
     }
 
     /// <summary>Projection minimale d'une <see cref="Subject"/> — seuls les champs de structure sont lus.</summary>

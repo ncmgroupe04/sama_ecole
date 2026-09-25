@@ -132,7 +132,7 @@ public class ImportGradeSheetCommandHandler(
                 {
                     errors.Add(new ValidationFailure(
                         field,
-                        $"Matricule « {matricule} » : cet élève ne suit pas cette matière (option non choisie ou matière désactivée pour la classe)."));
+                        $"Matricule « {matricule} » : cet élève ne suit pas cette matière (option non choisie, matière désactivée pour la classe ou élève dispensé)."));
                 }
                 continue;
             }

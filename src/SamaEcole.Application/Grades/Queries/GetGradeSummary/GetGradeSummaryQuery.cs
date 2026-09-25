@@ -52,4 +52,13 @@ public record GradeSummaryDto(
     decimal TotalCoefficients,
     decimal TotalPoints,
     decimal GeneralAverage,
-    string? Mention);
+    string? Mention,
+    IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null);
+
+/// <summary>
+/// Matière OBLIGATOIRE dont l'élève est dispensé, portée par le résumé pour que le bulletin la marque « Dispensé(e) ».
+/// Elle n'entre ni dans <see cref="GradeSummaryDto.Subjects"/> ni dans les totaux. <see cref="Coefficient"/> est le
+/// coefficient EFFECTIF (surcharges comprises ; 1 au primaire) : il s'imprime barré. Le MOTIF n'est volontairement
+/// pas ici — il peut être médical et ne figure sur aucun document.
+/// </summary>
+public record ExemptSubjectDto(Guid SubjectId, string SubjectName, decimal Coefficient);
