@@ -52,17 +52,15 @@ public class CreateScheduleSlotCommandHandler(
         // Jour de repos de l'établissement (Évolution N°3) : aucun créneau n'y est placé.
         await workingDayGuard.EnsureWorkingDayAsync(request.DayOfWeek, nameof(request.DayOfWeek), cancellationToken);
 
-        var overlappingSlot = await context.ScheduleSlots
-            .Where(s => s.DayOfWeek == request.DayOfWeek 
-                     && s.StartTime < request.EndTime 
-                     && s.EndTime > request.StartTime)
-            .Where(s => s.TeacherId == teacherId || s.ClassroomId == request.ClassroomId)
-            .FirstOrDefaultAsync(cancellationToken);
+        // Enseignant, classe ET salle (Évolution N°7 : la salle n'était jusqu'ici jamais comparée).
+        var overlapMessage = await ScheduleOverlapGuard.FindOverlapAsync(
+            context, excludedSlotId: null, request.DayOfWeek, request.StartTime, request.EndTime,
+            teacherId, request.ClassroomId, request.RoomNumber, cancellationToken);
 
-        if (overlappingSlot != null)
+        if (overlapMessage != null)
         {
             throw new ValidationException(new[] {
-                new FluentValidation.Results.ValidationFailure("global", "Le créneau chevauche un autre cours existant (salle occupée, enseignant occupé, ou classe occupée).")
+                new FluentValidation.Results.ValidationFailure("global", overlapMessage)
             });
         }
 

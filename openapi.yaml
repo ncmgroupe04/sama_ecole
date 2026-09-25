@@ -29,6 +29,7 @@ tags:
   - name: ClassSubjects
   - name: Institutional
   - name: Syllabus
+  - name: HourVolumes
   - name: Students
   - name: Teachers
   - name: Attendance
@@ -296,6 +297,62 @@ paths:
       responses:
         '200': { description: '{ schoolYearLabel, rows[] (classe × matière : teachers, coveredUnits, totalUnits, percent, lastSessionDate), bySubject[], byTeacher[] }' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /hour-volumes/norms:
+    get:
+      tags: [HourVolumes]
+      summary: Volumes horaires hebdomadaires d'un niveau (et d'une série) — Directeur, Secrétariat (Évolution N°7)
+      parameters:
+        - { name: gradeLevel, in: query, required: true, schema: { type: string, example: "Terminale" } }
+        - { name: series, in: query, schema: { type: string, example: "S2" } }
+      responses:
+        '200': { description: '{ gradeLevel, series, hasTemplate, totalHours, rows[] (subjectId, subjectName, optionGroup, templateHours, gradeHours, schoolHours, effectiveHours, overrideId, rowVersion) }' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [HourVolumes]
+      summary: Régler le volume hebdomadaire d'une matière pour un niveau (et une série) — Directeur seul
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gradeLevel, subjectId, weeklyHours]
+              properties:
+                gradeLevel: { type: string }
+                series: { type: string, nullable: true, description: Lycée seulement }
+                subjectId: { type: string, format: uuid }
+                weeklyHours: { type: number, minimum: 0, maximum: 40, multipleOf: 0.25 }
+                rowVersion: { type: integer, format: int64, nullable: true, description: Obligatoire pour modifier un réglage existant }
+      responses:
+        '204': { description: Enregistré }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /hour-volumes/norms/{id}:
+    delete:
+      tags: [HourVolumes]
+      summary: Revenir au volume de référence (suppression logique du réglage) — Directeur seul
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: rowVersion, in: query, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: Archivé }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /hour-volumes/compliance:
+    get:
+      tags: [HourVolumes]
+      summary: Conformité des emplois du temps aux volumes de référence, et chevauchements — Directeur, Secrétariat
+      parameters:
+        - { name: classroomId, in: query, schema: { type: string, format: uuid }, description: Omis = toutes les classes }
+      responses:
+        '200': { description: '{ classes[] (gradeLevel, series, totals, subjects[] : plannedHours, normHours, difference, status Compliant | Under | Over | NoReference ; conflictCount), conflicts[] (kind Teacher | Room | Classroom, dayOfWeek, resource, first, second) }' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /state-integration/stateduc:
     get:

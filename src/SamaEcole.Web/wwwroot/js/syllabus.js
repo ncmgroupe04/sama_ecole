@@ -6,7 +6,9 @@
  *   au cahier de texte de l'année active, puis les moyennes par matière et par enseignant
  *   (GET /api/v1/syllabus/coverage, Directeur et Secrétariat) ;
  * - « Référentiel » : les chapitres d'une matière pour un niveau (GET /api/v1/syllabus/units), que le Directeur
- *   importe depuis la trame nationale quand elle existe, complète (un chapitre par ligne), corrige ou archive.
+ *   importe depuis la trame nationale quand elle existe, complète (un chapitre par ligne), corrige ou archive ;
+ * - « Volumes horaires » : composant `hourNormsPanel` (hour-volumes.js). `?tab=hours` ouvre directement cet onglet
+ *   (lien depuis le contrôle de conformité de l'emploi du temps).
  *
  * Ce fichier n'a AUCUNE règle métier : pourcentages, moyennes et niveau d'une classe viennent du serveur. `canEdit`
  * ne fait que masquer des boutons, le serveur reste seul juge (403).
@@ -87,6 +89,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         async init() {
+            const requestedTab = new URLSearchParams(window.location.search || '').get('tab');
+            if (['coverage', 'units', 'hours'].includes(requestedTab)) this.tab = requestedTab;
             await Promise.all([this.loadCoverage(), this.loadSubjects()]);
         },
 

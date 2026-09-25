@@ -101,6 +101,9 @@ internal static class UniqueConstraintCatalog
         ["class_journal_entry_units"] =
             "Ce chapitre est déjà pointé pour cette séance. Rechargez le cahier de texte avant de réessayer.",
 
+        ["weekly_hour_norms"] =
+            "Un volume horaire est déjà réglé pour cette matière à ce niveau. Rechargez la liste et modifiez-le.",
+
         ["LateArrivals"] =
             "Un billet d'entrée est déjà actif pour cet élève, ce cours et ce jour. Il n'en faut pas un second : "
             + "retrouvez le billet dans la liste, ou annulez-le d'abord s'il a été émis par erreur.",

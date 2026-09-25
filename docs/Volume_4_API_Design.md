@@ -545,7 +545,7 @@ Construction de l'emploi du temps hebdomadaire et pointage des présences enseig
 |---|---|---|
 | `GET` | `/api/v1/schedules/teacher/{teacherId}` | Emploi du temps d'un enseignant |
 | `GET` | `/api/v1/schedules/classroom/{classroomId}` | Emploi du temps d'une classe |
-| `POST` | `/api/v1/schedules` | Créer un créneau. `422` si le jour est un jour de repos de l'établissement (`workingDays`) |
+| `POST` | `/api/v1/schedules` | Créer un créneau. `422` si le jour est un jour de repos de l'établissement (`workingDays`), ou si l'enseignant, la classe ou la salle est déjà occupé(e) sur la plage |
 | `PUT` | `/api/v1/schedules/{id}` | Modifier un créneau. `422` si le jour écrit est un jour de repos — y compris pour un créneau hérité d'un jour devenu repos, qui reste lisible et supprimable mais plus modifiable |
 | `DELETE` | `/api/v1/schedules/{id}` | Supprimer un créneau |
 | `GET` | `/api/v1/teacher-attendance?date=` | Pointage des enseignants pour une date |
@@ -852,6 +852,17 @@ Contrôleur `SyllabusController`, module Pédagogie requis.
 `POST /api/v1/class-journal` et `PUT /api/v1/class-journal/{id}` acceptent `syllabusUnitIds[]` (chapitres traités ;
 `422` si l'un n'appartient pas au programme de la matière pour le niveau de la classe ; absent à la correction :
 inchangés). `GET /api/v1/class-journal` renvoie `syllabusUnitIds` pour chaque séance.
+
+## 27. API Volumes horaires et conformité des emplois du temps (Évolution N°7)
+
+Contrôleur `HourVolumesController`, module Pédagogie requis. Lecture : Directeur, Secrétariat.
+
+| Méthode | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/hour-volumes/norms?gradeLevel=&series=` | Volumes d'un niveau (et d'une série) : par matière, `templateHours` (grille), `gradeHours` (réglage du niveau), `schoolHours` (réglage de cette série), `effectiveHours`, `overrideId`/`rowVersion` ; lignes de grille sans matière dans l'établissement (`subjectId` null) ; `totalHours`. `422` niveau ou série inconnus |
+| `PUT` | `/api/v1/hour-volumes/norms` | `{ gradeLevel, series?, subjectId, weeklyHours, rowVersion? }` — Directeur seul. Au quart d'heure, 0 à 40 h ; série réservée au lycée. `rowVersion` obligatoire pour modifier un réglage existant (`409` si périmé) |
+| `DELETE` | `/api/v1/hour-volumes/norms/{id}?rowVersion=` | « Revenir à la référence » (suppression logique) — Directeur seul, `409` si périmé |
+| `GET` | `/api/v1/hour-volumes/compliance?classroomId=` | Conformité d'une classe (ou de toutes) : `classes[]` (`gradeLevel`, `series`, `totals`, `subjects[]` avec `plannedHours`, `normHours`, `difference`, `status` = `Compliant`/`Under`/`Over`/`NoReference`, `conflictCount`) et `conflicts[]` (`kind` = `Teacher`/`Room`/`Classroom`, `dayOfWeek`, `resource`, `first`, `second`). `404` classe inconnue |
 
 ---
 

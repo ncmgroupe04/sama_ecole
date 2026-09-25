@@ -495,6 +495,15 @@ Seuils du conseil de classe (Évolution N°7) : six colonnes `numeric(4,2)` sur 
   `reset_school_data` (juste avant `class_journal_entries` : liens, puis chapitres) ; non rattachées à une année,
   `delete_school_year` ne les touche pas.
 
+### 5.14 Volumes horaires (Évolution N°7) — `weekly_hour_norms`
+
+Table tenant de **paramétrage** : `Id`, `SchoolId`, `GradeLevel` (`varchar(20)`), `Series` (`varchar(10)`, nullable :
+toutes les classes du niveau), `SubjectId` (FK composite → `subjects`), `WeeklyHours` (`numeric(4,2)`, `CHECK 0–40`),
+audit, suppression logique, `xmin`. Index unique partiel `UX_weekly_hour_norms_scope (SchoolId, GradeLevel, Series,
+SubjectId) NULLS NOT DISTINCT WHERE NOT IsDeleted`. RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE`.
+N'existe que pour un volume réglé par l'école : sans ligne, la grille codée (`WeeklyHourTemplates`) s'applique.
+Purgée par `reset_school_data` juste avant `subjects`.
+
 ## 6. Dictionnaire des énumérations
 
 | Énumération | Valeurs |

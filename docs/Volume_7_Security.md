@@ -296,6 +296,8 @@ Le Secrétariat compose, télécharge et saisit les observations du conseil (`Re
 | **Normes d'âge par niveau** (Évolution N°7) : ÉCRITURE réservée | ✔ | lecture seule | ✖ |
 | **Programmes** (référentiel des chapitres, import de la trame nationale — Évolution N°7) : ÉCRITURE réservée | ✔ | lecture seule | lecture seule (pointage au cahier de texte) |
 | **Avancement des programmes** (tableau par classe, matière, enseignant — Évolution N°7) | ✔ | ✔ | ✖ |
+| **Volumes horaires par niveau et série** (Évolution N°7) : ÉCRITURE réservée | ✔ | lecture seule | ✖ |
+| **Conformité des emplois du temps** (écarts aux volumes, chevauchements — Évolution N°7) | ✔ | ✔ | ✖ |
 | Export de données (remplace « Sauvegardes/Restaurations » de la v1.0, désormais automatisées côté infrastructure — Volume 9) | ✔ | ✖ | ✖ |
 
 Le barème est exposé par un endpoint dédié (`PUT /schools/current/settings/grading-scale`), distinct du reste des réglages d'établissement (`PUT /schools/current/settings`) : ouvrir ce dernier au Secrétariat lui aurait aussi donné la main sur les formats de matricule, la déconnexion automatique et les mensualités, hors du périmètre de la délégation voulue.

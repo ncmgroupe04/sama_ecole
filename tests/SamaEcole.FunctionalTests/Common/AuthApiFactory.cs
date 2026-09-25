@@ -483,6 +483,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // d'abord (ils référencent syllabus_units).
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM class_journal_entry_units;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM syllabus_units;");
+        // Volumes horaires de l'école (Évolution N°7) : FK Restrict vers subjects.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM weekly_hour_norms;");
 
         // Matières (ticket JGK-C03) : un test qui crée « Maths / Primaire » ferait échouer en 409 le
         // suivant qui croit créer la même matière à neuf.

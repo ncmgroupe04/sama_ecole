@@ -140,6 +140,9 @@ public interface IApplicationDbContext
     /// <summary>Unités du programme traitées pendant une séance du cahier de texte (Évolution N°7).</summary>
     DbSet<ClassJournalEntryUnit> ClassJournalEntryUnits { get; }
 
+    /// <summary>Volumes horaires hebdomadaires propres à l'école, par niveau/série et matière (Évolution N°7).</summary>
+    DbSet<WeeklyHourNorm> WeeklyHourNorms { get; }
+
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 

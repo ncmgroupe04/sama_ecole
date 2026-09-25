@@ -59,20 +59,12 @@ public class UpdateScheduleSlotCommandHandler(
         // hérité d'un jour devenu repos reste lisible et supprimable, mais pas modifiable (arbitrage D3).
         await workingDayGuard.EnsureWorkingDayAsync(request.DayOfWeek, nameof(request.DayOfWeek), cancellationToken);
 
-        var overlappingSlot = await context.ScheduleSlots
-            .Where(s => s.Id != request.Id) // Exclude current slot
-            .Where(s => s.DayOfWeek == request.DayOfWeek
-                     && s.StartTime < request.EndTime
-                     && s.EndTime > request.StartTime)
-            .Where(s => s.TeacherId == teacherId || s.ClassroomId == request.ClassroomId)
-            .FirstOrDefaultAsync(cancellationToken);
+        var errorMessage = await ScheduleOverlapGuard.FindOverlapAsync(
+            context, excludedSlotId: request.Id, request.DayOfWeek, request.StartTime, request.EndTime,
+            teacherId, request.ClassroomId, request.RoomNumber, cancellationToken);
 
-        if (overlappingSlot != null)
+        if (errorMessage != null)
         {
-            var errorMessage = overlappingSlot.TeacherId == teacherId
-                ? "L'enseignant a déjà cours sur cette plage horaire."
-                : "La classe a déjà cours sur cette plage horaire.";
-
             throw new SamaEcole.Application.Common.Exceptions.ValidationException(new[] {
                 new FluentValidation.Results.ValidationFailure("global", errorMessage)
             });

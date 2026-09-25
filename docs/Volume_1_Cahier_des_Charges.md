@@ -777,7 +777,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 - L'emploi du temps est construit par **créneaux** : jour, heure de début, heure de fin, enseignant, classe, matière, salle.
 - Il se consulte **par enseignant** et **par classe**.
-- **Détection de chevauchement** à la création comme à la modification : un créneau est refusé s'il recouvre un créneau existant pour le même enseignant ou pour la même classe. Le message précise laquelle des deux contraintes est violée.
+- **Détection de chevauchement** à la création comme à la modification : un créneau est refusé s'il recouvre un créneau existant pour le même enseignant, pour la même classe ou dans la même **salle** (Évolution N°7 ; nom de salle comparé sans casse, accents ni ponctuation). Le message précise laquelle des contraintes est violée.
 - **Jours ouvrés configurables** (Évolution N°3) : le Directeur définit dans Paramètres › Notation & mentions les jours ouvrés de l'établissement (par défaut du lundi au samedi ; par exemple du samedi au mercredi pour une école franco-arabe ou un daara au repos le jeudi et le vendredi). La grille n'affiche que ces jours, dans l'ordre de la semaine de l'école, et un créneau ne peut être créé ni déplacé sur un jour de repos. Un créneau déjà posé sur un jour devenu repos reste visible (colonne marquée « repos ») et peut être supprimé, mais plus modifié.
 
 ### 21.2 Qui peut faire quoi
@@ -1079,6 +1079,26 @@ Directeur, lecture Secrétariat).
   (un chapitre pointé deux fois compte une fois ; programme vide : « — »), enseignants de la classe dans la matière
   (emploi du temps, plus les auteurs du cahier) et dernière séance ; moyennes **par matière et niveau** et **par
   enseignant** — un enseignant qui ne tient pas le cahier apparaît à 0 %.
+
+### 23.9 Volumes horaires officiels et conformité des emplois du temps (Évolution N°7)
+
+- **Volumes de référence.** Grille hebdomadaire par niveau et, au lycée, par série, **en code** et pré-remplie :
+  collège (6e-5e : Français 6 h, Anglais 4 h, Mathématiques 5 h, SVT 2 h, Histoire-Géographie 3 h, Éducation civique
+  1 h, EPS 2 h ; 4e-3e : + LV2 3 h et Physique-Chimie 3 h, Français 5 h) ; Seconde S / L (grille de la famille de
+  série) ; Première et Terminale S1, S2, L1a, L1b, L2. Valeurs **indicatives**, à rapprocher de l'arrêté en vigueur :
+  le Directeur les règle pour son établissement (écran **Programmes › Volumes horaires**) par niveau — toutes séries —
+  ou par niveau et série ; le réglage de la série l'emporte sur celui du niveau, qui l'emporte sur la grille. Vider un
+  volume revient à la référence. Aucune grille n'est codée pour le préscolaire, l'élémentaire, les séries techniques
+  et franco-arabes : le contrôle y est « sans référence » tant que l'école n'a rien saisi.
+- **Contrôle de conformité** (écran Enseignants › Emploi du temps, vue « Par classe », Directeur et Secrétariat) :
+  heures planifiées de chaque matière contre la référence du niveau et de la série de la classe — **conforme**,
+  **sous le volume**, **au-dessus**, **sans référence** — et total hebdomadaire. Matières contrôlées : le programme de
+  la classe (Évolution N°6) s'il est saisi, sinon les matières du cycle qui ont une référence, plus toute matière
+  planifiée. Une matière **au choix** (LV2, langue ancienne) : les langues non planifiées du groupe sont ignorées dès
+  qu'une l'est ; si aucune ne l'est, le groupe ressort en une ligne manquante.
+- **Chevauchements** : tout l'établissement est scanné — même enseignant, même salle ou même classe, le même jour, sur
+  des plages qui se recouvrent (y compris l'historique antérieur à la garde sur les salles). La carte de la classe
+  liste ceux qui la touchent.
 
 ---
 

@@ -7,6 +7,7 @@
    Directeur) et la RLS isole. *@
 @section Scripts {
     <script src="~/js/syllabus.js" asp-append-version="true"></script>
+    <script src="~/js/hour-volumes.js" asp-append-version="true"></script>
 }
 
 <div x-data="syllabusView()" class="space-y-6">
@@ -21,6 +22,7 @@
     <div role="tablist" class="tab-nav w-fit">
         <button type="button" role="tab" x-on:click="tab = 'coverage'" :aria-selected="(tab === 'coverage').toString()" class="tab-btn" :class="tab === 'coverage' ? 'tab-btn-active' : ''">Avancement</button>
         <button type="button" role="tab" x-on:click="tab = 'units'" :aria-selected="(tab === 'units').toString()" class="tab-btn" :class="tab === 'units' ? 'tab-btn-active' : ''">Référentiel</button>
+        <button type="button" role="tab" x-on:click="tab = 'hours'" :aria-selected="(tab === 'hours').toString()" class="tab-btn" :class="tab === 'hours' ? 'tab-btn-active' : ''">Volumes horaires</button>
     </div>
 
     @* ── Avancement ─────────────────────────────────────────────────────────────────────────── *@
@@ -260,6 +262,89 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </template>
+    </section>
+
+    @* ── Volumes horaires (Évolution N°7) ────────────────────────────────────────────────────── *@
+    <section x-show="tab === 'hours'" x-cloak x-data="hourNormsPanel()" class="space-y-5">
+        <p class="text-sm text-slate-500">
+            Volume hebdomadaire de chaque matière par niveau (et, au lycée, par série). La grille de référence est
+            pré-remplie ; réglez un volume pour votre établissement, ou videz-le pour revenir à la référence. Le contrôle
+            de conformité de l'emploi du temps (écran Enseignants, vue « Par classe ») s'y compare.
+        </p>
+
+        <div x-show="error" x-cloak class="form-error-banner" x-text="error"></div>
+        <div x-show="notice" x-cloak role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800" x-text="notice"></div>
+
+        <div class="flex flex-wrap items-end gap-4">
+            <div class="w-full sm:w-48">
+                <label class="form-label">Niveau</label>
+                <select-field model="gradeLevel" aria-label="Niveau" placeholder="Sélectionner un niveau"
+                              options-expr="gradeOptions" on-change="selectGrade()" />
+            </div>
+            <div class="w-full sm:w-48" x-show="isLycee" x-cloak>
+                <label class="form-label">Série</label>
+                <select-field model="series" aria-label="Série" options-expr="seriesOptions" on-change="load()" />
+            </div>
+            <p x-show="data" x-cloak class="text-sm text-slate-600 sm:ml-auto">
+                Total hebdomadaire : <span class="font-semibold text-slate-900" x-text="formatHours(data && data.totalHours)"></span>
+            </p>
+        </div>
+
+        <div x-show="!gradeLevel" class="card">
+            <empty-state icon="clock" title="Choisissez un niveau."
+                         hint="Les grilles du collège (6e à 3e) et du lycée (Seconde S/L, Première et Terminale S1, S2, L1a, L1b, L2) sont pré-remplies." />
+        </div>
+
+        <div x-show="isLoading" x-cloak class="card p-4"><div class="skeleton h-4 w-2/3"></div></div>
+
+        <template x-if="data && gradeLevel && !isLoading">
+            <div class="card overflow-x-auto">
+                <p x-show="!data.hasTemplate" class="px-4 pt-4 text-sm text-amber-700">
+                    Aucune grille de référence n'est codée pour ce niveau<span x-show="series"> et cette série</span> :
+                    saisissez les volumes de votre établissement.
+                </p>
+                <table class="min-w-full text-sm mt-2">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-2 px-3 text-left">Matière</th>
+                            <th class="py-2 px-3 text-right">Référence</th>
+                            <th class="py-2 px-3 text-right" x-show="series" x-cloak>Niveau (toutes séries)</th>
+                            <th class="py-2 px-3 text-right w-36">Établissement</th>
+                            <th class="py-2 px-3 text-right">Effectif</th>
+                            <th class="py-2 px-3 text-right" x-show="canEdit" x-cloak></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr x-show="rows.length === 0" x-cloak>
+                            <td colspan="6" class="py-4 px-3 text-sm text-slate-500">Aucune matière de ce cycle n'a de volume de référence.</td>
+                        </tr>
+                        <template x-for="row in rows" :key="(row.subjectId || '') + row.subjectName">
+                            <tr class="align-top">
+                                <td class="py-2 px-3">
+                                    <span class="text-slate-800" x-text="row.subjectName"></span>
+                                    <span x-show="row.optionGroup" x-cloak class="ml-1 text-xs text-slate-400" x-text="'(' + row.optionGroup + ', au choix)'"></span>
+                                    <p x-show="!row.subjectId" x-cloak class="text-xs text-amber-700">Matière absente de l'établissement.</p>
+                                    <p x-show="row.error" x-cloak class="field-error" x-text="row.error"></p>
+                                </td>
+                                <td class="py-2 px-3 text-right text-slate-500" x-text="formatHours(row.templateHours)"></td>
+                                <td class="py-2 px-3 text-right text-slate-500" x-show="series" x-cloak x-text="formatHours(row.gradeHours)"></td>
+                                <td class="py-2 px-3 text-right">
+                                    <input type="text" inputmode="decimal" x-model="row.draft" :disabled="!canEdit || !row.subjectId"
+                                           aria-label="Volume de l'établissement" placeholder="—" class="input-field mt-0 text-sm text-right">
+                                </td>
+                                <td class="py-2 px-3 text-right font-medium text-slate-800" x-text="formatHours(row.effectiveHours)"></td>
+                                <td class="py-2 px-3 text-right whitespace-nowrap" x-show="canEdit" x-cloak>
+                                    <button type="button" x-show="row.subjectId && isDirty(row)" x-on:click="save(row)" :disabled="row.isSaving"
+                                            class="text-xs font-medium text-primary-600 hover:underline">Enregistrer</button>
+                                    <button type="button" x-show="row.overrideId && !isDirty(row)" x-on:click="reset(row)" :disabled="row.isSaving"
+                                            class="ml-2 text-xs font-medium text-slate-500 hover:text-slate-800">Revenir à la référence</button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
             </div>
         </template>
     </section>
