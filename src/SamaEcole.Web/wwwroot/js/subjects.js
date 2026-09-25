@@ -157,7 +157,7 @@ document.addEventListener('alpine:init', () => {
 
         isCreateOpen: false,
         isSubmitting: false,
-        newSubject: { name: '', nameAr: '', level: '', coefficient: 1, parentSubjectId: '', maxScore: '', displayOrder: 0 },
+        newSubject: { name: '', nameAr: '', level: '', coefficient: 1, parentSubjectId: '', maxScore: '', displayOrder: 0, isOptional: false, optionGroup: '' },
         createErrors: {},
 
         // ── Structure d'évaluation (grilles APC du primaire) ──
@@ -469,7 +469,9 @@ document.addEventListener('alpine:init', () => {
                 // Placée en fin de fratrie : une activité ajoutée ne vient jamais s'intercaler au milieu
                 // d'une grille déjà ordonnée.
                 displayOrder: siblings.length + 1,
-                maxScore: siblings.length ? siblings[siblings.length - 1].maxScore : null
+                maxScore: siblings.length ? siblings[siblings.length - 1].maxScore : null,
+                isOptional: false,
+                optionGroup: ''
             };
             this.createErrors = {};
             this.isCreateOpen = true;
@@ -484,7 +486,9 @@ document.addEventListener('alpine:init', () => {
                 coefficient: 1,
                 parentSubjectId: '',
                 displayOrder: this.structureGroups.length + 1,
-                maxScore: null
+                maxScore: null,
+                isOptional: false,
+                optionGroup: ''
             };
             this.createErrors = {};
             this.isCreateOpen = true;
@@ -615,6 +619,11 @@ document.addEventListener('alpine:init', () => {
                 displayOrder: subject.displayOrder ?? 0,
                 column1Header: subject.column1Header,
                 column2Header: subject.column2Header,
+                // Le PUT remplace la matière entière : sans ces deux champs, chaque enregistrement (réordonner,
+                // entêtes…) ferait retomber une option en matière obligatoire.
+                isOptional: subject.isOptional === true,
+                // Le groupe n'a de sens que pour une option : décocher « optionnelle » le vide.
+                optionGroup: subject.isOptional === true ? subject.optionGroup : null,
                 ...patch
             };
 
@@ -635,6 +644,16 @@ document.addEventListener('alpine:init', () => {
          */
         get knownLevels() {
             return [...new Set(this.subjects.map((s) => s.level))].sort();
+        },
+
+        /** Groupes d'options déjà utilisés (suggestions du champ « Groupe d'options »), sans doublon de casse. */
+        get existingOptionGroups() {
+            const seen = new Map();
+            this.subjects.forEach((s) => {
+                const group = (s.optionGroup ?? '').trim();
+                if (s.isOptional && group && !seen.has(group.toLowerCase())) seen.set(group.toLowerCase(), group);
+            });
+            return [...seen.values()].sort((a, b) => a.localeCompare(b, 'fr'));
         },
 
         formatCoefficient(value) {
@@ -658,7 +677,8 @@ document.addEventListener('alpine:init', () => {
             const lastLevel = source.length ? source[source.length - 1].level : '';
             this.newSubject = {
                 name: '', nameAr: '', level: lastLevel, coefficient: 1,
-                parentSubjectId: '', maxScore: '', displayOrder: 0
+                parentSubjectId: '', maxScore: '', displayOrder: 0,
+                isOptional: false, optionGroup: ''
             };
             this.createErrors = {};
             this.isCreateOpen = true;
@@ -684,7 +704,14 @@ document.addEventListener('alpine:init', () => {
             this.isSubmitting = true;
             this.createErrors = {};
             try {
-                await window.api.post('/subjects', blankToNull(this.newSubject));
+                await window.api.post('/subjects', blankToNull({
+                    ...this.newSubject,
+                    // Une activité de domaine n'est jamais optionnelle : la case est masquée quand un parent est
+                    // choisi, mais son état peut avoir été coché avant.
+                    isOptional: this.newSubject.isOptional && !this.newSubject.parentSubjectId,
+                    optionGroup: this.newSubject.isOptional && !this.newSubject.parentSubjectId
+                        ? this.newSubject.optionGroup : null
+                }));
 
                 this.isCreateOpen = false;
                 this.addedSubjectName = this.newSubject.name;
@@ -712,7 +739,9 @@ document.addEventListener('alpine:init', () => {
                 displayOrder: subject.displayOrder ?? 0,
                 column1Header: subject.column1Header ?? null,
                 column2Header: subject.column2Header ?? null,
-                nameAr: subject.nameAr ?? ''
+                nameAr: subject.nameAr ?? '',
+                isOptional: subject.isOptional === true,
+                optionGroup: subject.optionGroup ?? ''
             };
             this.editErrors = {};
         },

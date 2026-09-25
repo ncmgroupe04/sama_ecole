@@ -244,6 +244,8 @@
          <span aria-hidden="true" class="w-2 h-2 rounded-full bg-primary-400 shrink-0"></span>
          <span class="font-semibold text-slate-800 break-words" x-text="displayName(subject.name)" :title="subject.name"></span>
          <badge variant="neutral" class="shrink-0 text-[10px]" x-text="subject.level"></badge>
+         <badge x-show="subject.isOptional" x-cloak variant="primary" class="shrink-0 text-[10px]"
+          x-text="'Option' + (subject.optionGroup ? ' · ' + subject.optionGroup : '')"></badge>
         </div>
 
         @* Jauge de poids relatif du coefficient *@
@@ -310,6 +312,8 @@
         <span aria-hidden="true" class="w-2 h-2 rounded-full bg-primary-400"></span>
         <span class="font-semibold text-slate-800" x-text="displayName(subject.name)" :title="subject.name"></span>
         <badge variant="neutral" class="shrink-0 text-[10px]" x-text="subject.level"></badge>
+        <badge x-show="subject.isOptional" x-cloak variant="primary" class="shrink-0 text-[10px]"
+         x-text="'Option' + (subject.optionGroup ? ' · ' + subject.optionGroup : '')"></badge>
        </div>
        <div class="mt-1.5">
         <span class="text-[11px] font-medium text-slate-400">
@@ -579,6 +583,30 @@
     <p x-show="createErrors.coefficient" x-cloak x-text="createErrors.coefficient" class="field-error"></p>
    </div>
 
+   @* Matière optionnelle (LV2, option scientifique) : un élève peut en être dispensé à l'inscription.
+      Réservée aux matières de premier niveau — le serveur refuse une activité de domaine. *@
+   <div x-show="!newSubject.parentSubjectId" x-cloak class="space-y-3">
+    <label class="flex items-start gap-2.5 cursor-pointer select-none">
+     <input type="checkbox" x-model="newSubject.isOptional" class="checkbox-field mt-0.5">
+     <span class="text-sm text-slate-700">
+      Matière optionnelle / au choix
+      <span class="block text-xs text-slate-400">Chaque élève choisit ses options à l'inscription ; une matière non suivie n'apparaît ni à la saisie des notes ni sur le bulletin.</span>
+     </span>
+    </label>
+
+    <div x-show="newSubject.isOptional" x-cloak>
+     <label for="subject-option-group" class="form-label">Groupe d'options</label>
+     <input id="subject-option-group" type="text" x-model="newSubject.optionGroup" maxlength="50" list="subject-option-groups"
+      placeholder="ex. LV2, Option scientifique — un seul choix par groupe"
+      class="input-field" :class="createErrors.optiongroup && 'input-field-error'">
+     <datalist id="subject-option-groups">
+      <template x-for="group in existingOptionGroups" :key="group"><option :value="group"></option></template>
+     </datalist>
+     <p class="text-xs text-slate-400 mt-1">Laissez vide pour une option cumulable (l'élève peut la suivre en plus d'une autre).</p>
+     <p x-show="createErrors.optiongroup" x-cloak x-text="createErrors.optiongroup" class="field-error"></p>
+    </div>
+   </div>
+
    @* ── Structure d'évaluation : rattachement à un domaine et barème propre ── *@
    <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
     <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Structure d'évaluation</p>
@@ -671,6 +699,27 @@
     <label for="edit-subject-coefficient" class="form-label form-label-required">Coefficient</label>
     <input id="edit-subject-coefficient" type="number" x-model.number="editing.coefficient" required min="0.5" max="20" step="0.5" class="input-field" :class="editErrors.coefficient && 'input-field-error'">
     <p x-show="editErrors.coefficient" x-cloak x-text="editErrors.coefficient" class="field-error"></p>
+   </div>
+
+   @* Matière optionnelle (LV2, option scientifique) : un élève peut en être dispensé à l'inscription.
+      Réservée aux matières de premier niveau — le serveur refuse une activité de domaine. *@
+   <div x-show="!editing.parentSubjectId" x-cloak class="space-y-3">
+    <label class="flex items-start gap-2.5 cursor-pointer select-none">
+     <input type="checkbox" x-model="editing.isOptional" class="checkbox-field mt-0.5">
+     <span class="text-sm text-slate-700">
+      Matière optionnelle / au choix
+      <span class="block text-xs text-slate-400">Chaque élève choisit ses options à l'inscription ; une matière non suivie n'apparaît ni à la saisie des notes ni sur le bulletin.</span>
+     </span>
+    </label>
+
+    <div x-show="editing.isOptional" x-cloak>
+     <label for="edit-subject-option-group" class="form-label">Groupe d'options</label>
+     <input id="edit-subject-option-group" type="text" x-model="editing.optionGroup" maxlength="50" list="subject-option-groups"
+      placeholder="ex. LV2, Option scientifique — un seul choix par groupe"
+      class="input-field" :class="editErrors.optiongroup && 'input-field-error'">
+     <p class="text-xs text-slate-400 mt-1">Laissez vide pour une option cumulable (l'élève peut la suivre en plus d'une autre).</p>
+     <p x-show="editErrors.optiongroup" x-cloak x-text="editErrors.optiongroup" class="field-error"></p>
+    </div>
    </div>
 
    @* ── Structure d'évaluation ── *@
