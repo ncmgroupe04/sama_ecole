@@ -12,8 +12,9 @@ namespace SamaEcole.Application.Users.Commands.UpdateUserProfile;
 /// sessions (protection contre une session volée). Ici, c'est le DIRECTEUR qui corrige la fiche
 /// D'AUTRUI — typiquement une faute de frappe repérée après coup sur un prénom ou un e-mail saisi à la
 /// création (CreateUserCommand). Pas de vérification de mot de passe (l'acteur n'est pas le titulaire
-/// du compte modifié) ; refusé sur SA PROPRE fiche (même garde que ChangeUserStatus/ResetUserPassword)
-/// — le Directeur corrige son propre e-mail par la voie sécurisée /auth/change-email, jamais par ici.
+/// du compte modifié). Sur SA PROPRE fiche, seul le nom complet est modifiable ici : le Directeur change
+/// son propre e-mail par la voie sécurisée /auth/change-email (mot de passe requis, sessions révoquées),
+/// jamais par ici — un e-mail différent de l'actuel est refusé (422).
 /// </summary>
 public record UpdateUserProfileCommand(Guid UserId, string FullName, string Email)
     : IRequest<UpdateUserProfileResult>, IAuditableRequest;

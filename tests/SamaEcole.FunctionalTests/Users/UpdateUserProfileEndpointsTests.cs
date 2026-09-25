@@ -10,7 +10,7 @@ namespace SamaEcole.FunctionalTests.Users;
 /// <summary>
 /// PATCH /users/{userId}/profile — le Directeur corrige le nom complet et/ou l'e-mail d'un compte
 /// qu'il gère (typiquement une faute de frappe repérée après POST /users). Critères : réservé au
-/// Directeur, impossible sur sa propre fiche (voie sécurisée : POST /auth/change-email), 404 sur un
+/// Directeur, sur sa propre fiche seul le nom est modifiable (e-mail : POST /auth/change-email), 404 sur un
 /// compte inconnu, 409 si l'e-mail visé est déjà pris par un AUTRE compte, le nouvel e-mail fonctionne
 /// immédiatement pour se connecter.
 /// </summary>
@@ -108,18 +108,39 @@ public class UpdateUserProfileEndpointsTests(AuthApiFactory factory) : IClassFix
     }
 
     /// <summary>
-    /// Le Directeur corrige son propre e-mail par la voie sécurisée (mot de passe requis, sessions
-    /// révoquées) — jamais par cette route administrative, même sur sa propre fiche.
+    /// Sur sa propre fiche, le Directeur corrige son nom ; l'e-mail renvoyé inchangé (ce que fait la
+    /// modale, champ désactivé) est accepté.
     /// </summary>
     [Fact]
-    public async Task A_Director_Should_Not_Be_Able_To_Edit_His_Own_Profile_This_Way()
+    public async Task A_Director_Can_Edit_His_Own_Full_Name()
     {
         var directeur = await LoginAsDirecteurAsync();
 
         var response = await UpdateProfileAsync(
             directeur.AccessToken, AuthApiFactory.DirecteurId, "Nouveau Nom", AuthApiFactory.DirecteurEmail);
 
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = (await response.Content.ReadFromJsonAsync<ProfileResult>())!;
+        result.FullName.Should().Be("Nouveau Nom");
+        result.Email.Should().Be(AuthApiFactory.DirecteurEmail);
+    }
+
+    /// <summary>
+    /// Le Directeur change son propre e-mail par la voie sécurisée (mot de passe requis, sessions
+    /// révoquées) — jamais par cette route, sinon une session volée suffirait à détourner le compte.
+    /// </summary>
+    [Fact]
+    public async Task A_Director_Should_Not_Be_Able_To_Change_His_Own_Email_This_Way()
+    {
+        var directeur = await LoginAsDirecteurAsync();
+
+        var response = await UpdateProfileAsync(
+            directeur.AccessToken, AuthApiFactory.DirecteurId, "Nouveau Nom", "autre.adresse@sama-ecole.sn");
+
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        // L'ancien e-mail fonctionne toujours : rien n'a été écrit.
+        await LoginAsDirecteurAsync();
     }
 
     [Fact]
