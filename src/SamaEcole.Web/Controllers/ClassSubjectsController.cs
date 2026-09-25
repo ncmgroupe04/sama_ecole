@@ -1,6 +1,7 @@
 using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.ClassSubjects.Commands;
 using SamaEcole.Application.ClassSubjects.Queries;
+using SamaEcole.Application.Exemptions;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
 using MediatR;
@@ -99,4 +100,33 @@ public class ClassSubjectsController(ISender mediator) : ControllerBase
     public async Task<IActionResult> SetStudentOptions(
         Guid studentId, [FromBody] SetStudentSubjectOptionsCommand command, CancellationToken cancellationToken)
         => Ok(await mediator.Send(command with { StudentId = studentId }, cancellationToken));
+
+    /// <summary>
+    /// Matières dispensables d'un élève et ses dispenses de l'année active, motif compris. Réservé au Directeur et au
+    /// Secrétariat : le motif peut être médical.
+    /// </summary>
+    [HttpGet("students/{studentId:guid}/exemptions")]
+    [Authorize(Roles = StaffRoles)]
+    [ProducesResponseType<StudentExemptionsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> GetStudentExemptions(Guid studentId, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetStudentExemptionsQuery(studentId), cancellationToken));
+
+    public record SetStudentExemptionsRequest(IReadOnlyList<SubjectExemptionInput>? Exemptions);
+
+    /// <summary>Remplace les dispenses de l'élève pour l'année active (liste vide = aucune). Motif obligatoire.</summary>
+    [HttpPut("students/{studentId:guid}/exemptions")]
+    [Authorize(Roles = StaffRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SetStudentExemptions(
+        Guid studentId, [FromBody] SetStudentExemptionsRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new SetStudentExemptionsCommand(studentId, request.Exemptions ?? []), cancellationToken);
+        return NoContent();
+    }
 }
