@@ -18,6 +18,12 @@ public record LateArrivalDto
 
     /// <summary>Issued, Accepted ou Cancelled ; null pour un retard sans cours visé (tout l'historique existant).</summary>
     public SamaEcole.Domain.Enums.EntryTicketStatus? Status { get; init; }
+
+    /// <summary>Heure d'arrivée saisie (Complément N°5 bis) ; null pour un billet saisi à l'ancienne.</summary>
+    public TimeOnly? ArrivalTime { get; init; }
+
+    /// <summary>Durée régularisée (cours manqués + retard) calculée à l'émission ; null à l'ancienne.</summary>
+    public int? TotalMinutes { get; init; }
 }
 
 public record GetLateArrivalsQuery : IRequest<List<LateArrivalDto>>;

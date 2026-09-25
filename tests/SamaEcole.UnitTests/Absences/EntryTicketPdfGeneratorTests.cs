@@ -81,6 +81,40 @@ public class EntryTicketPdfGeneratorTests
         Encoding.ASCII.GetString(pdf).Should().Contain("/Count 1", "le billet A5 ne doit jamais déborder sur une deuxième page");
     }
 
+    // Complément N°5 bis : le billet par heure d'arrivée détaille l'heure, la durée et les cours manqués — sur UNE page.
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(4)]
+    [InlineData(9)]
+    public void Generate_Prints_An_Arrival_Time_Ticket_On_A_Single_Page_Whatever_The_Number_Of_Missed_Courses(int missed)
+    {
+        var slots = Enumerable.Range(0, missed)
+            .Select(i => new EntryTicketMissedSlot($"Matière {i + 1}", $"{8 + i:00}:00-{9 + i:00}:00", 60))
+            .ToList();
+        var ticket = Ticket(subject: "Français", status: "Issued") with
+        {
+            ArrivalTime = new TimeOnly(10, 20), TotalMinutes = missed * 60 + 20, Minutes = 20, MissedSlots = slots
+        };
+
+        var pdf = new EntryTicketPdfGenerator().Generate(ticket, logo: null, surveillantSignature: null);
+
+        ShouldBeAValidPdf(pdf);
+        Encoding.ASCII.GetString(pdf).Should().Contain("/Count 1");
+    }
+
+    [Fact]
+    public void Generate_Prints_An_Arrival_Ticket_With_No_Late_Minutes()
+    {
+        var ticket = Ticket(subject: "Français", status: "Issued") with
+        {
+            ArrivalTime = new TimeOnly(10, 0), TotalMinutes = 120, Minutes = 0,
+            MissedSlots = [new EntryTicketMissedSlot("Mathématiques", "08:00-10:00", 120)]
+        };
+
+        ShouldBeAValidPdf(new EntryTicketPdfGenerator().Generate(ticket, logo: null, surveillantSignature: null));
+    }
+
     [Fact]
     public void Generate_Stays_On_A_Single_Page_With_A_Long_Subject_And_Long_Observations()
     {
