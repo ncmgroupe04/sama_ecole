@@ -12,6 +12,12 @@ public record LateArrivalDto
     public int Minutes { get; init; }
     public string Reason { get; init; } = null!;
     public DateTimeOffset CreatedAt { get; init; }
+
+    /// <summary>Cours visé par le billet d'entrée (Évolution N°5) ; null pour un retard sans cours visé.</summary>
+    public Guid? TargetScheduleSlotId { get; init; }
+
+    /// <summary>Issued, Accepted ou Cancelled ; null pour un retard sans cours visé (tout l'historique existant).</summary>
+    public SamaEcole.Domain.Enums.EntryTicketStatus? Status { get; init; }
 }
 
 public record GetLateArrivalsQuery : IRequest<List<LateArrivalDto>>;

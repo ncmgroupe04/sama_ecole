@@ -23,7 +23,9 @@ public class GetLateArrivalsQueryHandler(IApplicationDbContext _context)
                 Date = l.Date,
                 Minutes = l.Minutes,
                 Reason = l.Reason,
-                CreatedAt = l.CreatedAt
+                CreatedAt = l.CreatedAt,
+                TargetScheduleSlotId = l.TargetScheduleSlotId,
+                Status = l.Status
             })
             .ToListAsync(cancellationToken);
     }

@@ -4,6 +4,7 @@ using SamaEcole.Application.Absences.Commands.CreateLateArrival;
 using SamaEcole.Application.Absences.Queries.GetAbsenceJustifications;
 using SamaEcole.Application.Absences.Queries.GetEarlyDepartures;
 using SamaEcole.Application.Absences.Queries.GetLateArrivals;
+using SamaEcole.Application.Absences.Queries.GetTodaySlotsForStudent;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
 using Microsoft.AspNetCore.Authorization;
@@ -35,6 +36,17 @@ public class AbsenceController(IMediator _mediator) : ControllerBase
     public async Task<ActionResult<List<LateArrivalDto>>> GetLateArrivals()
     {
         return await _mediator.Send(new GetLateArrivalsQuery());
+    }
+
+    /// <summary>
+    /// Cours du jour de la classe d'un élève (Évolution N°5) : de quoi choisir le cours que le billet d'entrée
+    /// vise. Le cours en cours, à défaut le prochain, est signalé. Un jour de repos ne renvoie aucun cours.
+    /// </summary>
+    [HttpGet("today-slots")]
+    public async Task<ActionResult<IReadOnlyList<StudentSlotDto>>> GetTodaySlots(
+        [FromQuery] Guid studentId, [FromQuery] DateOnly? date)
+    {
+        return Ok(await _mediator.Send(new GetTodaySlotsForStudentQuery(studentId, date)));
     }
 
     [HttpPost("late-arrivals")]

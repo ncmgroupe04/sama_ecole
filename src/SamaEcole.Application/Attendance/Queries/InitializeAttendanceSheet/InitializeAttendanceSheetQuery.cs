@@ -28,7 +28,13 @@ public record AttendanceRosterRow(
     string Matricule,
     string FullName,
     string? Status,
-    int LateMinutes);
+    int LateMinutes,
+
+    // Billet d'entrée visant ce cours pour cet élève (Évolution N°5) : la feuille de l'enseignant le signale et
+    // lui propose de l'accepter. Tous nuls pour un élève sans billet actif.
+    Guid? EntryTicketId = null,
+    string? EntryTicketNumber = null,
+    string? EntryTicketStatus = null);
 
 public record AttendanceRosterDto(
     Guid ClassroomId,

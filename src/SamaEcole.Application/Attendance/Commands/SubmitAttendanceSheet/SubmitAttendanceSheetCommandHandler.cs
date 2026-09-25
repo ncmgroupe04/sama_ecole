@@ -62,6 +62,22 @@ public class SubmitAttendanceSheetCommandHandler(
         // Jour de repos de l'établissement (Évolution N°3) : aucun appel ne s'y saisit.
         await workingDayGuard.EnsureWorkingDayAsync(request.Date, nameof(request.Date), cancellationToken);
 
+        // Billets d'entrée actifs visant CE cours à CETTE date (Évolution N°5) : chaque ligne d'un élève qui en
+        // a un lui est rattachée. Le statut, lui, reste CELUI QUE L'ENSEIGNANT A SAISI — la feuille présélectionne
+        // « Retard », mais un élève marqué absent le reste, et son billet demeure en attente d'acceptation.
+        var ticketByStudent = new Dictionary<Guid, Guid>();
+        if (resolved.SlotId is { } ticketSlotId)
+        {
+            var day = request.Date.ToDateTime(TimeOnly.MinValue);
+            ticketByStudent = (await dbContext.LateArrivals.AsNoTracking()
+                    .Where(l => l.TargetScheduleSlotId == ticketSlotId
+                                && l.Date == day
+                                && (l.Status == EntryTicketStatus.Issued || l.Status == EntryTicketStatus.Accepted))
+                    .Select(l => new { l.StudentId, l.Id })
+                    .ToListAsync(cancellationToken))
+                .ToDictionary(t => t.StudentId, t => t.Id);
+        }
+
         // Tous les élèves de l'appel doivent appartenir à CETTE classe : un statut posé sur un élève
         // d'une autre classe (ou d'une autre école, déjà masqué par la RLS) est une erreur de saisie.
         var classStudentIds = await dbContext.Students.AsNoTracking()
@@ -107,7 +123,8 @@ public class SubmitAttendanceSheetCommandHandler(
                     Status = entry.Status,
                     // Invariant : les minutes de retard n'ont de sens que pour Late (validé en amont,
                     // reforcé ici pour que la donnée en base ne puisse pas être incohérente).
-                    LateMinutes = entry.Status == AttendanceStatus.Late ? entry.LateMinutes : 0
+                    LateMinutes = entry.Status == AttendanceStatus.Late ? entry.LateMinutes : 0,
+                    EntryTicketId = ticketByStudent.TryGetValue(entry.StudentId, out var ticketId) ? ticketId : null
                 });
             }
 

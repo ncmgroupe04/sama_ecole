@@ -1,3 +1,4 @@
+using SamaEcole.Application.Attendance.EntryTickets;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
@@ -85,16 +86,41 @@ public class InitializeAttendanceSheetQueryHandler(
             .Where(sa => existingSheetId != null && sa.AttendanceSheetId == existingSheetId)
             .ToDictionaryAsync(sa => sa.StudentId, sa => new { sa.Status, sa.LateMinutes }, cancellationToken);
 
+        // Billets d'entrée actifs visant CE cours à CETTE date (Évolution N°5) : ils présélectionnent le retard de
+        // l'élève tant que l'appel n'est pas fait, et la feuille les signale (« en attente d'acceptation »).
+        var ticketsByStudent = new Dictionary<Guid, (Guid Id, int Minutes, EntryTicketStatus? Status)>();
+        if (resolved.SlotId is { } slotId)
+        {
+            var day = request.Date.ToDateTime(TimeOnly.MinValue);
+            var tickets = await dbContext.LateArrivals.AsNoTracking()
+                .Where(l => l.TargetScheduleSlotId == slotId
+                            && l.Date == day
+                            && (l.Status == EntryTicketStatus.Issued || l.Status == EntryTicketStatus.Accepted))
+                .Select(l => new { l.Id, l.StudentId, l.Minutes, l.Status })
+                .ToListAsync(cancellationToken);
+
+            ticketsByStudent = tickets.ToDictionary(t => t.StudentId, t => (t.Id, t.Minutes, t.Status));
+        }
+
         var rows = students
             .Select(s =>
             {
                 existingStatuses.TryGetValue(s.Id, out var recorded);
+                var hasTicket = ticketsByStudent.TryGetValue(s.Id, out var ticket);
+
+                // Un appel déjà saisi l'emporte toujours ; sinon un billet présélectionne « Retard ».
+                var status = recorded?.Status.ToString() ?? (hasTicket ? nameof(AttendanceStatus.Late) : null);
+                var lateMinutes = recorded?.LateMinutes ?? (hasTicket ? ticket.Minutes : 0);
+
                 return new AttendanceRosterRow(
                     s.Id,
                     s.Matricule,
                     s.FullName,
-                    recorded?.Status.ToString(),
-                    recorded?.LateMinutes ?? 0);
+                    status,
+                    lateMinutes,
+                    hasTicket ? ticket.Id : null,
+                    hasTicket ? EntryTicketNumber.For(ticket.Id) : null,
+                    hasTicket ? ticket.Status?.ToString() : null);
             })
             .ToList();
 
