@@ -13,6 +13,9 @@ using SamaEcole.Application.Grades.Commands.CreateGrade;
 using SamaEcole.Application.Grades.Queries.GetClassGrades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Application.Grades;
+using SamaEcole.Application.ReportCards.Queries.GetReportCardPdf;
+using SamaEcole.Infrastructure.Documents;
+using MediatR;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
 using SamaEcole.IntegrationTests.Common;
@@ -32,6 +35,27 @@ file sealed class NoOpKpiCacheService : IKpiCacheService
 file sealed class StubTenantProvider(Guid? schoolId) : ITenantProvider
 {
     public Guid? CurrentSchoolId => schoolId;
+}
+
+/// <summary>Route le seul GetGradeSummaryQuery dont ReportCardDataService a besoin (pas de conteneur DI).</summary>
+file sealed class SummaryMediator(ApplicationDbContext dbContext) : ISender
+{
+    public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+        => request is GetGradeSummaryQuery query
+            ? (Task<TResponse>)(object)new GetGradeSummaryQueryHandler(
+                dbContext, new CoefficientOverrideLoader(dbContext), new SubjectFollowScope(dbContext)).Handle(query, cancellationToken)
+            : throw new NotSupportedException(request.GetType().Name);
+
+    public Task<object?> Send(object request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
+        => throw new NotSupportedException();
+
+    public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
 }
 
 /// <summary>
@@ -262,6 +286,50 @@ public class ClassSubjectsTests : IAsyncLifetime
         summary.TotalCoefficients.Should().Be(4m);
         summary.TotalPoints.Should().Be(52m);   // 10 × 2 + 16 × 2
         summary.GeneralAverage.Should().Be(13m); // 52 / 4
+    }
+
+    [Fact]
+    public async Task The_Pdf_Report_Card_Hides_Unchosen_Options_And_Ranks_Each_Option_Among_Its_Own_Students()
+    {
+        var (classroomId, _) = await CreateL2ClassAsync();
+        var ids = await ClassSubjectIdsAsync(classroomId);
+        var pc = await SubjectIdAsync("Physique-Chimie");
+        var svt = await SubjectIdAsync("SVT");
+        var pcStudent = await EnrollAsync(classroomId, "Awa Ndiaye", ids["Physique-Chimie"]);
+        var svtStudent = await EnrollAsync(classroomId, "Fatou Sow", ids["SVT"]);
+
+        await GradeAsync(pcStudent, Maths, 10);   // coefficient de classe : 2
+        await GradeAsync(pcStudent, pc, 16);      // option : 2
+        await GradeAsync(svtStudent, Maths, 14);
+        await GradeAsync(svtStudent, svt, 18);
+
+        // Note SVT antérieure au choix de l'élève de l'option PC : en base, jamais sur son bulletin.
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Grades.Add(new Grade
+            {
+                SchoolId = Ecole, StudentId = pcStudent, SubjectId = svt, TermId = Trimestre,
+                EvaluationType = EvaluationType.Composition, Value = 2
+            });
+            await owner.SaveChangesAsync();
+        }
+
+        await using var db = _db.NewAppContext(Ecole);
+        var reportCard = await new ReportCardDataService(new SummaryMediator(db), db).BuildAsync(pcStudent, Trimestre, default);
+
+        reportCard.Subjects.Select(s => s.SubjectName).Should().BeEquivalentTo("Maths", "Physique-Chimie");
+        reportCard.Subjects.Should().NotContain(s => s.SubjectId == svt, "une option non choisie est masquée, sans ligne vide");
+        reportCard.Subjects.Single(s => s.SubjectId == pc).Coefficient.Should().Be(2m);
+        reportCard.TotalCoefficients.Should().Be(4m);
+        reportCard.TotalPoints.Should().Be(52m);
+        reportCard.GeneralAverage.Should().Be(13m);
+        reportCard.SubjectRanks.Keys.Should().BeEquivalentTo([Maths, pc]);
+        reportCard.SubjectRanks[pc].Should().Be(1, "le rang d'une option se calcule parmi les seuls élèves qui la suivent");
+
+        // Le vrai générateur (QuestPDF) imprime ce bulletin sans erreur.
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        var pdf = new ReportCardPdfGenerator().Generate(reportCard, logo: null);
+        System.Text.Encoding.ASCII.GetString(pdf, 0, 4).Should().Be("%PDF");
     }
 
     [Fact]
