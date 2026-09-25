@@ -131,6 +131,18 @@ public interface IApplicationDbContext
     /// <summary>Choix d'option d'un élève pour une année scolaire (Évolution N°6).</summary>
     DbSet<StudentSubjectEnrollment> StudentSubjectEnrollments { get; }
 
+    /// <summary>Tranches d'âge par niveau propres à l'école (Évolution N°7, cartographie IEF).</summary>
+    DbSet<GradeAgeNorm> GradeAgeNorms { get; }
+
+    /// <summary>Programme officiel d'une matière pour un niveau : chapitres/objectifs (Évolution N°7).</summary>
+    DbSet<SyllabusUnit> SyllabusUnits { get; }
+
+    /// <summary>Unités du programme traitées pendant une séance du cahier de texte (Évolution N°7).</summary>
+    DbSet<ClassJournalEntryUnit> ClassJournalEntryUnits { get; }
+
+    /// <summary>Volumes horaires hebdomadaires propres à l'école, par niveau/série et matière (Évolution N°7).</summary>
+    DbSet<WeeklyHourNorm> WeeklyHourNorms { get; }
+
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 

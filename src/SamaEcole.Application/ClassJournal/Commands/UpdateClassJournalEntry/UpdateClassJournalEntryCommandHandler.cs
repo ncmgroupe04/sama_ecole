@@ -1,5 +1,6 @@
 using SamaEcole.Application.ClassJournal.Commands.CreateClassJournalEntry;
 using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Syllabus;
 using SamaEcole.Application.Common.Interfaces;
 using FluentValidation.Results;
 using MediatR;
@@ -10,7 +11,8 @@ namespace SamaEcole.Application.ClassJournal.Commands.UpdateClassJournalEntry;
 public class UpdateClassJournalEntryCommandHandler(
     IApplicationDbContext dbContext,
     ClassJournalScopeAuthorizer scopeAuthorizer,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ICurrentUserService? currentUser = null)
     : IRequestHandler<UpdateClassJournalEntryCommand, ClassJournalEntryResult>
 {
     public async Task<ClassJournalEntryResult> Handle(
@@ -45,6 +47,9 @@ public class UpdateClassJournalEntryCommandHandler(
         entry.Content = request.Content;
         entry.Homework = request.Homework;
         entry.HomeworkDueDate = request.HomeworkDueDate;
+
+        await JournalUnitLinker.SetAsync(
+            dbContext, entry, request.SyllabusUnitIds, currentUser?.UserId?.ToString() ?? "system", cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

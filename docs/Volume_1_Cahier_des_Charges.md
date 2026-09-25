@@ -365,6 +365,27 @@ choix appartient à l'**année scolaire** ; le changer archive l'ancien (suppres
   des matières non suivies sont **masquées** (PDF A5, bulletins de classe, délibération, fiche élève) — jamais une
   ligne vide.
 
+### 8.9 Conseil de classe : procès-verbaux, distinctions et décisions (Évolution N°7)
+
+**Seuils de l'école** (Paramètres › Notation & mentions, Directeur ; sur /20, transposés au barème de la classe).
+Défauts, règles du Ministère : Félicitations ≥ 14 ; Tableau d'honneur ≥ 12 **sans note éliminatoire** ;
+Encouragements ≥ 12 ; note éliminatoire = moyenne de matière < 5 (jugée sur le barème propre de la matière) ;
+Admis en classe supérieure ≥ 10 de moyenne annuelle ; Autorisé à redoubler ≥ 8,5 ; en dessous, Exclu. Le serveur
+refuse des seuils incohérents (422).
+
+- **Distinctions.** Proposées automatiquement sur le bulletin (moitié haute seulement — jamais Blâme ni
+  Avertissement), dans l'ordre Félicitations, Tableau d'honneur, Encouragements ; une saisie du conseil l'emporte
+  toujours (§8, `DisciplinaryMention`). Les anciens seuils 16/14/12 sont remplacés par les règles ci-dessus.
+- **Décisions de fin d'année.** Proposées d'après la moyenne annuelle ; « Appliquer les décisions proposées »
+  (écran Notes, Directeur/Secrétariat) les enregistre pour les seuls élèves sans décision — une décision du conseil
+  n'est jamais remplacée. Le bulletin n'imprime que les décisions enregistrées (gabarit inchangé, règle #12).
+- **PV de période et PV annuel** (A4). En-tête : République du Sénégal, Ministère de l'Éducation nationale, IA,
+  IEF, établissement. Tableau récapitulatif **Filles / Garçons / Total** : effectif, présents (ont composé ;
+  au PV annuel : ont au moins une moyenne de période), classés (ont une moyenne), moyenne ≥ 10/20, taux de
+  réussite (% des classés). Moyenne de la classe, plus forte, plus faible ; décompte des distinctions (période) ou
+  des décisions (annuel). Liste par ordre de mérite avec sexe, moyenne, rang, distinction, décision — au PV annuel,
+  une décision non prise imprime la proposition (« Proposé : … », en italique).
+
 ---
 
 ## 9. Rôles et permissions
@@ -756,7 +777,7 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 
 - L'emploi du temps est construit par **créneaux** : jour, heure de début, heure de fin, enseignant, classe, matière, salle.
 - Il se consulte **par enseignant** et **par classe**.
-- **Détection de chevauchement** à la création comme à la modification : un créneau est refusé s'il recouvre un créneau existant pour le même enseignant ou pour la même classe. Le message précise laquelle des deux contraintes est violée.
+- **Détection de chevauchement** à la création comme à la modification : un créneau est refusé s'il recouvre un créneau existant pour le même enseignant, pour la même classe ou dans la même **salle** (Évolution N°7 ; nom de salle comparé sans casse, accents ni ponctuation). Le message précise laquelle des contraintes est violée.
 - **Jours ouvrés configurables** (Évolution N°3) : le Directeur définit dans Paramètres › Notation & mentions les jours ouvrés de l'établissement (par défaut du lundi au samedi ; par exemple du samedi au mercredi pour une école franco-arabe ou un daara au repos le jeudi et le vendredi). La grille n'affiche que ces jours, dans l'ordre de la semaine de l'école, et un créneau ne peut être créé ni déplacé sur un jour de repos. Un créneau déjà posé sur un jour devenu repos reste visible (colonne marquée « repos ») et peut être supprimé, mais plus modifié.
 
 ### 21.2 Qui peut faire quoi
@@ -1018,6 +1039,66 @@ l'école d'accueil lors d'une mutation, aux côtés du certificat.
 
 > **Une case vide signifie « non évaluée », et rien d'autre.** Imprimer « NA » à la place porterait un
 > jugement d'échec que personne n'a formulé — sur le document qui suit l'élève d'école en école.
+
+### 23.7 Cartographie statistique et rapport de rentrée IEF (Évolution N°7)
+
+Écran **Rapports institutionnels** (`/rapports/institutionnels`, Directeur et Secrétariat).
+
+- **Normes d'âge par niveau.** Modèle national en code : âge normal du niveau (CI 6 ans … CM2 11 ans, 6e 12 ans
+  … 3e 15 ans, Seconde 16 ans … Terminale 18 ans, maternelle TPS 2 à GS 5), tolérance d'**un an d'avance et deux
+  ans de retard** (CI : 5 à 8 ans). Âges **révolus au 31 décembre** de l'année de rentrée. Le Directeur peut
+  régler un niveau pour son école (onglet « Normes d'âge ») ou revenir au modèle. Le niveau d'une classe se lit sur
+  son nom (« 6e B » → Sixième) ; un nom qui ne le dit pas n'est pas contrôlé.
+- **Inscription.** Un âge hors tranche affiche un **avertissement, jamais un blocage**. Case « Élève transféré
+  d'un autre établissement » (+ établissement d'origine). Statut de l'élève : **Redoublant** (classe redoublée),
+  sinon **Transféré**, sinon **Nouveau**.
+- **Rapport de rentrée** (aperçu, **Export PDF** A4 paysage, **Export Excel**) — comptages sur les inscriptions
+  non annulées de l'année :
+  1. effectifs **par classe, par âge et par sexe** (F/G), statuts Nouveau/Redoublant/Transféré, élèves en avance
+     et en retard sur la norme, âge inconnu ; les âges extrêmes sont regroupés (« ≤ x », « ≥ y ») pour tenir sur
+     une page ;
+  2. **taux de redoublement par niveau** (dont filles, dont garçons) ;
+  3. **corps professoral** par discipline (enseignants H/F, heures hebdomadaires), par diplôme (académique ×
+     professionnel), et liste nominative avec volume horaire — disciplines et heures lues sur l'emploi du temps.
+
+### 23.8 Programmes nationaux et suivi du cahier de texte (Évolution N°7)
+
+Écran **Programmes** (`/programmes`) : onglets « Avancement » (Directeur, Secrétariat) et « Référentiel » (écriture
+Directeur, lecture Secrétariat).
+
+- **Référentiel.** Le programme d'une matière pour un **niveau** (CI … Terminale) est une liste ordonnée de
+  chapitres, groupés par partie, avec un volume horaire indicatif facultatif. Il appartient à l'établissement.
+  **Trame nationale** (découpage DEMSGS / INEADE) en code, importable d'un clic quand elle existe — volontairement
+  restreinte aux trames stables (Mathématiques de 3e, programme du BFEM) : toute autre matière se saisit en collant
+  **un chapitre par ligne**, jamais un programme inventé. Un chapitre se renomme, se déplace, se retire (suppression
+  logique) ; un intitulé déjà présent n'est jamais dupliqué.
+- **Cahier de texte.** À la saisie ou à la correction d'une séance, dès que la classe et la matière sont choisies,
+  l'enseignant **coche les chapitres traités** parmi le programme de la matière pour le niveau de la classe (niveau
+  lu sur le nom de la classe). Le serveur refuse (422) un chapitre d'une autre matière ou d'un autre niveau.
+- **Avancement.** Pour l'année active : par classe et matière, **part des chapitres pointés au moins une fois**
+  (un chapitre pointé deux fois compte une fois ; programme vide : « — »), enseignants de la classe dans la matière
+  (emploi du temps, plus les auteurs du cahier) et dernière séance ; moyennes **par matière et niveau** et **par
+  enseignant** — un enseignant qui ne tient pas le cahier apparaît à 0 %.
+
+### 23.9 Volumes horaires officiels et conformité des emplois du temps (Évolution N°7)
+
+- **Volumes de référence.** Grille hebdomadaire par niveau et, au lycée, par série, **en code** et pré-remplie :
+  collège (6e-5e : Français 6 h, Anglais 4 h, Mathématiques 5 h, SVT 2 h, Histoire-Géographie 3 h, Éducation civique
+  1 h, EPS 2 h ; 4e-3e : + LV2 3 h et Physique-Chimie 3 h, Français 5 h) ; Seconde S / L (grille de la famille de
+  série) ; Première et Terminale S1, S2, L1a, L1b, L2. Valeurs **indicatives**, à rapprocher de l'arrêté en vigueur :
+  le Directeur les règle pour son établissement (écran **Programmes › Volumes horaires**) par niveau — toutes séries —
+  ou par niveau et série ; le réglage de la série l'emporte sur celui du niveau, qui l'emporte sur la grille. Vider un
+  volume revient à la référence. Aucune grille n'est codée pour le préscolaire, l'élémentaire, les séries techniques
+  et franco-arabes : le contrôle y est « sans référence » tant que l'école n'a rien saisi.
+- **Contrôle de conformité** (écran Enseignants › Emploi du temps, vue « Par classe », Directeur et Secrétariat) :
+  heures planifiées de chaque matière contre la référence du niveau et de la série de la classe — **conforme**,
+  **sous le volume**, **au-dessus**, **sans référence** — et total hebdomadaire. Matières contrôlées : le programme de
+  la classe (Évolution N°6) s'il est saisi, sinon les matières du cycle qui ont une référence, plus toute matière
+  planifiée. Une matière **au choix** (LV2, langue ancienne) : les langues non planifiées du groupe sont ignorées dès
+  qu'une l'est ; si aucune ne l'est, le groupe ressort en une ligne manquante.
+- **Chevauchements** : tout l'établissement est scanné — même enseignant, même salle ou même classe, le même jour, sur
+  des plages qui se recouvrent (y compris l'historique antérieur à la garde sur les salles). La carte de la classe
+  liste ceux qui la touchent.
 
 ---
 

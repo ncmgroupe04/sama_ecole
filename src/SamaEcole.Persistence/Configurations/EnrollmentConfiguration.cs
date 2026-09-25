@@ -30,6 +30,9 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         // Classe redoublée (feature F) : défaut false en base pour que toute inscription existante
         // (créée avant cette colonne) soit non-redoublante, jamais NULL.
         builder.Property(e => e.IsRepeating).IsRequired().HasDefaultValue(false);
+        // Cartographie IEF (Évolution N°7) : défaut false en base, une inscription existante reste « Nouveau ».
+        builder.Property(e => e.IsTransferredIn).IsRequired().HasDefaultValue(false);
+        builder.Property(e => e.PreviousSchoolName).HasMaxLength(150);
         // Régime d'hébergement (module Internat) : défaut base 'Externe' pour que toute inscription
         // existante (créée avant cette colonne) reste Externe, jamais NULL — même contrat qu'IsRepeating.
         builder.Property(e => e.BoardingStatus)

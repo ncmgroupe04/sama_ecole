@@ -465,6 +465,45 @@ Trois tables tenant, snake_case (convention des modules les plus récents, §4.5
 
 ---
 
+### 5.12 Cartographie IEF (Évolution N°7) — `grade_age_norms` + colonnes d'inscription
+
+- `enrollments.IsTransferredIn` (`boolean`, défaut `false`) et `enrollments.PreviousSchoolName` (`varchar(150)`,
+  nullable) : statut « Transféré » du rapport de rentrée ; les inscriptions existantes restent « Nouveau ».
+- `grade_age_norms` — table tenant de **paramétrage** : `Id`, `SchoolId`, `GradeLevel` (`varchar(20)`, libellé de
+  `ClassroomGradeLevels`), `MinAge`, `MaxAge`, audit, suppression logique, `xmin`. `CHECK (MinAge >= 0 AND MaxAge >=
+  MinAge AND MaxAge <= 30)`, index unique partiel `(SchoolId, GradeLevel) WHERE NOT IsDeleted`. RLS + Global Query
+  Filter, `GRANT SELECT, INSERT, UPDATE`. N'existe que pour un niveau réglé par l'école : sans ligne, le modèle
+  national (`AgeNormTemplates`, en code) s'applique. Comme `school_settings`, elle survit à « Réinitialiser les
+  données » (aucune FK vers une table purgée).
+
+Seuils du conseil de classe (Évolution N°7) : six colonnes `numeric(4,2)` sur `school_settings`
+(`CouncilFelicitationsMin` 14, `CouncilHonorRollMin` 12, `CouncilEncouragementsMin` 12, `CouncilEliminatoryGrade` 5,
+`CouncilPromotionMin` 10, `CouncilRepeatMin` 8,5 — défauts en base).
+
+### 5.13 Programmes et cahier de texte (Évolution N°7) — `syllabus_units`, `class_journal_entry_units`
+
+- `syllabus_units` — référentiel d'un programme : `Id`, `SchoolId`, `SubjectId` (FK composite `(SchoolId,
+  SubjectId)` → `subjects`), `GradeLevel` (`varchar(20)`, libellé de `ClassroomGradeLevels`), `Section`
+  (`varchar(120)`, nullable), `Title` (`varchar(200)`), `Order`, `PlannedHours` (`numeric(5,2)`, nullable), audit,
+  suppression logique, `xmin`. Index unique partiel `UX_syllabus_units_title (SchoolId, SubjectId, GradeLevel, Title)
+  WHERE NOT IsDeleted`.
+- `class_journal_entry_units` — chapitres pointés dans une séance : `Id`, `SchoolId`, `ClassJournalEntryId` (FK
+  composite → `class_journal_entries`, d'où la clé alternative `AK_class_journal_entries_SchoolId_Id`),
+  `SyllabusUnitId` (FK composite → `syllabus_units`), audit, suppression logique, `xmin`. Index unique partiel
+  `(ClassJournalEntryId, SyllabusUnitId) WHERE NOT IsDeleted`.
+- Les deux : RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE` (aucun DELETE, règle #6). Purgées par
+  `reset_school_data` (juste avant `class_journal_entries` : liens, puis chapitres) ; non rattachées à une année,
+  `delete_school_year` ne les touche pas.
+
+### 5.14 Volumes horaires (Évolution N°7) — `weekly_hour_norms`
+
+Table tenant de **paramétrage** : `Id`, `SchoolId`, `GradeLevel` (`varchar(20)`), `Series` (`varchar(10)`, nullable :
+toutes les classes du niveau), `SubjectId` (FK composite → `subjects`), `WeeklyHours` (`numeric(4,2)`, `CHECK 0–40`),
+audit, suppression logique, `xmin`. Index unique partiel `UX_weekly_hour_norms_scope (SchoolId, GradeLevel, Series,
+SubjectId) NULLS NOT DISTINCT WHERE NOT IsDeleted`. RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE`.
+N'existe que pour un volume réglé par l'école : sans ligne, la grille codée (`WeeklyHourTemplates`) s'applique.
+Purgée par `reset_school_data` juste avant `subjects`.
+
 ## 6. Dictionnaire des énumérations
 
 | Énumération | Valeurs |

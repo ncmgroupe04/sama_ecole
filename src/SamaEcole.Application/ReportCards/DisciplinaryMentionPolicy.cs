@@ -27,42 +27,15 @@ namespace SamaEcole.Application.ReportCards;
 public static class DisciplinaryMentionPolicy
 {
     /// <summary>
-    /// Seuils sur <see cref="MentionScales.Reference"/> (/20), plus fortes d'abord — transposés au
-    /// barème du bulletin comme ceux des appréciations, pour que le primaire /10 ne soit pas jugé sur
-    /// des seuils /20.
-    /// </summary>
-    private static readonly (DisciplinaryMention Mention, decimal MinAverage)[] OnReferenceScale =
-    [
-        (DisciplinaryMention.Felicitations, 16m),
-        (DisciplinaryMention.TableauHonneur, 14m),
-        (DisciplinaryMention.Encouragements, 12m)
-    ];
-
-    /// <summary>
-    /// La distinction que mérite <paramref name="generalAverage"/>, ou null s'il n'y en a aucune à
-    /// proposer — sous 12/20, aucune récompense, et jamais une sanction (voir la remarque de classe).
+    /// La distinction que mérite <paramref name="generalAverage"/> selon les règles de l'école (Évolution N°7 :
+    /// Félicitations, Tableau d'honneur sans note éliminatoire, Encouragements — <see cref="CouncilRules"/>), ou
+    /// null s'il n'y en a aucune à proposer — jamais une sanction (voir la remarque de classe).
     ///
-    /// Null aussi quand <paramref name="hasGrades"/> est faux : un bulletin sans la moindre note porte
-    /// une moyenne générale de 0 par convention (<c>GradeCalculator.WeightedGeneralAverage</c> sur un
-    /// ensemble vide), et ce 0 ne dit rien de l'élève. Le laisser entrer ici ne changerait aucune
-    /// distinction — 0 est sous tous les seuils — mais l'oubli se paierait le jour où quelqu'un
-    /// ajouterait un seuil bas.
+    /// Null aussi quand <paramref name="hasGrades"/> est faux : un bulletin sans la moindre note porte une moyenne
+    /// générale de 0 par convention, et ce 0 ne dit rien de l'élève.
     /// </summary>
-    public static DisciplinaryMention? Suggest(decimal generalAverage, int gradingScale, bool hasGrades)
-    {
-        if (!hasGrades)
-        {
-            return null;
-        }
-
-        foreach (var (mention, minAverage) in OnReferenceScale)
-        {
-            if (generalAverage >= minAverage * gradingScale / MentionScales.Reference)
-            {
-                return mention;
-            }
-        }
-
-        return null;
-    }
+    public static DisciplinaryMention? Suggest(
+        decimal generalAverage, int gradingScale, bool hasGrades,
+        CouncilRules? rules = null, bool hasEliminatoryGrade = false)
+        => (rules ?? CouncilRules.Default).SuggestDistinction(generalAverage, gradingScale, hasGrades, hasEliminatoryGrade);
 }

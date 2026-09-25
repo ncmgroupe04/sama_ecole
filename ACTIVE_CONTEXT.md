@@ -5,7 +5,8 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 25/09/2026** (Séries du Baccalauréat, matières par classe et options — Évolution N°6,
+**Dernière mise à jour : 25/09/2026** (Conformité pédagogique et institutionnelle — Évolution N°7 : PV du conseil,
+cartographie IEF, programmes et volumes horaires, voir §2 ; Séries du Baccalauréat, matières par classe et options — Évolution N°6,
 voir §2 ; Appel par cours de l'emploi du temps et billets d'entrée visant
 un cours — Évolution N°5, voir §2 ; Notes — fenêtre de correction de l'Enseignant, saisie par le
 Secrétariat et fiche de saisie papier PDF, voir §2 ; Module Cahier de texte / Journal de classe (JGK-P04) —
@@ -303,6 +304,43 @@ tableau de bord. Sans `scheduleSlotId` ni cours visé, tout se comporte exacteme
    à revoir pour un déploiement dans un autre fuseau.
 5. Le billet de sortie reste un registre à part, sans lien avec le cours ; la justification des séances manquées
    (Tâche 9) n'est pas construite.
+
+### Conformité pédagogique et institutionnelle (25/09/2026) — livré (Évolution N°7)
+
+Quatre modules, un commit chacun, branche `claude/senegal-series-subjects-coefficients-ndqwkq`. Spécification :
+`docs/Volume_1_Cahier_des_Charges.md` §8.9, §23.7 à §23.9 ; routes : `docs/Volume_4_API_Design.md` §9, §25 à §27.
+
+- **PV du conseil de classe et décisions.** Seuils réglables par le Directeur (`school_settings`, Paramètres ›
+  Notation & mentions) : Félicitations ≥ 14, Tableau d'honneur ≥ 12 **sans note éliminatoire** (< 5, jugée sur le
+  barème de chaque matière), Encouragements ≥ 12, passage ≥ 10, redoublement ≥ 8,5 (sinon exclusion). PV de période et
+  **PV annuel** (en-tête officiel, statistiques Filles / Garçons / Total, taux de réussite). « Appliquer les décisions
+  proposées » ne remplace jamais une décision déjà prise ; une proposition s'imprime « Proposé : … », en italique.
+- **Cartographie IEF.** Normes d'âge par niveau en code (âge normal − 1 / + 2, au 31 décembre), réglables par l'école
+  (`grade_age_norms`) ; avertissement d'âge à l'inscription (jamais un blocage) ; statut Nouveau / Redoublant /
+  Transféré (`enrollments.IsTransferredIn`, `PreviousSchoolName`). Écran `/rapports/institutionnels` : effectifs
+  classe × âge × sexe, redoublement par niveau, corps professoral (discipline, diplôme, heures) ; export PDF et Excel.
+- **Programmes et cahier de texte.** `syllabus_units` (chapitres d'une matière pour un niveau) et
+  `class_journal_entry_units` (chapitres cochés dans une séance). Trame nationale codée pour les Mathématiques de 3e
+  seulement ; ailleurs, un chapitre par ligne. Écran `/programmes` : avancement par classe × matière, par matière et
+  par enseignant (année active), référentiel, volumes horaires.
+- **Volumes horaires et conformité des emplois du temps.** Grilles en code (collège ; Seconde S/L ; Première et
+  Terminale S1, S2, L1a, L1b, L2), réglables par niveau ou niveau × série (`weekly_hour_norms`). Contrôle par classe
+  dans l'emploi du temps « Par classe » (conforme / sous / au-dessus / sans référence, options comptées une fois) et
+  chevauchements enseignant / salle / classe de tout l'établissement. La **salle** est désormais refusée à l'écriture
+  d'un créneau qui la double.
+- **Migrations** `AddCouncilRules`, `AddIefMapping`, `AddSyllabusTracking`, `AddWeeklyHourNorms` : RLS + Global Query
+  Filter, `GRANT` sans DELETE, `reset_school_data` corrigée pour les tables qui pendent à `subjects` ou
+  `class_journal_entries`. Scripts idempotents et de retour arrière dans `docs/migrations/` (vérifiés sur
+  PostgreSQL 16 : double application, retour arrière, réapplication).
+
+**Points de vigilance connus :**
+1. Les grilles horaires et la trame de programme sont des **valeurs par défaut indicatives** : à confronter à l'arrêté
+   et aux programmes DEMSGS / INEADE en vigueur — chaque école les ajuste sans toucher au code.
+2. Le niveau d'une classe se lit sur son **nom** (« 6e B », « Tle S2 A ») : une classe au nom hors nomenclature n'est
+   ni contrôlée en âge, ni rattachée à un programme, ni confrontée à une grille horaire.
+3. Le contrôle de conformité suppose des créneaux hebdomadaires fixes (l'emploi du temps n'a pas de semaines A/B).
+4. Deux créneaux d'une même classe à la même heure (groupes de LV2 en parallèle) restent refusés par la garde
+   historique ; le contrôle les signale comme chevauchement de classe s'ils existent déjà.
 
 ### Séries du Baccalauréat, matières par classe et options (25/09/2026) — livré (Évolution N°6)
 

@@ -27,6 +27,9 @@ tags:
   - name: Subjects
   - name: Coefficients
   - name: ClassSubjects
+  - name: Institutional
+  - name: Syllabus
+  - name: HourVolumes
   - name: Students
   - name: Teachers
   - name: Attendance
@@ -107,6 +110,249 @@ paths:
                 properties:
                   isConfigured: { type: boolean }
                   message: { type: string }
+
+  /institutional/ief-report:
+    get:
+      tags: [Institutional]
+      summary: Rapport de rentrée IEF (Évolution N°7) — Directeur, Secrétariat
+      description: >-
+        Comptages sur les inscriptions non annulées de l'année : effectifs par classe, âge (révolu à la date de
+        référence, défaut 31 décembre de l'année de rentrée) et sexe, statuts Nouveau/Redoublant/Transféré, élèves hors
+        tranche d'âge ; taux de redoublement par niveau ; corps professoral par discipline, diplôme et volume horaire
+        (emploi du temps). Mêmes chiffres que les exports /pdf et /excel.
+      parameters:
+        - { name: schoolYearId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: ageReferenceDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Le rapport (IefReportDto) }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /institutional/ief-report/pdf:
+    get:
+      tags: [Institutional]
+      summary: Rapport de rentrée IEF en PDF (A4 paysage, inline)
+      parameters:
+        - { name: schoolYearId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: ageReferenceDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  /institutional/ief-report/excel:
+    get:
+      tags: [Institutional]
+      summary: Rapport de rentrée IEF en classeur .xlsx (une feuille par tableau)
+      parameters:
+        - { name: schoolYearId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: ageReferenceDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Classeur
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+
+  /institutional/age-norms:
+    get:
+      tags: [Institutional]
+      summary: Tranches d'âge par niveau (modèle national et réglage de l'école)
+      responses:
+        '200': { description: Une ligne par niveau (gradeLevel, cycle, templateMinAge, templateMaxAge, minAge, maxAge, isCustom) }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /institutional/age-norms/{gradeLevel}:
+    put:
+      tags: [Institutional]
+      summary: Régler la tranche d'âge d'un niveau (Directeur seul)
+      parameters:
+        - { name: gradeLevel, in: path, required: true, schema: { type: string, example: "Sixième" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [minAge, maxAge]
+              properties:
+                minAge: { type: integer, minimum: 0, maximum: 30 }
+                maxAge: { type: integer, minimum: 0, maximum: 30 }
+      responses:
+        '204': { description: Enregistrée }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Institutional]
+      summary: Revenir au modèle national pour un niveau (Directeur seul)
+      parameters:
+        - { name: gradeLevel, in: path, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Réglage archivé }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /institutional/age-check:
+    get:
+      tags: [Institutional]
+      summary: Contrôle de la tranche d'âge à l'inscription — avertissement, jamais un refus
+      parameters:
+        - { name: classroomId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: birthDate, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200': { description: 'gradeLevel, age, minAge, maxAge, status (Unknown | Early | Normal | Late), referenceDate, message' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /syllabus/units:
+    get:
+      tags: [Syllabus]
+      summary: Programme d'une matière pour un niveau, ou pour le niveau d'une classe (Évolution N°7)
+      parameters:
+        - { name: subjectId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: gradeLevel, in: query, schema: { type: string, example: "Troisième" } }
+        - { name: classroomId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ gradeLevel, hasTemplate, units[] } — chapitres dans l''ordre (id, section, title, order, plannedHours, rowVersion)' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Syllabus]
+      summary: Ajouter des chapitres, un par intitulé, à la suite du programme (Directeur seul)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subjectId, gradeLevel, titles]
+              properties:
+                subjectId: { type: string, format: uuid }
+                gradeLevel: { type: string }
+                section: { type: string, maxLength: 120, nullable: true }
+                titles: { type: array, items: { type: string, maxLength: 200 } }
+      responses:
+        '200': { description: '{ added } — un intitulé déjà présent est ignoré' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /syllabus/import-template:
+    post:
+      tags: [Syllabus]
+      summary: Importer la trame nationale d'une matière pour un niveau (Directeur seul)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subjectId, gradeLevel]
+              properties:
+                subjectId: { type: string, format: uuid }
+                gradeLevel: { type: string }
+      responses:
+        '200': { description: '{ added }' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /syllabus/units/{id}:
+    put:
+      tags: [Syllabus]
+      summary: Corriger un chapitre (Directeur seul)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, order, rowVersion]
+              properties:
+                title: { type: string, maxLength: 200 }
+                section: { type: string, maxLength: 120, nullable: true }
+                order: { type: integer, minimum: 0 }
+                plannedHours: { type: number, minimum: 0, maximum: 500, nullable: true }
+                rowVersion: { type: integer, format: int64 }
+      responses:
+        '204': { description: Enregistré }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Syllabus]
+      summary: Retirer un chapitre (suppression logique, Directeur seul)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: rowVersion, in: query, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: Archivé }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /syllabus/coverage:
+    get:
+      tags: [Syllabus]
+      summary: Avancement des programmes de l'année active — Directeur, Secrétariat
+      responses:
+        '200': { description: '{ schoolYearLabel, rows[] (classe × matière : teachers, coveredUnits, totalUnits, percent, lastSessionDate), bySubject[], byTeacher[] }' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /hour-volumes/norms:
+    get:
+      tags: [HourVolumes]
+      summary: Volumes horaires hebdomadaires d'un niveau (et d'une série) — Directeur, Secrétariat (Évolution N°7)
+      parameters:
+        - { name: gradeLevel, in: query, required: true, schema: { type: string, example: "Terminale" } }
+        - { name: series, in: query, schema: { type: string, example: "S2" } }
+      responses:
+        '200': { description: '{ gradeLevel, series, hasTemplate, totalHours, rows[] (subjectId, subjectName, optionGroup, templateHours, gradeHours, schoolHours, effectiveHours, overrideId, rowVersion) }' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [HourVolumes]
+      summary: Régler le volume hebdomadaire d'une matière pour un niveau (et une série) — Directeur seul
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gradeLevel, subjectId, weeklyHours]
+              properties:
+                gradeLevel: { type: string }
+                series: { type: string, nullable: true, description: Lycée seulement }
+                subjectId: { type: string, format: uuid }
+                weeklyHours: { type: number, minimum: 0, maximum: 40, multipleOf: 0.25 }
+                rowVersion: { type: integer, format: int64, nullable: true, description: Obligatoire pour modifier un réglage existant }
+      responses:
+        '204': { description: Enregistré }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /hour-volumes/norms/{id}:
+    delete:
+      tags: [HourVolumes]
+      summary: Revenir au volume de référence (suppression logique du réglage) — Directeur seul
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: rowVersion, in: query, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: Archivé }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /hour-volumes/compliance:
+    get:
+      tags: [HourVolumes]
+      summary: Conformité des emplois du temps aux volumes de référence, et chevauchements — Directeur, Secrétariat
+      parameters:
+        - { name: classroomId, in: query, schema: { type: string, format: uuid }, description: Omis = toutes les classes }
+      responses:
+        '200': { description: '{ classes[] (gradeLevel, series, totals, subjects[] : plannedHours, normHours, difference, status Compliant | Under | Over | NoReference ; conflictCount), conflicts[] (kind Teacher | Room | Classroom, dayOfWeek, resource, first, second) }' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /state-integration/stateduc:
     get:
@@ -2929,6 +3175,92 @@ paths:
         '403': { description: Réservé au Directeur et à l'Enseignant }
         '404': { description: Élève ou trimestre introuvable dans l'établissement courant }
 
+
+  /report-cards/class-deliberation/annual/pdf:
+    get:
+      tags: [ReportCards]
+      summary: PV ANNUEL du conseil de classe (Évolution N°7) — Directeur, Enseignant, Secrétariat
+      description: >-
+        Moyenne et rang annuels de chaque élève (ordre de mérite), tableau récapitulatif Filles / Garçons / Total
+        (effectif, présents, classés, moyenne ≥ moitié du barème, taux de réussite), décompte des décisions, et la
+        décision de fin d'année — saisie par le conseil, à défaut PROPOSÉE (« Proposé : … ») d'après les seuils de
+        l'école. Bâti sur la dernière période de l'année. 409 pour une classe sans élève ou une année sans période.
+      parameters:
+        - { name: classroomId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: schoolYearId, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: PV annuel (A4 portrait)
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Classe sans élève, ou année sans période }
+
+  /report-cards/council-decisions/apply-proposals:
+    post:
+      tags: [ReportCards]
+      summary: Enregistrer les décisions de fin d'année proposées (Directeur, Secrétariat)
+      description: >-
+        Pour chaque élève de la classe SANS décision sur la période, enregistre la décision proposée d'après sa
+        moyenne annuelle (Admis en classe supérieure, Autorisé à redoubler, Exclu). Ne remplace jamais une
+        décision déjà prise ; un élève sans moyenne annuelle reste sans décision. Idempotente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [classroomId, termId]
+              properties:
+                classroomId: { type: string, format: uuid }
+                termId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Bilan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applied: { type: integer }
+                  alreadyDecided: { type: integer }
+                  withoutAverage: { type: integer }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /report-cards/council-rules:
+    get:
+      tags: [ReportCards]
+      summary: Seuils du conseil de classe de l'école (défauts MEN à défaut de réglage)
+      responses:
+        '200':
+          description: Les seuils, sur /20
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CouncilRules' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [ReportCards]
+      summary: Régler les seuils du conseil de classe (Directeur seul)
+      description: >-
+        Tous sur /20. 422 si un seuil sort de [0 ; 20], si les Félicitations exigent moins que le Tableau d'honneur
+        ou les Encouragements, ou si le seuil de redoublement dépasse celui de passage. Recalcule les PROPOSITIONS
+        (distinctions du bulletin, décisions du PV annuel), jamais une décision déjà prise. Journalisé.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CouncilRules' }
+      responses:
+        '200':
+          description: Les seuils enregistrés
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CouncilRules' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /finance/fee-categories:
     get:
       tags: [Finance]
@@ -5648,6 +5980,18 @@ components:
             de Lycée ou hors du catalogue. REMPLACEMENT COMPLET en PUT : une série absente est EFFACÉE — renvoyez
             la classe entière.
 
+    CouncilRules:
+      type: object
+      description: >-
+        Seuils du conseil de classe (Évolution N°7), sur /20, transposés au barème de la classe. Défauts : règles MEN.
+      properties:
+        felicitationsMin: { type: number, example: 14 }
+        honorRollMin: { type: number, example: 12, description: "Tableau d'honneur — sans aucune note éliminatoire" }
+        encouragementsMin: { type: number, example: 12 }
+        eliminatoryGrade: { type: number, example: 5, description: Une moyenne de matière strictement inférieure est éliminatoire }
+        promotionMin: { type: number, example: 10, description: Moyenne annuelle minimale proposée « Admis en classe supérieure » }
+        repeatMin: { type: number, example: 8.5, description: Moyenne annuelle minimale proposée « Autorisé à redoubler » ; en dessous « Exclu » }
+
     SeriesItem:
       type: object
       properties:
@@ -6258,6 +6602,10 @@ components:
         gender: { type: string, enum: [M, F], description: NewEnrollment uniquement }
         guardianName: { type: string }
         guardianPhone: { type: string }
+        isTransferredIn:
+          type: boolean
+          description: Élève transféré d'un autre établissement (statut « Transféré » du rapport de rentrée IEF — Évolution N°7).
+        previousSchoolName: { type: string, maxLength: 150, nullable: true, description: Établissement d'origine d'un élève transféré }
         subjectOptionIds:
           type: array
           nullable: true
@@ -8033,6 +8381,10 @@ components:
             Calculé serveur (ClassJournalEditWindow.CanCorrect) : vrai pour Directeur/Secrétariat,
             ou pour l'auteur dans les 15 jours suivant sessionDate. Confort d'affichage — la vraie
             garde reste PUT/DELETE /class-journal/{id} (403 sinon).
+        syllabusUnitIds:
+          type: array
+          items: { type: string, format: uuid }
+          description: Chapitres du programme pointés pour cette séance (Évolution N°7).
 
     ClassJournalEntryCreateRequest:
       type: object
@@ -8052,6 +8404,13 @@ components:
           format: date
           nullable: true
           description: N'a de sens que si `homework` est renseigné ; ne peut précéder `sessionDate`.
+        syllabusUnitIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: >-
+            Chapitres traités (Évolution N°7) — chacun doit appartenir au programme de la matière pour le niveau de la
+            classe (422 sinon).
 
     ClassJournalEntryUpdateRequest:
       type: object
@@ -8063,6 +8422,11 @@ components:
         homework: { type: string, maxLength: 2000, nullable: true }
         homeworkDueDate: { type: string, format: date, nullable: true }
         rowVersion: { type: integer }
+        syllabusUnitIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: Chapitres traités (Évolution N°7) — remplace la liste ; absent (null) = inchangée.
 
     PaginatedClassJournalEntries:
       type: object

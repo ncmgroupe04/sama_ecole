@@ -6,6 +6,7 @@
 @section Scripts {
  <script src="~/js/photo-compress.js" asp-append-version="true"></script>
  <script src="~/js/teachers.js" asp-append-version="true"></script>
+ <script src="~/js/hour-volumes.js" asp-append-version="true"></script>
 }
 
 <div x-data="teachersView()">
@@ -860,6 +861,8 @@
                 Sélectionnez une classe pour voir son emploi du temps.
             </div>
         </div>
+
+        @await Html.PartialAsync("_TimetableCompliance")
 
         <!-- Modale : Créer un créneau -->
         <modal-shell open="creatingScheduleSlot" on-close="closeCreateScheduleSlot()" size="md">

@@ -18,6 +18,7 @@ public class CreateEnrollmentCommandValidator : AbstractValidator<CreateEnrollme
         RuleFor(x => x.ClassroomId).NotEmpty();
 
         RuleFor(x => x.BoardingStatus).IsInEnum();
+        RuleFor(x => x.PreviousSchoolName).MaximumLength(150).NoHtml();
 
         // Un régime Interne/Demi-pensionnaire sans chambre est une saisie incomplète — RoomId reste
         // libre pour Externe (spec §3.3 : significatif seulement si BoardingStatus != Externe).

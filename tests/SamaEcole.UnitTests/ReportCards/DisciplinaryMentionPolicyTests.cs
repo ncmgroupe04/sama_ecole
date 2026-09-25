@@ -15,14 +15,31 @@ public class DisciplinaryMentionPolicyTests
 {
     [Theory]
     [InlineData(17.0, DisciplinaryMention.Felicitations)]
-    [InlineData(16.0, DisciplinaryMention.Felicitations)]
-    [InlineData(15.99, DisciplinaryMention.TableauHonneur)]
-    [InlineData(14.0, DisciplinaryMention.TableauHonneur)]
-    [InlineData(13.5, DisciplinaryMention.Encouragements)]
-    [InlineData(12.0, DisciplinaryMention.Encouragements)]
+    [InlineData(14.0, DisciplinaryMention.Felicitations)]
+    [InlineData(13.99, DisciplinaryMention.TableauHonneur)]
+    [InlineData(12.0, DisciplinaryMention.TableauHonneur)]
     public void An_Award_Is_Proposed_From_Twelve_On(double average, DisciplinaryMention expected)
     {
+        // Règles MEN (Évolution N°7) : Félicitations ≥ 14, Tableau d'honneur ≥ 12 sans note éliminatoire.
         DisciplinaryMentionPolicy.Suggest((decimal)average, 20, hasGrades: true).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(13.5, DisciplinaryMention.Encouragements)]
+    [InlineData(12.0, DisciplinaryMention.Encouragements)]
+    [InlineData(15.0, DisciplinaryMention.Felicitations)]
+    public void An_Eliminatory_Grade_Turns_The_Honour_Roll_Into_Encouragements(double average, DisciplinaryMention expected)
+        => DisciplinaryMentionPolicy.Suggest((decimal)average, 20, hasGrades: true, hasEliminatoryGrade: true)
+            .Should().Be(expected);
+
+    [Fact]
+    public void The_School_Thresholds_Are_Honoured()
+    {
+        var strict = CouncilRules.Default with { FelicitationsMin = 16, HonorRollMin = 14, EncouragementsMin = 13 };
+
+        DisciplinaryMentionPolicy.Suggest(15m, 20, hasGrades: true, strict).Should().Be(DisciplinaryMention.TableauHonneur);
+        DisciplinaryMentionPolicy.Suggest(13.5m, 20, hasGrades: true, strict).Should().Be(DisciplinaryMention.Encouragements);
+        DisciplinaryMentionPolicy.Suggest(12.5m, 20, hasGrades: true, strict).Should().BeNull();
     }
 
     [Theory]
@@ -42,11 +59,10 @@ public class DisciplinaryMentionPolicyTests
         DisciplinaryMentionPolicy.Suggest(0m, 20, hasGrades: false).Should().BeNull();
     }
 
-    /// <summary>Un bulletin primaire /10 : les seuils sont transposés, Félicitations dès 8/10.</summary>
+    /// <summary>Un bulletin primaire /10 : les seuils sont transposés, Félicitations dès 7/10.</summary>
     [Theory]
-    [InlineData(8.0, DisciplinaryMention.Felicitations)]
-    [InlineData(7.0, DisciplinaryMention.TableauHonneur)]
-    [InlineData(6.0, DisciplinaryMention.Encouragements)]
+    [InlineData(7.0, DisciplinaryMention.Felicitations)]
+    [InlineData(6.0, DisciplinaryMention.TableauHonneur)]
     [InlineData(5.99, null)]
     public void Thresholds_Are_Transposed_To_The_Card_Scale(double average, DisciplinaryMention? expected)
     {

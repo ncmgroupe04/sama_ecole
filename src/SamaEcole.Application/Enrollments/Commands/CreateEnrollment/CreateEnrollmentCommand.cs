@@ -31,6 +31,14 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     /// <summary>L'élève redouble cette classe (feature F) — coché sur le bulletin. Faux par défaut.</summary>
     public bool IsRepeating { get; init; }
 
+    /// <summary>
+    /// Élève transféré d'un autre établissement (Évolution N°7, statut IEF « Transféré »). Faux par défaut ;
+    /// <see cref="PreviousSchoolName"/> nomme l'établissement d'origine (facultatif, ignoré sinon).
+    /// </summary>
+    public bool IsTransferredIn { get; init; }
+
+    public string? PreviousSchoolName { get; init; }
+
     // --- Réinscription : élève existant ---
     public Guid? StudentId { get; init; }
 

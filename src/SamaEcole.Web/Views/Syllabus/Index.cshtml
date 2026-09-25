@@ -1,0 +1,351 @@
+@{
+    ViewData["Title"] = "Programmes";
+}
+
+@* Évolution N°7 — programmes nationaux (DEMSGS / INEADE) et avancement pointé au cahier de texte. auth.js et api.js
+   sont chargés par _Layout ; SyllabusController garde l'accès (tableau : Directeur, Secrétariat ; écriture :
+   Directeur) et la RLS isole. *@
+@section Scripts {
+    <script src="~/js/syllabus.js" asp-append-version="true"></script>
+    <script src="~/js/hour-volumes.js" asp-append-version="true"></script>
+}
+
+<div x-data="syllabusView()" class="space-y-6">
+    <div>
+        <h1 class="page-title">Programmes</h1>
+        <p class="page-subtitle">Référentiel des programmes par matière et par niveau, et avancement pointé par les enseignants au cahier de texte.</p>
+    </div>
+
+    <div x-show="error" x-cloak class="form-error-banner" x-text="error"></div>
+    <div x-show="notice" x-cloak role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800" x-text="notice"></div>
+
+    <div role="tablist" class="tab-nav w-fit">
+        <button type="button" role="tab" x-on:click="tab = 'coverage'" :aria-selected="(tab === 'coverage').toString()" class="tab-btn" :class="tab === 'coverage' ? 'tab-btn-active' : ''">Avancement</button>
+        <button type="button" role="tab" x-on:click="tab = 'units'" :aria-selected="(tab === 'units').toString()" class="tab-btn" :class="tab === 'units' ? 'tab-btn-active' : ''">Référentiel</button>
+        <button type="button" role="tab" x-on:click="tab = 'hours'" :aria-selected="(tab === 'hours').toString()" class="tab-btn" :class="tab === 'hours' ? 'tab-btn-active' : ''">Volumes horaires</button>
+    </div>
+
+    @* ── Avancement ─────────────────────────────────────────────────────────────────────────── *@
+    <section x-show="tab === 'coverage'" class="space-y-5">
+        <div x-show="isLoadingCoverage" x-cloak class="card p-4 space-y-2">
+            <div class="skeleton h-4 w-full"></div>
+            <div class="skeleton h-4 w-2/3"></div>
+        </div>
+
+        <template x-if="coverage && !coverage.schoolYearLabel">
+            <div class="card">
+                <empty-state icon="calendar" title="Aucune année scolaire active."
+                             hint="L'avancement se calcule sur les séances de l'année active : activez-en une depuis l'écran Années scolaires." />
+            </div>
+        </template>
+
+        <template x-if="coverage && coverage.schoolYearLabel">
+            <div class="space-y-5">
+                <p class="text-sm text-slate-500">
+                    Année <span class="font-medium text-slate-800" x-text="coverage.schoolYearLabel"></span> — part des chapitres du programme
+                    pointés au moins une fois au cahier de texte.
+                </p>
+
+                <div x-show="coverage.rows.length === 0" x-cloak class="card">
+                    <empty-state icon="document-text" title="Aucun programme n'est encore saisi pour les niveaux de vos classes."
+                                 hint="Renseignez-le depuis l'onglet Référentiel : import de la trame nationale ou un chapitre par ligne." />
+                </div>
+
+                <div x-show="coverage.rows.length > 0" x-cloak class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <div class="card overflow-x-auto">
+                        <p class="px-4 pt-4 text-sm font-semibold text-slate-800">Par matière et niveau</p>
+                        <table class="min-w-full text-sm mt-2">
+                            <thead>
+                                <tr class="table-head">
+                                    <th class="py-2 px-4 text-left">Matière</th>
+                                    <th class="py-2 px-4 text-left">Niveau</th>
+                                    <th class="py-2 px-4 text-right">Classes</th>
+                                    <th class="py-2 px-4 text-left w-40">Avancement moyen</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template x-for="s in coverage.bySubject" :key="s.subjectName + s.gradeLevel">
+                                    <tr>
+                                        <td class="py-2 px-4 font-medium text-slate-800" x-text="s.subjectName"></td>
+                                        <td class="py-2 px-4 text-slate-600" x-text="s.gradeLevel"></td>
+                                        <td class="py-2 px-4 text-right text-slate-600" x-text="s.classes"></td>
+                                        <td class="py-2 px-4">
+                                            <div class="flex items-center gap-2">
+                                                <div class="h-2 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                                                    <div class="h-full rounded-full" :class="percentClass(s.averagePercent)" :style="percentWidth(s.averagePercent)"></div>
+                                                </div>
+                                                <span class="w-14 text-right text-xs font-medium text-slate-700" x-text="percentLabel(s.averagePercent)"></span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card overflow-x-auto">
+                        <p class="px-4 pt-4 text-sm font-semibold text-slate-800">Par enseignant</p>
+                        <table class="min-w-full text-sm mt-2">
+                            <thead>
+                                <tr class="table-head">
+                                    <th class="py-2 px-4 text-left">Enseignant</th>
+                                    <th class="py-2 px-4 text-right">Classes × matières</th>
+                                    <th class="py-2 px-4 text-left w-40">Avancement moyen</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr x-show="coverage.byTeacher.length === 0" x-cloak>
+                                    <td colspan="3" class="py-3 px-4 text-sm text-slate-500">Aucun enseignant n'est rattaché à ces programmes (emploi du temps ou cahier de texte).</td>
+                                </tr>
+                                <template x-for="t in coverage.byTeacher" :key="t.teacherName">
+                                    <tr>
+                                        <td class="py-2 px-4 font-medium text-slate-800" x-text="t.teacherName"></td>
+                                        <td class="py-2 px-4 text-right text-slate-600" x-text="t.classes"></td>
+                                        <td class="py-2 px-4">
+                                            <div class="flex items-center gap-2">
+                                                <div class="h-2 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                                                    <div class="h-full rounded-full" :class="percentClass(t.averagePercent)" :style="percentWidth(t.averagePercent)"></div>
+                                                </div>
+                                                <span class="w-14 text-right text-xs font-medium text-slate-700" x-text="percentLabel(t.averagePercent)"></span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div x-show="coverage.rows.length > 0" x-cloak class="card overflow-x-auto">
+                    <div class="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
+                        <p class="text-sm font-semibold text-slate-800">Détail par classe</p>
+                        <select-field model="coverageFilter" aria-label="Filtrer par classe" class="mt-0 w-56" options-expr="classroomFilterOptions" />
+                    </div>
+                    <table class="min-w-full text-sm mt-2">
+                        <thead>
+                            <tr class="table-head">
+                                <th class="py-2 px-4 text-left">Classe</th>
+                                <th class="py-2 px-4 text-left">Matière</th>
+                                <th class="py-2 px-4 text-left">Enseignant(s)</th>
+                                <th class="py-2 px-4 text-right">Chapitres</th>
+                                <th class="py-2 px-4 text-left w-40">Avancement</th>
+                                <th class="py-2 px-4 text-left">Dernière séance</th>
+                                <th class="py-2 px-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="row in coverageRows" :key="row.classroomId + row.subjectId">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="py-2 px-4 font-medium text-slate-800" x-text="row.classroomName"></td>
+                                    <td class="py-2 px-4 text-slate-700" x-text="row.subjectName"></td>
+                                    <td class="py-2 px-4 text-slate-600" x-text="row.teachers.length ? row.teachers.join(', ') : '—'"></td>
+                                    <td class="py-2 px-4 text-right text-slate-600"><span x-text="row.coveredUnits"></span> / <span x-text="row.totalUnits"></span></td>
+                                    <td class="py-2 px-4">
+                                        <div class="flex items-center gap-2">
+                                            <div class="h-2 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                                                <div class="h-full rounded-full" :class="percentClass(row.percent)" :style="percentWidth(row.percent)"></div>
+                                            </div>
+                                            <span class="w-14 text-right text-xs font-medium text-slate-700" x-text="percentLabel(row.percent)"></span>
+                                        </div>
+                                    </td>
+                                    <td class="py-2 px-4 text-slate-600" x-text="formatDate(row.lastSessionDate)"></td>
+                                    <td class="py-2 px-4 text-right">
+                                        <button type="button" x-on:click="openProgramme(row)" class="text-xs font-medium text-primary-600 hover:underline">Programme</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </template>
+    </section>
+
+    @* ── Référentiel ────────────────────────────────────────────────────────────────────────── *@
+    <section x-show="tab === 'units'" x-cloak class="space-y-5">
+        <div class="flex flex-wrap items-end gap-4">
+            <div class="w-full sm:w-72">
+                <label class="form-label">Matière</label>
+                <select-field model="subjectId" aria-label="Matière" placeholder="Sélectionner une matière"
+                              options-expr="subjectOptions" on-change="loadUnits()" />
+            </div>
+            <div class="w-full sm:w-48">
+                <label class="form-label">Niveau</label>
+                <select-field model="gradeLevel" aria-label="Niveau" placeholder="Sélectionner un niveau"
+                              options-expr="gradeOptions" on-change="loadUnits()" />
+            </div>
+            <button type="button" x-show="canEdit && programme && programme.hasTemplate" x-cloak
+                    x-on:click="importTemplate()" :disabled="isImporting" class="btn-modal-primary group sm:ml-auto">
+                <icon name="download" class="w-4 h-4" />
+                <span x-text="isImporting ? 'Import…' : 'Importer la trame nationale'"></span>
+            </button>
+        </div>
+
+        <div x-show="!subjectId || !gradeLevel" class="card">
+            <empty-state icon="document-text" title="Choisissez une matière et un niveau."
+                         hint="Le programme est propre à votre établissement : importez la trame nationale quand elle existe, ou saisissez un chapitre par ligne." />
+        </div>
+
+        <div x-show="isLoadingUnits" x-cloak class="card p-4 space-y-2">
+            <div class="skeleton h-4 w-full"></div>
+            <div class="skeleton h-4 w-2/3"></div>
+        </div>
+
+        <template x-if="programme && subjectId && gradeLevel && !isLoadingUnits">
+            <div class="space-y-5">
+                <div class="card overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="table-head">
+                                <th class="py-2 px-3 text-right w-10">N°</th>
+                                <th class="py-2 px-3 text-left">Partie</th>
+                                <th class="py-2 px-3 text-left">Chapitre</th>
+                                <th class="py-2 px-3 text-right w-28">Volume (h)</th>
+                                <th class="py-2 px-3 text-right" x-show="canEdit" x-cloak>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr x-show="rows.length === 0" x-cloak>
+                                <td colspan="5" class="py-4 px-3 text-sm text-slate-500">
+                                    Aucun chapitre n'est encore saisi pour cette matière en <span x-text="gradeLevel"></span>.
+                                </td>
+                            </tr>
+                            <template x-for="(row, index) in rows" :key="row.id">
+                                <tr class="align-top">
+                                    <td class="py-2 px-3 text-right text-slate-400" x-text="index + 1"></td>
+                                    <td class="py-2 px-3">
+                                        <input type="text" x-model="row.draftSection" maxlength="120" :disabled="!canEdit" aria-label="Partie"
+                                               class="input-field mt-0 text-sm" placeholder="—">
+                                    </td>
+                                    <td class="py-2 px-3">
+                                        <input type="text" x-model="row.draftTitle" maxlength="200" :disabled="!canEdit" aria-label="Chapitre"
+                                               class="input-field mt-0 text-sm">
+                                        <p x-show="row.error" x-cloak class="field-error" x-text="row.error"></p>
+                                    </td>
+                                    <td class="py-2 px-3">
+                                        <input type="text" inputmode="decimal" x-model="row.draftHours" :disabled="!canEdit" aria-label="Volume horaire"
+                                               class="input-field mt-0 text-sm text-right" placeholder="—">
+                                    </td>
+                                    <td class="py-2 px-3 whitespace-nowrap text-right" x-show="canEdit" x-cloak>
+                                        <button type="button" x-on:click="move(row, -1)" :disabled="row.isSaving || index === 0" class="px-1 text-slate-400 hover:text-slate-700 disabled:opacity-30" aria-label="Monter">▲</button>
+                                        <button type="button" x-on:click="move(row, 1)" :disabled="row.isSaving || index === rows.length - 1" class="px-1 text-slate-400 hover:text-slate-700 disabled:opacity-30" aria-label="Descendre">▼</button>
+                                        <button type="button" x-show="isDirty(row)" x-on:click="saveUnit(row)" :disabled="row.isSaving" class="ml-2 text-xs font-medium text-primary-600 hover:underline">Enregistrer</button>
+                                        <button type="button" x-on:click="archive(row)" :disabled="row.isSaving" class="ml-2 text-xs font-medium"
+                                                :class="row.confirmDelete ? 'text-red-700' : 'text-slate-500 hover:text-red-600'"
+                                                x-text="row.confirmDelete ? 'Confirmer le retrait' : 'Retirer'"></button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <form x-show="canEdit" x-cloak x-on:submit.prevent="submitAdd()" novalidate class="card p-4 space-y-3">
+                    <p class="text-sm font-semibold text-slate-800">Ajouter des chapitres</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="form-label" for="syllabus-section">Partie (facultatif)</label>
+                            <input id="syllabus-section" type="text" x-model="addForm.section" maxlength="120" class="input-field"
+                                   placeholder="ex : Activités géométriques">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="form-label form-label-required" for="syllabus-titles">Chapitres — un par ligne</label>
+                            <textarea id="syllabus-titles" x-model="addForm.titlesText" rows="5" class="input-field"
+                                      placeholder="Racine carrée&#10;Calcul algébrique&#10;Équations et inéquations du premier degré"></textarea>
+                        </div>
+                    </div>
+                    <div x-show="addError" x-cloak class="form-error-banner" x-text="addError"></div>
+                    <div class="flex justify-end">
+                        <button type="submit" :disabled="!canAdd" class="btn-modal-primary group">
+                            <icon name="plus" class="w-4 h-4" />
+                            <span x-text="isAdding ? 'Ajout…' : 'Ajouter au programme'"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </template>
+    </section>
+
+    @* ── Volumes horaires (Évolution N°7) ────────────────────────────────────────────────────── *@
+    <section x-show="tab === 'hours'" x-cloak x-data="hourNormsPanel()" class="space-y-5">
+        <p class="text-sm text-slate-500">
+            Volume hebdomadaire de chaque matière par niveau (et, au lycée, par série). La grille de référence est
+            pré-remplie ; réglez un volume pour votre établissement, ou videz-le pour revenir à la référence. Le contrôle
+            de conformité de l'emploi du temps (écran Enseignants, vue « Par classe ») s'y compare.
+        </p>
+
+        <div x-show="error" x-cloak class="form-error-banner" x-text="error"></div>
+        <div x-show="notice" x-cloak role="status" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800" x-text="notice"></div>
+
+        <div class="flex flex-wrap items-end gap-4">
+            <div class="w-full sm:w-48">
+                <label class="form-label">Niveau</label>
+                <select-field model="gradeLevel" aria-label="Niveau" placeholder="Sélectionner un niveau"
+                              options-expr="gradeOptions" on-change="selectGrade()" />
+            </div>
+            <div class="w-full sm:w-48" x-show="isLycee" x-cloak>
+                <label class="form-label">Série</label>
+                <select-field model="series" aria-label="Série" options-expr="seriesOptions" on-change="load()" />
+            </div>
+            <p x-show="data" x-cloak class="text-sm text-slate-600 sm:ml-auto">
+                Total hebdomadaire : <span class="font-semibold text-slate-900" x-text="formatHours(data && data.totalHours)"></span>
+            </p>
+        </div>
+
+        <div x-show="!gradeLevel" class="card">
+            <empty-state icon="clock" title="Choisissez un niveau."
+                         hint="Les grilles du collège (6e à 3e) et du lycée (Seconde S/L, Première et Terminale S1, S2, L1a, L1b, L2) sont pré-remplies." />
+        </div>
+
+        <div x-show="isLoading" x-cloak class="card p-4"><div class="skeleton h-4 w-2/3"></div></div>
+
+        <template x-if="data && gradeLevel && !isLoading">
+            <div class="card overflow-x-auto">
+                <p x-show="!data.hasTemplate" class="px-4 pt-4 text-sm text-amber-700">
+                    Aucune grille de référence n'est codée pour ce niveau<span x-show="series"> et cette série</span> :
+                    saisissez les volumes de votre établissement.
+                </p>
+                <table class="min-w-full text-sm mt-2">
+                    <thead>
+                        <tr class="table-head">
+                            <th class="py-2 px-3 text-left">Matière</th>
+                            <th class="py-2 px-3 text-right">Référence</th>
+                            <th class="py-2 px-3 text-right" x-show="series" x-cloak>Niveau (toutes séries)</th>
+                            <th class="py-2 px-3 text-right w-36">Établissement</th>
+                            <th class="py-2 px-3 text-right">Effectif</th>
+                            <th class="py-2 px-3 text-right" x-show="canEdit" x-cloak></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr x-show="rows.length === 0" x-cloak>
+                            <td colspan="6" class="py-4 px-3 text-sm text-slate-500">Aucune matière de ce cycle n'a de volume de référence.</td>
+                        </tr>
+                        <template x-for="row in rows" :key="(row.subjectId || '') + row.subjectName">
+                            <tr class="align-top">
+                                <td class="py-2 px-3">
+                                    <span class="text-slate-800" x-text="row.subjectName"></span>
+                                    <span x-show="row.optionGroup" x-cloak class="ml-1 text-xs text-slate-400" x-text="'(' + row.optionGroup + ', au choix)'"></span>
+                                    <p x-show="!row.subjectId" x-cloak class="text-xs text-amber-700">Matière absente de l'établissement.</p>
+                                    <p x-show="row.error" x-cloak class="field-error" x-text="row.error"></p>
+                                </td>
+                                <td class="py-2 px-3 text-right text-slate-500" x-text="formatHours(row.templateHours)"></td>
+                                <td class="py-2 px-3 text-right text-slate-500" x-show="series" x-cloak x-text="formatHours(row.gradeHours)"></td>
+                                <td class="py-2 px-3 text-right">
+                                    <input type="text" inputmode="decimal" x-model="row.draft" :disabled="!canEdit || !row.subjectId"
+                                           aria-label="Volume de l'établissement" placeholder="—" class="input-field mt-0 text-sm text-right">
+                                </td>
+                                <td class="py-2 px-3 text-right font-medium text-slate-800" x-text="formatHours(row.effectiveHours)"></td>
+                                <td class="py-2 px-3 text-right whitespace-nowrap" x-show="canEdit" x-cloak>
+                                    <button type="button" x-show="row.subjectId && isDirty(row)" x-on:click="save(row)" :disabled="row.isSaving"
+                                            class="text-xs font-medium text-primary-600 hover:underline">Enregistrer</button>
+                                    <button type="button" x-show="row.overrideId && !isDirty(row)" x-on:click="reset(row)" :disabled="row.isSaving"
+                                            class="ml-2 text-xs font-medium text-slate-500 hover:text-slate-800">Revenir à la référence</button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+    </section>
+</div>

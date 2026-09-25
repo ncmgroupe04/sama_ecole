@@ -793,6 +793,116 @@
                         "Si une séance manque après le délai de 15 jours, ne demandez pas à l'enseignant de la recréer : seuls le Directeur ou le Secrétariat peuvent encore corriger l'entrée existante.",
                         "N'attendez pas une absence imprévue pour découvrir qu'un enseignant n'a rien journalisé depuis des semaines : consultez le journal par classe à échéance régulière, c'est un indicateur discret de suivi pédagogique."
                     ]
+                },
+                {
+                    id: 'programmes-avancement',
+                    title: 'Programmes — référentiel et avancement',
+                    location: 'Gestion Scolaire › Programmes',
+                    href: '/programmes',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Le programme d'une matière pour un niveau (CI … Terminale) : la liste ordonnée de ses chapitres, groupés par partie. " +
+                        "L'enseignant coche au cahier de texte les chapitres traités à chaque séance ; l'écran en tire l'avancement de chaque classe.",
+                    objectif:
+                        "Savoir, à tout moment de l'année, où en est chaque classe dans chaque matière, et quel enseignant tient réellement son programme.",
+                    probleme:
+                        "Sans référentiel, le cahier de texte dit ce qui a été fait mais pas ce qui reste à faire : un retard de programme ne se découvre qu'au moment de l'examen.",
+                    procedure: [
+                        "RÉFÉRENTIEL (Directeur) : onglet « Référentiel », choisissez la matière et le niveau. « Importer la trame nationale » quand elle existe (Mathématiques de 3e), sinon collez un chapitre par ligne, avec la partie du programme.",
+                        "Un chapitre se renomme, se déplace (▲ ▼) ou se retire ; un intitulé déjà présent n'est jamais ajouté deux fois.",
+                        "POINTAGE (Enseignant) : au cahier de texte, dès que la classe et la matière sont choisies, cochez les chapitres traités pendant la séance.",
+                        "AVANCEMENT : onglet « Avancement » — pour l'année active, part des chapitres pointés par classe et matière, puis moyennes par matière et par enseignant."
+                    ],
+                    impacts: [
+                        "Le niveau d'une classe se lit sur son nom (« 3e B » → Troisième) : une classe au nom hors nomenclature n'a pas de programme à suivre.",
+                        "Un enseignant de l'emploi du temps qui ne pointe rien apparaît à 0 % — c'est volontaire.",
+                        "Réinitialisation des données : le référentiel et les chapitres pointés sont effacés avec le cahier de texte."
+                    ],
+                    recommandations: [
+                        "Saisissez le programme avant la rentrée : les séances déjà journalisées sans chapitre coché ne comptent pas dans l'avancement.",
+                        "Rapprochez la trame importée du programme officiel en vigueur et ajustez-la : elle vous appartient."
+                    ]
+                },
+                {
+                    id: 'volumes-horaires-conformite',
+                    title: "Volumes horaires et conformité de l'emploi du temps",
+                    location: 'Gestion Scolaire › Programmes › Volumes horaires ; Enseignants › Emploi du temps (Par classe)',
+                    href: '/programmes?tab=hours',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Le volume hebdomadaire de chaque matière par niveau et, au lycée, par série. Une grille de référence est pré-remplie " +
+                        "(collège, Seconde S/L, Première et Terminale S1, S2, L1a, L1b, L2) ; l'établissement la règle pour lui-même.",
+                    objectif:
+                        "Vérifier qu'un emploi du temps respecte les volumes horaires, et qu'aucun enseignant, aucune salle ni aucune classe n'est placé deux fois sur la même plage.",
+                    probleme:
+                        "Un volume manquant ou une salle doublement réservée ne se voit qu'à l'usage, en pleine semaine de cours.",
+                    procedure: [
+                        "RÉGLAGE (Directeur) : Programmes › Volumes horaires, choisissez le niveau (et la série au lycée), saisissez le volume de l'établissement puis « Enregistrer ». Videz la case pour revenir à la référence.",
+                        "Un réglage de série l'emporte sur celui du niveau, qui l'emporte sur la grille de référence.",
+                        "CONTRÔLE : Enseignants › Emploi du temps › Par classe. Sous la grille, chaque matière est dite conforme, sous le volume, au-dessus ou sans référence, avec le total hebdomadaire et les chevauchements qui touchent la classe."
+                    ],
+                    impacts: [
+                        "Une matière au choix (LV2, latin/grec) compte une fois : les langues non planifiées du groupe sont ignorées dès qu'une l'est.",
+                        "À la création ou à la modification d'un créneau, une salle déjà occupée sur la plage est refusée, comme un enseignant ou une classe déjà occupés.",
+                        "Si le programme de la classe (Matières par classe) est saisi, seules ses matières sont contrôlées."
+                    ],
+                    recommandations: [
+                        "Les grilles fournies sont indicatives : rapprochez-les de l'arrêté en vigueur une fois pour toutes avant la rentrée.",
+                        "Nommez les salles de façon constante (« Salle 12 ») : c'est le nom qui sert à détecter un chevauchement."
+                    ]
+                },
+                {
+                    id: 'rapport-rentree-ief',
+                    title: "Rapport de rentrée IEF et normes d'âge",
+                    location: 'Gestion Scolaire › Rapports institutionnels',
+                    href: '/rapports/institutionnels',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Les tableaux statistiques demandés par l'Inspection de l'Éducation et de la Formation : effectifs par classe, âge et sexe, " +
+                        "statuts Nouveau / Redoublant / Transféré, taux de redoublement par niveau et corps professoral.",
+                    objectif:
+                        "Produire le rapport de rentrée en quelques clics, en PDF ou en Excel, à partir des inscriptions de l'année.",
+                    probleme:
+                        "Le rapport de rentrée se remplit d'ordinaire à la main, classe par classe, avec des erreurs d'âge et de décompte.",
+                    procedure: [
+                        "Choisissez l'année scolaire ; les âges sont calculés au 31 décembre de l'année de rentrée (modifiable).",
+                        "Exportez en PDF (A4 paysage) ou en Excel (une feuille par tableau).",
+                        "NORMES D'ÂGE (Directeur) : onglet « Normes d'âge », réglez la tranche d'un niveau ou revenez au modèle national.",
+                        "À l'inscription, un âge hors tranche affiche un avertissement ; cochez « Élève transféré » pour un élève venant d'un autre établissement."
+                    ],
+                    impacts: [
+                        "Un avertissement d'âge ne bloque jamais une inscription.",
+                        "Les disciplines et heures des enseignants viennent de l'emploi du temps."
+                    ],
+                    recommandations: [
+                        "Renseignez le sexe et la date de naissance de chaque élève : un âge inconnu ressort à part dans le rapport."
+                    ]
+                },
+                {
+                    id: 'conseil-de-classe-pv',
+                    title: 'Conseil de classe — distinctions, décisions et PV',
+                    location: 'Gestion Scolaire › Notes et bulletins ; Paramètres › Notation & mentions',
+                    href: '/notes',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Les seuils du conseil (Félicitations, Tableau d'honneur, Encouragements, note éliminatoire, passage, redoublement) proposent " +
+                        "une distinction à chaque période et une décision de fin d'année ; le PV les imprime avec les statistiques filles / garçons.",
+                    objectif:
+                        "Préparer le conseil de classe et produire le procès-verbal de période ou le PV annuel sans recalcul manuel.",
+                    probleme:
+                        "Les distinctions et décisions se recalculent à la main à chaque conseil, avec des seuils qui varient d'un établissement à l'autre.",
+                    procedure: [
+                        "SEUILS (Directeur) : Paramètres › Notation & mentions — par défaut Félicitations 14, Tableau d'honneur 12 sans note éliminatoire (< 5), Encouragements 12, passage 10, redoublement 8,5.",
+                        "PV : Notes et bulletins, bouton « PV » (période) ou « PV annuel ».",
+                        "DÉCISIONS : « Appliquer les décisions proposées » enregistre les propositions de fin d'année pour les élèves encore sans décision."
+                    ],
+                    impacts: [
+                        "Une décision déjà prise n'est jamais remplacée par une proposition.",
+                        "Au PV annuel, une décision non prise s'imprime « Proposé : … » en italique."
+                    ],
+                    recommandations: [
+                        "Réglez les seuils avant le premier conseil de l'année : ils valent pour toutes les classes."
+                    ]
                 }
             ]
         },

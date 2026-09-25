@@ -1,5 +1,9 @@
 using SamaEcole.Application.ReportCards;
+using SamaEcole.Application.ReportCards.Commands.ApplyCouncilDecisionProposals;
+using SamaEcole.Application.ReportCards.Commands.UpdateCouncilRules;
 using SamaEcole.Application.ReportCards.Commands.UpsertReportCardRemark;
+using SamaEcole.Application.ReportCards.Queries.GetClassAnnualDeliberationPdf;
+using SamaEcole.Application.ReportCards.Queries.GetCouncilRules;
 using SamaEcole.Application.ReportCards.Queries.GetClassDeliberationPdf;
 using SamaEcole.Application.ReportCards.Queries.GetClassReportCardsPdf;
 using SamaEcole.Application.ReportCards.Queries.GetClassReportCardsZip;
@@ -34,6 +38,7 @@ public class ReportCardsController(ISender mediator, ILogger<ReportCardsControll
 {
     private const string ReportCardWriterRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)},{nameof(Role.Secretariat)}";
     private const string ReportCardDownloadRoles = $"{nameof(Role.Directeur)},{nameof(Role.Enseignant)},{nameof(Role.Secretariat)}";
+    private const string CouncilDecisionRoles = $"{nameof(Role.Directeur)},{nameof(Role.Secretariat)}";
 
     public record GenerateReportCardRequest(Guid StudentId, Guid TermId);
     public record UpsertReportCardRemarkRequest(
@@ -224,4 +229,57 @@ public class ReportCardsController(ISender mediator, ILogger<ReportCardsControll
             new UpsertReportCardRemarkCommand(
                 request.StudentId, request.TermId, request.DisciplinaryMention, request.CouncilDecision, request.Observations),
             cancellationToken));
+
+    // ── Conseil de classe (Évolution N°7) ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// PV ANNUEL du conseil de classe : moyennes et rangs annuels, statistiques Filles/Garçons, décision de fin
+    /// d'année (saisie, à défaut proposée d'après les seuils de l'école).
+    /// </summary>
+    [HttpGet("class-deliberation/annual/pdf")]
+    [Authorize(Roles = ReportCardDownloadRoles)]
+    [EnableRateLimiting(SensitiveEndpointRateLimiting.ReportCardGenerationPolicyName)]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DownloadAnnualDeliberationPdf(
+        [FromQuery] Guid classroomId, [FromQuery] Guid schoolYearId, CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetClassAnnualDeliberationPdfQuery(classroomId, schoolYearId), cancellationToken);
+        Response.Headers["Content-Disposition"] = $"inline; filename=\"{result.FileName}\"";
+        return File(result.Content, "application/pdf");
+    }
+
+    /// <summary>
+    /// « Appliquer les propositions de décision » : enregistre, pour les élèves sans décision sur la période, la
+    /// décision de fin d'année proposée. Ne remplace jamais une décision déjà prise. Directeur et Secrétariat.
+    /// </summary>
+    [HttpPost("council-decisions/apply-proposals")]
+    [Authorize(Roles = CouncilDecisionRoles)]
+    [ProducesResponseType<ApplyCouncilDecisionProposalsResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ApplyCouncilDecisionProposals(
+        [FromBody] ApplyCouncilDecisionProposalsCommand command, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(command, cancellationToken));
+
+    /// <summary>Seuils du conseil de classe (sur /20) : distinctions, note éliminatoire, passage, redoublement.</summary>
+    [HttpGet("council-rules")]
+    [Authorize(Roles = ReportCardDownloadRoles)]
+    [ProducesResponseType<CouncilRules>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCouncilRules(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetCouncilRulesQuery(), cancellationToken));
+
+    /// <summary>Règle les seuils du conseil de classe — Directeur seul.</summary>
+    [HttpPut("council-rules")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<CouncilRules>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateCouncilRules(
+        [FromBody] UpdateCouncilRulesCommand command, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(command, cancellationToken));
 }

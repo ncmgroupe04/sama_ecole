@@ -15,6 +15,12 @@ public record CreateClassJournalEntryCommand : IRequest<ClassJournalEntryResult>
     public required string Content { get; init; }
     public string? Homework { get; init; }
     public DateOnly? HomeworkDueDate { get; init; }
+
+    /// <summary>
+    /// Unités du programme traitées pendant la séance (Évolution N°7 — suivi du syllabus) : elles doivent appartenir au
+    /// programme de la matière pour le niveau de la classe. Absent : aucune unité pointée.
+    /// </summary>
+    public IReadOnlyList<Guid>? SyllabusUnitIds { get; init; }
 }
 
 public record ClassJournalEntryResult(

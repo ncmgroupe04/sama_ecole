@@ -42,7 +42,10 @@ public record ClassJournalEntryListItem(
     /// Modifier/Supprimer, la vraie garde restant côté Update/Delete (403 sinon). Évite à l'écran
     /// de deviner l'heure serveur ou, pour l'Enseignant, sa propre fiche enseignant.
     /// </summary>
-    bool CanEdit);
+    bool CanEdit,
+
+    /// <summary>Unités du programme pointées pour cette séance (Évolution N°7) ; vide si aucune.</summary>
+    IReadOnlyList<Guid>? SyllabusUnitIds = null);
 
 public record PaginatedClassJournalEntries(
     IReadOnlyList<ClassJournalEntryListItem> Items,

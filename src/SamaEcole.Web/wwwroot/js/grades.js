@@ -60,6 +60,10 @@ document.addEventListener('alpine:init', () => {
 
         downloadingClassBulletins: false,
         downloadingClassDeliberation: false,
+        // Conseil de classe (Évolution N°7) : PV annuel et application des propositions de décision.
+        activeYearId: null,
+        applyingDecisions: false,
+        councilNotice: null,
         classBulletinsError: null,
 
         selectedClassroomId: '',
@@ -148,6 +152,7 @@ document.addEventListener('alpine:init', () => {
                 // Seule l'année ACTIVE propose des trimestres à noter : les années passées sont en
                 // lecture seule (docs/Volume_1_Cahier_des_Charges.md, ticket JGK-C01).
                 const activeYear = years.find(y => y.isActive);
+                this.activeYearId = activeYear ? activeYear.id : null;
                 if (activeYear) {
                     this.terms = await window.api.get(`/school-years/${activeYear.id}/terms`);
                 }
@@ -399,6 +404,48 @@ document.addEventListener('alpine:init', () => {
                 this.classBulletinsError = (err && err.message) || 'Aperçu du PV de délibération impossible.';
             } finally {
                 this.downloadingClassDeliberation = false;
+            }
+        },
+
+        /** PV ANNUEL du conseil de classe (année active) : moyennes annuelles, décisions saisies ou proposées. */
+        async downloadAnnualDeliberationPdf() {
+            if (!this.selectedClassroomId || !this.activeYearId) return;
+            this.classBulletinsError = null;
+            this.downloadingClassDeliberation = true;
+            try {
+                const className = this.classNameFor(this.selectedClassroomId);
+                await this.openPdfPreview(
+                    `/api/v1/report-cards/class-deliberation/annual/pdf?classroomId=${this.selectedClassroomId}&schoolYearId=${this.activeYearId}`,
+                    `PV annuel — ${className}`,
+                    `PV_Annuel_${className}.pdf`
+                );
+            } catch (err) {
+                this.classBulletinsError = (err && err.message) || 'Aperçu du PV annuel impossible.';
+            } finally {
+                this.downloadingClassDeliberation = false;
+            }
+        },
+
+        /** Directeur et Secrétariat : enregistre les décisions proposées pour les élèves sans décision (jamais d'écrasement). */
+        get canApplyDecisions() {
+            return ['Directeur', 'Secretariat'].includes(window.auth.role);
+        },
+
+        async applyDecisionProposals() {
+            if (!this.hasClassAndTerm || !this.canApplyDecisions) return;
+            this.classBulletinsError = null;
+            this.councilNotice = null;
+            this.applyingDecisions = true;
+            try {
+                const result = await window.api.post('/report-cards/council-decisions/apply-proposals', {
+                    classroomId: this.selectedClassroomId, termId: this.selectedTermId
+                });
+                this.councilNotice = `${result.applied} décision(s) enregistrée(s), ${result.alreadyDecided} déjà prise(s) conservée(s), `
+                    + `${result.withoutAverage} élève(s) sans moyenne annuelle.`;
+            } catch (err) {
+                this.classBulletinsError = window.api.toMessage(err, "Erreur lors de l'application des propositions.");
+            } finally {
+                this.applyingDecisions = false;
             }
         },
 

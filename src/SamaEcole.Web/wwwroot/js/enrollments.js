@@ -49,6 +49,9 @@ document.addEventListener('alpine:init', () => {
         form: {
             classroomId: '',
             isRepeating: false, // Classe redoublée (feature F) — porté par l'inscription, coché sur le bulletin.
+            // Statut IEF (Évolution N°7) : Transféré d'un autre établissement, avec l'établissement d'origine.
+            isTransferredIn: false,
+            previousSchoolName: '',
             fullName: '',
             birthDate: '',
             birthPlace: '', // Obligatoire pour une nouvelle inscription (feature E).
@@ -72,6 +75,9 @@ document.addEventListener('alpine:init', () => {
 
         // Groupes d'options de la classe choisie (LV2, option scientifique…) — vide : la section est masquée.
         optionGroups: [],
+
+        // Contrôle de la tranche d'âge du niveau (Évolution N°7) : un avertissement, jamais un blocage.
+        ageWarning: null,
         isSubmitting: false,
 
         /**
@@ -102,7 +108,8 @@ document.addEventListener('alpine:init', () => {
                 this.hasDraft = true;
             }
             // Classe changée (saisie ou brouillon restauré) : ses groupes d'options remplacent les précédents.
-            this.$watch('form.classroomId', (id) => this.loadSubjectOptions(id));
+            this.$watch('form.classroomId', (id) => { this.loadSubjectOptions(id); this.checkAge(); });
+            this.$watch('form.birthDate', () => this.checkAge());
             this.$watch('form', (val) => {
                 if (window.formDraft && (val.fullName || val.studentId || val.classroomId)) {
                     window.formDraft.save('enrollment_form', {
@@ -357,6 +364,36 @@ document.addEventListener('alpine:init', () => {
             this.form.subjectOptions = selection;
         },
 
+        /**
+         * Tranche d'âge du niveau (Évolution N°7) : le serveur compare l'âge au 31 décembre de l'année de rentrée à la
+         * norme du niveau de la classe. Nouvelle inscription seulement (date de naissance saisie) ; en silence si le
+         * module Pédagogie est désactivé ou si le niveau de la classe est inconnu.
+         */
+        async checkAge() {
+            const { classroomId, birthDate } = this.form;
+            if (!classroomId || !birthDate || this.mode !== 'NewEnrollment') {
+                this.ageWarning = null;
+                return;
+            }
+            try {
+                const result = await window.api.get(
+                    `/institutional/age-check?classroomId=${encodeURIComponent(classroomId)}&birthDate=${encodeURIComponent(birthDate)}`);
+                if (this.form.classroomId !== classroomId || this.form.birthDate !== birthDate) return; // réponse périmée
+                this.ageWarning = result && result.message ? result.message : null;
+            } catch {
+                // silence-volontaire : le contrôle d'âge est un confort, jamais une condition de l'inscription.
+                this.ageWarning = null;
+            }
+        },
+
+        /** Statut de l'élève transmis au serveur : l'établissement d'origine seulement pour un transfert. */
+        transferPayload() {
+            return {
+                isTransferredIn: this.form.isTransferredIn,
+                previousSchoolName: this.form.isTransferredIn && this.form.previousSchoolName.trim() ? this.form.previousSchoolName.trim() : null
+            };
+        },
+
         /** Options transmises : une par groupe affiché ; absent si la classe n'a aucun groupe. */
         subjectOptionsPayload() {
             if (this.optionGroups.length === 0) return {};
@@ -376,7 +413,8 @@ document.addEventListener('alpine:init', () => {
                     isRepeating: this.form.isRepeating,
                     studentId: this.form.studentId,
                     ...this.boardingPayload(),
-                    ...this.subjectOptionsPayload()
+                    ...this.subjectOptionsPayload(),
+                    ...this.transferPayload()
                 }
                 : {
                     type: 'NewEnrollment',
@@ -389,7 +427,8 @@ document.addEventListener('alpine:init', () => {
                     guardianName: this.form.guardianName || null,
                     guardianPhone: this.form.guardianPhone || null,
                     ...this.boardingPayload(),
-                    ...this.subjectOptionsPayload()
+                    ...this.subjectOptionsPayload(),
+                    ...this.transferPayload()
                 };
 
             try {
@@ -457,9 +496,12 @@ document.addEventListener('alpine:init', () => {
                 boardingStatus: 'Externe',
                 roomId: null,
                 includeBoardingFee: true,
-                subjectOptions: {}
+                subjectOptions: {},
+                isTransferredIn: false,
+                previousSchoolName: ''
             };
             this.optionGroups = [];
+            this.ageWarning = null;
             this.studentSearch = '';
             this.formErrors = {};
             this.mode = 'NewEnrollment';
