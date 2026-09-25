@@ -383,7 +383,7 @@ public class CoefficientOverrideLoader(IApplicationDbContext dbContext)
 - Consumes : tout ce qui précède.
 - Produces (routes, `[Authorize]` ; écriture `Roles = Directeur`, lecture `Directeur,Secretariat` ; `[RequireModule(SchoolModule.Pedagogy)]`) :
   - `GET  /api/v1/coefficients/catalog` → `[{code, label}]`
-  - `GET  /api/v1/coefficients?series=S2` ou `?classroomId={id}` (+ `schoolYearId` optionnel, défaut année active) → `[{subjectId, subjectName, level, baseCoefficient, overrideId?, overrideCoefficient?, effectiveCoefficient, source: "Subject"|"Series"|"Classroom", rowVersion?}]` — matières **hors primaire/maternelle** (le niveau texte est libre : voir « Constat »)
+  - `GET  /api/v1/coefficients?series=S2` ou `?classroomId={id}` (+ `schoolYearId` optionnel, défaut année active) → **objet enveloppe** `{schoolYearId, schoolYearLabel, yearHasGrades, rows: [{subjectId, subjectName, level, baseCoefficient, overrideId?, overrideCoefficient?, rowVersion?, inheritedSeriesCoefficient?, effectiveCoefficient, source: "Subject"|"Series"|"Classroom"}]}` (écart assumé à l'exécution : `yearHasGrades` porte l'avertissement de recalcul rétroactif, arbitrage A7) — matières **hors primaire/maternelle** (le niveau texte est libre : voir « Constat »)
   - `PUT  /api/v1/coefficients` corps `{subjectId, series? | classroomId?, coefficient, rowVersion?}` → upsert sur l'année ACTIVE ; 422 (bornes, portée invalide par A8, matière primaire), 409 (`xmin`)
   - `DELETE /api/v1/coefficients/{id}` → suppression logique (« Rétablir »)
   - `POST /api/v1/coefficients/carry-over` corps `{fromSchoolYearId}` → copie les surcharges de l'année source vers l'année active **sans écraser** l'existant ; renvoie `{copied, skipped}`

@@ -25,6 +25,7 @@ tags:
   - name: SchoolYears
   - name: Classrooms
   - name: Subjects
+  - name: Coefficients
   - name: Students
   - name: Teachers
   - name: Attendance
@@ -1747,6 +1748,139 @@ paths:
         '403': { description: Réservé au Directeur (ou au Secrétariat si la délégation est activée) }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: 'Jeton de concurrence périmé, notes déjà saisies, ou domaine portant encore des activités' }
+
+  /coefficients/catalog:
+    get:
+      tags: [Coefficients]
+      summary: Catalogue fermé des séries de lycée (Évolution N°4)
+      description: >-
+        Directeur et Secrétariat. Servi par l'API plutôt que recopié côté client : une seule source de vérité.
+      responses:
+        '200':
+          description: Les séries, dans l'ordre d'affichage
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SeriesItem' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /coefficients:
+    get:
+      tags: [Coefficients]
+      summary: Grille des coefficients d'une série OU d'une classe pour une année
+      description: >-
+        Une ligne par matière hors primaire/maternelle (le niveau d'une matière étant un texte libre, on écarte
+        ce que le calcul neutralise à 1). `effectiveCoefficient` est calculé par le serveur — classe, puis
+        série, puis coefficient de la matière — et `source` dit d'où il vient. Directeur et Secrétariat.
+        Exactement UNE portée : `series` OU `classroomId`, sinon 422. Une classe de primaire/maternelle est
+        refusée en 422.
+      parameters:
+        - { name: series, in: query, schema: { type: string, enum: [L1, L2, S1, S2, TECH] } }
+        - { name: classroomId, in: query, schema: { type: string, format: uuid } }
+        - name: schoolYearId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Défaut — l'année scolaire ACTIVE.
+      responses:
+        '200':
+          description: La grille
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CoefficientGrid' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [Coefficients]
+      summary: Poser ou corriger une surcharge de coefficient (Directeur seul)
+      description: >-
+        Portée `series` OU `classroomId`, sur l'année ACTIVE résolue serveur. Création : sans `rowVersion`.
+        Correction : `rowVersion` obligatoire (verrou optimiste xmin) — une correction sans jeton, ou un jeton
+        périmé, répond 409 et n'écrase rien. Le coefficient suit les bornes d'une matière (> 0, ≤ 20). Chaque
+        écriture est journalisée : elle recalcule des moyennes et des bulletins de l'année.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertCoefficientOverrideRequest' }
+      responses:
+        '200':
+          description: La surcharge enregistrée, avec son nouveau jeton
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CoefficientOverrideResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: La ligne a changé entre-temps (jeton périmé ou manquant) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /coefficients/{id}:
+    delete:
+      tags: [Coefficients]
+      summary: « Rétablir » — supprimer (logiquement) une surcharge (Directeur seul)
+      description: >-
+        La matière retrouve la valeur de la portée supérieure (série, puis matière). Suppression LOGIQUE : la clé
+        redevient libre. `rowVersion` en query string, comme `DELETE /subjects/{id}`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: rowVersion, in: query, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: Surcharge rétablie }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Surcharge introuvable dans l'établissement }
+        '409': { description: Jeton périmé }
+
+  /coefficients/apply-template:
+    post:
+      tags: [Coefficients]
+      summary: « Appliquer le modèle » national d'une série (Directeur seul)
+      description: >-
+        Crée, pour l'année active, une surcharge de SÉRIE par matière reconnue dans le modèle (correspondance
+        par nom : casse, accents et ponctuation ignorés). Ne modifie jamais le coefficient des matières ni les
+        surcharges de classe. Sans `overwrite`, une surcharge de série déjà posée est conservée. Idempotent.
+        Une série sans modèle (`TECH` aujourd'hui) répond 422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplySeriesTemplateRequest' }
+      responses:
+        '200':
+          description: Rapport d'application
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplyTemplateResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /coefficients/carry-over:
+    post:
+      tags: [Coefficients]
+      summary: « Reprendre l'année précédente » (Directeur seul)
+      description: >-
+        Une nouvelle année démarre SANS surcharge : cette action explicite recopie celles de `fromSchoolYearId`
+        vers l'année ACTIVE, sans rien écraser. Une ligne dont la matière ou la classe est archivée n'est pas
+        recopiée. 422 si l'année source est l'année active ou introuvable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromSchoolYearId]
+              properties:
+                fromSchoolYearId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Nombre de lignes recopiées / ignorées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  copied: { type: integer }
+                  skipped: { type: integer }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /students:
     get:
@@ -5106,6 +5240,15 @@ components:
             ordinaire. Ce n'est pas un identifiant : il n'existe aucune table de niveaux (voir la
             description de `level`) — c'est le libellé du niveau, dans la nomenclature du cycle
             (CI/CP/CE1… au Primaire, Sixième…Troisième au Collège, Seconde/Première/Terminale au Lycée).
+        series:
+          type: string
+          nullable: true
+          enum: [L1, L2, S1, S2, TECH]
+          example: "S2"
+          description: >-
+            Série du LYCÉE (Évolution N°4) — catalogue fermé, voir `GET /coefficients/catalog`. Null pour toute
+            classe sans série (Seconde commune, et TOUTE classe hors lycée). L'élève hérite la série de sa
+            classe : c'est la clé des coefficients par série.
         rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
 
     ClassroomUpdateRequest:
@@ -5140,6 +5283,94 @@ components:
             Second niveau validé. OBLIGATOIRE quand `isAccelerated` vaut `true`, et refusé en 422 s'il
             n'appartient pas au cycle de la classe ou s'il répète le niveau de départ. Ignoré (remis à
             null) quand `isAccelerated` vaut `false` : une classe ordinaire ne garde pas de niveau cible.
+        series:
+          type: string
+          nullable: true
+          enum: [L1, L2, S1, S2, TECH]
+          description: >-
+            Série du lycée (Évolution N°4), casse ignorée (`s2` devient `S2`). Refusée en 422 hors d'une classe
+            de Lycée ou hors du catalogue. REMPLACEMENT COMPLET en PUT : une série absente est EFFACÉE — renvoyez
+            la classe entière.
+
+    SeriesItem:
+      type: object
+      properties:
+        code: { type: string, enum: [L1, L2, S1, S2, TECH] }
+        label: { type: string, example: "Série S2" }
+
+    CoefficientGrid:
+      type: object
+      properties:
+        schoolYearId: { type: string, format: uuid }
+        schoolYearLabel: { type: string, example: "2026-2027" }
+        yearHasGrades:
+          type: boolean
+          description: >-
+            Des notes existent déjà sur l'année : modifier un coefficient recalcule alors les moyennes et les
+            bulletins de cette année (l'écran avertit).
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/CoefficientGridRow' }
+
+    CoefficientGridRow:
+      type: object
+      properties:
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        level: { type: string }
+        baseCoefficient: { type: number, description: "Coefficient de la matière (`Subject.coefficient`)" }
+        overrideId: { type: string, format: uuid, nullable: true }
+        overrideCoefficient: { type: number, nullable: true, description: Surcharge de LA portée demandée }
+        rowVersion: { type: integer, format: int64, nullable: true, description: Jeton xmin de la surcharge }
+        inheritedSeriesCoefficient:
+          type: number
+          nullable: true
+          description: Portée « classe » seulement — la surcharge de la série de la classe, si elle existe.
+        effectiveCoefficient: { type: number }
+        source: { type: string, enum: [Subject, Series, Classroom] }
+
+    UpsertCoefficientOverrideRequest:
+      type: object
+      required: [subjectId, coefficient]
+      description: Exactement UNE portée — `series` OU `classroomId`.
+      properties:
+        subjectId: { type: string, format: uuid }
+        coefficient: { type: number, exclusiveMinimum: 0, maximum: 20, example: 6 }
+        series: { type: string, enum: [L1, L2, S1, S2, TECH], nullable: true }
+        classroomId: { type: string, format: uuid, nullable: true }
+        rowVersion: { type: integer, format: int64, nullable: true, description: Obligatoire pour corriger une ligne existante }
+
+    CoefficientOverrideResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        series: { type: string, nullable: true }
+        classroomId: { type: string, format: uuid, nullable: true }
+        coefficient: { type: number }
+        rowVersion: { type: integer, format: int64 }
+
+    ApplySeriesTemplateRequest:
+      type: object
+      required: [series]
+      properties:
+        series: { type: string, enum: [L1, L2, S1, S2, TECH] }
+        overwrite: { type: boolean, default: false }
+
+    ApplyTemplateResult:
+      type: object
+      properties:
+        applied: { type: integer, description: Surcharges créées }
+        updated: { type: integer, description: Surcharges existantes remplacées (overwrite, valeur différente) }
+        skippedExisting: { type: integer }
+        unmatchedTemplateLines:
+          type: array
+          items: { type: string }
+          description: Lignes du modèle qu'aucune matière de l'école ne reconnaît.
+        uncoveredSubjects:
+          type: array
+          items: { type: string }
+          description: Matières de l'école (hors primaire) qu'aucune ligne du modèle ne couvre.
 
     SubjectCreateRequest:
       type: object

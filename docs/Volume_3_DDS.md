@@ -150,7 +150,14 @@ l'appel des élèves, le pointage des enseignants et les créneaux d'emploi du t
 
 ### 4.4 Domaine Pédagogique
 
-`SchoolYears`, `Terms`, `Levels`, `ClassRooms`, `Subjects`, `Teachers`, `TeacherAssignments`, `Students`, `Guardians`, `StudentGuardians`, `Enrollments`, `EnrollmentDocuments`, `WaitingListEntries`, `StudentTransfers`, `Attendances`, `Grades`, `GradeDetails`, `ReportCards`, `ReportCardDetails`, `ScheduleSlots` (créneaux d'emploi du temps, Volume 1 §21), `TeacherAttendances` (pointage des enseignants, Volume 1 §21.3).
+`SchoolYears`, `Terms`, `Levels`, `ClassRooms`, `Subjects`, `Teachers`, `TeacherAssignments`, `Students`, `Guardians`, `StudentGuardians`, `Enrollments`, `EnrollmentDocuments`, `WaitingListEntries`, `StudentTransfers`, `Attendances`, `Grades`, `GradeDetails`, `ReportCards`, `ReportCardDetails`, `ScheduleSlots` (créneaux d'emploi du temps, Volume 1 §21), `TeacherAttendances` (pointage des enseignants, Volume 1 §21.3), `SubjectCoefficientOverrides` (surcharges de coefficient, ci-dessous).
+
+**Coefficients par série (Évolution N°4).** Deux ajouts, sans toucher à `Subjects.Coefficient` (`numeric(4,2)`), qui reste la valeur de repli :
+
+- `classrooms.Series` — `varchar(10)`, nullable, sans défaut. Code du catalogue fermé `LyceeSeries` (`L1`, `L2`, `S1`, `S2`, `TECH`) ; null pour toute classe sans série. Refusée à l'écriture hors d'une classe de Lycée. L'élève hérite la série de sa classe.
+- `subject_coefficient_overrides` — table tenant : `Id`, `SchoolId`, `SchoolYearId`, `SubjectId`, `ClassroomId` (nullable), `Series` (nullable, `varchar(10)`), `Coefficient` (`numeric(4,2)`), colonnes d'audit et de suppression logique, `xmin` (verrou optimiste, `409`). Contrainte `CHECK (num_nonnulls("ClassroomId", "Series") = 1)` : exactement une portée, classe OU série. Deux index uniques **partiels** (`WHERE NOT "IsDeleted"`) — `(SchoolYearId, SubjectId, ClassroomId)` et `(SchoolYearId, SubjectId, Series)` — pour qu'un « Rétablir » libère la clé. FK composites `(SchoolId, …)` vers `subjects`, `classrooms` et `school_years` (`RESTRICT`). RLS + Global Query Filter ; `GRANT SELECT, INSERT, UPDATE` seulement. Inscrite dans `reset_school_data` (avant `subjects`) et dans `delete_school_year` (avant l'année).
+
+Le coefficient EFFECTIF d'une matière pour un élève et une année est : surcharge de la classe de son inscription de l'année, sinon surcharge de la série de cette classe, sinon `Subjects.Coefficient` (`SubjectCoefficients.Resolve`). Primaire et Maternelle : toujours 1, quoi qu'il y ait en base.
 
 ### 4.5 Domaine Finance
 

@@ -238,9 +238,15 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/classrooms` | Créer une classe (aucune liste figée, Volume 1 §5.1) |
+| `POST` | `/api/v1/classrooms` | Créer une classe (aucune liste figée, Volume 1 §5.1). `series` optionnelle (L1, L2, S1, S2, TECH) : Lycée seulement, `422` sinon (Évolution N°4) |
 | `GET` | `/api/v1/classrooms` | Lister avec effectifs (total, garçons, filles) |
 | `POST` | `/api/v1/subjects` | Créer une matière |
+| `GET` | `/api/v1/coefficients/catalog` | Catalogue fermé des séries de lycée (Directeur, Secrétariat) |
+| `GET` | `/api/v1/coefficients?series=` ou `?classroomId=` | Grille des coefficients d'une série OU d'une classe (`schoolYearId` facultatif, défaut : année active) : base, surcharge, coefficient effectif, origine, `yearHasGrades`. Exactement une portée, sinon `422` (Directeur, Secrétariat) |
+| `PUT` | `/api/v1/coefficients` | Poser ou corriger une surcharge sur l'année active. Correction : `rowVersion` obligatoire, `409` si périmé ou absent. `422` pour un coefficient hors ]0 ; 20], une classe ou une matière de primaire/maternelle (Directeur seul) |
+| `DELETE` | `/api/v1/coefficients/{id}?rowVersion=` | « Rétablir » : suppression logique de la surcharge (Directeur seul) |
+| `POST` | `/api/v1/coefficients/apply-template` | « Appliquer le modèle » national d'une série (`overwrite` facultatif). `422` pour une série sans modèle (TECH). Ne modifie jamais `Subject.Coefficient` (Directeur seul) |
+| `POST` | `/api/v1/coefficients/carry-over` | « Reprendre l'année précédente » : recopie les surcharges d'une autre année vers l'année active sans rien écraser (Directeur seul) |
 
 ## 6. API Inscriptions
 
