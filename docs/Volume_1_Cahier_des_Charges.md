@@ -1061,6 +1061,25 @@ l'école d'accueil lors d'une mutation, aux côtés du certificat.
   3. **corps professoral** par discipline (enseignants H/F, heures hebdomadaires), par diplôme (académique ×
      professionnel), et liste nominative avec volume horaire — disciplines et heures lues sur l'emploi du temps.
 
+### 23.8 Programmes nationaux et suivi du cahier de texte (Évolution N°7)
+
+Écran **Programmes** (`/programmes`) : onglets « Avancement » (Directeur, Secrétariat) et « Référentiel » (écriture
+Directeur, lecture Secrétariat).
+
+- **Référentiel.** Le programme d'une matière pour un **niveau** (CI … Terminale) est une liste ordonnée de
+  chapitres, groupés par partie, avec un volume horaire indicatif facultatif. Il appartient à l'établissement.
+  **Trame nationale** (découpage DEMSGS / INEADE) en code, importable d'un clic quand elle existe — volontairement
+  restreinte aux trames stables (Mathématiques de 3e, programme du BFEM) : toute autre matière se saisit en collant
+  **un chapitre par ligne**, jamais un programme inventé. Un chapitre se renomme, se déplace, se retire (suppression
+  logique) ; un intitulé déjà présent n'est jamais dupliqué.
+- **Cahier de texte.** À la saisie ou à la correction d'une séance, dès que la classe et la matière sont choisies,
+  l'enseignant **coche les chapitres traités** parmi le programme de la matière pour le niveau de la classe (niveau
+  lu sur le nom de la classe). Le serveur refuse (422) un chapitre d'une autre matière ou d'un autre niveau.
+- **Avancement.** Pour l'année active : par classe et matière, **part des chapitres pointés au moins une fois**
+  (un chapitre pointé deux fois compte une fois ; programme vide : « — »), enseignants de la classe dans la matière
+  (emploi du temps, plus les auteurs du cahier) et dernière séance ; moyennes **par matière et niveau** et **par
+  enseignant** — un enseignant qui ne tient pas le cahier apparaît à 0 %.
+
 ---
 
 **Fin du Volume 1.**

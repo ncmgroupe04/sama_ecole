@@ -21,4 +21,7 @@ public record UpdateClassJournalEntryCommand : IRequest<ClassJournalEntryResult>
     public string? Homework { get; init; }
     public DateOnly? HomeworkDueDate { get; init; }
     public required uint RowVersion { get; init; }
+
+    /// <summary>Unités du programme traitées (Évolution N°7) : remplace la liste ; absent (null) = inchangée.</summary>
+    public IReadOnlyList<Guid>? SyllabusUnitIds { get; init; }
 }

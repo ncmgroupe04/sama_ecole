@@ -294,6 +294,8 @@ Le Secrétariat compose, télécharge et saisit les observations du conseil (`Re
 | **Appliquer les décisions proposées** (fin d'année — Évolution N°7) | ✔ | ✔ | ✖ |
 | **Rapport de rentrée IEF** (aperçu, export PDF/Excel — Évolution N°7) | ✔ | ✔ | ✖ |
 | **Normes d'âge par niveau** (Évolution N°7) : ÉCRITURE réservée | ✔ | lecture seule | ✖ |
+| **Programmes** (référentiel des chapitres, import de la trame nationale — Évolution N°7) : ÉCRITURE réservée | ✔ | lecture seule | lecture seule (pointage au cahier de texte) |
+| **Avancement des programmes** (tableau par classe, matière, enseignant — Évolution N°7) | ✔ | ✔ | ✖ |
 | Export de données (remplace « Sauvegardes/Restaurations » de la v1.0, désormais automatisées côté infrastructure — Volume 9) | ✔ | ✖ | ✖ |
 
 Le barème est exposé par un endpoint dédié (`PUT /schools/current/settings/grading-scale`), distinct du reste des réglages d'établissement (`PUT /schools/current/settings`) : ouvrir ce dernier au Secrétariat lui aurait aussi donné la main sur les formats de matricule, la déconnexion automatique et les mensualités, hors du périmètre de la délégation voulue.

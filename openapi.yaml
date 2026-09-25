@@ -28,6 +28,7 @@ tags:
   - name: Coefficients
   - name: ClassSubjects
   - name: Institutional
+  - name: Syllabus
   - name: Students
   - name: Teachers
   - name: Attendance
@@ -201,6 +202,100 @@ paths:
       responses:
         '200': { description: 'gradeLevel, age, minAge, maxAge, status (Unknown | Early | Normal | Late), referenceDate, message' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /syllabus/units:
+    get:
+      tags: [Syllabus]
+      summary: Programme d'une matière pour un niveau, ou pour le niveau d'une classe (Évolution N°7)
+      parameters:
+        - { name: subjectId, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: gradeLevel, in: query, schema: { type: string, example: "Troisième" } }
+        - { name: classroomId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: '{ gradeLevel, hasTemplate, units[] } — chapitres dans l''ordre (id, section, title, order, plannedHours, rowVersion)' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Syllabus]
+      summary: Ajouter des chapitres, un par intitulé, à la suite du programme (Directeur seul)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subjectId, gradeLevel, titles]
+              properties:
+                subjectId: { type: string, format: uuid }
+                gradeLevel: { type: string }
+                section: { type: string, maxLength: 120, nullable: true }
+                titles: { type: array, items: { type: string, maxLength: 200 } }
+      responses:
+        '200': { description: '{ added } — un intitulé déjà présent est ignoré' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /syllabus/import-template:
+    post:
+      tags: [Syllabus]
+      summary: Importer la trame nationale d'une matière pour un niveau (Directeur seul)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subjectId, gradeLevel]
+              properties:
+                subjectId: { type: string, format: uuid }
+                gradeLevel: { type: string }
+      responses:
+        '200': { description: '{ added }' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /syllabus/units/{id}:
+    put:
+      tags: [Syllabus]
+      summary: Corriger un chapitre (Directeur seul)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, order, rowVersion]
+              properties:
+                title: { type: string, maxLength: 200 }
+                section: { type: string, maxLength: 120, nullable: true }
+                order: { type: integer, minimum: 0 }
+                plannedHours: { type: number, minimum: 0, maximum: 500, nullable: true }
+                rowVersion: { type: integer, format: int64 }
+      responses:
+        '204': { description: Enregistré }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Syllabus]
+      summary: Retirer un chapitre (suppression logique, Directeur seul)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: rowVersion, in: query, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: Archivé }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /syllabus/coverage:
+    get:
+      tags: [Syllabus]
+      summary: Avancement des programmes de l'année active — Directeur, Secrétariat
+      responses:
+        '200': { description: '{ schoolYearLabel, rows[] (classe × matière : teachers, coveredUnits, totalUnits, percent, lastSessionDate), bySubject[], byTeacher[] }' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /state-integration/stateduc:
     get:
@@ -8229,6 +8324,10 @@ components:
             Calculé serveur (ClassJournalEditWindow.CanCorrect) : vrai pour Directeur/Secrétariat,
             ou pour l'auteur dans les 15 jours suivant sessionDate. Confort d'affichage — la vraie
             garde reste PUT/DELETE /class-journal/{id} (403 sinon).
+        syllabusUnitIds:
+          type: array
+          items: { type: string, format: uuid }
+          description: Chapitres du programme pointés pour cette séance (Évolution N°7).
 
     ClassJournalEntryCreateRequest:
       type: object
@@ -8248,6 +8347,13 @@ components:
           format: date
           nullable: true
           description: N'a de sens que si `homework` est renseigné ; ne peut précéder `sessionDate`.
+        syllabusUnitIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: >-
+            Chapitres traités (Évolution N°7) — chacun doit appartenir au programme de la matière pour le niveau de la
+            classe (422 sinon).
 
     ClassJournalEntryUpdateRequest:
       type: object
@@ -8259,6 +8365,11 @@ components:
         homework: { type: string, maxLength: 2000, nullable: true }
         homeworkDueDate: { type: string, format: date, nullable: true }
         rowVersion: { type: integer }
+        syllabusUnitIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: Chapitres traités (Évolution N°7) — remplace la liste ; absent (null) = inchangée.
 
     PaginatedClassJournalEntries:
       type: object

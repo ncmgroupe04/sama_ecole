@@ -1,0 +1,36 @@
+@model string
+@* Chapitres du programme traités pendant la séance (Évolution N°7). @Model est l'expression Alpine de la liste
+   d'identifiants cochés (newEntry.syllabusUnitIds ou editingEntry.syllabusUnitIds). Le serveur revérifie chaque
+   chapitre (422 s'il n'appartient pas au programme de la matière pour le niveau de la classe). *@
+<div x-show="programme.key" x-cloak class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
+    <div class="flex items-center justify-between gap-3">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Programme traité (facultatif)</p>
+        <span x-show="programme.gradeLevel" x-cloak class="text-xs text-slate-400">
+            Niveau <span x-text="programme.gradeLevel"></span> · <span x-text="@(Model).length"></span> chapitre(s) coché(s)
+        </span>
+    </div>
+
+    <div x-show="programme.isLoading" x-cloak class="skeleton h-4 w-2/3"></div>
+
+    <p x-show="programmeError" x-cloak class="field-error" x-text="programmeError"></p>
+
+    <p x-show="!programme.isLoading && !programmeError && programme.units.length === 0" x-cloak class="text-sm text-slate-500">
+        Aucun programme n'est saisi pour cette matière à ce niveau. Le Directeur le renseigne depuis l'écran
+        <a href="/programmes" class="font-medium text-primary-600 hover:underline">Programmes</a>.
+    </p>
+
+    <div class="max-h-60 overflow-y-auto space-y-3 pr-1">
+        <template x-for="section in programmeSections" :key="section.name">
+            <div>
+                <p x-show="section.name" x-cloak class="text-xs font-semibold text-slate-600 mb-1" x-text="section.name"></p>
+                <template x-for="unit in section.units" :key="unit.id">
+                    <label class="flex items-start gap-2 py-1 text-sm text-slate-700 cursor-pointer">
+                        <input type="checkbox" class="mt-0.5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                               :checked="@(Model).includes(unit.id)" x-on:change="toggleUnit(@Model, unit.id)">
+                        <span x-text="unit.title"></span>
+                    </label>
+                </template>
+            </div>
+        </template>
+    </div>
+</div>

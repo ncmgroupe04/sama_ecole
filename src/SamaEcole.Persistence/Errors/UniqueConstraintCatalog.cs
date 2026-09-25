@@ -95,6 +95,12 @@ internal static class UniqueConstraintCatalog
         ["grade_age_norms"] =
             "Une tranche d'âge est déjà réglée pour ce niveau. Rechargez la liste et modifiez-la au lieu d'en créer une seconde.",
 
+        ["syllabus_units"] =
+            "Ce chapitre figure déjà au programme de cette matière pour ce niveau. Modifiez-le au lieu d'en créer un second.",
+
+        ["class_journal_entry_units"] =
+            "Ce chapitre est déjà pointé pour cette séance. Rechargez le cahier de texte avant de réessayer.",
+
         ["LateArrivals"] =
             "Un billet d'entrée est déjà actif pour cet élève, ce cours et ce jour. Il n'en faut pas un second : "
             + "retrouvez le billet dans la liste, ou annulez-le d'abord s'il a été émis par erreur.",

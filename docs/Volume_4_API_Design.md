@@ -836,6 +836,23 @@ Contrôleur `InstitutionalController`, module Pédagogie requis. Lecture : Direc
 
 `POST /api/v1/enrollments` accepte en plus `isTransferredIn` et `previousSchoolName` (≤ 150).
 
+## 26. API Programmes (Évolution N°7)
+
+Contrôleur `SyllabusController`, module Pédagogie requis.
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/syllabus/units?subjectId=&gradeLevel=` · `?subjectId=&classroomId=` | Directeur, Secrétariat, Enseignant, Surveillant | Programme d'une matière pour un niveau (ou pour le niveau d'une classe) : `{ gradeLevel, hasTemplate, units[] }`, chapitres dans l'ordre avec `rowVersion` |
+| `POST` | `/api/v1/syllabus/units` | Directeur | `{ subjectId, gradeLevel, section?, titles[] }` — ajoute à la suite ; un intitulé existant est ignoré. `{ added }` |
+| `POST` | `/api/v1/syllabus/import-template` | Directeur | `{ subjectId, gradeLevel }` — importe la trame nationale ; `422` s'il n'en existe pas. `{ added }` |
+| `PUT` | `/api/v1/syllabus/units/{id}` | Directeur | `{ title, section?, order, plannedHours?, rowVersion }` — `409` si périmé |
+| `DELETE` | `/api/v1/syllabus/units/{id}?rowVersion=` | Directeur | Retire un chapitre (suppression logique) — `409` si périmé |
+| `GET` | `/api/v1/syllabus/coverage` | Directeur, Secrétariat | Avancement de l'année active : `rows[]` (classe × matière : enseignants, `coveredUnits`/`totalUnits`, `percent`, dernière séance), `bySubject[]`, `byTeacher[]` |
+
+`POST /api/v1/class-journal` et `PUT /api/v1/class-journal/{id}` acceptent `syllabusUnitIds[]` (chapitres traités ;
+`422` si l'un n'appartient pas au programme de la matière pour le niveau de la classe ; absent à la correction :
+inchangés). `GET /api/v1/class-journal` renvoie `syllabusUnitIds` pour chaque séance.
+
 ---
 
 **Fin du Volume 4.**

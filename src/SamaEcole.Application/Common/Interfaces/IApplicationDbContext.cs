@@ -134,6 +134,12 @@ public interface IApplicationDbContext
     /// <summary>Tranches d'âge par niveau propres à l'école (Évolution N°7, cartographie IEF).</summary>
     DbSet<GradeAgeNorm> GradeAgeNorms { get; }
 
+    /// <summary>Programme officiel d'une matière pour un niveau : chapitres/objectifs (Évolution N°7).</summary>
+    DbSet<SyllabusUnit> SyllabusUnits { get; }
+
+    /// <summary>Unités du programme traitées pendant une séance du cahier de texte (Évolution N°7).</summary>
+    DbSet<ClassJournalEntryUnit> ClassJournalEntryUnits { get; }
+
     /// <summary>Statut de chaque élève sur une fiche d'appel (ticket JGK-D06).</summary>
     DbSet<StudentAttendance> StudentAttendances { get; }
 

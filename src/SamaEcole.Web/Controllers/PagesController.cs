@@ -141,6 +141,11 @@ public class PagesController : Controller
     [HttpGet("/rapports/institutionnels")]
     public IActionResult InstitutionalReports() => View("~/Views/Reports/Institutional.cshtml");
 
+    // Évolution N°7 : programmes nationaux (référentiel des chapitres) et avancement pointé au cahier de texte.
+    // SyllabusController garde l'accès (écriture Directeur, tableau Directeur/Secrétariat), la RLS isole.
+    [HttpGet("/programmes")]
+    public IActionResult Syllabus() => View("~/Views/Syllabus/Index.cshtml");
+
     [HttpGet("/rapports/financiers")]
     public IActionResult FinancialReport() => View("~/Views/Reports/Financial.cshtml");
 

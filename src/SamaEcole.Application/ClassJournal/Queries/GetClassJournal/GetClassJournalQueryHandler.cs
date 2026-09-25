@@ -88,6 +88,14 @@ public class GetClassJournalQueryHandler(
             })
             .ToListAsync(cancellationToken);
 
+        // Unités pointées de la page (Évolution N°7) : une requête pour toutes les séances affichées.
+        var entryIds = rows.Select(r => r.Id).ToList();
+        var unitsByEntry = (await dbContext.ClassJournalEntryUnits.AsNoTracking()
+                .Where(l => entryIds.Contains(l.ClassJournalEntryId))
+                .Select(l => new { l.ClassJournalEntryId, l.SyllabusUnitId })
+                .ToListAsync(cancellationToken))
+            .ToLookup(l => l.ClassJournalEntryId, l => l.SyllabusUnitId);
+
         var items = rows
             .Select(r => new ClassJournalEntryListItem(
                 r.Id, r.ClassroomId, r.ClassroomName, r.SubjectId, r.SubjectName,
@@ -95,7 +103,8 @@ public class GetClassJournalQueryHandler(
                 r.Homework, r.HomeworkDueDate, r.RowVersion,
                 isUnrestrictedCorrector
                     || (ownTeacherId is { } teacherId
-                        && ClassJournalEditWindow.CanCorrect(r.TeacherId, r.SessionDate, teacherId, today))))
+                        && ClassJournalEditWindow.CanCorrect(r.TeacherId, r.SessionDate, teacherId, today)),
+                unitsByEntry[r.Id].ToList()))
             .ToList();
 
         return new PaginatedClassJournalEntries(items, totalCount, request.Page, request.PageSize);

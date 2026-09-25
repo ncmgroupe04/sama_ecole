@@ -1,4 +1,5 @@
 using SamaEcole.Application.Common.Exceptions;
+using SamaEcole.Application.Syllabus;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using FluentValidation.Results;
@@ -61,6 +62,10 @@ public class CreateClassJournalEntryCommandHandler(
         };
 
         dbContext.ClassJournalEntries.Add(entry);
+
+        // Unités du programme pointées (Évolution N°7), dans le même SaveChanges que la séance.
+        await JournalUnitLinker.SetAsync(dbContext, entry, request.SyllabusUnitIds, "system", cancellationToken);
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var rowVersion = await dbContext.ClassJournalEntries.AsNoTracking()

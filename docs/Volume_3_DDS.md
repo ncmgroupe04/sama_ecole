@@ -480,6 +480,21 @@ Seuils du conseil de classe (Évolution N°7) : six colonnes `numeric(4,2)` sur 
 (`CouncilFelicitationsMin` 14, `CouncilHonorRollMin` 12, `CouncilEncouragementsMin` 12, `CouncilEliminatoryGrade` 5,
 `CouncilPromotionMin` 10, `CouncilRepeatMin` 8,5 — défauts en base).
 
+### 5.13 Programmes et cahier de texte (Évolution N°7) — `syllabus_units`, `class_journal_entry_units`
+
+- `syllabus_units` — référentiel d'un programme : `Id`, `SchoolId`, `SubjectId` (FK composite `(SchoolId,
+  SubjectId)` → `subjects`), `GradeLevel` (`varchar(20)`, libellé de `ClassroomGradeLevels`), `Section`
+  (`varchar(120)`, nullable), `Title` (`varchar(200)`), `Order`, `PlannedHours` (`numeric(5,2)`, nullable), audit,
+  suppression logique, `xmin`. Index unique partiel `UX_syllabus_units_title (SchoolId, SubjectId, GradeLevel, Title)
+  WHERE NOT IsDeleted`.
+- `class_journal_entry_units` — chapitres pointés dans une séance : `Id`, `SchoolId`, `ClassJournalEntryId` (FK
+  composite → `class_journal_entries`, d'où la clé alternative `AK_class_journal_entries_SchoolId_Id`),
+  `SyllabusUnitId` (FK composite → `syllabus_units`), audit, suppression logique, `xmin`. Index unique partiel
+  `(ClassJournalEntryId, SyllabusUnitId) WHERE NOT IsDeleted`.
+- Les deux : RLS + Global Query Filter, `GRANT SELECT, INSERT, UPDATE` (aucun DELETE, règle #6). Purgées par
+  `reset_school_data` (juste avant `class_journal_entries` : liens, puis chapitres) ; non rattachées à une année,
+  `delete_school_year` ne les touche pas.
+
 ## 6. Dictionnaire des énumérations
 
 | Énumération | Valeurs |
