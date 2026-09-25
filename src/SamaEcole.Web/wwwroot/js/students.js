@@ -69,6 +69,18 @@ document.addEventListener('alpine:init', () => {
         detailError: null,
         detailTab: 'history',
 
+        // Onglet « Options & dispenses » de la fiche (matières optionnelles et dispenses de matières
+        // obligatoires) : écriture réservée au Directeur et au Secrétariat (confort d'affichage — la garde réelle
+        // est EnrollmentsController). Les DEUX moitiés ont leur propre état « modifié » : n'est envoyée au serveur
+        // que celle que l'utilisateur a réellement touchée (écart E5). Le motif d'une dispense peut être médical :
+        // il ne vit que dans cet état, jamais journalisé ni stocké ailleurs.
+        canManageOptions: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
+        optionsPanel: {
+            loading: false, error: null, enrollmentId: null, saving: false, saved: false,
+            groups: [], selected: [], hasExplicitChoice: false, optionsDirty: false,
+            mandatorySubjects: [], exemptions: {}, exemptionsDirty: false
+        },
+
         // Identifiant National de l'Élève (module Intégration étatique, JGK-M01). Géré depuis la
         // fiche : soit on saisit le numéro OFFICIEL reçu de l'IEF, soit on demande un numéro
         // PROVISOIRE de secours (préfixé « P », sans valeur officielle). La garde réelle est
@@ -403,6 +415,11 @@ document.addEventListener('alpine:init', () => {
             this.reportCardError = null;
             this.reportCardNotice = null;
             this.detailTab = 'history';
+            this.optionsPanel = {
+                loading: false, error: null, enrollmentId: null, saving: false, saved: false,
+                groups: [], selected: [], hasExplicitChoice: false, optionsDirty: false,
+                mandatorySubjects: [], exemptions: {}, exemptionsDirty: false
+            };
             this.isLoadingDetails = true;
             try {
                 this.studentDetail = await window.api.get(`/students/${student.id}`);
@@ -410,6 +427,141 @@ document.addEventListener('alpine:init', () => {
                 this.detailError = window.api.toMessage(err, "Impossible de charger la fiche complète de l'élève.");
             } finally {
                 this.isLoadingDetails = false;
+            }
+        },
+
+        /** L'inscription dont on règle les options : celle de l'année ACTIVE, non annulée. */
+        get activeEnrollmentEntry() {
+            const history = this.studentDetail ? this.studentDetail.academicHistory : [];
+            return history.find((e) => e.isActiveYear && e.status !== 'Cancelled');
+        },
+
+        /** Forme attendue par subject-options.js à partir d'un groupe du DTO serveur. */
+        optionsGroupView(group) {
+            return {
+                key: group.group ?? `free:${group.subjects[0].subjectId}`,
+                label: group.group,
+                exclusive: group.group !== null,
+                subjects: group.subjects.map((s) => ({ id: s.subjectId, name: s.name, gradeCount: s.gradeCount }))
+            };
+        },
+
+        /** Notes que l'enregistrement masquerait — seulement pour les moitiés que l'utilisateur a modifiées. */
+        get hiddenOptionGrades() {
+            const panel = this.optionsPanel;
+            const options = panel.optionsDirty
+                ? window.subjectOptions.hiddenGradeCount(panel.groups.map((g) => this.optionsGroupView(g)), panel.selected)
+                : 0;
+            const exemptions = panel.exemptionsDirty
+                ? window.subjectOptions.hiddenExemptionGrades(panel.mandatorySubjects, panel.exemptions)
+                : 0;
+            return options + exemptions;
+        },
+
+        get unchosenOptionGroups() {
+            return this.optionsPanel.optionsDirty
+                ? window.subjectOptions.unchosenGroupLabels(
+                    this.optionsPanel.groups.map((g) => this.optionsGroupView(g)), this.optionsPanel.selected)
+                : [];
+        },
+
+        /** Matières cochées comme dispensées dont le motif est vide : le serveur refuserait l'enregistrement. */
+        get missingExemptionReasons() {
+            return window.subjectOptions.missingReasons(this.optionsPanel.mandatorySubjects, this.optionsPanel.exemptions);
+        },
+
+        get canSaveOptions() {
+            const panel = this.optionsPanel;
+            return (panel.optionsDirty || panel.exemptionsDirty)
+                && this.missingExemptionReasons.length === 0
+                && !panel.saving;
+        },
+
+        async openOptionsTab() {
+            this.detailTab = 'options';
+            const entry = this.activeEnrollmentEntry;
+            const panel = this.optionsPanel;
+            panel.error = null;
+            panel.saved = false;
+            if (!entry) return;
+
+            panel.loading = true;
+            try {
+                const dto = await window.api.get(`/enrollments/${entry.enrollmentId}/options`);
+                panel.enrollmentId = dto.enrollmentId;
+                panel.groups = dto.groups;
+                panel.hasExplicitChoice = dto.hasExplicitChoice;
+                // Sans choix enregistré l'élève suit tout : la sélection démarre VIDE (« non renseigné »), pour
+                // ne pas présenter comme un choix ce qui n'en est pas un.
+                panel.selected = dto.hasExplicitChoice
+                    ? dto.groups.flatMap((g) => g.subjects.filter((s) => s.isFollowed).map((s) => s.subjectId))
+                    : [];
+                panel.mandatorySubjects = dto.mandatorySubjects || [];
+                panel.exemptions = window.subjectOptions.exemptionStateFrom(panel.mandatorySubjects);
+                panel.optionsDirty = false;
+                panel.exemptionsDirty = false;
+            } catch (err) {
+                panel.error = window.api.toMessage(err, "Impossible de charger les options de l'élève.");
+            } finally {
+                panel.loading = false;
+            }
+        },
+
+        chooseStudentOption(group, subjectId) {
+            const panel = this.optionsPanel;
+            panel.selected = window.subjectOptions.choose(this.optionsGroupView(group), panel.selected, subjectId);
+            panel.optionsDirty = true;
+            panel.saved = false;
+        },
+
+        clearStudentOptionGroup(group) {
+            const panel = this.optionsPanel;
+            panel.selected = window.subjectOptions.clearGroup(this.optionsGroupView(group), panel.selected);
+            panel.optionsDirty = true;
+            panel.saved = false;
+        },
+
+        toggleExemption(subjectId) {
+            const panel = this.optionsPanel;
+            const current = panel.exemptions[subjectId] || { checked: false, reason: '' };
+            panel.exemptions = { ...panel.exemptions, [subjectId]: { ...current, checked: !current.checked } };
+            panel.exemptionsDirty = true;
+            panel.saved = false;
+        },
+
+        setExemptionReason(subjectId, reason) {
+            const panel = this.optionsPanel;
+            const current = panel.exemptions[subjectId] || { checked: false, reason: '' };
+            panel.exemptions = { ...panel.exemptions, [subjectId]: { ...current, reason } };
+            panel.exemptionsDirty = true;
+            panel.saved = false;
+        },
+
+        async saveOptions() {
+            const panel = this.optionsPanel;
+            if (!panel.enrollmentId || panel.saving) return;
+
+            const missing = this.missingExemptionReasons;
+            if (missing.length > 0) {
+                panel.error = `Renseignez le motif de la dispense : ${missing.join(', ')}.`;
+                return;
+            }
+
+            // Une moitié non modifiée n'est PAS envoyée : le serveur la laisse alors inchangée (écart E5).
+            const body = {};
+            if (panel.optionsDirty) body.subjectIds = panel.selected;
+            if (panel.exemptionsDirty) body.exemptions = window.subjectOptions.exemptionsPayload(panel.exemptions);
+
+            panel.saving = true;
+            panel.error = null;
+            try {
+                await window.api.put(`/enrollments/${panel.enrollmentId}/options`, body);
+                await this.openOptionsTab();
+                this.optionsPanel.saved = true;
+            } catch (err) {
+                panel.error = window.api.toMessage(err, "Erreur lors de l'enregistrement des options.");
+            } finally {
+                panel.saving = false;
             }
         },
 

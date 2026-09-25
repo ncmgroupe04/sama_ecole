@@ -39,6 +39,14 @@ document.addEventListener('alpine:init', () => {
         // Rechargé à chaque changement de régime (l'occupation évolue au fil des inscriptions).
         availableRooms: [],
 
+        // Matières optionnelles (LV2, option scientifique). `optionSubjects` : toutes les matières lues sur
+        // /subjects — vide si l'école n'a pas le module Pédagogie (403) ou aucune option. `optionSelection` :
+        // les options SUIVIES, composées pour la classe `optionSelectionFor` ; null = « non renseigné »
+        // (l'élève suit toutes les options, rien n'est transmis).
+        optionSubjects: [],
+        optionSelection: null,
+        optionSelectionFor: null,
+
         // Élèves pour la réinscription (chargés à la demande)
         students: [],
         studentsLoaded: false,
@@ -169,6 +177,10 @@ document.addEventListener('alpine:init', () => {
                 this.classrooms = classrooms;
                 this.tuitionMonths = settings.tuitionMonthsPerYear;
                 this.activeYear = years.find((y) => y.isActive) || null;
+
+                // Les matières sont facultatives ici : sans le module Pédagogie l'API répond 403, et
+                // l'inscription doit rester possible (aucun bloc « options » ne s'affiche alors).
+                this.optionSubjects = await window.api.get('/subjects').catch(() => []);
 
                 this.internatEnabled = !!settings && settings.isInternatEnabled === true;
                 if (this.internatEnabled) await this.loadAvailableRooms();
@@ -317,6 +329,43 @@ document.addEventListener('alpine:init', () => {
             };
         },
 
+        /** Groupes d'options du niveau de la classe choisie (vide si aucune option). */
+        get optionGroups() {
+            const classroom = this.classrooms.find((c) => c.id === this.form.classroomId);
+            return classroom ? window.subjectOptions.groupsForLevel(this.optionSubjects, classroom.level) : [];
+        },
+
+        /**
+         * La sélection valable pour la classe ACTUELLEMENT choisie : null (« non renseigné ») si elle a été
+         * composée pour une autre classe. Changer de classe abandonne donc le choix — un choix composé
+         * pour un autre niveau ne doit ni être envoyé, ni dispenser des options du nouveau.
+         */
+        get effectiveOptionSelection() {
+            return this.optionSelectionFor === this.form.classroomId ? this.optionSelection : null;
+        },
+
+        chooseOption(group, subjectId) {
+            this.optionSelection = window.subjectOptions.choose(group, this.effectiveOptionSelection ?? [], subjectId);
+            this.optionSelectionFor = this.form.classroomId;
+        },
+
+        clearOptionGroup(group) {
+            this.optionSelection = window.subjectOptions.clearGroup(group, this.effectiveOptionSelection ?? []);
+            this.optionSelectionFor = this.form.classroomId;
+        },
+
+        /** Groupes exclusifs où rien n'est choisi, pour l'avertissement « aucune matière suivie dans… ». */
+        get unchosenOptionGroups() {
+            const selection = this.effectiveOptionSelection;
+            return selection === null ? [] : window.subjectOptions.unchosenGroupLabels(this.optionGroups, selection);
+        },
+
+        /** Le choix à joindre à la commande — VIDE tant que le secrétaire n'a pas touché au bloc de cette classe. */
+        optionsPayload() {
+            const selection = this.effectiveOptionSelection;
+            return selection === null || this.optionGroups.length === 0 ? {} : { optionSubjectIds: selection };
+        },
+
         async submit() {
             this.formErrors = {};
             this.isSubmitting = true;
@@ -329,7 +378,8 @@ document.addEventListener('alpine:init', () => {
                     classroomId: this.form.classroomId,
                     isRepeating: this.form.isRepeating,
                     studentId: this.form.studentId,
-                    ...this.boardingPayload()
+                    ...this.boardingPayload(),
+                    ...this.optionsPayload()
                 }
                 : {
                     type: 'NewEnrollment',
@@ -341,7 +391,8 @@ document.addEventListener('alpine:init', () => {
                     gender: this.form.gender,
                     guardianName: this.form.guardianName || null,
                     guardianPhone: this.form.guardianPhone || null,
-                    ...this.boardingPayload()
+                    ...this.boardingPayload(),
+                    ...this.optionsPayload()
                 };
 
             try {
@@ -410,6 +461,8 @@ document.addEventListener('alpine:init', () => {
                 roomId: null,
                 includeBoardingFee: true
             };
+            this.optionSelection = null;
+            this.optionSelectionFor = null;
             this.studentSearch = '';
             this.formErrors = {};
             this.mode = 'NewEnrollment';
