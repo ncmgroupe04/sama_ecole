@@ -39,6 +39,13 @@ document.addEventListener('alpine:init', () => {
 
         exporting: false,
 
+        // Onglets (Évolution N°5) : « student » = le rapport par élève d'avant ; « subject » = séances appelées et
+        // répartition des statuts, matière par matière (mêmes filtres, mêmes rôles).
+        tab: 'student',
+        subjects: [],
+        isLoadingSubjects: false,
+        subjectsError: null,
+
         init() {
             const today = new Date();
             const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -91,10 +98,43 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        setTab(tab) {
+            this.tab = tab;
+            if (tab === 'subject') this.loadSubjects();
+        },
+
+        /** Vue par matière : une ligne par matière appelée sur la période, sans pagination (peu de lignes). */
+        async loadSubjects() {
+            if (!this.startDate || !this.endDate) return;
+
+            this.isLoadingSubjects = true;
+            this.subjectsError = null;
+            try {
+                const params = new URLSearchParams({ startDate: this.startDate, endDate: this.endDate });
+                if (this.classId) params.set('classId', this.classId);
+
+                const data = await window.api.get(`/reports/attendance/by-subject?${params.toString()}`);
+                this.subjects = Array.isArray(data) ? data : [];
+            } catch (err) {
+                this.subjects = [];
+                this.subjectsError = window.api.toMessage(err, 'Erreur lors du chargement du rapport par matière.');
+                toast.error(this.subjectsError);
+            } finally {
+                this.isLoadingSubjects = false;
+            }
+        },
+
+        /** Infobulle des jours d'absence : « 12 séances appelées » — le dénominateur qui donne du sens aux chiffres. */
+        sessionsTooltip(row) {
+            const n = row.totalCalls || 0;
+            return `${n} séance${n > 1 ? 's' : ''} appelée${n > 1 ? 's' : ''} · ${row.daysRecorded || 0} jour${(row.daysRecorded || 0) > 1 ? 's' : ''} avec appel`;
+        },
+
         /** Un changement de filtre repart de la page 1 : la page 3 d'un filtre précédent n'a pas de sens. */
         applyFilters() {
             this.page = 1;
             this.load();
+            if (this.tab === 'subject') this.loadSubjects();
         },
 
         resetFilters() {

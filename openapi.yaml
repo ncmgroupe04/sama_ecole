@@ -25,6 +25,7 @@ tags:
   - name: SchoolYears
   - name: Classrooms
   - name: Subjects
+  - name: Coefficients
   - name: Students
   - name: Teachers
   - name: Attendance
@@ -1748,6 +1749,139 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: 'Jeton de concurrence périmé, notes déjà saisies, ou domaine portant encore des activités' }
 
+  /coefficients/catalog:
+    get:
+      tags: [Coefficients]
+      summary: Catalogue fermé des séries de lycée (Évolution N°4)
+      description: >-
+        Directeur et Secrétariat. Servi par l'API plutôt que recopié côté client : une seule source de vérité.
+      responses:
+        '200':
+          description: Les séries, dans l'ordre d'affichage
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SeriesItem' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /coefficients:
+    get:
+      tags: [Coefficients]
+      summary: Grille des coefficients d'une série OU d'une classe pour une année
+      description: >-
+        Une ligne par matière hors primaire/maternelle (le niveau d'une matière étant un texte libre, on écarte
+        ce que le calcul neutralise à 1). `effectiveCoefficient` est calculé par le serveur — classe, puis
+        série, puis coefficient de la matière — et `source` dit d'où il vient. Directeur et Secrétariat.
+        Exactement UNE portée : `series` OU `classroomId`, sinon 422. Une classe de primaire/maternelle est
+        refusée en 422.
+      parameters:
+        - { name: series, in: query, schema: { type: string, enum: [L1, L2, S1, S2, TECH] } }
+        - { name: classroomId, in: query, schema: { type: string, format: uuid } }
+        - name: schoolYearId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Défaut — l'année scolaire ACTIVE.
+      responses:
+        '200':
+          description: La grille
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CoefficientGrid' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [Coefficients]
+      summary: Poser ou corriger une surcharge de coefficient (Directeur seul)
+      description: >-
+        Portée `series` OU `classroomId`, sur l'année ACTIVE résolue serveur. Création : sans `rowVersion`.
+        Correction : `rowVersion` obligatoire (verrou optimiste xmin) — une correction sans jeton, ou un jeton
+        périmé, répond 409 et n'écrase rien. Le coefficient suit les bornes d'une matière (> 0, ≤ 20). Chaque
+        écriture est journalisée : elle recalcule des moyennes et des bulletins de l'année.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpsertCoefficientOverrideRequest' }
+      responses:
+        '200':
+          description: La surcharge enregistrée, avec son nouveau jeton
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CoefficientOverrideResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { description: La ligne a changé entre-temps (jeton périmé ou manquant) }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /coefficients/{id}:
+    delete:
+      tags: [Coefficients]
+      summary: « Rétablir » — supprimer (logiquement) une surcharge (Directeur seul)
+      description: >-
+        La matière retrouve la valeur de la portée supérieure (série, puis matière). Suppression LOGIQUE : la clé
+        redevient libre. `rowVersion` en query string, comme `DELETE /subjects/{id}`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: rowVersion, in: query, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '204': { description: Surcharge rétablie }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { description: Surcharge introuvable dans l'établissement }
+        '409': { description: Jeton périmé }
+
+  /coefficients/apply-template:
+    post:
+      tags: [Coefficients]
+      summary: « Appliquer le modèle » national d'une série (Directeur seul)
+      description: >-
+        Crée, pour l'année active, une surcharge de SÉRIE par matière reconnue dans le modèle (correspondance
+        par nom : casse, accents et ponctuation ignorés). Ne modifie jamais le coefficient des matières ni les
+        surcharges de classe. Sans `overwrite`, une surcharge de série déjà posée est conservée. Idempotent.
+        Une série sans modèle (`TECH` aujourd'hui) répond 422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplySeriesTemplateRequest' }
+      responses:
+        '200':
+          description: Rapport d'application
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplyTemplateResult' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /coefficients/carry-over:
+    post:
+      tags: [Coefficients]
+      summary: « Reprendre l'année précédente » (Directeur seul)
+      description: >-
+        Une nouvelle année démarre SANS surcharge : cette action explicite recopie celles de `fromSchoolYearId`
+        vers l'année ACTIVE, sans rien écraser. Une ligne dont la matière ou la classe est archivée n'est pas
+        recopiée. 422 si l'année source est l'année active ou introuvable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromSchoolYearId]
+              properties:
+                fromSchoolYearId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Nombre de lignes recopiées / ignorées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  copied: { type: integer }
+                  skipped: { type: integer }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /students:
     get:
       tags: [Students]
@@ -1986,6 +2120,13 @@ paths:
         pour ses classes/matières assignées (403 sinon) ; Directeur et Secrétariat sans restriction. Si
         une fiche existe déjà pour cette clé, les statuts déjà saisis sont renvoyés (alreadySubmitted=true).
         Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
+
+        **Appel par créneau (Évolution N°5).** Avec `scheduleSlotId`, l'appel porte sur un cours de l'emploi du
+        temps : la période est DÉRIVÉE du cours (« 08:00-10:00 ») et le paramètre `period` est ignoré. Le cours doit
+        appartenir à la classe et à la matière demandées et tomber le bon jour de semaine (422 sinon) ; un Enseignant
+        n'y accède que s'il en est le titulaire (403 sinon). Sans `scheduleSlotId`, `period` reste obligatoire :
+        c'est l'appel libre d'avant. Un billet d'entrée actif visant ce cours présélectionne l'élève en `Late` et
+        renseigne `entryTicketId`, `entryTicketNumber` et `entryTicketStatus` sur sa ligne.
       parameters:
         - name: classroomId
           in: query
@@ -2001,8 +2142,13 @@ paths:
           schema: { type: string, format: date }
         - name: period
           in: query
-          required: true
+          required: false
+          description: Obligatoire sans `scheduleSlotId` ; ignoré (dérivé du cours) avec.
           schema: { type: string }
+        - name: scheduleSlotId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Grille d'appel
@@ -2012,6 +2158,139 @@ paths:
         '403': { description: Enseignant non assigné à cette classe/matière }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /attendance/slots:
+    get:
+      tags: [Attendance]
+      summary: Cours d'une classe pour une date — de quoi choisir le créneau de l'appel (Évolution N°5)
+      description: >-
+        Les créneaux de l'emploi du temps de la classe le jour de semaine de `date`, triés par heure, avec le
+        libellé de période dérivé (`label`, « 08:00-10:00 ») et, si l'appel a déjà été fait pour ce cours ce
+        jour-là, l'identifiant de la fiche (`sheetId`). Un Enseignant ne reçoit que SES cours. Un jour de repos de
+        l'établissement renvoie une liste vide. Mêmes rôles que `/attendance/roster`.
+      parameters:
+        - name: classroomId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Cours de la journée
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AttendanceSlot' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /absences/today-slots:
+    get:
+      tags: [Attendance]
+      summary: Cours du jour de la classe d'un élève — sélecteur du cours visé par un billet d'entrée (Évolution N°5)
+      description: >-
+        Les cours de la classe de l'élève à `date` (aujourd'hui par défaut). Le cours en cours (`isCurrent`), à
+        défaut le prochain (`isNext`), est signalé ; ces deux indicateurs ne valent que pour la date du jour, sur
+        l'heure UTC du serveur. `ticketStatus` indique un billet actif déjà émis pour cet élève et ce cours. Un jour
+        de repos renvoie une liste vide. Réservé au SuperAdmin, au Directeur et à la Vie Scolaire.
+      parameters:
+        - name: studentId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Cours de la journée
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StudentSlot' }
+        '403': { description: Rôle non autorisé }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /absences/late-arrivals:
+    post:
+      tags: [Attendance]
+      summary: Enregistrer un retard — et, avec `targetScheduleSlotId`, émettre un billet d'entrée visant un cours (Évolution N°5)
+      description: >-
+        Sans `targetScheduleSlotId`, le comportement d'avant : un retard sans cours visé, sans statut de billet.
+        Avec `targetScheduleSlotId`, le billet naît `Issued` et vise ce cours : le cours doit appartenir à la classe
+        de l'élève et tomber le jour de `date` (422 sinon), `minutes` est plafonné à 240, le jour ne doit pas être un
+        jour de repos, et un seul billet actif (`Issued` ou `Accepted`) est admis par élève, cours et jour (409 sinon).
+        Si la fiche d'appel de ce cours existe déjà, la ligne de l'élève passe en `Late` dans la MÊME transaction
+        (son statut d'avant est conservé pour une éventuelle annulation) ; une absence rectifiée en retard publie
+        l'événement d'assiduité. Le retard de la liste (`GET /absences/late-arrivals`) porte `targetScheduleSlotId` et
+        `status` (null pour tout l'historique sans cours visé). Réservé au SuperAdmin, au Directeur et à la Vie Scolaire.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LateArrivalCreateRequest' }
+      responses:
+        '200':
+          description: Identifiant du retard / billet
+          content:
+            application/json:
+              schema: { type: string, format: uuid }
+        '403': { description: Rôle non autorisé }
+        '409': { description: Un billet actif existe déjà pour cet élève, ce cours et ce jour }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /billets/{id}/accept:
+    post:
+      tags: [Attendance]
+      summary: Accepter l'élève en classe — billet d'entrée (Évolution N°5)
+      description: >-
+        L'ENSEIGNANT du cours visé (titulaire du créneau) ou le Directeur constate que l'élève est entré en classe :
+        le billet passe `Accepted`. Idempotent (un second appel renvoie le même résultat, sans nouvel effet). Refus :
+        403 pour un Enseignant qui n'est pas le titulaire du cours ; 404 billet introuvable dans l'établissement ;
+        422 si le billet est annulé ou ne vise aucun cours.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Billet accepté
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntryTicketActionResult' }
+        '403': { description: Enseignant non titulaire du cours, ou rôle non autorisé }
+        '404': { description: Billet introuvable dans l'établissement courant }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /billets/{id}/cancel:
+    post:
+      tags: [Attendance]
+      summary: Annuler un billet d'entrée non accepté (Évolution N°5)
+      description: >-
+        Réservé à la Vie Scolaire (Surveillant) et au Directeur — l'enseignant accepte, il n'annule pas. Le billet
+        passe `Cancelled` et, si la fiche d'appel du cours existe, la ligne de l'élève retrouve son statut d'avant
+        (le billet n'est jamais supprimé : soft delete, jamais physique). Idempotent sur un billet déjà annulé.
+        422 si le billet a déjà été accepté par l'enseignant.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Billet annulé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EntryTicketActionResult' }
+        '403': { description: Rôle non autorisé }
+        '404': { description: Billet introuvable dans l'établissement courant }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /attendance:
     post:
       tags: [Attendance]
@@ -2019,6 +2298,9 @@ paths:
       description: >-
         Ni schoolId ni schoolYearId dans le corps : l'année ACTIVE est résolue serveur (même règle que
         POST /enrollments). Une seconde saisie de la même clé (classe, matière, date, créneau) est refusée en 409.
+        Avec `scheduleSlotId` (Évolution N°5), la clé reste (classe, matière, date, période) — la période étant dérivée du cours, `period`
+        est ignoré ; les billets d'entrée actifs visant ce cours sont rattachés aux
+        lignes des élèves concernés.
         Une `date` tombant un jour de repos de l'établissement (`SchoolSettings.workingDays`) est refusée (422).
       requestBody:
         required: true
@@ -3036,6 +3318,39 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AttendanceReport' }
+        '403': { description: Réservé au Directeur, au Secrétariat et au Super Admin }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /reports/attendance/by-subject:
+    get:
+      tags: [Reports]
+      summary: Rapport d'assiduité par matière (Évolution N°5)
+      description: >-
+        Pour la période, une ligne par matière appelée : séances appelées (`sessions`), lignes d'appel, répartition
+        des statuts et taux de présence ((Présents + Retards) / lignes — la formule du rapport par élève, inchangée).
+        Mêmes filtres, mêmes rôles (Directeur, Secrétariat, Super Admin) et même garde de classe (422 si `classId`
+        n'appartient pas à l'école courante) que `/reports/attendance`. Les agrégats passent sous la policy RLS.
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: classId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Une ligne par matière
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SubjectAttendanceReportRow' }
         '403': { description: Réservé au Directeur, au Secrétariat et au Super Admin }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -5106,6 +5421,15 @@ components:
             ordinaire. Ce n'est pas un identifiant : il n'existe aucune table de niveaux (voir la
             description de `level`) — c'est le libellé du niveau, dans la nomenclature du cycle
             (CI/CP/CE1… au Primaire, Sixième…Troisième au Collège, Seconde/Première/Terminale au Lycée).
+        series:
+          type: string
+          nullable: true
+          enum: [L1, L2, S1, S2, TECH]
+          example: "S2"
+          description: >-
+            Série du LYCÉE (Évolution N°4) — catalogue fermé, voir `GET /coefficients/catalog`. Null pour toute
+            classe sans série (Seconde commune, et TOUTE classe hors lycée). L'élève hérite la série de sa
+            classe : c'est la clé des coefficients par série.
         rowVersion: { type: integer, format: int64, description: Jeton xmin — requis pour PUT/DELETE (verrou optimiste) }
 
     ClassroomUpdateRequest:
@@ -5140,6 +5464,94 @@ components:
             Second niveau validé. OBLIGATOIRE quand `isAccelerated` vaut `true`, et refusé en 422 s'il
             n'appartient pas au cycle de la classe ou s'il répète le niveau de départ. Ignoré (remis à
             null) quand `isAccelerated` vaut `false` : une classe ordinaire ne garde pas de niveau cible.
+        series:
+          type: string
+          nullable: true
+          enum: [L1, L2, S1, S2, TECH]
+          description: >-
+            Série du lycée (Évolution N°4), casse ignorée (`s2` devient `S2`). Refusée en 422 hors d'une classe
+            de Lycée ou hors du catalogue. REMPLACEMENT COMPLET en PUT : une série absente est EFFACÉE — renvoyez
+            la classe entière.
+
+    SeriesItem:
+      type: object
+      properties:
+        code: { type: string, enum: [L1, L2, S1, S2, TECH] }
+        label: { type: string, example: "Série S2" }
+
+    CoefficientGrid:
+      type: object
+      properties:
+        schoolYearId: { type: string, format: uuid }
+        schoolYearLabel: { type: string, example: "2026-2027" }
+        yearHasGrades:
+          type: boolean
+          description: >-
+            Des notes existent déjà sur l'année : modifier un coefficient recalcule alors les moyennes et les
+            bulletins de cette année (l'écran avertit).
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/CoefficientGridRow' }
+
+    CoefficientGridRow:
+      type: object
+      properties:
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        level: { type: string }
+        baseCoefficient: { type: number, description: "Coefficient de la matière (`Subject.coefficient`)" }
+        overrideId: { type: string, format: uuid, nullable: true }
+        overrideCoefficient: { type: number, nullable: true, description: Surcharge de LA portée demandée }
+        rowVersion: { type: integer, format: int64, nullable: true, description: Jeton xmin de la surcharge }
+        inheritedSeriesCoefficient:
+          type: number
+          nullable: true
+          description: Portée « classe » seulement — la surcharge de la série de la classe, si elle existe.
+        effectiveCoefficient: { type: number }
+        source: { type: string, enum: [Subject, Series, Classroom] }
+
+    UpsertCoefficientOverrideRequest:
+      type: object
+      required: [subjectId, coefficient]
+      description: Exactement UNE portée — `series` OU `classroomId`.
+      properties:
+        subjectId: { type: string, format: uuid }
+        coefficient: { type: number, exclusiveMinimum: 0, maximum: 20, example: 6 }
+        series: { type: string, enum: [L1, L2, S1, S2, TECH], nullable: true }
+        classroomId: { type: string, format: uuid, nullable: true }
+        rowVersion: { type: integer, format: int64, nullable: true, description: Obligatoire pour corriger une ligne existante }
+
+    CoefficientOverrideResult:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        series: { type: string, nullable: true }
+        classroomId: { type: string, format: uuid, nullable: true }
+        coefficient: { type: number }
+        rowVersion: { type: integer, format: int64 }
+
+    ApplySeriesTemplateRequest:
+      type: object
+      required: [series]
+      properties:
+        series: { type: string, enum: [L1, L2, S1, S2, TECH] }
+        overwrite: { type: boolean, default: false }
+
+    ApplyTemplateResult:
+      type: object
+      properties:
+        applied: { type: integer, description: Surcharges créées }
+        updated: { type: integer, description: Surcharges existantes remplacées (overwrite, valeur différente) }
+        skippedExisting: { type: integer }
+        unmatchedTemplateLines:
+          type: array
+          items: { type: string }
+          description: Lignes du modèle qu'aucune matière de l'école ne reconnaît.
+        uncoveredSubjects:
+          type: array
+          items: { type: string }
+          description: Matières de l'école (hors primaire) qu'aucune ligne du modèle ne couvre.
 
     SubjectCreateRequest:
       type: object
@@ -5424,6 +5836,72 @@ components:
           nullable: true
           allOf: [{ $ref: '#/components/schemas/AttendanceStatus' }]
         lateMinutes: { type: integer }
+        entryTicketId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Billet d'entrée actif visant CE cours pour cet élève (Évolution N°5), sinon null.
+        entryTicketNumber: { type: string, nullable: true, description: "« BILLET-XXXXXXXX »" }
+        entryTicketStatus:
+          type: string
+          nullable: true
+          enum: [Issued, Accepted]
+          description: Un billet annulé n'apparaît plus sur la feuille.
+
+    AttendanceSlot:
+      type: object
+      description: Un cours de l'emploi du temps proposé pour l'appel (Évolution N°5).
+      properties:
+        slotId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        teacherId: { type: string, format: uuid }
+        teacherName: { type: string }
+        start: { type: string, example: "08:00:00" }
+        end: { type: string, example: "10:00:00" }
+        label: { type: string, example: "08:00-10:00", description: Période dérivée du cours. }
+        sheetId: { type: string, format: uuid, nullable: true, description: "Fiche d'appel déjà faite pour ce cours ce jour-là." }
+
+    StudentSlot:
+      type: object
+      description: Un cours du jour de la classe d'un élève, pour viser un cours depuis un billet d'entrée (Évolution N°5).
+      properties:
+        slotId: { type: string, format: uuid }
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        teacherName: { type: string }
+        start: { type: string, example: "08:00:00" }
+        end: { type: string, example: "10:00:00" }
+        label: { type: string, example: "08:00-10:00" }
+        isCurrent: { type: boolean, description: Le cours a lieu maintenant (date du jour uniquement). }
+        isNext: { type: boolean, description: Premier cours à venir, quand aucun n'est en cours. }
+        ticketStatus:
+          type: string
+          nullable: true
+          enum: [Issued, Accepted]
+          description: Billet actif déjà émis pour cet élève et ce cours ce jour-là.
+
+    LateArrivalCreateRequest:
+      type: object
+      required: [studentId, date, minutes, reason]
+      properties:
+        studentId: { type: string, format: uuid }
+        date: { type: string, format: date-time }
+        minutes: { type: integer, minimum: 1, description: "Plafonné à 240 quand un cours est visé." }
+        reason: { type: string }
+        observations: { type: string, nullable: true }
+        targetScheduleSlotId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Cours visé par le billet d'entrée (Évolution N°5). Null = retard sans cours visé, comme avant.
+
+    EntryTicketActionResult:
+      type: object
+      properties:
+        ticketId: { type: string, format: uuid }
+        status: { type: string, enum: [Issued, Accepted, Cancelled] }
+        acceptedAt: { type: string, format: date-time, nullable: true }
 
     AttendanceRoster:
       type: object
@@ -5449,12 +5927,16 @@ components:
 
     AttendanceSubmitRequest:
       type: object
-      required: [classroomId, subjectId, date, period, entries]
+      required: [classroomId, subjectId, date, entries]
+      description: >-
+        `period` est obligatoire sans `scheduleSlotId` (appel libre) ; avec `scheduleSlotId` (Évolution N°5), la
+        période est dérivée du cours et le champ est ignoré.
       properties:
         classroomId: { type: string, format: uuid }
         subjectId: { type: string, format: uuid }
         date: { type: string, format: date }
         period: { type: string }
+        scheduleSlotId: { type: string, format: uuid, nullable: true }
         entries: { type: array, items: { $ref: '#/components/schemas/AttendanceEntry' } }
 
     AttendanceSubmitResult:
@@ -5978,6 +6460,24 @@ components:
         unjustifiedAbsences: { type: integer }
         totalLateMinutes: { type: integer }
         attendanceRate: { type: number, description: "Taux 0-1 = (Présents + Retards) / total de ses appels." }
+        daysRecorded:
+          type: integer
+          description: Jours où au moins une séance a été appelée pour l'élève (Évolution N°5) — le dénominateur des deux nombres suivants.
+        fullAbsenceDays: { type: integer, description: "Jours où l'élève a été absent à TOUTES les séances appelées." }
+        partialAbsenceDays: { type: integer, description: "Jours où il a manqué au moins une séance mais assisté (présent ou en retard) à une autre. Calcul, pas un statut : le taux n'en dépend pas." }
+
+    SubjectAttendanceReportRow:
+      type: object
+      properties:
+        subjectId: { type: string, format: uuid }
+        subjectName: { type: string }
+        sessions: { type: integer, description: Séances appelées sur la période. }
+        lines: { type: integer, description: Lignes d'appel (élève × séance). }
+        presents: { type: integer }
+        lates: { type: integer }
+        justifiedAbsences: { type: integer }
+        unjustifiedAbsences: { type: integer }
+        attendanceRate: { type: number, description: "Taux 0-1 = (Présents + Retards) / lignes d'appel." }
 
     AttendanceReport:
       type: object

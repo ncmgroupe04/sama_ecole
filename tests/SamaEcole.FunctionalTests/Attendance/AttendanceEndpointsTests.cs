@@ -169,6 +169,181 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         sheet.SchoolYearLabel.Should().Be("2026-2027");
     }
 
+    private record SlotDto(Guid SlotId, Guid SubjectId, string SubjectName, Guid TeacherId, string TeacherName, string Start, string End, string Label, Guid? SheetId);
+
+    /// <summary>
+    /// Évolution N°5 — appel par créneau de bout en bout : la liste des cours du jour, l'appel sans période
+    /// saisie (dérivée du cours), un créneau qui ne convient pas refusé en 422, et la vue restreinte d'un Enseignant.
+    /// </summary>
+    [Fact]
+    public async Task An_Attendance_Sheet_Can_Be_Taken_On_A_Schedule_Slot_And_Derives_Its_Period()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (subjectId, classroomId, s1, _) = await SeedClassAsync(directeur);
+
+        // Un jour ouvré de la semaine par défaut (lundi → samedi) : le dimanche, on prend la veille.
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var date = today.DayOfWeek == DayOfWeek.Sunday ? today.AddDays(-1) : today;
+
+        var teacherResponse = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
+        {
+            fullName = "Enseignant de test", email = "prof.creneau@sama-ecole.sn", birthDate = "1985-04-12",
+            subjectIds = new[] { subjectId }, userId = AuthApiFactory.EnseignantId
+        });
+        teacherResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var teacherId = (await teacherResponse.Content.ReadFromJsonAsync<TeacherResult>())!.Id;
+        (await SendAsync(HttpMethod.Post, $"/api/v1/teachers/{teacherId}/assignments", directeur, new { classroomId, subjectId }))
+            .StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var slotResponse = await SendAsync(HttpMethod.Post, "/api/v1/schedules", directeur, new
+        {
+            teacherId, classroomId, subjectId, dayOfWeek = (int)date.DayOfWeek, startTime = "08:00:00", endTime = "10:00:00"
+        });
+        slotResponse.EnsureSuccessStatusCode();
+
+        // 1. Les cours du jour.
+        var slots = (await (await SendAsync(HttpMethod.Get, $"/api/v1/attendance/slots?classroomId={classroomId}&date={date:yyyy-MM-dd}", directeur))
+            .Content.ReadFromJsonAsync<List<SlotDto>>())!;
+        var slot = slots.Should().ContainSingle().Subject;
+        slot.Label.Should().Be("08:00-10:00");
+        slot.SheetId.Should().BeNull();
+
+        // 2. Un créneau qui ne convient pas (mauvaise matière) : 422, rien d'écrit.
+        var otherSubject = await CreateSubjectAsync(directeur, "Français");
+        (await SendAsync(HttpMethod.Post, "/api/v1/attendance", directeur, new
+        {
+            classroomId, subjectId = otherSubject, date = date.ToString("yyyy-MM-dd"), scheduleSlotId = slot.SlotId,
+            entries = new[] { Entry(s1, "Present") }
+        })).StatusCode.Should().Be((HttpStatusCode)422);
+
+        // 3. L'appel SANS période : elle est dérivée du cours.
+        var submit = await SendAsync(HttpMethod.Post, "/api/v1/attendance", directeur, new
+        {
+            classroomId, subjectId, date = date.ToString("yyyy-MM-dd"), scheduleSlotId = slot.SlotId,
+            entries = new[] { Entry(s1, "Present") }
+        });
+        submit.StatusCode.Should().Be(HttpStatusCode.Created);
+        var sheetId = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.Id;
+        (await (await SendAsync(HttpMethod.Get, $"/api/v1/attendance/{sheetId}", directeur))
+            .Content.ReadFromJsonAsync<SheetDto>())!.Period.Should().Be("08:00-10:00");
+
+        // 4. Le cours porte désormais sa fiche ; le même créneau ne se ressaisit pas (409).
+        var after = (await (await SendAsync(HttpMethod.Get, $"/api/v1/attendance/slots?classroomId={classroomId}&date={date:yyyy-MM-dd}", directeur))
+            .Content.ReadFromJsonAsync<List<SlotDto>>())!;
+        after.Single().SheetId.Should().Be(sheetId);
+        (await SendAsync(HttpMethod.Post, "/api/v1/attendance", directeur, new
+        {
+            classroomId, subjectId, date = date.ToString("yyyy-MM-dd"), scheduleSlotId = slot.SlotId,
+            entries = new[] { Entry(s1, "Present") }
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        // 5. L'Enseignant titulaire voit son cours.
+        var enseignant = await EnseignantTokenAsync();
+        var mine = (await (await SendAsync(HttpMethod.Get, $"/api/v1/attendance/slots?classroomId={classroomId}&date={date:yyyy-MM-dd}", enseignant))
+            .Content.ReadFromJsonAsync<List<SlotDto>>())!;
+        mine.Should().ContainSingle();
+    }
+
+    private record TicketRow(Guid StudentId, string? Status, int LateMinutes, Guid? EntryTicketId, string? EntryTicketStatus);
+    private record TicketRoster(bool AlreadySubmitted, List<TicketRow> Students);
+    private record TodaySlot(Guid SlotId, string Label, bool IsCurrent, bool IsNext, string? TicketStatus);
+    private record TicketAction(Guid TicketId, string Status, DateTimeOffset? AcceptedAt);
+
+    /// <summary>
+    /// Évolution N°5 — billet d'entrée visant un cours, de bout en bout : la Vie Scolaire voit les cours de la classe
+    /// de l'élève, émet le billet, la feuille d'appel présélectionne le retard avec le billet, un doublon est refusé.
+    /// </summary>
+    [Fact]
+    public async Task An_Entry_Ticket_Targeting_A_Course_Preselects_The_Late_On_The_Roster()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (subjectId, classroomId, s1, _) = await SeedClassAsync(directeur);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var date = today.DayOfWeek == DayOfWeek.Sunday ? today.AddDays(-1) : today;
+        var day = date.ToString("yyyy-MM-dd");
+
+        var teacherResponse = await SendAsync(HttpMethod.Post, "/api/v1/teachers", directeur, new
+        {
+            fullName = "Enseignant de test", email = "prof.billet@sama-ecole.sn", birthDate = "1985-04-12",
+            subjectIds = new[] { subjectId }, userId = AuthApiFactory.EnseignantId
+        });
+        teacherResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var teacherId = (await teacherResponse.Content.ReadFromJsonAsync<TeacherResult>())!.Id;
+
+        (await SendAsync(HttpMethod.Post, "/api/v1/schedules", directeur, new
+        {
+            teacherId, classroomId, subjectId, dayOfWeek = (int)date.DayOfWeek, startTime = "08:00:00", endTime = "10:00:00"
+        })).EnsureSuccessStatusCode();
+
+        // 1. Les cours du jour de la classe de l'élève.
+        var slots = (await (await SendAsync(HttpMethod.Get, $"/api/v1/absences/today-slots?studentId={s1}&date={day}", directeur))
+            .Content.ReadFromJsonAsync<List<TodaySlot>>())!;
+        var slot = slots.Should().ContainSingle().Subject;
+        slot.Label.Should().Be("08:00-10:00");
+        slot.TicketStatus.Should().BeNull();
+
+        // 2. Émission du billet visant ce cours.
+        var issue = await SendAsync(HttpMethod.Post, "/api/v1/absences/late-arrivals", directeur, new
+        {
+            studentId = s1, date = day, minutes = 12, reason = "Transport", targetScheduleSlotId = slot.SlotId
+        });
+        issue.StatusCode.Should().Be(HttpStatusCode.OK);
+        var ticketId = await issue.Content.ReadFromJsonAsync<Guid>();
+
+        // 3. La feuille d'appel de ce cours présélectionne le retard et porte le billet.
+        var roster = (await (await SendAsync(HttpMethod.Get,
+                $"/api/v1/attendance/roster?classroomId={classroomId}&subjectId={subjectId}&date={day}&scheduleSlotId={slot.SlotId}", directeur))
+            .Content.ReadFromJsonAsync<TicketRoster>())!;
+        var row = roster.Students.Single(r => r.StudentId == s1);
+        row.Status.Should().Be("Late");
+        row.LateMinutes.Should().Be(12);
+        row.EntryTicketId.Should().Be(ticketId);
+        row.EntryTicketStatus.Should().Be("Issued");
+
+        // 4. Le cours signale son billet ; un second billet actif est refusé (409) ; un cours d'une autre classe, 422.
+        (await (await SendAsync(HttpMethod.Get, $"/api/v1/absences/today-slots?studentId={s1}&date={day}", directeur))
+            .Content.ReadFromJsonAsync<List<TodaySlot>>())!.Single().TicketStatus.Should().Be("Issued");
+        (await SendAsync(HttpMethod.Post, "/api/v1/absences/late-arrivals", directeur, new
+        {
+            studentId = s1, date = day, minutes = 5, reason = "Transport", targetScheduleSlotId = slot.SlotId
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await SendAsync(HttpMethod.Post, "/api/v1/absences/late-arrivals", directeur, new
+        {
+            studentId = s1, date = day, minutes = 5, reason = "Transport", targetScheduleSlotId = Guid.NewGuid()
+        })).StatusCode.Should().Be((HttpStatusCode)422);
+
+        // 5. L'Enseignant n'émet pas de billet (réservé à la Vie Scolaire).
+        var enseignant = await EnseignantTokenAsync();
+        (await SendAsync(HttpMethod.Post, "/api/v1/absences/late-arrivals", enseignant, new
+        {
+            studentId = s1, date = day, minutes = 5, reason = "Transport"
+        })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // 6. Le Secrétariat n'accepte pas ; l'Enseignant TITULAIRE du cours accepte, et rejouer ne change rien.
+        var secretaire = await AccessTokenAsync(AuthApiFactory.SecretaireEmail, AuthApiFactory.SecretairePassword);
+        (await SendAsync(HttpMethod.Post, $"/api/v1/billets/{ticketId}/accept", secretaire))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var accepted = await SendAsync(HttpMethod.Post, $"/api/v1/billets/{ticketId}/accept", enseignant);
+        accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await accepted.Content.ReadFromJsonAsync<TicketAction>())!.Status.Should().Be("Accepted");
+        (await SendAsync(HttpMethod.Post, $"/api/v1/billets/{ticketId}/accept", enseignant))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // 7. Accepté, le billet ne s'annule plus (422) ; la feuille le montre accepté.
+        (await SendAsync(HttpMethod.Post, $"/api/v1/billets/{ticketId}/cancel", directeur))
+            .StatusCode.Should().Be((HttpStatusCode)422);
+        var after = (await (await SendAsync(HttpMethod.Get,
+                $"/api/v1/attendance/roster?classroomId={classroomId}&subjectId={subjectId}&date={day}&scheduleSlotId={slot.SlotId}", directeur))
+            .Content.ReadFromJsonAsync<TicketRoster>())!;
+        after.Students.Single(r => r.StudentId == s1).EntryTicketStatus.Should().Be("Accepted");
+
+        // 8. Un billet inconnu : 404.
+        (await SendAsync(HttpMethod.Post, $"/api/v1/billets/{Guid.NewGuid()}/accept", directeur))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     [Fact]
     public async Task Roster_Should_Reflect_An_Already_Submitted_Sheet()
     {

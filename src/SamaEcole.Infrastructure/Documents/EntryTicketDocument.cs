@@ -134,7 +134,23 @@ public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo, byte[]? su
 
             ComposeGridRow(column, showRule: true,
                 left: c => ComposeCell(c, "Classe", inner =>
-                    inner.Item().Text(ticket.ClassroomName).Bold().FontSize(11).FontColor(HeadingColor)),
+                {
+                    inner.Item().Text(ticket.ClassroomName).Bold().FontSize(11).FontColor(HeadingColor);
+
+                    // Cours visé (Évolution N°5) : ce que l'enseignant reconnaît au premier coup d'œil. Absent
+                    // pour un billet sans cours visé, qui s'imprime alors comme avant.
+                    if (!string.IsNullOrWhiteSpace(ticket.TargetSubjectName))
+                    {
+                        inner.Item().PaddingTop(2)
+                            .Text($"Cours : {ticket.TargetSubjectName}").FontSize(9).FontColor(HeadingColor).SemiBold();
+
+                        var detail = JoinPresent(ticket.TargetTimeRange, ticket.TargetTeacherName);
+                        if (detail.Length > 0)
+                        {
+                            inner.Item().Text(detail).FontSize(8.5f).FontColor(AccentColor);
+                        }
+                    }
+                }),
                 right: c => ComposeCell(c, "Motif du billet", inner =>
                 {
                     inner.Item().Text($"RETARD DE {ticket.Minutes} MIN").Bold().FontSize(10).FontColor(HeadingColor);
@@ -147,7 +163,22 @@ public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo, byte[]? su
 
             ComposeGridRow(column, showRule: false,
                 left: c => ComposeCell(c, "Décision de la surveillance", inner =>
-                    inner.Item().Text("ADMIS EN CLASSE").Bold().FontSize(10).FontColor(HeadingColor)),
+                {
+                    // Un billet annulé n'autorise plus rien : il ne doit JAMAIS se lire « ADMIS EN CLASSE ».
+                    var cancelled = ticket.Status == "Cancelled";
+                    inner.Item().Text(cancelled ? "BILLET ANNULÉ" : "ADMIS EN CLASSE").Bold().FontSize(10).FontColor(HeadingColor);
+
+                    var statusLine = ticket.Status switch
+                    {
+                        "Issued" => "En attente d'acceptation par l'enseignant",
+                        "Accepted" => "Accepté en classe par l'enseignant",
+                        _ => null
+                    };
+                    if (statusLine is not null)
+                    {
+                        inner.Item().PaddingTop(1).Text(statusLine).FontSize(8.5f).FontColor(AccentColor);
+                    }
+                }),
                 right: c => ComposeCell(c, "Observations", inner =>
                     inner.Item().Text(string.IsNullOrWhiteSpace(ticket.Observations) ? DefaultObservationsNotice : ticket.Observations)
                         .Italic().FontSize(9).FontColor(Colors.Grey.Darken2)));

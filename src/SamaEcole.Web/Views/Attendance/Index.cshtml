@@ -10,7 +10,7 @@
 <div x-data="attendanceView()">
  <div>
  <h1 class="page-title">Présences</h1>
- <p class="page-subtitle">Faites l'appel d'une classe pour une matière, une date et un créneau.</p>
+ <p class="page-subtitle">Faites l'appel d'une classe sur un cours de son emploi du temps — ou en appel libre : matière, date et créneau.</p>
  </div>
 
  @await Html.PartialAsync("_ErrorBanner")
@@ -23,7 +23,7 @@
  <select-field model="filters.classroomId" class="mt-0" placeholder="Choisir une classe…"
  options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' (' + c.level + ')'}))" />
  </div>
- <div class="flex-1">
+ <div class="flex-1" x-show="!slotMode">
  <label class="form-label-sm">Matière</label>
  <select-field model="filters.subjectId" class="mt-0" placeholder="Choisir une matière…"
  options-expr="subjects.map(s => ({value: s.id, label: s.name + ' (' + s.level + ')'}))" />
@@ -32,7 +32,7 @@
  <label class="form-label-sm">Date</label>
  <date-field model="filters.date" class="mt-0" aria-label="Date" />
  </div>
- <div>
+ <div x-show="!slotMode">
  <label class="form-label-sm">Créneau</label>
  <input type="text" x-model="filters.period" list="attendance-periods" placeholder="Matin" class="input-field mt-0 w-40" />
  <datalist id="attendance-periods">
@@ -42,10 +42,33 @@
  <option value="2e heure" class="font-semibold"></option>
  </datalist>
  </div>
- <button type="button" x-on:click="loadRoster()" :disabled="!canLoad || isLoading" class="btn-modal-primary whitespace-nowrap group">
+ <button type="button" x-show="!slotMode" x-on:click="loadRoster()" :disabled="!canLoad || isLoading" class="btn-modal-primary whitespace-nowrap group">
  <icon name="checkmark-circle" class="w-4 h-4" />
  <span x-text="isLoading ? 'Chargement…' : 'Charger l\'appel'"></span>
  </button>
+ </div>
+
+ @* Appel par créneau (Évolution N°5) : les cours de la classe ce jour-là, pris de l'emploi du temps. Choisir un cours
+ fixe la matière et ouvre sa feuille ; le libellé du créneau (08:00-10:00) est dérivé du cours par le serveur. Un
+ Enseignant ne reçoit que SES cours. Sans cours, ou sur choix, l'appel libre d'avant reste disponible. *@
+ <div x-show="slots.length > 0" x-cloak class="mt-4">
+ <div class="flex items-center justify-between gap-3 flex-wrap">
+ <p class="form-label-sm">Cours de la journée</p>
+ <button type="button" class="text-xs font-medium text-primary-600 hover:underline"
+ x-on:click="setMode(slotMode ? 'free' : 'slot')"
+ x-text="slotMode ? 'Faire un appel libre (demi-journée)' : 'Choisir un cours de l\'emploi du temps'"></button>
+ </div>
+ <div x-show="slotMode" class="mt-2 flex flex-wrap gap-2">
+ <template x-for="slot in slots" :key="slot.slotId">
+ <button type="button" x-on:click="selectSlot(slot)" :disabled="isLoading"
+ class="rounded-xl border px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50"
+ :class="selectedSlotId === slot.slotId ? 'border-primary ring-2 ring-primary/30 bg-primary-50' : 'border-slate-200 bg-white'">
+ <span class="block font-semibold text-slate-900" x-text="slot.subjectName"></span>
+ <span class="block text-xs text-slate-500" x-text="slot.label + ' · ' + slot.teacherName"></span>
+ <span x-show="slot.sheetId" x-cloak class="status-badge-success mt-1 inline-block text-[10px]">Appel fait</span>
+ </button>
+ </template>
+ </div>
  </div>
 
  @* Jour de repos de l'établissement (Évolution N°3) : confort d'affichage, le serveur refuse de toute façon (422). *@
@@ -81,6 +104,8 @@
 
  <div x-show="submitError" x-cloak class="mx-4 mt-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="submitError"></div>
 
+ <div x-show="ticketNotice" x-cloak role="status" class="mx-4 mt-4 rounded-xl border-l-4 border-success bg-success-bg p-3 text-sm text-success" x-text="ticketNotice"></div>
+
  <div class="overflow-x-auto">
  <table class="w-full text-left border-collapse">
  <thead>
@@ -105,6 +130,13 @@
  <div>
  <p class="font-medium text-slate-900" x-text="entry.fullName"></p>
  <p class="font-mono text-xs text-slate-500" x-text="entry.matricule"></p>
+ @* Billet d'entrée émis par la Vie Scolaire pour CE cours (Évolution N°5) : l'enseignant du cours l'accepte en classe. *@
+ <div x-show="entry.entryTicketId" x-cloak class="mt-1 flex flex-wrap items-center gap-2">
+ <span class="status-badge-warning text-[10px]"
+ x-text="'Billet d\'entrée ' + entry.entryTicketNumber + ' — ' + ticketStatusLabel(entry.entryTicketStatus)"></span>
+ <button type="button" x-show="canAcceptTicket(entry)" x-on:click="acceptTicket(entry)"
+ class="btn-modal-secondary text-xs px-2 py-1">Accepter</button>
+ </div>
  </div>
  </div>
  </td>
@@ -141,7 +173,7 @@
  L'appel de <span class="font-medium text-slate-900" x-text="selectedClassroomLabel"></span>
  en <span class="font-medium text-slate-900" x-text="selectedSubjectLabel"></span>
  du <span class="font-medium text-slate-900" x-text="formatDate(filters.date)"></span>
- (<span x-text="filters.period"></span>) a bien été enregistré :
+ (<span x-text="periodLabel"></span>) a bien été enregistré :
  <span class="font-medium text-slate-900" x-text="countBy('Present')"></span> présent(s),
  <span class="font-medium text-slate-900" x-text="countBy('Late')"></span> retard(s),
  <span class="font-medium text-slate-900" x-text="countBy('UnjustifiedAbsence') + countBy('JustifiedAbsence')"></span> absent(s).

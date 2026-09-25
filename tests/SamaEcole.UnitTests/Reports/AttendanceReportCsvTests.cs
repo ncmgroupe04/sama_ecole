@@ -42,6 +42,20 @@ public class AttendanceReportCsvTests
         text.Should().Contain("Matricule;Nom;Classe;Appels;Présents;Retards;Minutes de retard;Absences justifiées;Absences non justifiées;Taux de présence (%)");
     }
 
+    // Évolution N°5 : deux colonnes EN FIN de ligne — l'en-tête historique reste un préfixe de la nouvelle.
+    [Fact]
+    public void Csv_Should_Append_The_Full_And_Partial_Absence_Day_Columns_After_The_Historical_Ones()
+    {
+        var row = new StudentAttendanceReportRow(
+            Guid.NewGuid(), "ELEV-2026-0003", "Awa Fall", Guid.NewGuid(), "CM2 A",
+            8, 4, 1, 1, 2, 15, 0.5m, DaysRecorded: 3, FullAbsenceDays: 1, PartialAbsenceDays: 2, LateOnlyDays: 0);
+
+        var text = Decode(AttendanceReportCsv.Build(Model(row)));
+
+        text.Should().Contain("Taux de présence (%);Jours d'absence complète;Jours d'absence partielle");
+        text.Should().Contain(";50;1;2", "le taux (50 %), puis 1 jour d'absence complète et 2 d'absence partielle");
+    }
+
     [Fact]
     public void Csv_Should_Render_A_Student_Row_With_Percent_And_Comma_Decimal()
     {

@@ -1138,8 +1138,10 @@
 
  <div class="my-5 border-t border-red-200"></div>
 
- <!-- Bascule test → réel : pleinement réversible, jamais un verrou par effet de bord. -->
- <div x-show="!isLiveMode" x-cloak class="flex flex-col gap-4 rounded-xl border border-primary-200 bg-white p-5 lg:flex-row lg:items-center lg:justify-between">
+ <!-- Bascule test → réel : pleinement réversible, jamais un verrou par effet de bord.
+ id="mode-reel" : cible du badge « MODE TEST » de la barre supérieure et de la modale
+ d'avertissement (/parametres?tab=securite#mode-reel) — settings.js › focusModeSection(). -->
+ <div id="mode-reel" x-show="!isLiveMode" x-cloak class="scroll-mt-24 flex flex-col gap-4 rounded-xl border border-primary-200 bg-white p-5 transition-shadow lg:flex-row lg:items-center lg:justify-between">
  <div class="max-w-2xl">
  <p class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
  <icon name="shield" class="w-4 h-4 text-primary-600" />

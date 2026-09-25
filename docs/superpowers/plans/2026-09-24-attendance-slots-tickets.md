@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **STATUT : PLAN POUR VALIDATION — aucun code n'est écrit.** Les arbitrages B1 à B13 ci-dessous doivent être validés avant la Tâche 1.
+> **STATUT : EXÉCUTÉ le 25/09/2026 (Tâches 1 à 8 et 10) — arbitrages B1 à B13 validés à 100 %.** La Tâche 9 (justification des séances manquées) est **hors périmètre**, non construite. Écarts constatés à l'exécution : voir la fin du document. **Complément N°5 bis (Tâches 11 à 15 : appel à trois statuts, billet par heure d'arrivée) : planifié le 25/09/2026, non exécuté — voir la fin du document.**
 
 **Goal :** (1) Faire l'appel par créneau d'emploi du temps, pas seulement par demi-journée, et distinguer absences complètes, retards et absences partielles par matière. (2) Faire du billet d'entrée un vrai circuit : la Vie Scolaire l'émet pour un cours précis, le registre d'appel de ce cours se met à jour, et l'enseignant l'accepte en classe.
 
@@ -437,3 +437,137 @@ public static class SlotPeriod
 | Isolation multi-tenant | 2, 3, 5, 6 (tests `Category=MultiTenant`) |
 
 Points de vigilance connus, non traités par ce plan : (1) **billet de sortie** inchangé (hors périmètre, B10) ; (2) la classification « complète » se fonde sur les séances **appelées** — une école qui ne fait l'appel que sur un cours par jour verra surtout des absences « complètes » ; la couverture affichée est là pour le rappeler, et rendre l'appel obligatoire sur tous les cours serait une autre évolution ; (3) **concurrence** : un billet émis exactement pendant la soumission de la fiche peut ne pas être rattaché à sa ligne ; l'acceptation par l'enseignant est le point de réconciliation (elle applique le retard à la ligne existante), et la feuille rechargée le montre — pas de verrou `xmin` sur `StudentAttendance` dans ce plan ; (4) un billet **accepté** ne s'annule plus (B9) : une erreur se corrige par un nouvel appel sur la ligne ; (5) la Tâche 9 (justification des séances manquées) est la seule qui crée une table — d'où son statut optionnel.
+
+---
+
+## Écarts constatés à l'exécution
+
+Ce que le code livré fait autrement que le plan ci-dessus, et pourquoi :
+
+- **Pas de `TargetDate`.** `LateArrivals.Date` est déjà une colonne `date` : le billet vise (cours, `Date`), aucune colonne ajoutée.
+- **Index de `StudentId` conservé explicitement.** EF supprimait `IX_LateArrivals_StudentId` comme redondant avec l'index unique partiel ; `HasIndex(e => e.StudentId)` est déclaré, la migration régénérée.
+- **Refus.** Un enseignant non titulaire reçoit **403** (`ForbiddenException`), pas `UnauthorizedAccess` ; les refus métier (billet annulé, déjà accepté, sans cours visé) sont des `ValidationException` sur la clé « Ticket » → **422**.
+- **Contrôleur d'acceptation séparé** (`EntryTicketActionsController`, même préfixe `api/v1/billets`) : un attribut de rôle sur une action s'ajoute à celui de la classe au lieu de l'élargir, et `BilletsController` exclut l'enseignant.
+- **`EntryTicketRegister`.** `ApplyAsync` est idempotent (`PreviousStatus ??=`) et `RestoreAsync` ne restaure que si un statut d'avant existe ; le numéro de billet vient d'`EntryTicketNumber.For(id)`, seule source (le PDF et la feuille ne recalculent plus).
+- **Formes de DTO.** `EntryTicketDto` gagne `TargetSubjectName`, `TargetTimeRange`, `TargetTeacherName`, `Status` en fin de record avec défauts ; `StudentAttendanceReportRow` gagne `DaysRecorded`, `FullAbsenceDays`, `PartialAbsenceDays` de la même façon — toute construction existante reste valide.
+- **Rapport.** `AttendanceReportAggregator` calcule par jour en SQL (comptes par groupe) puis classe via `DayAttendanceClassifier` ; le CSV ajoute deux colonnes en fin de ligne, le PDF deux colonnes.
+- **Tests d'infrastructure.** `AuthApiFactory` nettoie aussi `LateArrivals`, `ScheduleSlots` et `subject_coefficient_overrides` (FK) ; le garde de régression JS impose un `toast.error` dans les `catch` des chargeurs, y compris `loadSlots` et `loadTodaySlots`.
+
+---
+
+# Complément N°5 bis — « Retard » retiré de l'appel, billet par heure d'arrivée (Tâches 11 à 15)
+
+> **STATUT : PLANIFIÉ le 25/09/2026, NON EXÉCUTÉ.** À exécuter **après** le plan ci-dessus (Tâches 1 à 8 et 10, livrées sur `feature/attendance-slots`), sur une branche dédiée `feature/attendance-arrival-time` **empilée sur `feature/attendance-slots`**, dans un worktree (`WORK_IN_PROGRESS.md`, règle 5) — jamais dans l'arbre partagé pendant qu'une autre session y travaille.
+
+**Demande (25/09/2026) :**
+1. Appel en classe : supprimer la notion de « Retard » et la saisie « RETARD (MIN) » ; l'enseignant ne choisit que **Présent**, **Absent (justifié)**, **Absent (non justifié)**.
+2. Billet d'entrée : gérer (a) un **retard en minutes** sur un cours en cours (arrivé à 08h15 pour le cours de 08h00) et (b) une **absence sur une plage** (absent de 08h00 à 10h00, présent à partir de 10h00), avec calcul automatique de la durée.
+
+## Arbitrages
+
+| # | Question | Décision |
+|---|---|---|
+| **C1** | Deux types de billet, ou un seul champ ? | **VALIDÉ le 25/09/2026 : « heure d'arrivée » unique.** Le surveillant saisit l'heure réelle d'arrivée ; le serveur en déduit les cours **manqués** (terminés avant l'arrivée) et le cours **en cours** (retard en minutes). Les deux cas de la demande sont deux résultats d'un même calcul, sans double saisie. |
+| **C2** | Coordination | **VALIDÉ : ajouter au plan, exécuter après.** Aucun fichier de l'appel ou des billets n'est modifié tant que ce complément n'est pas lancé. |
+| C3 | Calcul (pur, testable) | `ArrivalCoverage.Compute(coursDeLaClasseCeJour, arrivée)` : **manqué** = cours dont `End <= arrivée` ; **en cours** = cours avec `Start < arrivée < End`, retard = `arrivée − Start` ; cours avec `Start >= arrivée` **ignorés**. Durée totale = Σ durées des cours manqués + minutes de retard. Arrivée **avant le début du premier cours** → 422 (« aucun cours n'a commencé »). Arrivée pile à l'heure de début → pas de retard sur ce cours (les précédents restent manqués). |
+| C4 | Cours visé du billet (celui que l'enseignant accepte) | Le cours **en cours** ; à défaut (arrivée pendant une pause) le **prochain** ; à défaut (plus aucun cours) le **dernier cours manqué**, accepté alors par son titulaire ou le Directeur. Un jour de repos ou une classe sans emploi du temps : billet **sans cours visé**, minutes saisies à la main comme aujourd'hui (B10 inchangé). |
+| C5 | Effet sur le registre des cours manqués | **À confirmer par le propriétaire (recommandé : oui).** Les lignes des cours manqués passent à `JustifiedAbsence` **seulement** depuis `UnjustifiedAbsence` ou en l'absence de ligne (présélection de la feuille) ; **jamais** depuis `Present`/`Late`, jamais l'inverse. Le cours en cours passe à `Late` (B6 inchangé). Cela **lève B7** : le billet justifie désormais les séances manquées. Si la réponse est « non », les cours manqués restent seulement **affichés** sur le billet (durée) sans toucher au registre. |
+| C6 | Restauration à l'annulation, sans table de journal | Un billet peut maintenant toucher **plusieurs** lignes, ce qui était la raison d'être de la table `attendance_status_changes` (Tâche 9). Plus simple : `student_attendances` gagne `PreviousStatus`/`PreviousLateMinutes` (nullables), **une ligne ↔ un billet** (`EntryTicketId` existe déjà). **Aucune nouvelle table** : pas de RLS/Global Query Filter/reset/purge supplémentaires (règle #2). Les colonnes `late_arrivals.Previous*` restent lues en repli pour les billets déjà émis. |
+| C7 | Notifications famille | `AttendanceRecordedEvent` **uniquement** pour le cours en cours (absence → retard, B8 inchangé). Le passage `UnjustifiedAbsence → JustifiedAbsence` d'un cours manqué **n'envoie rien** en V1 (pas de nouveau modèle de message). |
+| C8 | Retard retiré de la grille : que devient un retard dans le registre ? | Un retard n'existe plus **que** par un billet. Les lignes `Late` **historiques** restent lues, comptées et rapportées telles quelles ; le **taux de présence est inchangé** (« Présents + Retards » ; invariant N°3). Le mode « Libre » (sans créneau) perd la saisie manuelle du retard : c'est **volontaire** — un retard sans billet n'a plus de source. |
+| C9 | Contrat d'API | **Changement cassant assumé** pour `POST /attendance` : `status = "Late"` sans billet actif → **422** (« Le retard s'enregistre par un billet d'entrée »). `lateMinutes` reste dans le contrat (billets et historique). À reporter dans `openapi.yaml` et Volume 4. Un client d'appel externe qui envoyait `Late` doit passer par le billet. |
+
+## File Structure (complément)
+
+| Fichier | Rôle |
+|---|---|
+| `Application/Attendance/ArrivalCoverage.cs` (créer) | Pur : cours manqués / cours en cours / durée totale. |
+| `Domain/Entities/LateArrival.cs` (modifier) | `TimeOnly? ArrivalTime`, `int? TotalMinutes` (instantané calculé à l'émission : un emploi du temps modifié plus tard ne réécrit pas un billet imprimé). |
+| `Domain/Entities/StudentAttendance.cs` (modifier) | `AttendanceStatus? PreviousStatus`, `int? PreviousLateMinutes`. |
+| `Persistence/Configurations/*`, `Migrations/*` | Colonnes nullables uniquement, migration **nouvelle**. |
+| `Absences/Commands/CreateLateArrival/*` (modifier) | `TimeOnly? ArrivalTime` ; `Minutes` dérivé quand elle est fournie. |
+| `Attendance/EntryTickets/EntryTicketRegister.cs` (modifier) | `ApplyAsync`/`RestoreAsync` sur **plusieurs** lignes. |
+| `Absences/Queries/GetArrivalPreview/*` (créer) | Aperçu calculé **côté serveur** (aucune règle métier dans le client). |
+| `Attendance/Commands/SubmitAttendanceSheet/*Validator.cs`, `*Handler.cs` (modifier) | Refus de `Late` sans billet actif (C9). |
+| `wwwroot/js/attendance.js`, `Views/Attendance/Index.cshtml` | Grille à trois statuts. |
+| `wwwroot/js/billets.js`, `Views/Absences/Billets.cshtml` | Champ « Heure d'arrivée » + aperçu. |
+| `Infrastructure/Documents/EntryTicket*.cs`, `GetEntryTicket*` | Arrivée, cours manqués, durée. |
+| `tests/SamaEcole.UnitTests/Attendance/ArrivalCoverageTests.cs`, `tests/SamaEcole.IntegrationTests/VieScolaire/ArrivalTimeTicketTests.cs`, `src/SamaEcole.Web/tests/js/attendance-no-late.test.mjs`, `billets-arrival.test.mjs` | Tests. |
+
+---
+
+### Task 11 : Retirer « Retard » de la grille d'appel (écran + garde serveur)
+
+**Files:** Modify `wwwroot/js/attendance.js` (`STATUSES`, `lateMinutes`, compteur d'en-tête, `statusBadge`), `Views/Attendance/Index.cshtml` (colonne « Retard (min) », pastille « Retards »), `SubmitAttendanceSheetCommandValidator.cs` + `SubmitAttendanceSheetCommandHandler.cs`, `help.js` (fiche « Appel en classe »). Test : `attendance-no-late.test.mjs`, `AttendanceBySlotTests.cs` (étendu).
+
+**Interfaces:** aucune nouvelle route. Écran : la liste ne propose que `Present`, `JustifiedAbsence`, `UnjustifiedAbsence` ; plus de colonne « RETARD (MIN) » ; le compteur d'en-tête ne montre plus « Retards ». Une ligne portant un `entryTicketId` (billet) n'a **pas** de liste : pastille en lecture seule « Retard — billet » (ou « Absence justifiée — billet »), minutes affichées, bouton « Accepter » inchangé pour l'enseignant titulaire ; elle est renvoyée telle quelle à la soumission. Serveur (C9) : ligne `Late` sans billet actif sur (élève, créneau, date) → 422.
+
+- [ ] **Step 1 : tests qui échouent.** JS : les options sont exactement Présent / Absent (justifié) / Absent (non justifié) ; aucune saisie de minutes ; une ligne avec billet est verrouillée et renvoyée avec son statut ; le compteur n'affiche plus de retards. C# : (1) `Late` sans billet → 422, rien d'écrit ; (2) `Late` **avec** billet actif → accepté (feuille pré-marquée renvoyée par le client) ; (3) fiche sans aucune ligne `Late` → comportement d'avant ; (4) les lignes `Late` historiques sont toujours lues et **le taux de présence est identique** (`AttendanceRateWorkingDaysTests` vert, non modifié) ; (5) `[Trait("Category","MultiTenant")]` : un billet d'une autre école ne « couvre » jamais une ligne.
+- [ ] **Step 2 : constater l'échec.** **Step 3 : implémenter.** **Step 4 : constater le succès** — `node --test tests/js/*.test.mjs` ; `--filter "FullyQualifiedName~AttendanceBySlotTests|FullyQualifiedName~AttendanceRateWorkingDaysTests|FullyQualifiedName~EntryTicketRegisterTests"` ; mettre à jour les tests d'aide si le texte est le contrat.
+- [ ] **Step 5 : commit** — `feat(attendance): appel à trois statuts — le retard ne se saisit plus qu'avec un billet d'entrée`
+
+---
+
+### Task 12 : `ArrivalCoverage` (pur, sans base)
+
+**Files:** Create `Application/Attendance/ArrivalCoverage.cs` ; Test `tests/SamaEcole.UnitTests/Attendance/ArrivalCoverageTests.cs`.
+
+**Interfaces:** `ArrivalCoverage.Compute(IReadOnlyList<(Guid SlotId, TimeOnly Start, TimeOnly End)> slots, TimeOnly arrival)` → `record ArrivalCoverageResult(IReadOnlyList<Guid> MissedSlotIds, Guid? InProgressSlotId, int LateMinutes, int MissedMinutes, int TotalMinutes, Guid? TargetSlotId)` ; `TargetSlotId` applique C4. Lève une erreur de domaine lisible (arrivée avant le premier cours, rien à régulariser) — le Handler la traduit en 422.
+
+- [ ] **Step 1 : tests qui échouent** (cas de la demande) : trois cours 08:00-10:00, 10:00-12:00, 14:00-16:00 — (1) arrivée 08:15 → aucun manqué, en cours = cours 1, retard 15, total 15 ; (2) arrivée 10:00 → manqué = cours 1, retard 0, total 120, cible = cours 2 ; (3) arrivée 10:20 → manqué = cours 1, retard 20, total 140 ; (4) arrivée 12:30 (pause) → manqués 1 et 2, cible = cours 3, retard 0, total 240 ; (5) arrivée 17:00 → tout manqué, cible = **dernier** cours (C4) ; (6) arrivée 07:30 → refus ; (7) arrivée = 08:00 pile → aucun manqué, aucun retard → refus (« rien à régulariser ») ; (8) liste vide → refus ; (9) créneaux non triés en entrée → même résultat.
+- [ ] **Step 2 : constater l'échec.** **Step 3 : implémenter.** **Step 4 : constater le succès** — `--filter "FullyQualifiedName~ArrivalCoverageTests"`.
+- [ ] **Step 5 : commit** — `feat(attendance): calcul pur des cours manqués et du retard à partir de l'heure d'arrivée`
+
+---
+
+### Task 13 : Émission par heure d'arrivée, registre multi-lignes, annulation
+
+**Files:** Modify `LateArrival.cs`, `StudentAttendance.cs`, leurs `*Configuration.cs`, `Migrations/*` (nouvelle), `CreateLateArrival{Command,Validator,Handler}.cs`, `EntryTicketRegister.cs`, `AbsenceController.cs`, `InitializeAttendanceSheetQueryHandler.cs` (présélection des cours manqués). Create `Absences/Queries/GetArrivalPreview/*`. Test `ArrivalTimeTicketTests.cs`.
+
+**Interfaces:**
+- `POST /api/v1/absences/late-arrivals` accepte `arrivalTime` (`HH:mm`, optionnel). Avec `arrivalTime` : le serveur charge les cours de la classe de l'élève pour `date`, calcule `ArrivalCoverage`, **dérive** `Minutes`, `TargetScheduleSlotId`, `TotalMinutes` (les `minutes`/`targetScheduleSlotId` du client sont **ignorés** dans ce mode), refuse un jour de repos / classe sans cours (le billet reste alors possible **sans** `arrivalTime`, comportement d'avant). Sans `arrivalTime` : **tout comme aujourd'hui** — un client qui n'envoie pas le champ ne voit aucun changement. Le validateur actuel (`Minutes > 0`) est relâché **seulement** quand `arrivalTime` est fourni (un billet d'arrivée pile à la fin d'un cours a 0 minute de retard et une durée manquée > 0).
+- `GET /api/v1/absences/arrival-preview?studentId=&date=&arrivalTime=` → `{missedSlots:[{slotId,label,subjectName,minutes}], inProgress?:{slotId,label,subjectName,lateMinutes}, targetSlotId?, totalMinutes}` — l'écran n'affiche que ce que le serveur calcule.
+- `EntryTicketRegister.ApplyAsync` : pour chaque cours **manqué** ayant une fiche : la ligne de l'élève en `UnjustifiedAbsence` → `JustifiedAbsence` (C5), `PreviousStatus`/`PreviousLateMinutes` mémorisés **sur la ligne**, `EntryTicketId` posé ; le cours en cours → `Late` comme en B6 ; sans fiche → présélection à l'ouverture (`InitializeAttendanceSheet` : statut du billet + `entryTicketId`). Événement famille : C7. `RestoreAsync` restaure **chaque** ligne liée depuis **son** `PreviousStatus` (repli sur `late_arrivals.Previous*` pour l'historique). Au plus un billet actif par (élève, cours, jour) (index existant) : un cours **déjà couvert** par un billet actif est ignoré au calcul.
+
+- [ ] **Step 1 : tests d'intégration qui échouent** (montage de la Tâche 5 + trois cours) : (1) arrivée 10:20, fiche du cours 1 saisie en `UnjustifiedAbsence` → cours 1 `JustifiedAbsence`, cours 2 `Late` 20 min, `TotalMinutes = 140`, billet `Issued` visant le cours 2 ; (2) même arrivée, fiche du cours 1 en `Present` → **inchangée** ; (3) fiche du cours 1 absente → aucune ligne créée, la feuille l'affiche pré-marquée `JustifiedAbsence` avec le billet ; (4) **annulation** avant acceptation → cours 1 retrouve `UnjustifiedAbsence`, cours 2 retrouve son statut d'avant ; (5) annuler un billet accepté → 422 (B9) ; (6) `arrivalTime` fourni + `minutes` incohérentes → `minutes` du client ignorées ; (7) arrivée avant le premier cours → 422 ; (8) jour de repos avec `arrivalTime` → 422 lisible, sans `arrivalTime` → billet libre accepté ; (9) un second billet pour le même élève le même jour ne re-justifie pas un cours déjà couvert ; (10) SMS/WhatsApp : **un seul** événement (cours en cours), aucun pour le cours manqué (C7) ; (11) **taux de présence** : le cours manqué justifié reste une absence pour le taux, le cours en retard compte comme présent — assertion sur `AttendanceReportAggregator` (aucune formule modifiée) ; (12) `[Trait("Category","MultiTenant")]` : l'aperçu et l'émission ne voient ni les cours ni l'élève d'une autre école ; (13) entrée d'audit.
+- [ ] **Step 2 : constater l'échec.** **Step 3 : implémenter** — colonnes nullables, migration **nouvelle** (générer avec `--configuration Release`, **puis** `dotnet ef database update` avant de relancer l'app, constat du 24/09/2026) ; émission et application au registre dans **une seule transaction**. **Step 4 : constater le succès** — `--filter "FullyQualifiedName~ArrivalTimeTicketTests|FullyQualifiedName~EntryTicket|FullyQualifiedName~AttendanceBySlotTests"`.
+- [ ] **Step 5 : commit** — `feat(attendance): billet d'entrée par heure d'arrivée — cours manqués justifiés, retard en minutes, restauration par ligne`
+
+---
+
+### Task 14 : Écran Billets d'entrée et billet imprimé
+
+**Files:** Modify `wwwroot/js/billets.js`, `Views/Absences/Billets.cshtml`, `GetEntryTicketQuery.cs` (+ Pdf), `Infrastructure/Documents/EntryTicket*.cs`, `help.js`. Test `billets-arrival.test.mjs`, `EntryTicketPdfGeneratorTests.cs` (étendu).
+
+**Interfaces:** le formulaire propose **« Heure d'arrivée »** (champ heure) à la place de « Minutes de retard » quand l'élève a des cours ce jour-là ; l'**aperçu** (appel de `GET /absences/arrival-preview` à chaque changement, avec `debounce`) affiche « Cours manqué : Mathématiques 08:00-10:00 (120 min) · En retard de 20 min à Anglais 10:00-12:00 · Durée totale : 2 h 20 ». Sans cours ce jour-là (repos, pas d'emploi du temps) : l'ancien champ « Minutes » est conservé. `EntryTicketDto` gagne **en fin de liste, optionnels** : `ArrivalTime`, `MissedSlots`, `TotalMinutes` ; un billet ancien s'imprime **exactement comme avant**.
+
+- [ ] **Step 1 : tests JS et PDF qui échouent** : le champ heure apparaît quand `today-slots` renvoie des cours, sinon le champ minutes ; aucune durée n'est calculée côté client (l'aperçu vient du serveur) ; le bouton « Émettre » est désactivé tant que l'aperçu est en erreur ; le PDF d'un billet avec arrivée mentionne l'heure, les cours manqués et la durée, celui d'un ancien billet est inchangé. **Step 2 : échec. Step 3 : implémenter. Step 4 : succès** — `node --test tests/js/*.test.mjs`, `--filter "FullyQualifiedName~EntryTicket"`, `npm run build:css --prefix src/SamaEcole.Web`.
+- [ ] **Step 5 : commit** — `feat(attendance): écran des billets par heure d'arrivée, aperçu serveur et billet imprimé`
+
+---
+
+### Task 15 : Documentation et contexte actif
+
+**Files:** `openapi.yaml` (`arrivalTime` sur `POST /absences/late-arrivals`, `GET /absences/arrival-preview`, refus 422 de `Late` sur `POST /attendance`), `docs/Volume_4_API_Design.md`, `Volume_1_Cahier_des_Charges.md` (Présences : trois statuts ; Surveillance : billet par heure d'arrivée), `Volume_3_DDS.md` (`late_arrivals.ArrivalTime/TotalMinutes`, `student_attendances.PreviousStatus/PreviousLateMinutes`), `Volume_7_Security.md` (inchangé : mêmes rôles), `ACTIVE_CONTEXT.md` §2 (arbitrages C1-C9 **tels que validés**, dont **B7 levé** et le changement cassant C9), `docs/GUIDE_FONCTIONNEL_MODULES.md`.
+
+- [ ] **Step 1 :** rédiger. **Step 2 :** `python -c "import yaml; yaml.safe_load(open('openapi.yaml', encoding='utf-8'))"`, `dotnet build`, `node --test tests/js/*.test.mjs`. **Step 3 : commit** — `docs(attendance): appel à trois statuts et billet par heure d'arrivée`
+
+---
+
+## Vérification finale du complément (à lancer par le propriétaire)
+
+- `dotnet test` (suite complète, dont `--filter Category=MultiTenant`) ; `node --test tests/js/*.test.mjs`.
+- Recette manuelle (classe avec cours 08:00-10:00, 10:00-12:00, 14:00-16:00 le samedi) : **Présences** → la liste ne propose que Présent / Absent (justifié) / Absent (non justifié), aucune colonne de minutes ; marquer Awa « Absente (non justifiée) » au cours 1 ; **Surveillance › Billets** → Awa, arrivée **10:20** → l'aperçu annonce « Cours manqué : 08:00-10:00 (120 min) · retard de 20 min au cours 2 · total 2 h 20 » → émettre ; **Présences** : cours 1 devient « Absent (justifié) — billet », cours 2 « Retard — billet » (verrouillé), l'enseignant du cours 2 voit « Accepter » ; **annuler** le billet avant acceptation → Awa retrouve « Absent (non justifié) » au cours 1 ; arrivée **08:15** → simple retard de 15 min ; un jeudi de repos : champ « Minutes » ancien, billet libre possible ; **Rapports › Assiduité** : taux moyen identique à celui d'avant pour les mêmes appels.
+
+## Self-review du complément (demande ↔ tâches)
+
+| Exigence | Tâche |
+|---|---|
+| Supprimer « Retard » et « RETARD (MIN) » de la grille ; ne garder que Présent / Absent justifié / Absent non justifié | 11 |
+| Billet : retard en minutes sur un cours en cours | 12 (calcul), 13 (registre, cours en retard), 14 (écran) |
+| Billet : absence sur une plage / un créneau entier, présent ensuite | 12 (cours manqués), 13 (justification des lignes), 14 (aperçu) |
+| Calcul automatique de la durée | 12 (`TotalMinutes`), 13 (instantané sur le billet), 14 (aperçu et PDF) |
+| Aucune règle métier côté client | 14 (aperçu serveur) |
+| Taux de présence, jours de repos, isolation multi-tenant, historique inchangés | 11, 13 (tests de non-régression et `MultiTenant`) |
+
+Points de vigilance : (1) le passage `UnjustifiedAbsence → JustifiedAbsence` n'avertit pas la famille (C7) ; (2) **C5 attend la confirmation du propriétaire** — c'est la seule décision qui change ce que le registre affirme ; (3) C9 est un changement d'API assumé ; (4) une arrivée pendant une pause vise le cours suivant : si l'école veut plutôt viser le dernier cours manqué, seul `ArrivalCoverage` change ; (5) le mode « Libre » n'a plus de retard manuel (C8).

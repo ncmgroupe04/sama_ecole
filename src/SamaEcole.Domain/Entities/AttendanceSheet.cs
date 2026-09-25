@@ -27,4 +27,11 @@ public class AttendanceSheet : AuditableEntity, ITenantEntity
 
     /// <summary>Auteur de l'appel — jamais lu depuis la requête, toujours depuis le JWT (traçabilité).</summary>
     public Guid TakenByUserId { get; set; }
+
+    /// <summary>
+    /// Cours d'emploi du temps sur lequel l'appel a été fait (Évolution N°5). Null pour un appel « libre »
+    /// (demi-journée, texte libre) — tout appel antérieur à l'évolution. Avec un créneau, <see cref="Period"/>
+    /// est DÉRIVÉ de ses horaires côté serveur (SlotPeriod.Label), jamais saisi.
+    /// </summary>
+    public Guid? ScheduleSlotId { get; set; }
 }

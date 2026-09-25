@@ -5,7 +5,8 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 24/09/2026** (Notes — fenêtre de correction de l'Enseignant, saisie par le
+**Dernière mise à jour : 25/09/2026** (Appel par cours de l'emploi du temps et billets d'entrée visant
+un cours — Évolution N°5, voir §2 ; Notes — fenêtre de correction de l'Enseignant, saisie par le
 Secrétariat et fiche de saisie papier PDF, voir §2 ; Module Cahier de texte / Journal de classe (JGK-P04) —
 **livré : entité + migration RLS, `ClassJournalScopeAuthorizer` (TeacherAssignment + ScheduleSlot),
 règle des 15 jours, CQRS complet, contrôleur, écran `/cahier-de-texte`, tests unitaires et
@@ -244,6 +245,63 @@ qui contourne encore par « une matière par niveau texte ») voit ses bulletins
 3. Le cycle de notation (barème /10 ou /20) d'un élève reste celui de sa classe actuelle, y compris pour les
    années passées ; seuls les coefficients suivent l'inscription de l'année.
 4. Le niveau d'une matière est un texte libre : la grille liste « toutes les matières hors primaire/maternelle ».
+
+### Appel par cours et billets d'entrée (25/09/2026) — livré (Évolution N°5)
+
+L'appel se fait par cours de l'emploi du temps, et un billet d'entrée vise un cours que l'enseignant accepte en
+classe. Branche `feature/attendance-slots`, empilée sur `feature/series-coefficients`. Plan et arbitrages :
+`docs/superpowers/plans/2026-09-24-attendance-slots-tickets.md`. Spécification fonctionnelle :
+`docs/Volume_1_Cahier_des_Charges.md` §21.4.
+
+**Arbitrages B1 à B13 — validés à 100 % sans modification :**
+
+| # | Décision retenue |
+|---|---|
+| B1 | **Les deux modes coexistent** : « Par créneau » (défaut si la classe a des cours ce jour-là) et « Libre » (demi-journée) inchangé. |
+| B2 | `AttendanceSheet.ScheduleSlotId` nullable ; le serveur vérifie (classe, matière, jour) et **dérive** `Period` — celle du client est ignorée. L'index unique existant suffit. |
+| B3 | Enseignant : **ses** cours (titulaire + affectations). Directeur, Secrétariat, Surveillant : tout cours (le remplaçant). |
+| B4 | Absence complète / partielle / retard = **classification calculée** (`DayAttendanceClassifier`) sur les séances appelées ; aucun nouveau statut. |
+| B5 | Le billet **étend `LateArrival`** ; statut `null` = billet sans cours visé = comportement d'avant, historique compris. |
+| B6 | Le registre change **à l'émission** (ligne → `Late`, statut d'avant conservé ; sinon présélection à l'ouverture de la feuille). L'annulation restaure. |
+| B7 | Le billet ne justifie **pas** les séances manquées plus tôt. La Tâche 9 (« justifier les séances manquées ») est **hors périmètre** et n'est pas construite. |
+| B8 | `AttendanceRecordedEvent` réutilisé quand une absence devient un retard par un billet (SMS/WhatsApp de rectification, via `SmsDispatcher`). |
+| B9 | Acceptation : enseignant **titulaire** du cours ou Directeur. Un billet accepté ne s'annule plus. |
+| B10 | **Billet de sortie hors périmètre** (inchangé). Billet d'entrée émissible sans cours visé. |
+| B11 | Un cours par billet ; **un billet actif** par (élève, cours, jour) — index unique partiel. |
+| B12 | Émission : SuperAdmin, Directeur, Surveillant ; le Secrétariat imprime. Le cours en cours (à défaut le suivant) est présélectionné. |
+| B13 | Pas de notification poussée : le billet apparaît sur la feuille de l'enseignant (pastille + « Accepter »). |
+
+- **Données.** Colonnes seulement (`attendance_sheets.ScheduleSlotId`, `student_attendances.EntryTicketId`,
+  `LateArrivals.*`) et index partiel `UX_LateArrivals_ActiveTicket` — voir `docs/Volume_3_DDS.md` §4.4.
+  Migration `AddAttendanceSlotAndEntryTicketWorkflow`. Aucune migration de données.
+- **API.** `GET /attendance/slots`, `scheduleSlotId` sur roster/soumission, `GET /absences/today-slots`,
+  `targetScheduleSlotId` sur `POST /absences/late-arrivals`, `POST /billets/{id}/accept|cancel`
+  (`EntryTicketActionsController`, séparé de `BilletsController` à dessein), `GET /reports/attendance/by-subject`.
+  Routes : `docs/Volume_4_API_Design.md` §10 ; schémas : `openapi.yaml` ; rôles : `docs/Volume_7_Security.md` §15.
+- **Écrans.** Présences : pastilles « Cours de la journée », bascule appel libre, billet et « Accepter » sur la ligne
+  de l'élève. Billets : sélecteur du cours visé, colonne Statut, « Annuler » avec confirmation. Rapport d'assiduité :
+  colonnes jours d'absence complète/partielle (infobulle « N séances appelées »), onglet « Par matière ». Le billet
+  PDF porte le cours et son statut ; un billet annulé se lit « BILLET ANNULÉ ». Fiches d'aide `appel-classe`,
+  `billets-entree-sortie`, `rapport-assiduite-detaille` mises à jour.
+
+**Invariant : le taux de présence n'a pas changé** — `(Présents + Retards) / lignes d'appel`, au rapport comme au
+tableau de bord. Sans `scheduleSlotId` ni cours visé, tout se comporte exactement comme avant.
+
+**Points de vigilance connus :**
+1. Annuler un billet dont la ligne n'avait **aucun statut d'avant** (la feuille n'existait pas à l'émission : le
+   retard a été présélectionné puis soumis par l'enseignant) laisse la ligne **telle que l'enseignant l'a saisie**
+   — typiquement `Late` — simplement détachée du billet : il n'y a rien à restaurer, et un statut d'avant inventé
+   serait faux. La Vie Scolaire corrige alors la ligne à la main.
+2. **Concurrence** : un billet émis exactement pendant la soumission de la fiche peut ne pas être rattaché à sa
+   ligne. L'acceptation par l'enseignant est le point de réconciliation (elle applique le retard à la ligne
+   existante) et la feuille rechargée le montre ; il n'y a pas de verrou `xmin` sur `StudentAttendance`. Deux
+   émissions simultanées pour le même (élève, cours, jour) sont, elles, arbitrées par l'index unique partiel (`409`).
+3. La classification « complète » se fonde sur les séances **appelées** : une seule fiche saisie ne prouve pas une
+   journée entière — d'où l'infobulle « N séances appelées » qui donne le dénominateur.
+4. `isCurrent` / `isNext` se calculent sur l'heure **UTC** du serveur (`TimeProvider`) : exact au Sénégal (UTC+0),
+   à revoir pour un déploiement dans un autre fuseau.
+5. Le billet de sortie reste un registre à part, sans lien avec le cours ; la justification des séances manquées
+   (Tâche 9) n'est pas construite.
 
 ### Inventaire (26/08/2026) — API et écran livrés
 

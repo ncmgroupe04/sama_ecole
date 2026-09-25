@@ -287,6 +287,7 @@ Le Secrétariat compose, télécharge et saisit les observations du conseil (`Re
 | Informations, année scolaire, matricules, déconnexion automatique, mensualités, utilisateurs | ✔ | ✖ | ✖ |
 | **Barème de notation (/10 ou /20), mentions du bulletin** (ticket JGK-G02 : délégation en cas d'absence du Directeur) | ✔ | ✔ (si délégation activée) | ✖ |
 | **Matières / coefficients** — accès inconditionnel, sans réglage de délégation | ✔ | ✔ | ✔ |
+| **Coefficients par série ou par classe** (surcharges, « Appliquer le modèle », reconduction — Évolution N°4) : ÉCRITURE réservée, sans délégation | ✔ | lecture seule | ✖ |
 | Export de données (remplace « Sauvegardes/Restaurations » de la v1.0, désormais automatisées côté infrastructure — Volume 9) | ✔ | ✖ | ✖ |
 
 Le barème est exposé par un endpoint dédié (`PUT /schools/current/settings/grading-scale`), distinct du reste des réglages d'établissement (`PUT /schools/current/settings`) : ouvrir ce dernier au Secrétariat lui aurait aussi donné la main sur les formats de matricule, la déconnexion automatique et les mensualités, hors du périmètre de la délégation voulue.
@@ -324,6 +325,23 @@ Trois choix appellent une justification :
 - **La lecture est ouverte à tous les rôles authentifiés**, y compris l'Enseignant : il doit pouvoir vérifier ce qui lui a été confié et ce que sa classe détient sans passer par le secrétariat. Aucune donnée sensible ne transite par ce module — un lot de tables-bancs n'est ni une note ni un montant.
 - **Le Surveillant peut mouvementer le stock et prêter, mais pas toucher au catalogue.** C'est lui qui distribue les manuels à la rentrée et les récupère en juin ; lui refuser ce droit obligerait le secrétariat à saisir des remises qu'il n'a pas faites. Créer ou archiver un bien, en revanche, reste de l'administration du patrimoine.
 - **La dernière ligne ne comporte aucun ✔, pour personne — Super Admin compris.** Le journal de stock est append-only : aucun endpoint n'expose de modification, et le rôle PostgreSQL applicatif ne dispose que de `SELECT, INSERT` sur `stock_movements` (Volume 3 §5.9). Ce n'est donc pas une permission qui manque à la matrice, c'est une capacité qui n'existe pas. Une correction s'écrit par un mouvement inverse — c'est ce qui rend l'inventaire opposable devant l'IEF ou la mairie.
+
+**Appel par cours et billets d'entrée (Évolution N°5)** — module Pédagogie.
+
+| Action | Directeur | Secrétariat | Surveillant | Enseignant | Finance |
+|---|---|---|---|---|---|
+| Faire l'appel d'un cours | ✔ (tout cours) | ✔ (tout cours) | ✔ (tout cours) | ✔ (**ses** cours seulement) | ✖ |
+| Lister les cours d'une classe pour l'appel | ✔ | ✔ | ✔ | ✔ (**ses** cours) | ✖ |
+| Émettre un billet d'entrée (avec ou sans cours visé) | ✔ | ✖ | ✔ | ✖ | ✖ |
+| Imprimer le billet d'entrée | ✔ | ✔ | ✔ | ✖ | ✖ |
+| Accepter un billet en classe | ✔ | ✖ | ✖ | ✔ (**titulaire** du cours visé) | ✖ |
+| Annuler un billet non accepté | ✔ | ✖ | ✔ | ✖ | ✖ |
+| Rapport d'assiduité (par élève et par matière) | ✔ | ✔ | ✖ | ✖ | ✖ |
+
+Le Super Admin suit le Directeur sur chaque ligne. Deux choix appellent une justification :
+
+- **L'enseignant accepte, il n'annule pas.** Il constate l'entrée en classe ; l'annulation défait une décision de la Vie Scolaire et lui revient. Inversement, la Vie Scolaire et le Secrétariat ne peuvent pas accepter : l'acceptation atteste d'un fait constaté **dans la classe**.
+- **La borne « ses cours » est vérifiée dans le handler**, jamais dans un attribut de rôle : le contrôleur d'acceptation est séparé de celui des billets à dessein (un attribut de rôle sur une action s'ajoute à celui de la classe, il ne l'élargit pas). L'école et l'auteur viennent du JWT (règle #10) ; un billet d'une autre école répond 404, comme s'il n'existait pas.
 
 ## 16. Permissions spéciales et double confirmation
 

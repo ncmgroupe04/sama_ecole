@@ -52,5 +52,15 @@ public class AttendanceSheetConfiguration : IEntityTypeConfiguration<AttendanceS
             .HasForeignKey(a => new { a.SchoolId, a.SchoolYearId })
             .HasPrincipalKey(y => new { y.SchoolId, y.Id })
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Appel par créneau (Évolution N°5) : lien NULLABLE vers le cours d'emploi du temps. FK simple, comme
+        // celles de ScheduleSlot lui-même (qui n'expose pas de clé alternative composite) ; le contrôle
+        // « ce créneau est bien celui de la classe et de la matière » est fait par SlotPeriod.Mismatch.
+        builder.HasIndex(a => a.ScheduleSlotId);
+
+        builder.HasOne<ScheduleSlot>()
+            .WithMany()
+            .HasForeignKey(a => a.ScheduleSlotId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

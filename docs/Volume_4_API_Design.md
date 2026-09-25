@@ -238,9 +238,15 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/classrooms` | Créer une classe (aucune liste figée, Volume 1 §5.1) |
+| `POST` | `/api/v1/classrooms` | Créer une classe (aucune liste figée, Volume 1 §5.1). `series` optionnelle (L1, L2, S1, S2, TECH) : Lycée seulement, `422` sinon (Évolution N°4) |
 | `GET` | `/api/v1/classrooms` | Lister avec effectifs (total, garçons, filles) |
 | `POST` | `/api/v1/subjects` | Créer une matière |
+| `GET` | `/api/v1/coefficients/catalog` | Catalogue fermé des séries de lycée (Directeur, Secrétariat) |
+| `GET` | `/api/v1/coefficients?series=` ou `?classroomId=` | Grille des coefficients d'une série OU d'une classe (`schoolYearId` facultatif, défaut : année active) : base, surcharge, coefficient effectif, origine, `yearHasGrades`. Exactement une portée, sinon `422` (Directeur, Secrétariat) |
+| `PUT` | `/api/v1/coefficients` | Poser ou corriger une surcharge sur l'année active. Correction : `rowVersion` obligatoire, `409` si périmé ou absent. `422` pour un coefficient hors ]0 ; 20], une classe ou une matière de primaire/maternelle (Directeur seul) |
+| `DELETE` | `/api/v1/coefficients/{id}?rowVersion=` | « Rétablir » : suppression logique de la surcharge (Directeur seul) |
+| `POST` | `/api/v1/coefficients/apply-template` | « Appliquer le modèle » national d'une série (`overwrite` facultatif). `422` pour une série sans modèle (TECH). Ne modifie jamais `Subject.Coefficient` (Directeur seul) |
+| `POST` | `/api/v1/coefficients/carry-over` | « Reprendre l'année précédente » : recopie les surcharges d'une autre année vers l'année active sans rien écraser (Directeur seul) |
 
 ## 6. API Inscriptions
 
@@ -287,8 +293,20 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/attendance` | Enregistrer une absence. `422` si la date est un jour de repos de l'établissement (`workingDays`, Évolution N°3) |
+| `POST` | `/api/v1/attendance` | Enregistrer une absence. `422` si la date est un jour de repos de l'établissement (`workingDays`, Évolution N°3). Avec `scheduleSlotId` (Évolution N°5), l'appel porte sur un cours de l'emploi du temps et la période est **dérivée** du cours |
 | `GET` | `/api/v1/attendance/report` | Rapport d'absences |
+| `GET` | `/api/v1/attendance/roster` | Feuille d'appel. `scheduleSlotId` facultatif (Évolution N°5) ; sans lui, `period` reste obligatoire (appel libre). Un billet d'entrée actif présélectionne l'élève en `Late` |
+| `GET` | `/api/v1/attendance/slots?classroomId&date` | Cours de la classe ce jour-là (Évolution N°5). Un Enseignant ne reçoit que **ses** cours ; jour de repos → liste vide |
+| `GET` | `/api/v1/absences/today-slots?studentId&date` | Cours du jour de la classe d'un élève, cours en cours / suivant signalés — sélecteur du cours visé par un billet d'entrée (SuperAdmin, Directeur, Surveillant) |
+| `POST` | `/api/v1/absences/late-arrivals` | Retard. `targetScheduleSlotId` facultatif : émet un billet d'entrée visant ce cours (`Issued`). `409` si un billet actif existe déjà pour (élève, cours, jour) ; minutes ≤ 240 avec un cours visé |
+| `POST` | `/api/v1/billets/{id}/accept` | L'enseignant **titulaire** du cours visé, ou le Directeur, accepte l'élève en classe. Idempotent ; `403` autre enseignant ; `422` billet annulé ou sans cours visé |
+| `POST` | `/api/v1/billets/{id}/cancel` | Surveillant ou Directeur annule un billet non accepté ; la ligne d'appel retrouve son statut d'avant. `422` si déjà accepté |
+| `GET` | `/api/v1/reports/attendance/by-subject` | Rapport d'assiduité par matière : séances appelées et répartition des statuts (Directeur, Secrétariat, SuperAdmin) |
+
+> **Évolution N°5 — ce qui n'a pas changé.** Sans `scheduleSlotId`, `POST /attendance` et la feuille d'appel se
+> comportent exactement comme avant (appel libre). Le rapport `GET /reports/attendance` gagne, en fin de ligne,
+> `daysRecorded`, `fullAbsenceDays` et `partialAbsenceDays` — des **compteurs calculés**, pas de nouveaux statuts —
+> et son taux de présence reste `(Présents + Retards) / lignes d'appel`. Détail des schémas : `openapi.yaml`.
 
 ## 11. API Paramètres
 

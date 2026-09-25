@@ -36,6 +36,30 @@ public record StudentAttendanceReportRow(
     int JustifiedAbsences,
     int UnjustifiedAbsences,
     int TotalLateMinutes,
+    decimal AttendanceRate,
+
+    // Évolution N°5 : la JOURNÉE de l'élève, classée d'après les séances appelées (DayAttendanceClassifier).
+    // Aucun nouveau statut : c'est un calcul, et le taux ci-dessus n'en dépend pas. Les défauts gardent
+    // compatible toute construction existante de la ligne.
+    /// <summary>Jours où au moins une séance a été appelée pour cet élève : le dénominateur des trois nombres suivants.</summary>
+    int DaysRecorded = 0,
+    /// <summary>Jours où il a été absent à TOUTES les séances appelées.</summary>
+    int FullAbsenceDays = 0,
+    /// <summary>Jours où il a été absent à au moins une séance mais présent (ou en retard) à une autre.</summary>
+    int PartialAbsenceDays = 0,
+    /// <summary>Jours sans aucune absence, avec au moins un retard.</summary>
+    int LateOnlyDays = 0);
+
+/// <summary>Une matière dans la vue « par matière » du rapport d'assiduité.</summary>
+public record SubjectAttendanceReportRow(
+    Guid SubjectId,
+    string SubjectName,
+    int Sessions,
+    int Lines,
+    int Presents,
+    int Lates,
+    int JustifiedAbsences,
+    int UnjustifiedAbsences,
     decimal AttendanceRate);
 
 public record AttendanceReportDto(

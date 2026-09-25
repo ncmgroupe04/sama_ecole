@@ -80,6 +80,8 @@ public class AttendanceReportDocument(AttendanceReportExportModel model) : IDocu
                 columns.RelativeColumn(0.9f);  // Abs. justifiées
                 columns.RelativeColumn(1.0f);  // Abs. non justifiées
                 columns.RelativeColumn(1.0f);  // Taux
+                columns.RelativeColumn(0.9f);  // Jours d'absence complète (Évolution N°5)
+                columns.RelativeColumn(0.9f);  // Jours d'absence partielle
             });
 
             table.Header(header =>
@@ -94,11 +96,13 @@ public class AttendanceReportDocument(AttendanceReportExportModel model) : IDocu
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Abs. J").Bold().FontSize(7.5f);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Abs. NJ").Bold().FontSize(7.5f);
                 header.Cell().Element(HeaderCell).AlignCenter().Text("Taux").Bold().FontSize(7.5f);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("J. abs. compl.").Bold().FontSize(7.5f);
+                header.Cell().Element(HeaderCell).AlignCenter().Text("J. abs. part.").Bold().FontSize(7.5f);
             });
 
             if (model.Students.Count == 0)
             {
-                table.Cell().ColumnSpan(10).Element(BodyCell).AlignCenter().PaddingVertical(8)
+                table.Cell().ColumnSpan(12).Element(BodyCell).AlignCenter().PaddingVertical(8)
                     .Text("Aucun appel sur cette période.").FontColor(Colors.Grey.Darken1);
                 return;
             }
@@ -115,6 +119,8 @@ public class AttendanceReportDocument(AttendanceReportExportModel model) : IDocu
                 table.Cell().Element(BodyCell).AlignCenter().Text(s.JustifiedAbsences.ToString(CultureInfo.InvariantCulture));
                 table.Cell().Element(BodyCell).AlignCenter().Text(s.UnjustifiedAbsences.ToString(CultureInfo.InvariantCulture));
                 table.Cell().Element(BodyCell).AlignCenter().Text(FormatPercent(s.AttendanceRate));
+                table.Cell().Element(BodyCell).AlignCenter().Text(s.FullAbsenceDays.ToString(CultureInfo.InvariantCulture));
+                table.Cell().Element(BodyCell).AlignCenter().Text(s.PartialAbsenceDays.ToString(CultureInfo.InvariantCulture));
             }
 
             static IContainer HeaderCell(IContainer c) =>

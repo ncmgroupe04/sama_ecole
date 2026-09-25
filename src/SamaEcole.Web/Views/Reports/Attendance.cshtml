@@ -40,7 +40,15 @@
 
  @await Html.PartialAsync("_ErrorBanner")
 
- <div class="card mt-6 relative">
+ @* Onglets (Évolution N°5) : par élève (la journée classée : absence complète / partielle) ou par matière. *@
+ <nav class="tab-nav mt-6" role="tablist" aria-label="Vues du rapport d'assiduité">
+ <button type="button" role="tab" x-on:click="setTab('student')"
+ class="tab-btn" :class="tab === 'student' ? 'tab-btn-active' : ''">Par élève</button>
+ <button type="button" role="tab" x-on:click="setTab('subject')"
+ class="tab-btn" :class="tab === 'subject' ? 'tab-btn-active' : ''">Par matière</button>
+ </nav>
+
+ <div class="card mt-4 relative">
  <!-- Filtres : classe + période -->
  <div class="filter-bar lg:items-end lg:justify-between">
  <div class="flex flex-wrap items-end gap-3">
@@ -67,7 +75,7 @@
  </div>
 
  <!-- Export PDF / CSV (JGK-R03) : conserve les filtres actifs de période et de classe. -->
- <div class="relative" x-data="{ open: false }" x-on:keydown.escape="open = false">
+ <div class="relative" x-show="tab === 'student'" x-data="{ open: false }" x-on:keydown.escape="open = false">
  <button type="button" x-on:click="open = !open" :disabled="exporting || !data"
  class="btn-modal-secondary group" aria-haspopup="true" :aria-expanded="open">
  <icon name="download" class="w-4 h-4" />
@@ -84,7 +92,7 @@
  </div>
  </div>
 
- <div class="overflow-x-auto">
+ <div class="overflow-x-auto" x-show="tab === 'student'">
  <table class="w-full text-left border-collapse">
  <thead>
  <tr class="table-head">
@@ -96,6 +104,9 @@
  <th class="py-3 px-4 text-center">Min. retard</th>
  <th class="py-3 px-4 text-center">Abs. justif.</th>
  <th class="py-3 px-4 text-center">Abs. non justif.</th>
+ @* Journée classée d'après les séances appelées (Évolution N°5) : un calcul, pas un statut ; le taux n'en dépend pas. *@
+ <th class="py-3 px-4 text-center" title="Jours où l'élève a été absent à toutes les séances appelées">Jours abs. complète</th>
+ <th class="py-3 px-4 text-center" title="Jours où l'élève a manqué au moins une séance mais assisté à une autre">Jours abs. partielle</th>
  <th class="py-3 px-4 text-right">Taux</th>
  @* Colonne masquée au Secrétariat : ParentSummonsController n'accepte que Directeur,
     Surveillant et Super Admin. Un bouton qui partirait en 403 vaut moins que pas de bouton. *@
@@ -105,12 +116,12 @@
  <tbody class="divide-y divide-slate-100">
  <template x-if="isLoading">
  <template x-for="i in 5" :key="i">
- <tr class="hover:bg-slate-50 transition-colors duration-150"><td class="py-3 px-4" colspan="10"><div class="skeleton h-4 w-full"></div></td></tr>
+ <tr class="hover:bg-slate-50 transition-colors duration-150"><td class="py-3 px-4" colspan="12"><div class="skeleton h-4 w-full"></div></td></tr>
  </template>
  </template>
 
  <tr class="hover:bg-slate-50 transition-colors duration-150" x-show="!isLoading && (!data || data.students.length === 0)" x-cloak>
- <td colspan="10">
+ <td colspan="12">
  <empty-state icon="checkmark-circle" title="Aucun appel sur cette période."
  hint="Ajustez la classe ou les dates ; les fiches d'appel saisies apparaîtront ici." />
  </td>
@@ -138,6 +149,14 @@
  <span x-show="row.unjustifiedAbsences > 0" class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-danger-bg text-danger" x-text="row.unjustifiedAbsences"></span>
  <span x-show="row.unjustifiedAbsences === 0" class="text-slate-400">0</span>
  </td>
+ <td class="py-3 px-4 text-center" :title="sessionsTooltip(row)">
+ <span x-show="row.fullAbsenceDays > 0" class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-danger-bg text-danger" x-text="row.fullAbsenceDays"></span>
+ <span x-show="!(row.fullAbsenceDays > 0)" class="text-slate-400">0</span>
+ </td>
+ <td class="py-3 px-4 text-center" :title="sessionsTooltip(row)">
+ <span x-show="row.partialAbsenceDays > 0" class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-warning-bg text-warning" x-text="row.partialAbsenceDays"></span>
+ <span x-show="!(row.partialAbsenceDays > 0)" class="text-slate-400">0</span>
+ </td>
  <td class="py-3 px-4 text-right">
  <span class="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-bold"
  :class="rateBadgeClass(row.attendanceRate)"
@@ -162,7 +181,57 @@
  </table>
  </div>
 
- <pagination page="page" page-size="pageSize" total="totalCount" on-change="load()" />
+ <div x-show="tab === 'student'"><pagination page="page" page-size="pageSize" total="totalCount" on-change="load()" /></div>
+
+ @* Vue par matière (Évolution N°5) : séances appelées et répartition des statuts. Le taux se calcule comme partout
+    ailleurs : (présents + retards) / lignes d'appel. *@
+ <div class="overflow-x-auto" x-show="tab === 'subject'" x-cloak>
+ <div x-show="subjectsError" x-cloak class="mx-4 mt-4 rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="subjectsError"></div>
+ <table class="w-full text-left border-collapse">
+ <thead>
+ <tr class="table-head">
+ <th class="py-3 px-4">Matière</th>
+ <th class="py-3 px-4 text-center">Séances appelées</th>
+ <th class="py-3 px-4 text-center">Présents</th>
+ <th class="py-3 px-4 text-center">Retards</th>
+ <th class="py-3 px-4 text-center">Abs. justif.</th>
+ <th class="py-3 px-4 text-center">Abs. non justif.</th>
+ <th class="py-3 px-4 text-right">Taux</th>
+ </tr>
+ </thead>
+ <tbody class="divide-y divide-slate-100">
+ <template x-if="isLoadingSubjects">
+ <template x-for="i in 5" :key="i">
+ <tr><td class="py-3 px-4" colspan="7"><div class="skeleton h-4 w-full"></div></td></tr>
+ </template>
+ </template>
+ <tr x-show="!isLoadingSubjects && !subjectsError && subjects.length === 0" x-cloak>
+ <td colspan="7">
+ <empty-state icon="checkmark-circle" title="Aucune séance appelée sur cette période."
+ hint="Ajustez la classe ou les dates ; les appels par matière apparaîtront ici." />
+ </td>
+ </tr>
+ <template x-for="row in subjects" :key="row.subjectId">
+ <tr class="hover:bg-slate-50 transition-colors duration-150" x-show="!isLoadingSubjects">
+ <td class="py-3 px-4 font-medium text-slate-900" x-text="row.subjectName"></td>
+ <td class="py-3 px-4 text-center" x-text="row.sessions" :title="row.lines + ' lignes d\'appel'"></td>
+ <td class="py-3 px-4 text-center" x-text="row.presents"></td>
+ <td class="py-3 px-4 text-center" x-text="row.lates"></td>
+ <td class="py-3 px-4 text-center" x-text="row.justifiedAbsences"></td>
+ <td class="py-3 px-4 text-center">
+ <span x-show="row.unjustifiedAbsences > 0" class="inline-flex items-center px-2 py-0.5 rounded-xl text-xs font-medium bg-danger-bg text-danger" x-text="row.unjustifiedAbsences"></span>
+ <span x-show="!(row.unjustifiedAbsences > 0)" class="text-slate-400">0</span>
+ </td>
+ <td class="py-3 px-4 text-right">
+ <span class="inline-flex items-center px-2.5 py-0.5 rounded-xl text-xs font-bold"
+ :class="rateBadgeClass(row.attendanceRate)"
+ x-text="formatPercent(row.attendanceRate)"></span>
+ </td>
+ </tr>
+ </template>
+ </tbody>
+ </table>
+ </div>
  </div>
 
     @* Convocation émise DEPUIS le bilan (02/09/2026). Le motif est pré-rempli avec les retards et

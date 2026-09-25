@@ -712,6 +712,27 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - Le pointage alimente le suivi d'assiduité du personnel et, pour les vacataires, recoupe la fiche de suivi des heures (§14.3) — sans s'y substituer.
 - **Jours de repos** (Évolution N°3) : ni le pointage des enseignants, ni l'**appel des élèves** (ouverture de la feuille comme soumission) ne s'enregistrent un jour de repos de l'établissement. Le verrou ne joue que sur les saisies **nouvelles** : les appels déjà enregistrés un jour devenu repos restent comptés. Aucun calcul de taux de présence n'a changé — ils portent sur les appels réellement saisis, jamais sur des jours calendaires — donc un jour de repos sans appel n'entre dans aucun dénominateur. Les billets d'entrée et de sortie, les justificatifs d'absence, le journal de classe et les heures de paie ne sont pas verrouillés.
 
+### 21.4 Appel par cours et billets d'entrée (Évolution N°5)
+
+**Statut : livré.** Plan et arbitrages B1 à B13 : `docs/superpowers/plans/2026-09-24-attendance-slots-tickets.md` ; état : `ACTIVE_CONTEXT.md` §2.
+
+**Appel par cours.**
+
+- L'appel se fait **par cours de l'emploi du temps** (§21.1) : on choisit la classe et la date, les cours de la journée s'affichent, on ouvre celui à appeler. La matière et l'horaire (« 08:00-10:00 ») sont **repris du cours** ; le serveur les dérive et ignore toute période saisie côté client.
+- L'**appel libre** d'avant (matière, date, créneau saisis à la main) est **conservé** : pour une école sans emploi du temps saisi, ou pour l'appel global du matin.
+- Un **Enseignant** ne fait l'appel que de **ses propres cours** ; le Directeur, le Secrétariat et le Surveillant peuvent appeler n'importe quel cours — c'est le cas du remplaçant. Le cours doit appartenir à la classe et à la matière, et tomber le bon jour de la semaine ; un jour de repos (§21.1) n'a aucun cours.
+- Chaque journée d'un élève se compose donc de plusieurs appels. Le rapport d'assiduité (§11) **classe** la journée d'après les séances **appelées** ce jour-là : **absence complète** (absent à toutes), **absence partielle** (absent à au moins une et présent ou en retard à une autre), **retard seul**, ou présent. C'est un **calcul**, jamais un statut enregistré : justifiée ou injustifiée reste portée par chaque ligne. Une vue **par matière** donne les séances appelées et la répartition des statuts.
+- **Le taux de présence n'a pas changé** : `(Présents + Retards) / lignes d'appel`. Les jours d'absence complète ou partielle éclairent le taux, ils ne le remplacent pas.
+
+**Billet d'entrée visant un cours.**
+
+- La **Vie Scolaire** (Surveillant), le Directeur et le Super Admin émettent un billet d'entrée pour un **cours précis** — le cours en cours, à défaut le prochain, est proposé d'office. Un billet peut aussi être émis **sans cours visé** (jour de repos, classe sans emploi du temps) : il se comporte alors exactement comme avant. Le Secrétariat imprime, il n'émet pas.
+- Un billet vise **un seul cours**, et il n'existe qu'**un billet actif** par élève, cours et jour. Le billet imprimé porte le cours (matière, horaire, enseignant) et son statut.
+- **À l'émission**, si la feuille d'appel du cours existe, la ligne de l'élève passe en **Retard** (minutes du billet) et le statut d'avant est conservé ; sinon, la feuille de l'enseignant **présélectionne** le retard à son ouverture. Une absence rectifiée en retard prévient la famille par le même canal que l'appel (SMS / WhatsApp, selon la formule).
+- L'**enseignant titulaire du cours** (ou le Directeur) **accepte** le billet depuis sa feuille d'appel : il constate ainsi que l'élève est entré en classe. Aucune notification n'est poussée à l'enseignant — le billet apparaît sur sa feuille.
+- Tant qu'il n'est pas accepté, la Vie Scolaire ou le Directeur peut **annuler** le billet : la ligne retrouve son statut d'avant. Un billet **accepté** ne s'annule plus — une erreur se corrige sur la ligne d'appel elle-même. Le billet n'est jamais supprimé.
+- **Hors périmètre** : le billet de **sortie** est inchangé, et un billet ne **justifie** pas les séances manquées plus tôt le même jour (une case « justifier les séances manquées », étudiée au plan, n'est pas construite).
+
 ---
 
 ## 22. Examens officiels (CFEE/BFEM/BAC)

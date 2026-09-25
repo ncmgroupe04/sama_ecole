@@ -38,6 +38,29 @@ public class LateArrivalConfiguration : IEntityTypeConfiguration<LateArrival>
         // Npgsql "Cannot write DateTime with Kind=Unspecified to timestamp with time zone" (le JSON
         // entrant "2026-07-26" n'a pas de Kind Utc explicite).
         builder.Property(e => e.Date).HasColumnType("date");
+
+        // ---- Circuit du billet d'entrée (Évolution N°5) ----
+        // Index simple sur l'élève CONSERVÉ : l'index unique ci-dessous est partiel (il ne sert qu'aux billets
+        // actifs), EF le jugerait sinon redondant et retirerait l'index de la clé étrangère.
+        builder.HasIndex(e => e.StudentId);
+
+        // Statut en TEXTE, nullable et SANS valeur par défaut : null = billet sans cours visé, c'est l'état de
+        // tout billet existant (aucune migration de données).
+        builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(e => e.PreviousStatus).HasConversion<string>().HasMaxLength(20);
+
+        // AU PLUS UN billet actif (émis ou accepté) par élève, cours et jour : un second est refusé (409).
+        // Un billet annulé libère la clé ; les billets sans cours visé (TargetScheduleSlotId NULL) ne se
+        // heurtent jamais entre eux — NULL est toujours distinct d'un autre NULL dans un index unique.
+        builder.HasIndex(e => new { e.StudentId, e.TargetScheduleSlotId, e.Date })
+            .IsUnique()
+            .HasDatabaseName("UX_LateArrivals_ActiveTicket")
+            .HasFilter("\"Status\" IN ('Issued', 'Accepted') AND NOT \"IsDeleted\"");
+
+        builder.HasOne<ScheduleSlot>()
+            .WithMany()
+            .HasForeignKey(e => e.TargetScheduleSlotId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

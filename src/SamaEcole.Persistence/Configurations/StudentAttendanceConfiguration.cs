@@ -18,6 +18,13 @@ public class StudentAttendanceConfiguration : IEntityTypeConfiguration<StudentAt
         builder.HasIndex(sa => new { sa.AttendanceSheetId, sa.StudentId }).IsUnique();
         builder.HasIndex(sa => sa.SchoolId);
 
+        // Billet d'entrée rattaché à la ligne (Évolution N°5) : nullable, Restrict (règle #6).
+        builder.HasIndex(sa => sa.EntryTicketId);
+        builder.HasOne<LateArrival>()
+            .WithMany()
+            .HasForeignKey(sa => sa.EntryTicketId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasOne<School>()
             .WithMany()
             .HasForeignKey(sa => sa.SchoolId)

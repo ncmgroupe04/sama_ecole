@@ -1,0 +1,48 @@
+@*
+    Modale d'AVERTISSEMENT « Établissement actuellement en Mode Test » — montée une seule fois par
+    _Layout. Pilotée par liveModeGuard() (wwwroot/js/school-mode-guard.js), qui ne l'ouvre qu'à
+    l'arrivée sur Inscriptions, Caisse ou Notes, une fois par session, tant que l'école est en bac à
+    sable ET que son paramétrage de base est terminé.
+
+    Pourquoi : un Directeur qui a fini de paramétrer commence à saisir « pour de vrai » sans
+    réaliser qu'il est encore en bac à sable — ses données seraient alors purgeables/mélangées à des
+    essais. Variante `warning` de confirm-dialog-body (triangle orange), et non l'`info` bleue de la
+    modale de guidage : ici on veut que l'utilisateur s'ARRÊTE.
+
+    Le Directeur voit le bouton « Aller aux Paramètres Système » (ancre #mode-reel de /parametres) ;
+    les autres rôles ne peuvent pas basculer (POST go-live est réservé au Directeur) : ils lisent le
+    même avertissement, sans bouton vers un écran qui leur est fermé.
+
+    Le chemin affiché reprend les libellés RÉELS de l'écran : onglet « Paramètres système »
+    (tab=securite), bouton « Passer en mode réel » de la Zone de danger.
+*@
+<div x-data="liveModeGuard()" x-cloak>
+    <modal-shell open="open" on-close="close()" size="md">
+        <template x-if="isDirecteur">
+            <confirm-dialog-body variant="warning" title-expr="'Attention : Établissement actuellement en Mode Test'"
+                                 close-action="close()" close-label="Continuer en mode test"
+                                 new-action="goToSettings()" new-label="Aller aux Paramètres Système">
+                <span class="block">
+                    Les saisies faites en Mode Test sont destinées aux <strong>essais</strong> et ne doivent
+                    <strong>pas contenir de données réelles</strong> (élèves, paiements, notes).
+                </span>
+                <span class="mt-3 block text-sm font-normal text-slate-600">Pour travailler avec vos vraies données, passez en Mode Réel :</span>
+                <span class="mt-1.5 block rounded-lg bg-warning-bg px-3 py-2 text-sm font-semibold text-slate-800">
+                    Paramètres › Paramètres système › Passer en mode réel
+                </span>
+            </confirm-dialog-body>
+        </template>
+        <template x-if="!isDirecteur">
+            <confirm-dialog-body variant="warning" title-expr="'Attention : Établissement actuellement en Mode Test'"
+                                 close-action="close()" close-label="J'ai compris">
+                <span class="block">
+                    Les saisies faites en Mode Test sont destinées aux <strong>essais</strong> et ne doivent
+                    <strong>pas contenir de données réelles</strong> (élèves, paiements, notes).
+                </span>
+                <span class="mt-3 block text-sm font-normal text-slate-600">
+                    Seul le Directeur peut passer l'établissement en Mode Réel. Prévenez-le avant de saisir de vraies données.
+                </span>
+            </confirm-dialog-body>
+        </template>
+    </modal-shell>
+</div>

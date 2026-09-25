@@ -1,5 +1,6 @@
 using SamaEcole.Application.Attendance.Commands.SubmitAttendanceSheet;
 using SamaEcole.Application.Attendance.Queries.GetAttendanceSheet;
+using SamaEcole.Application.Attendance.Queries.GetAttendanceSlots;
 using SamaEcole.Application.Attendance.Queries.InitializeAttendanceSheet;
 using SamaEcole.Domain.Enums;
 using SamaEcole.Web.Authorization;
@@ -24,8 +25,13 @@ namespace SamaEcole.Web.Controllers;
 [RequireModule(SchoolModule.Pedagogy)]
 public class AttendanceController(ISender mediator) : ControllerBase
 {
+    /// <summary>
+    /// <paramref name="Period"/> (mode libre) et <paramref name="ScheduleSlotId"/> (appel par créneau,
+    /// Évolution N°5) sont facultatifs : avec un créneau, la période est dérivée du cours par le serveur.
+    /// </summary>
     public record SubmitAttendanceRequest(
-        Guid ClassroomId, Guid SubjectId, DateOnly Date, string Period, IReadOnlyList<AttendanceEntry> Entries);
+        Guid ClassroomId, Guid SubjectId, DateOnly Date, IReadOnlyList<AttendanceEntry> Entries,
+        string Period = "", Guid? ScheduleSlotId = null);
 
     private const string TakeRoles =
         $"{nameof(Role.Enseignant)},{nameof(Role.Directeur)},{nameof(Role.Secretariat)},{nameof(Role.Surveillant)}";
@@ -46,6 +52,18 @@ public class AttendanceController(ISender mediator) : ControllerBase
         [FromQuery] InitializeAttendanceSheetQuery query, CancellationToken cancellationToken)
         => Ok(await mediator.Send(query, cancellationToken));
 
+    /// <summary>
+    /// Cours d'emploi du temps d'une classe pour une date (Évolution N°5) : de quoi choisir le créneau de
+    /// l'appel. Un jour de repos ne renvoie aucun cours ; un Enseignant ne reçoit que les siens.
+    /// </summary>
+    [HttpGet("slots")]
+    [Authorize(Roles = TakeRoles)]
+    [ProducesResponseType<IReadOnlyList<AttendanceSlotDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> Slots(
+        [FromQuery] Guid classroomId, [FromQuery] DateOnly date, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetAttendanceSlotsQuery(classroomId, date), cancellationToken));
+
     /// <summary>Enregistre l'appel complet (fiche + statut de chaque élève) — ticket JGK-D06.</summary>
     [HttpPost]
     [Authorize(Roles = TakeRoles)]
@@ -62,6 +80,7 @@ public class AttendanceController(ISender mediator) : ControllerBase
             SubjectId = request.SubjectId,
             Date = request.Date,
             Period = request.Period,
+            ScheduleSlotId = request.ScheduleSlotId,
             Entries = request.Entries
         }, cancellationToken);
 

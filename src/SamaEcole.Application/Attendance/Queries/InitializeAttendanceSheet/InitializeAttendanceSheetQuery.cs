@@ -15,7 +15,12 @@ public record InitializeAttendanceSheetQuery : IRequest<AttendanceRosterDto>
     public required Guid ClassroomId { get; init; }
     public required Guid SubjectId { get; init; }
     public required DateOnly Date { get; init; }
-    public required string Period { get; init; }
+
+    /// <summary>Créneau libre ; ignoré (et non exigé) quand <see cref="ScheduleSlotId"/> est fourni.</summary>
+    public string Period { get; init; } = string.Empty;
+
+    /// <summary>Cours d'emploi du temps visé (Évolution N°5) : le libellé du créneau en est dérivé.</summary>
+    public Guid? ScheduleSlotId { get; init; }
 }
 
 public record AttendanceRosterRow(
@@ -23,7 +28,13 @@ public record AttendanceRosterRow(
     string Matricule,
     string FullName,
     string? Status,
-    int LateMinutes);
+    int LateMinutes,
+
+    // Billet d'entrée visant ce cours pour cet élève (Évolution N°5) : la feuille de l'enseignant le signale et
+    // lui propose de l'accepter. Tous nuls pour un élève sans billet actif.
+    Guid? EntryTicketId = null,
+    string? EntryTicketNumber = null,
+    string? EntryTicketStatus = null);
 
 public record AttendanceRosterDto(
     Guid ClassroomId,

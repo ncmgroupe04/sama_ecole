@@ -108,6 +108,9 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid?>("ScheduleSlotId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
@@ -127,6 +130,8 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ScheduleSlotId");
 
                     b.HasIndex("SchoolId");
 
@@ -2203,6 +2208,18 @@ namespace SamaEcole.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("AcceptedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CancelledByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2228,6 +2245,13 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<int?>("PreviousLateMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -2236,7 +2260,14 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Status")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TargetScheduleSlotId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
@@ -2249,7 +2280,14 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("StudentId");
 
+                    b.HasIndex("TargetScheduleSlotId");
+
                     b.HasIndex("SchoolId", "StudentId");
+
+                    b.HasIndex("StudentId", "TargetScheduleSlotId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("UX_LateArrivals_ActiveTicket")
+                        .HasFilter("\"Status\" IN ('Issued', 'Accepted') AND NOT \"IsDeleted\"");
 
                     b.ToTable("LateArrivals");
                 });
@@ -3972,6 +4010,9 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("EntryTicketId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -3996,6 +4037,8 @@ namespace SamaEcole.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EntryTicketId");
 
                     b.HasIndex("SchoolId");
 
@@ -5110,6 +5153,11 @@ namespace SamaEcole.Persistence.Migrations
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.AttendanceSheet", b =>
                 {
+                    b.HasOne("SamaEcole.Domain.Entities.ScheduleSlot", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduleSlotId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SamaEcole.Domain.Entities.School", null)
                         .WithMany()
                         .HasForeignKey("SchoolId")
@@ -5634,6 +5682,11 @@ namespace SamaEcole.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SamaEcole.Domain.Entities.ScheduleSlot", null)
+                        .WithMany()
+                        .HasForeignKey("TargetScheduleSlotId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Student");
                 });
 
@@ -5896,6 +5949,11 @@ namespace SamaEcole.Persistence.Migrations
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.StudentAttendance", b =>
                 {
+                    b.HasOne("SamaEcole.Domain.Entities.LateArrival", null)
+                        .WithMany()
+                        .HasForeignKey("EntryTicketId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SamaEcole.Domain.Entities.School", null)
                         .WithMany()
                         .HasForeignKey("SchoolId")
