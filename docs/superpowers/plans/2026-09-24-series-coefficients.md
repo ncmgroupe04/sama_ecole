@@ -419,7 +419,7 @@ public class CoefficientOverrideLoader(IApplicationDbContext dbContext)
 
 **Files:**
 - Modify: `wwwroot/js/classrooms.js`, `Views/Classrooms/Index.cshtml` (champ « Série », visible seulement pour un cycle Lycée ; pastille de série dans la liste)
-- Create: `wwwroot/js/coefficients.js`, `Views/Subjects/_CoefficientsTab.cshtml`
+- Create: `wwwroot/js/coefficients.js`, `Views/Shared/_CoefficientsTab.cshtml`
 - Modify: `wwwroot/js/subjects.js` et `Views/Subjects/Index.cshtml` (3e onglet, composant partagé `.tab-nav`/`.tab-btn`, voir la mémoire du 09/2026 sur les barres d'onglets), `wwwroot/js/help.js`
 - Test: `src/SamaEcole.Web/tests/js/coefficients.test.mjs`
 
