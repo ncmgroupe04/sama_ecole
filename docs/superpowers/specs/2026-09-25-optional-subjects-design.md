@@ -1,10 +1,15 @@
 # Matières optionnelles & dispenses — Spécification
 
 **Date :** 25/09/2026
-**Statut :** Validé en brainstorming le 25/09/2026, en attente de relecture puis de plan d'implémentation.
-**Périmètre :** Permettre qu'un élève ne suive qu'une partie des matières de sa classe (LV2 au choix,
-option scientifique) : la matière non suivie n'apparaît ni à la saisie des notes, ni sur le bulletin, ni
-dans les moyennes, et le total des coefficients s'adapte. Branche `feature/optional-subjects`, issue de `main`.
+**Statut :** Validé en brainstorming le 25/09/2026, amendé le même jour (volet « dispense d'une matière
+obligatoire », §2 décisions 8 à 10), en attente de relecture puis de plan d'implémentation.
+**Périmètre :** Permettre qu'un élève ne suive qu'une partie des matières de sa classe, de deux façons :
+1. **Option non suivie** (LV2 au choix, option scientifique) — une matière **optionnelle** que l'élève ne suit pas ;
+2. **Dispense** — l'élève est exempté d'une matière **obligatoire** (ex. EPS pour raison médicale), avec un motif.
+
+Dans les deux cas la matière ne compte plus dans ses moyennes, elle n'apparaît pas à la saisie des notes, et le
+total des coefficients s'adapte. Le bulletin la traite selon le type (§4.4). Branche `feature/optional-subjects`,
+issue de `main`.
 
 ## 1. Contexte
 
@@ -29,8 +34,11 @@ même règle « sans donnée, le calcul est celui d'avant », même portée annu
 | 3 | Représentation en base | **Dispenses** (`enrollment_subject_exemptions`), pas des choix : « aucune ligne » = « suit tout ». |
 | 4 | Portée du choix | Sur l'**inscription** (donc par année scolaire). Une réinscription repart sans dispense. |
 | 5 | Notes déjà saisies d'une matière dont l'élève est dispensé | **Conservées** (règle #6), masquées du bulletin et des moyennes. |
-| 6 | Matières éligibles | Matière **autonome** uniquement : ni domaine parent, ni activité APC. |
+| 6 | Matières éligibles | Matière **autonome** uniquement : ni domaine parent, ni activité APC. Optionnelle ou obligatoire (décision 8). |
 | 7 | Rôles | Lecture : ceux qui lisent l'inscription. Écriture : **Directeur + Secrétariat**. Module `Pedagogy` requis. |
+| 8 | Dispense d'une matière **obligatoire** | Même table et même calcul que l'option non suivie ; la ligne porte un **motif** (`Reason`), **obligatoire** pour une matière obligatoire (422 sinon), facultatif pour une option. Le type est **déduit de `Subject.IsOptional`** : pas de colonne « type ». |
+| 9 | Bulletin PDF | **Selon le type** : option non suivie → ligne **absente** ; dispense d'une matière obligatoire → ligne **« Dispensé(e) »**, coefficient barré, hors totaux (§4.4). |
+| 10 | Règle n°12 (bulletin = `docs/design-references/`) | La ligne « Dispensé(e) » est un **écart assumé** et validé par le propriétaire (25/09/2026) : il est consigné dans `docs/design-references/README.md`. Aucun autre élément du bulletin ne change. |
 
 ## 3. Modèle de données
 
@@ -44,8 +52,11 @@ même règle « sans donnée, le calcul est celui d'avant », même portée annu
 
 ### 3.2 `EnrollmentSubjectExemption` (nouvelle table tenant `enrollment_subject_exemptions`)
 
-`Id`, `SchoolId`, `EnrollmentId`, `SubjectId`, champs d'audit et de suppression logique
-(`IsDeleted`, `DeletedAt`, `DeletedBy`).
+`Id`, `SchoolId`, `EnrollmentId`, `SubjectId`, `Reason` (texte, nullable, longueur bornée à 200), champs
+d'audit et de suppression logique (`IsDeleted`, `DeletedAt`, `DeletedBy`).
+
+`Reason` : obligatoire (non vide) pour la dispense d'une matière **obligatoire**, imposé par la commande (§5.2) ;
+pour une option non suivie il reste vide (la ligne dit seulement « ne suit pas »).
 
 - Global Query Filter **et** policy RLS : la table est ajoutée à `TenantTables` (AGENTS.md règle #2).
 - Le rôle applicatif `sama_ecole_app` reçoit ses droits sur la nouvelle table dans la migration.
@@ -78,10 +89,15 @@ Un élève sans inscription active pour l'année, ou sans dispense, obtient l'en
 |---|---|
 | `GetGradeSummaryQueryHandler` | Lignes de notes des matières dispensées écartées avant calcul. Le total des coefficients s'adapte (22 au lieu de 25). Bulletins PDF, bulletins de classe et délibération en héritent. |
 | `GetStudentDetailQueryHandler` (`BuildTermReportsAsync`) | Même filtre, par année, pour que la fiche ne contredise jamais le bulletin. |
-| `EvaluationStructureBuilder` | Nouveau paramètre « matières dispensées » : la ligne disparaît du tableau même sans note. |
+| `EvaluationStructureBuilder` | Nouveau paramètre « matières dispensées » : une option non suivie **disparaît** du tableau, même sans note ; une matière obligatoire dispensée **reste** avec un indicateur « dispensée » que le PDF rend (§4.4). |
 | `GetClassGrades`, `GetGradeSheetPdf`, `GetGradeSheetExcel` | L'élève dispensé de la matière n'apparaît pas dans la liste de saisie. |
 | `ImportGradeSheet` | Une ligne d'élève dispensé est signalée comme ignorée, jamais écrite. |
 | `CreateGradeCommandHandler` | Refus (422, erreur sur le champ) si l'élève est dispensé : filet de sécurité serveur. |
+
+Pour que le PDF sache **quelle ligne marquer**, le résumé de notes expose les matières obligatoires dispensées :
+`GradeSummaryDto` gagne un dernier membre optionnel `ExemptSubjects` (`SubjectId`, `SubjectName`), vide par
+défaut — un client ou un test existant n'est pas affecté. Ces matières n'entrent ni dans `Subjects` ni dans les
+totaux. Le câblage exact (résumé → `ReportCardDataService` → `ReportCardDocument`) est à confirmer au plan.
 
 L'année de référence est celle de la période (`Term.SchoolYearId`), comme pour les surcharges de coefficient.
 
@@ -93,6 +109,15 @@ L'année de référence est celle de la période (`Term.SchoolYearId`), comme po
 - Primaire/Maternelle : mécanisme neutre (les options ne s'y appliquent pas en pratique), mais non bloqué
   par le code — le niveau étant un texte libre, c'est la validation §3.1 qui protège les grilles APC.
 
+### 4.4 Rendu du bulletin PDF (décisions 9 et 10)
+
+- **Option non suivie** : aucune ligne ; c'est déjà l'effet d'une matière sans note.
+- **Dispense d'une matière obligatoire** : la ligne garde son rang et son libellé ; la zone des notes porte
+  « Dispensé(e) » ; le coefficient s'affiche **barré** ; ni « Moy x coef » ni points ; les totaux de
+  coefficients et de points l'ignorent.
+- Aucune autre modification de la mise en page (règle n°12) ; l'écart est consigné dans
+  `docs/design-references/README.md`. Le bulletin bilingue arabe suit la même règle.
+
 ## 5. API
 
 ### 5.1 Matières
@@ -103,13 +128,18 @@ renvoient. Aucune nouvelle route.
 ### 5.2 Options d'une inscription
 
 - `GET /api/v1/enrollments/{id}/options` → matières optionnelles du niveau de la classe, groupées, avec
-  l'état de chaque matière (suivie / dispensée) et `hasExplicitChoice`, plus le nombre de notes que
-  masquerait chaque dispense.
-- `PUT /api/v1/enrollments/{id}/options` avec `SetEnrollmentOptionsCommand(EnrollmentId, SubjectIds)` :
+  l'état de chaque matière (suivie / dispensée) et `hasExplicitChoice`, **les matières obligatoires du niveau**
+  avec leur éventuelle dispense et son motif, plus le nombre de notes que masquerait chaque dispense.
+- `PUT /api/v1/enrollments/{id}/options` avec `SetEnrollmentOptionsCommand(EnrollmentId, SubjectIds, Exemptions)`
+  où `Exemptions` est une liste `(SubjectId, Reason)` **facultative** (omise = aucune dispense de matière
+  obligatoire, ce qui est le comportement des clients existants) :
   - les matières choisies appartiennent au niveau de la classe et sont optionnelles, sinon 422 ;
   - au plus une par `OptionGroup`, sinon 422 ;
-  - les dispenses deviennent **l'ensemble des options du niveau non choisies** ; l'ancien ensemble est
-    remplacé dans une transaction (retrait par suppression logique, ajout des manquantes) ;
+  - chaque matière de `Exemptions` appartient au niveau de la classe, est **obligatoire** et autonome, et
+    porte un `Reason` non vide, sinon 422 ;
+  - les dispenses deviennent **l'ensemble des options du niveau non choisies** (sans motif) **plus** les
+    matières de `Exemptions` (avec motif) ; l'ancien ensemble est remplacé dans une transaction (retrait par
+    suppression logique, ajout des manquantes, mise à jour d'un motif modifié) ;
   - idempotent ; inscription annulée → 422 ; inscription d'une autre école → 404 (filtre tenant).
 - `POST` d'inscription (`CreateEnrollmentCommand`) accepte `optionSubjectIds` facultatif : les dispenses
   s'écrivent dans la **même transaction** que l'inscription (comme le matricule, règle #3). Omis, aucune
@@ -124,7 +154,10 @@ Format d'erreur normalisé (`docs/Volume_4_API_Design.md` §0.4). Le `schoolId` 
    dans la liste.
 2. **Inscription / réinscription** : bloc « Langues & options » si le niveau de la classe compte des
    options — un choix unique par groupe, une case par option sans groupe.
-3. **Fiche élève › onglet Options** : même bloc, modifiable par Secrétariat et Directeur. Mention
+3. **Fiche élève › onglet « Options & dispenses »** : le bloc ci-dessus **plus** une section « Dispenses »
+   (matières obligatoires du niveau : case « Dispensé(e) » et champ « Motif » obligatoire quand la case est
+   cochée) — la dispense se saisit ici et non à l'inscription, car elle survient après coup et exige un motif.
+   Modifiable par Secrétariat et Directeur. Mention
    « Options non renseignées : l'élève suit toutes les options » tant que `hasExplicitChoice` est faux.
    Alerte à l'enregistrement : « N notes seront masquées du bulletin (conservées) ».
 4. **Saisie des notes** : aucun changement, hors une ligne « N élève(s) dispensé(s) de cette matière ».
@@ -138,6 +171,10 @@ Obligatoires (Finance, Notes, isolation tenant — AGENTS.md) :
 - Élève dispensé d'une matière notée : absente du sommaire, total des coefficients 22 au lieu de 25.
 - `EvaluationStructureBuilder` : ligne dispensée absente, autres lignes inchangées.
 - Résolution des groupes : un seul choix par groupe accepté, deux → 422 ; option sans groupe cumulable.
+- Dispense d'une matière obligatoire : sans motif → 422 ; matière optionnelle placée dans `Exemptions` → 422 ;
+  motif modifié → ligne mise à jour, sans doublon ; isolement par inscription.
+- Bulletin : option non suivie → aucune ligne ; matière obligatoire dispensée → ligne « Dispensé(e) »,
+  coefficient barré, absente des totaux (test du document PDF, sans capture d'écran).
 - `SetEnrollmentOptionsCommand` : idempotence, remplacement, matière hors niveau ou non optionnelle refusée.
 - Saisie refusée sur matière dispensée ; import : ligne ignorée ; feuilles de notes sans l'élève dispensé.
 - Isolation : la nouvelle table est protégée par RLS (`--filter Category=MultiTenant`).
@@ -146,13 +183,16 @@ Obligatoires (Finance, Notes, isolation tenant — AGENTS.md) :
 ## 8. Documentation
 
 Cahier des charges §8.8 (règle fonctionnelle), Volume 3 (table), Volume 4 (routes),
-`ACTIVE_CONTEXT.md`, fiche d'aide `help.js`.
+`ACTIVE_CONTEXT.md`, fiche d'aide `help.js`, et `docs/design-references/README.md` (une ligne : la mention
+« Dispensé(e) » est l'unique écart validé à la référence du bulletin).
 
 ## 9. Hors périmètre (YAGNI)
 
 - Liste de classe « élèves aux options à renseigner » et affectation en masse.
 - Choix imposé par groupe (« LV2 obligatoire ») : un groupe sans choix reste permis.
 - Dispenses au niveau de l'élève sur plusieurs années.
+- Matière facultative « à points bonus » (seuls les points au-dessus de 10/20 comptent) : règle de calcul à part.
+- Dispense par période (trimestre/semestre) : la portée est l'inscription, donc l'année.
 - Emploi du temps et présences par option.
 
 ## 10. Points de vigilance
@@ -167,3 +207,9 @@ Cahier des charges §8.8 (règle fonctionnelle), Volume 3 (table), Volume 4 (rou
 4. **Changement de classe en cours d'année** : les dispenses suivent l'inscription ; un élève changé de
    classe conserve celles de l'inscription active. Le comportement exact avec une nouvelle inscription est
    à confirmer au plan (`CreateEnrollmentCommand`, `ClassroomPromotion`).
+5. **Écart à la règle n°12** : la ligne « Dispensé(e) » n'existe pas dans la référence graphique. Elle est
+   validée par le propriétaire mais reste le seul point où le bulletin s'écarte de `docs/design-references/` ;
+   tout autre ajout de mention serait à arbitrer séparément.
+6. **Absence de verrou `xmin`** sur les dispenses (l'écriture est un remplacement idempotent d'un ensemble) :
+   deux écrans ouverts en même temps, le dernier enregistrement gagne. À reconsidérer si un motif de dispense
+   devenait une pièce à valeur probante.
