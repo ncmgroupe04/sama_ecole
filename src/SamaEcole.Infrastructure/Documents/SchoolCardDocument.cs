@@ -1,4 +1,3 @@
-using System.Net;
 using SamaEcole.Application.Common;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -24,16 +23,24 @@ public class SchoolCardDocument(SchoolCardBatchDto batch) : IDocument
 
     private void ComposeContent(IContainer container)
     {
-        // 2 colonnes, 5 rangées par page = 10 cartes par page
-        container.Grid(grid =>
+        // 2 colonnes, 5 rangées par page = 10 cartes par page. Rangées explicites (Column + Row) :
+        // l'élément Grid de QuestPDF est obsolète depuis 2022.11 ; même géométrie (deux demi-largeurs
+        // séparées de 5 mm, 1 mm entre rangées).
+        container.Column(column =>
         {
-            grid.Columns(2);
-            grid.HorizontalSpacing(5, Unit.Millimetre);
-            grid.VerticalSpacing(1, Unit.Millimetre);
+            column.Spacing(1, Unit.Millimetre);
 
-            foreach (var card in batch.Cards)
+            foreach (var pair in batch.Cards.Chunk(2))
             {
-                grid.Item().Element(c => ComposeCard(c, card));
+                column.Item().Row(row =>
+                {
+                    row.Spacing(5, Unit.Millimetre);
+                    row.RelativeItem().Element(c => ComposeCard(c, pair[0]));
+                    if (pair.Length > 1)
+                        row.RelativeItem().Element(c => ComposeCard(c, pair[1]));
+                    else
+                        row.RelativeItem();
+                });
             }
         });
     }
@@ -54,18 +61,12 @@ public class SchoolCardDocument(SchoolCardBatchDto batch) : IDocument
                     // En-tête : Nom école
                     col.Item().Row(row =>
                     {
-                        if (!string.IsNullOrWhiteSpace(batch.SchoolLogoUrl) && batch.SchoolLogoUrl.StartsWith("http"))
+                        if (batch.SchoolLogo is not null)
                         {
-                            try
-                            {
-                                using var webClient = new WebClient();
-                                var imageBytes = webClient.DownloadData(batch.SchoolLogoUrl);
-                                row.AutoItem().Height(10, Unit.Millimetre).Image(imageBytes);
-                                row.Spacing(3, Unit.Millimetre);
-                            }
-                            catch { /* Ignore image error */ }
+                            row.AutoItem().Height(10, Unit.Millimetre).Image(batch.SchoolLogo);
+                            row.Spacing(3, Unit.Millimetre);
                         }
-                        
+
                         row.RelativeItem().Column(header =>
                         {
                             header.Item().Text(batch.SchoolName.ToUpper()).Bold().FontSize(10).FontColor(Colors.Blue.Darken2);

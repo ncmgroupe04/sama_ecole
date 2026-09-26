@@ -9,6 +9,7 @@ public class GetSchoolCardsPdfQueryHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
     IQrCodeService qrCodeService,
+    ISchoolLogoProvider logoProvider,
     ISchoolCardPdfGenerator pdfGenerator) : IRequestHandler<GetSchoolCardsPdfQuery, byte[]>
 {
     public async Task<byte[]> Handle(GetSchoolCardsPdfQuery request, CancellationToken cancellationToken)
@@ -56,9 +57,14 @@ public class GetSchoolCardsPdfQueryHandler(
             );
         }).ToList();
 
+        // Un seul téléchargement pour tout le lot, par le fournisseur protégé contre le SSRF — le
+        // document le faisait auparavant lui-même, carte par carte, via WebClient (sans filtrage des
+        // adresses internes ni délai borné).
+        var logo = await logoProvider.TryFetchAsync(school.LogoUrl, cancellationToken);
+
         var batch = new SchoolCardBatchDto(
             SchoolName: school.Name,
-            SchoolLogoUrl: school.LogoUrl,
+            SchoolLogo: logo,
             ClassroomName: classroom.Name,
             SchoolYearName: schoolYear.Label,
             PhoneNumber: school.Phone,

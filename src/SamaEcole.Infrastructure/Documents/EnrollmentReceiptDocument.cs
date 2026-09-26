@@ -54,11 +54,16 @@ public class EnrollmentReceiptDocument(EnrollmentReceiptDto receipt, byte[]? log
     /// </summary>
     private string ReceiptReference()
     {
-        var pending =
-            (receipt.ReceiptNumber?.StartsWith("EN-ATTENTE-", StringComparison.OrdinalIgnoreCase) ?? false)
-            || string.Equals(receipt.Status, "PendingPayment", StringComparison.OrdinalIgnoreCase);
+        // Sans numéro du tout, aucun reçu officiel n'a été émis non plus : même libellé que le jeton
+        // provisoire, plutôt qu'un badge « N° » vide.
+        if (receipt.ReceiptNumber is not { } number
+            || number.StartsWith("EN-ATTENTE-", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(receipt.Status, "PendingPayment", StringComparison.OrdinalIgnoreCase))
+        {
+            return "en attente de règlement";
+        }
 
-        return pending ? "en attente de règlement" : receipt.ReceiptNumber;
+        return number;
     }
 
     public void Compose(IDocumentContainer container)

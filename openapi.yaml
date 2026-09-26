@@ -4218,7 +4218,7 @@ paths:
       summary: Initier un paiement d'abonnement (Mobile Money, virement, carte)
       description: >-
         Ticket JGK-I05, réservé au Directeur. Le montant est calculé serveur, jamais fourni par le client : établissement privé issu d'une demande d'inscription = forfait de la grille en `Yearly` (prolongation d'un an), forfait ÷ 12 arrondi au multiple supérieur de 100 FCFA en `Monthly` (prolongation d'un mois) ; établissement public = 422 (sur devis) ; sans demande d'inscription = tarif par formule (plan × période).
-        jamais fourni par le client. Réponse 200 (et non 201) : la ligne SubscriptionPayment créée est
+        Réponse 200 (et non 201) : la ligne SubscriptionPayment créée est
         consultable via GET /subscriptions/{schoolId}/payments (JGK-I07) — même choix que l'approbation
         d'inscription (JGK-I03), qui crée pourtant un établissement entier et répond 200 aussi. Route
         explicitement exemptée du mode restreint AwaitingPayment (JGK-I04) : c'est la seule voie de sortie.

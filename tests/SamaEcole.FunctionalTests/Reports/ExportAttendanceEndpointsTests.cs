@@ -63,7 +63,7 @@ public class ExportAttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAs
         var yearId = Guid.CreateVersion7();
         var subjectId = Guid.CreateVersion7();
 
-        await _factory.SeedAsOwnerAsync(async db =>
+        await _factory.SeedAsOwnerAsync(db =>
         {
             db.SchoolYears.Add(new SchoolYear { Id = yearId, SchoolId = EcoleId, Label = "2026-2027", StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2027, 6, 30), IsActive = true });
             db.Classrooms.Add(new Classroom { Id = ClasseA, SchoolId = EcoleId, Name = "CM2 A", Level = "Primaire", Capacity = 40 });
@@ -78,6 +78,8 @@ public class ExportAttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAs
                 (AwaId, AttendanceStatus.Present, 0), (ModouId, AttendanceStatus.UnjustifiedAbsence, 0));
             AddSheet(db, subjectId, yearId, new DateOnly(2026, 7, 12),
                 (AwaId, AttendanceStatus.Late, 5), (ModouId, AttendanceStatus.JustifiedAbsence, 0));
+
+            return Task.CompletedTask;
         });
     }
 

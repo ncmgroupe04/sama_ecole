@@ -47,4 +47,8 @@ dotnet_sort_system_directives_first = true
 
 # --- Qualité ---
 dotnet_diagnostic.CS8618.severity = warning   # non-nullable non initialisé
-dotnet_diagnostic.CA2007.severity = warning   # ConfigureAwait manquant
+# ConfigureAwait : désactivé pour toute la solution. ASP.NET Core n'installe aucun
+# SynchronizationContext (ConfigureAwait(false) n'y change rien), et dans les tests xUnit il est
+# même déconseillé (xUnit1030). Il n'était ignoré que dans Application et Web (NoWarn) : ailleurs il
+# produisait ~1 800 avertissements sans valeur qui noyaient les vrais.
+dotnet_diagnostic.CA2007.severity = none
