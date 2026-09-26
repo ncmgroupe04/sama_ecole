@@ -1,5 +1,6 @@
 using SamaEcole.Application.Classrooms;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Exemptions;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Queries.GetGradeSummary;
 using SamaEcole.Domain.Entities;
@@ -34,8 +35,11 @@ public record ReportCardTermRecap(string TermLabel, int Order, decimal? Average)
 /// qui en compte par ailleurs) : son nom occupe alors les DEUX premières colonnes, sans regroupement.
 /// <see cref="Score"/> est null tant que rien n'est noté — la case s'imprime vide, comme sur les grilles
 /// vierges distribuées aux enseignants, jamais un zéro qui vaudrait échec.
+/// <see cref="IsExempt"/> marque la matière dont l'élève est dispensé : la ligne reste dans la grille, le document
+/// y imprime « Dispensé(e) » à la place de la note.
 /// </summary>
-public record EvaluationLineDto(Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation);
+public record EvaluationLineDto(
+    Guid SubjectId, string? Label, decimal? Score, decimal MaxScore, string? Appreciation, bool IsExempt = false);
 
 /// <summary>
 /// Un DOMAINE et ses lignes : la première colonne du tableau porte <see cref="Name"/> une seule fois,
@@ -192,7 +196,13 @@ public record ReportCardDto(
     CouncilDecision? ProposedCouncilDecision = null,
 
     // Vrai si l'élève a une note de composition sur la période : « présent » au sens du PV.
-    bool SatComposition = false);
+    bool SatComposition = false,
+
+    // Matières OBLIGATOIRES dont l'élève est dispensé (avec motif) : la ligne reste sur le bulletin, marquée
+    // « Dispensé(e) », coefficient barré, hors totaux (spécification §4.4 — écart assumé et validé à la règle
+    // n°12, consigné dans docs/design-references/README.md). Le motif n'est jamais porté ici. Null/vide — le
+    // cas de tout élève sans dispense — : le bulletin est strictement celui d'avant.
+    IReadOnlyList<ExemptSubjectDto>? ExemptSubjects = null);
 
 public class GetReportCardPdfQueryHandler(
     ReportCardDataService dataService,
@@ -342,8 +352,15 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         // bulletin reprend alors ses tableaux d'origine. Les appréciations de ses lignes se calculent
         // sur le POURCENTAGE de réussite, avec les mentions de l'école telles qu'elles sont stockées
         // (/20) — pas les seuils transposés ci-dessus, qui supposent une note déjà sur gradingScale.
+        // Les matières dispensées gardent leur ligne dans la grille, marquées (jamais retirées : le bulletin imprime
+        // la grille ENTIÈRE).
+        var exemptSubjectIds = (await ExemptionQueries.ForStudentAsync(
+                dbContext, student.Id, term.SchoolYearId, cancellationToken))
+            .Select(e => e.SubjectId)
+            .ToHashSet();
+
         var evaluationStructure = await EvaluationStructureBuilder.BuildAsync(
-            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, cancellationToken);
+            dbContext, classroom.Level, gradingScale, summary.Subjects, mentionScale, exemptSubjectIds, cancellationToken);
 
         var (absences, retards, totalAbsences) = await CountAttendanceAsync(
             student.Id, student.ClassroomId, term, cancellationToken);
@@ -386,7 +403,7 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
         IReadOnlyDictionary<Guid, string?>? subjectNamesAr = null;
         if (isBilingualArabic)
         {
-            var subjectIds = summary.Subjects.Select(s => s.SubjectId).ToList();
+            var subjectIds = summary.Subjects.Select(s => s.SubjectId).Concat(summary.ExemptSubjects?.Select(s => s.SubjectId) ?? []).ToList();
             subjectNamesAr = await dbContext.Subjects.AsNoTracking()
                 .Where(s => subjectIds.Contains(s.Id))
                 .ToDictionaryAsync(s => s.Id, s => s.NameAr, cancellationToken);
@@ -442,7 +459,8 @@ public class ReportCardDataService(ISender mediator, IApplicationDbContext dbCon
             subjectNamesAr,
             student.Gender,
             councilRules.SuggestDecision(annualAverage, gradingScale),
-            summary.Subjects.Any(s => s.Composition is not null));
+            summary.Subjects.Any(s => s.Composition is not null),
+            ExemptSubjects: summary.ExemptSubjects);
 
         return dto;
     }

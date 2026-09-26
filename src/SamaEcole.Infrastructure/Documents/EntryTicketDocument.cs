@@ -1,4 +1,5 @@
 using System.Globalization;
+using SamaEcole.Application.Attendance;
 using SamaEcole.Application.Common;
 using SamaEcole.Application.Absences.Queries.GetEntryTicket;
 using QuestPDF.Fluent;
@@ -153,7 +154,38 @@ public class EntryTicketDocument(EntryTicketDto ticket, byte[]? logo, byte[]? su
                 }),
                 right: c => ComposeCell(c, "Motif du billet", inner =>
                 {
-                    inner.Item().Text($"RETARD DE {ticket.Minutes} MIN").Bold().FontSize(10).FontColor(HeadingColor);
+                    if (ticket.ArrivalTime is { } arrival)
+                    {
+                        // Billet par heure d'arrivée (Complément N°5 bis) : l'heure, la durée régularisée, puis le détail
+                        // — cours manqués (nommé s'il est seul, résumé sinon) et retard éventuel.
+                        var total = ticket.TotalMinutes is { } t ? $" — {DurationText.Human(t)}" : "";
+                        inner.Item().Text($"ARRIVÉE À {arrival.ToString("HH:mm", CultureInfo.InvariantCulture)}{total}").Bold().FontSize(10).FontColor(HeadingColor);
+
+                        // Un seul cours manqué : il est nommé ; plusieurs : un résumé (nombre et durée) — le billet A5 ne doit
+                        // JAMAIS déborder sur une deuxième page, quel que soit le nombre de cours manqués.
+                        var missed = ticket.MissedSlots ?? [];
+                        if (missed.Count == 1)
+                        {
+                            inner.Item().PaddingTop(1)
+                                .Text($"Cours manqué : {missed[0].SubjectName} {missed[0].TimeRange}").FontSize(8.5f).FontColor(AccentColor);
+                        }
+                        else if (missed.Count > 1)
+                        {
+                            inner.Item().PaddingTop(1)
+                                .Text($"{missed.Count} cours manqués ({DurationText.Human(missed.Sum(m => m.Minutes))})").FontSize(8.5f).FontColor(AccentColor);
+                        }
+
+                        if (ticket.Minutes > 0)
+                        {
+                            inner.Item().PaddingTop(1)
+                                .Text($"Retard de {ticket.Minutes} min au cours visé").FontSize(8.5f).FontColor(AccentColor);
+                        }
+                    }
+                    else
+                    {
+                        inner.Item().Text($"RETARD DE {ticket.Minutes} MIN").Bold().FontSize(10).FontColor(HeadingColor);
+                    }
+
                     if (!string.IsNullOrWhiteSpace(ticket.Reason))
                     {
                         inner.Item().PaddingTop(1)

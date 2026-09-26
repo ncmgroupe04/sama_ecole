@@ -2414,6 +2414,9 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<Guid?>("AcceptedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<TimeOnly?>("ArrivalTime")
+                        .HasColumnType("time without time zone");
+
                     b.Property<DateTimeOffset?>("CancelledAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2440,6 +2443,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<int>("Minutes")
                         .HasColumnType("integer");
+
+                    b.PrimitiveCollection<Guid[]>("MissedScheduleSlotIds")
+                        .HasColumnType("uuid[]");
 
                     b.Property<string>("Observations")
                         .HasMaxLength(1000)
@@ -2469,6 +2475,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<Guid?>("TargetScheduleSlotId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("TotalMinutes")
+                        .HasColumnType("integer");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -4273,6 +4282,13 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<int>("LateMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("PreviousLateMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
@@ -4471,6 +4487,64 @@ namespace SamaEcole.Persistence.Migrations
                         .HasFilter("NOT \"IsDeleted\"");
 
                     b.ToTable("student_subject_enrollments", (string)null);
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.StudentSubjectExemption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SchoolId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SchoolYearId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SchoolId", "SchoolYearId");
+
+                    b.HasIndex("SchoolId", "SubjectId", "SchoolYearId");
+
+                    b.HasIndex("SchoolId", "StudentId", "SubjectId", "SchoolYearId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_student_subject_exemptions_key")
+                        .HasFilter("NOT \"IsDeleted\"");
+
+                    b.ToTable("student_subject_exemptions", (string)null);
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.Subject", b =>
@@ -6536,6 +6610,36 @@ namespace SamaEcole.Persistence.Migrations
                     b.HasOne("SamaEcole.Domain.Entities.Student", null)
                         .WithMany()
                         .HasForeignKey("SchoolId", "StudentId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.StudentSubjectExemption", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.School", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.SchoolYear", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "SchoolYearId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "StudentId")
+                        .HasPrincipalKey("SchoolId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SamaEcole.Domain.Entities.Subject", null)
+                        .WithMany()
+                        .HasForeignKey("SchoolId", "SubjectId")
                         .HasPrincipalKey("SchoolId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

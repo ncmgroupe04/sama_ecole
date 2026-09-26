@@ -303,8 +303,37 @@ tableau de bord. Sans `scheduleSlotId` ni cours visé, tout se comporte exacteme
    journée entière — d'où l'infobulle « N séances appelées » qui donne le dénominateur.
 4. `isCurrent` / `isNext` se calculent sur l'heure **UTC** du serveur (`TimeProvider`) : exact au Sénégal (UTC+0),
    à revoir pour un déploiement dans un autre fuseau.
-5. Le billet de sortie reste un registre à part, sans lien avec le cours ; la justification des séances manquées
-   (Tâche 9) n'est pas construite.
+5. Le billet de sortie reste un registre à part, sans lien avec le cours. (La justification des séances manquées,
+   « Tâche 9 », est **remplacée** par le Complément N°5 bis ci-dessous, sans table de journal.)
+
+#### Complément N°5 bis (25/09/2026) — appel à trois statuts et billet par heure d'arrivée
+
+Plan et arbitrages C1 à C9 : `docs/superpowers/plans/2026-09-24-attendance-slots-tickets.md` (fin du document).
+Branche `feature/attendance-arrival-time`, empilée sur `feature/attendance-slots`.
+
+- **Appel.** La grille ne propose que **Présent / Absent (justifié) / Absent (non justifié)** ; plus de colonne
+  « Retard (min) ». Une ligne issue d'un billet, et tout retard historique, est en **lecture seule**. **Changement
+  d'API assumé (C9)** : `POST /attendance` refuse (422) une ligne `Late` sans billet actif sur (élève, cours,
+  date), y compris en appel libre. Lignes `Late` existantes et **taux de présence inchangés**.
+- **Billet.** Le surveillant saisit l'**heure d'arrivée** (C1, validé) ; `ArrivalCoverage` (pur) et `ArrivalPlanner`
+  en déduisent cours manqués, retard, cours visé (en cours, sinon prochain, sinon dernier manqué) et durée totale.
+  `GET /absences/arrival-preview` = le même calcul, pour l'écran. Minutes et cours visé du client sont **ignorés**
+  dans ce mode ; sans cours ce jour-là, saisie des minutes comme avant.
+- **Registre (C5, validé).** Les cours manqués dont la fiche existe passent `UnjustifiedAbsence` → `JustifiedAbsence`
+  — jamais depuis `Present`/`Late`, jamais l'inverse, aucune ligne créée. **B7 est levé.** Statut d'avant gardé
+  **sur la ligne** (`student_attendances.PreviousStatus`) : annulation ligne par ligne, **aucune table de journal**
+  (C6). Le cours en cours passe en `Late` (à 0 minute : ligne seulement rattachée). Un seul message famille (C7).
+- **Données.** Migration `AddArrivalTimeToEntryTickets`, colonnes nullables seulement : `LateArrivals.ArrivalTime`,
+  `TotalMinutes`, `MissedScheduleSlotIds` (`uuid[]`), `student_attendances.PreviousStatus`/`PreviousLateMinutes`.
+  À appliquer avec `dotnet ef database update` avant de relancer l'app en local (sinon « Une erreur inattendue »).
+- **Billet imprimé.** Heure d'arrivée, durée, cours manqué (nommé s'il est seul, résumé sinon) — toujours une page A5.
+  La création d'un billet devient une requête **auditée** (`IAuditableRequest`).
+
+**Points de vigilance du complément :** (1) le passage « non justifié → justifié » n'avertit pas la famille ;
+(2) une arrivée pendant une pause vise le cours **suivant** — seul `ArrivalCoverage` change si l'école préfère le
+dernier manqué ; (3) le mode « Libre » n'a plus de retard manuel ; (4) un billet ne peut plus être émis « sans cours
+précis » depuis l'écran quand la classe a des cours ce jour-là (l'API, elle, l'accepte encore) ; (5) un billet émis
+pendant la soumission d'une fiche peut ne pas être rattaché : l'acceptation reste le point de réconciliation.
 
 ### Grille tarifaire, inscription public / privé et facturation (26/09/2026) — livré
 
@@ -422,6 +451,40 @@ sortent de la grille et du bulletin.
    une matière en cours d'année la retire aussi des bulletins déjà calculés de l'année.
 5. L'écran de saisie des notes propose toujours toutes les matières de l'école ; seule la liste des élèves suit les
    options.
+
+### Dispense d'une matière obligatoire (25/09/2026) — livré
+
+Un élève peut être dispensé d'une matière **obligatoire** de sa classe pour l'année active, avec un **motif**
+obligatoire. Branche `feature/optional-subjects` (nom conservé), construite sur `main` après l'Évolution N°6 ;
+spécification `docs/superpowers/specs/2026-09-25-subject-exemptions-design.md` (v2) et plan
+`docs/superpowers/plans/2026-09-25-subject-exemptions.md`. La v1 (options + dispenses par inscription, redondante avec
+l'Évolution N°6) reste consultable sur `backup/optional-subjects-v1`. Spécification fonctionnelle :
+`docs/Volume_1_Cahier_des_Charges.md` §8.10.
+
+- **Données.** `student_subject_exemptions` (élève, matière, année, `Reason` non nul ≤ 200) : RLS + Global Query Filter,
+  index unique partiel, pas de `xmin`, purges (`reset_school_data`, `delete_school_year`). Migrations
+  `AddStudentSubjectExemptions` et `AddStudentSubjectExemptionsToPurges`, scripts `docs/migrations/`.
+- **Calcul.** `SamaEcole.Application.Exemptions` (`ExemptionRules`, `ExemptionQueries`, statiques). `SubjectFollowScope`
+  réunit les dispenses aux exclusions du programme : résumé de notes, bulletins, délibération, fiche élève, grille,
+  import, feuilles PDF/Excel et garde de `CreateGrade` en héritent sans nouveau paramètre de constructeur.
+- **API.** `GET`/`PUT /api/v1/class-subjects/students/{studentId}/exemptions` (`StaffRoles`, module `Pedagogy`).
+- **Écran.** Fiche élève › section « Dispenses » (`subject-exemptions.js`, `students.js`). Fiche d'aide `dispenses-matieres`.
+- **Bulletin.** « Dispensé(e) » (secondaire, primaire, grille APC) : **écart validé à la règle #12**, consigné dans
+  `docs/design-references/README.md`. Aucun autre changement de mise en page.
+
+**Invariant : sans dispense, résumé, bulletin, grilles et imports sont strictement ceux de `main`.**
+
+**Points de vigilance connus :**
+1. « Dispensé(e) » est le seul écart au bulletin de référence ; tout autre ajout est à arbitrer séparément.
+2. Le motif est une donnée sensible : jamais imprimé ni journalisé, lu et écrit par le Directeur et le Secrétariat
+   seulement.
+3. `SubjectFollowScope` a désormais **deux sources d'exclusion** (programme/options et dispenses) : tout nouveau lecteur
+   doit passer par lui, jamais recalculer.
+4. Une dispense devient **inerte** (sans être supprimée) si le programme change — matière désactivée ou devenue
+   option — ou si l'élève change de classe : elle exclut toujours la matière tant qu'elle existe ; à nettoyer depuis la fiche.
+5. Le **livret de compétences** ignore le marquage « Dispensé(e) ».
+6. `PUT`/`DELETE` d'une note existante sur une matière dispensée ne sont pas bloqués (invisible dans les moyennes).
+7. Le parcours navigateur de la section « Dispenses » et le rendu du bulletin bilingue arabe n'ont pas été vérifiés à l'œil.
 
 ### Inventaire (26/08/2026) — API et écran livrés
 

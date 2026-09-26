@@ -457,7 +457,7 @@ Ce que le code livré fait autrement que le plan ci-dessus, et pourquoi :
 
 # Complément N°5 bis — « Retard » retiré de l'appel, billet par heure d'arrivée (Tâches 11 à 15)
 
-> **STATUT : PLANIFIÉ le 25/09/2026, NON EXÉCUTÉ.** À exécuter **après** le plan ci-dessus (Tâches 1 à 8 et 10, livrées sur `feature/attendance-slots`), sur une branche dédiée `feature/attendance-arrival-time` **empilée sur `feature/attendance-slots`**, dans un worktree (`WORK_IN_PROGRESS.md`, règle 5) — jamais dans l'arbre partagé pendant qu'une autre session y travaille.
+> **STATUT : EXÉCUTÉ le 25/09/2026 (Tâches 11 à 15) sur `feature/attendance-arrival-time` — C5 confirmé (cours manqués → « Absent (justifié) »). Écarts à l'exécution : voir la fin du complément.** *(Texte de planification d'origine :)* À exécuter **après** le plan ci-dessus (Tâches 1 à 8 et 10, livrées sur `feature/attendance-slots`), sur une branche dédiée `feature/attendance-arrival-time` **empilée sur `feature/attendance-slots`**, dans un worktree (`WORK_IN_PROGRESS.md`, règle 5) — jamais dans l'arbre partagé pendant qu'une autre session y travaille.
 
 **Demande (25/09/2026) :**
 1. Appel en classe : supprimer la notion de « Retard » et la saisie « RETARD (MIN) » ; l'enseignant ne choisit que **Présent**, **Absent (justifié)**, **Absent (non justifié)**.
@@ -571,3 +571,15 @@ Ce que le code livré fait autrement que le plan ci-dessus, et pourquoi :
 | Taux de présence, jours de repos, isolation multi-tenant, historique inchangés | 11, 13 (tests de non-régression et `MultiTenant`) |
 
 Points de vigilance : (1) le passage `UnjustifiedAbsence → JustifiedAbsence` n'avertit pas la famille (C7) ; (2) **C5 attend la confirmation du propriétaire** — c'est la seule décision qui change ce que le registre affirme ; (3) C9 est un changement d'API assumé ; (4) une arrivée pendant une pause vise le cours suivant : si l'école veut plutôt viser le dernier cours manqué, seul `ArrivalCoverage` change ; (5) le mode « Libre » n'a plus de retard manuel (C8).
+
+## Écarts constatés à l'exécution du complément (Tâches 11 à 15)
+
+- **Colonne supplémentaire : `LateArrivals.MissedScheduleSlotIds`** (`uuid[]`, nullable). Le plan ne prévoyait que `ArrivalTime` et `TotalMinutes` ; sans les cours manqués **mémorisés**, la présélection des feuilles non encore saisies aurait dépendu d'un emploi du temps qui peut changer après l'émission. Instantané, sans table ni FK.
+- **Statut d'avant : sur la ligne pour les cours manqués, sur le billet pour le cours visé.** Le plan (C6) proposait de tout porter sur `student_attendances`. Le cours visé garde `LateArrivals.PreviousStatus` (déjà livré, testé, migré) ; seuls les cours manqués utilisent `student_attendances.PreviousStatus`. `RestoreAsync` lit les deux sources ; sa signature perd le paramètre `slot` (il suit désormais les lignes rattachées au billet, le cours visé pouvant avoir été supprimé).
+- **Aucune ligne créée pour un cours manqué** dont l'élève est absent de la fiche (le plan disait « ou en l'absence de ligne ») : créer une absence justifiée que l'annulation ne saurait pas défaire était pire que ne rien faire. La présélection de la feuille couvre le cas d'une fiche non encore saisie.
+- **Heure au format `HH:mm:ss`** dans l'API (`arrivalTime`, comme l'emploi du temps `startTime`), pas `HH:mm` : c'est le format que le désérialiseur JSON de `TimeOnly` accepte sans convertisseur dédié. L'écran ajoute `:00`.
+- **`ArrivalPlanner` (nouveau service)** partage le calcul entre l'émission et l'aperçu ; il écarte aussi les cours déjà couverts par un billet actif de l'élève — ce qui évite la violation de l'index unique `UX_LateArrivals_ActiveTicket` sur le cours visé — et refuse un retard > 240 min sur un même cours.
+- **Billet imprimé : résumé plutôt que liste.** Un cours manqué est nommé ; à partir de deux, « N cours manqués (durée) ». Une liste de quatre lignes ou plus faisait déborder le billet sur une deuxième page (test `/Count 1` rouge à 4 et 9 cours) : la règle « une seule page A5 » l'emporte.
+- **L'écran ne propose plus « Cours visé » ni « Sans cours précis »** quand la classe a des cours ce jour-là (l'heure d'arrivée les remplace) ; l'API accepte toujours `targetScheduleSlotId`. Les tests JS du sélecteur (`billets-tickets.test.mjs`) ont été remplacés par `billets-arrival.test.mjs`.
+- **Requête auditée.** `CreateLateArrivalCommand` implémente `IAuditableRequest` (test `Issuing_A_Ticket_Is_An_Audited_Request`).
+- **Constat étranger au complément** : `live-mode-guard.test.mjs` (garde-fou du mode test, commit `6ab7ec8`) échoue **par intermittence** (~1 exécution sur 6, même seul et sans ce complément) — un test dépendant du séquencement asynchrone, à durcir séparément.

@@ -153,7 +153,7 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
             entries = new[]
             {
                 Entry(s1, "Present"),
-                Entry(s2, "Late", 10)
+                Entry(s2, "UnjustifiedAbsence")
             }
         });
         submitResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -165,7 +165,7 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         sheetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var sheet = (await sheetResponse.Content.ReadFromJsonAsync<SheetDto>())!;
         sheet.Lines.Should().HaveCount(2);
-        sheet.Lines.Should().Contain(l => l.StudentId == s2 && l.Status == "Late" && l.LateMinutes == 10);
+        sheet.Lines.Should().Contain(l => l.StudentId == s2 && l.Status == "UnjustifiedAbsence" && l.LateMinutes == 0);
         sheet.SchoolYearLabel.Should().Be("2026-2027");
     }
 
@@ -393,6 +393,27 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+    }
+
+    /// <summary>
+    /// Complément N°5 bis (C9) — un retard n'a plus d'autre source qu'un billet d'entrée : avec des minutes valides
+    /// mais sans billet actif, l'appel est refusé avec le message qui indique où saisir le retard.
+    /// </summary>
+    [Fact]
+    public async Task Submitting_A_Late_Status_Without_An_Entry_Ticket_Should_Return_422_Pointing_To_The_Ticket()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var (subjectId, classroomId, s1, _) = await SeedClassAsync(directeur);
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/attendance", directeur, new
+        {
+            classroomId, subjectId, date = CallDate, period = "Matin",
+            entries = new[] { Entry(s1, "Late", 10) }
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        // Le JSON échappe apostrophe et accents : on cherche un mot ASCII propre à ce message.
+        (await response.Content.ReadAsStringAsync()).Should().Contain("marquez");
     }
 
     [Fact]

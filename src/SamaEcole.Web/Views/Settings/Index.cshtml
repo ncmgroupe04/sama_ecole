@@ -743,7 +743,7 @@
 
  <div x-show="isDirecteur" x-cloak class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-2">
  <button type="submit" :disabled="configSaving" class="btn-modal-primary group">
- <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ <span x-text="configSavingLabelVisible ? 'Enregistrement…' : 'Enregistrer'"></span>
  </button>
  </div>
  </form>
@@ -815,7 +815,7 @@
  </div>
  <span class="pb-2.5 text-sm text-slate-500">jours</span>
  <button type="submit" :disabled="configSaving" class="btn-modal-primary group">
- <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ <span x-text="configSavingLabelVisible ? 'Enregistrement…' : 'Enregistrer'"></span>
  </button>
  </div>
  <p x-show="configErrors.gradeeditwindowdays" x-cloak x-text="configErrors.gradeeditwindowdays" class="field-error"></p>
@@ -846,7 +846,7 @@
  class="input-field" placeholder="2 à 6" title="Nombre de périodes (2 à 6)">
  </div>
  <button type="submit" :disabled="configSaving" class="btn-modal-primary group">
- <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ <span x-text="configSavingLabelVisible ? 'Enregistrement…' : 'Enregistrer'"></span>
  </button>
  </div>
  <p x-show="configErrors.evaluationperiodtype" x-cloak x-text="configErrors.evaluationperiodtype" class="field-error"></p>
@@ -877,7 +877,7 @@
  <button type="button" x-on:click="applyWeekPreset('mon-sat')" class="btn-modal-secondary text-xs">Lundi → Samedi</button>
  <button type="button" x-on:click="applyWeekPreset('sat-wed')" class="btn-modal-secondary text-xs">Samedi → Mercredi (repos jeudi et vendredi)</button>
  <button type="submit" :disabled="configSaving" class="btn-modal-primary group ml-auto">
- <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ <span x-text="configSavingLabelVisible ? 'Enregistrement…' : 'Enregistrer'"></span>
  </button>
  </div>
  <p x-show="configErrors.workingdays" x-cloak x-text="configErrors.workingdays" class="field-error"></p>
@@ -1003,7 +1003,7 @@
 
  <div x-show="isDirecteur" x-cloak class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-2">
  <button type="submit" :disabled="configSaving" class="btn-modal-primary group">
- <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ <span x-text="configSavingLabelVisible ? 'Enregistrement…' : 'Enregistrer'"></span>
  </button>
  </div>
  </form>
@@ -1074,7 +1074,7 @@
 
  <div x-show="isDirecteur" x-cloak class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-2">
  <button type="submit" :disabled="configSaving" class="btn-modal-primary group">
- <span x-text="configSaving ? 'Enregistrement…' : 'Enregistrer'"></span>
+ <span x-text="configSavingLabelVisible ? 'Enregistrement…' : 'Enregistrer'"></span>
  </button>
  </div>
  </form>

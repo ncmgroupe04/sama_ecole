@@ -86,20 +86,30 @@ public class InitializeAttendanceSheetQueryHandler(
             .Where(sa => existingSheetId != null && sa.AttendanceSheetId == existingSheetId)
             .ToDictionaryAsync(sa => sa.StudentId, sa => new { sa.Status, sa.LateMinutes }, cancellationToken);
 
-        // Billets d'entrée actifs visant CE cours à CETTE date (Évolution N°5) : ils présélectionnent le retard de
-        // l'élève tant que l'appel n'est pas fait, et la feuille les signale (« en attente d'acceptation »).
-        var ticketsByStudent = new Dictionary<Guid, (Guid Id, int Minutes, EntryTicketStatus? Status)>();
+        // Billets d'entrée actifs qui touchent CE cours à CETTE date (Évolution N°5, Complément N°5 bis) : ils
+        // présélectionnent l'état de l'élève tant que l'appel n'est pas fait, et la feuille les signale (« en
+        // attente d'acceptation »). Le billet peut VISER ce cours (retard : « Retard », ou rien à changer si l'élève
+        // arrive pile à l'heure) ou l'avoir MANQUÉ avant l'arrivée (« Absent (justifié) »).
+        var ticketsByStudent = new Dictionary<Guid, (Guid Id, int Minutes, EntryTicketStatus? Status, bool Missed)>();
         if (resolved.SlotId is { } slotId)
         {
             var day = request.Date.ToDateTime(TimeOnly.MinValue);
             var tickets = await dbContext.LateArrivals.AsNoTracking()
-                .Where(l => l.TargetScheduleSlotId == slotId
-                            && l.Date == day
-                            && (l.Status == EntryTicketStatus.Issued || l.Status == EntryTicketStatus.Accepted))
-                .Select(l => new { l.Id, l.StudentId, l.Minutes, l.Status })
+                .Where(l => l.Date == day
+                            && (l.Status == EntryTicketStatus.Issued || l.Status == EntryTicketStatus.Accepted)
+                            && (l.TargetScheduleSlotId == slotId
+                                || (l.MissedScheduleSlotIds != null && l.MissedScheduleSlotIds.Contains(slotId))))
+                .Select(l => new { l.Id, l.StudentId, l.Minutes, l.Status, Missed = l.TargetScheduleSlotId != slotId })
                 .ToListAsync(cancellationToken);
 
-            ticketsByStudent = tickets.ToDictionary(t => t.StudentId, t => (t.Id, t.Minutes, t.Status));
+            // Un cours visé l'emporte sur un cours manqué si, exceptionnellement, deux billets le touchent.
+            ticketsByStudent = tickets
+                .GroupBy(t => t.StudentId)
+                .ToDictionary(g => g.Key, g =>
+                {
+                    var t = g.OrderBy(x => x.Missed).First();
+                    return (t.Id, t.Minutes, t.Status, t.Missed);
+                });
         }
 
         var rows = students
@@ -108,9 +118,18 @@ public class InitializeAttendanceSheetQueryHandler(
                 existingStatuses.TryGetValue(s.Id, out var recorded);
                 var hasTicket = ticketsByStudent.TryGetValue(s.Id, out var ticket);
 
-                // Un appel déjà saisi l'emporte toujours ; sinon un billet présélectionne « Retard ».
-                var status = recorded?.Status.ToString() ?? (hasTicket ? nameof(AttendanceStatus.Late) : null);
-                var lateMinutes = recorded?.LateMinutes ?? (hasTicket ? ticket.Minutes : 0);
+                // Un appel déjà saisi l'emporte toujours ; sinon un billet présélectionne « Retard » (cours visé, minutes
+                // > 0) ou « Absent (justifié) » (cours manqué). Cours visé à 0 minute : le billet est seulement rattaché.
+                string? preselected = null;
+                if (hasTicket)
+                {
+                    preselected = ticket.Missed
+                        ? nameof(AttendanceStatus.JustifiedAbsence)
+                        : ticket.Minutes > 0 ? nameof(AttendanceStatus.Late) : null;
+                }
+
+                var status = recorded?.Status.ToString() ?? preselected;
+                var lateMinutes = recorded?.LateMinutes ?? (hasTicket && !ticket.Missed ? ticket.Minutes : 0);
 
                 return new AttendanceRosterRow(
                     s.Id,

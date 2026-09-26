@@ -273,7 +273,7 @@ public class EntryTicketAcceptanceTests : IAsyncLifetime
         await using (var db = _db.NewAppContext(EcoleA))
         {
             ticketId = await new CreateLateArrivalCommandHandler(
-                    db, new StubTenant(EcoleA), new RecordingPublisher(), new EntryTicketRegister(db), new WorkingDayGuard(db))
+                    db, new StubTenant(EcoleA), new RecordingPublisher(), new EntryTicketRegister(db), new WorkingDayGuard(db), new ArrivalPlanner(db, new WorkingDayGuard(db)))
                 .Handle(new CreateLateArrivalCommand
                 {
                     StudentId = Awa, Date = Samedi.ToDateTime(TimeOnly.MinValue), Minutes = 10, Reason = "Transport"
@@ -318,7 +318,7 @@ public class EntryTicketAcceptanceTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(EcoleA);
         return await new CreateLateArrivalCommandHandler(
-                db, new StubTenant(EcoleA), new RecordingPublisher(), new EntryTicketRegister(db), new WorkingDayGuard(db))
+                db, new StubTenant(EcoleA), new RecordingPublisher(), new EntryTicketRegister(db), new WorkingDayGuard(db), new ArrivalPlanner(db, new WorkingDayGuard(db)))
             .Handle(new CreateLateArrivalCommand
             {
                 StudentId = student, Date = Samedi.ToDateTime(TimeOnly.MinValue), Minutes = minutes,

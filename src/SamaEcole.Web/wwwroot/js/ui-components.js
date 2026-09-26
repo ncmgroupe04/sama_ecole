@@ -499,6 +499,8 @@ document.addEventListener('alpine:init', () => {
             const dateStr = now.toLocaleDateString('fr-FR', {
                 weekday: 'long',
                 year: 'numeric',
+                // 'short' : « sept. », « janv. », « févr. »… — n'abrège QUE les mois longs (mai, juin,
+                // août, mars restent entiers), ce qui resserre le pill sans rien tronquer d'inutile.
                 month: 'short',
                 day: 'numeric'
             });

@@ -25,6 +25,7 @@
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
  <script src="~/js/photo-compress.js" asp-append-version="true"></script>
+ <script src="~/js/subject-exemptions.js" asp-append-version="true"></script>
  <script src="~/js/students.js" asp-append-version="true"></script>
 }
 
@@ -438,6 +439,46 @@
         <button type="button" x-show="canManageStudent" x-on:click="saveStudentOptions()" :disabled="isSavingOptions"
                 class="btn-modal-secondary !h-9 !px-4 text-sm">
             <span x-text="isSavingOptions ? 'Enregistrement…' : 'Enregistrer les options'"></span>
+        </button>
+    </div>
+
+    @* Dispenses (matières obligatoires) : l'élève ne suit pas la matière cette année-là — elle sort de ses moyennes et de
+       sa saisie, et le bulletin la marque « Dispensé(e) ». Un motif est obligatoire ; il ne figure sur aucun document.
+       Masquée si la classe n'a aucune matière dispensable ; modifiable par ceux qui gèrent l'élève. *@
+    <div x-show="studentExemptions.length > 0" x-cloak class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Dispenses</h3>
+        <p class="text-xs text-slate-400">
+            Une matière dispensée n'entre plus dans les moyennes et n'est plus saisie ; sur le bulletin elle reste, marquée « Dispensé(e) ».
+        </p>
+        <template x-for="subject in studentExemptions" :key="subject.subjectId">
+            <div class="space-y-2">
+                <label class="flex items-center gap-2 cursor-pointer select-none text-sm text-slate-700">
+                    <input type="checkbox" class="checkbox-field" :disabled="!canManageStudent"
+                           :checked="exemptionState[subject.subjectId] && exemptionState[subject.subjectId].checked"
+                           x-on:change="toggleExemption(subject.subjectId)">
+                    <span class="font-medium" x-text="subject.name"></span>
+                    <span x-show="subject.gradeCount > 0" x-cloak class="text-xs text-slate-400" x-text="'(' + subject.gradeCount + ' note(s))'"></span>
+                </label>
+                <div x-show="exemptionState[subject.subjectId] && exemptionState[subject.subjectId].checked" x-cloak>
+                    <label :for="'exempt-reason-' + subject.subjectId" class="form-label form-label-required">Motif</label>
+                    <input :id="'exempt-reason-' + subject.subjectId" type="text" maxlength="200" class="input-field"
+                           placeholder="ex. Inaptitude médicale, certificat du 12/09/2026" :disabled="!canManageStudent"
+                           :value="exemptionState[subject.subjectId] ? exemptionState[subject.subjectId].reason : ''"
+                           x-on:input="setExemptionReason(subject.subjectId, $event.target.value)">
+                </div>
+            </div>
+        </template>
+        <p x-show="missingExemptionReasons.length > 0" x-cloak class="text-xs text-amber-700">
+            Motif manquant : <span x-text="missingExemptionReasons.join(', ')"></span>.
+        </p>
+        <p x-show="hiddenExemptionGrades > 0" x-cloak class="text-xs text-amber-700">
+            <span x-text="hiddenExemptionGrades"></span> note(s) déjà saisie(s) seront masquées des moyennes (elles restent conservées).
+        </p>
+        <p x-show="exemptionsError" x-cloak x-text="exemptionsError" class="field-error"></p>
+        <p x-show="exemptionsNotice" x-cloak x-text="exemptionsNotice" class="text-xs text-emerald-700"></p>
+        <button type="button" x-show="canManageStudent" x-on:click="saveStudentExemptions()" :disabled="!canSaveExemptions"
+                class="btn-modal-secondary !h-9 !px-4 text-sm disabled:opacity-50">
+            <span x-text="isSavingExemptions ? 'Enregistrement…' : 'Enregistrer les dispenses'"></span>
         </button>
     </div>
 

@@ -71,6 +71,14 @@ document.addEventListener('alpine:init', () => {
 
         // Matières optionnelles de l'élève pour l'année active (Évolution N°6) : groupes de sa classe et choix.
         studentOptionGroups: [],
+        // Dispenses d'une matière obligatoire (motif obligatoire) de l'année active. Le motif peut être médical : il
+        // reste dans cet état, jamais loggé ni stocké ailleurs.
+        studentExemptions: [],
+        exemptionState: {},
+        exemptionsDirty: false,
+        isSavingExemptions: false,
+        exemptionsError: null,
+        exemptionsNotice: null,
         optionSelection: {},
         isSavingOptions: false,
         optionsError: null,
@@ -415,6 +423,12 @@ document.addEventListener('alpine:init', () => {
             this.optionsError = null;
             this.optionsNotice = null;
             this.loadStudentOptions(student.id);
+            this.studentExemptions = [];
+            this.exemptionState = {};
+            this.exemptionsDirty = false;
+            this.exemptionsError = null;
+            this.exemptionsNotice = null;
+            this.loadStudentExemptions(student.id);
             try {
                 this.studentDetail = await window.api.get(`/students/${student.id}`);
             } catch (err) {
@@ -461,6 +475,74 @@ document.addEventListener('alpine:init', () => {
                 this.optionsError = window.api.toMessage(err, "Erreur lors de l'enregistrement des options.");
             } finally {
                 this.isSavingOptions = false;
+            }
+        },
+
+        /**
+         * Section « Dispenses » de la fiche : matières obligatoires de la classe de l'élève que l'on peut dispenser,
+         * avec l'état de l'année active. Réservée à ceux qui gèrent l'élève (Directeur, Secrétariat).
+         */
+        async loadStudentExemptions(studentId) {
+            if (!this.canManageStudent) return;
+            try {
+                const result = await window.api.get(`/class-subjects/students/${encodeURIComponent(studentId)}/exemptions`);
+                if (!this.detailStudent || this.detailStudent.id !== studentId) return; // fiche changée entre-temps
+                this.studentExemptions = (result && result.subjects) || [];
+                this.exemptionState = window.subjectExemptions.stateFrom(this.studentExemptions);
+                this.exemptionsDirty = false;
+            } catch {
+                // silence-volontaire : sans module Pédagogie (403) ou sans année active, la section reste masquée.
+                this.studentExemptions = [];
+            }
+        },
+
+        toggleExemption(subjectId) {
+            const current = this.exemptionState[subjectId] || { checked: false, reason: '' };
+            this.exemptionState = { ...this.exemptionState, [subjectId]: { ...current, checked: !current.checked } };
+            this.exemptionsDirty = true;
+            this.exemptionsNotice = null;
+        },
+
+        setExemptionReason(subjectId, reason) {
+            const current = this.exemptionState[subjectId] || { checked: false, reason: '' };
+            this.exemptionState = { ...this.exemptionState, [subjectId]: { ...current, reason } };
+            this.exemptionsDirty = true;
+            this.exemptionsNotice = null;
+        },
+
+        get missingExemptionReasons() {
+            return window.subjectExemptions.missingReasons(this.studentExemptions, this.exemptionState);
+        },
+
+        get hiddenExemptionGrades() {
+            return window.subjectExemptions.hiddenGrades(this.studentExemptions, this.exemptionState);
+        },
+
+        get canSaveExemptions() {
+            return this.exemptionsDirty && this.missingExemptionReasons.length === 0 && !this.isSavingExemptions;
+        },
+
+        async saveStudentExemptions() {
+            if (!this.detailStudent || this.isSavingExemptions) return;
+
+            const missing = this.missingExemptionReasons;
+            if (missing.length > 0) {
+                this.exemptionsError = `Renseignez le motif de la dispense : ${missing.join(', ')}.`;
+                return;
+            }
+
+            this.isSavingExemptions = true;
+            this.exemptionsError = null;
+            this.exemptionsNotice = null;
+            try {
+                await window.api.put(`/class-subjects/students/${this.detailStudent.id}/exemptions`,
+                    { exemptions: window.subjectExemptions.payload(this.exemptionState) });
+                await this.loadStudentExemptions(this.detailStudent.id);
+                this.exemptionsNotice = 'Dispenses enregistrées.';
+            } catch (err) {
+                this.exemptionsError = window.api.toMessage(err, "Erreur lors de l'enregistrement des dispenses.");
+            } finally {
+                this.isSavingExemptions = false;
             }
         },
 

@@ -81,6 +81,32 @@ public class EntryTicketDtoTests : IAsyncLifetime
         dto.TicketNumber.Should().Be(EntryTicketNumber.For(id), "un seul calcul du numéro de billet");
     }
 
+    // Complément N°5 bis — le billet par heure d'arrivée porte l'heure, la durée régularisée et les cours manqués.
+    [Fact]
+    public async Task A_Ticket_By_Arrival_Time_Carries_The_Arrival_The_Duration_And_The_Missed_Courses()
+    {
+        Guid id;
+        await using (var issue = _db.NewAppContext(EcoleA))
+        {
+            id = await new CreateLateArrivalCommandHandler(
+                    issue, new StubTenant(EcoleA), new NoOpPublisher(), new EntryTicketRegister(issue), new WorkingDayGuard(issue),
+                    new ArrivalPlanner(issue, new WorkingDayGuard(issue)))
+                .Handle(new CreateLateArrivalCommand
+                {
+                    StudentId = Awa, Date = Samedi.ToDateTime(TimeOnly.MinValue), Reason = "Transport", ArrivalTime = new TimeOnly(11, 0)
+                }, default);
+        }
+
+        await using var db = _db.NewAppContext(EcoleA);
+        var dto = await new GetEntryTicketQueryHandler(db).Handle(new GetEntryTicketQuery(id), default);
+
+        dto.ArrivalTime.Should().Be(new TimeOnly(11, 0));
+        dto.TotalMinutes.Should().Be(120);
+        dto.Minutes.Should().Be(0, "aucun retard sur un cours en cours : le cours est entièrement manqué");
+        dto.MissedSlots.Should().ContainSingle().Which.Should().BeEquivalentTo(
+            new EntryTicketMissedSlot("Mathématiques", "08:00-10:00", 120));
+    }
+
     [Fact]
     public async Task The_Status_Follows_The_Ticket_Through_Cancellation()
     {
@@ -109,6 +135,9 @@ public class EntryTicketDtoTests : IAsyncLifetime
         dto.TargetTeacherName.Should().BeNull();
         dto.Status.Should().BeNull();
         dto.Minutes.Should().Be(10);
+        dto.ArrivalTime.Should().BeNull();
+        dto.TotalMinutes.Should().BeNull();
+        dto.MissedSlots.Should().BeNull();
     }
 
     [Fact]
@@ -127,7 +156,7 @@ public class EntryTicketDtoTests : IAsyncLifetime
     {
         await using var db = _db.NewAppContext(EcoleA);
         return await new CreateLateArrivalCommandHandler(
-                db, new StubTenant(EcoleA), new NoOpPublisher(), new EntryTicketRegister(db), new WorkingDayGuard(db))
+                db, new StubTenant(EcoleA), new NoOpPublisher(), new EntryTicketRegister(db), new WorkingDayGuard(db), new ArrivalPlanner(db, new WorkingDayGuard(db)))
             .Handle(new CreateLateArrivalCommand
             {
                 StudentId = Awa, Date = Samedi.ToDateTime(TimeOnly.MinValue), Minutes = 10, Reason = "Transport",

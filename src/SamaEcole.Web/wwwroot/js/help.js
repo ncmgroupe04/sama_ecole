@@ -610,6 +610,44 @@
                         "Vérifiez qu'aucun groupe n'affiche d'« élèves sans option » avant d'ouvrir la saisie des notes : ces élèves n'apparaîtraient dans aucune grille du groupe.",
                         "Comparez la colonne « Officiel » au texte de l'Office du Baccalauréat en vigueur ; les fourchettes du référentiel (Maths 5-6 en T1/T2/STIDD) sont réglées sur la borne basse."
                     ]
+                },
+                {
+                    id: 'dispenses-matieres',
+                    title: "Dispenser un élève d'une matière obligatoire",
+                    location: 'Gestion Scolaire › Élèves › Fiche élève › Dispenses',
+                    href: '/eleves',
+                    roles: ['Directeur', 'Secrétariat'],
+                    definition:
+                        "Une dispense libère un élève d'une matière OBLIGATOIRE de sa classe pour l'année en cours — l'EPS pour " +
+                        "raison médicale, par exemple. Elle s'accompagne d'un MOTIF obligatoire. Ce n'est pas un choix d'option : " +
+                        "un élève qui ne prend pas une LV2 ne la suit simplement pas, sans dispense.",
+                    objectif:
+                        "Que l'élève ne soit ni noté ni pénalisé dans une matière qu'il ne peut pas suivre, sans fausser sa " +
+                        "moyenne, et que son bulletin le dise clairement.",
+                    probleme:
+                        "Sans dispense, un élève inapte en EPS restait dans la grille de saisie, une note à zéro ou une case vide " +
+                        "tirait sa moyenne vers le bas, et le bulletin ne distinguait pas une absence de note d'une dispense.",
+                    procedure: [
+                        "Ouvrez Gestion Scolaire › Élèves puis la fiche de l'élève : la section « Dispenses » liste les matières obligatoires de sa classe. Elle n'apparaît pas si la classe n'en a aucune.",
+                        "Cochez la matière dont l'élève est dispensé.",
+                        "Saisissez le MOTIF (obligatoire, 200 caractères au plus), par exemple « Inaptitude médicale, certificat du 12/09/2026 ».",
+                        "Si des notes existent déjà pour cette matière, l'écran annonce combien seront masquées des moyennes (elles sont conservées).",
+                        "Cliquez « Enregistrer les dispenses » : le bouton reste grisé tant qu'un motif manque.",
+                        "Vérifiez : la matière a disparu de la grille de saisie de l'élève, et son bulletin porte « Dispensé(e) » sur sa ligne.",
+                        "Pour lever une dispense, décochez la matière puis enregistrez."
+                    ],
+                    impacts: [
+                        "Moyennes : la matière sort du calcul ; le total des coefficients est celui des matières suivies.",
+                        "Saisie : l'élève n'apparaît plus dans la grille, la fiche papier ni le modèle Excel de la matière ; une note saisie ou importée pour lui est refusée.",
+                        "Bulletin : la ligne reste, marquée « Dispensé(e) », coefficient barré, hors totaux ; le motif n'y figure jamais.",
+                        "Les notes déjà saisies sont conservées et reviennent si la dispense est retirée.",
+                        "La dispense vaut pour l'année active seulement : une nouvelle année démarre sans dispense."
+                    ],
+                    recommandations: [
+                        "Rédigez un motif sobre : il reste dans le dossier, n'est jamais imprimé, et seuls le Directeur et le Secrétariat peuvent le lire.",
+                        "Retirez la dispense avant de saisir une note pour cet élève dans la matière : la saisie est refusée tant qu'elle existe.",
+                        "En cas de changement de classe en cours d'année, vérifiez ses dispenses depuis la fiche : elles restent enregistrées mais peuvent ne plus correspondre à la nouvelle classe."
+                    ]
                 }
             ]
         },
@@ -2398,8 +2436,8 @@
                     roles: ['Enseignant', 'Directeur', 'Secrétariat'],
                     definition:
                         "L'appel constate, pour une classe et un COURS de son emploi du temps, le statut de " +
-                        "chaque élève inscrit : Présent, Absence justifiée, Absence injustifiée, ou Retard " +
-                        "— ce dernier accompagné du nombre de minutes. La journée d'un élève se compose ainsi " +
+                        "chaque élève inscrit : Présent, Absence justifiée, Absence injustifiée. " +
+                        "Le retard ne se saisit pas ici : il vient d'un billet d'entrée émis par la Surveillance. La journée d'un élève se compose ainsi " +
                         "de plusieurs appels, un par cours. Un enseignant ne voit et ne renseigne que ses " +
                         "propres cours ; sans emploi du temps ce jour-là, l'appel libre par demi-journée reste possible.",
                     objectif:
@@ -2414,8 +2452,8 @@
                     procedure: [
                         "Ouvrez Surveillance › Appel en classe, choisissez la classe et la date : les cours de la journée s'affichent, tirés de l'emploi du temps.",
                         "Cliquez sur le cours à appeler : la matière et l'horaire (08:00-10:00) sont repris du cours, rien à saisir. Un cours déjà appelé est signalé « Appel fait ».",
-                        "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent. Un élève muni d'un billet d'entrée pour CE cours apparaît déjà en Retard, avec la mention du billet.",
-                        "Modifiez le statut de chaque élève concerné : Absence justifiée, Absence injustifiée, ou Retard — en précisant alors le nombre de minutes.",
+                        "La liste nominative des élèves inscrits s'affiche, chacun par défaut marqué Présent. Un élève muni d'un billet d'entrée pour CE cours apparaît déjà en Retard, en lecture seule, avec la mention du billet.",
+                        "Modifiez le statut de chaque élève concerné : Absence justifiée ou Absence injustifiée. Aucun champ de minutes : un élève arrivé en retard se régularise par un billet d'entrée, pas par l'appel.",
                         "Si un élève présente un billet d'entrée en attente, cliquez sur « Accepter » : l'enseignant du cours constate ainsi que l'élève est bien entré en classe.",
                         "Validez l'appel. La fiche est enregistrée avec son auteur et son horodatage.",
                         "Un appel déjà soumis reste consultable par la Direction et le Secrétariat, mais ne se ressaisit pas pour le même cours : une correction passe par le rapport d'assiduité, non par un second appel.",
@@ -2441,8 +2479,9 @@
                     roles: ['Directeur', 'Surveillant'],
                     definition:
                         "Le billet documente un mouvement individuel d'élève en dehors des horaires " +
-                        "normaux. Une ENTRÉE TARDIVE motive le retard, vise le COURS que l'élève rejoint et " +
-                        "l'autorise — l'enseignant de ce cours l'accepte en classe ; une SORTIE ANTICIPÉE " +
+                        "normaux. Une ENTRÉE TARDIVE part de l'HEURE D'ARRIVÉE réelle de l'élève : le système en déduit " +
+                         "les cours manqués, le retard sur le cours en cours et la durée totale, puis " +
+                        "l'autorise — l'enseignant du cours qu'il rejoint l'accepte en classe ; une SORTIE ANTICIPÉE " +
                         "précise, en plus, qui est venu chercher l'élève — exigence de sécurité courante " +
                         "des établissements sénégalais — sauf autorisation écrite permettant une sortie " +
                         "seul. Chaque billet est imprimable au format A5.",
@@ -2457,15 +2496,16 @@
                         "il est arrivé.",
                     procedure: [
                         "Ouvrez Surveillance › Billets d'entrée.",
-                        "ENTRÉE TARDIVE : sélectionnez l'élève, puis le cours visé — le cours en cours (à défaut le prochain) est proposé d'office, « Sans cours précis » reste possible —, renseignez le motif du retard, puis validez.",
-                        "Le billet imprimé porte le cours visé (matière, horaire, enseignant) et son statut : En attente d'acceptation, Accepté en classe ou Annulé.",
+                        "ENTRÉE TARDIVE : sélectionnez l'élève et la date, puis saisissez l'heure d'arrivée réelle. Un aperçu calculé d'après l'emploi du temps de sa classe annonce les cours manqués (par exemple 08h-10h), le retard sur le cours en cours (par exemple 20 min) et la durée totale ; renseignez le motif, puis validez.",
+                        "Sans cours ce jour-là (jour de repos, classe sans emploi du temps), le champ « Minutes de retard » remplace l'heure d'arrivée : le billet est alors émis sans cours précis.",
+                        "Le billet imprimé porte l'heure d'arrivée, la durée régularisée, le cours manqué (ou leur nombre), le cours visé (matière, horaire, enseignant) et son statut : En attente d'acceptation, Accepté en classe ou Annulé.",
                         "Un billet En attente peut être annulé (bouton « Annuler ») par la Vie Scolaire ou le Directeur, tant que l'enseignant ne l'a pas accepté ; l'appel reprend alors son état d'avant. Un billet accepté ne s'annule plus.",
                         "SORTIE ANTICIPÉE : sélectionnez l'élève, le motif, et la personne venue le chercher — ou l'autorisation écrite couvrant une sortie seul.",
                         "Imprimez le billet A5 généré et remettez-le à l'élève ou à la personne qui l'accompagne, selon l'usage de l'établissement.",
                         "Le billet reste consultable dans l'historique de l'élève, daté et attribué à son auteur."
                     ],
                     impacts: [
-                        "Appel en classe : un élève entré tardivement est marqué en Retard, non Absent, sur le cours que vise son billet ; sa ligne d'appel est mise à jour dès l'émission du billet, même si l'appel de ce cours est déjà fait.",
+                        "Appel en classe : un élève entré tardivement est marqué en Retard, non Absent, sur le cours en cours que vise son billet ; les cours entièrement manqués avant son arrivée passent de « Absent (non justifié) » à « Absent (justifié) ». Les lignes sont mises à jour dès l'émission du billet, même si l'appel de ces cours est déjà fait ; un « Présent » n'est jamais modifié.",
                         "Registre de discipline : des retards ou sorties répétés et injustifiés peuvent motiver un examen disciplinaire.",
                         "Convocations : un billet à motif inhabituel ou répété est souvent le premier signal qui déclenche une convocation de parent."
                     ],

@@ -290,6 +290,7 @@ Le Secrétariat compose, télécharge et saisit les observations du conseil (`Re
 | **Coefficients par série ou par classe** (surcharges, « Appliquer le modèle », reconduction — Évolution N°4) : ÉCRITURE réservée, sans délégation | ✔ | lecture seule | ✖ |
 | **Programme d'une classe** (matières par classe, groupes d'options, « Réinitialiser aux coefficients officiels » — Évolution N°6) : ÉCRITURE réservée, sans délégation | ✔ | lecture seule | ✖ |
 | **Options d'un élève** (inscription, fiche élève, « Affecter l'option par défaut » — Évolution N°6) | ✔ | ✔ | ✖ |
+| **Dispenses de matières** (fiche élève ; lecture ET écriture, motif compris) | ✔ | ✔ | ✖ |
 | **Seuils du conseil de classe** (distinctions, note éliminatoire, passage, redoublement — Évolution N°7) : ÉCRITURE réservée | ✔ | lecture seule | lecture seule |
 | **Appliquer les décisions proposées** (fin d'année — Évolution N°7) | ✔ | ✔ | ✖ |
 | **Rapport de rentrée IEF** (aperçu, export PDF/Excel — Évolution N°7) | ✔ | ✔ | ✖ |
@@ -299,6 +300,8 @@ Le Secrétariat compose, télécharge et saisit les observations du conseil (`Re
 | **Volumes horaires par niveau et série** (Évolution N°7) : ÉCRITURE réservée | ✔ | lecture seule | ✖ |
 | **Conformité des emplois du temps** (écarts aux volumes, chevauchements — Évolution N°7) | ✔ | ✔ | ✖ |
 | Export de données (remplace « Sauvegardes/Restaurations » de la v1.0, désormais automatisées côté infrastructure — Volume 9) | ✔ | ✖ | ✖ |
+
+**Dispenses de matières — le motif est une donnée sensible.** Le motif d'une dispense peut être médical (inaptitude, handicap). Il est lu et écrit par **une seule paire de routes** (`GET`/`PUT /api/v1/class-subjects/students/{studentId}/exemptions`), réservées au Directeur et au Secrétariat (`403` pour tout autre rôle, Finance et Enseignant compris), et n'existe sur **aucun** DTO de bulletin (`ExemptSubjectDto` n'a pas de `Reason`), document PDF, journal d'audit, message d'erreur ni trace de l'interface : les messages de validation nomment la matière, jamais le motif. Le motif est validé sans HTML et borné à 200 caractères.
 
 Le barème est exposé par un endpoint dédié (`PUT /schools/current/settings/grading-scale`), distinct du reste des réglages d'établissement (`PUT /schools/current/settings`) : ouvrir ce dernier au Secrétariat lui aurait aussi donné la main sur les formats de matricule, la déconnexion automatique et les mensualités, hors du périmètre de la délégation voulue.
 
@@ -342,7 +345,7 @@ Trois choix appellent une justification :
 |---|---|---|---|---|---|
 | Faire l'appel d'un cours | ✔ (tout cours) | ✔ (tout cours) | ✔ (tout cours) | ✔ (**ses** cours seulement) | ✖ |
 | Lister les cours d'une classe pour l'appel | ✔ | ✔ | ✔ | ✔ (**ses** cours) | ✖ |
-| Émettre un billet d'entrée (avec ou sans cours visé) | ✔ | ✖ | ✔ | ✖ | ✖ |
+| Émettre un billet d'entrée (avec ou sans cours visé, avec ou sans heure d'arrivée) et en lire l'aperçu | ✔ | ✖ | ✔ | ✖ | ✖ |
 | Imprimer le billet d'entrée | ✔ | ✔ | ✔ | ✖ | ✖ |
 | Accepter un billet en classe | ✔ | ✖ | ✖ | ✔ (**titulaire** du cours visé) | ✖ |
 | Annuler un billet non accepté | ✔ | ✖ | ✔ | ✖ | ✖ |

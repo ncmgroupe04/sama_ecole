@@ -22,15 +22,7 @@ public class UpdateUserProfileCommandHandler(
         var actorId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Utilisateur courant inconnu.");
 
-        // Le Directeur corrige ici la fiche D'AUTRUI ; sa propre fiche passe par la voie sécurisée
-        // /auth/change-email (mot de passe requis, sessions révoquées) — même garde que
-        // ChangeUserStatusCommandHandler (on ne peut pas se bloquer soi-même) et ResetUserPasswordCommandHandler.
-        if (request.UserId == actorId)
-        {
-            throw new ValidationException([
-                new ValidationFailure(nameof(request.UserId), "Vous ne pouvez pas modifier votre propre fiche ici — utilisez « Changer mon e-mail ».")
-            ]);
-        }
+        var isSelf = request.UserId == actorId;
 
         // Lecture via EF : la policy RLS + le Global Query Filter garantissent qu'un Directeur ne peut
         // atteindre QUE les comptes de son école. Cibler l'utilisateur d'une autre école renvoie donc
@@ -40,6 +32,19 @@ public class UpdateUserProfileCommandHandler(
             ?? throw new KeyNotFoundException($"Utilisateur {request.UserId} introuvable.");
 
         var email = EmailNormalizer.Normalize(request.Email);
+
+        // Sur SA PROPRE fiche, le nom est librement corrigeable, mais l'e-mail ne l'est pas ici : il
+        // sert à se connecter et à récupérer le compte, donc son changement passe par la voie sécurisée
+        // /auth/change-email (mot de passe actuel requis, sessions révoquées) — sinon une session volée
+        // suffirait à détourner le compte. Renvoyer l'e-mail inchangé (ce que fait la modale) reste accepté.
+        // Ce Handler ne reçoit ni rôle ni statut : rien d'autre à protéger contre l'auto-dégradation
+        // (blocage/suspension de soi-même : ChangeUserStatusCommandHandler).
+        if (isSelf && !string.Equals(email, user.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ValidationException([
+                new ValidationFailure(nameof(request.Email), "Pour changer votre propre e-mail, utilisez « Changer mon e-mail » (mot de passe requis).")
+            ]);
+        }
 
         // Même garde d'unicité GLOBALE (toute la plateforme, pas seulement l'école courante) que
         // CreateUserCommandHandler — en excluant le compte qu'on modifie lui-même, sinon renvoyer le

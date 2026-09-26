@@ -37,9 +37,9 @@ document.addEventListener('alpine:init', () => {
 
         // --- Correction du profil (nom complet / e-mail) : faute de frappe repérée après la création.
         // Distinct de /auth/change-email (libre-service, réservé au titulaire du compte) — voir
-        // UpdateUserProfileCommand. Jamais proposé sur user.isSelf (voir <row-actions> ci-dessous et
-        // la garde serveur équivalente dans le Handler).
-        editProfileTarget: null, // { id }
+        // UpdateUserProfileCommand. Sur user.isSelf, seul le nom est modifiable : le champ e-mail est
+        // désactivé (modale) et le Handler refuse un e-mail différent — voir /auth/change-email.
+        editProfileTarget: null, // { id, isSelf }
         editProfileForm: { fullName: '', email: '' },
         isSavingProfile: false,
         editProfileErrors: {},
@@ -162,7 +162,7 @@ document.addEventListener('alpine:init', () => {
         // ------------------------------------------------------------ Profil (nom / e-mail)
 
         openEditProfile(user) {
-            this.editProfileTarget = { id: user.id };
+            this.editProfileTarget = { id: user.id, isSelf: !!user.isSelf };
             this.editProfileForm = { fullName: user.fullName, email: user.email };
             this.editProfileErrors = {};
         },

@@ -464,6 +464,8 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Programme des classes et options des élèves (Évolution N°6) : FK Restrict vers students,
         // school_years, subjects ET classrooms — les choix d'options d'abord (ils référencent le programme).
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM student_subject_enrollments;");
+        // Dispenses de matières : FK Restrict vers students, subjects ET school_years, donc AVANT les trois.
+        await owner.Database.ExecuteSqlRawAsync("DELETE FROM student_subject_exemptions;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM class_subjects;");
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM subject_coefficient_overrides;");
 

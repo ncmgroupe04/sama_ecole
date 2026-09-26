@@ -1,9 +1,9 @@
 /**
  * Écran des billets d'entrée (Évolution N°5) — côté navigateur.
  *
- *   1. Le cours visé est proposé d'après la classe de l'élève et la date ; le cours en cours (à défaut le
- *      prochain) est présélectionné.
- *   2. Le retard est créé avec `targetScheduleSlotId` (ou null : billet sans cours précis, comme avant).
+ *   1. Les cours du jour de la classe de l'élève sont demandés d'après l'élève et la date : ils décident du
+ *      champ proposé (heure d'arrivée, ou minutes à défaut de cours) — voir billets-arrival.test.mjs.
+ *   2. (Complément N°5 bis : le cours visé n'est plus choisi à la main, le serveur le déduit de l'heure d'arrivée.)
  *   3. Le statut du billet se lit dans la liste ; « Annuler » n'est proposé qu'à la Vie Scolaire / au
  *      Directeur, et seulement tant que le billet est en attente.
  *   4. Annuler appelle POST /billets/{id}/cancel puis recharge la liste ; un refus serveur s'affiche.
@@ -75,32 +75,14 @@ test('les cours du jour de la classe de l\'élève sont demandés avec l\'élèv
     assert.equal(view.todaySlots.length, 3);
 });
 
-test('le cours en cours est présélectionné', async () => {
-    const { view } = await boot();
-    view.form.studentId = 'awa';
-
-    await view.loadTodaySlots();
-
-    assert.equal(view.form.targetScheduleSlotId, 's2');
-});
-
-test('à défaut de cours en cours, le prochain est présélectionné', async () => {
-    const { view } = await boot({ slots: SLOTS.map((s) => ({ ...s, isCurrent: false })) });
-    view.form.studentId = 'awa';
-
-    await view.loadTodaySlots();
-
-    assert.equal(view.form.targetScheduleSlotId, 's3');
-});
-
-test('sans cours ce jour-là, rien n\'est présélectionné (billet sans cours précis)', async () => {
+test('sans cours ce jour-là, l\'écran retombe sur les minutes saisies à la main', async () => {
     const { view } = await boot({ slots: [] });
     view.form.studentId = 'awa';
 
     await view.loadTodaySlots();
 
     assert.equal(view.todaySlots.length, 0);
-    assert.equal(view.form.targetScheduleSlotId, '');
+    assert.equal(view.hasSlots, false);
 });
 
 test('sans élève choisi, aucune requête de cours n\'est envoyée', async () => {
@@ -111,34 +93,7 @@ test('sans élève choisi, aucune requête de cours n\'est envoyée', async () =
     assert.equal(calls.get.some((u) => u.startsWith('/absences/today-slots')), false);
 });
 
-test('le libellé d\'un cours indique l\'horaire, la matière, l\'enseignant et son état', async () => {
-    const { view } = await boot();
-
-    assert.equal(view.slotOptionLabel(SLOTS[1]), '10:00-12:00 · Français (Modou Ba) — en cours');
-    assert.equal(view.slotOptionLabel({ ...SLOTS[0], ticketStatus: 'Issued' }), '08:00-10:00 · Mathématiques (Awa Sow) — billet déjà émis');
-});
-
 // ---------------------------------------------------------------- 2. Création
-
-test('le retard est créé avec le cours visé', async () => {
-    const { view, calls } = await boot();
-    Object.assign(view.form, { studentId: 'awa', minutes: 10, reason: 'Transport', targetScheduleSlotId: 's2' });
-
-    await view.submitCreate();
-
-    const sent = calls.post.find((p) => p.endpoint === '/absences/late-arrivals');
-    assert.equal(sent.body.targetScheduleSlotId, 's2');
-    assert.equal(sent.body.minutes, 10);
-});
-
-test('« Sans cours précis » envoie null, comme avant', async () => {
-    const { view, calls } = await boot();
-    Object.assign(view.form, { studentId: 'awa', minutes: 10, reason: 'Transport', targetScheduleSlotId: '' });
-
-    await view.submitCreate();
-
-    assert.equal(calls.post.find((p) => p.endpoint === '/absences/late-arrivals').body.targetScheduleSlotId, null);
-});
 
 // ---------------------------------------------------------------- 3. Statut et annulation
 

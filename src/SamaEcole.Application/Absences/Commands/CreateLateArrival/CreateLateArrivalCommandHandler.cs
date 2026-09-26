@@ -24,7 +24,8 @@ public class CreateLateArrivalCommandHandler(
     ITenantProvider _tenantProvider,
     IPublisher publisher,
     EntryTicketRegister register,
-    WorkingDayGuard workingDayGuard)
+    WorkingDayGuard workingDayGuard,
+    ArrivalPlanner arrivalPlanner)
     : IRequestHandler<CreateLateArrivalCommand, Guid>
 {
     public async Task<Guid> Handle(CreateLateArrivalCommand request, CancellationToken cancellationToken)
@@ -48,7 +49,30 @@ public class CreateLateArrivalCommandHandler(
 
         AttendanceRecordedEvent? rectification = null;
 
-        if (request.TargetScheduleSlotId is { } slotId)
+        if (request.ArrivalTime is { } arrival)
+        {
+            // Heure d'arrivée (Complément N°5 bis) : tout est DÉDUIT par le serveur — les minutes et le cours visé
+            // du client sont ignorés. Un jour de repos est refusé par le planificateur (422) ; le billet reste
+            // possible sans heure d'arrivée. Le billet, les lignes qu'il touche et l'index unique sont écrits par
+            // UN SEUL SaveChanges plus bas.
+            var arrivalDate = DateOnly.FromDateTime(request.Date);
+            var plan = await arrivalPlanner.PlanAsync(student.ClassroomId, student.Id, arrivalDate, arrival, cancellationToken);
+            var coverage = plan.Coverage;
+
+            var targetSlot = await _context.ScheduleSlots.AsNoTracking()
+                .FirstAsync(s => s.Id == coverage.TargetSlotId!.Value, cancellationToken);
+
+            lateArrival.ArrivalTime = arrival;
+            lateArrival.Minutes = coverage.LateMinutes;
+            lateArrival.TotalMinutes = coverage.TotalMinutes;
+            lateArrival.MissedScheduleSlotIds = coverage.MissedSlotIds.ToArray();
+            lateArrival.TargetScheduleSlotId = coverage.TargetSlotId;
+            lateArrival.Status = EntryTicketStatus.Issued;
+
+            rectification = await register.ApplyAsync(lateArrival, targetSlot, arrivalDate, schoolId, cancellationToken);
+            await register.ApplyMissedAsync(lateArrival, arrivalDate, cancellationToken);
+        }
+        else if (request.TargetScheduleSlotId is { } slotId)
         {
             const string field = nameof(request.TargetScheduleSlotId);
             var date = DateOnly.FromDateTime(request.Date);

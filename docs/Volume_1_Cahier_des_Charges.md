@@ -386,6 +386,35 @@ refuse des seuils incohérents (422).
   des décisions (annuel). Liste par ordre de mérite avec sexe, moyenne, rang, distinction, décision — au PV annuel,
   une décision non prise imprime la proposition (« Proposé : … », en italique).
 
+### 8.10 Dispense d'une matière obligatoire
+
+Un élève peut être **dispensé d'une matière obligatoire** de sa classe pour l'année active — l'EPS pour raison
+médicale, par exemple. Les **options** (LV2, option scientifique) relèvent du §8.8 : un élève qui ne choisit pas une
+option n'est pas « dispensé », il ne la suit simplement pas.
+
+**Qui, où, quoi.** Le Directeur et le Secrétariat, depuis la **fiche élève › section « Dispenses »** : une case par
+matière dispensable et un **motif obligatoire** (200 caractères au plus) pour chaque matière cochée. Sont dispensables
+les matières **obligatoires et autonomes** de la classe de l'élève : celles du programme de la classe si elle en a un
+(matières actives, hors groupe d'options), sinon celles du niveau de la classe ; jamais un domaine ni une activité. La
+dispense vaut pour **l'année active** : une nouvelle année démarre sans aucune dispense.
+
+**Effets.**
+- **Moyennes :** la matière sort du calcul ; le total des coefficients et le total des points sont ceux des matières
+  suivies (Moyenne générale = Total des points ÷ Total des coefficients, comme au §8.3). Elle sort aussi du classement
+  de la matière pour les camarades.
+- **Saisie :** l'élève n'apparaît plus dans la grille de saisie, la fiche papier ni le modèle Excel de la matière ;
+  une note saisie ou importée pour lui sur cette matière est refusée (« Cet élève est dispensé de cette matière »).
+- **Bulletin :** la matière **reste** sur le bulletin, à sa place : « Dispensé(e) » remplace les notes, le
+  coefficient est **barré**, il n'y a ni « Moy x », ni T.H, ni appréciation, et le rang est « — ». Elle est hors des
+  totaux. L'écart au bulletin de référence est validé et consigné dans `docs/design-references/README.md`.
+- **Notes déjà saisies :** conservées en base (aucune suppression), simplement masquées des moyennes. Retirer la
+  dispense les fait revenir. L'écran annonce le nombre de notes qui seront masquées.
+
+**Confidentialité du motif.** Le motif peut être médical. Il n'est lu et écrit que par le Directeur et le Secrétariat,
+et il ne figure sur **aucun** document, bulletin, journal ni message d'erreur.
+
+**Sans dispense, tout est strictement comme avant.**
+
 ---
 
 ## 9. Rôles et permissions
@@ -813,7 +842,15 @@ Seule sous-section de ce chapitre effectivement en production. Elle remplace le 
 - **À l'émission**, si la feuille d'appel du cours existe, la ligne de l'élève passe en **Retard** (minutes du billet) et le statut d'avant est conservé ; sinon, la feuille de l'enseignant **présélectionne** le retard à son ouverture. Une absence rectifiée en retard prévient la famille par le même canal que l'appel (SMS / WhatsApp, selon la formule).
 - L'**enseignant titulaire du cours** (ou le Directeur) **accepte** le billet depuis sa feuille d'appel : il constate ainsi que l'élève est entré en classe. Aucune notification n'est poussée à l'enseignant — le billet apparaît sur sa feuille.
 - Tant qu'il n'est pas accepté, la Vie Scolaire ou le Directeur peut **annuler** le billet : la ligne retrouve son statut d'avant. Un billet **accepté** ne s'annule plus — une erreur se corrige sur la ligne d'appel elle-même. Le billet n'est jamais supprimé.
-- **Hors périmètre** : le billet de **sortie** est inchangé, et un billet ne **justifie** pas les séances manquées plus tôt le même jour (une case « justifier les séances manquées », étudiée au plan, n'est pas construite).
+- **Hors périmètre** : le billet de **sortie** est inchangé.
+
+**Appel à trois statuts et billet par heure d'arrivée (Complément N°5 bis).** Plan et arbitrages C1 à C9 : même document.
+
+- **L'enseignant ne pointe que la présence ou l'absence** : Présent, Absent (justifié), Absent (non justifié). Plus de statut « Retard » ni de saisie de minutes à l'appel. Une ligne issue d'un billet, et tout retard historique, s'affiche en **lecture seule** (« Retard (20 min) — billet »). Le serveur **refuse** (422) une ligne « Retard » sans billet actif : un retard n'a plus d'autre source qu'un billet d'entrée. Les retards déjà enregistrés et le **taux de présence** (« (Présents + Retards) / lignes d'appel ») sont inchangés.
+- **Le surveillant ne saisit que l'heure d'arrivée réelle** de l'élève. Le système en déduit, d'après l'emploi du temps de sa classe : les cours **manqués** (terminés avant l'arrivée), le **retard** en minutes sur le cours en cours (arrivé à 08h15 pour le cours de 08h00 : 15 min), le cours **visé** que l'enseignant acceptera (en cours, sinon le prochain, sinon le dernier manqué) et la **durée totale** (absent de 08h à 10h, présent à 10h : 2 h). Un aperçu calculé par le serveur s'affiche avant l'émission.
+- **Cours manqués justifiés.** À l'émission, la ligne d'un cours manqué déjà appelé passe de « Absent (non justifié) » à « **Absent (justifié)** » ; jamais depuis Présent ou Retard, jamais dans l'autre sens, et aucune ligne n'est créée pour un élève absent de la fiche. Si la fiche n'existe pas encore, la feuille de l'enseignant présélectionne l'absence justifiée. **Annuler** un billet non accepté restaure chaque ligne à son statut d'avant. Le passage « non justifié → justifié » **n'envoie aucun message** à la famille ; seul le retard du cours en cours en envoie un.
+- Un cours **déjà couvert** par un billet actif du même élève le même jour n'est ni re-justifié ni re-visé. Sans cours ce jour-là (jour de repos, classe sans emploi du temps), le billet reste possible **sans heure d'arrivée** : minutes saisies à la main, comme avant.
+- Le billet imprimé porte l'heure d'arrivée, la durée régularisée et le cours manqué (nommé s'il est seul, résumé sinon) — toujours **une seule page A5**.
 
 ---
 

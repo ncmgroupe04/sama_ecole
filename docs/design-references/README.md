@@ -101,6 +101,8 @@ Fichiers : `receipt-reference.png`, `bulletin-reference.png`, `dashboard-referen
 
 **Format d'impression** : **A5 portrait, une seule page, sans débordement — contrainte stricte, sous test de non-régression** (`ReportCardDocumentTests` : un bulletin à 12 disciplines, une grille APC à 18 lignes, un bulletin primaire /10, une classe passerelle, tous en une page). Cohérent avec la règle déjà posée au Volume 1 §8 (ajustement automatique de l'interligne puis du corps entre 3 et 20 lignes, suppression des décimales inutiles). Corps du tableau des disciplines : **8,5 pt** dans le cas courant (≤ 12 disciplines), plancher à 88 % (~7,5 pt) au-delà.
 
+> **Écart validé à la référence (25/09/2026) : la mention « Dispensé(e) ».** Quand un élève est dispensé d'une matière obligatoire (Volume 1 §8.10), la matière **reste** sur son bulletin, à sa place alphabétique, et l'écart est le seul autorisé : *secondaire* — « Dispensé(e) » sur Devoir/Comp/Moy (italique, centré), coefficient **barré**, « Moy x », T.H et appréciation vides, rang « — » ; *primaire* (sans coefficient) — « Dispensé(e) » sur Devoir/Comp/Moy, T.H vide, rang « — » ; *grille APC* — « Dispensé(e) » sur Notes et Sur, appréciation vide. La ligne est **hors des totaux** et le bulletin reste sur **une seule page A5**. Le motif de la dispense n'y figure jamais. **Aucun autre élément du bulletin ne change (règle #12).** Sans dispense, le bulletin est strictement celui de la référence.
+
 ## 3. Dashboard (`dashboard-reference.jpg`) — écran "Vue d'ensemble des élèves"
 
 **Structure générale :**

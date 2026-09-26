@@ -536,7 +536,7 @@ Super Admin, Directeur, Secrétariat.
 **Route :** `/presences`
 
 ### Objectif / Rôle principal
-Saisie de l'appel (absences et retards) par classe et par matière.
+Saisie de l'appel (présence ou absence) par classe, par matière et — depuis l'Évolution N°5 — par cours de l'emploi du temps.
 
 ### Utilisateurs cibles
 **Saisie** : Enseignant (borné à ses propres classes/matières assignées), Directeur, Secrétariat,
@@ -546,6 +546,9 @@ Admin — la Finance en est explicitement exclue, la présence ne relevant pas d
 ### Fonctionnalités clés & règles métier
 - L'appel se soumet par classe, matière, date et période — un enseignant ne peut soumettre que pour ses
   propres classes/matières assignées (même idiome de portée que le Cahier de texte, §11).
+- **L'enseignant ne pointe que Présent, Absent (justifié) ou Absent (non justifié)** — plus de statut « Retard »
+  ni de minutes à l'appel (Complément N°5 bis). Un retard vient d'un billet d'entrée (§16) : la ligne de l'élève
+  s'affiche alors en lecture seule, « Retard — billet », et l'enseignant du cours l'accepte.
 - Chaque absence ou retard enregistré peut déclencher, selon la configuration de l'école, une
   notification SMS et/ou WhatsApp au tuteur (§28.7 de ce guide, canal sortant uniquement).
 - Alimente directement le Rapport d'assiduité (§14) et la génération de Billets (§16) pour un retard.
@@ -569,8 +572,12 @@ Impression officielle A5 d'un billet d'entrée (retard) ou de sortie (départ an
 Super Admin, Directeur, Secrétariat (délivrance à l'accueil), Surveillant.
 
 ### Fonctionnalités clés & règles métier
-- Un **billet d'entrée** est l'impression d'un retard déjà enregistré via Présences — il ne crée pas
-  la donnée, il la met en forme pour la remise en main propre à l'élève.
+- Un **billet d'entrée** se saisit à partir de l'**heure d'arrivée** réelle de l'élève (Complément N°5 bis) :
+  le système calcule, d'après l'emploi du temps de sa classe, les **cours manqués** (passés en « Absent
+  (justifié) » dans l'appel), le **retard** sur le cours en cours et la **durée totale**, avec un aperçu avant
+  validation. Sans cours ce jour-là (repos, pas d'emploi du temps), on saisit les minutes de retard comme avant.
+  L'enseignant du cours visé accepte le billet en classe ; la Vie Scolaire peut l'annuler tant qu'il n'est pas
+  accepté (les lignes d'appel retrouvent leur statut d'avant).
 - Un **billet de sortie** documente une sortie anticipée de l'élève dans la journée.
 - Génération PDF côté serveur, mise en page à points fixes — aucun débordement de page possible.
 
@@ -894,8 +901,10 @@ lui-même (voir ci-dessous).
   obligatoire), réinitialisation de mot de passe, historique des changements de statut — réservé au
   Directeur. **Correction de profil** (`PATCH /users/{id}/profile`, 20/09/2026) : le Directeur peut
   aussi corriger le nom complet et/ou l'e-mail d'un compte géré — typiquement une faute de frappe
-  repérée après la création — sans passer par le changement d'e-mail en libre-service et sans jamais
-  pouvoir cibler sa propre fiche par cette voie.
+  repérée après la création — sans passer par le changement d'e-mail en libre-service. Sur **sa propre
+  ligne** (badge « Vous », crayon seul affiché), le Directeur ne peut corriger que son nom : son e-mail
+  reste changeable uniquement via « Changer mon e-mail » (mot de passe requis, sessions révoquées) ;
+  blocage, suspension, mot de passe et historique restent réservés aux autres comptes.
 - **Changer mon e-mail** (menu de session, libre-service, `POST /auth/change-email`) est réservé au
   **Directeur et au Super Admin** depuis le 20/09/2026 — les comptes que le Directeur crée
   (Secrétariat, Finance, Enseignant, Surveillant) n'ont plus cette option, disparue de leur menu, et
