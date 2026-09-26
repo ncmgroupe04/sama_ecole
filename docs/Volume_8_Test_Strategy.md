@@ -143,6 +143,16 @@ Chaque exigence fonctionnelle reçoit un identifiant unique `REQ-{MODULE}-{NNN}`
 | REQ-FIN-002 | Dépense | `POST /expenses` | `Expenses` | `UNIT-FIN-102` |
 | REQ-FIN-003 | Reçu PDF | `POST /receipts/generate/{paymentId}` | `Receipts` | `E2E-FIN-005` |
 
+**Exemple — Module Abonnements (facturation hybride, 26/09/2026)**
+
+| ID | Exigence | API | Table | Test |
+|---|---|---|---|---|
+| REQ-SUBS-001 | Paiement annuel : forfait de la grille, abonnement prolongé d'un an (Volume 1 §11.6) | `POST /subscriptions/{schoolId}/payments` | `SubscriptionPayments` | `InitiateSubscriptionPaymentEndpointsTests`, `SubscriptionPricingGridTests` |
+| REQ-SUBS-002 | Paiement mensuel : forfait ÷ 12 arrondi au multiple supérieur de 100 FCFA, jamais inférieur au forfait sur 12 mois ; prolongation d'un mois | `POST /subscriptions/{schoolId}/payments` | `SubscriptionPayments` | `SubscriptionPricingGridTests`, `InitiateSubscriptionPaymentEndpointsTests`, `ProcessPaymentWebhookEndpointsTests` |
+| REQ-SUBS-003 | Établissement public : tarif sur devis, paiement en ligne refusé (422) | `POST /subscriptions/{schoolId}/payments` | `Subscriptions` | `InitiateSubscriptionPaymentEndpointsTests` |
+| REQ-SUBS-004 | Grille serveur identique à la grille publiée sur la vitrine | — | — | `SubscriptionPricingGridConsistencyTests` |
+| REQ-SUBS-005 | Historique des paiements avec période couverte (Mensuel / Annuel) | `GET /subscriptions/{schoolId}/payments` | `SubscriptionPayments` | `GetSubscriptionPaymentsEndpointsTests` |
+
 Avant chaque version, une vérification automatique confirme : aucune exigence orpheline, aucune API sans exigence associée, aucun écran non documenté, aucun test manquant.
 
 ## 13. Catalogue des cas de test (extrait de référence)

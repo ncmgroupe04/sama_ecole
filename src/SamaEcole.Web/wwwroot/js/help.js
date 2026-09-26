@@ -61,12 +61,13 @@
                         "l'échec, module après module, alors que l'ordre à suivre est connu d'avance et " +
                         "toujours le même.",
                     procedure: [
-                        "Le bouton de l'assistant s'affiche sur TOUTE la barre supérieure, quel que soit l'écran ouvert — inutile de naviguer vers une adresse particulière.",
+                        "Le bouton « Démarrage » s'affiche sur TOUTE la barre supérieure, quel que soit l'écran ouvert, avec le pourcentage d'avancement — inutile de naviguer vers une adresse particulière. Sur un écran étroit, seul le pourcentage reste visible.",
                         "À la toute première connexion d'un compte Directeur ou Secrétariat, le parcours s'ouvre automatiquement, une seule fois par navigateur.",
                         "Chaque étape affiche pourquoi elle importe et propose un raccourci direct vers l'écran correspondant : « Activer l'année scolaire », « Niveaux & classes », « Configurer les frais »…",
                         "Une étape n'est déverrouillée que si les précédentes, quand elles s'appliquent, sont déjà faites : le parcours impose l'ordre qui évite les blocages en cascade.",
                         "Traitez l'étape depuis son propre écran, puis revenez à l'assistant et cliquez sur « Revérifier » : son état se recalcule depuis la base, jamais par une simple coche manuelle.",
-                        "La grille tarifaire se marque automatiquement « Non applicable » pour un établissement public : elle disparaît du calcul d'avancement plutôt que de rester indéfiniment « à faire »."
+                        "La grille tarifaire se marque automatiquement « Non applicable » pour un établissement public : elle disparaît du calcul d'avancement plutôt que de rester indéfiniment « à faire ».",
+                        "À 100 % du paramétrage, le bouton « Démarrage » disparaît de la barre supérieure : il n'a plus rien à signaler et libère la place. Il réapparaît de lui-même si une étape redevient « à faire » (par exemple après une réinitialisation de l'école en mode test)."
                     ],
                     impacts: [
                         "Toutes les étapes renvoient vers des écrans déjà documentés ailleurs dans ce guide — l'assistant n'introduit aucun nouvel écran, il n'en est que la porte d'entrée ordonnée.",
@@ -75,7 +76,7 @@
                     ],
                     recommandations: [
                         "Suivez l'ordre proposé même si l'envie est de foncer directement sur les élèves : chaque étape verrouillée l'est pour une raison réelle, pas par excès de prudence.",
-                        "Rouvrez l'assistant à tout moment via son bouton — il ne s'ouvre automatiquement qu'une fois, mais reste accessible en permanence pour vérifier ce qu'il reste à faire.",
+                        "Rouvrez l'assistant à tout moment via son bouton tant que le paramétrage n'est pas complet — il ne s'ouvre automatiquement qu'une fois, mais reste accessible pour vérifier ce qu'il reste à faire. Une fois les 100 % atteints, l'absence du bouton est normale : elle signifie que tout est en place.",
                         "Un compte Finance, Enseignant ou Surveillant ne voit jamais ce bouton : ce n'est pas une restriction à signaler, ces rôles n'ont rien à paramétrer au démarrage de l'établissement."
                     ]
                 },
@@ -109,7 +110,7 @@
                         "Années scolaires : création, activation et clôture des exercices, découpage en périodes — trimestres par défaut, semestres ou personnalisé (fiche dédiée « Ouverture et clôture d'une année académique »).",
                         "Notation & mentions : rappel du barème automatique par cycle, seuils de mention du bulletin, et délégation « le Secrétariat gère la configuration des notes ».",
                         "Mensualités & autorisations de caisse : nombre de mensualités par an, et deux interrupteurs réservés au Directeur — « la Finance peut modifier les montants de frais », « la Finance peut supprimer des frais ».",
-                        "Facturation & historique : formule d'abonnement Unikol de l'établissement et historique des paiements d'abonnement (Directeur).",
+                        "Facturation & historique : statut, formule et échéance de l'abonnement Unikol, puis historique des paiements avec leur période couverte, mensuelle ou annuelle (Directeur). Voir la fiche « Comprendre votre abonnement ».",
                         "Paramètres système : format des dates, délai de déconnexion automatique, type d'établissement (Privé / Public — un changement masque ou révèle le module Finance), et la Zone de danger (réinitialisation en mode bac à sable, passage en mode réel).",
                         "Utilisateurs & rôles : création des comptes du personnel et attribution des rôles (Directeur).",
                         "Journal d'audit : registre consultable de toutes les opérations sensibles — auteur, date, valeur antérieure (Directeur).",
@@ -200,7 +201,8 @@
                         "Frais scolaires : les barèmes sont paramétrés par année. Une nouvelle année suppose de reconduire ou de réviser la grille tarifaire.",
                         "Notes et bulletins : les périodes de l'année alimentent directement les écrans de saisie et l'en-tête des bulletins.",
                         "Comptabilité : les rapports financiers et les statistiques de la direction s'établissent sur le périmètre de l'exercice actif.",
-                        "Barre supérieure : l'année active est rappelée en permanence dans l'en-tête de l'application, afin que nul ne travaille par inadvertance sur le mauvais exercice."
+                        "Barre supérieure : l'année active est rappelée en permanence dans l'en-tête de l'application (pastille « 2026-2027 », toujours sur une seule ligne, masquée sur un écran étroit), afin que nul ne travaille par inadvertance sur le mauvais exercice. Pour le Directeur, un clic sur la pastille ouvre la gestion des années ; pour les autres rôles, elle est informative.",
+                        "Date et heure : sur grand écran, la barre supérieure affiche aussi la date du jour et l'heure, mise à jour en continu, avec l'heure en gras et les mois longs abrégés (« Vendredi 25 sept. 2026 • 01:44 »). C'est l'horloge de votre appareil, pas une donnée de l'établissement."
                     ],
                     recommandations: [
                         "N'activez la nouvelle année qu'une fois les frais scolaires reconduits : une inscription enregistrée avant le barème se retrouve sans montant dû.",
@@ -276,7 +278,7 @@
                         "fermerait la purge à la première tentative punirait un Directeur qui hésite encore, ou qui a " +
                         "besoin de refaire un essai après avoir déjà basculé une fois.",
                     procedure: [
-                        "La pastille de la barre supérieure indique en permanence le régime en cours. En mode test, elle devient un avertissement orange « MODE TEST : Cliquez ici pour passer en Mode Réel » : pour le Directeur, un clic mène directement au bloc « Passer en mode réel » de Paramètres › Paramètres système ; pour les autres rôles, c'est un rappel non cliquable.",
+                        "La pastille de la barre supérieure indique en permanence le régime en cours. En mode test, elle devient un badge orange compact « MODE TEST » (sur grand écran, il précise « : Cliquez ici pour passer en Mode Réel » pour le Directeur, « : données d'essai uniquement » pour les autres rôles) ; en mode réel, elle se réduit à une pastille grise « Mode réel », masquée sur un écran étroit. Pour le Directeur, un clic mène directement au bloc « Passer en mode réel » de Paramètres › Paramètres système ; pour les autres rôles, c'est un rappel non cliquable.",
                         "En mode test, une fenêtre d'avertissement s'ouvre à votre arrivée sur Inscriptions, Caisse ou Notes (une fois par session, dès que le paramétrage de base — année, classes et matières, frais, enseignants — est terminé) : n'y saisissez pas de données réelles. Le bouton « Aller aux Paramètres Système » (Directeur) mène à la bascule.",
                         "« Réinitialiser l'école » (disponible en mode test, tant qu'aucun verrouillage définitif n'a été posé) efface tout ce que vous avez saisi ET paramétré : élèves, inscriptions, notes, bulletins, transactions, classes, matières, enseignants, barème des frais, inventaire, paie, comptes du personnel.",
                         "Sont CONSERVÉS par une réinitialisation : votre compte Directeur, la fiche et les réglages de l'établissement, votre abonnement, les années scolaires et leurs trimestres, les mentions, les bâtiments et salles, et le journal d'audit.",
@@ -322,14 +324,21 @@
                         "FORMULE STANDARD : le socle, PLUS les rapports financiers consolidés (ventilation des recettes par cycle, classe et mode de paiement) et l'export comptable au format .xlsx — l'écran Comptabilité › Rapports financiers.",
                         "FORMULE PREMIUM : le socle et les rapports financiers, PLUS les notifications SMS et WhatsApp sortantes vers les parents (retards, absences, impayés, reçus, convocations, bulletins), PLUS le mode groupe scolaire — plusieurs établissements pilotés depuis un même compte.",
                         "La formule en cours et sa date d'expiration se consultent dans Paramètres › Facturation ; un changement de formule se fait auprès de l'éditeur, pas depuis cet écran.",
-                        "TARIFICATION INDICATIVE (à confirmer auprès de l'éditeur) : Primaire environ 10 000 FCFA / mois (100 000 / an), Standard environ 25 000 / mois (250 000 / an), Premium environ 45 000 / mois (450 000 / an)."
+                        "TARIFICATION D'UN ÉTABLISSEMENT PRIVÉ : le montant vient de la grille publiée sur le site Unikol, selon les cycles gérés et la taille déclarés à l'inscription (exemple, un établissement primaire : 150 000 / 250 000 / 350 000 FCFA par an pour un petit, moyen ou grand effectif). La formule (Primaire ou Standard) est déduite de ce profil : Bicycle et Complexe relèvent de Standard, les autres profils de Primaire. Les tarifs publiés font foi ; à défaut de certitude, demandez confirmation à l'éditeur.",
+                        "PAIEMENT ANNUEL OU MENSUEL : sur l'écran de paiement, le champ « Période » propose « Annuel » (par défaut) ou « Mensuel ». Annuel : le forfait de la grille, abonnement prolongé d'un an. Mensuel : ce forfait divisé par 12 et arrondi au multiple SUPÉRIEUR de 100 FCFA, abonnement prolongé d'un mois. Exemples : 150 000 FCFA par an donnent 12 500 par mois ; 250 000 donnent 20 900 par mois (20 833 arrondis à la centaine supérieure).",
+                        "Le tarif mensuel n'est pas publié : il se déduit du forfait, sans majoration. Grâce à l'arrondi supérieur, douze mensualités ne couvrent jamais moins que le forfait annuel — mais peuvent le dépasser de quelques centaines de FCFA.",
+                        "DURÉE COUVERTE : à la confirmation du paiement, l'échéance avance d'un an (annuel) ou d'un mois (mensuel) en mois et années du calendrier, à partir de la plus tardive des deux dates entre aujourd'hui et l'échéance actuelle. Un renouvellement payé en avance ne raccourcit donc jamais la période déjà acquise.",
+                        "ÉTABLISSEMENT PUBLIC : pas de paiement en ligne. Le tarif est fixé par élève, dans une fourchette, et s'établit sur devis ; l'écran de paiement le refuse. Une fois le devis accepté, l'éditeur active l'abonnement de son côté.",
+                        "CODE PROMO / PARRAINAGE : le champ optionnel de l'écran de paiement recalcule le montant à régler avant validation. Un code d'accès offert active l'abonnement sans paiement.",
+                        "HISTORIQUE : Paramètres › Facturation & historique liste chaque paiement avec sa date, son montant, sa période couverte (Mensuel ou Annuel), son moyen de paiement, son statut et sa référence. Les comptes historiques créés sans demande d'inscription conservent la tarification par formule communiquée par l'éditeur."
                     ],
                     impacts: [
                         "Rapports financiers : en formule Primaire, le bouton d'export existe mais reste désactivé et signalé « Standard » — il n'est jamais masqué, pour que le Directeur voie ce qu'une formule supérieure lui apporterait.",
                         "SMS / WhatsApp : en formule Primaire ou Standard, l'option d'envoi est visible mais marquée « Premium » et le serveur refuse tout envoi — le contrôle n'est jamais porté par le seul badge de l'interface.",
                         "Plafonds d'effectif : les repères « jusqu'à 500 élèves », « jusqu'à 2 000 » sont COMMERCIAUX, pas techniques. L'application n'empêche pas d'inscrire un élève de plus : seules les trois fonctionnalités ci-dessus sont réellement verrouillées.",
                         "Expiration : à l'échéance, l'établissement passe en mode restreint (lecture seule, export des données toujours possible) plutôt qu'un blocage total — pour ne jamais empêcher une école de récupérer ses données. Des alertes sont envoyées au Directeur 30, 15 et 7 jours avant.",
-                        "Premier paiement : un établissement nouvellement approuvé mais dont le premier règlement n'est pas encore confirmé n'a accès qu'à l'écran de paiement, à l'exclusion de tout autre module."
+                        "Premier paiement : un établissement nouvellement approuvé mais dont le premier règlement n'est pas encore confirmé n'a accès qu'à l'écran de paiement, à l'exclusion de tout autre module.",
+                        "Confirmation : un paiement n'est pris en compte que lorsque le partenaire de paiement le confirme à Unikol par une notification signée — jamais par le simple retour sur l'application après le règlement. L'abonnement peut donc mettre quelques instants à passer en « Actif » ; en cas d'échec, il reste en attente et vous pouvez retenter."
                     ],
                     recommandations: [
                         "Choisissez d'abord d'après les TROIS fonctionnalités, pas d'après un nombre d'élèves : si vous n'envoyez pas de SMS aux parents et n'avez qu'un établissement, Premium ne vous apporte que les rapports financiers — que Standard offre déjà.",
@@ -848,7 +857,7 @@
                     procedure: [
                         "RÉFÉRENTIEL (Directeur) : onglet « Référentiel », choisissez la matière et le niveau. « Importer la trame nationale » quand elle existe (Mathématiques de 3e), sinon collez un chapitre par ligne, avec la partie du programme.",
                         "Un chapitre se renomme, se déplace (▲ ▼) ou se retire ; un intitulé déjà présent n'est jamais ajouté deux fois.",
-                        "POINTAGE (Enseignant) : au cahier de texte, dès que la classe et la matière sont choisies, cochez les chapitres traités pendant la séance.",
+                        "POINTAGE (Enseignant) : au cahier de texte, dès que la classe et la matière sont choisies, le bloc « Programme traité (facultatif) » liste les chapitres du niveau, groupés par partie, avec le nombre de chapitres cochés : cochez ceux traités pendant la séance. Le même bloc sert à la modification d'une entrée existante. Sans programme saisi pour cette matière et ce niveau, le bloc renvoie vers l'écran Programmes.",
                         "AVANCEMENT : onglet « Avancement » — pour l'année active, part des chapitres pointés par classe et matière, puis moyennes par matière et par enseignant."
                     ],
                     impacts: [
@@ -877,7 +886,8 @@
                     procedure: [
                         "RÉGLAGE (Directeur) : Programmes › Volumes horaires, choisissez le niveau (et la série au lycée), saisissez le volume de l'établissement puis « Enregistrer ». Videz la case pour revenir à la référence.",
                         "Un réglage de série l'emporte sur celui du niveau, qui l'emporte sur la grille de référence.",
-                        "CONTRÔLE : Enseignants › Emploi du temps › Par classe. Sous la grille, chaque matière est dite conforme, sous le volume, au-dessus ou sans référence, avec le total hebdomadaire et les chevauchements qui touchent la classe."
+                        "CONTRÔLE : Enseignants › Emploi du temps, en vue « Par classe », une fois la classe choisie. Le panneau « Conformité aux volumes horaires » apparaît sous la grille et se met à jour quand vous changez de classe. Il rappelle le niveau (et la série) reconnus, le total planifié rapporté au total de référence, puis une ligne par matière : Planifié, Référence, Écart et Statut (Conforme, Sous le volume, Au-dessus ou Sans référence).",
+                        "CHEVAUCHEMENTS : sous le tableau, un encart vert confirme qu'aucun enseignant, aucune salle ni aucune classe n'est placé deux fois sur la même plage ; sinon il devient rouge, indique le nombre de chevauchements touchant la classe, et « Voir le détail » liste la ressource concernée, le jour et les deux créneaux en cause."
                     ],
                     impacts: [
                         "Une matière au choix (LV2, latin/grec) compte une fois : les langues non planifiées du groupe sont ignorées dès qu'une l'est.",

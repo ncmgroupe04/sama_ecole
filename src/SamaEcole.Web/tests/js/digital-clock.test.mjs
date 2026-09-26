@@ -16,7 +16,8 @@ function clockAt(iso) {
     ctx.sandbox.setInterval = () => 0; // pas de minuterie réelle : elle garderait node en vie
     const clock = ctx.component('digitalClock');
     clock.updateClock();
-    return clock.currentTime;
+    // La pastille affiche « date • heure » (l'heure en gras dans une balise distincte, voir _Layout.cshtml).
+    return `${clock.currentDate} • ${clock.currentHour}`;
 }
 
 test('un mois long est abrégé', () => {

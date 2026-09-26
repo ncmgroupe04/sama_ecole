@@ -204,9 +204,10 @@ public class PromoCodesEndpointsTests(AuthApiFactory factory) : IClassFixture<Au
         var result = (await response.Content.ReadFromJsonAsync<InitiateResult>())!;
         result.PaymentId.Should().NotBeNull();
 
-        // Standard/Monthly = 25 000 XOF (InitiateSubscriptionPaymentEndpointsTests) — 20 % de réduction.
+        // Mensuel = forfait de la grille (privé, Primaire, petit : 150 000) ÷ 12 = 12 500 XOF
+        // (InitiateSubscriptionPaymentEndpointsTests) — 20 % de réduction.
         var payment = await factory.GetSubscriptionPaymentAsync(result.PaymentId!.Value);
-        payment!.Amount.Should().Be(20_000m);
+        payment!.Amount.Should().Be(10_000m);
     }
 
     [Fact]
