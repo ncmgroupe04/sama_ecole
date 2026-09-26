@@ -50,7 +50,7 @@ public class CreateDisbursementCommandHandler(
     {
         var disbursement = new Disbursement
         {
-            SchoolId = tenantProvider.CurrentSchoolId.Value,
+            SchoolId = tenantProvider.CurrentSchoolId ?? throw new UnauthorizedAccessException("Tenant is required."),
             Reason = request.Reason,
             Category = request.Category,
             Amount = request.Amount,

@@ -12,9 +12,14 @@ public record SchoolCardDto(
     byte[] QrCodeImage
 );
 
+/// <param name="SchoolLogo">
+/// Octets du logo déjà récupérés par le handler via <c>ISchoolLogoProvider</c> (filtrage SSRF,
+/// taille et délai bornés), une seule fois pour tout le lot — ou <c>null</c> : cartes sans logo.
+/// Le document PDF ne fait jamais lui-même d'appel réseau.
+/// </param>
 public record SchoolCardBatchDto(
     string SchoolName,
-    string? SchoolLogoUrl,
+    byte[]? SchoolLogo,
     string ClassroomName,
     string SchoolYearName,
     string? PhoneNumber,

@@ -48,21 +48,33 @@ public class GetDebtorAgingReportQueryHandler(IApplicationDbContext dbContext, T
             })
             .ToListAsync(cancellationToken);
 
+        // Lignes de frais et échéanciers actifs chargés EN LOT pour tous les débiteurs (deux requêtes au
+        // total) plutôt que deux requêtes PAR débiteur : ToLookup conserve l'ordre SQL au sein de chaque
+        // inscription (IsRecurring puis Designation ; SequenceNo), celui qu'attend le calculateur.
+        var enrollmentIds = debtors.Select(d => d.Enrollment.Id).ToList();
+
+        var linesByEnrollment = (await dbContext.EnrollmentFeeLines.AsNoTracking()
+                .Where(l => enrollmentIds.Contains(l.EnrollmentId))
+                .OrderBy(l => l.IsRecurring)
+                .ThenBy(l => l.Designation)
+                .ToListAsync(cancellationToken))
+            .ToLookup(l => l.EnrollmentId);
+
+        var installmentsByEnrollment = (await (
+                    from p in dbContext.FeeInstallmentPlans.AsNoTracking()
+                    where enrollmentIds.Contains(p.EnrollmentId) && p.Status == FeeInstallmentPlanStatus.Active
+                    join i in dbContext.FeeInstallments.AsNoTracking() on p.Id equals i.FeeInstallmentPlanId
+                    orderby i.SequenceNo
+                    select new { p.EnrollmentId, Installment = i })
+                .ToListAsync(cancellationToken))
+            .ToLookup(x => x.EnrollmentId, x => x.Installment);
+
         var rows = new List<DebtorAgingRow>();
 
         foreach (var debtor in debtors)
         {
-            var lines = await dbContext.EnrollmentFeeLines.AsNoTracking()
-                .Where(l => l.EnrollmentId == debtor.Enrollment.Id)
-                .OrderBy(l => l.IsRecurring)
-                .ThenBy(l => l.Designation)
-                .ToListAsync(cancellationToken);
-
-            var customInstallments = await dbContext.FeeInstallmentPlans.AsNoTracking()
-                .Where(p => p.EnrollmentId == debtor.Enrollment.Id && p.Status == FeeInstallmentPlanStatus.Active)
-                .SelectMany(p => dbContext.FeeInstallments.Where(i => i.FeeInstallmentPlanId == p.Id))
-                .OrderBy(i => i.SequenceNo)
-                .ToListAsync(cancellationToken);
+            var lines = linesByEnrollment[debtor.Enrollment.Id].ToList();
+            var customInstallments = installmentsByEnrollment[debtor.Enrollment.Id].ToList();
 
             var overdue = InstallmentScheduleCalculator
                 .Calculate(debtor.Enrollment.AmountPaid, today, lines, debtor.SchoolYearStart, customInstallments)

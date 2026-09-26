@@ -65,7 +65,7 @@ public class ReportsDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
         var girlId = Guid.CreateVersion7();
         var sheetId = Guid.CreateVersion7();
 
-        await _factory.SeedAsOwnerAsync(async db =>
+        await _factory.SeedAsOwnerAsync(db =>
         {
             db.SchoolYears.Add(new SchoolYear
             {
@@ -100,6 +100,8 @@ public class ReportsDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
                 SchoolId = EcoleId, Plan = SubscriptionPlan.Standard,
                 Status = SubscriptionStatus.Active, ExpiresAt = today.AddDays(30)
             });
+
+            return Task.CompletedTask;
         });
     }
 
@@ -165,7 +167,7 @@ public class ReportsDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
         var s3 = Guid.CreateVersion7();
         var sheetId = Guid.CreateVersion7();
 
-        await _factory.SeedAsOwnerAsync(async db =>
+        await _factory.SeedAsOwnerAsync(db =>
         {
             db.SchoolYears.Add(new SchoolYear { Id = yearId, SchoolId = EcoleId, Label = "2026-2027", StartDate = today.AddMonths(-1), EndDate = today.AddMonths(8), IsActive = true });
             db.Classrooms.Add(new Classroom { Id = classroomId, SchoolId = EcoleId, Name = "CM2 A", Level = "Primaire", Capacity = 40 });
@@ -180,6 +182,8 @@ public class ReportsDashboardEndpointsTests : IClassFixture<AuthApiFactory>, IAs
                 new StudentAttendance { SchoolId = EcoleId, AttendanceSheetId = sheetId, StudentId = s1, Status = AttendanceStatus.Present, LateMinutes = 0 },
                 new StudentAttendance { SchoolId = EcoleId, AttendanceSheetId = sheetId, StudentId = s2, Status = AttendanceStatus.Late, LateMinutes = 5 },
                 new StudentAttendance { SchoolId = EcoleId, AttendanceSheetId = sheetId, StudentId = s3, Status = AttendanceStatus.UnjustifiedAbsence, LateMinutes = 0 });
+
+            return Task.CompletedTask;
         });
 
         var token = await AccessTokenAsync(AuthApiFactory.DirecteurEmail, AuthApiFactory.DirecteurPassword);

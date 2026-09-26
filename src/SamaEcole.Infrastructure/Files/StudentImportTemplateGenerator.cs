@@ -44,7 +44,7 @@ public class StudentImportTemplateGenerator : IStudentImportTemplateGenerator
         sheet.Columns(1, Headers.Length).AdjustToContents();
 
         // Liste déroulante Genre : littéraux directs, pas besoin d'une plage source.
-        sheet.Range("D2:D1000").SetDataValidation().List("M,F");
+        sheet.Range("D2:D1000").CreateDataValidation().List("M,F");
 
         if (classroomNames.Count > 0)
         {
@@ -62,7 +62,7 @@ public class StudentImportTemplateGenerator : IStudentImportTemplateGenerator
             classSheet.Column(1).AdjustToContents();
 
             var classRange = classSheet.Range(2, 1, classroomNames.Count + 1, 1);
-            sheet.Range("E2:E1000").SetDataValidation().List(classRange);
+            sheet.Range("E2:E1000").CreateDataValidation().List(classRange);
         }
 
         sheet.SheetView.FreezeRows(1);

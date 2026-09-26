@@ -396,10 +396,10 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // Écoles et comptes créés PAR les tests (ticket JGK-B01) : sans cette purge, une école créée
         // dans un test resterait provisionnée et fausserait le suivant. Les utilisateurs d'abord :
         // ils référencent les écoles.
-        await owner.Database.ExecuteSqlRawAsync(
+        await owner.Database.ExecuteSqlAsync(
             $"""
              DELETE FROM users
-             WHERE "Id" NOT IN ('{DirecteurId}', '{SecretaireId}', '{SuperAdminId}', '{FinanceId}', '{EnseignantId}');
+             WHERE "Id" NOT IN ({DirecteurId}, {SecretaireId}, {SuperAdminId}, {FinanceId}, {EnseignantId});
              """);
 
         // Encaissements (ticket JGK-F02) : ils référencent l'inscription en Restrict, donc AVANT elle.
@@ -512,16 +512,16 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         // (Restrict), donc AVANT la suppression des écoles. Aucun n'est semé, on peut tout purger.
         await owner.Database.ExecuteSqlRawAsync("DELETE FROM subscriptions;");
 
-        await owner.Database.ExecuteSqlRawAsync(
-            $"""DELETE FROM schools WHERE "Id" <> '{EcoleId}';""");
+        await owner.Database.ExecuteSqlAsync(
+            $"""DELETE FROM schools WHERE "Id" <> {EcoleId};""");
 
         // Remet la fiche de l'école semée à neuf : un PUT /schools/current de test la renomme, et sans
         // cette remise à zéro le test suivant hériterait du nom/adresse modifiés (ordre significatif).
-        await owner.Database.ExecuteSqlRawAsync(
+        await owner.Database.ExecuteSqlAsync(
             $"""
              UPDATE schools
              SET "Name" = 'École de test', "Address" = NULL, "Phone" = NULL, "LogoUrl" = NULL
-             WHERE "Id" = '{EcoleId}';
+             WHERE "Id" = {EcoleId};
              """);
 
         await owner.Database.ExecuteSqlRawAsync(

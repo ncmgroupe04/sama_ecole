@@ -6,7 +6,6 @@
     <Nullable>enable</Nullable>
     <RootNamespace>SamaEcole.Web</RootNamespace>
     <UserSecretsId>sama_ecole-web-dev</UserSecretsId>
-    <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

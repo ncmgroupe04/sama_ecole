@@ -141,9 +141,25 @@ export function loadScripts(files, options = {}) {
     };
 }
 
-/** Laisse les promesses en attente se résoudre (les reprises utilisent setTimeout). */
-export function flush(ms = 20) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+/** Nombre de tours de `setTimeout(0)` drainés après l'attente : profondeur max des chaînes attendues. */
+const ZERO_DELAY_ROUNDS = 5;
+
+/**
+ * Laisse les promesses en attente se résoudre (les reprises utilisent setTimeout).
+ *
+ * L'attente seule ne suffit pas : un code qui enchaîne des `setTimeout(0)` imbriqués (ex.
+ * school-mode-guard.js › present(), qui ouvre la modale au tick SUIVANT la fermeture des autres)
+ * rendait les tests instables sous charge. Si la boucle d'événements est bloquée plus de `ms`, le
+ * premier timer et celui de l'attente expirent dans la même phase : le premier programme le second,
+ * puis l'attente se résout AVANT qu'il ait tourné. Les timers de même délai s'exécutant dans l'ordre
+ * où ils ont été posés, chaque tour de `setTimeout(0)` ci-dessous passe après ceux posés par le tour
+ * précédent : la chaîne est drainée quelle que soit la charge de la machine.
+ */
+export async function flush(ms = 20) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    for (let i = 0; i < ZERO_DELAY_ROUNDS; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
 }
 
 /**
