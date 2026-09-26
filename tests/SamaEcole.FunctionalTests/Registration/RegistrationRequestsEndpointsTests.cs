@@ -32,7 +32,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
         city = "Dakar",
         region = "Dakar",
         estimatedStudentCount = 250,
-        requestedPlan = "Standard",
+        ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small",
         website
     };
 
@@ -46,6 +46,34 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
 
         var result = (await response.Content.ReadFromJsonAsync<RegistrationResult>())!;
         result.TrackingReference.Should().StartWith("REG-");
+    }
+
+    [Fact]
+    public async Task The_School_Type_Is_Mandatory_And_Is_Never_Defaulted_Silently()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/registration-requests", new
+        {
+            directorFullName = "Awa Ndiaye", directorEmail = "sans-type@baobabs.sn", directorPhone = "+221771234567",
+            directorPassword = "Correct-Horse-9", schoolName = "École Sans Type"
+        });
+
+        response.StatusCode.Should().Be((HttpStatusCode)422);
+    }
+
+    [Theory]
+    [InlineData("Private", "Primaire", null)]      // privé sans palier de taille
+    [InlineData("Public", "Bicycle", null)]        // un public gère un seul cycle
+    [InlineData("Public", "Complexe", null)]
+    public async Task An_Offer_Outside_The_Grid_Is_Refused(string ownership, string cycleProfile, string? sizeTier)
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/registration-requests", new
+        {
+            directorFullName = "Awa Ndiaye", directorEmail = $"hors-grille-{ownership}-{cycleProfile}@baobabs.sn".ToLowerInvariant(),
+            directorPhone = "+221771234567", directorPassword = "Correct-Horse-9", schoolName = "École Hors Grille",
+            ownership, cycleProfile, sizeTier
+        });
+
+        response.StatusCode.Should().Be((HttpStatusCode)422);
     }
 
     [Fact]
@@ -70,7 +98,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
             directorPhone = "+221771234567",
             directorPassword = password,
             schoolName = "École Confidentielle",
-            requestedPlan = "Standard"
+            ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
 
         var body = await response.Content.ReadAsStringAsync();
@@ -164,7 +192,7 @@ public class RegistrationRequestsEndpointsTests(AuthApiFactory factory) : IClass
                 directorPhone = "+221771234567",
                 directorPassword = "1234",
                 schoolName = "École Faible",
-                requestedPlan = "Standard"
+                ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
             });
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);

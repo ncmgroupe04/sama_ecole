@@ -48,7 +48,7 @@ public class AdminRegistrationRequestsEndpointsTests(AuthApiFactory factory) : I
             directorPhone = "+221771119988",
             directorPassword = DirectorPassword,
             schoolName,
-            requestedPlan = "Standard"
+            ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
         var reference = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.TrackingReference;
 
@@ -336,7 +336,7 @@ public class AdminRegistrationRequestsEndpointsTests(AuthApiFactory factory) : I
             directorPhone = "+221771119988",
             directorPassword = DirectorPassword,
             schoolName = "École Motif Public",
-            requestedPlan = "Standard"
+            ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
         var reference = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.TrackingReference;
 

@@ -52,7 +52,7 @@ public class SubscriptionReadOnlyMiddlewareTests(AuthApiFactory factory) : IClas
             directorPhone = "+221771119988",
             directorPassword = DirectorPassword,
             schoolName,
-            requestedPlan = "Standard"
+            ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
         var reference = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.TrackingReference;
 

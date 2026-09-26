@@ -170,6 +170,41 @@
         });
 
         /**
+         * Grille tarifaire (#tarifs) : onglet principal (public / privé) + filtre de cycles du privé
+         * (monocycle / bicycle / complexe). Les cartes sont déjà dans le HTML serveur — ici on ne fait
+         * qu'alterner et filtrer. Changer d'onglet remet le filtre sur « tous », pour ne jamais arriver
+         * sur un onglet dont le filtre masquerait toutes les cartes.
+         */
+        Alpine.data('marketingPricing', function (initialAudience) {
+            return {
+                audience: initialAudience || 'public',
+                group: 'tous',
+
+                selectAudience(key) {
+                    this.audience = key;
+                    this.group = 'tous';
+                },
+                isAudience(key) { return this.audience === key; },
+
+                selectGroup(key) { this.group = key; },
+                isGroup(key) { return this.group === key; },
+                shows(key) { return this.group === 'tous' || this.group === key; },
+
+                /** Flèches gauche/droite entre onglets (WAI-ARIA tablist), comme marketingTabs. */
+                move(event, direction) {
+                    var buttons = Array.prototype.slice.call(
+                        event.target.closest('[role="tablist"]').querySelectorAll('[role="tab"]'));
+                    var index = buttons.indexOf(event.target);
+                    if (index === -1) return;
+
+                    var next = buttons[(index + direction + buttons.length) % buttons.length];
+                    next.focus();
+                    next.click();
+                }
+            };
+        });
+
+        /**
          * Accordéon (FAQ, détail des modules). Un seul panneau ouvert à la fois : sur une FAQ, tout
          * déplier repousse la question suivante à plusieurs écrans de distance.
          */

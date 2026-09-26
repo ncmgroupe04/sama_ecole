@@ -45,10 +45,20 @@ public class SchoolRegistrationRequest : AuditableEntity
     /// <summary>Effectif approximatif déclaré par le Directeur (aide le Super Admin à qualifier la demande).</summary>
     public int? EstimatedStudentCount { get; set; }
 
+    /// <summary>Établissement public ou privé — première entrée de la grille tarifaire.</summary>
+    public SchoolOwnership Ownership { get; set; } = SchoolOwnership.Private;
+
+    /// <summary>Cycles gérés (un, deux, ou Maternelle à Lycée) — deuxième entrée de la grille tarifaire.</summary>
+    public SchoolCycleProfile CycleProfile { get; set; } = SchoolCycleProfile.Primaire;
+
+    /// <summary>Palier de taille du forfait PRIVÉ. Null pour un établissement public (facturé par élève, sur devis).</summary>
+    public SchoolSizeTier? SizeTier { get; set; }
+
     /// <summary>
-    /// Plan souhaité — simple préférence déclarée à ce stade, aucun paiement n'est demandé avant validation
-    /// (docs/Volume_1_Cahier_des_Charges.md §11.5). Enum plutôt que FK : le MVP ne matérialise pas de table
-    /// SubscriptionPlans, l'abonnement porte lui-même son plan en enum (voir <see cref="Subscription.Plan"/>).
+    /// Plan d'abonnement DÉRIVÉ de l'offre (voir SubscriptionPricingGrid.PlanFor) — jamais saisi : le demandeur ne
+    /// choisit plus de « formule », il décrit son établissement. Il ne pilote plus que les DROITS de fonctionnalités
+    /// (<see cref="Subscription.Plan"/>) ; le MONTANT, lui, vient de la grille. Enum plutôt que FK : le MVP ne
+    /// matérialise pas de table SubscriptionPlans.
     /// </summary>
     public SubscriptionPlan RequestedPlan { get; set; }
 

@@ -7290,7 +7290,7 @@ components:
 
     RegistrationRequestCreate:
       type: object
-      required: [directorFullName, directorEmail, directorPhone, directorPassword, schoolName, requestedPlan]
+      required: [directorFullName, directorEmail, directorPhone, directorPassword, schoolName, ownership, cycleProfile]
       properties:
         directorFullName: { type: string, maxLength: 200 }
         directorEmail: { type: string, format: email, maxLength: 200 }
@@ -7301,7 +7301,9 @@ components:
         city: { type: string, maxLength: 100 }
         region: { type: string, maxLength: 100 }
         estimatedStudentCount: { type: integer, minimum: 1 }
-        requestedPlan: { type: string, enum: [Primaire, Standard, Premium] }
+        ownership: { type: string, enum: [Private, Public], description: "Établissement privé ou public — première entrée de la grille tarifaire de la vitrine. Aucune valeur par défaut : 422 si absent." }
+        cycleProfile: { type: string, enum: [Primaire, College, Lycee, Bicycle, Complexe], description: "Cycles gérés. Un public gère un seul cycle (Primaire, College, Lycee) ; Bicycle et Complexe sont réservés au privé." }
+        sizeTier: { type: string, enum: [Small, Medium, Large], nullable: true, description: "Palier de taille du forfait PRIVÉ (obligatoire pour un privé, ignoré pour un public). Seuils : bicycle 400 / 800 élèves, grand complexe 500 / 1 000 ; monocycles petit / moyen / grand sans seuil chiffré." }
         website: { type: string, description: "Honeypot anti-spam : champ leurre, DOIT rester vide. Rempli, la soumission est ignorée sans être enregistrée." }
 
     RegistrationRequestCreated:
@@ -7373,7 +7375,10 @@ components:
         city: { type: string, nullable: true }
         region: { type: string, nullable: true }
         estimatedStudentCount: { type: integer, nullable: true }
-        requestedPlan: { type: string, enum: [Primaire, Standard, Premium] }
+        requestedPlan: { type: string, enum: [Primaire, Standard, Premium], description: "Plan d'abonnement DÉDUIT de l'offre (Bicycle / Complexe → Standard, sinon Primaire) : le demandeur ne le choisit plus." }
+        ownership: { type: string, enum: [Private, Public] }
+        cycleProfile: { type: string, enum: [Primaire, College, Lycee, Bicycle, Complexe] }
+        sizeTier: { type: string, enum: [Small, Medium, Large], nullable: true }
         directorFullName: { type: string }
         directorEmail: { type: string, format: email }
         directorPhone: { type: string }

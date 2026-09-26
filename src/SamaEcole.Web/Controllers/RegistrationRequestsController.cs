@@ -43,7 +43,9 @@ public class RegistrationRequestsController(
         string? City,
         string? Region,
         int? EstimatedStudentCount,
-        SubscriptionPlan RequestedPlan,
+        SchoolOwnership? Ownership,
+        SchoolCycleProfile? CycleProfile,
+        SchoolSizeTier? SizeTier,
         string? Website);
 
     [HttpPost]
@@ -78,7 +80,9 @@ public class RegistrationRequestsController(
                 City = request.City,
                 Region = request.Region,
                 EstimatedStudentCount = request.EstimatedStudentCount,
-                RequestedPlan = request.RequestedPlan
+                Ownership = request.Ownership,
+                CycleProfile = request.CycleProfile,
+                SizeTier = request.SizeTier
             },
             cancellationToken);
 

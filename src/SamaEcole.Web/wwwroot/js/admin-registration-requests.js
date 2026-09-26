@@ -74,8 +74,30 @@ document.addEventListener('alpine:init', () => {
             }[status] || 'bg-zinc-800 text-zinc-300';
         },
 
-        planLabel(plan) {
-            return { Primaire: 'Primaire', Standard: 'Standard', Premium: 'Premium' }[plan] || plan;
+        /**
+         * « Privé · Bicycle · 400 à 800 élèves » / « Public · Collège (CEM) · sur devis » : l'offre déclarée à
+         * l'inscription, dans les termes de la grille de la vitrine. Le plan d'abonnement en est DÉDUIT côté
+         * serveur (il ne se choisit plus) et n'est donc plus affiché comme un choix du demandeur.
+         */
+        offerLabel(request) {
+            const isPublic = request.ownership === 'Public';
+            const cycles = {
+                Primaire: isPublic ? 'École élémentaire' : 'Primaire',
+                College: isPublic ? 'Collège (CEM)' : 'Collège',
+                Lycee: 'Lycée',
+                Bicycle: 'Bicycle',
+                Complexe: 'Grand complexe'
+            }[request.cycleProfile] || request.cycleProfile;
+
+            if (isPublic) return `Public · ${cycles} · sur devis`;
+
+            const sizes = request.cycleProfile === 'Bicycle'
+                ? { Small: 'moins de 400 élèves', Medium: '400 à 800 élèves', Large: 'plus de 800 élèves' }
+                : request.cycleProfile === 'Complexe'
+                    ? { Small: 'moins de 500 élèves', Medium: '500 à 1 000 élèves', Large: 'plus de 1 000 élèves' }
+                    : { Small: 'petit', Medium: 'moyen', Large: 'grand' };
+
+            return `Privé · ${cycles}${request.sizeTier ? ' · ' + sizes[request.sizeTier] : ''}`;
         },
 
         formatDate(iso) {

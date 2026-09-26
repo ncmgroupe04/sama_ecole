@@ -5,7 +5,8 @@
 dans `docs/Volume_1_Cahier_des_Charges.md`. Il répond à une seule question — *qu'est-ce qui est dans
 la V1, et qu'est-ce qui n'y est pas ?*
 
-**Dernière mise à jour : 25/09/2026** (Conformité pédagogique et institutionnelle — Évolution N°7 : PV du conseil,
+**Dernière mise à jour : 26/09/2026** (Grille tarifaire de la vitrine, formulaire d'inscription public / privé et
+facturation alignée sur la grille, voir §2 ; Conformité pédagogique et institutionnelle — Évolution N°7 : PV du conseil,
 cartographie IEF, programmes et volumes horaires, voir §2 ; Séries du Baccalauréat, matières par classe et options — Évolution N°6,
 voir §2 ; Appel par cours de l'emploi du temps et billets d'entrée visant
 un cours — Évolution N°5, voir §2 ; Notes — fenêtre de correction de l'Enseignant, saisie par le
@@ -333,6 +334,39 @@ Branche `feature/attendance-arrival-time`, empilée sur `feature/attendance-slot
 dernier manqué ; (3) le mode « Libre » n'a plus de retard manuel ; (4) un billet ne peut plus être émis « sans cours
 précis » depuis l'écran quand la classe a des cours ce jour-là (l'API, elle, l'accepte encore) ; (5) un billet émis
 pendant la soumission d'une fiche peut ne pas être rattaché : l'acceptation reste le point de réconciliation.
+
+### Grille tarifaire, inscription public / privé et facturation (26/09/2026) — livré
+
+Branche `claude/senegal-series-subjects-coefficients-ndqwkq`. Décision commerciale : la vitrine affiche désormais des
+montants FCFA (elle n'en affichait aucun jusque-là).
+
+- **Vitrine `/vitrine#tarifs`** : deux onglets, « Établissements publics » (par élève et par an : école élémentaire
+  500 à 1 000, CEM 1 000, lycée 1 500 ; encart « Pack Collectivités / Mairies ») et « Établissements privés & complexes »
+  (monocycles petit / moyen / grand ; bicycles < 400, 400-800, > 800 élèves ; grands complexes < 500, 500-1 000, > 1 000).
+  Filtre de cycles côté privé, cartes rendues côté serveur (`MarketingCatalog.Pricing`, `_PriceCard.cshtml`),
+  « Inscrire mon école » (formulaire prérempli) et « Demander un devis sur mesure » (WhatsApp). Plus aucune « formule Premium »
+  dans la FAQ ni sur la vitrine ; les SMS aux parents y sont dits « sur devis ».
+- **Connexion** : l'accroche tarifaire et « Voir la grille tarifaire » sont en bas du volet bleu (la carte de connexion est
+  inchangée) ; un lien équivalent est affiché sous le formulaire sur mobile, où le volet est masqué.
+- **Formulaire d'inscription** : « Formule souhaitée » supprimée. Le demandeur choisit Public / Privé (radio, sans valeur par
+  défaut), ses cycles gérés et, pour un privé, sa taille. Colonnes `school_registration_requests.Ownership`, `CycleProfile`,
+  `SizeTier` (migration `AddRegistrationSchoolProfile`, scripts dans `docs/migrations/`). Le plan d'abonnement est **déduit**
+  (`SubscriptionPricingGrid.PlanFor` : Bicycle et Complexe → Standard, le reste → Primaire ; aucune offre n'accorde Premium).
+- **Facturation** : `SubscriptionAmountResolver` est l'unique source du montant (aperçu du code promo et initiation du paiement).
+  Un établissement issu d'une demande approuvée paie le **forfait annuel de la grille** (`SubscriptionPricing:Grid`), quelle que
+  soit la période demandée ; un **public est refusé en ligne (422, « sur devis »)** : le Super Admin active l'abonnement (accès
+  gracieux) une fois le devis accepté. Sans demande d'inscription (comptes historiques, démonstration), la tarification par plan
+  (Primaire / Standard / Premium, valeurs placeholder) reste en vigueur.
+
+**Points de vigilance connus :**
+1. Les montants de la grille figurent à **deux endroits** (texte de la vitrine, `appsettings.json`) : le test
+   `SubscriptionPricingGridConsistencyTests` échoue s'ils divergent.
+2. La correspondance offre → plan (droits SMS / rapports consolidés) est **à confirmer commercialement**.
+3. Un public n'a aucun paiement en ligne tant que le tarif par élève (fourchette 500 à 1 000 FCFA pour l'élémentaire) n'est pas fixé.
+4. Le paiement mensuel n'existe plus pour les établissements de la grille (la grille est annuelle).
+5. **Billets d'absence par plage et appel à trois statuts : NON livrés sur cette branche.** Ils vivent sur
+   `origin/feature/attendance-arrival-time` (billet par heure d'arrivée, migration `AddArrivalTimeToEntryTickets`, 5 commits du
+   25/09/2026), à fusionner séparément. Une première implémentation « absence sur plage » a été écartée au profit de celle-ci.
 
 ### Conformité pédagogique et institutionnelle (25/09/2026) — livré (Évolution N°7)
 

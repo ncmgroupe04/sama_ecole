@@ -12,7 +12,8 @@
     séparation qui empêche la vitrine de redevenir une page de documentation.
 
     Contenu : SamaEcole.Web/Content/MarketingCatalog.cs. Rien ici n'affirme ce que le code ne fait
-    pas — pas de chiffre de clientèle, pas de prix, pas de portail parents (hors périmètre V1).
+    pas — pas de chiffre de clientèle, pas de portail parents (hors périmètre V1). Les prix vivent dans
+    MarketingCatalog.Pricing (décision commerciale du 25/09/2026).
 *@
 
 <!-- ══════════════════════════════════════════════════════════════════ HERO -->
@@ -121,7 +122,7 @@
             <h2 class="mkt-h2 mt-4">Tout votre établissement. Un seul logiciel.</h2>
             <p class="mkt-lead mt-4">
                 Huit domaines, quatorze modules. Le socle métier — élèves, classes, notes,
-                inscriptions, encaissement, bulletins, documents — est inclus dans toutes les formules.
+                inscriptions, encaissement, bulletins, documents — est inclus dans toutes les offres.
             </p>
         </div>
 
@@ -495,47 +496,98 @@
     </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════════════ FORMULES -->
-<section id="tarifs" class="mkt-section bg-slate-50 scroll-mt-16">
+<!-- ══════════════════════════════════════════════════════════════════ TARIFS -->
+@*
+    Grille tarifaire par type d'établissement. Tout le contenu est rendu côté serveur
+    (MarketingCatalog.Pricing) : marketingPricing() (marketing.js) ne fait qu'alterner les onglets et
+    filtrer les groupes de cycles — sans JavaScript, la grille reste dans le HTML livré.
+*@
+<section id="tarifs" class="mkt-section bg-slate-50 scroll-mt-16" x-data="marketingPricing('public')">
     <div class="mkt-container">
         <div class="mx-auto max-w-2xl text-center">
-            <span class="mkt-eyebrow">Formules</span>
-            <h2 class="mkt-h2 mt-4">Une formule pour chaque taille d'établissement.</h2>
+            <span class="mkt-eyebrow">Tarifs</span>
+            <h2 class="mkt-h2 mt-4">Une grille adaptée à votre type d'établissement.</h2>
             <p class="mkt-lead mt-4">
-                Le socle métier est inclus partout. Chaque formule ajoute des capacités adaptées à
-                un effectif et à un mode d'organisation.
+                Public ou privé, un ou plusieurs cycles : choisissez votre profil pour voir le tarif
+                qui vous correspond. Le socle métier est inclus dans toutes les offres.
             </p>
         </div>
 
-        <div class="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            @foreach (var plan in MarketingCatalog.Plans)
-            {
-                <div class="mkt-card @(plan.Recommended ? "border-2 border-primary-600 relative lg:-mt-3 lg:shadow-lg" : "")" data-reveal>
-                    @if (plan.Recommended)
-                    {
-                        <span class="absolute -top-3 left-6 rounded-full bg-primary-600 px-3 py-1 text-xs font-semibold text-white">Recommandée</span>
-                    }
-                    <h3 class="mkt-h3">@plan.Name</h3>
-                    <p class="mt-2 text-sm text-slate-500">@plan.Audience</p>
-                    <ul class="mt-5 space-y-2.5">
-                        @foreach (var item in plan.Includes)
+        @* Onglets principaux : même composant visuel que les autres onglets de la vitrine (mkt-tab). *@
+        <div class="mt-10 flex justify-center">
+            <div class="inline-flex w-full max-w-md flex-col gap-1 rounded-xl bg-slate-100 p-1 sm:w-auto sm:max-w-none sm:flex-row" role="tablist" aria-label="Type d'établissement">
+                @foreach (var audience in MarketingCatalog.Pricing)
+                {
+                    <button type="button" class="mkt-tab justify-center" role="tab" id="tab-tarifs-@audience.Key"
+                            :aria-selected="isAudience('@audience.Key') ? 'true' : 'false'" tabindex="0"
+                            x-on:click="selectAudience('@audience.Key')"
+                            x-on:keydown.arrow-right.prevent="move($event, 1)" x-on:keydown.arrow-left.prevent="move($event, -1)"
+                            aria-controls="panel-tarifs-@audience.Key">@audience.Label</button>
+                }
+            </div>
+        </div>
+
+        @foreach (var audience in MarketingCatalog.Pricing)
+        {
+            var isPublic = audience.Key == "public";
+
+            <div id="panel-tarifs-@audience.Key" role="tabpanel" aria-labelledby="tab-tarifs-@audience.Key"
+                 class="mt-8" x-show="isAudience('@audience.Key')" x-cloak="@(!isPublic)">
+
+                <p class="mx-auto max-w-2xl text-center text-base text-slate-600">@audience.Intro</p>
+
+                @* Sélecteur de cycles : uniquement quand l'onglet a plusieurs groupes (le privé). Des puces qui
+                   passent à la ligne (mkt-filter), pas des onglets : quatre libellés tiennent mal sur un mobile. *@
+                @if (audience.Groups.Count > 1)
+                {
+                    <div class="mt-6 flex flex-wrap justify-center gap-2" role="group" aria-label="Filtrer par nombre de cycles">
+                        <button type="button" class="mkt-filter" :aria-pressed="isGroup('tous') ? 'true' : 'false'"
+                                x-on:click="selectGroup('tous')">Tous les cycles</button>
+                        @foreach (var group in audience.Groups)
                         {
-                            <li class="flex items-start gap-2.5 text-sm text-slate-700">
-                                <icon name="check" class="mt-0.5 h-4 w-4 shrink-0 text-primary-500" />
-                                <span>@item</span>
-                            </li>
+                            <button type="button" class="mkt-filter" :aria-pressed="isGroup('@group.Key') ? 'true' : 'false'"
+                                    x-on:click="selectGroup('@group.Key')">@group.Title</button>
                         }
-                    </ul>
-                    <a href="/inscription?plan=@plan.Name"
-                       class="mkt-btn @(plan.Recommended ? "mkt-btn-primary" : "mkt-btn-secondary") mt-6 w-full">
-                        Demander un devis
+                    </div>
+                }
+
+                <div class="mt-10 space-y-14">
+                    @foreach (var group in audience.Groups)
+                    {
+                        <div x-show="shows('@group.Key')" x-transition:enter.opacity.duration.200ms>
+                            <div class="mb-6 text-center sm:text-left">
+                                <h3 class="text-xl font-bold text-slate-900">@group.Title</h3>
+                                <p class="mt-1 text-sm text-slate-600">@group.Description</p>
+                            </div>
+
+                            <div class="grid gap-6 @(group.Offers.Count == 1 ? "mx-auto max-w-xl grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3")">
+                                @foreach (var offer in group.Offers)
+                                {
+                                    @await Html.PartialAsync("Marketing/_PriceCard", offer)
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* Devis sur mesure : Pack Collectivités / Mairies côté public, hors-grille côté privé. *@
+                <div class="mt-12 flex flex-col items-start gap-4 rounded-2xl border border-primary-200 bg-primary-50 p-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">@audience.Quote.Title</h3>
+                        <p class="mt-1 text-sm text-slate-700">@audience.Quote.Text</p>
+                    </div>
+                    <a href="@MarketingCatalog.QuoteWhatsAppHref" target="_blank" rel="noopener"
+                       class="mkt-btn mkt-btn-primary w-full shrink-0 sm:w-auto">
+                        <icon name="whatsapp" class="h-5 w-5" />
+                        Demander un devis sur mesure
                     </a>
                 </div>
-            }
-        </div>
+            </div>
+        }
+
         <p class="mt-8 text-center text-sm text-slate-500">
-            Les tarifs sont établis avec chaque établissement selon son effectif. Décrivez votre
-            besoin dans le formulaire pour recevoir une proposition chiffrée.
+            Montants annuels exprimés en FCFA. Une question sur votre effectif ou votre type
+            d'établissement&nbsp;? Décrivez votre besoin, nous vous répondons avec une proposition adaptée.
         </p>
     </div>
 </section>

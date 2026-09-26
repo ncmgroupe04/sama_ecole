@@ -47,7 +47,7 @@ public class GrantComplimentaryAccessEndpointsTests(AuthApiFactory factory) : IC
             directorPhone = "+221771119988",
             directorPassword = "Correct-Horse-9",
             schoolName,
-            requestedPlan = "Standard"
+            ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
         var reference = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.TrackingReference;
 

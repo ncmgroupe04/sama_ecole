@@ -495,6 +495,7 @@ document.addEventListener('alpine:init', () => {
         },
         updateClock() {
             const now = new Date();
+            // Mois abrégé (« sept. », « janv. »…) : la pilule reste compacte sans rogner le jour de la semaine.
             const dateStr = now.toLocaleDateString('fr-FR', {
                 weekday: 'long',
                 year: 'numeric',

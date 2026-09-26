@@ -16,7 +16,9 @@ public class SubmitRegistrationRequestValidatorTests
         DirectorPhone = "+221771234567",
         DirectorPassword = "Correct-Horse-9",
         SchoolName = "Complexe Les Baobabs",
-        RequestedPlan = SubscriptionPlan.Standard
+        Ownership = SchoolOwnership.Private,
+        CycleProfile = SchoolCycleProfile.Primaire,
+        SizeTier = SchoolSizeTier.Small
     };
 
     [Fact]
@@ -25,6 +27,51 @@ public class SubmitRegistrationRequestValidatorTests
         var result = _validator.Validate(ValidCommand());
 
         result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Should_Fail_When_The_School_Type_Is_Missing()
+    {
+        var command = ValidCommand() with { Ownership = null };
+
+        _validator.Validate(command).Errors.Should().Contain(e => e.PropertyName == nameof(command.Ownership));
+    }
+
+    [Fact]
+    public void Should_Fail_When_The_Cycles_Are_Missing()
+    {
+        var command = ValidCommand() with { CycleProfile = null };
+
+        _validator.Validate(command).Errors.Should().Contain(e => e.PropertyName == nameof(command.CycleProfile));
+    }
+
+    [Fact]
+    public void A_Private_School_Must_Give_Its_Size()
+    {
+        var command = ValidCommand() with { SizeTier = null };
+
+        _validator.Validate(command).Errors.Should().Contain(e => e.PropertyName == nameof(command.SizeTier));
+    }
+
+    [Theory]
+    [InlineData(SchoolCycleProfile.Primaire)]
+    [InlineData(SchoolCycleProfile.College)]
+    [InlineData(SchoolCycleProfile.Lycee)]
+    public void A_Public_School_With_One_Cycle_And_No_Size_Is_Valid(SchoolCycleProfile profile)
+    {
+        var command = ValidCommand() with { Ownership = SchoolOwnership.Public, CycleProfile = profile, SizeTier = null };
+
+        _validator.Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(SchoolCycleProfile.Bicycle)]
+    [InlineData(SchoolCycleProfile.Complexe)]
+    public void A_Public_School_Cannot_Be_A_Bicycle_Or_A_Complex(SchoolCycleProfile profile)
+    {
+        var command = ValidCommand() with { Ownership = SchoolOwnership.Public, CycleProfile = profile, SizeTier = null };
+
+        _validator.Validate(command).Errors.Should().Contain(e => e.PropertyName == nameof(command.CycleProfile));
     }
 
     [Fact]

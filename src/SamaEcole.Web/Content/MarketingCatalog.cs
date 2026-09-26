@@ -14,8 +14,8 @@ namespace SamaEcole.Web.Content;
 ///
 /// RÈGLE DE RÉDACTION : rien ici ne doit affirmer ce que le code ne fait pas. Chaque module cite
 /// l'écran réel qui l'implémente ; chaque mécanisme de sécurité est vérifiable dans le dépôt. Pas
-/// de chiffre de clientèle, pas de prix (la grille FCFA du CDC §11.1 est marquée « indicative, non
-/// validée commercialement »), pas de portail parents (hors périmètre V1, voir AGENTS.md).
+/// de chiffre de clientèle, pas de portail parents (hors périmètre V1, voir AGENTS.md). Les prix ne
+/// figurent QUE dans <see cref="Pricing"/> (décision commerciale du 25/09/2026, voir son commentaire).
 /// La source des textes de module est HELP_SECTIONS dans wwwroot/js/help.js — si un module y est
 /// ajouté ou renommé, le refléter ici.
 /// </summary>
@@ -58,11 +58,36 @@ public static class MarketingCatalog
 
     public sealed record Guarantee(string Icon, string Title, string Description);
 
-    public sealed record Plan(
+    /// <param name="Label">Palier (« Petit », « Moins de 400 élèves »), ou « Tarif » pour un prix unique.</param>
+    /// <param name="Price">Montant lisible, espaces insécables (« 150 000 FCFA »).</param>
+    public sealed record PriceTier(string Label, string Price);
+
+    /// <param name="Unit">Base de facturation (« par an », « par élève et par an »).</param>
+    /// <param name="Tiers">Un seul palier = prix unique affiché en grand ; plusieurs = liste de paliers.</param>
+    /// <param name="Featured">Carte mise en avant (bordure pleine) — l'offre la plus courante de son groupe.</param>
+    /// <param name="RegisterQuery">Paramètres de /inscription qui préremplissent le type, les cycles (et la taille) — voir registration.js.</param>
+    public sealed record PriceOffer(
         string Name,
         string Audience,
+        string Unit,
+        IReadOnlyList<PriceTier> Tiers,
         IReadOnlyList<string> Includes,
-        bool Recommended);
+        bool Featured,
+        string RegisterQuery = "");
+
+    /// <param name="Key">Clé du filtre de cycles (monocycle, bicycle, complexe) — lue par marketingPricing().</param>
+    public sealed record PriceGroup(string Key, string Title, string Description, IReadOnlyList<PriceOffer> Offers);
+
+    /// <summary>Encart « devis sur mesure » d'un onglet (Pack Collectivités, besoin hors grille).</summary>
+    public sealed record QuoteCallout(string Title, string Text);
+
+    /// <param name="Key">Clé de l'onglet (public, prive).</param>
+    public sealed record PricingAudience(
+        string Key,
+        string Label,
+        string Intro,
+        IReadOnlyList<PriceGroup> Groups,
+        QuoteCallout Quote);
 
     public sealed record Question(string Ask, string Answer);
 
@@ -599,40 +624,143 @@ public static class MarketingCatalog
             "accessible depuis un navigateur ne peut marquer un abonnement comme réglé.")
     ];
 
-    // ═══════════════════════════════════════════════════════════════════════ Formules
+    // ═══════════════════════════════════════════════════════════════════════ Tarification
 
     /// <summary>
-    /// Les trois formules de Domain/Enums/CommonEnums.cs (SubscriptionPlan) et la matrice
-    /// PlanFeatures. AUCUN prix : la grille FCFA du CDC §11.1 est marquée « indicative, non encore
-    /// validée commercialement ». Afficher un montant reviendrait à engager le commerce depuis une vue.
+    /// Grille tarifaire publique par TYPE D'ÉTABLISSEMENT (public / privé) et par cycles gérés. Décision
+    /// commerciale du 25/09/2026 : la vitrine affiche désormais des montants FCFA (elle n'en affichait
+    /// aucun jusque-là). Ces montants vitrine ne sont PAS ceux de SubscriptionPricingOptions (grille par
+    /// formule Primaire/Standard/Premium utilisée par le paiement d'abonnement) : les aligner reste à
+    /// arbitrer avant toute mise en production du paiement.
+    ///
+    /// Les espaces des montants sont insécables (U+00A0) : « 150 000 » ne doit jamais se couper en deux
+    /// lignes. Les paliers des monocycles ne sont pas chiffrés en élèves (« Petit / Moyen / Grand ») :
+    /// n'inventer aucun seuil.
     /// </summary>
-    public static readonly IReadOnlyList<Plan> Plans =
+    public static readonly IReadOnlyList<PricingAudience> Pricing =
     [
-        new("Primaire", "Établissement à effectif réduit — jusqu'à 500 élèves.",
+        new("public", "Établissements publics",
+            "Modèle par élève, adapté au financement par l'APE (Association des Parents d'Élèves) : le coût suit l'effectif réel.",
             [
-                "Élèves, classes, inscriptions et réinscriptions",
-                "Notes, bulletins PDF et présences",
-                "Encaissement, reçus et suivi des impayés",
-                "Examens officiels, inventaire et vie scolaire",
-                "Documents officiels et pièces réglementaires"
+                new("public-cycles", "Un tarif par niveau d'enseignement",
+                    "Chaque type d'établissement public a son tarif, facturé par élève inscrit et par an.",
+                    [
+                        new("Écoles élémentaires", "Primaire uniquement",
+                            "par élève et par an",
+                            [new("Tarif", "500 à 1 000 FCFA")],
+                            [
+                                "Bulletins APC — approche par compétences",
+                                "Vie scolaire : appel, billets d'entrée, discipline",
+                                "Caisse, reçus et suivi des paiements"
+                            ],
+                            Featured: false,
+                            RegisterQuery: "type=public&cycles=Primaire"),
+                        new("Collèges d'enseignement moyen", "CEM uniquement",
+                            "par élève et par an",
+                            [new("Tarif", "1 000 FCFA")],
+                            [
+                                "Bulletins par matière et coefficients",
+                                "Vie scolaire : appel, billets d'entrée, discipline",
+                                "Caisse, reçus et suivi des paiements"
+                            ],
+                            Featured: true,
+                            RegisterQuery: "type=public&cycles=College"),
+                        new("Lycées publics", "Lycée uniquement",
+                            "par élève et par an",
+                            [new("Tarif", "1 500 FCFA")],
+                            [
+                                "Bulletins à coefficients par série",
+                                "Vie scolaire : appel, billets d'entrée, discipline",
+                                "Caisse, reçus et suivi des paiements"
+                            ],
+                            Featured: false,
+                            RegisterQuery: "type=public&cycles=Lycee")
+                    ])
             ],
-            Recommended: false),
+            new("Pack Collectivités / Mairies",
+                "Une commune ou un département finance plusieurs établissements publics d'un coup : " +
+                "un seul devis groupé, un déploiement coordonné.")),
 
-        new("Standard", "Établissement de taille moyenne — jusqu'à 2 000 élèves.",
+        new("prive", "Établissements privés & complexes",
+            "Forfait annuel selon le nombre de cycles gérés et l'effectif de l'établissement.",
             [
-                "Tout ce qui est inclus dans Primaire",
-                "Rapports financiers consolidés par cycle, classe et mode de paiement",
-                "Export comptable au format .xlsx"
-            ],
-            Recommended: true),
+                new("monocycle", "Établissements monocycles",
+                    "Un seul cycle d'enseignement. Le forfait dépend de la taille de l'établissement.",
+                    [
+                        new("Primaire", "Primaire uniquement",
+                            "par an",
+                            [new("Petit", "150 000 FCFA"), new("Moyen", "250 000 FCFA"), new("Grand", "350 000 FCFA")],
+                            [
+                                "Bulletins APC — approche par compétences",
+                                "Vie scolaire : appel, billets d'entrée, discipline",
+                                "Caisse, reçus et suivi des impayés"
+                            ],
+                            Featured: false,
+                            RegisterQuery: "type=prive&cycles=Primaire"),
+                        new("Collège", "Collège uniquement",
+                            "par an",
+                            [new("Petit", "250 000 FCFA"), new("Moyen", "400 000 FCFA"), new("Grand", "550 000 FCFA")],
+                            [
+                                "Bulletins par matière et coefficients",
+                                "Vie scolaire : appel, billets d'entrée, discipline",
+                                "Caisse, reçus et suivi des impayés"
+                            ],
+                            Featured: false,
+                            RegisterQuery: "type=prive&cycles=College"),
+                        new("Lycée", "Lycée uniquement",
+                            "par an",
+                            [new("Petit", "300 000 FCFA"), new("Moyen", "450 000 FCFA"), new("Grand", "600 000 FCFA")],
+                            [
+                                "Bulletins à coefficients par série",
+                                "Vie scolaire : appel, billets d'entrée, discipline",
+                                "Caisse, reçus et suivi des impayés"
+                            ],
+                            Featured: false,
+                            RegisterQuery: "type=prive&cycles=Lycee")
+                    ]),
 
-        new("Premium", "Effectif illimité, ou groupe de plusieurs établissements.",
-            [
-                "Tout ce qui est inclus dans Standard",
-                "Notifications SMS aux parents — retards, absences, impayés, reçus",
-                "Groupe scolaire : plusieurs établissements pilotés depuis un même compte"
+                new("bicycle", "Formules bicycles",
+                    "Deux cycles dans le même établissement, par exemple Primaire + Collège ou Collège + Lycée.",
+                    [
+                        new("Bicycle", "Deux cycles, une seule plateforme",
+                            "par an",
+                            [
+                                new("Moins de 400 élèves", "450 000 FCFA"),
+                                new("400 à 800 élèves", "650 000 FCFA"),
+                                new("Plus de 800 élèves", "850 000 FCFA")
+                            ],
+                            [
+                                "Multi-cycles unifié : un seul abonnement, une seule plateforme",
+                                "Bulletins APC et coefficients, selon le cycle de la classe",
+                                "Vie scolaire : appel, billets d'entrée, discipline",
+                                "Caisse, reçus et suivi des impayés"
+                            ],
+                            Featured: true,
+                            RegisterQuery: "type=prive&cycles=Bicycle")
+                    ]),
+
+                new("complexe", "Grands complexes",
+                    "Maternelle + Primaire + Collège + Lycée réunis dans un même établissement.",
+                    [
+                        new("Grand complexe", "Maternelle, Primaire, Collège et Lycée",
+                            "par an",
+                            [
+                                new("Moins de 500 élèves", "600 000 FCFA"),
+                                new("500 à 1 000 élèves", "850 000 FCFA"),
+                                new("Plus de 1 000 élèves", "1,2 million FCFA")
+                            ],
+                            [
+                                "Multi-cycles unifié : tous les cycles, un seul abonnement",
+                                "Bulletins APC et coefficients, selon le cycle de la classe",
+                                "Vie scolaire : appel, billets d'entrée, discipline",
+                                "Caisse, reçus et suivi des impayés"
+                            ],
+                            Featured: true,
+                            RegisterQuery: "type=prive&cycles=Complexe")
+                    ])
             ],
-            Recommended: false)
+            new("Un besoin qui sort de la grille ?",
+                "Groupe scolaire, effectif atypique, plusieurs sites : nous établissons un devis sur mesure."))
     ];
 
     // ═══════════════════════════════════════════════════════════════════════ FAQ
@@ -642,8 +770,8 @@ public static class MarketingCatalog
         new("Unikol convient-il à une école primaire ?",
             "Oui. Le moteur d'évaluation accepte aussi bien l'Approche par les Compétences du primaire " +
             "sénégalais — domaines, activités, barèmes hétérogènes — que la notation par matière et " +
-            "coefficient du secondaire. La formule Primaire est prévue pour les établissements jusqu'à " +
-            "500 élèves."),
+            "coefficient du secondaire. Un tarif dédié aux écoles élémentaires figure dans la grille " +
+            "tarifaire, côté établissements publics comme privés."),
 
         new("Peut-on gérer plusieurs années scolaires ?",
             "Oui, mais une seule est active à la fois, et cette unicité est garantie par la base de " +
@@ -665,7 +793,7 @@ public static class MarketingCatalog
 
         new("Les parents ont-ils un accès à la plateforme ?",
             "Non, pas dans la version actuelle. La communication vers les familles est sortante : SMS " +
-            "(formule Premium), convocations et documents remis en main propre. Un portail destiné aux " +
+            "(sur devis), convocations et documents remis en main propre. Un portail destiné aux " +
             "parents et aux élèves est prévu pour une version ultérieure."),
 
         new("Peut-on gérer les examens CFEE, BFEM et BAC ?",
@@ -675,8 +803,8 @@ public static class MarketingCatalog
 
         new("Comment suit-on les impayés ?",
             "En temps réel, par classe comme par élève. L'écran Caisse et les rapports financiers " +
-            "donnent le reste à recouvrer et le taux de recouvrement ; la formule Premium ajoute les " +
-            "relances par SMS."),
+            "donnent le reste à recouvrer et le taux de recouvrement ; les relances par SMS sont " +
+            "proposées sur devis."),
 
         new("Unikol fonctionne-t-il sans connexion Internet ?",
             "Non, et c'est un choix assumé : aucune donnée n'est enregistrée localement à titre " +
@@ -700,6 +828,10 @@ public static class MarketingCatalog
     public const string PhoneDisplay = "+221 76 354 59 16";
     public const string PhoneHref = "tel:+221763545916";
     public const string WhatsAppHref = "https://wa.me/221763545916";
+
+    /// <summary>WhatsApp avec message prérempli, pour « Demander un devis sur mesure » (texte URL-encodé).</summary>
+    public const string QuoteWhatsAppHref =
+        "https://wa.me/221763545916?text=Bonjour%2C%20je%20souhaite%20un%20devis%20sur%20mesure%20pour%20mon%20%C3%A9tablissement.";
 
     // ═══════════════════════════════════════════════════════════════════════ Utilitaires de vue
 

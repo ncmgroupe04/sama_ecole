@@ -136,6 +136,44 @@ public enum SubscriptionPlan
 }
 
 /// <summary>
+/// Statut de l'établissement demandeur : public ou privé. Détermine le mode de tarification de la grille
+/// (public : par élève, sur devis ; privé : forfait annuel). Persisté en TEXTE. Valeur par défaut de la
+/// colonne : <see cref="Private"/>, ce qui est le cas de toute demande antérieure à la grille.
+/// </summary>
+public enum SchoolOwnership
+{
+    Private,
+    Public
+}
+
+/// <summary>
+/// Cycles gérés par l'établissement, tels que la grille tarifaire les distingue : un seul cycle
+/// (<see cref="Primaire"/>, <see cref="College"/>, <see cref="Lycee"/>), deux cycles (<see cref="Bicycle"/>,
+/// ex. Primaire + Collège) ou l'ensemble Maternelle à Lycée (<see cref="Complexe"/>). Distinct de
+/// <see cref="CycleType"/>, qui qualifie UNE classe : ici on qualifie l'offre commerciale d'un établissement.
+/// </summary>
+public enum SchoolCycleProfile
+{
+    Primaire,
+    College,
+    Lycee,
+    Bicycle,
+    Complexe
+}
+
+/// <summary>
+/// Taille de l'établissement, palier du forfait privé. Pour les monocycles : petit / moyen / grand (aucun
+/// seuil chiffré dans la grille) ; pour les bicycles et grands complexes, les seuils d'effectif sont ceux
+/// de la grille vitrine (400 / 800 élèves ; 500 / 1 000 élèves).
+/// </summary>
+public enum SchoolSizeTier
+{
+    Small,
+    Medium,
+    Large
+}
+
+/// <summary>
 /// Type de réduction porté par un code promo (module Tarification &amp; Promotions, espace Super
 /// Admin). FreeTrialMonths et FullDiscount ne font transiter aucun argent : ils court-circuitent
 /// l'agrégateur de paiement plutôt que de générer un paiement à 0 FCFA « confirmé » sans webhook

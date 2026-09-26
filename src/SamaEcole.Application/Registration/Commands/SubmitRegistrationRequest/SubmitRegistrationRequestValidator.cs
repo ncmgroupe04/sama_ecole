@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Validation;
 using SamaEcole.Application.Users.Common;
+using SamaEcole.Domain.Enums;
 using FluentValidation;
 
 namespace SamaEcole.Application.Registration.Commands.SubmitRegistrationRequest;
@@ -39,6 +40,21 @@ public class SubmitRegistrationRequestValidator : AbstractValidator<SubmitRegist
             .GreaterThan(0).LessThanOrEqualTo(100_000)
             .When(x => x.EstimatedStudentCount.HasValue);
 
-        RuleFor(x => x.RequestedPlan).IsInEnum();
+        // Profil tarifaire : un choix EXPLICITE de chaque champ (les propriétés sont nullables), puis la cohérence de la
+        // combinaison avec la grille — public : un seul cycle, sans palier ; privé : palier de taille obligatoire.
+        RuleFor(x => x.Ownership).NotNull().WithMessage("Précisez si votre établissement est public ou privé.")
+            .IsInEnum();
+        RuleFor(x => x.CycleProfile).NotNull().WithMessage("Précisez les cycles gérés par votre établissement.")
+            .IsInEnum();
+        RuleFor(x => x.SizeTier).IsInEnum().When(x => x.SizeTier.HasValue);
+
+        RuleFor(x => x.SizeTier)
+            .NotNull().WithMessage("Précisez la taille de votre établissement.")
+            .When(x => x.Ownership == SchoolOwnership.Private);
+
+        RuleFor(x => x.CycleProfile)
+            .Must(profile => profile is SchoolCycleProfile.Primaire or SchoolCycleProfile.College or SchoolCycleProfile.Lycee)
+            .WithMessage("Un établissement public gère un seul cycle : école élémentaire, collège (CEM) ou lycée.")
+            .When(x => x.Ownership == SchoolOwnership.Public && x.CycleProfile.HasValue);
     }
 }

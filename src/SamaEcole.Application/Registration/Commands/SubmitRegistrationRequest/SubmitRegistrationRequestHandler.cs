@@ -2,6 +2,8 @@ using SamaEcole.Application.Common;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
+using SamaEcole.Application.Subscriptions;
 using FluentValidation.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -73,7 +75,13 @@ public class SubmitRegistrationRequestHandler(
             City = string.IsNullOrWhiteSpace(request.City) ? null : request.City.Trim(),
             Region = string.IsNullOrWhiteSpace(request.Region) ? null : request.Region.Trim(),
             EstimatedStudentCount = request.EstimatedStudentCount,
-            RequestedPlan = request.RequestedPlan
+            // Validés non nuls et cohérents (SubmitRegistrationRequestValidator) avant d'arriver ici. Le palier n'a de sens
+            // que pour le privé (forfait) ; un public est facturé par élève, sur devis.
+            Ownership = request.Ownership!.Value,
+            CycleProfile = request.CycleProfile!.Value,
+            SizeTier = request.Ownership == SchoolOwnership.Private ? request.SizeTier : null,
+            // Déduit de l'offre : le demandeur ne choisit plus de « formule » (SubscriptionPricingGrid.PlanFor).
+            RequestedPlan = SubscriptionPricingGrid.PlanFor(request.CycleProfile!.Value)
         };
 
         dbContext.SchoolRegistrationRequests.Add(registrationRequest);
@@ -213,7 +221,8 @@ public class SubmitRegistrationRequestHandler(
              Établissement : {registrationRequest.SchoolName}
              Ville / région : {registrationRequest.City ?? "—"} / {registrationRequest.Region ?? "—"}
              Effectif estimé : {registrationRequest.EstimatedStudentCount?.ToString() ?? "—"}
-             Plan souhaité : {registrationRequest.RequestedPlan}
+             Type : {(registrationRequest.Ownership == SchoolOwnership.Public ? "Public" : "Privé")} — cycles : {registrationRequest.CycleProfile}{(registrationRequest.SizeTier is { } tier ? $" — taille : {tier}" : "")}
+             Plan d'abonnement déduit : {registrationRequest.RequestedPlan}
 
              Directeur : {registrationRequest.DirectorFullName}
              E-mail : {registrationRequest.DirectorEmail}

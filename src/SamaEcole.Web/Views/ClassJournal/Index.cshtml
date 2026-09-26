@@ -154,7 +154,7 @@
                 <p x-show="createErrors.content" x-text="createErrors.content" class="field-error"></p>
             </div>
 
-            @await Html.PartialAsync("_SyllabusChecklist", "newEntry.syllabusUnitIds")
+            @await Html.PartialAsync("~/Views/ClassJournal/_SyllabusChecklist.cshtml", "newEntry.syllabusUnitIds")
             <p x-show="createErrors.syllabusunitids" x-text="createErrors.syllabusunitids" class="field-error"></p>
 
             <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
@@ -242,7 +242,7 @@
                 <p x-show="editErrors.content" x-text="editErrors.content" class="field-error"></p>
             </div>
 
-            @await Html.PartialAsync("_SyllabusChecklist", "editingEntry.syllabusUnitIds")
+            @await Html.PartialAsync("~/Views/ClassJournal/_SyllabusChecklist.cshtml", "editingEntry.syllabusUnitIds")
             <p x-show="editErrors.syllabusunitids" x-text="editErrors.syllabusunitids" class="field-error"></p>
 
             <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
