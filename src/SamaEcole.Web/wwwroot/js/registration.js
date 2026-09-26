@@ -122,7 +122,13 @@ document.addEventListener('alpine:init', () => {
         city: '',
         region: '',
         estimatedStudentCount: '',
-        requestedPlan: 'Standard',
+
+        // Profil tarifaire (grille de la vitrine) : AUCUNE valeur par défaut — le choix est explicite, sans quoi un
+        // établissement public se retrouverait « privé » par simple inattention. ownership : 'Private' | 'Public' ;
+        // cycleProfile : Primaire | College | Lycee | Bicycle | Complexe ; sizeTier : Small | Medium | Large.
+        ownership: '',
+        cycleProfile: '',
+        sizeTier: '',
 
         // Honeypot : DOIT rester vide. Lié au champ leurre `website`.
         website: '',
@@ -132,14 +138,75 @@ document.addEventListener('alpine:init', () => {
         errors: {},
         trackingReference: null,
 
-        // Pré-remplit la formule quand on arrive depuis une carte tarifaire de la vitrine
-        // (/inscription?plan=Premium) — une simple commodité d'affichage, jamais fait confiance
-        // côté serveur : CreateRegistrationRequestCommand revalide requestedPlan indépendamment.
+        // Pré-remplit le profil quand on arrive depuis une carte tarifaire de la vitrine
+        // (/inscription?type=prive&cycles=Bicycle&taille=Medium) — une simple commodité d'affichage, jamais fait
+        // confiance côté serveur : SubmitRegistrationRequestValidator revalide toute la combinaison.
         init() {
-            const plan = new URLSearchParams(window.location.search).get('plan');
-            if (['Primaire', 'Standard', 'Premium'].includes(plan)) {
-                this.requestedPlan = plan;
+            const params = new URLSearchParams(window.location.search);
+            const type = { prive: 'Private', public: 'Public' }[params.get('type')];
+            if (!type) return;
+
+            this.selectOwnership(type);
+
+            const cycles = params.get('cycles');
+            if (this.cycleOptions.some((o) => o.value === cycles)) this.cycleProfile = cycles;
+
+            const taille = params.get('taille');
+            if (this.needsSize && ['Small', 'Medium', 'Large'].includes(taille)) this.sizeTier = taille;
+        },
+
+        /** Cycles proposés : un public gère UN cycle ; un privé peut en réunir deux, ou tous (grille de la vitrine). */
+        get cycleOptions() {
+            if (this.ownership === 'Public') {
+                return [
+                    { value: 'Primaire', label: 'École élémentaire (primaire)' },
+                    { value: 'College', label: "Collège d'enseignement moyen (CEM)" },
+                    { value: 'Lycee', label: 'Lycée' }
+                ];
             }
+            return [
+                { value: 'Primaire', label: 'Primaire uniquement' },
+                { value: 'College', label: 'Collège uniquement' },
+                { value: 'Lycee', label: 'Lycée uniquement' },
+                { value: 'Bicycle', label: 'Deux cycles (ex. Primaire + Collège)' },
+                { value: 'Complexe', label: 'Maternelle, Primaire, Collège et Lycée' }
+            ];
+        },
+
+        /** Le forfait privé dépend de la taille ; le public est facturé par élève, sans palier. */
+        get needsSize() {
+            return this.ownership === 'Private';
+        },
+
+        /** Paliers de taille, avec les seuils d'effectif de la grille pour les bicycles et grands complexes. */
+        get sizeOptions() {
+            if (this.cycleProfile === 'Bicycle') {
+                return [
+                    { value: 'Small', label: 'Moins de 400 élèves' },
+                    { value: 'Medium', label: '400 à 800 élèves' },
+                    { value: 'Large', label: 'Plus de 800 élèves' }
+                ];
+            }
+            if (this.cycleProfile === 'Complexe') {
+                return [
+                    { value: 'Small', label: 'Moins de 500 élèves' },
+                    { value: 'Medium', label: '500 à 1 000 élèves' },
+                    { value: 'Large', label: 'Plus de 1 000 élèves' }
+                ];
+            }
+            return [
+                { value: 'Small', label: 'Petit établissement' },
+                { value: 'Medium', label: 'Établissement moyen' },
+                { value: 'Large', label: 'Grand établissement' }
+            ];
+        },
+
+        /** Changer public/privé invalide ce qui n'existe plus dans l'autre grille (cycle bicycle, palier de taille). */
+        selectOwnership(value) {
+            this.ownership = value;
+            if (!this.cycleOptions.some((o) => o.value === this.cycleProfile)) this.cycleProfile = '';
+            if (!this.needsSize) this.sizeTier = '';
+            this.errors = { ...this.errors, ownership: undefined, cycleprofile: undefined, sizetier: undefined };
         },
 
         /**
@@ -201,6 +268,17 @@ document.addEventListener('alpine:init', () => {
                 }
             }
 
+            // Profil tarifaire : choix explicite, cohérent avec la grille (un public n'a pas de palier de taille).
+            if (!this.ownership) {
+                errors.ownership = 'Précisez si votre établissement est public ou privé.';
+            }
+            if (this.ownership && !this.cycleProfile) {
+                errors.cycleprofile = 'Précisez les cycles gérés par votre établissement.';
+            }
+            if (this.needsSize && !this.sizeTier) {
+                errors.sizetier = 'Précisez la taille de votre établissement.';
+            }
+
             this.errors = errors;
             return Object.keys(errors).length === 0;
         },
@@ -252,7 +330,10 @@ document.addEventListener('alpine:init', () => {
                     estimatedStudentCount: this.estimatedStudentCount === ''
                         ? null
                         : Number(this.estimatedStudentCount),
-                    requestedPlan: this.requestedPlan,
+                    // Le plan d'abonnement n'est plus saisi : le serveur le déduit de ce profil.
+                    ownership: this.ownership,
+                    cycleProfile: this.cycleProfile,
+                    sizeTier: this.needsSize ? this.sizeTier : null,
                     website: this.website
                 });
 

@@ -49,7 +49,7 @@ public class SubscriptionAwaitingPaymentMiddlewareTests(AuthApiFactory factory) 
             directorPhone = "+221771119988",
             directorPassword = DirectorPassword,
             schoolName,
-            requestedPlan = "Standard"
+            ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
         var reference = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.TrackingReference;
 

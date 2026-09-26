@@ -25,7 +25,16 @@ public record SubmitRegistrationRequestCommand : IRequest<SubmitRegistrationRequ
     public string? Region { get; init; }
     public int? EstimatedStudentCount { get; init; }
 
-    public SubscriptionPlan RequestedPlan { get; init; }
+    /// <summary>
+    /// Profil de l'établissement, dans les termes de la grille tarifaire de la vitrine. Nullables pour pouvoir
+    /// EXIGER un choix explicite (un enum non nullable retomberait silencieusement sur sa première valeur).
+    /// Le plan d'abonnement n'est plus saisi : il est déduit du profil (SubscriptionPricingGrid.PlanFor).
+    /// </summary>
+    public SchoolOwnership? Ownership { get; init; }
+    public SchoolCycleProfile? CycleProfile { get; init; }
+
+    /// <summary>Palier de taille — obligatoire pour un établissement privé, ignoré (mis à null) pour un public.</summary>
+    public SchoolSizeTier? SizeTier { get; init; }
 }
 
 /// <summary>

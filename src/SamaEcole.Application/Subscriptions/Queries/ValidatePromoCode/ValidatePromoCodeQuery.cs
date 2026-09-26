@@ -31,7 +31,7 @@ public record ValidatePromoCodeResult(
 public class ValidatePromoCodeQueryHandler(
     IApplicationDbContext dbContext,
     ITenantProvider tenantProvider,
-    ISubscriptionPricingProvider pricingProvider,
+    SubscriptionAmountResolver amountResolver,
     TimeProvider timeProvider)
     : IRequestHandler<ValidatePromoCodeQuery, ValidatePromoCodeResult>
 {
@@ -57,7 +57,7 @@ public class ValidatePromoCodeQueryHandler(
             return new ValidatePromoCodeResult(false, "Ce code promo n'existe pas.", null, null, true);
         }
 
-        var baseAmount = pricingProvider.GetAmount(subscription.Plan, request.BillingPeriod);
+        var baseAmount = (await amountResolver.ResolveAsync(schoolId, subscription.Plan, request.BillingPeriod, cancellationToken)).Amount;
         var evaluation = PromoCodeDiscountCalculator.Evaluate(promoCode, baseAmount, timeProvider.GetUtcNow());
 
         if (!evaluation.IsValid)

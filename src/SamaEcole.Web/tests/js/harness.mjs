@@ -55,10 +55,13 @@ function createEventTarget() {
  * @param {boolean}  options.onLine   valeur initiale de navigator.onLine
  * @param {Function} options.fetch    doublure de fetch
  * @param {object}   options.preload  propriétés posées sur `window` AVANT l'évaluation (ex. auth)
+ * @param {object}   options.document propriétés posées sur `document` AVANT l'évaluation (ex. querySelectorAll)
  */
 export function loadScripts(files, options = {}) {
     const windowTarget = createEventTarget();
-    const documentTarget = createEventTarget();
+    // options.document : propriétés posées sur `document` AVANT l'évaluation, pour les scripts qui lisent le DOM au
+    // chargement (ex. marketing.js : querySelectorAll, readyState).
+    const documentTarget = Object.assign(createEventTarget(), options.document || {});
     const alpineComponents = new Map();
     const alpineStores = new Map();
 

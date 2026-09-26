@@ -13,4 +13,11 @@ public interface ISubscriptionPricingProvider
 {
     /// <summary>Montant en FCFA. Lève <see cref="KeyNotFoundException"/> si aucun tarif n'est configuré pour ce couple.</summary>
     decimal GetAmount(SubscriptionPlan plan, BillingPeriod billingPeriod);
+
+    /// <summary>
+    /// Forfait ANNUEL d'un établissement PRIVÉ selon la grille de la vitrine (cycles × palier de taille), en FCFA.
+    /// Le public (par élève, en fourchette) n'a pas de montant fixe : il n'est pas concerné. Appelé via
+    /// SubscriptionAmountResolver, jamais directement.
+    /// </summary>
+    decimal GetGridAmount(SchoolCycleProfile profile, SchoolSizeTier tier);
 }

@@ -1,4 +1,5 @@
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -34,6 +35,14 @@ public class SchoolRegistrationRequestConfiguration : IEntityTypeConfiguration<S
         builder.Property(r => r.SchoolAddress).HasMaxLength(300);
         builder.Property(r => r.City).HasMaxLength(100);
         builder.Property(r => r.Region).HasMaxLength(100);
+
+        // Profil tarifaire de la grille, en TEXTE (un registre se relit en base des années plus tard). Les valeurs
+        // par défaut couvrent les demandes antérieures à la grille : privé, Primaire, sans palier.
+        builder.Property(r => r.Ownership).HasConversion<string>().HasMaxLength(20).IsRequired()
+            .HasDefaultValue(SchoolOwnership.Private);
+        builder.Property(r => r.CycleProfile).HasConversion<string>().HasMaxLength(20).IsRequired()
+            .HasDefaultValue(SchoolCycleProfile.Primaire);
+        builder.Property(r => r.SizeTier).HasConversion<string>().HasMaxLength(20);
 
         builder.Property(r => r.RequestedPlan).HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);

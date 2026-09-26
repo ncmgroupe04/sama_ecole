@@ -1,9 +1,6 @@
 @{
  ViewData["Title"] = "Inscription de votre établissement";
  Layout = "_AuthLayout";
- var requestedPlanOptions = new List<SelectFieldOption> {
- new("Primaire", "Primaire"), new("Standard", "Standard"), new("Premium", "Premium")
- };
 }
 
 <div class="min-h-screen lg:grid lg:grid-cols-2">
@@ -120,6 +117,29 @@
  <fieldset class="space-y-4">
  <legend class="text-jgk-body font-semibold text-slate-900 mb-1">Votre établissement</legend>
 
+ @* Type d'établissement : choix EXPLICITE (aucune valeur par défaut) — c'est la première entrée de la grille
+    tarifaire de la vitrine (public : par élève, sur devis ; privé : forfait annuel selon cycles et taille). *@
+ <div role="radiogroup" aria-labelledby="ownershipLabel" aria-describedby="ownershipError">
+ <span id="ownershipLabel" class="form-label">Type d'établissement</span>
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ <button type="button" role="radio" x-bind:aria-checked="ownership === 'Public' ? 'true' : 'false'"
+ x-on:click="selectOwnership('Public')"
+ class="rounded-xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+ x-bind:class="ownership === 'Public' ? 'border-primary ring-2 ring-primary/30 bg-primary-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+ <span class="block font-semibold text-slate-900">Public</span>
+ <span class="block text-xs text-slate-500">École élémentaire, CEM ou lycée public.</span>
+ </button>
+ <button type="button" role="radio" x-bind:aria-checked="ownership === 'Private' ? 'true' : 'false'"
+ x-on:click="selectOwnership('Private')"
+ class="rounded-xl border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+ x-bind:class="ownership === 'Private' ? 'border-primary ring-2 ring-primary/30 bg-primary-50' : 'border-slate-200 bg-white hover:bg-slate-50'">
+ <span class="block font-semibold text-slate-900">Privé</span>
+ <span class="block text-xs text-slate-500">Un ou plusieurs cycles, jusqu'au grand complexe.</span>
+ </button>
+ </div>
+ <p id="ownershipError" x-cloak x-show="errors.ownership" x-text="errors.ownership" class="text-red-500 text-xs mt-1" role="alert"></p>
+ </div>
+
  <div>
  <label for="schoolName" class="form-label">Nom de l'établissement</label>
  <input id="schoolName" type="text" x-model="schoolName" required maxlength="200"
@@ -172,11 +192,22 @@
  class="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-jgk-body placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" />
  <p id="estimatedStudentCountError" x-cloak x-show="errors.estimatedstudentcount" x-text="errors.estimatedstudentcount" class="text-red-500 text-xs mt-1" role="alert"</p>
  </div>
- <div>
- <label for="requestedPlan" class="form-label">Formule souhaitée</label>
- <select-field id="requestedPlan" model="requestedPlan" options="requestedPlanOptions" />
+ <div x-show="ownership">
+ <label for="cycleProfile" class="form-label">Cycles gérés</label>
+ <select-field id="cycleProfile" model="cycleProfile" options-expr="cycleOptions" placeholder="Choisissez vos cycles" />
+ <p id="cycleProfileError" x-cloak x-show="errors.cycleprofile" x-text="errors.cycleprofile" class="text-red-500 text-xs mt-1" role="alert"></p>
  </div>
  </div>
+
+ @* Taille : le forfait privé en dépend. Un établissement public est facturé par élève, sur devis. *@
+ <div x-cloak x-show="needsSize && cycleProfile">
+ <label for="sizeTier" class="form-label">Taille de l'établissement</label>
+ <select-field id="sizeTier" model="sizeTier" options-expr="sizeOptions" placeholder="Choisissez la taille" />
+ <p id="sizeTierError" x-cloak x-show="errors.sizetier" x-text="errors.sizetier" class="text-red-500 text-xs mt-1" role="alert"></p>
+ </div>
+ <p x-cloak x-show="ownership === 'Public'" class="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">
+ Le tarif des établissements publics est établi par élève : notre équipe vous adresse un devis après examen de votre demande.
+ </p>
  </fieldset>
 
  <fieldset class="space-y-4 pt-2">

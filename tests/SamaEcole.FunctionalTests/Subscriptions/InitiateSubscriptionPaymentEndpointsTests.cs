@@ -39,8 +39,13 @@ public class InitiateSubscriptionPaymentEndpointsTests(AuthApiFactory factory) :
     private Task<Tokens> LoginAsSuperAdminAsync() =>
         LoginAsync(AuthApiFactory.SuperAdminEmail, AuthApiFactory.SuperAdminPassword);
 
-    /// <summary>Fait naître une école AwaitingPayment de bout en bout via le parcours I01 -> I03 (plan Standard).</summary>
-    private async Task<ApprovalResult> CreateAwaitingPaymentSchoolAsync(string schoolName, string directorEmail)
+    /// <summary>
+    /// Fait naître une école AwaitingPayment de bout en bout via le parcours I01 -> I03. Par défaut : privé, Primaire,
+    /// petit établissement, soit 150 000 FCFA/an dans la grille de la vitrine.
+    /// </summary>
+    private async Task<ApprovalResult> CreateAwaitingPaymentSchoolAsync(
+        string schoolName, string directorEmail,
+        string ownership = "Private", string cycleProfile = "Primaire", string? sizeTier = "Small")
     {
         var submit = await _client.PostAsJsonAsync("/api/v1/registration-requests", new
         {
@@ -49,7 +54,9 @@ public class InitiateSubscriptionPaymentEndpointsTests(AuthApiFactory factory) :
             directorPhone = "+221771119988",
             directorPassword = DirectorPassword,
             schoolName,
-            requestedPlan = "Standard"
+            ownership,
+            cycleProfile,
+            sizeTier
         });
         var reference = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.TrackingReference;
 
@@ -93,10 +100,11 @@ public class InitiateSubscriptionPaymentEndpointsTests(AuthApiFactory factory) :
     }
 
     [Fact]
-    public async Task The_Amount_Should_Be_Computed_Server_Side_From_Plan_And_Billing_Period()
+    public async Task The_Amount_Should_Be_Computed_Server_Side_From_The_Grid_Offer()
     {
-        // Plan "Standard" (soumis dans CreateAwaitingPaymentSchoolAsync) x Monthly = 25 000 XOF
-        // (appsettings.json, SubscriptionPricing — critère : jamais fourni par le client).
+        // Offre « privé, Primaire, petit » (CreateAwaitingPaymentSchoolAsync) = 150 000 XOF par an dans la grille de la
+        // vitrine (appsettings.json, SubscriptionPricing:Grid — critère : jamais fourni par le client). La grille est
+        // annuelle : un paiement « Monthly » demandé est facturé à l'année.
         var approval = await CreateAwaitingPaymentSchoolAsync("École Tarif I05", "tarif-i05@test.sn");
         var director = await LoginAsync("tarif-i05@test.sn", DirectorPassword);
 
@@ -105,12 +113,44 @@ public class InitiateSubscriptionPaymentEndpointsTests(AuthApiFactory factory) :
 
         var payment = await factory.GetSubscriptionPaymentAsync(result.PaymentId);
         payment.Should().NotBeNull();
-        payment!.Amount.Should().Be(25_000m);
+        payment!.Amount.Should().Be(150_000m);
+        payment.BillingPeriod.Should().Be(BillingPeriod.Yearly, "la grille n'a pas de tarif mensuel");
         payment.SubscriptionId.Should().Be(approval.SubscriptionId,
             "la transaction de paiement doit être liée à l'abonnement (préparation du callback JGK-I06)");
         payment.Provider.Should().Be("FakeProvider");
         payment.Status.Should().Be(SubscriptionPaymentStatus.Initiated);
         payment.ProviderTransactionRef.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Theory]
+    [InlineData("Primaire", "Large", 350_000)]
+    [InlineData("College", "Medium", 400_000)]
+    [InlineData("Lycee", "Small", 300_000)]
+    [InlineData("Bicycle", "Large", 850_000)]
+    [InlineData("Complexe", "Large", 1_200_000)]
+    public async Task Each_Offer_Of_The_Grid_Is_Billed_At_Its_Published_Annual_Amount(string cycleProfile, string sizeTier, int expected)
+    {
+        var email = $"grille-{cycleProfile}-{sizeTier}@test.sn".ToLowerInvariant();
+        var approval = await CreateAwaitingPaymentSchoolAsync($"École Grille {cycleProfile} {sizeTier}", email, "Private", cycleProfile, sizeTier);
+        var director = await LoginAsync(email, DirectorPassword);
+
+        var response = await InitiateAsync(director.AccessToken, approval.SchoolId, "BankTransfer", "Yearly");
+        var result = (await response.Content.ReadFromJsonAsync<InitiateResult>())!;
+
+        (await factory.GetSubscriptionPaymentAsync(result.PaymentId))!.Amount.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task A_Public_School_Cannot_Pay_Online_Its_Tariff_Is_Per_Student_On_Quote()
+    {
+        var approval = await CreateAwaitingPaymentSchoolAsync(
+            "CEM Public Tarif", "cem-public@test.sn", "Public", "College", sizeTier: null);
+        var director = await LoginAsync("cem-public@test.sn", DirectorPassword);
+
+        var response = await InitiateAsync(director.AccessToken, approval.SchoolId, "BankTransfer", "Yearly");
+
+        response.StatusCode.Should().Be((HttpStatusCode)422);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("devis");
     }
 
     [Fact]
@@ -130,7 +170,7 @@ public class InitiateSubscriptionPaymentEndpointsTests(AuthApiFactory factory) :
         var result = (await response.Content.ReadFromJsonAsync<InitiateResult>())!;
 
         var payment = await factory.GetSubscriptionPaymentAsync(result.PaymentId);
-        payment!.Amount.Should().Be(25_000m, "le montant vient du barème serveur, jamais du corps de la requête");
+        payment!.Amount.Should().Be(150_000m, "le montant vient du barème serveur, jamais du corps de la requête");
     }
 
     [Fact]

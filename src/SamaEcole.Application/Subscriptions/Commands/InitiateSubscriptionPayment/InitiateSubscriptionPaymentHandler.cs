@@ -25,7 +25,7 @@ public class InitiateSubscriptionPaymentHandler(
     ITenantProvider tenantProvider,
     ICurrentUserService currentUser,
     IPaymentService paymentService,
-    ISubscriptionPricingProvider pricingProvider,
+    SubscriptionAmountResolver amountResolver,
     IAuditLogStore auditLogStore,
     TimeProvider timeProvider)
     : IRequestHandler<InitiateSubscriptionPaymentCommand, InitiateSubscriptionPaymentResult>
@@ -53,7 +53,11 @@ public class InitiateSubscriptionPaymentHandler(
             .AsNoTracking()
             .SingleAsync(u => u.Id == currentUser.UserId, cancellationToken);
 
-        var baseAmount = pricingProvider.GetAmount(subscription.Plan, request.BillingPeriod);
+        // Montant selon l'offre déclarée à l'inscription (grille de la vitrine) ou, pour un compte sans demande,
+        // selon le plan : voir SubscriptionAmountResolver. La période FACTURÉE peut différer de la demandée (grille annuelle).
+        var resolved = await amountResolver.ResolveAsync(schoolId, subscription.Plan, request.BillingPeriod, cancellationToken);
+        var baseAmount = resolved.Amount;
+        var billingPeriod = resolved.BillingPeriod;
 
         // Module Tarification & Promotions — RE-VALIDATION SERVEUR INTÉGRALE (règle #10) : jamais le
         // montant prévisualisé par ValidatePromoCodeQuery, qui n'a d'ailleurs rien réservé (lecture
@@ -107,7 +111,7 @@ public class InitiateSubscriptionPaymentHandler(
 
         var description =
             $"Abonnement Unikol — {school.Name} — {subscription.Plan} "
-            + $"({(request.BillingPeriod == Domain.Enums.BillingPeriod.Monthly ? "mensuel" : "annuel")})";
+            + $"({(billingPeriod == Domain.Enums.BillingPeriod.Monthly ? "mensuel" : "annuel")})";
 
         var initiation = await paymentService.InitiatePaymentAsync(
             new PaymentInitiationRequest(paymentId, schoolId, amount, "XOF", description, director.FullName, director.Email),
@@ -121,7 +125,7 @@ public class InitiateSubscriptionPaymentHandler(
             Amount = amount,
             Currency = "XOF",
             Method = request.Method,
-            BillingPeriod = request.BillingPeriod,
+            BillingPeriod = billingPeriod,
             Provider = paymentService.ProviderName,
             ProviderTransactionRef = initiation.ProviderTransactionRef,
             InitiatedAt = timeProvider.GetUtcNow()

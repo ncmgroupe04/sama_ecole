@@ -41,7 +41,7 @@ public class ProcessPaymentWebhookEndpointsTests(AuthApiFactory factory) : IClas
         LoginAsync(AuthApiFactory.SuperAdminEmail, AuthApiFactory.SuperAdminPassword);
 
     private async Task<ApprovalResult> CreateAwaitingPaymentSchoolAsync(
-        string schoolName, string directorEmail, string plan = "Standard")
+        string schoolName, string directorEmail)
     {
         var submit = await _client.PostAsJsonAsync("/api/v1/registration-requests", new
         {
@@ -50,7 +50,7 @@ public class ProcessPaymentWebhookEndpointsTests(AuthApiFactory factory) : IClas
             directorPhone = "+221771119988",
             directorPassword = DirectorPassword,
             schoolName,
-            requestedPlan = plan
+            ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
         var reference = (await submit.Content.ReadFromJsonAsync<SubmitResult>())!.TrackingReference;
 

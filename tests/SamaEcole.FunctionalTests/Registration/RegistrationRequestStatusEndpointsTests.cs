@@ -35,7 +35,7 @@ public class RegistrationRequestStatusEndpointsTests(AuthApiFactory factory) : I
             directorPhone = DirectorPhone,
             directorPassword = "Correct-Horse-9",
             schoolName,
-            requestedPlan = "Standard"
+            ownership = "Private", cycleProfile = "Primaire", sizeTier = "Small"
         });
 
         var result = (await response.Content.ReadFromJsonAsync<SubmitResult>())!;

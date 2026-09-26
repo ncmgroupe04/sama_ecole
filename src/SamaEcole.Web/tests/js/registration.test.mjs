@@ -29,7 +29,9 @@ function mountValidForm(fetchStub) {
     form.region = 'Diourbel';
     form.schoolAddress = 'Darou Karim';
     form.estimatedStudentCount = 2500;
-    form.requestedPlan = 'Premium';
+    form.selectOwnership('Private');
+    form.cycleProfile = 'Bicycle';
+    form.sizeTier = 'Medium';
     form.directorFullName = 'Cheikh Mbacké Nguirane';
     form.directorEmail = 'nguirane600@gmail.com';
     form.directorPhone = '763545916';
@@ -164,3 +166,129 @@ test('un 422 serveur retombe sous le bon champ (window.api.toFieldErrors)', asyn
     assert.match(form.errors.directorphone, /sénégalais/);
     assert.equal(form.isSubmitting, false);
 });
+
+// ---------------------------------------------------------------- Profil tarifaire (grille de la vitrine)
+
+test('aucun type d\'établissement n\'est présélectionné : le choix est explicite', () => {
+    const form = boot().component('registrationForm');
+
+    assert.equal(form.ownership, '');
+    assert.equal(form.cycleProfile, '');
+    assert.equal(form.sizeTier, '');
+});
+
+test('sans type d\'établissement, la validation refuse et nomme le champ', () => {
+    const { form } = mountValidForm();
+    form.ownership = '';
+
+    assert.equal(form.validate(), false);
+    assert.match(form.errors.ownership, /public ou privé/);
+});
+
+test('un privé doit préciser cycles et taille ; un public n\'a pas de taille à donner', () => {
+    const { form } = mountValidForm();
+    form.selectOwnership('Private');
+    form.cycleProfile = 'Primaire';
+    form.sizeTier = '';
+
+    assert.equal(form.validate(), false);
+    assert.match(form.errors.sizetier, /taille/);
+
+    form.selectOwnership('Public');
+    form.cycleProfile = 'College';
+
+    assert.equal(form.validate(), true);
+    assert.equal(form.needsSize, false);
+});
+
+test('un public gère un seul cycle : ni bicycle ni grand complexe ne lui sont proposés', () => {
+    const { form } = mountValidForm();
+
+    form.selectOwnership('Public');
+    assert.deepEqual(Array.from(form.cycleOptions.map((o) => o.value)), ['Primaire', 'College', 'Lycee']);
+
+    form.selectOwnership('Private');
+    assert.deepEqual(Array.from(form.cycleOptions.map((o) => o.value)),
+        ['Primaire', 'College', 'Lycee', 'Bicycle', 'Complexe']);
+});
+
+test('passer de privé à public efface le bicycle choisi et le palier de taille', () => {
+    const { form } = mountValidForm();
+    form.selectOwnership('Private');
+    form.cycleProfile = 'Bicycle';
+    form.sizeTier = 'Large';
+
+    form.selectOwnership('Public');
+
+    assert.equal(form.cycleProfile, '', 'le bicycle n\'existe pas côté public');
+    assert.equal(form.sizeTier, '', 'le public est facturé par élève, sans palier');
+});
+
+test('les paliers de taille reprennent les seuils d\'effectif de la grille', () => {
+    const { form } = mountValidForm();
+    form.selectOwnership('Private');
+
+    form.cycleProfile = 'Bicycle';
+    assert.match(form.sizeOptions[0].label, /400/);
+
+    form.cycleProfile = 'Complexe';
+    assert.match(form.sizeOptions[0].label, /500/);
+    assert.match(form.sizeOptions[2].label, /1 000/);
+
+    form.cycleProfile = 'Primaire';
+    assert.match(form.sizeOptions[0].label, /Petit/);
+});
+
+test('le formulaire n\'envoie plus de « formule » : il envoie type, cycles et taille', async () => {
+    const calls = [];
+    const fetchStub = async (url, init) => {
+        calls.push(JSON.parse(init.body));
+        return { ok: true, status: 200, json: async () => ({ trackingReference: 'REG-TEST1234' }) };
+    };
+    const { form } = mountValidForm(fetchStub);
+
+    await form.submit();
+
+    assert.equal('requestedPlan' in calls[0], false);
+    assert.equal(calls[0].ownership, 'Private');
+    assert.equal(calls[0].cycleProfile, 'Bicycle');
+    assert.equal(calls[0].sizeTier, 'Medium');
+});
+
+test('un établissement public est envoyé sans palier de taille', async () => {
+    const calls = [];
+    const fetchStub = async (url, init) => {
+        calls.push(JSON.parse(init.body));
+        return { ok: true, status: 200, json: async () => ({ trackingReference: 'REG-TEST1234' }) };
+    };
+    const { form } = mountValidForm(fetchStub);
+    form.selectOwnership('Public');
+    form.cycleProfile = 'College';
+
+    await form.submit();
+
+    assert.equal(calls[0].ownership, 'Public');
+    assert.equal(calls[0].sizeTier, null);
+});
+
+test('arriver depuis une carte de la vitrine préremplit le type et les cycles', () => {
+    const ctx = loadScripts(['api.js', 'registration.js'], {
+        preload: { location: { protocol: 'https:', hostname: 'localhost', pathname: '/inscription', search: '?type=prive&cycles=Bicycle' } }
+    });
+    const form = ctx.component('registrationForm');
+
+    assert.equal(form.ownership, 'Private');
+    assert.equal(form.cycleProfile, 'Bicycle');
+    assert.equal(form.sizeTier, '', 'la taille reste à choisir');
+});
+
+test('un lien de vitrine inconnu ou incohérent ne préremplit rien de faux', () => {
+    const ctx = loadScripts(['api.js', 'registration.js'], {
+        preload: { location: { protocol: 'https:', hostname: 'localhost', pathname: '/inscription', search: '?type=public&cycles=Complexe' } }
+    });
+    const form = ctx.component('registrationForm');
+
+    assert.equal(form.ownership, 'Public');
+    assert.equal(form.cycleProfile, '', 'un public n\'a pas de grand complexe');
+});
+
