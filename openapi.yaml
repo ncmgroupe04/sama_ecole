@@ -6,7 +6,7 @@ info:
     Toutes les routes (sauf /auth/*) exigent un JWT Bearer valide.
     Le tenant (SchoolId) est dérivé du claim `schoolId` du token, jamais d'un paramètre de requête.
     Référence fonctionnelle complète : docs/Volume_4_API_Design.md
-  version: "1.1.0"
+  version: "1.2.0"
 servers:
   - url: https://api.sama-ecole.sn/v1
     description: Production

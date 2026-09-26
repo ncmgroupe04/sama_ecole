@@ -33,7 +33,8 @@
 //          retrait des bandeaux d'état de paiement de l'attestation à l'écran.
 // v1.1.0 — attestation/reçu : suppression du « FCFA » en double sur les totaux ; bouton Fermer de
 //          la modale PDF en rouge plein + libellé.
-const CACHE_NAME = 'samaecole-static-v1.1.0';
+// v1.2.0 — release : facturation hybride, refonte de la topbar, correction des vues partielles.
+const CACHE_NAME = 'samaecole-static-v1.2.0';
 
 const STATIC_ASSETS = [
     '/',
