@@ -7,6 +7,7 @@
     <RootNamespace>SamaEcole.Web</RootNamespace>
     <UserSecretsId>sama_ecole-web-dev</UserSecretsId>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
