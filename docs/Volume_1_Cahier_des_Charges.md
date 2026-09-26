@@ -504,12 +504,23 @@ Tant que l'abonnement est en statut `AwaitingPayment`, le Directeur n'a accès q
 **Règle de sécurité non négociable** : un paiement n'est confirmé **que** par la réception et la vérification (signature HMAC) d'un webhook envoyé par l'agrégateur — jamais par une simple redirection ou déclaration du navigateur du Directeur. Voir Volume 7 (Sécurité) pour le détail.
 
 **Cycle de vie d'un paiement** :
-1. Le Directeur choisit son moyen de paiement et le montant (mensuel ou annuel, selon son plan).
+1. Le Directeur choisit son moyen de paiement et la période à régler (**annuelle ou mensuelle**) ; le montant est **toujours calculé côté serveur** (`SubscriptionAmountResolver`), jamais lu dans la requête (voir « Montant facturé » ci-dessous).
 2. Le système initie une session de paiement auprès de l'agrégateur et redirige le Directeur.
 3. Le Directeur complète le paiement (Mobile Money, carte, ou instructions de virement) sur la page de l'agrégateur.
 4. L'agrégateur notifie la plateforme via webhook signé.
 5. Sur confirmation, l'abonnement passe en statut `Active`, avec une date d'expiration calculée à partir de la période choisie (mensuel/annuel) ; le mode restreint est levé.
 6. En cas d'échec ou d'absence de confirmation, l'abonnement reste `AwaitingPayment` et le Directeur peut retenter.
+
+**Montant facturé** (mis à jour le 26/09/2026 — facturation hybride) : `SubscriptionAmountResolver` est l'unique source du montant, pour l'aperçu du code promo comme pour l'initiation du paiement.
+- **Établissement privé issu d'une demande d'inscription approuvée** : le montant vient de la grille publiée sur la vitrine (cycles gérés × palier de taille, `SubscriptionPricing:Grid`).
+  - **Annuel** : le forfait de la grille ; l'abonnement est prolongé d'**un an**.
+  - **Mensuel** : forfait annuel ÷ 12, **arrondi au multiple supérieur de 100 FCFA** (`Grid:MonthlyRoundingXof`, 100 par défaut) ; l'abonnement est prolongé d'**un mois**. Exemples : 150 000 → 12 500 ; 250 000 → 20 900. Le tarif mensuel n'est pas publié et ne comporte aucune majoration : douze mensualités ne couvrent jamais moins que le forfait, mais peuvent le dépasser de quelques centaines de FCFA.
+  - La période facturée est celle qui a été demandée (`billingPeriod` = `Monthly` ou `Yearly`) ; la formule d'abonnement est **déduite** du profil de cycles (`SubscriptionPricingGrid.PlanFor` : Bicycle et Complexe → Standard, les autres → Primaire).
+- **Établissement public** : le tarif est par élève, dans une fourchette, et s'établit **sur devis**. Aucun paiement en ligne : l'initiation est refusée en `422`. Une fois le devis accepté, le Super Admin active l'abonnement (accès gracieux).
+- **Comptes sans demande d'inscription** (historiques, jeux de démonstration) : tarification par formule (Primaire / Standard / Premium), inchangée.
+- **Code promo** : appliqué au montant ainsi résolu ; un code « mois offerts » active l'abonnement sans créer de paiement (règle #11 : aucun paiement à 0 FCFA).
+
+**Prolongation de l'abonnement** : à la confirmation par webhook, la fonction SQL `confirm_subscription_payment` fixe la nouvelle échéance à `GREATEST(échéance actuelle, aujourd'hui) + 1 an` (annuel) ou `+ 1 mois` (mensuel), en **année et mois calendaires**. Un renouvellement payé en avance ne raccourcit donc jamais la période déjà acquise ; un abonnement expiré repart d'aujourd'hui.
 
 **Renouvellement** : suit exactement le même mécanisme de paiement, déclenché par les alertes d'expiration (§11.2) plutôt que par une approbation Super Admin (déjà acquise depuis la première activation).
 

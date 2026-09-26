@@ -1,6 +1,7 @@
 # Guide fonctionnel des modules — Sama Ecole (Unikol)
 
 **Date de rédaction :** 20/09/2026
+**Dernière mise à jour :** 26/09/2026 — facturation hybride (annuel / mensuel), barre supérieure, volumes horaires et cahier de texte
 **Statut :** synthèse de référence, à relire à chaque évolution significative d'un module.
 
 Ce guide documente **chaque écran de la navigation principale**, un par un — pas de regroupement
@@ -20,6 +21,9 @@ utilisateurs cibles, fonctionnalités clés & règles métier, flux d'utilisatio
 ---
 
 ## Table des matières
+
+**Interface transverse**
+0. [Barre supérieure](#0-barre-supérieure)
 
 **Tableau de bord**
 1. [Tableau de bord](#1-tableau-de-bord)
@@ -58,6 +62,52 @@ utilisateurs cibles, fonctionnalités clés & règles métier, flux d'utilisatio
 26. [Paramètres](#26-paramètres)
 27. [Console Super Admin](#27-console-super-admin)
 28. [Aide & Documentation](#28-aide--documentation)
+
+---
+
+## 0. Barre supérieure
+
+**Présente sur :** tous les écrans authentifiés (spécification visuelle : `docs/Volume_5_UIUX_Design.md` §3.1).
+
+### Objectif / Rôle principal
+Rappeler en permanence, sans rien saisir, **où l'on se trouve et dans quel régime l'on travaille** : écran
+courant, exercice actif, mode test ou réel, avancement du paramétrage. Aucune de ces pastilles n'est un
+module : ce sont des indicateurs, dont deux mènent à l'écran qui permet d'agir.
+
+### Utilisateurs cibles
+Tous les rôles connectés ; certaines pastilles sont réservées (voir ci-dessous).
+
+### Fonctionnalités clés & règles métier
+- **Titre de l'écran** : `shrink-0 whitespace-nowrap`, il ne rétrécit ni ne passe sous l'horloge. Lorsque
+  la place manque, c'est le groupe de droite (`min-w-0`) qui s'adapte, pas le titre.
+- **Horodateur dynamique** (visible dès `lg`) : `Vendredi 25 sept. 2026 • 01:44`. Mois **abrégé** quand
+  il est long (« sept. », « janv. » ; mai, juin, août restent entiers), heure **en gras**, mise à jour
+  chaque seconde. Il lit l'horloge de l'appareil, pas une donnée de l'établissement.
+- **Badge « MODE TEST »** : badge orange **compact**, visible tant que l'établissement est en mode test.
+  Sur grand écran il ajoute « : Cliquez ici pour passer en Mode Réel » (Directeur, cliquable vers
+  Paramètres › Paramètres système, ancre `#mode-reel`) ou « : données d'essai uniquement » (autres rôles,
+  non cliquable). En mode réel, il devient une pastille grise « Mode réel », masquée sous `sm`. Il n'active
+  rien : la bascule elle-même se confirme dans Paramètres (§26).
+- **Année scolaire active** (dès `sm`) : pastille `2026-2027` **toujours sur une seule ligne**
+  (`whitespace-nowrap shrink-0`). Cliquable pour le Directeur (vers la gestion des années), informative
+  pour les autres rôles.
+- **Assistant « Démarrage »** (Directeur et Secrétariat) : pastille avec pourcentage d'avancement du
+  paramétrage de l'établissement. **À 100 %, le bouton disparaît** de la barre, sans laisser d'espace
+  résiduel ; il réapparaît si une étape redevient « à faire » (par exemple après une réinitialisation
+  en mode test). Le pourcentage exclut les étapes « non applicables » (la grille tarifaire d'un
+  établissement public). L'assistant ne configure rien lui-même : il lit l'état réel et renvoie vers
+  les écrans existants.
+- **Sélecteur d'établissement** (groupe scolaire uniquement) et **salutation** selon l'heure complètent
+  la barre. La recherche globale n'est pas livrée ; le raccourci « Aide » et la déconnexion ne sont plus
+  dans la barre supérieure (Aide : menu latéral ; déconnexion : carte de profil du menu latéral).
+
+### Flux d'utilisation typique
+1. À la première connexion d'un Directeur ou d'un Secrétariat, l'assistant « Démarrage » s'ouvre une seule
+   fois ; l'utilisateur suit les étapes, chacune renvoyant vers son écran.
+2. Tant que l'établissement est en mode test, le badge orange rappelle de n'y saisir que des données
+   d'essai ; le Directeur y accède directement à la bascule en mode réel.
+3. Une fois le paramétrage à 100 %, la pastille « Démarrage » s'efface et laisse la place aux autres
+   indicateurs.
 
 ---
 
@@ -345,6 +395,34 @@ Super Admin, Directeur, Secrétariat.
 - Champs STATEDUC repliés et facultatifs (genre, diplôme académique, diplôme professionnel, statut
   administratif, matricule de solde, date de première prise de service) — alimentent le rapport
   annuel STATEDUC (§13 de ce guide) sans jamais bloquer la création d'une fiche.
+- **Emploi du temps — conformité aux volumes horaires** (Évolution N°7, Directeur et Secrétariat). En vue
+  « Par classe », une fois la classe choisie, le panneau « Conformité aux volumes horaires » s'affiche
+  sous la grille :
+  - *Référence.* Chaque matière est comparée à un **volume hebdomadaire de référence** par niveau et, au
+    lycée, par série. Une grille est fournie en code (collège ; Seconde S/L ; Première et Terminale S1,
+    S2, L1a, L1b, L2) ; l'établissement la règle depuis **Programmes › Volumes horaires**
+    (Directeur seul, au quart d'heure, 0 à 40 h). Précédence : réglage de la série > réglage du niveau >
+    grille fournie. « Revenir à la référence » supprime logiquement le réglage.
+  - *Lecture.* Niveau et série reconnus, total planifié rapporté au total de référence, puis une ligne
+    par matière — **Planifié / Référence / Écart / Statut** — avec quatre statuts : Conforme, Sous le
+    volume, Au-dessus, Sans référence. Une matière au choix (LV2, latin/grec) ne compte qu'**une fois** ;
+    si le programme de la classe (Matières par classe) est saisi, seules ses matières sont contrôlées.
+  - *Chevauchements.* Un encart vert confirme l'absence de double occupation d'**enseignant, de salle ou
+    de classe** ; sinon il passe au rouge, compte les chevauchements touchant la classe et « Voir le
+    détail » liste ressource, jour et créneaux en cause. À l'écriture d'un créneau, une salle, un
+    enseignant ou une classe déjà occupés sur la plage sont **refusés** (la salle l'est depuis
+    l'Évolution N°7). Le contrôle est **informatif** : un écart de volume n'empêche jamais la saisie.
+  - *Flux de données.* Le composant `timetableCompliance()` est imbriqué dans `teachersView` : la classe
+    choisie et les créneaux lui sont transmis (`x-effect`) et il se recharge quand l'un des deux change,
+    via `GET /api/v1/hour-volumes/compliance?classroomId=` (Volume 4 §27). Le gabarit est le partiel
+    `Views/Teachers/_TimetableCompliance.cshtml`.
+  - *Rendu.* `PagesController` sert **toutes** les vues : `Html.PartialAsync("_Nom")` ne cherche que dans
+    `Views/Pages` et `Views/Shared`. Les partiels d'un module s'appellent donc par **chemin complet**
+    (`~/Views/Teachers/_TimetableCompliance.cshtml`). Un chemin court provoquait un `500 INTERNAL_ERROR`
+    sur `/enseignants` (corrigé le 26/09/2026) ; `PagesRenderTests` exige désormais du HTML sur chaque
+    route de page.
+- **Le pointage des heures ne se déduit pas de la grille** : l'emploi du temps est une prévision, le
+  pointage (§19) fait foi pour la paie (§22).
 
 ### Flux d'utilisation typique
 1. Le Secrétariat ou le Directeur crée la fiche enseignant, sélectionne ses matières qualifiées.
@@ -352,6 +430,9 @@ Super Admin, Directeur, Secrétariat.
    fiche détaillée si le compte n'existait pas encore à ce moment-là.
 3. L'enseignant ainsi rattaché peut se connecter et n'agit que sur ses propres classes/matières/créneaux
    (Notes, Présences, Cahier de texte, Emploi du temps).
+4. Après avoir construit l'emploi du temps d'une classe, le Directeur ou le Secrétariat ouvre la vue
+   « Par classe » et vérifie la conformité aux volumes horaires et l'absence de chevauchement avant
+   la rentrée.
 
 ---
 
@@ -408,6 +489,21 @@ Secrétariat, Surveillant, Enseignant — document pédagogique partagé, pas un
   Directeur et le Secrétariat peuvent corriger une entrée — et toute correction, qu'elle vienne de
   l'auteur ou d'un rôle élevé, est systématiquement historisée.
 - Écran filtrable par classe, matière et période ; modales de création, détail, édition et suppression.
+- **Programme traité (facultatif)** (Évolution N°7). Dès que la classe et la matière sont choisies, les
+  modales de création **et** d'édition affichent le bloc « Programme traité » : les chapitres de la
+  matière pour le niveau de la classe, groupés par partie, avec le nombre de chapitres cochés. L'entrée
+  enregistre les identifiants cochés (`syllabusUnitIds[]`, `POST`/`PUT /api/v1/class-journal`) ; le serveur
+  **revérifie chaque chapitre** (`422` s'il n'appartient pas au programme de la matière pour ce niveau).
+  Sans programme saisi, le bloc renvoie vers l'écran Programmes.
+- **Avancement de programme** (écran `/programmes`, Directeur et Secrétariat) : pour l'année active, un
+  chapitre est « couvert » dès qu'une séance journalisée le mentionne. Une séance sans chapitre coché
+  reste valable au cahier de texte mais **ne compte pas** dans l'avancement. Le programme (référentiel) est
+  saisi par le Directeur ; la trame nationale n'est fournie que pour les Mathématiques de 3e, ailleurs
+  un chapitre par ligne.
+- **Rendu du composant partagé.** Le bloc est le partiel `Views/ClassJournal/_SyllabusChecklist.cshtml`,
+  appelé deux fois depuis `ClassJournal/Index.cshtml` (création : `newEntry.syllabusUnitIds` ; édition :
+  `editingEntry.syllabusUnitIds`) **par chemin complet** — comme pour la conformité de l'emploi du temps
+  (§9), un chemin court renvoyait un `500` sur `/cahier-de-texte` (corrigé le 26/09/2026).
 
 ### Flux d'utilisation typique
 1. Un Enseignant, après une séance qu'il vient d'assurer, journalise ce qui a été traité et les devoirs
@@ -910,6 +1006,39 @@ lui-même (voir ci-dessous).
   (Secrétariat, Finance, Enseignant, Surveillant) n'ont plus cette option, disparue de leur menu, et
   gardent uniquement « Changer mon mot de passe » : la correction de leur e-mail passe désormais par le
   Directeur (point précédent), pour ne pas le solliciter à chaque demande évitable.
+- **Facturation & historique** (Directeur) : statut, formule et échéance de l'abonnement, puis
+  historique paginé des paiements — date, montant, **période couverte (Mensuel / Annuel)**, moyen de
+  paiement, statut, référence (`GET /api/v1/subscriptions/{schoolId}/payments`). Écran en lecture : le
+  règlement se fait sur l'écran de paiement (voir ci-dessous). Spécification : Volume 1 §11.6.
+- **Facturation hybride — annuel ou mensuel** (26/09/2026). Pour un **établissement privé issu d'une
+  demande d'inscription approuvée**, le Directeur choisit la période sur l'écran de paiement (« Annuel »
+  par défaut). Le montant est **toujours résolu côté serveur** (`SubscriptionAmountResolver`, source
+  unique de l'aperçu du code promo comme de l'initiation) :
+  - **Annuel** : le forfait de la grille de la vitrine (cycles gérés × palier de taille,
+    `SubscriptionPricing:Grid`) ; abonnement prolongé d'**un an**.
+  - **Mensuel** : forfait annuel **÷ 12, arrondi au multiple supérieur de 100 FCFA**
+    (`Grid:MonthlyRoundingXof`) ; abonnement prolongé d'**un mois**. Exemples : 150 000 → 12 500 ;
+    250 000 → 20 900. Ce tarif n'est pas publié et n'ajoute aucune majoration : douze mensualités ne
+    couvrent jamais moins que le forfait, mais peuvent le dépasser de quelques centaines de FCFA.
+  - La formule est **déduite** du profil de cycles (Bicycle et Complexe → Standard ; les autres →
+    Primaire) ; aucune offre de la grille n'accorde Premium (correspondance à confirmer
+    commercialement).
+  - **Établissement public : sur devis uniquement.** Le tarif est par élève, dans une fourchette ;
+    l'initiation d'un paiement en ligne répond `422`. Le Super Admin active l'abonnement (accès
+    gracieux) une fois le devis accepté.
+  - **Comptes sans demande d'inscription** (historiques, démonstration) : tarification par formule
+    (Primaire / Standard / Premium), inchangée.
+  - **Code promo / parrainage** : appliqué au montant résolu ; un code « mois offerts » active
+    l'abonnement sans créer de paiement.
+- **Prolongation de l'abonnement.** Elle n'a lieu qu'à la **confirmation par webhook signé HMAC**
+  (règle #11) : la fonction SQL `confirm_subscription_payment` fixe la nouvelle échéance à
+  `GREATEST(échéance actuelle, aujourd'hui) + 1 an` (annuel) ou `+ 1 mois` (mensuel), en année et mois
+  **calendaires**. Un renouvellement payé en avance ne raccourcit jamais la période acquise ; un
+  abonnement expiré repart d'aujourd'hui. Tant que le statut est `AwaitingPayment`, l'accès est restreint
+  à l'écran de paiement.
+- **Mode test / mode réel et assistant « Démarrage »** : la pastille de régime et l'assistant vivent dans
+  la barre supérieure (§0) ; la bascule en mode réel, le retour en mode test et le verrouillage se
+  confirment dans l'onglet Paramètres système, ci-dessus.
 
 ### Flux d'utilisation typique
 1. À la création de l'école, le Directeur renseigne l'identité de l'établissement, ses formats et son
@@ -957,8 +1086,10 @@ agrégées inter-écoles.
 ### Flux d'utilisation typique
 1. Un Directeur soumet une demande d'inscription self-service depuis le site public.
 2. Le Super Admin la retrouve dans `/admin/inscriptions`, vérifie, puis approuve ou rejette.
-3. À l'approbation, l'école est créée automatiquement ; le Directeur règle son premier paiement, confirmé
-   par webhook signé.
+3. À l'approbation, l'école est créée automatiquement ; le Directeur règle son premier paiement — annuel
+   (forfait de la grille) ou mensuel (forfait ÷ 12 arrondi aux 100 FCFA supérieurs), voir §26 — confirmé
+   par webhook signé. Un établissement public n'a pas de paiement en ligne : son abonnement est activé
+   par le Super Admin après acceptation du devis.
 4. Le Super Admin suit ensuite les abonnements de toutes les écoles depuis `/admin/facturation` et
    `/admin/etablissements`, et intervient (rappel, impersonation) en cas de besoin.
 

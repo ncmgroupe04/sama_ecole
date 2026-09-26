@@ -178,7 +178,7 @@ Chaque JWT contient les claims `sub` (UserId), `schoolId`, `role`. Le middleware
 |---|---|---|---|
 | `POST` | `/api/v1/registration-requests` | **Aucune** (public) | Soumettre le formulaire d'inscription (Volume 1 §11.5). Anti-spam obligatoire (captcha/honeypot). |
 | `GET` | `/api/v1/registration-requests/{trackingReference}/status` | **Aucune** (public, via référence) | Suivre l'état d'une demande sans authentification |
-| `POST` | `/api/v1/subscriptions/{schoolId}/payments` | Directeur | Initier un paiement (Mobile Money, virement, carte) — retourne l'URL de redirection agrégateur |
+| `POST` | `/api/v1/subscriptions/{schoolId}/payments` | Directeur | Initier un paiement (Mobile Money, virement, carte) — retourne l'URL de redirection agrégateur. Corps : `method`, `billingPeriod` (`Monthly`/`Yearly`), `promoCode?`. Le montant est résolu côté serveur (Volume 1 §11.6) : forfait de la grille en annuel, forfait ÷ 12 arrondi aux 100 FCFA supérieurs en mensuel ; `422` pour un établissement public (sur devis) |
 | `GET` | `/api/v1/subscriptions/{schoolId}/payments` | Directeur | Historique des paiements de l'établissement |
 | `POST` | `/api/v1/webhooks/payments/{provider}` | **Aucune** (public, vérifié par signature HMAC) | Callback de l'agrégateur (PayDunya/CinetPay) confirmant ou infirmant un paiement — voir Volume 7 §Paiements pour la vérification obligatoire de signature |
 

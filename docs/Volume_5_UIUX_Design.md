@@ -87,7 +87,18 @@ Bibliothèque unique (Material Symbols ou Fluent UI System Icons) — pas de mé
 
 ### 3.1 Barre supérieure
 
-Logo, nom de l'école active, année scolaire active, utilisateur connecté, recherche globale (non livrée). Le badge de connectivité, le raccourci « Aide » et le bouton de déconnexion, prévus ici dans une version antérieure de ce document, ont été retirés de la barre supérieure le 26/08/2026 à la demande du client : ils faisaient doublon avec, respectivement, la pastille de la barre d'état (§9), l'entrée « Aide & Documentation » du menu latéral, et la carte de profil en bas du menu latéral (§3.2) qui porte désormais la déconnexion.
+Bandeau bleu (`bg-primary-600`, 64 px) en deux groupes. **Groupe gauche** : bouton d'ouverture du menu (mobile) ou de réduction de la barre latérale (bureau), puis le titre de l'écran (masqué sous `sm`). Le titre est en `shrink-0 whitespace-nowrap` : il ne se tronque ni ne passe sous l'horloge ; c'est le groupe de droite (`min-w-0`) qui absorbe le manque de place. **Groupe droit**, dans l'ordre :
+
+| Élément | Comportement |
+|---|---|
+| Sélecteur d'établissement | Uniquement pour un compte rattaché à plusieurs écoles (groupe scolaire) ; masqué sous `sm`. |
+| Horodateur | Masqué sous `lg`. Affiche `Vendredi 25 sept. 2026 • 01:44` : date en `weekday long`, **mois abrégé** (`sept.`, `janv.` — les mois courts comme mai, juin, août restent entiers), heure **en gras** dans une balise distincte. Alimenté par l'horloge de l'appareil (`digitalClock()`, `ui-components.js`, mise à jour chaque seconde), il expose `currentDate` et `currentHour`. |
+| Pastille de régime | **Mode test** : badge orange **compact** (`px-2.5 py-1.5 text-xs`, icône 14 px), libellé « MODE TEST » ; le complément (« : Cliquez ici pour passer en Mode Réel » pour le Directeur, « : données d'essai uniquement » pour les autres rôles) n'apparaît que sous `lg`. Cliquable pour le seul Directeur (ancre `#mode-reel` de Paramètres › Paramètres système). **Mode réel** : pastille grise « Mode réel », masquée sous `sm`. |
+| Année scolaire active | Pastille `2026-2027`, `whitespace-nowrap shrink-0` : elle **ne passe jamais sur deux lignes**. Masquée sous `sm`. Cliquable pour le Directeur (`/annees-scolaires`), informative pour les autres rôles. |
+| Assistant « Démarrage » | Directeur et Secrétariat seulement. Pastille avec pourcentage d'avancement ; le libellé est masqué sous `sm`. **À 100 % (`allDone`), le bouton disparaît** (`x-show="!allDone"`) et le conteneur passe en `contents`, sans boîte ni espacement résiduel ; la modale, descendante du conteneur, reste dans le DOM. Il réapparaît si une étape redevient « à faire ». |
+| Salutation | Selon l'heure (matin, après-midi, soir, nuit), sans donnée personnelle ; masquée sous `sm`. |
+
+La recherche globale n'est pas livrée. Le badge de connectivité, le raccourci « Aide » et le bouton de déconnexion, prévus ici dans une version antérieure de ce document, ont été retirés de la barre supérieure le 26/08/2026 à la demande du client : ils faisaient doublon avec, respectivement, la pastille de la barre d'état (§9), l'entrée « Aide & Documentation » du menu latéral, et la carte de profil en bas du menu latéral (§3.2) qui porte désormais la déconnexion.
 
 ### 3.2 Menu latéral
 
