@@ -138,12 +138,13 @@ public class GetSubscriptionPaymentsEndpointsTests(AuthApiFactory factory) : ICl
         result.Items[1].Id.Should().Be(firstPaymentId);
         result.Items[1].Status.Should().Be("Confirmed");
         result.Items[1].ConfirmedAt.Should().NotBeNull();
-        result.Items[1].Amount.Should().Be(25_000m);
+        result.Items[1].Amount.Should().Be(12_500m, "premier paiement MENSUEL : forfait de la grille (privé, Primaire, petit) ÷ 12");
+        result.Items[0].Amount.Should().Be(150_000m, "second paiement ANNUEL : le forfait de la grille");
         result.Items[1].Currency.Should().Be("XOF");
 
         // L'abonnement, désormais actif grâce au premier paiement confirmé, voyage dans la même réponse.
         result.SubscriptionStatus.Should().Be("Active");
-        result.SubscriptionPlan.Should().Be("Standard");
+        result.SubscriptionPlan.Should().Be("Primaire", "plan déduit de l'offre (un seul cycle) : plus de choix de formule à l'inscription");
         result.SubscriptionExpiresAt.Should().NotBeNull();
     }
 

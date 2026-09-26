@@ -103,8 +103,8 @@ public class InitiateSubscriptionPaymentEndpointsTests(AuthApiFactory factory) :
     public async Task The_Amount_Should_Be_Computed_Server_Side_From_The_Grid_Offer()
     {
         // Offre « privé, Primaire, petit » (CreateAwaitingPaymentSchoolAsync) = 150 000 XOF par an dans la grille de la
-        // vitrine (appsettings.json, SubscriptionPricing:Grid — critère : jamais fourni par le client). La grille est
-        // annuelle : un paiement « Monthly » demandé est facturé à l'année.
+        // vitrine (appsettings.json, SubscriptionPricing:Grid — critère : jamais fourni par le client). Mensuel : ce
+        // forfait ÷ 12 = 12 500 XOF.
         var approval = await CreateAwaitingPaymentSchoolAsync("École Tarif I05", "tarif-i05@test.sn");
         var director = await LoginAsync("tarif-i05@test.sn", DirectorPassword);
 
@@ -113,13 +113,27 @@ public class InitiateSubscriptionPaymentEndpointsTests(AuthApiFactory factory) :
 
         var payment = await factory.GetSubscriptionPaymentAsync(result.PaymentId);
         payment.Should().NotBeNull();
-        payment!.Amount.Should().Be(150_000m);
-        payment.BillingPeriod.Should().Be(BillingPeriod.Yearly, "la grille n'a pas de tarif mensuel");
+        payment!.Amount.Should().Be(12_500m);
+        payment.BillingPeriod.Should().Be(BillingPeriod.Monthly);
         payment.SubscriptionId.Should().Be(approval.SubscriptionId,
             "la transaction de paiement doit être liée à l'abonnement (préparation du callback JGK-I06)");
         payment.Provider.Should().Be("FakeProvider");
         payment.Status.Should().Be(SubscriptionPaymentStatus.Initiated);
         payment.ProviderTransactionRef.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task A_Yearly_Payment_Is_Billed_At_The_Full_Annual_Package()
+    {
+        var approval = await CreateAwaitingPaymentSchoolAsync("École Tarif Annuel", "tarif-annuel@test.sn");
+        var director = await LoginAsync("tarif-annuel@test.sn", DirectorPassword);
+
+        var response = await InitiateAsync(director.AccessToken, approval.SchoolId, "BankTransfer", "Yearly");
+        var result = (await response.Content.ReadFromJsonAsync<InitiateResult>())!;
+
+        var payment = await factory.GetSubscriptionPaymentAsync(result.PaymentId);
+        payment!.Amount.Should().Be(150_000m);
+        payment.BillingPeriod.Should().Be(BillingPeriod.Yearly);
     }
 
     [Theory]
@@ -170,7 +184,7 @@ public class InitiateSubscriptionPaymentEndpointsTests(AuthApiFactory factory) :
         var result = (await response.Content.ReadFromJsonAsync<InitiateResult>())!;
 
         var payment = await factory.GetSubscriptionPaymentAsync(result.PaymentId);
-        payment!.Amount.Should().Be(150_000m, "le montant vient du barème serveur, jamais du corps de la requête");
+        payment!.Amount.Should().Be(12_500m, "le montant vient du barème serveur, jamais du corps de la requête");
     }
 
     [Fact]

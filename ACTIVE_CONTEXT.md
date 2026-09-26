@@ -353,9 +353,11 @@ montants FCFA (elle n'en affichait aucun jusque-là).
   `SizeTier` (migration `AddRegistrationSchoolProfile`, scripts dans `docs/migrations/`). Le plan d'abonnement est **déduit**
   (`SubscriptionPricingGrid.PlanFor` : Bicycle et Complexe → Standard, le reste → Primaire ; aucune offre n'accorde Premium).
 - **Facturation** : `SubscriptionAmountResolver` est l'unique source du montant (aperçu du code promo et initiation du paiement).
-  Un établissement issu d'une demande approuvée paie le **forfait annuel de la grille** (`SubscriptionPricing:Grid`), quelle que
-  soit la période demandée ; un **public est refusé en ligne (422, « sur devis »)** : le Super Admin active l'abonnement (accès
-  gracieux) une fois le devis accepté. Sans demande d'inscription (comptes historiques, démonstration), la tarification par plan
+  Un établissement issu d'une demande approuvée choisit **annuel ou mensuel** : annuel = le **forfait de la grille**
+  (`SubscriptionPricing:Grid`), abonnement prolongé d'un an ; mensuel = ce forfait **÷ 12 arrondi au multiple supérieur de
+  100 FCFA** (`Grid:MonthlyRoundingXof`, ex. 150 000 → 12 500 ; 250 000 → 20 900), prolongé d'un mois (fonction SQL
+  `confirm_subscription_payment`, mois et années calendaires). Un **public est refusé en ligne (422, « sur devis »)** : le
+  Super Admin active l'abonnement (accès gracieux) une fois le devis accepté. Sans demande d'inscription (comptes historiques, démonstration), la tarification par plan
   (Primaire / Standard / Premium, valeurs placeholder) reste en vigueur.
 
 **Points de vigilance connus :**
@@ -363,7 +365,8 @@ montants FCFA (elle n'en affichait aucun jusque-là).
    `SubscriptionPricingGridConsistencyTests` échoue s'ils divergent.
 2. La correspondance offre → plan (droits SMS / rapports consolidés) est **à confirmer commercialement**.
 3. Un public n'a aucun paiement en ligne tant que le tarif par élève (fourchette 500 à 1 000 FCFA pour l'élémentaire) n'est pas fixé.
-4. Le paiement mensuel n'existe plus pour les établissements de la grille (la grille est annuelle).
+4. Le tarif **mensuel n'est pas publié** sur la vitrine : il se déduit du forfait (÷ 12, arrondi), sans majoration. Si un tarif
+   mensuel commercial distinct est décidé, il se règle dans `ConfiguredSubscriptionPricingProvider` sans toucher l'appelant.
 5. **Billets d'absence par plage et appel à trois statuts : NON livrés sur cette branche.** Ils vivent sur
    `origin/feature/attendance-arrival-time` (billet par heure d'arrivée, migration `AddArrivalTimeToEntryTickets`, 5 commits du
    25/09/2026), à fusionner séparément. Une première implémentation « absence sur plage » a été écartée au profit de celle-ci.

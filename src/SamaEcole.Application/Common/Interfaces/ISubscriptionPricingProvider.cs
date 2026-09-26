@@ -15,9 +15,11 @@ public interface ISubscriptionPricingProvider
     decimal GetAmount(SubscriptionPlan plan, BillingPeriod billingPeriod);
 
     /// <summary>
-    /// Forfait ANNUEL d'un établissement PRIVÉ selon la grille de la vitrine (cycles × palier de taille), en FCFA.
-    /// Le public (par élève, en fourchette) n'a pas de montant fixe : il n'est pas concerné. Appelé via
-    /// SubscriptionAmountResolver, jamais directement.
+    /// Montant d'un établissement PRIVÉ selon la grille de la vitrine (cycles × palier de taille), en FCFA.
+    /// <see cref="BillingPeriod.Yearly"/> : le forfait annuel publié. <see cref="BillingPeriod.Monthly"/> : ce forfait
+    /// ÉTALÉ sur 12 mois, arrondi au multiple supérieur de SubscriptionPricingOptions.Grid.MonthlyRoundingXof (le
+    /// mensuel n'est pas publié : il se déduit du forfait, il ne s'y ajoute aucune majoration). Le public (par élève,
+    /// en fourchette) n'a pas de montant fixe : il n'est pas concerné. Appelé via SubscriptionAmountResolver.
     /// </summary>
-    decimal GetGridAmount(SchoolCycleProfile profile, SchoolSizeTier tier);
+    decimal GetGridAmount(SchoolCycleProfile profile, SchoolSizeTier tier, BillingPeriod billingPeriod);
 }
