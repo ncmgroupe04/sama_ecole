@@ -17,5 +17,8 @@ public class SchoolCardPdfGenerator(ILogger<SchoolCardPdfGenerator>? logger = nu
         PdfRenderGuard.Render(
             logger,
             $"cartes scolaires (école {batch.SchoolName}, classe {batch.ClassroomName}, {batch.SchoolYearName})",
-            () => new SchoolCardDocument(batch).GeneratePdf());
+            () => new SchoolCardDocument(batch).GeneratePdf(),
+            batch.SchoolLogo is not null
+                ? () => new SchoolCardDocument(batch with { SchoolLogo = null }).GeneratePdf()
+                : null);
 }

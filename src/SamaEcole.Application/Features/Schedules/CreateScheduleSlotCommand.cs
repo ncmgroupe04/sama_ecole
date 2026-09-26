@@ -66,7 +66,7 @@ public class CreateScheduleSlotCommandHandler(
 
         var slot = new ScheduleSlot
         {
-            SchoolId = tenantProvider.CurrentSchoolId.Value,
+            SchoolId = tenantProvider.CurrentSchoolId ?? throw new UnauthorizedAccessException("Tenant is required."),
             TeacherId = teacherId,
             ClassroomId = request.ClassroomId,
             SubjectId = request.SubjectId,

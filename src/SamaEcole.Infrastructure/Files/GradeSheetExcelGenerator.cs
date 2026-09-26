@@ -72,7 +72,7 @@ public class GradeSheetExcelGenerator : IGradeSheetExcelGenerator
             // ClosedXML exprime ses bornes de validation en double : la conversion est explicite plutôt
             // que subie, et sans perte utile ici (un barème est un petit nombre à deux décimales).
             sheet.Range(FirstDataRow, col, lastRow, col)
-                .SetDataValidation().Decimal.Between(0, (double)gradingScale);
+                .CreateDataValidation().Decimal.Between(0, (double)gradingScale);
         }
 
         sheet.Columns(1, headers.Length).AdjustToContents();
