@@ -488,7 +488,9 @@ document.addEventListener('alpine:init', () => {
     }));
 
     Alpine.data('digitalClock', () => ({
-        currentTime: '',
+        // Date et heure séparées : l'heure est mise en gras dans la pilule (voir _Layout.cshtml).
+        currentDate: '',
+        currentHour: '',
         init() {
             this.updateClock();
             setInterval(() => this.updateClock(), 1000);
@@ -508,8 +510,8 @@ document.addEventListener('alpine:init', () => {
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            const capitalizedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
-            this.currentTime = `${capitalizedDate} • ${timeStr}`;
+            this.currentDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+            this.currentHour = timeStr;
         }
     }));
 

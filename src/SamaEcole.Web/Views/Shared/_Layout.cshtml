@@ -417,12 +417,8 @@
  année scolaire, démarrage, salutation) GARDENT leur fond clair d'origine (bg-slate-100 etc.) —
  elles ressortent déjà naturellement sur le bleu, inutile de les repeindre. Seuls les éléments posés
  directement sur le bleu (titre, boutons icône sans pastille) passent en blanc. *@
- @* min-w-0 flex-1 : le groupe gauche (menu + titre) est l'élément COMPRESSIBLE de la barre. Sans lui,
- il gardait sa largeur naturelle et le titre débordait SOUS l'horloge dès que les pastilles de droite
- (mode test, année, démarrage, salutation) occupaient presque toute la largeur — barre latérale
- dépliée. Le groupe de droite est en shrink-0 : les pastilles gardent la priorité, le titre se tronque. *@
- <div class="bg-primary-600 h-16 flex items-center justify-between px-4 lg:px-8">
- <div class="flex items-center gap-4 min-w-0 flex-1 pr-4">
+ <div class="bg-primary-600 h-16 flex items-center justify-between gap-4 px-4 lg:px-8">
+ <div class="flex items-center gap-4 shrink-0">
  <!-- Bouton Menu Mobile : ouvre le tiroir superposé de la barre latérale -->
  <button x-on:click="sidebarOpen = true" class="lg:hidden p-2 -ml-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl">
  <icon name="menu" class="w-6 h-6" />
@@ -450,10 +446,13 @@
  c'est la seule chose qui répond à « où suis-je ? ». Ramené au gabarit du reste de la
  barre (text-sm), en slate-700 : le bleu marque l'entrée ACTIVE du menu latéral, une
  deuxième zone bleue dans le bandeau diluait ce repère. *@
- <h2 title="@ViewData["Title"]" class="hidden sm:block min-w-0 truncate whitespace-nowrap text-sm font-semibold tracking-tight text-white">@ViewData["Title"]</h2>
+ @* shrink-0 + whitespace-nowrap : le titre gardait sa largeur de contenu mais la colonne de gauche
+ se comprimait sous la pression des pastilles de droite, si bien que le texte débordait sur
+ l'horloge voisine. Le titre ne rétrécit plus ; c'est la colonne de droite qui absorbe. *@
+ <h2 class="hidden sm:block shrink-0 whitespace-nowrap text-sm font-semibold tracking-tight text-white">@ViewData["Title"]</h2>
  </div>
 
- <div class="flex items-center gap-4 shrink-0">
+ <div class="flex items-center gap-3 min-w-0">
  @* Sélecteur d'établissement (groupe scolaire) — INVISIBLE pour un compte mono-école :
  hasMultipleSchools reste faux tant que GET /auth/my-schools renvoie moins de deux
  entrées, ce qui est le cas de l'immense majorité des comptes. *@
@@ -495,7 +494,7 @@
  Ramenée au gabarit des autres pastilles (text-sm, px-2.5 py-1), elle s'y harmonise. *@
  <div x-data="digitalClock()" class="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold shrink-0 whitespace-nowrap" x-cloak>
  <icon name="clock" class="w-4 h-4 shrink-0" />
- <span x-text="currentTime"></span>
+ <span><span x-text="currentDate"></span> • <span class="font-bold" x-text="currentHour"></span></span>
  </div>
 
  @* L'ancien badge de connectivité de la barre supérieure a été retiré : il mesurait la même
@@ -516,8 +515,8 @@
  <a x-show="isDirecteur" x-cloak href="/parametres?tab=securite#mode-reel"
  :title="isLive ? 'Mode réel — les données enregistrées sont définitives (Paramètres › Paramètres système)' : 'Mode test — les données saisies sont des essais. Cliquez pour passer en Mode Réel (Paramètres › Paramètres système › Passer en mode réel)'"
  class="inline-flex items-center gap-2 rounded-full text-sm ring-1 transition-all duration-200 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
- :class="isLive ? 'px-3.5 py-2 font-medium bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200 focus-visible:ring-slate-400' : 'px-3 py-2 font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700 shadow-sm hover:bg-orange-800 focus-visible:ring-orange-700'">
- <icon name="alert-circle" class="w-4 h-4 shrink-0" x-show="!isLive" x-cloak />
+ :class="isLive ? 'px-3.5 py-2 font-medium bg-slate-100 text-slate-600 ring-slate-200 hover:bg-slate-200 focus-visible:ring-slate-400' : 'px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700 hover:bg-orange-800 focus-visible:ring-orange-700'">
+ <icon name="alert-circle" class="w-3.5 h-3.5 shrink-0" x-show="!isLive" x-cloak />
  <icon name="shield" class="w-4 h-4" x-show="isLive" x-cloak />
  <span x-show="isLive" x-cloak>Mode réel</span>
  <span x-show="!isLive" x-cloak>
@@ -527,8 +526,8 @@
  <span x-show="!isDirecteur" x-cloak
  :title="isLive ? 'Mode réel — les données enregistrées sont définitives' : 'Mode test — les données saisies sont des essais : n\'y enregistrez pas de données réelles. Seul le Directeur peut passer en Mode Réel.'"
  class="inline-flex items-center gap-2 rounded-full text-sm ring-1"
- :class="isLive ? 'px-3.5 py-2 font-medium bg-slate-100 text-slate-600 ring-slate-200' : 'px-3 py-2 font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700 shadow-sm'">
- <icon name="alert-circle" class="w-4 h-4 shrink-0" x-show="!isLive" x-cloak />
+ :class="isLive ? 'px-3.5 py-2 font-medium bg-slate-100 text-slate-600 ring-slate-200' : 'px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap bg-orange-700 text-white ring-orange-700'">
+ <icon name="alert-circle" class="w-3.5 h-3.5 shrink-0" x-show="!isLive" x-cloak />
  <icon name="shield" class="w-4 h-4" x-show="isLive" x-cloak />
  <span x-show="isLive" x-cloak>Mode réel</span>
  <span x-show="!isLive" x-cloak>
@@ -541,19 +540,18 @@
  travail courant, dont dépendent inscriptions, frais, notes et finances (résolu serveur via
  SchoolYear.IsActive, voir activeSchoolYearBadge()). Cliquable pour le seul Directeur — vers
  l'onglet Paramètres › Années où la bascule se confirme par mot de passe (Volume_7_Security §16) ;
- informatif pour les autres rôles. Masqué sous `sm` pour ne pas encombrer la barre sur mobile.
- whitespace-nowrap : « 2026-2027 » se cassait après le tiret quand la barre se resserrait. *@
- <div x-data="activeSchoolYearBadge()" x-show="loaded && label" x-cloak class="hidden sm:block shrink-0 whitespace-nowrap">
+ informatif pour les autres rôles. Masqué sous `sm` pour ne pas encombrer la barre sur mobile. *@
+ <div x-data="activeSchoolYearBadge()" x-show="loaded && label" x-cloak class="hidden sm:block shrink-0">
  <a x-show="isDirecteur" x-cloak href="/annees-scolaires"
  title="Année scolaire active — gérer dans Paramètres › Années"
- class="inline-flex items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-full bg-indigo-50 text-primary-700 text-sm font-medium hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full whitespace-nowrap bg-indigo-50 text-primary-700 text-sm font-medium hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
  <icon name="calendar" class="w-4 h-4" />
  <span x-text="label"></span>
  </a>
  <span x-show="!isDirecteur" x-cloak
  title="Année scolaire active de l'établissement"
- class="inline-flex items-center gap-2 whitespace-nowrap px-3.5 py-2 rounded-full bg-slate-100 text-slate-600 text-sm font-medium">
- <icon name="calendar" class="w-4 h-4 shrink-0" />
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full whitespace-nowrap bg-slate-100 text-slate-600 text-sm font-medium">
+ <icon name="calendar" class="w-4 h-4" />
  <span x-text="label"></span>
  </span>
  </div>
@@ -583,14 +581,13 @@
  l'API, plus un pourcentage d'avancement. Réservé aux rôles qui paramètrent l'établissement
  (Directeur, Secrétariat) ; s'ouvre de lui-même une seule fois, au tout premier accès.
  ───────────────────────────────────────────────────────────────────────────────────────────── *@
- @* Paramétrage terminé à 100 % (allDone) : le bouton disparaît de la barre pour lui rendre sa place.
- Le conteneur passe alors en `contents` (aucune boîte générée, donc pas non plus l'écart gap-4 d'un
- élément vide) au lieu d'être masqué par x-show : la modale ci-dessous en est un descendant, un
- display:none la ferait disparaître avec lui. *@
- <div x-data="setupAssistant()" x-show="eligible" x-cloak :class="allDone ? 'contents' : 'relative'" class="relative">
- <button type="button" x-on:click="toggle()" x-show="!allDone"
- :title="'Assistant de démarrage — paramétrage de l\'établissement (' + percent + '%)'"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-primary-50 text-primary-700 hover:bg-primary-100 text-sm font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary">
+ <div x-data="setupAssistant()" x-show="eligible" x-cloak class="relative">
+ @* Une fois le paramétrage à 100 %, la pastille « Démarrage » disparaît : elle n'a plus rien à
+ signaler et libère la barre. Seul le bouton est masqué (la modale reste dans le DOM). *@
+ <button type="button" x-on:click="toggle()" x-show="!allDone" x-cloak
+ :title="allDone ? 'Assistant de démarrage — paramétrage terminé' : 'Assistant de démarrage — paramétrage de l\'établissement (' + percent + '%)'"
+ :class="allDone ? 'bg-success-bg text-success hover:bg-success/10' : 'bg-primary-50 text-primary-700 hover:bg-primary-100'"
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-sm font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary">
  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4 shrink-0"><use href="#icon-sparkle"></use></svg>
  <span class="hidden sm:block">Démarrage</span>
  <span x-show="loaded" x-cloak x-text="percent + '%'"
