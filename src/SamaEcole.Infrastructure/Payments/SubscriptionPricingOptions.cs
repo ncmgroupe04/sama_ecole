@@ -6,7 +6,7 @@ namespace SamaEcole.Infrastructure.Payments;
 /// DEUX TARIFICATIONS, un seul point d'entrée (SubscriptionAmountResolver) :
 ///
 ///   · <see cref="Grid"/> — la GRILLE publiée sur la vitrine (MarketingCatalog.Pricing), forfaits ANNUELS des
-///     établissements PRIVÉS par cycles gérés et taille. C'est la tarification de tout établissement issu d'une
+///     établissements PRIVÉS par cycles gérés et taille ; le paiement MENSUEL en est déduit (÷ 12, arrondi). C'est la tarification de tout établissement issu d'une
 ///     demande d'inscription. Le public (par élève, fourchette 500 à 1 000 FCFA) n'y figure pas : il se chiffre
 ///     sur devis. Les montants ci-dessous DOIVENT rester identiques à ceux de la vitrine (garde-fou :
 ///     SubscriptionPricingGridConsistencyTests).
@@ -29,6 +29,12 @@ public class SubscriptionPricingOptions
 /// <summary>Forfaits annuels PRIVÉS de la vitrine, en FCFA — un palier de taille par cycle géré.</summary>
 public class GridPricing
 {
+    /// <summary>
+    /// Le tarif MENSUEL n'est pas publié : il se déduit du forfait annuel (÷ 12), arrondi au multiple SUPÉRIEUR de cette
+    /// valeur en FCFA — 12 mois de mensualités ne couvrent ainsi jamais moins que le forfait.
+    /// </summary>
+    public decimal MonthlyRoundingXof { get; set; } = 100m;
+
     public TierPricing Primaire { get; set; } = new() { Small = 150_000m, Medium = 250_000m, Large = 350_000m };
     public TierPricing College { get; set; } = new() { Small = 250_000m, Medium = 400_000m, Large = 550_000m };
     public TierPricing Lycee { get; set; } = new() { Small = 300_000m, Medium = 450_000m, Large = 600_000m };

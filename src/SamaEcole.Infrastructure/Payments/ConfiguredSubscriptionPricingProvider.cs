@@ -28,7 +28,7 @@ public class ConfiguredSubscriptionPricingProvider(IOptions<SubscriptionPricingO
         return billingPeriod == BillingPeriod.Monthly ? planPricing.Monthly : planPricing.Yearly;
     }
 
-    public decimal GetGridAmount(SchoolCycleProfile profile, SchoolSizeTier tier)
+    public decimal GetGridAmount(SchoolCycleProfile profile, SchoolSizeTier tier, BillingPeriod billingPeriod)
     {
         var grid = options.Value.Grid;
 
@@ -42,12 +42,21 @@ public class ConfiguredSubscriptionPricingProvider(IOptions<SubscriptionPricingO
             _ => throw new KeyNotFoundException($"Aucun tarif de grille pour le profil {profile}.")
         };
 
-        return tier switch
+        var annual = tier switch
         {
             SchoolSizeTier.Small => tiers.Small,
             SchoolSizeTier.Medium => tiers.Medium,
             SchoolSizeTier.Large => tiers.Large,
             _ => throw new KeyNotFoundException($"Aucun palier de taille {tier} dans la grille.")
         };
+
+        if (billingPeriod == BillingPeriod.Yearly)
+        {
+            return annual;
+        }
+
+        // Mensuel : forfait ÷ 12, arrondi au multiple supérieur (jamais moins que le forfait sur l'année).
+        var rounding = grid.MonthlyRoundingXof > 0 ? grid.MonthlyRoundingXof : 1m;
+        return Math.Ceiling(annual / 12m / rounding) * rounding;
     }
 }

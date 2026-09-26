@@ -54,7 +54,7 @@ public class SubscriptionPricingGridConsistencyTests(AuthApiFactory factory) : I
             var tiers = new[] { SchoolSizeTier.Small, SchoolSizeTier.Medium, SchoolSizeTier.Large };
             for (var i = 0; i < tiers.Length; i++)
             {
-                provider.GetGridAmount(profile, tiers[i]).Should().Be(ParsePrice(offer.Tiers[i].Price),
+                provider.GetGridAmount(profile, tiers[i], BillingPeriod.Yearly).Should().Be(ParsePrice(offer.Tiers[i].Price),
                     $"{offer.Name} / {offer.Tiers[i].Label} : le montant facturé doit être celui affiché");
                 checkedOffers++;
             }

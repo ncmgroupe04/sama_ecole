@@ -109,6 +109,7 @@ public class ProcessPaymentWebhookEndpointsTests(AuthApiFactory factory) : IClas
 
         var subscription = await factory.GetSubscriptionAsync(approval.SchoolId);
         subscription!.Status.Should().Be(SubscriptionStatus.Active);
+        // Paiement mensuel (période par défaut de InitiatePaymentAsync) : l'abonnement est prolongé d'UN MOIS.
         subscription.ExpiresAt.Should().Be(DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(1));
     }
 

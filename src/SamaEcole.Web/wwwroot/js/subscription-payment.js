@@ -8,8 +8,8 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('subscriptionPaymentForm', () => ({
         method: 'MobileMoney',
-        // Annuel par défaut : la grille tarifaire est ANNUELLE. Le serveur facture l'annuel à tout établissement issu
-        // d'une demande d'inscription, même si « Mensuel » est demandé (SubscriptionAmountResolver).
+        // Annuel par défaut : c'est le forfait publié sur la grille de la vitrine. Le mensuel (forfait ÷ 12, arrondi)
+        // reste au choix du Directeur (SubscriptionAmountResolver).
         billingPeriod: 'Yearly',
         isSubmitting: false,
         error: null,

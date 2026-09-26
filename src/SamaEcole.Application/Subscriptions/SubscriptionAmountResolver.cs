@@ -8,7 +8,7 @@ using ValidationException = SamaEcole.Application.Common.Exceptions.ValidationEx
 namespace SamaEcole.Application.Subscriptions;
 
 /// <param name="Amount">Montant en FCFA à régler.</param>
-/// <param name="BillingPeriod">Période effectivement facturée : la grille étant ANNUELLE, elle diffère de la demande.</param>
+/// <param name="BillingPeriod">Période facturée : celle qui a été demandée (mensuelle ou annuelle).</param>
 /// <param name="FromGrid">Vrai si le montant vient de la grille (offre déclarée à l'inscription), faux pour la tarification par plan.</param>
 public record ResolvedSubscriptionAmount(decimal Amount, BillingPeriod BillingPeriod, bool FromGrid);
 
@@ -18,7 +18,7 @@ public record ResolvedSubscriptionAmount(decimal Amount, BillingPeriod BillingPe
 ///
 /// Un établissement issu d'une demande d'inscription approuvée est facturé selon SON OFFRE (public/privé × cycles ×
 /// taille — la grille de la vitrine) :
-///   · privé   → forfait ANNUEL de la grille, quelle que soit la période demandée (la grille n'a pas de tarif mensuel) ;
+///   · privé   → annuel : le forfait de la grille ; mensuel : ce forfait ÷ 12 arrondi (voir ISubscriptionPricingProvider) ;
 ///   · public  → refusé (422) : le tarif est par élève, dans une fourchette, et s'établit sur devis — pas de paiement
 ///     en ligne, le Super Admin active l'abonnement (accès gracieux) une fois le devis accepté.
 /// Un abonnement sans demande d'inscription (comptes historiques, jeux de données de démonstration) garde la
@@ -59,6 +59,6 @@ public class SubscriptionAmountResolver(IApplicationDbContext dbContext, ISubscr
         }
 
         return new ResolvedSubscriptionAmount(
-            pricingProvider.GetGridAmount(offer.CycleProfile, tier), BillingPeriod.Yearly, FromGrid: true);
+            pricingProvider.GetGridAmount(offer.CycleProfile, tier, requested), requested, FromGrid: true);
     }
 }

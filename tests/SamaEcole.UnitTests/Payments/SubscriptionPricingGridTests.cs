@@ -34,7 +34,30 @@ public class SubscriptionPricingGridTests
     [InlineData(SchoolCycleProfile.Complexe, SchoolSizeTier.Large, 1_200_000)]
     public void Should_Return_The_Published_Annual_Amount_For_Each_Offer(
         SchoolCycleProfile profile, SchoolSizeTier tier, decimal expected)
-        => Provider.GetGridAmount(profile, tier).Should().Be(expected);
+        => Provider.GetGridAmount(profile, tier, BillingPeriod.Yearly).Should().Be(expected);
+
+    // Mensuel = forfait ÷ 12, arrondi au multiple supérieur de 100 FCFA : 150 000 / 12 = 12 500 exactement ;
+    // 250 000 / 12 = 20 833,33 → 20 900 ; 1 200 000 / 12 = 100 000 exactement.
+    [Theory]
+    [InlineData(SchoolCycleProfile.Primaire, SchoolSizeTier.Small, 12_500)]
+    [InlineData(SchoolCycleProfile.Primaire, SchoolSizeTier.Medium, 20_900)]
+    [InlineData(SchoolCycleProfile.Primaire, SchoolSizeTier.Large, 29_200)]
+    [InlineData(SchoolCycleProfile.Bicycle, SchoolSizeTier.Large, 70_900)]
+    [InlineData(SchoolCycleProfile.Complexe, SchoolSizeTier.Large, 100_000)]
+    public void Should_Derive_The_Monthly_Amount_From_The_Annual_Package(
+        SchoolCycleProfile profile, SchoolSizeTier tier, decimal expected)
+        => Provider.GetGridAmount(profile, tier, BillingPeriod.Monthly).Should().Be(expected);
+
+    [Fact]
+    public void Twelve_Monthly_Payments_Never_Cost_Less_Than_The_Annual_Package()
+    {
+        foreach (var profile in Enum.GetValues<SchoolCycleProfile>())
+        foreach (var tier in Enum.GetValues<SchoolSizeTier>())
+        {
+            (Provider.GetGridAmount(profile, tier, BillingPeriod.Monthly) * 12)
+                .Should().BeGreaterThanOrEqualTo(Provider.GetGridAmount(profile, tier, BillingPeriod.Yearly), $"{profile}/{tier}");
+        }
+    }
 
     [Fact]
     public void A_Configured_Grid_Overrides_The_Defaults()
@@ -44,7 +67,7 @@ public class SubscriptionPricingGridTests
             Grid = new GridPricing { Bicycle = new TierPricing { Small = 1m, Medium = 2m, Large = 3m } }
         }));
 
-        provider.GetGridAmount(SchoolCycleProfile.Bicycle, SchoolSizeTier.Medium).Should().Be(2m);
+        provider.GetGridAmount(SchoolCycleProfile.Bicycle, SchoolSizeTier.Medium, BillingPeriod.Yearly).Should().Be(2m);
     }
 
     [Theory]
