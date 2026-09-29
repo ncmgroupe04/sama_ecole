@@ -8,12 +8,15 @@
  var successFilterOptions = new List<SelectFieldOption> { new("", "Tous résultats"), new("true", "Succès"), new("false", "Échecs") };
 }
 <div x-data="auditLogView()">
- <div>
- <h2 class="text-lg font-semibold text-slate-900">Journal d'audit</h2>
- <p class="text-sm text-slate-500 mt-1">
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="clock" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title text-lg">Journal d'audit</h2>
+ <p class="icon-heading-subtitle text-sm mt-1">
  Trace des actions sensibles de l'établissement : paiements, création de comptes, changements
  de statut ou de mot de passe, reçus imprimés. Lecture seule — rien ici ne peut être modifié.
  </p>
+ </div>
  </div>
 
  @await Html.PartialAsync("_ErrorBanner")

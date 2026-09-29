@@ -891,6 +891,79 @@
     @apply text-sm font-bold tabular-nums text-slate-900;
   }
 
+  /* ---------------------------------------------------------------- En-tête de section à icône
+     Signature « icône + titre + sous-titre » au sommet d'un bloc de formulaire, dans un onglet
+     ou un écran qui enchaîne plusieurs sections (Paramètres, Inscriptions…). Complète .card-header
+     / .section-title (qui restent pour un en-tête SANS icône, avec action à droite) plutôt que de
+     les remplacer — une intention = une classe, même convention que le reste de ce fichier.
+     L'icône réutilise .icon-chip-md/.icon-chip-* (aucune nouvelle pastille à maintenir). */
+  .icon-heading {
+    @apply flex items-start gap-3;
+  }
+
+  .icon-heading-title {
+    @apply text-sm font-semibold text-slate-900 tracking-tight;
+  }
+
+  .icon-heading-subtitle {
+    @apply mt-0.5 text-xs text-slate-400;
+  }
+
+  /* ---------------------------------------------------------------- Étapes (stepper horizontal)
+     Repère de progression pour un formulaire découpé en étapes logiques (Inscriptions : Identité,
+     Affectation, Tuteur, Récapitulatif). Chaque pastille reste un vrai bouton — une étape déjà
+     remplie se rouvre librement, rien n'est verrouillé une fois passé. L'état porte la couleur
+     (fond + pastille numérotée) ; aucun état n'utilise le rouge, ni ne bloque visuellement une
+     étape à venir (fond neutre, pas de cadenas) — même logique que .status-dot : la couleur suit
+     le sens, jamais la décoration. */
+  .stepper {
+    @apply grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4;
+  }
+
+  .stepper-step {
+    @apply flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors duration-200;
+  }
+
+  .stepper-step-upcoming {
+    @apply bg-slate-50 hover:bg-slate-100;
+  }
+
+  .stepper-step-active {
+    @apply bg-primary-50;
+  }
+
+  .stepper-step-done {
+    @apply bg-emerald-50 hover:bg-emerald-100;
+  }
+
+  .stepper-badge {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold;
+  }
+
+  .stepper-badge-upcoming {
+    @apply bg-slate-200 text-slate-500;
+  }
+
+  .stepper-badge-active {
+    @apply bg-primary-600 text-white shadow-sm;
+  }
+
+  .stepper-badge-done {
+    @apply bg-emerald-500 text-white;
+  }
+
+  .stepper-eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-wider;
+  }
+
+  .stepper-title {
+    @apply truncate text-sm font-semibold text-slate-900;
+  }
+
+  .stepper-hint {
+    @apply truncate text-xs text-slate-400;
+  }
+
   /* ══════════════════════════════════════════════════════════════════════════════════════════
      VITRINE PUBLIQUE (/vitrine, /modules, /annuaire) — préfixe `mkt-`
      ══════════════════════════════════════════════════════════════════════════════════════════

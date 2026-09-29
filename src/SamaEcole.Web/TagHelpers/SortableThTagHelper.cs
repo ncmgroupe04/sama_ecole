@@ -50,7 +50,15 @@ public class SortableThTagHelper : TagHelper
             ? "cursor-pointer select-none hover:text-gray-700"
             : $"{existingClass} cursor-pointer select-none hover:text-gray-700";
         output.Attributes.SetAttribute("class", mergedClass);
-        output.Attributes.SetAttribute("x-on:click", $"{WebUtility.HtmlEncode(OnSort)}");
+        // PAS de WebUtility.HtmlEncode ici : SetAttribute(string, string) encode déjà sa valeur au
+        // rendu (même contrat que class="..." juste au-dessus). Un double encodage transformait
+        // chaque apostrophe de "toggleSort('matricule')" en &#39; côté navigateur, qu'Alpine
+        // recevait alors tel quel (littéralement) — "Unexpected token '&'" sur CHAQUE colonne
+        // triable du site (retour utilisateur du 29/09/2026, régression de longue date, sans lien
+        // avec les correctifs de profils du jour). `column`, lui, reste HtmlEncode PUIS injecté via
+        // SetHtmlContent (contrat inverse : contenu déjà sûr, jamais réencodé) — un seul et même
+        // bug ne concernait donc que cette ligne.
+        output.Attributes.SetAttribute("x-on:click", OnSort);
 
         // Chevron visible seulement sur la colonne activement triée ; sa rotation (bas/haut) indique
         // le sens. fill="currentColor" (pas de stroke) : convention Fluent UI System Icons du sprite.

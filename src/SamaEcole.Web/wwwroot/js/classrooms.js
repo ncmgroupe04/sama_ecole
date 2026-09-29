@@ -189,6 +189,31 @@ document.addEventListener('alpine:init', () => {
         },
 
         /**
+         * Niveaux proposés à la création (retour utilisateur du 29/09/2026) : un établissement Simplifié
+         * ou Élémentaire/Primaire n'a — par définition de son profil d'Onboarding — ni Collège ni Lycée
+         * (EstablishmentProfilePresets.cs, ApplyEstablishmentProfileCommand). Sans ce filtre, rien
+         * n'empêchait de créer une classe de Lycée sous ce profil, ce qui aurait fait apparaître le champ
+         * Série (showSeriesField, ci-dessous) — pensé pour le Lycée — sur un profil qui n'en a pas.
+         * Général/Franco-Arabe/Daara-Internat gardent la liste complète.
+         */
+        // `currentLevel` : garde le niveau déjà enregistré dans la liste même s'il est restreint pour ce
+        // profil (édition d'une classe de Lycée héritée d'un profil changé depuis) — seul le choix d'un
+        // NOUVEAU niveau Collège/Lycée est empêché, la donnée existante ne disparaît jamais du sélecteur.
+        visibleLevelOptions(currentLevel = null) {
+            const all = [
+                { value: 'Crèche', label: 'Crèche' },
+                { value: 'Maternelle', label: 'Maternelle' },
+                { value: 'Primaire', label: 'Primaire' },
+                { value: 'Collège', label: 'Collège' },
+                { value: 'Lycée', label: 'Lycée' }
+            ];
+            const config = Alpine.store('schoolConfig');
+            const restricted = config && (config.isSimplifieProfile || config.isElementaireProfile);
+            if (!restricted) return all;
+            return all.filter((o) => o.value === currentLevel || (o.value !== 'Collège' && o.value !== 'Lycée'));
+        },
+
+        /**
          * Séries proposées (Évolution N°6) : « Général / Collège » (aucune série), puis le référentiel du
          * Baccalauréat par famille. Un ancien code (L1, TECH) n'est proposé qu'à la classe qui le porte déjà —
          * jamais pour une nouvelle classe.

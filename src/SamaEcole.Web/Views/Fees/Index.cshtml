@@ -178,7 +178,10 @@
  <span class="block text-xs text-slate-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
  </label>
  </div>
- <div class="flex items-start gap-2">
+ @* Masqué si le module Internat est désactivé (retour utilisateur du 29/09/2026) : un profil
+    Général/Élémentaire/Simplifié n'a pas d'internat, cocher cette case n'y aurait aucun effet
+    visible (écran Internat/Inscriptions, tous deux déjà masqués pour ces profils). *@
+ <div class="flex items-start gap-2" x-show="$store.schoolConfig.internatEnabled" x-cloak>
  <input id="cat-boarding" type="checkbox" x-model="newCategory.isBoardingFee" class="checkbox-field mt-1">
  <label for="cat-boarding" class="text-sm text-slate-700">
  Frais d'internat (module Internat)
@@ -256,6 +259,11 @@
 
  <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
 
+ @* `editing` vaut null tant que la modale n'a pas été ouverte : sans ce <template x-if>, Alpine
+    évaluait `editing.amount` dès le chargement de l'écran (avant tout clic sur "Modifier"),
+    jetant une TypeError en boucle sur /frais — corrigé au passage (retour utilisateur du
+    29/09/2026), même garde que la modale d'édition de salle (Views/Buildings/Index.cshtml). *@
+ <template x-if="editing">
  <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
  <div>
  <label for="edit-amount" class="form-label form-label-required">Montant (FCFA)</label>
@@ -270,6 +278,7 @@
  </button>
  </div>
  </form>
+ </template>
  </modal-shell>
 
  <!-- Modale : historique -->

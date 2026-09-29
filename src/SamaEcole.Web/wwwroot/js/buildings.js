@@ -302,6 +302,23 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.isDeletingRoom = false;
             }
+        },
+
+        // `currentType` : garde le type déjà enregistré dans la liste même si le module Internat est
+        // désactivé depuis (salle déjà en Dortoir) — seul le choix d'un NOUVEAU Dortoir est empêché,
+        // la donnée existante ne disparaît jamais du sélecteur (même principe que
+        // classroomsView.visibleLevelOptions, wwwroot/js/classrooms.js).
+        roomTypeOptions(currentType = null) {
+            const all = [
+                { value: 'SalleDeClasse', label: 'Salle de classe' },
+                { value: 'Laboratoire', label: 'Laboratoire' },
+                { value: 'Bureau', label: 'Bureau' },
+                { value: 'Dortoir', label: 'Dortoir' },
+                { value: 'Autre', label: 'Autre' }
+            ];
+            const config = Alpine.store('schoolConfig');
+            if (config && config.internatEnabled) return all;
+            return all.filter((o) => o.value === currentType || o.value !== 'Dortoir');
         }
     }));
 });

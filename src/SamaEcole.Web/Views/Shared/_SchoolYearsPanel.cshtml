@@ -7,11 +7,14 @@
 <div x-data="schoolYearsView()">
  <!-- Titre et bouton Nouvelle année -->
  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
- <div>
- <h2 class="text-lg font-semibold text-slate-900">Années scolaires</h2>
- <p class="text-sm text-slate-500 mt-1">
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="calendar" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title text-lg">Années scolaires</h2>
+ <p class="icon-heading-subtitle text-sm mt-1">
  L'année active est l'exercice sur lequel travaille l'établissement : inscriptions, frais et bulletins s'y rattachent.
  </p>
+ </div>
  </div>
 
  @* Réservé au Directeur (Volume 7 §15). Masquer le bouton n'est qu'un confort : l'API répond

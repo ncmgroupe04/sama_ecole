@@ -574,8 +574,11 @@
    </div>
 
    @* Module Coran/Franco-Arabe : facultatif, imprimé sur le bulletin bilingue seulement si renseigné —
-      dir="rtl" pour que la saisie se lise dans le bon sens dès la frappe, aucune traduction automatique. *@
-   <div>
+      dir="rtl" pour que la saisie se lise dans le bon sens dès la frappe, aucune traduction automatique.
+      Masqué hors profil Franco-Arabe/Internat-Daara (retour utilisateur du 29/09/2026) : un champ
+      arabe proposé à un établissement Élémentaire ou Général n'a rien à faire dans ce formulaire —
+      même logique que isSimplifieProfile/isElementaireProfile ailleurs (schoolConfig, auth.js). *@
+   <div x-show="$store.schoolConfig.isFrancoArabeProfile || $store.schoolConfig.isDaaraInternatProfile" x-cloak>
     <label for="subject-name-ar" class="form-label">Nom en arabe (facultatif)</label>
     <input id="subject-name-ar" type="text" x-model="newSubject.nameAr" maxlength="80" dir="rtl" placeholder="مثال : الرياضيات"
      class="input-field" :class="createErrors.nameAr && 'input-field-error'">
@@ -669,8 +672,8 @@
     <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="field-error"></p>
    </div>
 
-   @* Module Coran/Franco-Arabe : facultatif, même champ que la création. *@
-   <div>
+   @* Module Coran/Franco-Arabe : facultatif, même champ que la création — même gabarit de profil. *@
+   <div x-show="$store.schoolConfig.isFrancoArabeProfile || $store.schoolConfig.isDaaraInternatProfile" x-cloak>
     <label for="edit-subject-name-ar" class="form-label">Nom en arabe (facultatif)</label>
     <input id="edit-subject-name-ar" type="text" x-model="editing.nameAr" maxlength="80" dir="rtl" placeholder="مثال : الرياضيات"
      class="input-field" :class="editErrors.nameAr && 'input-field-error'">

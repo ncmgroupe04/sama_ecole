@@ -1210,7 +1210,38 @@ document.addEventListener('alpine:init', () => {
             }
             return number;
         },
-        
+
+        /**
+         * Lien WhatsApp direct vers le tuteur (raccourci de la ligne de la liste) — wa.me exige le
+         * numéro international SANS le "+". `GuardianPhone` est saisi en local (9 chiffres) ou déjà
+         * préfixé 221 selon l'écran d'où il vient (import, fiche, inscription) : on normalise ici,
+         * jamais côté serveur (donnée d'affichage seulement, aucun impact sur l'inscription).
+         * Renvoie null si le numéro ne ressemble à rien d'exploitable — pas de lien mort à afficher.
+         */
+        waLink(phone) {
+            if (!phone) return null;
+            const cleaned = phone.toString().replace(/\D/g, '');
+            if (cleaned.startsWith('221') && cleaned.length === 12) return `https://wa.me/${cleaned}`;
+            if (cleaned.length === 9) return `https://wa.me/221${cleaned}`;
+            return null;
+        },
+
+        // Confort d'affichage : id de l'élève dont le matricule vient d'être copié (efface la coche
+        // après 1,5 s). Pas de préférence utilisateur à persister, un état mémoire suffit.
+        copiedMatriculeId: null,
+
+        async copyMatricule(student) {
+            if (!student || !student.matricule || !navigator.clipboard) return;
+            try {
+                await navigator.clipboard.writeText(student.matricule);
+                this.copiedMatriculeId = student.id;
+                setTimeout(() => { if (this.copiedMatriculeId === student.id) this.copiedMatriculeId = null; }, 1500);
+            } catch {
+                // Presse-papiers indisponible (permission refusée, contexte non sécurisé) : pas de
+                // confort d'affichage, mais rien de cassé — le matricule reste lisible à l'écran.
+            }
+        },
+
         getInitials(name) {
             if (!name) return '??';
             return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
