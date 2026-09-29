@@ -515,6 +515,13 @@ document.addEventListener('alpine:init', () => {
         internatEnabled: false,
 
         /**
+         * Module Coran/Franco-Arabe (Paramètres › Modules) — même précaution qu'internatEnabled
+         * ci-dessus : masqué par défaut, sûr par défaut = caché (module réservé/inerte tant que le
+         * Directeur ne l'a pas activé).
+         */
+        coranEnabled: false,
+
+        /**
          * Jours OUVRÉS de l'établissement (DayOfWeek : dimanche = 0), dans l'ordre d'AFFICHAGE calculé par
          * le serveur (SchoolWeek.DisplayOrder). Défaut lundi → samedi tant que la réponse n'est pas
          * arrivée : la grille historique. CONFORT d'affichage — le vrai verrou est WorkingDayGuard (422).
@@ -548,6 +555,7 @@ document.addEventListener('alpine:init', () => {
                 this.pedagogyEnabled = !s || s.isPedagogyEnabled !== false;
                 this.financeEnabled = !s || s.isFinanceEnabled !== false;
                 this.internatEnabled = !!s && s.isInternatEnabled === true;
+                this.coranEnabled = !!s && s.isCoranModuleEnabled === true;
                 this.workingDays = window.dayIndexes(s && s.workingDays);
             } catch {
                 // Non bloquant : en cas d'erreur réseau, la navigation reste complète pour
@@ -557,6 +565,7 @@ document.addEventListener('alpine:init', () => {
                 this.pedagogyEnabled = true;
                 this.financeEnabled = true;
                 this.internatEnabled = false;
+                this.coranEnabled = false;
                 this.workingDays = [1, 2, 3, 4, 5, 6];
             } finally {
                 this.loaded = true;
@@ -587,6 +596,7 @@ document.addEventListener('alpine:init', () => {
         get pedagogyEnabled() { return Alpine.store('schoolConfig').pedagogyEnabled; },
         get financeEnabled() { return Alpine.store('schoolConfig').financeEnabled; },
         get internatEnabled() { return Alpine.store('schoolConfig').internatEnabled; },
+        get coranEnabled() { return Alpine.store('schoolConfig').coranEnabled; },
 
         init() {
             return Alpine.store('schoolConfig').init();
