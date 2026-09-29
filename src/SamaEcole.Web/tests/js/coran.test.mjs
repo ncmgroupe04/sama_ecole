@@ -402,3 +402,117 @@ test('closeProgressModal ferme la modale', async () => {
 
     assert.equal(view.progressModal.open, false);
 });
+
+// ---------------------------------------------------------------- 5. Modale Évaluation orale
+
+test('openCreateEvaluationModal pose un état neuf, date du jour, compteurs à 0', async () => {
+    const { view } = boot({ evaluations: () => [evaluationRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+
+    view.openCreateEvaluationModal(view.evaluationRows[0]);
+
+    assert.equal(view.evaluationModal.open, true);
+    assert.equal(view.evaluationModal.mode, 'create');
+    assert.equal(view.evaluationModal.studentId, 's-1');
+    assert.equal(view.evaluationModal.evaluationDate, view.todayIso());
+    assert.equal(view.evaluationModal.memoryMistakes, '0');
+    assert.equal(view.evaluationModal.finalScore, '');
+});
+
+test('openEditEvaluationModal pré-remplit depuis l\'entrée choisie', async () => {
+    const { view } = boot({ evaluations: () => [evaluationRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    const entry = view.evaluationRows[0].entries[1]; // e-2
+
+    view.openEditEvaluationModal(view.evaluationRows[0], entry);
+
+    assert.equal(view.evaluationModal.mode, 'edit');
+    assert.equal(view.evaluationModal.entryId, 'e-2');
+    assert.equal(view.evaluationModal.evaluationDate, '2026-09-18');
+    assert.equal(view.evaluationModal.hesitations, '1');
+    assert.equal(view.evaluationModal.finalScore, '18');
+    assert.equal(view.evaluationModal.rowVersion, 1);
+});
+
+test('date future refusée AVANT tout appel réseau', async () => {
+    const { view, calls } = boot({ evaluations: () => [evaluationRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    view.openCreateEvaluationModal(view.evaluationRows[0]);
+    view.evaluationModal.evaluationDate = '2099-01-01';
+    view.evaluationModal.finalScore = '15';
+
+    await view.saveEvaluation();
+
+    assert.match(view.evaluationModal.error, /future/i);
+    assert.equal(calls.filter(c => c.method === 'POST').length, 0);
+});
+
+test('compteur négatif refusé AVANT tout appel réseau', async () => {
+    const { view, calls } = boot({ evaluations: () => [evaluationRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    view.openCreateEvaluationModal(view.evaluationRows[0]);
+    view.evaluationModal.memoryMistakes = '-1';
+    view.evaluationModal.finalScore = '15';
+
+    await view.saveEvaluation();
+
+    assert.match(view.evaluationModal.error, /mémoire/i);
+    assert.equal(calls.filter(c => c.method === 'POST').length, 0);
+});
+
+test('création : envoie POST /quran/evaluations avec les champs saisis', async () => {
+    const { view, calls } = boot({ evaluations: () => [evaluationRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    view.openCreateEvaluationModal(view.evaluationRows[0]);
+    view.evaluationModal.evaluationDate = '2026-09-25';
+    view.evaluationModal.memoryMistakes = '1';
+    view.evaluationModal.tajwidMistakes = '0';
+    view.evaluationModal.hesitations = '2';
+    view.evaluationModal.finalScore = '16.5';
+
+    await view.saveEvaluation();
+
+    const post = calls.find(c => c.method === 'POST' && c.endpoint === '/quran/evaluations');
+    assert.deepEqual(post.body, {
+        studentId: 's-1', evaluationDate: '2026-09-25',
+        memoryMistakes: 1, tajwidMistakes: 0, hesitations: 2, finalScore: 16.5
+    });
+    assert.equal(view.evaluationModal.open, false);
+});
+
+test('correction : envoie PUT avec le rowVersion, SANS studentId', async () => {
+    const { view, calls } = boot({ evaluations: () => [evaluationRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    const entry = view.evaluationRows[0].entries[0]; // e-1, rowVersion 1
+    view.openEditEvaluationModal(view.evaluationRows[0], entry);
+    view.evaluationModal.finalScore = '17';
+
+    await view.saveEvaluation();
+
+    const put = calls.find(c => c.method === 'PUT' && c.endpoint === '/quran/evaluations/e-1');
+    assert.deepEqual(put.body, {
+        evaluationDate: '2026-09-05', memoryMistakes: 2, tajwidMistakes: 1, hesitations: 0,
+        finalScore: 17, rowVersion: 1
+    });
+    assert.ok(!('studentId' in put.body), 'studentId ne doit jamais être envoyé en correction');
+});
+
+test('409 à la correction : message explicite, la modale reste ouverte', async () => {
+    const conflict = Object.assign(new Error('conflit'), { status: 409 });
+    const { view } = boot({ evaluations: () => [evaluationRow()], failWith: { PUT: conflict } });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    const entry = view.evaluationRows[0].entries[0];
+    view.openEditEvaluationModal(view.evaluationRows[0], entry);
+
+    await view.saveEvaluation();
+
+    assert.match(view.evaluationModal.error, /modifiée par un autre utilisateur/);
+    assert.equal(view.evaluationModal.open, true);
+});

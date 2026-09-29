@@ -182,5 +182,69 @@ document.addEventListener('alpine:init', () => {
                 m.saving = false;
             }
         },
+
+        // --- Modale Évaluation orale -----------------------------------------------------------
+
+        evaluationModal: { open: false, mode: 'create', studentId: null, studentName: '', entryId: null, evaluationDate: '', memoryMistakes: '0', tajwidMistakes: '0', hesitations: '0', finalScore: '', rowVersion: null, saving: false, error: null },
+
+        todayIso() {
+            return new Date().toISOString().slice(0, 10);
+        },
+
+        openCreateEvaluationModal(row) {
+            this.evaluationModal = { open: true, mode: 'create', studentId: row.studentId, studentName: row.fullName, entryId: null, evaluationDate: this.todayIso(), memoryMistakes: '0', tajwidMistakes: '0', hesitations: '0', finalScore: '', rowVersion: null, saving: false, error: null };
+        },
+
+        openEditEvaluationModal(row, entry) {
+            this.evaluationModal = { open: true, mode: 'edit', studentId: row.studentId, studentName: row.fullName, entryId: entry.id, evaluationDate: entry.evaluationDate, memoryMistakes: String(entry.memoryMistakes), tajwidMistakes: String(entry.tajwidMistakes), hesitations: String(entry.hesitations), finalScore: String(entry.finalScore), rowVersion: entry.rowVersion, saving: false, error: null };
+        },
+
+        closeEvaluationModal() {
+            this.evaluationModal.open = false;
+        },
+
+        /** Bornes reflétées du serveur (CreateQuranEvaluationCommandValidator) — voir progressValidationError. */
+        evaluationValidationError() {
+            const m = this.evaluationModal;
+            if (!m.evaluationDate) return 'La date est obligatoire.';
+            if (m.evaluationDate > this.todayIso()) return 'La date ne peut pas être future.';
+            const memory = Number(m.memoryMistakes), tajwid = Number(m.tajwidMistakes), hesitations = Number(m.hesitations), score = Number(m.finalScore);
+            if (!Number.isInteger(memory) || memory < 0) return 'Le nombre d\'erreurs de mémoire doit être positif ou nul.';
+            if (!Number.isInteger(tajwid) || tajwid < 0) return 'Le nombre d\'erreurs de tajwid doit être positif ou nul.';
+            if (!Number.isInteger(hesitations) || hesitations < 0) return 'Le nombre d\'hésitations doit être positif ou nul.';
+            if (Number.isNaN(score) || score < 0) return 'La note finale doit être positive ou nulle.';
+            return null;
+        },
+
+        async saveEvaluation() {
+            const m = this.evaluationModal;
+            const validationError = this.evaluationValidationError();
+            if (validationError) { m.error = validationError; return; }
+
+            m.saving = true;
+            m.error = null;
+            try {
+                const payload = {
+                    evaluationDate: m.evaluationDate,
+                    memoryMistakes: Number(m.memoryMistakes),
+                    tajwidMistakes: Number(m.tajwidMistakes),
+                    hesitations: Number(m.hesitations),
+                    finalScore: Number(m.finalScore)
+                };
+                if (m.mode === 'create') {
+                    await window.api.post('/quran/evaluations', { studentId: m.studentId, ...payload });
+                } else {
+                    await window.api.put(`/quran/evaluations/${m.entryId}`, { ...payload, rowVersion: m.rowVersion });
+                }
+                this.closeEvaluationModal();
+                await this.loadEvaluations();
+            } catch (err) {
+                m.error = err && err.status === 409
+                    ? 'Cette observation a été modifiée par un autre utilisateur.'
+                    : window.api.toMessage(err, 'Une erreur est survenue.');
+            } finally {
+                m.saving = false;
+            }
+        }
     }));
 });
