@@ -105,10 +105,14 @@ Une migration additive unique (nom proposé : `AddStudentArabicNames`) :
   (`s.FullNameAr`, `s.GuardianNameAr`) ainsi que dans la construction manuelle plus bas dans le
   fichier (`student.FullNameAr`, `student.GuardianNameAr`) — le fichier construit le DTO à deux
   endroits (projection + reconstruction), les deux doivent être tenus à jour.
-- `StudentListItem` (`GetStudentsQuery.cs`) : ajout de `FullNameAr` (utile pour un futur affichage
-  liste/RTL, hors périmètre ici mais le DTO doit porter la donnée). `GuardianNameAr` **non ajouté**
-  à `StudentListItem` : le tuteur n'apparaît pas dans la liste élèves aujourd'hui (seul `FullName`
-  y figure), pas de besoin identifié d'y ajouter son miroir arabe dans ce lot.
+- `StudentListItem` (`GetStudentsQuery.cs`) : ajout de **`FullNameAr` ET `GuardianNameAr`**.
+  *Correction post-brainstorming* : `GuardianName` (FR) est déjà présent sur `StudentListItem`
+  alors que la liste/carte élève ne l'affiche pas non plus — parce que c'est cet objet, et non
+  `StudentIdentityDto`, que `Views/Students/Index.cshtml` assigne à `detailStudent` à l'ouverture
+  de la fiche (`openDetail(student)`, `wwwroot/js/students.js`), et que le panneau « Tuteur légal »
+  de la modale de détail lit `detailStudent.guardianName` — jamais `studentDetail.identity.*`.
+  `GuardianNameAr` doit donc suivre exactement le même chemin que `GuardianName`, sous peine de
+  rester vide dans ce panneau alors que la donnée existe bien en base.
 
 ### 4.3 Import CSV en masse
 
