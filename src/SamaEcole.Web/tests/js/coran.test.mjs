@@ -94,7 +94,11 @@ const CLASSROOMS = [
 function boot({ role = 'Directeur', progress, evaluations, failWith = {} } = {}) {
     const calls = [];
     const record = (method) => async (endpoint, body) => {
-        calls.push({ method, endpoint, body });
+        // plain() : body est construit à l'intérieur du contexte vm (coran.js) — sans ce passage par
+        // JSON, assert.deepEqual échoue sur la comparaison de prototypes malgré un contenu identique
+        // (même piège que class-subjects.test.mjs / coefficients.test.mjs, cf. commentaire de plain()
+        // dans harness.mjs).
+        calls.push({ method, endpoint, body: body === undefined ? undefined : plain(body) });
         if (failWith[method]) throw failWith[method];
         return { rowVersion: 1 };
     };
@@ -287,4 +291,114 @@ test('changer de classe recharge les deux onglets pour la nouvelle classe', asyn
 
     assert.ok(calls.some(c => c.endpoint === '/quran/progress/classroom/c-6a'));
     assert.ok(calls.some(c => c.endpoint === '/quran/evaluations/classroom/c-6a'));
+});
+
+// ---------------------------------------------------------------- 4. Modale Suivi de mémorisation
+
+test('openCreateProgressModal pose un état neuf pour l\'élève choisi', async () => {
+    const { view } = boot({ progress: () => [progressRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+
+    view.openCreateProgressModal(view.progressRows[0]);
+
+    assert.equal(view.progressModal.open, true);
+    assert.equal(view.progressModal.mode, 'create');
+    assert.equal(view.progressModal.studentId, 's-1');
+    assert.equal(view.progressModal.studentName, 'Awa Fall');
+    assert.equal(view.progressModal.juzNumber, '');
+    assert.equal(view.progressModal.status, 'InProcess');
+    assert.equal(view.progressModal.error, null);
+});
+
+test('openEditProgressModal pré-remplit depuis l\'entrée choisie', async () => {
+    const { view } = boot({ progress: () => [progressRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    const entry = view.progressRows[0].entries[1]; // p-2 : Memorized
+
+    view.openEditProgressModal(view.progressRows[0], entry);
+
+    assert.equal(view.progressModal.mode, 'edit');
+    assert.equal(view.progressModal.entryId, 'p-2');
+    assert.equal(view.progressModal.juzNumber, 2);
+    assert.equal(view.progressModal.status, 'Memorized');
+    assert.equal(view.progressModal.notes, 'Bien');
+    assert.equal(view.progressModal.rowVersion, 1);
+});
+
+test('création : bornes Juz/Hizb/Sourate refusées AVANT tout appel réseau', async () => {
+    const { view, calls } = boot({ progress: () => [progressRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    view.openCreateProgressModal(view.progressRows[0]);
+    view.progressModal.juzNumber = '31';
+    view.progressModal.hizbNumber = '1';
+    view.progressModal.surahNumber = '1';
+
+    await view.saveProgress();
+
+    assert.match(view.progressModal.error, /juz/i);
+    assert.equal(calls.filter(c => c.method === 'POST').length, 0);
+});
+
+test('création : envoie POST /quran/progress avec les champs saisis', async () => {
+    const { view, calls } = boot({ progress: () => [progressRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    view.openCreateProgressModal(view.progressRows[0]);
+    view.progressModal.juzNumber = '5';
+    view.progressModal.hizbNumber = '9';
+    view.progressModal.surahNumber = '20';
+    view.progressModal.status = 'Memorized';
+    view.progressModal.notes = 'Récité sans erreur';
+
+    await view.saveProgress();
+
+    const post = calls.find(c => c.method === 'POST' && c.endpoint === '/quran/progress');
+    assert.deepEqual(post.body, {
+        studentId: 's-1', juzNumber: 5, hizbNumber: 9, surahNumber: 20,
+        status: 'Memorized', evaluationDate: null, notes: 'Récité sans erreur'
+    });
+    assert.equal(view.progressModal.open, false, 'la modale se ferme après succès');
+});
+
+test('correction : envoie PUT avec le rowVersion, SANS Juz/Hizb/Sourate/Élève', async () => {
+    const { view, calls } = boot({ progress: () => [progressRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    const entry = view.progressRows[0].entries[0]; // p-1, rowVersion 1
+    view.openEditProgressModal(view.progressRows[0], entry);
+    view.progressModal.status = 'Revised';
+    view.progressModal.notes = 'Révisé en classe';
+
+    await view.saveProgress();
+
+    const put = calls.find(c => c.method === 'PUT' && c.endpoint === '/quran/progress/p-1');
+    assert.deepEqual(put.body, { status: 'Revised', evaluationDate: '2026-09-10', notes: 'Révisé en classe', rowVersion: 1 });
+});
+
+test('409 à la correction : message explicite, la modale reste ouverte', async () => {
+    const conflict = Object.assign(new Error('conflit'), { status: 409 });
+    const { view } = boot({ progress: () => [progressRow()], failWith: { PUT: conflict } });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    const entry = view.progressRows[0].entries[0];
+    view.openEditProgressModal(view.progressRows[0], entry);
+
+    await view.saveProgress();
+
+    assert.match(view.progressModal.error, /modifiée par un autre utilisateur/);
+    assert.equal(view.progressModal.open, true);
+});
+
+test('closeProgressModal ferme la modale', async () => {
+    const { view } = boot({ progress: () => [progressRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+    view.openCreateProgressModal(view.progressRows[0]);
+
+    view.closeProgressModal();
+
+    assert.equal(view.progressModal.open, false);
 });

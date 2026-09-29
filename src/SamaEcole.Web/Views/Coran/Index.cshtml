@@ -83,11 +83,19 @@
                                             <span x-show="!latestProgress(row)" class="text-slate-400">Aucune observation</span>
                                         </td>
                                         <td class="py-2 px-4 text-right">
-                                            <button type="button" x-show="row.entries.length > 0" x-cloak
-                                                    class="text-xs font-medium text-primary-600 hover:text-primary-700"
-                                                    x-on:click="toggleExpand(row)">
-                                                <span x-text="row.expanded ? 'Masquer' : 'Historique (' + row.entries.length + ')'"></span>
-                                            </button>
+                                            <div class="flex items-center justify-end gap-3">
+                                                <button type="button" x-show="row.entries.length > 0" x-cloak
+                                                        class="text-xs font-medium text-primary-600 hover:text-primary-700"
+                                                        x-on:click="toggleExpand(row)">
+                                                    <span x-text="row.expanded ? 'Masquer' : 'Historique (' + row.entries.length + ')'"></span>
+                                                </button>
+                                                <button type="button" x-show="canWrite" x-cloak
+                                                        class="btn-modal-secondary text-xs py-1 px-2"
+                                                        x-on:click="openCreateProgressModal(row)">
+                                                    <icon name="plus" class="w-3.5 h-3.5" />
+                                                    Ajouter
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </template>
@@ -104,6 +112,7 @@
                                                     <th class="text-left py-1 pr-2">Statut</th>
                                                     <th class="text-left py-1 pr-2">Date</th>
                                                     <th class="text-left py-1 pr-2">Notes</th>
+                                                    <th class="text-left py-1 pr-2"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -115,6 +124,14 @@
                                                         <td class="py-1 pr-2" x-text="statusLabel(entry.status)"></td>
                                                         <td class="py-1 pr-2" x-text="entry.evaluationDate || '—'"></td>
                                                         <td class="py-1 pr-2" x-text="entry.notes || ''"></td>
+                                                        <td class="py-1 pr-2 text-right">
+                                                            <button type="button" x-show="canWrite" x-cloak
+                                                                    class="text-primary-600 hover:text-primary-700"
+                                                                    title="Corriger"
+                                                                    x-on:click="openEditProgressModal(row, entry)">
+                                                                <icon name="pencil" class="w-3.5 h-3.5" label="Corriger" />
+                                                            </button>
+                                                        </td>
                                                     </tr>
                                                 </template>
                                             </tbody>
@@ -206,4 +223,58 @@
             </div>
         </div>
     </div>
+
+    <modal-shell open="progressModal.open" on-close="closeProgressModal()" size="md"
+                  title="Suivi de mémorisation">
+        <div class="space-y-4">
+            <p class="text-sm text-slate-500">Élève : <strong x-text="progressModal.studentName"></strong></p>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="form-label">Juz</label>
+                    <input type="number" min="1" max="30" x-model="progressModal.juzNumber"
+                           x-show="progressModal.mode === 'create'" x-cloak class="input-field mt-1" />
+                    <p x-show="progressModal.mode === 'edit'" x-cloak class="input-field mt-1 bg-slate-50 text-slate-500" x-text="progressModal.juzNumber"></p>
+                </div>
+                <div>
+                    <label class="form-label">Hizb</label>
+                    <input type="number" min="1" max="60" x-model="progressModal.hizbNumber"
+                           x-show="progressModal.mode === 'create'" x-cloak class="input-field mt-1" />
+                    <p x-show="progressModal.mode === 'edit'" x-cloak class="input-field mt-1 bg-slate-50 text-slate-500" x-text="progressModal.hizbNumber"></p>
+                </div>
+                <div>
+                    <label class="form-label">Sourate</label>
+                    <input type="number" min="1" max="114" x-model="progressModal.surahNumber"
+                           x-show="progressModal.mode === 'create'" x-cloak class="input-field mt-1" />
+                    <p x-show="progressModal.mode === 'edit'" x-cloak class="input-field mt-1 bg-slate-50 text-slate-500" x-text="progressModal.surahNumber"></p>
+                </div>
+            </div>
+
+            <div>
+                <label class="form-label">Statut</label>
+                <select-field model="progressModal.status"
+                              options-expr="[{value:'InProcess', label:'En cours'},{value:'Memorized', label:'Mémorisé'},{value:'Revised', label:'Révisé'}]" />
+            </div>
+
+            <div>
+                <label class="form-label">Date (facultative)</label>
+                <input type="date" x-model="progressModal.evaluationDate" class="input-field mt-1" />
+            </div>
+
+            <div>
+                <label class="form-label">Notes (facultatives)</label>
+                <textarea x-model="progressModal.notes" rows="3" maxlength="2000" class="input-field mt-1"></textarea>
+            </div>
+
+            <p x-show="progressModal.error" x-cloak class="field-error" x-text="progressModal.error"></p>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" class="btn-modal-secondary group" x-on:click="closeProgressModal()">Annuler</button>
+                <button type="button" class="btn-modal-primary group" :disabled="progressModal.saving"
+                        x-on:click="saveProgress()">
+                    <span x-text="progressModal.saving ? 'Enregistrement…' : 'Enregistrer'"></span>
+                </button>
+            </div>
+        </div>
+    </modal-shell>
 </div>

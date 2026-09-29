@@ -115,5 +115,72 @@ document.addEventListener('alpine:init', () => {
         statusLabel(status) {
             return { InProcess: 'En cours', Memorized: 'Mémorisé', Revised: 'Révisé' }[status] || status;
         },
+
+        // --- Modale Suivi de mémorisation --------------------------------------------------
+
+        progressModal: { open: false, mode: 'create', studentId: null, studentName: '', entryId: null, juzNumber: '', hizbNumber: '', surahNumber: '', status: 'InProcess', evaluationDate: '', notes: '', rowVersion: null, saving: false, error: null },
+
+        openCreateProgressModal(row) {
+            this.progressModal = { open: true, mode: 'create', studentId: row.studentId, studentName: row.fullName, entryId: null, juzNumber: '', hizbNumber: '', surahNumber: '', status: 'InProcess', evaluationDate: '', notes: '', rowVersion: null, saving: false, error: null };
+        },
+
+        openEditProgressModal(row, entry) {
+            this.progressModal = { open: true, mode: 'edit', studentId: row.studentId, studentName: row.fullName, entryId: entry.id, juzNumber: entry.juzNumber, hizbNumber: entry.hizbNumber, surahNumber: entry.surahNumber, status: entry.status, evaluationDate: entry.evaluationDate || '', notes: entry.notes || '', rowVersion: entry.rowVersion, saving: false, error: null };
+        },
+
+        closeProgressModal() {
+            this.progressModal.open = false;
+        },
+
+        /** Bornes reflétées du serveur (CreateQuranProgressCommandValidator) — évite un aller-retour
+         *  pour une erreur triviale ; le serveur reste seul autorité (422 sinon). Seule la CRÉATION
+         *  porte Juz/Hizb/Sourate : ils sont immuables et non affichés en édition. */
+        progressValidationError() {
+            const m = this.progressModal;
+            if (m.mode === 'create') {
+                const juz = Number(m.juzNumber), hizb = Number(m.hizbNumber), surah = Number(m.surahNumber);
+                if (!Number.isInteger(juz) || juz < 1 || juz > 30) return 'Le Juz doit être compris entre 1 et 30.';
+                if (!Number.isInteger(hizb) || hizb < 1 || hizb > 60) return 'Le Hizb doit être compris entre 1 et 60.';
+                if (!Number.isInteger(surah) || surah < 1 || surah > 114) return 'La Sourate doit être comprise entre 1 et 114.';
+            }
+            return null;
+        },
+
+        async saveProgress() {
+            const m = this.progressModal;
+            const validationError = this.progressValidationError();
+            if (validationError) { m.error = validationError; return; }
+
+            m.saving = true;
+            m.error = null;
+            try {
+                if (m.mode === 'create') {
+                    await window.api.post('/quran/progress', {
+                        studentId: m.studentId,
+                        juzNumber: Number(m.juzNumber),
+                        hizbNumber: Number(m.hizbNumber),
+                        surahNumber: Number(m.surahNumber),
+                        status: m.status,
+                        evaluationDate: m.evaluationDate || null,
+                        notes: m.notes || null
+                    });
+                } else {
+                    await window.api.put(`/quran/progress/${m.entryId}`, {
+                        status: m.status,
+                        evaluationDate: m.evaluationDate || null,
+                        notes: m.notes || null,
+                        rowVersion: m.rowVersion
+                    });
+                }
+                this.closeProgressModal();
+                await this.loadProgress();
+            } catch (err) {
+                m.error = err && err.status === 409
+                    ? 'Cette observation a été modifiée par un autre utilisateur.'
+                    : window.api.toMessage(err, 'Une erreur est survenue.');
+            } finally {
+                m.saving = false;
+            }
+        },
     }));
 });
