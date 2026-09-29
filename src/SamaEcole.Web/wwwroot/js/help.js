@@ -657,6 +657,42 @@
                         "Retirez la dispense avant de saisir une note pour cet élève dans la matière : la saisie est refusée tant qu'elle existe.",
                         "En cas de changement de classe en cours d'année, vérifiez ses dispenses depuis la fiche : elles restent enregistrées mais peuvent ne plus correspondre à la nouvelle classe."
                     ]
+                },
+                {
+                    id: 'ecran-coran',
+                    title: 'Suivi de mémorisation et évaluations orales (module Coran/Franco-Arabe)',
+                    location: 'Coran',
+                    href: '/coran',
+                    roles: ['Directeur', 'Enseignant', 'Secrétariat'],
+                    definition:
+                        "Écran Coran : un sélecteur de classe et deux onglets — Suivi de mémorisation (Juz, Hizb, " +
+                        "Sourate, statut En cours/Mémorisé/Révisé) et Évaluations orales (erreurs de mémoire et de " +
+                        "tajwid, hésitations, note finale). Chaque élève porte une liste d'observations, illimitée " +
+                        "dans le temps, consultable par un historique dépliable.",
+                    objectif:
+                        "Donner à l'école un suivi structuré de la mémorisation coranique et des évaluations orales, " +
+                        "au même titre que les notes académiques, sans mélanger les deux systèmes de notation.",
+                    probleme:
+                        "Sans écran dédié, ce suivi ne vit que sur des registres papier ou des carnets personnels de " +
+                        "l'enseignant : rien n'est consultable par le Directeur ou le Secrétariat, rien ne survit à un " +
+                        "changement d'enseignant, et aucun historique ne permet de mesurer la progression d'un élève " +
+                        "d'un mois sur l'autre.",
+                    procedure: [
+                        "Ouvrez Coran et choisissez une classe.",
+                        "Onglet « Suivi de mémorisation » : cliquez « Ajouter » sur la ligne d'un élève, renseignez Juz, Hizb, Sourate et le statut, puis enregistrez.",
+                        "Onglet « Évaluations orales » : cliquez « Ajouter », renseignez la date, les erreurs de mémoire et de tajwid, les hésitations et la note finale.",
+                        "Cliquez « Historique » sur la ligne d'un élève pour voir toutes ses observations passées, les plus récentes en premier.",
+                        "Cliquez l'icône crayon d'une observation pour la corriger — l'identité de la ligne (Juz/Hizb/Sourate ou l'élève) ne peut jamais être changée après coup, seuls le statut, la date et les notes ou chiffres le peuvent."
+                    ],
+                    impacts: [
+                        "Bulletin : ce suivi n'apparaît PAS sur le bulletin de notes — c'est un système de suivi séparé, indépendant du calcul des moyennes et des coefficients.",
+                        "Module désactivé : si le Directeur désactive le module Coran depuis Paramètres, l'écran affiche une erreur d'accès et aucune saisie n'est possible, quel que soit le rôle.",
+                        "Rôles : Directeur et Enseignant peuvent ajouter et corriger ; le Secrétariat consulte uniquement, sans pouvoir écrire."
+                    ],
+                    recommandations: [
+                        "Saisissez une évaluation orale le jour même de la séance : une date antérieure reste possible, mais une date future est refusée par l'écran.",
+                        "En cas de refus lors d'une correction concurrente (« modifiée par un autre utilisateur »), rouvrez l'historique pour repartir de l'observation à jour avant de corriger à nouveau."
+                    ]
                 }
             ]
         },
