@@ -1,3 +1,4 @@
+@using SamaEcole.Web.Content
 @{
  ViewData["Title"] = "Paramètres";
  var dateFormatOptions = new List<SelectFieldOption> {
@@ -23,14 +24,46 @@
  <script src="~/js/sms-settings.js" asp-append-version="true"></script>
 }
 
-<div x-data="settingsView()">
+<div x-data="settingsView()"
+ x-on:keydown.window.ctrl.s.prevent="isDirecteur && currentTabHasQuickSave() && !isSavingCurrentTab() && saveCurrentTab()"
+ x-on:keydown.window.cmd.s.prevent="isDirecteur && currentTabHasQuickSave() && !isSavingCurrentTab() && saveCurrentTab()">
 
- <!-- Titre -->
+ <!-- ============================= RUBAN D'EN-TÊTE (refonte UI/UX) ============================= -->
+ <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
  <div>
- <h1 class="page-title">Paramètres</h1>
+ <div class="flex items-center gap-1.5 text-xs font-medium text-slate-400">
+ <span>Système</span>
+ <icon name="chevron-right" class="w-3 h-3" />
+ <span class="text-primary font-semibold" x-text="tabLabel(tab)"></span>
+ </div>
+ <h1 class="page-title mt-0.5">Paramètres</h1>
  <p class="page-subtitle">
  Configurez l'identité de votre établissement, ses réglages et ses années scolaires.
  </p>
+ </div>
+
+ <!-- Actions rapides : seules celles qui correspondent à une vraie action à cet endroit, jamais
+ un bouton de confort qui ne ferait rien (voir currentTabHasQuickSave, settings.js). -->
+ <div class="flex items-center gap-2 shrink-0 flex-wrap">
+ <button type="button" x-show="isDirecteur" x-cloak x-on:click="goToTab('journal-audit')" class="btn-modal-secondary text-xs">
+ <icon name="clock" class="w-4 h-4 text-slate-400" />
+ Journal d'audit
+ </button>
+ <button type="button" x-on:click="goToTab('formats-signatures')" class="btn-modal-secondary text-xs">
+ <icon name="eye" class="w-4 h-4 text-primary" />
+ Aperçu des reçus
+ </button>
+ <button type="button" x-show="isDirecteur && currentTabHasQuickSave()" x-cloak
+ x-on:click="cancelCurrentTabChanges()" :disabled="isSavingCurrentTab()" class="btn-modal-secondary text-xs">
+ Annuler les modifications
+ </button>
+ <button type="button" x-show="isDirecteur && currentTabHasQuickSave()" x-cloak
+ x-on:click="saveCurrentTab()" :disabled="isSavingCurrentTab()" class="btn-modal-primary text-xs group">
+ <icon name="checkmark-circle" class="w-4 h-4" />
+ <span x-text="isSavingCurrentTab() ? 'Enregistrement…' : 'Enregistrer'"></span>
+ <kbd class="hidden sm:inline-block ml-1 rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-mono">Ctrl+S</kbd>
+ </button>
+ </div>
  </div>
 
  <!-- Écriture réservée au Directeur (Volume 7 §15), sauf le barème, les matières et les mentions
@@ -92,8 +125,14 @@
  </button>
  </nav>
 
- <!-- ============================= ZONE DE CONTENU (cartes blanches, fond neutre) ============================= -->
- <main class="mt-6 w-full">
+ <!-- ============================= ZONE DE CONTENU (cartes blanches, fond neutre) =============================
+ Grille 8/4 : le contenu de l'onglet à gauche, un rail d'aide contextuelle PERSISTANT à droite
+ (aperçu de l'en-tête des reçus, avancement du paramétrage, assistance) — visible quel que soit
+ l'onglet ouvert, comme dans la maquette de référence. Les trois widgets ne lisent QUE des
+ données réelles déjà chargées par cet écran ou par setupAssistant() (aucune valeur inventée :
+ pas de « payé », pas de QR, pas de compteur fictif — voir docs/design-references/README.md). -->
+ <div class="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+ <main class="w-full min-w-0" :class="tab === 'profil' ? 'lg:col-span-8' : 'lg:col-span-12'">
 
  <!-- Chargement -->
  <div x-show="isLoading" class="flex items-center justify-center py-12">
@@ -107,9 +146,12 @@
  <div class="card p-6 w-full">
  <form x-on:submit.prevent="saveProfile()" novalidate class="space-y-5 max-w-2xl">
 
- <div>
- <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Identité de l'établissement</h2>
- <p class="text-xs text-slate-400 mt-0.5">Ces informations figurent sur le reçu d'inscription et les documents officiels.</p>
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="building" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title">Identité de l'établissement</h2>
+ <p class="icon-heading-subtitle">Ces informations figurent sur le reçu d'inscription et les documents officiels.</p>
+ </div>
  </div>
 
  <div>
@@ -276,17 +318,21 @@
  un Secrétariat/Enseignant qui ne voit plus certaines entrées de menu doit pouvoir comprendre
  pourquoi ici, en lecture seule — les interrupteurs restent simplement désactivés pour lui. *@
  <div x-show="!isLoading && !loadError && tab === 'modules'" x-cloak>
- <div class="card p-6 w-full max-w-2xl space-y-6">
- <div>
- <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Modules activés</h2>
- <p class="text-xs text-slate-400 mt-0.5">
+ <div class="card p-6 w-full space-y-6">
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="layers" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title">Modules activés</h2>
+ <p class="icon-heading-subtitle">
  Adaptez l'application à l'usage réel de votre établissement : masquez un module dont vous
  ne vous servez pas, sans perdre les données déjà saisies.
  </p>
  </div>
+ </div>
 
  <div class="flex flex-col gap-4">
- <div class="flex items-start justify-between gap-4">
+ <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+ <div class="flex items-start justify-between gap-4 rounded-xl border border-slate-200 p-4">
  <div>
  <span id="module-switch-pedagogy-label" class="text-sm font-medium text-slate-700">Pédagogie</span>
  <p class="text-xs text-slate-400 mt-0.5">Matières, Notes &amp; bulletins, Examens officiels, Intégration étatique, Surveillance générale.</p>
@@ -302,7 +348,7 @@
  </button>
  </div>
 
- <div class="flex items-start justify-between gap-4">
+ <div class="flex items-start justify-between gap-4 rounded-xl border border-slate-200 p-4">
  <div>
  <span id="module-switch-finance-label" class="text-sm font-medium text-slate-700">Comptabilité &amp; Finance</span>
  <p class="text-xs text-slate-400 mt-0.5">Caisse, Frais scolaires, Paie, Fiscalité, Trésorerie, Rapports financiers.</p>
@@ -321,7 +367,7 @@
  @* Internat livré le 18/09/2026 (ACTIVE_CONTEXT.md) : désactivé PAR DÉFAUT, à l'inverse de
  Pédagogie/Finance — contrairement à ceux-ci, ce n'est pas un réglage anticipé, l'activer
  ouvre réellement le module (/internat, RequireModule côté API). *@
- <div class="flex items-start justify-between gap-4">
+ <div class="flex items-start justify-between gap-4 rounded-xl border border-slate-200 p-4">
  <div>
  <span id="module-switch-internat-label" class="text-sm font-medium text-slate-700">Internat</span>
  <p class="text-xs text-slate-400 mt-0.5">Tableau de bord par chambre, affectation, transfert et pension des élèves internes.</p>
@@ -336,6 +382,49 @@
  class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
  </button>
  </div>
+ </div>
+
+ @* Onboarding / Setup Wizard (Ticket 5) : le profil choisi à la première connexion du Directeur
+ (ou ici, plus tard) pilote les 3 commutateurs ci-dessus ET le commutateur « Filière Coranique
+ / Franco-Arabe » juste en dessous — voir EstablishmentProfilePresets. Endpoint DÉDIÉ
+ (applyEstablishmentProfile(), settings.js), distinct de saveConfig() : voir sa doc. *@
+ <div class="border-t border-slate-100 pt-4">
+ <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Profil d'établissement</h3>
+ <p class="text-xs text-slate-400 mb-3">
+ Choisi à la configuration initiale (Onboarding) — adapte automatiquement les modules
+ ci-dessus, le menu et le formulaire d'inscription à votre façon de travailler. Modifiable ici
+ à tout moment.
+ </p>
+
+ <div class="tab-nav flex-wrap" role="radiogroup" aria-label="Profil d'établissement">
+ <template x-for="option in profileOptions" :key="option.key">
+ @* <icon> (TagHelpers/IconTagHelper.cs) résout son symbole CÔTÉ SERVEUR, à partir d'un attribut
+ `name` LITTÉRAL : il ne peut pas recevoir option.icon (valeur connue seulement côté client,
+ dans cette boucle Alpine). <use :href> reproduit son rendu en visant directement le sprite
+ (_IconSprite.cshtml, déjà inclus par _Layout) avec une liaison dynamique. *@
+ <button type="button" role="radio"
+ x-on:click="applyEstablishmentProfile(option.key)"
+ :aria-checked="(config.profileEtablissement === option.key).toString()"
+ :disabled="profileSaving || !isDirecteur"
+ class="tab-btn" :class="config.profileEtablissement === option.key ? 'tab-btn-active' : ''">
+ <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-4 h-4"><use :href="'#icon-' + option.icon"></use></svg>
+ <span x-text="option.label"></span>
+ </button>
+ </template>
+ </div>
+
+ <p class="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+ <strong>Changer de profil</strong> réapplique immédiatement les modules associés au nouveau
+ profil (Pédagogie, Finance, Internat, Filière Coranique/Franco-Arabe) et adapte le menu ainsi
+ que le formulaire d'inscription en conséquence. Aucune donnée déjà saisie n'est supprimée.
+ </p>
+
+ <p x-show="profileSaving" x-cloak class="mt-2 text-xs text-slate-500">Application du profil…</p>
+ <p x-show="profileSaved" x-cloak class="mt-2 text-xs text-success bg-success-bg border border-success/20 rounded-xl px-3 py-2">
+ Profil « <span x-text="profileLabel(config.profileEtablissement)"></span> » appliqué — le menu et le formulaire d'inscription sont déjà à jour.
+ </p>
+ <p x-show="profileError" x-cloak x-text="profileError" class="mt-2 text-xs text-danger bg-danger-bg border border-danger/20 rounded-xl px-3 py-2"></p>
+ </div>
 
  <div class="border-t border-slate-100 pt-4">
  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Réservé — à venir</h3>
@@ -343,7 +432,7 @@
  Aucun module n'est encore rattaché à ce réglage : l'activer n'ouvre rien
  aujourd'hui — c'est un réglage anticipé pour le jour où ce module existera.
  </p>
- <div class="flex flex-col gap-4">
+ <div class="flex flex-col gap-4 max-w-md">
  <div class="flex items-start justify-between gap-4">
  <div>
  <span id="module-switch-coran-label" class="text-sm font-medium text-slate-700">Filière Coranique / Franco-Arabe</span>
@@ -371,13 +460,18 @@
  vivaient avant dans la colonne de droite du même onglet « Établissement ». *@
  <div x-show="!isLoading && !loadError && tab === 'integration-etatique'" x-cloak>
  <div class="card p-6 w-full">
- <form x-on:submit.prevent="saveProfile()" novalidate class="space-y-6 max-w-2xl">
+ <form x-on:submit.prevent="saveProfile()" novalidate class="space-y-6">
 
  @* En-tête administratif du bulletin de notes (IA / IEF / LYCEE DE) : reproduit les
  trois premières lignes de docs/design-references/bulletin-reference.png. *@
  <div>
- <h3 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Informations Académiques &amp; Administration</h3>
- <p class="text-xs text-slate-400 mt-0.5">Ces trois lignes forment l'en-tête officiel du bulletin de notes.</p>
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="globe" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h3 class="icon-heading-title">Informations Académiques &amp; Administration</h3>
+ <p class="icon-heading-subtitle">Ces trois lignes forment l'en-tête officiel du bulletin de notes.</p>
+ </div>
+ </div>
 
  <div class="mt-4 space-y-5">
  <div class="form-grid">
@@ -396,7 +490,7 @@
  <p x-show="profileErrors.inspectioneducationformation" x-cloak x-text="profileErrors.inspectioneducationformation" class="field-error"></p>
  </div>
  </div>
- <div>
+ <div class="max-w-lg">
  <label for="school-nom-lycee" class="form-label">Nom de l'établissement sur le bulletin</label>
  <input id="school-nom-lycee" type="text" x-model="profile.nomLycee" maxlength="150" :disabled="!isDirecteur"
  placeholder="ex : Popenguine"
@@ -418,7 +512,7 @@
  </p>
 
  <div class="mt-4 space-y-5">
- <div>
+ <div class="max-w-lg">
  <label for="school-national-code" class="form-label">Code établissement national</label>
  <input id="school-national-code" type="text" x-model="profile.nationalSchoolCode" maxlength="30" :disabled="!isDirecteur"
  placeholder="ex : 012347"
@@ -477,7 +571,15 @@
  <!-- ============================= SPOKE : FORMATS & SIGNATURES OFFICIELLES ============================= -->
  <div x-show="!isLoading && !loadError && tab === 'formats-signatures'" x-cloak>
  <div class="card p-6 w-full">
- <form x-on:submit.prevent="saveConfig()" novalidate class="space-y-5 max-w-2xl">
+ <form x-on:submit.prevent="saveConfig()" novalidate class="space-y-5">
+
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="document-text" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title">Formats &amp; signatures officielles</h2>
+ <p class="icon-heading-subtitle">Gabarits des matricules et images imprimées au bas des documents officiels.</p>
+ </div>
+ </div>
 
  <div>
  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Format des matricules</h3>
@@ -546,6 +648,8 @@
  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Signatures &amp; Cachet Officiel</h3>
  <p class="text-xs text-slate-400 mt-0.5 mb-3">Ces images sont automatiquement injectées au bas des reçus de caisse, certificats et bulletins officiels (PNG sur fond transparent recommandé).</p>
  </div>
+
+ <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-5">
 
  <!-- Signature du Directeur -->
  <div>
@@ -737,6 +841,8 @@
  </div>
  </div>
  </div>
+
+ </div>
  </div>
 
  <div x-show="configErrors.global" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="configErrors.global"></div>
@@ -760,6 +866,14 @@
  bloc « Mentions du bulletin » de l'onglet Configuration d'origine. *@
  <div x-show="!isLoading && !loadError && canViewMentions && tab === 'pedagogie'" x-cloak>
  <div class="card p-6 w-full space-y-6">
+
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="book" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title">Notation &amp; mentions</h2>
+ <p class="icon-heading-subtitle">Barème, délais de correction, découpage de l'année et mentions du bulletin.</p>
+ </div>
+ </div>
 
  @* Le barème n'est PLUS un réglage d'établissement : il découle du cycle de la classe
  (GradingScaleGuard.ScaleForCycle — Primaire /10, Collège & Lycée /20). *@
@@ -950,11 +1064,16 @@
  <!-- ============================= SPOKE : MENSUALITÉS & AUTORISATIONS DE CAISSE (Finance) ============================= -->
  <div x-show="!isLoading && !loadError && tab === 'finance'" x-cloak>
  <div class="card p-6 w-full">
- <form x-on:submit.prevent="saveConfig()" novalidate class="space-y-6 max-w-2xl">
+ <form x-on:submit.prevent="saveConfig()" novalidate class="space-y-6">
 
  <div>
- <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Mensualités</h2>
- <p class="text-xs text-slate-400 mt-0.5">Tranches de scolarité (souvent 9 au Sénégal). Multiplie chaque mensualité au calcul du dû.</p>
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="wallet" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title">Mensualités</h2>
+ <p class="icon-heading-subtitle">Tranches de scolarité (souvent 9 au Sénégal). Multiplie chaque mensualité au calcul du dû.</p>
+ </div>
+ </div>
  <div class="mt-3 max-w-xs">
  <label for="cfg-tuition" class="form-label">Mensualités par an</label>
  <input id="cfg-tuition" type="number" min="1" max="12" x-model.number="config.tuitionMonthsPerYear" :disabled="!isDirecteur"
@@ -969,9 +1088,9 @@
  l'écran Finance. saveConfig(false) : même requête PUT que les mensualités ci-dessus. *@
  <div x-show="isDirecteur" x-cloak class="border-t border-slate-100 pt-5">
  <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Autorisations de caisse</h3>
- <div class="flex flex-col gap-3">
- <div class="flex items-center gap-3">
- <span id="delegation-switch-finance-modify-label" class="text-sm font-medium text-slate-700">
+ <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-4">
+ <span id="delegation-switch-finance-modify-label" class="text-sm font-medium text-slate-700 flex-1">
  Autoriser la Finance à modifier les montants de frais
  </span>
  <button type="button" role="switch" aria-labelledby="delegation-switch-finance-modify-label"
@@ -984,8 +1103,8 @@
  class="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform"></span>
  </button>
  </div>
- <div class="flex items-center gap-3">
- <span id="delegation-switch-finance-delete-label" class="text-sm font-medium text-slate-700">
+ <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-4">
+ <span id="delegation-switch-finance-delete-label" class="text-sm font-medium text-slate-700 flex-1">
  Autoriser la Finance à supprimer des frais
  </span>
  <button type="button" role="switch" aria-labelledby="delegation-switch-finance-delete-label"
@@ -1018,11 +1137,16 @@
  <!-- ============================= SPOKE : PARAMÈTRES SYSTÈME (Sécurité & Administration) ============================= -->
  <div x-show="!isLoading && !loadError && tab === 'securite'" x-cloak>
  <div class="card p-6 w-full">
- <form x-on:submit.prevent="saveConfig()" novalidate class="space-y-6 max-w-2xl">
+ <form x-on:submit.prevent="saveConfig()" novalidate class="space-y-6">
 
  <div>
- <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wider">Paramètres système</h2>
- <p class="text-xs text-slate-400 mt-0.5">Affichage des dates et sécurité de session.</p>
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="settings" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title">Paramètres système</h2>
+ <p class="icon-heading-subtitle">Affichage des dates et sécurité de session.</p>
+ </div>
+ </div>
 
  <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-5">
  <div>
@@ -1241,6 +1365,110 @@
  </div>
 
  </main>
+
+ @* ============================= RAIL DROIT : aide contextuelle (refonte UI/UX) =============================
+ Onglet Profil UNIQUEMENT (retour utilisateur du 28/09/2026) — les trois widgets (aperçu du reçu,
+ avancement du paramétrage, aide) n'ont de sens que dans le contexte du profil de l'établissement ;
+ sur les 11 autres onglets, ils ne suivent pas — <main> reprend alors toute la largeur
+ (lg:col-span-12, voir plus haut). *@
+ <aside class="lg:col-span-4 w-full flex flex-col gap-6" x-show="tab === 'profil'" x-cloak>
+
+ @* WIDGET 1 : Aperçu en-tête reçu — reflète EXACTEMENT les champs saisis dans « Profil » et
+ « Formats & signatures », rien d'autre : pas de référence, pas de QR, pas de badge d'état de
+ paiement (voir docs/design-references/README.md §1ter, « jamais un état faux »). *@
+ <div class="card p-5">
+ <div class="flex items-center gap-2">
+ <icon name="eye" class="w-4 h-4 text-primary" />
+ <h3 class="text-sm font-bold text-slate-900">Aperçu en-tête reçu</h3>
+ </div>
+ <p class="mt-1 text-xs text-slate-400">Rendu des mentions qui ornent vos reçus de scolarité.</p>
+
+ <div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col gap-2">
+ <div class="flex items-start justify-between gap-2">
+ <div class="w-9 h-9 rounded-lg bg-white border border-slate-200 shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
+ <img x-show="profile.logoUrl" x-cloak :src="profile.logoUrl" alt="" class="max-w-full max-h-full object-contain">
+ <icon x-show="!profile.logoUrl" name="building" class="w-4 h-4 text-slate-300" />
+ </div>
+ <span class="text-[9px] text-right text-slate-400 leading-tight" x-text="profile.address || 'Adresse non renseignée'"></span>
+ </div>
+ <div class="text-center border-t border-dashed border-slate-200 pt-2">
+ <p class="text-[11px] font-bold text-slate-900 truncate" x-text="profile.name || 'Nom de l\'établissement'"></p>
+ <p class="mt-1 text-[9px] font-mono text-slate-400">
+ <span x-show="profile.ninea">NINEA <span x-text="profile.ninea"></span></span>
+ <span x-show="profile.ninea && profile.registreCommerce"> · </span>
+ <span x-show="profile.registreCommerce">RCCM <span x-text="profile.registreCommerce"></span></span>
+ <span x-show="!profile.ninea && !profile.registreCommerce">Mentions légales non renseignées</span>
+ </p>
+ </div>
+ </div>
+ <p class="mt-2 text-[11px] text-slate-400">Aperçu illustratif — le reçu réel se consulte depuis la fiche d'un élève.</p>
+ </div>
+
+ @* WIDGET 2 : Niveau de configuration — ÉCOUTE PASSIVEMENT l'événement `setup-progress` déjà publié
+ par l'unique instance de setupAssistant() (bouton « Démarrage » de la barre supérieure, chargée
+ par _Layout) plutôt que d'en instancier une seconde : une deuxième instance relancerait ses 9
+ requêtes de lecture en double à chaque ouverture de /parametres (voir setup-assistant.js). Aucune
+ nouvelle donnée, aucun nouvel appel réseau ici — un simple relais d'affichage. *@
+ <div class="card p-5"
+ x-data="{ progress: window.setupProgress || null }"
+ x-init="window.addEventListener('setup-progress', (e) => progress = e.detail)"
+ x-show="window.auth && ['Directeur', 'Secretariat'].includes(window.auth.role)">
+ <div class="flex items-center justify-between">
+ <h3 class="text-sm font-bold text-slate-900">Niveau de configuration</h3>
+ <span class="text-lg font-bold text-primary tabular-nums" x-show="progress" x-cloak x-text="(progress ? progress.percent : 0) + '%'"></span>
+ </div>
+ <div class="progress-track mt-3">
+ <div class="progress-fill-primary" :style="'width:' + (progress ? progress.percent : 0) + '%'"></div>
+ </div>
+ <p class="mt-3 text-xs text-slate-400">
+ <span x-show="!progress" x-cloak>Analyse de votre paramétrage…</span>
+ <span x-show="progress && progress.percent < 100" x-cloak>
+ <span x-text="progress ? progress.done : 0"></span> / <span x-text="progress ? progress.total : 0"></span> étapes terminées —
+ poursuivez depuis le bouton « Démarrage » en haut de l'écran.
+ </span>
+ <span x-show="progress && progress.percent === 100" x-cloak class="text-success font-medium">Paramétrage terminé.</span>
+ </p>
+ </div>
+
+ @* WIDGET 3 : Assistance — numéro et lien WhatsApp RÉELS de la plateforme (MarketingCatalog,
+ déjà affichés sur la vitrine /modules et /vitrine), jamais un numéro inventé. Un seul et même
+ contact Unikol sous deux formes (appel, message) — pas deux numéros différents comme la
+ maquette, qui n'en a qu'un en réalité. *@
+ <div class="card p-5">
+ <div class="flex items-center gap-3">
+ <span class="icon-chip-md icon-chip-indigo shrink-0"><icon name="help-circle" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h3 class="text-sm font-bold text-slate-900">Besoin d'aide ?</h3>
+ <p class="text-xs text-slate-400">Documentation et assistance Unikol</p>
+ </div>
+ </div>
+
+ <div class="mt-3 rounded-lg bg-slate-50 border border-slate-200 p-2.5 flex flex-col gap-1.5 text-xs">
+ <a href="tel:@(MarketingCatalog.PhoneDisplay.Replace(" ", ""))" class="flex items-center justify-between gap-2 text-slate-600 hover:text-primary transition-colors">
+ <span class="flex items-center gap-1.5">
+ <icon name="phone" class="w-3.5 h-3.5 text-primary" />
+ Assistance Unikol
+ </span>
+ <span class="font-mono font-semibold text-slate-900">@MarketingCatalog.PhoneDisplay</span>
+ </a>
+ <a href="@MarketingCatalog.WhatsAppHref" target="_blank" rel="noopener" class="flex items-center justify-between gap-2 text-slate-600 hover:text-emerald-600 transition-colors">
+ <span class="flex items-center gap-1.5">
+ <icon name="whatsapp" class="w-3.5 h-3.5 text-emerald-600" />
+ WhatsApp
+ </span>
+ <span class="font-mono font-semibold text-slate-900">@MarketingCatalog.PhoneDisplay</span>
+ </a>
+ </div>
+
+ <div class="mt-3 flex flex-col gap-2">
+ <a href="/aide" class="btn-modal-secondary w-full justify-center text-xs">
+ <icon name="help-circle" class="w-4 h-4" />
+ Centre d'aide &amp; documentation
+ </a>
+ </div>
+ </div>
+ </aside>
+ </div>
 
  <!-- Création d'une mention -->
  <modal-shell size="lg" open="isMentionCreateOpen" title="Nouvelle mention">
