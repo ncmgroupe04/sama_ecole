@@ -118,7 +118,10 @@ function boot({ role = 'Directeur', progress, evaluations, failWith = {} } = {})
                 },
                 post: record('POST'),
                 put: record('PUT'),
-                toMessage: (e, fallback) => (e && e.message) || fallback
+                // Toujours le message de repli (comme la production pour une vraie erreur HTTP sans
+                // `details` : toError() fabrique déjà un message adapté au statut) — un test qui veut
+                // vérifier un message serveur spécifique (409 rowVersion, etc.) le fera via `details`.
+                toMessage: (_e, fallback) => fallback
             }
         }
     });
@@ -169,4 +172,119 @@ test('sélectionner une classe pose selectedClassroomId', async () => {
 test('activeTab démarre sur "progress"', async () => {
     const { view } = boot();
     assert.equal(view.activeTab, 'progress');
+});
+
+// ---------------------------------------------------------------- 3. Chargement et tri des onglets
+
+function progressRow(overrides = {}) {
+    return {
+        studentId: 's-1', matricule: 'ELEV-0001', fullName: 'Awa Fall',
+        entries: [
+            { id: 'p-1', studentId: 's-1', juzNumber: 1, hizbNumber: 1, surahNumber: 1, status: 'InProcess', evaluationDate: '2026-09-10', notes: null, rowVersion: 1 },
+            { id: 'p-2', studentId: 's-1', juzNumber: 2, hizbNumber: 3, surahNumber: 10, status: 'Memorized', evaluationDate: '2026-09-20', notes: 'Bien', rowVersion: 1 }
+        ],
+        ...overrides
+    };
+}
+
+function evaluationRow(overrides = {}) {
+    return {
+        studentId: 's-1', matricule: 'ELEV-0001', fullName: 'Awa Fall',
+        entries: [
+            { id: 'e-1', studentId: 's-1', evaluationDate: '2026-09-05', memoryMistakes: 2, tajwidMistakes: 1, hesitations: 0, finalScore: 15, rowVersion: 1 },
+            { id: 'e-2', studentId: 's-1', evaluationDate: '2026-09-18', memoryMistakes: 0, tajwidMistakes: 0, hesitations: 1, finalScore: 18, rowVersion: 1 }
+        ],
+        ...overrides
+    };
+}
+
+test('choisir une classe charge les deux onglets en parallèle', async () => {
+    const { view, calls } = boot({ progress: () => [progressRow()], evaluations: () => [evaluationRow()] });
+    await view.init();
+
+    await view.selectClassroom('c-cm2');
+
+    assert.ok(calls.some(c => c.endpoint === '/quran/progress/classroom/c-cm2'));
+    assert.ok(calls.some(c => c.endpoint === '/quran/evaluations/classroom/c-cm2'));
+    assert.equal(view.progressRows.length, 1);
+    assert.equal(view.evaluationRows.length, 1);
+});
+
+test('un onglet en échec n\'empêche pas l\'autre de s\'afficher', async () => {
+    const { view } = boot({
+        evaluations: () => [evaluationRow()],
+        failWith: { progress: Object.assign(new Error('panne'), { status: 500 }) }
+    });
+    await view.init();
+
+    await view.selectClassroom('c-cm2');
+
+    assert.match(view.progressError, /mémorisation/i);
+    assert.equal(view.evaluationError, null);
+    assert.equal(view.evaluationRows.length, 1);
+});
+
+test('sortedProgressEntries trie par date décroissante, une entrée SANS date en dernier', () => {
+    const { view } = boot();
+    const entries = [
+        { id: 'a', evaluationDate: '2026-09-10' },
+        { id: 'b', evaluationDate: null },
+        { id: 'c', evaluationDate: '2026-09-20' }
+    ];
+
+    assert.deepEqual(plain(view.sortedProgressEntries(entries).map(e => e.id)), ['c', 'a', 'b']);
+});
+
+test('latestProgress renvoie l\'entrée la plus récente, null si la liste est vide', () => {
+    const { view } = boot();
+
+    assert.equal(view.latestProgress(progressRow()).id, 'p-2');
+    assert.equal(view.latestProgress(progressRow({ entries: [] })), null);
+});
+
+test('sortedEvaluationEntries trie par date décroissante (EvaluationDate toujours renseignée)', () => {
+    const { view } = boot();
+    const entries = [
+        { id: 'a', evaluationDate: '2026-09-05' },
+        { id: 'b', evaluationDate: '2026-09-18' }
+    ];
+
+    assert.deepEqual(plain(view.sortedEvaluationEntries(entries).map(e => e.id)), ['b', 'a']);
+});
+
+test('latestEvaluation renvoie l\'entrée la plus récente, null si la liste est vide', () => {
+    const { view } = boot();
+
+    assert.equal(view.latestEvaluation(evaluationRow()).id, 'e-2');
+    assert.equal(view.latestEvaluation(evaluationRow({ entries: [] })), null);
+});
+
+test('statusLabel traduit les trois statuts et retombe sur la valeur brute sinon', () => {
+    const { view } = boot();
+
+    assert.equal(view.statusLabel('InProcess'), 'En cours');
+    assert.equal(view.statusLabel('Memorized'), 'Mémorisé');
+    assert.equal(view.statusLabel('Revised'), 'Révisé');
+    assert.equal(view.statusLabel('Autre'), 'Autre');
+});
+
+test('toggleExpand bascule l\'état déplié d\'une ligne', () => {
+    const { view } = boot();
+    const row = { expanded: false };
+
+    view.toggleExpand(row);
+    assert.equal(row.expanded, true);
+    view.toggleExpand(row);
+    assert.equal(row.expanded, false);
+});
+
+test('changer de classe recharge les deux onglets pour la nouvelle classe', async () => {
+    const { view, calls } = boot({ progress: () => [progressRow()], evaluations: () => [evaluationRow()] });
+    await view.init();
+    await view.selectClassroom('c-cm2');
+
+    await view.selectClassroom('c-6a');
+
+    assert.ok(calls.some(c => c.endpoint === '/quran/progress/classroom/c-6a'));
+    assert.ok(calls.some(c => c.endpoint === '/quran/evaluations/classroom/c-6a'));
 });

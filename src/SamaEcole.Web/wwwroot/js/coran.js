@@ -36,7 +36,84 @@ document.addEventListener('alpine:init', () => {
 
         async selectClassroom(id) {
             this.selectedClassroomId = id;
-            // Task 3 : déclenche ici le chargement des deux onglets (Promise.all, indépendants).
-        }
+            if (!id) {
+                this.progressRows = [];
+                this.evaluationRows = [];
+                return;
+            }
+            // Indépendants : un onglet en échec n'empêche pas l'affichage de l'autre.
+            await Promise.all([this.loadProgress(), this.loadEvaluations()]);
+        },
+
+        progressRows: [],
+        loadingProgress: false,
+        progressError: null,
+
+        evaluationRows: [],
+        loadingEvaluations: false,
+        evaluationError: null,
+
+        async loadProgress() {
+            if (!this.selectedClassroomId) return;
+            this.loadingProgress = true;
+            this.progressError = null;
+            try {
+                const rows = await window.api.get(`/quran/progress/classroom/${this.selectedClassroomId}`);
+                this.progressRows = rows.map(r => ({ ...r, expanded: false }));
+            } catch (err) {
+                this.progressError = window.api.toMessage(err, 'Erreur lors du chargement du suivi de mémorisation.');
+            } finally {
+                this.loadingProgress = false;
+            }
+        },
+
+        async loadEvaluations() {
+            if (!this.selectedClassroomId) return;
+            this.loadingEvaluations = true;
+            this.evaluationError = null;
+            try {
+                const rows = await window.api.get(`/quran/evaluations/classroom/${this.selectedClassroomId}`);
+                this.evaluationRows = rows.map(r => ({ ...r, expanded: false }));
+            } catch (err) {
+                this.evaluationError = window.api.toMessage(err, 'Erreur lors du chargement des évaluations orales.');
+            } finally {
+                this.loadingEvaluations = false;
+            }
+        },
+
+        toggleExpand(row) {
+            row.expanded = !row.expanded;
+        },
+
+        /** Entrées triées par date décroissante ; une entrée SANS date (QuranProgress.evaluationDate
+         *  nullable) passe en dernier — jamais confondue avec la plus récente. */
+        sortedProgressEntries(entries) {
+            return [...entries].sort((a, b) => {
+                if (!a.evaluationDate && !b.evaluationDate) return 0;
+                if (!a.evaluationDate) return 1;
+                if (!b.evaluationDate) return -1;
+                return b.evaluationDate.localeCompare(a.evaluationDate);
+            });
+        },
+
+        /** QuranEvaluation.evaluationDate est TOUJOURS renseignée (champ requis, pas nullable) : tri
+         *  direct, sans le cas "sans date" de sortedProgressEntries. */
+        sortedEvaluationEntries(entries) {
+            return [...entries].sort((a, b) => b.evaluationDate.localeCompare(a.evaluationDate));
+        },
+
+        latestProgress(row) {
+            const sorted = this.sortedProgressEntries(row.entries);
+            return sorted.length > 0 ? sorted[0] : null;
+        },
+
+        latestEvaluation(row) {
+            const sorted = this.sortedEvaluationEntries(row.entries);
+            return sorted.length > 0 ? sorted[0] : null;
+        },
+
+        statusLabel(status) {
+            return { InProcess: 'En cours', Memorized: 'Mémorisé', Revised: 'Révisé' }[status] || status;
+        },
     }));
 });

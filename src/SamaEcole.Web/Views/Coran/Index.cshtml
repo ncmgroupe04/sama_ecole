@@ -45,12 +45,165 @@
             </button>
         </div>
 
-        @* Task 3 remplace ces deux panneaux par les tableaux réels (chargement, vide, lignes). *@
-        <div x-show="activeTab === 'progress'" x-cloak class="card mt-4 p-6">
-            <p class="text-sm text-slate-400">Suivi de mémorisation — à venir (Task 3).</p>
+        <div x-show="activeTab === 'progress'" x-cloak class="mt-4">
+            <div x-show="loadingProgress" x-cloak class="card p-12 flex items-center justify-center">
+                <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </div>
+            <div x-show="progressError" x-cloak class="card p-4 border-l-4 border-danger bg-danger-bg">
+                <p class="text-sm text-danger" x-text="progressError"></p>
+            </div>
+            <div x-show="!loadingProgress && !progressError && progressRows.length === 0" x-cloak class="card">
+                <empty-state icon="users" title="Cette classe ne compte aucun élève."
+                             hint="Inscrivez des élèves dans cette classe pour commencer le suivi." />
+            </div>
+            <div x-show="!loadingProgress && !progressError && progressRows.length > 0" x-cloak class="card relative">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="table-head">
+                                <th class="py-3 px-4 whitespace-nowrap">Matricule</th>
+                                <th class="py-3 px-4">Élève</th>
+                                <th class="py-3 px-4">Dernière observation</th>
+                                <th class="py-3 px-4 w-32"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="row in progressRows" :key="row.studentId">
+                                <template x-if="true">
+                                    <tr class="hover:bg-slate-50 transition-colors duration-150">
+                                        <td class="py-2 px-4 text-xs font-mono text-slate-500 whitespace-nowrap" x-text="row.matricule"></td>
+                                        <td class="py-2 px-4 font-medium text-slate-900" x-text="row.fullName"></td>
+                                        <td class="py-2 px-4 text-sm">
+                                            <template x-if="latestProgress(row)">
+                                                <span>
+                                                    Juz <span x-text="latestProgress(row).juzNumber"></span> —
+                                                    <span x-text="statusLabel(latestProgress(row).status)"></span>
+                                                </span>
+                                            </template>
+                                            <span x-show="!latestProgress(row)" class="text-slate-400">Aucune observation</span>
+                                        </td>
+                                        <td class="py-2 px-4 text-right">
+                                            <button type="button" x-show="row.entries.length > 0" x-cloak
+                                                    class="text-xs font-medium text-primary-600 hover:text-primary-700"
+                                                    x-on:click="toggleExpand(row)">
+                                                <span x-text="row.expanded ? 'Masquer' : 'Historique (' + row.entries.length + ')'"></span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                            <template x-for="row in progressRows" :key="row.studentId + '-history'">
+                                <tr x-show="row.expanded" x-cloak class="bg-slate-50/60">
+                                    <td colspan="4" class="p-4">
+                                        <table class="w-full text-sm">
+                                            <thead>
+                                                <tr class="text-xs text-slate-400">
+                                                    <th class="text-left py-1 pr-2">Juz</th>
+                                                    <th class="text-left py-1 pr-2">Hizb</th>
+                                                    <th class="text-left py-1 pr-2">Sourate</th>
+                                                    <th class="text-left py-1 pr-2">Statut</th>
+                                                    <th class="text-left py-1 pr-2">Date</th>
+                                                    <th class="text-left py-1 pr-2">Notes</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template x-for="entry in sortedProgressEntries(row.entries)" :key="entry.id">
+                                                    <tr class="border-t border-slate-100">
+                                                        <td class="py-1 pr-2" x-text="entry.juzNumber"></td>
+                                                        <td class="py-1 pr-2" x-text="entry.hizbNumber"></td>
+                                                        <td class="py-1 pr-2" x-text="entry.surahNumber"></td>
+                                                        <td class="py-1 pr-2" x-text="statusLabel(entry.status)"></td>
+                                                        <td class="py-1 pr-2" x-text="entry.evaluationDate || '—'"></td>
+                                                        <td class="py-1 pr-2" x-text="entry.notes || ''"></td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div x-show="activeTab === 'evaluations'" x-cloak class="card mt-4 p-6">
-            <p class="text-sm text-slate-400">Évaluations orales — à venir (Task 3).</p>
+        <div x-show="activeTab === 'evaluations'" x-cloak class="mt-4">
+            <div x-show="loadingEvaluations" x-cloak class="card p-12 flex items-center justify-center">
+                <svg aria-hidden="true" class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </div>
+            <div x-show="evaluationError" x-cloak class="card p-4 border-l-4 border-danger bg-danger-bg">
+                <p class="text-sm text-danger" x-text="evaluationError"></p>
+            </div>
+            <div x-show="!loadingEvaluations && !evaluationError && evaluationRows.length === 0" x-cloak class="card">
+                <empty-state icon="users" title="Cette classe ne compte aucun élève."
+                             hint="Inscrivez des élèves dans cette classe pour commencer les évaluations." />
+            </div>
+            <div x-show="!loadingEvaluations && !evaluationError && evaluationRows.length > 0" x-cloak class="card relative">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="table-head">
+                                <th class="py-3 px-4 whitespace-nowrap">Matricule</th>
+                                <th class="py-3 px-4">Élève</th>
+                                <th class="py-3 px-4">Dernière évaluation</th>
+                                <th class="py-3 px-4 w-32"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="row in evaluationRows" :key="row.studentId">
+                                <tr class="hover:bg-slate-50 transition-colors duration-150">
+                                    <td class="py-2 px-4 text-xs font-mono text-slate-500 whitespace-nowrap" x-text="row.matricule"></td>
+                                    <td class="py-2 px-4 font-medium text-slate-900" x-text="row.fullName"></td>
+                                    <td class="py-2 px-4 text-sm">
+                                        <template x-if="latestEvaluation(row)">
+                                            <span>
+                                                <span x-text="latestEvaluation(row).evaluationDate"></span> —
+                                                note <span x-text="latestEvaluation(row).finalScore"></span>
+                                            </span>
+                                        </template>
+                                        <span x-show="!latestEvaluation(row)" class="text-slate-400">Aucune évaluation</span>
+                                    </td>
+                                    <td class="py-2 px-4 text-right">
+                                        <button type="button" x-show="row.entries.length > 0" x-cloak
+                                                class="text-xs font-medium text-primary-600 hover:text-primary-700"
+                                                x-on:click="toggleExpand(row)">
+                                            <span x-text="row.expanded ? 'Masquer' : 'Historique (' + row.entries.length + ')'"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-for="row in evaluationRows" :key="row.studentId + '-history'">
+                                <tr x-show="row.expanded" x-cloak class="bg-slate-50/60">
+                                    <td colspan="4" class="p-4">
+                                        <table class="w-full text-sm">
+                                            <thead>
+                                                <tr class="text-xs text-slate-400">
+                                                    <th class="text-left py-1 pr-2">Date</th>
+                                                    <th class="text-left py-1 pr-2">Erreurs mémoire</th>
+                                                    <th class="text-left py-1 pr-2">Erreurs tajwid</th>
+                                                    <th class="text-left py-1 pr-2">Hésitations</th>
+                                                    <th class="text-left py-1 pr-2">Note</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template x-for="entry in sortedEvaluationEntries(row.entries)" :key="entry.id">
+                                                    <tr class="border-t border-slate-100">
+                                                        <td class="py-1 pr-2" x-text="entry.evaluationDate"></td>
+                                                        <td class="py-1 pr-2" x-text="entry.memoryMistakes"></td>
+                                                        <td class="py-1 pr-2" x-text="entry.tajwidMistakes"></td>
+                                                        <td class="py-1 pr-2" x-text="entry.hesitations"></td>
+                                                        <td class="py-1 pr-2" x-text="entry.finalScore"></td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
