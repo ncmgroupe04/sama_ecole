@@ -1,0 +1,56 @@
+@{
+    ViewData["Title"] = "Coran";
+}
+
+@* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
+@section Scripts {
+    <script src="~/js/coran.js" asp-append-version="true"></script>
+}
+
+@* Pas de x-init="init()" : Alpine appelle DÉJÀ tout seul la méthode init() d'un composant x-data —
+   l'ajouter déclencherait GET /classrooms deux fois à chaque ouverture (même précaution qu'Internat). *@
+<div x-data="coranPage()">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Coran</h1>
+            <p class="page-subtitle">Suivi de mémorisation et évaluations orales, par classe.</p>
+        </div>
+    </div>
+
+    @await Html.PartialAsync("_ErrorBanner")
+
+    <div class="card mt-4 p-4">
+        <label for="coran-classroom" class="form-label">Classe</label>
+        <select-field id="coran-classroom" model="selectedClassroomId" on-change="selectClassroom(selectedClassroomId)"
+                      placeholder="Sélectionnez une classe…"
+                      options-expr="classrooms.map(c => ({value: c.id, label: c.name + ' — ' + c.level}))" />
+    </div>
+
+    <div x-show="!selectedClassroomId" x-cloak class="card mt-4">
+        <empty-state icon="book" title="Choisissez une classe."
+                     hint="Le suivi de mémorisation et les évaluations orales apparaissent une fois la classe choisie." />
+    </div>
+
+    <div x-show="selectedClassroomId" x-cloak class="mt-4">
+        <div class="flex gap-2 border-b border-slate-200">
+            <button type="button" x-on:click="activeTab = 'progress'"
+                    :class="activeTab === 'progress' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                    class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">
+                Suivi de mémorisation
+            </button>
+            <button type="button" x-on:click="activeTab = 'evaluations'"
+                    :class="activeTab === 'evaluations' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                    class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">
+                Évaluations orales
+            </button>
+        </div>
+
+        @* Task 3 remplace ces deux panneaux par les tableaux réels (chargement, vide, lignes). *@
+        <div x-show="activeTab === 'progress'" x-cloak class="card mt-4 p-6">
+            <p class="text-sm text-slate-400">Suivi de mémorisation — à venir (Task 3).</p>
+        </div>
+        <div x-show="activeTab === 'evaluations'" x-cloak class="card mt-4 p-6">
+            <p class="text-sm text-slate-400">Évaluations orales — à venir (Task 3).</p>
+        </div>
+    </div>
+</div>
