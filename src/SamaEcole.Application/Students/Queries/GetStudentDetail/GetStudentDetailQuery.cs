@@ -79,6 +79,8 @@ public record StudentIdentityDto(
     string? GuardianPhone,
     string? GuardianEmail,
     string? Address,
+    string? FullNameAr,
+    string? GuardianNameAr,
     uint RowVersion,
 
     // Régime d'hébergement (module Internat) pour l'année scolaire ACTIVE — jamais une autre année,
@@ -195,6 +197,8 @@ public class GetStudentDetailQueryHandler(
                 s.GuardianPhone,
                 s.GuardianEmail,
                 s.Address,
+                s.FullNameAr,
+                s.GuardianNameAr,
                 RowVersion = EF.Property<uint>(s, "xmin"),
 
                 // Sous-requête pour le nom de classe : une classe supprimée (soft delete) sort du Global
@@ -251,6 +255,8 @@ public class GetStudentDetailQueryHandler(
             student.GuardianPhone,
             student.GuardianEmail,
             student.Address,
+            student.FullNameAr,
+            student.GuardianNameAr,
             student.RowVersion,
             (boarding?.BoardingStatus ?? BoardingStatus.Externe).ToString(),
             boarding?.RoomName);

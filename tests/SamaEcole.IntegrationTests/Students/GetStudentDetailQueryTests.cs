@@ -102,6 +102,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
             new Student
             {
                 Id = EleveEcoleB, SchoolId = EcoleB, Matricule = "ELEV-2026-0001", FullName = "Modou Diop",
+                FullNameAr = "مودو ديوب", GuardianNameAr = "فاطمة ديوب",
                 BirthDate = new DateOnly(2014, 8, 2), BirthPlace = "Dakar", Gender = "M", ClassroomId = ClasseB
             },
             new Student
@@ -183,6 +184,18 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
 
         detail.Identity.FullName.Should().Be("Modou Diop");
         detail.Identity.Matricule.Should().Be("ELEV-2026-0001");
+    }
+
+    [Fact]
+    public async Task Handle_Exposes_The_Arabic_Mirror_Names_When_Set()
+    {
+        await using var db = _db.NewAppContext(EcoleB);
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db));
+
+        var detail = await handler.Handle(new GetStudentDetailQuery(EleveEcoleB), CancellationToken.None);
+
+        detail.Identity.FullNameAr.Should().Be("مودو ديوب");
+        detail.Identity.GuardianNameAr.Should().Be("فاطمة ديوب");
     }
 
     // ------------------------------------------------------------------
