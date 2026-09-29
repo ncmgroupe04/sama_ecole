@@ -117,7 +117,7 @@
  </div>
 
  <!-- Enseignant : la correction d'une note est limitée dans le temps (Paramètres › délai de correction) -->
- <div x-show="isTeacher && hasSelection" x-cloak class="mt-4 rounded-xl border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
+ <div x-show="isTeacher && hasSelection" x-cloak class="mt-4 rounded-xl border-l-4 border-primary bg-primary-50 p-3 text-sm text-primary">
  Vous pouvez corriger vos notes, ou celles de votre matière et de votre classe, pendant le délai fixé par le Directeur. Passé ce délai, la note est verrouillée (champ grisé) : demandez au Directeur ou au Secrétariat de la corriger.
  </div>
 
@@ -245,7 +245,7 @@
  </div>
 
  <!-- Aperçu (dryRun) : rien n'est encore écrit — l'enseignant confirme après avoir vu le résultat. -->
- <div x-show="importPreview" x-cloak class="mb-4 rounded-xl border-l-4 border-primary bg-indigo-50 p-3 text-sm text-primary">
+ <div x-show="importPreview" x-cloak class="mb-4 rounded-xl border-l-4 border-primary bg-primary-50 p-3 text-sm text-primary">
  <span x-text="importPreviewSummary"></span> — vérifiez puis confirmez pour enregistrer.
  </div>
 
@@ -265,7 +265,7 @@
  <div>
  <label for="grades-import-file" class="form-label form-label-required">Fichier</label>
  <input id="grades-import-file" type="file" accept=".xlsx,.xls" x-on:change="onImportFileChange($event)"
- class="input-field bg-white file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-primary file:cursor-pointer" />
+ class="input-field bg-white file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary file:cursor-pointer" />
  <p class="mt-1 text-xs text-slate-500">Excel, colonnes Matricule, Devoir 1, Devoir 2, Composition (ordre libre) — la ligne d'en-tête est obligatoire.</p>
  </div>
  </div>

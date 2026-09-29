@@ -126,9 +126,9 @@
  @{
  var path = Context.Request.Path.Value ?? "/";
 
- // text-primary (#6366F1 DEFAULT) sur ce fond ne tient que 3.99:1 — sous le seuil WCAG AA
- // 4.5:1 (Volume 5 §8). primary-600 (#4F46E5) sur primary-50 (#EEF2FF) tient ~5.6:1,
- // conforme AA, et aligne l'état actif sur le bleu du logo et de l'avatar (harmonie sidebar).
+ // text-primary (#2563EB DEFAULT) sur primary-50 (#EEF4FF) tient ~4.68:1, conforme AA mais avec
+ // peu de marge. primary-600 (#004AC6) sur ce même fond tient ~6.81:1 (marge confortable,
+ // proche AAA), et aligne l'état actif sur le bleu du logo et de l'avatar (harmonie sidebar).
  @* whitespace-nowrap : un libellé de menu ne passe JAMAIS à la ligne. S'il ne tient pas, c'est
  la barre qu'il faut élargir (voir w-72 sur l'aside) ou le libellé qu'il faut raccourcir —
  pas la ligne qu'il faut casser, ce qui désaligne toute la colonne et fait sauter la hauteur
@@ -471,7 +471,7 @@
 
  <template x-for="school in schools" :key="school.schoolId">
  <button type="button" x-on:click="switchTo(school); isOpen = false"
- :class="school.isCurrent ? 'bg-indigo-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'"
+ :class="school.isCurrent ? 'bg-primary-50 text-primary-700' : 'text-slate-700 hover:bg-slate-50'"
  class="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors">
  <span class="truncate" x-text="school.name"></span>
  <icon name="check" class="w-4 h-4 shrink-0" x-show="school.isCurrent" />
@@ -544,7 +544,7 @@
  <div x-data="activeSchoolYearBadge()" x-show="loaded && label" x-cloak class="hidden sm:block shrink-0">
  <a x-show="isDirecteur" x-cloak href="/annees-scolaires"
  title="Année scolaire active — gérer dans Paramètres › Années"
- class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full whitespace-nowrap bg-indigo-50 text-primary-700 text-sm font-medium hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
+ class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full whitespace-nowrap bg-primary-50 text-primary-700 text-sm font-medium hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 active:scale-95">
  <icon name="calendar" class="w-4 h-4" />
  <span x-text="label"></span>
  </a>

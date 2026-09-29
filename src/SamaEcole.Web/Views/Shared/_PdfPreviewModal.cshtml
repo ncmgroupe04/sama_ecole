@@ -39,8 +39,8 @@
         </div>
 
         <!-- Bandeau d'astuce -->
-        <div x-show="pdfPreviewUrl" x-cloak class="flex items-center gap-2 p-3 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-900 text-xs font-medium">
-            <icon name="document" class="w-4 h-4 text-indigo-600 shrink-0" />
+        <div x-show="pdfPreviewUrl" x-cloak class="flex items-center gap-2 p-3 rounded-xl bg-primary-50/80 border border-primary-100 text-primary-900 text-xs font-medium">
+            <icon name="document" class="w-4 h-4 text-primary-600 shrink-0" />
             <span>Astuce : si l'aperçu ne s'affiche pas correctement, ouvrez le document dans un nouvel onglet ou téléchargez-le depuis les boutons ci-dessus.</span>
         </div>
 
@@ -81,7 +81,7 @@
                 </p>
                 <div class="flex items-center gap-1 ml-auto">
                     <button type="button" x-on:click="zoomPdfOut()" :disabled="!canZoomPdfOut()" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Réduire">−</button>
-                    <button type="button" x-on:click="zoomPdfReset()" class="text-xs text-slate-500 w-14 text-center hover:text-indigo-600" x-text="pdfZoomLabel()"></button>
+                    <button type="button" x-on:click="zoomPdfReset()" class="text-xs text-slate-500 w-14 text-center hover:text-primary-600" x-text="pdfZoomLabel()"</button>
                     <button type="button" x-on:click="zoomPdfIn()" :disabled="!canZoomPdfIn()" class="btn-modal-secondary text-xs px-2 py-1 disabled:opacity-40 group" aria-label="Agrandir">+</button>
                 </div>
             </div>

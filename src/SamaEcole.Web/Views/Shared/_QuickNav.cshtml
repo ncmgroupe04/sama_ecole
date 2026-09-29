@@ -78,7 +78,7 @@
   {
    var active = path.StartsWith(item.Href, StringComparison.OrdinalIgnoreCase);
    <a href="@item.Href" x-show="@ShowExpr(item)" x-cloak
-    class="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors @(active ? "bg-indigo-50 text-primary-700" : "text-slate-700 hover:bg-slate-50")">
+    class="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors @(active ? "bg-primary-50 text-primary-700" : "text-slate-700 hover:bg-slate-50")">
     <icon name="@item.Icon" class="w-4 h-4 shrink-0" />
     <span class="truncate">@item.Label</span>
     @if (active)

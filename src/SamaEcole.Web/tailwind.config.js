@@ -17,39 +17,55 @@ module.exports = {
       lg: "1024px"  // Desktop (Volume 5 §2.4)
     },
     extend: {
-      // Palette alignée sur docs/Volume_5_UIUX_Design.md §2.1 et docs/design-references/
-      // (dashboard-reference.jpg fait foi pour la couleur principale) — un agent qui a
-      // besoin d'une de ces couleurs utilise la classe utilitaire (ex. bg-primary), jamais
-      // un code hexadécimal en dur dans une vue.
+      // Palette alignée sur le design system Unikol 2026 (bleu Unikol, plus l'indigo
+      // Tailwind générique) — un agent qui a besoin d'une de ces couleurs utilise la
+      // classe utilitaire (ex. bg-primary), jamais un code hexadécimal en dur dans une vue.
       //
-      // `primary` porte désormais une VRAIE rampe (50→900), pas juste un ton : les nouveaux
-      // composants (StatCard, Badge…) ont besoin de teintes intermédiaires (ex. fond clair de
-      // carte, bordure au survol) sans jamais sortir du token. `DEFAULT` reste #6366F1 : tout
-      // `bg-primary`/`text-primary`/`border-primary`/`focus:ring-primary` déjà écrit dans les
-      // vues continue de resolver EXACTEMENT à la même couleur qu'avant, aucune régression.
-      // Les valeurs 50–900 sont la rampe indigo standard de Tailwind — 500 coïncide déjà avec
-      // #6366F1, donc DEFAULT=500 n'introduit aucune dérive de teinte.
+      // `primary` porte une VRAIE rampe (50→900) : les composants (StatCard, Badge…) ont
+      // besoin de teintes intermédiaires (ex. fond clair de carte, bordure au survol) sans
+      // jamais sortir du token.
+      //
+      // Rampe bleu Unikol (remplace l'indigo générique Tailwind qui l'a précédée) : chaque
+      // valeur vient du design system officiel (tokens `primary` / `primary-container` /
+      // `primary-fixed*` / `on-primary-fixed*`), pas d'une teinte Tailwind stock.
+      //   500 DEFAULT = primary-container #2563EB — bouton/lien standard, contraste blanc 5.17:1 (AA)
+      //   600         = primary #004AC6 — variante haute-lisibilité (pastille active sous texte
+      //                 blanc, hover), contraste blanc 7.52:1 (AAA)
+      //   700         = on-primary-fixed-variant #003EA8 — état pressé/actif
+      //   900         = on-primary-fixed #00174B — le bleu marine le plus sombre du design system
+      //   100 / 300   = primary-fixed #DBE1FF / primary-fixed-dim #B4C5FF — teintes claires
+      //                 (fond de carte, bordure au survol)
+      //   50/200/400/800 sont interpolés entre les stops officiels ci-dessus pour obtenir
+      //   une rampe Tailwind complète et régulière.
       //
       // success/warning/danger restent des couleurs SÉMANTIQUES (statut), pas des rampes de
       // marque : un seul ton + une variante `-bg` (fond clair, pour les badges pastilles).
+      //
+      // success/danger/neutral alignés sur le design system officiel (tokens `tertiary` /
+      // `error` / `secondary`) — comme `primary`, plus de teinte Tailwind stock ici :
+      //   success = tertiary #006242, bg = on-tertiary-container #BDFFDB
+      //   danger  = error #BA1A1A,    bg = error-container #FFDAD6
+      //   neutral = secondary #565E74
+      // `warning` n'a pas d'équivalent dans le design system (pas de token ambre officiel) :
+      // conservé tel quel, seule couleur de ce groupe qui reste une teinte Tailwind ad hoc.
       colors: {
         primary: {
-          DEFAULT: "#6366F1",
-          50: "#EEF2FF",
-          100: "#E0E7FF",
-          200: "#C7D2FE",
-          300: "#A5B4FC",
-          400: "#818CF8",
-          500: "#6366F1",
-          600: "#4F46E5",
-          700: "#4338CA",
-          800: "#3730A3",
-          900: "#312E81"
+          DEFAULT: "#2563EB",
+          50: "#EEF4FF",
+          100: "#DBE1FF",
+          200: "#C8D3FF",
+          300: "#B4C5FF",
+          400: "#6D94F5",
+          500: "#2563EB",
+          600: "#004AC6",
+          700: "#003EA8",
+          800: "#002B7A",
+          900: "#00174B"
         },
-        success: { DEFAULT: "#1E8E3E", bg: "#EAF7EE" }, // Vert — validation, paiement effectué, abonnement actif
-        warning: { DEFAULT: "#E8710A", bg: "#FDF0E4" }, // Orange — échéances proches, paiement partiel
-        danger: { DEFAULT: "#D93025", bg: "#FBEAE9" },  // Rouge — erreurs, suppression, abonnement expiré/restreint
-        neutral: "#6B7280"      // Gris — textes secondaires, séparateurs
+        success: { DEFAULT: "#006242", bg: "#BDFFDB" }, // Vert — validation, paiement effectué, abonnement actif
+        warning: { DEFAULT: "#E8710A", bg: "#FDF0E4" }, // Orange — échéances proches, paiement partiel (pas de token officiel)
+        danger: { DEFAULT: "#BA1A1A", bg: "#FFDAD6" },  // Rouge — erreurs, suppression, abonnement expiré/restreint
+        neutral: "#565E74"      // Gris — textes secondaires, séparateurs
       },
       fontFamily: {
         // Inter (variable, AUTO-HÉBERGÉE — voir les @font-face en tête de Styles/input.css), repli

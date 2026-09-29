@@ -227,9 +227,9 @@
     <div class="bg-white border-b border-slate-100 p-6 flex justify-between items-start">
         <div class="flex items-center gap-4">
             <img x-show="detailStudent && detailStudent.photoDisplayUrl" :src="detailStudent ? detailStudent.photoDisplayUrl : ''" alt=""
-                 class="w-16 h-16 rounded-full ring-4 ring-indigo-50 shadow-md object-cover flex-shrink-0" x-cloak />
+                 class="w-16 h-16 rounded-full ring-4 ring-primary-50 shadow-md object-cover flex-shrink-0" x-cloak />
             <div x-show="!detailStudent || !detailStudent.photoDisplayUrl" :class="detailStudent ? initialsClasses(detailStudent.fullName) : ''" 
-                 class="w-16 h-16 rounded-full ring-4 ring-indigo-50 shadow-md flex items-center justify-center font-bold text-xl flex-shrink-0" 
+                 class="w-16 h-16 rounded-full ring-4 ring-primary-50 shadow-md flex items-center justify-center font-bold text-xl flex-shrink-0" 
                  x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
             <div>
                 <h2 class="text-2xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></h2>
@@ -356,14 +356,14 @@
                           x-text="studentDetail.identity.ienNumber"></span>
                     <span x-show="studentDetail.identity.isIenProvisional" class="text-[10px] font-bold text-amber-600 uppercase">provisoire</span>
                     <button type="button" x-show="canManageStudent" x-on:click="openIenModal()"
-                            class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Gérer</button>
+                            class="text-xs font-medium text-primary-600 hover:text-primary-800">Gérer</button>
                 </div>
             </template>
             <template x-if="studentDetail && studentDetail.identity && !studentDetail.identity.ienNumber">
                 <div class="flex items-center gap-2">
                     <span class="text-slate-400 italic text-sm">Non attribué</span>
                     <button type="button" x-show="canManageStudent" x-on:click="openIenModal()"
-                            class="text-xs font-medium text-indigo-600 hover:text-indigo-800">Renseigner</button>
+                            class="text-xs font-medium text-primary-600 hover:text-primary-800">Renseigner</button>
                 </div>
             </template>
         </div>
@@ -384,7 +384,7 @@
 
     <div class="bg-slate-50/80 border border-slate-200/60 rounded-xl p-4 mx-6 mb-6 shadow-sm">
         <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-            <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-md">
+            <span class="bg-primary-100 text-primary-600 p-1.5 rounded-md">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             </span>
             Tuteur légal
@@ -576,8 +576,8 @@
  </template>
  <button type="button" x-on:click="openEnrollmentCertificatePreview(entry.enrollmentId, entry.schoolYearLabel)"
  title="Aperçu et impression de l'attestation"
- class="inline-flex items-center justify-center gap-1.5 p-2 rounded-lg border border-indigo-200/60 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
- <icon name="document-text" class="w-4 h-4 text-indigo-700 shrink-0" />
+ class="inline-flex items-center justify-center gap-1.5 p-2 rounded-lg border border-primary-200/60 bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
+ <icon name="document-text" class="w-4 h-4 text-primary-700 shrink-0" />
  <span class="whitespace-nowrap">Attestation / Imprimer</span>
  </button>
  <button type="button" x-on:click="openEnrollmentReceiptPreview(entry.enrollmentId, entry.schoolYearLabel)"
@@ -591,8 +591,8 @@
  <template x-if="entry.status === 'DroppedOut' || entry.status === 'Transferred'">
  <button type="button" x-on:click="openExeatCertificatePreview(entry.enrollmentId, entry.schoolYearLabel)"
  title="Aperçu et impression du certificat d'exéat"
- class="inline-flex items-center justify-center gap-1.5 p-2 rounded-lg border border-indigo-200/60 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
- <icon name="document-text" class="w-4 h-4 text-indigo-700 shrink-0" />
+ class="inline-flex items-center justify-center gap-1.5 p-2 rounded-lg border border-primary-200/60 bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs font-semibold transition-all whitespace-nowrap shrink-0">
+ <icon name="document-text" class="w-4 h-4 text-primary-700 shrink-0" />
  <span class="whitespace-nowrap">Exéat / Imprimer</span>
  </button>
  </template>
@@ -772,7 +772,7 @@
  </button>
  <button type="button" x-on:click="openCreateCommitmentModal(activeEnrollmentId)"
  title="Créer un engagement financier (échéancier)"
- class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm transition-all whitespace-nowrap shrink-0">
+ class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm transition-all whitespace-nowrap shrink-0">
  <icon name="document-text" class="w-4 h-4 shrink-0" />
  <span class="whitespace-nowrap">Nouvel engagement financier</span>
  </button>
@@ -842,8 +842,8 @@
  <td class="py-3 px-4 text-center whitespace-nowrap">
  <button type="button" x-on:click="openPaymentReceiptPreview(payment.paymentId, payment.receiptNumber)"
  title="Aperçu et impression du reçu PDF"
- class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 mx-auto shrink-0">
- <icon name="document-text" class="w-4 h-4 text-indigo-600 shrink-0" />
+ class="bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-200/60 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 mx-auto shrink-0">
+ <icon name="document-text" class="w-4 h-4 text-primary-600 shrink-0" />
  <span class="whitespace-nowrap">Aperçu / Imprimer</span>
  </button>
  </td>

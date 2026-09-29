@@ -323,7 +323,7 @@
  <template x-for="s in filteredStudents()" :key="s.id">
  <button type="button" x-on:click="selectStudent(s)"
  class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors duration-150"
- :class="form.studentId === s.id ? 'bg-indigo-50' : ''">
+ :class="form.studentId === s.id ? 'bg-primary-50' : ''">
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
  <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
  </button>
@@ -441,7 +441,7 @@
  Nouvelle inscription
  </button>
  <button type="button" x-on:click="downloadPdf()" class="btn-modal-secondary group shrink-0">
- <icon name="document-text" class="w-5 h-5 text-indigo-600" />
+ <icon name="document-text" class="w-5 h-5 text-primary-600" />
  Attestation
  </button>
  <button type="button" x-on:click="downloadCertificatePdf()" class="btn-modal-secondary group shrink-0">
@@ -482,7 +482,7 @@
      <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-center text-[10.5px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
      <!--/center-badge-->
      <!--badges-->
-     <span class="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-indigo-700 whitespace-nowrap">Inscription enregistrée</span>
+     <span class="rounded-full border border-primary-200 bg-primary-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-700 whitespace-nowrap">Inscription enregistrée</span>
      <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Année&nbsp;<span x-text="receipt.schoolYearLabel"></span></span>
      <!--/badges-->
 
@@ -520,7 +520,7 @@
 
      @* D. Corps : deux blocs de NATURE différente. À gauche ce qu'il y a à régler maintenant, à
      l'ENCRE NOIRE — rien n'est acquitté, le secrétariat n'encaisse pas, et le vert signifierait
-     « payé ». À droite le prospectif, en indigo.
+     « payé ». À droite le prospectif, en bleu primaire.
 
      Le cumul annuel (totalDue) et le « reste à payer » ont disparu : c'est l'objet même de la
      refonte du 25/08/2026. Voir docs/design-references/README.md §1, rubrique « Interdits ». *@
@@ -582,12 +582,12 @@
      <p x-show="monthlyLines().length === 0" x-cloak class="py-1 text-[11px] italic text-slate-400">Aucun frais mensuel souscrit.</p>
      </div>
 
-     <div class="mt-2 flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+     <div class="mt-2 flex items-center justify-between gap-3 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2">
      <div>
-     <div class="text-[9px] font-bold uppercase tracking-wider text-indigo-700">Total à prévoir chaque mois</div>
-     <div class="text-[9px] text-indigo-500">Règlement du 1<sup>er</sup> au 5 de chaque mois</div>
+     <div class="text-[9px] font-bold uppercase tracking-wider text-primary-700">Total à prévoir chaque mois</div>
+     <div class="text-[9px] text-primary-500">Règlement du 1<sup>er</sup> au 5 de chaque mois</div>
      </div>
-     <div class="whitespace-nowrap text-lg font-bold leading-none text-indigo-700 amount"><span x-text="formatMoney(monthlyTotal())"></span><span class="text-[10px] font-medium text-indigo-500"> / mois</span></div>
+     <div class="whitespace-nowrap text-lg font-bold leading-none text-primary-700 amount"><span x-text="formatMoney(monthlyTotal())"></span><span class="text-[10px] font-medium text-primary-500"> / mois</span></div>
      </div>
      </div>
 

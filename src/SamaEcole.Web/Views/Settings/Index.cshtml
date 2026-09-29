@@ -169,12 +169,12 @@
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingLogo">
  <span class="flex items-center gap-2">
- <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <icon name="upload-cloud" class="w-4 h-4 text-primary-600" />
  <span>Choisir un fichier...</span>
  </span>
  </template>
  <template x-if="isUploadingLogo">
- <span class="flex items-center gap-2 text-indigo-600">
+ <span class="flex items-center gap-2 text-primary-600">
  <icon name="loader" class="w-4 h-4 animate-spin" />
  <span>Envoi en cours...</span>
  </span>
@@ -567,12 +567,12 @@
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingDirectorSignature">
  <span class="flex items-center gap-2">
- <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <icon name="upload-cloud" class="w-4 h-4 text-primary-600" />
  <span>Choisir un fichier...</span>
  </span>
  </template>
  <template x-if="isUploadingDirectorSignature">
- <span class="flex items-center gap-2 text-indigo-600">
+ <span class="flex items-center gap-2 text-primary-600">
  <icon name="loader" class="w-4 h-4 animate-spin" />
  <span>Envoi...</span>
  </span>
@@ -605,12 +605,12 @@
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingSecretarySignature">
  <span class="flex items-center gap-2">
- <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <icon name="upload-cloud" class="w-4 h-4 text-primary-600" />
  <span>Choisir un fichier...</span>
  </span>
  </template>
  <template x-if="isUploadingSecretarySignature">
- <span class="flex items-center gap-2 text-indigo-600">
+ <span class="flex items-center gap-2 text-primary-600">
  <icon name="loader" class="w-4 h-4 animate-spin" />
  <span>Envoi...</span>
  </span>
@@ -643,12 +643,12 @@
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingCashierSignature">
  <span class="flex items-center gap-2">
- <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <icon name="upload-cloud" class="w-4 h-4 text-primary-600" />
  <span>Choisir un fichier...</span>
  </span>
  </template>
  <template x-if="isUploadingCashierSignature">
- <span class="flex items-center gap-2 text-indigo-600">
+ <span class="flex items-center gap-2 text-primary-600">
  <icon name="loader" class="w-4 h-4 animate-spin" />
  <span>Envoi...</span>
  </span>
@@ -682,12 +682,12 @@
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingSurveillantSignature">
  <span class="flex items-center gap-2">
- <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <icon name="upload-cloud" class="w-4 h-4 text-primary-600" />
  <span>Choisir un fichier...</span>
  </span>
  </template>
  <template x-if="isUploadingSurveillantSignature">
- <span class="flex items-center gap-2 text-indigo-600">
+ <span class="flex items-center gap-2 text-primary-600">
  <icon name="loader" class="w-4 h-4 animate-spin" />
  <span>Envoi...</span>
  </span>
@@ -720,12 +720,12 @@
  <label x-show="isDirecteur" class="cursor-pointer inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium shadow-sm transition-all duration-150 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
  <template x-if="!isUploadingOfficialStamp">
  <span class="flex items-center gap-2">
- <icon name="upload-cloud" class="w-4 h-4 text-indigo-600" />
+ <icon name="upload-cloud" class="w-4 h-4 text-primary-600" />
  <span>Choisir un fichier...</span>
  </span>
  </template>
  <template x-if="isUploadingOfficialStamp">
- <span class="flex items-center gap-2 text-indigo-600">
+ <span class="flex items-center gap-2 text-primary-600">
  <icon name="loader" class="w-4 h-4 animate-spin" />
  <span>Envoi...</span>
  </span>
@@ -929,7 +929,7 @@
  <td class="py-2.5 px-4 text-right">
  <div class="flex items-center justify-end gap-1" x-show="canManageGradingConfig" x-cloak>
  <button type="button" x-on:click="m.id ? openEditMention(m) : openCreateMentionFromDefault(m)" title="Modifier" aria-label="Modifier la mention"
- class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+ class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
  <icon name="pencil" class="w-4 h-4" />
  </button>
  <button type="button" x-on:click="m.id ? openDeleteMention(m) : openCreateMentionFromDefault(m)" title="Supprimer" aria-label="Supprimer la mention"
