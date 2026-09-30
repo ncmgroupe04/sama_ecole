@@ -17,9 +17,9 @@ public class UserSchoolConfiguration : IEntityTypeConfiguration<UserSchool>
 
         builder.HasKey(us => us.Id);
 
-        // Un rattachement au plus par couple : le soft delete fait partie de la clé, comme partout
-        // ailleurs — un rattachement retiré puis rétabli ne doit pas buter sur l'index.
-        builder.HasIndex(us => new { us.UserId, us.SchoolId, us.IsDeleted }).IsUnique();
+        // Un rattachement au plus par couple : index PARTIEL sur les lignes vivantes, comme partout
+        // ailleurs — un rattachement retiré puis rétabli (même plusieurs fois) ne doit pas buter sur l'index.
+        builder.HasIndex(us => new { us.UserId, us.SchoolId }).IsUnique().HasFilter("\"IsDeleted\" = false");
 
         builder.HasOne<User>()
             .WithMany()

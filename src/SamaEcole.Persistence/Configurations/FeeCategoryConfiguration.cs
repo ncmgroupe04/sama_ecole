@@ -23,9 +23,10 @@ public class FeeCategoryConfiguration : IEntityTypeConfiguration<FeeCategory>
         // Défaut false : toute catégorie existante reste OBLIGATOIRE après la migration.
         builder.Property(c => c.IsOptional).IsRequired().HasDefaultValue(false);
 
-        // Une catégorie est unique par nom au sein de l'école. Le soft delete fait partie de la clé :
-        // sans lui, une catégorie archivée interdirait d'en recréer une de même nom.
-        builder.HasIndex(c => new { c.SchoolId, c.Name, c.IsDeleted }).IsUnique();
+        // Une catégorie est unique par nom au sein de l'école. L'unicité est un
+        // index PARTIEL sur les lignes vivantes : une catégorie archivée n'interdit jamais d'en recréer une de même
+        // nom, même supprimée plusieurs fois (IsDeleted dans la clé n'autorisait qu'UNE ligne supprimée par nom).
+        builder.HasIndex(c => new { c.SchoolId, c.Name }).IsUnique().HasFilter("\"IsDeleted\" = false");
 
         // Clé alternative (SchoolId, Id) : elle sert de cible à la FK COMPOSITE de class_fees, qui
         // référence une catégorie ET son école à la fois. Sans elle, une ligne de barème pourrait
