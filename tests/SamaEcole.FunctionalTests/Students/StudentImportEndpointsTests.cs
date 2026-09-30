@@ -37,7 +37,7 @@ public class StudentImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsync
     private record ErrorResponseDto(string Code, string Message, Dictionary<string, string[]>? Details, string TraceId);
     private record ImportRowResultDto(int RowNumber, bool IsValid, string FullName, string BirthDate,
         string BirthPlace, string Gender, string ClassroomName, string GuardianName, string GuardianPhone,
-        Dictionary<string, string> FieldErrors);
+        string FullNameAr, string GuardianNameAr, Dictionary<string, string> FieldErrors);
     private record ImportResultDto(bool DryRun, bool Committed, int TotalRows, int ValidRows, int InvalidRows,
         int Created, List<ImportRowResultDto> Rows);
     private record StudentListItemDto(Guid Id, string Matricule, string FullName, DateOnly BirthDate,
@@ -120,6 +120,40 @@ public class StudentImportEndpointsTests : IClassFixture<AuthApiFactory>, IAsync
         result.Created.Should().Be(0);
 
         (await StudentCountAsync(directeur)).Should().Be(before, "un aperçu (dryRun) ne doit jamais écrire en base");
+    }
+
+    [Fact]
+    public async Task A_Row_With_Valid_Arabic_Names_Is_Accepted_And_Echoed_Back()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 Import Arabe");
+
+        var csv = $"{Header};NomAr;TuteurAr\nAwa Ndiaye;12/03/2015;Dakar;F;{classroom.Name};;;;;أوا نداي;موسى نداي";
+
+        var response = await ImportAsync(directeur, csv, dryRun: true);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = (await response.Content.ReadFromJsonAsync<ImportResultDto>())!;
+        result.InvalidRows.Should().Be(0);
+        result.Rows.Single().FullNameAr.Should().Be("أوا نداي");
+        result.Rows.Single().GuardianNameAr.Should().Be("موسى نداي");
+    }
+
+    [Fact]
+    public async Task A_Row_With_An_Oversized_FullNameAr_Is_Rejected_With_A_Field_Error()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 Import Arabe Invalide");
+        var tooLong = new string('ا', 201);
+
+        var csv = $"{Header};NomAr;TuteurAr\nAwa Ndiaye;12/03/2015;Dakar;F;{classroom.Name};;;;;{tooLong};";
+
+        var response = await ImportAsync(directeur, csv, dryRun: true);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = (await response.Content.ReadFromJsonAsync<ImportResultDto>())!;
+        result.InvalidRows.Should().Be(1);
+        result.Rows.Single().FieldErrors.Should().ContainKey("fullNameAr");
     }
 
     [Fact]
