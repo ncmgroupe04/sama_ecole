@@ -28,6 +28,8 @@ public class UpdateStudentCommandValidator : AbstractValidator<UpdateStudentComm
             .NoHtml();
 
         RuleFor(x => x.Address).MaximumLength(300).NoHtml();
+        RuleFor(x => x.FullNameAr).MaximumLength(200).NoHtml();
+        RuleFor(x => x.GuardianNameAr).MaximumLength(200).NoHtml();
 
         // Même contrat que CreateStudentCommandValidator : une adresse http(s), jamais un file:// ou
         // javascript: — la photo n'est jamais téléversée, seulement référencée par URL.
