@@ -194,7 +194,7 @@
           <icon name="payment" class="w-4 h-4" />
          </button>
          <button type="button" @@click="openEdit(classroom)" title="Modifier" aria-label="Modifier la classe"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+          class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
           <icon name="pencil" class="w-4 h-4" />
          </button>
          <button type="button" @@click="deleteClassroom(classroom)" title="Supprimer" aria-label="Supprimer la classe"
@@ -267,7 +267,7 @@
           <icon name="payment" class="w-4 h-4" />
          </button>
          <button type="button" @@click="openEdit(classroom)" title="Modifier" aria-label="Modifier la classe"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+          class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
           <icon name="pencil" class="w-4 h-4" />
          </button>
          <button type="button" @@click="deleteClassroom(classroom)" title="Supprimer" aria-label="Supprimer la classe"
@@ -306,7 +306,7 @@
     @* on-change : changer de cycle change la nomenclature du second niveau — la valeur déjà choisie
        n'y appartient plus et doit repartir de zéro (voir onLevelChanged). *@
     <select-field model="newClassroom.level" required="true" aria-label="Niveau"
-     options="classroomLevelOptions" on-change="onLevelChanged(newClassroom)" />
+     options-expr="visibleLevelOptions(newClassroom.level)" on-change="onLevelChanged(newClassroom)" />
     <p x-show="createErrors.level" x-text="createErrors.level" class="field-error"></p>
    </div>
 
@@ -389,7 +389,7 @@
    <div>
     <label class="form-label form-label-required">Niveau</label>
     <select-field model="editing.level" required="true" aria-label="Niveau"
-     options="classroomLevelOptions" on-change="onLevelChanged(editing)" />
+     options-expr="visibleLevelOptions(editing.level)" on-change="onLevelChanged(editing)" />
     <p x-show="editErrors.level" x-cloak x-text="editErrors.level" class="field-error"></p>
    </div>
 

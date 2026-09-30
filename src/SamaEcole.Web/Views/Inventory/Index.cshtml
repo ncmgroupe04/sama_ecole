@@ -119,7 +119,7 @@
                         <template x-for="item in items" :key="item.id">
                             <tr class="hover:bg-slate-50 transition-colors">
                                 <td class="py-3 px-4">
-                                    <button type="button" x-on:click="openItemDetail(item)" class="font-medium text-slate-900 hover:text-indigo-600 text-left transition-colors">
+                                    <button type="button" x-on:click="openItemDetail(item)" class="font-medium text-slate-900 hover:text-primary-600 text-left transition-colors">
                                         <span x-text="item.name"></span>
                                     </button>
                                     <p x-show="item.code" x-cloak class="text-xs text-slate-400 font-mono" x-text="item.code"></p>

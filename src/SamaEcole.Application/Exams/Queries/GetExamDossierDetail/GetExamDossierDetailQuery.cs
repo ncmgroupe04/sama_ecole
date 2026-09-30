@@ -32,4 +32,7 @@ public record ExamDossierDetail(
     // numéro de table (distinct du numéro de candidat), état détaillé de la pièce d'état civil.
     string? ExamCenterCode,
     string? TableNumber,
-    string CivilRegistryDocumentStatus);
+    string CivilRegistryDocumentStatus,
+    // Ticket Onboarding #6 (profil Élémentaire) — voir ExamDossier.PhotoPresent.
+    bool PhotoPresent = false,
+    bool FeeReceiptPresent = false);

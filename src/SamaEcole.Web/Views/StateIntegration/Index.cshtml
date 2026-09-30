@@ -14,10 +14,14 @@
 <div x-data="stateIntegrationView()">
 
     <div>
-        <h1 class="page-title">Intégration étatique</h1>
-        <p class="page-subtitle">
+        <h1 class="page-title" x-text="pedagogyEnabled ? 'Intégration étatique' : 'Export Planète'"></h1>
+        <p class="page-subtitle" x-show="pedagogyEnabled" x-cloak>
             Pièces et fichiers réglementaires dus au ministère : export Planète, rapport annuel STATEDUC,
             registre des certificats de mutation.
+        </p>
+        <p class="page-subtitle" x-show="!pedagogyEnabled" x-cloak>
+            Matrice de l'état civil scolaire à transmettre au ministère — accessible quel que soit le
+            profil de votre établissement.
         </p>
     </div>
 
@@ -43,11 +47,14 @@
                     class="tab-btn" :class="tabClass('planete')">
                 Export Planète
             </button>
-            <button type="button" role="tab" x-show="isDirector" x-cloak x-on:click="switchTab('stateduc')"
+            <button type="button" role="tab" x-show="isDirector && pedagogyEnabled" x-cloak x-on:click="switchTab('stateduc')"
                     class="tab-btn" :class="tabClass('stateduc')">
                 Rapport STATEDUC
             </button>
-            <button type="button" role="tab" x-on:click="switchTab('certificats')"
+            @* Ticket Onboarding (ajustement profil Simplifié) : redemande désormais le module
+               Pédagogie côté API (StateIntegrationController) — masqué sans lui, sans quoi l'action
+               échouerait systématiquement en 403. *@
+            <button type="button" role="tab" x-show="pedagogyEnabled" x-cloak x-on:click="switchTab('certificats')"
                     class="tab-btn" :class="tabClass('certificats')">
                 Certificats de mutation
             </button>
@@ -83,11 +90,11 @@
                         <label class="form-label-sm">Format</label>
                         <div class="flex gap-2 mt-1">
                             <label class="inline-flex items-center gap-1.5 text-sm">
-                                <input type="radio" value="Csv" x-model="planete.format" class="text-indigo-600" />
+                                <input type="radio" value="Csv" x-model="planete.format" class="text-primary-600" />
                                 CSV
                             </label>
                             <label class="inline-flex items-center gap-1.5 text-sm">
-                                <input type="radio" value="Json" x-model="planete.format" class="text-indigo-600" />
+                                <input type="radio" value="Json" x-model="planete.format" class="text-primary-600" />
                                 JSON
                             </label>
                         </div>
@@ -111,7 +118,7 @@
     </div>
 
     <!-- ============================= ONGLET RAPPORT STATEDUC ============================= -->
-    <div x-show="tab === 'stateduc' && isDirector" x-cloak class="mt-6 space-y-6">
+    <div x-show="tab === 'stateduc' && isDirector && pedagogyEnabled" x-cloak class="mt-6 space-y-6">
         <div class="card p-6 space-y-5">
             <div>
                 <h2 class="section-title">Rapport annuel STATEDUC</h2>
@@ -242,7 +249,7 @@
     </div>
 
     <!-- ============================= ONGLET CERTIFICATS ============================= -->
-    <div x-show="tab === 'certificats'" x-cloak class="mt-6">
+    <div x-show="tab === 'certificats' && pedagogyEnabled" x-cloak class="mt-6">
         <div class="card overflow-hidden">
             <div class="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-3">

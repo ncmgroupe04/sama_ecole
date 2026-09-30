@@ -39,6 +39,12 @@ document.addEventListener('alpine:init', () => {
         // fiche élève). Un rôle sans accès n'arrive pas ici — le lien de menu est déjà masqué.
         isDirector: window.auth.role === 'Directeur',
 
+        // Ticket Onboarding (ajustement profil Simplifié) : STATEDUC/Certificats redemandent
+        // désormais le module Pédagogie côté API (StateIntegrationController) — seul Export Planète
+        // en reste dispensé. Chargé dans init(), confort d'affichage comme partout ailleurs (la
+        // vraie garde reste le 403 serveur) : évite de proposer un onglet qui échouerait à coup sûr.
+        pedagogyEnabled: true,
+
         tab: window.auth.role === 'Directeur' ? 'planete' : 'certificats',
 
         // Référentiels partagés.
@@ -79,12 +85,14 @@ document.addEventListener('alpine:init', () => {
 
         async init() {
             try {
-                const [years, classrooms] = await Promise.all([
+                const [years, classrooms, settings] = await Promise.all([
                     window.api.get('/school-years'),
-                    window.api.get('/classrooms')
+                    window.api.get('/classrooms'),
+                    window.api.get('/schools/current/settings')
                 ]);
                 this.schoolYears = years || [];
                 this.classrooms = classrooms || [];
+                this.pedagogyEnabled = !settings || settings.isPedagogyEnabled !== false;
 
                 const active = this.schoolYears.find((y) => y.isActive) || this.schoolYears[0];
                 if (active) {
@@ -94,6 +102,10 @@ document.addEventListener('alpine:init', () => {
             } catch (err) {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des référentiels.');
             }
+
+            // Pédagogie désactivée (profil Simplifié) : seul Export Planète reste accessible —
+            // STATEDUC et Certificats redemandent le module côté API, inutile d'y atterrir par défaut.
+            if (!this.pedagogyEnabled) this.tab = 'planete';
 
             // Best-effort : un échec du statut du relais ne doit pas bloquer l'écran.
             try {

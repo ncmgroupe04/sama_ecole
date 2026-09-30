@@ -1,5 +1,6 @@
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
+using SamaEcole.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -61,7 +62,8 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         settings.GradeEditWindowDays,
         settings.EvaluationPeriodType.ToString(),
         settings.CustomPeriodCount,
-        SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)));
+        SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)),
+        settings.ProfileEtablissement?.ToString());
 
     private static SchoolSettingsDto Defaults() => new(
         SchoolSettingsDefaults.GradingScale.ToString(),
@@ -91,5 +93,11 @@ public class GetSchoolSettingsQueryHandler(IApplicationDbContext dbContext, ITen
         SchoolSettingsDefaults.GradeEditWindowDays,
         SchoolSettingsDefaults.EvaluationPeriodType.ToString(),
         SchoolSettingsDefaults.CustomPeriodCount,
-        SchoolWeek.ToNames(SchoolWeek.FromStored(null)));
+        SchoolWeek.ToNames(SchoolWeek.FromStored(null)),
+
+        // Aucune ligne school_settings du tout (école antérieure à JGK-B02, provision_school_director
+        // n'existait pas encore) : traitée comme une école EXISTANTE, jamais redirigée vers l'Onboarding.
+        // Une école neuve, elle, a TOUJOURS une ligne dès sa création (provision_school_director) avec
+        // ProfileEtablissement = NULL — elle ne passe donc jamais par CETTE branche.
+        ProfileEtablissement.General.ToString());
 }

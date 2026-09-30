@@ -13,7 +13,7 @@ public class GetFeeCategoriesQueryHandler(IApplicationDbContext dbContext)
         return await dbContext.FeeCategories
             .AsNoTracking()
             .OrderBy(c => c.Name)
-            .Select(c => new FeeCategoryDto(c.Id, c.Name, c.IsRecurring))
+            .Select(c => new FeeCategoryDto(c.Id, c.Name, c.IsRecurring, c.IsOptional))
             .ToListAsync(cancellationToken);
     }
 }

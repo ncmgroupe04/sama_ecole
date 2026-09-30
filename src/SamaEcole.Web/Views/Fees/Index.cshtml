@@ -178,7 +178,19 @@
  <span class="block text-xs text-slate-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
  </label>
  </div>
- <div class="flex items-start gap-2">
+ @* Frais optionnels : masquée pour une pension (incompatible, 422 côté serveur) — le module Internat a
+    son propre choix. Décochée par défaut : un frais reste obligatoire tant qu'on ne le déclare pas facultatif. *@
+ <div class="flex items-start gap-2" x-show="!newCategory.isBoardingFee">
+ <input id="cat-optional" type="checkbox" x-model="newCategory.isOptional" class="checkbox-field mt-1">
+ <label for="cat-optional" class="text-sm text-slate-700">
+ Frais optionnel (au choix de la famille)
+ <span class="block text-xs text-slate-400">Cochez pour l'uniforme, la tenue de sport… : l'inscription proposera une case à cocher. Laissez décoché pour l'inscription et la mensualité, dues par tous.</span>
+ </label>
+ </div>
+ @* Masqué si le module Internat est désactivé (retour utilisateur du 29/09/2026) : un profil
+    Général/Élémentaire/Simplifié n'a pas d'internat, cocher cette case n'y aurait aucun effet
+    visible (écran Internat/Inscriptions, tous deux déjà masqués pour ces profils). *@
+ <div class="flex items-start gap-2" x-show="$store.schoolConfig.internatEnabled" x-cloak>
  <input id="cat-boarding" type="checkbox" x-model="newCategory.isBoardingFee" class="checkbox-field mt-1">
  <label for="cat-boarding" class="text-sm text-slate-700">
  Frais d'internat (module Internat)
@@ -204,7 +216,7 @@
 
  <!-- Modale : appliquer un montant standard -->
  <modal-shell open="isApplyOpen" size="lg">
- <modal-title>Montant standard — <span class="text-indigo-100" x-text="selectedCategory ? selectedCategory.name : ''"></span></modal-title>
+ <modal-title>Montant standard — <span class="text-primary-100" x-text="selectedCategory ? selectedCategory.name : ''"></span></modal-title>
  @* Le décompte suit le périmètre choisi : il doit dire ce qui va RÉELLEMENT être écrit, pas le
  total de l'école — c'est le seul garde-fou avant un geste qui touche plusieurs classes. *@
  <modal-subtitle>
@@ -251,11 +263,16 @@
 
  <!-- Modale : modifier une exception -->
  <modal-shell open="editing" on-close="closeEdit()" size="md">
- <modal-title>Montant — <span class="text-indigo-100" x-text="editing ? editing.classroomName : ''"></span></modal-title>
+ <modal-title>Montant — <span class="text-primary-100" x-text="editing ? editing.classroomName : ''"></span></modal-title>
  <modal-subtitle><span x-text="selectedCategory ? selectedCategory.name : ''"></span></modal-subtitle>
 
  <div x-show="editErrors.global" x-cloak class="mb-4 rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="editErrors.global"></div>
 
+ @* `editing` vaut null tant que la modale n'a pas été ouverte : sans ce <template x-if>, Alpine
+    évaluait `editing.amount` dès le chargement de l'écran (avant tout clic sur "Modifier"),
+    jetant une TypeError en boucle sur /frais — corrigé au passage (retour utilisateur du
+    29/09/2026), même garde que la modale d'édition de salle (Views/Buildings/Index.cshtml). *@
+ <template x-if="editing">
  <form x-on:submit.prevent="submitEdit()" novalidate class="space-y-4">
  <div>
  <label for="edit-amount" class="form-label form-label-required">Montant (FCFA)</label>
@@ -270,11 +287,12 @@
  </button>
  </div>
  </form>
+ </template>
  </modal-shell>
 
  <!-- Modale : historique -->
  <modal-shell open="historyFor" on-close="closeHistory()" size="lg">
- <modal-title>Historique — <span class="text-indigo-100" x-text="historyFor ? historyFor.classroomName : ''"></span></modal-title>
+ <modal-title>Historique — <span class="text-primary-100" x-text="historyFor ? historyFor.classroomName : ''"></span></modal-title>
 
  <div x-show="isLoadingHistory" class="py-8 text-center text-sm text-slate-400">Chargement…</div>
 

@@ -133,4 +133,30 @@ public class GetStudentsQueryHandlerTests : IAsyncLifetime
         result.Items.Select(i => i.Id).Should()
             .BeEquivalentTo(new[] { EleveInscrit, EleveNonInscrit, EleveInscriptionAnnulee });
     }
+
+    [Fact]
+    public async Task Items_Expose_The_Arabic_Mirror_Names_When_Set()
+    {
+        var eleveId = Guid.Parse("11111111-0000-0000-0000-0000000000a9");
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Students.Add(new Student
+            {
+                Id = eleveId, SchoolId = EcoleA, Matricule = "ELEV-2026-0099", FullName = "Fatou Sarr",
+                FullNameAr = "فاتو سار", GuardianNameAr = "عمر سار",
+                BirthDate = new DateOnly(2015, 5, 5), BirthPlace = "Dakar", Gender = "F", ClassroomId = ClasseA
+            });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(EcoleA);
+        var handler = new GetStudentsQueryHandler(db);
+
+        var result = await handler.Handle(new GetStudentsQuery { PageSize = 50 }, CancellationToken.None);
+
+        var item = result.Items.Should().ContainSingle(i => i.Id == eleveId).Subject;
+        item.FullNameAr.Should().Be("فاتو سار");
+        item.GuardianNameAr.Should().Be("عمر سار");
+    }
 }

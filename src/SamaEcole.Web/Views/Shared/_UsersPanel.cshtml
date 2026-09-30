@@ -11,11 +11,14 @@
 <div x-data="usersView()">
  <!-- Titre et bouton Nouvel utilisateur -->
  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
- <div>
- <h2 class="text-lg font-semibold text-slate-900">Utilisateurs</h2>
- <p class="text-sm text-slate-500 mt-1">
+ <div class="icon-heading">
+ <span class="icon-chip-md icon-chip-indigo" aria-hidden="true"><icon name="users" class="w-5 h-5" /></span>
+ <div class="min-w-0">
+ <h2 class="icon-heading-title text-lg">Utilisateurs</h2>
+ <p class="icon-heading-subtitle text-sm mt-1">
  Créez les comptes de votre personnel et contrôlez leur accès (blocage, suspension, mot de passe).
  </p>
+ </div>
  </div>
 
  <button x-show="isDirecteur" x-cloak x-on:click="openCreate()" class="btn-modal-primary group">

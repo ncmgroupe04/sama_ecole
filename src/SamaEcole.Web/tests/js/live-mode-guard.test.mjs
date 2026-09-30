@@ -220,7 +220,7 @@ test('assistant : base terminée SANS première inscription ni SIMEN (ce que la 
     const { assistant, ctx, events } = await mountAssistant(ASSISTANT_TABLE());
     assert.equal(assistant.baseComplete, true);
     assert.equal(assistant.percent < 100, true, 'le parcours complet reste inachevé');
-    assert.deepEqual(plain(events.at(-1)), { baseComplete: true });
+    assert.deepEqual(plain(events.at(-1)), { baseComplete: true, percent: 67, done: 4, total: 6 });
     assert.equal(ctx.window.setupProgress.baseComplete, true);
 });
 
@@ -228,7 +228,7 @@ test('assistant : une étape de base manquante (enseignants) => base incomplète
     const { assistant, events } = await mountAssistant(
         ASSISTANT_TABLE({ '/teachers': { totalCount: 0, items: [] } }));
     assert.equal(assistant.baseComplete, false);
-    assert.deepEqual(plain(events.at(-1)), { baseComplete: false });
+    assert.deepEqual(plain(events.at(-1)), { baseComplete: false, percent: 50, done: 3, total: 6 });
 });
 
 test('assistant : établissement public — frais non applicable, la base peut être complète', async () => {

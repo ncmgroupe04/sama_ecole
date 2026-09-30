@@ -26,7 +26,8 @@ document.addEventListener('alpine:init', () => {
 
         classrooms: [],
         recurringByCategory: {}, // { feeCategoryId: isRecurring }
-        feesByClassroom: {},     // { classroomId: [{ feeCategoryId, designation, isRecurring, unitAmount }] }
+        optionalByCategory: {},  // { feeCategoryId: isOptional } — frais au choix de la famille (uniforme, tenue de sport…)
+        feesByClassroom: {},     // { classroomId: [{ feeCategoryId, designation, isRecurring, isOptional, unitAmount }] }
         tuitionMonths: 9,
         activeYear: null,
 
@@ -39,10 +40,37 @@ document.addEventListener('alpine:init', () => {
         // Rechargé à chaque changement de régime (l'occupation évolue au fil des inscriptions).
         availableRooms: [],
 
+        // Profil d'Onboarding (Ticket 4, voir ApplyEstablishmentProfileCommand) — même confort
+        // d'affichage qu'internatEnabled ci-dessus : lu sur la MÊME réponse /schools/current/settings
+        // que tuitionMonths/internatEnabled (loadReferenceData), pas via le store partagé
+        // schoolConfig (auth.js), pour ne pas dupliquer cette requête déjà faite sur cet écran.
+        isSimplifieProfile: false,
+        isElementaireProfile: false,
+        isFrancoArabeProfile: false,
+
         // Élèves pour la réinscription (chargés à la demande)
         students: [],
         studentsLoaded: false,
         studentSearch: '',
+
+        // Étapes du formulaire (repère de progression, refonte UI/UX) : purement un découpage
+        // d'AFFICHAGE — tous les champs des 4 étapes restent dans le même `form` et la même
+        // validation (canSubmit()/submit()) qu'avant, aucune étape n'est un formulaire distinct.
+        // Navigation libre (goToStep) : une étape déjà remplie n'est jamais verrouillée.
+        currentStep: 1,
+        stepCount: 4,
+
+        goToStep(step) {
+            this.currentStep = Math.min(Math.max(step, 1), this.stepCount);
+        },
+
+        nextStep() {
+            this.goToStep(this.currentStep + 1);
+        },
+
+        prevStep() {
+            this.goToStep(this.currentStep - 1);
+        },
 
         // Formulaire
         mode: 'NewEnrollment',
@@ -69,7 +97,12 @@ document.addEventListener('alpine:init', () => {
             includeBoardingFee: true,
 
             // --- Matières optionnelles (Évolution N°6) : { nom du groupe: id de la matière de classe retenue } ---
-            subjectOptions: {}
+            subjectOptions: {},
+
+            // --- Frais optionnels : identifiants des catégories DÉCOCHÉES. On mémorise les exceptions plutôt que
+            // les cases cochées : tout frais optionnel est pré-coché par défaut, y compris celui qui n'a pas
+            // encore été chargé, et un brouillon restauré (form entier) conserve les décochages. ---
+            uncheckedFeeIds: []
         },
         formErrors: {},
 
@@ -108,7 +141,12 @@ document.addEventListener('alpine:init', () => {
                 this.hasDraft = true;
             }
             // Classe changée (saisie ou brouillon restauré) : ses groupes d'options remplacent les précédents.
-            this.$watch('form.classroomId', (id) => { this.loadSubjectOptions(id); this.checkAge(); });
+            // Une classe REMPLACÉE (pas la première sélection, ni un brouillon restauré) recoche les frais optionnels.
+            this.$watch('form.classroomId', (id, previous) => {
+                if (previous) this.resetOptionalFees();
+                this.loadSubjectOptions(id);
+                this.checkAge();
+            });
             this.$watch('form.birthDate', () => this.checkAge());
             this.$watch('form', (val) => {
                 if (window.formDraft && (val.fullName || val.studentId || val.classroomId)) {
@@ -188,8 +226,17 @@ document.addEventListener('alpine:init', () => {
                 this.internatEnabled = !!settings && settings.isInternatEnabled === true;
                 if (this.internatEnabled) await this.loadAvailableRooms();
 
+                const profile = settings && settings.profileEtablissement;
+                this.isSimplifieProfile = profile === 'Simplifie';
+                this.isElementaireProfile = profile === 'ElementairePrimaire';
+                this.isFrancoArabeProfile = profile === 'FrancoArabe';
+
                 this.recurringByCategory = {};
-                categories.forEach((c) => { this.recurringByCategory[c.id] = c.isRecurring; });
+                this.optionalByCategory = {};
+                categories.forEach((c) => {
+                    this.recurringByCategory[c.id] = c.isRecurring;
+                    this.optionalByCategory[c.id] = !!c.isOptional;
+                });
 
                 this.feesByClassroom = {};
                 fees.forEach((f) => {
@@ -197,6 +244,7 @@ document.addEventListener('alpine:init', () => {
                         feeCategoryId: f.feeCategoryId,
                         designation: f.feeCategoryName,
                         isRecurring: !!this.recurringByCategory[f.feeCategoryId],
+                        isOptional: !!this.optionalByCategory[f.feeCategoryId],
                         unitAmount: f.amount
                     });
                 });
@@ -229,26 +277,75 @@ document.addEventListener('alpine:init', () => {
         // ---------------------------------------------------------------- Aperçu des frais
 
         /**
-         * Recompose les lignes de frais de la classe sélectionnée, EXACTEMENT comme le serveur :
-         * une mensualité est multipliée par le nombre de mensualités de l'année, un frais ponctuel
+         * Tous les frais de la classe sélectionnée, cochés ou non — ce que la liste du formulaire affiche.
+         * Un frais optionnel décoché reste listé (on doit pouvoir le recocher) mais n'est pas facturé.
+         */
+        feeChoices() {
+            const fees = this.feesByClassroom[this.form.classroomId] || [];
+            return fees.map((f) => {
+                const months = f.isRecurring ? this.tuitionMonths : 1;
+                return {
+                    feeCategoryId: f.feeCategoryId,
+                    designation: f.designation,
+                    isRecurring: f.isRecurring,
+                    isOptional: !!f.isOptional,
+                    checked: this.isFeeChecked(f.feeCategoryId),
+                    unitAmount: f.unitAmount,
+                    months,
+                    lineTotal: f.unitAmount * months
+                };
+            });
+        },
+
+        /**
+         * Recompose les lignes de frais FACTURÉES de la classe sélectionnée, EXACTEMENT comme le serveur
+         * (OptionalFeeSelection) : un frais obligatoire est toujours dû, un frais optionnel seulement s'il est
+         * coché. Une mensualité est multipliée par le nombre de mensualités de l'année, un frais ponctuel
          * jamais. Trié ponctuels d'abord, comme le reçu.
          */
         previewLines() {
-            const fees = this.feesByClassroom[this.form.classroomId] || [];
-            return fees
-                .map((f) => {
-                    const months = f.isRecurring ? this.tuitionMonths : 1;
-                    return {
-                        feeCategoryId: f.feeCategoryId,
-                        designation: f.designation,
-                        isRecurring: f.isRecurring,
-                        unitAmount: f.unitAmount,
-                        months,
-                        lineTotal: f.unitAmount * months
-                    };
-                })
+            return this.feeChoices()
+                .filter((l) => !l.isOptional || l.checked)
                 .sort((a, b) =>
                     (a.isRecurring - b.isRecurring) || a.designation.localeCompare(b.designation));
+        },
+
+        // ---------------------------------------------------------------- Frais optionnels (cases à cocher)
+
+        /** Un frais obligatoire est toujours « coché » ; un frais optionnel l'est tant qu'on ne l'a pas décoché. */
+        isFeeChecked(feeCategoryId) {
+            if (!this.optionalFeeIds().includes(feeCategoryId)) return true;
+            return !this.form.uncheckedFeeIds.includes(feeCategoryId);
+        },
+
+        /** Bascule un frais OPTIONNEL. Sans effet sur un frais obligatoire : la mensualité ne se décoche pas. */
+        toggleFee(feeCategoryId) {
+            if (!this.optionalFeeIds().includes(feeCategoryId)) return;
+            this.form.uncheckedFeeIds = this.isFeeChecked(feeCategoryId)
+                ? [...this.form.uncheckedFeeIds, feeCategoryId]
+                : this.form.uncheckedFeeIds.filter((id) => id !== feeCategoryId);
+        },
+
+        /** Changement de classe : le barème change, les frais optionnels redeviennent tous cochés. */
+        resetOptionalFees() {
+            this.form.uncheckedFeeIds = [];
+        },
+
+        optionalFeeIds() {
+            return (this.feesByClassroom[this.form.classroomId] || [])
+                .filter((f) => f.isOptional)
+                .map((f) => f.feeCategoryId);
+        },
+
+        /**
+         * Frais optionnels retenus, transmis au serveur qui décide seul de ce qui est dû (règle #10) : la liste
+         * EXPLICITE des cochés — vide si la famille n'en prend aucun. Absente quand la classe n'a aucun frais
+         * optionnel (rien à choisir). Le serveur ignore le silence : un champ absent facturerait tout.
+         */
+        optionalFeePayload() {
+            const optionalIds = this.optionalFeeIds();
+            if (optionalIds.length === 0) return {};
+            return { optionalFeeCategoryIds: optionalIds.filter((id) => this.isFeeChecked(id)) };
         },
 
         previewTotal() {
@@ -282,6 +379,7 @@ document.addEventListener('alpine:init', () => {
         async selectMode(mode) {
             this.mode = mode;
             this.formErrors = {};
+            this.currentStep = 1;
             if (mode === 'ReEnrollment' && !this.studentsLoaded) {
                 await this.loadStudents();
             }
@@ -414,6 +512,7 @@ document.addEventListener('alpine:init', () => {
                     studentId: this.form.studentId,
                     ...this.boardingPayload(),
                     ...this.subjectOptionsPayload(),
+                    ...this.optionalFeePayload(),
                     ...this.transferPayload()
                 }
                 : {
@@ -428,6 +527,7 @@ document.addEventListener('alpine:init', () => {
                     guardianPhone: this.form.guardianPhone || null,
                     ...this.boardingPayload(),
                     ...this.subjectOptionsPayload(),
+                    ...this.optionalFeePayload(),
                     ...this.transferPayload()
                 };
 
@@ -441,9 +541,30 @@ document.addEventListener('alpine:init', () => {
                 this.hasDraft = false;
             } catch (err) {
                 this.formErrors = window.api.toFieldErrors(err, "Erreur lors de l'inscription.");
+                this.jumpToFirstErrorStep();
             } finally {
                 this.isSubmitting = false;
             }
+        },
+
+        /**
+         * Le formulaire reste un SEUL modèle de validation (formErrors) malgré son découpage en
+         * étapes d'affichage : une erreur retournée par le serveur peut viser un champ d'une étape
+         * que l'utilisateur ne regarde plus (ex. resté sur l'étape 4 après une 1re tentative). On
+         * saute donc à la première étape qui porte une erreur, plutôt que de laisser un message
+         * invisible sous un x-show="currentStep === n" fermé.
+         */
+        jumpToFirstErrorStep() {
+            const stepOfField = {
+                fullname: 1, birthdate: 1, gender: 1, birthplace: 1, studentid: 1,
+                classroomid: 2, roomid: 2, boardingstatus: 2, subjectoptionids: 2, previousschoolname: 2,
+                guardianname: 3, guardianphone: 3,
+                global: 4, schoolyear: 4
+            };
+            const erroredKeys = Object.keys(this.formErrors);
+            if (erroredKeys.length === 0) return;
+            const steps = erroredKeys.map((k) => stepOfField[k]).filter(Boolean);
+            if (steps.length > 0) this.goToStep(Math.min(...steps));
         },
 
         /** Fenêtre de confirmation → « Imprimer le reçu » : on ferme le dialogue et on révèle le reçu. */
@@ -497,6 +618,7 @@ document.addEventListener('alpine:init', () => {
                 roomId: null,
                 includeBoardingFee: true,
                 subjectOptions: {},
+                uncheckedFeeIds: [],
                 isTransferredIn: false,
                 previousSchoolName: ''
             };
@@ -506,6 +628,7 @@ document.addEventListener('alpine:init', () => {
             this.formErrors = {};
             this.mode = 'NewEnrollment';
             this.simMonths = 1;
+            this.currentStep = 1;
         },
 
         /**
@@ -546,6 +669,20 @@ document.addEventListener('alpine:init', () => {
         },
 
         // ---------------------------------------------------------------- Affichage
+
+        /**
+         * Classes proposées au sélecteur — restreintes aux cycles Maternelle/Primaire en profil
+         * Élémentaire (Ticket 4). Filtre sur Classroom.Cycle (structuré), JAMAIS sur Classroom.Level
+         * (texte libre, AGENTS.md : « ne pas introduire d'énumération de niveaux ») : aucune classe
+         * Collège/Lycée n'a de raison d'apparaître pour une école qui n'en gère pas, mais la
+         * nomenclature des classes proposées reste celle que l'école a choisie. Confort d'affichage
+         * uniquement : CreateEnrollmentCommandHandler ne refuse aujourd'hui aucune classe par cycle,
+         * ce filtre ne fait qu'éviter de proposer un choix hors du périmètre du profil.
+         */
+        visibleClassrooms() {
+            if (!this.isElementaireProfile) return this.classrooms;
+            return this.classrooms.filter((c) => c.cycle === 'Primaire' || c.cycle === 'Maternelle');
+        },
 
         classroomLabel(classroom) {
             return `${classroom.name} — ${classroom.level}`;

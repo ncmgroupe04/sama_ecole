@@ -23,7 +23,7 @@ public class TermConfiguration : IEntityTypeConfiguration<Term>
         builder.Property(t => t.EndDate).IsRequired();
 
         // Un seul trimestre par rang au sein d'une même année scolaire.
-        builder.HasIndex(t => new { t.SchoolId, t.SchoolYearId, t.Order, t.IsDeleted }).IsUnique();
+        builder.HasIndex(t => new { t.SchoolId, t.SchoolYearId, t.Order }).IsUnique().HasFilter("\"IsDeleted\" = false");
 
         builder.HasOne<School>()
             .WithMany()

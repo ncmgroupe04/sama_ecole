@@ -259,8 +259,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId");
 
-                    b.HasIndex("SchoolId", "Name", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("buildings", (string)null);
                 });
@@ -397,8 +398,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId", "FeeCategoryId");
 
-                    b.HasIndex("SchoolId", "FeeCategoryId", "ClassroomId", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "FeeCategoryId", "ClassroomId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("class_fees", (string)null);
                 });
@@ -683,8 +685,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId");
 
-                    b.HasIndex("SchoolId", "Name", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("classrooms", (string)null);
                 });
@@ -1411,8 +1414,18 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<Guid>("ExamSessionId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("FeeReceiptPresent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("PhotoPresent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
@@ -1630,6 +1643,11 @@ namespace SamaEcole.Persistence.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsOptional")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsRecurring")
                         .HasColumnType("boolean");
 
@@ -1649,8 +1667,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SchoolId", "Name", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("fee_categories", (string)null);
                 });
@@ -2181,8 +2200,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SchoolId", "Name", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("inventory_categories", (string)null);
                 });
@@ -2591,8 +2611,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SchoolId", "Label", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "Label")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("mentions", (string)null);
                 });
@@ -3387,8 +3408,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId", "BuildingId");
 
-                    b.HasIndex("SchoolId", "BuildingId", "Name", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "BuildingId", "Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("rooms", (string)null);
                 });
@@ -3847,6 +3869,10 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("ProfileEtablissement")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
@@ -3965,8 +3991,9 @@ namespace SamaEcole.Persistence.Migrations
                         .HasDatabaseName("UX_school_years_single_active")
                         .HasFilter("\"IsActive\" AND NOT \"IsDeleted\"");
 
-                    b.HasIndex("SchoolId", "Label", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "Label")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("school_years", (string)null);
                 });
@@ -4182,6 +4209,10 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("FullNameAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Gender")
                         .IsRequired()
                         .HasMaxLength(1)
@@ -4193,6 +4224,10 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.Property<string>("GuardianName")
                         .HasColumnType("text");
+
+                    b.Property<string>("GuardianNameAr")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("GuardianPhone")
                         .HasColumnType("text");
@@ -5416,8 +5451,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SchoolId", "SchoolYearId", "Order", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("SchoolId", "SchoolYearId", "Order")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("terms", (string)null);
                 });
@@ -5534,8 +5570,9 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasIndex("SchoolId");
 
-                    b.HasIndex("UserId", "SchoolId", "IsDeleted")
-                        .IsUnique();
+                    b.HasIndex("UserId", "SchoolId")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
 
                     b.ToTable("user_schools", (string)null);
                 });

@@ -34,6 +34,8 @@ public class CreateStudentCommandValidator : AbstractValidator<CreateStudentComm
             .NoHtml();
 
         RuleFor(x => x.Address).MaximumLength(300).NoHtml();
+        RuleFor(x => x.FullNameAr).MaximumLength(200).NoHtml();
+        RuleFor(x => x.GuardianNameAr).MaximumLength(200).NoHtml();
     }
 
     private static bool BeAValidHttpUrl(string? url) =>

@@ -86,7 +86,7 @@
                                         <button type="button" x-show="contract.type === 'Vacataire'" x-cloak
                                                 x-on:click="openHourRecordsModal(contract)" title="Voir/Ajouter des heures"
                                                 aria-label="Voir ou ajouter des heures"
-                                                class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                                class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
                                             <icon name="clock" class="w-4 h-4" />
                                         </button>
                                         <button type="button" x-on:click="downloadWorkCertificate(contract)" :disabled="downloadingCertificateId === contract.id"
@@ -98,7 +98,7 @@
                                         <button type="button" x-show="!contract.endDate" x-cloak
                                                 x-on:click="openEditContractModal(contract)" title="Modifier le salaire/taux horaire"
                                                 aria-label="Modifier le contrat"
-                                                class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                                class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
                                             <icon name="pencil" class="w-4 h-4" />
                                         </button>
                                         <button type="button" x-show="!contract.endDate" x-cloak

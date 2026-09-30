@@ -1,5 +1,6 @@
 # Guide fonctionnel des modules — Sama Ecole (Unikol)
 
+**Version :** 1.2.0
 **Date de rédaction :** 20/09/2026
 **Dernière mise à jour :** 26/09/2026 — facturation hybride (annuel / mensuel), barre supérieure, volumes horaires et cahier de texte
 **Statut :** synthèse de référence, à relire à chaque évolution significative d'un module.

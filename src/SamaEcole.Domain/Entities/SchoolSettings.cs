@@ -141,6 +141,16 @@ public class SchoolSettings : AuditableEntity, ITenantEntity
     public SchoolType SchoolType { get; set; } = SchoolSettingsDefaults.SchoolType;
 
     /// <summary>
+    /// Profil choisi à l'Onboarding (voir <see cref="Enums.ProfileEtablissement"/> pour la distinction
+    /// avec <see cref="TypeEtablissement"/> et <see cref="SchoolType"/>). PAS de valeur par défaut ici,
+    /// à dessein : NULL est un état métier signifiant (« Onboarding non fait »), pas une case oubliée —
+    /// c'est exactement ce que lit la garde cliente pour rediriger vers /onboarding. Les écoles
+    /// antérieures à ce réglage reçoivent <see cref="Enums.ProfileEtablissement.General"/> par une
+    /// UPDATE explicite de la migration (jamais par CE champ), pour ne jamais les rediriger à tort.
+    /// </summary>
+    public ProfileEtablissement? ProfileEtablissement { get; set; }
+
+    /// <summary>
     /// Fenêtre de correction des notes par l'ENSEIGNANT, en jours : passé ce délai après la saisie
     /// (<c>Grade.CreatedAt</c>), il ne peut plus corriger sa note — seuls le Directeur et le Secrétariat
     /// le peuvent, sans limite de délai. Lue par GradeCorrectionAuthorizer ; réglée par le Directeur.

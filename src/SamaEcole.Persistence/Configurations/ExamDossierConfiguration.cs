@@ -25,6 +25,8 @@ public class ExamDossierConfiguration : IEntityTypeConfiguration<ExamDossier>
         builder.Property(d => d.ExamCenterName).HasMaxLength(150);
         builder.Property(d => d.BirthCertificateNumber).HasMaxLength(50);
         builder.Property(d => d.BirthCertificatePresent).IsRequired().HasDefaultValue(false);
+        builder.Property(d => d.PhotoPresent).IsRequired().HasDefaultValue(false);
+        builder.Property(d => d.FeeReceiptPresent).IsRequired().HasDefaultValue(false);
         builder.Property(d => d.CivilStatusNotes).HasMaxLength(500);
 
         builder.Property(d => d.Status)

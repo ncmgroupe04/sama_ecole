@@ -39,4 +39,7 @@ public record ExamDossierListItem(
     // Carte scolaire et état civil (Volume 1 §23.4), en phase avec ExamDossierDetail.
     string? ExamCenterCode,
     string? TableNumber,
-    string CivilRegistryDocumentStatus);
+    string CivilRegistryDocumentStatus,
+    // Ticket Onboarding #6 (profil Élémentaire) — voir ExamDossier.PhotoPresent.
+    bool PhotoPresent = false,
+    bool FeeReceiptPresent = false);

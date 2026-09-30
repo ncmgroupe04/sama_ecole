@@ -148,7 +148,7 @@
  <template x-for="s in students" :key="s.id">
  <button type="button" x-on:click="selectStudent(s)"
  class="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors duration-150"
- :class="selectedStudent && selectedStudent.id === s.id ? 'bg-indigo-50' : ''">
+ :class="selectedStudent && selectedStudent.id === s.id ? 'bg-primary-50' : ''">
  <span class="flex items-center justify-between gap-2">
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
  <span class="text-xs font-mono text-slate-500 shrink-0" x-text="s.matricule"></span>
@@ -333,8 +333,8 @@
                          <td class="py-2 px-3 text-center whitespace-nowrap">
                              <button type="button" x-on:click.stop="previewReceipt(pay.paymentId, pay.receiptNumber)"
                                      title="Aperçu et impression du reçu PDF"
-                                     class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
-                                 <icon name="document-text" class="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                     class="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary-200 bg-primary-50/60 hover:bg-primary-100 text-primary-800 text-xs font-semibold shadow-2xs transition-all whitespace-nowrap shrink-0">
+                                 <icon name="document-text" class="w-3.5 h-3.5 text-primary-600 shrink-0" />
                                  <span class="whitespace-nowrap">Aperçu / Imprimer</span>
                              </button>
                          </td>
@@ -433,7 +433,7 @@
  Nouvel encaissement
  </button>
  <button type="button" x-on:click="downloadPdf()" class="btn-modal-secondary group">
- <icon name="document-text" class="w-5 h-5 text-indigo-600" />
+ <icon name="document-text" class="w-5 h-5 text-primary-600" />
  Aperçu PDF officiel (A5)
  </button>
  <button type="button" x-on:click="printReceipt()" class="btn-modal-primary group">

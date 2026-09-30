@@ -39,7 +39,7 @@
                attribut du Tag Helper, or celui-ci efface sa propre balise au rendu — la liaison Alpine
                partait avec. Un découvert s'affichait donc en indigo, comme un encaissement. *@
             <stat-card label="Solde net" icon="chart-multiple" accent="primary" emphasis
-                       value-class-expr="(data.netPosition ?? 0) >= 0 ? 'text-indigo-700' : 'text-rose-700'">
+                       value-class-expr="(data.netPosition ?? 0) >= 0 ? 'text-primary-700' : 'text-rose-700'">
                 <span x-text="formatAmount(data.netPosition)"></span>
             </stat-card>
         </template>

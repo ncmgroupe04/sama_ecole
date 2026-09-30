@@ -6,7 +6,7 @@ info:
     Toutes les routes (sauf /auth/*) exigent un JWT Bearer valide.
     Le tenant (SchoolId) est dérivé du claim `schoolId` du token, jamais d'un paramètre de requête.
     Référence fonctionnelle complète : docs/Volume_4_API_Design.md
-  version: "1.1.0"
+  version: "1.2.0"
 servers:
   - url: https://api.sama-ecole.sn/v1
     description: Production
@@ -3406,6 +3406,32 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /finance/fee-categories/{id}:
+    put:
+      tags: [Finance]
+      summary: Rendre une catégorie de frais optionnelle ou obligatoire (Directeur, ou Finance déléguée)
+      description: >-
+        Bascule uniquement `isOptional`. N'agit que sur les inscriptions FUTURES : les lignes de frais
+        d'une inscription existante sont figées et son montant dû n'est jamais recalculé (règle #4).
+        Même délégation que la création (AllowFinanceToModifyFees).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isOptional]
+              properties:
+                isOptional: { type: boolean }
+      responses:
+        '204': { description: Catégorie mise à jour }
+        '403': { description: Réservé au Directeur, ou à la Finance si la modification des frais lui est déléguée }
+        '404': { description: Catégorie introuvable dans cet établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Finance]
       summary: Supprimer une catégorie de frais et tout son barème (Directeur, ou Finance déléguée)
@@ -6779,6 +6805,17 @@ components:
             Un groupe sans choix reçoit l'option par défaut (la plus fréquente de l'établissement) ; absent :
             toutes les options par défaut. Enregistrées dans la même transaction ; 422 pour une option hors
             classe ou deux options d'un même groupe.
+        optionalFeeCategoryIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: >-
+            Frais optionnels (uniforme, tenue de sport…) cochés par la famille — inscription ET réinscription.
+            Seuls ces frais entrent dans le dû annuel ; les frais obligatoires sont TOUJOURS facturés, quoi que
+            contienne la liste. Absent : tous les frais de la classe sont facturés (comportement antérieur) ;
+            liste vide : aucun frais optionnel. 422 pour un doublon, un identifiant vide, ou une catégorie qui
+            n'est pas un frais optionnel de la classe (obligatoire, inconnue, d'une autre école) — l'inscription
+            entière est alors annulée.
 
     EnrollmentReceipt:
       type: object
@@ -7018,6 +7055,12 @@ components:
         isRecurring:
           type: boolean
           description: Vrai pour une mensualité (due chaque mois), faux pour un frais ponctuel.
+        isOptional:
+          type: boolean
+          description: >-
+            Frais facultatif (uniforme, tenue de sport…) que la famille coche à l'inscription. Faux par
+            défaut : un frais est obligatoire tant que le Directeur ne l'a pas déclaré optionnel.
+            Incompatible avec `isBoardingFee` (422).
 
     FeeCategory:
       type: object
@@ -7030,6 +7073,12 @@ components:
           description: >-
             Module Internat : catégorie incluable automatiquement sur l'inscription d'un élève
             Interne/Demi-pensionnaire, en plus du barème ordinaire.
+        isOptional:
+          type: boolean
+          description: >-
+            Frais facultatif (uniforme, tenue de sport…) que la famille coche à l'inscription. Faux par
+            défaut : un frais est obligatoire tant que le Directeur ne l'a pas déclaré optionnel.
+            Incompatible avec `isBoardingFee` (422).
 
     ClassFee:
       type: object

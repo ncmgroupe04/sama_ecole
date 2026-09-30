@@ -19,7 +19,7 @@ public class StudentImportFileParser : IStudentImportFileParser
 {
     /// <summary>Nombre de colonnes attendu (voir StudentImportFileRow) — les colonnes manquantes en fin
     /// de ligne (tuteur non renseigné) sont complétées par des chaînes vides, jamais une erreur.</summary>
-    private const int ColumnCount = 9;
+    private const int ColumnCount = 11;
 
     public IReadOnlyList<StudentImportFileRow> Parse(byte[] fileContent, string fileName)
     {
@@ -73,7 +73,8 @@ public class StudentImportFileParser : IStudentImportFileParser
             while (fields.Count < ColumnCount) fields.Add("");
 
             rows.Add(new StudentImportFileRow(
-                i + 1, fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8]));
+                i + 1, fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8],
+                fields[9], fields[10]));
         }
 
         return rows;
@@ -156,7 +157,8 @@ public class StudentImportFileParser : IStudentImportFileParser
                 }
 
                 rows.Add(new StudentImportFileRow(
-                    xlRow.RowNumber(), fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8]));
+                    xlRow.RowNumber(), fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8],
+                    fields[9], fields[10]));
             }
 
             return rows;

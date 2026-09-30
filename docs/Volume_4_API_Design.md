@@ -263,7 +263,7 @@ Vitrine grand public : la seule surface de l'application servie à un visiteur n
 
 | Méthode | Route | Description |
 |---|---|---|
-| `POST` | `/api/v1/enrollments` | Créer une inscription/pré-inscription. `subjectOptionIds` facultatif (Évolution N°6) : options retenues, une par groupe ; un groupe sans choix reçoit l'option par défaut. Enregistrées dans la même transaction |
+| `POST` | `/api/v1/enrollments` | Créer une inscription/pré-inscription. `subjectOptionIds` facultatif (Évolution N°6) : options retenues, une par groupe ; un groupe sans choix reçoit l'option par défaut. Enregistrées dans la même transaction. `optionalFeeCategoryIds` facultatif : frais optionnels cochés (absent = tous facturés ; `[]` = aucun ; les frais obligatoires sont toujours dus ; 422 si un identifiant n'est pas un frais optionnel de la classe) |
 | `POST` | `/api/v1/enrollments/{id}/confirm` | Confirmer → émet `EnrollmentConfirmed` (Volume 2 §5.1) |
 | `GET` | `/api/v1/enrollments/{id}/receipt` | Reçu d'inscription (PDF) |
 | `GET` | `/api/v1/classrooms/{id}/availability` | Places disponibles |

@@ -107,7 +107,7 @@
  <div class="flex items-center gap-3">
  <img x-show="teacher.photoDisplayUrl" :src="teacher.photoDisplayUrl" alt=""
  class="w-8 h-8 rounded-full object-cover shrink-0" x-cloak>
- <div x-show="!teacher.photoDisplayUrl" class="w-8 h-8 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"></div>
+ <div x-show="!teacher.photoDisplayUrl" class="w-8 h-8 rounded-full bg-primary-100 text-primary flex items-center justify-center font-bold text-xs shrink-0" x-text="initials(teacher.fullName)"</div>
  <div>
  <p class="font-medium text-slate-900" x-text="teacher.fullName"></p>
  <p class="text-xs text-slate-500" x-text="teacher.email"></p>
@@ -152,12 +152,12 @@
  <div>
  <div class="flex items-center gap-5 pb-6 border-b border-slate-100">
  <img x-show="detail.photoDisplayUrl" :src="detail.photoDisplayUrl" alt=""
- class="w-16 h-16 rounded-full ring-4 ring-indigo-50 shadow-md object-cover flex-shrink-0" x-cloak>
- <div x-show="!detail.photoDisplayUrl" class="w-16 h-16 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-md ring-4 ring-indigo-50" x-text="initials(detail.fullName)"></div>
+ class="w-16 h-16 rounded-full ring-4 ring-primary-50 shadow-md object-cover flex-shrink-0" x-cloak>
+ <div x-show="!detail.photoDisplayUrl" class="w-16 h-16 rounded-full bg-primary-100 text-primary flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-md ring-4 ring-primary-50" x-text="initials(detail.fullName)"</div>
  <div>
  <p class="text-2xl font-bold text-slate-900" x-text="detail.fullName"></p>
  <div class="flex items-center gap-2 mt-1.5">
- <span class="bg-indigo-50 text-indigo-700 font-medium px-2.5 py-0.5 text-xs rounded-full font-mono" x-text="detail.matricule"></span>
+ <span class="bg-primary-50 text-primary-700 font-medium px-2.5 py-0.5 text-xs rounded-full font-mono" x-text="detail.matricule"</span>
  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold" :class="statusClass(detail.status)" x-text="statusLabel(detail.status)"></span>
  @* Correction du matricule — Directeur seul. Voir teachers.js. *@
  <button type="button" x-show="isDirecteur && !matriculeEdit.open" x-cloak
@@ -824,19 +824,19 @@
                                 <td x-show="!time.isPause" class="py-2 px-2 text-center border-r border-slate-100 align-top w-40">
                                     <div x-data="{ slot: getSlotForDayAndTime(day.value, time.start) }" class="h-full min-h-[5rem]">
                                         <template x-if="slot">
-                                            <div class="bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg p-2 text-left shadow-sm relative group/slot h-full flex flex-col">
+                                            <div class="bg-primary-50 text-primary-700 border border-primary-100 rounded-lg p-2 text-left shadow-sm relative group/slot h-full flex flex-col">
                                                 @* Raccourcis de navigation dans l'emploi du temps : la matière ouvre l'écran
                                                    Matières filtré (subjects.js lit ?q=), la classe l'écran Classes filtré
                                                    (classrooms.js lit ?q=), et l'enseignant sa fiche détaillée — sans quitter
                                                    la page (teachers.js sait aussi ouvrir ?teacherId= à froid / nouvel onglet).
-                                                   Survol = soulignement, le seul repère lisible sur ce fond indigo. *@
+                                                   Survol = soulignement, le seul repère lisible sur ce fond bleu. *@
                                                 <a :href="`/matieres?q=${encodeURIComponent(slot.subjectName)}`" :title="'Voir la matière : ' + slot.subjectName"
                                                    class="font-semibold text-xs leading-tight rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.subjectName"></a>
                                                 <a x-show="scheduleViewMode === 'teacher'" :href="`/classes?q=${encodeURIComponent(slot.classroomName)}`" :title="'Voir la classe : ' + slot.classroomName"
-                                                   class="text-[11px] mt-1 text-indigo-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.classroomName"></a>
+                                                   class="text-[11px] mt-1 text-primary-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.classroomName"</a>
                                                 <a x-show="scheduleViewMode === 'classroom'" :href="`/enseignants?teacherId=${slot.teacherId}`" x-on:click.prevent="openDetail({ id: slot.teacherId })" :title="'Ouvrir la fiche de ' + slot.teacherName"
-                                                   class="text-[11px] mt-1 text-indigo-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.teacherName"></a>
-                                                <div class="text-[10px] mt-auto pt-1 text-indigo-500" x-show="slot.roomNumber" x-text="'Salle: ' + slot.roomNumber"></div>
+                                                   class="text-[11px] mt-1 text-primary-700 font-medium rounded transition-colors hover:underline focus:outline-none focus:ring-1 focus:ring-primary" x-text="slot.teacherName"</a>
+                                                <div class="text-[10px] mt-auto pt-1 text-primary-500" x-show="slot.roomNumber" x-text="'Salle: ' + slot.roomNumber"</div>
                                                 
                                                 <!-- Actions rapides -->
                                                 <div class="absolute top-1 right-1 opacity-0 group-hover/slot:opacity-100 transition-opacity flex gap-1 bg-white/90 rounded shadow-sm p-0.5" x-show="canManageSchedule">

@@ -129,7 +129,8 @@ public class CreateEnrollmentCommandHandler(
             }
 
             var tuitionMonths = await ResolveTuitionMonthsAsync(ct);
-            var lines = await BuildFeeLinesAsync(schoolId, request.ClassroomId, tuitionMonths, ct);
+            var lines = await BuildFeeLinesAsync(
+                schoolId, request.ClassroomId, tuitionMonths, request.OptionalFeeCategoryIds, ct);
 
             // Pension (module Internat) : catégories IsBoardingFee, seulement pour Interne/Demi-
             // pensionnaire et seulement si IncludeBoardingFee — les élèves Externe de la même classe
@@ -296,31 +297,52 @@ public class CreateEnrollmentCommandHandler(
     /// sont ajoutés que par <see cref="BoardingFeeLineBuilder"/>, conditionnés au régime d'hébergement
     /// et à <c>IncludeBoardingFee</c> — sinon un élève Externe de la même classe se verrait facturer la
     /// pension d'office dès lors que l'école aurait un tarif de pension sur cette classe (spec §5.1).
+    ///
+    /// Frais optionnels : une catégorie <see cref="FeeCategory.IsOptional"/> n'est facturée que si la famille
+    /// l'a cochée (<paramref name="selectedOptionalFeeCategoryIds"/>), voir <see cref="OptionalFeeSelection"/> ;
+    /// les frais obligatoires le sont toujours. Un identifiant coché qui n'est pas un frais optionnel de la
+    /// classe est refusé en 422 — l'inscription entière est alors annulée (matricule compris).
     /// </summary>
     private async Task<List<EnrollmentFeeLine>> BuildFeeLinesAsync(
-        Guid schoolId, Guid classroomId, int tuitionMonths, CancellationToken ct)
+        Guid schoolId, Guid classroomId, int tuitionMonths,
+        IReadOnlyList<Guid>? selectedOptionalFeeCategoryIds, CancellationToken ct)
     {
         var fees = await (
             from fee in dbContext.ClassFees
             join category in dbContext.FeeCategories on fee.FeeCategoryId equals category.Id
             where fee.ClassroomId == classroomId && !category.IsBoardingFee
             orderby category.IsRecurring, category.Name
-            select new { fee.FeeCategoryId, category.Name, category.IsRecurring, fee.Amount })
+            select new { fee.FeeCategoryId, category.Name, category.IsRecurring, category.IsOptional, fee.Amount })
             .ToListAsync(ct);
 
-        return fees.Select(f =>
+        var invalid = OptionalFeeSelection.FindInvalid(
+            selectedOptionalFeeCategoryIds,
+            fees.Where(f => f.IsOptional).Select(f => f.FeeCategoryId).ToHashSet());
+
+        if (invalid.Count > 0)
         {
-            var months = f.IsRecurring ? tuitionMonths : 1;
-            return new EnrollmentFeeLine
+            throw new ValidationException([
+                new ValidationFailure(
+                    nameof(CreateEnrollmentCommand.OptionalFeeCategoryIds),
+                    "Un frais coché n'est pas un frais optionnel de cette classe.")
+            ]);
+        }
+
+        return fees
+            .Where(f => OptionalFeeSelection.IsBilled(f.IsOptional, f.FeeCategoryId, selectedOptionalFeeCategoryIds))
+            .Select(f =>
             {
-                SchoolId = schoolId,
-                FeeCategoryId = f.FeeCategoryId,
-                Designation = f.Name,
-                IsRecurring = f.IsRecurring,
-                UnitAmount = f.Amount,
-                Months = months,
-                LineTotal = f.Amount * months
-            };
-        }).ToList();
+                var months = f.IsRecurring ? tuitionMonths : 1;
+                return new EnrollmentFeeLine
+                {
+                    SchoolId = schoolId,
+                    FeeCategoryId = f.FeeCategoryId,
+                    Designation = f.Name,
+                    IsRecurring = f.IsRecurring,
+                    UnitAmount = f.Amount,
+                    Months = months,
+                    LineTotal = f.Amount * months
+                };
+            }).ToList();
     }
 }

@@ -32,7 +32,7 @@ public class ClassFeeConfiguration : IEntityTypeConfiguration<ClassFee>
 
         // Une seule ligne de barème par (catégorie, classe) dans une école. Le soft delete fait
         // partie de la clé, comme partout ailleurs.
-        builder.HasIndex(f => new { f.SchoolId, f.FeeCategoryId, f.ClassroomId, f.IsDeleted }).IsUnique();
+        builder.HasIndex(f => new { f.SchoolId, f.FeeCategoryId, f.ClassroomId }).IsUnique().HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(f => new { f.SchoolId, f.FeeCategoryId });
 
         builder.HasOne<School>()

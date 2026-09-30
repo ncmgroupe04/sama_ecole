@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>SamaEcole.Web</RootNamespace>
     <UserSecretsId>sama_ecole-web-dev</UserSecretsId>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

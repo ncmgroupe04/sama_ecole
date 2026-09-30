@@ -59,6 +59,22 @@ public class ExamDossier : AuditableEntity, ITenantEntity
     public string? BirthCertificateNumber { get; set; }
     public bool BirthCertificatePresent { get; set; }
 
+    /// <summary>
+    /// Photo d'identité présente au dossier PAPIER remis à l'IEF — distincte de
+    /// <see cref="Student.PhotoData"/>/<see cref="Student.PhotoUrl"/> (la photo numérique de la fiche
+    /// élève) : l'IEF exige un tirage physique dans le dossier de candidature, que la fiche élève ait
+    /// une photo numérique ou non. Ticket Onboarding #6 (profil Élémentaire) : REQUISE pour qu'un
+    /// dossier CFEE passe Complet (voir UpdateExamDossierCommandHandler) — sans effet sur BFEM/BAC,
+    /// dont la checklist reste celle d'avant ce champ.
+    /// </summary>
+    public bool PhotoPresent { get; set; }
+
+    /// <summary>
+    /// Quittance des frais d'inscription à l'examen présente au dossier. Même statut que
+    /// <see cref="PhotoPresent"/> : REQUISE pour Complet sur un dossier CFEE seulement.
+    /// </summary>
+    public bool FeeReceiptPresent { get; set; }
+
     /// <summary>Nul = non encore contrôlé, distinct de <c>false</c> (Volume 1 §22.2).</summary>
     public bool? CivilStatusConforming { get; set; }
 

@@ -222,11 +222,19 @@ document.addEventListener('alpine:init', () => {
                 && this.steps.filter((s) => base.includes(s.key)).every((s) => s.state === 'done' || s.state === 'na');
         },
 
-        /** Publie l'état de base pour school-mode-guard.js (valeur lisible + événement pour qui attend). */
+        /**
+         * Publie l'état pour qui en a besoin ailleurs sur la page — `baseComplete` pour
+         * school-mode-guard.js (garde-fou du mode test), `percent`/`done`/`total` pour un affichage
+         * passif comme le widget « Niveau de configuration » de Paramètres (Views/Settings/Index.cshtml) :
+         * celui-ci se contente de LIRE cet événement plutôt que d'instancier une seconde fois
+         * setupAssistant() — une deuxième instance relancerait les 9 requêtes de refresh() en double
+         * (mesuré le 28/09/2026 : page quasi figée à l'ouverture de /parametres).
+         */
         publishProgress() {
             const baseComplete = this.baseComplete;
-            window.setupProgress = { baseComplete };
-            window.dispatchEvent(new CustomEvent('setup-progress', { detail: { baseComplete } }));
+            const detail = { baseComplete, percent: this.percent, done: this.doneCount, total: this.applicableSteps.length };
+            window.setupProgress = detail;
+            window.dispatchEvent(new CustomEvent('setup-progress', { detail }));
         },
 
         /**

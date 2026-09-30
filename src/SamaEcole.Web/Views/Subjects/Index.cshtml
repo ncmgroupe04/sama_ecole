@@ -271,7 +271,7 @@
        <template x-if="canManageSubject">
         <div class="shrink-0 flex items-center gap-1">
          <button type="button" @@click="openEdit(subject)" title="Modifier" aria-label="Modifier la matière"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+          class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
           <icon name="pencil" class="w-4 h-4" />
          </button>
          <button type="button" @@click="openDelete(subject)" title="Supprimer" aria-label="Supprimer la matière"
@@ -328,7 +328,7 @@
       <template x-if="canManageSubject">
        <div class="shrink-0 flex items-center gap-1">
         <button type="button" @@click="openEdit(subject)" title="Modifier" aria-label="Modifier la matière"
-         class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+         class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
          <icon name="pencil" class="w-4 h-4" />
         </button>
         <button type="button" @@click="openDelete(subject)" title="Supprimer" aria-label="Supprimer la matière"
@@ -480,7 +480,7 @@
           Activité
          </button>
          <button type="button" x-on:click="openEdit(group.root)" title="Modifier le domaine" aria-label="Modifier le domaine"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+          class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
           <icon name="pencil" class="w-4 h-4" />
          </button>
          <button type="button" x-on:click="openDelete(group.root)" title="Supprimer le domaine" aria-label="Supprimer le domaine"
@@ -521,7 +521,7 @@
          <template x-if="canManageSubject">
           <div class="shrink-0 flex items-center gap-1">
            <button type="button" x-on:click="openEdit(child)" title="Modifier l'activité" aria-label="Modifier l'activité"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+            class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors">
             <icon name="pencil" class="w-4 h-4" />
            </button>
            <button type="button" x-on:click="openDelete(child)" title="Supprimer l'activité" aria-label="Supprimer l'activité"
@@ -574,8 +574,11 @@
    </div>
 
    @* Module Coran/Franco-Arabe : facultatif, imprimé sur le bulletin bilingue seulement si renseigné —
-      dir="rtl" pour que la saisie se lise dans le bon sens dès la frappe, aucune traduction automatique. *@
-   <div>
+      dir="rtl" pour que la saisie se lise dans le bon sens dès la frappe, aucune traduction automatique.
+      Masqué hors profil Franco-Arabe/Internat-Daara (retour utilisateur du 29/09/2026) : un champ
+      arabe proposé à un établissement Élémentaire ou Général n'a rien à faire dans ce formulaire —
+      même logique que isSimplifieProfile/isElementaireProfile ailleurs (schoolConfig, auth.js). *@
+   <div x-show="$store.schoolConfig.isFrancoArabeProfile || $store.schoolConfig.isDaaraInternatProfile" x-cloak>
     <label for="subject-name-ar" class="form-label">Nom en arabe (facultatif)</label>
     <input id="subject-name-ar" type="text" x-model="newSubject.nameAr" maxlength="80" dir="rtl" placeholder="مثال : الرياضيات"
      class="input-field" :class="createErrors.nameAr && 'input-field-error'">
@@ -669,8 +672,8 @@
     <p x-show="editErrors.name" x-cloak x-text="editErrors.name" class="field-error"></p>
    </div>
 
-   @* Module Coran/Franco-Arabe : facultatif, même champ que la création. *@
-   <div>
+   @* Module Coran/Franco-Arabe : facultatif, même champ que la création — même gabarit de profil. *@
+   <div x-show="$store.schoolConfig.isFrancoArabeProfile || $store.schoolConfig.isDaaraInternatProfile" x-cloak>
     <label for="edit-subject-name-ar" class="form-label">Nom en arabe (facultatif)</label>
     <input id="edit-subject-name-ar" type="text" x-model="editing.nameAr" maxlength="80" dir="rtl" placeholder="مثال : الرياضيات"
      class="input-field" :class="editErrors.nameAr && 'input-field-error'">

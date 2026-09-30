@@ -521,6 +521,28 @@ document.addEventListener('alpine:init', () => {
          */
         workingDays: [1, 2, 3, 4, 5, 6],
 
+        /**
+         * Profil d'Onboarding (Setup Wizard) choisi par le Directeur — voir ApplyEstablishmentProfileCommand.
+         * Trois états, à ne pas confondre :
+         *   - `undefined` (valeur INITIALE, avant chargement, OU après une erreur réseau) : on NE SAIT PAS,
+         *     onboarding-guard.js ne force jamais de redirection dans ce cas — un aléa réseau ne doit pas
+         *     piéger le Directeur dans une boucle vers /onboarding.
+         *   - `null` (valeur EXPLICITE renvoyée par l'API) : Directeur pas encore passé par l'Onboarding.
+         *     C'est le SEUL état qui déclenche la redirection.
+         *   - une chaîne (« Simplifie » / « ElementairePrimaire » / « General » / « FrancoArabe » /
+         *     « DaaraInternat ») : profil déjà choisi.
+         */
+        profileEtablissement: undefined,
+
+        get hasChosenProfile() {
+            return this.profileEtablissement !== null && this.profileEtablissement !== undefined;
+        },
+        get isSimplifieProfile() { return this.profileEtablissement === 'Simplifie'; },
+        get isElementaireProfile() { return this.profileEtablissement === 'ElementairePrimaire'; },
+        get isGeneralProfile() { return this.profileEtablissement === 'General'; },
+        get isFrancoArabeProfile() { return this.profileEtablissement === 'FrancoArabe'; },
+        get isDaaraInternatProfile() { return this.profileEtablissement === 'DaaraInternat'; },
+
         isWorkingDay(isoDate) {
             const [y, m, d] = String(isoDate).split('-').map(Number);
             if (!y || !m || !d) return true; // date illisible : on ne bloque pas, le serveur juge
@@ -549,6 +571,11 @@ document.addEventListener('alpine:init', () => {
                 this.financeEnabled = !s || s.isFinanceEnabled !== false;
                 this.internatEnabled = !!s && s.isInternatEnabled === true;
                 this.workingDays = window.dayIndexes(s && s.workingDays);
+                // s.profileEtablissement vaut soit NULL (JSON explicite), soit une chaîne — jamais
+                // absent (le DTO le porte toujours, voir GetSchoolSettingsQuery). `s` lui-même ne
+                // devrait jamais être vide ici (l'API renvoie toujours un SchoolSettingsDto), mais on
+                // reste défensif : `undefined` plutôt qu'une fausse redirection si jamais il l'était.
+                this.profileEtablissement = s ? s.profileEtablissement : undefined;
             } catch {
                 // Non bloquant : en cas d'erreur réseau, la navigation reste complète pour
                 // Pédagogie/Finance (socle métier, sûr par défaut) mais Internat reste masqué —
@@ -558,6 +585,8 @@ document.addEventListener('alpine:init', () => {
                 this.financeEnabled = true;
                 this.internatEnabled = false;
                 this.workingDays = [1, 2, 3, 4, 5, 6];
+                // profileEtablissement reste `undefined` (valeur initiale) : voir le commentaire de
+                // sa déclaration — jamais forcé à `null`, qui déclencherait /onboarding à tort.
             } finally {
                 this.loaded = true;
             }
@@ -587,6 +616,13 @@ document.addEventListener('alpine:init', () => {
         get pedagogyEnabled() { return Alpine.store('schoolConfig').pedagogyEnabled; },
         get financeEnabled() { return Alpine.store('schoolConfig').financeEnabled; },
         get internatEnabled() { return Alpine.store('schoolConfig').internatEnabled; },
+
+        // Profil d'Onboarding (Ticket 3, voir ApplyEstablishmentProfileCommand) — même délégation au
+        // store partagé que les getters ci-dessus.
+        get isSimplifieProfile() { return Alpine.store('schoolConfig').isSimplifieProfile; },
+        get isElementaireProfile() { return Alpine.store('schoolConfig').isElementaireProfile; },
+        get isFrancoArabeProfile() { return Alpine.store('schoolConfig').isFrancoArabeProfile; },
+        get isDaaraInternatProfile() { return Alpine.store('schoolConfig').isDaaraInternatProfile; },
 
         init() {
             return Alpine.store('schoolConfig').init();

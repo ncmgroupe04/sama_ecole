@@ -80,6 +80,12 @@ document.addEventListener('alpine:init', () => {
         isUploadingLogo: false,
         logoUploadError: null,
 
+        // Dernier état SERVEUR connu de `profile` (clone profond, jamais une référence) — permet à
+        // « Annuler les modifications » (cancelProfileChanges) de revenir en arrière sans recharger la
+        // page. Posé au chargement ET après chaque enregistrement réussi (le nouvel état sauvegardé
+        // devient le nouveau point de retour) — jamais après un enregistrement en échec.
+        profileSnapshot: null,
+
         // --- Configuration (réglages) ---
         config: {
             gradingScale: '20',
@@ -91,7 +97,7 @@ document.addEventListener('alpine:init', () => {
             allowSecretaryToManageGrading: false,
             allowFinanceToModifyFees: false,
             allowFinanceToDeleteFees: false,
-            // Modules activés/désactivés par le Directeur (Paramètres › Modules & fonctionnalités) —
+            // Modules activés/désactivés par le Directeur (Paramètres ⬺ Modules & fonctionnalités) —
             // second axe, indépendant de la formule d'abonnement (featureGate/window.features).
             isPedagogyEnabled: true,
             isFinanceEnabled: true,
@@ -113,17 +119,30 @@ document.addEventListener('alpine:init', () => {
             officialStampUrl: '',
             surveillantSignatureUrl: '',
             // TypeEtablissement : Prive (défaut, module Finance actif) ou Public (module Finance masqué).
-            typeEtablissement: 'Prive'
+            typeEtablissement: 'Prive',
+            // Profil d'Onboarding (Ticket 5, voir ApplyEstablishmentProfileCommand) — NULL tant que le
+            // Directeur n'est jamais passé par /onboarding. Non modifiable par saveConfig() ci-dessous
+            // (PUT /schools/current/settings) : seul applyEstablishmentProfile() l'écrit, via son
+            // propre endpoint dédié — voir sa doc plus bas pour la raison de cette séparation.
+            profileEtablissement: null
         },
         configErrors: {},
         configSaving: false,
         // Vrai seulement pendant l'enregistrement d'un vrai bouton « Enregistrer » (formulaire). Les
         // commutateurs de délégation (saveConfig(false)) sauvegardent sans changer le libellé des
-        // boutons : « Enregistrement… » est plus long que « Enregistrer », donc chaque bascule les
+        // boutons : « Enregistrement⬦ » est plus long que « Enregistrer », donc chaque bascule les
         // étirait tous (jusqu'à 6 à la fois, configSaving étant partagé) puis les ramenait — l'à-coup
         // de mise en page remonté. Les boutons restent désactivés (configSaving), sans changer de largeur.
         configSavingLabelVisible: false,
         configSaved: false,
+
+        // Même principe que profileSnapshot ci-dessus, pour `config` (cancelConfigChanges).
+        configSnapshot: null,
+
+        // --- Profil d'établissement (Ticket 5) ---
+        profileSaving: false,
+        profileError: null,
+        profileSaved: false,
 
         // --- Compteur de départ des matricules (Option 1) — année scolaire en cours ---
         // matriculeSequences vient de GET /schools/current/settings/matricule-sequences ; input
@@ -154,7 +173,7 @@ document.addEventListener('alpine:init', () => {
 
         // --- Mentions du bulletin (dans l'onglet Configuration) ---
         // Getter, PAS une valeur figée au chargement : dépend de config.isPedagogyEnabled (module
-        // Pédagogie, Paramètres › Modules), connu seulement après load() — les mentions du bulletin
+        // Pédagogie, Paramètres ⬺ Modules), connu seulement après load() — les mentions du bulletin
         // n'ont pas leur place sur une école qui a désactivé la Pédagogie (GradesController, qui sert
         // /grades/mentions, est sous [RequireModule(SchoolModule.Pedagogy)] côté serveur). Avant le
         // premier chargement, config.isPedagogyEnabled vaut true (défaut sûr) : la visibilité par rôle
@@ -190,7 +209,7 @@ document.addEventListener('alpine:init', () => {
         resetSummary: null,
 
         // --- Bac à sable / mode réel ---
-        // isLiveMode pilote les DEUX régimes de bascule de la Zone de danger (test ↔ réel). Depuis le
+        // isLiveMode pilote les DEUX régimes de bascule de la Zone de danger (test → réel). Depuis le
         // 19/09/2026, cette bascule est PLEINEMENT réversible et ne verrouille plus rien toute seule —
         // voir isProductionLocked ci-dessous, une dimension INDÉPENDANTE. Chargé dans load() depuis
         // GET /schools/current/mode ; le serveur revérifie tout (GoLiveCommandHandler,
@@ -217,7 +236,7 @@ document.addEventListener('alpine:init', () => {
         isLockingProduction: false,
 
         // Garde partagée par les quatre actions critiques de l'établissement (Réinitialiser / Passer en
-        // mode réel / Repasser en mode test / Verrouiller définitivement) : mot-clé comparé À LA
+        // mode réel / Repasser en mode test / Verrouiller définitivement) : mot-clé comparé ì LA
         // CASSE — miroir exact de TypedConfirmationGuard.Matches côté serveur — ou nom de l'école, lui
         // toléré en casse et en espaces de bord. Centralisée ici pour que les getters ci-dessous ne
         // dérivent jamais l'un de l'autre (même risque que côté C#, voir TypedConfirmationGuard).
@@ -315,8 +334,11 @@ document.addEventListener('alpine:init', () => {
                     cashierSignatureUrl: config.cashierSignatureUrl || '',
                     officialStampUrl: config.officialStampUrl || '',
                     surveillantSignatureUrl: config.surveillantSignatureUrl || '',
-                    typeEtablissement: config.typeEtablissement || 'Prive'
+                    typeEtablissement: config.typeEtablissement || 'Prive',
+                    profileEtablissement: config.profileEtablissement || null
                 };
+                this.profileSnapshot = JSON.parse(JSON.stringify(this.profile));
+                this.configSnapshot = JSON.parse(JSON.stringify(this.config));
 
                 // Compteurs de matricules : requête à part (Directeur seul), pour ne pas fragiliser
                 // le Promise.all ci-dessus avec un troisième appel conditionnel.
@@ -502,6 +524,7 @@ document.addEventListener('alpine:init', () => {
                     publicDescription: this.profile.publicDescription || null
                 });
                 this.profile = this.toProfileState(saved);
+                this.profileSnapshot = JSON.parse(JSON.stringify(this.profile));
                 this.profileSaved = true;
             } catch (err) {
                 this.profileErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
@@ -794,14 +817,72 @@ document.addEventListener('alpine:init', () => {
                     cashierSignatureUrl: saved.cashierSignatureUrl || '',
                     officialStampUrl: saved.officialStampUrl || '',
                     surveillantSignatureUrl: saved.surveillantSignatureUrl || '',
-                    typeEtablissement: saved.typeEtablissement || 'Prive'
+                    typeEtablissement: saved.typeEtablissement || 'Prive',
+                    // PUT /schools/current/settings ne modifie jamais ce champ (voir sa déclaration
+                    // ci-dessus) : simple report de la valeur renvoyée, pour ne pas la faire
+                    // disparaître de l'écran quand un AUTRE réglage de cette même page est enregistré.
+                    profileEtablissement: saved.profileEtablissement || this.config.profileEtablissement
                 };
+                this.configSnapshot = JSON.parse(JSON.stringify(this.config));
                 this.configSaved = showConfirmation;
             } catch (err) {
                 this.configErrors = window.api.toFieldErrors(err, "Enregistrement impossible.");
             } finally {
                 this.configSaving = false;
                 this.configSavingLabelVisible = false;
+            }
+        },
+
+        // ---------------------------------------------------------------- Profil d'établissement (Ticket 5)
+
+        profileOptions: [
+            { key: 'Simplifie', label: 'Inscriptions & Scolarité Simplifiée', icon: 'sparkle' },
+            { key: 'ElementairePrimaire', label: 'Élémentaire / Primaire', icon: 'book' },
+            { key: 'General', label: 'Enseignement Général', icon: 'chart-multiple' },
+            { key: 'FrancoArabe', label: 'Franco-Arabe', icon: 'globe' },
+            { key: 'DaaraInternat', label: 'Internat / Daara Moderne', icon: 'bed' }
+        ],
+
+        profileLabel(key) {
+            const option = this.profileOptions.find((o) => o.key === key);
+            return option ? option.label : key;
+        },
+
+        /**
+         * Endpoint DÉDIÉ (POST establishment-profile), PAS le PUT général de saveConfig() ci-dessus :
+         * changer de profil réapplique le PRESET ENTIER des 4 commutateurs de modules d'un coup
+         * (ApplyEstablishmentProfileCommand/EstablishmentProfilePresets) — un comportement que
+         * saveConfig() n'a aucune raison de connaître, et qu'on ne veut pas voir se déclencher par
+         * accident au détour d'un autre enregistrement de cette page.
+         */
+        async applyEstablishmentProfile(profile) {
+            if (this.profileSaving || profile === this.config.profileEtablissement) return;
+
+            this.profileError = null;
+            this.profileSaved = false;
+            this.profileSaving = true;
+            try {
+                const saved = await window.api.post('/schools/current/settings/establishment-profile', { profile });
+
+                this.config.profileEtablissement = saved.profileEtablissement;
+                this.config.isPedagogyEnabled = saved.isPedagogyEnabled;
+                this.config.isFinanceEnabled = saved.isFinanceEnabled;
+                this.config.isInternatEnabled = saved.isInternatEnabled;
+                this.config.isCoranModuleEnabled = saved.isCoranModuleEnabled;
+                this.profileSaved = true;
+
+                // Rafraîchit le store partagé (sidebar, formulaire d'inscription) SANS recharger la
+                // page : _initPromise mémorise le premier chargement pour la réentrance normale
+                // (plusieurs composants au boot) — on le vide ici pour forcer un second fetch, le seul
+                // moyen pour schoolConfig.init() de relire un état qu'on vient tout juste de changer.
+                if (window.Alpine && Alpine.store('schoolConfig')) {
+                    Alpine.store('schoolConfig')._initPromise = null;
+                    await Alpine.store('schoolConfig').init();
+                }
+            } catch (err) {
+                this.profileError = window.api.toMessage(err, "Impossible d'appliquer ce profil. Réessayez.");
+            } finally {
+                this.profileSaving = false;
             }
         },
 
@@ -1086,7 +1167,7 @@ document.addEventListener('alpine:init', () => {
          * Bascule vers la section demandée et synchronise l'URL via replaceState — un lien
          * copié/rechargé rouvre le même onglet, sans naviguer ni recharger les données (même esprit
          * que les "sous-routes" du ticket, sans le coût d'un vrai changement de page : l'état déjà
-         * chargé — profil, config, mentions… — reste intact).
+         * chargé — profil, config, mentions⬦ — reste intact).
          */
         goToTab(name) {
             this.tab = name;
@@ -1099,9 +1180,75 @@ document.addEventListener('alpine:init', () => {
         /** État visuel d'un onglet de la barre horizontale. Renvoie le SEUL modificateur
          * `tab-btn-active` (pastille bleu Unikol plein, texte blanc — défini dans input.css) ;
          * la base `.tab-btn` est posée en dur dans la vue. Même composant partagé que Paie,
-         * Inventaire, Examens, Frais… pour que toutes les barres d'onglets se lisent à l'identique. */
+         * Inventaire, Examens, Frais⬦ pour que toutes les barres d'onglets se lisent à l'identique. */
         tabClass(name) {
             return this.tab === name ? 'tab-btn-active' : '';
+        },
+
+        /** Libellé du fil d'ariane (ruban du haut) — reprend le texte déjà posé sur chaque bouton
+         * de la barre d'onglets, une seule source pour les deux affichages. */
+        tabLabel(name) {
+            return {
+                profil: "Profil de l'établissement",
+                modules: 'Modules & fonctionnalités',
+                'integration-etatique': 'Intégration étatique (SIMEN)',
+                'formats-signatures': 'Formats & signatures officielles',
+                'annees-scolaires': 'Années scolaires',
+                pedagogie: 'Notation & mentions',
+                finance: 'Mensualités & autorisations de caisse',
+                facturation: 'Facturation & historique',
+                securite: 'Paramètres système',
+                utilisateurs: 'Utilisateurs & rôles',
+                'journal-audit': "Journal d'audit",
+                sms: 'Notifications SMS'
+            }[name] || '';
+        },
+
+        /**
+         * Ruban d'actions du haut (refonte UI/UX) : un seul bouton « Enregistrer » qui vise le
+         * BON formulaire selon l'onglet ouvert, plutôt qu'un faux bouton global qui ferait croire
+         * à un enregistrement unique alors que l'écran porte plusieurs formulaires indépendants
+         * (chacun avec sa propre requête PUT, voir l'en-tête de ce fichier). N'apparaît donc QUE
+         * sur les onglets qui portent un formulaire principal unique ; les autres (Modules —
+         * s'enregistre au clic de chaque interrupteur —, Années scolaires, Facturation,
+         * Utilisateurs, Journal d'audit, SMS — chacun sa propre modale/action) n'ont pas
+         * d'équivalent honnête à afficher ici.
+         */
+        currentTabHasQuickSave() {
+            return ['profil', 'integration-etatique', 'formats-signatures', 'finance', 'securite'].includes(this.tab);
+        },
+
+        isSavingCurrentTab() {
+            if (this.tab === 'profil' || this.tab === 'integration-etatique') return this.profileSaving;
+            if (this.tab === 'formats-signatures' || this.tab === 'finance' || this.tab === 'securite') return this.configSavingLabelVisible;
+            return false;
+        },
+
+        saveCurrentTab() {
+            if (this.tab === 'profil' || this.tab === 'integration-etatique') return this.saveProfile();
+            if (this.tab === 'formats-signatures' || this.tab === 'finance' || this.tab === 'securite') return this.saveConfig();
+        },
+
+        /**
+         * « Annuler les modifications » — revient au dernier état enregistré (le serveur, jamais une
+         * valeur par défaut codée en dur). Un simple clone profond du snapshot pris à load() / au
+         * dernier enregistrement réussi : rien n'est renvoyé au serveur, aucune requête ici.
+         */
+        cancelProfileChanges() {
+            if (!this.profileSnapshot) return;
+            this.profile = JSON.parse(JSON.stringify(this.profileSnapshot));
+            this.profileErrors = {};
+        },
+
+        cancelConfigChanges() {
+            if (!this.configSnapshot) return;
+            this.config = JSON.parse(JSON.stringify(this.configSnapshot));
+            this.configErrors = {};
+        },
+
+        cancelCurrentTabChanges() {
+            if (this.tab === 'profil' || this.tab === 'integration-etatique') return this.cancelProfileChanges();
+            if (this.tab === 'formats-signatures' || this.tab === 'finance' || this.tab === 'securite') return this.cancelConfigChanges();
         }
     }));
 });

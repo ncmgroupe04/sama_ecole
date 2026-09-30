@@ -88,12 +88,18 @@
 
 <div x-data="enrollmentsView()">
  <!-- Titre -->
+ <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
  <div>
  <h1 class="page-title">Inscriptions</h1>
  <p class="page-subtitle">
  Inscrivez un nouvel élève ou réinscrivez un élève existant pour l'année scolaire active.
  Les frais dus sont calculés automatiquement à partir du barème de la classe.
  </p>
+ </div>
+ <a href="/eleves" class="btn-modal-secondary text-xs shrink-0">
+ <icon name="chevron-left" class="w-4 h-4" />
+ Retour à la liste des élèves
+ </a>
  </div>
 
  <!-- Rôle non autorisé : le service Finance encaisse, il ne compose pas le montant dû (règle #4). -->
@@ -129,6 +135,58 @@
  <div class="flex items-center gap-2 text-sm text-slate-500">
  <badge variant="success" dot>Année active</badge>
  <span class="font-medium text-slate-900" x-text="activeYear ? activeYear.label : ''"></span>
+ </div>
+
+ <!-- ============================= REPÈRE DE PROGRESSION (refonte UI/UX) =============================
+ Découpage d'AFFICHAGE seulement : les 4 étapes partagent le même `form` et la même validation
+ (canSubmit()/submit()) qu'avant — voir enrollments.js (currentStep, goToStep). Navigation libre,
+ une étape déjà remplie n'est jamais verrouillée ; une erreur serveur ramène automatiquement à la
+ première étape concernée (jumpToFirstErrorStep()). -->
+ <div class="stepper" role="tablist" aria-label="Étapes de l'inscription">
+ <button type="button" role="tab" :aria-selected="currentStep === 1" x-on:click="goToStep(1)"
+ class="stepper-step" :class="currentStep === 1 ? 'stepper-step-active' : (currentStep > 1 ? 'stepper-step-done' : 'stepper-step-upcoming')">
+ <span class="stepper-badge" :class="currentStep === 1 ? 'stepper-badge-active' : (currentStep > 1 ? 'stepper-badge-done' : 'stepper-badge-upcoming')">
+ <icon name="users" class="w-4 h-4" />
+ </span>
+ <span class="min-w-0 text-left">
+ <span class="stepper-eyebrow block" :class="currentStep === 1 ? 'text-primary' : (currentStep > 1 ? 'text-emerald-600' : 'text-slate-400')"
+ x-text="currentStep === 1 ? 'Étape 1 · En cours' : (currentStep > 1 ? 'Étape 1 · Complétée' : 'Étape 1 · À venir')"></span>
+ <span class="stepper-title block">Identité &amp; état civil</span>
+ </span>
+ </button>
+ <button type="button" role="tab" :aria-selected="currentStep === 2" x-on:click="goToStep(2)"
+ class="stepper-step" :class="currentStep === 2 ? 'stepper-step-active' : (currentStep > 2 ? 'stepper-step-done' : 'stepper-step-upcoming')">
+ <span class="stepper-badge" :class="currentStep === 2 ? 'stepper-badge-active' : (currentStep > 2 ? 'stepper-badge-done' : 'stepper-badge-upcoming')">
+ <icon name="building" class="w-4 h-4" />
+ </span>
+ <span class="min-w-0 text-left">
+ <span class="stepper-eyebrow block" :class="currentStep === 2 ? 'text-primary' : (currentStep > 2 ? 'text-emerald-600' : 'text-slate-400')"
+ x-text="currentStep === 2 ? 'Étape 2 · En cours' : (currentStep > 2 ? 'Étape 2 · Complétée' : 'Étape 2 · À venir')"></span>
+ <span class="stepper-title block">Affectation scolaire</span>
+ </span>
+ </button>
+ <button type="button" role="tab" :aria-selected="currentStep === 3" x-on:click="goToStep(3)"
+ class="stepper-step" :class="currentStep === 3 ? 'stepper-step-active' : (currentStep > 3 ? 'stepper-step-done' : 'stepper-step-upcoming')">
+ <span class="stepper-badge" :class="currentStep === 3 ? 'stepper-badge-active' : (currentStep > 3 ? 'stepper-badge-done' : 'stepper-badge-upcoming')">
+ <icon name="phone" class="w-4 h-4" />
+ </span>
+ <span class="min-w-0 text-left">
+ <span class="stepper-eyebrow block" :class="currentStep === 3 ? 'text-primary' : (currentStep > 3 ? 'text-emerald-600' : 'text-slate-400')"
+ x-text="currentStep === 3 ? 'Étape 3 · En cours' : (currentStep > 3 ? 'Étape 3 · Complétée' : 'Étape 3 · À venir')"></span>
+ <span class="stepper-title block">Tuteur &amp; contacts</span>
+ </span>
+ </button>
+ <button type="button" role="tab" :aria-selected="currentStep === 4" x-on:click="goToStep(4)"
+ class="stepper-step" :class="currentStep === 4 ? 'stepper-step-active' : 'stepper-step-upcoming'">
+ <span class="stepper-badge" :class="currentStep === 4 ? 'stepper-badge-active' : 'stepper-badge-upcoming'">
+ <icon name="checkmark-circle" class="w-4 h-4" />
+ </span>
+ <span class="min-w-0 text-left">
+ <span class="stepper-eyebrow block" :class="currentStep === 4 ? 'text-primary' : 'text-slate-400'"
+ x-text="currentStep === 4 ? 'Étape 4 · En cours' : 'Étape 4 · À venir'"></span>
+ <span class="stepper-title block">Récapitulatif</span>
+ </span>
+ </button>
  </div>
 
  <!-- Choix du mode -->
@@ -170,17 +228,27 @@
  <div x-show="formErrors.global" x-cloak class="rounded-xl border-l-4 border-danger bg-danger-bg p-3 text-sm text-danger" x-text="formErrors.global"></div>
  <div x-show="formErrors.schoolyear" x-cloak class="rounded-xl border-l-4 border-warning bg-warning-bg p-3 text-sm text-warning" x-text="formErrors.schoolyear"></div>
 
+ <!-- ============================= ÉTAPE 2 : AFFECTATION SCOLAIRE ============================= -->
+ <div x-show="currentStep === 2" x-cloak class="space-y-5">
+
  <!-- Classe -->
  <div>
  <label for="enr-classroom" class="form-label form-label-required">Classe d'affectation</label>
  @* on-change : les frais diffèrent d'une classe à l'autre — on remet le simulateur de mois à 1
  pour ne pas reporter une simulation faite sur le barème d'une autre classe (voir resetSimulator). *@
+ @* Profil Élémentaire (Ticket 4) : visibleClassrooms() restreint le choix aux cycles
+ Maternelle/Primaire — voir sa doc dans enrollments.js. Aucun nouveau champ « Série » à
+ masquer : ce formulaire n'en a jamais eu (la série est un attribut de la CLASSE, fixé à sa
+ création, jamais choisi à l'inscription). *@
  <select-field id="enr-classroom" model="form.classroomId" required="true"
  placeholder="— Choisir une classe —" on-change="resetSimulator()"
- options-expr="[{value:'', label:'— Choisir une classe —'}].concat(classrooms.map(c => ({value: c.id, label: classroomLabel(c)})))" />
+ options-expr="[{value:'', label:'— Choisir une classe —'}].concat(visibleClassrooms().map(c => ({value: c.id, label: classroomLabel(c)})))" />
  <p x-show="formErrors.classroomid" x-cloak x-text="formErrors.classroomid" class="field-error"></p>
  <p x-show="classrooms.length === 0" x-cloak class="mt-1 text-xs text-slate-400">
  Aucune classe définie. Créez vos classes avant d'inscrire (<a href="/classes" class="underline">Classes</a>).
+ </p>
+ <p x-show="classrooms.length > 0 && visibleClassrooms().length === 0" x-cloak class="mt-1 text-xs text-slate-400">
+ Aucune classe Maternelle ou Primaire définie. Créez-en une avant d'inscrire (<a href="/classes" class="underline">Classes</a>).
  </p>
  </div>
 
@@ -191,10 +259,15 @@
   <span x-text="ageWarning"></span>
  </div>
 
+ @* Profil Simplifié (Ticket 4) : ce bloc et les deux suivants (transfert, options) sont des
+ raffinements administratifs (redoublement IEF, statut de transfert, options pédagogiques)
+ hors du périmètre « état civil, classe, frais » que ce profil conserve — voir
+ EstablishmentProfilePresets. Masqués, jamais supprimés : un Directeur qui changerait de
+ profil plus tard les retrouve intacts (form.isRepeating etc. ne sont pas réinitialisés). *@
  <!-- Classe redoublée (feature F) : coche portée par l'inscription, cochée [X] sur le
  bulletin (Enrollment.IsRepeating). Vaut pour une nouvelle inscription comme pour une
  réinscription — un élève peut redoubler qu'il soit nouveau dans l'école ou non. -->
- <label class="flex items-start gap-2.5 cursor-pointer select-none">
+ <label x-show="!isSimplifieProfile" x-cloak class="flex items-start gap-2.5 cursor-pointer select-none">
  <input type="checkbox" x-model="form.isRepeating"
  class="checkbox-field mt-0.5">
  <span class="text-sm text-slate-700">
@@ -205,14 +278,14 @@
 
  @* Élève transféré d'un autre établissement (Évolution N°7) : statut « Transféré » du rapport de rentrée IEF
     (Redoublant l'emporte si la classe est aussi redoublée). *@
- <label class="flex items-start gap-2.5 cursor-pointer select-none">
+ <label x-show="!isSimplifieProfile" x-cloak class="flex items-start gap-2.5 cursor-pointer select-none">
   <input type="checkbox" x-model="form.isTransferredIn" class="checkbox-field mt-0.5">
   <span class="text-sm text-slate-700">
    Élève transféré d'un autre établissement
    <span class="block text-xs text-slate-400">Compté « Transféré » au rapport de rentrée de l'IEF.</span>
   </span>
  </label>
- <div x-show="form.isTransferredIn" x-cloak>
+ <div x-show="form.isTransferredIn && !isSimplifieProfile" x-cloak>
   <label for="enr-previous-school" class="form-label">Établissement d'origine</label>
   <input id="enr-previous-school" type="text" x-model="form.previousSchoolName" maxlength="150" placeholder="ex : CEM Liberté 6, Dakar" class="input-field">
   <p x-show="formErrors.previousschoolname" x-cloak x-text="formErrors.previousschoolname" class="field-error"></p>
@@ -221,7 +294,7 @@
  @* Matières optionnelles (Évolution N°6) : affichée seulement si la classe choisie a des groupes d'options
     (LV2, option scientifique de la L2…). L'option la plus fréquente de l'établissement est pré-cochée ; le
     choix détermine les grilles de saisie et le bulletin de l'élève. *@
- <div x-show="optionGroups.length > 0" x-cloak class="border-t border-slate-100 pt-4 mt-4 space-y-3">
+ <div x-show="optionGroups.length > 0 && !isSimplifieProfile" x-cloak class="border-t border-slate-100 pt-4 mt-4 space-y-3">
   <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Matières optionnelles</h3>
   <template x-for="group in optionGroups" :key="group.name">
    <fieldset>
@@ -245,7 +318,13 @@
     Confort d'affichage uniquement : CreateEnrollmentCommandHandler retranche déjà en 422 toute
     tentative sur une école qui n'a pas le module actif (docs/superpowers/plans/2026-09-18-module-
     internat.md, Task 4). Vaut pour une nouvelle inscription comme pour une réinscription — le
-    régime d'hébergement est une propriété de l'INSCRIPTION, pas de l'élève. *@
+    régime d'hébergement est une propriété de l'INSCRIPTION, pas de l'élève.
+
+    Ticket 4 (Onboarding) : déjà exactement ce qui était demandé pour le profil Daara/Internat —
+    internatEnabled vaut true dès l'application de ce preset (EstablishmentProfilePresets),
+    aucune double condition de profil à ajouter ici. Pas de champ « Bilinguisme/Arabe » à masquer
+    pour le profil Franco-Arabe : ce formulaire n'en a jamais eu — la répartition Français/Arabe
+    se paramètre par MATIÈRE (Subject.SectionType, écran /matieres), pas à l'inscription. *@
  <div x-show="internatEnabled" x-cloak class="border-t border-slate-100 pt-4 mt-4">
   <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Régime &amp; Hébergement</h3>
 
@@ -275,8 +354,12 @@
   </label>
  </div>
 
+ </div>
+ <!-- ============================= /ÉTAPE 2 ============================= -->
+
+ <!-- ============================= ÉTAPE 1 : IDENTITÉ & ÉTAT CIVIL ============================= -->
  <!-- Nouvelle inscription : état civil de l'élève -->
- <div x-show="mode === 'NewEnrollment'" x-cloak class="space-y-5">
+ <div x-show="currentStep === 1 && mode === 'NewEnrollment'" x-cloak class="space-y-5">
  <div>
  <label for="enr-fullname" class="form-label form-label-required">Nom complet de l'élève</label>
  <input id="enr-fullname" type="text" x-model="form.fullName" maxlength="200" placeholder="ex : Awa Ndiaye" class="input-field" :class="formErrors.fullname && 'input-field-error'">
@@ -299,20 +382,10 @@
  <input id="enr-birthplace" type="text" x-model="form.birthPlace" maxlength="200" placeholder="ex : Dakar" class="input-field" :class="formErrors.birthplace && 'input-field-error'">
  <p x-show="formErrors.birthplace" x-cloak x-text="formErrors.birthplace" class="field-error"></p>
  </div>
- <div class="form-grid">
- <div>
- <label for="enr-guardian" class="form-label">Nom du tuteur</label>
- <input id="enr-guardian" type="text" x-model="form.guardianName" maxlength="200" placeholder="Parent / tuteur" class="input-field">
- </div>
- <div>
- <label for="enr-guardian-phone" class="form-label">Téléphone du tuteur</label>
- <input id="enr-guardian-phone" type="tel" x-model="form.guardianPhone" maxlength="30" placeholder="77 000 00 00" class="input-field">
- </div>
- </div>
  </div>
 
  <!-- Réinscription : sélection d'un élève existant -->
- <div x-show="mode === 'ReEnrollment'" x-cloak>
+ <div x-show="currentStep === 1 && mode === 'ReEnrollment'" x-cloak>
  <label for="enr-student-search" class="block text-sm font-semibold text-slate-700">Élève à réinscrire <span class="text-danger">*</span></label>
  <input id="enr-student-search" type="text" x-model="studentSearch" placeholder="Rechercher par nom ou matricule…"
  x-on:input="form.studentId = ''"
@@ -323,7 +396,7 @@
  <template x-for="s in filteredStudents()" :key="s.id">
  <button type="button" x-on:click="selectStudent(s)"
  class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between transition-colors duration-150"
- :class="form.studentId === s.id ? 'bg-indigo-50' : ''">
+ :class="form.studentId === s.id ? 'bg-primary-50' : ''">
  <span class="text-sm text-slate-900" x-text="s.fullName"></span>
  <span class="text-xs font-mono text-slate-500" x-text="s.matricule"></span>
  </button>
@@ -334,12 +407,67 @@
  <div x-show="!studentsLoaded" class="px-3 py-4 text-sm text-slate-400 text-center">Chargement des élèves…</div>
  </div>
  </div>
+ <!-- ============================= /ÉTAPE 1 ============================= -->
 
+ <!-- ============================= ÉTAPE 3 : TUTEUR & CONTACTS ============================= -->
+ <div x-show="currentStep === 3 && mode === 'NewEnrollment'" x-cloak class="form-grid">
+ <div>
+ <label for="enr-guardian" class="form-label">Nom du tuteur</label>
+ <input id="enr-guardian" type="text" x-model="form.guardianName" maxlength="200" placeholder="Parent / tuteur" class="input-field">
+ </div>
+ <div>
+ <label for="enr-guardian-phone" class="form-label">Téléphone du tuteur</label>
+ <input id="enr-guardian-phone" type="tel" x-model="form.guardianPhone" maxlength="30" placeholder="77 000 00 00" class="input-field">
+ </div>
+ </div>
+ @* Réinscription : les coordonnées du tuteur restent celles déjà enregistrées sur la fiche de
+ l'élève — ce formulaire n'en recueille pas de nouvelles, pour ne pas laisser croire à une mise
+ à jour qui n'a pas lieu (la fiche élève est l'endroit où les corriger). *@
+ <div x-show="currentStep === 3 && mode === 'ReEnrollment'" x-cloak class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+ Les coordonnées du tuteur restent celles déjà enregistrées sur la fiche de l'élève. Pour les
+ mettre à jour, modifiez-les depuis sa fiche après la réinscription.
+ </div>
+ <!-- ============================= /ÉTAPE 3 ============================= -->
+
+ <!-- ============================= ÉTAPE 4 : RÉCAPITULATIF ============================= -->
+ <div x-show="currentStep === 4" x-cloak class="space-y-4">
+ <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+ <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Avant de valider</p>
+ <dl class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+ <div class="flex justify-between gap-3 sm:block">
+ <dt class="text-slate-400">Élève</dt>
+ <dd class="font-medium text-slate-900 truncate" x-text="mode === 'ReEnrollment' ? (studentSearch || '—') : (form.fullName || '—')"></dd>
+ </div>
+ <div class="flex justify-between gap-3 sm:block">
+ <dt class="text-slate-400">Classe</dt>
+ <dd class="font-medium text-slate-900 truncate" x-text="classrooms.find(c => c.id === form.classroomId) ? classroomLabel(classrooms.find(c => c.id === form.classroomId)) : '—'"></dd>
+ </div>
+ </dl>
+ </div>
+ <p class="text-xs text-slate-400">
+ Aucun encaissement n'est demandé ici — le règlement, y compris le premier versement, se fait
+ ensuite à la Caisse (Comptabilité).
+ </p>
+ </div>
  <!-- Soumission -->
- <div class="pt-2 flex justify-end border-t border-slate-100">
+ <div x-show="currentStep === 4" x-cloak class="pt-2 flex justify-end border-t border-slate-100">
  <button type="submit" :disabled="!canSubmit()" class="btn-modal-primary mt-4 group">
  <icon x-show="!isSubmitting" name="checkmark-circle" class="w-5 h-5" />
  <span x-text="isSubmitting ? 'Enregistrement…' : 'Inscrire l\'élève'"></span>
+ </button>
+ </div>
+ <!-- ============================= /ÉTAPE 4 ============================= -->
+
+ <!-- Navigation entre étapes -->
+ <div class="pt-2 flex items-center justify-between border-t border-slate-100">
+ <button type="button" x-show="currentStep > 1" x-cloak x-on:click="prevStep()" class="btn-modal-secondary group">
+ <icon name="chevron-left" class="w-4 h-4" />
+ Précédent
+ </button>
+ <span x-show="currentStep === 1" x-cloak></span>
+ <button type="button" x-show="currentStep < 4" x-cloak x-on:click="nextStep()" class="btn-modal-primary group">
+ Suivant
+ <icon name="chevron-right" class="w-4 h-4" />
  </button>
  </div>
  </form>
@@ -369,15 +497,29 @@
  renseigner le parent. Il n'encaisse rien — le règlement, y compris le premier versement,
  se fait à la Caisse, seule pièce comptable (docs/design-references/README.md §1). *@
  <div x-show="form.classroomId && hasFeesForSelectedClass()" x-cloak class="mt-4">
+ @* Frais optionnels (uniforme, tenue de sport…) : une case par frais, PRÉ-COCHÉE. Décochée, la ligne reste
+ visible (on peut la recocher) mais sort du total. Les frais obligatoires n'ont pas de case : l'inscription
+ et la mensualité sont dues par tous, et le serveur les facture quoi que le formulaire envoie. *@
  <ul class="divide-y divide-slate-100">
- <template x-for="line in previewLines()" :key="line.feeCategoryId">
+ <template x-for="line in feeChoices()" :key="line.feeCategoryId">
  <li class="py-2.5 flex items-start justify-between gap-3">
+ <span class="min-w-0 flex items-start gap-2">
+ <input x-show="line.isOptional" x-cloak type="checkbox" class="checkbox-field mt-1"
+ :id="'enr-fee-' + line.feeCategoryId" :checked="line.checked"
+ x-on:change="toggleFee(line.feeCategoryId)"
+ :aria-label="'Facturer ' + line.designation">
  <span class="min-w-0">
- <span class="block text-sm text-slate-800" x-text="line.designation"></span>
+ <label :for="line.isOptional ? 'enr-fee-' + line.feeCategoryId : null"
+ class="block text-sm" :class="line.checked ? 'text-slate-800' : 'text-slate-400 line-through'"
+ x-text="line.designation"></label>
+ <span x-show="line.isOptional" x-cloak class="block text-xs text-slate-400">Optionnel — au choix de la famille</span>
  <span x-show="line.isRecurring" x-cloak class="block text-xs text-slate-400"
  x-text="formatMoney(line.unitAmount) + ' × ' + line.months + ' mois'"></span>
  </span>
- <span class="text-sm font-medium text-slate-900 whitespace-nowrap amount" x-text="formatMoney(line.lineTotal)"></span>
+ </span>
+ <span class="text-sm font-medium whitespace-nowrap amount"
+ :class="line.checked ? 'text-slate-900' : 'text-slate-400 line-through'"
+ x-text="formatMoney(line.lineTotal)"></span>
  </li>
  </template>
  </ul>
@@ -441,7 +583,7 @@
  Nouvelle inscription
  </button>
  <button type="button" x-on:click="downloadPdf()" class="btn-modal-secondary group shrink-0">
- <icon name="document-text" class="w-5 h-5 text-indigo-600" />
+ <icon name="document-text" class="w-5 h-5 text-primary-600" />
  Attestation
  </button>
  <button type="button" x-on:click="downloadCertificatePdf()" class="btn-modal-secondary group shrink-0">
@@ -482,7 +624,7 @@
      <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-center text-[10.5px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">N°&nbsp;<span x-text="receiptReference()"></span></span>
      <!--/center-badge-->
      <!--badges-->
-     <span class="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-indigo-700 whitespace-nowrap">Inscription enregistrée</span>
+     <span class="rounded-full border border-primary-200 bg-primary-50 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-700 whitespace-nowrap">Inscription enregistrée</span>
      <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-700 whitespace-nowrap">Année&nbsp;<span x-text="receipt.schoolYearLabel"></span></span>
      <!--/badges-->
 
@@ -520,7 +662,7 @@
 
      @* D. Corps : deux blocs de NATURE différente. À gauche ce qu'il y a à régler maintenant, à
      l'ENCRE NOIRE — rien n'est acquitté, le secrétariat n'encaisse pas, et le vert signifierait
-     « payé ». À droite le prospectif, en indigo.
+     « payé ». À droite le prospectif, en bleu primaire.
 
      Le cumul annuel (totalDue) et le « reste à payer » ont disparu : c'est l'objet même de la
      refonte du 25/08/2026. Voir docs/design-references/README.md §1, rubrique « Interdits ». *@
@@ -582,12 +724,12 @@
      <p x-show="monthlyLines().length === 0" x-cloak class="py-1 text-[11px] italic text-slate-400">Aucun frais mensuel souscrit.</p>
      </div>
 
-     <div class="mt-2 flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+     <div class="mt-2 flex items-center justify-between gap-3 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2">
      <div>
-     <div class="text-[9px] font-bold uppercase tracking-wider text-indigo-700">Total à prévoir chaque mois</div>
-     <div class="text-[9px] text-indigo-500">Règlement du 1<sup>er</sup> au 5 de chaque mois</div>
+     <div class="text-[9px] font-bold uppercase tracking-wider text-primary-700">Total à prévoir chaque mois</div>
+     <div class="text-[9px] text-primary-500">Règlement du 1<sup>er</sup> au 5 de chaque mois</div>
      </div>
-     <div class="whitespace-nowrap text-lg font-bold leading-none text-indigo-700 amount"><span x-text="formatMoney(monthlyTotal())"></span><span class="text-[10px] font-medium text-indigo-500"> / mois</span></div>
+     <div class="whitespace-nowrap text-lg font-bold leading-none text-primary-700 amount"><span x-text="formatMoney(monthlyTotal())"></span><span class="text-[10px] font-medium text-primary-500"> / mois</span></div>
      </div>
      </div>
 
