@@ -38,7 +38,7 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     private record StudentIdentityDto(
         Guid Id, string Matricule, string FullName, DateOnly BirthDate, string? BirthPlace, string Gender,
         Guid ClassroomId, string ClassroomName, string? PhotoUrl, string? GuardianName, string? GuardianPhone,
-        uint RowVersion);
+        string? FullNameAr, string? GuardianNameAr, uint RowVersion);
 
     private record StudentDetailDto(StudentIdentityDto Identity);
     private record UpdateStudentResult(Guid Id, uint RowVersion);
@@ -129,6 +129,31 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Creating_A_Student_With_Arabic_Names_Round_Trips_Them_Through_The_Detail_Endpoint()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 Test Arabe");
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/students", directeur, new
+        {
+            fullName = "Ibrahima Ndoye",
+            birthDate = "2015-03-12",
+            birthPlace = "Thiès",
+            gender = "M",
+            classroomId = classroom.Id,
+            fullNameAr = "  إبراهيما ندوي  ",
+            guardianNameAr = "خديجة ندوي"
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = (await response.Content.ReadFromJsonAsync<StudentCreated>())!;
+
+        var identity = await FetchStudentAsync(directeur, created.Id);
+        identity.FullNameAr.Should().Be("إبراهيما ندوي", "le nom arabe doit être détouré (Trim) comme les autres champs texte");
+        identity.GuardianNameAr.Should().Be("خديجة ندوي");
     }
 
     [Fact]

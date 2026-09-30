@@ -26,6 +26,8 @@ public record CreateStudentCommand : IRequest<CreateStudentResult>
     public string? GuardianPhone { get; init; }
     public string? GuardianEmail { get; init; }
     public string? Address { get; init; }
+    public string? FullNameAr { get; init; }
+    public string? GuardianNameAr { get; init; }
 }
 
 public record CreateStudentResult(Guid Id, string Matricule);
