@@ -29,14 +29,14 @@
 - [x] Tests d'intégration `tests/SamaEcole.IntegrationTests/Finance/OptionalFeeCategoryTests.cs` (persistance, bascule dans les deux sens, cloisonnement entre écoles, liste).
 - [ ] Reste à la charge d'une tâche ultérieure : bascule d'une catégorie **existante** depuis l'écran (le `PUT` est prêt, l'écran n'expose que la création).
 
-## Tâche 2 — Sélection à l'inscription et à la réinscription
+## Tâche 2 — Sélection à l'inscription et à la réinscription — FAIT
 
-- [ ] Tests d'abord (rouge) — `CreateEnrollmentCommandValidatorTests` : liste `OptionalFeeCategoryIds` sans doublon ; tests d'intégration `EnrollmentTests` : une catégorie optionnelle décochée ne crée aucune `EnrollmentFeeLine` et n'entre pas dans `TotalDue`.
-- [ ] `CreateEnrollmentCommand.OptionalFeeCategoryIds` (`IReadOnlyList<Guid>?`). **Absent (`null`) = comportement historique** : tous les frais optionnels de la classe inclus, pour ne pas changer la facture d'un ancien client. Liste fournie = uniquement ceux-là.
-- [ ] `BuildFeeLinesAsync` : les catégories `IsOptional` ne sont incluses que si choisies ; les obligatoires le sont toujours, quoi que contienne la liste.
-- [ ] Un identifiant qui n'est pas une catégorie optionnelle **de cette classe** → 422 (jamais ignoré en silence).
-- [ ] Écran d'inscription et de réinscription (`Views/Enrollments/Index.cshtml`, `wwwroot/js/enrollments.js`) : une case par frais optionnel de la classe, **cochée par défaut**, avec le montant ; le total affiché se recalcule ; les frais obligatoires sont listés sans case.
-- [ ] Le reçu (règle #12) ne change pas de mise en page : il liste les lignes réellement facturées.
+- [x] Règle pure `OptionalFeeSelection` (`IsBilled`, `FindInvalid`) — tests unitaires `OptionalFeeSelectionTests` : rouge de compilation, rouge de comportement (6 échecs sur 17), puis vert.
+- [x] `CreateEnrollmentCommand.OptionalFeeCategoryIds` (`IReadOnlyList<Guid>?`) : **absent (`null`) = comportement historique** (tous les frais de la classe), `[]` = aucun frais optionnel. Validateur : pas de doublon, pas de `Guid.Empty`.
+- [x] `BuildFeeLinesAsync` : une catégorie `IsOptional` n'est facturée que si cochée ; les obligatoires le sont toujours. Un identifiant qui n'est pas un frais optionnel de la classe → 422, et l'inscription entière est annulée (matricule compris). Tests d'intégration `EnrollmentTests` (PostgreSQL) : rouge (5 échecs) puis vert (25/25).
+- [x] Formulaire (`Views/Enrollments/Index.cshtml`, `wwwroot/js/enrollments.js`) : une case par frais optionnel dans le récapitulatif, **cochée par défaut**, ligne barrée et sortie du total quand décochée ; les frais obligatoires n'ont pas de case. Un seul composant sert l'inscription et la réinscription. État `form.uncheckedFeeIds` (les exceptions, pas les cochés) : restauré avec le brouillon, remis à zéro quand la classe change. Tests `node --test` `enrollment-optional-fees.test.mjs` : rouge (13 échecs) puis vert.
+- [x] `openapi.yaml` et `Volume_4_API_Design.md` : champ `optionalFeeCategoryIds`.
+- Le reçu ne change pas de mise en page (règle #12) : il liste les lignes réellement facturées.
 
 ## Tâche 3 — Dû annuel et protection des frais obligatoires
 

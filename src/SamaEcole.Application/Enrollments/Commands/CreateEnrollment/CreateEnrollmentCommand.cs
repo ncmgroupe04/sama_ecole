@@ -77,4 +77,14 @@ public record CreateEnrollmentCommand : IRequest<EnrollmentReceiptDto>
     /// classe sans groupe d'options.
     /// </summary>
     public IReadOnlyList<Guid>? SubjectOptionIds { get; init; }
+
+    // --- Frais optionnels (uniforme, tenue de sport…) ---
+
+    /// <summary>
+    /// Catégories de frais OPTIONNELLES retenues par la famille (cases cochées du formulaire). Seules celles-ci
+    /// entrent dans le dû annuel ; les frais obligatoires sont toujours facturés, quoi que contienne la liste.
+    /// Absente (<c>null</c>) → tous les frais de la classe sont facturés, comme avant la fonctionnalité ; liste
+    /// vide → aucun frais optionnel. Un identifiant qui n'est pas un frais optionnel de la classe → 422.
+    /// </summary>
+    public IReadOnlyList<Guid>? OptionalFeeCategoryIds { get; init; }
 }

@@ -274,6 +274,162 @@ public class EnrollmentTests : IAsyncLifetime
         visibleToB.Should().Be(0, "une inscription d'une autre école ne doit jamais être visible (règle #2)");
     }
 
+    // ------------------------------------------------------------------ Frais optionnels (Tâche 2)
+
+    private const decimal Uniforme = 25_000m;
+    private const decimal TenueSport = 8_000m;
+    private const decimal ObligatoiresAnnuels = Inscription + Mensualite * TuitionMonths;
+
+    private sealed record OptionalFeesClass(Guid ClassroomId, Guid UniformeId, Guid TenueId, Guid InscriptionId);
+
+    /// <summary>
+    /// Une classe dédiée (les autres tests comptent EXACTEMENT deux lignes sur ClasseA) : inscription et
+    /// mensualité obligatoires + uniforme et tenue de sport optionnels.
+    /// </summary>
+    private async Task<OptionalFeesClass> SeedOptionalFeesClassAsync()
+    {
+        var classroomId = Guid.CreateVersion7();
+        var inscriptionId = Guid.CreateVersion7();
+        var mensualiteId = Guid.CreateVersion7();
+        var uniformeId = Guid.CreateVersion7();
+        var tenueId = Guid.CreateVersion7();
+
+        await using var owner = _db.NewOwnerContext();
+        owner.Classrooms.Add(new Classroom { Id = classroomId, SchoolId = EcoleA, Name = "6e Optionnels", Level = "Collège", Capacity = 40 });
+        owner.FeeCategories.AddRange(
+            new FeeCategory { Id = inscriptionId, SchoolId = EcoleA, Name = "Inscription 6e" },
+            new FeeCategory { Id = mensualiteId, SchoolId = EcoleA, Name = "Mensualité 6e", IsRecurring = true },
+            new FeeCategory { Id = uniformeId, SchoolId = EcoleA, Name = "Uniforme", IsOptional = true },
+            new FeeCategory { Id = tenueId, SchoolId = EcoleA, Name = "Tenue de sport", IsOptional = true });
+        owner.ClassFees.AddRange(
+            new ClassFee { SchoolId = EcoleA, FeeCategoryId = inscriptionId, ClassroomId = classroomId, Amount = Inscription },
+            new ClassFee { SchoolId = EcoleA, FeeCategoryId = mensualiteId, ClassroomId = classroomId, Amount = Mensualite },
+            new ClassFee { SchoolId = EcoleA, FeeCategoryId = uniformeId, ClassroomId = classroomId, Amount = Uniforme },
+            new ClassFee { SchoolId = EcoleA, FeeCategoryId = tenueId, ClassroomId = classroomId, Amount = TenueSport });
+        await owner.SaveChangesAsync(CancellationToken.None);
+
+        return new OptionalFeesClass(classroomId, uniformeId, tenueId, inscriptionId);
+    }
+
+    private static CreateEnrollmentCommand NewStudentIn(Guid classroomId, string fullName, IReadOnlyList<Guid>? optionalFeeCategoryIds) => new()
+    {
+        Type = EnrollmentType.NewEnrollment,
+        ClassroomId = classroomId,
+        FullName = fullName,
+        BirthDate = new DateOnly(2013, 2, 2),
+        BirthPlace = "Thiès",
+        Gender = "M",
+        OptionalFeeCategoryIds = optionalFeeCategoryIds
+    };
+
+    [Fact]
+    public async Task Without_A_Selection_Every_Fee_Of_The_Class_Is_Billed_As_Before()
+    {
+        var cls = await SeedOptionalFeesClassAsync();
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var receipt = await NewHandler(db, EcoleA).Handle(NewStudentIn(cls.ClassroomId, "Ancien Client", null), CancellationToken.None);
+
+        receipt.TotalDue.Should().Be(ObligatoiresAnnuels + Uniforme + TenueSport,
+            "un client qui n'envoie pas le champ garde la facture historique");
+    }
+
+    [Fact]
+    public async Task Only_The_Checked_Optional_Fees_Enter_The_Annual_Due()
+    {
+        var cls = await SeedOptionalFeesClassAsync();
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var receipt = await NewHandler(db, EcoleA).Handle(
+            NewStudentIn(cls.ClassroomId, "Uniforme Seulement", [cls.UniformeId]), CancellationToken.None);
+
+        receipt.TotalDue.Should().Be(ObligatoiresAnnuels + Uniforme);
+        receipt.Lines.Select(l => l.Designation).Should().BeEquivalentTo("Inscription 6e", "Mensualité 6e", "Uniforme");
+
+        await using var check = _db.NewAppContext(EcoleA);
+        var persisted = await check.EnrollmentFeeLines.Where(l => l.EnrollmentId == receipt.EnrollmentId).ToListAsync();
+        persisted.Should().NotContain(l => l.Designation == "Tenue de sport", "un frais décoché ne laisse aucune ligne");
+        persisted.Sum(l => l.LineTotal).Should().Be(receipt.TotalDue);
+
+        var enrollment = await check.Enrollments.SingleAsync(e => e.Id == receipt.EnrollmentId);
+        enrollment.TotalDue.Should().Be(receipt.TotalDue);
+    }
+
+    [Fact]
+    public async Task An_Empty_Selection_Bills_Only_The_Mandatory_Fees()
+    {
+        var cls = await SeedOptionalFeesClassAsync();
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var receipt = await NewHandler(db, EcoleA).Handle(NewStudentIn(cls.ClassroomId, "Sans Options", []), CancellationToken.None);
+
+        receipt.TotalDue.Should().Be(ObligatoiresAnnuels);
+        receipt.Lines.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task A_Re_Enrollment_Honours_The_Selection_Too()
+    {
+        var cls = await SeedOptionalFeesClassAsync();
+        var studentId = Guid.CreateVersion7();
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.Students.Add(new Student
+            {
+                Id = studentId, SchoolId = EcoleA, Matricule = "ELEV-2020-0042", FullName = "Réinscrit Sow",
+                BirthDate = new DateOnly(2012, 4, 4), BirthPlace = "Dakar", Gender = "F", ClassroomId = ClasseA
+            });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(EcoleA);
+        var receipt = await NewHandler(db, EcoleA).Handle(new CreateEnrollmentCommand
+        {
+            Type = EnrollmentType.ReEnrollment,
+            ClassroomId = cls.ClassroomId,
+            StudentId = studentId,
+            OptionalFeeCategoryIds = [cls.TenueId]
+        }, CancellationToken.None);
+
+        receipt.TotalDue.Should().Be(ObligatoiresAnnuels + TenueSport);
+        receipt.Lines.Select(l => l.Designation).Should().Contain("Tenue de sport").And.NotContain("Uniforme");
+    }
+
+    [Fact]
+    public async Task A_Mandatory_Category_In_The_Selection_Is_Refused_And_Nothing_Is_Persisted()
+    {
+        var cls = await SeedOptionalFeesClassAsync();
+        await using var db = _db.NewAppContext(EcoleA);
+
+        var act = async () => await NewHandler(db, EcoleA).Handle(
+            NewStudentIn(cls.ClassroomId, "Contournement", [cls.InscriptionId]), CancellationToken.None);
+
+        (await act.Should().ThrowAsync<ValidationException>())
+            .Which.Errors.Should().ContainKey(nameof(CreateEnrollmentCommand.OptionalFeeCategoryIds));
+
+        await using var check = _db.NewAppContext(EcoleA);
+        (await check.Students.AnyAsync(s => s.FullName == "Contournement")).Should().BeFalse("l'inscription est atomique");
+        (await check.Enrollments.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task An_Optional_Category_Of_Another_School_Is_Refused()
+    {
+        var cls = await SeedOptionalFeesClassAsync();
+        var chezB = Guid.CreateVersion7();
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.FeeCategories.Add(new FeeCategory { Id = chezB, SchoolId = EcoleB, Name = "Uniforme B", IsOptional = true });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var db = _db.NewAppContext(EcoleA);
+        var act = async () => await NewHandler(db, EcoleA).Handle(
+            NewStudentIn(cls.ClassroomId, "Fuite Inter-Écoles", [chezB]), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ValidationException>();
+    }
+
     private sealed class StubTenantProvider(Guid? schoolId) : ITenantProvider
     {
         public Guid? CurrentSchoolId => schoolId;

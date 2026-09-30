@@ -6805,6 +6805,17 @@ components:
             Un groupe sans choix reçoit l'option par défaut (la plus fréquente de l'établissement) ; absent :
             toutes les options par défaut. Enregistrées dans la même transaction ; 422 pour une option hors
             classe ou deux options d'un même groupe.
+        optionalFeeCategoryIds:
+          type: array
+          nullable: true
+          items: { type: string, format: uuid }
+          description: >-
+            Frais optionnels (uniforme, tenue de sport…) cochés par la famille — inscription ET réinscription.
+            Seuls ces frais entrent dans le dû annuel ; les frais obligatoires sont TOUJOURS facturés, quoi que
+            contienne la liste. Absent : tous les frais de la classe sont facturés (comportement antérieur) ;
+            liste vide : aucun frais optionnel. 422 pour un doublon, un identifiant vide, ou une catégorie qui
+            n'est pas un frais optionnel de la classe (obligatoire, inconnue, d'une autre école) — l'inscription
+            entière est alors annulée.
 
     EnrollmentReceipt:
       type: object
