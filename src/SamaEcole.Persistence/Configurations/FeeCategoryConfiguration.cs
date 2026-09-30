@@ -20,6 +20,8 @@ public class FeeCategoryConfiguration : IEntityTypeConfiguration<FeeCategory>
         builder.Property(c => c.Name).IsRequired().HasMaxLength(60);
         builder.Property(c => c.IsRecurring).IsRequired();
         builder.Property(c => c.IsBoardingFee).IsRequired().HasDefaultValue(false);
+        // Défaut false : toute catégorie existante reste OBLIGATOIRE après la migration.
+        builder.Property(c => c.IsOptional).IsRequired().HasDefaultValue(false);
 
         // Une catégorie est unique par nom au sein de l'école. Le soft delete fait partie de la clé :
         // sans lui, une catégorie archivée interdirait d'en recréer une de même nom.

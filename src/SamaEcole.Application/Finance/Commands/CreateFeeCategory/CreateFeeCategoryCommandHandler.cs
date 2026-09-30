@@ -19,7 +19,8 @@ public class CreateFeeCategoryCommandHandler(
             SchoolId = schoolId,
             Name = request.Name.Trim(),
             IsRecurring = request.IsRecurring,
-            IsBoardingFee = request.IsBoardingFee
+            IsBoardingFee = request.IsBoardingFee,
+            IsOptional = request.IsOptional
         };
 
         dbContext.FeeCategories.Add(category);
@@ -28,6 +29,6 @@ public class CreateFeeCategoryCommandHandler(
         // en ConcurrencyConflictException → 409, jamais un écrasement silencieux (AGENTS.md règle #5).
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new CreateFeeCategoryResult(category.Id, category.Name, category.IsRecurring, category.IsBoardingFee);
+        return new CreateFeeCategoryResult(category.Id, category.Name, category.IsRecurring, category.IsBoardingFee, category.IsOptional);
     }
 }

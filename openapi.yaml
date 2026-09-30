@@ -3406,6 +3406,32 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /finance/fee-categories/{id}:
+    put:
+      tags: [Finance]
+      summary: Rendre une catégorie de frais optionnelle ou obligatoire (Directeur, ou Finance déléguée)
+      description: >-
+        Bascule uniquement `isOptional`. N'agit que sur les inscriptions FUTURES : les lignes de frais
+        d'une inscription existante sont figées et son montant dû n'est jamais recalculé (règle #4).
+        Même délégation que la création (AllowFinanceToModifyFees).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isOptional]
+              properties:
+                isOptional: { type: boolean }
+      responses:
+        '204': { description: Catégorie mise à jour }
+        '403': { description: Réservé au Directeur, ou à la Finance si la modification des frais lui est déléguée }
+        '404': { description: Catégorie introuvable dans cet établissement }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Finance]
       summary: Supprimer une catégorie de frais et tout son barème (Directeur, ou Finance déléguée)
@@ -7018,6 +7044,12 @@ components:
         isRecurring:
           type: boolean
           description: Vrai pour une mensualité (due chaque mois), faux pour un frais ponctuel.
+        isOptional:
+          type: boolean
+          description: >-
+            Frais facultatif (uniforme, tenue de sport…) que la famille coche à l'inscription. Faux par
+            défaut : un frais est obligatoire tant que le Directeur ne l'a pas déclaré optionnel.
+            Incompatible avec `isBoardingFee` (422).
 
     FeeCategory:
       type: object
@@ -7030,6 +7062,12 @@ components:
           description: >-
             Module Internat : catégorie incluable automatiquement sur l'inscription d'un élève
             Interne/Demi-pensionnaire, en plus du barème ordinaire.
+        isOptional:
+          type: boolean
+          description: >-
+            Frais facultatif (uniforme, tenue de sport…) que la famille coche à l'inscription. Faux par
+            défaut : un frais est obligatoire tant que le Directeur ne l'a pas déclaré optionnel.
+            Incompatible avec `isBoardingFee` (422).
 
     ClassFee:
       type: object
