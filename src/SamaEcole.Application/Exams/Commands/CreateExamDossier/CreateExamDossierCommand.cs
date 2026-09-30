@@ -23,4 +23,9 @@ public record ExamDossierResult(
     bool BirthCertificatePresent,
     bool? CivilStatusConforming,
     string Status,
-    uint RowVersion);
+    uint RowVersion,
+    // Ticket Onboarding #6 (profil Élémentaire) — ajoutés en fin de liste pour ne décaler aucun appel
+    // positionnel existant. Voir ExamDossier.PhotoPresent pour la portée (REQUIS pour Complet sur CFEE
+    // seulement, sans effet sur BFEM/BAC).
+    bool PhotoPresent = false,
+    bool FeeReceiptPresent = false);

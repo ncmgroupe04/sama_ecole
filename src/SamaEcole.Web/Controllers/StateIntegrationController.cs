@@ -36,7 +36,6 @@ namespace SamaEcole.Web.Controllers;
 [ApiController]
 [Route("api/v1/state-integration")]
 [Authorize(Roles = DirectorAndSecretariat)]
-[RequireModule(SchoolModule.Pedagogy)]
 public class StateIntegrationController(ISender mediator, ISimenBridgeService simenBridge) : ControllerBase
 {
     private const string DirectorOnly = "Directeur";
@@ -48,6 +47,14 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     // alors un 403 sur /certificates et /simen/status alors que le contrat les lui ouvre. Les routes
     // réservées au seul Directeur (Planète, STATEDUC, statut du relais) reposent leur garde
     // explicitement ci-dessous.
+    //
+    // [RequireModule(Pedagogy)] N'EST PLUS posé au niveau CLASSE (Ticket Onboarding — ajustement
+    // profil Simplifié) : la remontée annuelle Planète au ministère concerne TOUTE école, y compris
+    // celles qui ont désactivé la Pédagogie (profil « Inscriptions & Scolarité Simplifiée », où aucun
+    // enseignement suivi ne se fait, mais où les effectifs se déclarent quand même). GetPlaneteExport
+    // ci-dessous reste donc SANS ce verrou ; toutes les AUTRES routes du contrôleur (STATEDUC, IEN,
+    // certificats, livret de compétences) le reposent explicitement, une à une, pour ne rien perdre
+    // de la garde précédente.
 
     // ------------------------------------------------------------------- Export « Planète Ready »
 
@@ -81,6 +88,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// </summary>
     [HttpGet("simen/status")]
     [Authorize(Roles = DirectorOnly)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public IActionResult GetSimenStatus() => Ok(new
     {
         isConfigured = simenBridge.IsConfigured,
@@ -95,6 +103,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// <summary>GET /stateduc — le rapport agrégé, en JSON, pour l'écran de consultation.</summary>
     [HttpGet("stateduc")]
     [Authorize(Roles = DirectorOnly)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public async Task<ActionResult<StateducReportDto>> GetStateducReport(
         [FromQuery] Guid schoolYearId,
         [FromQuery] DateOnly? observationDate = null,
@@ -110,6 +119,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// </summary>
     [HttpGet("stateduc/pdf")]
     [Authorize(Roles = DirectorOnly)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public async Task<IActionResult> GetStateducReportPdf(
         [FromQuery] Guid schoolYearId,
         [FromQuery] DateOnly? observationDate,
@@ -127,6 +137,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// <summary>GET /stateduc/excel — le même rapport en classeur .xlsx, pour consolidation à l'IEF.</summary>
     [HttpGet("stateduc/excel")]
     [Authorize(Roles = DirectorOnly)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public async Task<IActionResult> GetStateducReportExcel(
         [FromQuery] Guid schoolYearId,
         [FromQuery] DateOnly? observationDate,
@@ -154,6 +165,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// </summary>
     [HttpPut("students/{studentId:guid}/ien")]
     [Authorize(Roles = DirectorAndSecretariat)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public async Task<ActionResult<AssignStudentIenResult>> AssignStudentIen(
         Guid studentId,
         [FromBody] AssignStudentIenRequest request,
@@ -171,6 +183,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// </summary>
     [HttpPost("students/{studentId:guid}/mutation-certificate")]
     [Authorize(Roles = DirectorAndSecretariat)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public async Task<IActionResult> GenerateMutationCertificate(
         Guid studentId,
         [FromBody] MutationCertificateRequest request,
@@ -202,6 +215,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// </summary>
     [HttpGet("certificates")]
     [Authorize(Roles = DirectorAndSecretariat)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public async Task<ActionResult<PaginatedMutationCertificates>> GetMutationCertificates(
         [FromQuery] Guid? studentId,
         [FromQuery] int page = 1,
@@ -218,6 +232,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// </summary>
     [HttpPost("certificates/{id:guid}/revoke")]
     [Authorize(Roles = DirectorAndSecretariat)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public async Task<IActionResult> RevokeMutationCertificate(
         Guid id,
         [FromBody] RevokeCertificateRequest request,
@@ -258,6 +273,7 @@ public class StateIntegrationController(ISender mediator, ISimenBridgeService si
     /// </summary>
     [HttpGet("students/{studentId:guid}/skills-booklet")]
     [Authorize(Roles = DirectorAndSecretariat)]
+    [RequireModule(SchoolModule.Pedagogy)]
     public async Task<IActionResult> GetSkillsBooklet(
         Guid studentId,
         [FromQuery] Guid schoolYearId,

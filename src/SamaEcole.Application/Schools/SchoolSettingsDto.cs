@@ -54,4 +54,12 @@ public record SchoolSettingsDto(
     int CustomPeriodCount = 3,
 
     /// <summary>Jours ouvrés (noms « Monday » … « Sunday »), dans l'ordre d'affichage de la semaine de l'école.</summary>
-    IReadOnlyList<string>? WorkingDays = null);
+    IReadOnlyList<string>? WorkingDays = null,
+
+    /// <summary>
+    /// Profil choisi à l'Onboarding (« Simplifie » / « ElementairePrimaire » / « General » / « FrancoArabe »
+    /// / « DaaraInternat »). NULL = Directeur pas encore passé par l'Onboarding — c'est ce que lit la garde
+    /// cliente (onboarding-guard.js) pour rediriger vers /onboarding. Ajouté en DERNIÈRE position pour ne
+    /// pas décaler les appels positionnels existants de ce DTO.
+    /// </summary>
+    string? ProfileEtablissement = null);

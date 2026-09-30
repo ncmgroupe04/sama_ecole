@@ -71,6 +71,8 @@ public class AssignExamCenterCommandHandler(
                 dossier.BirthCertificatePresent,
                 dossier.CivilStatusConforming,
                 dossier.Status.ToString(),
-                rowVersion);
+                rowVersion,
+                dossier.PhotoPresent,
+                dossier.FeeReceiptPresent);
         }, cancellationToken);
 }

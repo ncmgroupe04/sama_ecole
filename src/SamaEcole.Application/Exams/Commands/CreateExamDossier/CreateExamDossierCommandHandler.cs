@@ -70,7 +70,9 @@ public class CreateExamDossierCommandHandler(IApplicationDbContext dbContext, IT
             dossier.BirthCertificatePresent,
             dossier.CivilStatusConforming,
             dossier.Status.ToString(),
-            rowVersion);
+            rowVersion,
+            dossier.PhotoPresent,
+            dossier.FeeReceiptPresent);
     }
 
     /// <summary>

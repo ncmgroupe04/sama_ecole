@@ -66,6 +66,15 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .IsRequired()
             .HasDefaultValue(SchoolSettingsDefaults.SchoolType);
 
+        // NULLABLE et SANS HasDefaultValue, à dessein : une école neuve (provision_school_director)
+        // doit recevoir NULL pour cette colonne, pas une valeur — c'est ce qui déclenche l'Onboarding.
+        // Le backfill des écoles ANTÉRIEURES à General passe par une UPDATE explicite dans la migration
+        // (AddProfileEtablissement), jamais par un défaut de colonne qui s'appliquerait aussi aux écoles
+        // neuves.
+        builder.Property(s => s.ProfileEtablissement)
+            .HasConversion<string>()
+            .HasMaxLength(30);
+
         builder.Property(s => s.EvaluationPeriodType)
             .HasConversion<string>()
             .HasMaxLength(20)

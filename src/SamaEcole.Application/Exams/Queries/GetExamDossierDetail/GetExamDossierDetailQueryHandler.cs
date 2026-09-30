@@ -62,6 +62,8 @@ public class GetExamDossierDetailQueryHandler(IApplicationDbContext dbContext, E
             result,
             dossier.ExamCenterCode,
             dossier.TableNumber,
-            dossier.CivilRegistryDocumentStatus.ToString());
+            dossier.CivilRegistryDocumentStatus.ToString(),
+            dossier.PhotoPresent,
+            dossier.FeeReceiptPresent);
     }
 }

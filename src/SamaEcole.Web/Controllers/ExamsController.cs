@@ -10,6 +10,7 @@ using SamaEcole.Application.Exams.Queries.GetExamCandidateFormPdf;
 using SamaEcole.Application.Exams.Queries.GetExamCandidateFormsBatchPdf;
 using SamaEcole.Application.Exams.Queries.GetExamConvocationPdf;
 using SamaEcole.Application.Exams.Queries.GetExamDossierAudit;
+using SamaEcole.Application.Exams.Queries.GetCfeeCandidates;
 using SamaEcole.Application.Exams.Queries.GetExamDossierDetail;
 using SamaEcole.Application.Exams.Queries.GetExamDossiers;
 using SamaEcole.Application.Exams.Queries.GetExamRegistrationExport;
@@ -149,7 +150,10 @@ public class ExamsController(ISender mediator) : ControllerBase
         string? CivilStatusNotes,
         uint RowVersion,
         // Volume 1 §23.4 — null = champ omis, la valeur en base est préservée (voir la Command).
-        Domain.Enums.CivilRegistryDocumentStatus? CivilRegistryDocumentStatus = null);
+        Domain.Enums.CivilRegistryDocumentStatus? CivilRegistryDocumentStatus = null,
+        // Ticket Onboarding #6 — voir ExamDossier.PhotoPresent.
+        bool PhotoPresent = false,
+        bool FeeReceiptPresent = false);
 
     [HttpPut("dossiers/{id:guid}")]
     [Authorize(Roles = ManageRoles)]
@@ -166,6 +170,8 @@ public class ExamsController(ISender mediator) : ControllerBase
                 ExamCenterName = request.ExamCenterName,
                 BirthCertificateNumber = request.BirthCertificateNumber,
                 BirthCertificatePresent = request.BirthCertificatePresent,
+                PhotoPresent = request.PhotoPresent,
+                FeeReceiptPresent = request.FeeReceiptPresent,
                 CivilStatusConforming = request.CivilStatusConforming,
                 CivilStatusNotes = request.CivilStatusNotes,
                 CivilRegistryDocumentStatus = request.CivilRegistryDocumentStatus,
@@ -234,6 +240,20 @@ public class ExamsController(ISender mediator) : ControllerBase
                 DeliberatedOn = request.DeliberatedOn
             },
             cancellationToken));
+
+    // ------------------------------------------------------------------ Candidats CM2 (Ticket Onboarding #6)
+
+    /// <summary>
+    /// Cohorte des élèves de CM2 de l'année active, avec leur dossier CFEE s'il existe déjà — voir
+    /// GetCfeeCandidatesQuery. Réservée à ManageRoles, comme Sessions/Audit/Statistiques : c'est un
+    /// tableau de préparation de campagne, pas la lecture bornée par classe de GET /dossiers (JGK-J08).
+    /// </summary>
+    [HttpGet("cfee-candidates")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<CfeeCandidatesResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetCfeeCandidates(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetCfeeCandidatesQuery(), cancellationToken));
 
     // ------------------------------------------------------------------ Statistiques
 

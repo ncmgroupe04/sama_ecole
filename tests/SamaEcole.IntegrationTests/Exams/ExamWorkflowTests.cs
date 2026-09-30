@@ -91,6 +91,80 @@ public class ExamWorkflowTests : IAsyncLifetime
                 Id = dossierId,
                 BirthCertificatePresent = true,
                 CivilStatusConforming = true,
+                // CreateDossierAsync ouvre sur SessionCfee (CFEE) : Photo et Quittance sont ici aussi
+                // nécessaires (Ticket Onboarding #6) — voir Cfee_Dossier_Requires_Photo_And_FeeReceipt...
+                // ci-dessous pour le cas négatif, et Bfem_Dossier_Does_Not_Require... pour la preuve que
+                // ces deux pièces ne changent rien pour les AUTRES types d'examen.
+                PhotoPresent = true,
+                FeeReceiptPresent = true,
+                RowVersion = rowVersion
+            },
+            CancellationToken.None);
+
+        result.Status.Should().Be(nameof(ExamDossierStatus.Complet));
+    }
+
+    [Fact]
+    public async Task Cfee_Dossier_Requires_Photo_And_FeeReceipt_To_Become_Complet()
+    {
+        // Ticket Onboarding #6 (profil Élémentaire) : sur un dossier CFEE, l'extrait de naissance et
+        // la conformité de l'état civil ne suffisent plus seuls — la photo et la quittance des frais
+        // sont désormais AUSSI requises. Sans elles, le dossier reste Incomplet.
+        var dossierId = await CreateDossierAsync();
+
+        await using var ctx = Ctx();
+        var handler = new UpdateExamDossierCommandHandler(ctx);
+
+        var rowVersion = await RowVersionAsync(ctx, dossierId);
+        var result = await handler.Handle(
+            new UpdateExamDossierCommand
+            {
+                Id = dossierId,
+                BirthCertificatePresent = true,
+                CivilStatusConforming = true,
+                PhotoPresent = true,
+                FeeReceiptPresent = false, // manquante
+                RowVersion = rowVersion
+            },
+            CancellationToken.None);
+
+        result.Status.Should().Be(nameof(ExamDossierStatus.Incomplet));
+    }
+
+    [Fact]
+    public async Task Bfem_Dossier_Does_Not_Require_Photo_Or_FeeReceipt_To_Become_Complet()
+    {
+        // Preuve de non-régression : la checklist Photo/Quittance du Ticket Onboarding #6 est
+        // SPÉCIFIQUE au CFEE (voir UpdateExamDossierCommandHandler) — un dossier BFEM/BAC continue de
+        // passer Complet avec seulement extrait de naissance + état civil conforme, comme avant ce ticket.
+        var sessionBfem = Guid.NewGuid();
+        var dossierId = Guid.NewGuid();
+
+        await using (var owner = _db.NewOwnerContext())
+        {
+            owner.ExamSessions.Add(new ExamSession
+            {
+                Id = sessionBfem, SchoolId = EcoleA, SchoolYearId = AnneeA, ExamType = ExamType.BFEM, Series = "L"
+            });
+            owner.ExamDossiers.Add(new ExamDossier
+            {
+                Id = dossierId, SchoolId = EcoleA, ExamSessionId = sessionBfem, StudentId = Eleve, ClassroomId = ClasseLycee
+            });
+            await owner.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var ctx = Ctx();
+        var handler = new UpdateExamDossierCommandHandler(ctx);
+
+        var rowVersion = await RowVersionAsync(ctx, dossierId);
+        var result = await handler.Handle(
+            new UpdateExamDossierCommand
+            {
+                Id = dossierId,
+                BirthCertificatePresent = true,
+                CivilStatusConforming = true,
+                PhotoPresent = false,
+                FeeReceiptPresent = false,
                 RowVersion = rowVersion
             },
             CancellationToken.None);
@@ -375,6 +449,11 @@ public class ExamWorkflowTests : IAsyncLifetime
                 Id = dossierId,
                 BirthCertificatePresent = true,
                 CivilStatusConforming = true,
+                // Tous les dossiers de ce fichier s'ouvrent sur SessionCfee (CFEE) : Photo et Quittance
+                // sont désormais requises pour Complet (Ticket Onboarding #6) — sans elles, les tests
+                // qui dépendent de ce helper (Transmit_*, RecordResult_*...) resteraient Incomplet.
+                PhotoPresent = true,
+                FeeReceiptPresent = true,
                 RowVersion = rowVersion
             },
             CancellationToken.None);
