@@ -8,7 +8,7 @@ function emptyEditingStudent() {
     return {
         fullName: '', birthDate: '', birthPlace: '', gender: '', classroomId: '',
         photoUrl: '', photoDisplayUrl: '', guardianName: '', guardianPhone: '', guardianEmail: '',
-        address: '', rowVersion: null
+        address: '', fullNameAr: '', guardianNameAr: '', rowVersion: null
     };
 }
 
@@ -119,7 +119,9 @@ document.addEventListener('alpine:init', () => {
             guardianName: '',
             guardianPhone: '',
             guardianEmail: '',
-            address: ''
+            address: '',
+            fullNameAr: '',
+            guardianNameAr: ''
         },
         createErrors: {},
 
@@ -640,6 +642,8 @@ document.addEventListener('alpine:init', () => {
                 guardianPhone: identity.guardianPhone || '',
                 guardianEmail: identity.guardianEmail || '',
                 address: identity.address || '',
+                fullNameAr: identity.fullNameAr || '',
+                guardianNameAr: identity.guardianNameAr || '',
                 rowVersion: identity.rowVersion
             };
             this.isEditingStudentOpen = true;
@@ -850,7 +854,7 @@ document.addEventListener('alpine:init', () => {
                 this.addedStudentName = this.newStudent.fullName;
                 // Cible du raccourci « Inscrire maintenant » — capturée AVANT la remise à zéro du formulaire.
                 this.createdStudent = { id: created.id, matricule: created.matricule, fullName: this.newStudent.fullName };
-                this.newStudent = { fullName: '', birthDate: '', birthPlace: '', gender: 'M', classroomId: '', photoUrl: '', photoData: '', guardianName: '', guardianPhone: '', guardianEmail: '', address: '' };
+                this.newStudent = { fullName: '', birthDate: '', birthPlace: '', gender: 'M', classroomId: '', photoUrl: '', photoData: '', guardianName: '', guardianPhone: '', guardianEmail: '', address: '', fullNameAr: '', guardianNameAr: '' };
 
                 // Rafraîchir la liste
                 this.page = 1;
