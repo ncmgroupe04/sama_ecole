@@ -1,6 +1,7 @@
 using System.IO;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
+using SamaEcole.Application.Schools.Commands.ApplyEstablishmentProfile;
 using SamaEcole.Application.Schools.Commands.SetMatriculeSequenceStart;
 using SamaEcole.Application.Schools.Commands.UpdateGradingScale;
 using SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
@@ -59,6 +60,9 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
         IReadOnlyList<string>? WorkingDays = null);
 
     public record UpdateGradingScaleRequest(string GradingScale);
+
+    /// <summary>Onboarding (Setup Wizard) — un des 5 profils de ProfileEtablissement.</summary>
+    public record ApplyEstablishmentProfileRequest(string Profile);
 
     /// <summary>Corps du PUT matricule-sequences : le type visé (« Student » / « Teacher ») et le prochain numéro.</summary>
     public record SetMatriculeSequenceStartRequest(string Kind, int NextValue);
@@ -293,6 +297,26 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
     /// PUT / ci-dessus. D'où un endpoint dédié plutôt qu'un élargissement du PUT / entier, qui aurait
     /// ouvert ces autres réglages au Secrétariat aussi.
     /// </summary>
+    /// <summary>
+    /// Onboarding (Setup Wizard) — enregistre le profil choisi par le Directeur ET applique le PRESET
+    /// de modules associé (voir ApplyEstablishmentProfileCommand/EstablishmentProfilePresets).
+    /// Endpoint dédié, comme grading-scale ci-dessous : appliquer un profil touche plusieurs réglages
+    /// d'un coup, ce que PUT / (UpdateSchoolSettingsCommand) exposerait mal.
+    /// </summary>
+    [HttpPost("establishment-profile")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<SchoolSettingsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> ApplyEstablishmentProfile(
+        [FromBody] ApplyEstablishmentProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new ApplyEstablishmentProfileCommand(request.Profile), cancellationToken);
+
+        return Ok(result);
+    }
+
     [HttpPut("grading-scale")]
     [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
     [ProducesResponseType<SchoolSettingsDto>(StatusCodes.Status200OK)]

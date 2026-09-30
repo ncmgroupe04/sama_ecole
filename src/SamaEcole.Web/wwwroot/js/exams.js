@@ -93,14 +93,24 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('examsView', () => ({
         ...window.pdfPreview.state(),
 
-        // 'sessions' | 'dossiers' | 'audit' | 'statistiques'. L'Enseignant n'a droit qu'à Dossiers
-        // (lecture) : les autres onglets restent Directeur/Secretariat (ExamsController, Roles de classe).
+        // 'sessions' | 'dossiers' | 'audit' | 'statistiques' | 'cfee'. L'Enseignant n'a droit qu'à
+        // Dossiers (lecture) : les autres onglets restent Directeur/Secretariat (ExamsController,
+        // Roles de classe) — 'cfee' (Ticket Onboarding #6) suit la même règle que Audit/Statistiques.
         tab: window.auth.role === 'Enseignant' ? 'dossiers' : 'sessions',
         error: null,
 
         canManage: window.auth.role === 'Directeur' || window.auth.role === 'Secretariat',
 
-        examTypeOptions: EXAM_TYPE_OPTIONS,
+        // Revue d'isolation par profil (pré-PR) : une école en profil Élémentaire n'a par construction
+        // aucune classe de Collège/Lycée — lui proposer BFEM/BAC à la création d'une session serait un
+        // choix qui ne peut jamais aboutir (CreateExamDossierCommandHandler.ExpectedCycle refuse déjà
+        // le mismatch de cycle en 422), et polluerait l'écran d'un profil qui n'en a pas l'usage. Les
+        // profils General/FrancoArabe/DaaraInternat couvrent, eux, tout le Secondaire : rien à filtrer.
+        isElementaireProfile: false,
+
+        get examTypeOptions() {
+            return this.isElementaireProfile ? EXAM_TYPE_OPTIONS.filter((o) => o.value === 'CFEE') : EXAM_TYPE_OPTIONS;
+        },
         sessionStatusOptions: SESSION_STATUS_OPTIONS,
         dossierStatusFilterOptions: DOSSIER_STATUS_FILTER_OPTIONS,
         mentionOptions: MENTION_OPTIONS,
@@ -191,10 +201,15 @@ document.addEventListener('alpine:init', () => {
 
         async loadReferenceData() {
             try {
-                const requests = [window.api.get('/school-years'), window.api.get('/classrooms')];
-                const [schoolYears, classrooms] = await Promise.all(requests);
+                const requests = [
+                    window.api.get('/school-years'),
+                    window.api.get('/classrooms'),
+                    window.api.get('/schools/current/settings')
+                ];
+                const [schoolYears, classrooms, settings] = await Promise.all(requests);
                 this.schoolYears = schoolYears || [];
                 this.classrooms = classrooms || [];
+                this.isElementaireProfile = !!settings && settings.profileEtablissement === 'ElementairePrimaire';
                 if (this.canManage) await this.loadSessions();
             } catch (err) {
                 this.error = window.api.toMessage(err, 'Erreur lors du chargement des données de référence.');
@@ -212,6 +227,7 @@ document.addEventListener('alpine:init', () => {
             if (tab === 'sessions' && this.sessions.length === 0) this.loadSessions();
             if (tab === 'dossiers' && this.dossiers.length === 0) this.loadDossiers();
             if (tab === 'statistiques' && !this.statistics) this.loadStatistics();
+            if (tab === 'cfee' && this.cfeeCandidates.length === 0) this.loadCfeeCandidates();
         },
 
         toNullableNumber(value) {
@@ -267,7 +283,11 @@ document.addEventListener('alpine:init', () => {
         createSessionErrors: {},
 
         openCreateSession() {
-            this.newSession = { schoolYearId: this.activeSchoolYearId, examType: 'BFEM', series: '', centerName: '' };
+            // Profil Élémentaire : BFEM n'est même plus une option valide (examTypeOptions filtré
+            // ci-dessus) — CFEE par défaut évite un <select> qui s'ouvrirait sur une valeur absente
+            // de sa propre liste.
+            const defaultExamType = this.isElementaireProfile ? 'CFEE' : 'BFEM';
+            this.newSession = { schoolYearId: this.activeSchoolYearId, examType: defaultExamType, series: '', centerName: '' };
             this.createSessionErrors = {};
             this.isCreateSessionOpen = true;
         },
@@ -576,6 +596,11 @@ document.addEventListener('alpine:init', () => {
                     examCenterName: detail.examCenterName || '',
                     birthCertificateNumber: detail.birthCertificateNumber || '',
                     birthCertificatePresent: detail.birthCertificatePresent,
+                    // Ticket Onboarding #6 : REQUIS pour passer Complet sur un dossier CFEE seulement
+                    // (UpdateExamDossierCommandHandler) — le champ reste modifiable ici pour BFEM/BAC
+                    // aussi, simplement sans effet sur leur statut.
+                    photoPresent: detail.photoPresent,
+                    feeReceiptPresent: detail.feeReceiptPresent,
                     civilStatusConforming: detail.civilStatusConforming === null || detail.civilStatusConforming === undefined
                         ? '' : String(detail.civilStatusConforming),
                     civilRegistryDocumentStatus: detail.civilRegistryDocumentStatus || 'NonFourni',
@@ -600,6 +625,8 @@ document.addEventListener('alpine:init', () => {
                     examCenterName: this.editingDossier.examCenterName || null,
                     birthCertificateNumber: this.editingDossier.birthCertificateNumber || null,
                     birthCertificatePresent: this.editingDossier.birthCertificatePresent,
+                    photoPresent: this.editingDossier.photoPresent,
+                    feeReceiptPresent: this.editingDossier.feeReceiptPresent,
                     civilStatusConforming: this.toNullableTriStateBool(this.editingDossier.civilStatusConforming),
                     civilRegistryDocumentStatus: this.editingDossier.civilRegistryDocumentStatus || null,
                     civilStatusNotes: this.editingDossier.civilStatusNotes || null,
@@ -879,6 +906,94 @@ document.addEventListener('alpine:init', () => {
 
         formatPercent(value) {
             return `${Math.round(value * 10) / 10} %`;
+        },
+
+        // ================================================================== ONGLET CANDIDATS CM2 (Ticket Onboarding #6)
+        //
+        // Tableau de préparation de la campagne CFEE : tous les élèves actuellement en CM2 (année
+        // active), qu'ils aient ou non déjà un dossier CFEE ouvert — GetCfeeCandidatesQuery fait la
+        // fusion. Réservé à Directeur/Secrétariat, comme Sessions/Audit/Statistiques.
+        cfeeSchoolYearLabel: null,
+        cfeeExamSessionId: null,
+        cfeeCandidates: [],
+        isLoadingCfeeCandidates: false,
+        cfeeError: null,
+
+        async loadCfeeCandidates() {
+            this.isLoadingCfeeCandidates = true;
+            this.cfeeError = null;
+            try {
+                const data = await window.api.get('/exams/cfee-candidates');
+                this.cfeeSchoolYearLabel = data.schoolYearLabel;
+                this.cfeeExamSessionId = data.cfeeExamSessionId;
+                this.cfeeCandidates = data.candidates || [];
+            } catch (err) {
+                this.cfeeError = window.api.toMessage(err, 'Erreur lors du chargement des candidats CM2.');
+            } finally {
+                this.isLoadingCfeeCandidates = false;
+            }
+        },
+
+        /** 4 pièces pour un dossier CFEE : extrait de naissance, état civil conforme, photo, quittance. */
+        cfeeChecklistCount(candidate) {
+            return [
+                candidate.birthCertificatePresent,
+                candidate.civilStatusConforming === true,
+                candidate.photoPresent,
+                candidate.feeReceiptPresent
+            ].filter(Boolean).length;
+        },
+
+        cfeeAdmissionLabel(candidate) {
+            if (candidate.isAdmitted === true) return 'Admis en 6ᵉ';
+            if (candidate.isAdmitted === false) return 'Ajourné';
+            return '—';
+        },
+
+        cfeeAdmissionVariant(candidate) {
+            if (candidate.isAdmitted === true) return 'success';
+            if (candidate.isAdmitted === false) return 'danger';
+            return 'neutral';
+        },
+
+        /** Raccourci vers l'onglet Sessions, formulaire de création pré-rempli en CFEE. */
+        goCreateCfeeSession() {
+            this.switchTab('sessions');
+            this.openCreateSession();
+            this.newSession.examType = 'CFEE';
+            this.newSession.series = '';
+        },
+
+        /**
+         * Ouvre le dossier CFEE d'un candidat qui n'en a pas encore (POST /exams/dossiers, même
+         * commande que le bouton « Nouveau dossier » de l'onglet Dossiers) — classe FIGÉE à
+         * l'ouverture (Volume 1 §22.1), reprise telle quelle depuis la classe actuelle du candidat.
+         */
+        openingCfeeDossierForStudentId: null,
+
+        async openCfeeDossier(candidate) {
+            if (!this.cfeeExamSessionId || this.openingCfeeDossierForStudentId) return;
+            this.openingCfeeDossierForStudentId = candidate.studentId;
+            this.cfeeError = null;
+            try {
+                await window.api.post('/exams/dossiers', {
+                    examSessionId: this.cfeeExamSessionId,
+                    studentId: candidate.studentId,
+                    classroomId: candidate.classroomId
+                });
+                toast.success('Dossier CFEE ouvert.');
+                await this.loadCfeeCandidates();
+            } catch (err) {
+                this.cfeeError = window.api.toMessage(err, "Erreur lors de l'ouverture du dossier.");
+            } finally {
+                this.openingCfeeDossierForStudentId = null;
+            }
+        },
+
+        /** Réutilise l'export ministériel existant (ExamsController) — un objet minimal suffit, exportMinisterial() ne lit que ces 3 champs. */
+        async exportCfeeCandidates() {
+            if (!this.cfeeExamSessionId) return;
+            await this.exportMinisterial({ id: this.cfeeExamSessionId, examType: 'CFEE', series: null });
         }
     }));
 });

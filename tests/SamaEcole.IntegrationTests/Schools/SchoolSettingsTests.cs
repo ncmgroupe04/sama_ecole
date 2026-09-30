@@ -142,5 +142,10 @@ public class SchoolSettingsTests : IAsyncLifetime
         settings.TeacherMatriculeFormat.Should().Be(SchoolSettingsDefaults.TeacherMatriculeFormat);
         settings.AutoLogoutMinutes.Should().Be(SchoolSettingsDefaults.AutoLogoutMinutes);
         settings.DateFormat.Should().Be(SchoolSettingsDefaults.DateFormat);
+
+        // Onboarding (Setup Wizard) : une école neuve n'a PAS de profil — c'est ce qui déclenche la
+        // redirection cliente vers /onboarding, contrairement aux écoles antérieures (backfillées à
+        // General par la migration AddProfileEtablissement).
+        settings.ProfileEtablissement.Should().BeNull();
     }
 }

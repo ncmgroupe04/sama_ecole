@@ -10,7 +10,10 @@ public class UpdateExamDossierCommandHandler(IApplicationDbContext dbContext)
 {
     public async Task<ExamDossierResult> Handle(UpdateExamDossierCommand request, CancellationToken cancellationToken)
     {
+        // Include(ExamSession) : la checklist Photo/Quittance ne conditionne le statut Complet QUE
+        // pour le CFEE (voir plus bas) — impossible à trancher sans connaître le type d'examen.
         var dossier = await dbContext.ExamDossiers
+            .Include(d => d.ExamSession)
             .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken)
             ?? throw new KeyNotFoundException($"Dossier d'examen {request.Id} introuvable.");
 
@@ -19,6 +22,8 @@ public class UpdateExamDossierCommandHandler(IApplicationDbContext dbContext)
         dossier.ExamCenterName = string.IsNullOrWhiteSpace(request.ExamCenterName) ? null : request.ExamCenterName.Trim();
         dossier.BirthCertificateNumber = string.IsNullOrWhiteSpace(request.BirthCertificateNumber) ? null : request.BirthCertificateNumber.Trim();
         dossier.BirthCertificatePresent = request.BirthCertificatePresent;
+        dossier.PhotoPresent = request.PhotoPresent;
+        dossier.FeeReceiptPresent = request.FeeReceiptPresent;
         dossier.CivilStatusConforming = request.CivilStatusConforming;
         dossier.CivilStatusNotes = string.IsNullOrWhiteSpace(request.CivilStatusNotes) ? null : request.CivilStatusNotes.Trim();
 
@@ -34,11 +39,22 @@ public class UpdateExamDossierCommandHandler(IApplicationDbContext dbContext)
         // Transmis ou Valide, une correction ultérieure (ex. faute de frappe repérée après coup) ne
         // fait pas régresser le dossier dans le cycle : seuls TransmitExamDossier et RecordExamResult
         // font avancer ces deux états-là.
+        //
+        // Ticket Onboarding #6 (profil Élémentaire) : Photo et Quittance ne conditionnent Complet QUE
+        // pour le CFEE — c'est le seul type d'examen pour lequel l'IEF les exige au dossier papier
+        // dans ce ticket. Étendre cette exigence à BFEM/BAC changerait le comportement de dossiers déjà
+        // en production sans qu'aucune exigence métier ne le demande ; ExamDossier.PhotoPresent reste
+        // néanmoins un champ disponible pour ces deux types, au cas où le Secrétariat voudrait le
+        // cocher, simplement sans effet sur leur statut.
         if (dossier.Status is ExamDossierStatus.Incomplet or ExamDossierStatus.Complet)
         {
-            dossier.Status = dossier.BirthCertificatePresent && dossier.CivilStatusConforming == true
-                ? ExamDossierStatus.Complet
-                : ExamDossierStatus.Incomplet;
+            var baseComplete = dossier.BirthCertificatePresent && dossier.CivilStatusConforming == true;
+
+            var isComplete = dossier.ExamSession.ExamType == ExamType.CFEE
+                ? baseComplete && dossier.PhotoPresent && dossier.FeeReceiptPresent
+                : baseComplete;
+
+            dossier.Status = isComplete ? ExamDossierStatus.Complet : ExamDossierStatus.Incomplet;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -58,6 +74,8 @@ public class UpdateExamDossierCommandHandler(IApplicationDbContext dbContext)
             dossier.BirthCertificatePresent,
             dossier.CivilStatusConforming,
             dossier.Status.ToString(),
-            rowVersion);
+            rowVersion,
+            dossier.PhotoPresent,
+            dossier.FeeReceiptPresent);
     }
 }

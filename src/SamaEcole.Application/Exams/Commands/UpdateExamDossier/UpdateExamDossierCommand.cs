@@ -15,6 +15,12 @@ public record UpdateExamDossierCommand : IRequest<ExamDossierResult>
     public string? BirthCertificateNumber { get; init; }
     public bool BirthCertificatePresent { get; init; }
 
+    /// <summary>Voir ExamDossier.PhotoPresent — REQUIS pour Complet sur un dossier CFEE seulement.</summary>
+    public bool PhotoPresent { get; init; }
+
+    /// <summary>Voir ExamDossier.FeeReceiptPresent — même portée que PhotoPresent ci-dessus.</summary>
+    public bool FeeReceiptPresent { get; init; }
+
     /// <summary>Nul = non encore contrôlé, distinct de <c>false</c> (Volume 1 §22.2).</summary>
     public bool? CivilStatusConforming { get; init; }
 

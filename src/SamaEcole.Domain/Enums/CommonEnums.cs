@@ -23,6 +23,40 @@ public enum TypeEtablissement
     Public
 }
 
+/// <summary>
+/// Profil pédagogique choisi par le Directeur à l'Onboarding (assistant de configuration initiale) :
+/// pilote le PRESET de modules activés (<see cref="Entities.SchoolSettings.IsPedagogyEnabled"/>,
+/// <c>IsFinanceEnabled</c>, <c>IsInternatEnabled</c>, <c>IsCoranModuleEnabled</c>) ainsi que l'affichage
+/// de la sidebar et des formulaires (Inscriptions, Élèves).
+///
+/// À NE PAS CONFONDRE avec deux enums existants et proches par le nom ou le sujet :
+/// - <see cref="TypeEtablissement"/> (Prive/Public) reste un axe INDÉPENDANT, purement financier
+///   (recouvrement mensuel oui/non) — ce champ-ci ne le modifie jamais.
+/// - <see cref="Entities.SchoolSettings.SchoolType"/> (Standard/FrancoArabic/Daara) reste PUREMENT
+///   INFORMATIF (aucun module ne le consulte) — ce champ-ci est la classification réellement ACTIVE.
+///
+/// NULLABLE sur <see cref="Entities.SchoolSettings"/> : NULL signifie « Directeur pas encore passé par
+/// l'Onboarding » et déclenche la redirection côté client vers /onboarding. Une valeur non nulle est un
+/// choix explicite, jamais déduit — même philosophie que <see cref="TypeEtablissement"/>.
+/// </summary>
+public enum ProfileEtablissement
+{
+    /// <summary>Inscriptions & Scolarité Simplifiée : Pédagogie masquée, seuls Inscriptions/Élèves/Caisse restent.</summary>
+    Simplifie,
+
+    /// <summary>Élémentaire / Primaire (avec ou sans Maternelle) : socle académique sans Séries ni Secondaire.</summary>
+    ElementairePrimaire,
+
+    /// <summary>Enseignement Général : socle académique complet (Séries, coefficients, bulletins).</summary>
+    General,
+
+    /// <summary>Franco-Arabe : socle académique + bilinguisme, matières arabes/islamiques.</summary>
+    FrancoArabe,
+
+    /// <summary>Internat / Daara Moderne : socle académique + Internat (dortoirs, Hifz, tuteurs, pension).</summary>
+    DaaraInternat
+}
+
 
 /// <summary>
 /// Cycle d'enseignement d'une classe. Détermine notamment le barème de notation appliqué au bulletin :

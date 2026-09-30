@@ -114,6 +114,10 @@ public class UpdateSchoolSettingsCommandHandler(
             settings.GradeEditWindowDays,
             settings.EvaluationPeriodType.ToString(),
             settings.CustomPeriodCount,
-            SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)));
+            SchoolWeek.ToNames(SchoolWeek.FromStored(settings.WorkingDays)),
+
+            // Non modifiable PAR CETTE commande (voir ApplyEstablishmentProfileCommand) : simple
+            // report de la valeur actuelle, pour ne pas la faire disparaître de la réponse PUT.
+            settings.ProfileEtablissement?.ToString());
     }
 }
