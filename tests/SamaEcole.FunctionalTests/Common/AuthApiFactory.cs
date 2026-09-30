@@ -558,6 +558,14 @@ public class AuthApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         return user.Id;
     }
 
+    /// <summary>Exécute du SQL brut sous le rôle PROPRIÉTAIRE — simule un état de schéma (colonne absente, base
+    /// non migrée) qu'aucune API ne sait produire.</summary>
+    public async Task ExecuteOwnerSqlAsync(string sql)
+    {
+        await using var owner = NewOwnerContext();
+        await owner.Database.ExecuteSqlRawAsync(sql);
+    }
+
     /// <summary>
     /// Modifie directement le statut d'un abonnement (ticket JGK-I04) : simule une confirmation de
     /// paiement SANS passer par le webhook (utile pour tester I04 indépendamment de I06). Pour tester le
