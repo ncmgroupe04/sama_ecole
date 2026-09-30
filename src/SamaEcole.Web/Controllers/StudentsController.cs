@@ -47,6 +47,8 @@ public class StudentsController(ISender mediator) : ControllerBase
         string? GuardianPhone,
         string? GuardianEmail,
         string? Address,
+        string? FullNameAr,
+        string? GuardianNameAr,
         uint RowVersion);
 
     private const string ManageRoles = "Directeur,Secretariat";
@@ -179,7 +181,8 @@ public class StudentsController(ISender mediator) : ControllerBase
             new UpdateStudentCommand(
                 id, request.FullName, request.BirthDate, request.BirthPlace, request.Gender,
                 request.ClassroomId, request.PhotoUrl, request.GuardianName, request.GuardianPhone,
-                request.GuardianEmail, request.Address, request.RowVersion),
+                request.GuardianEmail, request.Address, request.FullNameAr, request.GuardianNameAr,
+                request.RowVersion),
             cancellationToken));
 
     /// <summary>

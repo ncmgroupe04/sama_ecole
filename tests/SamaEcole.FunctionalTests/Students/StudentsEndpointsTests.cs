@@ -157,6 +157,33 @@ public class StudentsEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLifet
     }
 
     [Fact]
+    public async Task Updating_A_Student_Persists_The_Arabic_Mirror_Names()
+    {
+        var directeur = await DirecteurTokenAsync();
+        var classroom = await CreateClassroomAsync(directeur, "CM2 Test Update Arabe");
+        var created = await CreateStudentAsync(directeur, classroom.Id, "Seydou Ba");
+        var before = await FetchStudentAsync(directeur, created.Id);
+
+        var response = await SendAsync(HttpMethod.Put, $"/api/v1/students/{created.Id}", directeur, new
+        {
+            fullName = before.FullName,
+            birthDate = before.BirthDate,
+            birthPlace = before.BirthPlace,
+            gender = before.Gender,
+            classroomId = before.ClassroomId,
+            fullNameAr = "سيدو با",
+            guardianNameAr = "آمينة با",
+            rowVersion = before.RowVersion
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var after = await FetchStudentAsync(directeur, created.Id);
+        after.FullNameAr.Should().Be("سيدو با");
+        after.GuardianNameAr.Should().Be("آمينة با");
+    }
+
+    [Fact]
     public async Task Reading_An_Unknown_Student_Should_Return_404()
     {
         var directeur = await DirecteurTokenAsync();
