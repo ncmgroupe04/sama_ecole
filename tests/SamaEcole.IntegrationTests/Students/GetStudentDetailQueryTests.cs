@@ -191,7 +191,7 @@ public class GetStudentDetailQueryTests : IAsyncLifetime
     public async Task Handle_Exposes_The_Arabic_Mirror_Names_When_Set()
     {
         await using var db = _db.NewAppContext(EcoleB);
-        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db));
+        var handler = new GetStudentDetailQueryHandler(db, new FakeCurrentUserService(Role.Directeur), new CoefficientOverrideLoader(db), new SubjectFollowScope(db));
 
         var detail = await handler.Handle(new GetStudentDetailQuery(EleveEcoleB), CancellationToken.None);
 
