@@ -38,8 +38,11 @@
 - [x] `openapi.yaml` et `Volume_4_API_Design.md` : champ `optionalFeeCategoryIds`.
 - Le reçu ne change pas de mise en page (règle #12) : il liste les lignes réellement facturées.
 
-## Tâche 3 — Dû annuel et protection des frais obligatoires
+## Tâche 3 — Dû annuel et protection des frais obligatoires — FAIT
 
-- [ ] Tests (rouge) : le solde, la relance des débiteurs, l'avis de dû et l'échéancier ne comptent que les lignes d'`EnrollmentFeeLine` existantes (donc pas les frais décochés) ; un frais obligatoire ne peut pas être retiré par une requête forgée.
-- [ ] Vérifier chaque lecteur de `EnrollmentFeeLine` / `TotalDue` (`GetStudentBalance`, `GetDuesNotice`, `GetDebtorAgingReport`, `InstallmentScheduleCalculator`) : aucun ne doit recalculer le dû depuis le barème de la classe.
-- [ ] Ajout d'un frais optionnel après l'inscription (oubli à l'inscription) : hors périmètre de ce plan — passe par une correction Secrétariat/Admin historisée (règle #4).
+Constat de l'audit des lecteurs : **aucun code de production à changer.** Tous lisent `Enrollment.TotalDue` ou les `EnrollmentFeeLine` figées à l'inscription ; aucun ne recalcule depuis le barème (`ClassFees`, seulement lu par l'inscription, `ApplyStandardFee`, `UpdateClassFee`, `DeleteClassFee`, `DeleteFeeCategory`). Le filtrage de la Tâche 2 se propage donc tout seul. Cette tâche est un filet de non-régression, pas une correction.
+
+- [x] `tests/SamaEcole.IntegrationTests/Finance/OptionalFeesAnnualDueTests.cs` (PostgreSQL, rôle applicatif) : trois élèves d'une même classe aux factures différentes (Awa tout coché = 178 000, Fatou uniforme seul = 170 000, Modou aucun = 145 000), inscrits par le vrai handler, puis lus par `GetStudentBalance` (dû, reste, échéances), `GetDuesNotice` (sommation), `GetDebtorAgingReport`, `SearchStudentsForCashier` (dû et « à régler maintenant »), `GetFinanceDashboard` et `ApplyFeeInstallmentPlanToClassroom` (échéancier calculé sur le dû propre à chaque élève).
+- [x] Protection des obligatoires, de bout en bout : rendre une catégorie obligatoire après coup ne réécrit aucune inscription existante ; une fois obligatoire, elle est facturée à tout nouvel élève même si un formulaire périmé la décoche ; lister la mensualité comme « frais optionnel » est refusé (422), pas ignoré.
+- [x] Tests verts dès l'écriture (9/9) puisque le code était déjà correct. Pour prouver qu'ils ne sont pas creux : **test de mutation** sur `OptionalFeeSelection.IsBilled`. « Tout est facturé » → 7 échecs sur 9 ; « un obligatoire peut être retiré » → 11 échecs d'intégration et 2 unitaires. Code restauré ensuite.
+- Non traité, hors périmètre : `GenerateDebtorReminderBatches` et `SendDuesReminderSms` lisent aussi `TotalDue − AmountPaid` (même source figée que le rapport des débiteurs, couvert ici) mais exigent des réglages SMS/relance ; l'ajout d'un frais optionnel APRÈS l'inscription passe par une correction Secrétariat/Admin historisée (règle #4).
