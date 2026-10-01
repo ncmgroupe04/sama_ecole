@@ -186,12 +186,13 @@ public class ClassJournalScopeTests : IAsyncLifetime
     [Fact]
     public async Task Auteur_Corrige_Sa_Propre_Entree_Dans_Les_15_Jours()
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var (id, rowVersion) = await CreerEntreeAsync(today.DayOfWeek == SeanceTenue.DayOfWeek ? today : SeanceTenue);
+        var (id, rowVersion) = await CreerEntreeAsync(SeanceTenue);
 
         await using var ctx = Ctx();
+        // Horloge figée à J+1 : le test reste dans la fenêtre sans dépendre de la date d'exécution.
+        var horlogeDansDelai = new FakeTimeProvider(SeanceTenue.ToDateTime(TimeOnly.MinValue).AddDays(1));
         var handler = new UpdateClassJournalEntryCommandHandler(
-            ctx, new ClassJournalScopeAuthorizer(ctx, CurrentUser.Enseignant(CompteProf)), TimeProvider.System);
+            ctx, new ClassJournalScopeAuthorizer(ctx, CurrentUser.Enseignant(CompteProf)), horlogeDansDelai);
 
         var result = await handler.Handle(
             new UpdateClassJournalEntryCommand { Id = id, Topic = "Sujet corrigé", Content = "Contenu corrigé", RowVersion = rowVersion },

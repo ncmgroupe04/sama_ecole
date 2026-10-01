@@ -37,12 +37,16 @@ public class SyllabusTrackingTests : IAsyncLifetime
     private static readonly Guid Diop = Guid.Parse("7fffffff-0000-0000-0000-0000000000f2");
     private static readonly Guid Sy = Guid.Parse("7fffffff-0000-0000-0000-0000000000f3");
 
-    // Un lundi passé, dans l'année active : le créneau de M. Diop se cale sur son jour.
-    private static readonly DateOnly Seance = new(2026, 9, 14);
-
+    // Date fixe pour garder les séances et la fenêtre de correction déterministes
+    private static readonly DateOnly Seance = new(2026, 9, 29);
     private sealed class FixedTenantProvider(Guid schoolId) : ITenantProvider
     {
         public Guid? CurrentSchoolId => schoolId;
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     private sealed class CurrentUser(Guid? userId, Role? role) : ICurrentUserService
@@ -222,12 +226,20 @@ public class SyllabusTrackingTests : IAsyncLifetime
 
         await using (var ctx = Ctx())
         {
+            var teacherUser = new CurrentUser(CompteDiop, Role.Enseignant);
+            var fixedTime = new FixedTimeProvider(Seance.AddDays(1).ToDateTime(new TimeOnly(12, 0), DateTimeKind.Utc));
+
             var handler = new UpdateClassJournalEntryCommandHandler(ctx,
-                new ClassJournalScopeAuthorizer(ctx, new CurrentUser(CompteDiop, Role.Enseignant)), TimeProvider.System,
-                new CurrentUser(CompteDiop, Role.Enseignant));
+                new ClassJournalScopeAuthorizer(ctx, teacherUser),
+                fixedTime,
+                teacherUser);
+
             await handler.Handle(new UpdateClassJournalEntryCommand
             {
-                Id = created.Id, Topic = "Racine carrée", Content = "Corrigé.", RowVersion = created.RowVersion,
+                Id = created.Id,
+                Topic = "Racine carrée",
+                Content = "Corrigé.",
+                RowVersion = created.RowVersion,
                 SyllabusUnitIds = [ids[1], ids[2]]
             }, CancellationToken.None);
         }
