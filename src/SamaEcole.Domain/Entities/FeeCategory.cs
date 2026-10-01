@@ -29,4 +29,14 @@ public class FeeCategory : AuditableEntity, ITenantEntity
     /// classe. Faux par défaut — un choix explicite de l'école, comme IsRecurring.
     /// </summary>
     public bool IsBoardingFee { get; set; }
+
+    /// <summary>
+    /// Frais FACULTATIF (uniforme, tenue de sport, cantine…) : la famille le choisit à l'inscription et à la
+    /// réinscription au lieu de le devoir d'office. Faux par défaut — un frais est OBLIGATOIRE tant que le
+    /// Directeur ne l'a pas explicitement déclaré optionnel. C'est ce défaut qui protège inscription et
+    /// mensualité : la liste des catégories étant libre, aucun nom n'est codé en dur pour les reconnaître.
+    /// Une pension (<see cref="IsBoardingFee"/>) ne peut pas être optionnelle : elle a son propre choix
+    /// (régime d'hébergement + IncludeBoardingFee).
+    /// </summary>
+    public bool IsOptional { get; set; }
 }

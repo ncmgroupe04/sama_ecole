@@ -62,6 +62,30 @@ public class StudentImportFileParserTests
     }
 
     [Fact]
+    public void The_Two_Trailing_Arabic_Name_Columns_Are_Read_When_Present()
+    {
+        var rows = _parser.Parse(
+            Csv($"{Header};NomAr;TuteurAr\nAwa Ndiaye;12/03/2015;Dakar;F;CM2 A;Moussa;+221771234567;;;أوا نداي;موسى نداي"),
+            "eleves.csv");
+
+        rows.Should().ContainSingle();
+        rows[0].FullNameAr.Should().Be("أوا نداي");
+        rows[0].GuardianNameAr.Should().Be("موسى نداي");
+    }
+
+    [Fact]
+    public void The_Two_Trailing_Arabic_Name_Columns_Default_To_Empty_When_The_File_Predates_Them()
+    {
+        // Compatibilité ascendante : un fichier à 9 colonnes (sans les deux colonnes arabes) reste
+        // importable, comme le garantit déjà le padding testé par Missing_Trailing_Optional_Columns...
+        var rows = _parser.Parse(Csv($"{Header}\nAwa Ndiaye;12/03/2015;Dakar;F;CM2 A"), "eleves.csv");
+
+        rows.Should().ContainSingle();
+        rows[0].FullNameAr.Should().Be("");
+        rows[0].GuardianNameAr.Should().Be("");
+    }
+
+    [Fact]
     public void A_Comma_Delimiter_Is_Accepted_When_No_Semicolon_Is_Present()
     {
         var header = Header.Replace(';', ',');

@@ -38,6 +38,8 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         builder.Property(s => s.PhotoData);
         builder.Property(s => s.GuardianEmail).HasMaxLength(255);
         builder.Property(s => s.Address).HasMaxLength(300);
+        builder.Property(s => s.FullNameAr).HasMaxLength(200);
+        builder.Property(s => s.GuardianNameAr).HasMaxLength(200);
 
         // IEN (module Intégration étatique, ticket JGK-M01). 24 caractères : notre format provisoire
         // en fait 15, mais le format national réel n'est pas connu — la marge évite d'avoir à migrer

@@ -118,4 +118,41 @@ public class CreateStudentCommandValidatorTests
 
         result.IsValid.Should().BeTrue();
     }
+
+    [Fact]
+    public void Should_Fail_When_FullNameAr_Exceeds_200_Characters()
+    {
+        var command = new CreateStudentCommand
+        {
+            FullName = "Awa Fall",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
+            Gender = "F",
+            ClassroomId = Guid.NewGuid(),
+            FullNameAr = new string('ا', 201)
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.PropertyName == nameof(command.FullNameAr));
+    }
+
+    [Fact]
+    public void Should_Succeed_When_FullNameAr_And_GuardianNameAr_Are_Absent()
+    {
+        // Facultatifs, contrairement à FullName : un élève sans nom arabe doit rester enregistrable.
+        var command = new CreateStudentCommand
+        {
+            FullName = "Awa Fall",
+            BirthDate = new DateOnly(2015, 3, 12),
+            BirthPlace = "Dakar",
+            Gender = "F",
+            ClassroomId = Guid.NewGuid()
+        };
+
+        var result = _validator.Validate(command);
+
+        result.IsValid.Should().BeTrue();
+    }
 }

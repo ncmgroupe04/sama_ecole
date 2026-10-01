@@ -91,4 +91,14 @@ public class Student : AuditableEntity, ITenantEntity
 
     /// <summary>Adresse du domicile de l'élève (facultative, distincte des coordonnées du tuteur).</summary>
     public string? Address { get; set; }
+
+    /// <summary>
+    /// Nom complet de l'élève en arabe (module Franco-Arabe), saisi librement par l'école — aucune
+    /// traduction automatique. Null tant que personne ne l'a renseigné : même principe que
+    /// <see cref="Subject.NameAr"/>, jamais une valeur inventée.
+    /// </summary>
+    public string? FullNameAr { get; set; }
+
+    /// <summary>Miroir arabe de <see cref="GuardianName"/> — mêmes règles que <see cref="FullNameAr"/>.</summary>
+    public string? GuardianNameAr { get; set; }
 }

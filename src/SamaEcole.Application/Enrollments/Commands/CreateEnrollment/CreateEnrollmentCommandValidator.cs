@@ -36,6 +36,15 @@ public class CreateEnrollmentCommandValidator : AbstractValidator<CreateEnrollme
             .When(x => x.BoardingStatus == BoardingStatus.Externe)
             .WithMessage("Un élève Externe ne peut pas être affecté à une chambre.");
 
+        // Frais optionnels : forme de la liste seulement (le contrôle « est-ce bien un frais optionnel de cette
+        // classe ? » suppose la base et vit dans le Handler). Un doublon ou un Guid vide est une saisie corrompue.
+        RuleFor(x => x.OptionalFeeCategoryIds)
+            .Must(ids => ids!.All(id => id != Guid.Empty))
+            .WithMessage("Une catégorie de frais optionnelle est invalide.")
+            .Must(ids => ids!.Distinct().Count() == ids!.Count)
+            .WithMessage("Une même catégorie de frais est cochée plusieurs fois.")
+            .When(x => x.OptionalFeeCategoryIds is not null);
+
         When(x => x.Type == EnrollmentType.ReEnrollment, () =>
         {
             RuleFor(x => x.StudentId)

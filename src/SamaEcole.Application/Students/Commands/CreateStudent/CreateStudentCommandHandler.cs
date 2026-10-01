@@ -60,7 +60,9 @@ public class CreateStudentCommandHandler(
                 GuardianName = request.GuardianName.ToTitleCase(),
                 GuardianPhone = request.GuardianPhone,
                 GuardianEmail = request.GuardianEmail,
-                Address = request.Address
+                Address = request.Address,
+                FullNameAr = Trimmed(request.FullNameAr),
+                GuardianNameAr = Trimmed(request.GuardianNameAr)
             };
 
             dbContext.Students.Add(student);
@@ -69,4 +71,10 @@ public class CreateStudentCommandHandler(
             return new CreateStudentResult(student.Id, student.Matricule);
         }, cancellationToken);
     }
+
+    /// <summary>Vide/blanc = « pas de nom arabe » (null), jamais une chaîne vide stockée — même
+    /// convention que CreateSubjectCommandHandler.Trimmed pour Subject.NameAr. Jamais .ToTitleCase()
+    /// (casse fr-FR) sur de l'arabe, qui n'a pas de notion de casse.</summary>
+    private static string? Trimmed(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

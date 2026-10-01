@@ -63,9 +63,10 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
         builder.Property(c => c.Series).HasMaxLength(10);
 
         // Deux classes ne peuvent pas porter le même nom dans la même école — mais « CM2 A » peut
-        // évidemment exister dans deux écoles différentes. Le soft delete fait partie de la clé :
-        // sans lui, on ne pourrait jamais recréer une classe portant le nom d'une classe archivée.
-        builder.HasIndex(c => new { c.SchoolId, c.Name, c.IsDeleted }).IsUnique();
+        // évidemment exister dans deux écoles différentes. L'unicité est un
+        // index PARTIEL sur les lignes vivantes : une classe archivée ne bloque jamais la réutilisation de son nom,
+        // même supprimée plusieurs fois (IsDeleted dans la clé n'autorisait qu'UNE ligne supprimée par nom).
+        builder.HasIndex(c => new { c.SchoolId, c.Name }).IsUnique().HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(c => c.SchoolId);
 
         // Restrict : on ne supprime jamais physiquement une école (AGENTS.md règle #6).

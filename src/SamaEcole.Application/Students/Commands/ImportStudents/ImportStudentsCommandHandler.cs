@@ -27,7 +27,8 @@ public class ImportStudentsCommandHandler(
 
     private record ParsedStudentRow(
         string FullName, DateOnly BirthDate, string BirthPlace, string Gender, Guid ClassroomId,
-        string? GuardianName, string? GuardianPhone, string? GuardianEmail, string? Address);
+        string? GuardianName, string? GuardianPhone, string? GuardianEmail, string? Address,
+        string? FullNameAr, string? GuardianNameAr);
 
     public async Task<ImportStudentsResult> Handle(ImportStudentsCommand request, CancellationToken cancellationToken)
     {
@@ -72,6 +73,7 @@ public class ImportStudentsCommandHandler(
                 row.RowNumber, fieldErrors.Count == 0,
                 row.FullName, row.BirthDate, row.BirthPlace, row.Gender, row.ClassroomName,
                 row.GuardianName, row.GuardianPhone, row.GuardianEmail, row.Address,
+                row.FullNameAr, row.GuardianNameAr,
                 fieldErrors));
 
             if (parsed is not null)
@@ -124,7 +126,9 @@ public class ImportStudentsCommandHandler(
                     GuardianName = parsed.GuardianName,
                     GuardianPhone = parsed.GuardianPhone,
                     GuardianEmail = parsed.GuardianEmail,
-                    Address = parsed.Address
+                    Address = parsed.Address,
+                    FullNameAr = parsed.FullNameAr,
+                    GuardianNameAr = parsed.GuardianNameAr
                 });
             }
 
@@ -252,6 +256,26 @@ public class ImportStudentsCommandHandler(
             errors["address"] = SafeTextValidation.ErrorMessage;
         }
 
+        var fullNameAr = row.FullNameAr.Trim();
+        if (fullNameAr.Length > 200)
+        {
+            errors["fullNameAr"] = "Le nom complet en arabe ne peut pas dépasser 200 caractères.";
+        }
+        else if (!SafeTextValidation.IsSafeText(fullNameAr))
+        {
+            errors["fullNameAr"] = SafeTextValidation.ErrorMessage;
+        }
+
+        var guardianNameAr = row.GuardianNameAr.Trim();
+        if (guardianNameAr.Length > 200)
+        {
+            errors["guardianNameAr"] = "Le nom du tuteur en arabe ne peut pas dépasser 200 caractères.";
+        }
+        else if (!SafeTextValidation.IsSafeText(guardianNameAr))
+        {
+            errors["guardianNameAr"] = SafeTextValidation.ErrorMessage;
+        }
+
         if (errors.Count > 0)
         {
             return (errors, null);
@@ -262,7 +286,9 @@ public class ImportStudentsCommandHandler(
             guardianName.Length == 0 ? null : guardianName,
             guardianPhone.Length == 0 ? null : guardianPhone,
             guardianEmail.Length == 0 ? null : guardianEmail,
-            address.Length == 0 ? null : address));
+            address.Length == 0 ? null : address,
+            fullNameAr.Length == 0 ? null : fullNameAr,
+            guardianNameAr.Length == 0 ? null : guardianNameAr));
     }
 
     /// <summary>Même contrat que EmailAddress() de FluentValidation (CreateStudentCommandValidator) : un

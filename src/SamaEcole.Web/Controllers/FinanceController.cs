@@ -4,6 +4,7 @@ using SamaEcole.Application.Finance.Commands.ApplyStandardFee;
 using SamaEcole.Application.Finance.Commands.CreateFeeCategory;
 using SamaEcole.Application.Finance.Commands.DeleteClassFee;
 using SamaEcole.Application.Finance.Commands.DeleteFeeCategory;
+using SamaEcole.Application.Finance.Commands.UpdateFeeCategory;
 using SamaEcole.Application.Finance.Commands.RecordPayment;
 using SamaEcole.Application.Finance.Commands.UpdateClassFee;
 using SamaEcole.Application.Finance.Queries.GetClassFees;
@@ -84,6 +85,8 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
 {
     public record UpdateFeeRequest(decimal Amount, uint RowVersion);
 
+    public record UpdateFeeCategoryRequest(bool IsOptional);
+
     // ------------------------------------------------------------------ Catégories
 
     [HttpGet("fee-categories")]
@@ -108,6 +111,23 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
         var result = await mediator.Send(command, cancellationToken);
 
         return CreatedAtAction(nameof(ListCategories), new { id = result.Id }, result);
+    }
+
+    /// <summary>
+    /// Frais optionnels — bascule le caractère facultatif d'une catégorie (uniforme, tenue de sport).
+    /// Même délégation que la création : Directeur toujours, Finance seulement si déléguée.
+    /// </summary>
+    [HttpPut("fee-categories/{id:guid}")]
+    [Authorize(Policy = FinancePolicies.CanModifyFees)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> UpdateCategory(
+        Guid id, [FromBody] UpdateFeeCategoryRequest request, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new UpdateFeeCategoryCommand(id, request.IsOptional), cancellationToken);
+        return NoContent();
     }
 
     /// <summary>
