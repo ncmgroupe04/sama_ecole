@@ -10,17 +10,8 @@ using Xunit;
 namespace SamaEcole.IntegrationTests.Teachers;
 
 /// <summary>
-/// Ticket JGK-T01 — retirer une matière qualifiée à un enseignant.
-///
-/// <c>UpdateTeacherCommandHandler</c> retire une qualification en supprimant PHYSIQUEMENT la ligne de
-/// <c>teacher_subjects</c>. La migration <c>AddTeachers</c> n'accordait au rôle applicatif que
-/// <c>SELECT, INSERT, UPDATE</c> : décocher une matière échouait donc en <c>42501: permission denied
-/// for table teacher_subjects</c> (HTTP 500). <c>GrantDeleteOnTeacherSubjects</c> ajoute le
-/// <c>DELETE</c> — ce test le prouve avec le rôle BRIDÉ, celui du runtime.
-///
-/// Deux vérifications, pas une : (1) l'opération n'échoue plus, et (2) la ligne a bien DISPARU en base
-/// — sans quoi un grant absent se traduirait par un échec, mais un soft-delete silencieux (que rien
-/// dans le code ne fait ici) passerait le test #1 tout en laissant une ligne fantôme.
+/// Une qualification retirée reste une trace historique tenant-scoped : le parcours actif la masque,
+/// tandis que les colonnes tombstone portent l'acteur et la date de la révocation.
 /// </summary>
 [Trait("Category", "MultiTenant")]
 public class TeacherSubjectUnassignmentTests : IAsyncLifetime
@@ -31,6 +22,7 @@ public class TeacherSubjectUnassignmentTests : IAsyncLifetime
     private static readonly Guid Enseignant = Guid.Parse("aaaaaaaa-0000-0000-0000-0000000000a1");
     private static readonly Guid MatiereGardee = Guid.Parse("eeeeeeee-0000-0000-0000-0000000000e1");
     private static readonly Guid MatiereRetiree = Guid.Parse("eeeeeeee-0000-0000-0000-0000000000e2");
+    private static readonly Guid Directeur = Guid.Parse("dddddddd-0000-0000-0000-0000000000d1");
 
     public async Task InitializeAsync()
     {
@@ -63,7 +55,7 @@ public class TeacherSubjectUnassignmentTests : IAsyncLifetime
     public Task DisposeAsync() => _db.DisposeAsync().AsTask();
 
     [Fact]
-    public async Task Removing_A_Qualified_Subject_Deletes_The_Link_Without_A_Permission_Error()
+    public async Task Removing_A_Qualified_Subject_Retains_A_Revoked_Link_With_Its_Audit_Fields()
     {
         // Jeton xmin lu tel que le ferait la fiche avant modification.
         uint rowVersion;
@@ -77,9 +69,9 @@ public class TeacherSubjectUnassignmentTests : IAsyncLifetime
 
         await using (var app = _db.NewAppContext(Ecole))
         {
-            var handler = new UpdateTeacherCommandHandler(app);
+            var handler = new UpdateTeacherCommandHandler(app, new TestCurrentUser(Directeur));
 
-            // On ne garde qu'UNE des deux matières : le Handler doit supprimer la ligne de l'autre.
+            // On ne garde qu'UNE des deux matières : le Handler doit révoquer la ligne de l'autre.
             var act = async () => await handler.Handle(
                 new UpdateTeacherCommand(
                     Enseignant, "Fatou Ndiaye", "fatou.ndiaye@baobabs.sn", null,
@@ -88,11 +80,11 @@ public class TeacherSubjectUnassignmentTests : IAsyncLifetime
                 CancellationToken.None);
 
             await act.Should().NotThrowAsync(
-                "le rôle applicatif doit pouvoir supprimer une ligne de teacher_subjects (JGK-T01)");
+                "la révocation est un UPDATE autorisé au rôle applicatif, pas un DELETE");
         }
 
-        // La ligne retirée a bien disparu — vérifié EN SQL BRUT avec le rôle applicatif, filtres EF
-        // hors jeu. Une ligne soft-deletée (IsDeleted = true) ressortirait ici ; il ne doit rien y avoir.
+        // SQL brut sous le rôle applicatif : le tombstone existe encore même si le filtre EF l'exclut
+        // des sélecteurs actifs.
         await using var connection = new NpgsqlConnection(_db.AppConnectionString);
         await connection.OpenAsync();
         await using (var setTenant = connection.CreateCommand())
@@ -102,19 +94,29 @@ public class TeacherSubjectUnassignmentTests : IAsyncLifetime
             await setTenant.ExecuteNonQueryAsync();
         }
 
-        await using var count = connection.CreateCommand();
-        count.CommandText =
+        await using var revoked = connection.CreateCommand();
+        revoked.CommandText =
             """
-            SELECT count(*) FROM teacher_subjects
+            SELECT "IsDeleted", "DeletedAt", "DeletedBy" FROM teacher_subjects
             WHERE "TeacherId" = @teacher AND "SubjectId" = @subject
             """;
-        count.Parameters.AddWithValue("teacher", Enseignant);
-        count.Parameters.AddWithValue("subject", MatiereRetiree);
+        revoked.Parameters.AddWithValue("teacher", Enseignant);
+        revoked.Parameters.AddWithValue("subject", MatiereRetiree);
 
-        var remaining = (long)(await count.ExecuteScalarAsync())!;
-        remaining.Should().Be(0, "la qualification retirée est supprimée physiquement, pas masquée");
+        await using var reader = await revoked.ExecuteReaderAsync();
+        (await reader.ReadAsync()).Should().BeTrue("la qualification révoquée est conservée pour l'historique");
+        reader.GetBoolean(0).Should().BeTrue();
+        reader.IsDBNull(1).Should().BeFalse("la date de révocation est obligatoire");
+        reader.GetString(2).Should().Be(Directeur.ToString(), "l'acteur de la révocation est conservé");
+        await reader.DisposeAsync();
 
-        // La matière conservée, elle, est toujours là.
+        await using (var active = _db.NewAppContext(Ecole))
+        {
+            (await active.TeacherSubjects.AnyAsync(ts => ts.TeacherId == Enseignant && ts.SubjectId == MatiereRetiree))
+                .Should().BeFalse("une qualification révoquée est absente des parcours actifs");
+        }
+
+        // La matière conservée, elle, reste active.
         await using var kept = connection.CreateCommand();
         kept.CommandText =
             """
@@ -125,6 +127,51 @@ public class TeacherSubjectUnassignmentTests : IAsyncLifetime
         kept.Parameters.AddWithValue("subject", MatiereGardee);
 
         var stillThere = (long)(await kept.ExecuteScalarAsync())!;
-        stillThere.Should().Be(1, "seule la matière décochée devait partir");
+        stillThere.Should().Be(1, "seule la matière décochée devait être révoquée");
+    }
+
+    [Fact]
+    public async Task Partial_Index_Allows_Several_Tombstones_But_Only_One_Active_Link()
+    {
+        await using var owner = _db.NewOwnerContext();
+        await owner.Database.ExecuteSqlRawAsync(
+            "UPDATE teacher_subjects SET \"IsDeleted\" = true, \"DeletedAt\" = now(), \"DeletedBy\" = 'test' " +
+            $"WHERE \"TeacherId\" = '{Enseignant}' AND \"SubjectId\" = '{MatiereRetiree}'");
+
+        // Nouvelle qualification active après révocation, révoquée à son tour, puis une troisième.
+        owner.TeacherSubjects.Add(new TeacherSubject { SchoolId = Ecole, TeacherId = Enseignant, SubjectId = MatiereRetiree });
+        await owner.SaveChangesAsync(CancellationToken.None);
+        await owner.Database.ExecuteSqlRawAsync(
+            "UPDATE teacher_subjects SET \"IsDeleted\" = true, \"DeletedAt\" = now(), \"DeletedBy\" = 'test' " +
+            $"WHERE \"TeacherId\" = '{Enseignant}' AND \"SubjectId\" = '{MatiereRetiree}' AND NOT \"IsDeleted\"");
+        owner.TeacherSubjects.Add(new TeacherSubject { SchoolId = Ecole, TeacherId = Enseignant, SubjectId = MatiereRetiree });
+        await owner.SaveChangesAsync(CancellationToken.None);
+
+        // Un second lien actif pour la même paire reste refusé.
+        owner.TeacherSubjects.Add(new TeacherSubject { SchoolId = Ecole, TeacherId = Enseignant, SubjectId = MatiereRetiree });
+        var act = async () => await owner.SaveChangesAsync(CancellationToken.None);
+        await act.Should().ThrowAsync<SamaEcole.Application.Common.Exceptions.DuplicateRecordException>();
+    }
+
+    [Fact]
+    public async Task App_Role_Cannot_Physically_Delete_A_Teacher_Subject()
+    {
+        await using var connection = new NpgsqlConnection(_db.AppConnectionString);
+        await connection.OpenAsync();
+        await using (var setTenant = connection.CreateCommand())
+        {
+            setTenant.CommandText = "SELECT set_config('app.current_school_id', @school, false)";
+            setTenant.Parameters.AddWithValue("school", Ecole.ToString());
+            await setTenant.ExecuteNonQueryAsync();
+        }
+
+        await using var delete = connection.CreateCommand();
+        delete.CommandText = "DELETE FROM teacher_subjects WHERE \"TeacherId\" = @teacher AND \"SubjectId\" = @subject";
+        delete.Parameters.AddWithValue("teacher", Enseignant);
+        delete.Parameters.AddWithValue("subject", MatiereRetiree);
+
+        var act = async () => await delete.ExecuteNonQueryAsync();
+        var failure = await act.Should().ThrowAsync<PostgresException>();
+        failure.Which.SqlState.Should().Be(PostgresErrorCodes.InsufficientPrivilege);
     }
 }

@@ -5,11 +5,10 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace SamaEcole.Persistence.Configurations;
 
 /// <summary>
-/// Table de LIAISON pure : « cet enseignant est qualifié pour cette matière ». Contrairement au reste
-/// du modèle, le rôle applicatif y a le droit <c>DELETE</c> (migration
-/// <c>GrantDeleteOnTeacherSubjects</c>, ticket JGK-T01) : retirer une qualification est une vraie
-/// suppression — aucune valeur d'audit à conserver « untel a pu enseigner les maths jusqu'en mars »,
-/// et <c>UpdateTeacherCommandHandler</c> recrée la ligne à l'identique si le Directeur se ravise.
+/// Association révocable : « cet enseignant est qualifié pour cette matière ». Son retrait est une
+/// suppression logique, car les consultations historiques doivent pouvoir résoudre la qualification
+/// qui existait lors d'une période passée. L'index unique ne porte que sur les associations actives :
+/// une nouvelle qualification après révocation crée donc une nouvelle ligne, sans réactiver l'ancienne.
 /// </summary>
 public class TeacherSubjectConfiguration : IEntityTypeConfiguration<TeacherSubject>
 {
@@ -20,8 +19,11 @@ public class TeacherSubjectConfiguration : IEntityTypeConfiguration<TeacherSubje
         builder.HasKey(ts => ts.Id);
         builder.Property(ts => ts.SchoolId).IsRequired();
 
-        // Une même matière ne peut être qualifiée deux fois pour le même enseignant.
-        builder.HasIndex(ts => new { ts.TeacherId, ts.SubjectId }).IsUnique();
+        // Une même matière ne peut être active deux fois pour le même enseignant; les tombstones
+        // historiques restent réinsérables et résolubles par les lectures dédiées tenant-scoped.
+        builder.HasIndex(ts => new { ts.TeacherId, ts.SubjectId })
+            .IsUnique()
+            .HasFilter("NOT \"IsDeleted\"");
         builder.HasIndex(ts => ts.SchoolId);
 
         builder.HasOne<School>()
