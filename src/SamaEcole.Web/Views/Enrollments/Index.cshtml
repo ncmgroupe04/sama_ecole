@@ -497,15 +497,29 @@
  renseigner le parent. Il n'encaisse rien — le règlement, y compris le premier versement,
  se fait à la Caisse, seule pièce comptable (docs/design-references/README.md §1). *@
  <div x-show="form.classroomId && hasFeesForSelectedClass()" x-cloak class="mt-4">
+ @* Frais optionnels (uniforme, tenue de sport…) : une case par frais, PRÉ-COCHÉE. Décochée, la ligne reste
+ visible (on peut la recocher) mais sort du total. Les frais obligatoires n'ont pas de case : l'inscription
+ et la mensualité sont dues par tous, et le serveur les facture quoi que le formulaire envoie. *@
  <ul class="divide-y divide-slate-100">
- <template x-for="line in previewLines()" :key="line.feeCategoryId">
+ <template x-for="line in feeChoices()" :key="line.feeCategoryId">
  <li class="py-2.5 flex items-start justify-between gap-3">
+ <span class="min-w-0 flex items-start gap-2">
+ <input x-show="line.isOptional" x-cloak type="checkbox" class="checkbox-field mt-1"
+ :id="'enr-fee-' + line.feeCategoryId" :checked="line.checked"
+ x-on:change="toggleFee(line.feeCategoryId)"
+ :aria-label="'Facturer ' + line.designation">
  <span class="min-w-0">
- <span class="block text-sm text-slate-800" x-text="line.designation"></span>
+ <label :for="line.isOptional ? 'enr-fee-' + line.feeCategoryId : null"
+ class="block text-sm" :class="line.checked ? 'text-slate-800' : 'text-slate-400 line-through'"
+ x-text="line.designation"></label>
+ <span x-show="line.isOptional" x-cloak class="block text-xs text-slate-400">Optionnel — au choix de la famille</span>
  <span x-show="line.isRecurring" x-cloak class="block text-xs text-slate-400"
  x-text="formatMoney(line.unitAmount) + ' × ' + line.months + ' mois'"></span>
  </span>
- <span class="text-sm font-medium text-slate-900 whitespace-nowrap amount" x-text="formatMoney(line.lineTotal)"></span>
+ </span>
+ <span class="text-sm font-medium whitespace-nowrap amount"
+ :class="line.checked ? 'text-slate-900' : 'text-slate-400 line-through'"
+ x-text="formatMoney(line.lineTotal)"></span>
  </li>
  </template>
  </ul>

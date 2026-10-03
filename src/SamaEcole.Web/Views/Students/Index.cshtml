@@ -259,6 +259,8 @@
                  x-text="detailStudent ? getInitials(detailStudent.fullName) : ''"></div>
             <div>
                 <h2 class="text-2xl font-bold text-slate-900" x-text="detailStudent ? detailStudent.fullName : ''"></h2>
+                <p x-show="detailStudent && detailStudent.fullNameAr" x-cloak dir="rtl"
+                   class="text-lg font-semibold text-slate-500" x-text="detailStudent ? detailStudent.fullNameAr : ''"></p>
                 <div class="mt-1.5 flex items-center gap-2">
                     @* Raccourci : le badge de classe ouvre l'écran Classes filtré sur cette classe
                        (classrooms.js lit ?q=). Rendu en lien seulement quand une classe est connue —
@@ -419,6 +421,8 @@
             <div>
                 <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Nom</p>
                 <p class="text-sm font-bold text-slate-900" x-text="detailStudent && detailStudent.guardianName ? detailStudent.guardianName : '—'"></p>
+                <p x-show="detailStudent && detailStudent.guardianNameAr" x-cloak dir="rtl"
+                   class="text-sm font-semibold text-slate-500 mt-0.5" x-text="detailStudent ? detailStudent.guardianNameAr : ''"></p>
             </div>
             <div>
                 <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Téléphone</p>
@@ -975,6 +979,12 @@
  <input type="text" x-model="editingStudent.fullName" required class="input-field" :class="studentEditErrors.fullname && 'input-field-error'">
  <p x-show="studentEditErrors.fullname" x-text="studentEditErrors.fullname" class="field-error"></p>
  </div>
+ <div>
+  <label for="edit-student-full-name-ar" class="form-label">Nom complet en arabe (facultatif)</label>
+  <input id="edit-student-full-name-ar" type="text" x-model="editingStudent.fullNameAr" maxlength="200" dir="rtl"
+   class="input-field" :class="studentEditErrors.fullnamear && 'input-field-error'">
+  <p x-show="studentEditErrors.fullnamear" x-cloak x-text="studentEditErrors.fullnamear" class="field-error"></p>
+ </div>
 
  <div>
  <label class="form-label form-label-required">Date de naissance</label>
@@ -1025,6 +1035,12 @@
  <label class="form-label">Nom du tuteur</label>
  <input type="text" x-model="editingStudent.guardianName" class="input-field" :class="studentEditErrors.guardianname && 'input-field-error'">
  <p x-show="studentEditErrors.guardianname" x-text="studentEditErrors.guardianname" class="field-error"></p>
+ </div>
+ <div>
+  <label for="edit-student-guardian-name-ar" class="form-label">Nom du tuteur en arabe (facultatif)</label>
+  <input id="edit-student-guardian-name-ar" type="text" x-model="editingStudent.guardianNameAr" maxlength="200" dir="rtl"
+   class="input-field" :class="studentEditErrors.guardiannamear && 'input-field-error'">
+  <p x-show="studentEditErrors.guardiannamear" x-cloak x-text="studentEditErrors.guardiannamear" class="field-error"></p>
  </div>
 
  <div>
@@ -1151,6 +1167,13 @@
  <input type="text" x-model="newStudent.fullName" required class="input-field" :class="createErrors.fullname && 'input-field-error'">
  <p x-show="createErrors.fullname" x-text="createErrors.fullname" class="field-error"></p>
  </div>
+ @* Module Franco-Arabe : facultatif, aucune traduction automatique — voir Subject.NameAr. *@
+ <div>
+  <label for="student-full-name-ar" class="form-label">Nom complet en arabe (facultatif)</label>
+  <input id="student-full-name-ar" type="text" x-model="newStudent.fullNameAr" maxlength="200" dir="rtl"
+   class="input-field" :class="createErrors.fullnamear && 'input-field-error'">
+  <p x-show="createErrors.fullnamear" x-cloak x-text="createErrors.fullnamear" class="field-error"></p>
+ </div>
 
  <!-- Date de naissance -->
  <div>
@@ -1208,6 +1231,12 @@
  <div>
  <label class="form-label">Nom du tuteur</label>
  <input type="text" x-model="newStudent.guardianName" class="input-field">
+ </div>
+ <div>
+  <label for="student-guardian-name-ar" class="form-label">Nom du tuteur en arabe (facultatif)</label>
+  <input id="student-guardian-name-ar" type="text" x-model="newStudent.guardianNameAr" maxlength="200" dir="rtl"
+   class="input-field" :class="createErrors.guardiannamear && 'input-field-error'">
+  <p x-show="createErrors.guardiannamear" x-cloak x-text="createErrors.guardiannamear" class="field-error"></p>
  </div>
 
  <div>
@@ -1303,6 +1332,8 @@
  <th class="py-2 px-2">Tél. tuteur</th>
                                     <th class="py-2 px-2">E-mail tuteur</th>
                                     <th class="py-2 px-2">Adresse</th>
+                                    <th class="py-2 px-2">Nom (arabe)</th>
+                                    <th class="py-2 px-2">Tuteur (arabe)</th>
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
@@ -1318,6 +1349,8 @@
  <td class="py-1.5 px-2" :class="importCellClass(row, 'guardianPhone')" :title="row.fieldErrors.guardianPhone || ''" x-text="row.guardianPhone"></td>
                                     <td class="py-1.5 px-2" :class="importCellClass(row, 'guardianEmail')" :title="row.fieldErrors.guardianEmail || ''" x-text="row.guardianEmail"></td>
                                     <td class="py-1.5 px-2" :class="importCellClass(row, 'address')" :title="row.fieldErrors.address || ''" x-text="row.address"></td>
+                                    <td class="py-1.5 px-2" dir="rtl" :class="importCellClass(row, 'fullNameAr')" :title="row.fieldErrors.fullNameAr || ''" x-text="row.fullNameAr"></td>
+                                    <td class="py-1.5 px-2" dir="rtl" :class="importCellClass(row, 'guardianNameAr')" :title="row.fieldErrors.guardianNameAr || ''" x-text="row.guardianNameAr"></td>
  </tr>
  </template>
  </tbody>

@@ -499,14 +499,20 @@ if (app.Environment.IsDevelopment())
     }
 }
 
+// Une ligne structurée par requête (méthode, chemin, code, durée) — jamais le corps ni les en-têtes,
+// donc aucun risque de journaliser un jeton ou un mot de passe.
+//
+// Placé AVANT ExceptionHandlingMiddleware, donc à l'EXTÉRIEUR : dans ASP.NET Core le premier middleware
+// enregistré enveloppe les suivants. Placé après (comme il l'a été), il voyait l'exception traverser AVANT
+// sa conversion en réponse et journalisait « responded 500 » au niveau Error pour un simple mauvais mot de
+// passe (401) ou une ressource absente (404) — alors que le client recevait le bon code. À l'extérieur, il
+// lit le code réellement renvoyé (StatusCode) ; un vrai 500 reste un Error, et sa cause est journalisée par
+// ExceptionHandlingMiddleware. Voir RequestLoggingStatusTests.
+app.UseSerilogRequestLogging();
+
 // Traduit toute exception applicative en réponse HTTP normalisée
 // (docs/Volume_4_API_Design.md §0.4) — jamais une exception brute renvoyée au client.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
-// Une ligne structurée par requête (méthode, chemin, code, durée) — jamais le corps ni les en-têtes,
-// donc aucun risque de journaliser un jeton ou un mot de passe. Placé après ExceptionHandlingMiddleware
-// pour capturer le code HTTP réellement renvoyé, y compris sur les requêtes en erreur.
-app.UseSerilogRequestLogging();
 
 if (!app.Environment.IsDevelopment())
 {

@@ -8,4 +8,4 @@ namespace SamaEcole.Application.Finance.Queries.GetFeeCategories;
 /// </summary>
 public record GetFeeCategoriesQuery : IRequest<IReadOnlyList<FeeCategoryDto>>;
 
-public record FeeCategoryDto(Guid Id, string Name, bool IsRecurring);
+public record FeeCategoryDto(Guid Id, string Name, bool IsRecurring, bool IsOptional);

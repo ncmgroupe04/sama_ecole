@@ -178,6 +178,15 @@
  <span class="block text-xs text-slate-400">Décochez pour un frais ponctuel : inscription, uniforme…</span>
  </label>
  </div>
+ @* Frais optionnels : masquée pour une pension (incompatible, 422 côté serveur) — le module Internat a
+    son propre choix. Décochée par défaut : un frais reste obligatoire tant qu'on ne le déclare pas facultatif. *@
+ <div class="flex items-start gap-2" x-show="!newCategory.isBoardingFee">
+ <input id="cat-optional" type="checkbox" x-model="newCategory.isOptional" class="checkbox-field mt-1">
+ <label for="cat-optional" class="text-sm text-slate-700">
+ Frais optionnel (au choix de la famille)
+ <span class="block text-xs text-slate-400">Cochez pour l'uniforme, la tenue de sport… : l'inscription proposera une case à cocher. Laissez décoché pour l'inscription et la mensualité, dues par tous.</span>
+ </label>
+ </div>
  @* Masqué si le module Internat est désactivé (retour utilisateur du 29/09/2026) : un profil
     Général/Élémentaire/Simplifié n'a pas d'internat, cocher cette case n'y aurait aucun effet
     visible (écran Internat/Inscriptions, tous deux déjà masqués pour ces profils). *@

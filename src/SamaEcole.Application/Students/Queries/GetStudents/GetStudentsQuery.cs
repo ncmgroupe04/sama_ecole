@@ -68,7 +68,9 @@ public record StudentListItem(
     string? GuardianName,
     string? GuardianPhone,
     string? GuardianEmail,
-    string? Address);
+    string? Address,
+    string? FullNameAr,
+    string? GuardianNameAr);
 
 public record PaginatedStudents(
     IReadOnlyList<StudentListItem> Items, 

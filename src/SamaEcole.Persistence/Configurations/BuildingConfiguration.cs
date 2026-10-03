@@ -33,7 +33,7 @@ public class BuildingConfiguration : IEntityTypeConfiguration<Building>
         // Deux bâtiments ne peuvent pas porter le même nom dans la même école. Le soft delete fait
         // partie de la clé : sans lui, on ne pourrait jamais recréer un bâtiment portant le nom d'un
         // bâtiment archivé.
-        builder.HasIndex(b => new { b.SchoolId, b.Name, b.IsDeleted }).IsUnique();
+        builder.HasIndex(b => new { b.SchoolId, b.Name }).IsUnique().HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(b => b.SchoolId);
 
         // Restrict : on ne supprime jamais physiquement une école (AGENTS.md règle #6).

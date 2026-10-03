@@ -39,7 +39,7 @@ public class RoomConfiguration : IEntityTypeConfiguration<Room>
 
         // Deux salles ne peuvent pas porter le même nom DANS LE MÊME BÂTIMENT — mais « Salle 1 » peut
         // exister dans deux bâtiments différents de la même école.
-        builder.HasIndex(r => new { r.SchoolId, r.BuildingId, r.Name, r.IsDeleted }).IsUnique();
+        builder.HasIndex(r => new { r.SchoolId, r.BuildingId, r.Name }).IsUnique().HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(r => new { r.SchoolId, r.BuildingId });
 
         // Restrict : on ne supprime jamais physiquement une école (AGENTS.md règle #6).

@@ -20,7 +20,7 @@ public class MentionConfiguration : IEntityTypeConfiguration<Mention>
         builder.Property(m => m.Label).IsRequired().HasMaxLength(40);
         builder.Property(m => m.MinAverage).IsRequired().HasPrecision(5, 2);
 
-        builder.HasIndex(m => new { m.SchoolId, m.Label, m.IsDeleted }).IsUnique();
+        builder.HasIndex(m => new { m.SchoolId, m.Label }).IsUnique().HasFilter("\"IsDeleted\" = false");
 
         builder.HasOne<School>()
             .WithMany()

@@ -17,6 +17,10 @@ public record CreateFeeCategoryCommand : IRequest<CreateFeeCategoryResult>
     /// <summary>Vrai pour une catégorie de pension (module Internat) : exclue du calcul des frais
     /// scolaires ordinaires à l'inscription, incluse seulement pour un élève Interne/Demi-pensionnaire.</summary>
     public bool IsBoardingFee { get; init; }
+
+    /// <summary>Vrai pour un frais facultatif (uniforme, tenue de sport) que la famille coche à
+    /// l'inscription. Faux par défaut : un client qui ignore le champ crée un frais obligatoire.</summary>
+    public bool IsOptional { get; init; }
 }
 
-public record CreateFeeCategoryResult(Guid Id, string Name, bool IsRecurring, bool IsBoardingFee);
+public record CreateFeeCategoryResult(Guid Id, string Name, bool IsRecurring, bool IsBoardingFee, bool IsOptional);

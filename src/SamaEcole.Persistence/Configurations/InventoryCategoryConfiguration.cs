@@ -25,8 +25,8 @@ public class InventoryCategoryConfiguration : IEntityTypeConfiguration<Inventory
         builder.Property(c => c.Name).IsRequired().HasMaxLength(100);
         builder.Property(c => c.Description).HasMaxLength(300);
 
-        // IsDeleted dans la clé : une catégorie archivée ne doit pas bloquer la réutilisation de son nom.
-        builder.HasIndex(c => new { c.SchoolId, c.Name, c.IsDeleted }).IsUnique();
+        // Index PARTIEL sur les lignes vivantes : une catégorie archivée ne bloque jamais la réutilisation de son nom.
+        builder.HasIndex(c => new { c.SchoolId, c.Name }).IsUnique().HasFilter("\"IsDeleted\" = false");
 
         // Restrict : on ne supprime jamais physiquement une école (AGENTS.md règle #6).
         builder.HasOne<School>()

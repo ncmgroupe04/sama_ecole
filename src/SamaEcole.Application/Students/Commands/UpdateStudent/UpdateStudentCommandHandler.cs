@@ -45,6 +45,8 @@ public class UpdateStudentCommandHandler(IApplicationDbContext dbContext)
         student.GuardianPhone = request.GuardianPhone;
         student.GuardianEmail = request.GuardianEmail;
         student.Address = request.Address;
+        student.FullNameAr = Trimmed(request.FullNameAr);
+        student.GuardianNameAr = Trimmed(request.GuardianNameAr);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -55,4 +57,10 @@ public class UpdateStudentCommandHandler(IApplicationDbContext dbContext)
 
         return new UpdateStudentResult(student.Id, newRowVersion);
     }
+
+    /// <summary>Vide/blanc = « pas de nom arabe » (null), jamais une chaîne vide stockée — même
+    /// convention que CreateStudentCommandHandler.Trimmed / CreateSubjectCommandHandler.Trimmed.
+    /// Jamais .ToTitleCase() (casse fr-FR) sur de l'arabe, qui n'a pas de notion de casse.</summary>
+    private static string? Trimmed(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

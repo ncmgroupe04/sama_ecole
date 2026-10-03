@@ -8,8 +8,9 @@ namespace SamaEcole.Application.Students;
 ///
 /// Colonnes fixes, dans cet ORDRE (celui du modèle téléchargeable, GetStudentImportTemplateQuery) :
 /// Nom complet, Date de naissance, Lieu de naissance, Genre, Classe, Nom du tuteur, Téléphone du
-/// tuteur, E-mail du tuteur, Adresse — une CLASSE PAR LIGNE (pas un import ciblé sur une seule classe
-/// comme les notes) : une rentrée scolaire mélange plusieurs classes dans un même fichier.
+/// tuteur, E-mail du tuteur, Adresse, Nom complet (arabe), Nom du tuteur (arabe) — une CLASSE PAR
+/// LIGNE (pas un import ciblé sur une seule classe comme les notes) : une rentrée scolaire mélange
+/// plusieurs classes dans un même fichier.
 /// </summary>
 public record StudentImportFileRow(
     int RowNumber,
@@ -21,4 +22,6 @@ public record StudentImportFileRow(
     string GuardianName,
     string GuardianPhone,
     string GuardianEmail,
-    string Address);
+    string Address,
+    string FullNameAr,
+    string GuardianNameAr);

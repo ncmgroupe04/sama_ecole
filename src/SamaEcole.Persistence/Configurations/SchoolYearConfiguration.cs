@@ -35,9 +35,9 @@ public class SchoolYearConfiguration : IEntityTypeConfiguration<SchoolYear>
         builder.Property(y => y.IsActive).IsRequired();
 
         // Deux années ne peuvent pas porter le même libellé dans la même école — mais « 2026-2027 »
-        // existe évidemment dans toutes les écoles. Le soft delete fait partie de la clé : sans lui,
-        // on ne pourrait jamais recréer une année portant le libellé d'une année archivée.
-        builder.HasIndex(y => new { y.SchoolId, y.Label, y.IsDeleted }).IsUnique();
+        // existe évidemment dans toutes les écoles. L'unicité est un index
+        // PARTIEL sur les lignes vivantes : une année archivée ne bloque jamais la réutilisation de son libellé.
+        builder.HasIndex(y => new { y.SchoolId, y.Label }).IsUnique().HasFilter("\"IsDeleted\" = false");
 
         builder.HasIndex(y => y.SchoolId)
             .IsUnique()
