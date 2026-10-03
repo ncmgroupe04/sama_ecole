@@ -1,7 +1,9 @@
 using SamaEcole.Application.Buildings.Commands.CreateBuilding;
 using SamaEcole.Application.Buildings.Commands.DeleteBuilding;
+using SamaEcole.Application.Buildings.Commands.RestoreBuilding;
 using SamaEcole.Application.Buildings.Commands.UpdateBuilding;
 using SamaEcole.Application.Buildings.Queries.GetBuildingsWithRooms;
+using SamaEcole.Application.Buildings.Queries.GetDeletedBuildings;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -67,6 +69,27 @@ public class BuildingsController(ISender mediator) : ControllerBase
         Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
     {
         await mediator.Send(new DeleteBuildingCommand(id, rowVersion), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Corbeille : bâtiments supprimés de l'école courante.</summary>
+    [HttpGet("deleted")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<IReadOnlyList<DeletedBuildingDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListDeleted(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDeletedBuildingsQuery(), cancellationToken));
+
+    /// <summary>Restaure un bâtiment supprimé. 409 ACTIVE_ENTITY_CONFLICT si son nom est repris par un bâtiment actif.</summary>
+    [HttpPost("{id:guid}/restore")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new RestoreBuildingCommand(id), cancellationToken);
         return NoContent();
     }
 }
