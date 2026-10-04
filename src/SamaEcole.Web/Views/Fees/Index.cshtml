@@ -423,17 +423,26 @@
                         <td colspan="7" class="py-12 text-center text-slate-500">Aucun décaissement enregistré.</td>
                     </tr>
                     <template x-for="d in disbursements" :key="d.id">
-                        <tr class="hover:bg-slate-50 transition-colors">
+                        <tr class="transition-colors" :class="disbursementRowClass(d)">
                             <td class="py-3 px-4 text-sm text-slate-900" x-text="formatDateOnly(d.date)"></td>
-                            <td class="py-3 px-4 text-sm font-medium text-slate-900" x-text="d.beneficiary"></td>
-                            <td class="py-3 px-4 text-sm text-slate-500" x-text="d.reason"></td>
+                            <td class="py-3 px-4 text-sm font-medium text-slate-900" :class="disbursementState(d) === 'reversed' && 'line-through text-slate-400'" x-text="d.beneficiary"></td>
+                            <td class="py-3 px-4 text-sm text-slate-500">
+                                <span :class="disbursementState(d) === 'reversed' && 'line-through text-slate-400'" x-text="d.reason"></span>
+                                @* Écriture comptable : jamais supprimée, annulée par une contre-écriture qui la référence. *@
+                                <span x-show="disbursementState(d) === 'reversal'" x-cloak class="mt-0.5 block text-xs text-rose-600" x-text="reversalNote(d)"></span>
+                                <span x-show="disbursementState(d) === 'reversed'" x-cloak class="mt-0.5 block text-xs text-slate-400">Annulé par une contre-écriture.</span>
+                            </td>
                             <td class="py-3 px-4 text-sm text-slate-900">
                                 <badge variant="neutral" x-text="d.category"></badge>
+                                <badge variant="danger" x-show="disbursementState(d) === 'reversal'" x-cloak class="ml-1">Annulation</badge>
+                                <badge variant="warning" x-show="disbursementState(d) === 'reversed'" x-cloak class="ml-1">Annulé</badge>
                             </td>
-                            <td class="py-3 px-4 text-sm font-bold text-slate-900 text-right amount" x-text="formatMoney(d.amount)"></td>
+                            <td class="py-3 px-4 text-sm font-bold text-right amount"
+                                :class="disbursementState(d) === 'reversal' ? 'text-rose-600' : (disbursementState(d) === 'reversed' ? 'text-slate-400 line-through' : 'text-slate-900')"
+                                x-text="formatMoney(d.amount)"></td>
                             <td class="py-3 px-4 text-sm text-slate-500" x-text="d.paymentMethod"></td>
                             <td class="py-3 px-4 text-right">
-                                <button type="button" x-on:click="openDeleteDisbursement(d)" class="text-danger hover:text-red-700 transition-colors p-1" title="Supprimer" aria-label="Supprimer">
+                                <button type="button" x-show="canReverseDisbursement(d)" x-cloak x-on:click="openDeleteDisbursement(d)" class="text-danger hover:text-red-700 transition-colors p-1" title="Annuler ce décaissement" aria-label="Annuler ce décaissement">
                                     <icon name="trash" class="w-5 h-5" />
                                 </button>
                             </td>
@@ -494,7 +503,12 @@
         <modal-subtitle>
             Voulez-vous vraiment annuler le décaissement pour <span class="font-semibold text-slate-900" x-text="deletingDisbursement ? deletingDisbursement.beneficiary : ''"></span> ?
         </modal-subtitle>
-        
+        <p class="mt-3 text-sm leading-relaxed text-slate-500">
+            Le décaissement est une écriture comptable : il n'est pas supprimé. Une ligne d'annulation, de montant opposé,
+            est ajoutée à la date du jour ; le solde, la trésorerie et la TVA déductible se corrigent d'eux-mêmes et
+            l'historique reste complet.
+        </p>
+
         <div x-show="deleteDisbursementError" x-cloak class="form-error-banner" x-text="deleteDisbursementError"></div>
         
         <div class="bg-white border-t border-slate-100 p-4 px-6 flex justify-end gap-3 -mx-6 -mb-6 mt-6 z-10">

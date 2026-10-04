@@ -59,4 +59,15 @@ public class TrashPanelRenderingTests : IClassFixture<AuthApiFactory>
         html.Should().Contain(flag, "le bandeau d'erreur du formulaire propose de voir les éléments supprimés");
         html.Should().Contain("Voir dans les éléments supprimés");
     }
+
+    [Fact]
+    public async Task The_Disbursements_Tab_Distinguishes_Reversals_From_Their_Original()
+    {
+        var html = await PageAsync("/frais");
+
+        html.Should().Contain("canReverseDisbursement", "seule une écriture normale propose l'annulation");
+        html.Should().Contain("disbursementState(d) === 'reversal'");
+        html.Should().Contain("disbursementState(d) === 'reversed'");
+        html.Should().Contain("Annuler ce décaissement");
+    }
 }
