@@ -104,6 +104,18 @@ internal static class UniqueConstraintCatalog
         ["weekly_hour_norms"] =
             "Un volume horaire est déjà réglé pour cette matière à ce niveau. Rechargez la liste et modifiez-le.",
 
+        ["uniform_items"] =
+            "Un modèle de tenue porte déjà ce nom pour ce public (mixte, garçon ou fille). Modifiez le modèle "
+            + "existant, ou donnez un nom différent à celui-ci.",
+
+        ["uniform_variants"] =
+            "Cette taille existe déjà pour ce modèle de tenue, ou le lot de stock choisi sert déjà à une autre "
+            + "taille. Rechargez la liste des tailles du modèle.",
+
+        ["student_uniforms"] =
+            "Cet élève a déjà une ligne active pour ce modèle de tenue cette année. Rechargez sa fiche : "
+            + "modifiez la quantité ou la taille de la ligne existante au lieu d'en créer une seconde.",
+
         ["LateArrivals"] =
             "Un billet d'entrée est déjà actif pour cet élève, ce cours et ce jour. Il n'en faut pas un second : "
             + "retrouvez le billet dans la liste, ou annulez-le d'abord s'il a été émis par erreur.",

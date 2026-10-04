@@ -93,6 +93,11 @@ public class ApplicationDbContext(
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<ItemAssignment> ItemAssignments => Set<ItemAssignment>();
 
+    // Module Tenues (modèles, tailles, dotations) — au-dessus de l'Inventaire et de Finance.
+    public DbSet<UniformItem> UniformItems => Set<UniformItem>();
+    public DbSet<UniformVariant> UniformVariants => Set<UniformVariant>();
+    public DbSet<StudentUniform> StudentUniforms => Set<StudentUniform>();
+
     // Module Examens officiels (CFEE/BFEM/BAC).
     public DbSet<ExamSession> ExamSessions => Set<ExamSession>();
     public DbSet<ExamDossier> ExamDossiers => Set<ExamDossier>();

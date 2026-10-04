@@ -205,6 +205,17 @@ public interface IApplicationDbContext
     /// <summary>Fiches de prêt/attribution de matériel aux élèves, enseignants et personnel. Verrou optimiste xmin.</summary>
     DbSet<ItemAssignment> ItemAssignments { get; }
 
+    // ------------------------------------------------------------------ Module Tenues
+
+    /// <summary>Modèles de tenue (uniforme, tenue de sport…). Verrou optimiste xmin.</summary>
+    DbSet<UniformItem> UniformItems { get; }
+
+    /// <summary>Tailles d'un modèle ; chacune désigne le lot d'inventaire qui porte son stock.</summary>
+    DbSet<UniformVariant> UniformVariants { get; }
+
+    /// <summary>Dotations : la tenue due à un élève pour une année. La remise passe par <c>StockLedger</c>. Verrou xmin.</summary>
+    DbSet<StudentUniform> StudentUniforms { get; }
+
     // ------------------------------------------------------------------ Module Examens officiels
 
     /// <summary>Campagnes d'examen (CFEE/BFEM/BAC) de l'école, par année scolaire et série.</summary>
