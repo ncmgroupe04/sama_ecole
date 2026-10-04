@@ -73,8 +73,8 @@ Aucun contrôle de formule d'abonnement ni `RequireModule` (comme l'Inventaire).
 | Méthode | Route | Rôles | Rôle de la route |
 |---|---|---|---|
 | `GET` | `/items` | lecture : tout le personnel authentifié | Catalogue, tailles et stock disponible |
-| `POST` `PUT` `DELETE` | `/items`, `/items/{id}` | Directeur, Secrétariat | Modèle ; `DELETE` = archivage (refusé si une dotation active l'utilise) |
-| `POST` `PUT` `DELETE` | `/items/{id}/variants`, `/variants/{id}` | Directeur, Secrétariat | Tailles ; crée le lot Inventaire |
+| `POST` `PUT` `DELETE` | `/items`, `/items/{id}` | Directeur, Secrétariat | Modèle ; `DELETE` = archivage du modèle et de ses tailles (refusé tant qu'un **besoin en attente** l'utilise ; les tenues déjà remises ne bloquent pas) |
+| `POST` `PUT` `DELETE` | `/items/{id}/variants`, `/variants/{id}` | Directeur, Secrétariat | Tailles ; crée le lot Inventaire dans la catégorie « Tenues » ; `DELETE` refusé tant qu'un besoin en attente vise la taille |
 | `GET` | `/students/{studentId}` | Directeur, Secrétariat, Finance, Surveillant | Dotations de l'élève, facturé ou non, badge de solde |
 | `POST` `PUT` `DELETE` | `/requests`, `/requests/{id}` | Directeur, Secrétariat, Surveillant | Besoins ; `PUT` sous `xmin` (409) ; `DELETE` = annulation |
 | `POST` | `/requests/{id}/deliver`, `/requests/{id}/return` | Directeur, Secrétariat, Surveillant | Remise et retour, audités (`IAuditableRequest`) |
@@ -101,3 +101,6 @@ Facturation en cours d'année (ticket Finance) ; saisie des tailles dans le form
 1. `Gender` des modèles se confronte à `Student.Gender` (`"M"`/`"F"`) pour la **proposition**, jamais comme contrainte.
 2. Un élève qui a besoin d'un même modèle en deux tailles tient en deux unités d'une même ligne — non supporté : une seule taille par ligne (rare ; à rouvrir si le terrain le demande).
 3. Un lot de tenue reste modifiable depuis l'écran Inventaire (ajustement après recomptage) ; seul l'archivage d'un lot référencé par une taille est refusé (garde ajoutée à `DeleteInventoryItem`).
+4. **Archivage et stock.** Archiver une taille ou un modèle n'archive jamais le lot d'inventaire ni son journal : le stock physique reste visible dans l'Inventaire. Recréer ensuite la même taille crée un **nouveau** lot ; l'ancien reste à solder depuis l'écran Inventaire (ajustement ou sortie).
+5. **Facturation attendue.** Pour une ligne encore à remettre, elle est recalculée à chaque lecture depuis les lignes de frais de l'inscription ; elle n'est figée qu'à la remise (Phase 4).
+

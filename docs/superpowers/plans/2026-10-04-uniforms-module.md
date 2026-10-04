@@ -26,16 +26,15 @@
 - [x] Tests d'intégration `UniformsPersistenceTests` (PostgreSQL, rôle applicatif) : RLS qui filtre, WITH CHECK, jamais de DELETE, FK composites entre écoles, CHECK, uniques partiels, purges d'année et de remise à neuf ; `RlsCoverageTests` vert (31/31).
 - **Défaut trouvé par les tests et corrigé :** `HasDefaultValue(1)` sur `Quantity` et `QuantityIncluded` faisait remplacer silencieusement un `0` par `1` à l'insertion (EF omet la valeur égale au défaut CLR). Défauts retirés côté base ; les initialiseurs C# suffisent.
 
-## Phase 2 — Catalogue (CQRS)
+## Phase 2 — Catalogue (CQRS) — FAIT
 
-- [ ] Commandes : créer/modifier/archiver un modèle ; créer/modifier/archiver une taille (crée le lot dans « Tenues »). Garde `DeleteInventoryItem` sur un lot référencé.
-- [ ] Requête `GetUniformItems` (tailles + stock disponible). Validateurs FluentValidation. Tests d'intégration.
+- [x] Commandes : créer/modifier/archiver un modèle (`xmin` → 409, renommage propagé aux lots) ; créer/modifier/archiver une taille (crée le lot dans « Tenues » de l'école, dans la même transaction : un doublon ne laisse aucun lot orphelin). Garde `UNIFORM_LOT_IN_USE` sur `DeleteInventoryItem`.
+- [x] Requête `GetUniformItems` (tailles triées, stock vivant du lot). Validateurs FluentValidation. 17 tests d'intégration (PostgreSQL) + tests unitaires des règles pures.
 
-## Phase 3 — Dotations
+## Phase 3 — Dotations (concurrence `xmin`) — FAIT
 
-- [ ] Commandes : créer des besoins pour une inscription, modifier (`xmin` → 409), annuler. Requête `GetStudentUniforms` (badge de solde, facturé ou non).
-- [ ] Tests : doublon actif refusé, hors tenant → 404, conflit `xmin`.
-
+- [x] Commandes : `CreateStudentUniforms` (tout ou rien, élève et année copiés de l'inscription), `UpdateStudentUniform` et `CancelStudentUniform` sous `xmin` (409). Requête `GetStudentUniforms` : badge de solde (information, jamais un blocage), facturation attendue lue dans les lignes de frais, propositions (payées, adaptées à l'élève, non encore demandées).
+- [x] 16 tests d'intégration : doublon actif refusé avec rollback de tout le lot, taille d'un autre modèle, hors tenant (404/422), inscription annulée, conflit `xmin` sur modification et annulation, Finance jamais écrite (TotalDue, lignes de frais, paiements inchangés).
 ## Phase 4 — Remise et retour (partie critique)
 
 - [ ] `DeliverStudentUniformCommand` / `ReturnStudentUniformCommand` via `StockLedger`, audités.
@@ -53,3 +52,4 @@
 ## Phase 7 — Isolation et documentation
 
 - [ ] `UniformsIsolationTests` (lecture et écriture croisées, références entre écoles). Volume 3 (tables), Volume 4 (routes), Volume 7 (rôles), `ACTIVE_CONTEXT`.
+
