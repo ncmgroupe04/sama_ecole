@@ -322,14 +322,15 @@ public class RestorableAggregatesEndToEndTests : IAsyncLifetime
     // ------------------------------------------------------------------ Deux créations, une même identité active
 
     /// <summary>
-    /// Deux Handlers, chacun sur son propre DbContext (comme deux requêtes HTTP distinctes). Le
-    /// pré-contrôle (<c>EnsureNoArchivedIdentityAsync</c>) ne porte que sur les identités ARCHIVÉES :
-    /// il ne voit donc aucun doublon ici, et c'est bien l'index unique PARTIEL sur les lignes vivantes,
-    /// en base, qui doit arbitrer — qu'il s'agisse d'une vraie course (deux connexions qui écrivent au
-    /// même instant, comme <c>TeacherAssignmentLifecycleTests.Two_Simultaneous_Assignments_…</c>) ou,
-    /// comme ici, de deux écritures qui se suivent sans qu'aucun pré-contrôle applicatif n'intervienne
-    /// entre les deux. Non encore couvert pour Classroom/Room/SchoolYear (SoftDeleteUniqueIndexTests ne
-    /// teste que Building/FeeCategory/Mention, et au niveau du DbContext, pas des Handlers).
+    /// VRAIE fenêtre de course : les deux lignes sont ajoutées (<c>Add</c>), chacune sur son propre
+    /// <c>DbContext</c>, AVANT que l'un ou l'autre n'appelle <c>SaveChangesAsync</c> — ni l'un ni
+    /// l'autre n'a encore vu l'écriture de son concurrent au moment d'écrire lui-même. Même patron que
+    /// <c>TeacherAssignmentLifecycleTests.Two_Simultaneous_Assignments_Should_Not_Create_A_Duplicate</c>
+    /// et <c>ClassFeeConcurrencyTests</c> : si un futur pré-contrôle applicatif EN MÉMOIRE introduisait
+    /// un TOCTOU, ce test le détecterait, puisqu'aucun des deux contextes ne relit la base entre son
+    /// <c>Add</c> et son <c>SaveChangesAsync</c>. L'index unique PARTIEL sur les lignes vivantes, en
+    /// base, reste le seul arbitre possible. Non encore couvert pour Classroom/Room/SchoolYear
+    /// (SoftDeleteUniqueIndexTests ne teste que Building/FeeCategory/Mention).
     /// </summary>
     [Fact]
     public async Task Two_Concurrent_Classroom_Creations_With_The_Same_Name_Leave_Exactly_One_Row()
@@ -337,13 +338,12 @@ public class RestorableAggregatesEndToEndTests : IAsyncLifetime
         await using var ctxA = _db.NewAppContext(EcoleA);
         await using var ctxB = _db.NewAppContext(EcoleA);
 
-        var command = new CreateClassroomCommand { Name = "6e Concurrente", Level = "6e", Capacity = 40 };
+        ctxA.Classrooms.Add(new Classroom { SchoolId = EcoleA, Name = "6e Concurrente", Level = "6e", Capacity = 40 });
+        ctxB.Classrooms.Add(new Classroom { SchoolId = EcoleA, Name = "6e Concurrente", Level = "6e", Capacity = 40 });
 
-        await new CreateClassroomCommandHandler(ctxA, Tenant(EcoleA), new NoOpKpiCache(), Injector(ctxA))
-            .Handle(command, default);
+        await ctxA.SaveChangesAsync(default);
 
-        var act = async () => await new CreateClassroomCommandHandler(ctxB, Tenant(EcoleA), new NoOpKpiCache(), Injector(ctxB))
-            .Handle(command, default);
+        var act = async () => await ctxB.SaveChangesAsync(default);
 
         await act.Should().ThrowAsync<ConcurrencyConflictException>(
             "la seconde création simultanée ne doit jamais aboutir à deux classes de même nom");
@@ -359,11 +359,12 @@ public class RestorableAggregatesEndToEndTests : IAsyncLifetime
         await using var ctxA = _db.NewAppContext(EcoleA);
         await using var ctxB = _db.NewAppContext(EcoleA);
 
-        var command = new CreateRoomCommand { Name = "Salle Concurrente", Capacity = 20, BuildingId = BatimentA };
+        ctxA.Rooms.Add(new Room { SchoolId = EcoleA, Name = "Salle Concurrente", Capacity = 20, BuildingId = BatimentA });
+        ctxB.Rooms.Add(new Room { SchoolId = EcoleA, Name = "Salle Concurrente", Capacity = 20, BuildingId = BatimentA });
 
-        await new CreateRoomCommandHandler(ctxA, Tenant(EcoleA)).Handle(command, default);
+        await ctxA.SaveChangesAsync(default);
 
-        var act = async () => await new CreateRoomCommandHandler(ctxB, Tenant(EcoleA)).Handle(command, default);
+        var act = async () => await ctxB.SaveChangesAsync(default);
 
         await act.Should().ThrowAsync<ConcurrencyConflictException>(
             "la seconde création simultanée ne doit jamais aboutir à deux salles de même nom dans le même bâtiment");
@@ -379,23 +380,23 @@ public class RestorableAggregatesEndToEndTests : IAsyncLifetime
         await using var ctxA = _db.NewAppContext(EcoleA);
         await using var ctxB = _db.NewAppContext(EcoleA);
 
-        // Même libellé, mais des périodes qui NE SE CHEVAUCHENT PAS : le garde-fou de chevauchement
-        // (CreateSchoolYearCommandHandler, avant l'index unique) ne doit pas être celui qui arbitre ici
-        // — c'est bien l'identité « libellé » qui est testée, pas la détection de chevauchement
-        // (couverte par ailleurs). Seul l'index unique partiel (SchoolId, Label) peut encore refuser.
-        var commandA = new CreateSchoolYearCommand
+        SchoolYear MakeYear() => new()
         {
-            Label = "2033-2034", StartDate = new DateOnly(2033, 10, 1), EndDate = new DateOnly(2034, 6, 30)
-        };
-        var commandB = new CreateSchoolYearCommand
-        {
-            Label = "2033-2034", StartDate = new DateOnly(2043, 10, 1), EndDate = new DateOnly(2044, 6, 30)
+            SchoolId = EcoleA, Label = "2033-2034",
+            StartDate = new DateOnly(2033, 10, 1), EndDate = new DateOnly(2034, 6, 30)
         };
 
-        await new CreateSchoolYearCommandHandler(ctxA, Tenant(EcoleA), TimeProvider.System).Handle(commandA, default);
+        // Construction directe de l'entité (comme les deux tests ci-dessus), pas via
+        // CreateSchoolYearCommandHandler : son garde-fou de chevauchement relit la base à chaque appel
+        // et masquerait la fenêtre de course qu'on veut precisément observer ici — ce garde-fou est
+        // testé par ailleurs (CreateSchoolYearCommandHandler, tests dédiés). Seul l'index unique
+        // partiel (SchoolId, Label) doit arbitrer ce test.
+        ctxA.SchoolYears.Add(MakeYear());
+        ctxB.SchoolYears.Add(MakeYear());
 
-        var act = async () => await new CreateSchoolYearCommandHandler(ctxB, Tenant(EcoleA), TimeProvider.System)
-            .Handle(commandB, default);
+        await ctxA.SaveChangesAsync(default);
+
+        var act = async () => await ctxB.SaveChangesAsync(default);
 
         await act.Should().ThrowAsync<ConcurrencyConflictException>(
             "la seconde création ne doit jamais aboutir à deux années de même libellé");
@@ -449,6 +450,39 @@ public class RestorableAggregatesEndToEndTests : IAsyncLifetime
         };
 
         await act.Should().NotThrowAsync("l'unicité du nom de salle est par bâtiment/école, pas globale");
+    }
+
+    /// <summary>
+    /// Même principe pour SchoolYear : l'index unique partiel (SchoolId, Label) est tenant-scopé
+    /// (inventaire §0.2), et SchoolYear figure dans le tableau des agrégats restaurables (§0.1). Deux
+    /// écoles doivent pouvoir chacune ouvrir une année « 2033-2034 » ACTIVE sans collision ni fuite —
+    /// SchoolYearRestoreTests ne teste que l'isolation d'une identité ARCHIVÉE entre tenants, jamais
+    /// deux années ACTIVES partageant le même libellé.
+    /// </summary>
+    [Fact]
+    public async Task Two_Tenants_Can_Each_Have_An_Active_SchoolYear_With_The_Same_Label()
+    {
+        var command = new CreateSchoolYearCommand
+        {
+            Label = "2033-2034", StartDate = new DateOnly(2033, 10, 1), EndDate = new DateOnly(2034, 6, 30)
+        };
+
+        await using (var ctxA = _db.NewAppContext(EcoleA))
+        {
+            await new CreateSchoolYearCommandHandler(ctxA, Tenant(EcoleA), TimeProvider.System).Handle(command, default);
+        }
+
+        var act = async () =>
+        {
+            await using var ctxB = _db.NewAppContext(EcoleB);
+            await new CreateSchoolYearCommandHandler(ctxB, Tenant(EcoleB), TimeProvider.System).Handle(command, default);
+        };
+
+        await act.Should().NotThrowAsync("l'unicité du libellé d'année scolaire est par école, pas globale");
+
+        await using var owner = _db.NewOwnerContext();
+        (await owner.SchoolYears.IgnoreQueryFilters().CountAsync(y => y.Label == "2033-2034" && !y.IsDeleted))
+            .Should().Be(2, "une ligne active par école, aucune collision");
     }
 
     // ------------------------------------------------------------------ Bloquer le parent (inventaire §6)
