@@ -28,4 +28,11 @@ public class Disbursement : AuditableEntity, ITenantEntity
     public DateOnly Date { get; set; }
     public string Beneficiary { get; set; } = string.Empty;
     public string? ReceiptUrl { get; set; }
+
+    /// <summary>
+    /// Non null UNIQUEMENT pour une contre-écriture : identifiant du décaissement d'origine qu'elle annule
+    /// (montants opposés). Un décaissement est une écriture comptable : il n'est jamais supprimé ni modifié,
+    /// il se corrige par une contre-écriture (conception soft delete 2026-10-01 §3.3).
+    /// </summary>
+    public Guid? ReversalOfId { get; set; }
 }

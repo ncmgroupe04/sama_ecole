@@ -34,8 +34,14 @@ public class DisbursementsController(ISender mediator) : ControllerBase
         return CreatedAtAction(nameof(GetDisbursements), new { id }, id);
     }
 
+    /// <summary>
+    /// ANNULE un décaissement par une contre-écriture (montants opposés, référence à l'original) : l'écriture
+    /// d'origine n'est jamais supprimée. 409 si le décaissement est déjà annulé ou s'il est lui-même une annulation.
+    /// </summary>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> DeleteDisbursement(Guid id, CancellationToken cancellationToken)
     {
         await mediator.Send(new DeleteDisbursementCommand(id), cancellationToken);
