@@ -33,6 +33,17 @@ public class DeleteInventoryItemCommandHandler(
                 "Impossible de supprimer : des prêts de ce bien sont encore en cours.");
         }
 
+        // Un lot qui porte le stock d'une taille de tenue ne s'archive pas depuis l'Inventaire : la taille perdrait
+        // son stock sans le savoir. On archive la taille (ou le modèle) depuis l'écran Tenues.
+        var isUniformLot = await dbContext.UniformVariants.AnyAsync(v => v.InventoryItemId == item.Id, cancellationToken);
+
+        if (isUniformLot)
+        {
+            throw new BusinessRuleException(
+                "Impossible de supprimer : ce lot porte le stock d'une taille de tenue. Archivez la taille depuis l'écran Tenues.",
+                "UNIFORM_LOT_IN_USE");
+        }
+
         dbContext.SetOriginalConcurrencyToken(item, request.RowVersion);
 
         // Le journal de stock, lui, n'est PAS effacé : il est append-only (AGENTS.md règle #6 poussée
