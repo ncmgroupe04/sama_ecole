@@ -46,5 +46,19 @@ public class DisbursementConfiguration : IEntityTypeConfiguration<Disbursement>
             .HasMaxLength(500);
 
         builder.HasIndex(d => new { d.SchoolId, d.Date });
+
+        // Contre-écriture : au plus UNE par décaissement d'origine (une double annulation, même concurrente,
+        // est refusée par la base), toujours en montant négatif, et l'origine ne peut jamais être effacée.
+        builder.HasIndex(d => d.ReversalOfId)
+            .IsUnique()
+            .HasFilter("\"ReversalOfId\" IS NOT NULL");
+
+        builder.HasOne<Disbursement>()
+            .WithMany()
+            .HasForeignKey(d => d.ReversalOfId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.ToTable(t => t.HasCheckConstraint(
+            "CK_disbursements_reversal_negative", "\"ReversalOfId\" IS NULL OR \"Amount\" < 0"));
     }
 }

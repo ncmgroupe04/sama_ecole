@@ -177,13 +177,22 @@
   </template>
  </div>
 
+ <div x-show="canManage" x-cloak>
+ @await Html.PartialAsync("_TrashPanel", "buildings")
+ @await Html.PartialAsync("_TrashPanel", "rooms")
+ </div>
+
  @* ═══════════════════════════════════════════════════════════════════════════
     MODALES — Bâtiments
     ═══════════════════════════════════════════════════════════════════════════ *@
 
  <modal-shell size="lg" open="isCreateBuildingOpen" on-close="closeCreateBuilding()" title="Nouveau bâtiment">
   <modal-subtitle>Nom et description du bâtiment physique.</modal-subtitle>
-  <div x-show="createBuildingErrors.global" x-cloak class="form-error-banner" x-text="createBuildingErrors.global"></div>
+  <div x-show="createBuildingErrors.global" x-cloak class="form-error-banner">
+   <span x-text="createBuildingErrors.global"></span>
+   <button type="button" x-show="createBuildingErrors.archivedConflict" x-cloak class="mt-2 block font-semibold underline"
+           x-on:click="closeCreateBuilding(); window.softDeleteTrash.openFor('buildings', newBuilding.name)">Voir dans les éléments supprimés</button>
+  </div>
   <form x-on:submit.prevent="submitCreateBuilding()" novalidate class="space-y-4">
    <div>
     <label class="form-label form-label-required">Nom du bâtiment</label>
@@ -258,7 +267,11 @@
 
  <modal-shell size="lg" open="isCreateRoomOpen" on-close="closeCreateRoom()" title="Nouvelle salle">
   <modal-subtitle>Configurez une nouvelle salle et sa capacité physique.</modal-subtitle>
-  <div x-show="createRoomErrors.global" x-cloak class="form-error-banner" x-text="createRoomErrors.global"></div>
+  <div x-show="createRoomErrors.global" x-cloak class="form-error-banner">
+   <span x-text="createRoomErrors.global"></span>
+   <button type="button" x-show="createRoomErrors.archivedConflict" x-cloak class="mt-2 block font-semibold underline"
+           x-on:click="closeCreateRoom(); window.softDeleteTrash.openFor('rooms', newRoom.name)">Voir dans les éléments supprimés</button>
+  </div>
   <form x-on:submit.prevent="submitCreateRoom()" novalidate class="space-y-4">
    <div>
     <label class="form-label form-label-required">Nom de la salle</label>

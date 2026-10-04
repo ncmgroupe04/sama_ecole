@@ -119,17 +119,27 @@
          <p x-show="openSessionError" x-cloak class="field-error mt-2" x-text="openSessionError"></p>
      </div>
 
-     <div x-show="currentSession" x-cloak class="card p-4 border-l-4 border-success flex flex-wrap items-center justify-between gap-3">
-         <p class="text-sm text-slate-700">
-             <span class="font-semibold text-success">Session de caisse ouverte</span>
-             depuis <span x-text="currentSession ? formatTime(currentSession.openedAt) : ''"></span>
-             · Fonds initial : <span x-text="formatMoney(currentSession ? currentSession.openingBalance : 0)"></span>
-             · Encaissé aujourd'hui : <span class="font-semibold" x-text="formatMoney(currentSession ? currentSession.totalCollected : 0)"></span>
-             (<span x-text="currentSession ? currentSession.paymentsCount : 0"></span> versement<span x-show="currentSession && currentSession.paymentsCount > 1">s</span>)
-         </p>
-         <button type="button" x-on:click="openCloseSessionModal()" class="btn-modal-secondary group shrink-0">
-             Clôturer la caisse
-         </button>
+     <div x-show="currentSession" x-cloak>
+         <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+             <p class="text-sm text-slate-500">
+                 <span class="font-semibold text-success">Session de caisse ouverte</span>
+                 depuis <span x-text="currentSession ? formatTime(currentSession.openedAt) : ''"></span>
+             </p>
+             <button type="button" x-on:click="openCloseSessionModal()" class="btn-modal-secondary group shrink-0">
+                 Clôturer la caisse
+             </button>
+         </div>
+         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+             <stat-card label="Fonds de caisse initial" icon="wallet" accent="slate">
+                 <span x-text="formatMoney(currentSession ? currentSession.openingBalance : 0)"></span>
+             </stat-card>
+             <stat-card label="Encaissé aujourd'hui" icon="wallet" accent="primary" emphasis>
+                 <span x-text="formatMoney(currentSession ? currentSession.totalCollected : 0)"></span>
+             </stat-card>
+             <stat-card label="Versements" icon="checkmark-circle" accent="slate">
+                 <span x-text="currentSession ? currentSession.paymentsCount : 0"></span>
+             </stat-card>
+         </div>
      </div>
  </div>
 

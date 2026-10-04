@@ -1,3 +1,5 @@
+using SamaEcole.Application.Grades.Commands.RestoreMention;
+using SamaEcole.Application.Grades.Queries.GetDeletedMentions;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Grades;
 using SamaEcole.Application.Grades.Commands.CreateGrade;
@@ -294,6 +296,27 @@ public class GradesController(ISender mediator) : ControllerBase
     public async Task<IActionResult> DeleteMention(Guid id, CancellationToken cancellationToken)
     {
         await mediator.Send(new DeleteMentionCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Corbeille : mentions supprimées. Même autorisation que l'écriture des mentions.</summary>
+    [HttpGet("mentions/deleted")]
+    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
+    [ProducesResponseType<IReadOnlyList<DeletedMentionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListDeletedMentions(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDeletedMentionsQuery(), cancellationToken));
+
+    /// <summary>Restaure une mention supprimée. 409 ACTIVE_ENTITY_CONFLICT si son libellé est repris.</summary>
+    [HttpPost("mentions/{id:guid}/restore")]
+    [Authorize(Policy = GradingPolicies.CanManageGradingScale)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RestoreMention(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new RestoreMentionCommand(id), cancellationToken);
         return NoContent();
     }
 }

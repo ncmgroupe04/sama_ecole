@@ -151,8 +151,8 @@ public class StatCardTagHelper : TagHelper
         "blue" => ("icon-chip-blue", "text-blue-700"),
         "purple" => ("icon-chip-purple", "text-purple-700"),
         "slate" => ("icon-chip-slate", "text-slate-900"),
-        "primary" => ("icon-chip-indigo", "text-indigo-700"),
-        _ => ("icon-chip-indigo", "text-indigo-700")
+        "primary" => ("icon-chip-primary", "text-primary-700"),
+        _ => ("icon-chip-primary", "text-primary-700")
     };
 
     /// <summary>Liseré d'accent d'un indicateur majeur (voir <see cref="Emphasis"/>).</summary>

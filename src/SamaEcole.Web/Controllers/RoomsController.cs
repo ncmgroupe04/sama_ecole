@@ -1,3 +1,5 @@
+using SamaEcole.Application.Rooms.Commands.RestoreRoom;
+using SamaEcole.Application.Rooms.Queries.GetDeletedRooms;
 using SamaEcole.Application.Rooms.Commands.CreateRoom;
 using SamaEcole.Application.Rooms.Commands.DeleteRoom;
 using SamaEcole.Application.Rooms.Commands.UpdateRoom;
@@ -73,6 +75,27 @@ public class RoomsController(ISender mediator) : ControllerBase
         Guid id, [FromQuery] uint rowVersion, CancellationToken cancellationToken)
     {
         await mediator.Send(new DeleteRoomCommand(id, rowVersion), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Corbeille : salles supprimées de l'école courante.</summary>
+    [HttpGet("deleted")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<IReadOnlyList<DeletedRoomDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListDeleted(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDeletedRoomsQuery(), cancellationToken));
+
+    /// <summary>Restaure une salle. 409 ACTIVE_ENTITY_CONFLICT (nom repris) ou PARENT_ENTITY_ARCHIVED (bâtiment supprimé).</summary>
+    [HttpPost("{id:guid}/restore")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new RestoreRoomCommand(id), cancellationToken);
         return NoContent();
     }
 }

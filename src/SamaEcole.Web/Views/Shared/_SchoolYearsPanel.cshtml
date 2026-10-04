@@ -142,12 +142,20 @@
  </div>
  </div>
 
+ <div x-show="isDirecteur" x-cloak>
+ @await Html.PartialAsync("_TrashPanel", "school-years")
+ </div>
+
  <!-- Création d'une année scolaire -->
  <modal-shell size="lg" open="isCreateOpen" title="Nouvelle année scolaire">
  <modal-subtitle>Créer une année ne fait pas basculer l'établissement dessus : elle reste inactive jusqu'à son activation.</modal-subtitle>
 
  <!-- Erreur globale (conflit de libellé, réseau…) -->
- <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
+ <div x-show="createErrors.global" x-cloak class="form-error-banner">
+  <span x-text="createErrors.global"></span>
+  <button type="button" x-show="createErrors.archivedConflict" x-cloak class="mt-2 block font-semibold underline"
+          x-on:click="isCreateOpen = false; window.softDeleteTrash.openFor('school-years', newYear.label)">Voir dans les éléments supprimés</button>
+ </div>
 
  <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
  <div>

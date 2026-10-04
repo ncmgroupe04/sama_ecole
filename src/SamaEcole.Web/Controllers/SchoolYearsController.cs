@@ -1,3 +1,5 @@
+using SamaEcole.Application.SchoolYears.Commands.RestoreSchoolYear;
+using SamaEcole.Application.SchoolYears.Queries.GetDeletedSchoolYears;
 using SamaEcole.Application.SchoolYears;
 using SamaEcole.Application.SchoolYears.Commands.ActivateSchoolYear;
 using SamaEcole.Application.SchoolYears.Commands.ApplyEvaluationPeriods;
@@ -172,4 +174,26 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
 
         return File(result.Content, "application/zip", result.FileName);
     }
+
+    /// <summary>Corbeille : années scolaires archivées de l'école courante.</summary>
+    [HttpGet("deleted")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<IReadOnlyList<DeletedSchoolYearDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListDeleted(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDeletedSchoolYearsQuery(), cancellationToken));
+
+    /// <summary>
+    /// Restaure une année archivée avec ses trimestres et ses affectations d'enseignants. 409
+    /// ACTIVE_ENTITY_CONFLICT si son libellé est repris, si sa période chevauche une année existante ou si
+    /// une autre année est déjà active. Elle ne redevient jamais active d'elle-même : l'activation reste explicite.
+    /// </summary>
+    [HttpPost("{id:guid}/restore")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<RestoreSchoolYearResult>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new RestoreSchoolYearCommand(id), cancellationToken));
 }

@@ -23,6 +23,12 @@ public class DisbursementDto
     public DateOnly Date { get; init; }
     public string Beneficiary { get; init; } = string.Empty;
     public string? ReceiptUrl { get; init; }
+
+    /// <summary>Non null pour une contre-écriture : identifiant du décaissement qu'elle annule.</summary>
+    public Guid? ReversalOfId { get; init; }
+
+    /// <summary>Vrai si une contre-écriture annule déjà ce décaissement.</summary>
+    public bool IsReversed { get; init; }
 }
 
 public class GetDisbursementsQueryHandler(IApplicationDbContext context) 
@@ -53,7 +59,9 @@ public class GetDisbursementsQueryHandler(IApplicationDbContext context)
                 PaymentMethod = d.PaymentMethod.ToString(),
                 Date = d.Date,
                 Beneficiary = d.Beneficiary,
-                ReceiptUrl = d.ReceiptUrl
+                ReceiptUrl = d.ReceiptUrl,
+                ReversalOfId = d.ReversalOfId,
+                IsReversed = context.Disbursements.Any(r => r.ReversalOfId == d.Id)
             })
             .ToListAsync(cancellationToken);
     }

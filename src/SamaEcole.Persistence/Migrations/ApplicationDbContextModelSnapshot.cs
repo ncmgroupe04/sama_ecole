@@ -862,6 +862,9 @@ namespace SamaEcole.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<Guid?>("ReversalOfId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
 
@@ -881,10 +884,16 @@ namespace SamaEcole.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ReversalOfId")
+                        .IsUnique()
+                        .HasFilter("\"ReversalOfId\" IS NOT NULL");
+
                     b.HasIndex("SchoolId", "Date");
 
                     b.ToTable("Disbursements", t =>
                         {
+                            t.HasCheckConstraint("CK_disbursements_reversal_negative", "\"ReversalOfId\" IS NULL OR \"Amount\" < 0");
+
                             t.HasCheckConstraint("CK_disbursements_vat_rate_range", "\"VatRate\" IS NULL OR (\"VatRate\" >= 0 AND \"VatRate\" <= 1)");
                         });
                 });
@@ -5929,6 +5938,14 @@ namespace SamaEcole.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("DebtorReminderBatch");
+                });
+
+            modelBuilder.Entity("SamaEcole.Domain.Entities.Disbursement", b =>
+                {
+                    b.HasOne("SamaEcole.Domain.Entities.Disbursement", null)
+                        .WithMany()
+                        .HasForeignKey("ReversalOfId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("SamaEcole.Domain.Entities.DisciplineRecord", b =>

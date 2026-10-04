@@ -52,7 +52,7 @@ public class PaginationTagHelper : TagHelper
                         <span class="sr-only">Précédent</span>
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#icon-chevron-left"></use></svg>
                     </button>
-                    <span class="inline-flex items-center rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700" x-text="{{Page}}"></span>
+                    <span class="inline-flex items-center rounded-xl border border-primary-100 bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700" x-text="{{Page}}"></span>
                     <button type="button"
                             x-on:click="if ({{Page}} * {{PageSize}} < {{Total}}) { {{Page}}++; {{OnChange}} }"
                             :disabled="{{Page}} * {{PageSize}} >= {{Total}}"

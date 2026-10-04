@@ -1,3 +1,5 @@
+using SamaEcole.Application.Classrooms.Commands.RestoreClassroom;
+using SamaEcole.Application.Classrooms.Queries.GetDeletedClassrooms;
 using SamaEcole.Application.Classrooms.Commands.CreateClassroom;
 using SamaEcole.Application.Classrooms.Commands.DeleteClassroom;
 using SamaEcole.Application.Classrooms.Commands.UpdateClassroom;
@@ -115,5 +117,26 @@ public class ClassroomsController(ISender mediator) : ControllerBase
         // `inline` : le PDF s'ouvre d'abord dans la modale d'aperçu partagée (_PdfPreviewModal),
         // jamais un téléchargement forcé.
         return this.InlinePdf(pdfBytes, $"Cartes_Scolaires_{id}.pdf");
+    }
+
+    /// <summary>Corbeille : classes supprimées de l'école courante.</summary>
+    [HttpGet("deleted")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType<IReadOnlyList<DeletedClassroomDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListDeleted(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDeletedClassroomsQuery(), cancellationToken));
+
+    /// <summary>Restaure une classe supprimée. 409 ACTIVE_ENTITY_CONFLICT si son nom est repris par une classe active.</summary>
+    [HttpPost("{id:guid}/restore")]
+    [Authorize(Roles = ManageRoles)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new RestoreClassroomCommand(id), cancellationToken);
+        return NoContent();
     }
 }

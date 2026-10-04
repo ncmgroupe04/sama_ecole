@@ -283,6 +283,10 @@
   </template>
  </div>
 
+ <div x-show="canManage" x-cloak>
+ @await Html.PartialAsync("_TrashPanel", "classrooms")
+ </div>
+
  @* ═══════════════════════════════════════════════════════════════════════════
     MODALES — Création / Édition / Suppression / Confirmations
     Logique Alpine.js identique, formulaires modernisés (rounded-xl, focus indigo).
@@ -292,7 +296,11 @@
  <modal-shell size="lg" open="isCreateOpen" on-close="closeCreate()" title="Nouvelle classe">
   <modal-subtitle>Configurez une nouvelle classe et sa capacité.</modal-subtitle>
 
-  <div x-show="createErrors.global" x-cloak class="form-error-banner" x-text="createErrors.global"></div>
+  <div x-show="createErrors.global" x-cloak class="form-error-banner">
+   <span x-text="createErrors.global"></span>
+   <button type="button" x-show="createErrors.archivedConflict" x-cloak class="mt-2 block font-semibold underline"
+           x-on:click="closeCreate(); window.softDeleteTrash.openFor('classrooms', newClassroom.name)">Voir dans les éléments supprimés</button>
+  </div>
 
   <form x-on:submit.prevent="submitCreate()" novalidate class="space-y-4">
    <div>

@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.SoftDelete;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -18,6 +19,12 @@ public class CreateSchoolYearCommandHandler(
     {
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
+
+        // Un libellé présent seulement parmi les années archivées n'est jamais réactivé en silence : 409
+        // ARCHIVED_ENTITY_EXISTS (conception soft delete §3.2) ; l'index unique partiel arbitre le reste.
+        var label = request.Label.Trim();
+        await SoftDeleteLifecycle.EnsureNoArchivedIdentityAsync(
+            dbContext.SchoolYears, schoolId, y => y.Label == label, $"Une année scolaire « {label} »", cancellationToken);
 
         // Deux années qui se chevauchent rendent la question « en quelle année sommes-nous ? » sans
         // réponse : une inscription du 15 octobre pourrait relever de l'une comme de l'autre. Le
@@ -47,7 +54,7 @@ public class CreateSchoolYearCommandHandler(
         var schoolYear = new SchoolYear
         {
             SchoolId = schoolId,
-            Label = request.Label.Trim(),
+            Label = label,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
 

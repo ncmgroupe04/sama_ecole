@@ -27,4 +27,15 @@ public abstract class AuditableEntity
         DeletedAt = DateTimeOffset.UtcNow;
         DeletedBy = deletedBy;
     }
+
+    /// <summary>
+    /// Restauration volontaire d'une entité supprimée logiquement (conception soft delete 2026-10-01 §3.2).
+    /// L'appelant vérifie avant l'unicité active et le tenant ; rien n'est fusionné.
+    /// </summary>
+    public void Restore()
+    {
+        IsDeleted = false;
+        DeletedAt = null;
+        DeletedBy = null;
+    }
 }

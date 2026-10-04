@@ -106,6 +106,10 @@ document.addEventListener('alpine:init', () => {
         isLoadingHistory: false,
 
         async init() {
+            // Restauration depuis la corbeille (trash.js) : catégories et barème se rechargent.
+            window.addEventListener('trash:restored', (event) => {
+                if (event.detail && event.detail.kind === 'fee-categories') this.loadAll();
+            });
             await this.loadAll();
         },
 
@@ -257,6 +261,7 @@ document.addEventListener('alpine:init', () => {
                 await window.api.delete(`/finance/fee-categories/${this.deletingCategory.id}`);
                 this.deletedCategoryName = this.deletingCategory.name;
                 this.deletingCategory = null;
+                window.softDeleteTrash.notifyChanged('fee-categories');
                 await this.loadAll();
                 this.showCategoryDeletedDialog = true;
             } catch (err) {
@@ -474,6 +479,38 @@ document.addEventListener('alpine:init', () => {
             } finally {
                 this.isSubmittingDisbursement = false;
             }
+        },
+
+        // ------------------------------------------------------------ Décaissements : contre-écritures
+        //
+        // Un décaissement est une écriture comptable (solde réel, trésorerie, TVA déductible) : il n'est jamais
+        // supprimé. « Annuler » crée une NOUVELLE ligne aux montants opposés qui référence l'original (API :
+        // reversalOfId) ; l'original passe à isReversed. Les totaux s'annulent d'eux-mêmes, l'historique reste complet.
+
+        /** 'reversal' : contre-écriture · 'reversed' : original déjà annulé · 'active' : écriture normale. */
+        disbursementState(d) {
+            if (d.reversalOfId) return 'reversal';
+            return d.isReversed ? 'reversed' : 'active';
+        },
+
+        /** Seule une écriture normale s'annule : ni une contre-écriture, ni un original déjà annulé (409 côté API). */
+        canReverseDisbursement(d) {
+            return this.disbursementState(d) === 'active';
+        },
+
+        disbursementRowClass(d) {
+            switch (this.disbursementState(d)) {
+                case 'reversal': return 'bg-rose-50/60 hover:bg-rose-50';
+                case 'reversed': return 'bg-slate-50/60 hover:bg-slate-50';
+                default: return 'hover:bg-slate-50';
+            }
+        },
+
+        /** Phrase qui relie la contre-écriture à l'écriture d'origine (si elle est dans la liste affichée). */
+        reversalNote(d) {
+            const original = this.disbursements.find((x) => x.id === d.reversalOfId);
+            if (!original) return "Annule un décaissement antérieur.";
+            return `Annule le décaissement du ${this.formatDateOnly(original.date)} (${original.beneficiary}).`;
         },
 
         openDeleteDisbursement(disbursement) {

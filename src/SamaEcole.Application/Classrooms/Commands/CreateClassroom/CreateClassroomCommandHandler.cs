@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.SoftDelete;
 using SamaEcole.Application.ClassSubjects;
 using SamaEcole.Application.Coefficients;
 using SamaEcole.Application.Common.Interfaces;
@@ -20,10 +21,14 @@ public class CreateClassroomCommandHandler(
 
         var level = request.Level.Trim();
 
+        var name = request.Name.Trim();
+        await SoftDeleteLifecycle.EnsureNoArchivedIdentityAsync(
+            dbContext.Classrooms, schoolId, c => c.Name == name, $"Une classe « {name} »", cancellationToken);
+
         var classroom = new Classroom
         {
             SchoolId = schoolId,
-            Name = request.Name.Trim(),
+            Name = name,
             Level = level,
             // Cycle DÉRIVÉ du niveau, jamais saisi séparément (voir ClassroomCycle) : c'est son absence
             // ici qui laissait toute classe de Primaire sur le défaut College — bulletin intitulé

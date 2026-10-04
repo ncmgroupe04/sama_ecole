@@ -1,3 +1,5 @@
+using SamaEcole.Application.Common.SoftDelete;
+using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using MediatR;
@@ -15,10 +17,17 @@ public class CreateBuildingCommandHandler(
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
 
+        var name = request.Name.Trim();
+
+        // Jamais de réactivation silencieuse : une identité présente seulement parmi les supprimés est refusée
+        // en 409 ARCHIVED_ENTITY_EXISTS (conception soft delete §3.2) ; l'index unique partiel arbitre le reste.
+        await SoftDeleteLifecycle.EnsureNoArchivedIdentityAsync(
+            dbContext.Buildings, schoolId, b => b.Name == name, $"Un bâtiment « {name} »", cancellationToken);
+
         var building = new Building
         {
             SchoolId = schoolId,
-            Name = request.Name.Trim(),
+            Name = name,
             Description = request.Description?.Trim()
         };
 
