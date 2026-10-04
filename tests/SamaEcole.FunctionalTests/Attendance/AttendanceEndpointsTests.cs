@@ -27,8 +27,18 @@ public class AttendanceEndpointsTests : IClassFixture<AuthApiFactory>, IAsyncLif
     public Task InitializeAsync() => _factory.ResetTestUsersAsync();
     public Task DisposeAsync() => Task.CompletedTask;
 
-    /// <summary>Date de l'appel : aujourd'hui — l'appel ne se fait jamais pour un jour futur (validé côté commande).</summary>
-    private static readonly string CallDate = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd");
+    /// <summary>
+    /// Date de l'appel : le jour ouvré (lundi à vendredi) le plus récent, aujourd'hui compris — l'appel ne se fait
+    /// jamais pour un jour futur (validé côté commande). Un jour de repos de l'établissement (dimanche par défaut)
+    /// est refusé en 422 : sans cette règle, ces tests échouaient tous les dimanches, indépendamment du code testé.
+    /// </summary>
+    private static readonly string CallDate = LastWeekday(DateOnly.FromDateTime(DateTime.UtcNow)).ToString("yyyy-MM-dd");
+
+    private static DateOnly LastWeekday(DateOnly day)
+    {
+        while (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) day = day.AddDays(-1);
+        return day;
+    }
 
     private record Tokens(string AccessToken, int ExpiresIn);
     private record SubjectDto(Guid Id, string Name, string Level, decimal Coefficient);
