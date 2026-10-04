@@ -41,7 +41,7 @@ public class StudentImportTemplateGenerator : IStudentImportTemplateGenerator
         sheet.Cell(2, 7).Value = "+221771234567";
         sheet.Cell(2, 8).Value = "moussa.ndiaye@example.com";
         sheet.Cell(2, 9).Value = "Cité Keur Gorgui, Dakar";
-        sheet.Cell(2, 10).Value = "إبراهيما نداي";
+        sheet.Cell(2, 10).Value = "أوا نداي";
         sheet.Cell(2, 11).Value = "موسى نداي";
 
         sheet.Columns(1, Headers.Length).AdjustToContents();

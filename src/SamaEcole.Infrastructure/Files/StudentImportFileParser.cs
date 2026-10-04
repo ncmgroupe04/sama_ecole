@@ -18,7 +18,7 @@ namespace SamaEcole.Infrastructure.Files;
 public class StudentImportFileParser : IStudentImportFileParser
 {
     /// <summary>Nombre de colonnes attendu (voir StudentImportFileRow) — les colonnes manquantes en fin
-    /// de ligne (tuteur non renseigné) sont complétées par des chaînes vides, jamais une erreur.</summary>
+    /// de ligne (tuteur non renseigné, noms arabes non renseignés) sont complétées par des chaînes vides, jamais une erreur.</summary>
     private const int ColumnCount = 11;
 
     public IReadOnlyList<StudentImportFileRow> Parse(byte[] fileContent, string fileName)
