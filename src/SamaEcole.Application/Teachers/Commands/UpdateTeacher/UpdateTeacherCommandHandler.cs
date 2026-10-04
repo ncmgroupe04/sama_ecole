@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SamaEcole.Application.Teachers.Commands.UpdateTeacher;
 
-public class UpdateTeacherCommandHandler(IApplicationDbContext dbContext)
+public class UpdateTeacherCommandHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser)
     : IRequestHandler<UpdateTeacherCommand, UpdateTeacherResult>
 {
     public async Task<UpdateTeacherResult> Handle(UpdateTeacherCommand request, CancellationToken cancellationToken)
@@ -54,9 +54,9 @@ public class UpdateTeacherCommandHandler(IApplicationDbContext dbContext)
             ? null : request.CivilServiceMatricule.Trim();
         teacher.FirstAppointmentDate = request.FirstAppointmentDate;
 
-        // Réconcilie les qualifications (TeacherSubject) avec la liste soumise : retire celles qui ne
-        // sont plus cochées, ajoute les nouvelles. Pas de DeleteBehavior.Cascade ici — retrait explicite,
-        // cohérent avec le fait que TeacherSubject n'est jamais soft-deleté isolément.
+        // Réconcilie les qualifications (TeacherSubject) avec la liste soumise : celles décochées sont
+        // révoquées pour conserver les consultations historiques; les associations demandées après une
+        // révocation deviennent de nouvelles lignes et ne réactivent jamais un ancien tombstone.
         var currentSubjectIds = await dbContext.TeacherSubjects
             .Where(ts => ts.TeacherId == request.Id)
             .ToListAsync(cancellationToken);
@@ -65,7 +65,7 @@ public class UpdateTeacherCommandHandler(IApplicationDbContext dbContext)
 
         foreach (var toRemove in currentSubjectIds.Where(ts => !requestedSet.Contains(ts.SubjectId)))
         {
-            dbContext.TeacherSubjects.Remove(toRemove);
+            toRemove.SoftDelete(currentUser.UserId?.ToString() ?? "system");
         }
 
         var existingSet = currentSubjectIds.Select(ts => ts.SubjectId).ToHashSet();

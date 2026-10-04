@@ -621,6 +621,7 @@ document.addEventListener('alpine:init', () => {
         // store partagé que les getters ci-dessus.
         get isSimplifieProfile() { return Alpine.store('schoolConfig').isSimplifieProfile; },
         get isElementaireProfile() { return Alpine.store('schoolConfig').isElementaireProfile; },
+        get isGeneralProfile() { return Alpine.store('schoolConfig').isGeneralProfile; },
         get isFrancoArabeProfile() { return Alpine.store('schoolConfig').isFrancoArabeProfile; },
         get isDaaraInternatProfile() { return Alpine.store('schoolConfig').isDaaraInternatProfile; },
 
