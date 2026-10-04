@@ -26,6 +26,9 @@
  @* Sélecteur d'établissement (groupe scolaire) — dépend d'auth.js et api.js. *@
  <script src="~/js/school-switcher.js" asp-append-version="true"></script>
  <script src="~/js/ui-components.js" asp-append-version="true"></script>
+ @* Corbeille et restauration (soft delete) : composant Alpine partagé + pont vers les formulaires de création.
+    Après api.js et ui-components.js (toast), avant Alpine différé. *@
+ <script src="~/js/trash.js" asp-append-version="true"></script>
  @* Modale universelle « Accès refusé » : store Alpine + pont depuis window.api. Script classique
     (enregistre un écouteur alpine:init), donc avant Alpine différé ; après api.js dont il dépend. *@
  <script src="~/js/access-denied.js" asp-append-version="true"></script>

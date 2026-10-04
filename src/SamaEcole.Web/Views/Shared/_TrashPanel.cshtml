@@ -1,0 +1,55 @@
+@*
+    Corbeille d'un type d'élément (conception soft delete 2026-10-01 §3.2) — partial réutilisable.
+
+    Usage : <partial name="_TrashPanel" model='"buildings"' /> avec l'une des clés de trash.js (KINDS) :
+    buildings, rooms, classrooms, fee-categories, mentions, school-years.
+
+    À placer dans un conteneur qui porte déjà le contrôle d'accès de l'écran (ex. x-show="canManage") : le panneau
+    reste de toute façon masqué quand il n'y a rien à restaurer ou quand l'API répond 403. Les règles métier
+    (rôles, tenant, dépendances, conflit d'identité active) sont celles de l'API ; l'écran affiche son message.
+*@
+@model string
+
+<section x-data="trashPanel('@Model')" x-show="visible" x-cloak class="card mt-6 overflow-hidden" aria-label="Éléments supprimés">
+    <button type="button" @@click="toggle()" :aria-expanded="open"
+            class="flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50">
+        <span class="flex items-center gap-2">
+            <svg class="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#icon-archive"></use></svg>
+            <span x-text="kind.title"></span>
+            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600" x-text="count"></span>
+        </span>
+        <svg class="h-5 w-5 text-slate-400 transition-transform" :class="open && 'rotate-180'" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+    </button>
+
+    <div x-show="open" x-cloak class="border-t border-slate-100 px-5 py-4">
+        <p class="mb-3 text-sm text-slate-500">
+            Ces éléments sont masqués des listes et des sélecteurs. Restaurez-en un plutôt que de le recréer : rien n'est réactivé ni fusionné sans votre action.
+        </p>
+
+        <div x-show="error" x-cloak class="form-error-banner" role="alert" x-text="error"></div>
+        <div x-show="notice" x-cloak role="status"
+             class="mb-4 rounded-xl border-l-4 border-emerald-500 bg-emerald-50 p-3 text-sm leading-relaxed text-emerald-800" x-text="notice"></div>
+
+        <p x-show="loading && count === 0" x-cloak class="text-sm text-slate-400">Chargement…</p>
+        <p x-show="!loading && count === 0 && !error" x-cloak class="text-sm text-slate-400">Aucun élément supprimé.</p>
+
+        <ul class="divide-y divide-slate-100">
+            <template x-for="item in items" :key="item.id">
+                <li class="flex items-center justify-between gap-3 py-3"
+                    :class="isHighlighted(item) && 'rounded-lg bg-amber-50 px-3 ring-1 ring-amber-200'">
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-medium text-slate-800" x-text="labelOf(item)"></p>
+                        <p class="text-xs text-slate-400">
+                            <span x-text="detailOf(item)"></span>
+                            <span x-show="detailOf(item) && deletedOn(item)"> · </span>
+                            <span x-show="deletedOn(item)" x-text="'Supprimé le ' + deletedOn(item)"></span>
+                        </p>
+                    </div>
+                    <button type="button" class="btn-secondary shrink-0" :disabled="restoringId !== null" @@click="restore(item)">
+                        <span x-text="restoringId === item.id ? 'Restauration…' : 'Restaurer'"></span>
+                    </button>
+                </li>
+            </template>
+        </ul>
+    </div>
+</section>

@@ -177,6 +177,11 @@ window.api = {
         }
     },
 
+    /** Vrai pour le 409 « cet élément existe dans les éléments supprimés » : à restaurer, pas à recréer. */
+    isArchivedConflict(error) {
+        return !!error && error.status === 409 && error.code === 'ARCHIVED_ENTITY_EXISTS';
+    },
+
     /**
      * Traduit une erreur d'API en messages affichables SOUS LES CHAMPS du formulaire.
      *
@@ -193,6 +198,13 @@ window.api = {
         // Déjà porté par la modale universelle « Accès refusé » (access-denied.js) : aucun message
         // local, sinon il s'affiche en double derrière la modale.
         if (error && error.handledGlobally) return {};
+
+        // Création refusée parce que l'identité existe parmi les éléments SUPPRIMÉS (409 ARCHIVED_ENTITY_EXISTS,
+        // conception soft delete §3.2) : le message du serveur explique, et le drapeau `archivedConflict` permet au
+        // formulaire d'afficher un bouton « Voir les éléments supprimés » (trash.js) plutôt qu'un simple bandeau rouge.
+        if (this.isArchivedConflict(error)) {
+            return { global: error.message || fallbackMessage, archivedConflict: true };
+        }
 
         const details = error && error.details;
 

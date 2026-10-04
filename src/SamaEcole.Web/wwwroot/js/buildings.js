@@ -59,6 +59,10 @@ document.addEventListener('alpine:init', () => {
             const q = new URLSearchParams(window.location.search).get('q');
             if (q) this.search = q;
             this.loadBuildings();
+            // Restauration depuis la corbeille (trash.js) : la grille se rafraîchit.
+            window.addEventListener('trash:restored', (event) => {
+                if (event.detail && (event.detail.kind === 'buildings' || event.detail.kind === 'rooms')) this.loadBuildings();
+            });
         },
 
         get filteredBuildings() {
@@ -190,6 +194,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.api.delete(`/buildings/${this.deletingBuilding.id}?rowVersion=${this.deletingBuilding.rowVersion}`);
                 this.deletingBuilding = null;
+                window.softDeleteTrash.notifyChanged('buildings');
                 await this.loadBuildings();
             } catch (err) {
                 if (err.code === 'BUSINESS_RULE_VIOLATION') {
@@ -291,6 +296,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.api.delete(`/rooms/${this.deletingRoom.id}?rowVersion=${this.deletingRoom.rowVersion}`);
                 this.deletingRoom = null;
+                window.softDeleteTrash.notifyChanged('rooms');
                 await this.loadBuildings();
             } catch (err) {
                 if (err.code === 'CONCURRENCY_CONFLICT') {

@@ -174,6 +174,10 @@ document.addEventListener('alpine:init', () => {
             if (q) this.search = q;
             this.loadClassrooms();
             this.loadSeriesCatalog();
+            // Restauration depuis la corbeille (trash.js) : la grille se rafraîchit.
+            window.addEventListener('trash:restored', (event) => {
+                if (event.detail && event.detail.kind === 'classrooms') this.loadClassrooms();
+            });
         },
 
         /** La série n'intéresse que ceux qui modifient une classe (Directeur, Secrétariat) : les autres rôles n'appellent pas l'API. */
@@ -457,6 +461,7 @@ document.addEventListener('alpine:init', () => {
                 await window.api.delete(`/classrooms/${this.deletingClassroom.id}?rowVersion=${this.deletingClassroom.rowVersion}`);
                 this.deletedClassroomName = this.deletingClassroom.name;
                 this.deletingClassroom = null;
+                window.softDeleteTrash.notifyChanged('classrooms');
                 await this.loadClassrooms();
                 this.showDeletedDialog = true;
             } catch (err) {

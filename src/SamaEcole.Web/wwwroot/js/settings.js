@@ -273,6 +273,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         init() {
+            // Restauration d'une mention depuis la corbeille (trash.js) : la liste du bulletin se rafraîchit.
+            window.addEventListener('trash:restored', (event) => {
+                if (event.detail && event.detail.kind === 'mentions') this.loadMentions();
+            });
+
             // Table des identifiants d'onglet valides (JGK-UI02) : chaque spoke du nouveau sidebar,
             // PLUS les deux anciens identifiants ('etablissement', 'configuration') encore portés
             // par un lien externe éventuel ou une habitude d'utilisateur — ils redirigent vers le
@@ -997,6 +1002,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.api.delete(`/grades/mentions/${this.deletingMention.id}`);
                 this.deletingMention = null;
+                window.softDeleteTrash.notifyChanged('mentions');
                 this.mentions = await window.api.get('/grades/mentions');
             } catch (err) {
                 this.deleteMentionError = window.api.toMessage(err, 'Erreur lors de la suppression de la mention.');

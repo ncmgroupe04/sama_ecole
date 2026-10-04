@@ -106,6 +106,10 @@ document.addEventListener('alpine:init', () => {
         isLoadingHistory: false,
 
         async init() {
+            // Restauration depuis la corbeille (trash.js) : catégories et barème se rechargent.
+            window.addEventListener('trash:restored', (event) => {
+                if (event.detail && event.detail.kind === 'fee-categories') this.loadAll();
+            });
             await this.loadAll();
         },
 
@@ -257,6 +261,7 @@ document.addEventListener('alpine:init', () => {
                 await window.api.delete(`/finance/fee-categories/${this.deletingCategory.id}`);
                 this.deletedCategoryName = this.deletingCategory.name;
                 this.deletingCategory = null;
+                window.softDeleteTrash.notifyChanged('fee-categories');
                 await this.loadAll();
                 this.showCategoryDeletedDialog = true;
             } catch (err) {

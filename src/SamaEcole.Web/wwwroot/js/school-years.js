@@ -78,6 +78,10 @@ document.addEventListener('alpine:init', () => {
         init() {
             this.loadYears();
             this.loadMode();
+            // Restauration depuis la corbeille (trash.js) : la liste des années se rafraîchit.
+            window.addEventListener('trash:restored', (event) => {
+                if (event.detail && event.detail.kind === 'school-years') this.loadYears();
+            });
         },
 
         async loadMode() {
@@ -403,6 +407,7 @@ document.addEventListener('alpine:init', () => {
                 this.yearToDelete = null;
                 this.deleteConfirmation = '';
                 this.deleteResult = result;
+                window.softDeleteTrash.notifyChanged('school-years');
 
                 await this.loadYears();
             } catch (err) {

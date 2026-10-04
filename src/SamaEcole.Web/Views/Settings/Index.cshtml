@@ -1059,6 +1059,9 @@
  </div>
  </div>
  </div>
+ <div x-show="canManageGradingConfig" x-cloak>
+ @await Html.PartialAsync("_TrashPanel", "mentions")
+ </div>
  </div>
 
  <!-- ============================= SPOKE : MENSUALITÉS & AUTORISATIONS DE CAISSE (Finance) ============================= -->
@@ -1474,7 +1477,11 @@
  <modal-shell size="lg" open="isMentionCreateOpen" title="Nouvelle mention">
  <modal-subtitle>Le seuil est la moyenne minimale, sur 20, pour l'obtenir. Le bulletin du Primaire le transpose automatiquement sur 10.</modal-subtitle>
 
- <div x-show="mentionCreateErrors.global" x-cloak class="form-error-banner" x-text="mentionCreateErrors.global"></div>
+ <div x-show="mentionCreateErrors.global" x-cloak class="form-error-banner">
+  <span x-text="mentionCreateErrors.global"></span>
+  <button type="button" x-show="mentionCreateErrors.archivedConflict" x-cloak class="mt-2 block font-semibold underline"
+          x-on:click="isMentionCreateOpen = false; window.softDeleteTrash.openFor('mentions', newMention.label)">Voir dans les éléments supprimés</button>
+ </div>
 
  <form x-on:submit.prevent="submitCreateMention()" novalidate class="space-y-4">
  <div>
