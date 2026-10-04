@@ -1,3 +1,5 @@
+using SamaEcole.Application.Finance.Commands.RestoreFeeCategory;
+using SamaEcole.Application.Finance.Queries.GetDeletedFeeCategories;
 using SamaEcole.Application.Finance;
 using SamaEcole.Application.Finance.Queries.GetTreasuryDashboard;
 using SamaEcole.Application.Finance.Commands.ApplyStandardFee;
@@ -143,6 +145,27 @@ public class FinanceController(ISender mediator, ILogger<FinanceController> logg
     public async Task<IActionResult> DeleteCategory(Guid id, CancellationToken cancellationToken)
     {
         await mediator.Send(new DeleteFeeCategoryCommand(id), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Corbeille : catégories de frais supprimées. Même autorisation que la suppression.</summary>
+    [HttpGet("fee-categories/deleted")]
+    [Authorize(Policy = FinancePolicies.CanDeleteFees)]
+    [ProducesResponseType<IReadOnlyList<DeletedFeeCategoryDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ListDeletedCategories(CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new GetDeletedFeeCategoriesQuery(), cancellationToken));
+
+    /// <summary>Restaure une catégorie de frais supprimée (ses lignes de barème ne sont pas réactivées).</summary>
+    [HttpPost("fee-categories/{id:guid}/restore")]
+    [Authorize(Policy = FinancePolicies.CanDeleteFees)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RestoreCategory(Guid id, CancellationToken cancellationToken)
+    {
+        await mediator.Send(new RestoreFeeCategoryCommand(id), cancellationToken);
         return NoContent();
     }
 

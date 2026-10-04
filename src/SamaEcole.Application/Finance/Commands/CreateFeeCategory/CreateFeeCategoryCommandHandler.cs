@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.SoftDelete;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
 using MediatR;
@@ -14,10 +15,14 @@ public class CreateFeeCategoryCommandHandler(
         var schoolId = tenantProvider.CurrentSchoolId
             ?? throw new UnauthorizedAccessException("Aucun établissement associé à l'utilisateur courant.");
 
+        var name = request.Name.Trim();
+        await SoftDeleteLifecycle.EnsureNoArchivedIdentityAsync(
+            dbContext.FeeCategories, schoolId, c => c.Name == name, $"Une catégorie « {name} »", cancellationToken);
+
         var category = new FeeCategory
         {
             SchoolId = schoolId,
-            Name = request.Name.Trim(),
+            Name = name,
             IsRecurring = request.IsRecurring,
             IsBoardingFee = request.IsBoardingFee,
             IsOptional = request.IsOptional

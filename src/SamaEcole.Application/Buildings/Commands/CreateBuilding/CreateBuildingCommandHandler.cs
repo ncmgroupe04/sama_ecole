@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.SoftDelete;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -18,21 +19,10 @@ public class CreateBuildingCommandHandler(
 
         var name = request.Name.Trim();
 
-        // Identité absente des bâtiments actifs mais présente parmi les supprimés : jamais de réactivation
-        // silencieuse, l'utilisateur est invité à restaurer (conception soft delete §3.2). Si une ligne active
-        // porte déjà le nom, c'est l'index unique partiel qui arbitre (conflit de doublon existant).
-        var activeExists = await dbContext.Buildings.AnyAsync(b => b.Name == name, cancellationToken);
-        if (!activeExists)
-        {
-            var archivedExists = await dbContext.Buildings.IgnoreQueryFilters()
-                .AnyAsync(b => b.SchoolId == schoolId && b.IsDeleted && b.Name == name, cancellationToken);
-            if (archivedExists)
-            {
-                throw new BusinessRuleException(
-                    $"Un bâtiment « {name} » existe dans les éléments supprimés : restaurez-le au lieu d'en créer un nouveau.",
-                    "ARCHIVED_ENTITY_EXISTS");
-            }
-        }
+        // Jamais de réactivation silencieuse : une identité présente seulement parmi les supprimés est refusée
+        // en 409 ARCHIVED_ENTITY_EXISTS (conception soft delete §3.2) ; l'index unique partiel arbitre le reste.
+        await SoftDeleteLifecycle.EnsureNoArchivedIdentityAsync(
+            dbContext.Buildings, schoolId, b => b.Name == name, $"Un bâtiment « {name} »", cancellationToken);
 
         var building = new Building
         {

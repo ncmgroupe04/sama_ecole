@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.SoftDelete;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Grades.Queries.GetMentions;
 using SamaEcole.Domain.Entities;
@@ -20,7 +21,11 @@ public class CreateMentionCommandHandler(IApplicationDbContext dbContext, ITenan
 
         // Un libellé en doublon viole l'index unique : SaveChangesAsync le traduit en
         // ConcurrencyConflictException (409), jamais en écrasement silencieux (AGENTS.md règle #5).
-        var mention = new Mention { SchoolId = schoolId, Label = request.Label.Trim(), MinAverage = request.MinAverage };
+        var label = request.Label.Trim();
+        await SoftDeleteLifecycle.EnsureNoArchivedIdentityAsync(
+            dbContext.Mentions, schoolId, m => m.Label == label, $"Une mention « {label} »", cancellationToken);
+
+        var mention = new Mention { SchoolId = schoolId, Label = label, MinAverage = request.MinAverage };
 
         dbContext.Mentions.Add(mention);
         await dbContext.SaveChangesAsync(cancellationToken);

@@ -114,10 +114,10 @@ public class MentionsEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
     }
 
     [Fact]
-    public async Task Deleting_A_Mention_Should_Free_Its_Label_For_Reuse()
+    public async Task Recreating_A_Deleted_Mention_Label_Returns_Archived_Conflict_And_The_Mention_Can_Be_Restored()
     {
-        // AGENTS.md règle #6 (suppression logique) + MentionConfiguration : l'index unique porte sur
-        // (SchoolId, Label, IsDeleted) — un libellé supprimé doit donc redevenir immédiatement utilisable.
+        // Conception soft delete 2026-10-01 §3.2 : un libellé supprimé n'est jamais réactivé en silence. La
+        // création renvoie 409 ARCHIVED_ENTITY_EXISTS, et la restauration est une action explicite.
         var directeur = await LoginAsDirecteurAsync();
         var first = await CreateMentionAsync(directeur.AccessToken, "Réutilisable", 12);
 
@@ -127,7 +127,20 @@ public class MentionsEndpointsTests(AuthApiFactory factory) : IClassFixture<Auth
             directeur.AccessToken, HttpMethod.Post, "/api/v1/grades/mentions",
             new { label = "Réutilisable", minAverage = 10 });
 
-        recreateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        recreateResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await recreateResponse.Content.ReadAsStringAsync()).Should().Contain("ARCHIVED_ENTITY_EXISTS");
+
+        var trash = await (await SendAsync(directeur.AccessToken, HttpMethod.Get, "/api/v1/grades/mentions/deleted"))
+            .Content.ReadAsStringAsync();
+        trash.Should().Contain("Réutilisable");
+
+        var restore = await SendAsync(
+            directeur.AccessToken, HttpMethod.Post, $"/api/v1/grades/mentions/{first.Id}/restore");
+        restore.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var list = await (await SendAsync(directeur.AccessToken, HttpMethod.Get, "/api/v1/grades/mentions"))
+            .Content.ReadFromJsonAsync<List<MentionDto>>();
+        list.Should().Contain(m => m.Label == "Réutilisable");
     }
 
     [Fact]

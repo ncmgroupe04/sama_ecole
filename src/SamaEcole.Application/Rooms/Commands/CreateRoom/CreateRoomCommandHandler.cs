@@ -1,3 +1,4 @@
+using SamaEcole.Application.Common.SoftDelete;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Domain.Entities;
@@ -27,10 +28,15 @@ public class CreateRoomCommandHandler(
             ]);
         }
 
+        var name = request.Name.Trim();
+        await SoftDeleteLifecycle.EnsureNoArchivedIdentityAsync(
+            dbContext.Rooms, schoolId, r => r.BuildingId == request.BuildingId && r.Name == name,
+            $"Une salle « {name} » dans ce bâtiment", cancellationToken);
+
         var room = new Room
         {
             SchoolId = schoolId,
-            Name = request.Name.Trim(),
+            Name = name,
             Capacity = request.Capacity,
             Type = request.Type,
             BuildingId = request.BuildingId
