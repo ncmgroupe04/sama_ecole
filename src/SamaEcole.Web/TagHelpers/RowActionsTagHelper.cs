@@ -61,7 +61,7 @@ public class RowActionTagHelper : TagHelper
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
         var isDanger = Variant.Equals("danger", StringComparison.OrdinalIgnoreCase);
-        var buttonClass = isDanger ? "text-red-500 hover:text-red-700 hover:bg-red-50" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-100";
+        var buttonClass = isDanger ? "text-red-500 hover:text-red-700 hover:bg-red-50" : "text-slate-500 hover:text-primary-600 hover:bg-slate-100";
         var showAttr = string.IsNullOrWhiteSpace(Show) ? "" : $"""x-show="{Show}" x-cloak """;
         var label = WebUtility.HtmlEncode(Label);
 
@@ -72,7 +72,7 @@ public class RowActionTagHelper : TagHelper
         output.Content.SetHtmlContent($$"""
             <button type="button" {{showAttr}}x-on:click="{{OnClick}}"
                     title="{{label}}" aria-label="{{label}}"
-                    class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 p-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 {{buttonClass}}">
+                    class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 p-1.5 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 {{buttonClass}}">
                 {{RowActionsTagHelper.Svg(Icon, "w-[18px] h-[18px] flex-shrink-0")}}
             </button>
             """);

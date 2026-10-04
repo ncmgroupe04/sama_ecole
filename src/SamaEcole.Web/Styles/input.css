@@ -631,6 +631,12 @@
     @apply icon-chip h-12 w-12;
   }
 
+  /* Bleu Unikol : variante de marque (StatCard accent="primary" et valeur par défaut) — jamais
+     confondue avec icon-chip-indigo ci-dessous, qui reste une teinte CATÉGORIELLE distincte. */
+  .icon-chip-primary {
+    @apply bg-primary-50 text-primary-600;
+  }
+
   .icon-chip-indigo {
     @apply bg-indigo-50 text-indigo-600;
   }
