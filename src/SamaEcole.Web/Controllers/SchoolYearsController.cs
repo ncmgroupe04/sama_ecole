@@ -186,7 +186,10 @@ public class SchoolYearsController(ISender mediator) : ControllerBase
     /// <summary>
     /// Restaure une année archivée avec ses trimestres et ses affectations d'enseignants. 409
     /// ACTIVE_ENTITY_CONFLICT si son libellé est repris, si sa période chevauche une année existante ou si
-    /// une autre année est déjà active. Elle ne redevient jamais active d'elle-même : l'activation reste explicite.
+    /// une autre année est déjà active. Elle reprend l'état d'activation qu'elle avait AVANT sa suppression
+    /// (le Handler ne le modifie jamais) : si ce tombstone n'était pas actif, l'activation reste une étape
+    /// explicite (POST .../activate) ; si ce tombstone était resté marqué actif (ligne antérieure à la
+    /// désactivation posée par l'archivage) et qu'aucune autre année n'est active, elle revient active.
     /// </summary>
     [HttpPost("{id:guid}/restore")]
     [Authorize(Roles = nameof(Role.Directeur))]

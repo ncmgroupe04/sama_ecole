@@ -95,7 +95,7 @@
             if (result.skippedAssignments) {
                 message += ` ${result.skippedAssignments} affectation(s) restent supprimées car leur enseignant, leur classe ou leur matière a été supprimé depuis.`;
             }
-            message += " L'année n'est pas réactivée : activez-la si nécessaire.";
+            message += " L'année reprend l'état d'activation qu'elle avait avant sa suppression : si elle n'était pas active, utilisez Activer si nécessaire.";
         }
 
         return message;

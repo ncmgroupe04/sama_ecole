@@ -151,7 +151,7 @@ test("un refus 409 de la restauration affiche le message du serveur et garde la 
     assert.equal(p.notice, '');
 });
 
-test('restaurer une année affiche le compte rendu (périodes, affectations laissées supprimées, pas réactivée)', async () => {
+test('restaurer une année affiche le compte rendu (périodes, affectations laissées supprimées, état d\'activation repris)', async () => {
     const items = [{ id: 'y1', label: '2024-2025', startDate: '2024-10-01', endDate: '2025-06-30' }];
     const result = { id: 'y1', label: '2024-2025', restoredTerms: 2, restoredAssignments: 1, skippedAssignments: 1 };
     const { panel } = boot(async (call) => (call.method === 'POST' ? reply(200, result) : reply(200, items)));
@@ -163,7 +163,7 @@ test('restaurer une année affiche le compte rendu (périodes, affectations lais
     assert.match(p.notice, /2 période\(s\)/);
     assert.match(p.notice, /1 affectation\(s\) d'enseignant/);
     assert.match(p.notice, /1 affectation\(s\) restent supprimées/);
-    assert.match(p.notice, /n'est pas réactivée/);
+    assert.match(p.notice, /reprend l'état d'activation/);
 });
 
 test('un rôle sans droit (403) ne voit pas le panneau et aucun message n\'est affiché', async () => {
