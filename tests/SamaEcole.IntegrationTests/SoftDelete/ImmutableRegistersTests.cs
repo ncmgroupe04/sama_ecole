@@ -62,6 +62,13 @@ public class ImmutableRegistersTests : IAsyncLifetime
         return (bool)(await cmd.ExecuteScalarAsync())!;
     }
 
+    /// <summary>
+    /// <c>relkind IN ('r', 'p', 'v', 'm', 'f')</c> : tables ordinaires/partitionnées, vues, vues
+    /// matérialisées, tables étrangères. <c>public_school_directory</c> (vue mono-table sur
+    /// <c>schools</c>, "updatable" par défaut par PostgreSQL) doit être balayée elle aussi — une vue
+    /// n'est pas une table, mais un DELETE à travers elle s'exécute avec les privilèges du
+    /// propriétaire sur la table de base, et aurait échappé à une boucle limitée à 'r'/'p'.
+    /// </summary>
     [Fact]
     public async Task App_Role_Can_Delete_Only_From_The_Technical_Allowlist()
     {
@@ -70,7 +77,7 @@ public class ImmutableRegistersTests : IAsyncLifetime
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = """
             SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+            WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
               AND has_table_privilege('sama_ecole_app', c.oid, 'DELETE')
             ORDER BY c.relname
             """;
@@ -83,6 +90,54 @@ public class ImmutableRegistersTests : IAsyncLifetime
 
         deletable.Should().BeEquivalentTo(RevokeDeleteOnBusinessTables.TechnicalTablesKeepingDelete,
             "toute nouvelle table supprimable par l'application doit être une décision explicite, jamais un héritage");
+    }
+
+    /// <summary>
+    /// TRUNCATE est un privilège DISTINCT de DELETE qui ignore la RLS : même la liste blanche technique
+    /// (jetons, compteur de séquence) n'a aucune raison métier de le garder. Aucune table ne doit
+    /// l'avoir — contrairement à DELETE, cette liste blanche est volontairement VIDE.
+    /// </summary>
+    [Fact]
+    public async Task App_Role_Can_Truncate_No_Table()
+    {
+        await using var connection = new NpgsqlConnection(_db.AppConnectionString);
+        await connection.OpenAsync();
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
+              AND has_table_privilege('sama_ecole_app', c.oid, 'TRUNCATE')
+            ORDER BY c.relname
+            """;
+
+        var truncatable = new List<string>();
+        await using (var reader = await cmd.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync()) truncatable.Add(reader.GetString(0));
+        }
+
+        truncatable.Should().BeEmpty("TRUNCATE ignore la RLS ; aucune table ne doit rester vidable par l'application");
+    }
+
+    /// <summary>
+    /// Aucun chemin de code ne modifie jamais un décaissement (la correction est une contre-écriture,
+    /// voir Cancelling_A_Disbursement_Adds_A_Negative_Reversal_And_Never_Touches_The_Original) : son
+    /// immutabilité ne doit plus reposer sur une convention de code seule, mais sur la BASE elle-même.
+    /// Payments et les autres registres gardent UPDATE : eux en ont légitimement besoin.
+    /// </summary>
+    [Fact]
+    public async Task Disbursements_Cannot_Be_Updated_By_The_Application_Role()
+    {
+        (await HasPrivilegeAsync("Disbursements", "UPDATE")).Should().BeFalse();
+
+        await using var connection = await _db.OpenRawAppConnectionAsync(EcoleA);
+        await using var update = connection.CreateCommand();
+        update.CommandText = "UPDATE \"Disbursements\" SET \"Reason\" = 'x' WHERE false";
+
+        var act = async () => await update.ExecuteNonQueryAsync();
+
+        (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState
+            .Should().Be(PostgresErrorCodes.InsufficientPrivilege);
     }
 
     [Theory]
@@ -200,7 +255,10 @@ public class ImmutableRegistersTests : IAsyncLifetime
         await using (var second = _db.NewOwnerContext())
         {
             second.Disbursements.Add(Reversal(-3_000m));
-            await second.Invoking(c => c.SaveChangesAsync(CancellationToken.None)).Should().ThrowAsync<Exception>(
+            // IX_Disbursements_ReversalOfId est unique (filtrée sur ReversalOfId IS NOT NULL) : une seconde
+            // contre-écriture viole 23505 unique_violation, qu'ApplicationDbContext.SaveChangesAsync traduit
+            // en DuplicateRecordException (jamais un DbUpdateException ni un PostgresException nu jusqu'ici).
+            await second.Invoking(c => c.SaveChangesAsync(CancellationToken.None)).Should().ThrowAsync<DuplicateRecordException>(
                 "une seule contre-écriture par décaissement, même en concurrence");
         }
 
@@ -209,8 +267,13 @@ public class ImmutableRegistersTests : IAsyncLifetime
         var wrongSign = Reversal(+100m);
         wrongSign.ReversalOfId = other;
         positive.Disbursements.Add(wrongSign);
-        await positive.Invoking(c => c.SaveChangesAsync(CancellationToken.None)).Should().ThrowAsync<Exception>(
+        // CK_disbursements_reversal_negative (ReversalOfId IS NULL OR Amount < 0) n'est pas traduite par
+        // ApplicationDbContext (seule UniqueViolation l'est) : l'exception reste un DbUpdateException dont
+        // l'InnerException est le PostgresException 23514 check_violation d'origine.
+        var wrongSignAct = await positive.Invoking(c => c.SaveChangesAsync(CancellationToken.None)).Should().ThrowAsync<DbUpdateException>(
             "une contre-écriture est toujours en montant négatif");
+        wrongSignAct.Which.InnerException.Should().BeOfType<PostgresException>()
+            .Which.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
     }
 
     [Fact]
