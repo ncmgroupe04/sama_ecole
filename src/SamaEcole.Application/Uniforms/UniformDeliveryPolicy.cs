@@ -28,6 +28,20 @@ public static class UniformDeliveryPolicy
     public static bool CanEdit(StudentUniformStatus status) => status == StudentUniformStatus.Requested;
 
     /// <summary>
+    /// Refuse (409) toute ligne qui n'est pas « demandée ». Appelée AVANT de lire quoi que ce soit d'autre : une tenue
+    /// déjà remise ne se remet pas, sinon le stock sortirait deux fois.
+    /// </summary>
+    public static void EnsureDeliverable(StudentUniformStatus status)
+    {
+        if (status != StudentUniformStatus.Requested)
+        {
+            throw new BusinessRuleException(
+                "Cette tenue n'est plus à remettre : elle a déjà été remise, retournée ou annulée.",
+                "UNIFORM_NOT_DELIVERABLE");
+        }
+    }
+
+    /// <summary>
     /// Valide une remise et retourne le motif NORMALISÉ à enregistrer : <c>null</c> pour une dotation facturée (un
     /// motif envoyé quand même est écarté — il n'a de sens que pour une remise non facturée), sinon le motif nettoyé.
     /// </summary>
@@ -38,12 +52,7 @@ public static class UniformDeliveryPolicy
         UniformBillingStatus billing,
         string? notBilledReason)
     {
-        if (status != StudentUniformStatus.Requested)
-        {
-            throw new BusinessRuleException(
-                "Cette tenue n'est plus à remettre : elle a déjà été remise, retournée ou annulée.",
-                "UNIFORM_NOT_DELIVERABLE");
-        }
+        EnsureDeliverable(status);
 
         var failures = new List<ValidationFailure>();
 

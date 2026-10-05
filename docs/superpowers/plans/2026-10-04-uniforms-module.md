@@ -35,10 +35,13 @@
 
 - [x] Commandes : `CreateStudentUniforms` (tout ou rien, élève et année copiés de l'inscription), `UpdateStudentUniform` et `CancelStudentUniform` sous `xmin` (409). Requête `GetStudentUniforms` : badge de solde (information, jamais un blocage), facturation attendue lue dans les lignes de frais, propositions (payées, adaptées à l'élève, non encore demandées).
 - [x] 16 tests d'intégration : doublon actif refusé avec rollback de tout le lot, taille d'un autre modèle, hors tenant (404/422), inscription annulée, conflit `xmin` sur modification et annulation, Finance jamais écrite (TotalDue, lignes de frais, paiements inchangés).
-## Phase 4 — Remise et retour (partie critique)
+## Phase 4 — Remise et retour (partie critique) — FAIT
 
-- [ ] `DeliverStudentUniformCommand` / `ReturnStudentUniformCommand` via `StockLedger`, audités.
-- [ ] Tests : concurrence sur la dernière unité (un 409), stock insuffisant (422), remise non facturée sans motif refusée, mouvement inverse au retour, journal append-only.
+- [x] ``DeliverStudentUniformCommand`` / ``ReturnStudentUniformCommand`` (auditées, ``IAuditableRequest``) via ``StockLedger`` : la remise passe la ligne à « remise » ET écrit une ``Sortie`` au journal dans UNE transaction ; le retour écrit l'``Entree`` inverse. Facturation calculée à la remise puis figée (``FeeLineId`` = preuve) ; date et auteur viennent du serveur ; libellés figés ; Finance jamais écrite. Le lot est retrouvé par le mouvement de remise (un retour reste possible après archivage de la taille).
+- [x] Règle pure ``UniformStockLabels`` : motifs et contrepartie du journal bornés (200 / 150), jamais cause d'échec.
+- [x] 20 tests d'intégration ``UniformDeliveryTests`` (PostgreSQL, rôle applicatif) : sortie au journal, 422 stock insuffisant sans écriture, motif obligatoire hors facturation, double remise refusée, jeton de ligne périmé → 409, retour inverse + rejeu du journal, journal append-only.
+- [x] **Course sur la dernière unité** : 6 manches, deux remises en parallèle sur deux contextes pour une seule unité — exactement une réussit, l'autre reçoit un 409 (verrou ``xmin`` du lot) ou un 422 (stock déjà épuisé), stock à zéro, un seul mouvement, la perdante intacte. Test déterministe en plus : une remise concurrente validée ENTRE la lecture et l'écriture du handler → 409 franc, rien d'écrit.
+- [x] **Test de mutation** : verrou ``xmin`` du lot désactivé temporairement → les deux tests de concurrence échouent ; restauré → verts.
 
 ## Phase 5 — Lectures et PDF
 
