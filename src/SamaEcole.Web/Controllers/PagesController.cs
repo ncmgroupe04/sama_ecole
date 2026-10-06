@@ -59,6 +59,12 @@ public class PagesController : Controller
     [HttpGet("/internat")]
     public IActionResult Internat() => View("~/Views/Internat/Index.cshtml");
 
+    // Espace de l'Oustaz (tablette) : sa Halqa, la grille des 60 Hizb par Juz, la saisie des quarts. Écran en arabe,
+    // de droite à gauche. InternatController garde l'accès (GET my-halqa réservé au rôle Enseignant, borné à SA Halqa
+    // par HalqaScopeAuthorizer, + [RequireModule(SchoolModule.Internat)]) et la RLS isole.
+    [HttpGet("/halqa")]
+    public IActionResult Halqa() => View("~/Views/Internat/Halqa.cshtml");
+
     // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
     // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
     // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.
