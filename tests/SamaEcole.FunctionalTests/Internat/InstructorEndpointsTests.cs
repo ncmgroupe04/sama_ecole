@@ -99,6 +99,17 @@ public class InstructorEndpointsTests(AuthApiFactory factory) : IClassFixture<Au
     }
 
     [Fact]
+    public async Task The_Instructor_Management_Page_Is_Served_With_Its_Script()
+    {
+        // Comme /internat, la page est servie sans session : c'est l'API qui garde l'accès et les écritures.
+        var response = await _client.GetAsync("/oustaz");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var html = await response.Content.ReadAsStringAsync();
+        html.Should().Contain("x-data=\"instructorsPage()\"").And.Contain("/js/instructors.js");
+    }
+
+    [Fact]
     public async Task Every_Route_Requires_Authentication()
     {
         (await SendAsync(HttpMethod.Get, MyHalqa, null)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
