@@ -148,6 +148,17 @@ l'appel des élèves, le pointage des enseignants et les créneaux d'emploi du t
 `WorkingDayGuard` (Application). Le défaut en base couvre les écoles existantes et la fonction
 `provision_school_director`, qui n'énumère pas toutes les colonnes de `school_settings`.
 
+`school_settings.ManagedCycles` (migration `AddManagedCyclesToSchoolSettings`, `varchar(60)`, `NOT NULL`, défaut en base
+`'Maternelle,Primaire,College,Lycee'`, `CHECK ("ManagedCycles" <> '')`) liste les **cycles que l'établissement gère** :
+noms de `CycleType` séparés par des virgules, forme canonique Maternelle → Lycée, comme `WorkingDays`. Il n'existe pas de
+cycle « Crèche » : Crèche et Maternelle sont deux niveaux du cycle `Maternelle`. Il pilote ce que proposent les écrans de
+classes, d'inscription et d'examens (CFEE ↔ Primaire, BFEM ↔ Collège, BAC ↔ Lycée) — confort d'affichage : le serveur ne
+refuse pas la création d'une classe hors de ces cycles. Une valeur vide ou illisible retombe sur tous les cycles
+(`ManagedCycleSet`). **Reprise** : toutes les écoles reçoivent tous les cycles, sauf celles déjà en profil
+`ElementairePrimaire`, reprises sur `Maternelle,Primaire` (c'est ce que le profil leur imposait déjà). L'Onboarding
+l'initialise (`Elementaire` → `Maternelle,Primaire`, tous les autres profils → tous les cycles) ; un changement de profil
+ultérieur ne le modifie jamais. Retirer un cycle qui contient des classes vivantes est refusé (Volume 4 §30).
+
 ### 4.4 Domaine Pédagogique
 
 `SchoolYears`, `Terms`, `Levels`, `ClassRooms`, `Subjects`, `Teachers`, `TeacherAssignments`, `Students`, `Guardians`, `StudentGuardians`, `Enrollments`, `EnrollmentDocuments`, `WaitingListEntries`, `StudentTransfers`, `Attendances`, `Grades`, `GradeDetails`, `ReportCards`, `ReportCardDetails`, `ScheduleSlots` (créneaux d'emploi du temps, Volume 1 §21), `TeacherAttendances` (pointage des enseignants, Volume 1 §21.3), `SubjectCoefficientOverrides` (surcharges de coefficient, ci-dessous).

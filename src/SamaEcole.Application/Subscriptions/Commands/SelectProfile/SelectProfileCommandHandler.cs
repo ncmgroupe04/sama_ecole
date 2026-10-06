@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SamaEcole.Application.Common.Exceptions;
 using SamaEcole.Application.Common.Interfaces;
+using SamaEcole.Application.Schools;
 using SamaEcole.Application.Schools.Commands.ApplyEstablishmentProfile;
 using SamaEcole.Domain.Entities;
 using SamaEcole.Domain.Enums;
@@ -70,6 +71,14 @@ public class SelectProfileCommandHandler(
         settings.IsFinanceEnabled = preset.IsFinanceEnabled;
         settings.IsInternatEnabled = preset.IsInternatEnabled;
         settings.IsCoranModuleEnabled = preset.IsCoranModuleEnabled;
+
+        // Cycles gérés : l'Onboarding INITIALISE, il n'écrase jamais un réglage fait ensuite. Seul l'Élémentaire
+        // se limite à Maternelle + Primaire ; tous les autres profils partent avec tous les cycles (un Daara
+        // mixte garde Collège et Lycée ; un Daara « pur » les décochera dans Paramètres › Modules). Le choix n'a
+        // lieu qu'une fois (le statut PendingOnboarding est vérifié plus haut), donc aucun réglage du
+        // Directeur ne peut exister à ce stade.
+        settings.ManagedCycles = ManagedCycleSet.Serialize(
+            request.Profile == ProfileType.Elementaire ? ManagedCycleSet.Elementary : ManagedCycleSet.All);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

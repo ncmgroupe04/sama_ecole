@@ -593,8 +593,17 @@ document.addEventListener('alpine:init', () => {
         get hasChosenProfile() {
             return this.profileEtablissement !== null && this.profileEtablissement !== undefined;
         },
+        /**
+         * Cycles gérés par l'établissement (SchoolSettings.ManagedCycles) — noms de CycleType. Par défaut TOUS les
+         * cycles, tant que la réponse n'est pas arrivée ou en cas d'erreur : on n'affiche jamais moins que ce que
+         * l'école avait. CONFORT d'affichage, jamais une protection (le serveur ne refuse pas la création d'une
+         * classe hors de ces cycles). Voir managed-cycles.js.
+         */
+        managedCycles: [...window.managedCycles.ALL],
+
+        isCycleManaged(cycle) { return window.managedCycles.isManaged(this.managedCycles, cycle); },
+
         get isSimplifieProfile() { return this.profileEtablissement === 'Simplifie'; },
-        get isElementaireProfile() { return this.profileEtablissement === 'ElementairePrimaire'; },
         get isGeneralProfile() { return this.profileEtablissement === 'General'; },
         get isFrancoArabeProfile() { return this.profileEtablissement === 'FrancoArabe'; },
         get isDaaraInternatProfile() { return this.profileEtablissement === 'DaaraInternat'; },
@@ -632,6 +641,7 @@ document.addEventListener('alpine:init', () => {
                 // devrait jamais être vide ici (l'API renvoie toujours un SchoolSettingsDto), mais on
                 // reste défensif : `undefined` plutôt qu'une fausse redirection si jamais il l'était.
                 this.profileEtablissement = s ? s.profileEtablissement : undefined;
+                this.managedCycles = window.managedCycles.normalize(s && s.managedCycles);
 
                 // Rafraîchit le profil mémorisé pour l'atterrissage (voir auth.rememberEstablishmentProfile).
                 window.auth.rememberEstablishmentProfile(s ? s.profileEtablissement : null);
@@ -644,6 +654,7 @@ document.addEventListener('alpine:init', () => {
                 this.financeEnabled = true;
                 this.internatEnabled = false;
                 this.workingDays = [1, 2, 3, 4, 5, 6];
+                this.managedCycles = [...window.managedCycles.ALL];
                 // profileEtablissement reste `undefined` (valeur initiale) : voir le commentaire de
                 // sa déclaration — jamais forcé à `null`, qui prétendrait une école sans profil.
             } finally {
@@ -679,7 +690,6 @@ document.addEventListener('alpine:init', () => {
         // Profil d'Onboarding (Ticket 3, voir ApplyEstablishmentProfileCommand) — même délégation au
         // store partagé que les getters ci-dessus.
         get isSimplifieProfile() { return Alpine.store('schoolConfig').isSimplifieProfile; },
-        get isElementaireProfile() { return Alpine.store('schoolConfig').isElementaireProfile; },
         get isGeneralProfile() { return Alpine.store('schoolConfig').isGeneralProfile; },
         get isFrancoArabeProfile() { return Alpine.store('schoolConfig').isFrancoArabeProfile; },
         get isDaaraInternatProfile() { return Alpine.store('schoolConfig').isDaaraInternatProfile; },

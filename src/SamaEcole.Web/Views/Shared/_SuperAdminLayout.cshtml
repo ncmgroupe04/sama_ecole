@@ -8,6 +8,9 @@
 
  @* Même chaîne de chargement que _Layout.cshtml (voir son commentaire de tête) : auth.js/api.js
  s'exécutent avant Alpine, require-session.js protège l'affichage, Alpine est auto-hébergé. *@
+ @* Règles pures des cycles gérés : auth.js (store schoolConfig) les lit dès l'initialisation d'Alpine — à charger AVANT lui,
+ dans CHAQUE mise en page qui charge auth.js (garde : tests/js/managed-cycles-layouts.test.mjs). *@
+ <script src="~/js/managed-cycles.js" asp-append-version="true"></script>
  <script src="~/js/auth.js" asp-append-version="true"></script>
  <script src="~/js/api.js" asp-append-version="true"></script>
  @* Modale universelle « Changer mon mot de passe » (store Alpine `changePasswordModal`) — après

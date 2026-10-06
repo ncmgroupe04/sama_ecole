@@ -117,9 +117,9 @@ public class TenantSubscriptionSchemaTests : IAsyncLifetime
     [Fact]
     public async Task Migration_Backfills_Every_Existing_School_As_Active_And_Unlimited_And_Keeps_Chosen_Profiles()
     {
-        // On RECULE avant la migration : les écoles existantes sont créées dans l'ancien schéma, puis la
-        // migration est rejouée sur ces données — exactement ce qui arrive en production.
-        await MigrateToAsync(PreviousMigration);
+        // Les écoles existantes sont semées dans le schéma COURANT (le modèle EF y écrit toutes ses colonnes),
+        // puis on RECULE avant la migration et on la rejoue sur ces données — exactement ce qui arrive en
+        // production : Down supprime la table (et les colonnes ajoutées après), Up la recrée depuis school_settings.
 
         var cases = new Dictionary<string, (ProfileEtablissement? Profile, bool Pedagogy, bool Finance, bool Internat, bool Coran, ProfileType Expected)>
         {
@@ -159,6 +159,7 @@ public class TenantSubscriptionSchemaTests : IAsyncLifetime
             await owner.SaveChangesAsync();
         }
 
+        await MigrateToAsync(PreviousMigration);
         await MigrateToAsync(null);
 
         await using var verify = _db.NewOwnerContext();

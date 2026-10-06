@@ -2,6 +2,7 @@ using System.IO;
 using SamaEcole.Application.Common.Interfaces;
 using SamaEcole.Application.Schools;
 using SamaEcole.Application.Schools.Commands.ApplyEstablishmentProfile;
+using SamaEcole.Application.Schools.Commands.SetManagedCycles;
 using SamaEcole.Application.Schools.Commands.SetMatriculeSequenceStart;
 using SamaEcole.Application.Schools.Commands.UpdateGradingScale;
 using SamaEcole.Application.Schools.Commands.UpdateSchoolSettings;
@@ -63,6 +64,9 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
 
     /// <summary>Onboarding (Setup Wizard) — un des 5 profils de ProfileEtablissement.</summary>
     public record ApplyEstablishmentProfileRequest(string Profile);
+
+    /// <summary>Cycles gérés — noms de CycleType : Maternelle, Primaire, College, Lycee.</summary>
+    public record SetManagedCyclesRequest(IReadOnlyList<string>? Cycles);
 
     /// <summary>Corps du PUT matricule-sequences : le type visé (« Student » / « Teacher ») et le prochain numéro.</summary>
     public record SetMatriculeSequenceStartRequest(string Kind, int NextValue);
@@ -316,6 +320,23 @@ public class SchoolSettingsController(ISender mediator) : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Cycles que l'établissement gère (Maternelle, Primaire, College, Lycee) — Paramètres › Modules. Directeur
+    /// seul. Retirer un cycle qui contient encore des classes vivantes répond 409 <c>CYCLE_HAS_CLASSROOMS</c>
+    /// (<c>details</c> : cycle et nombre de classes). Endpoint dédié, comme establishment-profile : la règle de
+    /// désactivation n'a rien à faire dans le PUT / général.
+    /// </summary>
+    [HttpPut("managed-cycles")]
+    [Authorize(Roles = nameof(Role.Directeur))]
+    [ProducesResponseType<SchoolSettingsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SetManagedCycles(
+        [FromBody] SetManagedCyclesRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await mediator.Send(new SetManagedCyclesCommand(request.Cycles ?? []), cancellationToken));
 
     [HttpPut("grading-scale")]
     [Authorize(Policy = GradingPolicies.CanManageGradingScale)]

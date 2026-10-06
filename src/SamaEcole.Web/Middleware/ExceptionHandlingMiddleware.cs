@@ -82,7 +82,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
                 HttpStatusCode.Conflict,
                 businessRuleEx.Code ?? "BUSINESS_RULE_VIOLATION",
                 businessRuleEx.Message,
-                null),
+                businessRuleEx.Details),
 
             // Quota d'élèves de la souscription (Onboarding & Pricing SaaS) : 422 — c'est le plan de l'école
             // qui refuse, pas l'état d'une ressource. `details` porte les chiffres (effectif, plafond,

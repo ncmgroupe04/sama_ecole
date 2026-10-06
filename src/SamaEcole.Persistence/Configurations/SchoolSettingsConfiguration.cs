@@ -9,7 +9,11 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
 {
     public void Configure(EntityTypeBuilder<SchoolSettings> builder)
     {
-        builder.ToTable("school_settings");
+        // CK_…_managed_cycles_not_empty : au moins un cycle — une chaîne vide ferait disparaître toutes les classes
+        // des écrans. Le contenu (noms connus, sans doublon) est garanti par ManagedCycleSet côté application,
+        // comme pour WorkingDays — pas de CHECK regex en base.
+        builder.ToTable("school_settings", t =>
+            t.HasCheckConstraint("CK_school_settings_managed_cycles_not_empty", "\"ManagedCycles\" <> ''"));
 
         builder.HasKey(s => s.Id);
 
@@ -89,6 +93,11 @@ public class SchoolSettingsConfiguration : IEntityTypeConfiguration<SchoolSettin
             .HasMaxLength(80)
             .IsRequired()
             .HasDefaultValue(SchoolSettingsDefaults.WorkingDays);
+
+        builder.Property(s => s.ManagedCycles)
+            .HasMaxLength(60)
+            .IsRequired()
+            .HasDefaultValue(SchoolSettingsDefaults.ManagedCycles);
 
         builder.Property(s => s.DirectorSignatureUrl).HasMaxLength(500);
         builder.Property(s => s.SecretarySignatureUrl).HasMaxLength(500);
