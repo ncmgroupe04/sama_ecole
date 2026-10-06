@@ -67,6 +67,14 @@ public class Student : AuditableEntity, ITenantEntity
     public Guid ClassroomId { get; set; }
 
     /// <summary>
+    /// Oustaz responsable de la Halqa (cercle d'étude) de cet élève — module Internat/Daara. NULLABLE :
+    /// l'immense majorité des élèves (écoles standard, franco-arabes) n'a aucune Halqa, et un élève de
+    /// daara peut attendre son affectation. Axe PÉDAGOGIQUE, distinct de <see cref="ClassroomId"/> qui
+    /// reste l'axe administratif et de caisse (frais, inscription) : les deux coexistent.
+    /// </summary>
+    public Guid? InstructorId { get; set; }
+
+    /// <summary>
     /// URL de la photo d'identité (docs/Volume_3_DDS.md : PhotoUrl) — une adresse http(s) EXTERNE saisie
     /// par l'utilisateur. Reste une alternative valide à <see cref="PhotoData"/> (feature B) : une école
     /// qui héberge déjà ses photos ailleurs n'est pas obligée de téléverser. Priorité d'affichage à la

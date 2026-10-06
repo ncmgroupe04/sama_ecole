@@ -81,5 +81,18 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
             .HasForeignKey(s => new { s.SchoolId, s.ClassroomId })
             .HasPrincipalKey(c => new { c.SchoolId, c.Id })
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Halqa (module Internat/Daara) : FK COMPOSITE NULLABLE vers instructors, même défense anti
+        // cross-tenant que ClassroomId ci-dessus. PostgreSQL (MATCH SIMPLE) ne contrôle la clé que si
+        // InstructorId est renseigné : un élève sans Oustaz reste valide, et un élève ne peut jamais
+        // pointer l'Oustaz d'une AUTRE école. Restrict : un Oustaz se retire en soft delete (règle #6).
+        builder.HasOne<Instructor>()
+            .WithMany()
+            .HasForeignKey(s => new { s.SchoolId, s.InstructorId })
+            .HasPrincipalKey(i => new { i.SchoolId, i.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // « Les élèves de la Halqa de cet Oustaz » (appel, suivi coranique).
+        builder.HasIndex(s => new { s.SchoolId, s.InstructorId });
     }
 }

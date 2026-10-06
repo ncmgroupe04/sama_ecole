@@ -87,6 +87,10 @@ public class ApplicationDbContext(
     public DbSet<QuranProgress> QuranProgresses => Set<QuranProgress>();
     public DbSet<QuranEvaluation> QuranEvaluations => Set<QuranEvaluation>();
 
+    // Module Internat/Daara : Oustaz (Halqa) et suivi coranique par Hizb.
+    public DbSet<Instructor> Instructors => Set<Instructor>();
+    public DbSet<StudentHizbStatus> StudentHizbStatuses => Set<StudentHizbStatus>();
+
     // Module Inventaire (patrimoine, stock, prêts de matériel).
     public DbSet<InventoryCategory> InventoryCategories => Set<InventoryCategory>();
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();

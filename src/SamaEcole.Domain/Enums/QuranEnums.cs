@@ -41,3 +41,16 @@ public enum QuranMemorizationStatus
     Memorized,
     Revised
 }
+
+/// <summary>
+/// État d'avancement d'un élève sur UN Hizb (<see cref="Entities.StudentHizbStatus"/>, module
+/// Internat/Daara). Dérivé de <see cref="Entities.StudentHizbStatus.CompletedQuarters"/> et verrouillé
+/// avec lui par une contrainte CHECK : <see cref="NotStarted"/> ⇔ 0 quart, <see cref="InProgress"/> ⇔ 1 à 3,
+/// <see cref="Completed"/> ⇔ 4. <see cref="NotStarted"/> en premier membre et valeur par défaut.
+/// </summary>
+public enum HizbMemorizationState
+{
+    NotStarted,
+    InProgress,
+    Completed
+}
