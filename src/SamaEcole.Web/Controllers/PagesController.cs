@@ -65,6 +65,12 @@ public class PagesController : Controller
     [HttpGet("/halqa")]
     public IActionResult Halqa() => View("~/Views/Internat/Halqa.cshtml");
 
+    // Gestion des Oustaz (Direction) : fiches, statut, compte de connexion. InternatController garde l'accès
+    // (liste : Directeur/Secrétariat/Surveillant ; écriture : Directeur seul ; GET /users, Directeur seul, pour le
+    // sélecteur de compte) + [RequireModule(SchoolModule.Internat)], et la RLS isole.
+    [HttpGet("/oustaz")]
+    public IActionResult Instructors() => View("~/Views/Internat/Instructors.cshtml");
+
     // JGK-D03/D04 : liste des enseignants, création de fiche, fiche détaillée avec matières/affectations.
     // Gabarit [AllowAnonymous] côté vue — c'est TeachersController qui garde l'accès (Voir : Super
     // Admin/Directeur/Secrétariat ; Créer/Attribuer : Directeur/Secrétariat) et la RLS qui isole.
