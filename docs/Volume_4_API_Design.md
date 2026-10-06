@@ -873,6 +873,25 @@ Contrôleur `HourVolumesController`, module Pédagogie requis. Lecture : Directe
 | `DELETE` | `/api/v1/hour-volumes/norms/{id}?rowVersion=` | « Revenir à la référence » (suppression logique) — Directeur seul, `409` si périmé |
 | `GET` | `/api/v1/hour-volumes/compliance?classroomId=` | Conformité d'une classe (ou de toutes) : `classes[]` (`gradeLevel`, `series`, `totals`, `subjects[]` avec `plannedHours`, `normHours`, `difference`, `status` = `Compliant`/`Under`/`Over`/`NoReference`, `conflictCount`) et `conflicts[]` (`kind` = `Teacher`/`Room`/`Classroom`, `dayOfWeek`, `resource`, `first`, `second`). `404` classe inconnue |
 
+## 28. API Internat / Daara — Oustaz, Halqa et suivi par Hizb
+
+Contrôleur `InternatController`, module Internat requis (`403 MODULE_DISABLED` sinon). L'Oustaz se connecte avec le rôle `Enseignant` ; `Instructor.UserId` le distingue d'un enseignant du cursus. **Portée d'un Oustaz** : il ne lit et n'écrit que le suivi des élèves de SA Halqa (`Student.InstructorId`) ; hors de sa Halqa, `403 FORBIDDEN` avec un message actionnable. Un Oustaz suspendu ou bloqué perd l'accès à la requête suivante (le statut est relu à chaque appel).
+
+| Méthode | Route | Rôles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/internat/instructors` | Directeur, Secrétariat, Surveillant | Oustaz de l'école, tous statuts, avec `studentCount`, `userId`, `userEmail` et `rowVersion`. |
+| `POST` | `/api/v1/internat/instructors` | Directeur | `{ fullName, fullNameAr?, phone?, userId? }` — `201`. `userId` : compte Enseignant de l'école, non déjà lié (`422`) ; un compte inconnu ou d'une autre école renvoie le même `404` neutre (pas d'énumération). |
+| `PUT` | `/api/v1/internat/instructors/{id}` | Directeur | Fiche ENTIÈRE `{ fullName, fullNameAr?, phone?, userId?, status, rowVersion }` ; `userId` nul détache le compte, `status` `Active`/`Suspended`/`Blocked`. `409` si `rowVersion` périmé. |
+| `GET` | `/api/v1/internat/instructors/{id}/students` | Directeur, Secrétariat, Surveillant, Enseignant (sa Halqa) | Halqa d'un Oustaz : élèves avec `completedHizbs`, `inProgressHizbs`, `completedQuarters`, `progressPercent`, `lastEvaluatedAt`. |
+| `GET` | `/api/v1/internat/my-halqa` | Enseignant | Halqa de l'Oustaz connecté, résolue depuis son compte (aucun identifiant en paramètre). |
+| `POST` | `/api/v1/internat/students/assign-instructor` | Directeur | `{ instructorId?, studentIds[] }` — affecte ou détache (`instructorId` nul) un lot de 200 élèves au plus ; tout ou rien, rejouable sans effet ; Oustaz non actif : `422`. N'écrit jamais `ClassroomId`. |
+| `GET` | `/api/v1/internat/students/{id}/hizb-progress` | Directeur, Secrétariat, Surveillant, Enseignant (sa Halqa) | Grille des 60 Hizb : `hizbs[]` (`hizbNumber`, `completedQuarters`, `state`, `lastEvaluatedAt`, `rating`, `rowVersion` — nul tant que le Hizb n'a jamais été saisi) et `summary`. |
+| `PUT` | `/api/v1/internat/students/{id}/hizb-progress` | Directeur, Enseignant (sa Halqa) | `{ hizbNumber 1-60, completedQuarters 0-4, rating? 1-5, rowVersion? }`. L'état se déduit des quarts et la date est posée par le serveur (jamais envoyés). `rowVersion` obligatoire si la ligne existe (`409` sinon ou si périmé) ; un Hizb à 0 quart n'a pas de note (`422`). |
+| `GET` | `/api/v1/internat/progress-dashboard?staleDays=` | Directeur, Secrétariat, Surveillant | Progression globale, `bands[]` (tranches 0, (0-10], (10-25], (25-50], (50-75], (75-100] % ), `halqas[]` et `stagnant[]` (élèves non évalués depuis `staleDays` jours — 30 par défaut, borné à 1-365 — ou jamais ; un élève qui a fini les 60 Hizb n'est jamais signalé). Distinct de `GET /dashboard` (occupation des dortoirs). |
+| `GET` | `/api/v1/internat/students/{id}/hizb-report/pdf` | Directeur, Secrétariat, Surveillant, Enseignant (sa Halqa) | Bulletin coranique PDF A4 bilingue français/arabe. Impression tracée au journal d'audit. |
+
+Pages : `/halqa` (tablette de l'Oustaz, arabe de droite à gauche), `/oustaz` (gestion des Oustaz), `/suivi-coranique` (tableau de bord de la Direction). Tables : `instructors`, `student_hizb_statuses` (un état courant par élève et Hizb, contraintes CHECK sur les bornes et la cohérence état/quarts), colonne `students.InstructorId`.
+
 ---
 
 **Fin du Volume 4.**
