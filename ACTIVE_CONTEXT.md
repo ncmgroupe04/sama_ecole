@@ -561,7 +561,9 @@ Migration `AddDaaraHalqaAndHizbTracking` (tables `instructors` et `student_hizb_
 (tablette de l'Oustaz, arabe, de droite à gauche : cartes d'élèves, grille des 60 Hizb par Juz, tiroir de saisie
 des quarts) et écran `/oustaz` (Direction : liste, création, modification, suspension/réactivation, liaison au
 compte ; écriture Directeur seul, lecture Secrétariat et Surveillant ; les comptes proposés viennent de
-`GET /api/v1/users`, réservé au Directeur).
+`GET /api/v1/users`, réservé au Directeur) et écran `/suivi-coranique` (Direction : progression globale,
+répartition par tranche d'avancement, synthèse par Halqa, alertes de stagnation, bulletin coranique PDF par élève ;
+`GET progress-dashboard` et `GET students/{id}/hizb-report/pdf`, bilingue français/arabe, QuestPDF).
 
 **Arbitrages actés, à ne pas rouvrir sans raison :**
 
@@ -581,8 +583,18 @@ compte ; écriture Directeur seul, lecture Secrétariat et Surveillant ; les com
 6. **Conflit d'écriture** : chaque case de la grille porte son jeton `xmin` ; un 409 recharge la grille côté écran
    au lieu d'écraser.
 
-**Pas encore livré :** tableau de bord de la Direction et courbe de progression, bulletin coranique PDF
-(QuestPDF).
+7. **Alertes = stagnation, pas retard.** Un élève est signalé quand il n'a pas été évalué depuis N jours (30 par
+   défaut, réglable de 1 à 365) ou jamais, sauf s'il a terminé les 60 Hizb. « En retard » supposerait un rythme attendu
+   que personne n'a fixé. Le tableau de bord ne porte que sur les élèves rattachés à une Halqa.
+8. **Pas de courbe d'évolution dans le temps.** Le suivi est un état courant par Hizb (la ligne est mise à jour sur
+   place) : l'historique passé n'existe pas, une courbe serait inventée. Elle exigerait un journal des évaluations
+   (table append-only, écrit à chaque saisie) — à décider séparément, c'est une évolution de schéma.
+9. **Le bulletin n'invente aucune appréciation** : il affiche la note (1 à 5) par Hizb, sa moyenne, la dernière
+   évaluation, et laisse un cadre pour l'appréciation manuscrite de l'Oustaz et les signatures. L'impression est
+   tracée au journal d'audit, et un Oustaz ne tire que le bulletin de SES élèves.
+
+**Pas encore livré :** courbe de progression dans le temps (journal des évaluations requis), bulletin PDF accessible
+depuis la tablette de l'Oustaz.
 
 ### Module Internat (18/09/2026) — livré
 
