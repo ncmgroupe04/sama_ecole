@@ -1,7 +1,7 @@
 # Internat — Modèle Pavillon/Lit et étanchéité IHM par profil — Spécification
 
 **Date :** 06/10/2026
-**Statut :** Brouillon pour relecture. Rien n'est implémenté. Les points à trancher sont au §11.
+**Statut :** Prête pour relecture. Questions de conception tranchées le 06/10/2026 (§11). Rien n'est implémenté.
 **Branches :** spec sur `docs/internat-backend-and-profile-isolation-design` ; implémentation back sur
 `feat/internat-backend` (Phase 1) ; implémentation front sur une branche distincte (Phase 2).
 **Remplace partiellement :** `docs/superpowers/specs/2026-09-18-module-internat-design.md` (décisions #1, #2, #4 —
@@ -70,7 +70,9 @@ Tous les enums sont persistés en string (`HasConversion<string>()`).
 | `Id`, `SchoolId` | uuid | — |
 | `Name` | text(100) | Requis. Unique par école (partiel, vivants). Ex. « Pavillon Oustaz Ahmad ». |
 | `Gender` | enum `DormitoryGender` | `Garcons`, `Filles` (+ `Mixte`, **réservé à la reprise de données**, voir §4 et §11-Q2). |
-| `SupervisorName` | text(150)? | Surveillant responsable (texte libre ; pas de FK vers `User` en V1). |
+| `SupervisorName` | text(150)? | Surveillant responsable, texte libre (V1). |
+| `SupervisorPhone` | text? | Validé par `MustBeValidSenegalPhone`. |
+| `SupervisorUserId` | uuid? | **Liaison optionnelle** à un compte utilisateur. Le handler vérifie qu'il existe un `UserSchool` `(UserId, SchoolId courant)` et que le rôle est `Surveillant` (sinon 422). Si renseigné, `SupervisorName` est dérivé du compte à la lecture et la saisie libre est ignorée. |
 | `Notes` | text(1000)? | — |
 
 `Capacity` : dérivée (N1).
@@ -109,6 +111,7 @@ Index uniques partiels : `(SchoolId, EnrollmentId) WHERE IsActive AND NOT IsDele
 `Id`, `SchoolId`, `BoardingEnrollmentId` (FK composite ; exposé en API sous le nom `boarderId`), `LeaveDate` (date),
 `ExpectedReturnDate` (date, `≥ LeaveDate`), `ActualReturnDate` (date?, posée par `PUT .../return`, `≥ LeaveDate`),
 `Reason` (enum `BoardingLeaveReason` : `Weekend`, `Sante`, `Famille`, + `Autre`), `AccompaniedBy` (text(150)),
+`IsCompanionUnlisted` (bool, **figé à la déclaration** : vrai si `AccompaniedBy` ne correspondait à aucune personne habilitée à cet instant — la traçabilité ne doit pas changer si la liste est modifiée plus tard),
 `ReasonDetail` (text(500)?). `Status` : **non stocké** (N6). Contrainte tenue par la base : **une seule sortie ouverte à la fois**
 par pensionnaire (index unique partiel sur `(BoardingEnrollmentId) WHERE ActualReturnDate IS NULL AND NOT IsDeleted`).
 
@@ -251,7 +254,7 @@ feuille de route ne sont jamais saisissables.
 
 | Route | Cas d'usage | Règles |
 |---|---|---|
-| `POST /api/v1/boarding/leaves` | `DeclareLeaveCommand` | Pensionnaire actif ; pas de sortie déjà ouverte (409) ; `ExpectedReturnDate ≥ LeaveDate`. Si `AccompaniedBy` ne correspond à aucune `AllowedExitPersons`, la sortie est **acceptée** mais le DTO porte `isCompanionUnlisted = true` (bloquer piégerait une urgence de santé ; voir §11-Q5). |
+| `POST /api/v1/boarding/leaves` | `DeclareLeaveCommand` | Pensionnaire actif ; pas de sortie déjà ouverte (409) ; `ExpectedReturnDate ≥ LeaveDate`. Si `AccompaniedBy` ne correspond à aucune `AllowedExitPersons`, la sortie est **acceptée** et `IsCompanionUnlisted = true` est **persisté** (décision Q5) : avertissement visuel à la saisie, pastille dans le registre des sorties et dans la fiche PDF. Aucun blocage — souplesse terrain, notamment pour une urgence de santé. |
 | `PUT /api/v1/boarding/leaves/{id}/return` | `RecordReturnCommand` | Pose `ActualReturnDate` (≤ aujourd'hui) ; idempotent refusé : déjà rentré → 409. `rowVersion`. |
 | `POST /api/v1/boarding/attendance` | `RecordAttendanceCommand` | Pointage **collectif** : `{ date, dormitoryId, entries: [{ boarderId, isPresent, note? }] }`. Upsert par `(boarder, date)` ; date ≤ aujourd'hui, année active, jour pointable. Un pensionnaire en sortie ce soir-là est accepté uniquement avec `isPresent = false` (la ligne indique « En permission » si la note est vide). Réponse : résultat par ligne. |
 
@@ -300,20 +303,22 @@ Les PDF sont générés à la demande, jamais stockés ; en-têtes `Cache-Contro
 
 ### 8.2 Règle de visibilité
 
-La source de vérité de la visibilité est **le même interrupteur que la garde serveur** (`IsInternatEnabled`,
-`IsCoranModuleEnabled`), pré-positionné par le profil à l'Onboarding (`EstablishmentProfilePresets`). Le profil
-détermine donc les valeurs par défaut, pas une seconde règle parallèle qui pourrait diverger de l'API.
+**Décision Q6 (06/10/2026) :** les interrupteurs de module (`IsInternatEnabled`, `IsCoranModuleEnabled`) font foi.
+La sidebar, la garde de page et les contrôles d'accès API vérifient le même état effectif du module pour l'école ;
+le profil n'est qu'un **pré-positionnement** à l'Onboarding (`EstablishmentProfilePresets`). Il n'y a pas de blocage
+dur par profil : un Directeur `Elementaire` peut activer l'Internat dans Paramètres › Modules, et l'obtient alors
+partout, API et IHM de façon cohérente. Le tableau ci-dessous décrit donc l'état **par défaut** après Onboarding.
 
 | `ProfileType` | Internat (`/internat`) | Coran (`/suivi-coranique`, `/halqa`, `/oustaz`) | Rôle dans l'interface |
 |---|---|---|---|
-| `Elementaire` | masqué, route → redirection | masqué, route → redirection | — |
+| `Elementaire` | masqué par défaut, route → redirection | masqué par défaut, route → redirection | — |
 | `EnseignementGeneral` | masqué | masqué | — |
 | `ComptabiliteRapports` | masqué | masqué | — |
 | `FrancoArabe` | masqué | **visible** | Coran secondaire |
 | `InternatDaara` | **visible** | **visible** | **Modules principaux** : atterrissage Directeur sur `/suivi-coranique` (déjà en place, `PROFILE_LANDINGS`), groupe « Internat / Coran » remonté en tête de la section « Gestion scolaire » |
 
 Les lignes `EnseignementGeneral`, `ComptabiliteRapports` et `FrancoArabe` découlent des presets existants ; la feuille
-de route ne tranchait que `Elementaire` et `InternatDaara` (voir §11-Q6).
+de route ne tranchait que `Elementaire` et `InternatDaara`.
 
 ### 8.3 Mécanisme
 
@@ -334,8 +339,8 @@ de route ne tranchait que `Elementaire` et `InternatDaara` (voir §11-Q6).
 5. **Navigation** : `/suivi-coranique`, `/oustaz`, `/halqa` conditionnés par `coranEnabled`, `/internat` par
    `internatEnabled`, aussi dans `_QuickNav.cshtml`. Les autres usages à auditer et aligner (liste vérifiée) :
    `Enrollments/Index.cshtml` (section régime), `Fees/Index.cshtml` (case pension), `Subjects/Index.cshtml` (blocs
-   conditionnés par `isFrancoArabeProfile || isDaaraInternatProfile` — conditionnés par le **profil** et non par le
-   module : à trancher, §11-Q6).
+   conditionnés par `isFrancoArabeProfile || isDaaraInternatProfile`, donc par le **profil** et non par un module : ce sont
+   des blocs de pédagogie bilingue, pas des écrans Internat/Coran ; hors périmètre de cette phase, à auditer à part).
 
 ### 8.4 Ce que cette phase ne garantit pas
 
@@ -382,28 +387,20 @@ mapping genre `M/F` ↔ pavillon, règles de capacité dérivée.
 
 Un lot = une PR relue ; la suite complète reste verte entre chaque lot.
 
-## 11. Questions ouvertes
+## 11. Décisions de conception tranchées (06/10/2026)
 
-- **Q1 — Dortoirs dans `/infrastructures`.** Une salle `Dortoir` existante est migrée (§4.1), mais faut-il la masquer
-  de la liste des salles après coup, ou la laisser consultable en lecture seule ? *Recommandation : la masquer des
-  sélecteurs, la laisser dans la corbeille.*
-- **Q2 — Valeur `Mixte`.** Nécessaire pour la reprise de dortoirs dont le genre n'est pas déductible. Elle n'est pas
-  dans la feuille de route (« Garçons / Filles »). *Recommandation : l'accepter, mais interdite à la création et à
-  la modification via l'API ; le Directeur doit qualifier ces pavillons une fois.*
-- **Q3 — Demi-pensionnaire sans lit (N7).** Le module livré exigeait une chambre pour un demi-pensionnaire ; ce
-  n'est pas cohérent avec un lit nominatif. À confirmer avec un directeur d'internat.
-- **Q4 — « Nuitées / Repas ».** L'intitulé évoque les repas ; les champs de la feuille de route n'en portent pas.
-  *Recommandation : V1 nuitées seules ; un `Slot` ultérieur est une migration additive.*
-- **Q5 — Accompagnateur non habilité.** Accepter avec avertissement (proposé) ou bloquer pour tout motif hors
-  `Sante` ? *Recommandation : avertir, et bloquer seulement si le Directeur active un réglage dédié (hors V1).*
-- **Q6 — Verrouillage par profil.** Le texte de Phase 2 est rédigé comme « `ProfileType == Elementaire` ⇒ routes
-  fermées ». Le §8.2 retient à la place « les interrupteurs de module font foi, le profil les pré-positionne ». Écart
-  de comportement : un Directeur `Elementaire` qui active **manuellement** l'Internat dans Paramètres › Modules
-  l'obtiendrait (API et menu cohérents) au lieu d'être bloqué. Si le produit veut interdire cela (tarification par
-  profil), il faut un contrôle serveur distinct (refus du réglage en 422 selon `ProfileType`), et non seulement un
-  masquage d'IHM. Décision produit requise. Lié : les blocs de `Subjects/Index.cshtml` basés sur le profil.
-- **Q7 — Surveillant responsable.** Texte libre en V1 ; une FK vers `User` (avec rôle `Surveillant`) permettrait de
-  filtrer « mes pavillons ». À prévoir en V2 ?
+| # | Sujet | Décision |
+|---|---|---|
+| Q1 | Anciennes salles `Dortoir` | Filtrées/masquées dans la gestion classique des salles (`/infrastructures`, sélecteurs de salles) pour éviter la confusion avec `Dormitory`. Implémentation : `GET /rooms` et les sélecteurs excluent `Type = Dortoir` ; la création d'une salle `Dortoir` est refusée (422, §4.3). Les lignes restent en base (reprise §4.1, rollback possible). |
+| Q2 | Genre des dortoirs repris | `Mixte` accepté pour la reprise de données. Il reste **refusé** à la création et à la modification via l'API : le Directeur qualifie une fois chaque pavillon repris. |
+| Q3 | Demi-pensionnaires | Aucun lit (N7). |
+| Q4 | Pointage V1 | Nuitées uniquement ; repas dans une évolution ultérieure (ajout additif d'un `Slot`). |
+| Q5 | Accompagnateur non habilité | Saisie jamais bloquée ; avertissement visuel + `IsCompanionUnlisted` persisté dans le registre (§3.5, §6.3). |
+| Q6 | Profil vs interrupteurs | Les interrupteurs de module font foi, pour l'IHM comme pour l'API (§8.2). |
+| Q7 | Surveillant responsable | Texte libre (nom, téléphone) en V1, avec liaison optionnelle à un compte `Surveillant` (§3.1). |
+
+**Point résiduel :** le filtre « surveillant ne voit que ses pavillons » (via `SupervisorUserId`) n'est **pas** inclus
+en V1 : un `Surveillant` voit tous les pavillons de l'école, comme dans la spec du 18/09.
 
 ## 12. Hors périmètre (rappel)
 
