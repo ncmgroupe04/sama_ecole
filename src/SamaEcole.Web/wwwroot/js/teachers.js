@@ -40,6 +40,12 @@ const CIVIL_SERVICE_STATUS_OPTIONS = [
     { value: 'Benevole', label: 'Bénévole' }
 ];
 
+// Colonnes de l'aperçu d'import, dans l'ordre d'affichage (libellés du récapitulatif d'erreurs).
+const TEACHER_IMPORT_FIELD_LABELS = {
+    fullName: 'Nom complet', email: 'E-mail', phone: 'Téléphone', birthDate: 'Naissance',
+    birthPlace: 'Lieu', subjects: 'Matières'
+};
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('teachersView', () => ({
         teachers: [],
@@ -149,6 +155,32 @@ document.addEventListener('alpine:init', () => {
         importPreview: null, // Dernière réponse dryRun=true (ImportTeachersResult) : { totalRows, validRows, invalidRows, rows }
         importResult: null, // Réponse de la confirmation (dryRun=false) une fois committed=true.
         importError: null, // Rejet global (extension non supportée, fichier vide/corrompu, >1000 lignes).
+
+        // Lecture des erreurs de l'aperçu (wwwroot/js/import-errors.js, partielle _ImportErrorsSummary) : liste
+        // « Ligne / Champ / Valeur / Message », filtre « lignes en erreur seulement », export CSV.
+        importOnlyErrors: false,
+
+        get importErrorEntries() {
+            return window.importErrors.entries(this.importPreview ? this.importPreview.rows : [], TEACHER_IMPORT_FIELD_LABELS);
+        },
+
+        /**
+         * Lignes montrées dans l'aperçu : toutes, ou seulement celles en erreur quand le filtre est coché.
+         * Le filtre ne s'applique que s'il reste des erreurs : un fichier corrigé et redéposé avec la case
+         * encore cochée afficherait sinon un aperçu VIDE, alors que la case (dans le récapitulatif, masqué
+         * sans erreur) ne serait plus là pour la décocher.
+         */
+        get importVisibleRows() {
+            const rows = this.importPreview ? this.importPreview.rows : [];
+            const invalid = window.importErrors.invalidRows(rows);
+            return this.importOnlyErrors && invalid.length > 0 ? invalid : rows;
+        },
+
+        exportImportErrors() {
+            window.importErrors.download(
+                window.importErrors.fileName('Enseignants'),
+                window.importErrors.toCsv(this.importErrorEntries));
+        },
 
         // Confirmation « Enseignant ajouté » affichée après un enregistrement réussi.
         showAddedDialog: false,
@@ -300,6 +332,7 @@ document.addEventListener('alpine:init', () => {
             this.importPreview = null;
             this.importResult = null;
             this.importError = null;
+            this.importOnlyErrors = false;
         },
 
         /** Un fichier choisi (clic) ou déposé (drag&drop) lance IMMÉDIATEMENT l'aperçu — pas de bouton intermédiaire. */
@@ -310,6 +343,7 @@ document.addEventListener('alpine:init', () => {
             this.importPreview = null;
             this.importResult = null;
             this.importError = null;
+            this.importOnlyErrors = false;
             this.previewImport();
         },
 

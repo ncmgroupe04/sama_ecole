@@ -1,0 +1,51 @@
+@*
+ Récapitulatif des erreurs de l'aperçu d'un import de masse (élèves, enseignants) : une ligne par erreur
+ « Ligne / Champ / Valeur saisie / Message », un filtre « lignes en erreur seulement » et l'export CSV.
+
+ Partielle SANS modèle : elle lit la portée Alpine du composant qui l'inclut (studentsView, teachersView),
+ qui doit exposer — voir wwwroot/js/import-errors.js :
+   importPreview, importErrorEntries, importOnlyErrors, exportImportErrors().
+ Aucune logique ici : tout le calcul est dans import-errors.js, testé à part.
+*@
+<div x-show="importErrorEntries.length > 0" x-cloak
+     class="mb-3 rounded-2xl border border-danger/20 bg-danger-bg/40 p-3" role="region" aria-label="Erreurs à corriger">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-sm font-medium text-danger">
+            <span x-text="importErrorEntries.length"></span> erreur(s) à corriger
+            dans <span x-text="importPreview ? importPreview.invalidRows : 0"></span> ligne(s)
+        </p>
+        <div class="flex flex-wrap items-center gap-3">
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+                <input type="checkbox" x-model="importOnlyErrors" class="rounded border-slate-300 text-primary focus:ring-primary/30">
+                Afficher seulement les lignes en erreur
+            </label>
+            <button type="button" x-on:click="exportImportErrors()" class="btn-modal-secondary group">
+                Exporter le rapport d'erreurs (.csv)
+            </button>
+        </div>
+    </div>
+
+    <div class="mt-3 max-h-48 overflow-auto rounded-xl border border-slate-200 bg-white">
+        <table class="w-full text-left border-collapse text-xs">
+            <caption class="sr-only">Liste des erreurs détectées dans le fichier, une ligne par erreur</caption>
+            <thead>
+                <tr class="table-head">
+                    <th scope="col" class="py-2 px-2 w-12">Ligne</th>
+                    <th scope="col" class="py-2 px-2">Champ</th>
+                    <th scope="col" class="py-2 px-2">Valeur saisie</th>
+                    <th scope="col" class="py-2 px-2">Message</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                <template x-for="(e, i) in importErrorEntries" :key="e.rowNumber + ':' + e.field">
+                    <tr>
+                        <td class="py-1.5 px-2 text-slate-500" x-text="e.rowNumber"></td>
+                        <td class="py-1.5 px-2 font-medium text-slate-700 whitespace-nowrap" x-text="e.label"></td>
+                        <td class="py-1.5 px-2 text-slate-600" x-text="e.value === '' ? '(vide)' : e.value"></td>
+                        <td class="py-1.5 px-2 text-danger" x-text="e.message"></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</div>

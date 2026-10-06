@@ -5,6 +5,7 @@
 @* auth.js et api.js sont chargés par _Layout : les inclure ici les exécuterait une seconde fois. *@
 @section Scripts {
  <script src="~/js/photo-compress.js" asp-append-version="true"></script>
+ <script src="~/js/import-errors.js" asp-append-version="true"></script>
  <script src="~/js/teachers.js" asp-append-version="true"></script>
  <script src="~/js/hour-volumes.js" asp-append-version="true"></script>
 }
@@ -693,6 +694,8 @@
  <span class="text-danger font-medium" x-text="importPreview ? importPreview.invalidRows : 0"></span> invalide(s).
  </p>
 
+ @await Html.PartialAsync("_ImportErrorsSummary")
+
  <div class="max-h-80 overflow-auto rounded-2xl border border-slate-200">
  <table class="w-full min-w-[900px] text-left border-collapse text-xs">
  <thead>
@@ -707,7 +710,7 @@
  </tr>
  </thead>
  <tbody class="divide-y divide-slate-100">
- <template x-for="row in (importPreview ? importPreview.rows : [])" :key="row.rowNumber">
+ <template x-for="row in (importVisibleRows)" :key="row.rowNumber">
  <tr class="hover:bg-slate-50 transition-colors duration-150">
  <td class="py-1.5 px-2 text-slate-400" x-text="row.rowNumber"></td>
  <td class="py-1.5 px-2" :class="importCellClass(row, 'fullName')" :title="row.fieldErrors.fullName || ''" x-text="row.fullName"></td>
@@ -723,7 +726,7 @@
  </div>
 
  <p x-show="importPreview && importPreview.invalidRows > 0" x-cloak class="field-error">
- Corrigez les cellules en rouge dans votre fichier (survolez-les pour le détail), puis redéposez-le ci-dessus.
+ Corrigez ces erreurs dans votre fichier (récapitulatif ci-dessus, ou cellules en rouge), puis redéposez-le ci-dessus.
  </p>
  </div>
  </div>
